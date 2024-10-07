@@ -180,8 +180,7 @@ static bool isFallThruRelocation(InputSection &is, InputFile *file,
     return false;
 
   uint64_t addrLoc = is.getOutputSection()->addr + is.outSecOff + r.offset;
-  uint64_t targetOffset = InputSectionBase::getRelocTargetVA(
-      file, r.type, r.addend, addrLoc, *r.sym, r.expr);
+  uint64_t targetOffset = is.getRelocTargetVA(ctx, r, addrLoc);
 
   // If this jmp is a fall thru, the target offset is the beginning of the
   // next section.
@@ -331,14 +330,15 @@ bool X86_64::relaxOnce(int pass) const {
           continue;
         assert(rel.addend == -4);
 
-        uint64_t v = sec->getRelocTargetVA(
-            sec->file, rel.type, rel.expr == R_RELAX_GOT_PC_NOPIC ? 0 : -4,
-            sec->getOutputSection()->addr + sec->outSecOff + rel.offset,
-            *rel.sym, rel.expr);
+        Relocation rel1 = rel;
+        rel1.addend = rel.expr == R_RELAX_GOT_PC_NOPIC ? 0 : -4;
+        uint64_t v = sec->getRelocTargetVA(ctx, rel1,
+                                           sec->getOutputSection()->addr +
+                                               sec->outSecOff + rel.offset);
         if (isInt<32>(v))
           continue;
         if (rel.sym->auxIdx == 0) {
-          rel.sym->allocateAux();
+          rel.sym->allocateAux(ctx);
           addGotEntry(ctx, *rel.sym);
           changed = true;
         }
@@ -417,7 +417,7 @@ void X86_64::writeGotPltHeader(uint8_t *buf) const {
 
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // See comments in X86::writeGotPlt.
-  write64le(buf, s.getPltVA() + 6);
+  write64le(buf, s.getPltVA(ctx) + 6);
 }
 
 void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
@@ -448,8 +448,8 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  write32le(buf + 2, sym.getGotPltVA() - pltEntryAddr - 6);
-  write32le(buf + 7, sym.getPltIdx());
+  write32le(buf + 2, sym.getGotPltVA(ctx) - pltEntryAddr - 6);
+  write32le(buf + 7, sym.getPltIdx(ctx));
   write32le(buf + 12, ctx.in.plt->getVA() - pltEntryAddr - 16);
 }
 
@@ -1059,9 +1059,7 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     if (rel.expr == R_NONE) // See deleteFallThruJmpInsn
       continue;
     uint8_t *loc = buf + rel.offset;
-    const uint64_t val =
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr);
+    const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
     relocate(loc, rel, val);
   }
   if (sec.jumpInstrMod) {
@@ -1087,8 +1085,8 @@ public:
 } // namespace
 
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  uint64_t va =
-      ctx.in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
+  uint64_t va = ctx.in.ibtPlt->getVA() + IBTPltHeaderSize +
+                s.getPltIdx(ctx) * pltEntrySize;
   write64le(buf, va);
 }
 
@@ -1100,7 +1098,7 @@ void IntelIBT::writePlt(uint8_t *buf, const Symbol &sym,
       0x66, 0x0f, 0x1f, 0x44, 0, 0, // nop
   };
   memcpy(buf, Inst, sizeof(Inst));
-  write32le(buf + 6, sym.getGotPltVA() - pltEntryAddr - 10);
+  write32le(buf + 6, sym.getGotPltVA(ctx) - pltEntryAddr - 10);
 }
 
 void IntelIBT::writeIBTPlt(uint8_t *buf, size_t numEntries) const {
@@ -1158,7 +1156,7 @@ Retpoline::Retpoline(Ctx &ctx) : X86_64(ctx) {
 }
 
 void Retpoline::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  write64le(buf, s.getPltVA() + 17);
+  write64le(buf, s.getPltVA(ctx) + 17);
 }
 
 void Retpoline::writePltHeader(uint8_t *buf) const {
@@ -1197,10 +1195,10 @@ void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
 
   uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
 
-  write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
+  write32le(buf + 3, sym.getGotPltVA(ctx) - pltEntryAddr - 7);
   write32le(buf + 8, -off - 12 + 32);
   write32le(buf + 13, -off - 17 + 18);
-  write32le(buf + 18, sym.getPltIdx());
+  write32le(buf + 18, sym.getPltIdx(ctx));
   write32le(buf + 23, -off - 27);
 }
 
@@ -1235,7 +1233,7 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, insn, sizeof(insn));
 
-  write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
+  write32le(buf + 3, sym.getGotPltVA(ctx) - pltEntryAddr - 7);
   write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
 }
 

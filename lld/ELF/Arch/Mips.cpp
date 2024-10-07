@@ -70,7 +70,7 @@ template <class ELFT> MIPS<ELFT>::MIPS(Ctx &ctx) : TargetInfo(ctx) {
 }
 
 template <class ELFT> uint32_t MIPS<ELFT>::calcEFlags() const {
-  return calcMipsEFlags<ELFT>();
+  return calcMipsEFlags<ELFT>(ctx);
 }
 
 template <class ELFT>
@@ -206,7 +206,7 @@ template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType type) const {
 template <class ELFT>
 void MIPS<ELFT>::writeGotPlt(uint8_t *buf, const Symbol &) const {
   uint64_t va = ctx.in.plt->getVA();
-  if (isMicroMips())
+  if (isMicroMips(ctx))
     va |= 1;
   write32(buf, va);
 }
@@ -256,20 +256,20 @@ static void writeMicroRelocation16(uint8_t *loc, uint64_t v, uint8_t bitsSize,
 }
 
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
-  if (isMicroMips()) {
+  if (isMicroMips(ctx)) {
     uint64_t gotPlt = ctx.in.gotPlt->getVA();
     uint64_t plt = ctx.in.plt->getVA();
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(buf, 0, pltHeaderSize);
 
-    write16(buf, isMipsR6() ? 0x7860 : 0x7980);  // addiupc v1, (GOTPLT) - .
+    write16(buf, isMipsR6(ctx) ? 0x7860 : 0x7980); // addiupc v1, (GOTPLT) - .
     write16(buf + 4, 0xff23);    // lw      $25, 0($3)
     write16(buf + 8, 0x0535);    // subu16  $2,  $2, $3
     write16(buf + 10, 0x2525);   // srl16   $2,  $2, 2
     write16(buf + 12, 0x3302);   // addiu   $24, $2, -2
     write16(buf + 14, 0xfffe);
     write16(buf + 16, 0x0dff);   // move    $15, $31
-    if (isMipsR6()) {
+    if (isMipsR6(ctx)) {
       write16(buf + 18, 0x0f83); // move    $28, $3
       write16(buf + 20, 0x472b); // jalrc   $25
       write16(buf + 22, 0x0c00); // nop
@@ -319,12 +319,12 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
 template <class ELFT>
 void MIPS<ELFT>::writePlt(uint8_t *buf, const Symbol &sym,
                           uint64_t pltEntryAddr) const {
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
-  if (isMicroMips()) {
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
+  if (isMicroMips(ctx)) {
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(buf, 0, pltEntrySize);
 
-    if (isMipsR6()) {
+    if (isMipsR6(ctx)) {
       write16(buf, 0x7840);      // addiupc $2, (GOTPLT) - .
       write16(buf + 4, 0xff22);  // lw $25, 0($2)
       write16(buf + 8, 0x0f02);  // move $24, $2
@@ -341,8 +341,9 @@ void MIPS<ELFT>::writePlt(uint8_t *buf, const Symbol &sym,
   }
 
   uint32_t loadInst = ELFT::Is64Bits ? 0xddf90000 : 0x8df90000;
-  uint32_t jrInst = isMipsR6() ? (ctx.arg.zHazardplt ? 0x03200409 : 0x03200009)
-                               : (ctx.arg.zHazardplt ? 0x03200408 : 0x03200008);
+  uint32_t jrInst = isMipsR6(ctx)
+                        ? (ctx.arg.zHazardplt ? 0x03200409 : 0x03200009)
+                        : (ctx.arg.zHazardplt ? 0x03200408 : 0x03200008);
   uint32_t addInst = ELFT::Is64Bits ? 0x65f80000 : 0x25f80000;
 
   write32(buf, 0x3c0f0000);     // lui   $15, %hi(.got.plt entry)

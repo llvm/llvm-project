@@ -48,9 +48,6 @@ extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
 extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
-bool InputFile::isInGroup;
-uint32_t InputFile::nextGroupId;
-
 // Returns "<internal>", "foo.a(bar.o)" or "baz.o".
 std::string lld::toString(const InputFile *f) {
   static std::mutex mu;
@@ -206,14 +203,14 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 }
 
 InputFile::InputFile(Kind k, MemoryBufferRef m)
-    : mb(m), groupId(nextGroupId), fileKind(k) {
+    : mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {
   // All files within the same --{start,end}-group get the same group ID.
   // Otherwise, a new file will get a new group ID.
-  if (!isInGroup)
-    ++nextGroupId;
+  if (!ctx.driver.isInGroup)
+    ++ctx.driver.nextGroupId;
 }
 
-std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
+std::optional<MemoryBufferRef> elf::readFile(Ctx &ctx, StringRef path) {
   llvm::TimeTraceScope timeScope("Load input files", path);
 
   // The --chroot option changes our virtual root directory.
@@ -272,7 +269,7 @@ static bool isCompatible(Ctx &ctx, InputFile *file) {
   if (file->ekind == ctx.arg.ekind && file->emachine == ctx.arg.emachine) {
     if (ctx.arg.emachine != EM_MIPS)
       return true;
-    if (isMipsN32Abi(file) == ctx.arg.mipsN32Abi)
+    if (isMipsN32Abi(ctx, *file) == ctx.arg.mipsN32Abi)
       return true;
   }
 
@@ -423,9 +420,9 @@ static void addDependentLibrary(Ctx &ctx, StringRef specifier,
                                 const InputFile *f) {
   if (!ctx.arg.dependentLibraries)
     return;
-  if (std::optional<std::string> s = searchLibraryBaseName(specifier))
+  if (std::optional<std::string> s = searchLibraryBaseName(ctx, specifier))
     ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
-  else if (std::optional<std::string> s = findFromSearchPaths(specifier))
+  else if (std::optional<std::string> s = findFromSearchPaths(ctx, specifier))
     ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
   else if (fs::exists(specifier))
     ctx.driver.addFile(specifier, /*withLOption=*/false);
@@ -1359,7 +1356,7 @@ static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
 
 unsigned SharedFile::vernauxNum;
 
-SharedFile::SharedFile(MemoryBufferRef m, StringRef defaultSoName)
+SharedFile::SharedFile(Ctx &ctx, MemoryBufferRef m, StringRef defaultSoName)
     : ELFFileBase(SharedKind, getELFKind(m, ""), m), soName(defaultSoName),
       isNeeded(!ctx.arg.asNeeded) {}
 
@@ -1698,7 +1695,7 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
+BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(BitcodeKind, mb) {
   this->archiveName = archiveName;
@@ -1830,7 +1827,7 @@ void BitcodeFile::postParse() {
     int c = irSym.getComdatIndex();
     if (c != -1 && !keptComdats[c])
       continue;
-    reportDuplicate(sym, this, nullptr, 0);
+    reportDuplicate(ctx, sym, this, nullptr, 0);
   }
 }
 
@@ -1903,10 +1900,11 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   // resolve() may trigger this->extract() if an existing symbol is an undefined
   // symbol. If that happens, this function has served its purpose, and we can
   // exit from the loop early.
+  auto *symtab = ctx.symtab.get();
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
-    symbols[i] = ctx.symtab->insert(CHECK(eSyms[i].getName(stringTable), this));
+    symbols[i] = symtab->insert(CHECK(eSyms[i].getName(stringTable), this));
     symbols[i]->resolve(LazySymbol{*this});
     if (!lazy)
       break;

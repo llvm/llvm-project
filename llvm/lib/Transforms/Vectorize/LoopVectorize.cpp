@@ -6196,11 +6196,12 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
           getScalarizationOverhead(CI, VF, CostKind);
 
       ScalarCost = ScalarCallCost * VF.getKnownMinValue() + ScalarizationCost;
-      // Honor ForcedScalars decision.
+      // Honor ForcedScalars and UniformAfterVectorization decisions.
       // TODO: For calls, it might still be more profitable to widen. Use
       // VPlan-based cost model to compare different options.
-      if (VF.isVector() && ForcedScalar != ForcedScalars.end() &&
-          ForcedScalar->second.contains(CI)) {
+      if (VF.isVector() && ((ForcedScalar != ForcedScalars.end() &&
+                             ForcedScalar->second.contains(CI)) ||
+                            isUniformAfterVectorization(CI, VF))) {
         setCallWideningDecision(CI, VF, CM_Scalarize, nullptr,
                                 Intrinsic::not_intrinsic, std::nullopt,
                                 ScalarCost);
@@ -9069,8 +9070,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  VPlanTransforms::createInterleaveGroups(InterleaveGroups, RecipeBuilder,
-                                          CM.isScalarEpilogueAllowed());
+  VPlanTransforms::createInterleaveGroups(
+      *Plan, InterleaveGroups, RecipeBuilder, CM.isScalarEpilogueAllowed());
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);

@@ -151,7 +151,8 @@ uint64_t Patch657417Section::getBranchAddr() const {
 
 // Given a branch instruction instr at sourceAddr work out its destination
 // address. This is only used when the branch instruction has no relocation.
-static uint64_t getThumbDestAddr(uint64_t sourceAddr, uint32_t instr) {
+static uint64_t getThumbDestAddr(Ctx &ctx, uint64_t sourceAddr,
+                                 uint32_t instr) {
   uint8_t buf[4];
   write16le(buf, instr >> 16);
   write16le(buf + 2, instr & 0x0000ffff);
@@ -191,7 +192,7 @@ void Patch657417Section::writeTo(Ctx &ctx, uint8_t *buf) {
   // Get the destination offset from the addend in the branch instruction.
   // We cannot use the instruction in the patchee section as this will have
   // been altered to point to us!
-  uint64_t s = getThumbDestAddr(getBranchAddr(), instr);
+  uint64_t s = getThumbDestAddr(ctx, getBranchAddr(), instr);
   // A BLX changes the state of the branch in the patch to Arm state, which
   // has a PC Bias of 8, whereas in all other cases the branch is in Thumb
   // state with a PC Bias of 4.
@@ -204,8 +205,9 @@ void Patch657417Section::writeTo(Ctx &ctx, uint8_t *buf) {
 // Given a branch instruction spanning two 4KiB regions, at offset off from the
 // start of isec, return true if the destination of the branch is within the
 // first of the two 4Kib regions.
-static bool branchDestInFirstRegion(const InputSection *isec, uint64_t off,
-                                    uint32_t instr, const Relocation *r) {
+static bool branchDestInFirstRegion(Ctx &ctx, const InputSection *isec,
+                                    uint64_t off, uint32_t instr,
+                                    const Relocation *r) {
   uint64_t sourceAddr = isec->getVA(0) + off;
   assert((sourceAddr & 0xfff) == 0xffe);
   uint64_t destAddr;
@@ -213,13 +215,14 @@ static bool branchDestInFirstRegion(const InputSection *isec, uint64_t off,
   // find the destination address as the branch could be indirected via a thunk
   // or the PLT.
   if (r) {
-    uint64_t dst = (r->expr == R_PLT_PC) ? r->sym->getPltVA() : r->sym->getVA();
+    uint64_t dst =
+        (r->expr == R_PLT_PC) ? r->sym->getPltVA(ctx) : r->sym->getVA();
     // Account for Thumb PC bias, usually cancelled to 0 by addend of -4.
     destAddr = dst + r->addend + 4;
   } else {
     // If there is no relocation, we must have an intra-section branch
     // We must extract the offset from the addend manually.
-    destAddr = getThumbDestAddr(sourceAddr, instr);
+    destAddr = getThumbDestAddr(ctx, sourceAddr, instr);
   }
 
   return (destAddr & 0xfffff000) == (sourceAddr & 0xfffff000);
@@ -227,7 +230,7 @@ static bool branchDestInFirstRegion(const InputSection *isec, uint64_t off,
 
 // Return true if a branch can reach a patch section placed after isec.
 // The Bcc.w instruction has a range of 1 MiB, all others have 16 MiB.
-static bool patchInRange(const InputSection *isec, uint64_t off,
+static bool patchInRange(Ctx &ctx, const InputSection *isec, uint64_t off,
                          uint32_t instr) {
 
   // We need the branch at source to reach a patch section placed immediately
@@ -289,8 +292,8 @@ static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
       });
       if (relIt != isec->relocs().end())
         scanRes.rel = &(*relIt);
-      if (branchDestInFirstRegion(isec, branchOff, instr2, scanRes.rel)) {
-        if (patchInRange(isec, branchOff, instr2)) {
+      if (branchDestInFirstRegion(ctx, isec, branchOff, instr2, scanRes.rel)) {
+        if (patchInRange(ctx, isec, branchOff, instr2)) {
           scanRes.off = branchOff;
           scanRes.instr = instr2;
         } else {
@@ -441,8 +444,9 @@ static void implementPatch(ScanResult sr, InputSection *isec,
       // The final target of the branch may be ARM or Thumb, if the target
       // is ARM then we write the patch in ARM state to avoid a state change
       // Thunk from the patch to the target.
-      uint64_t dstSymAddr = (sr.rel->expr == R_PLT_PC) ? sr.rel->sym->getPltVA()
-                                                       : sr.rel->sym->getVA();
+      uint64_t dstSymAddr = (sr.rel->expr == R_PLT_PC)
+                                ? sr.rel->sym->getPltVA(ctx)
+                                : sr.rel->sym->getVA();
       destIsARM = (dstSymAddr & 1) == 0;
     }
     psec = make<Patch657417Section>(isec, sr.off, sr.instr, destIsARM);
