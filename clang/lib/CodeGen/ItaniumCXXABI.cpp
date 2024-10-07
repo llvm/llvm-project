@@ -3532,6 +3532,7 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
       Name, Init->getType(), Linkage, Align.getAsAlign());
 
   GV->setInitializer(Init);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   return GV;
 }

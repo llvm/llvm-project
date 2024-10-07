@@ -12,8 +12,8 @@
 // CHECK-NEXT: V _ZTV1A
 // CHECK-NEXT: V _ZTV1B
 
-// CHECK-IR-DAG: _ZTS1B = linkonce_odr constant
-// CHECK-IR-DAG: _ZTS1A = linkonce_odr constant
+// CHECK-IR-DAG: _ZTS1B = linkonce_odr unnamed_addr constant
+// CHECK-IR-DAG: _ZTS1A = linkonce_odr unnamed_addr constant
 // CHECK-IR-DAG: _ZTV1B = linkonce_odr unnamed_addr constant
 // CHECK-IR-DAG: _ZTI1A = linkonce_odr constant
 // CHECK-IR-DAG: _ZTI1B = linkonce_odr constant
