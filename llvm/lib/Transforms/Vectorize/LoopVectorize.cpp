@@ -8713,7 +8713,7 @@ static SetVector<VPIRInstruction *> collectUsersInExitBlock(
 // Add exit values to \p Plan. Extracts are added for each entry in \p
 // ExitUsersToFix if needed and their operands are updated.
 static void
-addUsersInExitBlock(VPlan &Plan, LLVMContext &Ctx,
+addUsersInExitBlock(VPlan &Plan,
                     const SetVector<VPIRInstruction *> &ExitUsersToFix) {
   if (ExitUsersToFix.empty())
     return;
@@ -8730,6 +8730,7 @@ addUsersInExitBlock(VPlan &Plan, LLVMContext &Ctx,
     if (V->isLiveIn())
       continue;
 
+    LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
     VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
                                   {V, Plan.getOrAddLiveIn(ConstantInt::get(
                                           IntegerType::get(Ctx, 32), 1))});
@@ -8895,10 +8896,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  Type *WidestIndTy = Legal->getWidestInductionType();
-  VPlanPtr Plan =
-      VPlan::createInitialVPlan(WidestIndTy, PSE, RequiresScalarEpilogueCheck,
-                                CM.foldTailByMasking(), OrigLoop);
+  VPlanPtr Plan = VPlan::createInitialVPlan(Legal->getWidestInductionType(),
+                                            PSE, RequiresScalarEpilogueCheck,
+                                            CM.foldTailByMasking(), OrigLoop);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8913,7 +8913,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // When not folding the tail, we know that the induction increment will not
   // overflow.
   bool HasNUW = Style == TailFoldingStyle::None;
-  addCanonicalIVRecipes(*Plan, WidestIndTy, HasNUW, DL);
+  addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW, DL);
 
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, Legal, CM, PSE, Builder);
 
@@ -9045,7 +9045,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   SetVector<VPIRInstruction *> ExitUsersToFix = collectUsersInExitBlock(
       OrigLoop, RecipeBuilder, *Plan, Legal->getInductionVars());
   addLiveOutsForFirstOrderRecurrences(*Plan, ExitUsersToFix);
-  addUsersInExitBlock(*Plan, WidestIndTy->getContext(), ExitUsersToFix);
+  addUsersInExitBlock(*Plan, ExitUsersToFix);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
