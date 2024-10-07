@@ -1474,8 +1474,8 @@ bool AMDGPUInstructionSelector::selectRelocConstant(MachineInstr &I) const {
   Module *M = MF->getFunction().getParent();
   const MDNode *Metadata = I.getOperand(2).getMetadata();
   auto SymbolName = cast<MDString>(Metadata->getOperand(0))->getString();
-  auto RelocSymbol = cast<GlobalVariable>(
-    M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
+  auto *RelocSymbol = cast<GlobalVariable>(
+      M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
 
   MachineBasicBlock *BB = I.getParent();
   BuildMI(*BB, &I, I.getDebugLoc(),
@@ -1770,6 +1770,14 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
     .cloneMemRefs(MI);
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
+bool AMDGPUInstructionSelector::selectInitWholeWave(MachineInstr &MI) const {
+  MachineFunction *MF = MI.getParent()->getParent();
+  SIMachineFunctionInfo *MFInfo = MF->getInfo<SIMachineFunctionInfo>();
+
+  MFInfo->setInitWholeWave();
+  return selectImpl(MI, *CoverageInfo);
 }
 
 bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
@@ -2099,6 +2107,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, true);
   case Intrinsic::amdgcn_ds_consume:
     return selectDSAppendConsume(I, false);
+  case Intrinsic::amdgcn_init_whole_wave:
+    return selectInitWholeWave(I);
   case Intrinsic::amdgcn_s_barrier:
     return selectSBarrier(I);
   case Intrinsic::amdgcn_raw_buffer_load_lds:
@@ -4366,8 +4376,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
         // single VALU instruction to materialize zero. Otherwise it is less
         // instructions to perform VALU adds with immediates or inline literals.
         unsigned NumLiterals =
-            !TII.isInlineConstant(APInt(32, ConstOffset & 0xffffffff)) +
-            !TII.isInlineConstant(APInt(32, ConstOffset >> 32));
+            !TII.isInlineConstant(APInt(32, Lo_32(ConstOffset))) +
+            !TII.isInlineConstant(APInt(32, Hi_32(ConstOffset)));
         if (STI.getConstantBusLimit(AMDGPU::V_ADD_U32_e64) > NumLiterals)
           return std::nullopt;
       }

@@ -21,7 +21,7 @@ using namespace lld::elf;
 namespace {
 class SPARCV9 final : public TargetInfo {
 public:
-  SPARCV9();
+  SPARCV9(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -31,7 +31,7 @@ public:
 };
 } // namespace
 
-SPARCV9::SPARCV9() {
+SPARCV9::SPARCV9(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_SPARC_COPY;
   gotRel = R_SPARC_GLOB_DAT;
   pltRel = R_SPARC_JMP_SLOT;
@@ -78,7 +78,7 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
   case R_SPARC_TLS_LE_LOX10:
     return R_TPREL;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -188,12 +188,9 @@ void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
   };
   memcpy(buf, pltData, sizeof(pltData));
 
-  uint64_t off = pltEntryAddr - in.plt->getVA();
+  uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
   relocateNoSym(buf, R_SPARC_22, off);
   relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
 }
 
-TargetInfo *elf::getSPARCV9TargetInfo() {
-  static SPARCV9 target;
-  return &target;
-}
+void elf::setSPARCV9TargetInfo(Ctx &ctx) { ctx.target.reset(new SPARCV9(ctx)); }

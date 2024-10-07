@@ -13,10 +13,11 @@
 //   constexpr bool cmp_greater_equal(T t, U u) noexcept; // C++20
 
 #include <utility>
+#include <cassert>
 #include <limits>
 #include <numeric>
 #include <tuple>
-#include <cassert>
+#include <type_traits>
 
 #include "test_macros.h"
 

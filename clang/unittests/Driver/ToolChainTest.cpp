@@ -14,6 +14,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -572,6 +573,26 @@ TEST(CompilerInvocation, SplitSwarfSingleCrash) {
   CreateInvocationOptions CIOpts;
   std::unique_ptr<CompilerInvocation> CI = createInvocation(Args, CIOpts);
   EXPECT_TRUE(CI); // no-crash
+}
+
+TEST(ToolChainTest, UEFICallingConventionTest) {
+  clang::CompilerInstance compiler;
+  compiler.createDiagnostics();
+
+  std::string TrStr = "x86_64-unknown-uefi";
+  llvm::Triple Tr(TrStr);
+  Tr.setOS(llvm::Triple::OSType::UEFI);
+  Tr.setVendor(llvm::Triple::VendorType::UnknownVendor);
+  Tr.setEnvironment(llvm::Triple::EnvironmentType::UnknownEnvironment);
+  Tr.setArch(llvm::Triple::ArchType::x86_64);
+
+  compiler.getTargetOpts().Triple = Tr.getTriple();
+  compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
+      compiler.getDiagnostics(),
+      std::make_shared<clang::TargetOptions>(compiler.getTargetOpts())));
+
+  EXPECT_EQ(compiler.getTarget().getCallingConvKind(true),
+            TargetInfo::CallingConvKind::CCK_MicrosoftWin64);
 }
 
 TEST(GetDriverMode, PrefersLastDriverMode) {

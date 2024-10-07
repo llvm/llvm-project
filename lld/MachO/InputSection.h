@@ -354,6 +354,7 @@ constexpr const char objcMethname[] = "__objc_methname";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";
 constexpr const char objcNonLazyClassList[] = "__objc_nlclslist";
 constexpr const char objcProtoList[] = "__objc_protolist";
+constexpr const char outlinedHashTree[] = "__llvm_outline";
 constexpr const char pageZero[] = "__pagezero";
 constexpr const char pointers[] = "__pointers";
 constexpr const char rebase[] = "__rebase";

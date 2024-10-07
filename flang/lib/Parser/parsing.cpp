@@ -42,9 +42,9 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     sourceFile =
         allSources.Open(path, fileError, "."s /*prepend to search path*/);
   }
-  if (!fileError.str().empty()) {
+  if (!buf.empty()) {
     ProvenanceRange range{allSources.AddCompilerInsertion(path)};
-    messages_.Say(range, "%s"_err_en_US, fileError.str());
+    messages_.Say(range, "%s"_err_en_US, buf);
     return sourceFile;
   }
   CHECK(sourceFile);
@@ -75,6 +75,8 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       messages_, *currentCooked_, preprocessor_, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
+      .set_expandIncludeLines(!options.prescanAndReformat ||
+          options.expandIncludeLinesInPreprocessedOutput)
       .AddCompilerDirectiveSentinel("dir$");
   if (options.features.IsEnabled(LanguageFeature::OpenACC)) {
     prescanner.AddCompilerDirectiveSentinel("$acc");

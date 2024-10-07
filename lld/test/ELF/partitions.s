@@ -3,7 +3,7 @@
 // RUN: ld.lld %t.o -o %t --export-dynamic --gc-sections -z max-page-size=65536
 // RUN: llvm-readelf -S -s %t | FileCheck %s
 
-// RUN: llvm-mc %s -o %t.o -filetype=obj --triple=aarch64
+// RUN: llvm-mc %s -o %t.o -filetype=obj --triple=aarch64 --crel
 // RUN: ld.lld %t.o -o %t --export-dynamic --gc-sections
 // RUN: llvm-readelf -S -s %t | FileCheck %s
 

@@ -30,7 +30,8 @@ public:
                      lldb::ThreadPlanSP thread_plan_sp,
                      const StructuredDataImpl &args_sp) override;
 
-  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+  llvm::SmallVector<AbstractMethodRequirement>
+  GetAbstractMethodRequirements() const override {
     return {};
   }
 

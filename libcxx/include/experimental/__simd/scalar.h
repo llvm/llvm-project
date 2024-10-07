@@ -11,9 +11,9 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
 
 #include <__assert>
+#include <__config>
 #include <__type_traits/integral_constant.h>
 #include <cstddef>
-#include <experimental/__config>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/traits.h>
 

@@ -46,6 +46,14 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcvttsh2si64:
   case X86::BI__builtin_ia32_vcvttsh2usi32:
   case X86::BI__builtin_ia32_vcvttsh2usi64:
+  case X86::BI__builtin_ia32_vcvttsd2sis32:
+  case X86::BI__builtin_ia32_vcvttsd2usis32:
+  case X86::BI__builtin_ia32_vcvttss2sis32:
+  case X86::BI__builtin_ia32_vcvttss2usis32:
+  case X86::BI__builtin_ia32_vcvttsd2sis64:
+  case X86::BI__builtin_ia32_vcvttsd2usis64:
+  case X86::BI__builtin_ia32_vcvttss2sis64:
+  case X86::BI__builtin_ia32_vcvttss2usis64:
     ArgNum = 1;
     break;
   case X86::BI__builtin_ia32_maxpd512:
@@ -434,6 +442,24 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcvt2ps2phx512_mask:
     ArgNum = 4;
     HasRC = true;
+    break;
+  case X86::BI__builtin_ia32_vcvttpd2dqs256_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2dqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2udqs256_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2udqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2qqs256_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2qqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2uqqs256_round_mask:
+  case X86::BI__builtin_ia32_vcvttpd2uqqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2dqs256_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2dqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2udqs256_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2udqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2qqs256_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2qqs512_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2uqqs256_round_mask:
+  case X86::BI__builtin_ia32_vcvttps2uqqs512_round_mask:
+    ArgNum = 3;
     break;
   }
 

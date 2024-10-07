@@ -190,6 +190,8 @@ void ObjFile::initializeECThunks() {
         ctx.symtab.addEntryThunk(getSymbol(entry->src), getSymbol(entry->dst));
         break;
       case Arm64ECThunkType::Exit:
+        ctx.symtab.addExitThunk(getSymbol(entry->src), getSymbol(entry->dst));
+        break;
       case Arm64ECThunkType::GuestExit:
         break;
       default:
@@ -1000,13 +1002,27 @@ void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
 }
 
 ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-    : InputFile(ctx, ImportKind, m), live(!ctx.config.doGC), thunkLive(live) {}
+    : InputFile(ctx, ImportKind, m), live(!ctx.config.doGC) {}
 
 MachineTypes ImportFile::getMachineType() const {
   uint16_t machine =
       reinterpret_cast<const coff_import_header *>(mb.getBufferStart())
           ->Machine;
   return MachineTypes(machine);
+}
+
+ImportThunkChunk *ImportFile::makeImportThunk() {
+  switch (hdr->Machine) {
+  case AMD64:
+    return make<ImportThunkChunkX64>(ctx, impSym);
+  case I386:
+    return make<ImportThunkChunkX86>(ctx, impSym);
+  case ARM64:
+    return make<ImportThunkChunkARM64>(ctx, impSym, ARM64);
+  case ARMNT:
+    return make<ImportThunkChunkARM>(ctx, impSym);
+  }
+  llvm_unreachable("unknown machine type");
 }
 
 void ImportFile::parse() {
@@ -1055,24 +1071,64 @@ void ImportFile::parse() {
   this->hdr = hdr;
   externalName = extName;
 
-  impSym = ctx.symtab.addImportData(impName, this);
+  bool isCode = hdr->getType() == llvm::COFF::IMPORT_CODE;
+
+  if (ctx.config.machine != ARM64EC) {
+    impSym = ctx.symtab.addImportData(impName, this, location);
+  } else {
+    // In addition to the regular IAT, ARM64EC also contains an auxiliary IAT,
+    // which holds addresses that are guaranteed to be callable directly from
+    // ARM64 code. Function symbol naming is swapped: __imp_ symbols refer to
+    // the auxiliary IAT, while __imp_aux_ symbols refer to the regular IAT. For
+    // data imports, the naming is reversed.
+    StringRef auxImpName = saver().save("__imp_aux_" + name);
+    if (isCode) {
+      impSym = ctx.symtab.addImportData(auxImpName, this, location);
+      impECSym = ctx.symtab.addImportData(impName, this, auxLocation);
+    } else {
+      impSym = ctx.symtab.addImportData(impName, this, location);
+      impECSym = ctx.symtab.addImportData(auxImpName, this, auxLocation);
+    }
+    if (!impECSym)
+      return;
+
+    StringRef auxImpCopyName = saver().save("__auximpcopy_" + name);
+    auxImpCopySym =
+        ctx.symtab.addImportData(auxImpCopyName, this, auxCopyLocation);
+    if (!auxImpCopySym)
+      return;
+  }
   // If this was a duplicate, we logged an error but may continue;
   // in this case, impSym is nullptr.
   if (!impSym)
     return;
 
   if (hdr->getType() == llvm::COFF::IMPORT_CONST)
-    static_cast<void>(ctx.symtab.addImportData(name, this));
+    static_cast<void>(ctx.symtab.addImportData(name, this, location));
 
   // If type is function, we need to create a thunk which jump to an
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
-  if (hdr->getType() == llvm::COFF::IMPORT_CODE) {
+  if (isCode) {
     if (ctx.config.machine != ARM64EC) {
-      thunkSym = ctx.symtab.addImportThunk(name, impSym, hdr->Machine);
+      thunkSym = ctx.symtab.addImportThunk(name, impSym, makeImportThunk());
     } else {
-      thunkSym = ctx.symtab.addImportThunk(name, impSym, AMD64);
-      // FIXME: Add aux IAT symbols.
+      thunkSym = ctx.symtab.addImportThunk(
+          name, impSym, make<ImportThunkChunkX64>(ctx, impSym));
+
+      if (std::optional<std::string> mangledName =
+              getArm64ECMangledFunctionName(name)) {
+        StringRef auxThunkName = saver().save(*mangledName);
+        auxThunkSym = ctx.symtab.addImportThunk(
+            auxThunkName, impECSym,
+            make<ImportThunkChunkARM64>(ctx, impECSym, ARM64EC));
+      }
+
+      StringRef impChkName = saver().save("__impchk_" + name);
+      impchkThunk = make<ImportThunkChunkARM64EC>(this);
+      impchkThunk->sym =
+          ctx.symtab.addImportThunk(impChkName, impSym, impchkThunk);
+      ctx.driver.pullArm64ECIcallHelper();
     }
   }
 }
