@@ -869,3 +869,86 @@ __m128 test_mm_xor_ps(__m128 A, __m128 B) {
   // CHECK: xor <4 x i32>
   return _mm_xor_ps(A, B);
 }
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+
+void test_constexpr() {
+  constexpr __m128 k1 {+1.0f,+0.0f,+2.0f,+4.0f};
+  constexpr __m128 k2 {+8.0f,+4.0f,+2.0f,+1.0f};
+  constexpr __m128 k3 {-4.0f,-5.0f,+6.0f,+7.0f};
+  constexpr __m128 k4 {+0.0f,-0.0f,-0.0f,+0.0f};
+
+  constexpr __m128 v_mm_set_ss = _mm_set_ss(1.0f);
+  static_assert(v_mm_set_ss[0] == +1.0f && v_mm_set_ss[1] == +0.0f && v_mm_set_ss[2] == +0.0f && v_mm_set_ss[3] == +0.0f);
+
+  constexpr __m128 v_mm_set1_ps = _mm_set1_ps(2.0f);
+  static_assert(v_mm_set1_ps[0] == +2.0f && v_mm_set1_ps[1] == +2.0f && v_mm_set1_ps[2] == +2.0f && v_mm_set1_ps[3] == +2.0f);
+
+  constexpr __m128 v_mm_set_ps1 = _mm_set_ps1(-2.0f);
+  static_assert(v_mm_set_ps1[0] == -2.0f && v_mm_set_ps1[1] == -2.0f && v_mm_set_ps1[2] == -2.0f && v_mm_set_ps1[3] == -2.0f);
+
+  constexpr __m128 v_mm_set_ps = _mm_set_ps(+0.0f, +1.0f, +2.0f, +3.0f);
+  static_assert(v_mm_set_ps[0] == +3.0f && v_mm_set_ps[1] == +2.0f && v_mm_set_ps[2] == +1.0f && v_mm_set_ps[3] == +0.0f);
+
+  constexpr __m128 v_mm_setr_ps = _mm_setr_ps(+0.0f, +1.0f, +2.0f, +3.0f);
+  static_assert(v_mm_setr_ps[0] == +0.0f && v_mm_setr_ps[1] == +1.0f && v_mm_setr_ps[2] == +2.0f && v_mm_setr_ps[3] == +3.0f);
+
+  constexpr __m128 v_mm_setzero_ps = _mm_setzero_ps();
+  static_assert(v_mm_setzero_ps[0] == +0.0f && v_mm_setzero_ps[1] == +0.0f && v_mm_setzero_ps[2] == +0.0f && v_mm_setzero_ps[3] == +0.0f);
+
+  constexpr __m128 v_mm_add_ss = _mm_add_ss(k1, k2);
+  static_assert(v_mm_add_ss[0] == +9.0f && v_mm_add_ss[1] == +0.0f && v_mm_add_ss[2] == +2.0f && v_mm_add_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_add_ps = _mm_add_ps(k1, k2);
+  static_assert(v_mm_add_ps[0] == +9.0f && v_mm_add_ps[1] == +4.0f && v_mm_add_ps[2] == +4.0f && v_mm_add_ps[3] == +5.0f);
+
+  constexpr __m128 v_mm_sub_ss = _mm_sub_ss(k1, k2);
+  static_assert(v_mm_sub_ss[0] == -7.0f && v_mm_sub_ss[1] == +0.0f && v_mm_sub_ss[2] == +2.0f && v_mm_sub_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_sub_ps = _mm_sub_ps(k1, k2);
+  static_assert(v_mm_sub_ps[0] == -7.0f && v_mm_sub_ps[1] == -4.0f && v_mm_sub_ps[2] == +0.0f && v_mm_sub_ps[3] == +3.0f);
+
+  constexpr __m128 v_mm_mul_ss = _mm_mul_ss(k1, k2);
+  static_assert(v_mm_mul_ss[0] == +8.0f && v_mm_mul_ss[1] == +0.0f && v_mm_mul_ss[2] == +2.0f && v_mm_mul_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_mul_ps = _mm_mul_ps(k1, k2);
+  static_assert(v_mm_mul_ps[0] == +8.0f && v_mm_mul_ps[1] == +0.0f && v_mm_mul_ps[2] == +4.0f && v_mm_mul_ps[3] == +4.0f);
+
+  constexpr __m128 v_mm_div_ss = _mm_div_ss(k1, k2);
+  static_assert(v_mm_div_ss[0] == +0.125f && v_mm_div_ss[1] == +0.0f && v_mm_div_ss[2] == +2.0f && v_mm_div_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_div_ps = _mm_div_ps(k1, k2);
+  static_assert(v_mm_div_ps[0] == +0.125f && v_mm_div_ps[1] == +0.0f && v_mm_div_ps[2] == +1.0f && v_mm_div_ps[3] == +4.0f);
+
+  constexpr __m128 v_mm_and_ps = _mm_and_ps(k3, k4);
+  static_assert(v_mm_and_ps[0] == +0.0f && v_mm_and_ps[1] == +0.0f && v_mm_and_ps[2] == +0.0f && v_mm_and_ps[3] == +0.0f);
+
+  constexpr __m128 v_mm_andnot_ps = _mm_andnot_ps(k3, k4);
+  static_assert(v_mm_andnot_ps[0] == +0.0f && v_mm_andnot_ps[1] == +0.0f && v_mm_andnot_ps[2] == +0.0f && v_mm_andnot_ps[3] == +0.0f);
+
+  constexpr __m128 v_mm_or_ps = _mm_or_ps(k3, k4);
+  static_assert(v_mm_or_ps[0] == -4.0f && v_mm_or_ps[1] == -5.0f && v_mm_or_ps[2] == -6.0f && v_mm_or_ps[3] == +7.0f);
+
+  constexpr __m128 v_mm_xor_ps = _mm_xor_ps(k3, k4);
+  static_assert(v_mm_xor_ps[0] == -4.0f && v_mm_xor_ps[1] == +5.0f && v_mm_xor_ps[2] == -6.0f && v_mm_xor_ps[3] == +7.0f);
+
+  constexpr __m128 v_mm_unpackhi_ps = _mm_unpackhi_ps(k1, k2);
+  static_assert(v_mm_unpackhi_ps[0] == +2.0f && v_mm_unpackhi_ps[1] == +2.0f && v_mm_unpackhi_ps[2] == +4.0f && v_mm_unpackhi_ps[3] == +1.0f);
+
+  constexpr __m128 v_mm_unpacklo_ps = _mm_unpacklo_ps(k1, k2);
+  static_assert(v_mm_unpacklo_ps[0] == +1.0f && v_mm_unpacklo_ps[1] == +8.0f && v_mm_unpacklo_ps[2] == +0.0f && v_mm_unpacklo_ps[3] == +4.0f);
+
+  constexpr __m128 v_mm_move_ss = _mm_move_ss(k1, k2);
+  static_assert(v_mm_move_ss[0] == +8.0f && v_mm_move_ss[1] == +0.0f && v_mm_move_ss[2] == +2.0f && v_mm_move_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_movehl_ps = _mm_movehl_ps(k1, k2);
+  static_assert(v_mm_movehl_ps[0] == +2.0f && v_mm_movehl_ps[1] == +1.0f && v_mm_movehl_ps[2] == +2.0f && v_mm_movehl_ps[3] == +4.0f);
+
+  constexpr __m128 v_mm_movelh_ps = _mm_movelh_ps(k1, k2);
+  static_assert(v_mm_movelh_ps[0] == +1.0f && v_mm_movelh_ps[1] == +0.0f && v_mm_movelh_ps[2] == +8.0f && v_mm_movelh_ps[3] == +4.0f);
+
+  static_assert(_mm_cvtss_f32(k2) == +8.0f);
+}
+
+#endif
