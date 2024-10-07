@@ -89,10 +89,26 @@ private:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __bounded_iter(_Iterator __current, _Iterator __begin, _Iterator __end)
       : __current_(__current), __begin_(__begin), __end_(__end) {
+    // These are internal checks rather than hardening checks because the STL container is expected to ensure they are
+    // in order.
     _LIBCPP_ASSERT_INTERNAL(
         __begin <= __current, "__bounded_iter(current, begin, end): current and begin are inconsistent");
     _LIBCPP_ASSERT_INTERNAL(
         __current <= __end, "__bounded_iter(current, begin, end): current and end are inconsistent");
+
+    // However, this order is important to help the compiler reason about bounds checks. For example, `std::vector` sets
+    // `__end_ptr` to the capacity, not the true container end. To translate container-end fenceposts into hardening-end
+    // fenceposts, we must know that container-end <= hardening-end. `std::__to_address` is needed because `_Iterator`
+    // may be wrapped type, such that `operator<=` has side effects.
+    pointer __begin_ptr   = std::__to_address(__begin);
+    pointer __current_ptr = std::__to_address(__current);
+    pointer __end_ptr     = std::__to_address(__end);
+    _LIBCPP_ASSUME(__begin_ptr <= __current_ptr);
+    _LIBCPP_ASSUME(__current_ptr <= __end_ptr);
+    // Silence warnings when assumptions are disabled.
+    (void)__begin_ptr;
+    (void)__current_ptr;
+    (void)__end_ptr;
   }
 
   template <class _It>

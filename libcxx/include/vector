@@ -850,6 +850,10 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator __make_iter(pointer __p) _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
+    // `__bounded_iter` will tell the compiler that `__p` is bounded by `__begin_` and `__end_cap`, but nothing a priori
+    // relates `__p` to `__end_`.
+    _LIBCPP_ASSUME(__p <= this->__end_);
+
     // Bound the iterator according to the capacity, rather than the size.
     //
     // Vector guarantees that iterators stay valid as long as no reallocation occurs even if new elements are inserted
@@ -870,7 +874,11 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(const_pointer __p) const _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
-    // Bound the iterator according to the capacity, rather than the size.
+    // `__bounded_iter` will tell the compiler that `__p` is bounded by `__begin_` and `__end_cap`, but nothing a priori
+    // relates `__p` to `__end_`.
+    _LIBCPP_ASSUME(__p <= this->__end_);
+
+    // Bound the iterator according to the capacity, rather than the size. See above.
     return std::__make_bounded_iter(
         std::__wrap_iter<const_pointer>(__p),
         std::__wrap_iter<const_pointer>(this->__begin_),
