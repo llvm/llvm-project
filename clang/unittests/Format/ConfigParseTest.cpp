@@ -300,9 +300,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 #define CHECK_ALIGN_CONSECUTIVE(FIELD)                                         \
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
-    CHECK_PARSE(                                                               \
-        #FIELD ": None", FIELD,                                                \
-        FormatStyle::AlignConsecutiveStyle({}));                               \
+    CHECK_PARSE(#FIELD ": None", FIELD,                                        \
+                FormatStyle::AlignConsecutiveStyle({}));                       \
     CHECK_PARSE(                                                               \
         #FIELD ": Consecutive", FIELD,                                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -325,9 +324,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
              /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     /* For backwards compability, false / true should still parse */           \
-    CHECK_PARSE(                                                               \
-        #FIELD ": false", FIELD,                                               \
-        FormatStyle::AlignConsecutiveStyle({}));                               \
+    CHECK_PARSE(#FIELD ": false", FIELD,                                       \
+                FormatStyle::AlignConsecutiveStyle({}));                       \
     CHECK_PARSE(                                                               \
         #FIELD ": true", FIELD,                                                \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -340,8 +338,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossEmptyLines);                          \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossComments);                            \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignCompound);                             \
-    CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionDeclarations);                 \
+    CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
   } while (false)
 
   CHECK_ALIGN_CONSECUTIVE(AlignConsecutiveAssignments);
