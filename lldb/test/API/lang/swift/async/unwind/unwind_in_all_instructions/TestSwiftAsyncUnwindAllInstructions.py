@@ -131,4 +131,4 @@ class TestCase(lldbtest.TestBase):
         # have some sanity check that we have hit at least a decent chunk of
         # them.
         breakpoints_not_hit = len(breakpoints)
-        self.assertGreater(0.10, breakpoints_not_hit / num_breakpoints)
+        self.assertLess(breakpoints_not_hit / num_breakpoints, 0.10)
