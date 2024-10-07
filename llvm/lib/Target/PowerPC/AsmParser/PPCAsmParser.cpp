@@ -1296,7 +1296,7 @@ MCRegister PPCAsmParser::matchRegisterName(int64_t &IntVal) {
     getParser().Lex(); // Eat the '%'.
 
   if (!getParser().getTok().is(AsmToken::Identifier))
-    return PPC::NoRegister;
+    return MCRegister();
 
   MCRegister RegNo;
   StringRef Name = getParser().getTok().getString();
@@ -1346,7 +1346,7 @@ MCRegister PPCAsmParser::matchRegisterName(int64_t &IntVal) {
              !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = DMRRegs[IntVal];
   } else
-    return PPC::NoRegister;
+    return MCRegister();
 
   getParser().Lex();
   return RegNo;
