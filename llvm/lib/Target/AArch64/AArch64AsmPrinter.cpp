@@ -157,6 +157,9 @@ public:
                                           bool ShouldTrap,
                                           const MCSymbol *OnFailure);
 
+  // Check authenticated LR before tail calling.
+  void emitPtrauthTailCallHardening(const MachineInstr *TC);
+
   // Emit the sequence for AUT or AUTPAC.
   void emitPtrauthAuthResign(const MachineInstr *MI);
 
@@ -1891,6 +1894,30 @@ void AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue(
   OutStreamer->emitLabel(SuccessSym);
 }
 
+// With Pointer Authentication, it may be needed to explicitly check the
+// authenticated value in LR before performing a tail call.
+// Otherwise, the callee may re-sign the invalid return address,
+// introducing a signing oracle.
+void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
+  if (!AArch64FI->shouldSignReturnAddress(*MF))
+    return;
+
+  auto LRCheckMethod = STI->getAuthenticatedLRCheckMethod(*MF);
+  if (LRCheckMethod == AArch64PAuth::AuthCheckMethod::None)
+    return;
+
+  const AArch64RegisterInfo *TRI = STI->getRegisterInfo();
+  Register ScratchReg =
+      TC->readsRegister(AArch64::X16, TRI) ? AArch64::X17 : AArch64::X16;
+  assert(!TC->readsRegister(ScratchReg, TRI) &&
+         "Neither x16 nor x17 is available as a scratch register");
+  AArch64PACKey::ID Key =
+      AArch64FI->shouldSignWithBKey() ? AArch64PACKey::IB : AArch64PACKey::IA;
+  emitPtrauthCheckAuthenticatedValue(
+      AArch64::LR, ScratchReg, Key, LRCheckMethod,
+      /*ShouldTrap=*/true, /*OnFailure=*/nullptr);
+}
+
 void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
 
@@ -2443,27 +2470,6 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     OutStreamer->emitLabel(LOHLabel);
   }
 
-  // With Pointer Authentication, it may be needed to explicitly check the
-  // authenticated value in LR when performing a tail call.
-  // Otherwise, the callee may re-sign the invalid return address,
-  // introducing a signing oracle.
-  auto CheckLRInTailCall = [this](Register CallDestinationReg) {
-    if (!AArch64FI->shouldSignReturnAddress(*MF))
-      return;
-
-    auto LRCheckMethod = STI->getAuthenticatedLRCheckMethod(*MF);
-    if (LRCheckMethod == AArch64PAuth::AuthCheckMethod::None)
-      return;
-
-    Register ScratchReg =
-        CallDestinationReg == AArch64::X16 ? AArch64::X17 : AArch64::X16;
-    AArch64PACKey::ID Key =
-        AArch64FI->shouldSignWithBKey() ? AArch64PACKey::IB : AArch64PACKey::IA;
-    emitPtrauthCheckAuthenticatedValue(
-        AArch64::LR, ScratchReg, Key, LRCheckMethod,
-        /*ShouldTrap=*/true, /*OnFailure=*/nullptr);
-  };
-
   AArch64TargetStreamer *TS =
     static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
   // Do any manual lowerings.
@@ -2614,7 +2620,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                               ? AArch64::X17
                               : AArch64::X16;
 
-    CheckLRInTailCall(MI->getOperand(0).getReg());
+    emitPtrauthTailCallHardening(MI);
 
     unsigned DiscReg = AddrDisc;
     if (Disc) {
@@ -2646,7 +2652,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::TCRETURNrix17:
   case AArch64::TCRETURNrinotx16:
   case AArch64::TCRETURNriALL: {
-    CheckLRInTailCall(MI->getOperand(0).getReg());
+    emitPtrauthTailCallHardening(MI);
 
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
@@ -2655,7 +2661,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case AArch64::TCRETURNdi: {
-    CheckLRInTailCall(AArch64::NoRegister);
+    emitPtrauthTailCallHardening(MI);
 
     MCOperand Dest;
     MCInstLowering.lowerOperand(MI->getOperand(0), Dest);

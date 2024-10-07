@@ -173,9 +173,9 @@ define void @test_tailcall_omit_mov_x16_x16(ptr %objptr) #0 {
 ; CHECK:         mov     x17, x0
 ; CHECK:         movk    x17, #6503, lsl #48
 ; CHECK:         autda   x16, x17
-; CHECK:         ldr     x1, [x16]
+; CHECK:         ldr     x2, [x16]
 ; CHECK:         movk    x16, #54167, lsl #48
-; CHECK:         braa    x1, x16
+; CHECK:         braa    x2, x16
   %vtable.signed = load ptr, ptr %objptr, align 8
   %objptr.int = ptrtoint ptr %objptr to i64
   %vtable.discr = tail call i64 @llvm.ptrauth.blend(i64 %objptr.int, i64 6503)

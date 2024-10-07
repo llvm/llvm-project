@@ -1966,15 +1966,19 @@ let Predicates = [HasPAuth] in {
   // Size 16: 4 fixed + 8 variable, to compute discriminator.
   // The size returned by getInstSizeInBytes() is incremented according
   // to the variant of LR check.
+  // As the check requires either x16 or x17 as a scratch register and
+  // authenticated tail call instructions have two register operands,
+  // make sure at least one register is usable as a scratch one - for that
+  // purpose, use tcGPRnotx16x17 register class for the second operand.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
       Uses = [SP] in {
     def AUTH_TCRETURN
       : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff, i32imm:$Key,
-                            i64imm:$Disc, tcGPR64:$AddrDisc),
+                            i64imm:$Disc, tcGPRnotx16x17:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
     def AUTH_TCRETURN_BTI
       : Pseudo<(outs), (ins tcGPRx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
-                            i64imm:$Disc, tcGPR64:$AddrDisc),
+                            i64imm:$Disc, tcGPRnotx16x17:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
   }
 
