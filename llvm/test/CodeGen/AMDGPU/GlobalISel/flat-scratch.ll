@@ -2416,39 +2416,12 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 15
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v1, off scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_store_b64 v0, v[1:2], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:1 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:3 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:4 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:5 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:6 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:7 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:1 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:2 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:3 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:4 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:5 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:6 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v0, v0, off offset:7 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b64 v[0:1], v0, off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2766,57 +2739,16 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
-; GFX12-NEXT:    v_mov_b32_e32 v3, 2
+; GFX12-NEXT:    s_mov_b32 s2, 3
+; GFX12-NEXT:    s_mov_b32 s1, 2
+; GFX12-NEXT:    s_mov_b32 s0, 1
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    v_dual_mov_b32 v3, s2 :: v_dual_mov_b32 v2, s1
+; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v1, off scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_store_b96 v0, v[1:3], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:1 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:3 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 3
-; GFX12-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:5 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:6 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:7 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v1, off offset:8 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:9 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:10 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:11 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:1 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:2 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:3 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:4 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:5 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:6 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:7 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:8 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:9 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:10 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v0, v0, off offset:11 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b96 v[0:2], v0, off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3251,74 +3183,17 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 0
-; GFX12-NEXT:    v_mov_b32_e32 v3, 2
+; GFX12-NEXT:    s_mov_b32 s3, 4
+; GFX12-NEXT:    s_mov_b32 s2, 3
+; GFX12-NEXT:    s_mov_b32 s1, 2
+; GFX12-NEXT:    s_mov_b32 s0, 1
+; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
+; GFX12-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v1, off scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:1 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:2 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:3 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v3, off offset:4 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 3
-; GFX12-NEXT:    v_mov_b32_e32 v3, 4
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:5 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:6 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:7 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v1, off offset:8 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:9 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:10 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:11 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v3, off offset:12 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:13 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:14 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_store_b8 v0, v2, off offset:15 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:1 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:2 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:3 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:4 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:5 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:6 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:7 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:8 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:9 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:10 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:11 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:12 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:13 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v1, v0, off offset:14 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    scratch_load_u8 v0, v0, off offset:15 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b128 v[0:3], v0, off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
