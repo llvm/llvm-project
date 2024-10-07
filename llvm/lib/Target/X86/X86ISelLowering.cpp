@@ -48492,15 +48492,26 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
       (!VT.isVector() || !VT.isSimple() || !VT.isInteger()))
     return SDValue();
 
-  KnownBits Known1 = DAG.computeKnownBits(N->getOperand(1));
-  if (!Known1.isConstant())
+  ConstantSDNode *CNode = isConstOrConstSplat(
+      N->getOperand(1), /*AllowUndefs*/ true, /*AllowTrunc*/ false);
+  const APInt *C = nullptr;
+  if (!CNode) {
+    if (VT.isVector())
+      if (auto *RawC = getTargetConstantFromNode(N->getOperand(1)))
+        if (auto *SplatC = RawC->getSplatValue())
+          if (auto *SplatCI = dyn_cast<ConstantInt>(SplatC))
+            C = &(SplatCI->getValue());
+
+    if (!C || C->getBitWidth() != VT.getScalarSizeInBits())
+      return SDValue();
+  } else {
+    C = &(CNode->getAPIntValue());
+  }
+
+  if (isPowerOf2_64(C->getZExtValue()))
     return SDValue();
 
-  const APInt &C = Known1.getConstant();
-  if (isPowerOf2_64(C.getZExtValue()))
-    return SDValue();
-
-  int64_t SignMulAmt = C.getSExtValue();
+  int64_t SignMulAmt = C->getSExtValue();
   assert(SignMulAmt != INT64_MIN && "Int min should have been handled!");
   uint64_t AbsMulAmt = SignMulAmt < 0 ? -SignMulAmt : SignMulAmt;
 
@@ -48559,12 +48570,12 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
       if (SignMulAmt < 0)
         NewMul = DAG.getNegative(NewMul, DL, VT);
     } else if (!Subtarget.slowLEA())
-      NewMul = combineMulSpecial(C.getZExtValue(), N, DAG, VT, DL);
+      NewMul = combineMulSpecial(C->getZExtValue(), N, DAG, VT, DL);
   }
   if (!NewMul) {
     EVT ShiftVT = VT.isVector() ? VT : MVT::i8;
-    assert(C.getZExtValue() != 0 &&
-           C.getZExtValue() != maxUIntN(VT.getScalarSizeInBits()) &&
+    assert(C->getZExtValue() != 0 &&
+           C->getZExtValue() != maxUIntN(VT.getScalarSizeInBits()) &&
            "Both cases that could cause potential overflows should have "
            "already been handled.");
     if (isPowerOf2_64(AbsMulAmt - 1)) {
