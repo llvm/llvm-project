@@ -2951,7 +2951,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   }
   ctx.nonPrevailingSyms.clear();
   for (const DuplicateSymbol &d : ctx.duplicates)
-    reportDuplicate(*d.sym, d.file, d.section, d.value);
+    reportDuplicate(ctx, *d.sym, d.file, d.section, d.value);
   ctx.duplicates.clear();
 
   // Return if there were name resolution errors.
@@ -3033,7 +3033,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   });
   parallelForEach(newObjectFiles, postParseObjectFile);
   for (const DuplicateSymbol &d : ctx.duplicates)
-    reportDuplicate(*d.sym, d.file, d.section, d.value);
+    reportDuplicate(ctx, *d.sym, d.file, d.section, d.value);
 
   // ELF dependent libraries may have introduced new input files after LTO has
   // completed. This is an error if the files haven't already been parsed, since
