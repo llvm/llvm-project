@@ -74,9 +74,9 @@ namespace std {
 
     // [variant.visit], visitation
     template<class Self, class Visitor>
-      constexpr decltype(auto) visit(this Self&&, Visitor&&); // Since C++26
+      constexpr decltype(auto) visit(this Self&&, Visitor&&); // since C++26
     template<class R, class Self, class Visitor>
-      constexpr R visit(this Self&&, Visitor&&);              // Since C++26
+      constexpr R visit(this Self&&, Visitor&&);              // since C++26
   };
 
   // 20.7.3, variant helper classes
@@ -86,8 +86,8 @@ namespace std {
   inline constexpr size_t variant_size_v = variant_size<T>::value;
 
   template <class T> struct variant_size<const T>;
-  template <class T> struct variant_size<volatile T>;
-  template <class T> struct variant_size<const volatile T>;
+  template <class T> struct variant_size<volatile T>;       // deprecated in C++20
+  template <class T> struct variant_size<const volatile T>; // deprecated in C++20
 
   template <class... Types>
   struct variant_size<variant<Types...>>;
@@ -98,8 +98,8 @@ namespace std {
   using variant_alternative_t = typename variant_alternative<I, T>::type;
 
   template <size_t I, class T> struct variant_alternative<I, const T>;
-  template <size_t I, class T> struct variant_alternative<I, volatile T>;
-  template <size_t I, class T> struct variant_alternative<I, const volatile T>;
+  template <size_t I, class T> struct variant_alternative<I, volatile T>;       // deprecated in C++20
+  template <size_t I, class T> struct variant_alternative<I, const volatile T>; // deprecated in C++20
 
   template <size_t I, class... Types>
   struct variant_alternative<I, variant<Types...>>;
@@ -319,10 +319,14 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS variant_size<const _Tp> : variant_size<_Tp> {};
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_size<volatile _Tp> : variant_size<_Tp> {};
+struct _LIBCPP_TEMPLATE_VIS variant_size<volatile _Tp> : variant_size<_Tp> {
+  _LIBCPP_VOLATILE_DEPRECATED_WARNING;
+};
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_size<const volatile _Tp> : variant_size<_Tp> {};
+struct _LIBCPP_TEMPLATE_VIS variant_size<const volatile _Tp> : variant_size<_Tp> {
+  _LIBCPP_VOLATILE_DEPRECATED_WARNING;
+};
 
 template <class... _Types>
 struct _LIBCPP_TEMPLATE_VIS variant_size<variant<_Types...>> : integral_constant<size_t, sizeof...(_Types)> {};
@@ -332,10 +336,14 @@ template <size_t _Ip, class _Tp>
 struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, const _Tp> : add_const<variant_alternative_t<_Ip, _Tp>> {};
 
 template <size_t _Ip, class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, volatile _Tp> : add_volatile<variant_alternative_t<_Ip, _Tp>> {};
+struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, volatile _Tp> : add_volatile<variant_alternative_t<_Ip, _Tp>> {
+  _LIBCPP_VOLATILE_DEPRECATED_WARNING;
+};
 
 template <size_t _Ip, class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, const volatile _Tp> : add_cv<variant_alternative_t<_Ip, _Tp>> {};
+struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, const volatile _Tp> : add_cv<variant_alternative_t<_Ip, _Tp>> {
+  _LIBCPP_VOLATILE_DEPRECATED_WARNING;
+};
 
 template <size_t _Ip, class... _Types>
 struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, variant<_Types...>> {
