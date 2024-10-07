@@ -1197,6 +1197,24 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::UCMP:
     Results.push_back(TLI.expandCMP(Node, DAG));
     return;
+
+  case ISD::FADD:
+  case ISD::FMUL:
+  case ISD::FMA:
+  case ISD::FDIV:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FNEARBYINT:
+  case ISD::FRINT:
+  case ISD::FROUND:
+  case ISD::FROUNDEVEN:
+  case ISD::FTRUNC:
+  case ISD::FSQRT:
+    if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);
@@ -1884,6 +1902,11 @@ void VectorLegalizer::ExpandFSUB(SDNode *Node,
   if (TLI.isOperationLegalOrCustom(ISD::FNEG, VT) &&
       TLI.isOperationLegalOrCustom(ISD::FADD, VT))
     return; // Defer to LegalizeDAG
+
+  if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
+    Results.push_back(Expanded);
+    return;
+  }
 
   SDValue Tmp = DAG.UnrollVectorOp(Node);
   Results.push_back(Tmp);
