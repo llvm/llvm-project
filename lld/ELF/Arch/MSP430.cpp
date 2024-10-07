@@ -83,12 +83,9 @@ void MSP430::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   }
   default:
-    error(getErrorLocation(loc) + "unrecognized relocation " +
+    error(getErrorLoc(ctx, loc) + "unrecognized relocation " +
           toString(rel.type));
   }
 }
 
-TargetInfo *elf::getMSP430TargetInfo(Ctx &ctx) {
-  static MSP430 target(ctx);
-  return &target;
-}
+void elf::setMSP430TargetInfo(Ctx &ctx) { ctx.target.reset(new MSP430(ctx)); }

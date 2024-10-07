@@ -825,11 +825,10 @@ BasicBlock *PHINode::LLVMBBToBB::operator()(llvm::BasicBlock *LLVMBB) const {
 }
 
 PHINode *PHINode::create(Type *Ty, unsigned NumReservedValues,
-                         Instruction *InsertBefore, Context &Ctx,
-                         const Twine &Name) {
-  llvm::PHINode *NewPHI = llvm::PHINode::Create(
-      Ty->LLVMTy, NumReservedValues, Name,
-      InsertBefore->getTopmostLLVMInstruction()->getIterator());
+                         InsertPosition Pos, Context &Ctx, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
+  llvm::PHINode *NewPHI =
+      Builder.CreatePHI(Ty->LLVMTy, NumReservedValues, Name);
   return Ctx.createPHINode(NewPHI);
 }
 
@@ -927,6 +926,70 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
     --Idx;
   }
 }
+
+CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
+                         Context &Ctx, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
+  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
+  if (dyn_cast<llvm::ICmpInst>(LLVMI))
+    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
+  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
+}
+CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
+                                        const Instruction *F,
+                                        InsertPosition Pos, Context &Ctx,
+                                        const Twine &Name) {
+  CmpInst *Inst = create(P, S1, S2, Pos, Ctx, Name);
+  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
+  return Inst;
+}
+
+Type *CmpInst::makeCmpResultType(Type *OpndType) {
+  if (auto *VT = dyn_cast<VectorType>(OpndType)) {
+    // TODO: Cleanup when we have more complete support for
+    // sandboxir::VectorType
+    return OpndType->getContext().getType(llvm::VectorType::get(
+        llvm::Type::getInt1Ty(OpndType->getContext().LLVMCtx),
+        cast<llvm::VectorType>(VT->LLVMTy)->getElementCount()));
+  }
+  return Type::getInt1Ty(OpndType->getContext());
+}
+
+void CmpInst::setPredicate(Predicate P) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&CmpInst::getPredicate, &CmpInst::setPredicate>>(this);
+  cast<llvm::CmpInst>(Val)->setPredicate(P);
+}
+
+void CmpInst::swapOperands() {
+  if (ICmpInst *IC = dyn_cast<ICmpInst>(this))
+    IC->swapOperands();
+  else
+    cast<FCmpInst>(this)->swapOperands();
+}
+
+void ICmpInst::swapOperands() {
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
+  cast<llvm::ICmpInst>(Val)->swapOperands();
+}
+
+void FCmpInst::swapOperands() {
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
+  cast<llvm::FCmpInst>(Val)->swapOperands();
+}
+
+#ifndef NDEBUG
+void CmpInst::dumpOS(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void CmpInst::dump() const {
+  dumpOS(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
 
 static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
   switch (Opc) {
@@ -1260,42 +1323,14 @@ Value *AtomicCmpXchgInst::getNewValOperand() {
 AtomicCmpXchgInst *
 AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
                           AtomicOrdering SuccessOrdering,
-                          AtomicOrdering FailureOrdering, BBIterator WhereIt,
-                          BasicBlock *WhereBB, Context &Ctx, SyncScope::ID SSID,
-                          const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+                          AtomicOrdering FailureOrdering, InsertPosition Pos,
+                          Context &Ctx, SyncScope::ID SSID, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   auto *LLVMAtomicCmpXchg =
       Builder.CreateAtomicCmpXchg(Ptr->Val, Cmp->Val, New->Val, Align,
                                   SuccessOrdering, FailureOrdering, SSID);
   LLVMAtomicCmpXchg->setName(Name);
   return Ctx.createAtomicCmpXchgInst(LLVMAtomicCmpXchg);
-}
-
-AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
-                                             MaybeAlign Align,
-                                             AtomicOrdering SuccessOrdering,
-                                             AtomicOrdering FailureOrdering,
-                                             Instruction *InsertBefore,
-                                             Context &Ctx, SyncScope::ID SSID,
-                                             const Twine &Name) {
-  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
-                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
-                SSID, Name);
-}
-
-AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
-                                             MaybeAlign Align,
-                                             AtomicOrdering SuccessOrdering,
-                                             AtomicOrdering FailureOrdering,
-                                             BasicBlock *InsertAtEnd,
-                                             Context &Ctx, SyncScope::ID SSID,
-                                             const Twine &Name) {
-  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
-                InsertAtEnd->end(), InsertAtEnd, Ctx, SSID, Name);
 }
 
 void AtomicCmpXchgInst::setAlignment(Align Align) {
@@ -1335,31 +1370,13 @@ void AtomicCmpXchgInst::setFailureOrdering(AtomicOrdering Ordering) {
   cast<llvm::AtomicCmpXchgInst>(Val)->setFailureOrdering(Ordering);
 }
 
-AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, BBIterator WhereIt,
-                               BasicBlock *WhereBB, Context &Ctx,
-                               Value *ArraySize, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, InsertPosition Pos,
+                               Context &Ctx, Value *ArraySize,
+                               const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   auto *NewAlloca =
       Builder.CreateAlloca(Ty->LLVMTy, AddrSpace, ArraySize->Val, Name);
   return Ctx.createAllocaInst(NewAlloca);
-}
-
-AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace,
-                               Instruction *InsertBefore, Context &Ctx,
-                               Value *ArraySize, const Twine &Name) {
-  return create(Ty, AddrSpace, InsertBefore->getIterator(),
-                InsertBefore->getParent(), Ctx, ArraySize, Name);
-}
-
-AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace,
-                               BasicBlock *InsertAtEnd, Context &Ctx,
-                               Value *ArraySize, const Twine &Name) {
-  return create(Ty, AddrSpace, InsertAtEnd->end(), InsertAtEnd, Ctx, ArraySize,
-                Name);
 }
 
 Type *AllocaInst::getAllocatedType() const {
@@ -1397,34 +1414,15 @@ PointerType *AllocaInst::getType() const {
 }
 
 Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
-                        BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
-                        const Twine &Name) {
+                        InsertPosition Pos, Context &Ctx, const Twine &Name) {
   assert(getLLVMCastOp(Op) && "Opcode not suitable for CastInst!");
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto &Builder = setInsertPos(Pos);
   auto *NewV =
       Builder.CreateCast(getLLVMCastOp(Op), Operand->Val, DestTy->LLVMTy, Name);
   if (auto *NewCI = dyn_cast<llvm::CastInst>(NewV))
     return Ctx.createCastInst(NewCI);
   assert(isa<llvm::Constant>(NewV) && "Expected constant");
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
-                        Instruction *InsertBefore, Context &Ctx,
-                        const Twine &Name) {
-  return create(DestTy, Op, Operand, InsertBefore->getIterator(),
-                InsertBefore->getParent(), Ctx, Name);
-}
-
-Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
-                        BasicBlock *InsertAtEnd, Context &Ctx,
-                        const Twine &Name) {
-  return create(DestTy, Op, Operand, InsertAtEnd->end(), InsertAtEnd, Ctx,
-                Name);
 }
 
 bool CastInst::classof(const Value *From) {
