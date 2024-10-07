@@ -1356,13 +1356,6 @@ LogicalResult vector::ExtractOp::verify() {
   return success();
 }
 
-template <typename IntType>
-static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
-  return llvm::to_vector<4>(llvm::map_range(
-      arrayAttr.getAsRange<IntegerAttr>(),
-      [](IntegerAttr attr) { return static_cast<IntType>(attr.getInt()); }));
-}
-
 /// Fold the result of chains of ExtractOp in place by simply concatenating the
 /// positions.
 static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
@@ -1786,8 +1779,7 @@ static Value foldExtractFromExtractStrided(ExtractOp extractOp) {
     return Value();
 
   // Trim offsets for dimensions fully extracted.
-  auto sliceOffsets =
-      extractVector<int64_t>(extractStridedSliceOp.getOffsets());
+  SmallVector<int64_t> sliceOffsets(extractStridedSliceOp.getOffsets());
   while (!sliceOffsets.empty()) {
     size_t lastOffset = sliceOffsets.size() - 1;
     if (sliceOffsets.back() != 0 ||
@@ -1841,12 +1833,10 @@ static Value foldExtractStridedOpFromInsertChain(ExtractOp extractOp) {
                              insertOp.getSourceVectorType().getRank();
     if (destinationRank > insertOp.getSourceVectorType().getRank())
       return Value();
-    auto insertOffsets = extractVector<int64_t>(insertOp.getOffsets());
+    ArrayRef<int64_t> insertOffsets = insertOp.getOffsets();
     ArrayRef<int64_t> extractOffsets = extractOp.getStaticPosition();
 
-    if (llvm::any_of(insertOp.getStrides(), [](Attribute attr) {
-          return llvm::cast<IntegerAttr>(attr).getInt() != 1;
-        }))
+    if (insertOp.hasNonUnitStrides())
       return Value();
     bool disjoint = false;
     SmallVector<int64_t, 4> offsetDiffs;
@@ -2209,12 +2199,6 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
-}
-
-static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
-                                       SmallVectorImpl<int64_t> &results) {
-  for (auto attr : arrayAttr)
-    results.push_back(llvm::cast<IntegerAttr>(attr).getInt());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2968,26 +2952,8 @@ void InsertStridedSliceOp::build(OpBuilder &builder, OperationState &result,
                                  Value source, Value dest,
                                  ArrayRef<int64_t> offsets,
                                  ArrayRef<int64_t> strides) {
-  result.addOperands({source, dest});
-  auto offsetsAttr = getVectorSubscriptAttr(builder, offsets);
-  auto stridesAttr = getVectorSubscriptAttr(builder, strides);
-  result.addTypes(dest.getType());
-  result.addAttribute(InsertStridedSliceOp::getOffsetsAttrName(result.name),
-                      offsetsAttr);
-  result.addAttribute(InsertStridedSliceOp::getStridesAttrName(result.name),
-                      stridesAttr);
-}
-
-// TODO: Should be moved to Tablegen ConfinedAttr attributes.
-template <typename OpType>
-static LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op,
-                                                        ArrayAttr arrayAttr,
-                                                        ArrayRef<int64_t> shape,
-                                                        StringRef attrName) {
-  if (arrayAttr.size() > shape.size())
-    return op.emitOpError("expected ")
-           << attrName << " attribute of rank no greater than vector rank";
-  return success();
+  build(builder, result, source, dest,
+        StridedSliceAttr::get(builder.getContext(), offsets, strides));
 }
 
 // Returns true if all integers in `arrayAttr` are in the half-open [min, max}
@@ -2995,16 +2961,15 @@ static LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op,
 // Otherwise, the admissible interval is [min, max].
 template <typename OpType>
 static LogicalResult
-isIntegerArrayAttrConfinedToRange(OpType op, ArrayAttr arrayAttr, int64_t min,
-                                  int64_t max, StringRef attrName,
-                                  bool halfOpen = true) {
-  for (auto attr : arrayAttr) {
-    auto val = llvm::cast<IntegerAttr>(attr).getInt();
+isIntArrayConfinedToRange(OpType op, ArrayRef<int64_t> array, int64_t min,
+                          int64_t max, StringRef arrayName,
+                          bool halfOpen = true) {
+  for (int64_t val : array) {
     auto upper = max;
     if (!halfOpen)
       upper += 1;
     if (val < min || val >= upper)
-      return op.emitOpError("expected ") << attrName << " to be confined to ["
+      return op.emitOpError("expected ") << arrayName << " to be confined to ["
                                          << min << ", " << upper << ")";
   }
   return success();
@@ -3015,13 +2980,12 @@ isIntegerArrayAttrConfinedToRange(OpType op, ArrayAttr arrayAttr, int64_t min,
 // Otherwise, the admissible interval is [min, max].
 template <typename OpType>
 static LogicalResult
-isIntegerArrayAttrConfinedToShape(OpType op, ArrayAttr arrayAttr,
-                                  ArrayRef<int64_t> shape, StringRef attrName,
-                                  bool halfOpen = true, int64_t min = 0) {
-  for (auto [index, attrDimPair] :
-       llvm::enumerate(llvm::zip_first(arrayAttr, shape))) {
-    int64_t val = llvm::cast<IntegerAttr>(std::get<0>(attrDimPair)).getInt();
-    int64_t max = std::get<1>(attrDimPair);
+isIntArrayConfinedToShape(OpType op, ArrayRef<int64_t> array,
+                          ArrayRef<int64_t> shape, StringRef attrName,
+                          bool halfOpen = true, int64_t min = 0) {
+  for (auto [index, dimPair] : llvm::enumerate(llvm::zip_first(array, shape))) {
+    int64_t val, max;
+    std::tie(val, max) = dimPair;
     if (!halfOpen)
       max += 1;
     if (val < min || val >= max)
@@ -3038,40 +3002,32 @@ isIntegerArrayAttrConfinedToShape(OpType op, ArrayAttr arrayAttr,
 // If `halfOpen` is true then the admissible interval is [min, max). Otherwise,
 // the admissible interval is [min, max].
 template <typename OpType>
-static LogicalResult isSumOfIntegerArrayAttrConfinedToShape(
-    OpType op, ArrayAttr arrayAttr1, ArrayAttr arrayAttr2,
-    ArrayRef<int64_t> shape, StringRef attrName1, StringRef attrName2,
+static LogicalResult isSumOfIntArrayConfinedToShape(
+    OpType op, ArrayRef<int64_t> array1, ArrayRef<int64_t> array2,
+    ArrayRef<int64_t> shape, StringRef arrayName1, StringRef arrayName2,
     bool halfOpen = true, int64_t min = 1) {
-  assert(arrayAttr1.size() <= shape.size());
-  assert(arrayAttr2.size() <= shape.size());
-  for (auto [index, it] :
-       llvm::enumerate(llvm::zip(arrayAttr1, arrayAttr2, shape))) {
-    auto val1 = llvm::cast<IntegerAttr>(std::get<0>(it)).getInt();
-    auto val2 = llvm::cast<IntegerAttr>(std::get<1>(it)).getInt();
-    int64_t max = std::get<2>(it);
+  assert(array1.size() <= shape.size());
+  assert(array2.size() <= shape.size());
+  for (auto [index, it] : llvm::enumerate(llvm::zip(array1, array2, shape))) {
+    int64_t val1, val2, max;
+    std::tie(val1, val2, max) = it;
     if (!halfOpen)
       max += 1;
     if (val1 + val2 < 0 || val1 + val2 >= max)
       return op.emitOpError("expected sum(")
-             << attrName1 << ", " << attrName2 << ") dimension " << index
+             << arrayName1 << ", " << arrayName2 << ") dimension " << index
              << " to be confined to [" << min << ", " << max << ")";
   }
   return success();
 }
 
-static ArrayAttr makeI64ArrayAttr(ArrayRef<int64_t> values,
-                                  MLIRContext *context) {
-  auto attrs = llvm::map_range(values, [context](int64_t v) -> Attribute {
-    return IntegerAttr::get(IntegerType::get(context, 64), APInt(64, v));
-  });
-  return ArrayAttr::get(context, llvm::to_vector<8>(attrs));
-}
-
 LogicalResult InsertStridedSliceOp::verify() {
   auto sourceVectorType = getSourceVectorType();
   auto destVectorType = getDestVectorType();
-  auto offsets = getOffsetsAttr();
-  auto strides = getStridesAttr();
+  auto offsets = getOffsets();
+  auto strides = getStrides();
+  if (!getStridedSlice().getSizes().empty())
+    return emitOpError("slice sizes not supported");
   if (offsets.size() != static_cast<unsigned>(destVectorType.getRank()))
     return emitOpError(
         "expected offsets of same size as destination vector rank");
@@ -3086,18 +3042,14 @@ LogicalResult InsertStridedSliceOp::verify() {
   SmallVector<int64_t, 4> sourceShapeAsDestShape(
       destShape.size() - sourceShape.size(), 0);
   sourceShapeAsDestShape.append(sourceShape.begin(), sourceShape.end());
-  auto offName = InsertStridedSliceOp::getOffsetsAttrName();
-  auto stridesName = InsertStridedSliceOp::getStridesAttrName();
-  if (failed(isIntegerArrayAttrConfinedToShape(*this, offsets, destShape,
-                                               offName)) ||
-      failed(isIntegerArrayAttrConfinedToRange(*this, strides, /*min=*/1,
-                                               /*max=*/1, stridesName,
-                                               /*halfOpen=*/false)) ||
-      failed(isSumOfIntegerArrayAttrConfinedToShape(
-          *this, offsets,
-          makeI64ArrayAttr(sourceShapeAsDestShape, getContext()), destShape,
-          offName, "source vector shape",
-          /*halfOpen=*/false, /*min=*/1)))
+  if (failed(isIntArrayConfinedToShape(*this, offsets, destShape, "offsets")) ||
+      failed(isIntArrayConfinedToRange(*this, strides, /*min=*/1,
+                                       /*max=*/1, "strides",
+                                       /*halfOpen=*/false)) ||
+      failed(isSumOfIntArrayConfinedToShape(*this, offsets,
+                                            sourceShapeAsDestShape, destShape,
+                                            "offsets", "source vector shape",
+                                            /*halfOpen=*/false, /*min=*/1)))
     return failure();
 
   unsigned rankDiff = destShape.size() - sourceShape.size();
@@ -3222,7 +3174,7 @@ public:
     VectorType sliceVecTy = sourceValue.getType();
     ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
     int64_t rankDifference = destTy.getRank() - sliceVecTy.getRank();
-    SmallVector<int64_t, 4> offsets = getI64SubArray(op.getOffsets());
+    ArrayRef<int64_t> offsets = op.getOffsets();
     SmallVector<int64_t, 4> destStrides = computeStrides(destTy.getShape());
 
     // Calcualte the destination element indices by enumerating all slice
@@ -3397,14 +3349,15 @@ Type OuterProductOp::getExpectedMaskType() {
 //   2. Add sizes from 'vectorType' for remaining dims.
 // Scalable flags are inherited from 'vectorType'.
 static Type inferStridedSliceOpResultType(VectorType vectorType,
-                                          ArrayAttr offsets, ArrayAttr sizes,
-                                          ArrayAttr strides) {
+                                          ArrayRef<int64_t> offsets,
+                                          ArrayRef<int64_t> sizes,
+                                          ArrayRef<int64_t> strides) {
   assert(offsets.size() == sizes.size() && offsets.size() == strides.size());
   SmallVector<int64_t, 4> shape;
   shape.reserve(vectorType.getRank());
   unsigned idx = 0;
   for (unsigned e = offsets.size(); idx < e; ++idx)
-    shape.push_back(llvm::cast<IntegerAttr>(sizes[idx]).getInt());
+    shape.push_back(sizes[idx]);
   for (unsigned e = vectorType.getShape().size(); idx < e; ++idx)
     shape.push_back(vectorType.getShape()[idx]);
 
@@ -3417,51 +3370,48 @@ void ExtractStridedSliceOp::build(OpBuilder &builder, OperationState &result,
                                   ArrayRef<int64_t> sizes,
                                   ArrayRef<int64_t> strides) {
   result.addOperands(source);
-  auto offsetsAttr = getVectorSubscriptAttr(builder, offsets);
-  auto sizesAttr = getVectorSubscriptAttr(builder, sizes);
-  auto stridesAttr = getVectorSubscriptAttr(builder, strides);
-  result.addTypes(
-      inferStridedSliceOpResultType(llvm::cast<VectorType>(source.getType()),
-                                    offsetsAttr, sizesAttr, stridesAttr));
-  result.addAttribute(ExtractStridedSliceOp::getOffsetsAttrName(result.name),
-                      offsetsAttr);
-  result.addAttribute(ExtractStridedSliceOp::getSizesAttrName(result.name),
-                      sizesAttr);
-  result.addAttribute(ExtractStridedSliceOp::getStridesAttrName(result.name),
-                      stridesAttr);
+  auto stridedSliceAttr =
+      StridedSliceAttr::get(builder.getContext(), offsets, sizes, strides);
+  result.addTypes(inferStridedSliceOpResultType(
+      llvm::cast<VectorType>(source.getType()), offsets, sizes, strides));
+  result.addAttribute(
+      ExtractStridedSliceOp::getStridedSliceAttrName(result.name),
+      stridedSliceAttr);
 }
 
 LogicalResult ExtractStridedSliceOp::verify() {
   auto type = getSourceVectorType();
-  auto offsets = getOffsetsAttr();
-  auto sizes = getSizesAttr();
-  auto strides = getStridesAttr();
+  auto offsets = getOffsets();
+  auto sizes = getSizes();
+  auto strides = getStrides();
   if (offsets.size() != sizes.size() || offsets.size() != strides.size())
     return emitOpError(
         "expected offsets, sizes and strides attributes of same size");
 
   auto shape = type.getShape();
-  auto offName = getOffsetsAttrName();
-  auto sizesName = getSizesAttrName();
-  auto stridesName = getStridesAttrName();
-  if (failed(
-          isIntegerArrayAttrSmallerThanShape(*this, offsets, shape, offName)) ||
-      failed(
-          isIntegerArrayAttrSmallerThanShape(*this, sizes, shape, sizesName)) ||
-      failed(isIntegerArrayAttrSmallerThanShape(*this, strides, shape,
-                                                stridesName)) ||
-      failed(
-          isIntegerArrayAttrConfinedToShape(*this, offsets, shape, offName)) ||
-      failed(isIntegerArrayAttrConfinedToShape(*this, sizes, shape, sizesName,
-                                               /*halfOpen=*/false,
-                                               /*min=*/1)) ||
-      failed(isIntegerArrayAttrConfinedToRange(*this, strides, /*min=*/1,
-                                               /*max=*/1, stridesName,
-                                               /*halfOpen=*/false)) ||
-      failed(isSumOfIntegerArrayAttrConfinedToShape(*this, offsets, sizes,
-                                                    shape, offName, sizesName,
-                                                    /*halfOpen=*/false)))
+  auto isIntArraySmallerThanShape = [&](ArrayRef<int64_t> array,
+                                        StringRef arrayName) -> LogicalResult {
+    if (array.size() > shape.size())
+      return emitOpError("expected ")
+             << arrayName << " to have rank no greater than vector rank";
+    return success();
+  };
+
+  if (failed(isIntArraySmallerThanShape(offsets, "offsets")) ||
+      failed(isIntArraySmallerThanShape(sizes, "sizes")) ||
+      failed(isIntArraySmallerThanShape(strides, "strides")) ||
+      failed(isIntArrayConfinedToShape(*this, offsets, shape, "offsets")) ||
+      failed(isIntArrayConfinedToShape(*this, sizes, shape, "sizes",
+                                       /*halfOpen=*/false,
+                                       /*min=*/1)) ||
+      failed(isIntArrayConfinedToRange(*this, strides, /*min=*/1,
+                                       /*max=*/1, "strides",
+                                       /*halfOpen=*/false)) ||
+      failed(isSumOfIntArrayConfinedToShape(*this, offsets, sizes, shape,
+                                            "offsets", "sizes",
+                                            /*halfOpen=*/false))) {
     return failure();
+  }
 
   auto resultType = inferStridedSliceOpResultType(getSourceVectorType(),
                                                   offsets, sizes, strides);
@@ -3471,7 +3421,7 @@ LogicalResult ExtractStridedSliceOp::verify() {
   for (unsigned idx = 0; idx < sizes.size(); ++idx) {
     if (type.getScalableDims()[idx]) {
       auto inputDim = type.getShape()[idx];
-      auto inputSize = llvm::cast<IntegerAttr>(sizes[idx]).getInt();
+      auto inputSize = sizes[idx];
       if (inputDim != inputSize)
         return emitOpError("expected size at idx=")
                << idx
@@ -3489,20 +3439,16 @@ LogicalResult ExtractStridedSliceOp::verify() {
 // extracted vector is a subset of one of the vector inserted.
 static LogicalResult
 foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
-  // Helper to extract integer out of ArrayAttr.
-  auto getElement = [](ArrayAttr array, int idx) {
-    return llvm::cast<IntegerAttr>(array[idx]).getInt();
-  };
-  ArrayAttr extractOffsets = op.getOffsets();
-  ArrayAttr extractStrides = op.getStrides();
-  ArrayAttr extractSizes = op.getSizes();
+  ArrayRef<int64_t> extractOffsets = op.getOffsets();
+  ArrayRef<int64_t> extractStrides = op.getStrides();
+  ArrayRef<int64_t> extractSizes = op.getSizes();
   auto insertOp = op.getVector().getDefiningOp<InsertStridedSliceOp>();
   while (insertOp) {
     if (op.getSourceVectorType().getRank() !=
         insertOp.getSourceVectorType().getRank())
       return failure();
-    ArrayAttr insertOffsets = insertOp.getOffsets();
-    ArrayAttr insertStrides = insertOp.getStrides();
+    ArrayRef<int64_t> insertOffsets = insertOp.getOffsets();
+    ArrayRef<int64_t> insertStrides = insertOp.getStrides();
     // If the rank of extract is greater than the rank of insert, we are likely
     // extracting a partial chunk of the vector inserted.
     if (extractOffsets.size() > insertOffsets.size())
@@ -3511,12 +3457,12 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
     bool disjoint = false;
     SmallVector<int64_t, 4> offsetDiffs;
     for (unsigned dim = 0, e = extractOffsets.size(); dim < e; ++dim) {
-      if (getElement(extractStrides, dim) != getElement(insertStrides, dim))
+      if (extractStrides[dim] != insertStrides[dim])
         return failure();
-      int64_t start = getElement(insertOffsets, dim);
+      int64_t start = insertOffsets[dim];
       int64_t end = start + insertOp.getSourceVectorType().getDimSize(dim);
-      int64_t offset = getElement(extractOffsets, dim);
-      int64_t size = getElement(extractSizes, dim);
+      int64_t offset = extractOffsets[dim];
+      int64_t size = extractSizes[dim];
       // Check if the start of the extract offset is in the interval inserted.
       if (start <= offset && offset < end) {
         // If the extract interval overlaps but is not fully included we may
@@ -3534,7 +3480,9 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
       op.setOperand(insertOp.getSource());
       // OpBuilder is only used as a helper to build an I64ArrayAttr.
       OpBuilder b(op.getContext());
-      op.setOffsetsAttr(b.getI64ArrayAttr(offsetDiffs));
+      auto stridedSliceAttr = StridedSliceAttr::get(
+          op.getContext(), offsetDiffs, op.getSizes(), op.getStrides());
+      op.setStridedSliceAttr(stridedSliceAttr);
       return success();
     }
     // If the chunk extracted is disjoint from the chunk inserted, keep looking
@@ -3557,11 +3505,6 @@ OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
     return getResult();
   return {};
 }
-
-void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
-  populateFromInt64AttrArray(getOffsets(), results);
-}
-
 namespace {
 
 // Pattern to rewrite an ExtractStridedSliceOp(ConstantMaskOp) to
@@ -3585,11 +3528,8 @@ public:
     // Gather constant mask dimension sizes.
     ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
     // Gather strided slice offsets and sizes.
-    SmallVector<int64_t, 4> sliceOffsets;
-    populateFromInt64AttrArray(extractStridedSliceOp.getOffsets(),
-                               sliceOffsets);
-    SmallVector<int64_t, 4> sliceSizes;
-    populateFromInt64AttrArray(extractStridedSliceOp.getSizes(), sliceSizes);
+    ArrayRef<int64_t> sliceOffsets = extractStridedSliceOp.getOffsets();
+    ArrayRef<int64_t> sliceSizes = extractStridedSliceOp.getSizes();
 
     // Compute slice of vector mask region.
     SmallVector<int64_t, 4> sliceMaskDimSizes;
@@ -3681,10 +3621,10 @@ public:
 
     // Expand offsets and sizes to match the vector rank.
     SmallVector<int64_t, 4> offsets(sliceRank, 0);
-    copy(getI64SubArray(extractStridedSliceOp.getOffsets()), offsets.begin());
+    copy(extractStridedSliceOp.getOffsets(), offsets.begin());
 
     SmallVector<int64_t, 4> sizes(sourceShape);
-    copy(getI64SubArray(extractStridedSliceOp.getSizes()), sizes.begin());
+    copy(extractStridedSliceOp.getSizes(), sizes.begin());
 
     // Calculate the slice elements by enumerating all slice positions and
     // linearizing them. The enumeration order is lexicographic which yields a
@@ -3747,10 +3687,9 @@ public:
     bool isScalarSrc = (srcRank == 0 || srcVecType.getNumElements() == 1);
     if (!lowerDimMatch && !isScalarSrc) {
       source = rewriter.create<ExtractStridedSliceOp>(
-          op->getLoc(), source,
-          getI64SubArray(op.getOffsets(), /* dropFront=*/rankDiff),
-          getI64SubArray(op.getSizes(), /* dropFront=*/rankDiff),
-          getI64SubArray(op.getStrides(), /* dropFront=*/rankDiff));
+          op->getLoc(), source, op.getOffsets().drop_front(rankDiff),
+          op.getSizes().drop_front(rankDiff),
+          op.getStrides().drop_front(rankDiff));
     }
     rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), source);
     return success();

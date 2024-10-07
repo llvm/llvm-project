@@ -550,11 +550,8 @@ struct ExtensionOverExtractStridedSlice final
     if (failed(ext))
       return failure();
 
-    VectorType origTy = op.getType();
-    VectorType extractTy =
-        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
     Value newExtract = rewriter.create<vector::ExtractStridedSliceOp>(
-        op.getLoc(), extractTy, ext->getIn(), op.getOffsets(), op.getSizes(),
+        op.getLoc(), ext->getIn(), op.getOffsets(), op.getSizes(),
         op.getStrides());
     ext->recreateAndReplace(rewriter, op, newExtract);
     return success();

@@ -16,6 +16,11 @@
 include "mlir/Dialect/Vector/IR/Vector.td"
 include "mlir/IR/EnumAttr.td"
 
+class Vector_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<Vector_Dialect, attrName, traits> {
+  let mnemonic = attrMnemonic;
+}
+
 // The "kind" of combining function for contractions and reductions.
 def COMBINING_KIND_ADD : I32EnumAttrCase<"ADD", 0, "add">;
 def COMBINING_KIND_MUL : I32EnumAttrCase<"MUL", 1, "mul">;
@@ -80,6 +85,44 @@ def PrintPunctuation : I32EnumAttr<"PrintPunctuation",
 
 def Vector_PrintPunctuation : EnumAttr<Vector_Dialect, PrintPunctuation, "punctuation"> {
   let assemblyFormat = "`<` $value `>`";
+}
+
+def Vector_StridedSliceAttr : Vector_Attr<"StridedSlice", "strided_slice">
+{
+  let summary = "strided vector slice";
+
+  let description = [{
+    An attribute that represents a strided slice of a vector.
+
+    *Examples:*
+
+    Without sizes:
+
+    `{offsets = [0, 0, 2], strides = [1, 1]}`
+
+    With sizes (used for extract_strided_slice):
+
+    `{offsets = [0, 2], sizes = [2, 4], strides = [1, 1]}`
+
+    TODO? Come up with a range syntax (similar to Python slices).
+  }];
+
+  let parameters = (ins
+    ArrayRefParameter<"int64_t">:$offsets,
+    OptionalArrayRefParameter<"int64_t">:$sizes,
+    ArrayRefParameter<"int64_t">:$strides
+  );
+
+  let builders = [AttrBuilder<(ins "ArrayRef<int64_t>":$offsets, "ArrayRef<int64_t>":$strides), [{
+      return $_get($_ctxt, offsets, ArrayRef<int64_t>{}, strides);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `{` `offsets` `=` `[` $offsets `]` `,`
+    (`sizes` `=` `[` $sizes^ `]` `,`)?
+    `strides` `=` `[` $strides `]` `}`
+  }];
 }
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTOR_ATTRIBUTES
