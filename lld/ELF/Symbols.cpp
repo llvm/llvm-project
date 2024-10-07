@@ -334,7 +334,7 @@ void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
-bool elf::computeIsPreemptible(const Symbol &sym) {
+bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
   assert(!sym.isLocal() || sym.isPlaceholder());
 
   // Only symbols with default visibility that appear in dynsym can be
@@ -511,7 +511,7 @@ bool Symbol::shouldReplace(const Defined &other) const {
   return !isGlobal() && other.isGlobal();
 }
 
-void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
+void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
                           InputSectionBase *errSec, uint64_t errOffset) {
   if (ctx.arg.allowMultipleDefinition)
     return;
@@ -555,7 +555,7 @@ void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
 
 void Symbol::checkDuplicate(const Defined &other) const {
   if (isDefined() && !isWeak() && !other.isWeak())
-    reportDuplicate(*this, other.file,
+    reportDuplicate(ctx, *this, other.file,
                     dyn_cast_or_null<InputSectionBase>(other.section),
                     other.value);
 }
