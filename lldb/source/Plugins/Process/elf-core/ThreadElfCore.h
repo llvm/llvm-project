@@ -100,9 +100,9 @@ struct ELFLinuxSigInfo {
 
   lldb_private::Status Parse(const lldb_private::DataExtractor &data,
                              const lldb_private::ArchSpec &arch,
-                             const lldb::UnixSignalsSP unix_signals_sp);
+                             const lldb_private::UnixSignals &unix_signals);
 
-  std::string GetDescription(const lldb::UnixSignalsSP unix_signals_sp);
+  std::string GetDescription(const lldb_private::UnixSignals &unix_signals);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof

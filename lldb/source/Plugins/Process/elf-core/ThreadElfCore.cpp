@@ -543,7 +543,7 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
 }
 
 Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
-                              const lldb::UnixSignalsSP unix_signals_sp) {
+                              const lldb_private::UnixSignals &unix_signals) {
   Status error;
   uint64_t size = GetSize(arch);
   if (size > data.GetByteSize()) {
@@ -563,8 +563,8 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
   if (data.GetAddressByteSize() == 8)
     offset += 4;
   // Not every stop signal has a valid address, but that will get resolved in
-  // the unix_signals_sp->GetSignalDescription() call below.
-  if (unix_signals_sp->GetShouldStop(si_signo)) {
+  // the unix_signals.GetSignalDescription() call below.
+  if (unix_signals.GetShouldStop(si_signo)) {
     // Instead of memcpy we call all these individually as the extractor will
     // handle endianness for us.
     _sigfault.sig_addr = data.GetAddress(&offset);
@@ -585,17 +585,17 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
 }
 
 std::string
-ELFLinuxSigInfo::GetDescription(const lldb::UnixSignalsSP unix_signals_sp) {
-  if (unix_signals_sp->GetShouldStop(si_signo)) {
+ELFLinuxSigInfo::GetDescription(const lldb_private::UnixSignals &unix_signals) {
+  if (unix_signals.GetShouldStop(si_signo)) {
     if (_sigfault._bounds._addr_bnd._upper != 0)
-      return unix_signals_sp->GetSignalDescription(
+      return unix_signals.GetSignalDescription(
           si_signo, si_code, _sigfault.sig_addr,
           _sigfault._bounds._addr_bnd._lower,
           _sigfault._bounds._addr_bnd._upper);
     else
-      return unix_signals_sp->GetSignalDescription(si_signo, si_code,
+      return unix_signals.GetSignalDescription(si_signo, si_code,
                                                    _sigfault.sig_addr);
   }
 
-  return unix_signals_sp->GetSignalDescription(si_signo, si_code);
+  return unix_signals.GetSignalDescription(si_signo, si_code);
 }

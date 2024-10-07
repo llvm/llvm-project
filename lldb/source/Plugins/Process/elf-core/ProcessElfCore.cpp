@@ -925,14 +925,14 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       break;
     }
     case ELF::NT_SIGINFO: {
-      lldb::UnixSignalsSP unix_signals_sp = GetUnixSignals();
+      const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
       ELFLinuxSigInfo siginfo;
-      Status status = siginfo.Parse(note.data, arch, unix_signals_sp);
+      Status status = siginfo.Parse(note.data, arch, unix_signals);
       if (status.Fail())
         return status.ToError();
       thread_data.signo = siginfo.si_signo;
       thread_data.code = siginfo.si_code;
-      thread_data.description = siginfo.GetDescription(unix_signals_sp);
+      thread_data.description = siginfo.GetDescription(unix_signals);
       break;
     }
     case ELF::NT_FILE: {
