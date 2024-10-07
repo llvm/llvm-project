@@ -227,7 +227,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t symValue = value.sec ? 0 : value.getValue();
 
-  Defined newSym(createInternalFile(cmd->location), cmd->name, STB_GLOBAL,
+  Defined newSym(createInternalFile(ctx, cmd->location), cmd->name, STB_GLOBAL,
                  visibility, value.type, symValue, 0, sec);
 
   Symbol *sym = ctx.symtab->insert(cmd->name);
@@ -239,7 +239,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
 
 // This function is called from LinkerScript::declareSymbols.
 // It creates a placeholder symbol if needed.
-static void declareSymbol(SymbolAssignment *cmd) {
+void LinkerScript::declareSymbol(SymbolAssignment *cmd) {
   if (!shouldDefineSym(cmd))
     return;
 
@@ -1055,7 +1055,7 @@ void LinkerScript::diagnoseOrphanHandling() const {
 }
 
 void LinkerScript::diagnoseMissingSGSectionAddress() const {
-  if (!ctx.arg.cmseImplib || !ctx.in.armCmseSGSection->isNeeded())
+  if (!ctx.arg.cmseImplib || !ctx.in.armCmseSGSection->isNeeded(ctx))
     return;
 
   OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
@@ -1442,7 +1442,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
         return cmd.hasPhdrs || cmd.hasFilehdr;
       });
   bool paged = !ctx.arg.omagic && !ctx.arg.nmagic;
-  uint64_t headerSize = getHeaderSize();
+  uint64_t headerSize = getHeaderSize(ctx);
 
   uint64_t base = 0;
   // If SECTIONS is present and the linkerscript is not explicit about program
@@ -1491,7 +1491,7 @@ LinkerScript::assignAddresses() {
     dot = ctx.target->getImageBase();
     ctx.out.elfHeader->addr = dot;
     ctx.out.programHeaders->addr = dot + ctx.out.elfHeader->size;
-    dot += getHeaderSize();
+    dot += getHeaderSize(ctx);
   }
 
   OutputSection *changedOsec = nullptr;

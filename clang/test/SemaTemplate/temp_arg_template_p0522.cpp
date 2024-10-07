@@ -21,7 +21,7 @@ template<int, int> struct ii;
 template<int...> struct Pi;
 template<int, int, int...> struct iiPi;
 
-template<int, typename = int> struct iDt; // #iDt
+template<int, typename = int> struct iDt;
 template<int, typename> struct it; // #it
 
 template<typename T, T v> struct t0;
@@ -50,9 +50,9 @@ namespace IntPackParam {
   using ok_compat = Pt<TPi<i>, TPi<iDi>, TPi<ii>, TPi<iiPi>>;
   using err1 = TPi<t0>; // expected-error@#TPi {{template argument for template type parameter must be a type}}
                         // expected-note@-1 {{different template parameters}}
-  using err2 = TPi<iDt>; // expected-error@#iDt {{could not match 'type-parameter-0-1' against}}
+  using err2 = TPi<iDt>; // expected-error@#TPi {{template argument for template type parameter must be a type}}
                          // expected-note@-1 {{different template parameters}}
-  using err3 = TPi<it>; // expected-error@#it {{could not match 'type-parameter-0-1' against}}
+  using err3 = TPi<it>; // expected-error@#TPi {{template argument for template type parameter must be a type}}
                         // expected-note@-1 {{different template parameters}}
 }
 

@@ -219,7 +219,6 @@ if (LIBCXX_ENABLE_SHARED)
 
     # TODO: These exports controls should not be tied to whether we re-export libc++abi symbols
     target_link_libraries(cxx_shared PRIVATE
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
   endif()
