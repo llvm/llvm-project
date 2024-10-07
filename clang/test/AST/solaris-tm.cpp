@@ -5,11 +5,6 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu  | FileCheck --check-prefix=CHECK-LINUX %s
 //
 // REQUIRES: x86-registered-target
-//
-// CHECK-SOLARIS: @_Z6tmfunc2tm
-// CHECK-SOLARIS: @_Z7ldtfunc6ldiv_t
-// CHECK-LINUX:   @_Z6tmfuncSt2tm
-// CHECK-LINUX:   @_Z7ldtfuncSt6ldiv_t
 
 namespace std {
   extern "C" {
@@ -22,6 +17,18 @@ namespace std {
   }
 }
 
+// CHECK-SOLARIS: @_Z6tmfunc2tm
+// CHECK-SOLARIS: @_Z9tmccpfunc2tmPKcS1_
+// CHECK-SOLARIS: @_Z7tm2func2tmS_
+// CHECK-LINUX:   @_Z6tmfuncSt2tm
+// CHECK-LINUX:   @_Z9tmccpfuncSt2tmPKcS1_
+// CHECK-LINUX:   @_Z7tm2funcSt2tmS_
+
 void tmfunc (std::tm tm) {}
+void tmccpfunc (std::tm tm, const char *ccp, const char *ccp2) {}
+void tm2func (std::tm tm, std::tm tm2) {}
+
+// CHECK-SOLARIS: @_Z7ldtfunc6ldiv_t
+// CHECK-LINUX:   @_Z7ldtfuncSt6ldiv_t
 
 void ldtfunc (std::ldiv_t ldt) {}
