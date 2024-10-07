@@ -553,8 +553,6 @@ void SplitGraph::buildGraph(CallGraph &CG) {
         // inline assembly can be ignored, unless InlineAsmIsIndirectCall is
         // true.
         if (CB->isInlineAsm()) {
-          if (InlineAsmIsIndirectCall)
-            HasUnknownIndirectCall = true;
           LLVM_DEBUG(dbgs() << "    found inline assembly\n");
           continue;
         }
