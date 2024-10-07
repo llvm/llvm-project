@@ -36,6 +36,7 @@ protected:
 
   PassManager(StringRef Name) : ParentPass(Name) {}
   PassManager(const PassManager &) = delete;
+  PassManager(PassManager &&) = default;
   virtual ~PassManager() = default;
   PassManager &operator=(const PassManager &) = delete;
 

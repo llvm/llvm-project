@@ -15,14 +15,14 @@
 
 namespace llvm::sandboxir {
 
-cl::opt<bool>
+static cl::opt<bool>
     PrintPassPipeline("sbvec-print-pass-pipeline", cl::init(false), cl::Hidden,
                       cl::desc("Prints the pass pipeline and returns."));
 
 /// A magic string for the default pass pipeline.
-const char *DefaultPipelineMagicStr = "*";
+static const char *DefaultPipelineMagicStr = "*";
 
-cl::opt<std::string> UserDefinedPassPipeline(
+static cl::opt<std::string> UserDefinedPassPipeline(
     "sbvec-passes", cl::init(DefaultPipelineMagicStr), cl::Hidden,
     cl::desc("Comma-separated list of vectorizer passes. If not set "
              "we run the predefined pipeline."));
@@ -31,14 +31,14 @@ static void registerAllRegionPasses(sandboxir::PassRegistry &PR) {
   PR.registerPass(std::make_unique<sandboxir::NullPass>());
 }
 
-static sandboxir::RegionPassManager &
-parseAndCreatePassPipeline(sandboxir::PassRegistry &PR, StringRef Pipeline) {
+/// Adds to `RPM` a sequence of passes described by `Pipeline` from the `PR`
+/// pass registry.
+static void parseAndCreatePassPipeline(RegionPassManager &RPM, PassRegistry &PR,
+                                       StringRef Pipeline) {
   static constexpr const char EndToken = '\0';
   // Add EndToken to the end to ease parsing.
   std::string PipelineStr = std::string(Pipeline) + EndToken;
   int FlagBeginIdx = 0;
-  auto &RPM = static_cast<sandboxir::RegionPassManager &>(
-      PR.registerPass(std::make_unique<sandboxir::RegionPassManager>("rpm")));
 
   for (auto [Idx, C] : enumerate(PipelineStr)) {
     // Keep moving Idx until we find the end of the pass name.
@@ -59,21 +59,17 @@ parseAndCreatePassPipeline(sandboxir::PassRegistry &PR, StringRef Pipeline) {
     // registerAllRegionPasses only registers regions passes.
     RPM.addPass(static_cast<sandboxir::RegionPass *>(Pass));
   }
-  return RPM;
 }
 
-BottomUpVec::BottomUpVec() : FunctionPass("bottom-up-vec") {
+BottomUpVec::BottomUpVec() : FunctionPass("bottom-up-vec"), RPM("rpm") {
   registerAllRegionPasses(PR);
 
   // Create a pipeline to be run on each Region created by BottomUpVec.
   if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {
-    // Create the default pass pipeline.
-    RPM = &static_cast<sandboxir::RegionPassManager &>(PR.registerPass(
-        std::make_unique<sandboxir::FunctionPassManager>("rpm")));
-    // TODO: Add passes to the default pipeline.
+    // TODO: Add default passes to RPM.
   } else {
     // Create the user-defined pipeline.
-    RPM = &parseAndCreatePassPipeline(PR, UserDefinedPassPipeline);
+    parseAndCreatePassPipeline(RPM, PR, UserDefinedPassPipeline);
   }
 }
 
@@ -115,7 +111,7 @@ void BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) { vectorizeRec(Bndl); }
 
 bool BottomUpVec::runOnFunction(Function &F) {
   if (PrintPassPipeline) {
-    RPM->printPipeline(outs());
+    RPM.printPipeline(outs());
     return false;
   }
 

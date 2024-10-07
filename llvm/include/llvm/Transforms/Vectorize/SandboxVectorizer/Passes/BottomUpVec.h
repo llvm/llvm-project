@@ -29,12 +29,11 @@ class BottomUpVec final : public FunctionPass {
   void tryVectorize(ArrayRef<Value *> Seeds);
 
   // Used to build a RegionPass pipeline to be run on Regions created by the
-  // bottom-up vectorization pass.
+  // bottom-up vectorization pass. Owns the sub-passes.
   PassRegistry PR;
 
-  // The PM containing the pipeline of region passes. It's owned by the pass
-  // registry.
-  RegionPassManager *RPM;
+  // The PM containing the pipeline of region passes.
+  RegionPassManager RPM;
 
 public:
   BottomUpVec();
