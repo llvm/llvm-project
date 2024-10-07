@@ -23,28 +23,40 @@ generic implementations of most library requirements, allowing the target
 to override the generic implementation at the granularity of individual
 functions.
 
-libclc currently only supports the PTX target, but support for more
+libclc currently supports NVPTX, AMDGPU and SPIRV targets, but support for more
 targets is welcome.
 
-Compiling and installing with Make
-----------------------------------
+Compiling and installing
+------------------------
 
-$ ./configure.py --with-llvm-config=/path/to/llvm-config && make
-$ make install
+(in the following instructions you can use make or ninja)
+
+For an in-tree build, Clang must also be built at the same time:
+
+$ cmake <path-to>/llvm-project/llvm/CMakeLists.txt -DLLVM_ENABLE_PROJECTS="libclc;clang" \
+    -DCMAKE_BUILD_TYPE=Release -G Ninja
+$ ninja
+
+Then install:
+
+$ ninja install
 
 Note you can use the DESTDIR Makefile variable to do staged installs.
 
-$ make install DESTDIR=/path/for/staged/install
-
-Compiling and installing with Ninja
------------------------------------
-
-$ ./configure.py -g ninja --with-llvm-config=/path/to/llvm-config && ninja
-$ ninja install
-
-Note you can use the DESTDIR environment variable to do staged installs.
-
 $ DESTDIR=/path/for/staged/install ninja install
+
+To build against an existing LLVM build or install:
+
+$ cmake <path-to>/llvm-project/libclc/CMakeLists.txt -DCMAKE_BUILD_TYPE=Release \
+  -G Ninja -DLLVM_DIR=$(<path-to>/llvm-config --cmakedir)
+$ ninja
+
+Then install as before.
+
+In both cases, the LLVM used must include the targets you want libclc support for.
+AMDGPU and NVPTX are enabled in LLVM by default, but SPIRV must be enabled by
+passing `-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=SPIRV` to CMake when configuring
+LLVM.
 
 Website
 -------
