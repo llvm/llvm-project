@@ -1358,7 +1358,8 @@ def VerifyOp : TransformDialectOp<"verify",
 }
 
 def YieldOp : TransformDialectOp<"yield",
-    [Terminator, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+    [Terminator, ReturnLike,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Yields operation handles from a transform IR region";
   let description = [{
     This terminator operation yields operation handles from regions of the
