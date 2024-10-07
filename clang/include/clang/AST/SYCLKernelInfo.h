@@ -13,27 +13,22 @@
 #ifndef LLVM_CLANG_AST_SYCLKERNELINFO_H
 #define LLVM_CLANG_AST_SYCLKERNELINFO_H
 
-#include <string>
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
+#include <string>
 
 namespace clang {
 
 class SYCLKernelInfo {
 public:
-  SYCLKernelInfo(
-      CanQualType KernelNameType,
-      const FunctionDecl *KernelEntryPointDecl)
-  :
-      KernelNameType(KernelNameType),
-      KernelEntryPointDecl(KernelEntryPointDecl)
-  {}
+  SYCLKernelInfo(CanQualType KernelNameType,
+                 const FunctionDecl *KernelEntryPointDecl)
+      : KernelNameType(KernelNameType),
+        KernelEntryPointDecl(KernelEntryPointDecl) {}
 
-  CanQualType GetKernelNameType() const {
-    return KernelNameType;
-  }
+  CanQualType GetKernelNameType() const { return KernelNameType; }
 
-  const FunctionDecl* GetKernelEntryPointDecl() const {
+  const FunctionDecl *GetKernelEntryPointDecl() const {
     return KernelEntryPointDecl;
   }
 

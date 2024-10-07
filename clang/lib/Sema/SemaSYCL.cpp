@@ -204,6 +204,6 @@ void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
   TypeSourceInfo *TSI = nullptr;
   (void)SemaRef.GetTypeFromParser(PT, &TSI);
   assert(TSI && "no type source info for attribute argument");
-  D->addAttr(::new (SemaRef.Context) SYCLKernelEntryPointAttr(SemaRef.Context,
-                                                              AL, TSI));
+  D->addAttr(::new (SemaRef.Context)
+                 SYCLKernelEntryPointAttr(SemaRef.Context, AL, TSI));
 }

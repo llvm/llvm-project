@@ -14299,7 +14299,7 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
 static SYCLKernelInfo BuildSYCLKernelInfo(ASTContext &Context,
                                           CanQualType KernelNameType,
                                           const FunctionDecl *FD) {
-  return { KernelNameType, FD };
+  return {KernelNameType, FD};
 }
 
 void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
@@ -14316,8 +14316,7 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
       llvm::report_fatal_error("SYCL kernel name conflict");
   } else {
     SYCLKernels.insert_or_assign(
-        KernelNameType,
-        BuildSYCLKernelInfo(*this, KernelNameType, FD));
+        KernelNameType, BuildSYCLKernelInfo(*this, KernelNameType, FD));
   }
 }
 
