@@ -9,6 +9,7 @@
 test_annotation:
   .functype   test_annotation () -> ()
   .tagtype  __cpp_exception i32
+  .tagtype  __c_longjmp i32
   try
     br        0
   catch     __cpp_exception
