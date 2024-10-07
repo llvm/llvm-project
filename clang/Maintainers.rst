@@ -1,36 +1,36 @@
 =================
-Clang Code Owners
+Clang Maintainers
 =================
 
 This file is a list of the
-`code owners <https://llvm.org/docs/DeveloperPolicy.html#code-owners>`_ for
+`maintainers <https://llvm.org/docs/DeveloperPolicy.html#maintainers>`_ for
 Clang.
 
 .. contents::
    :depth: 2
    :local:
 
-Current Code Owners
-===================
-The following people are the active code owners for the project. Please reach
+Active Maintainers
+==================
+The following people are the active maintainers for the project. Please reach
 out to them for code reviews, questions about their area of expertise, or other
 assistance.
 
-All parts of Clang not covered by someone else
-----------------------------------------------
+Lead Maintainer
+---------------
 | Aaron Ballman
 | aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
 Contained Components
 --------------------
-These code owners are responsible for particular high-level components within
+These maintainers are responsible for particular high-level components within
 Clang that are typically contained to one area of the compiler.
 
 AST matchers
 ~~~~~~~~~~~~
-| Manuel Klimek
-| klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)
+| Aaron Ballman
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
 Clang LLVM IR generation
@@ -60,7 +60,7 @@ Analysis & CFG
 Experimental new constant interpreter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Timm Bäder
-| tbaeder\@redhat.com (email), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
+| tbaeder\@redhat.com (em), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
 
 
 Modules & serialization
@@ -125,13 +125,8 @@ Driver parts not covered by someone else
 
 Tools
 -----
-These code owners are responsible for user-facing tools under the Clang
+These maintainers are responsible for user-facing tools under the Clang
 umbrella or components used to support such tools.
-
-Tooling library
-~~~~~~~~~~~~~~~
-| Manuel Klimek
-| klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)
 
 
 clang-format
@@ -255,19 +250,20 @@ SYCL conformance
 | alexey.bader\@intel.com (email), bader (Phabricator), bader (GitHub)
 
 
-Former Code Owners
-==================
-The following people have graciously spent time performing code ownership
+Inactive Maintainers
+====================
+The following people have graciously spent time performing maintainership
 responsibilities but are no longer active in that role. Thank you for all your
 help with the success of the project!
 
-Emeritus owners
----------------
+Emeritus Lead Maintainers
+-------------------------
 | Doug Gregor (dgregor\@apple.com)
 | Richard Smith (richard\@metafoo.co.uk)
 
 
-Former component owners
------------------------
+Inactive component maintainers
+------------------------------
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
+| Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
