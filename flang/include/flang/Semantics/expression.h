@@ -10,8 +10,6 @@
 #define FORTRAN_SEMANTICS_EXPRESSION_H_
 
 #include "semantics.h"
-#include "flang/Common/Fortran.h"
-#include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/characteristics.h"
@@ -24,6 +22,8 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
+#include "flang/Support/Fortran.h"
+#include "flang/Support/indirection.h"
 #include <map>
 #include <optional>
 #include <type_traits>

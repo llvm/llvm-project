@@ -9,9 +9,9 @@
 #ifndef FORTRAN_SEMANTICS_ASSIGNMENT_H_
 #define FORTRAN_SEMANTICS_ASSIGNMENT_H_
 
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/indirection.h"
 
 namespace Fortran::parser {
 class ContextualMessages;

@@ -9,8 +9,8 @@
 #ifndef FORTRAN_LOWER_PPCINTRINSICCALL_H
 #define FORTRAN_LOWER_PPCINTRINSICCALL_H
 
-#include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Support/static-multimap-view.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 namespace fir {

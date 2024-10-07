@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -42,6 +41,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat.h"
+#include "flang/Support/static-multimap-view.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"

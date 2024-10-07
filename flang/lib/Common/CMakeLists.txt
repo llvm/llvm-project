@@ -36,11 +36,11 @@ endif()
 
 
 add_flang_library(FortranCommon
-  Fortran.cpp
-  Fortran-features.cpp
-  default-kinds.cpp
-  idioms.cpp
-  Version.cpp
+  ../Support/Fortran.cpp
+  ../Support/Fortran-features.cpp
+  ../Support/default-kinds.cpp
+  ../Support/idioms.cpp
+  ../Support/Version.cpp
   ${version_inc}
 
   LINK_COMPONENTS

@@ -11,12 +11,12 @@
 
 #include "scope.h"
 #include "symbol.h"
-#include "flang/Common/Fortran-features.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/module-dependences.h"
+#include "flang/Support/Fortran-features.h"
 #include <iosfwd>
 #include <set>
 #include <string>

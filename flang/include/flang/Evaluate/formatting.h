@@ -19,7 +19,7 @@
 // This header is meant to be included by the headers that define the several
 // representational class templates that need it, not by external clients.
 
-#include "flang/Common/indirection.h"
+#include "flang/Support/indirection.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <type_traits>

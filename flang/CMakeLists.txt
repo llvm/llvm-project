@@ -257,7 +257,8 @@ set(LLVM_BUILD_TOOLS ON)
 
 include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
-  ${FLANG_SOURCE_DIR}/include)
+  ${FLANG_SOURCE_DIR}/include
+  ${FLANG_SOURCE_DIR}/../FortranRuntime/include)
 
 # Add Flang-centric modules to cmake path.
 list(INSERT CMAKE_MODULE_PATH 0
@@ -468,7 +469,7 @@ if (FLANG_CUF_RUNTIME)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
-add_subdirectory(runtime)
+add_subdirectory(../FortranRuntime/lib/Runtime runtime)
 
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)

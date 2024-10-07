@@ -8,12 +8,12 @@
 
 #include "check-select-type.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/reference.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/reference.h"
 #include <optional>
 
 namespace Fortran::semantics {

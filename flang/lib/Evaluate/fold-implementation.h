@@ -12,9 +12,6 @@
 #include "character.h"
 #include "host.h"
 #include "int-power.h"
-#include "flang/Common/indirection.h"
-#include "flang/Common/template.h"
-#include "flang/Common/unwrap.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/constant.h"
@@ -31,6 +28,9 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/indirection.h"
+#include "flang/Support/template.h"
+#include "flang/Support/unwrap.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>

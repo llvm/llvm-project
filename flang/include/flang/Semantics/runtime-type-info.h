@@ -14,8 +14,8 @@
 #ifndef FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 #define FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 
-#include "flang/Common/reference.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/reference.h"
 #include <map>
 #include <set>
 #include <string>

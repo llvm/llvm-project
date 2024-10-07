@@ -15,7 +15,7 @@
 //  - A Unicode byte order mark is recognized if present.
 
 #include "characters.h"
-#include "flang/Common/reference.h"
+#include "flang/Support/reference.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>

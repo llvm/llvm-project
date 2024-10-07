@@ -11,8 +11,6 @@
 
 #include "traverse.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/template.h"
-#include "flang/Common/unwrap.h"
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
@@ -21,6 +19,8 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/template.h"
+#include "flang/Support/unwrap.h"
 #include <array>
 #include <optional>
 #include <set>

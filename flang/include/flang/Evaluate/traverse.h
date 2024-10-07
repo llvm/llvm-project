@@ -38,9 +38,9 @@
 // expression of an ASSOCIATE (or related) construct entity.
 
 #include "expression.h"
-#include "flang/Common/indirection.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/indirection.h"
 #include <set>
 #include <type_traits>
 

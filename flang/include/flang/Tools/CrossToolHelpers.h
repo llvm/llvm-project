@@ -13,9 +13,9 @@
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/LangOptions.h"
+#include "flang/Support/MathOptionsBase.h"
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
