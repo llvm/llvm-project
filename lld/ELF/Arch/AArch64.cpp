@@ -1208,12 +1208,10 @@ void elf::createTaggedSymbols(Ctx &ctx) {
   }
 }
 
-TargetInfo *elf::getAArch64TargetInfo(Ctx &ctx) {
+void elf::setAArch64TargetInfo(Ctx &ctx) {
   if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      ctx.arg.zPacPlt) {
-    static AArch64BtiPac t(ctx);
-    return &t;
-  }
-  static AArch64 t(ctx);
-  return &t;
+      ctx.arg.zPacPlt)
+    ctx.target.reset(new AArch64BtiPac(ctx));
+  else
+    ctx.target.reset(new AArch64(ctx));
 }
