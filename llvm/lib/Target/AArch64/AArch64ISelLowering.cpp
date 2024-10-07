@@ -24085,11 +24085,11 @@ static SDValue performMaskedGatherScatterCombine(
 
   if (N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM) {
     MaskedHistogramSDNode *HG = cast<MaskedHistogramSDNode>(N);
-    assert(HG &&
-           "Can only combine gather load, scatter store or histogram nodes");
 
     SDValue Index = HG->getIndex();
-    if (ISD::isExtOpcode(Index->getOpcode())) {
+    if (!ISD::isExtOpcode(Index->getOpcode())) {
+      return SDValue();
+    } else {
       SDLoc DL(HG);
       SDValue ExtOp = Index.getOperand(0);
       SDValue Ops[] = {HG->getChain(),   HG->getInc(), HG->getMask(),
@@ -24099,12 +24099,9 @@ static SDValue performMaskedGatherScatterCombine(
                                     HG->getMemoryVT(), DL, Ops,
                                     HG->getMemOperand(), HG->getIndexType());
     }
-    return SDValue();
   }
 
   MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
-  assert(MGS &&
-         "Can only combine gather load, scatter store or histogram nodes");
 
   SDLoc DL(MGS);
   SDValue Chain = MGS->getChain();
