@@ -706,17 +706,21 @@ void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 22, -off - 26);
 }
 
-void elf::setX86TargetInfo(Ctx &ctx) {
+TargetInfo *elf::getX86TargetInfo(Ctx &ctx) {
   if (ctx.arg.zRetpolineplt) {
-    if (ctx.arg.isPic)
-      ctx.target.reset(new RetpolinePic(ctx));
-    else
-      ctx.target.reset(new RetpolineNoPic(ctx));
-    return;
+    if (ctx.arg.isPic) {
+      static RetpolinePic t(ctx);
+      return &t;
+    }
+    static RetpolineNoPic t(ctx);
+    return &t;
   }
 
-  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)
-    ctx.target.reset(new IntelIBT(ctx));
-  else
-    ctx.target.reset(new X86(ctx));
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    static IntelIBT t(ctx);
+    return &t;
+  }
+
+  static X86 t(ctx);
+  return &t;
 }
