@@ -11,7 +11,6 @@
 #include <memory>
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 
 namespace llvm {
@@ -21,21 +20,12 @@ class TargetTransformInfo;
 class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
 
-  // Used to build a RegionPass pipeline to be run on Regions created by the
-  // bottom-up vectorization pass.
-  sandboxir::PassRegistry PR;
-
   // The main vectorizer pass.
-  std::unique_ptr<sandboxir::BottomUpVec> BottomUpVecPass;
-
-  // The PM containing the pipeline of region passes. It's owned by the pass
-  // registry.
-  sandboxir::RegionPassManager *RPM;
+  sandboxir::BottomUpVec BottomUpVecPass;
 
   bool runImpl(Function &F);
 
 public:
-  SandboxVectorizerPass();
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

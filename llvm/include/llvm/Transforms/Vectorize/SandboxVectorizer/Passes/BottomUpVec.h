@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {
@@ -27,11 +28,16 @@ class BottomUpVec final : public FunctionPass {
   void vectorizeRec(ArrayRef<Value *> Bndl);
   void tryVectorize(ArrayRef<Value *> Seeds);
 
-  [[maybe_unused]] RegionPassManager *RPM;
+  // Used to build a RegionPass pipeline to be run on Regions created by the
+  // bottom-up vectorization pass.
+  PassRegistry PR;
+
+  // The PM containing the pipeline of region passes. It's owned by the pass
+  // registry.
+  RegionPassManager *RPM;
 
 public:
-  BottomUpVec(RegionPassManager *RPM)
-      : FunctionPass("bottom-up-vec"), RPM(RPM) {}
+  BottomUpVec();
   bool runOnFunction(Function &F) final;
 };
 
