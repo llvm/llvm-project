@@ -32,7 +32,7 @@ define i32 @foo(i32 %x) nounwind ssp {
 ; CHECK-NEXT:  LBB0_8: ## %return
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .p2align 2, 0x90
+; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:    .data_region jt32
 ; CHECK-NEXT:  .set L0_0_set_2, LBB0_2-LJTI0_0
 ; CHECK-NEXT:  .set L0_0_set_3, LBB0_3-LJTI0_0

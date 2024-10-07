@@ -1128,6 +1128,11 @@ SPIRVGlobalRegistry::getPointerStorageClass(Register VReg) const {
   SPIRVType *Type = getSPIRVTypeForVReg(VReg);
   assert(Type && Type->getOpcode() == SPIRV::OpTypePointer &&
          Type->getOperand(1).isImm() && "Pointer type is expected");
+  return getPointerStorageClass(Type);
+}
+
+SPIRV::StorageClass::StorageClass
+SPIRVGlobalRegistry::getPointerStorageClass(const SPIRVType *Type) const {
   return static_cast<SPIRV::StorageClass::StorageClass>(
       Type->getOperand(1).getImm());
 }
@@ -1144,16 +1149,19 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
   DT.add(TD, &MIRBuilder.getMF(), ResVReg);
-  return MIRBuilder.buildInstr(SPIRV::OpTypeImage)
-      .addDef(ResVReg)
-      .addUse(getSPIRVTypeID(SampledType))
-      .addImm(Dim)
-      .addImm(Depth)        // Depth (whether or not it is a Depth image).
-      .addImm(Arrayed)      // Arrayed.
-      .addImm(Multisampled) // Multisampled (0 = only single-sample).
-      .addImm(Sampled)      // Sampled (0 = usage known at runtime).
-      .addImm(ImageFormat)
-      .addImm(AccessQual);
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeImage)
+                 .addDef(ResVReg)
+                 .addUse(getSPIRVTypeID(SampledType))
+                 .addImm(Dim)
+                 .addImm(Depth)   // Depth (whether or not it is a Depth image).
+                 .addImm(Arrayed) // Arrayed.
+                 .addImm(Multisampled) // Multisampled (0 = only single-sample).
+                 .addImm(Sampled)      // Sampled (0 = usage known at runtime).
+                 .addImm(ImageFormat);
+
+  if (AccessQual != SPIRV::AccessQualifier::None)
+    MIB.addImm(AccessQual);
+  return MIB;
 }
 
 SPIRVType *
