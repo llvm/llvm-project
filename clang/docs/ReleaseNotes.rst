@@ -378,6 +378,8 @@ Improvements to Clang's diagnostics
 
 - Clang now emits a diagnostic note at the class declaration when the method definition does not match any declaration (#GH110638).
 
+- Clang now omits warnings for extra parentheses in fold expressions with single expansion (#GH101863).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -471,6 +473,8 @@ Bug Fixes to C++ Support
 - Fixed an issue deducing non-type template arguments of reference type. (#GH73460)
 - Fixed an issue in constraint evaluation, where type constraints on the lambda expression
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
+- Fixes crashes with function template member specializations, and increases
+  conformance of explicit instantiation behaviour with MSVC. (#GH111266)
 - Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
   in certain friend declarations. (#GH93099)
 
