@@ -2742,6 +2742,50 @@ static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
   return &MI;
 }
 
+static MachineInstr *swapNonRegOperands(MachineInstr &MI,
+                                             MachineOperand &NonRegOp1,
+                                             MachineOperand &NonRegOp2) {
+  if (NonRegOp1.isImm() && NonRegOp2.isImm()){
+    auto TargetFlags = NonRegOp1.getTargetFlags();
+    auto NonRegVal = NonRegOp1.getImm();
+
+    NonRegOp1.setImm(NonRegOp2.getImm());
+    NonRegOp2.setImm(NonRegVal);
+    NonRegOp1.setTargetFlags(NonRegOp2.getTargetFlags());
+    NonRegOp2.setTargetFlags(TargetFlags);
+  }
+  // --> Still working on the FrameInfo case :)
+  // else if (NonRegOp1.isFI() && NonRegOp2.isFI()){
+  //   auto TargetFlags = NonRegOp 1.getTargetFlags();
+  //   auto FrameIndex = NonRegOp1.getIndex();  
+  //   NonRegOp1.ChangeToFrameIndex(NonRegOp2.getIndex());  
+  //   NonRegOp2.ChangeToFrameIndex(FrameIndex);  
+  //   NonRegOp1.setTargetFlags(NonRegOp2.getTargetFlags());
+  //   NonRegOp2.setTargetFlags(TargetFlags);
+  // }
+  else if (NonRegOp1.isGlobal() && NonRegOp2.isImm()){
+    auto TargetFlags = NonRegOp1.getTargetFlags();
+    auto GlobalVal = NonRegOp1.getGlobal();  
+    auto GlobalOffset = NonRegOp1.getOffset();  
+    NonRegOp1.ChangeToImmediate(NonRegOp2.getImm());  
+    NonRegOp1.setTargetFlags(NonRegOp2.getTargetFlags());
+    NonRegOp2.ChangeToGA(GlobalVal, GlobalOffset, TargetFlags);  
+    NonRegOp2.setTargetFlags(TargetFlags);
+  }
+  else if (NonRegOp1.isImm() && NonRegOp2.isGlobal()){
+    auto TargetFlags = NonRegOp2.getTargetFlags();
+    auto GlobalVal = NonRegOp2.getGlobal();  
+    auto GlobalOffset = NonRegOp2.getOffset();  
+    NonRegOp2.ChangeToImmediate(NonRegOp1.getImm());  
+    NonRegOp2.setTargetFlags(NonRegOp1.getTargetFlags());
+    NonRegOp1.ChangeToGA(GlobalVal, GlobalOffset, TargetFlags);  
+    NonRegOp1.setTargetFlags(TargetFlags);
+  }
+  else 
+    return nullptr;
+  return &MI;
+}
+
 MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                   unsigned Src0Idx,
                                                   unsigned Src1Idx) const {
@@ -2780,8 +2824,7 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     if (isOperandLegal(MI, Src1Idx, &Src0))
       CommutedMI = swapRegAndNonRegOperand(MI, Src1, Src0);
   } else {
-    // FIXME: Found two non registers to commute. This does happen.
-    return nullptr;
+      CommutedMI = swapNonRegOperands(MI, Src1, Src0);
   }
 
   if (CommutedMI) {
