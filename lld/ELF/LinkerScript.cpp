@@ -227,7 +227,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t symValue = value.sec ? 0 : value.getValue();
 
-  Defined newSym(createInternalFile(cmd->location), cmd->name, STB_GLOBAL,
+  Defined newSym(createInternalFile(ctx, cmd->location), cmd->name, STB_GLOBAL,
                  visibility, value.type, symValue, 0, sec);
 
   Symbol *sym = ctx.symtab->insert(cmd->name);
