@@ -1542,8 +1542,15 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   }
   if (beginDir.v == llvm::omp::Directive::OMPD_master)
     IssueNonConformanceWarning(beginDir.v, beginDir.source);
-  ClearDataSharingAttributeObjects();
-  ClearPrivateDataSharingAttributeObjects();
+
+  // The omp_taskgroup directive doesn't have its own data-sharing clauses.
+  // It inherits data-sharing attributes from the surrounding context.
+  // Therefore, don't clear the data-sharing attributes if it's an omp taskgroup
+  if (beginDir.v != llvm::omp::Directive::OMPD_taskgroup) {
+    ClearDataSharingAttributeObjects();
+    ClearPrivateDataSharingAttributeObjects();
+  }
+
   ClearAllocateNames();
   return true;
 }
