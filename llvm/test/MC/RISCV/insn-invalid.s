@@ -33,6 +33,8 @@
 .insn 0x2, 0xffffffff # CHECK: :[[@LINE]]:7: error: instruction length does not match the encoding
 .insn 0xffffffffff # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction
 
+.insn 0x0, 0x0 # CHECK: :[[@LINE]]:7: error: instruction lengths must be a non-zero multiple of two
+.insn 0x1, 0xff # CHECK: :[[@LINE]]:7: error: instruction lengths must be a non-zero multiple of two
 .insn 10, 0x000007f # CHECK: :[[@LINE]]:7: error: instruction lengths over 64 bits are not supported
 
 .insn 0x2, 0x03 # CHECK: :[[@LINE]]:7: error: instruction length does not match the encoding
