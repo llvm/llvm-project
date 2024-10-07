@@ -48497,7 +48497,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   const APInt &C = Known1.getConstant();
-  if (isPowerOf2_64(C.getZExtValue()))
+  if (isPowerOf2_64(C.getZExtValue()) || C.isZero() || C.isAllOnes())
     return SDValue();
 
   int64_t SignMulAmt = C.getSExtValue();
@@ -48563,10 +48563,6 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   }
   if (!NewMul) {
     EVT ShiftVT = VT.isVector() ? VT : MVT::i8;
-    assert(C.getZExtValue() != 0 &&
-           C.getZExtValue() != maxUIntN(VT.getScalarSizeInBits()) &&
-           "Both cases that could cause potential overflows should have "
-           "already been handled.");
     if (isPowerOf2_64(AbsMulAmt - 1)) {
       // (mul x, 2^N + 1) => (add (shl x, N), x)
       NewMul = DAG.getNode(

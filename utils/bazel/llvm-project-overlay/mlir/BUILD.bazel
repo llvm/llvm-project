@@ -2800,6 +2800,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":Rewrite",
         ":SCFDialect",
         ":SCFPassIncGen",
         ":SCFUtils",
