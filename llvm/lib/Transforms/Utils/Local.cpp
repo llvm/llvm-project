@@ -1020,11 +1020,9 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 // Only when they shares a single common predecessor, return true.
 // Only handles cases when BB can't be merged while its predecessors can be
 // redirected.
-// \p SuccPredsOut may be partially populated with the predecessors of Succ.
 static bool
 CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 const SmallPtrSetImpl<BasicBlock *> &BBPreds,
-                                SmallPtrSetImpl<BasicBlock *> &SuccPredsOut,
                                 BasicBlock *&CommonPred) {
 
   // There must be phis in BB, otherwise BB will be merged into Succ directly
@@ -1044,7 +1042,6 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
   // Get the single common predecessor of both BB and Succ. Return false
   // when there are more than one common predecessors.
   for (BasicBlock *SuccPred : predecessors(Succ)) {
-    SuccPredsOut.insert(SuccPred);
     if (BBPreds.count(SuccPred)) {
       if (CommonPred)
         return false;
@@ -1168,7 +1165,6 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     return false;
 
   SmallPtrSet<BasicBlock *, 16> BBPreds(pred_begin(BB), pred_end(BB));
-  SmallPtrSet<BasicBlock *, 16> SuccPreds;
 
   // The single common predecessor of BB and Succ when BB cannot be killed
   BasicBlock *CommonPred = nullptr;
@@ -1177,16 +1173,13 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
-  bool BBPhisMergeable =
-      BBKillable ||
-      CanRedirectPredsOfEmptyBBToSucc(BB, Succ, BBPreds, SuccPreds, CommonPred);
+  bool BBPhisMergeable = BBKillable || CanRedirectPredsOfEmptyBBToSucc(
+                                           BB, Succ, BBPreds, CommonPred);
 
   if ((!BBKillable && !BBPhisMergeable) || introduceTooManyPhiEntries(BB, Succ))
     return false;
 
-  // SuccPreds may not have been fully filled by CanRedirectPredsOfEmptyBBToSucc
-  // so finish it here.
-  SuccPreds.insert(pred_begin(Succ), pred_end(Succ));
+  SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
 
   // Check to see if merging these blocks/phis would cause conflicts for any of
   // the phi nodes in BB or Succ. If not, we can safely merge.
