@@ -13,8 +13,7 @@ import Foundation
 
 func main() {
   var measurement = Measurement(value: 1.25, unit: Unit(symbol: "m"))
-  print("done!") //% self.expect("frame variable measurement", substrs=['1.25 m'])
-   //% self.expect("expression -d run -- measurement", substrs=['1.25 m'])
+  print("break here")
 }
 
 main()
