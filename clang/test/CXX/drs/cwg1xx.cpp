@@ -119,6 +119,16 @@ namespace cwg109 { // cwg109: yes
   };
 }
 
+namespace cwg110 { // cwg110: 2.8
+template <typename>
+void f();
+
+class f;
+
+template <typename>
+void f(int);
+} // namespace cwg110
+
 namespace cwg111 { // cwg111: dup 535
   struct A { A(); A(volatile A&, int = 0); A(A&, const char * = "foo"); };
   struct B : A { B(); }; // #cwg111-B
