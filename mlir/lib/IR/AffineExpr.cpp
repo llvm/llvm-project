@@ -349,8 +349,6 @@ unsigned AffineDimExpr::getPosition() const {
   return static_cast<ImplType *>(expr)->position;
 }
 
-namespace {
-
 /// Returns true if the expression is divisible by the given symbol with
 /// position `symbolPos`. The argument `opKind` specifies here what kind of
 /// division or mod operation called this division. It helps in implementing the
@@ -358,17 +356,13 @@ namespace {
 ///`exprKind` is floordiv and `expr` is also a binary expression of a floordiv
 /// operation, then the commutative property can be used otherwise, the floordiv
 /// operation is not divisible. The same argument holds for ceildiv operation.
-bool isDivisibleBySymbolImpl(AffineExpr expr, unsigned symbolPos,
-                             AffineExprKind opKind,
-                             SmallVectorImpl<AffineExpr> &visitedExprs,
-                             size_t depth = 0) {
+static bool canSimplifyDivisionBySymbol(AffineExpr expr, unsigned symbolPos,
+                                        AffineExprKind opKind,
+                                        bool fromMul = false) {
   // The argument `opKind` can either be Modulo, Floordiv or Ceildiv only.
   assert((opKind == AffineExprKind::Mod || opKind == AffineExprKind::FloorDiv ||
           opKind == AffineExprKind::CeilDiv) &&
          "unexpected opKind");
-  if (visitedExprs.size() > depth)
-    visitedExprs.resize(depth);
-  visitedExprs.emplace_back(expr);
   switch (expr.getKind()) {
   case AffineExprKind::Constant:
     return cast<AffineConstantExpr>(expr).getValue() == 0;
@@ -379,10 +373,9 @@ bool isDivisibleBySymbolImpl(AffineExpr expr, unsigned symbolPos,
   // Checks divisibility by the given symbol for both operands.
   case AffineExprKind::Add: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    return isDivisibleBySymbolImpl(binaryExpr.getLHS(), symbolPos, opKind,
-                                   visitedExprs, depth + 1) &&
-           isDivisibleBySymbolImpl(binaryExpr.getRHS(), symbolPos, opKind,
-                                   visitedExprs, depth + 1);
+    return canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos,
+                                       opKind) &&
+           canSimplifyDivisionBySymbol(binaryExpr.getRHS(), symbolPos, opKind);
   }
   // Checks divisibility by the given symbol for both operands. Consider the
   // expression `(((s1*s0) floordiv w) mod ((s1 * s2) floordiv p)) floordiv s1`,
@@ -391,20 +384,18 @@ bool isDivisibleBySymbolImpl(AffineExpr expr, unsigned symbolPos,
   // `AffineExprKind::Mod` for this reason.
   case AffineExprKind::Mod: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    return isDivisibleBySymbolImpl(binaryExpr.getLHS(), symbolPos,
-                                   AffineExprKind::Mod, visitedExprs,
-                                   depth + 1) &&
-           isDivisibleBySymbolImpl(binaryExpr.getRHS(), symbolPos,
-                                   AffineExprKind::Mod, visitedExprs,
-                                   depth + 1);
+    return canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos,
+                                       AffineExprKind::Mod) &&
+           canSimplifyDivisionBySymbol(binaryExpr.getRHS(), symbolPos,
+                                       AffineExprKind::Mod);
   }
   // Checks if any of the operand divisible by the given symbol.
   case AffineExprKind::Mul: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    return isDivisibleBySymbolImpl(binaryExpr.getLHS(), symbolPos, opKind,
-                                   visitedExprs, depth + 1) ||
-           isDivisibleBySymbolImpl(binaryExpr.getRHS(), symbolPos, opKind,
-                                   visitedExprs, depth + 1);
+    return canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos, opKind,
+                                       true) ||
+           canSimplifyDivisionBySymbol(binaryExpr.getRHS(), symbolPos, opKind,
+                                       true);
   }
   // Floordiv and ceildiv are divisible by the given symbol when the first
   // operand is divisible, and the affine expression kind of the argument expr
@@ -412,31 +403,23 @@ bool isDivisibleBySymbolImpl(AffineExpr expr, unsigned symbolPos,
   // property of floordiv and ceildiv operations and are as follow:
   // (exp1 floordiv exp2) floordiv exp3 = (exp1 floordiv exp3) floordiv exp2
   // (exp1 ceildiv exp2) ceildiv exp3 = (exp1 ceildiv exp3) ceildiv expr2
-  // It will fail if operations are not same. For example:
-  // (exps1 ceildiv exp2) floordiv exp3 can not be simplified.
+  // It will fail 1.if operations are not same. For example:
+  // (exps1 ceildiv exp2) floordiv exp3 can not be simplified. 2.if there is a
+  // multiplication operation in the expression. For example:
+  //  (exps1 ceildiv exp2) mul exp3 ceildiv exp4 can not be simplified.
   case AffineExprKind::FloorDiv:
   case AffineExprKind::CeilDiv: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
     if (opKind != expr.getKind())
       return false;
-    if (llvm::any_of(visitedExprs, [](auto expr) {
-          return expr.getKind() == AffineExprKind::Mul;
-        }))
+    if (fromMul)
       return false;
-    return isDivisibleBySymbolImpl(binaryExpr.getLHS(), symbolPos,
-                                   expr.getKind(), visitedExprs, depth + 1);
+    return canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos,
+                                       expr.getKind());
   }
   }
   llvm_unreachable("Unknown AffineExpr");
 }
-
-bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
-                         AffineExprKind opKind) {
-  SmallVector<AffineExpr> visitedExprs;
-  return isDivisibleBySymbolImpl(expr, symbolPos, opKind, visitedExprs);
-}
-
-} // namespace
 
 /// Divides the given expression by the given symbol at position `symbolPos`. It
 /// considers the divisibility condition is checked before calling itself. A
@@ -474,7 +457,7 @@ static AffineExpr symbolicDivide(AffineExpr expr, unsigned symbolPos,
   // Dividing any of the operand by the given symbol.
   case AffineExprKind::Mul: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    if (!isDivisibleBySymbol(binaryExpr.getLHS(), symbolPos, opKind))
+    if (!canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos, opKind))
       return binaryExpr.getLHS() *
              symbolicDivide(binaryExpr.getRHS(), symbolPos, opKind);
     return symbolicDivide(binaryExpr.getLHS(), symbolPos, opKind) *
@@ -609,7 +592,8 @@ static AffineExpr simplifySemiAffine(AffineExpr expr, unsigned numDims,
     if (!symbolExpr)
       return getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
     unsigned symbolPos = symbolExpr.getPosition();
-    if (!isDivisibleBySymbol(binaryExpr.getLHS(), symbolPos, expr.getKind()))
+    if (!canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos,
+                                     expr.getKind()))
       return getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
     if (expr.getKind() == AffineExprKind::Mod)
       return getAffineConstantExpr(0, expr.getContext());
