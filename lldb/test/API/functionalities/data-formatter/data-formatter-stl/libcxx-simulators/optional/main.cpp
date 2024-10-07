@@ -3,7 +3,7 @@
 
 #if REVISION == 0
 // Pre-a3942b3 layout.
-#define HAS_REMOVE_CV
+#define NO_REMOVE_CV
 #endif
 // REVISION == 1: current layout
 
@@ -20,10 +20,10 @@ struct __optional_destruct_base {
   typedef _Tp value_type;
   union {
     char __null_state_;
-#ifdef HAS_REMOVE_CV
-    remove_cv_t<value_type> __val_;
-#else // !HAS_REMOVE_CV
+#ifdef NO_REMOVE_CV
     value_type __val_;
+#else // !NO_REMOVE_CV
+    remove_cv_t<value_type> __val_;
 #endif
   };
   bool __engaged_;
