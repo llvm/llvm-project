@@ -2589,45 +2589,49 @@ lldb::addr_t SwiftLanguageRuntime::GetAsyncContext(RegisterContext *regctx) {
 }
 
 /// Functional wrapper to read a register as an address.
-static std::optional<addr_t> ReadRegisterAsAddress(RegisterContext &regctx,
-                                                   RegisterKind regkind,
-                                                   unsigned regnum) {
+static llvm::Expected<addr_t> ReadRegisterAsAddress(RegisterContext &regctx,
+                                                    RegisterKind regkind,
+                                                    unsigned regnum) {
   unsigned lldb_regnum =
       regctx.ConvertRegisterKindToRegisterNumber(regkind, regnum);
   auto reg = regctx.ReadRegisterAsUnsigned(lldb_regnum, LLDB_INVALID_ADDRESS);
   if (reg != LLDB_INVALID_ADDRESS)
     return reg;
-  return {};
+  return llvm::createStringError(
+      "SwiftLanguageRuntime: failed to read register from regctx");
 }
 
 /// Functional wrapper to read a pointer from process memory at `addr +
 /// offset`.
-static std::optional<addr_t>
-ReadPtrFromAddr(Process &process, std::optional<addr_t> addr, int offset = 0) {
+static llvm::Expected<addr_t>
+ReadPtrFromAddr(Process &process, llvm::Expected<addr_t> addr, int offset = 0) {
   if (!addr)
-    return {};
+    return addr;
   Status error;
   addr_t ptr = process.ReadPointerFromMemory(*addr + offset, error);
   if (ptr != LLDB_INVALID_ADDRESS)
     return ptr;
-  return {};
+  return llvm::createStringError("SwiftLanguageRuntime: Failed to read ptr "
+                                 "from memory address 0x%8.8" PRIx64,
+                                 *addr + offset);
 }
 
 /// Computes the Canonical Frame Address (CFA) by converting the abstract
 /// location of UnwindPlan::Row::FAValue into a concrete address. This is a
 /// simplified version of the methods in RegisterContextUnwind, since plumbing
 /// access to those here would be challenging.
-static std::optional<addr_t> GetCFA(Process &process, RegisterContext &regctx,
-                                    RegisterKind regkind,
-                                    UnwindPlan::Row::FAValue cfa_loc) {
+static llvm::Expected<addr_t> GetCFA(Process &process, RegisterContext &regctx,
+                                     RegisterKind regkind,
+                                     UnwindPlan::Row::FAValue cfa_loc) {
   using ValueType = UnwindPlan::Row::FAValue::ValueType;
   switch (cfa_loc.GetValueType()) {
   case ValueType::isRegisterPlusOffset: {
     unsigned regnum = cfa_loc.GetRegisterNumber();
-    if (std::optional<addr_t> regvalue =
+    if (llvm::Expected<addr_t> regvalue =
             ReadRegisterAsAddress(regctx, regkind, regnum))
       return *regvalue + cfa_loc.GetOffset();
-    break;
+    else
+      return regvalue;
   }
   case ValueType::isConstant:
   case ValueType::isDWARFExpression:
@@ -2636,27 +2640,34 @@ static std::optional<addr_t> GetCFA(Process &process, RegisterContext &regctx,
   case ValueType::unspecified:
     break;
   }
-  return {};
+  return llvm::createStringError(
+      "SwiftLanguageRuntime: Unsupported FA location type = %d",
+      cfa_loc.GetValueType());
 }
 
 /// Attempts to use UnwindPlans that inspect assembly to recover the entry value
 /// of the async context register. This is a simplified version of the methods
 /// in RegisterContextUnwind, since plumbing access to those here would be
 /// challenging.
-static std::optional<addr_t> ReadAsyncContextRegisterFromUnwind(
+static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
     SymbolContext &sc, Process &process, Address pc, Address func_start_addr,
     RegisterContext &regctx, AsyncUnwindRegisterNumbers regnums) {
   FuncUnwindersSP unwinders =
       pc.GetModule()->GetUnwindTable().GetFuncUnwindersContainingAddress(pc,
                                                                          sc);
   if (!unwinders)
-    return {};
+    return llvm::createStringError("SwiftLanguageRuntime: Failed to find "
+                                   "function unwinder at address 0x%8.8" PRIx64,
+                                   pc.GetFileAddress());
 
   Target &target = process.GetTarget();
   UnwindPlanSP unwind_plan =
       unwinders->GetUnwindPlanAtNonCallSite(target, regctx.GetThread());
   if (!unwind_plan)
-    return {};
+    return llvm::createStringError(
+        "SwiftLanguageRuntime: Failed to find non call site unwind plan at "
+        "address 0x%8.8" PRIx64,
+        pc.GetFileAddress());
 
   const RegisterKind unwind_regkind = unwind_plan->GetRegisterKind();
   UnwindPlan::RowSP row = unwind_plan->GetRowForFunctionOffset(
@@ -2668,7 +2679,8 @@ static std::optional<addr_t> ReadAsyncContextRegisterFromUnwind(
   if (!regctx.ConvertBetweenRegisterKinds(
           regnums.GetRegisterKind(), regnums.async_ctx_regnum, unwind_regkind,
           async_reg_unwind_regdomain))
-    return {};
+    return llvm::createStringError(
+        "SwiftLanguageRuntime: Failed to convert register domains");
 
   // If the plan doesn't have information about the async register, we can use
   // its current value, as this is a callee saved register.
@@ -2689,16 +2701,16 @@ static std::optional<addr_t> ReadAsyncContextRegisterFromUnwind(
     return ReadRegisterAsAddress(regctx, unwind_regkind, regnum);
   }
   case RestoreType::atCFAPlusOffset: {
-    std::optional<addr_t> cfa =
+    llvm::Expected<addr_t> cfa =
         GetCFA(process, regctx, unwind_regkind, row->GetCFAValue());
-    return ReadPtrFromAddr(process, cfa, regloc.GetOffset());
+    return ReadPtrFromAddr(process, std::move(cfa), regloc.GetOffset());
   }
   case RestoreType::isCFAPlusOffset: {
-    std::optional<addr_t> cfa =
-        GetCFA(process, regctx, unwind_regkind, row->GetCFAValue());
-    if (!cfa)
-      return {};
-    return *cfa + regloc.GetOffset();
+    if (llvm::Expected<addr_t> cfa =
+            GetCFA(process, regctx, unwind_regkind, row->GetCFAValue()))
+      return *cfa + regloc.GetOffset();
+    else
+      return cfa;
   }
   case RestoreType::isConstant:
     return regloc.GetConstant();
@@ -2708,9 +2720,10 @@ static std::optional<addr_t> ReadAsyncContextRegisterFromUnwind(
   case RestoreType::isAFAPlusOffset:
   case RestoreType::isDWARFExpression:
   case RestoreType::atDWARFExpression:
-    return {};
+    break;
   }
-  return {};
+  return llvm::createStringError(
+      "SwiftLanguageRuntime: Unsupported register location type = %d", loctype);
 }
 
 // Examine the register state and detect the transition from a real
@@ -2721,6 +2734,11 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
                                            RegisterContext *regctx,
                                            bool &behaves_like_zeroth_frame) {
   LLDB_SCOPED_TIMER();
+  auto log_expected = [](llvm::Error error) {
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOG_ERROR(log, std::move(error), "SwiftLanguageRuntime: error {0}");
+    return UnwindPlanSP();
+  };
 
   Target &target(process_sp->GetTarget());
   auto arch = target.GetArchitecture();
@@ -2771,12 +2789,14 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   bool indirect_context =
       IsSwiftAsyncAwaitResumePartialFunctionSymbol(mangled_name.GetStringRef());
 
-  std::optional<addr_t> async_reg = ReadAsyncContextRegisterFromUnwind(
+  llvm::Expected<addr_t> async_reg = ReadAsyncContextRegisterFromUnwind(
       sc, *process_sp, pc, func_start_addr, *regctx, *regnums);
-  std::optional<addr_t> async_ctx =
-      indirect_context ? ReadPtrFromAddr(*m_process, async_reg) : async_reg;
-  if (!async_reg || !async_ctx)
-    return UnwindPlanSP();
+  if (!async_reg)
+    return log_expected(async_reg.takeError());
+  llvm::Expected<addr_t> async_ctx =
+      indirect_context ? ReadPtrFromAddr(*m_process, *async_reg) : *async_reg;
+  if (!async_ctx)
+    return log_expected(async_ctx.takeError());
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
   const int32_t ptr_size = 8;
