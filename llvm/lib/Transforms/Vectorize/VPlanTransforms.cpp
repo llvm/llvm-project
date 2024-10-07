@@ -1487,9 +1487,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
                                          m_VPValue(RHS))))
                   return nullptr;
-                VPValue *Cond = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+                // Use all true as the condition because this transformation is
+                // limited to selects whose condition is a header mask.
+                VPValue *AllTrue =
+                    Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
                 return new VPInstruction(VPInstruction::MergeUntilPivot,
-                                         {Cond, LHS, RHS, &EVL},
+                                         {AllTrue, LHS, RHS, &EVL},
                                          VPI->getDebugLoc());
               })
               .Default([&](VPRecipeBase *R) { return nullptr; });
