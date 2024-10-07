@@ -81,7 +81,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
                 ->onlyReadsMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
-    ;
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
@@ -912,9 +911,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     CI->getOperandBundlesAsDefs(OpBundles);
 
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
-
-  if (isa<FPMathOperator>(V))
-    V->copyFastMathFlags(CI);
+  setFlags(V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);

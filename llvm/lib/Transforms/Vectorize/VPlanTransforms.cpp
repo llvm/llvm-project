@@ -84,8 +84,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
-              make_range(Ingredient.op_begin(), Ingredient.op_end() - 1),
-              CI->getType(), CI->getDebugLoc());
+              {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
+              CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {

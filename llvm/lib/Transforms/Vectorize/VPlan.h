@@ -1627,9 +1627,8 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
   bool MayHaveSideEffects;
 
 public:
-  template <typename IterT>
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
-                         iterator_range<IterT> CallArguments, Type *Ty,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
@@ -1641,8 +1640,8 @@ public:
 
   VPWidenIntrinsicRecipe *clone() override {
     return new VPWidenIntrinsicRecipe(*cast<CallInst>(getUnderlyingValue()),
-                                      VectorIntrinsicID, operands(), ResultTy,
-                                      getDebugLoc());
+                                      VectorIntrinsicID, {op_begin(), op_end()},
+                                      ResultTy, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)

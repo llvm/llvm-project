@@ -8293,7 +8293,6 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     return nullptr;
 
   SmallVector<VPValue *, 4> Ops(Operands.take_front(CI->arg_size()));
-  Ops.push_back(Operands.back());
 
   // Is it beneficial to perform intrinsic call compared to lib call?
   bool ShouldUseVectorIntrinsic =
@@ -8304,9 +8303,8 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 },
                 Range);
   if (ShouldUseVectorIntrinsic)
-    return new VPWidenIntrinsicRecipe(*CI, ID,
-                                      make_range(Ops.begin(), Ops.end() - 1),
-                                      CI->getType(), CI->getDebugLoc());
+    return new VPWidenIntrinsicRecipe(*CI, ID, Ops, CI->getType(),
+                                      CI->getDebugLoc());
 
   Function *Variant = nullptr;
   std::optional<unsigned> MaskPos;
@@ -8358,6 +8356,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
+    Ops.push_back(Operands.back());
     return new VPWidenCallRecipe(
         CI, Variant, make_range(Ops.begin(), Ops.end()), CI->getDebugLoc());
   }
