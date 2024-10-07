@@ -178,7 +178,7 @@ define internal void @mutual_recursion_1(i16 %arg) {
 
 define amdgpu_kernel void @kernel_lds_recursion() {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_lds_recursion(
-; CHECK-SAME: ) #[[ATTR6:[0-9]+]] !llvm.amdgcn.lds.kernel.id !9 {
+; CHECK-SAME: ) #[[ATTR2]] !llvm.amdgcn.lds.kernel.id [[META9:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_lds_recursion.lds) ]
 ; CHECK-NEXT:    call void @mutual_recursion_0(i16 0)
 ; CHECK-NEXT:    ret void

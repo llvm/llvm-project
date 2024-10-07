@@ -591,6 +591,7 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[6:7], 0x28
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
+; VI-NEXT:    s_load_dword s3, s[6:7], 0x4c
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_ashr_i32 s4, s2, 24
 ; VI-NEXT:    s_bfe_i32 s5, s2, 0x80010
