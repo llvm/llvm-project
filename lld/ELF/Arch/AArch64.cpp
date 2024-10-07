@@ -213,7 +213,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_NONE:
     return R_NONE;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -348,7 +348,7 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return SignExtend64<28>(getBits(read32le(buf), 0, 25) << 2);
 
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -1208,12 +1208,10 @@ void elf::createTaggedSymbols(Ctx &ctx) {
   }
 }
 
-TargetInfo *elf::getAArch64TargetInfo(Ctx &ctx) {
+void elf::setAArch64TargetInfo(Ctx &ctx) {
   if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      ctx.arg.zPacPlt) {
-    static AArch64BtiPac t(ctx);
-    return &t;
-  }
-  static AArch64 t(ctx);
-  return &t;
+      ctx.arg.zPacPlt)
+    ctx.target.reset(new AArch64BtiPac(ctx));
+  else
+    ctx.target.reset(new AArch64(ctx));
 }

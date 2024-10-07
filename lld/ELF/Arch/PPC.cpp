@@ -265,7 +265,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_TPREL16_HI:
     return R_TPREL;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -292,7 +292,7 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC_TPREL32:
     return SignExtend64<32>(read32(buf));
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -523,7 +523,4 @@ void PPC::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   }
 }
 
-TargetInfo *elf::getPPCTargetInfo(Ctx &ctx) {
-  static PPC target(ctx);
-  return &target;
-}
+void elf::setPPCTargetInfo(Ctx &ctx) { ctx.target.reset(new PPC(ctx)); }

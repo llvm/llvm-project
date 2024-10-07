@@ -545,7 +545,7 @@ struct Ctx {
   Config arg;
   LinkerDriver driver;
   LinkerScript *script;
-  TargetInfo *target;
+  std::unique_ptr<TargetInfo> target;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
@@ -668,7 +668,7 @@ LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.
-static inline ArrayRef<VersionDefinition> namedVersionDefs() {
+static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
   return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 

@@ -145,7 +145,7 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
   case R_386_NONE:
     return R_NONE;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -274,7 +274,7 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -365,7 +365,7 @@ static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     //
     // Note: call *x@tlsdesc(%eax) may not immediately follow this instruction.
     if (memcmp(loc - 2, "\x8d\x83", 2)) {
-      error(getErrorLocation(loc - 2) +
+      error(getErrorLoc(ctx, loc - 2) +
             "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
       return;
     }
@@ -397,7 +397,7 @@ static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   } else if (rel.type == R_386_TLS_GOTDESC) {
     // Convert leal x@tlsdesc(%ebx), %eax to movl x@gotntpoff(%ebx), %eax.
     if (memcmp(loc - 2, "\x8d\x83", 2)) {
-      error(getErrorLocation(loc - 2) +
+      error(getErrorLoc(ctx, loc - 2) +
             "R_386_TLS_GOTDESC must be used in leal x@tlsdesc(%ebx), %eax");
       return;
     }
@@ -706,21 +706,17 @@ void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 22, -off - 26);
 }
 
-TargetInfo *elf::getX86TargetInfo(Ctx &ctx) {
+void elf::setX86TargetInfo(Ctx &ctx) {
   if (ctx.arg.zRetpolineplt) {
-    if (ctx.arg.isPic) {
-      static RetpolinePic t(ctx);
-      return &t;
-    }
-    static RetpolineNoPic t(ctx);
-    return &t;
+    if (ctx.arg.isPic)
+      ctx.target.reset(new RetpolinePic(ctx));
+    else
+      ctx.target.reset(new RetpolineNoPic(ctx));
+    return;
   }
 
-  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
-    static IntelIBT t(ctx);
-    return &t;
-  }
-
-  static X86 t(ctx);
-  return &t;
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)
+    ctx.target.reset(new IntelIBT(ctx));
+  else
+    ctx.target.reset(new X86(ctx));
 }
