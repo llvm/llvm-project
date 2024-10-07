@@ -170,7 +170,7 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
 
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -261,7 +261,7 @@ int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }

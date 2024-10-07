@@ -239,7 +239,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
 
 // This function is called from LinkerScript::declareSymbols.
 // It creates a placeholder symbol if needed.
-static void declareSymbol(SymbolAssignment *cmd) {
+void LinkerScript::declareSymbol(SymbolAssignment *cmd) {
   if (!shouldDefineSym(cmd))
     return;
 

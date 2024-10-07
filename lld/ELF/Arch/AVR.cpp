@@ -93,7 +93,7 @@ RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
   case R_AVR_13_PCREL:
     return R_PC;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
