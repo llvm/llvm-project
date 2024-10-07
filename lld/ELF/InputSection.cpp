@@ -737,7 +737,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return r.sym->getVA(a) - getARMStaticBase(*r.sym);
   case R_GOT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
-    return r.sym->getGotVA() + a;
+    return r.sym->getGotVA(ctx) + a;
   case R_LOONGARCH_GOT:
     // The LoongArch TLS GD relocs reuse the R_LARCH_GOT_PC_LO12 reloc r.type
     // for their page offsets. The arithmetics are different in the TLS case
@@ -745,7 +745,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     if (r.sym->hasFlag(NEEDS_TLSGD) && r.type != R_LARCH_TLS_IE_PC_LO12)
       // Like R_LOONGARCH_TLSGD_PAGE_PC but taking the absolute value.
       return ctx.in.got->getGlobalDynAddr(*r.sym) + a;
-    return r.sym->getGotVA() + a;
+    return r.sym->getGotVA(ctx) + a;
   case R_GOTONLY_PC:
     return ctx.in.got->getVA() + a - p;
   case R_GOTPLTONLY_PC:
@@ -757,28 +757,28 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return r.sym->getVA(a) - ctx.in.gotPlt->getVA();
   case R_GOTPLT:
   case R_RELAX_TLS_GD_TO_IE_GOTPLT:
-    return r.sym->getGotVA() + a - ctx.in.gotPlt->getVA();
+    return r.sym->getGotVA(ctx) + a - ctx.in.gotPlt->getVA();
   case R_TLSLD_GOT_OFF:
   case R_GOT_OFF:
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
-    return r.sym->getGotOffset() + a;
+    return r.sym->getGotOffset(ctx) + a;
   case R_AARCH64_GOT_PAGE_PC:
   case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
-    return getAArch64Page(r.sym->getGotVA() + a) - getAArch64Page(p);
+    return getAArch64Page(r.sym->getGotVA(ctx) + a) - getAArch64Page(p);
   case R_AARCH64_GOT_PAGE:
-    return r.sym->getGotVA() + a - getAArch64Page(ctx.in.got->getVA());
+    return r.sym->getGotVA(ctx) + a - getAArch64Page(ctx.in.got->getVA());
   case R_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
-    return r.sym->getGotVA() + a - p;
+    return r.sym->getGotVA(ctx) + a - p;
   case R_GOTPLT_GOTREL:
-    return r.sym->getGotPltVA() + a - ctx.in.got->getVA();
+    return r.sym->getGotPltVA(ctx) + a - ctx.in.got->getVA();
   case R_GOTPLT_PC:
-    return r.sym->getGotPltVA() + a - p;
+    return r.sym->getGotPltVA(ctx) + a - p;
   case R_LOONGARCH_GOT_PAGE_PC:
     if (r.sym->hasFlag(NEEDS_TLSGD))
       return getLoongArchPageDelta(ctx.in.got->getGlobalDynAddr(*r.sym) + a, p,
                                    r.type);
-    return getLoongArchPageDelta(r.sym->getGotVA() + a, p, r.type);
+    return getLoongArchPageDelta(r.sym->getGotVA(ctx) + a, p, r.type);
   case R_MIPS_GOTREL:
     return r.sym->getVA(a) - ctx.in.mipsGot->getGp(file);
   case R_MIPS_GOT_GP:
@@ -860,21 +860,21 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return dest - p;
   }
   case R_PLT:
-    return r.sym->getPltVA() + a;
+    return r.sym->getPltVA(ctx) + a;
   case R_PLT_PC:
   case R_PPC64_CALL_PLT:
-    return r.sym->getPltVA() + a - p;
+    return r.sym->getPltVA(ctx) + a - p;
   case R_LOONGARCH_PLT_PAGE_PC:
-    return getLoongArchPageDelta(r.sym->getPltVA() + a, p, r.type);
+    return getLoongArchPageDelta(r.sym->getPltVA(ctx) + a, p, r.type);
   case R_PLT_GOTPLT:
-    return r.sym->getPltVA() + a - ctx.in.gotPlt->getVA();
+    return r.sym->getPltVA(ctx) + a - ctx.in.gotPlt->getVA();
   case R_PLT_GOTREL:
-    return r.sym->getPltVA() + a - ctx.in.got->getVA();
+    return r.sym->getPltVA(ctx) + a - ctx.in.got->getVA();
   case R_PPC32_PLTREL:
     // R_PPC_PLTREL24 uses the addend (usually 0 or 0x8000) to indicate r30
     // stores _GLOBAL_OFFSET_TABLE_ or .got2+0x8000. The addend is ignored for
     // target VA computation.
-    return r.sym->getPltVA() - p;
+    return r.sym->getPltVA(ctx) - p;
   case R_PPC64_CALL: {
     uint64_t symVA = r.sym->getVA(a);
     // If we have an undefined weak symbol, we might get here with a symbol

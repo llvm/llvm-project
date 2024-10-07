@@ -145,34 +145,34 @@ uint64_t Symbol::getVA(int64_t addend) const {
   return getSymVA(*this, addend) + addend;
 }
 
-uint64_t Symbol::getGotVA() const {
+uint64_t Symbol::getGotVA(Ctx &ctx) const {
   if (gotInIgot)
-    return ctx.in.igotPlt->getVA() + getGotPltOffset();
-  return ctx.in.got->getVA() + getGotOffset();
+    return ctx.in.igotPlt->getVA() + getGotPltOffset(ctx);
+  return ctx.in.got->getVA() + getGotOffset(ctx);
 }
 
-uint64_t Symbol::getGotOffset() const {
-  return getGotIdx() * ctx.target->gotEntrySize;
+uint64_t Symbol::getGotOffset(Ctx &ctx) const {
+  return getGotIdx(ctx) * ctx.target->gotEntrySize;
 }
 
-uint64_t Symbol::getGotPltVA() const {
+uint64_t Symbol::getGotPltVA(Ctx &ctx) const {
   if (isInIplt)
-    return ctx.in.igotPlt->getVA() + getGotPltOffset();
-  return ctx.in.gotPlt->getVA() + getGotPltOffset();
+    return ctx.in.igotPlt->getVA() + getGotPltOffset(ctx);
+  return ctx.in.gotPlt->getVA() + getGotPltOffset(ctx);
 }
 
-uint64_t Symbol::getGotPltOffset() const {
+uint64_t Symbol::getGotPltOffset(Ctx &ctx) const {
   if (isInIplt)
-    return getPltIdx() * ctx.target->gotEntrySize;
-  return (getPltIdx() + ctx.target->gotPltHeaderEntriesNum) *
+    return getPltIdx(ctx) * ctx.target->gotEntrySize;
+  return (getPltIdx(ctx) + ctx.target->gotPltHeaderEntriesNum) *
          ctx.target->gotEntrySize;
 }
 
-uint64_t Symbol::getPltVA() const {
-  uint64_t outVA =
-      isInIplt ? ctx.in.iplt->getVA() + getPltIdx() * ctx.target->ipltEntrySize
-               : ctx.in.plt->getVA() + ctx.in.plt->headerSize +
-                     getPltIdx() * ctx.target->pltEntrySize;
+uint64_t Symbol::getPltVA(Ctx &ctx) const {
+  uint64_t outVA = isInIplt ? ctx.in.iplt->getVA() +
+                                  getPltIdx(ctx) * ctx.target->ipltEntrySize
+                            : ctx.in.plt->getVA() + ctx.in.plt->headerSize +
+                                  getPltIdx(ctx) * ctx.target->pltEntrySize;
 
   // While linking microMIPS code PLT code are always microMIPS
   // code. Set the less-significant bit to track that fact.
