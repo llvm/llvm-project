@@ -457,55 +457,6 @@ enum class FunctionEffectMode : uint8_t {
   Dependent // effect(expr) where expr is dependent.
 };
 
-struct FunctionEffectDiff {
-  enum class Kind { Added, Removed, ConditionMismatch };
-
-  FunctionEffect::Kind EffectKind;
-  Kind DiffKind;
-  FunctionEffectWithCondition Old; // invalid when Added.
-  FunctionEffectWithCondition New; // invalid when Removed.
-
-  StringRef effectName() const {
-    if (Old.Effect.kind() != FunctionEffect::Kind::None)
-      return Old.Effect.name();
-    return New.Effect.name();
-  }
-
-  /// Describes the result of effects differing between a base class's virtual
-  /// method and an overriding method in a subclass.
-  enum class OverrideResult {
-    NoAction,
-    Warn,
-    Merge // Merge missing effect from base to derived.
-  };
-
-  /// Return true if adding or removing the effect as part of a type conversion
-  /// should generate a diagnostic.
-  bool shouldDiagnoseConversion(QualType SrcType,
-                                const FunctionEffectsRef &SrcFX,
-                                QualType DstType,
-                                const FunctionEffectsRef &DstFX) const;
-
-  /// Return true if adding or removing the effect in a redeclaration should
-  /// generate a diagnostic.
-  bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
-                                   const FunctionEffectsRef &OldFX,
-                                   const FunctionDecl &NewFunction,
-                                   const FunctionEffectsRef &NewFX) const;
-
-  /// Return true if adding or removing the effect in a C++ virtual method
-  /// override should generate a diagnostic.
-  OverrideResult shouldDiagnoseMethodOverride(
-      const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
-      const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
-};
-
-struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
-  /// Caller should short-circuit by checking for equality first.
-  FunctionEffectDifferences(const FunctionEffectsRef &Old,
-                            const FunctionEffectsRef &New);
-};
-
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -546,6 +497,7 @@ class Sema final : public SemaBase {
   // 32. Constraints and Concepts (SemaConcept.cpp)
   // 33. Types (SemaType.cpp)
   // 34. FixIt Helpers (SemaFixItUtils.cpp)
+  // 35. Function Effects (SemaFunctionEffects.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -626,10 +578,10 @@ public:
   const llvm::MapVector<FieldDecl *, DeleteLocs> &
   getMismatchingDeleteExpressions() const;
 
-  /// Cause the active diagnostic on the DiagosticsEngine to be
-  /// emitted. This is closely coupled to the SemaDiagnosticBuilder class and
+  /// Cause the built diagnostic to be emitted on the DiagosticsEngine.
+  /// This is closely coupled to the SemaDiagnosticBuilder class and
   /// should not be used elsewhere.
-  void EmitCurrentDiagnostic(unsigned DiagID);
+  void EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB);
 
   void addImplicitTypedef(StringRef Name, QualType T);
 
@@ -851,29 +803,9 @@ public:
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);
 
-  // ----- function effects ---
-
   /// Warn when implicitly changing function effects.
   void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
                                         SourceLocation Loc);
-
-  /// Warn and return true if adding an effect to a set would create a conflict.
-  bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
-                                         const FunctionEffectWithCondition &EC,
-                                         SourceLocation NewAttrLoc);
-
-  // Report a failure to merge function effects between declarations due to a
-  // conflict.
-  void
-  diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
-                                       SourceLocation NewLoc,
-                                       SourceLocation OldLoc);
-
-  /// Try to parse the conditional expression attached to an effect attribute
-  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty
-  /// optional on error.
-  std::optional<FunctionEffectMode>
-  ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
 
   /// makeUnavailableInSystemHeader - There is an error in the current
   /// context.  If we're still in a system header, and we can plausibly
@@ -2381,7 +2313,8 @@ public:
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
 
-  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  /// \param FPOnly restricts the arguments to floating-point types.
+  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   /// Handles the checks for format strings, non-POD arguments to vararg
@@ -2573,7 +2506,8 @@ private:
   ExprResult AtomicOpsOverloaded(ExprResult TheCallResult,
                                  AtomicExpr::AtomicOp Op);
 
-  bool BuiltinElementwiseMath(CallExpr *TheCall);
+  /// \param FPOnly restricts the arguments to floating-point types.
+  bool BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly = false);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
@@ -7423,7 +7357,8 @@ public:
                                               SourceLocation Loc,
                                               BinaryOperatorKind Opc);
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
-                                      SourceLocation Loc);
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
 
   /// Context in which we're performing a usual arithmetic conversion.
   enum ArithConvKind {
@@ -7956,6 +7891,10 @@ public:
 
   /// Do an explicit extend of the given block pointer if we're in ARC.
   void maybeExtendBlockObject(ExprResult &E);
+
+  std::vector<std::pair<QualType, unsigned>> ExcessPrecisionNotSatisfied;
+  SourceLocation LocationOfExcessPrecisionNotSatisfied;
+  void DiagnosePrecisionLossInComplexDivision();
 
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
@@ -11248,6 +11187,7 @@ public:
                             ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
+                            QualType ConstrainedType,
                             SourceLocation EllipsisLoc);
 
   bool AttachTypeConstraint(AutoTypeLoc TL,
@@ -12476,8 +12416,9 @@ public:
                                     sema::TemplateDeductionInfo &Info);
 
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
-      TemplateParameterList *PParam, TemplateDecl *AArg,
-      const DefaultArguments &DefaultArgs, SourceLocation Loc, bool IsDeduced);
+      TemplateParameterList *PParam, TemplateDecl *PArg, TemplateDecl *AArg,
+      const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
+      bool IsDeduced);
 
   /// Mark which template parameters are used in a given expression.
   ///
@@ -12786,6 +12727,9 @@ public:
 
       /// We are instantiating a type alias template declaration.
       TypeAliasTemplateInstantiation,
+
+      /// We are performing partial ordering for template template parameters.
+      PartialOrderingTTP,
     } Kind;
 
     /// Was the enclosing context a non-instantiation SFINAE context?
@@ -13005,6 +12949,12 @@ public:
     /// \brief Note that we are building deduction guides.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateDecl *Entity, BuildingDeductionGuidesTag,
+                          SourceRange InstantiationRange = SourceRange());
+
+    struct PartialOrderingTTP {};
+    /// \brief Note that we are partial ordering template template parameters.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation ArgLoc,
+                          PartialOrderingTTP, TemplateDecl *PArg,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we have finished instantiating this template.
@@ -15044,6 +14994,12 @@ public:
     return hasAcceptableDefinition(D, &Hidden, Kind);
   }
 
+  /// Try to parse the conditional expression attached to an effect attribute
+  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty
+  /// optional on error.
+  std::optional<FunctionEffectMode>
+  ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
+
 private:
   /// The implementation of RequireCompleteType
   bool RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
@@ -15072,6 +15028,108 @@ public:
   std::string getFixItZeroInitializerForType(QualType T,
                                              SourceLocation Loc) const;
   std::string getFixItZeroLiteralForType(QualType T, SourceLocation Loc) const;
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name Function Effects
+  /// Implementations are in SemaFunctionEffects.cpp
+  ///@{
+public:
+  struct FunctionEffectDiff {
+    enum class Kind { Added, Removed, ConditionMismatch };
+
+    FunctionEffect::Kind EffectKind;
+    Kind DiffKind;
+    std::optional<FunctionEffectWithCondition>
+        Old; // Invalid when 'Kind' is 'Added'.
+    std::optional<FunctionEffectWithCondition>
+        New; // Invalid when 'Kind' is 'Removed'.
+
+    StringRef effectName() const {
+      if (Old)
+        return Old.value().Effect.name();
+      return New.value().Effect.name();
+    }
+
+    /// Describes the result of effects differing between a base class's virtual
+    /// method and an overriding method in a subclass.
+    enum class OverrideResult {
+      NoAction,
+      Warn,
+      Merge // Merge missing effect from base to derived.
+    };
+
+    /// Return true if adding or removing the effect as part of a type
+    /// conversion should generate a diagnostic.
+    bool shouldDiagnoseConversion(QualType SrcType,
+                                  const FunctionEffectsRef &SrcFX,
+                                  QualType DstType,
+                                  const FunctionEffectsRef &DstFX) const;
+
+    /// Return true if adding or removing the effect in a redeclaration should
+    /// generate a diagnostic.
+    bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
+                                     const FunctionEffectsRef &OldFX,
+                                     const FunctionDecl &NewFunction,
+                                     const FunctionEffectsRef &NewFX) const;
+
+    /// Return true if adding or removing the effect in a C++ virtual method
+    /// override should generate a diagnostic.
+    OverrideResult shouldDiagnoseMethodOverride(
+        const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+        const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
+  };
+
+  struct FunctionEffectDiffVector : public SmallVector<FunctionEffectDiff> {
+    /// Caller should short-circuit by checking for equality first.
+    FunctionEffectDiffVector(const FunctionEffectsRef &Old,
+                             const FunctionEffectsRef &New);
+  };
+
+  /// All functions/lambdas/blocks which have bodies and which have a non-empty
+  /// FunctionEffectsRef to be verified.
+  SmallVector<const Decl *> DeclsWithEffectsToVerify;
+
+  /// The union of all effects present on DeclsWithEffectsToVerify. Conditions
+  /// are all null.
+  FunctionEffectKindSet AllEffectsToVerify;
+
+public:
+  /// Warn and return true if adding a function effect to a set would create a
+  /// conflict.
+  bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
+                                         const FunctionEffectWithCondition &EC,
+                                         SourceLocation NewAttrLoc);
+
+  // Report a failure to merge function effects between declarations due to a
+  // conflict.
+  void
+  diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
+                                       SourceLocation NewLoc,
+                                       SourceLocation OldLoc);
+
+  /// Inline checks from the start of maybeAddDeclWithEffects, to
+  /// minimize performance impact on code not using effects.
+  template <class FuncOrBlockDecl>
+  void maybeAddDeclWithEffects(FuncOrBlockDecl *D) {
+    if (Context.hasAnyFunctionEffects())
+      if (FunctionEffectsRef FX = D->getFunctionEffects(); !FX.empty())
+        maybeAddDeclWithEffects(D, FX);
+  }
+
+  /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
+  void maybeAddDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
+
+  /// Unconditionally add a Decl to DeclsWithEfffectsToVerify.
+  void addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
+
+  void performFunctionEffectAnalysis(TranslationUnitDecl *TU);
 
   ///@}
 };

@@ -1110,7 +1110,6 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
           Spelling.clear();
           raw_string_ostream OutStream(Spelling);
           CTA.print(Context.getPrintingPolicy(), OutStream, false);
-          OutStream.flush();
         }
       }
 
@@ -1622,6 +1621,9 @@ DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
              cast<CXXMethodDecl>(Decl)->isOverloadedOperator()) {
     Fragments.append(Decl->getNameAsString(),
                      DeclarationFragments::FragmentKind::Identifier);
+  } else if (isa<TagDecl>(Decl) &&
+             cast<TagDecl>(Decl)->getTypedefNameForAnonDecl()) {
+    return getSubHeading(cast<TagDecl>(Decl)->getTypedefNameForAnonDecl());
   } else if (Decl->getIdentifier()) {
     Fragments.append(Decl->getName(),
                      DeclarationFragments::FragmentKind::Identifier);

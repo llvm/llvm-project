@@ -9441,6 +9441,11 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaa\n"
       ");",
       Style);
+  verifyFormat("aaaaaaa<bbbbbbbb> const aaaaaaaaaa{\n"
+               "    aaaaaaaaaaaaa(aaaaaaaaaaa, aaaaaaaaaaaaaaaa)\n"
+               "};",
+               Style);
+
   verifyFormat("bool aaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    const bool &aaaaaaaaa, const void *aaaaaaaaaa\n"
                ") const {\n"
@@ -17282,6 +17287,12 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   Spaces.SpacesInParens = FormatStyle::SIPO_Custom;
   Spaces.SpacesInParensOptions = {};
   Spaces.SpacesInParensOptions.Other = true;
+
+  EXPECT_FALSE(Spaces.SpacesInParensOptions.InConditionalStatements);
+  verifyFormat("if (a)\n"
+               "  return;",
+               Spaces);
+
   Spaces.SpacesInParensOptions.InConditionalStatements = true;
   verifyFormat("do_something( ::globalVar );", Spaces);
   verifyFormat("call( x, y, z );", Spaces);
@@ -20010,6 +20021,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  return 0;\n"
                "}() };",
                BracedAlign);
+
+  Alignment.AlignConsecutiveDeclarations.AlignFunctionDeclarations = false;
+  verifyFormat("unsigned int f1(void);\n"
+               "void f2(void);\n"
+               "size_t f3(void);",
+               Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
@@ -20253,9 +20270,16 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
-                 /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                 /*AlignFunctionDeclarations=*/false,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
-            FormatStyle::AlignConsecutiveStyle({}));
+            FormatStyle::AlignConsecutiveStyle(
+                {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
+                 /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AlignFunctionDeclarations=*/true,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"
@@ -27577,6 +27601,12 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
 
   verifyNoChange("int i;\n", Style);
   verifyFormat("int i;\n", "int i;", Style);
+
+  constexpr StringRef Code{"namespace {\n"
+                           "int i;\n"
+                           "} // namespace"};
+  verifyFormat(Code.str() + '\n', Code, Style,
+               {tooling::Range(19, 13)}); // line 3
 }
 
 TEST_F(FormatTest, KeepEmptyLinesAtEOF) {

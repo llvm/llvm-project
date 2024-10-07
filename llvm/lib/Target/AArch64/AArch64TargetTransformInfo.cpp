@@ -517,25 +517,31 @@ static bool isUnpackedVectorVT(EVT VecVT) {
 static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
   Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
   Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
+  unsigned TotalHistCnts = 1;
 
-  // Only allow (32b and 64b) integers or pointers for now...
-  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
-      (EltTy->getScalarSizeInBits() != 32 &&
-       EltTy->getScalarSizeInBits() != 64))
+  unsigned EltSize = EltTy->getScalarSizeInBits();
+  // Only allow (up to 64b) integers or pointers
+  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) || EltSize > 64)
     return InstructionCost::getInvalid();
 
-  // FIXME: Hacky check for legal vector types. We can promote smaller types
-  //        but we cannot legalize vectors via splitting for histcnt.
   // FIXME: We should be able to generate histcnt for fixed-length vectors
   //        using ptrue with a specific VL.
-  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy))
-    if ((VTy->getElementCount().getKnownMinValue() != 2 &&
-         VTy->getElementCount().getKnownMinValue() != 4) ||
-        VTy->getPrimitiveSizeInBits().getKnownMinValue() > 128 ||
-        !VTy->isScalableTy())
+  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
+    unsigned EC = VTy->getElementCount().getKnownMinValue();
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
       return InstructionCost::getInvalid();
 
-  return InstructionCost(BaseHistCntCost);
+    // HistCnt only supports 32b and 64b element types
+    unsigned LegalEltSize = EltSize <= 32 ? 32 : 64;
+
+    if (EC == 2 || (LegalEltSize == 32 && EC == 4))
+      return InstructionCost(BaseHistCntCost);
+
+    unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
+    TotalHistCnts = EC / NaturalVectorWidth;
+  }
+
+  return InstructionCost(BaseHistCntCost * TotalHistCnts);
 }
 
 InstructionCost
@@ -1972,7 +1978,13 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
   ConstantInt *SplatConstantInt = dyn_cast_or_null<ConstantInt>(SplatValue);
   if (!SplatConstantInt)
     return std::nullopt;
+
   APInt Divisor = SplatConstantInt->getValue();
+  const int64_t DivisorValue = Divisor.getSExtValue();
+  if (DivisorValue == -1)
+    return std::nullopt;
+  if (DivisorValue == 1)
+    IC.replaceInstUsesWith(II, Vec);
 
   if (Divisor.isPowerOf2()) {
     Constant *DivisorLog2 = ConstantInt::get(Int32Ty, Divisor.logBase2());
@@ -2128,6 +2140,16 @@ static std::optional<Instruction *> instCombineSVESrshl(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, LSL);
 }
 
+static std::optional<Instruction *> instCombineSVEInsr(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  Value *Vec = II.getOperand(0);
+
+  if (getSplatValue(Vec) == II.getOperand(1))
+    return IC.replaceInstUsesWith(II, Vec);
+
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -2135,7 +2157,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
-  case Intrinsic::aarch64_sve_fcvt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvt_bf16f32_v2:
   case Intrinsic::aarch64_sve_fcvt_f16f32:
   case Intrinsic::aarch64_sve_fcvt_f16f64:
   case Intrinsic::aarch64_sve_fcvt_f32f16:
@@ -2144,11 +2166,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fcvt_f64f32:
   case Intrinsic::aarch64_sve_fcvtlt_f32f16:
   case Intrinsic::aarch64_sve_fcvtlt_f64f32:
-  case Intrinsic::aarch64_sve_fcvtnt_bf16f32:
-  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
-  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
   case Intrinsic::aarch64_sve_fcvtx_f32f64:
-  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
   case Intrinsic::aarch64_sve_fcvtzs:
   case Intrinsic::aarch64_sve_fcvtzs_i32f16:
   case Intrinsic::aarch64_sve_fcvtzs_i32f64:
@@ -2170,6 +2188,11 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ucvtf_f32i64:
   case Intrinsic::aarch64_sve_ucvtf_f64i32:
     return instCombineSVEAllOrNoActiveUnary(IC, II);
+  case Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2:
+  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
+    return instCombineSVENoActiveReplace(IC, II, true);
   case Intrinsic::aarch64_sve_st1_scatter:
   case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
   case Intrinsic::aarch64_sve_st1_scatter_sxtw:
@@ -2448,6 +2471,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVESrshl(IC, II);
   case Intrinsic::aarch64_sve_dupq_lane:
     return instCombineSVEDupqLane(IC, II);
+  case Intrinsic::aarch64_sve_insr:
+    return instCombineSVEInsr(IC, II);
   }
 
   return std::nullopt;
@@ -3416,15 +3441,14 @@ InstructionCost AArch64TTIImpl::getAddressComputationCost(Type *Ty,
   return 1;
 }
 
-InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                                   Type *CondTy,
-                                                   CmpInst::Predicate VecPred,
-                                                   TTI::TargetCostKind CostKind,
-                                                   const Instruction *I) {
+InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
+                                     Op1Info, Op2Info, I);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
@@ -3503,7 +3527,8 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
 }
 
 AArch64TTIImpl::TTI::MemCmpExpansionOptions
@@ -4146,6 +4171,26 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   };
   switch (ISD) {
   default:
+    break;
+  case ISD::FADD:
+    if (Type *EltTy = ValTy->getScalarType();
+        // FIXME: For half types without fullfp16 support, this could extend and
+        // use a fp32 faddp reduction but current codegen unrolls.
+        MTy.isVector() && (EltTy->isFloatTy() || EltTy->isDoubleTy() ||
+                           (EltTy->isHalfTy() && ST->hasFullFP16()))) {
+      const unsigned NElts = MTy.getVectorNumElements();
+      if (ValTy->getElementCount().getFixedValue() >= 2 && NElts >= 2 &&
+          isPowerOf2_32(NElts))
+        // Reduction corresponding to series of fadd instructions is lowered to
+        // series of faddp instructions. faddp has latency/throughput that
+        // matches fadd instruction and hence, every faddp instruction can be
+        // considered to have a relative cost = 1 with
+        // CostKind = TCK_RecipThroughput.
+        // An faddp will pairwise add vector elements, so the size of input
+        // vector reduces by half every time, requiring
+        // #(faddp instructions) = log2_32(NElts).
+        return (LT.first - 1) + /*No of faddp instructions*/ Log2_32(NElts);
+    }
     break;
   case ISD::ADD:
     if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))

@@ -16,6 +16,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename OutType, typename InType>
 class SubTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
@@ -34,22 +36,22 @@ public:
   using SubFunc = OutType (*)(InType, InType);
 
   void test_special_numbers(SubFunc func) {
-    EXPECT_FP_IS_NAN(func(aNaN, aNaN));
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(sNaN, sNaN), FE_INVALID);
+    EXPECT_FP_IS_NAN(func(in.aNaN, in.aNaN));
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(in.sNaN, in.sNaN), FE_INVALID);
 
     InType qnan_42 = InFPBits::quiet_nan(Sign::POS, 0x42).get_val();
-    EXPECT_FP_IS_NAN(func(qnan_42, zero));
-    EXPECT_FP_IS_NAN(func(zero, qnan_42));
+    EXPECT_FP_IS_NAN(func(qnan_42, in.zero));
+    EXPECT_FP_IS_NAN(func(in.zero, qnan_42));
 
-    EXPECT_FP_EQ(inf, func(inf, zero));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, zero));
-    EXPECT_FP_EQ(inf, func(inf, neg_zero));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, neg_zero));
+    EXPECT_FP_EQ(inf, func(in.inf, in.zero));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.zero));
+    EXPECT_FP_EQ(inf, func(in.inf, in.neg_zero));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.neg_zero));
   }
 
   void test_invalid_operations(SubFunc func) {
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(inf, inf), FE_INVALID);
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(neg_inf, neg_inf), FE_INVALID);
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(in.inf, in.inf), FE_INVALID);
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(in.neg_inf, in.neg_inf), FE_INVALID);
   }
 
   void test_range_errors(SubFunc func) {
@@ -57,10 +59,10 @@ public:
     using namespace LIBC_NAMESPACE::fputil::testing;
 
     if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(max_normal, neg_max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
-      EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(neg_max_normal, max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(in.neg_max_normal, in.max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
 
@@ -75,10 +77,11 @@ public:
     }
 
     if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal, func(max_normal, neg_max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal,
+                                  func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_max_normal,
-                                  func(neg_max_normal, max_normal),
+                                  func(in.neg_max_normal, in.max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(zero,
@@ -92,9 +95,10 @@ public:
     }
 
     if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal, func(max_normal, neg_max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal,
+                                  func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
-      EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(neg_max_normal, max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(in.neg_max_normal, in.max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
 
@@ -109,11 +113,11 @@ public:
     }
 
     if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(max_normal, neg_max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_max_normal,
-                                  func(neg_max_normal, max_normal),
+                                  func(in.neg_max_normal, in.max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(min_denormal,
@@ -129,7 +133,7 @@ public:
   }
 
   void test_inexact_results(SubFunc func) {
-    func(InType(1.0), min_denormal);
+    func(InType(1.0), in.min_denormal);
     EXPECT_FP_EXCEPTION(FE_INEXACT);
   }
 };

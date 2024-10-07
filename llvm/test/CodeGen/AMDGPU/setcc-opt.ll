@@ -154,19 +154,12 @@ define amdgpu_kernel void @zext_bool_icmp_ne_neg1(ptr addrspace(1) %out, i32 %a,
 }
 
 ; FUNC-LABEL: {{^}}cmp_zext_k_i8max:
-; SI: s_load_dword [[VALUE:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; VI: s_load_dword [[VALUE:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; SI-DAG: s_and_b32 [[B:s[0-9]+]], [[VALUE]], 0xff
-; SI: s_cmpk_lg_i32 [[B]], 0xff
-; SI: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: s_load_dword [[VALUE:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}
+; GCN-DAG: s_and_b32 [[B:s[0-9]+]], [[VALUE]], 0xff
+; GCN: s_cmpk_lg_i32 [[B]], 0xff
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
 
-; VI: v_mov_b32_e32 [[VK255:v[0-9]+]], 0xff
-; VI: s_movk_i32 [[K255:s[0-9]+]], 0xff
-; VI: v_and_b32_e32 [[B:v[0-9]+]], [[VALUE]], [[VK255]]
-; VI: v_cmp_ne_u16_e32 vcc, [[K255]], [[B]]
-
-; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
-; VI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN: buffer_store_byte [[RESULT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @cmp_zext_k_i8max(ptr addrspace(1) %out, i8 %b) nounwind {

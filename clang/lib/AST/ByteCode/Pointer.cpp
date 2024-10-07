@@ -204,18 +204,22 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Path.push_back(APValue::LValuePathEntry(
           {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
 
-      if (const auto *FD = dyn_cast<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
+      if (const auto *FD =
+              dyn_cast_if_present<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
         Offset += getFieldOffset(FD);
 
       Ptr = Ptr.getBase();
     } else if (Ptr.isArrayElement()) {
+      Ptr = Ptr.expand();
       unsigned Index;
       if (Ptr.isOnePastEnd())
         Index = Ptr.getArray().getNumElems();
       else
         Index = Ptr.getIndex();
 
-      Offset += (Index * ASTCtx.getTypeSizeInChars(Ptr.getType()));
+      QualType ElemType = Ptr.getFieldDesc()->getElemQualType();
+      Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
@@ -665,7 +669,7 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
   uint64_t FieldOffset =
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
-  return IntPointer{this->Desc, this->Value + FieldOffset};
+  return IntPointer{F->Desc, this->Value + FieldOffset};
 }
 
 IntPointer IntPointer::baseCast(const ASTContext &ASTCtx,

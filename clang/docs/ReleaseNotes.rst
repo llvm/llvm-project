@@ -39,6 +39,13 @@ code bases.
 
 - The ``le32`` and ``le64`` targets have been removed.
 
+- ``clang -m32`` defaults to ``-mcpu=v9`` on SPARC Linux now.  Distros
+  still supporting SPARC V8 CPUs need to specify ``-mcpu=v8`` with a
+  `config file
+  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`_.
+
+- The ``clang-rename`` tool has been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -74,10 +81,30 @@ C++ Specific Potentially Breaking Changes
     template <typename T>
     void f();
 
+- During constant evaluation, comparisons between different evaluations of the
+  same string literal are now correctly treated as non-constant, and comparisons
+  between string literals that cannot possibly overlap in memory are now treated
+  as constant. This updates Clang to match the anticipated direction of open core
+  issue `CWG2765 <http://wg21.link/CWG2765>`, but is subject to change once that
+  issue is resolved.
+
+  .. code-block:: c++
+
+    constexpr const char *f() { return "hello"; }
+    constexpr const char *g() { return "world"; }
+    // Used to evaluate to false, now error: non-constant comparison.
+    constexpr bool a = f() == f();
+    // Might evaluate to true or false, as before.
+    bool at_runtime() { return f() == f(); }
+    // Was error, now evaluates to false.
+    constexpr bool b = f() == g();
+
 ABI Changes in This Version
 ---------------------------
 
 - Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
+- Fixed the Itanium mangling of the construction vtable name. This change will introduce incompatibilities with code compiled by Clang 19 and earlier versions, unless the -fclang-abi-compat=19 option is used. (#GH108015)
+- Mangle member-like friend function templates as members of the enclosing class. (#GH110247, #GH110503)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -108,12 +135,21 @@ C++ Language Changes
 - Allow single element access of GCC vector/ext_vector_type object to be
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
-- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension 
+- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension
   of temporary created by aggregate initialization using a default member
   initializer.
 
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
+- Add ``__builtin_elementwise_popcount`` builtin for integer types only.
+
+- Add ``__builtin_elementwise_fmod`` builtin for floating point types only.
+
+- Add ``__builtin_elementwise_minimum`` and ``__builtin_elementwise_maximum``
+  builtin for floating point types only.
+
+- The builtin type alias ``__builtin_common_type`` has been added to improve the
+  performance of ``std::common_type``.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -138,6 +174,10 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+C++17 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- The implementation of the relaxed template template argument matching rules is
+  more complete and reliable, and should provide more accurate diagnostics.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -169,6 +209,12 @@ Resolutions to C++ Defect Reports
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
   (`CWG2749: Treatment of "pointer to void" for relational comparisons <https://cplusplus.github.io/CWG/issues/2749.html>`_).
+
+- Reject explicit object parameters with type ``void`` (``this void``).
+  (`CWG2915: Explicit object parameters of type void <https://cplusplus.github.io/CWG/issues/2915.html>`_).
+
+- Clang now allows trailing requires clause on explicit deduction guides.
+  (`CWG2707: Deduction guides cannot have a trailing requires-clause <https://cplusplus.github.io/CWG/issues/2707.html>`_).
 
 C Language Changes
 ------------------
@@ -249,7 +295,18 @@ Attribute Changes in Clang
   (#GH106864)
 
 - Introduced a new attribute ``[[clang::coro_await_elidable]]`` on coroutine return types
-  to express elideability at call sites where the coroutine is co_awaited as a prvalue.
+  to express elideability at call sites where the coroutine is invoked under a safe elide context.
+
+- Introduced a new attribute ``[[clang::coro_await_elidable_argument]]`` on function parameters
+  to propagate safe elide context to arguments if such function is also under a safe elide context.
+
+- The documentation of the ``[[clang::musttail]]`` attribute was updated to
+  note that the lifetimes of all local variables end before the call. This does
+  not change the behaviour of the compiler, as this was true for previous
+  versions.
+
+- Fix a bug where clang doesn't automatically apply the ``[[gsl::Owner]]`` or
+  ``[[gsl::Pointer]]`` to STL explicit template specialization decls. (#GH109442)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -277,6 +334,10 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
 
 - Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
+
+- Clang now properly explains the reason a template template argument failed to
+  match a template template parameter, in terms of the C++17 relaxed matching rules
+  instead of the old ones.
 
 - Don't emit duplicated dangling diagnostics. (#GH93386).
 
@@ -306,6 +367,16 @@ Improvements to Clang's diagnostics
 - Clang now diagnose when importing module implementation partition units in module interface units.
 
 - Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
+
+- The ``-Wreturn-stack-address`` warning now also warns about addresses of
+  local variables passed to function calls using the ``[[clang::musttail]]``
+  attribute.
+
+- Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
+
+- Clang now diagnoses when a ``requires`` expression has a local parameter of void type, aligning with the function parameter (#GH109831).
+
+- Clang now emits a diagnostic note at the class declaration when the method definition does not match any declaration (#GH110638).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -367,6 +438,8 @@ Bug Fixes to C++ Support
 - Correctly check constraints of explicit instantiations of member functions. (#GH46029)
 - When performing partial ordering of function templates, clang now checks that
   the deduction was consistent. Fixes (#GH18291).
+- Fixes to several issues in partial ordering of template template parameters, which
+  were documented in the test suite.
 - Fixed an assertion failure about a constraint of a friend function template references to a value with greater
   template depth than the friend function template. (#GH98258)
 - Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
@@ -389,13 +462,24 @@ Bug Fixes to C++ Support
 - A follow-up fix was added for (#GH61460), as the previous fix was not entirely correct. (#GH86361)
 - Fixed a crash in the typo correction of an invalid CTAD guide. (#GH107887)
 - Fixed a crash when clang tries to subtitute parameter pack while retaining the parameter
-  pack. #GH63819, #GH107560
+  pack. (#GH63819), (#GH107560)
 - Fix a crash when a static assert declaration has an invalid close location. (#GH108687)
+- Avoided a redundant friend declaration instantiation under a certain ``consteval`` context. (#GH107175)
+- Fixed an assertion failure in debug mode, and potential crashes in release mode, when
+  diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
+- Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
+- Fixed an issue deducing non-type template arguments of reference type. (#GH73460)
+- Fixed an issue in constraint evaluation, where type constraints on the lambda expression
+  containing outer unexpanded parameters were not correctly expanded. (#GH101754)
+- Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
+  in certain friend declarations. (#GH93099)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed a crash that occurred when dividing by zero in complex integer division. (#GH55390).
+- Fixed a bug in ``ASTContext::getRawCommentForAnyRedecl()`` where the function could
+  sometimes incorrectly return null even if a comment was present. (#GH108145)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -414,6 +498,11 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash when function has more than 65536 parameters.
   Now a diagnostic is emitted. (#GH35741)
+
+- Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
+
+- Fixed internal assertion firing when a declaration in the implicit global
+  module is found through ADL. (GH#109879)
 
 OpenACC Specific Changes
 ------------------------
@@ -446,6 +535,18 @@ X86 Support
 - Support ISA of ``AVX10.2``.
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
   ``*_(mask(z)))_minmax_s[s|d|h]``.
+
+- All intrinsics in adcintrin.h can now be used in constant expressions.
+
+- All intrinsics in adxintrin.h can now be used in constant expressions.
+
+- All intrinsics in lzcntintrin.h can now be used in constant expressions.
+
+- All intrinsics in bmiintrin.h can now be used in constant expressions.
+
+- All intrinsics in bmi2intrin.h can now be used in constant expressions.
+
+- All intrinsics in tbmintrin.h can now be used in constant expressions.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -494,6 +595,8 @@ DWARF Support in Clang
 Floating Point Support in Clang
 -------------------------------
 
+- Add ``__builtin_elementwise_atan2`` builtin for floating point types only.
+
 Fixed Point Support in Clang
 ----------------------------
 
@@ -506,10 +609,14 @@ AST Matchers
 - Fixed an ordering issue with the `hasOperands` matcher occurring when setting a
   binding in the first matcher and using it in the second matcher.
 
+- Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
+
 clang-format
 ------------
 
 - Adds ``BreakBinaryOperations`` option.
+- Adds ``TemplateNames`` option.
+- Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
 
 libclang
 --------
@@ -522,10 +629,17 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
+- Now CSA models `__builtin_*_overflow` functions. (#GH102602)
+
 - MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
   attributes with class names different from "malloc". Clang static analyzer now reports an error
   if class of allocation and deallocation function mismatches.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
+
+- Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint" 
+  attributes, are now verified. For example, for functions declared with the ``nonblocking`` 
+  attribute, the compiler can generate warnings about the use of any language features, or calls to
+  other functions, which may block.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
@@ -598,6 +712,7 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support for 'omp assume' directive.
+- Added support for 'omp scope' directive.
 
 Improvements
 ^^^^^^^^^^^^

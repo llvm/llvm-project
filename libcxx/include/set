@@ -524,14 +524,23 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__iterator/ranges_iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/allocator.h>
+#include <__memory/allocator_traits.h>
 #include <__memory_resource/polymorphic_allocator.h>
 #include <__node_handle>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__tree>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_nothrow_assignable.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_swappable.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
+#include <__utility/pair.h>
 #include <version>
 
 // standard-mandated includes

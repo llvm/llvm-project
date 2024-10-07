@@ -16,7 +16,6 @@
 #include <__bit/countl.h>
 #include <__config>
 #include <__functional/hash.h>
-#include <__functional/invoke.h>
 #include <__iterator/iterator_traits.h>
 #include <__math/rounding_functions.h>
 #include <__memory/addressof.h>
@@ -28,6 +27,8 @@
 #include <__memory/unique_ptr.h>
 #include <__type_traits/can_extract_key.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>

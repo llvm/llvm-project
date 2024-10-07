@@ -147,17 +147,17 @@ public:
 
 // Provide DenseMapInfo for Register
 template <> struct DenseMapInfo<Register> {
-  static inline unsigned getEmptyKey() {
+  static inline Register getEmptyKey() {
     return DenseMapInfo<unsigned>::getEmptyKey();
   }
-  static inline unsigned getTombstoneKey() {
+  static inline Register getTombstoneKey() {
     return DenseMapInfo<unsigned>::getTombstoneKey();
   }
   static unsigned getHashValue(const Register &Val) {
     return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }
   static bool isEqual(const Register &LHS, const Register &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS.id(), RHS.id());
+    return LHS == RHS;
   }
 };
 

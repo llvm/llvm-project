@@ -2357,8 +2357,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     setRegsToType(MRI, DefRegs, HalfTy);
 
-    B.buildSelect(DefRegs[0], CondRegs[0], Src1Regs[0], Src2Regs[0]);
-    B.buildSelect(DefRegs[1], CondRegs[0], Src1Regs[1], Src2Regs[1]);
+    auto Flags = MI.getFlags();
+    B.buildSelect(DefRegs[0], CondRegs[0], Src1Regs[0], Src2Regs[0], Flags);
+    B.buildSelect(DefRegs[1], CondRegs[0], Src1Regs[1], Src2Regs[1], Flags);
 
     MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
@@ -2440,8 +2441,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     setRegsToType(MRI, DefRegs, HalfTy);
 
-    B.buildInstr(Opc, {DefRegs[0]}, {Src0Regs[0], Src1Regs[0]});
-    B.buildInstr(Opc, {DefRegs[1]}, {Src0Regs[1], Src1Regs[1]});
+    auto Flags = MI.getFlags();
+    B.buildInstr(Opc, {DefRegs[0]}, {Src0Regs[0], Src1Regs[0]}, Flags);
+    B.buildInstr(Opc, {DefRegs[1]}, {Src0Regs[1], Src1Regs[1]}, Flags);
 
     MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
@@ -3076,11 +3078,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
-  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC: {
-    applyDefaultMapping(OpdMapper);
-    executeInWaterfallLoop(B, MI, {2, 5});
-    return;
-  }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {

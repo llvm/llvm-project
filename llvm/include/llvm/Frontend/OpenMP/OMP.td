@@ -229,7 +229,7 @@ def OMPC_IsDevicePtr : Clause<"is_device_ptr"> {
 }
 def OMPC_LastPrivate : Clause<"lastprivate"> {
   let clangClass = "OMPLastprivateClause";
-  let flangClass = "OmpObjectList";
+  let flangClass = "OmpLastprivateClause";
 }
 def OMPC_Linear : Clause<"linear"> {
   let clangClass = "OMPLinearClause";
@@ -887,6 +887,8 @@ def OMP_scope : Directive<"scope"> {
   let allowedClauses = [
     VersionedClause<OMPC_Private, 51>,
     VersionedClause<OMPC_Reduction, 51>,
+    VersionedClause<OMPC_FirstPrivate, 52>,
+    VersionedClause<OMPC_Allocate, 52>,
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait, 51>,

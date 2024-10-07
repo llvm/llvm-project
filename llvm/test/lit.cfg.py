@@ -364,6 +364,14 @@ if config.host_ldflags.find("-m32") < 0 and any(
     config.available_features.add("llvm-64-bits")
 
 config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
+if config.target_triple:
+    if re.match(
+        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|s390x|s390|tce|thumbeb)-.*",
+        config.target_triple,
+    ):
+        config.available_features.add("target-byteorder-big-endian")
+    else:
+        config.available_features.add("target-byteorder-little-endian")
 
 if sys.platform in ["win32"]:
     # ExecutionEngine, no weak symbols in COFF.

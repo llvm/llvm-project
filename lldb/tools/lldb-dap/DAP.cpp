@@ -36,7 +36,7 @@ DAP::DAP()
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
-      enable_display_extended_backtrace(false),
+      display_extended_backtrace(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
@@ -483,20 +483,20 @@ llvm::json::Value DAP::CreateTopLevelScopes() {
   return llvm::json::Value(std::move(scopes));
 }
 
-ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
-                                               std::string &expression) {
-  // Include the escape hatch prefix.
+ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
+                             bool partial_expression) {
+  // Check for the escape hatch prefix.
   if (!expression.empty() &&
       llvm::StringRef(expression).starts_with(g_dap.command_escape_prefix)) {
     expression = expression.substr(g_dap.command_escape_prefix.size());
-    return ExpressionContext::Command;
+    return ReplMode::Command;
   }
 
   switch (repl_mode) {
   case ReplMode::Variable:
-    return ExpressionContext::Variable;
+    return ReplMode::Variable;
   case ReplMode::Command:
-    return ExpressionContext::Command;
+    return ReplMode::Command;
   case ReplMode::Auto:
     // To determine if the expression is a command or not, check if the first
     // term is a variable or command. If it's a variable in scope we will prefer
@@ -509,6 +509,12 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
     //   int var and expression "va" > command
     std::pair<llvm::StringRef, llvm::StringRef> token =
         llvm::getToken(expression);
+
+    // If the first token is not fully finished yet, we can't
+    // determine whether this will be a variable or a lldb command.
+    if (partial_expression && token.second.empty())
+      return ReplMode::Auto;
+
     std::string term = token.first.str();
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
     bool term_is_command = interpreter.CommandExists(term.c_str()) ||
@@ -527,9 +533,9 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame frame,
 
     // Variables take preference to commands in auto, since commands can always
     // be called using the command_escape_prefix
-    return term_is_variable  ? ExpressionContext::Variable
-           : term_is_command ? ExpressionContext::Command
-                             : ExpressionContext::Variable;
+    return term_is_variable  ? ReplMode::Variable
+           : term_is_command ? ReplMode::Command
+                             : ReplMode::Variable;
   }
 
   llvm_unreachable("enum cases exhausted.");
@@ -822,7 +828,7 @@ void Variables::Clear() {
   locals.Clear();
   globals.Clear();
   registers.Clear();
-  expandable_variables.clear();
+  referenced_variables.clear();
 }
 
 int64_t Variables::GetNewVariableReference(bool is_permanent) {
@@ -837,24 +843,23 @@ bool Variables::IsPermanentVariableReference(int64_t var_ref) {
 
 lldb::SBValue Variables::GetVariable(int64_t var_ref) const {
   if (IsPermanentVariableReference(var_ref)) {
-    auto pos = expandable_permanent_variables.find(var_ref);
-    if (pos != expandable_permanent_variables.end())
+    auto pos = referenced_permanent_variables.find(var_ref);
+    if (pos != referenced_permanent_variables.end())
       return pos->second;
   } else {
-    auto pos = expandable_variables.find(var_ref);
-    if (pos != expandable_variables.end())
+    auto pos = referenced_variables.find(var_ref);
+    if (pos != referenced_variables.end())
       return pos->second;
   }
   return lldb::SBValue();
 }
 
-int64_t Variables::InsertExpandableVariable(lldb::SBValue variable,
-                                            bool is_permanent) {
+int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
   int64_t var_ref = GetNewVariableReference(is_permanent);
   if (is_permanent)
-    expandable_permanent_variables.insert(std::make_pair(var_ref, variable));
+    referenced_permanent_variables.insert(std::make_pair(var_ref, variable));
   else
-    expandable_variables.insert(std::make_pair(var_ref, variable));
+    referenced_variables.insert(std::make_pair(var_ref, variable));
   return var_ref;
 }
 

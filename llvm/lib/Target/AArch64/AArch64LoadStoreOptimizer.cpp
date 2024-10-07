@@ -1321,6 +1321,17 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
               .add(StMO)
               .addImm(AndMaskEncoded)
               .setMIFlags(LoadI->getFlags());
+    } else if (IsStoreXReg && Imms == 31) {
+      // Use the 32 bit variant of UBFM if it's the LSR alias of the
+      // instruction.
+      assert(Immr <= Imms && "Expected LSR alias of UBFM");
+      BitExtMI = BuildMI(*LoadI->getParent(), LoadI, LoadI->getDebugLoc(),
+                         TII->get(AArch64::UBFMWri),
+                         TRI->getSubReg(DestReg, AArch64::sub_32))
+                     .addReg(TRI->getSubReg(StRt, AArch64::sub_32))
+                     .addImm(Immr)
+                     .addImm(Imms)
+                     .setMIFlags(LoadI->getFlags());
     } else {
       BitExtMI =
           BuildMI(*LoadI->getParent(), LoadI, LoadI->getDebugLoc(),

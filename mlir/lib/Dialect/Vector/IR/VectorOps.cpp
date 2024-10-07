@@ -351,6 +351,21 @@ SmallVector<Value> vector::getAsValues(OpBuilder &builder, Location loc,
   return values;
 }
 
+std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
+  if (value.getDefiningOp<vector::VectorScaleOp>())
+    return 1;
+  auto mul = value.getDefiningOp<arith::MulIOp>();
+  if (!mul)
+    return {};
+  auto lhs = mul.getLhs();
+  auto rhs = mul.getRhs();
+  if (lhs.getDefiningOp<vector::VectorScaleOp>())
+    return getConstantIntValue(rhs);
+  if (rhs.getDefiningOp<vector::VectorScaleOp>())
+    return getConstantIntValue(lhs);
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // CombiningKindAttr
 //===----------------------------------------------------------------------===//
@@ -3932,10 +3947,6 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
                            "as permutation_map results: ")
            << AffineMapAttr::get(permutationMap)
            << " vs inBounds of size: " << inBounds.size();
-  for (unsigned int i = 0, e = permutationMap.getNumResults(); i < e; ++i)
-    if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
-        !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
-      return op->emitOpError("requires broadcast dimensions to be in-bounds");
 
   return success();
 }
@@ -4123,22 +4134,43 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
   bool changed = false;
   SmallVector<bool, 4> newInBounds;
   newInBounds.reserve(op.getTransferRank());
+  // Idxs of non-bcast dims - used when analysing bcast dims.
+  SmallVector<unsigned> nonBcastDims;
+
+  // 1. Process non-broadcast dims
   for (unsigned i = 0; i < op.getTransferRank(); ++i) {
-    // Already marked as in-bounds, nothing to see here.
+    // 1.1. Already marked as in-bounds, nothing to see here.
     if (op.isDimInBounds(i)) {
       newInBounds.push_back(true);
       continue;
     }
-    // Currently out-of-bounds, check whether we can statically determine it is
-    // inBounds.
+    // 1.2. Currently out-of-bounds, check whether we can statically determine
+    // it is inBounds.
+    bool inBounds = false;
     auto dimExpr = dyn_cast<AffineDimExpr>(permutationMap.getResult(i));
-    assert(dimExpr && "Broadcast dims must be in-bounds");
-    auto inBounds =
-        isInBounds(op, /*resultIdx=*/i, /*indicesIdx=*/dimExpr.getPosition());
+    if (dimExpr) {
+      inBounds = isInBounds(op, /*resultIdx=*/i,
+                            /*indicesIdx=*/dimExpr.getPosition());
+      nonBcastDims.push_back(i);
+    }
+
     newInBounds.push_back(inBounds);
     // We commit the pattern if it is "more inbounds".
     changed |= inBounds;
   }
+
+  // 2. Handle broadcast dims
+  // If all non-broadcast dims are "in bounds", then all bcast dims should be
+  // "in bounds" as well.
+  bool allNonBcastDimsInBounds = llvm::all_of(
+      nonBcastDims, [&newInBounds](unsigned idx) { return newInBounds[idx]; });
+  if (allNonBcastDimsInBounds) {
+    for (size_t idx : permutationMap.getBroadcastDims()) {
+      changed |= !newInBounds[idx];
+      newInBounds[idx] = true;
+    }
+  }
+
   if (!changed)
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
@@ -4769,7 +4801,14 @@ void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
+                                                 VectorType vecTy,
                                                  MemRefType memRefTy) {
+  // If rank==0 or size==1 it's equivalent to scalar load/store, so we don't
+  // need any strides limitations.
+  if (!vecTy.isScalable() &&
+      (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
+    return success();
+
   if (!isLastMemrefDimUnitStride(memRefTy))
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
@@ -4779,7 +4818,7 @@ LogicalResult vector::LoadOp::verify() {
   VectorType resVecTy = getVectorType();
   MemRefType memRefTy = getMemRefType();
 
-  if (failed(verifyLoadStoreMemRefLayout(*this, memRefTy)))
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVecTy, memRefTy)))
     return failure();
 
   // Checks for vector memrefs.
@@ -4811,7 +4850,7 @@ LogicalResult vector::StoreOp::verify() {
   VectorType valueVecTy = getVectorType();
   MemRefType memRefTy = getMemRefType();
 
-  if (failed(verifyLoadStoreMemRefLayout(*this, memRefTy)))
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVecTy, memRefTy)))
     return failure();
 
   // Checks for vector memrefs.
@@ -5887,21 +5926,6 @@ LogicalResult CreateMaskOp::verify() {
   return success();
 }
 
-std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
-  if (value.getDefiningOp<vector::VectorScaleOp>())
-    return 1;
-  auto mul = value.getDefiningOp<arith::MulIOp>();
-  if (!mul)
-    return {};
-  auto lhs = mul.getLhs();
-  auto rhs = mul.getRhs();
-  if (lhs.getDefiningOp<vector::VectorScaleOp>())
-    return getConstantIntValue(rhs);
-  if (rhs.getDefiningOp<vector::VectorScaleOp>())
-    return getConstantIntValue(lhs);
-  return {};
-}
-
 namespace {
 
 /// Pattern to rewrite a CreateMaskOp with a ConstantMaskOp.
@@ -6124,7 +6148,9 @@ LogicalResult MaskOp::verify() {
   Block &block = getMaskRegion().getBlocks().front();
   if (block.getOperations().empty())
     return emitOpError("expects a terminator within the mask region");
-  if (block.getOperations().size() > 2)
+
+  unsigned numMaskRegionOps = block.getOperations().size();
+  if (numMaskRegionOps > 2)
     return emitOpError("expects only one operation to mask");
 
   // Terminator checks.
@@ -6136,10 +6162,13 @@ LogicalResult MaskOp::verify() {
     return emitOpError(
         "expects number of results to match mask region yielded values");
 
-  auto maskableOp = dyn_cast<MaskableOpInterface>(block.front());
   // Empty vector.mask. Nothing else to check.
-  if (!maskableOp)
+  if (numMaskRegionOps == 1)
     return success();
+
+  auto maskableOp = dyn_cast<MaskableOpInterface>(block.front());
+  if (!maskableOp)
+    return emitOpError("expects a MaskableOpInterface within the mask region");
 
   // Result checks.
   if (maskableOp->getNumResults() != getNumResults())

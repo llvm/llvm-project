@@ -446,7 +446,6 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   }
   if (HostTriple.isOSLinux() && HostTriple.isOSBinFormatELF())
     ObjStream << "  .section .note.GNU-stack, \"\", @progbits\n";
-  ObjStream.flush();
 
   // Dump the contents of the temp object file gen if the user requested that.
   // We support this option to enable testing of behavior with -###.

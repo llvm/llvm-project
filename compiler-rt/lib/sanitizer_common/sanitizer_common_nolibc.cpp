@@ -22,6 +22,7 @@ namespace __sanitizer {
 #if !SANITIZER_WINDOWS
 #  if SANITIZER_LINUX
 void LogMessageOnPrintf(const char *str) {}
+void InitTlsSize() {}
 #  endif
 void WriteToSyslog(const char *buffer) {}
 void Abort() { internal__exit(1); }
