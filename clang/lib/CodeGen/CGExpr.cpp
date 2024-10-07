@@ -1052,6 +1052,8 @@ public:
     return Visit(E->getBase());
   }
   const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return IsExpectedRecordDecl(E) ? E : nullptr;
     return Visit(E->getSubExpr());
   }
   const Expr *VisitParenExpr(const ParenExpr *E) {
@@ -1119,18 +1121,14 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
-    Res = EmitDeclRefLValue(DRE).getPointer(*this);
-    Res = Builder.CreateAlignedLoad(ConvertType(DRE->getType()), Res,
-                                    getPointerAlign(), "dre.load");
-  } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(StructBase)) {
-    LValue LV = EmitMemberExpr(ME);
-    Address Addr = LV.getAddress();
-    Res = Addr.emitRawPointer(*this);
-  } else if (StructBase->getType()->isPointerType()) {
+  if (StructBase->getType()->isPointerType()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
+    Res = Addr.emitRawPointer(*this);
+  } else if (StructBase->isLValue()) {
+    LValue LV = EmitLValue(StructBase);
+    Address Addr = LV.getAddress();
     Res = Addr.emitRawPointer(*this);
   } else {
     return nullptr;
