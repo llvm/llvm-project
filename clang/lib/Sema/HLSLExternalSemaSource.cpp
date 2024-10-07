@@ -493,7 +493,7 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
       false, AST.getTrivialTypeSourceInfo(AST.IntTy));
   llvm::APInt RVal(AST.getIntWidth(AST.IntTy), 4);
   TemplateArgument RDefault(AST, llvm::APSInt(std::move(RVal)), AST.IntTy,
-                           /*IsDefaulted=*/true);
+                            /*IsDefaulted=*/true);
   RowsParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(RDefault, AST.IntTy,
                                                   SourceLocation(), RowsParam));
@@ -505,7 +505,7 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
       false, AST.getTrivialTypeSourceInfo(AST.IntTy));
   llvm::APInt CVal(AST.getIntWidth(AST.IntTy), 4);
   TemplateArgument CDefault(AST, llvm::APSInt(std::move(CVal)), AST.IntTy,
-                           /*IsDefaulted=*/true);
+                            /*IsDefaulted=*/true);
   ColsParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(CDefault, AST.IntTy,
                                                   SourceLocation(), ColsParam));
