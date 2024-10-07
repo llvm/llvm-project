@@ -202,9 +202,19 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   # itself (and not Path). Thus, we must copy all our DLLs into the Python package. This is a best
   # practice on Windows anyway.
   if (WIN32)
-    add_custom_command(TARGET ${swig_target} POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy -t ${lldb_python_target_dir}> $<TARGET_RUNTIME_DLLS:liblldb>
-      COMMAND_EXPAND_LISTS)
+    # TARGET_RUNTIME_DLLS is supported in CMake 3.21+
+    if ("${CMAKE_VERSION}" VERSION_LESS "3.21.0")
+      if (LLDB_INCLUDE_TESTS)
+        message(SEND_ERROR
+          "Your CMake version is ${CMAKE_VERSION}. In order to run LLDB tests "
+          "on Windows please upgrade to 3.21.0 at least (or disable tests with "
+          "LLDB_INCLUDE_TESTS=Off)")
+      endif()
+    else()
+      add_custom_command(TARGET ${swig_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy -t ${lldb_python_target_dir}> $<TARGET_RUNTIME_DLLS:liblldb>
+        COMMAND_EXPAND_LISTS)
+    endif()
   endif()
 
 endfunction()
