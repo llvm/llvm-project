@@ -47,6 +47,12 @@ if(${LLVM_NATIVE_ARCH} MATCHES "^(AArch64|Hexagon|Sparc|SystemZ)$")
   set(RUN_PYTHON_TESTS FALSE)
 endif()
 
+# Allow user to explicitly disable these tests.
+option(CLANG_DISABLE_RUN_PYTHON_TESTS "Do not run Clang Python bindings tests" OFF)
+if(CLANG_DISABLE_RUN_PYTHON_TESTS)
+  set(RUN_PYTHON_TESTS FALSE)
+endif()
+
 if(RUN_PYTHON_TESTS)
     set_property(GLOBAL APPEND PROPERTY
                  LLVM_ALL_ADDITIONAL_TEST_TARGETS check-clang-python)
