@@ -1097,7 +1097,7 @@ following options with cmake:
  * ``-DLLVM_USE_LINKER``
 
    Setting this option to ``lld`` will significantly reduce linking time for LLVM
-   executables on ELF-based platforms, such as Linux. If you are building LLVM
+   executables, particularly on Linux and Windows. If you are building LLVM
    for the first time and lld is not available to you as a binary package, then
    you may want to use the gold linker as a faster alternative to GNU ld.
 
@@ -1124,16 +1124,17 @@ following options with cmake:
  * ``-DLLVM_TARGETS_TO_BUILD``
 
    Set this equal to the target you wish to build. You may wish to set this to
-   only your host architecture. For example `X86` if you are using an AMD64 machine.
-   You will find a full list of targets within the
+   only your host architecture. For example ``X86`` if you are using an Intel or
+   AMD machine. You will find a full list of targets within the
    `llvm-project/llvm/lib/Target <https://github.com/llvm/llvm-project/tree/main/llvm/lib/Target>`_
    directory.
 
  * ``-DLLVM_OPTIMIZED_TABLEGEN``
 
-   Set this to ``ON`` to generate a fully optimized tablegen during your build. This
-   will significantly improve your build time. This is only useful if you are
-   using the ``Debug`` build type.
+   Set this to ``ON`` to generate a fully optimized TableGen compiler during your
+   build, even if that build is a ``Debug`` build. This will significantly improve
+   your build time. You should not enable this if your intention is to debug the
+   TableGen compiler.
 
  * ``-DLLVM_ENABLE_PROJECTS``
 
