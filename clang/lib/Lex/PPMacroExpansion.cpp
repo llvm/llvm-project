@@ -1604,10 +1604,12 @@ static bool isTargetVariantEnvironment(const TargetInfo &TI,
   return false;
 }
 
-#if defined(__sun__) && defined(__svr4__)
+#if defined(__sun__) && defined(__svr4__) && defined(__clang__) &&             \
+    __clang__ < 20
 // GCC mangles std::tm as tm for binary compatibility on Solaris (Issue
 // #33114).  We need to match this to allow the std::put_time calls to link
-// (PR #99075).
+// (PR #99075).  clang 20 contains a fix, but the workaround is still needed
+// with older versions.
 asm("_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
     "RSt8ios_basecPKSt2tmPKcSB_ = "
     "_ZNKSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE3putES3_"
