@@ -1379,7 +1379,6 @@ protected:
   DefaultThreadPool BackendThreadPool;
   std::optional<Error> Err;
   std::mutex ErrMu;
-  std::mutex OnWriteMu;
 
 public:
   ThinBackendProc(
@@ -1423,16 +1422,17 @@ public:
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::OF_None);
     if (EC)
-      return errorCodeToError(EC);
+      return createFileError("cannot open " + NewModulePath + ".thinlto.bc",
+                             EC);
 
     writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
                      &DeclarationSummaries);
 
     if (ShouldEmitImportsFiles) {
-      EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",
-                            ModuleToSummariesForIndex);
-      if (EC)
-        return errorCodeToError(EC);
+      Error ImportFilesError = EmitImportsFiles(
+          ModulePath, NewModulePath + ".imports", ModuleToSummariesForIndex);
+      if (ImportFilesError)
+        return ImportFilesError;
     }
     return Error::success();
   }
@@ -1614,13 +1614,13 @@ class WriteIndexesThinBackend : public ThinBackendProc {
 public:
   WriteIndexesThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       std::string OldPrefix, std::string NewPrefix,
       std::string NativeObjectPrefix, bool ShouldEmitImportsFiles,
       raw_fd_ostream *LinkedObjectsFile, lto::IndexWriteCallback OnWrite)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                        OnWrite, ShouldEmitImportsFiles,
-                        /* ThinLTOParallelism */ hardware_concurrency()),
+                        OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
         OldPrefix(OldPrefix), NewPrefix(NewPrefix),
         NativeObjectPrefix(NativeObjectPrefix),
         LinkedObjectsFile(LinkedObjectsFile) {}
@@ -1660,14 +1660,11 @@ public:
               Err = std::move(E);
             return;
           }
-          if (OnWrite) {
-            // Serialize calls to the on write callback in case it is not thread
-            // safe
-            std::unique_lock<std::mutex> L(OnWriteMu);
-            OnWrite(std::string(ModulePath));
-          }
         },
         ModulePath, ImportList, OldPrefix, NewPrefix);
+
+    if (OnWrite)
+      OnWrite(std::string(ModulePath));
     return Error::success();
   }
 
@@ -1680,16 +1677,17 @@ public:
 } // end anonymous namespace
 
 ThinBackend lto::createWriteIndexesThinBackend(
-    std::string OldPrefix, std::string NewPrefix,
-    std::string NativeObjectPrefix, bool ShouldEmitImportsFiles,
-    raw_fd_ostream *LinkedObjectsFile, IndexWriteCallback OnWrite) {
+    ThreadPoolStrategy Parallelism, std::string OldPrefix,
+    std::string NewPrefix, std::string NativeObjectPrefix,
+    bool ShouldEmitImportsFiles, raw_fd_ostream *LinkedObjectsFile,
+    IndexWriteCallback OnWrite) {
   return
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache) {
         return std::make_unique<WriteIndexesThinBackend>(
-            Conf, CombinedIndex, ModuleToDefinedGVSummaries, OldPrefix,
-            NewPrefix, NativeObjectPrefix, ShouldEmitImportsFiles,
+            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+            OldPrefix, NewPrefix, NativeObjectPrefix, ShouldEmitImportsFiles,
             LinkedObjectsFile, OnWrite);
       };
 }
