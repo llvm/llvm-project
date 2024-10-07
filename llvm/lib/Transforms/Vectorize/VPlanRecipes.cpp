@@ -638,9 +638,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return NewPhi;
   }
   case VPInstruction::MergeUntilPivot: {
-    Value *Cond = State.get(getOperand(0), 0);
-    Value *OnTrue = State.get(getOperand(1), 0);
-    Value *OnFalse = State.get(getOperand(2), 0);
+    Value *Cond = State.get(getOperand(0));
+    Value *OnTrue = State.get(getOperand(1));
+    Value *OnFalse = State.get(getOperand(2));
     Value *Pivot = State.get(getOperand(3), /* IsScalar */ true);
     assert(Pivot->getType()->isIntegerTy() && "Pivot should be an integer.");
     return Builder.CreateIntrinsic(Intrinsic::vp_merge, {OnTrue->getType()},
