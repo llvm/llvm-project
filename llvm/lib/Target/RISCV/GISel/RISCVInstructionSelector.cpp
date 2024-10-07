@@ -68,6 +68,9 @@ private:
   // Returns true if the instruction was modified.
   void preISelLower(MachineInstr &MI, MachineIRBuilder &MIB);
 
+  // An early selection function that runs before the selectImpl() call.
+  bool earlySelect(MachineInstr &I);
+
   bool replacePtrWithInt(MachineOperand &Op, MachineIRBuilder &MIB);
 
   // Custom selection methods
@@ -530,7 +533,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineFunction &MF = *MBB.getParent();
   MachineIRBuilder MIB(MI);
 
-  bool OpcWasGSplatVector = MI.getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
   preISelLower(MI, MIB);
   const unsigned Opc = MI.getOpcode();
 
@@ -569,17 +571,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return true;
   }
 
-  // FIXME: We create a IMPLICIT_DEF and a G_CONSTANT in preISelLower when
-  // we encounter a G_SPLAT_VECTOR. We cannot select the G_CONSTANT until after
-  // the MI is lowered, since renderVLOp needs to see the G_CONSTANT. It would
-  // be nice if the InstructionSelector selected these instructions without
-  // needing to call select on them explicitly.
-  if (OpcWasGSplatVector) {
-    MachineInstr *Passthru = MRI->getVRegDef(MI.getOperand(1).getReg());
-    MachineInstr *VL = MRI->getVRegDef(MI.getOperand(3).getReg());
-    if (selectImpl(MI, *CoverageInfo))
-      return select(*Passthru) && select(*VL);
-  }
+  if (earlySelect(MI))
+    return true;
 
   if (selectImpl(MI, *CoverageInfo))
     return true;
@@ -813,8 +806,19 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     replacePtrWithInt(MI.getOperand(1), MIB);
     MI.setDesc(TII.get(TargetOpcode::G_AND));
     MRI->setType(DstReg, sXLen);
-    break;
   }
+  }
+}
+
+bool RISCVInstructionSelector::earlySelect(MachineInstr &MI) {
+  assert(MI.getParent() && "Instruction should be in a basic block!");
+  assert(MI.getParent()->getParent() && "Instruction should be in a function!");
+
+  MachineIRBuilder MIB(MI);
+
+  switch (MI.getOpcode()) {
+  default:
+    break;
   case TargetOpcode::G_SPLAT_VECTOR: {
     // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
     // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
@@ -825,23 +829,27 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
                                           sXLen.getSizeInBits()))
       Scalar = MIB.buildAnyExt(sXLen, Scalar).getReg(0);
 
-    // Convert MI in place, since select function is trying to select this
-    // instruction.
+    // We create a IMPLICIT_DEF and a G_CONSTANT when we encounter a
+    // G_SPLAT_VECTOR. We cannot select the G_CONSTANT until after the MI is
+    // lowered, since renderVLOp needs to see the G_CONSTANT.
+    // FIXME: It would be nice if the InstructionSelector selected these
+    // instructions without needing to call select on them explicitly,
+    // which would allow us to lower G_SPLAT_VECTOR in preISelLower and
+    // rely on select to do the selection instead of early selecting here.
     unsigned Opc = IsGPRSplat ? RISCV::G_VMV_V_X_VL : RISCV::G_VFMV_V_F_VL;
-    MI.setDesc(TII.get(Opc));
-    MI.removeOperand(1);
     LLT VecTy = MRI->getType(MI.getOperand(0).getReg());
     auto Passthru = MIB.buildUndef(VecTy);
     auto VLMax = MIB.buildConstant(sXLen, -1);
     MRI->setRegBank(Passthru.getReg(0), RBI.getRegBank(RISCV::VRBRegBankID));
     MRI->setRegBank(VLMax.getReg(0), RBI.getRegBank(RISCV::GPRBRegBankID));
-    MachineInstrBuilder(*MI.getMF(), &MI)
-        .addUse(Passthru.getReg(0))
-        .addUse(Scalar)
-        .addUse(VLMax.getReg(0));
-    break;
+    auto Splat = MIB.buildInstr(Opc, {MI.getOperand(0).getReg()},
+                                {Passthru, Scalar, VLMax});
+    MI.eraseFromParent();
+    if (selectImpl(*Splat, *CoverageInfo))
+      return select(*Passthru) && select(*VLMax);
   }
   }
+  return false;
 }
 
 void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
