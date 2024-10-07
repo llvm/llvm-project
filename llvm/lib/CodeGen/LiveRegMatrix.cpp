@@ -52,7 +52,7 @@ void LiveRegMatrixWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool LiveRegMatrixWrapperPass::runOnMachineFunction(MachineFunction &MF) {
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  auto &VRM = getAnalysis<VirtRegMapWrapperPass>().getVRM();
+  auto &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
   LRM.init(MF, LIS, VRM);
   return false;
 }
