@@ -334,12 +334,12 @@ tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) 
 
 #### Release management
 
-For x.y.0 releases:
+Odd releases:
 
-Hans Wennborg \
-hans@chromium.org (email), [zmodem](https://github.com/zmodem) (GitHub)
+Tobias Hieta \
+tobias@hieta.se (email), [tru](https://github.com/tru) (GitHub)
 
-For x.y.\[1-9\] releases:
+Even releases:
 
 Tom Stellard \
 tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
@@ -426,7 +426,9 @@ help with the success of the project!
 
 ### Emeritus lead maintainers
 
-### Inactive component maintainers
+### Inactive or former component maintainers
+
+Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management
 
 ### Former maintainers of removed components
 
