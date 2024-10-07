@@ -100,6 +100,9 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
 static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
                                     IntrinsicInst *II) {
   assert(II != nullptr && "Intrinsic cannot be null");
+  Intrinsic::ID IID = II->getIntrinsicID();
+  if (IID == Intrinsic::not_intrinsic)
+    return false;
   // At the moment VFABI assumes the return type is always widened unless it is
   // a void type.
   auto *VTy = dyn_cast<VectorType>(II->getType());
@@ -108,11 +111,11 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // Compute the argument types of the corresponding scalar call and check that
   // all vector operands match the previously found EC.
   SmallVector<Type *, 8> ScalarArgTypes;
-  Intrinsic::ID IID = II->getIntrinsicID();
 
   // OloadTys collects types used in scalar intrinsic overload name.
   SmallVector<Type *, 3> OloadTys;
-  if (isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
+  if (!ScalarRetTy->isVoidTy() &&
+      isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
     OloadTys.push_back(ScalarRetTy);
 
   for (auto Arg : enumerate(II->args())) {
