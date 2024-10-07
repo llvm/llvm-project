@@ -60,9 +60,9 @@ bool DINodeAttr::classof(Attribute attr) {
                    DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
                    DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
                    DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-                   DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
-                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
-      attr);
+                   DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
+                   DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -221,15 +221,16 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 //===----------------------------------------------------------------------===//
 
 DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
-  return DISubprogramAttr::get(
-      getContext(), recId, getIsRecSelf(), getId(), getCompileUnit(),
-      getScope(), getName(), getLinkageName(), getFile(), getLine(),
-      getScopeLine(), getSubprogramFlags(), getType(), getRetainedNodes());
+  return DISubprogramAttr::get(getContext(), recId, getIsRecSelf(), getId(),
+                               getCompileUnit(), getScope(), getName(),
+                               getLinkageName(), getFile(), getLine(),
+                               getScopeLine(), getSubprogramFlags(), getType(),
+                               getRetainedNodes(), getAnnotations());
 }
 
 DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
   return DISubprogramAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
-                               {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {});
+                               {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {}, {});
 }
 
 //===----------------------------------------------------------------------===//

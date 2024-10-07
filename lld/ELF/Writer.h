@@ -45,7 +45,7 @@ struct PhdrEntry {
 };
 
 void addReservedSymbols(Ctx &ctx);
-bool includeInSymtab(const Symbol &b);
+bool includeInSymtab(Ctx &, const Symbol &);
 unsigned getSectionRank(Ctx &, OutputSection &osec);
 
 } // namespace lld::elf
