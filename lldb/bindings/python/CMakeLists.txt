@@ -199,9 +199,9 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   endif()
 
   # Since Python3.8 the Windows runtime loads dependent DLLs only from the directory of the binary
-  # itself (and not Path). Thus, we must copy all our DLLs into the Python package. This is a best
-  # practice on Windows anyway.
-  if (WIN32)
+  # itself (and not Path). Windows has no notion RPATHs, so we must copy all DLLs that we depend on
+  # into the Python package. Plus swiftCore which is a transitive (but no direct) dependency.
+  if (WIN32 AND LLDB_ENABLE_SWIFT_SUPPORT)
     # TARGET_RUNTIME_DLLS is supported in CMake 3.21+
     if ("${CMAKE_VERSION}" VERSION_LESS "3.21.0")
       if (LLDB_INCLUDE_TESTS)
@@ -211,8 +211,9 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
           "LLDB_INCLUDE_TESTS=Off)")
       endif()
     else()
+      add_dependencies(${swig_target} swiftCore-windows)
       add_custom_command(TARGET ${swig_target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy -t ${lldb_python_target_dir}> $<TARGET_RUNTIME_DLLS:liblldb>
+        COMMAND ${CMAKE_COMMAND} -E copy -t ${lldb_python_target_dir} $<TARGET_RUNTIME_DLLS:liblldb> ${SWIFT_BINARY_DIR}/bin/swiftCore.dll
         COMMAND_EXPAND_LISTS)
     endif()
   endif()
