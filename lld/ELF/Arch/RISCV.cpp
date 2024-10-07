@@ -602,9 +602,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     const Relocation &rel = relocs[i];
     uint8_t *loc = buf + rel.offset;
-    uint64_t val =
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr);
+    uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 
     switch (rel.expr) {
     case R_RELAX_HINT:
