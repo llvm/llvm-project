@@ -2544,6 +2544,8 @@ struct AsyncUnwindRegisterNumbers {
   /// frames below us as they need to react differently. There is no good way to
   /// expose this, so we set another dummy register to communicate this state.
   uint32_t dummy_regnum;
+
+  RegisterKind GetRegisterKind() const { return lldb::eRegisterKindDWARF; }
 };
 } // namespace
 
@@ -2588,8 +2590,11 @@ lldb::addr_t SwiftLanguageRuntime::GetAsyncContext(RegisterContext *regctx) {
 
 /// Functional wrapper to read a register as an address.
 static std::optional<addr_t> ReadRegisterAsAddress(RegisterContext &regctx,
+                                                   RegisterKind regkind,
                                                    unsigned regnum) {
-  auto reg = regctx.ReadRegisterAsUnsigned(regnum, LLDB_INVALID_ADDRESS);
+  unsigned lldb_regnum =
+      regctx.ConvertRegisterKindToRegisterNumber(regkind, regnum);
+  auto reg = regctx.ReadRegisterAsUnsigned(lldb_regnum, LLDB_INVALID_ADDRESS);
   if (reg != LLDB_INVALID_ADDRESS)
     return reg;
   return {};
@@ -2613,12 +2618,14 @@ ReadPtrFromAddr(Process &process, std::optional<addr_t> addr, int offset = 0) {
 /// simplified version of the methods in RegisterContextUnwind, since plumbing
 /// access to those here would be challenging.
 static std::optional<addr_t> GetCFA(Process &process, RegisterContext &regctx,
+                                    RegisterKind regkind,
                                     UnwindPlan::Row::FAValue cfa_loc) {
   using ValueType = UnwindPlan::Row::FAValue::ValueType;
   switch (cfa_loc.GetValueType()) {
   case ValueType::isRegisterPlusOffset: {
     unsigned regnum = cfa_loc.GetRegisterNumber();
-    if (std::optional<addr_t> regvalue = ReadRegisterAsAddress(regctx, regnum))
+    if (std::optional<addr_t> regvalue =
+            ReadRegisterAsAddress(regctx, regkind, regnum))
       return *regvalue + cfa_loc.GetOffset();
     break;
   }
@@ -2651,31 +2658,44 @@ static std::optional<addr_t> ReadAsyncContextRegisterFromUnwind(
   if (!unwind_plan)
     return {};
 
+  const RegisterKind unwind_regkind = unwind_plan->GetRegisterKind();
   UnwindPlan::RowSP row = unwind_plan->GetRowForFunctionOffset(
       pc.GetFileAddress() - func_start_addr.GetFileAddress());
-  UnwindPlan::Row::AbstractRegisterLocation regloc;
+
+  // To request info about a register from the unwind plan, the register must
+  // be in the same domain as the unwind plan's registers.
+  uint32_t async_reg_unwind_regdomain;
+  if (!regctx.ConvertBetweenRegisterKinds(
+          regnums.GetRegisterKind(), regnums.async_ctx_regnum, unwind_regkind,
+          async_reg_unwind_regdomain))
+    return {};
 
   // If the plan doesn't have information about the async register, we can use
   // its current value, as this is a callee saved register.
-  if (!row->GetRegisterInfo(regnums.async_ctx_regnum, regloc))
-    return ReadRegisterAsAddress(regctx, regnums.async_ctx_regnum);
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+  if (!row->GetRegisterInfo(async_reg_unwind_regdomain, regloc))
+    return ReadRegisterAsAddress(regctx, regnums.GetRegisterKind(),
+                                 regnums.async_ctx_regnum);
 
   // Handle the few abstract locations we are likely to encounter.
   using RestoreType = UnwindPlan::Row::AbstractRegisterLocation::RestoreType;
   RestoreType loctype = regloc.GetLocationType();
   switch (loctype) {
   case RestoreType::same:
+    return ReadRegisterAsAddress(regctx, regnums.GetRegisterKind(),
+                                 regnums.async_ctx_regnum);
   case RestoreType::inOtherRegister: {
-    unsigned regnum = loctype == RestoreType::same ? regnums.async_ctx_regnum
-                                                   : regloc.GetRegisterNumber();
-    return ReadRegisterAsAddress(regctx, regnum);
+    unsigned regnum = regloc.GetRegisterNumber();
+    return ReadRegisterAsAddress(regctx, unwind_regkind, regnum);
   }
   case RestoreType::atCFAPlusOffset: {
-    std::optional<addr_t> cfa = GetCFA(process, regctx, row->GetCFAValue());
+    std::optional<addr_t> cfa =
+        GetCFA(process, regctx, unwind_regkind, row->GetCFAValue());
     return ReadPtrFromAddr(process, cfa, regloc.GetOffset());
   }
   case RestoreType::isCFAPlusOffset: {
-    std::optional<addr_t> cfa = GetCFA(process, regctx, row->GetCFAValue());
+    std::optional<addr_t> cfa =
+        GetCFA(process, regctx, unwind_regkind, row->GetCFAValue());
     if (!cfa)
       return {};
     return *cfa + regloc.GetOffset();
