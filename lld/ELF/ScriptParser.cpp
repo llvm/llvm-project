@@ -385,12 +385,10 @@ void ScriptParser::readExtern() {
 }
 
 void ScriptParser::readGroup() {
-  bool orig = InputFile::isInGroup;
-  InputFile::isInGroup = true;
+  SaveAndRestore saved(ctx.driver.isInGroup, true);
   readInput();
-  InputFile::isInGroup = orig;
-  if (!orig)
-    ++InputFile::nextGroupId;
+  if (!saved.get())
+    ++ctx.driver.nextGroupId;
 }
 
 void ScriptParser::readInclude() {
