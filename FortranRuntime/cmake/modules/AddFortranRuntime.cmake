@@ -6,7 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-# Builds a library with common option for FortranRuntime.
+# Builds a library with common options for FortranRuntime.
 #
 # Usage:
 #
@@ -16,11 +16,13 @@
 #   STATIC
 #     Build a static (.a/.lib) library
 #   OBJECT
-#     Create only object- and Fortran module files without static/dynamic library
+#     Create only object files without static/dynamic library
 #   INSTALL_WITH_TOOLCHAIN
-#     Install library into Clang's resource directory so it can be found by the Flang driver during compilation, including tests
+#     Install library into Clang's resource directory so it can be found by the
+#     Flang driver during compilation, including tests
 #   EXCLUDE_FROM_ALL
-#     Do not build library by default; typically used for libraries needed for testing only, no install
+#     Do not build library by default; typically used for libraries needed for
+#     testing only, no install
 #   LINK_TO_LLVM
 #     Library requires include path and linking to LLVM's Support component
 #   ADDITIONAL_HEADERS
@@ -65,22 +67,30 @@ function (add_fortranruntime_library name)
 
   target_compile_features(${name} PRIVATE cxx_std_17)
   if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    target_compile_options(${name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>)
+    target_compile_options(${name} PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
+      )
   elseif (MSVC)
-    target_compile_options(${name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->)
+    target_compile_options(${name} PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
+      )
   endif ()
 
   # FortranRuntime's public headers
   target_include_directories(${name} PRIVATE "${FORTRANRUNTIME_SOURCE_DIR}/include")
 
-  # For ISO_Fortran_binding.h to be found (Accessed as #include "flang/ISO_Fortran_binding.h")
+  # For ISO_Fortran_binding.h to be found by the runtime itself (Accessed as #include "flang/ISO_Fortran_binding.h")
+  # User applications can use #include <ISO_Fortran_binding.h>
   target_include_directories(${name} PRIVATE "${FLANG_SOURCE_DIR}/include")
 
-  # For configured config.h for be found
+  # For FortranRuntime's configured config.h to be found
   target_include_directories(${name} PRIVATE "${FORTRANRUNTIME_BINARY_DIR}")
 
-  # Clang/Flang, targeting the MSVC ABI, including clang-cl, should only depends on msv(u)crt. LLVM still emits libgcc/compiler-rt functions for 128-bit integer math (__udivti3, __modti3, __fixsfti, __floattidf, ...) that msvc does not support.
-  # We are injecting a dependency to Compiler-RT where these are implemented.
+  # Clang/Flang, targeting the MSVC ABI, including clang-cl, should only depends
+  # on msv(u)crt. LLVM still emits libgcc/compiler-rt functions for 128-bit
+  # integer math (__udivti3, __modti3, __fixsfti, __floattidf, ...) that msvc
+  # does not support. We are injecting a dependency to Compiler-RT where these
+  # are implemented.
   if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") AND FORTRANRUNTIME_LIBCALL)
     target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FORTRANRUNTIME_LIBCALL}")
   endif ()
@@ -96,9 +106,9 @@ function (add_fortranruntime_library name)
     target_include_directories(${name} PRIVATE  ${LLVM_INCLUDE_DIRS})
   endif ()
 
-  # If this is part of the toolchain, put it into the compiler's resource directory.
-  # Otherwise it is part of testing and is not installed at all.
-  # TODO: Consider multi-configuration builds
+  # If this is part of the toolchain, put it into the compiler's resource
+  # directory. Otherwise it is part of testing and is not installed at all.
+  # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
   if (ARG_INSTALL_WITH_TOOLCHAIN)
     set_target_properties(${name}
       PROPERTIES

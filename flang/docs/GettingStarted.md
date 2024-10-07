@@ -197,13 +197,13 @@ Flang runtime can be built for accelerators in experimental mode, i.e.
 complete enabling is WIP.  CUDA and OpenMP target offload builds
 are currently supported.
 
-#### Building out-of-tree
+#### Building out-of-tree (Runtime-only build)
 
 ##### CUDA build
 Clang with NVPTX backend and NVCC compilers are supported.
 
 ```bash
-cd llvm-project/flang
+cd llvm-project
 rm -rf build_flang_runtime
 mkdir build_flang_runtime
 cd build_flang_runtime
@@ -217,7 +217,7 @@ cmake \
   -DCMAKE_CUDA_COMPILER=clang \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtimes/
-make -j FortranRuntime
+make -j`nprocs` FortranRuntime
 ```
 
 Note that the used version of `clang` must [support](https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#cuda-support)
@@ -226,7 +226,7 @@ CUDA toolkit installations, please use `-DCUDAToolkit_ROOT=/some/path`
 to specify the compatible version.
 
 ```bash
-cd llvm-project/flang
+cd llvm-project
 rm -rf build_flang_runtime
 mkdir build_flang_runtime
 cd build_flang_runtime
@@ -241,7 +241,7 @@ cmake \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtimes/
 
-make -j FortranRuntime
+make -j`nprocs` FortranRuntime
 ```
 
 Note that `nvcc` might limit support to certain
@@ -267,6 +267,7 @@ For example:
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_CUDA_COMPILER=clang \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
+  ../llvm
 ```
 
 Or:
@@ -278,15 +279,17 @@ Or:
   -DCMAKE_CXX_COMPILER=g++ \
   -DCMAKE_CUDA_COMPILER=nvcc \
   -DCMAKE_CUDA_HOST_COMPILER=g++ \
+  ../llvm
 ```
 
-Normal `make -j check-flang` will work with such CMake configuration.
+Normal `make -j`nprocs` check-flang` will work with such CMake configuration.
+Consider a lower value instead of `nprocs` appropriate to the available RAM.
 
 ##### OpenMP target offload build
 Only Clang compiler is currently supported.
 
 ```bash
-cd llvm-project/flang
+cd llvm-project
 rm -rf build_flang_runtime
 mkdir build_flang_runtime
 cd build_flang_runtime
@@ -299,7 +302,7 @@ cmake \
   -DFORTRANRUNTIME_DEVICE_ARCHITECTURES="all" \
   ../runtimes/
 
-make -j FortranRuntime
+make -j`nprocs` FortranRuntime
 ```
 
 The result of the build is a "device-only" library, i.e. the host

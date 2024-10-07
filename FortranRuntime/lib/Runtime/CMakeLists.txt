@@ -90,9 +90,6 @@ file(GLOB_RECURSE private_headers
   "${FLANGRUNTIME_SOURCE_DIR}/lib/Common/*.h"
   )
 
-
-
-
 get_target_property(f128_sources
   FortranFloat128MathILib INTERFACE_SOURCES
   )
@@ -109,8 +106,6 @@ if (f128_sources)
   list(APPEND sources ${f128_sources})
 endif()
 
-
-
 if (NOT WIN32)
   add_fortranruntime_library(FortranRuntime STATIC
     ${sources}
@@ -118,7 +113,8 @@ if (NOT WIN32)
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
 
-  # For unittests that link to FortranRuntime. Should link to the static version of the library.
+  # For unittests that link to FortranRuntime. Should link to the static version
+  # of the library.
   add_library(FortranRuntime.static ALIAS FortranRuntime)
   add_library(FortranRuntime.unittest ALIAS FortranRuntime)
 else()
@@ -131,7 +127,8 @@ else()
         ADDITIONAL_HEADERS ${public_headers} ${private_headers}
       )
 
-    # Setting an unique Fortran_MODULE_DIRECTORY is required for each variant to write a different .mod file.
+    # Setting an unique Fortran_MODULE_DIRECTORY is required for each variant to
+    # write a different .mod file.
     set_target_properties(${name}
         PROPERTIES
           MSVC_RUNTIME_LIBRARY ${msvc_lib}
@@ -145,7 +142,8 @@ else()
   # unittests link against LLVMSupport which is compiled with /MD
   add_win_fortranruntime_library(STATIC unittest   MultiThreadedDLL EXCLUDE_FROM_ALL)
 
-  # FIXME: Before DLL versions of the runtime can be used, exported definitions must be annotated with __declspec(dllexport).
+  # FIXME: Before DLL versions of the runtime can be used, exported definitions
+  # must be annotated with __declspec(dllexport).
   add_win_fortranruntime_library(SHARED dynamic     MultiThreadedDLL)
   add_win_fortranruntime_library(SHARED dynamic_dbg MultiThreadedDebugDLL)
 

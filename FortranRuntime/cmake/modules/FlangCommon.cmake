@@ -1,3 +1,15 @@
+#===-- cmake/modules/FlangCommon.txt ----------------------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===------------------------------------------------------------------------===#
+#
+# CMake definitions shared betwween Flang and FortranRuntime
+#
+#===------------------------------------------------------------------------===#
+
 # The out of tree builds of the compiler and the Fortran runtime
 # must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
 # to be composable. Failure to synchronize this setting may result

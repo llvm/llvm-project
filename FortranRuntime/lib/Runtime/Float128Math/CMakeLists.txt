@@ -88,9 +88,11 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
       "${FLANG_RUNTIME_F128_MATH_LIB}"
       )
   endif()
-   
+
   if (WIN32)
-     # Do not create a FortranFloat128Math library under Windows, the Flang driver never links it. Instead, add the sources to the main FortranRuntime.lib.
+    # Do not create a FortranFloat128Math library under Windows, the Flang
+    # driver never links it. Instead, add the sources to the main
+    # FortranRuntime.lib.
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
     target_compile_definitions(FortranFloat128MathILib INTERFACE HAS_QUADMATHLIB)
   else ()

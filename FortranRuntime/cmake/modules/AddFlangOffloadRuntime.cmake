@@ -1,12 +1,10 @@
-
-
-
-
-
-
-
-
-
+#===-- cmake/modules/AddFlangOffloadRuntime.txt ----------------------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===------------------------------------------------------------------------===#
 
 macro(enable_cuda_compilation name files)
   if (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")

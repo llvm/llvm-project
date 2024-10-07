@@ -39,7 +39,6 @@ function(add_flang_unittest_offload_properties target)
       PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON
       )
   endif()
-
   # Enable OpenMP offload during linking. We may need to replace
   # LINK_OPTIONS with COMPILE_OPTIONS when there are OpenMP offload
   # unittests.

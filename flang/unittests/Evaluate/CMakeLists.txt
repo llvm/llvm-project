@@ -40,11 +40,11 @@ add_flang_nongtest_unittest(integer
 )
 
 add_flang_nongtest_unittest(intrinsics
-  FortranSupport
   FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
+  FortranSupport
   FortranParser
 )
 
@@ -63,7 +63,6 @@ set(LLVM_REQUIRES_RTTI ON)
 add_flang_nongtest_unittest(real
   FortranEvaluateTesting
   FortranEvaluate
-  FortranCommon
   FortranSupport
   FortranSemantics
 )

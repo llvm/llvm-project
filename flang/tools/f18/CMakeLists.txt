@@ -6,7 +6,7 @@ set(LLVM_LINK_COMPONENTS
 
 # Define the list of Fortran module files for which it is
 # sufficient to generate the module file via -fsyntax-only.
-set(MODULES_WITHOUT_IMPLEMENTATION
+set(MODULES
   "__fortran_builtins"
   "__fortran_ieee_exceptions"
   "__fortran_type_info"
@@ -22,8 +22,6 @@ set(MODULES_WITHOUT_IMPLEMENTATION
   "iso_fortran_env"
   "iso_fortran_env_impl"
 )
-
-set(MODULES ${MODULES_WITHOUT_IMPLEMENTATION})
 
 # Check if 128-bit float computations can be done via long double.
 check_cxx_source_compiles(
@@ -69,7 +67,7 @@ if (NOT CMAKE_CROSSCOMPILING)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
       if(${filename} STREQUAL "iso_fortran_env_impl")
-        set(sourcepath "${FLANG_SOURCE_DIR}/../FortranRuntime/lib/Runtime/${filename}.f90")
+        set(sourcepath "${FORTRANRUNTIME_SOURCE_DIR}/lib/Runtime/${filename}.f90")
       endif()
       if(${filename} STREQUAL "iso_fortran_env")
         set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/iso_fortran_env_impl.mod)
