@@ -13608,7 +13608,7 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
     }
 
     AllEmptyPacks &= Decls.empty();
-  };
+  }
 
   // C++ [temp.res]/8.4.2:
   //   The program is ill-formed, no diagnostic required, if [...] lookup for
