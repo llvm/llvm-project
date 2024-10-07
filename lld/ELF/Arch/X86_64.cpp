@@ -401,7 +401,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -483,7 +483,7 @@ static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     // Convert leaq x@tlsdesc(%rip), %REG to movq $x@tpoff, %REG.
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLocation(loc - 3) +
+      errorOrWarn(getErrorLoc(ctx, loc - 3) +
                   "R_X86_64_GOTPC32_TLSDESC must be used "
                   "in leaq x@tlsdesc(%rip), %REG");
       return;
@@ -524,7 +524,7 @@ static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLocation(loc - 3) +
+      errorOrWarn(getErrorLoc(ctx, loc - 3) +
                   "R_X86_64_GOTPC32_TLSDESC must be used "
                   "in leaq x@tlsdesc(%rip), %REG");
       return;
@@ -573,7 +573,7 @@ static void relaxTlsIeToLe(uint8_t *loc, const Relocation &, uint64_t val) {
     memcpy(inst, "\x48\xc7", 2);
     *regSlot = 0xc0 | reg;
   } else {
-    error(getErrorLocation(loc - 3) +
+    error(getErrorLoc(ctx, loc - 3) +
           "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
   }
 
@@ -617,7 +617,7 @@ static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     return;
   }
 
-  error(getErrorLocation(loc - 3) +
+  error(getErrorLoc(ctx, loc - 3) +
         "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD");
 }
 
@@ -756,7 +756,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }

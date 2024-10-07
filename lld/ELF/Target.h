@@ -204,7 +204,7 @@ struct ErrorPlace {
 // Returns input section and corresponding source string for the given location.
 ErrorPlace getErrorPlace(Ctx &ctx, const uint8_t *loc);
 
-static inline std::string getErrorLocation(const uint8_t *loc) {
+static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
   return getErrorPlace(ctx, loc).loc;
 }
 
@@ -286,7 +286,7 @@ inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
 inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
                            const Relocation &rel) {
   if ((v & (n - 1)) != 0)
-    error(getErrorLocation(loc) + "improper alignment for relocation " +
+    error(getErrorLoc(ctx, loc) + "improper alignment for relocation " +
           lld::toString(rel.type) + ": 0x" + llvm::utohexstr(v) +
           " is not aligned to " + Twine(n) + " bytes");
 }
