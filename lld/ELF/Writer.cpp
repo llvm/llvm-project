@@ -456,7 +456,7 @@ static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
   return true;
 }
 
-bool lld::elf::includeInSymtab(const Symbol &b) {
+bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
   if (auto *d = dyn_cast<Defined>(&b)) {
     // Always include absolute symbols.
     SectionBase *sec = d->section;
@@ -488,7 +488,7 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
 
       if (dr->section && !dr->section->isLive())
         demoteDefined(*dr, sectionIndexMap);
-      else if (ctx.in.symTab && includeInSymtab(*b) &&
+      else if (ctx.in.symTab && includeInSymtab(ctx, *b) &&
                shouldKeepInSymtab(ctx, *dr))
         ctx.in.symTab->addSymbol(b);
     }
@@ -1862,7 +1862,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Now that we have defined all possible global symbols including linker-
     // synthesized ones. Visit all symbols to give the finishing touches.
     for (Symbol *sym : ctx.symtab->getSymbols()) {
-      if (!sym->isUsedInRegularObj || !includeInSymtab(*sym))
+      if (!sym->isUsedInRegularObj || !includeInSymtab(ctx, *sym))
         continue;
       if (!ctx.arg.relocatable)
         sym->binding = sym->computeBinding();

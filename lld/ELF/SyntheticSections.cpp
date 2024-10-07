@@ -1280,9 +1280,7 @@ void StringTableSection::writeTo(Ctx &ctx, uint8_t *buf) {
 // Returns the number of entries in .gnu.version_d: the number of
 // non-VER_NDX_LOCAL-non-VER_NDX_GLOBAL definitions, plus 1.
 // Note that we don't support vd_cnt > 1 yet.
-static unsigned getVerDefNum() {
-  return namedVersionDefs().size() + 1;
-}
+static unsigned getVerDefNum() { return namedVersionDefs(ctx).size() + 1; }
 
 template <class ELFT>
 DynamicSection<ELFT>::DynamicSection()
@@ -3691,7 +3689,7 @@ StringRef VersionDefinitionSection::getFileDefName() {
 
 void VersionDefinitionSection::finalizeContents(Ctx &) {
   fileDefNameOff = getPartition().dynStrTab->addString(getFileDefName());
-  for (const VersionDefinition &v : namedVersionDefs())
+  for (const VersionDefinition &v : namedVersionDefs(ctx))
     verDefNameOffs.push_back(getPartition().dynStrTab->addString(v.name));
 
   if (OutputSection *sec = getPartition().dynStrTab->getParent())
@@ -3725,7 +3723,7 @@ void VersionDefinitionSection::writeTo(Ctx &ctx, uint8_t *buf) {
   writeOne(buf, 1, getFileDefName(), fileDefNameOff);
 
   auto nameOffIt = verDefNameOffs.begin();
-  for (const VersionDefinition &v : namedVersionDefs()) {
+  for (const VersionDefinition &v : namedVersionDefs(ctx)) {
     buf += EntrySize;
     writeOne(buf, v.id, v.name, *nameOffIt++);
   }
@@ -4586,13 +4584,14 @@ static size_t computeOrWriteULEB128(uint64_t v, uint8_t *buf, size_t offset) {
 constexpr uint64_t kMemtagStepSizeBits = 3;
 constexpr uint64_t kMemtagGranuleSize = 16;
 static size_t
-createMemtagGlobalDescriptors(const SmallVector<const Symbol *, 0> &symbols,
+createMemtagGlobalDescriptors(Ctx &ctx,
+                              const SmallVector<const Symbol *, 0> &symbols,
                               uint8_t *buf = nullptr) {
   size_t sectionSize = 0;
   uint64_t lastGlobalEnd = 0;
 
   for (const Symbol *sym : symbols) {
-    if (!includeInSymtab(*sym))
+    if (!includeInSymtab(ctx, *sym))
       continue;
     const uint64_t addr = sym->getVA();
     const uint64_t size = sym->getSize();
@@ -4638,11 +4637,11 @@ bool MemtagGlobalDescriptors::updateAllocSize(Ctx &ctx) {
 }
 
 void MemtagGlobalDescriptors::writeTo(Ctx &ctx, uint8_t *buf) {
-  createMemtagGlobalDescriptors(symbols, buf);
+  createMemtagGlobalDescriptors(ctx, symbols, buf);
 }
 
 size_t MemtagGlobalDescriptors::getSize(Ctx &ctx) const {
-  return createMemtagGlobalDescriptors(symbols);
+  return createMemtagGlobalDescriptors(ctx, symbols);
 }
 
 static OutputSection *findSection(StringRef name) {
@@ -4775,7 +4774,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       part.verSym = std::make_unique<VersionTableSection>();
       add(*part.verSym);
 
-      if (!namedVersionDefs().empty()) {
+      if (!namedVersionDefs(ctx).empty()) {
         part.verDef = std::make_unique<VersionDefinitionSection>();
         add(*part.verDef);
       }
