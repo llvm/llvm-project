@@ -198,6 +198,9 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
+  if (T->isFixedPointType())
+    return PT_FixedPoint;
+
   return std::nullopt;
 }
 

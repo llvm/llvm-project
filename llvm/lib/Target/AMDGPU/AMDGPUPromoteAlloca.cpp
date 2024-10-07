@@ -402,7 +402,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
-  MapVector<Value *, APInt> VarOffsets;
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
   if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
       !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))

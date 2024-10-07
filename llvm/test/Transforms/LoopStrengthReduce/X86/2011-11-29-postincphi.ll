@@ -17,7 +17,7 @@ define i64 @sqlite3DropTriggerPtr() nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    callq check@PLT
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al

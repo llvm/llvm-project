@@ -13,8 +13,6 @@
 #include "src/errno/libc_errno.h"
 #include "src/stdio/gpu/vfprintf_utils.h"
 
-#include <stdio.h>
-
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, vprintf,

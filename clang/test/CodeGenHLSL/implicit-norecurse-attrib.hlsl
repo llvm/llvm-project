@@ -31,7 +31,7 @@ uint Find(Node SortedTree[MAX], uint key) {
 }
 
 // CHECK: Function Attrs:{{.*}}norecurse
-// CHECK: define noundef i1 @"?InitTree@@YA_NY0GE@UNode@@V?$RWBuffer@T?$__vector@I$03@__clang@@@hlsl@@I@Z"(ptr noundef byval([100 x %struct.Node]) align 4 %tree, ptr noundef byval(%"class.hlsl::RWBuffer") align 4 %encodedTree, i32 noundef %maxDepth) [[ExtAttr:\#[0-9]+]]
+// CHECK: define noundef i1 @"?InitTree@@YA_NY0GE@UNode@@V?$RWBuffer@T?$__vector@I$03@__clang@@@hlsl@@I@Z"(ptr noundef byval([100 x %struct.Node]) align 4 %tree, ptr noundef byval(%"class.hlsl::RWBuffer") align 16 %encodedTree, i32 noundef %maxDepth) [[ExtAttr:\#[0-9]+]]
 // CHECK: ret i1
 // Initialize tree with given buffer
 // Imagine the inout works
