@@ -1143,13 +1143,14 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   bool IsRecursive = false;
   unsigned StackDepth = 0;
   examineStackFrames(D, Pred->getLocationContext(), IsRecursive, StackDepth);
-  if (!(Opts.AnalyzerAlwaysInlineTainted && TaintRelatedFun) && (StackDepth >= Opts.InlineMaxStackDepth) &&
+  if (!(Opts.AnalyzerAlwaysInlineTainted && TaintRelatedFun && (StackDepth < 3*Opts.InlineMaxStackDepth))
+      && (StackDepth >= Opts.InlineMaxStackDepth) &&
       (!isSmall(CalleeADC) || IsRecursive))
     return false;
 
   // Do not inline large functions too many times.
   // We skip this bound if the function is taint related
-  if (!(Opts.AnalyzerAlwaysInlineTainted && TaintRelatedFun) && (Engine.FunctionSummaries->getNumTimesInlined(D) >
+  if ((Engine.FunctionSummaries->getNumTimesInlined(D) >
        Opts.MaxTimesInlineLarge) &&
       isLarge(CalleeADC)) {
     NumReachedInlineCountMax++;
