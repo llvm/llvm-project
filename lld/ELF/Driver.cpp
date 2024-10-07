@@ -56,6 +56,7 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
@@ -287,7 +288,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   MemoryBufferRef mbref = *buffer;
 
   if (ctx.arg.formatBinary) {
-    files.push_back(make<BinaryFile>(mbref));
+    files.push_back(make<BinaryFile>(ctx, mbref));
     return;
   }
 
@@ -303,7 +304,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
           files.push_back(
               make<BitcodeFile>(ctx, p.first, path, p.second, false));
         else if (!tryAddFatLTOFile(p.first, path, p.second, false))
-          files.push_back(createObjFile(p.first, path));
+          files.push_back(createObjFile(ctx, p.first, path));
       }
       return;
     }
@@ -322,22 +323,20 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     //
     // All files within the archive get the same group ID to allow mutual
     // references for --warn-backrefs.
-    bool saved = InputFile::isInGroup;
-    InputFile::isInGroup = true;
+    SaveAndRestore saved(isInGroup, true);
     for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
       auto magic = identify_magic(p.first.getBuffer());
       if (magic == file_magic::elf_relocatable) {
         if (!tryAddFatLTOFile(p.first, path, p.second, true))
-          files.push_back(createObjFile(p.first, path, true));
+          files.push_back(createObjFile(ctx, p.first, path, true));
       } else if (magic == file_magic::bitcode)
         files.push_back(make<BitcodeFile>(ctx, p.first, path, p.second, true));
       else
         warn(path + ": archive member '" + p.first.getBufferIdentifier() +
              "' is neither ET_REL nor LLVM bitcode");
     }
-    InputFile::isInGroup = saved;
-    if (!saved)
-      ++InputFile::nextGroupId;
+    if (!saved.get())
+      ++nextGroupId;
     return;
   }
   case file_magic::elf_shared_object: {
@@ -362,7 +361,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     break;
   case file_magic::elf_relocatable:
     if (!tryAddFatLTOFile(mbref, "", 0, inLib))
-      files.push_back(createObjFile(mbref, "", inLib));
+      files.push_back(createObjFile(ctx, mbref, "", inLib));
     break;
   default:
     error(path + ": unknown file type");
@@ -1934,7 +1933,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
   // Iterate over argv to process input files and positional arguments.
   std::optional<MemoryBufferRef> defaultScript;
-  InputFile::isInGroup = false;
+  nextGroupId = 0;
+  isInGroup = false;
   bool hasInput = false, hasScript = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
@@ -1992,7 +1992,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     case OPT_just_symbols:
       if (std::optional<MemoryBufferRef> mb = readFile(ctx, arg->getValue())) {
-        files.push_back(createObjFile(*mb));
+        files.push_back(createObjFile(ctx, *mb));
         files.back()->justSymbols = true;
       }
       break;
@@ -2001,33 +2001,33 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
         error("multiple CMSE import libraries not supported");
       else if (std::optional<MemoryBufferRef> mb =
                    readFile(ctx, arg->getValue()))
-        armCmseImpLib = createObjFile(*mb);
+        armCmseImpLib = createObjFile(ctx, *mb);
       break;
     case OPT_start_group:
-      if (InputFile::isInGroup)
+      if (isInGroup)
         error("nested --start-group");
-      InputFile::isInGroup = true;
+      isInGroup = true;
       break;
     case OPT_end_group:
-      if (!InputFile::isInGroup)
+      if (!isInGroup)
         error("stray --end-group");
-      InputFile::isInGroup = false;
-      ++InputFile::nextGroupId;
+      isInGroup = false;
+      ++nextGroupId;
       break;
     case OPT_start_lib:
       if (inLib)
         error("nested --start-lib");
-      if (InputFile::isInGroup)
+      if (isInGroup)
         error("may not nest --start-lib in --start-group");
       inLib = true;
-      InputFile::isInGroup = true;
+      isInGroup = true;
       break;
     case OPT_end_lib:
       if (!inLib)
         error("stray --end-lib");
       inLib = false;
-      InputFile::isInGroup = false;
-      ++InputFile::nextGroupId;
+      isInGroup = false;
+      ++nextGroupId;
       break;
     case OPT_push_state:
       stack.emplace_back(ctx.arg.asNeeded, ctx.arg.isStatic, inWholeArchive);
@@ -2872,7 +2872,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   for (auto *arg : args.filtered(OPT_trace_symbol))
     ctx.symtab->insert(arg->getValue())->traced = true;
 
-  ctx.internalFile = createInternalFile("<internal>");
+  ctx.internalFile = createInternalFile(ctx, "<internal>");
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.

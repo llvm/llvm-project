@@ -413,7 +413,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     if (savePrelink || ctx.arg.ltoEmitAsm)
       saveBuffer(buf[i].second, ltoObjName);
     if (!ctx.arg.ltoEmitAsm)
-      ret.push_back(createObjFile(MemoryBufferRef(objBuf, ltoObjName)));
+      ret.push_back(createObjFile(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
   return ret;
 }
