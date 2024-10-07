@@ -832,9 +832,15 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_TARGETS_TO_BUILD**:STRING
   Semicolon-separated list of targets to build, or *all* for building all
   targets. Case-sensitive. Defaults to *all*. Example:
-  ``-DLLVM_TARGETS_TO_BUILD="X86;PowerPC"``.
+  ``-DLLVM_TARGETS_TO_BUILD="X86;PowerPC;host"``.
   The full list, as of March 2023, is:
-  ``AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;LoongArch;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SystemZ;VE;WebAssembly;X86;XCore``
+  ``AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;LoongArch;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SystemZ;VE;WebAssembly;X86;XCore;host;Native``
+
+  **Additional Options**:
+  - **host**: Automatically detect and build the target corresponding to the host machine's architecture.
+  
+    For example, on an x86_64 machine, `host` will map to `X86`.
+  - **Native**: Alias for `host`, used interchangeably to specify the host architecture.
 
 **LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN**:BOOL
   If enabled, the compiler version check will only warn when using a toolchain
