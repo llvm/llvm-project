@@ -2170,16 +2170,13 @@ public:
 class ParenExpr : public Expr {
   SourceLocation L, R;
   Stmt *Val;
-public:
-  enum TransformConstraint : uint8_t {
-    None = 0,     // No specific preservation required
-    Preserve = 1, // Parentheses have always to be preserved
-  };
 
+public:
   ParenExpr(SourceLocation l, SourceLocation r, Expr *val)
       : Expr(ParenExprClass, val->getType(), val->getValueKind(),
              val->getObjectKind()),
-        L(l), R(r), Val(val), TC(TransformConstraint::None) {
+        L(l), R(r), Val(val) {
+    ParenExprBits.ProducedByFoldExpansion = false;
     setDependence(computeDependence(this));
   }
 
@@ -2212,13 +2209,12 @@ public:
     return const_child_range(&Val, &Val + 1);
   }
 
-  TransformConstraint getTransformConstraint() const { return TC; }
-  void setTransformConstraint(TransformConstraint Constraint) {
-    TC = Constraint;
+  bool isProducedByFoldExpansion() const {
+    return ParenExprBits.ProducedByFoldExpansion != 0;
   }
-
-private:
-  TransformConstraint TC;
+  void setIsProducedByFoldExpansion(bool ProducedByFoldExpansion = true) {
+    ParenExprBits.ProducedByFoldExpansion = ProducedByFoldExpansion;
+  }
 };
 
 /// UnaryOperator - This represents the unary-expression's (except sizeof and

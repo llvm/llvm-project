@@ -20220,11 +20220,12 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
   if (parenLoc.isInvalid() || parenLoc.isMacroID())
     return;
   // Don't warn for dependent expressions.
-  if (ParenE->isTypeDependent() ||
-      ParenE->getTransformConstraint() == ParenExpr::Preserve)
+  if (ParenE->isTypeDependent())
     return;
 
   Expr *E = ParenE->IgnoreParens();
+  if (ParenE->isProducedByFoldExpansion() && ParenE->getSubExpr() == E)
+    return;
 
   if (BinaryOperator *opE = dyn_cast<BinaryOperator>(E))
     if (opE->getOpcode() == BO_EQ &&
