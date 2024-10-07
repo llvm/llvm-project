@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "src/math/sinpif16.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -14,11 +15,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
-// TODO: Should probably create a new file; sincospif16_utils.h
-// To store the following helper functions and constants.
-// I'd defer to @lntue for suggestions regarding that
-
-// HELPER_START
 namespace LIBC_NAMESPACE_DECL {
 
 constexpr float PI_OVER_32 = 0x1.921fb6p-4f;
@@ -29,24 +25,25 @@ constexpr float PI_OVER_32 = 0x1.921fb6p-4f;
 // > prec=24;
 // > TL = chebyshevform(sin(x), 9, [-pi / 32, pi / 32]);
 // > TL[0];
-const float SIN_COEFF[10] = {
+static constexpr float SIN_COEFF[10] = {
     0x1.d333p-26, 0x1.000048p0, -0x1.a5d2p-14, -0x1.628588p-3, 0x1.c1eep-5,
     0x1.4455p1,   -0x1.317a8p3, -0x1.6bb9p8,   0x1.00ef8p9,    0x1.0edcp14};
+
 // In Sollya generate 10 coefficients for a degree-9 chebyshev polynomial
 // approximating the sine function in [-pi/32, pi/32] with the following
 // commands:
 // > prec = 24;
 // > TL = chebyshevform(cos(x), 9, [-pi / 32, pi / 32]);
 // > TL[0];
-const float COS_COEFF[10] = {
+static constexpr float COS_COEFF[10] = {
     0x1.000006p0, 0x1.e1eap-15, -0x1.0071p-1, -0x1.3b56p-4, 0x1.f3dfp-2,
     0x1.ccbap4,   -0x1.3034p6,  -0x1.f817p11, 0x1.fc59p11,  0x1.7079p17};
+
 // Lookup table for sin(k * pi / 32) with k = 0, ..., 63.
 // Table is generated with Sollya as follows:
 // > display = hexadecimmal;
 // > prec = 24;
 // > for k from 0 to 63 do {sin(k * pi/32);};
-
 const float SIN_K_PI_OVER_32[64] = {0,
                                     0x1.917a6cp-4,
                                     0x1.8f8b84p-3,
@@ -118,7 +115,6 @@ int32_t range_reduction(float x, float &y) {
 
   return static_cast<int32_t>(kf);
 }
-// HELPER_END
 
 LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
   using FPBits = typename fputil::FPBits<float16>;
@@ -153,7 +149,7 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
     return x;
   }
 
-  // Numbers greater or equal to 2^10 are integers or NaN
+  // Numbers greater or equal to 2^10 are integers, or infinity, or NaN
   if (LIBC_UNLIKELY(x_abs >= 0x6400)) {
     // Check for NaN or infinity values
     if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
@@ -163,13 +159,12 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
         fputil::raise_except_if_required(FE_INVALID);
       }
 
-      // If value is NaN
       return x + FPBits::quiet_nan().get_val();
     }
     return FPBits::zero(xbits.sign()).get_val();
   }
 
-  float f32 = static_cast<float>(x);
+  float f32 = x;
   float y;
   int32_t k = range_reduction(f32, y);
 

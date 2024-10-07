@@ -10,8 +10,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/math/sinpif16.h"
 #include "test/UnitTest/FPMatcher.h"
-
-#include <stdint.h>
+#include "test/UnitTest/Test.h"
 
 using LlvmLibcSinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 

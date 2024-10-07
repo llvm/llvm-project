@@ -58,10 +58,8 @@ add_fp_unittest(
   SRCS
     sinpif16_test.cpp
   DEPENDS
-    libc.src.math.sinpif16
     libc.src.errno.errno
-    libc.src.__support.CPP.array
-    libc.src.__support.FPUtil.fp_bits  
+    libc.src.math.sinpif16
 )
 
 add_fp_unittest(

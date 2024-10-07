@@ -535,11 +535,13 @@ add_entrypoint_object(
   HDRS
     ../sinpif16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.common
-    libc.src.__support.macros.config
+    libc.src.__support.FPutil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits 
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.poly_eval
+    libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     -O3
 )
