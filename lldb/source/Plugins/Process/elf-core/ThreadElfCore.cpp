@@ -565,8 +565,20 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
   // Not every stop signal has a valid address, but that will get resolved in
   // the unix_signals_sp->GetSignalDescription() call below.
   if (unix_signals_sp->GetShouldStop(si_signo)) {
-    addr = data.GetAddress(&offset);
-    addr_lsb = data.GetU16(&offset);
+    // Instead of memcpy we call all these individually as the extractor will
+    // handle endianness for us.
+    _sigfault.sig_addr = data.GetAddress(&offset);
+    _sigfault.sig_addr_lsb = data.GetU16(&offset);
+    if (data.GetByteSize() - offset >= sizeof(_sigfault._bounds)) {
+      _sigfault._bounds._addr_bnd._lower = data.GetAddress(&offset);
+      _sigfault._bounds._addr_bnd._upper = data.GetAddress(&offset);
+      _sigfault._bounds._pkey = data.GetU32(&offset);
+    } else {
+      // Set these to 0 so we don't use bogus data for the description.
+      _sigfault._bounds._addr_bnd._lower = 0;
+      _sigfault._bounds._addr_bnd._upper = 0;
+      _sigfault._bounds._pkey = 0;
+    }
   }
 
   return error;
@@ -574,9 +586,16 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
 
 std::string
 ELFLinuxSigInfo::GetDescription(const lldb::UnixSignalsSP unix_signals_sp) {
-  if (unix_signals_sp->GetShouldStop(si_signo))
-    return unix_signals_sp->GetSignalDescription(
-        si_signo, si_code, addr);
+  if (unix_signals_sp->GetShouldStop(si_signo)) {
+    if (_sigfault._bounds._addr_bnd._upper != 0)
+      return unix_signals_sp->GetSignalDescription(
+          si_signo, si_code, _sigfault.sig_addr,
+          _sigfault._bounds._addr_bnd._lower,
+          _sigfault._bounds._addr_bnd._upper);
+    else
+      return unix_signals_sp->GetSignalDescription(si_signo, si_code,
+                                                   _sigfault.sig_addr);
+  }
 
   return unix_signals_sp->GetSignalDescription(si_signo, si_code);
 }

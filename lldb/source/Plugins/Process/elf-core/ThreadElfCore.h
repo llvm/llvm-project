@@ -79,8 +79,22 @@ struct ELFLinuxSigInfo {
   int32_t si_signo; // Order matters for the first 3.
   int32_t si_errno;
   int32_t si_code;
-  lldb::addr_t addr; /* faulting insn/memory ref. */
-  int32_t addr_lsb;  /* Valid LSB of the reported address.  */
+  // Copied from siginfo_t so we don't have to include signal.h on non 'Nix
+  // builds, we add `g` to the si_ prefix because siginfo_t defines them as
+  // macros.
+  struct {
+    lldb::addr_t sig_addr;  /* faulting insn/memory ref. */
+    short int sig_addr_lsb; /* Valid LSB of the reported address.  */
+    union {
+      /* used when si_code=SEGV_BNDERR */
+      struct {
+        lldb::addr_t _lower;
+        lldb::addr_t _upper;
+      } _addr_bnd;
+      /* used when si_code=SEGV_PKUERR */
+      uint32_t _pkey;
+    } _bounds;
+  } _sigfault;
 
   ELFLinuxSigInfo();
 
@@ -98,7 +112,7 @@ struct ELFLinuxSigInfo {
   static size_t GetSize(const lldb_private::ArchSpec &arch);
 };
 
-static_assert(sizeof(ELFLinuxSigInfo) == 32,
+static_assert(sizeof(ELFLinuxSigInfo) == 48,
               "sizeof ELFLinuxSigInfo is not correct!");
 
 // PRPSINFO structure's size differs based on architecture.
