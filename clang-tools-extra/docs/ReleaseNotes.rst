@@ -177,6 +177,11 @@ Improvements to clang-tidy
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
 
+- Improved :program:`clang-tidy` by adding the `--removed-arg` option to remove
+  arguments sent to the compiler when invoking Clang-Tidy. This option was also
+  added to :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` and 
+  can be configured in the config file through the `RemovedArgs` option.
+
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
   in the 24th release.
