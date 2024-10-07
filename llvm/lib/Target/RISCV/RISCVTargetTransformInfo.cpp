@@ -343,6 +343,49 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,  TTI::TargetCostKind CostKind) {
                              /*AddressSpace=*/0, CostKind);
 }
 
+InstructionCost
+RISCVTTIImpl::isMultipleInsertSubvector(VectorType *Tp, ArrayRef<int> Mask,
+                                        TTI::TargetCostKind CostKind) {
+  if (!isa<FixedVectorType>(Tp))
+    return InstructionCost::getInvalid();
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  if (LT.second.getScalarSizeInBits() == 1)
+    return InstructionCost::getInvalid();
+  // Try to guess SubTp.
+  for (unsigned SubVecSize = 1, E = Mask.size(); SubVecSize < E;
+       SubVecSize <<= 1) {
+    if (E % SubVecSize != 0)
+      continue;
+    SmallVector<int> RepeatedPattern(createSequentialMask(0, SubVecSize, 0));
+    bool Skip = false;
+    for (unsigned I = 0; I != E; I += SubVecSize)
+      if (!Mask.slice(I, SubVecSize).equals(RepeatedPattern)) {
+        Skip = true;
+        break;
+      }
+    if (Skip)
+      continue;
+    InstructionCost Cost = 0;
+    unsigned NumSlides = Log2_32(E / SubVecSize);
+    // The cost of extraction from a subvector is 0 if the index is 0.
+    for (unsigned I = 0; I != NumSlides; ++I) {
+      unsigned InsertIndex = SubVecSize * (1 << I);
+      FixedVectorType *SubTp = FixedVectorType::get(
+          cast<FixedVectorType>(Tp)->getElementType(), InsertIndex);
+      FixedVectorType *DesTp =
+          FixedVectorType::getDoubleElementsVectorType(SubTp);
+      std::pair<InstructionCost, MVT> DesLT = getTypeLegalizationCost(DesTp);
+      // Add the cost of whole vector register move because the destination
+      // vector register group for vslideup cannot overlap the source.
+      Cost += DesLT.first * TLI->getLMULCost(DesLT.second);
+      Cost += getShuffleCost(TTI::SK_InsertSubvector, DesTp, {}, CostKind,
+                             InsertIndex, SubTp);
+    }
+    return Cost;
+  }
+  return InstructionCost::getInvalid();
+}
+
 static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
                                         LLVMContext &C) {
   assert((DataVT.getScalarSizeInBits() != 8 ||
@@ -394,6 +437,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                         LT.second, CostKind);
           }
         }
+        if (InstructionCost Cost =
+                isMultipleInsertSubvector(Tp, Mask, CostKind);
+            Cost.isValid())
+          return Cost;
       }
       // vrgather + cost of generating the mask constant.
       // We model this for an unknown mask with a single vrgather.
@@ -1163,8 +1210,46 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       Dst->getScalarSizeInBits() > ST->getELen())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  assert(ISD && "Invalid opcode");
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
+
+  // Handle i1 source and dest cases *before* calling logic in BasicTTI.
+  // The shared implementation doesn't model vector widening during legalization
+  // and instead assumes scalarization.  In order to scalarize an <N x i1>
+  // vector, we need to extend/trunc to/from i8.  If we don't special case
+  // this, we can get an infinite recursion cycle.
+  switch (ISD) {
+  default:
+    break;
+  case ISD::SIGN_EXTEND:
+  case ISD::ZERO_EXTEND:
+    if (Src->getScalarSizeInBits() == 1) {
+      // We do not use vsext/vzext to extend from mask vector.
+      // Instead we use the following instructions to extend from mask vector:
+      // vmv.v.i v8, 0
+      // vmerge.vim v8, v8, -1, v0 (repeated per split)
+      return getRISCVInstructionCost(RISCV::VMV_V_I, DstLT.second, CostKind) +
+             DstLT.first * getRISCVInstructionCost(RISCV::VMERGE_VIM,
+                                                   DstLT.second, CostKind) +
+             DstLT.first - 1;
+    }
+    break;
+  case ISD::TRUNCATE:
+    if (Dst->getScalarSizeInBits() == 1) {
+      // We do not use several vncvt to truncate to mask vector. So we could
+      // not use PowDiff to calculate it.
+      // Instead we use the following instructions to truncate to mask vector:
+      // vand.vi v8, v8, 1
+      // vmsne.vi v0, v8, 0
+      return SrcLT.first *
+                 getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
+                                         SrcLT.second, CostKind) +
+             SrcLT.first - 1;
+    }
+    break;
+  };
 
   // Our actual lowering for the case where a wider legal type is available
   // uses promotion to the wider type.  This is reflected in the result of
@@ -1181,22 +1266,11 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // The split cost is handled by the base getCastInstrCost
   assert((SrcLT.first == 1) && (DstLT.first == 1) && "Illegal type");
 
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  assert(ISD && "Invalid opcode");
-
   int PowDiff = (int)Log2_32(DstLT.second.getScalarSizeInBits()) -
                 (int)Log2_32(SrcLT.second.getScalarSizeInBits());
   switch (ISD) {
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
-    if (Src->getScalarSizeInBits() == 1) {
-      // We do not use vsext/vzext to extend from mask vector.
-      // Instead we use the following instructions to extend from mask vector:
-      // vmv.v.i v8, 0
-      // vmerge.vim v8, v8, -1, v0
-      return getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
-                                     DstLT.second, CostKind);
-    }
     if ((PowDiff < 1) || (PowDiff > 3))
       return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
     unsigned SExtOp[] = {RISCV::VSEXT_VF2, RISCV::VSEXT_VF4, RISCV::VSEXT_VF8};
@@ -1206,16 +1280,6 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return getRISCVInstructionCost(Op, DstLT.second, CostKind);
   }
   case ISD::TRUNCATE:
-    if (Dst->getScalarSizeInBits() == 1) {
-      // We do not use several vncvt to truncate to mask vector. So we could
-      // not use PowDiff to calculate it.
-      // Instead we use the following instructions to truncate to mask vector:
-      // vand.vi v8, v8, 1
-      // vmsne.vi v0, v8, 0
-      return getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
-                                     SrcLT.second, CostKind);
-    }
-    [[fallthrough]];
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     // Counts of narrow/widen instructions.
@@ -1514,6 +1578,11 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     Opcodes = {RISCV::VMV_S_X, RISCV::VREDAND_VS, RISCV::VMV_X_S};
     break;
   case ISD::FADD:
+    // We can't promote f16/bf16 fadd reductions.
+    if ((LT.second.getVectorElementType() == MVT::f16 &&
+         !ST->hasVInstructionsF16()) ||
+        LT.second.getVectorElementType() == MVT::bf16)
+      return InstructionCost::getInvalid();
     SplitOp = RISCV::VFADD_VV;
     Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDUSUM_VS, RISCV::VFMV_F_S};
     break;

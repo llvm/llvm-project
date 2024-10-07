@@ -388,7 +388,7 @@ This corresponds to SPIR-V [struct type][StructType]. Its syntax is
 ```
 struct-member-decoration ::= integer-literal? spirv-decoration*
 struct-type ::= `!spirv.struct<` spirv-type (`[` struct-member-decoration `]`)?
-                     (`, ` spirv-type (`[` struct-member-decoration `]`)?
+                     (`, ` spirv-type (`[` struct-member-decoration `]`)? `>`
 ```
 
 For Example,
