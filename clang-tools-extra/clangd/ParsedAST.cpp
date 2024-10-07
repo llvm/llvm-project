@@ -660,16 +660,17 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                                 &CTContext](const Diag &Diag,
                                             const clang::Diagnostic &Info) {
         auto Fixes = std::vector<Fix>();
-        auto IncludeFixes = FixIncludes->fix(Diag.Severity, Info);
 
+        auto IncludeFixes = FixIncludes->fix(Diag.Severity, Info);
         // Ensures that if clang later introduces its own fix-it for includes it
         // will get on our radar.
         assert((IncludeFixes.empty() || Info.getNumFixItHints() == 0) &&
                "Include-fixer replaced a note with clang fix-its attached!");
-
         Fixes.insert(Fixes.end(), IncludeFixes.begin(), IncludeFixes.end());
+
         auto NoLintFixes = noLintFixes(*CTContext, Info, Diag);
         Fixes.insert(Fixes.end(), NoLintFixes.begin(), NoLintFixes.end());
+
         return Fixes;
       });
       Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
