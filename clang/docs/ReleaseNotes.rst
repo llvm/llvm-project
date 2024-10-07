@@ -510,6 +510,10 @@ OpenACC Specific Changes
 Target Specific Changes
 -----------------------
 
+- Clang now implements the Solaris-specific mangling of ``std::tm`` as
+  ``tm``, same for ``std::div_t``, ``std::ldiv_t``, and
+  ``std::lconv``, for Solaris ABI compatibility. (#GH33114)
+
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
