@@ -43,6 +43,11 @@ public:
 
   ~ScopedBypass() { context_.BypassPop(); }
 
+  ScopedBypass(const ScopedBypass &) = delete;
+  ScopedBypass &operator=(const ScopedBypass &) = delete;
+  ScopedBypass(ScopedBypass &&) = delete;
+  ScopedBypass &operator=(ScopedBypass &&) = delete;
+
 private:
   Context &context_;
 };
