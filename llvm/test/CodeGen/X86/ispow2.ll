@@ -102,7 +102,7 @@ define <4 x i1> @is_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpopcntq %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; CHECK-AVX512-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; CHECK-AVX512-NEXT:    vzeroupper
@@ -155,7 +155,7 @@ define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpopcntq %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpcmpneqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; CHECK-AVX512-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; CHECK-AVX512-NEXT:    vzeroupper

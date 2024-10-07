@@ -2114,22 +2114,17 @@ bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
 /// Some targets have better codegen for `ctpop(X) u< 2` than `ctpop(X) == 1`.
 /// This function converts `ctpop(X) ==/!= 1` into `ctpop(X) u</u> 2/1` if the
 /// result cannot be zero.
-static bool adjustIsPower2Test(CmpInst *Cmp) {
+static bool adjustIsPower2Test(CmpInst *Cmp, const DataLayout &DL) {
   ICmpInst::Predicate Pred;
   if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(), m_One())))
     return false;
   if (!ICmpInst::isEquality(Pred))
     return false;
   auto *II = cast<IntrinsicInst>(Cmp->getOperand(0));
-  if (auto Range = II->getRange()) {
-    Type *Ty = II->getType();
-    unsigned BitWidth = Ty->getScalarSizeInBits();
-    if (Range->contains(APInt::getZero(BitWidth)))
-      return false;
-
+  if (isKnownNonZero(II, DL)) {
     if (Pred == ICmpInst::ICMP_EQ) {
       Cmp->setPredicate(ICmpInst::ICMP_ULT);
-      Cmp->setOperand(1, ConstantInt::get(Ty, 2));
+      Cmp->setOperand(1, ConstantInt::get(II->getType(), 2));
     } else
       Cmp->setPredicate(ICmpInst::ICMP_UGT);
     return true;
@@ -2156,7 +2151,7 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (foldFCmpToFPClassTest(Cmp, *TLI, *DL))
     return true;
 
-  if (adjustIsPower2Test(Cmp))
+  if (adjustIsPower2Test(Cmp, *DL))
     return true;
 
   return false;
