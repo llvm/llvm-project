@@ -22,6 +22,7 @@
 #include <utility>
 
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 enum Enum { EV };
 enum SignedEnum : signed int {};
@@ -135,6 +136,13 @@ constexpr void test_is_implicit_lifetime() {
   test_is_implicit_lifetime<T[94], true>();
 }
 
+struct AritmeticTypesTest {
+  template <class T>
+  constexpr void operator()() {
+    test_is_implicit_lifetime<T>();
+  }
+};
+
 constexpr bool test() {
   // Standard fundamental C++ types
 
@@ -160,29 +168,7 @@ constexpr bool test() {
   test_is_implicit_lifetime<char16_t>();
   test_is_implicit_lifetime<char32_t>();
 
-  test_is_implicit_lifetime<short>();
-  test_is_implicit_lifetime<short int>();
-  test_is_implicit_lifetime<signed short>();
-  test_is_implicit_lifetime<signed short int>();
-  test_is_implicit_lifetime<unsigned short>();
-  test_is_implicit_lifetime<unsigned short int>();
-  test_is_implicit_lifetime<int>();
-  test_is_implicit_lifetime<signed>();
-  test_is_implicit_lifetime<signed int>();
-  test_is_implicit_lifetime<unsigned>();
-  test_is_implicit_lifetime<unsigned int>();
-  test_is_implicit_lifetime<long>();
-  test_is_implicit_lifetime<long int>();
-  test_is_implicit_lifetime<signed long>();
-  test_is_implicit_lifetime<signed long int>();
-  test_is_implicit_lifetime<unsigned long>();
-  test_is_implicit_lifetime<unsigned long int>();
-  test_is_implicit_lifetime<long long>();
-  test_is_implicit_lifetime<long long int>();
-  test_is_implicit_lifetime<signed long long>();
-  test_is_implicit_lifetime<signed long long int>();
-  test_is_implicit_lifetime<unsigned long long>();
-  test_is_implicit_lifetime<unsigned long long int>();
+  types::for_each(types::arithmetic_types(), AritmeticTypesTest{});
 
   test_is_implicit_lifetime<float>();
   test_is_implicit_lifetime<double>();
