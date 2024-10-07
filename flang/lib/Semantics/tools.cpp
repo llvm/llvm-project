@@ -1649,7 +1649,9 @@ bool HasDefinedIo(common::DefinedIo which, const DerivedTypeSpec &derived,
       }
     }
   }
-  return false;
+  // Check for inherited defined I/O
+  const auto *parentType{derived.typeSymbol().GetParentTypeSpec()};
+  return parentType && HasDefinedIo(which, *parentType, scope);
 }
 
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &context,
