@@ -38,7 +38,7 @@ class TargetRegisterInfo;
 class VirtRegMap;
 
 class LiveRegMatrix {
-  friend class LiveRegMatrixWrapperPass;
+  friend class LiveRegMatrixWrapperLegacy;
   friend class LiveRegMatrixAnalysis;
   const TargetRegisterInfo *TRI = nullptr;
   LiveIntervals *LIS = nullptr;
@@ -163,13 +163,13 @@ public:
   Register getOneVReg(unsigned PhysReg) const;
 };
 
-class LiveRegMatrixWrapperPass : public MachineFunctionPass {
+class LiveRegMatrixWrapperLegacy : public MachineFunctionPass {
   LiveRegMatrix LRM;
 
 public:
   static char ID;
 
-  LiveRegMatrixWrapperPass() : MachineFunctionPass(ID) {}
+  LiveRegMatrixWrapperLegacy() : MachineFunctionPass(ID) {}
 
   LiveRegMatrix &getLRM() { return LRM; }
   const LiveRegMatrix &getLRM() const { return LRM; }

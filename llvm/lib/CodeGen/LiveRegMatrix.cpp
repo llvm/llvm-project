@@ -35,22 +35,22 @@ using namespace llvm;
 STATISTIC(NumAssigned   , "Number of registers assigned");
 STATISTIC(NumUnassigned , "Number of registers unassigned");
 
-char LiveRegMatrixWrapperPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperPass, "liveregmatrix",
+char LiveRegMatrixWrapperLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperLegacy, "liveregmatrix",
                       "Live Register Matrix", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
-INITIALIZE_PASS_END(LiveRegMatrixWrapperPass, "liveregmatrix",
+INITIALIZE_PASS_END(LiveRegMatrixWrapperLegacy, "liveregmatrix",
                     "Live Register Matrix", false, false)
 
-void LiveRegMatrixWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void LiveRegMatrixWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.addRequiredTransitive<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool LiveRegMatrixWrapperPass::runOnMachineFunction(MachineFunction &MF) {
+bool LiveRegMatrixWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   auto &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
   LRM.init(MF, LIS, VRM);
@@ -72,7 +72,7 @@ void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
   invalidateVirtRegs();
 }
 
-void LiveRegMatrixWrapperPass::releaseMemory() { LRM.releaseMemory(); }
+void LiveRegMatrixWrapperLegacy::releaseMemory() { LRM.releaseMemory(); }
 
 void LiveRegMatrix::releaseMemory() {
   for (unsigned i = 0, e = Matrix.size(); i != e; ++i) {
