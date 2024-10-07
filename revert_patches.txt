@@ -1,5 +1,5 @@
-revert: breaks MIOpen composableKernel build 
-[clang][Sema] Add -Wswitch-default warning option (#73077)  
+revert: breaks MIOpen composableKernel build
+[clang][Sema] Add -Wswitch-default warning option (#73077)
    https://ontrack-internal.amd.com/browse/SWDEV-436625
 
 ---
@@ -41,16 +41,12 @@ Revert: 41f9c78
     Konstantin
 ---
 Revert: temaplate breaks ComposableKernel build
-f46d1463b835 [clang] require template arg list after template kw (#80801) 
+f46d1463b835 [clang] require template arg list after template kw (#80801)
 contact : RonL
 ---
 Revert:  breaks composableKernel
-53d2f4d96783 [CUDA][HIP] warn incompatible redeclare (#77359)     
+53d2f4d96783 [CUDA][HIP] warn incompatible redeclare (#77359)
 contact : Ronl or Sam
----
-Revert: breaks MIOpen 
-18ec885a2604 [RFC][AMDGPU] Remove old llvm.amdgcn.buffer.* and tbuffer intrinsics (#93801)     
-contact: Ron and Jay
 ---
 Reverts: break componsableKernels
 9a88aa0e2b6d [Clang][Sema] Diagnose variable template explicit specializati
@@ -83,13 +79,11 @@ Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpA
     This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
 contact: Selehov
 ---
-Revert: breaks hipBlender*
-0e73bbd3450c   [AMDGPU][PromoteAlloca] Don't stop when an alloca is too big to promote (#93466) 
-contact: Pierre
----
-Janek breaks aomp smoke red_bug_51. revert:
-c897c13dde3b [AMDGPU] Convert AMDGPUResourceUsageAnalysis pass
----
 hangs ocl at -O0
 735a5f67e351 [AMDGPU] When allocating VGPRs, VGPR spills are not part of the prologue (#109439)
+Ron,MatC,Jay
+---
+breaks hip_on_rocclr build
+Revert 8039886e6d  "AMDGPU: Handle folding frame indexes into s_add_i32 (#101694)"
+Ron/MatC
 ---
