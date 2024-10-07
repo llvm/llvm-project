@@ -83,10 +83,17 @@ const char kHwasanShadowMemoryDynamicAddress[] =
 static const size_t kNumberOfAccessSizes = 5;
 
 static const size_t kDefaultShadowScale = 4;
-static const uint64_t kDynamicShadowSentinel =
-    std::numeric_limits<uint64_t>::max();
 
 static const unsigned kShadowBaseAlignment = 32;
+
+namespace {
+enum class OffsetKind {
+  kFixed = 0,
+  kGlobal,
+  kIfunc,
+  kTls,
+};
+}
 
 static cl::opt<std::string>
     ClMemoryAccessCallbackPrefix("hwasan-memory-access-callback-prefix",
@@ -171,19 +178,19 @@ static cl::opt<bool>
 static cl::opt<uint64_t>
     ClMappingOffset("hwasan-mapping-offset",
                     cl::desc("HWASan shadow mapping offset [EXPERIMENTAL]"),
-                    cl::Hidden, cl::init(0));
+                    cl::Hidden);
+
+static cl::opt<OffsetKind> ClMappingOffsetDynamic(
+    "hwasan-mapping-offset-dynamic",
+    cl::desc("HWASan shadow mapping dynamic offset location"), cl::Hidden,
+    cl::values(clEnumValN(OffsetKind::kGlobal, "global", "Use global"),
+               clEnumValN(OffsetKind::kIfunc, "ifunc", "Use ifunc global"),
+               clEnumValN(OffsetKind::kTls, "tls", "Use TLS")));
 
 static cl::opt<bool>
-    ClWithIfunc("hwasan-with-ifunc",
-                cl::desc("Access dynamic shadow through an ifunc global on "
-                         "platforms that support this"),
-                cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClWithTls(
-    "hwasan-with-tls",
-    cl::desc("Access dynamic shadow through an thread-local pointer on "
-             "platforms that support this"),
-    cl::Hidden, cl::init(true));
+    ClFrameRecords("hwasan-with-frame-record",
+                   cl::desc("Use ring buffer for stack allocations"),
+                   cl::Hidden);
 
 static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                           cl::desc("Hot percentile cuttoff."));
@@ -316,6 +323,7 @@ private:
                                           FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
+  void removeFnAttributes(Function *F);
 
   void initializeCallbacks(Module &M);
 
@@ -384,25 +392,44 @@ private:
   std::unique_ptr<RandomNumberGenerator> Rng;
 
   /// This struct defines the shadow mapping using the rule:
+  /// If `kFixed`, then
   ///   shadow = (mem >> Scale) + Offset.
-  /// If InGlobal is true, then
+  /// If `kGlobal`, then
+  ///   extern char* __hwasan_shadow_memory_dynamic_address;
+  ///   shadow = (mem >> Scale) + __hwasan_shadow_memory_dynamic_address
+  /// If `kIfunc`, then
   ///   extern char __hwasan_shadow[];
   ///   shadow = (mem >> Scale) + &__hwasan_shadow
-  /// If InTls is true, then
+  /// If `kTls`, then
   ///   extern char *__hwasan_tls;
   ///   shadow = (mem>>Scale) + align_up(__hwasan_shadow, kShadowBaseAlignment)
   ///
   /// If WithFrameRecord is true, then __hwasan_tls will be used to access the
   /// ring buffer for storing stack allocations on targets that support it.
-  struct ShadowMapping {
-    uint8_t Scale;
+  class ShadowMapping {
+    OffsetKind Kind;
     uint64_t Offset;
-    bool InGlobal;
-    bool InTls;
+    uint8_t Scale;
     bool WithFrameRecord;
 
+    void SetFixed(uint64_t O) {
+      Kind = OffsetKind::kFixed;
+      Offset = O;
+    }
+
+  public:
     void init(Triple &TargetTriple, bool InstrumentWithCalls);
     Align getObjectAlignment() const { return Align(1ULL << Scale); }
+    bool isInGlobal() const { return Kind == OffsetKind::kGlobal; }
+    bool isInIfunc() const { return Kind == OffsetKind::kIfunc; }
+    bool isInTls() const { return Kind == OffsetKind::kTls; }
+    bool isFixed() const { return Kind == OffsetKind::kFixed; }
+    uint8_t scale() const { return Scale; };
+    uint64_t offset() const {
+      assert(isFixed());
+      return Offset;
+    };
+    bool withFrameRecord() const { return WithFrameRecord; };
   };
 
   ShadowMapping Mapping;
@@ -591,6 +618,46 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   appendToCompilerUsed(M, Dummy);
 }
 
+void HWAddressSanitizer::removeFnAttributes(Function *F) {
+  // Remove memory attributes that are invalid with HWASan.
+  // HWASan checks read from shadow, which invalidates memory(argmem: *)
+  // Short granule checks on function arguments read from the argument memory
+  // (last byte of the granule), which invalidates writeonly.
+  //
+  // This is not only true for sanitized functions, because AttrInfer can
+  // infer those attributes on libc functions, which is not true if those
+  // are instrumented (Android) or intercepted.
+  //
+  // We might want to model HWASan shadow memory more opaquely to get rid of
+  // this problem altogether, by hiding the shadow memory write in an
+  // intrinsic, essentially like in the AArch64StackTagging pass. But that's
+  // for another day.
+
+  // The API is weird. `onlyReadsMemory` actually means "does not write", and
+  // `onlyWritesMemory` actually means "does not read". So we reconstruct
+  // "accesses memory" && "does not read" <=> "writes".
+  bool Changed = false;
+  if (!F->doesNotAccessMemory()) {
+    bool WritesMemory = !F->onlyReadsMemory();
+    bool ReadsMemory = !F->onlyWritesMemory();
+    if ((WritesMemory && !ReadsMemory) || F->onlyAccessesArgMemory()) {
+      F->removeFnAttr(Attribute::Memory);
+      Changed = true;
+    }
+  }
+  for (Argument &A : F->args()) {
+    if (A.hasAttribute(Attribute::WriteOnly)) {
+      A.removeAttr(Attribute::WriteOnly);
+      Changed = true;
+    }
+  }
+  if (Changed) {
+    // nobuiltin makes sure later passes don't restore assumptions about
+    // the function.
+    F->addFnAttr(Attribute::NoBuiltin);
+  }
+}
+
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
@@ -598,40 +665,8 @@ void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   TargetTriple = Triple(M.getTargetTriple());
 
-  for (auto &F : M.functions()) {
-    // Remove memory attributes that are invalid with HWASan.
-    // HWASan checks read from shadow, which invalidates memory(argmem: *)
-    // Short granule checks on function arguments read from the argument memory
-    // (last byte of the granule), which invalidates writeonly.
-    //
-    // This is not only true for sanitized functions, because AttrInfer can
-    // infer those attributes on libc functions, which is not true if those
-    // are instrumented (Android) or intercepted.
-
-    // The API is weird. `onlyReadsMemory` actually means "does not write", and
-    // `onlyWritesMemory` actually means "does not read". So we reconstruct
-    // "accesses memory" && "does not read" <=> "writes".
-    bool Changed = false;
-    if (!F.doesNotAccessMemory()) {
-      bool WritesMemory = !F.onlyReadsMemory();
-      bool ReadsMemory = !F.onlyWritesMemory();
-      if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
-        F.removeFnAttr(Attribute::Memory);
-        Changed = true;
-      }
-    }
-    for (Argument &A : F.args()) {
-      if (A.hasAttribute(Attribute::WriteOnly)) {
-        Changed = true;
-        A.removeAttr(Attribute::WriteOnly);
-      }
-    }
-    if (Changed) {
-      // nobuiltin makes sure later passes don't restore assumptions about
-      // the function.
-      F.addFnAttr(Attribute::NoBuiltin);
-    }
-  }
+  for (Function &F : M.functions())
+    removeFnAttributes(&F);
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
@@ -794,12 +829,13 @@ Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {
 }
 
 Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
-  if (Mapping.Offset != kDynamicShadowSentinel)
+  if (Mapping.isFixed()) {
     return getOpaqueNoopCast(
         IRB, ConstantExpr::getIntToPtr(
-                 ConstantInt::get(IntptrTy, Mapping.Offset), PtrTy));
+                 ConstantInt::get(IntptrTy, Mapping.offset()), PtrTy));
+  }
 
-  if (Mapping.InGlobal)
+  if (Mapping.isInIfunc())
     return getDynamicShadowIfunc(IRB);
 
   Value *GlobalDynamicAddress =
@@ -931,8 +967,8 @@ void HWAddressSanitizer::untagPointerOperand(Instruction *I, Value *Addr) {
 
 Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
   // Mem >> Scale
-  Value *Shadow = IRB.CreateLShr(Mem, Mapping.Scale);
-  if (Mapping.Offset == 0)
+  Value *Shadow = IRB.CreateLShr(Mem, Mapping.scale());
+  if (Mapping.isFixed() && Mapping.offset() == 0)
     return IRB.CreateIntToPtr(Shadow, PtrTy);
   // (Mem >> Scale) + Offset
   return IRB.CreatePtrAdd(ShadowBase, Shadow);
@@ -990,7 +1026,7 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  bool useFixedShadowIntrinsic = false;
+  bool UseFixedShadowIntrinsic = false;
   // The memaccess fixed shadow intrinsic is only supported on AArch64,
   // which allows a 16-bit immediate to be left-shifted by 32.
   // Since kShadowBaseAlignment == 32, and Linux by default will not
@@ -998,25 +1034,27 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
   // representable.
   // In particular, an offset of 4TB (1024 << 32) is representable, and
   // ought to be good enough for anybody.
-  if (TargetTriple.isAArch64() && Mapping.Offset != kDynamicShadowSentinel) {
-    uint16_t offset_shifted = Mapping.Offset >> 32;
-    useFixedShadowIntrinsic = (uint64_t)offset_shifted << 32 == Mapping.Offset;
+  if (TargetTriple.isAArch64() && Mapping.isFixed()) {
+    uint16_t OffsetShifted = Mapping.offset() >> 32;
+    UseFixedShadowIntrinsic =
+        static_cast<uint64_t>(OffsetShifted) << 32 == Mapping.offset();
   }
 
-  if (useFixedShadowIntrinsic)
+  if (UseFixedShadowIntrinsic) {
     IRB.CreateCall(
         Intrinsic::getDeclaration(
             M, UseShortGranules
                    ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
                    : Intrinsic::hwasan_check_memaccess_fixedshadow),
         {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
-         ConstantInt::get(Int64Ty, Mapping.Offset)});
-  else
+         ConstantInt::get(Int64Ty, Mapping.offset())});
+  } else {
     IRB.CreateCall(Intrinsic::getDeclaration(
                        M, UseShortGranules
                               ? Intrinsic::hwasan_check_memaccess_shortgranules
                               : Intrinsic::hwasan_check_memaccess),
                    {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+  }
 }
 
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
@@ -1182,7 +1220,7 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
                    {IRB.CreatePointerCast(AI, PtrTy), Tag,
                     ConstantInt::get(IntptrTy, AlignedSize)});
   } else {
-    size_t ShadowSize = Size >> Mapping.Scale;
+    size_t ShadowSize = Size >> Mapping.scale();
     Value *AddrLong = untagPointer(IRB, IRB.CreatePointerCast(AI, IntptrTy));
     Value *ShadowPtr = memToShadow(AddrLong, IRB);
     // If this memset is not inlined, it will be intercepted in the hwasan
@@ -1340,7 +1378,7 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
-  if (!Mapping.InTls)
+  if (!Mapping.isInTls())
     ShadowBase = getShadowNonTls(IRB);
   else if (!WithFrameRecord && TargetTriple.isAndroid())
     ShadowBase = getDynamicShadowIfunc(IRB);
@@ -1665,7 +1703,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ ClRecordStackHistory != none &&
-                   Mapping.WithFrameRecord &&
+                   Mapping.withFrameRecord() &&
                    !SInfo.AllocasToInstrument.empty());
 
   if (!SInfo.AllocasToInstrument.empty()) {
@@ -1889,38 +1927,28 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
 
 void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
                                              bool InstrumentWithCalls) {
+  // Start with defaults.
   Scale = kDefaultShadowScale;
+  Kind = OffsetKind::kTls;
+  WithFrameRecord = true;
+
+  // Tune for the target.
   if (TargetTriple.isOSFuchsia()) {
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
-    InGlobal = false;
-    InTls = false;
-    Offset = 0;
-    WithFrameRecord = true;
-  } else if (ClMappingOffset.getNumOccurrences() > 0) {
-    InGlobal = false;
-    InTls = false;
-    Offset = ClMappingOffset;
-    WithFrameRecord = false;
+    SetFixed(0);
   } else if (ClEnableKhwasan || InstrumentWithCalls) {
-    InGlobal = false;
-    InTls = false;
-    Offset = 0;
+    SetFixed(0);
     WithFrameRecord = false;
-  } else if (ClWithIfunc) {
-    InGlobal = true;
-    InTls = false;
-    Offset = kDynamicShadowSentinel;
-    WithFrameRecord = false;
-  } else if (ClWithTls) {
-    InGlobal = false;
-    InTls = true;
-    Offset = kDynamicShadowSentinel;
-    WithFrameRecord = true;
-  } else {
-    InGlobal = false;
-    InTls = false;
-    Offset = kDynamicShadowSentinel;
-    WithFrameRecord = false;
+  }
+
+  WithFrameRecord = optOr(ClFrameRecords, WithFrameRecord);
+
+  // Apply the last of ClMappingOffset and ClMappingOffsetDynamic.
+  Kind = optOr(ClMappingOffsetDynamic, Kind);
+  if (ClMappingOffset.getNumOccurrences() > 0 &&
+      !(ClMappingOffsetDynamic.getNumOccurrences() > 0 &&
+        ClMappingOffsetDynamic.getPosition() > ClMappingOffset.getPosition())) {
+    SetFixed(ClMappingOffset);
   }
 }

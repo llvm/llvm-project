@@ -1026,7 +1026,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
             return true;
         }
         if (C.Tok->is(TT_FunctionDeclarationName))
-          return true;
+          return Style.AlignConsecutiveDeclarations.AlignFunctionDeclarations;
         if (C.Tok->isNot(TT_StartOfName))
           if (!Style.AlignConsecutiveDeclarations.AlignBlockComments ||
               !shouldAlignBlockComment(*C.Tok)) {
