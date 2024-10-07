@@ -50,29 +50,25 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false,
-                     /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
     IO.enumCase(Value, "AcrossEmptyLines",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/true,
                      /*AcrossComments=*/false, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false,
-                     /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
     IO.enumCase(Value, "AcrossComments",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
                      /*AcrossComments=*/true, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false,
-                     /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
     IO.enumCase(Value, "AcrossEmptyLinesAndComments",
                 FormatStyle::AlignConsecutiveStyle(
                     {/*Enabled=*/true, /*AcrossEmptyLines=*/true,
                      /*AcrossComments=*/true, /*AlignCompound=*/false,
                      /*AlignFunctionDeclarations=*/true,
-                     /*AlignFunctionPointers=*/false,
-                     /*PadOperators=*/true}));
+                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
 
     // For backward compatibility.
     IO.enumCase(Value, "true",
