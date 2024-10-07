@@ -35,5 +35,17 @@ private:
   int bypass_depth_{0};
 };
 
+class ScopedBypass {
+public:
+  [[nodiscard]] explicit ScopedBypass(Context &context) : context_(context) {
+    context_.BypassPush();
+  }
+
+  ~ScopedBypass() { context_.BypassPop(); }
+
+private:
+  Context &context_;
+};
+
 Context &GetContextForThisThread();
 } // namespace __rtsan
