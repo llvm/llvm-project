@@ -50,11 +50,6 @@ public:
   /// by symbol, symbol-offset, and program order (which depends if scheduling
   /// bottom-up or top-down).
   void insertAt(iterator Pos, Instruction *I) {
-#ifdef EXPENSIVE_CHECKS
-    for (auto Itr : Seeds) {
-      assert(*Itr != I && "Attempt to insert an instruction twice.");
-    }
-#endif
     Seeds.insert(Pos, I);
     NumUnusedBits += Utils::getNumBits(I);
   }
