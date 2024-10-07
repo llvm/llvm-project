@@ -303,6 +303,7 @@ class LinkerScript final {
 
   StringRef getOutputSectionName(const InputSectionBase *s) const;
   void addSymbol(SymbolAssignment *cmd);
+  void declareSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
   void setDot(Expr e, const Twine &loc, bool inSec);
   void expandOutputSection(uint64_t size);
