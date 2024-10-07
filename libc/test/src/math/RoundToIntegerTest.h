@@ -19,7 +19,6 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 #include "hdr/math_macros.h"
-#include <errno.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::Sign;

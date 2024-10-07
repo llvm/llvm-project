@@ -354,6 +354,17 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Tile: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  }
 
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
@@ -524,6 +535,36 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultClause(
   return OpenACCDefaultClause::Create(
       Ctx, Clause.getDefaultClauseKind(), Clause.getBeginLoc(),
       Clause.getLParenLoc(), Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Loop)
+    return isNotImplemented();
+
+  // Duplicates here are not really sensible.  We could possible permit
+  // multiples if they all had the same value, but there isn't really a good
+  // reason to do so. Also, this simplifies the suppression of duplicates, in
+  // that we know if we 'find' one after instantiation, that it is the same
+  // clause, which simplifies instantiation/checking/etc.
+  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
+  llvm::SmallVector<Expr *> NewSizeExprs;
+
+  // Make sure these are all positive constant expressions or *.
+  for (Expr *E : Clause.getIntExprs()) {
+    ExprResult Res = SemaRef.CheckTileSizeExpr(E);
+
+    if (!Res.isUsable())
+      return nullptr;
+
+    NewSizeExprs.push_back(Res.get());
+  }
+
+  return OpenACCTileClause::Create(Ctx, Clause.getBeginLoc(),
+                                   Clause.getLParenLoc(), NewSizeExprs,
+                                   Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
@@ -1087,6 +1128,7 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
     SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
   } else if (DirKind == OpenACCDirectiveKind::Loop) {
     SetCollapseInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
+    SetTileInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
   }
 }
 
@@ -1095,8 +1137,9 @@ void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
     ArrayRef<OpenACCClause *> Clauses) {
 
   // Reset this checking for loops that aren't covered in a RAII object.
-  SemaRef.CollapseInfo.CurLevelHasLoopAlready = false;
+  SemaRef.LoopInfo.CurLevelHasLoopAlready = false;
   SemaRef.CollapseInfo.CollapseDepthSatisfied = true;
+  SemaRef.TileInfo.TileDepthSatisfied = true;
 
   // We make sure to take an optional list of uninstantiated clauses, so that
   // we can check to make sure we don't 'double diagnose' in the event that
@@ -1133,6 +1176,26 @@ void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
   SemaRef.CollapseInfo.CollapseDepthSatisfied = false;
   SemaRef.CollapseInfo.CurCollapseCount =
       cast<ConstantExpr>(LoopCount)->getResultAsAPSInt();
+}
+
+void SemaOpenACC::AssociatedStmtRAII::SetTileInfoBeforeAssociatedStmt(
+    ArrayRef<const OpenACCClause *> UnInstClauses,
+    ArrayRef<OpenACCClause *> Clauses) {
+  // We don't diagnose if this is during instantiation, since the only thing we
+  // care about is the number of arguments, which we can figure out without
+  // instantiation, so we don't want to double-diagnose.
+  if (UnInstClauses.size() > 0)
+    return;
+  auto *TileClauseItr =
+      llvm::find_if(Clauses, llvm::IsaPred<OpenACCTileClause>);
+
+  if (Clauses.end() == TileClauseItr)
+    return;
+
+  OpenACCTileClause *TileClause = cast<OpenACCTileClause>(*TileClauseItr);
+  SemaRef.TileInfo.ActiveTile = TileClause;
+  SemaRef.TileInfo.TileDepthSatisfied = false;
+  SemaRef.TileInfo.CurTileCount = TileClause->getSizeExprs().size();
 }
 
 SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
@@ -1698,22 +1761,64 @@ ExprResult SemaOpenACC::CheckCollapseLoopCount(Expr *LoopCount) {
       ConstantExpr::Create(getASTContext(), LoopCount, APValue{*ICE})};
 }
 
+ExprResult SemaOpenACC::CheckTileSizeExpr(Expr *SizeExpr) {
+  if (!SizeExpr)
+    return ExprError();
+
+  assert((SizeExpr->isInstantiationDependent() ||
+          SizeExpr->getType()->isIntegerType()) &&
+         "size argument non integer?");
+
+  // If dependent, or an asterisk, the expression is fine.
+  if (SizeExpr->isInstantiationDependent() ||
+      isa<OpenACCAsteriskSizeExpr>(SizeExpr))
+    return ExprResult{SizeExpr};
+
+  std::optional<llvm::APSInt> ICE =
+      SizeExpr->getIntegerConstantExpr(getASTContext());
+
+  // OpenACC 3.3 2.9.8
+  // where each tile size is a constant positive integer expression or asterisk.
+  if (!ICE || *ICE <= 0) {
+    Diag(SizeExpr->getBeginLoc(), diag::err_acc_size_expr_value)
+        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+    return ExprError();
+  }
+
+  return ExprResult{
+      ConstantExpr::Create(getASTContext(), SizeExpr, APValue{*ICE})};
+}
+
 void SemaOpenACC::ActOnWhileStmt(SourceLocation WhileLoc) {
   if (!getLangOpts().OpenACC)
     return;
 
-  if (!CollapseInfo.TopLevelLoopSeen)
+  if (!LoopInfo.TopLevelLoopSeen)
     return;
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
-    Diag(WhileLoc, diag::err_acc_invalid_in_collapse_loop) << /*while loop*/ 1;
+    Diag(WhileLoc, diag::err_acc_invalid_in_loop)
+        << /*while loop*/ 1 << OpenACCClauseKind::Collapse;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-         diag::note_acc_collapse_clause_here);
+         diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Collapse;
 
     // Remove the value so that we don't get cascading errors in the body. The
     // caller RAII object will restore this.
     CollapseInfo.CurCollapseCount = std::nullopt;
+  }
+
+  if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    Diag(WhileLoc, diag::err_acc_invalid_in_loop)
+        << /*while loop*/ 1 << OpenACCClauseKind::Tile;
+    assert(TileInfo.ActiveTile && "tile count without object?");
+    Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Tile;
+
+    // Remove the value so that we don't get cascading errors in the body. The
+    // caller RAII object will restore this.
+    TileInfo.CurTileCount = std::nullopt;
   }
 }
 
@@ -1721,18 +1826,32 @@ void SemaOpenACC::ActOnDoStmt(SourceLocation DoLoc) {
   if (!getLangOpts().OpenACC)
     return;
 
-  if (!CollapseInfo.TopLevelLoopSeen)
+  if (!LoopInfo.TopLevelLoopSeen)
     return;
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
-    Diag(DoLoc, diag::err_acc_invalid_in_collapse_loop) << /*do loop*/ 2;
+    Diag(DoLoc, diag::err_acc_invalid_in_loop)
+        << /*do loop*/ 2 << OpenACCClauseKind::Collapse;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-         diag::note_acc_collapse_clause_here);
+         diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Collapse;
 
     // Remove the value so that we don't get cascading errors in the body. The
     // caller RAII object will restore this.
     CollapseInfo.CurCollapseCount = std::nullopt;
+  }
+
+  if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    Diag(DoLoc, diag::err_acc_invalid_in_loop)
+        << /*do loop*/ 2 << OpenACCClauseKind::Tile;
+    assert(TileInfo.ActiveTile && "tile count without object?");
+    Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Tile;
+
+    // Remove the value so that we don't get cascading errors in the body. The
+    // caller RAII object will restore this.
+    TileInfo.CurTileCount = std::nullopt;
   }
 }
 
@@ -1741,7 +1860,7 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
     return;
 
   // Enable the while/do-while checking.
-  CollapseInfo.TopLevelLoopSeen = true;
+  LoopInfo.TopLevelLoopSeen = true;
 
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
 
@@ -1750,11 +1869,12 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
     // or loop nest.
     // This checks for more than 1 loop at the current level, the
     // 'depth'-satisifed checking manages the 'not zero' case.
-    if (CollapseInfo.CurLevelHasLoopAlready) {
-      Diag(ForLoc, diag::err_acc_collapse_multiple_loops);
+    if (LoopInfo.CurLevelHasLoopAlready) {
+      Diag(ForLoc, diag::err_acc_clause_multiple_loops) << /*Collapse*/ 0;
       assert(CollapseInfo.ActiveCollapse && "No collapse object?");
       Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-           diag::note_acc_collapse_clause_here);
+           diag::note_acc_active_clause_here)
+          << OpenACCClauseKind::Collapse;
     } else {
       --(*CollapseInfo.CurCollapseCount);
 
@@ -1765,13 +1885,29 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
     }
   }
 
+  if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    if (LoopInfo.CurLevelHasLoopAlready) {
+      Diag(ForLoc, diag::err_acc_clause_multiple_loops) << /*Tile*/ 1;
+      assert(TileInfo.ActiveTile && "No tile object?");
+      Diag(TileInfo.ActiveTile->getBeginLoc(),
+           diag::note_acc_active_clause_here)
+          << OpenACCClauseKind::Tile;
+    } else {
+      --(*TileInfo.CurTileCount);
+      // Once we've hit zero here, we know we have deep enough 'for' loops to
+      // get to the bottom.
+      if (*TileInfo.CurTileCount == 0)
+        TileInfo.TileDepthSatisfied = true;
+    }
+  }
+
   // Set this to 'false' for the body of this loop, so that the next level
   // checks independently.
-  CollapseInfo.CurLevelHasLoopAlready = false;
+  LoopInfo.CurLevelHasLoopAlready = false;
 }
 
 namespace {
-SourceLocation FindInterveningCodeInCollapseLoop(const Stmt *CurStmt) {
+SourceLocation FindInterveningCodeInLoop(const Stmt *CurStmt) {
   // We should diagnose on anything except `CompoundStmt`, `NullStmt`,
   // `ForStmt`, `CXXForRangeStmt`, since those are legal, and `WhileStmt` and
   // `DoStmt`, as those are caught as a violation elsewhere.
@@ -1789,8 +1925,7 @@ SourceLocation FindInterveningCodeInCollapseLoop(const Stmt *CurStmt) {
   // of compound statements, as long as there isn't any code inside.
   if (const auto *CS = dyn_cast<CompoundStmt>(CurStmt)) {
     for (const auto *ChildStmt : CS->children()) {
-      SourceLocation ChildStmtLoc =
-          FindInterveningCodeInCollapseLoop(ChildStmt);
+      SourceLocation ChildStmtLoc = FindInterveningCodeInLoop(ChildStmt);
       if (ChildStmtLoc.isValid())
         return ChildStmtLoc;
     }
@@ -1805,24 +1940,33 @@ void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
   if (!getLangOpts().OpenACC)
     return;
   // Set this to 'true' so if we find another one at this level we can diagnose.
-  CollapseInfo.CurLevelHasLoopAlready = true;
+  LoopInfo.CurLevelHasLoopAlready = true;
 
   if (!Body.isUsable())
     return;
 
-  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0 &&
-      !CollapseInfo.ActiveCollapse->hasForce()) {
-    // OpenACC 3.3: 2.9.1
-    // If the 'force' modifier does not appear, then the associated loops must
-    // be tightly nested.  If the force modifier appears, then any intervening
-    // code may be executed multiple times as needed to perform the collapse.
+  bool IsActiveCollapse = CollapseInfo.CurCollapseCount &&
+                          *CollapseInfo.CurCollapseCount > 0 &&
+                          !CollapseInfo.ActiveCollapse->hasForce();
+  bool IsActiveTile = TileInfo.CurTileCount && *TileInfo.CurTileCount > 0;
 
-    SourceLocation OtherStmtLoc = FindInterveningCodeInCollapseLoop(Body.get());
+  if (IsActiveCollapse || IsActiveTile) {
+    SourceLocation OtherStmtLoc = FindInterveningCodeInLoop(Body.get());
 
-    if (OtherStmtLoc.isValid()) {
-      Diag(OtherStmtLoc, diag::err_acc_collapse_intervening_code);
+    if (OtherStmtLoc.isValid() && IsActiveCollapse) {
+      Diag(OtherStmtLoc, diag::err_acc_intervening_code)
+          << OpenACCClauseKind::Collapse;
       Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-           diag::note_acc_collapse_clause_here);
+           diag::note_acc_active_clause_here)
+          << OpenACCClauseKind::Collapse;
+    }
+
+    if (OtherStmtLoc.isValid() && IsActiveTile) {
+      Diag(OtherStmtLoc, diag::err_acc_intervening_code)
+          << OpenACCClauseKind::Tile;
+      Diag(TileInfo.ActiveTile->getBeginLoc(),
+           diag::note_acc_active_clause_here)
+          << OpenACCClauseKind::Tile;
     }
   }
 }
@@ -1838,11 +1982,19 @@ bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
   //
   // ALL constructs are ill-formed if there is an active 'collapse'
   if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
-    Diag(StartLoc, diag::err_acc_invalid_in_collapse_loop)
-        << /*OpenACC Construct*/ 0 << K;
+    Diag(StartLoc, diag::err_acc_invalid_in_loop)
+        << /*OpenACC Construct*/ 0 << OpenACCClauseKind::Collapse << K;
     assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
     Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-         diag::note_acc_collapse_clause_here);
+         diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Collapse;
+  }
+  if (TileInfo.CurTileCount && *TileInfo.CurTileCount > 0) {
+    Diag(StartLoc, diag::err_acc_invalid_in_loop)
+        << /*OpenACC Construct*/ 0 << OpenACCClauseKind::Tile << K;
+    assert(TileInfo.ActiveTile && "Tile count without object?");
+    Diag(TileInfo.ActiveTile->getBeginLoc(), diag::note_acc_active_clause_here)
+        << OpenACCClauseKind::Tile;
   }
 
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
@@ -1917,11 +2069,24 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
       return StmtError();
     }
 
-    if (!CollapseInfo.CollapseDepthSatisfied) {
-      Diag(DirectiveLoc, diag::err_acc_collapse_insufficient_loops);
-      assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
-      Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
-           diag::note_acc_collapse_clause_here);
+    if (!CollapseInfo.CollapseDepthSatisfied || !TileInfo.TileDepthSatisfied) {
+      if (!CollapseInfo.CollapseDepthSatisfied) {
+        Diag(DirectiveLoc, diag::err_acc_insufficient_loops)
+            << OpenACCClauseKind::Collapse;
+        assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
+        Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+             diag::note_acc_active_clause_here)
+            << OpenACCClauseKind::Collapse;
+      }
+
+      if (!TileInfo.TileDepthSatisfied) {
+        Diag(DirectiveLoc, diag::err_acc_insufficient_loops)
+            << OpenACCClauseKind::Tile;
+        assert(TileInfo.ActiveTile && "Collapse count without object?");
+        Diag(TileInfo.ActiveTile->getBeginLoc(),
+             diag::note_acc_active_clause_here)
+            << OpenACCClauseKind::Tile;
+      }
       return StmtError();
     }
 
@@ -1944,3 +2109,13 @@ bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
 }
 
 DeclGroupRef SemaOpenACC::ActOnEndDeclDirective() { return DeclGroupRef{}; }
+
+ExprResult
+SemaOpenACC::BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
+  return OpenACCAsteriskSizeExpr::Create(getASTContext(), AsteriskLoc);
+}
+
+ExprResult
+SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
+  return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
+}

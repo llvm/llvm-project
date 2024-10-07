@@ -223,19 +223,19 @@ using target extension types and are represented as follows:
 
   .. table:: SPIR-V Opaque Types
 
-     ================== ====================== =========================================================================================
+     ================== ====================== ===========================================================================================
      SPIR-V Type        LLVM type name         LLVM type arguments
-     ================== ====================== =========================================================================================
-     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     ================== ====================== ===========================================================================================
+     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeSampler      ``spirv.Sampler``      (none)
-     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeEvent        ``spirv.Event``        (none)
      OpTypeDeviceEvent  ``spirv.DeviceEvent``  (none)
      OpTypeReserveId    ``spirv.ReserveId``    (none)
      OpTypeQueue        ``spirv.Queue``        (none)
      OpTypePipe         ``spirv.Pipe``         access qualifier
      OpTypePipeStorage  ``spirv.PipeStorage``  (none)
-     ================== ====================== =========================================================================================
+     ================== ====================== ===========================================================================================
 
 All integer arguments take the same value as they do in their `corresponding
 SPIR-V instruction <https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_type_declaration_instructions>`_.

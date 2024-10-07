@@ -8,6 +8,7 @@ add_clang_library(clangTidyBugproneModule
   AssertSideEffectCheck.cpp
   AssignmentInIfConditionCheck.cpp
   BadSignalToKillThreadCheck.cpp
+  BitwisePointerCastCheck.cpp
   BoolPointerImplicitConversionCheck.cpp
   BranchCloneCheck.cpp
   BugproneTidyModule.cpp

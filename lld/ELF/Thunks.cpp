@@ -550,7 +550,7 @@ void Thunk::setOffset(uint64_t newOffset) {
 
 // AArch64 Thunk base class.
 static uint64_t getAArch64ThunkDestVA(const Symbol &s, int64_t a) {
-  uint64_t v = s.isInPlt() ? s.getPltVA() : s.getVA(a);
+  uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA(a);
   return v;
 }
 
@@ -677,7 +677,7 @@ void AArch64BTILandingPadThunk::writeLong(uint8_t *buf) {
 
 // ARM Target Thunks
 static uint64_t getARMThunkDestVA(const Symbol &s) {
-  uint64_t v = s.isInPlt() ? s.getPltVA() : s.getVA();
+  uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA();
   return SignExtend64<32>(v);
 }
 
@@ -1171,7 +1171,7 @@ void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t gotPltVA,
 }
 
 void PPC32PltCallStub::writeTo(uint8_t *buf) {
-  writePPC32PltCallStub(ctx, buf, destination.getGotPltVA(), file, addend);
+  writePPC32PltCallStub(ctx, buf, destination.getGotPltVA(ctx), file, addend);
 }
 
 void PPC32PltCallStub::addSymbols(ThunkSection &isec) {
@@ -1231,7 +1231,7 @@ void elf::writePPC64LoadAndBranch(uint8_t *buf, int64_t offset) {
 }
 
 void PPC64PltCallStub::writeTo(uint8_t *buf) {
-  int64_t offset = destination.getGotPltVA() - getPPC64TocBase();
+  int64_t offset = destination.getGotPltVA(ctx) - getPPC64TocBase(ctx);
   // Save the TOC pointer to the save-slot reserved in the call frame.
   write32(buf + 0, 0xf8410018); // std     r2,24(r1)
   writePPC64LoadAndBranch(buf + 4, offset);
@@ -1257,7 +1257,7 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     write32(buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
   } else if (isInt<34>(offset)) {
     int nextInstOffset;
-    uint64_t tocOffset = destination.getVA() - getPPC64TocBase();
+    uint64_t tocOffset = destination.getVA() - getPPC64TocBase(ctx);
     if (tocOffset >> 16 > 0) {
       const uint64_t addi = ADDI_R12_TO_R12_NO_DISP | (tocOffset & 0xffff);
       const uint64_t addis =
@@ -1276,7 +1276,7 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     ctx.in.ppc64LongBranchTarget->addEntry(&destination, addend);
     const int64_t offsetFromTOC =
         ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-        getPPC64TocBase();
+        getPPC64TocBase(ctx);
     writePPC64LoadAndBranch(buf + 4, offsetFromTOC);
   }
 }
@@ -1293,8 +1293,9 @@ bool PPC64R2SaveStub::isCompatibleWith(const InputSection &isec,
 }
 
 void PPC64R12SetupStub::writeTo(uint8_t *buf) {
-  int64_t offset = (gotPlt ? destination.getGotPltVA() : destination.getVA()) -
-                   getThunkTargetSym()->getVA();
+  int64_t offset =
+      (gotPlt ? destination.getGotPltVA(ctx) : destination.getVA()) -
+      getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
     reportRangeError(ctx, buf, offset, 34, destination,
                      "R12 setup stub offset");
@@ -1303,8 +1304,8 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
   if (ctx.arg.power10Stubs) {
     const uint64_t imm = (((offset >> 16) & 0x3ffff) << 32) | (offset & 0xffff);
     // pld 12, func@plt@pcrel or  paddi r12, 0, func@pcrel
-    writePrefixedInstruction(
-        buf, (gotPlt ? PLD_R12_NO_DISP : PADDI_R12_NO_DISP) | imm);
+    writePrefixedInst(ctx, buf,
+                      (gotPlt ? PLD_R12_NO_DISP : PADDI_R12_NO_DISP) | imm);
     nextInstOffset = 8;
   } else {
     uint32_t off = offset - 8;
@@ -1338,7 +1339,7 @@ bool PPC64R12SetupStub::isCompatibleWith(const InputSection &isec,
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
   int64_t offset =
       ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-      getPPC64TocBase();
+      getPPC64TocBase(ctx);
   writePPC64LoadAndBranch(buf, offset);
 }
 
@@ -1514,7 +1515,7 @@ static Thunk *addThunkAVR(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
 }
 
 static Thunk *addThunkMips(Ctx &ctx, RelType type, Symbol &s) {
-  if ((s.stOther & STO_MIPS_MICROMIPS) && isMipsR6())
+  if ((s.stOther & STO_MIPS_MICROMIPS) && isMipsR6(ctx))
     return make<MicroMipsR6Thunk>(ctx, s);
   if (s.stOther & STO_MIPS_MICROMIPS)
     return make<MicroMipsThunk>(ctx, s);
@@ -1526,7 +1527,7 @@ static Thunk *addThunkPPC32(Ctx &ctx, const InputSection &isec,
   assert((rel.type == R_PPC_LOCAL24PC || rel.type == R_PPC_REL24 ||
           rel.type == R_PPC_PLTREL24) &&
          "unexpected relocation type for thunk");
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return make<PPC32PltCallStub>(ctx, isec, rel, s);
   return make<PPC32LongThunk>(ctx, s, rel.addend);
 }
@@ -1539,9 +1540,9 @@ static Thunk *addThunkPPC64(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
   // If we are emitting stubs for NOTOC relocations, we need to tell
   // the PLT resolver that there can be multiple TOCs.
   if (type == R_PPC64_REL24_NOTOC)
-    getPPC64TargetInfo(ctx)->ppc64DynamicSectionOpt = 0x2;
+    ctx.target->ppc64DynamicSectionOpt = 0x2;
 
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return type == R_PPC64_REL24_NOTOC
                ? (Thunk *)make<PPC64R12SetupStub>(ctx, s, /*gotPlt=*/true)
                : (Thunk *)make<PPC64PltCallStub>(ctx, s);

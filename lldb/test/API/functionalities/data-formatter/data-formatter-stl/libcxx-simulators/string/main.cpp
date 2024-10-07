@@ -92,7 +92,7 @@ public:
 #ifdef NON_STANDARD_PADDING
     unsigned char __padding[sizeof(value_type) - 1];
 #else
-    [[no_unique_address]] __padding<sizeof(value_type) - 1> __padding_;
+    _LLDB_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
 #endif
 
 #ifdef BITMASKS
@@ -162,7 +162,7 @@ public:
 #ifdef NON_STANDARD_PADDING
     unsigned char __padding[sizeof(value_type) - 1];
 #else  // !NON_STANDARD_PADDING
-    [[no_unique_address]] __padding<sizeof(value_type) - 1> __padding_;
+    _LLDB_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
 #endif // NON_STANDARD_PADDING
 
 #endif // SHORT_UNION

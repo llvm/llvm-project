@@ -1,4 +1,4 @@
-# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+exception-handling < %s | FileCheck %s
 
 # Tests if block/loop/try/catch/end/branch/rethrow instructions are correctly
 # printed with their annotations.
@@ -9,18 +9,23 @@
 test_annotation:
   .functype   test_annotation () -> ()
   .tagtype  __cpp_exception i32
+  .tagtype  __c_longjmp i32
   try
     br        0
   catch     __cpp_exception
+    drop
     block
+      i32.const 0
       br_if     0
       loop
+        i32.const 0
         br_if     1
       end_loop
     end_block
     try
       rethrow   0
     catch     __cpp_exception
+      drop
     catch_all
       block
         try
@@ -56,15 +61,19 @@ test_annotation:
 # CHECK:        try
 # CHECK-NEXT:   br        0               # 0: down to label0
 # CHECK-NEXT:   catch     __cpp_exception # catch0:
+# CHECK-NEXT:   drop
 # CHECK-NEXT:   block
+# CHECK-NEXT:   i32.const       0
 # CHECK-NEXT:   br_if     0               # 0: down to label1
 # CHECK-NEXT:   loop                      # label2:
+# CHECK-NEXT:   i32.const       0
 # CHECK-NEXT:   br_if     1               # 1: down to label1
 # CHECK-NEXT:   end_loop
 # CHECK-NEXT:   end_block                 # label1:
 # CHECK-NEXT:   try
 # CHECK-NEXT:   rethrow   0               # down to catch3
 # CHECK-NEXT:   catch     __cpp_exception # catch3:
+# CHECK-NEXT:   drop
 # CHECK-NEXT:   catch_all{{$}}
 # CHECK-NEXT:   block
 # CHECK-NEXT:   try

@@ -221,7 +221,7 @@ void MultiRegionOpConversion<omp::PrivateClauseOp>::forwardOpAttrs(
 } // namespace
 
 void mlir::configureOpenMPToLLVMConversionLegality(
-    ConversionTarget &target, LLVMTypeConverter &typeConverter) {
+    ConversionTarget &target, const LLVMTypeConverter &typeConverter) {
   target.addDynamicallyLegalOp<
       omp::AtomicReadOp, omp::AtomicWriteOp, omp::CancellationPointOp,
       omp::CancelOp, omp::CriticalDeclareOp, omp::FlushOp, omp::MapBoundsOp,
