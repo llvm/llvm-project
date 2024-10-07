@@ -100,9 +100,14 @@ public:
 
   Type getType() const { return TokenType; };
 
+  void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
+
+  size_t getIndentation() const { return Indentation; };
+
   static Type getTokenType(char Identifier);
 
 private:
+  size_t Indentation;
   Type TokenType;
   SmallString<128> RawBody;
   Accessor Accessor;
@@ -121,15 +126,16 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), LocalContext(nullptr) {};
+  ASTNode() : T(Type::Root), LocalContext(nullptr){};
 
   ASTNode(StringRef Body, ASTNode *Parent)
-      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr) {};
+      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr),
+        Indentation(0){};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        LocalContext(nullptr) {};
+        LocalContext(nullptr), Indentation(0){};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -139,16 +145,19 @@ public:
 
   void setRawBody(StringRef NewBody) { RawBody = NewBody; };
 
+  void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
+
   SmallString<128> render(llvm::json::Value Data,
                           llvm::BumpPtrAllocator &Allocator,
-                          DenseMap<StringRef, ASTNode *> &Partials,
-                          DenseMap<StringRef, Lambda> &Lambdas,
-                          DenseMap<StringRef, SectionLambda> &SectionLambdas,
+                          StringMap<ASTNode *> &Partials,
+                          StringMap<Lambda> &Lambdas,
+                          StringMap<SectionLambda> &SectionLambdas,
                           DenseMap<char, StringRef> &Escapes);
 
 private:
   llvm::json::Value findContext();
   Type T;
+  size_t Indentation;
   SmallString<128> RawBody;
   SmallString<128> Body;
   ASTNode *Parent;
@@ -177,9 +186,9 @@ public:
   void registerEscape(DenseMap<char, StringRef> Escapes);
 
 private:
-  DenseMap<StringRef, ASTNode *> Partials;
-  DenseMap<StringRef, Lambda> Lambdas;
-  DenseMap<StringRef, SectionLambda> SectionLambdas;
+  StringMap<ASTNode *> Partials;
+  StringMap<Lambda> Lambdas;
+  StringMap<SectionLambda> SectionLambdas;
   DenseMap<char, StringRef> Escapes;
   llvm::BumpPtrAllocator Allocator;
   ASTNode *Tree;

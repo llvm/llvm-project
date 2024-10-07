@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Mustache.h"
 #include "llvm/Support/Error.h"
+#include <sstream>
 
 using namespace llvm;
 using namespace llvm::json;
@@ -40,8 +41,20 @@ Accessor split(StringRef Str, char Delimiter) {
   return Tokens;
 }
 
+void addIndentation(llvm::SmallString<128> &PartialStr,
+                    size_t IndentationSize) {
+  std::string Indent(IndentationSize, ' ');
+  llvm::SmallString<128> Result;
+  for (size_t I = 0; I < PartialStr.size(); ++I) {
+    Result.push_back(PartialStr[I]);
+    if (PartialStr[I] == '\n' && I < PartialStr.size() - 1)
+      Result.append(Indent);
+  }
+  PartialStr = Result;
+}
+
 Token::Token(StringRef RawBody, StringRef InnerBody, char Identifier)
-    : RawBody(RawBody), TokenBody(InnerBody) {
+    : RawBody(RawBody), TokenBody(InnerBody), Indentation(0) {
   TokenType = getTokenType(Identifier);
   if (TokenType == Type::Comment)
     return;
@@ -53,7 +66,8 @@ Token::Token(StringRef RawBody, StringRef InnerBody, char Identifier)
 }
 
 Token::Token(StringRef Str)
-    : TokenType(Type::Text), RawBody(Str), Accessor({}), TokenBody(Str) {}
+    : TokenType(Type::Text), RawBody(Str), Accessor({}), TokenBody(Str),
+      Indentation(0) {}
 
 Token::Type Token::getTokenType(char Identifier) {
   switch (Identifier) {
@@ -147,7 +161,8 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
   //  "Line 1\n Line 2\n Line 3"
   size_t LastIdx = Tokens.size() - 1;
   for (size_t Idx = 0, End = Tokens.size(); Idx < End; ++Idx) {
-    Token::Type CurrentType = Tokens[Idx].getType();
+    Token &CurrentToken = Tokens[Idx];
+    Token::Type CurrentType = CurrentToken.getType();
     // Check if token type requires cleanup
     bool RequiresCleanUp = (CurrentType == Token::Type::SectionOpen ||
                             CurrentType == Token::Type::InvertSectionOpen ||
@@ -172,10 +187,14 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
       }
     }
     // Adjust previous token body if no text behind
-    if ((NoTextBehind && NoTextAhead) || (NoTextBehind && Idx == LastIdx)) {
+    if (((NoTextBehind && NoTextAhead) || (NoTextBehind && Idx == LastIdx))) {
       Token &PrevToken = Tokens[Idx - 1];
       StringRef PrevTokenBody = PrevToken.getTokenBody();
-      PrevToken.setTokenBody(PrevTokenBody.rtrim(" \t\v\t"));
+      StringRef Unindented = PrevTokenBody.rtrim(" \t\v\t");
+      size_t Indentation = PrevTokenBody.size() - Unindented.size();
+      if (CurrentType != Token::Type::Partial)
+        PrevToken.setTokenBody(Unindented);
+      CurrentToken.setIndentation(Indentation);
     }
   }
   return Tokens;
@@ -233,6 +252,7 @@ void Parser::parseMustache(ASTNode *Parent) {
     }
     case Token::Type::Partial: {
       CurrentNode = new (Node) ASTNode(ASTNode::Partial, A, Parent);
+      CurrentNode->setIndentation(CurrentToken.getIndentation());
       Parent->addChild(CurrentNode);
       break;
     }
@@ -285,7 +305,7 @@ SmallString<128> Template::render(Value Data) {
 void Template::registerPartial(StringRef Name, StringRef Partial) {
   Parser P = Parser(Partial, Allocator);
   ASTNode *PartialTree = P.parse();
-  Partials[Name] = PartialTree;
+  Partials.insert(std::make_pair(Name, PartialTree));
 }
 
 void Template::registerLambda(StringRef Name, Lambda L) { Lambdas[Name] = L; }
@@ -320,6 +340,12 @@ SmallString<128> printJson(Value &Data) {
     Result += Data.getAsString()->str();
     return Result;
   }
+  if (auto Num = Data.getAsNumber()) {
+    std::ostringstream Oss;
+    Oss << *Num;
+    Result += Oss.str();
+    return Result;
+  }
   return formatv("{0:2}", Data);
 }
 
@@ -329,12 +355,11 @@ bool isFalsey(Value &V) {
          (V.getAsObject() && V.getAsObject()->empty());
 }
 
-SmallString<128>
-ASTNode::render(Value Data, BumpPtrAllocator &Allocator,
-                DenseMap<StringRef, ASTNode *> &Partials,
-                DenseMap<StringRef, Lambda> &Lambdas,
-                DenseMap<StringRef, SectionLambda> &SectionLambdas,
-                DenseMap<char, StringRef> &Escapes) {
+SmallString<128> ASTNode::render(Value Data, llvm::BumpPtrAllocator &Allocator,
+                                 StringMap<ASTNode *> &Partials,
+                                 StringMap<Lambda> &Lambdas,
+                                 StringMap<SectionLambda> &SectionLambdas,
+                                 DenseMap<char, StringRef> &Escapes) {
   LocalContext = Data;
   Value Context = T == Root ? Data : findContext();
   SmallString<128> Result;
@@ -352,7 +377,7 @@ ASTNode::render(Value Data, BumpPtrAllocator &Allocator,
       ASTNode *Partial = Partials[Accessor[0]];
       Result += Partial->render(Data, Allocator, Partials, Lambdas,
                                 SectionLambdas, Escapes);
-      return Result;
+      addIndentation(Result, Indentation);
     }
     return Result;
   }
@@ -393,10 +418,11 @@ ASTNode::render(Value Data, BumpPtrAllocator &Allocator,
       if (isFalsey(Return))
         return Result;
       StringRef LambdaStr = printJson(Return);
-      Parser P = Parser(LambdaStr.str(), Allocator);
+      Parser P = Parser(LambdaStr, Allocator);
       ASTNode *LambdaNode = P.parse();
-      return LambdaNode->render(Data, Allocator, Partials, Lambdas,
-                                SectionLambdas, Escapes);
+      Result = LambdaNode->render(Data, Allocator, Partials, Lambdas,
+                                  SectionLambdas, Escapes);
+      return Result;
     }
     if (Context.getAsArray()) {
       json::Array *Arr = Context.getAsArray();
