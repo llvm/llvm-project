@@ -12,9 +12,9 @@ RUN: rm a.out
 */
 
 #include "flang/Runtime/entry-names.h"
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /*
 Manually add declarations for the runtime functions that we want to make sure
@@ -32,8 +32,8 @@ int32_t RTNAME(ArgumentCount)();
 int32_t RTNAME(GetCommandArgument)(int32_t, const struct Descriptor *,
     const struct Descriptor *, const struct Descriptor *);
 int32_t RTNAME(GetEnvVariable)(const struct Descriptor *,
-    const struct Descriptor *, const struct Descriptor *, bool ,
-    const struct Descriptor *, const char *, int );
+    const struct Descriptor *, const struct Descriptor *, bool,
+    const struct Descriptor *, const char *, int);
 int64_t RTNAME(SystemClockCount)(int kind);
 
 int main() {
