@@ -97,9 +97,23 @@ static bool findRISCVMultilibs(const Driver &D,
   return false;
 }
 
+static std::string computeBaseSysRoot(const Driver &D, bool IncludeTriple) {
+  if (!D.SysRoot.empty())
+    return D.SysRoot;
+
+  SmallString<128> SysRootDir(D.Dir);
+  llvm::sys::path::append(SysRootDir, "..", "lib", "clang-runtimes");
+
+  if (IncludeTriple)
+    llvm::sys::path::append(SysRootDir, D.getTargetTriple());
+
+  return std::string(SysRootDir);
+}
+
 BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
                      const ArgList &Args)
-    : ToolChain(D, Triple, Args) {
+    : ToolChain(D, Triple, Args),
+      SysRoot(computeBaseSysRoot(D, /*IncludeTriple=*/true)) {
   getProgramPaths().push_back(getDriver().Dir);
 
   findMultilibs(D, Triple, Args);
@@ -194,26 +208,21 @@ static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
 
 static constexpr llvm::StringLiteral MultilibFilename = "multilib.yaml";
 
-// Get the sysroot, before multilib takes effect.
-static std::string computeBaseSysRoot(const Driver &D,
-                                      const llvm::Triple &Triple) {
-  if (!D.SysRoot.empty())
-    return D.SysRoot;
-
-  SmallString<128> SysRootDir(D.Dir);
-  llvm::sys::path::append(SysRootDir, "..", "lib", "clang-runtimes");
-
-  SmallString<128> MultilibPath(SysRootDir);
-  llvm::sys::path::append(MultilibPath, MultilibFilename);
-
-  // New behaviour: if multilib.yaml is found then use clang-runtimes as the
-  // sysroot.
-  if (D.getVFS().exists(MultilibPath))
-    return std::string(SysRootDir);
-
-  // Otherwise fall back to the old behaviour of appending the target triple.
-  llvm::sys::path::append(SysRootDir, D.getTargetTriple());
-  return std::string(SysRootDir);
+static std::optional<llvm::SmallString<128>>
+getMultilibConfigPath(const Driver &D, const llvm::Triple &Triple,
+                      const ArgList &Args) {
+  llvm::SmallString<128> MultilibPath;
+  if (Arg *ConfigFileArg = Args.getLastArg(options::OPT_multi_lib_config)) {
+    MultilibPath = ConfigFileArg->getValue();
+    if (!D.getVFS().exists(MultilibPath)) {
+      D.Diag(clang::diag::err_drv_no_such_file) << MultilibPath.str();
+      return {};
+    }
+  } else {
+    MultilibPath = computeBaseSysRoot(D, /*IncludeTriple=*/false);
+    llvm::sys::path::append(MultilibPath, MultilibFilename);
+  }
+  return MultilibPath;
 }
 
 void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
@@ -221,10 +230,15 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
   DetectedMultilibs Result;
   // Look for a multilib.yaml before trying target-specific hardwired logic.
   // If it exists, always do what it specifies.
-  llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
-  llvm::sys::path::append(MultilibPath, MultilibFilename);
-  if (D.getVFS().exists(MultilibPath)) {
-    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
+  std::optional<llvm::SmallString<128>> MultilibPath =
+      getMultilibConfigPath(D, Triple, Args);
+  if (!MultilibPath)
+    return;
+  if (D.getVFS().exists(*MultilibPath)) {
+    // If multilib.yaml is found, update sysroot so it doesn't use a target
+    // specific suffix
+    SysRoot = computeBaseSysRoot(D, /*IncludeTriple=*/false);
+    findMultilibsFromYAML(*this, D, *MultilibPath, Args, Result);
     SelectedMultilibs = Result.SelectedMultilibs;
     Multilibs = Result.Multilibs;
   } else if (isRISCVBareMetal(Triple)) {
@@ -248,9 +262,7 @@ Tool *BareMetal::buildStaticLibTool() const {
   return new tools::baremetal::StaticLibTool(*this);
 }
 
-std::string BareMetal::computeSysRoot() const {
-  return computeBaseSysRoot(getDriver(), getTriple());
-}
+std::string BareMetal::computeSysRoot() const { return SysRoot; }
 
 BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
   // Get multilibs in reverse order because they're ordered most-specific last.
