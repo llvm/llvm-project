@@ -46,7 +46,9 @@ class LibcxxOptionalDataFormatterSimulatorTestCase(TestBase):
 for r in range(2):
     name = f"test_r{r}"
     defines = [f"REVISION={r}"]
-    f = functools.partialmethod(
-        LibcxxOptionalDataFormatterSimulatorTestCase._run_test, defines
-    )
-    setattr(LibcxxOptionalDataFormatterSimulatorTestCase, name, f)
+
+    @functools.wraps(LibcxxOptionalDataFormatterSimulatorTestCase._run_test)
+    def test_method(self, defines=defines):
+        LibcxxOptionalDataFormatterSimulatorTestCase._run_test(self, defines)
+
+    setattr(LibcxxOptionalDataFormatterSimulatorTestCase, name, test_method)
