@@ -477,10 +477,10 @@ public:
 
   virtual ~SyntheticSection() = default;
   virtual size_t getSize(Ctx &) const = 0;
-  virtual bool updateAllocSize() { return false; }
+  virtual bool updateAllocSize(Ctx &) { return false; }
   // If the section has the SHF_ALLOC flag and the size may be changed if
   // thunks are added, update the section size.
-  virtual bool isNeeded() const { return true; }
+  virtual bool isNeeded(Ctx &) const { return true; }
   virtual void finalizeContents(Ctx &) {}
   virtual void writeTo(Ctx &, uint8_t *buf) = 0;
 
