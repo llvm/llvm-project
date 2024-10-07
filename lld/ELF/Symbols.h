@@ -525,10 +525,10 @@ template <typename... T> Defined *makeDefined(T &&...args) {
   return &s;
 }
 
-void reportDuplicate(const Symbol &sym, const InputFile *newFile,
+void reportDuplicate(Ctx &, const Symbol &sym, const InputFile *newFile,
                      InputSectionBase *errSec, uint64_t errOffset);
 void maybeWarnUnorderableSymbol(const Symbol *sym);
-bool computeIsPreemptible(const Symbol &sym);
+bool computeIsPreemptible(Ctx &, const Symbol &sym);
 
 } // namespace elf
 } // namespace lld
