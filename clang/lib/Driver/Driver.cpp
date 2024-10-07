@@ -1200,16 +1200,16 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   }
 
   // Otherwise, use the real triple as used by the driver.
+  llvm::Triple RealTriple =
+      computeTargetTriple(*this, TargetTriple, *CLOptions);
   if (Triple.empty()) {
-    llvm::Triple RealTriple =
-        computeTargetTriple(*this, TargetTriple, *CLOptions);
     Triple = RealTriple.str();
     assert(!Triple.empty());
   }
 
   // On z/OS, start by loading the customization file before loading
   // the usual default config file(s).
-  if (llvm::Triple(Triple).isOSzOS() && loadZOSCustomizationFile(ExpCtx))
+  if (RealTriple.isOSzOS() && loadZOSCustomizationFile(ExpCtx))
     return true;
 
   // Search for config files in the following order:
