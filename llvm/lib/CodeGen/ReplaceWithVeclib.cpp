@@ -104,6 +104,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // a void type.
   auto *VTy = dyn_cast<VectorType>(II->getType());
   ElementCount EC(VTy ? VTy->getElementCount() : ElementCount::getFixed(0));
+  Type *ScalarRetTy = II->getType()->getScalarType();
   // Compute the argument types of the corresponding scalar call and check that
   // all vector operands match the previously found EC.
   SmallVector<Type *, 8> ScalarArgTypes;
@@ -111,30 +112,23 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   // OloadTys collects types used in scalar intrinsic overload name.
   SmallVector<Type *, 3> OloadTys;
-  if (VTy && isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
-    OloadTys.push_back(VTy->getElementType());
+  if (isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
+    OloadTys.push_back(ScalarRetTy);
 
   for (auto Arg : enumerate(II->args())) {
     auto *ArgTy = Arg.value()->getType();
-    // Gather type if it is used in the overload name.
-    if (isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index())) {
-      if (!isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index()) && isa<VectorType>(ArgTy))
-        OloadTys.push_back(cast<VectorType>(ArgTy)->getElementType());
-      else
-        OloadTys.push_back(ArgTy);
-    }
-
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
-      ScalarArgTypes.push_back(ArgTy);
-    } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
-      ScalarArgTypes.push_back(VectorArgTy->getElementType());
+    auto *ScalarArgTy = ArgTy->getScalarType();
+    ScalarArgTypes.push_back(ScalarArgTy);
+    if (isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index()))
+        OloadTys.push_back(ScalarArgTy);
+    if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
       // When return type is void, set EC to the first vector argument, and
       // disallow vector arguments with different ECs.
       if (EC.isZero())
         EC = VectorArgTy->getElementCount();
       else if (EC != VectorArgTy->getElementCount())
         return false;
-    } else
+    } else if (!isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index()))
       // Exit when it is supposed to be a vector argument but it isn't.
       return false;
   }
@@ -160,7 +154,6 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   // Replace the call to the intrinsic with a call to the vector library
   // function.
-  Type *ScalarRetTy = II->getType()->getScalarType();
   FunctionType *ScalarFTy =
       FunctionType::get(ScalarRetTy, ScalarArgTypes, /*isVarArg*/ false);
   const std::string MangledName = VD->getVectorFunctionABIVariantString();
