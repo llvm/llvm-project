@@ -1871,18 +1871,19 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
     if (BackendProcess->getThreadCount() == 1 ||
         BackendProcess->isSensitiveToInputOrder()) {
-      // Process the modules in the order they were provided on the command-line.
-      // It is important for this codepath to be used for WriteIndexesThinBackend,
-      // to ensure the emitted LinkedObjectsFile lists ThinLTO objects in the same
-      // order as the inputs, which otherwise would affect the final link order.
+      // Process the modules in the order they were provided on the
+      // command-line. It is important for this codepath to be used for
+      // WriteIndexesThinBackend, to ensure the emitted LinkedObjectsFile lists
+      // ThinLTO objects in the same order as the inputs, which otherwise would
+      // affect the final link order.
       for (int I = 0, E = ModuleMap.size(); I != E; ++I)
         if (Error E = ProcessOneModule(I))
           return E;
     } else {
       // When executing in parallel, process largest bitsize modules first to
       // improve parallelism, and avoid starving the thread pool near the end.
-      // This saves about 15 sec on a 36-core machine while link `clang.exe` (out
-      // of 100 sec).
+      // This saves about 15 sec on a 36-core machine while link `clang.exe`
+      // (out of 100 sec).
       std::vector<BitcodeModule *> ModulesVec;
       ModulesVec.reserve(ModuleMap.size());
       for (auto &Mod : ModuleMap)
