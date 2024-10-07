@@ -65,7 +65,7 @@ LIBC_INLINE void quick_sort(Array array) {
     if (array_size <= 1)
       return;
     size_t split_index = partition(array);
-    if (array_size <= 2)
+    if (array_size == 2)
       // The partition operation sorts the two element array.
       return;
 
