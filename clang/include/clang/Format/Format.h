@@ -225,6 +225,20 @@ struct FormatStyle {
     ///   bbb = 2;
     /// \endcode
     bool AlignCompound;
+    /// Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    /// are aligned.
+    /// \code
+    ///   true:
+    ///   unsigned int f1(void);
+    ///   void         f2(void);
+    ///   size_t       f3(void);
+    ///
+    ///   false:
+    ///   unsigned int f1(void);
+    ///   void f2(void);
+    ///   size_t f3(void);
+    /// \endcode
+    bool AlignFunctionDeclarations;
     /// Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     /// aligned.
     /// \code
@@ -264,6 +278,7 @@ struct FormatStyle {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
              AlignCompound == R.AlignCompound &&
+             AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
              PadOperators == R.PadOperators;
     }
