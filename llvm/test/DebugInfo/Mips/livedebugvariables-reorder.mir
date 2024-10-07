@@ -21,44 +21,35 @@
   target datalayout = "E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
   target triple = "mips"
 
-  define dso_local i32 @main() local_unnamed_addr #0 !dbg !8 {
+  define dso_local i32 @main() local_unnamed_addr #0 !dbg !3 {
   entry:
-    ret i32 0, !dbg !21
+    ret i32 0, !dbg !12
   }
 
-  declare !dbg !22 dso_local i32 @foo() local_unnamed_addr
+  declare !dbg !14 dso_local i32 @foo() local_unnamed_addr
 
   declare void @llvm.dbg.value(metadata, metadata, metadata)
 
   attributes #0 = { "frame-pointer"="all" }
 
   !llvm.dbg.cu = !{!0}
-  !llvm.module.flags = !{!2, !3, !4, !5, !6}
-  !llvm.ident = !{!7}
+  !llvm.module.flags = !{!2}
 
   !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 19.0.0git", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "main.c", directory: "/", checksumkind: CSK_MD5, checksum: "9edfcd32ce51b21ab508a4a0755aa78b")
-  !2 = !{i32 7, !"Dwarf Version", i32 5}
-  !3 = !{i32 2, !"Debug Info Version", i32 3}
-  !4 = !{i32 1, !"wchar_size", i32 4}
-  !5 = !{i32 7, !"frame-pointer", i32 2}
-  !6 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
-  !7 = !{!"clang version 19.0.0git"}
-  !8 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 12, type: !9, scopeLine: 12, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
-  !9 = !DISubroutineType(types: !10)
-  !10 = !{!11}
-  !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-  !12 = !{!13, !14, !15, !16}
-  !13 = !DILocalVariable(name: "aaa", scope: !8, file: !1, line: 13, type: !11)
-  !14 = !DILocalVariable(name: "bbb", scope: !8, file: !1, line: 14, type: !11)
-  !15 = !DILocalVariable(name: "ccc", scope: !8, file: !1, line: 15, type: !11)
-  !16 = !DILocalVariable(name: "ddd", scope: !8, file: !1, line: 16, type: !11)
-  !17 = !DILocation(line: 13, scope: !8)
-  !18 = !DILocation(line: 0, scope: !8)
-  !19 = !DILocation(line: 17, scope: !8)
-  !20 = !{i64 2147496201}
-  !21 = !DILocation(line: 18, scope: !8)
-  !22 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !9, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 12, type: !4, scopeLine: 12, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !7)
+  !4 = !DISubroutineType(types: !5)
+  !5 = !{!6}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{!8, !9, !10, !11}
+  !8 = !DILocalVariable(name: "aaa", scope: !3, file: !1, line: 13, type: !6)
+  !9 = !DILocalVariable(name: "bbb", scope: !3, file: !1, line: 13, type: !6)
+  !10 = !DILocalVariable(name: "ccc", scope: !3, file: !1, line: 13, type: !6)
+  !11 = !DILocalVariable(name: "ddd", scope: !3, file: !1, line: 13, type: !6)
+  !12 = !DILocation(line: 13, scope: !3)
+  !13 = !{i64 2147496201}
+  !14 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !4, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
 
 ...
 ---
@@ -76,18 +67,18 @@ callSites:
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
-    ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp, debug-location !17
-    JAL @foo, csr_o32_fpxx, implicit-def dead $ra, implicit-def $sp, implicit-def $v0, debug-location !17
-    ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp, debug-location !17
-    %0:gpr32 = COPY killed $v0, debug-location !17
-    DBG_VALUE 1001, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !18
-    DBG_VALUE 1002, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !18
-    DBG_VALUE 222, $noreg, !14, !DIExpression(), debug-location !18
-    DBG_VALUE 333, $noreg, !15, !DIExpression(), debug-location !18
-    DBG_VALUE 444, $noreg, !16, !DIExpression(), debug-location !18
-    DBG_VALUE %0, $noreg, !13, !DIExpression(), debug-location !18
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $v0, 12 /* clobber */, implicit-def dead early-clobber $v1, 12 /* clobber */, implicit-def dead early-clobber $a0, 12 /* clobber */, implicit-def dead early-clobber $a1, 12 /* clobber */, implicit-def dead early-clobber $a2, 12 /* clobber */, implicit-def dead early-clobber $a3, 12 /* clobber */, implicit-def dead early-clobber $t0, 12 /* clobber */, implicit-def dead early-clobber $t1, 12 /* clobber */, implicit-def dead early-clobber $t2, 12 /* clobber */, implicit-def dead early-clobber $t3, 12 /* clobber */, implicit-def dead early-clobber $t4, 12 /* clobber */, implicit-def dead early-clobber $t5, 12 /* clobber */, implicit-def dead early-clobber $t6, 12 /* clobber */, implicit-def dead early-clobber $t7, 12 /* clobber */, implicit-def dead early-clobber $t8, 12 /* clobber */, implicit-def dead early-clobber $t9, 12 /* clobber */, implicit-def dead early-clobber $gp, 12 /* clobber */, implicit-def dead early-clobber $ra, 12 /* clobber */, implicit-def dead early-clobber $s0, 12 /* clobber */, implicit-def dead early-clobber $s1, 12 /* clobber */, implicit-def dead early-clobber $s2, 12 /* clobber */, implicit-def dead early-clobber $s3, 12 /* clobber */, implicit-def dead early-clobber $s4, 12 /* clobber */, implicit-def dead early-clobber $s5, 12 /* clobber */, implicit-def dead early-clobber $s6, 12 /* clobber */, implicit-def dead early-clobber $s7, 12 /* clobber */, implicit-def dead early-clobber $at, !20, debug-location !19
-    $v0 = COPY killed %0, debug-location !21
-    RetRA implicit killed $v0, debug-location !21
+    ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp, debug-location !12
+    JAL @foo, csr_o32_fpxx, implicit-def dead $ra, implicit-def $sp, implicit-def $v0, debug-location !12
+    ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp, debug-location !12
+    %0:gpr32 = COPY killed $v0, debug-location !12
+    DBG_VALUE 1001, $noreg, !8, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !12
+    DBG_VALUE 1002, $noreg, !8, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !12
+    DBG_VALUE 222, $noreg, !9, !DIExpression(), debug-location !12
+    DBG_VALUE 333, $noreg, !10, !DIExpression(), debug-location !12
+    DBG_VALUE 444, $noreg, !11, !DIExpression(), debug-location !12
+    DBG_VALUE %0, $noreg, !8, !DIExpression(), debug-location !12
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $v0, 12 /* clobber */, implicit-def dead early-clobber $v1, 12 /* clobber */, implicit-def dead early-clobber $a0, 12 /* clobber */, implicit-def dead early-clobber $a1, 12 /* clobber */, implicit-def dead early-clobber $a2, 12 /* clobber */, implicit-def dead early-clobber $a3, 12 /* clobber */, implicit-def dead early-clobber $t0, 12 /* clobber */, implicit-def dead early-clobber $t1, 12 /* clobber */, implicit-def dead early-clobber $t2, 12 /* clobber */, implicit-def dead early-clobber $t3, 12 /* clobber */, implicit-def dead early-clobber $t4, 12 /* clobber */, implicit-def dead early-clobber $t5, 12 /* clobber */, implicit-def dead early-clobber $t6, 12 /* clobber */, implicit-def dead early-clobber $t7, 12 /* clobber */, implicit-def dead early-clobber $t8, 12 /* clobber */, implicit-def dead early-clobber $t9, 12 /* clobber */, implicit-def dead early-clobber $gp, 12 /* clobber */, implicit-def dead early-clobber $ra, 12 /* clobber */, implicit-def dead early-clobber $s0, 12 /* clobber */, implicit-def dead early-clobber $s1, 12 /* clobber */, implicit-def dead early-clobber $s2, 12 /* clobber */, implicit-def dead early-clobber $s3, 12 /* clobber */, implicit-def dead early-clobber $s4, 12 /* clobber */, implicit-def dead early-clobber $s5, 12 /* clobber */, implicit-def dead early-clobber $s6, 12 /* clobber */, implicit-def dead early-clobber $s7, 12 /* clobber */, implicit-def dead early-clobber $at, !13, debug-location !12
+    $v0 = COPY killed %0, debug-location !12
+    RetRA implicit killed $v0, debug-location !12
 
 ...
