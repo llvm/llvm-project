@@ -1955,7 +1955,13 @@ public:
   /// specialization which was specialized by this.
   llvm::PointerUnion<ClassTemplateDecl *,
                      ClassTemplatePartialSpecializationDecl *>
-  getSpecializedTemplateOrPartial() const;
+  getSpecializedTemplateOrPartial() const {
+    if (const auto *PartialSpec =
+            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+      return PartialSpec->PartialSpecialization;
+
+    return SpecializedTemplate.get<ClassTemplateDecl*>();
+  }
 
   /// Retrieve the set of template arguments that should be used
   /// to instantiate members of the class template or class template partial
@@ -2707,7 +2713,13 @@ public:
   /// Retrieve the variable template or variable template partial
   /// specialization which was specialized by this.
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
-  getSpecializedTemplateOrPartial() const;
+  getSpecializedTemplateOrPartial() const {
+    if (const auto *PartialSpec =
+            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+      return PartialSpec->PartialSpecialization;
+
+    return SpecializedTemplate.get<VarTemplateDecl *>();
+  }
 
   /// Retrieve the set of template arguments that should be used
   /// to instantiate the initializer of the variable template or variable

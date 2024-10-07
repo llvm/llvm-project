@@ -4112,31 +4112,31 @@ getPatternForClassTemplateSpecialization(
 
   CXXRecordDecl *Pattern = nullptr;
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
-  if (auto *PartialSpec =
-          Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-    // Instantiate using the best class template partial specialization.
-    while (PartialSpec->getInstantiatedFromMember()) {
-      // If we've found an explicit specialization of this class template,
-      // stop here and use that as the pattern.
-      if (PartialSpec->isMemberSpecialization())
+  if (auto *CTD = Specialized.dyn_cast<ClassTemplateDecl *>()) {
+    while (true) {
+      CTD = CTD->getMostRecentDecl();
+      if (CTD->isMemberSpecialization())
         break;
-
-      PartialSpec = PartialSpec->getInstantiatedFromMember();
-    }
-    Pattern = PartialSpec;
-  } else {
-    ClassTemplateDecl *Template = ClassTemplateSpec->getSpecializedTemplate();
-    while (Template->getInstantiatedFromMemberTemplate()) {
-      // If we've found an explicit specialization of this class template,
-      // stop here and use that as the pattern.
-      if (Template->isMemberSpecialization())
+      if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
+        CTD = NewCTD;
+      else
         break;
-
-      Template = Template->getInstantiatedFromMemberTemplate();
     }
-    Pattern = Template->getTemplatedDecl();
+    Pattern = CTD->getTemplatedDecl();
+  } else if (auto *CTPSD =
+                 Specialized
+                     .dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+    while (true) {
+      CTPSD = CTPSD->getMostRecentDecl();
+      if (CTPSD->isMemberSpecialization())
+        break;
+      if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
+        CTPSD = NewCTPSD;
+      else
+        break;
+    }
+    Pattern = CTPSD;
   }
-
   return Pattern;
 }
 

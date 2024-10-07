@@ -997,23 +997,12 @@ void ClassTemplateSpecializationDecl::getNameForDiagnostic(
   }
 }
 
-llvm::PointerUnion<ClassTemplateDecl *,
-                   ClassTemplatePartialSpecializationDecl *>
-ClassTemplateSpecializationDecl::getSpecializedTemplateOrPartial() const {
-  if (const auto *PartialSpec =
-          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-    return PartialSpec->PartialSpecialization->getMostRecentDecl();
-
-  return SpecializedTemplate.get<ClassTemplateDecl *>()->getMostRecentDecl();
-}
-
 ClassTemplateDecl *
 ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization*>())
-    return PartialSpec->PartialSpecialization->getSpecializedTemplate()
-        ->getMostRecentDecl();
-  return SpecializedTemplate.get<ClassTemplateDecl *>()->getMostRecentDecl();
+    return PartialSpec->PartialSpecialization->getSpecializedTemplate();
+  return SpecializedTemplate.get<ClassTemplateDecl*>();
 }
 
 SourceRange
@@ -1421,21 +1410,11 @@ void VarTemplateSpecializationDecl::getNameForDiagnostic(
   }
 }
 
-llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
-VarTemplateSpecializationDecl::getSpecializedTemplateOrPartial() const {
-  if (const auto *PartialSpec =
-          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-    return PartialSpec->PartialSpecialization->getMostRecentDecl();
-
-  return SpecializedTemplate.get<VarTemplateDecl *>()->getMostRecentDecl();
-}
-
 VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-    return PartialSpec->PartialSpecialization->getSpecializedTemplate()
-        ->getMostRecentDecl();
-  return SpecializedTemplate.get<VarTemplateDecl *>()->getMostRecentDecl();
+    return PartialSpec->PartialSpecialization->getSpecializedTemplate();
+  return SpecializedTemplate.get<VarTemplateDecl *>();
 }
 
 SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
