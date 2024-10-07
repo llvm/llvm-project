@@ -1055,7 +1055,7 @@ void LinkerScript::diagnoseOrphanHandling() const {
 }
 
 void LinkerScript::diagnoseMissingSGSectionAddress() const {
-  if (!ctx.arg.cmseImplib || !ctx.in.armCmseSGSection->isNeeded())
+  if (!ctx.arg.cmseImplib || !ctx.in.armCmseSGSection->isNeeded(ctx))
     return;
 
   OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
