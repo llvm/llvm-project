@@ -67,13 +67,9 @@ public:
       : TRI(Other.TRI), LIS(Other.LIS), VRM(Other.VRM), UserTag(Other.UserTag),
         Matrix(std::move(Other.Matrix)), Queries(std::move(Other.Queries)),
         RegMaskTag(Other.RegMaskTag), RegMaskVirtReg(Other.RegMaskVirtReg),
-        RegMaskUsable(std::move(Other.RegMaskUsable)) {
-    Other.TRI = nullptr;
-    Other.LIS = nullptr;
-    Other.VRM = nullptr;
-  }
+        RegMaskUsable(std::move(Other.RegMaskUsable)) {}
 
-  void init(MachineFunction &MF, LiveIntervals *LIS, VirtRegMap *VRM);
+  void init(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM);
 
   //===--------------------------------------------------------------------===//
   // High-level interface.

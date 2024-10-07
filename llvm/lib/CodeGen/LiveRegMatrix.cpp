@@ -51,17 +51,17 @@ void LiveRegMatrixWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool LiveRegMatrixWrapperPass::runOnMachineFunction(MachineFunction &MF) {
-  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  auto *VRM = &getAnalysis<VirtRegMapWrapperPass>().getVRM();
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto &VRM = getAnalysis<VirtRegMapWrapperPass>().getVRM();
   LRM.init(MF, LIS, VRM);
   return false;
 }
 
-void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals *pLIS,
-                         VirtRegMap *pVRM) {
+void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
+                         VirtRegMap &pVRM) {
   TRI = MF.getSubtarget().getRegisterInfo();
-  LIS = pLIS;
-  VRM = pVRM;
+  LIS = &pLIS;
+  VRM = &pVRM;
 
   unsigned NumRegUnits = TRI->getNumRegUnits();
   if (NumRegUnits != Matrix.size())
@@ -261,6 +261,6 @@ LiveRegMatrix LiveRegMatrixAnalysis::run(MachineFunction &MF,
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   auto &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
   LiveRegMatrix LRM;
-  LRM.init(MF, &LIS, &VRM);
+  LRM.init(MF, LIS, VRM);
   return LRM;
 }
