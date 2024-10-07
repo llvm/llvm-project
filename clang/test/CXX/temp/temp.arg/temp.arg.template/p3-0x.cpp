@@ -18,7 +18,7 @@ eval<D<int, 17>> eD; // expected-error{{implicit instantiation of undefined temp
 eval<E<int, float>> eE; // expected-error{{implicit instantiation of undefined template 'eval<E<int, float>>}}
 
 template<
-  template <int ...N> // expected-error{{deduced non-type template argument does not have the same type as the corresponding template parameter ('int' vs 'long')}}
+  template <int ...N> // expected-error{{deduced non-type template argument does not have the same type as the corresponding template parameter ('long' vs 'int')}}
   class TT // expected-note {{previous template template parameter is here}}
 > struct X0 { };
 
@@ -31,7 +31,7 @@ X0<X0b> inst_x0b;
 X0<X0c> inst_x0c; // expected-note{{template template argument has different template parameters than its corresponding template template parameter}}
 
 template<typename T,
-         template <T ...N> // expected-error{{deduced non-type template argument does not have the same type as the corresponding template parameter ('short' vs 'long')}}
+         template <T ...N> // expected-error{{deduced non-type template argument does not have the same type as the corresponding template parameter ('long' vs 'short')}}
          class TT // expected-note {{previous template template parameter is here}}
 > struct X1 { };
 template<int I, int J, int ...Rest> struct X1a;
