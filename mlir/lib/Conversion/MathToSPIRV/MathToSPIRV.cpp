@@ -389,7 +389,31 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
         spirv::ConstantOp::getZero(adaptor.getLhs().getType(), loc, rewriter);
     Value lessThan =
         rewriter.create<spirv::FOrdLessThanOp>(loc, adaptor.getLhs(), zero);
-    Value abs = rewriter.create<spirv::GLFAbsOp>(loc, adaptor.getLhs());
+
+    // Per C/CPP spec:
+    // "pow(base, exponent) returns NaN (and raises FE_INVALID) if base is "
+    // " finite and negative and exponent is finite and non-integer. "
+    // Calculae calc reminder from exponent and check whether it is zero
+    Value floatOne =
+        spirv::ConstantOp::getOne(adaptor.getRhs().getType(), loc, rewriter);
+    Value expRem =
+        rewriter.create<spirv::FRemOp>(loc, adaptor.getRhs(), floatOne);
+    Value expRemNonZero =
+        rewriter.create<spirv::FOrdNotEqualOp>(loc, expRem, zero);
+    Value cmpNegativeWithFractionalExp =
+        rewriter.create<spirv::LogicalAndOp>(loc, expRemNonZero, lessThan);
+    // Create NaN result and replace base value if conditions meet
+    const auto &floatSemantics = scalarFloatType.getFloatSemantics();
+    const auto nan = APFloat::getNaN(floatSemantics);
+    Attribute nanAttr = rewriter.getFloatAttr(scalarFloatType, nan);
+    if (auto vectorType = dyn_cast<VectorType>(adaptor.getRhs().getType()))
+      nanAttr = DenseElementsAttr::get(vectorType, nan);
+
+    Value NanValue = rewriter.create<spirv::ConstantOp>(
+        loc, adaptor.getRhs().getType(), nanAttr);
+    Value lhs = rewriter.create<spirv::SelectOp>(
+        loc, cmpNegativeWithFractionalExp, NanValue, adaptor.getLhs());
+    Value abs = rewriter.create<spirv::GLFAbsOp>(loc, lhs);
 
     // TODO: The following just forcefully casts y into an integer value in
     // order to properly propagate the sign, assuming integer y cases. It
