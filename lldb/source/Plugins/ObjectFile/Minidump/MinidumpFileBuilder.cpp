@@ -697,14 +697,16 @@ Status MinidumpFileBuilder::AddExceptions() {
     Exception exp_record = {};
     exp_record.ExceptionCode =
         static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
-    exp_record.ExceptionFlags = static_cast<llvm::support::ulittle32_t>(Exception::LLDB_FLAG);
+    exp_record.ExceptionFlags =
+        static_cast<llvm::support::ulittle32_t>(Exception::LLDB_FLAG);
     exp_record.ExceptionRecord = static_cast<llvm::support::ulittle64_t>(0);
     exp_record.ExceptionAddress = reg_ctx_sp->GetPC();
     exp_record.NumberParameters = static_cast<llvm::support::ulittle32_t>(1);
     std::string description = stop_info_sp->GetDescription();
-    // We have 120 bytes to work with and it's unlikely description will 
+    // We have 120 bytes to work with and it's unlikely description will
     // overflow, but we gotta check.
-    memcpy(&exp_record.ExceptionInformation, description.c_str(), std::max(description.size(), Exception::MaxParameterBytes));
+    memcpy(&exp_record.ExceptionInformation, description.c_str(),
+           std::max(description.size(), Exception::MaxParameterBytes));
     exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
     ExceptionStream exp_stream;
     exp_stream.ThreadId =
