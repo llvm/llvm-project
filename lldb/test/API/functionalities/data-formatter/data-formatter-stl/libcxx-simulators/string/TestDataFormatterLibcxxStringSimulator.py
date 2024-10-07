@@ -34,7 +34,9 @@ for v in [None, "ALTERNATE_LAYOUT"]:
             if v:
                 name += "_" + v
                 defines += [v]
-            f = functools.partialmethod(
-                LibcxxStringDataFormatterSimulatorTestCase._run_test, defines
-            )
-            setattr(LibcxxStringDataFormatterSimulatorTestCase, name, f)
+
+            @functools.wraps(LibcxxStringDataFormatterSimulatorTestCase._run_test)
+            def test_method(self, defines=defines):
+                LibcxxStringDataFormatterSimulatorTestCase._run_test(self, defines)
+
+            setattr(LibcxxStringDataFormatterSimulatorTestCase, name, test_method)
