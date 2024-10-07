@@ -322,19 +322,13 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
 
   // [C++26][basic.scope.pdecl]/p13
   // The locus of a concept-definition is immediately after its concept-name.
-  bool AddedToScope = false;
   ConceptDecl *D = Actions.ActOnStartConceptDefinition(
-      getCurScope(), *TemplateInfo.TemplateParams, Id, IdLoc, AddedToScope);
+      getCurScope(), *TemplateInfo.TemplateParams, Id, IdLoc);
 
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
 
   if (!TryConsumeToken(tok::equal)) {
-    // The expression is unset until ActOnFinishConceptDefinition(), so remove
-    // the invalid declaration from the future lookup such that the evaluation
-    // wouldn't have to handle empty expressions.
-    if (AddedToScope)
-      Actions.CurContext->removeDecl(D);
     Diag(Tok.getLocation(), diag::err_expected) << tok::equal;
     SkipUntil(tok::semi);
     return nullptr;
@@ -343,8 +337,6 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   ExprResult ConstraintExprResult =
       Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
   if (ConstraintExprResult.isInvalid()) {
-    if (AddedToScope)
-      Actions.CurContext->removeDecl(D);
     SkipUntil(tok::semi);
     return nullptr;
   }

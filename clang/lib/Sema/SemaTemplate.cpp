@@ -8632,7 +8632,7 @@ Decl *Sema::ActOnTemplateDeclarator(Scope *S,
 
 ConceptDecl *Sema::ActOnStartConceptDefinition(
     Scope *S, MultiTemplateParamsArg TemplateParameterLists,
-    const IdentifierInfo *Name, SourceLocation NameLoc, bool &AddedToScope) {
+    const IdentifierInfo *Name, SourceLocation NameLoc) {
   DeclContext *DC = CurContext;
 
   if (!DC->getRedeclContext()->isFileContext()) {
@@ -8688,10 +8688,8 @@ ConceptDecl *Sema::ActOnStartConceptDefinition(
   // We cannot properly handle redeclarations until we parse the constraint
   // expression, so only inject the name if we are sure we are not redeclaring a
   // symbol
-  if (Previous.empty()) {
+  if (Previous.empty())
     PushOnScopeChains(NewDecl, S, true);
-    AddedToScope = true;
-  }
 
   return NewDecl;
 }
