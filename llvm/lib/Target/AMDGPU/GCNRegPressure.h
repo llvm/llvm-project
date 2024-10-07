@@ -265,13 +265,14 @@ public:
                const LiveRegSet *LiveRegsCopy = nullptr);
 };
 
-LaneBitmask getLiveLaneMask(unsigned Reg,
-                            SlotIndex SI,
+LaneBitmask getLiveLaneMask(unsigned Reg, SlotIndex SI,
                             const LiveIntervals &LIS,
-                            const MachineRegisterInfo &MRI);
+                            const MachineRegisterInfo &MRI,
+                            LaneBitmask Mask = LaneBitmask::getAll());
 
 LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
-                            const MachineRegisterInfo &MRI);
+                            const MachineRegisterInfo &MRI,
+                            LaneBitmask Mask = LaneBitmask::getAll());
 
 GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
                                      const MachineRegisterInfo &MRI);
