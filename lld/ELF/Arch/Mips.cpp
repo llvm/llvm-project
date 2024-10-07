@@ -779,23 +779,23 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
 }
 
-void elf::setMipsTargetInfo(Ctx &ctx) {
+TargetInfo *elf::getMipsTargetInfo(Ctx &ctx) {
   switch (ctx.arg.ekind) {
   case ELF32LEKind: {
-    ctx.target.reset(new MIPS<ELF32LE>(ctx));
-    return;
+    static MIPS<ELF32LE> t(ctx);
+    return &t;
   }
   case ELF32BEKind: {
-    ctx.target.reset(new MIPS<ELF32BE>(ctx));
-    return;
+    static MIPS<ELF32BE> t(ctx);
+    return &t;
   }
   case ELF64LEKind: {
-    ctx.target.reset(new MIPS<ELF64LE>(ctx));
-    return;
+    static MIPS<ELF64LE> t(ctx);
+    return &t;
   }
   case ELF64BEKind: {
-    ctx.target.reset(new MIPS<ELF64BE>(ctx));
-    return;
+    static MIPS<ELF64BE> t(ctx);
+    return &t;
   }
   default:
     llvm_unreachable("unsupported target");
