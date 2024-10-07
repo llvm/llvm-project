@@ -38,20 +38,13 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK-NEXT:    br label [[CONTROL_US:%.*]]
 ; CHECK:       bb3.us:
 ; CHECK-NEXT:    br label [[CONTROL_OUTER_US]]
-; CHECK:       bb0.us:
-; CHECK-NEXT:    br label [[CONTROL_US]]
 ; CHECK:       control.us:
-; CHECK-NEXT:    [[SWITCHCOND_0_US]] = phi i32 [ [[A_0_PH_US]], [[BB0_US:%.*]] ], [ [[SWITCHCOND_0_PH_US]], [[CONTROL_OUTER_US]] ]
-; CHECK-NEXT:    switch i32 [[SWITCHCOND_0_US]], label [[CONTROL_OUTER_LOOPEXIT_US_LCSSA_US:%.*]] [
-; CHECK-NEXT:      i32 0, label [[BB0_US]]
-; CHECK-NEXT:      i32 1, label [[BB1_US_LCSSA_US:%.*]]
-; CHECK-NEXT:      i32 3, label [[BB3_US]]
+; CHECK-NEXT:    switch i32 [[SWITCHCOND_0_PH_US]], label [[CONTROL_OUTER_LOOPEXIT_US_LCSSA_US:%.*]] [
 ; CHECK-NEXT:      i32 4, label [[BB4_US_LCSSA_US:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3_US]]
 ; CHECK-NEXT:    ]
 ; CHECK:       control.outer.loopexit.us-lcssa.us:
 ; CHECK-NEXT:    br label [[CONTROL_OUTER_LOOPEXIT]]
-; CHECK:       bb1.us-lcssa.us:
-; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb4.us-lcssa.us:
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       control.outer:
@@ -79,7 +72,7 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[CONTROL]]
 ; CHECK:       bb1.us-lcssa:
-; CHECK-NEXT:    br label [[BB1]]
+; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret i32 0
 ;
