@@ -1,4 +1,4 @@
-//===- SeedCollection.cpp  -0000000----------------------------------------===//
+//===- SeedCollector.cpp  -0000000-----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,6 @@
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/Debug.h"
-#include <span>
 
 using namespace llvm;
 namespace llvm::sandboxir {
