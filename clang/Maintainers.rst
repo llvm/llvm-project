@@ -60,7 +60,7 @@ Analysis & CFG
 Experimental new constant interpreter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Timm Bäder
-| tbaeder\@redhat.com (email), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
+| tbaeder\@redhat.com (em), tbaeder (Phabricator), tbaederr (GitHub), tbaeder (Discourse), tbaeder (Discord)
 
 
 Modules & serialization
@@ -68,6 +68,8 @@ Modules & serialization
 | Chuanqi Xu
 | yedeng.yd\@linux.alibaba.com (email), ChuanqiXu (Phabricator), ChuanqiXu9 (GitHub)
 
+| Michael Spencer
+| bigcheesegs\@gmail.com (email), Bigcheese (Phabricator), Bigcheese (GitHub)
 
 Templates
 ~~~~~~~~~
@@ -264,4 +266,3 @@ Inactive component maintainers
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
-| Michael Spencer (bigcheesegs\@gmail.com (email), Bigcheese (Phabricator), Bigcheese (GitHub)) -- Modules & serialization
