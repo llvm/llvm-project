@@ -37,14 +37,12 @@ func.func @add_fold_constants(%arg: index) -> (index) {
   %0 = index.constant 1
   %1 = index.constant 2
   %2 = index.add %arg, %0
-  %3 = index.add %1, %2
-  %4 = index.add %3, %1
-  %5 = index.add %4, %0
+  %3 = index.add %2, %1
 
-  // CHECK-DAG: [[A:%.*]] = index.constant 6
-  // CHECK-DAG: [[V0:%.*]] = index.add %arg0, [[A]]
+  // CHECK-DAG: [[C3:%.*]] = index.constant 3
+  // CHECK-DAG: [[V0:%.*]] = index.add %arg0, [[C3]]
   // CHECK: return [[V0]]
-  return %5 : index
+  return %3 : index
 }
 
 // CHECK-LABEL: @sub
