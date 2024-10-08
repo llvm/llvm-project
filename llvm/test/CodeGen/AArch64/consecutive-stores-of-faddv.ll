@@ -55,15 +55,10 @@ define void @consecutive_stores_quadruple(ptr %dest0,
 define void @consecutive_stores_pair_streaming_function(ptr %dest0, <vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1) "aarch64_pstate_sm_enabled"  {
 ; CHECK-LABEL: consecutive_stores_pair_streaming_function:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    faddv s0, p0, z0.s
-; CHECK-NEXT:    stp s0, s1, [sp, #8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    str d0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    faddv s1, p0, z1.s
+; CHECK-NEXT:    stp s0, s1, [x0]
 ; CHECK-NEXT:    ret
   %dest1 = getelementptr inbounds i8, ptr %dest0, i64 4
   %reduce0 = call float @llvm.aarch64.sve.faddv.nxv4f32(<vscale x 4 x i1> splat(i1 true), <vscale x 4 x float> %vec0)
@@ -79,16 +74,10 @@ define void @consecutive_stores_quadruple_streaming_function(ptr %dest0,
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    faddv s0, p0, z0.s
 ; CHECK-NEXT:    faddv s1, p0, z1.s
-; CHECK-NEXT:    faddv s3, p0, z3.s
 ; CHECK-NEXT:    faddv s2, p0, z2.s
-; CHECK-NEXT:    stp s0, s1, [sp, #-16]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr d0, [sp]
-; CHECK-NEXT:    str d0, [x0]
-; CHECK-NEXT:    stp s2, s3, [sp, #8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    str d0, [x0, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    stp s0, s1, [x0]
+; CHECK-NEXT:    faddv s3, p0, z3.s
+; CHECK-NEXT:    stp s2, s3, [x0, #8]
 ; CHECK-NEXT:    ret
   <vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1, <vscale x 4 x float> %vec2, <vscale x 4 x float> %vec3) "aarch64_pstate_sm_enabled"
 {

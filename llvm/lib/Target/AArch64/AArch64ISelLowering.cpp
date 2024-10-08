@@ -27924,6 +27924,23 @@ bool AArch64TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   return OptSize && !VT.isVector();
 }
 
+bool AArch64TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
+                                             const MachineFunction &MF) const {
+  // Avoid merging stores into fixed-length vectors when Neon is unavailable.
+  // Until we have more general SVE lowerings for BUILD_VECTOR this may
+  // introduce stack spills.
+  if (MemVT.isFixedLengthVector() && !Subtarget->isNeonAvailable())
+    return false;
+
+  // Do not merge to float value size (128 bytes) if no implicit
+  // float attribute is set.
+  bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
+
+  if (NoFloat)
+    return (MemVT.getSizeInBits() <= 64);
+  return true;
+}
+
 bool AArch64TargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   // We want inc-of-add for scalars and sub-of-not for vectors.
   return VT.isScalarInteger();
