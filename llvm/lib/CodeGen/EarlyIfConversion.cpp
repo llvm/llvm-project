@@ -83,6 +83,7 @@ class SSAIfConv {
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
+  const MachineLoopInfo *MLI;
 
 public:
   /// The block containing the conditional branch.
@@ -121,6 +122,8 @@ public:
 
   /// The branch condition determined by analyzeBranch.
   SmallVector<MachineOperand, 4> Cond;
+  /// Is branch predictable as determined by analyzeBranch.
+  bool IsPredictableBranch = false;
 
 private:
   /// Instructions in Head that define values used by the conditional blocks.
@@ -163,7 +166,7 @@ private:
   void rewritePHIOperands();
 
 public:
-  SSAIfConv(MachineFunction &MF) {
+  SSAIfConv(MachineFunction &MF, const MachineLoopInfo *MLI) {
     TII = MF.getSubtarget().getInstrInfo();
     TRI = MF.getSubtarget().getRegisterInfo();
     MRI = &MF.getRegInfo();
@@ -171,6 +174,7 @@ public:
     LiveRegUnits.setUniverse(TRI->getNumRegUnits());
     ClobberedRegUnits.clear();
     ClobberedRegUnits.resize(TRI->getNumRegUnits());
+    this->MLI = MLI;
   }
 
   /// canConvertIf - If the sub-CFG headed by MBB can be if-converted,
@@ -483,7 +487,7 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 
   // The branch we're looking to eliminate must be analyzable.
   Cond.clear();
-  if (TII->analyzeBranch(*Head, TBB, FBB, Cond)) {
+  if (TII->analyzeBranch(*Head, TBB, FBB, Cond, &IsPredictableBranch, MLI)) {
     LLVM_DEBUG(dbgs() << "Branch not analyzable.\n");
     return false;
   }
@@ -873,33 +877,7 @@ bool EarlyIfConverter::shouldConvertIf(SSAIfConv &IfConv) {
   // Do not try to if-convert if the condition has a high chance of being
   // predictable.
   MachineLoop *CurrentLoop = Loops->getLoopFor(IfConv.Head);
-  // If the condition is in a loop, consider it predictable if the condition
-  // itself or all its operands are loop-invariant. E.g. this considers a load
-  // from a loop-invariant address predictable; we were unable to prove that it
-  // doesn't alias any of the memory-writes in the loop, but it is likely to
-  // read to same value multiple times.
-  if (CurrentLoop && any_of(IfConv.Cond, [&](MachineOperand &MO) {
-        if (!MO.isReg() || !MO.isUse())
-          return false;
-        Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg))
-          return false;
-
-        MachineInstr *Def = MRI->getVRegDef(Reg);
-        return CurrentLoop->isLoopInvariant(*Def) ||
-               all_of(Def->operands(), [&](MachineOperand &Op) {
-                 if (Op.isImm())
-                   return true;
-                 if (!MO.isReg() || !MO.isUse())
-                   return false;
-                 Register Reg = MO.getReg();
-                 if (Register::isPhysicalRegister(Reg))
-                   return false;
-
-                 MachineInstr *Def = MRI->getVRegDef(Reg);
-                 return CurrentLoop->isLoopInvariant(*Def);
-               });
-      }))
+  if (CurrentLoop && IfConv.IsPredictableBranch)
     return false;
 
   if (!MinInstr)
@@ -1095,7 +1073,7 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   MinInstr = nullptr;
 
   bool Changed = false;
-  SSAIfConv IfConv(MF);
+  SSAIfConv IfConv(MF, Loops);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase
@@ -1231,7 +1209,7 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   bool Changed = false;
-  SSAIfConv IfConv(MF);
+  SSAIfConv IfConv(MF, Loops);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase
