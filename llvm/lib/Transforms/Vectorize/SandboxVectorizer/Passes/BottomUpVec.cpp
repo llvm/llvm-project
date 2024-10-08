@@ -27,22 +27,26 @@ static cl::opt<std::string> UserDefinedPassPipeline(
     cl::desc("Comma-separated list of vectorizer passes. If not set "
              "we run the predefined pipeline."));
 
-static void registerAllRegionPasses(sandboxir::PassRegistry &PR) {
-  PR.registerPass(std::make_unique<sandboxir::NullPass>());
+static std::unique_ptr<RegionPass> createRegionPass(StringRef Name) {
+#define REGION_PASS(NAME, CREATE_PASS)                                         \
+  if (Name == NAME)                                                            \
+    return std::make_unique<decltype(CREATE_PASS)>(CREATE_PASS);
+#include "PassRegistry.def"
+  return nullptr;
 }
 
-/// Adds to `RPM` a sequence of passes described by `Pipeline` from the `PR`
-/// pass registry.
-static void parseAndCreatePassPipeline(RegionPassManager &RPM, PassRegistry &PR,
+/// Adds to `RPM` a sequence of region passes described by `Pipeline`.
+static void parseAndCreatePassPipeline(RegionPassManager &RPM,
                                        StringRef Pipeline) {
   static constexpr const char EndToken = '\0';
+  static constexpr const char PassDelimToken = ',';
   // Add EndToken to the end to ease parsing.
   std::string PipelineStr = std::string(Pipeline) + EndToken;
   int FlagBeginIdx = 0;
 
   for (auto [Idx, C] : enumerate(PipelineStr)) {
     // Keep moving Idx until we find the end of the pass name.
-    bool FoundDelim = C == EndToken || C == PR.PassDelimToken;
+    bool FoundDelim = C == EndToken || C == PassDelimToken;
     if (!FoundDelim)
       continue;
     unsigned Sz = Idx - FlagBeginIdx;
@@ -50,26 +54,22 @@ static void parseAndCreatePassPipeline(RegionPassManager &RPM, PassRegistry &PR,
     FlagBeginIdx = Idx + 1;
 
     // Get the pass that corresponds to PassName and add it to the pass manager.
-    auto *Pass = PR.getPassByName(PassName);
-    if (Pass == nullptr) {
+    auto RegionPass = createRegionPass(PassName);
+    if (RegionPass == nullptr) {
       errs() << "Pass '" << PassName << "' not registered!\n";
       exit(1);
     }
-    // TODO: Add a type check here. The downcast is correct as long as
-    // registerAllRegionPasses only registers regions passes.
-    RPM.addPass(static_cast<sandboxir::RegionPass *>(Pass));
+    RPM.addPass(std::move(RegionPass));
   }
 }
 
 BottomUpVec::BottomUpVec() : FunctionPass("bottom-up-vec"), RPM("rpm") {
-  registerAllRegionPasses(PR);
-
   // Create a pipeline to be run on each Region created by BottomUpVec.
   if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {
     // TODO: Add default passes to RPM.
   } else {
     // Create the user-defined pipeline.
-    parseAndCreatePassPipeline(RPM, PR, UserDefinedPassPipeline);
+    parseAndCreatePassPipeline(RPM, UserDefinedPassPipeline);
   }
 }
 

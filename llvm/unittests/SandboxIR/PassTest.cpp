@@ -180,12 +180,10 @@ define void @foo() {
   };
   unsigned BBCnt1 = 0;
   unsigned BBCnt2 = 0;
-  TestPass1 TPass1(BBCnt1);
-  TestPass2 TPass2(BBCnt2);
 
   FunctionPassManager FPM("test-fpm");
-  FPM.addPass(&TPass1);
-  FPM.addPass(&TPass2);
+  FPM.addPass(std::make_unique<TestPass1>(BBCnt1));
+  FPM.addPass(std::make_unique<TestPass2>(BBCnt2));
   // Check runOnFunction().
   FPM.runOnFunction(*F);
   EXPECT_EQ(BBCnt1, 1u);
@@ -238,12 +236,10 @@ define i8 @foo(i8 %v0, i8 %v1) {
   };
   unsigned InstCount1 = 0;
   unsigned InstCount2 = 0;
-  TestPass1 TPass1(InstCount1);
-  TestPass2 TPass2(InstCount2);
 
   RegionPassManager RPM("test-rpm");
-  RPM.addPass(&TPass1);
-  RPM.addPass(&TPass2);
+  RPM.addPass(std::make_unique<TestPass1>(InstCount1));
+  RPM.addPass(std::make_unique<TestPass2>(InstCount2));
   // Check runOnRegion().
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
       Region::createRegionsFromMD(*F);
@@ -258,64 +254,4 @@ define i8 @foo(i8 %v0, i8 %v1) {
   RPM.print(SS);
   EXPECT_EQ(Buff, "test-rpm(test-pass1,test-pass2)");
 #endif // NDEBUG
-}
-
-TEST_F(PassTest, PassRegistry) {
-  class TestPass1 final : public FunctionPass {
-  public:
-    TestPass1() : FunctionPass("test-pass1") {}
-    bool runOnFunction(Function &F) final { return false; }
-  };
-  class TestPass2 final : public FunctionPass {
-  public:
-    TestPass2() : FunctionPass("test-pass2") {}
-    bool runOnFunction(Function &F) final { return false; }
-  };
-
-  PassRegistry Registry;
-  auto &TP1 = Registry.registerPass(std::make_unique<TestPass1>());
-  auto &TP2 = Registry.registerPass(std::make_unique<TestPass2>());
-
-  // Check getPassByName().
-  EXPECT_EQ(Registry.getPassByName("test-pass1"), &TP1);
-  EXPECT_EQ(Registry.getPassByName("test-pass2"), &TP2);
-
-#ifndef NDEBUG
-  // Check print().
-  std::string Buff;
-  llvm::raw_string_ostream SS(Buff);
-  Registry.print(SS);
-  EXPECT_EQ(Buff, "test-pass1\ntest-pass2\n");
-#endif // NDEBUG
-}
-
-TEST_F(PassTest, ParsePassPipeline) {
-  class TestPass1 final : public FunctionPass {
-  public:
-    TestPass1() : FunctionPass("test-pass1") {}
-    bool runOnFunction(Function &F) final { return false; }
-  };
-  class TestPass2 final : public FunctionPass {
-  public:
-    TestPass2() : FunctionPass("test-pass2") {}
-    bool runOnFunction(Function &F) final { return false; }
-  };
-
-  PassRegistry Registry;
-  Registry.registerPass(std::make_unique<TestPass1>());
-  Registry.registerPass(std::make_unique<TestPass2>());
-
-  [[maybe_unused]] auto &FPM =
-      Registry.parseAndCreatePassPipeline("test-pass1,test-pass2,test-pass1");
-#ifndef NDEBUG
-  std::string Buff;
-  llvm::raw_string_ostream SS(Buff);
-  FPM.print(SS);
-  EXPECT_EQ(Buff, "init-fpm(test-pass1,test-pass2,test-pass1)");
-#endif // NDEBUG
-
-  EXPECT_DEATH(Registry.parseAndCreatePassPipeline("bad-pass-name"),
-               ".*not registered.*");
-  EXPECT_DEATH(Registry.parseAndCreatePassPipeline(""), ".*not registered.*");
-  EXPECT_DEATH(Registry.parseAndCreatePassPipeline(","), ".*not registered.*");
 }
