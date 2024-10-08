@@ -244,13 +244,28 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     return false;
   }
 
-  VPBlockBase *MiddleBB =
-      IRBB->getPlan()->getVectorLoopRegion()->getSingleSuccessor();
-  if (IRBB != IRBB->getPlan()->getPreheader() &&
-      IRBB->getSinglePredecessor() != MiddleBB) {
-    errs() << "VPIRBasicBlock can only be used as pre-header or a successor of "
-              "middle-block at the moment!\n";
-    return false;
+  if (IRBB != IRBB->getPlan()->getPreheader()) {
+    const SmallVectorImpl<VPBlockBase *> &Succs =
+        IRBB->getPlan()->getVectorLoopRegion()->getSuccessors();
+
+    // First successor is always the middle block, and the middle block's first
+    // successor is always the exit block.
+    unsigned NumMatches = 0;
+    if (Succs[0]->getSuccessors()[0] == IRBB) {
+      NumMatches++;
+    }
+
+    // The remaining successors should be vector early exits.
+    for (unsigned I = 1; I < Succs.size(); I++) {
+      if (Succs[I]->getSingleSuccessor() == IRBB)
+        NumMatches++;
+    }
+    if (!NumMatches) {
+      errs() << "VPIRBasicBlock can only be used as pre-header or an indirect "
+                "successor of "
+                "VPRegionBlock at the moment!\n";
+      return false;
+    }
   }
   return true;
 }
@@ -269,7 +284,9 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
-  if (VPB->getNumSuccessors() > 1 ||
+  // NOTE: A VPRegionBlock can legally have multiple successors due to
+  // early exits from the loop.
+  if ((VPB->getNumSuccessors() > 1 && !isa<VPRegionBlock>(VPB)) ||
       (VPBB && VPBB->getParent() && VPBB->isExiting() &&
        !VPBB->getParent()->isReplicator())) {
     if (!VPBB || !VPBB->getTerminator()) {
@@ -277,7 +294,7 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
                 "have a proper branch recipe!\n";
       return false;
     }
-  } else {
+  } else if (!isa<VPRegionBlock>(VPB)) {
     if (VPBB && VPBB->getTerminator()) {
       errs() << "Unexpected branch recipe!\n";
       return false;
@@ -291,6 +308,26 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   if (hasDuplicates(Successors)) {
     errs() << "Multiple instances of the same successor.\n";
     return false;
+  }
+
+  // If this is a loop region with multiple successors it must have as many
+  // exiting blocks as successors, even if the original scalar loop only had a
+  // single exit block. That's because in the vector loop we always create a
+  // middle block for the vector latch exit, which is distinct from the early
+  // exit.
+  auto *VPRB = dyn_cast<VPRegionBlock>(VPB);
+  if (VPRB && VPRB->getNumExitingBlocks() != VPB->getNumSuccessors()) {
+    errs() << "Number of exiting blocks (" << VPRB->getNumExitingBlocks()
+           << ") does not match number of successors ("
+           << VPB->getNumSuccessors() << ")!\n";
+    return false;
+  }
+
+  if (auto *VPRB = dyn_cast<VPRegionBlock>(VPB)) {
+    if (VPRB->getNumExitingBlocks() != VPB->getNumSuccessors()) {
+      errs() << "Not enough exiting blocks for successors!\n";
+      return false;
+    }
   }
 
   for (const VPBlockBase *Succ : Successors) {

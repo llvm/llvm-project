@@ -419,7 +419,14 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
-    VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
+    auto *VPRB = dyn_cast<VPRegionBlock>(PredVPBlock);
+
+    // The exiting block that leads to this block might be an early exit from
+    // a loop region.
+    VPBasicBlock *PredVPBB = VPRB && VPRB->getEarlyExit() == this
+                                 ? cast<VPBasicBlock>(VPRB->getEarlyExiting())
+                                 : PredVPBlock->getExitingBasicBlock();
+
     auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
 
@@ -441,6 +448,11 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+      VPRegionBlock *PredParentRegion =
+          dyn_cast_or_null<VPRegionBlock>(PredVPBB->getParent());
+      if (PredParentRegion->getEarlyExiting() == PredVPBB) {
+        idx = 1 - idx;
+      }
       assert(!TermBr->getSuccessor(idx) &&
              "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
@@ -497,6 +509,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
       !((SingleHPred = getSingleHierarchicalPredecessor()) &&
         SingleHPred->getExitingBasicBlock() == PrevVPBB &&
         PrevVPBB->getSingleHierarchicalSuccessor() &&
+        PrevVPBB != getEnclosingLoopRegion()->getEarlyExiting() &&
         (SingleHPred->getParent() == getEnclosingLoopRegion() &&
          !IsLoopRegion(SingleHPred))) &&         /* B */
       !(Replica && getPredecessors().empty())) { /* C */
@@ -515,7 +528,8 @@ void VPBasicBlock::execute(VPTransformState *State) {
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
     // Register NewBB in its loop. In innermost loops its the same for all
     // BB's.
-    if (State->CurrentVectorLoop)
+    if (State->CurrentVectorLoop &&
+        this != getEnclosingLoopRegion()->getEarlyExit())
       State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->Builder.SetInsertPoint(Terminator);
     State->CFG.PrevBB = NewBB;
@@ -633,7 +647,11 @@ const VPRecipeBase *VPBasicBlock::getTerminator() const {
 }
 
 bool VPBasicBlock::isExiting() const {
-  return getParent() && getParent()->getExitingBasicBlock() == this;
+  const VPRegionBlock *VPRB = getParent();
+  if (!VPRB)
+    return false;
+  return VPRB->getExitingBasicBlock() == this ||
+         VPRB->getEarlyExiting() == this;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -874,7 +892,8 @@ VPIRBasicBlock *VPIRBasicBlock::fromBasicBlock(BasicBlock *IRBB) {
 VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
                                    PredicatedScalarEvolution &PSE,
                                    bool RequiresScalarEpilogueCheck,
-                                   bool TailFolded, Loop *TheLoop) {
+                                   bool TailFolded, Loop *TheLoop,
+                                   bool HasEarlyExit) {
   VPIRBasicBlock *Entry =
       VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
@@ -887,8 +906,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   // uncountable exits whilst also ensuring the symbolic maximum and known
   // back-edge taken count remain identical for loops with countable exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
-  assert((!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
-          BackedgeTakenCountSCEV == PSE.getBackedgeTakenCount()) &&
+  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
          "Invalid loop count");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,
@@ -908,6 +926,12 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
+  if (HasEarlyExit) {
+    VPBasicBlock *EarlyExitVPBB = new VPBasicBlock("vector.early.exit");
+    TopRegion->setEarlyExit(EarlyExitVPBB);
+    VPBlockUtils::connectBlocks(TopRegion, EarlyExitVPBB);
+  }
+
   VPBasicBlock *ScalarPH = new VPBasicBlock("scalar.ph");
   if (!RequiresScalarEpilogueCheck) {
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
@@ -922,7 +946,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   // 2) If we require a scalar epilogue, there is no conditional branch as
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
-  BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
+  BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.
   VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
@@ -998,7 +1022,8 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
 /// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
 /// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
-static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
+static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
+                                             BasicBlock *IRBB) {
   VPIRBasicBlock *IRVPBB = VPIRBasicBlock::fromBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB)) {
     assert(!R.isPhi() && "Tried to move phi recipe to end of block");
@@ -1012,6 +1037,7 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
     VPBlockUtils::disconnectBlocks(VPBB, Succ);
   }
   delete VPBB;
+  return IRVPBB;
 }
 
 /// Generate the code inside the preheader and body of the vectorized loop.
@@ -1035,7 +1061,7 @@ void VPlan::execute(VPTransformState *State) {
   // VPlan execution rather than earlier during VPlan construction.
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+      cast<VPBasicBlock>(getVectorLoopRegion()->getSuccessors()[0]);
   // Find the VPBB for the scalar preheader, relying on the current structure
   // when creating the middle block and its successrs: if there's a single
   // predecessor, it must be the scalar preheader. Otherwise, the second
@@ -1049,7 +1075,14 @@ void VPlan::execute(VPTransformState *State) {
   assert(!isa<VPIRBasicBlock>(ScalarPhVPBB) &&
          "scalar preheader cannot be wrapped already");
   replaceVPBBWithIRVPBB(ScalarPhVPBB, ScalarPh);
-  replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
+  MiddleVPBB = replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
+
+  // Ensure the middle block is still the first successor.
+  for (auto *Succ : getVectorLoopRegion()->getSuccessors())
+    if (Succ == MiddleVPBB) {
+      getVectorLoopRegion()->moveSuccessorToFront(MiddleVPBB);
+      break;
+    }
 
   // Disconnect the middle block from its single successor (the scalar loop
   // header) in both the CFG and DT. The branch will be recreated during VPlan
@@ -1108,6 +1141,20 @@ void VPlan::execute(VPTransformState *State) {
     Value *Phi = State->get(PhiR, NeedsScalar);
     Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
     cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+  }
+
+  // Patch up early exiting vector block to jump to the original scalar loop's
+  // early exit block.
+  if (getVectorLoopRegion()->getEarlyExit()) {
+    VPBasicBlock *EarlyExitVPBB =
+        cast<VPBasicBlock>(getVectorLoopRegion()->getEarlyExit());
+    BasicBlock *VectorEarlyExitBB = State->CFG.VPBB2IRBB[EarlyExitVPBB];
+    BasicBlock *OrigEarlyExitBB = State->CFG.EarlyExitBB;
+    BranchInst *BI = BranchInst::Create(OrigEarlyExitBB);
+    BI->insertBefore(VectorEarlyExitBB->getTerminator());
+    VectorEarlyExitBB->getTerminator()->eraseFromParent();
+    State->CFG.DTU.applyUpdates(
+        {{DominatorTree::Insert, VectorEarlyExitBB, OrigEarlyExitBB}});
   }
 
   State->CFG.DTU.flush();
@@ -1218,9 +1265,10 @@ LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
 #endif
 
-void VPlan::addLiveOut(PHINode *PN, VPValue *V) {
-  assert(LiveOuts.count(PN) == 0 && "an exit value for PN already exists");
-  LiveOuts.insert({PN, new VPLiveOut(PN, V)});
+void VPlan::addLiveOut(PHINode *PN, VPValue *V, VPBasicBlock *IncomingBlock) {
+  auto Key = std::pair<PHINode *, VPBasicBlock *>(PN, IncomingBlock);
+  assert(LiveOuts.count(Key) == 0 && "an exit value for PN already exists");
+  LiveOuts.insert({Key, new VPLiveOut(PN, V, IncomingBlock)});
 }
 
 static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
@@ -1291,8 +1339,9 @@ VPlan *VPlan::duplicate() {
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
   // Clone live-outs.
-  for (const auto &[_, LO] : LiveOuts)
-    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)]);
+  for (const auto &[Key, LO] : LiveOuts)
+    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)],
+                        Key.second);
 
   // Initialize remaining fields of cloned VPlan.
   NewPlan->VFs = VFs;

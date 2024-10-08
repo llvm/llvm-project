@@ -382,7 +382,8 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
       continue;
     auto *PredVPBB =
         dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
-    if (!PredVPBB || PredVPBB->getNumSuccessors() != 1)
+    if (!PredVPBB || PredVPBB->getNumSuccessors() != 1 ||
+        PredVPBB == Plan.getVectorLoopRegion()->getEarlyExiting())
       continue;
     WorkList.push_back(VPBB);
   }
@@ -399,6 +400,8 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
       VPBlockUtils::disconnectBlocks(VPBB, Succ);
       VPBlockUtils::connectBlocks(PredVPBB, Succ);
     }
+    if (ParentRegion && ParentRegion->getEarlyExiting() == VPBB)
+      ParentRegion->setEarlyExiting(PredVPBB);
     delete VPBB;
   }
   return !WorkList.empty();
@@ -851,7 +854,6 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
-
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
     // Try to remove redundant blend recipes.
     SmallPtrSet<VPValue *, 4> UniqueValues;
