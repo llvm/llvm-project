@@ -429,8 +429,8 @@ Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
     return findConstantFor(V, KnownConstants);
   }
   if (Constant *Condition = findConstantFor(I.getCondition(), KnownConstants))
-    if (I.getTrueValue() == LastVisited->first && Condition->isOneValue() ||
-        I.getFalseValue() == LastVisited->first && Condition->isZeroValue())
+    if ((I.getTrueValue() == LastVisited->first && Condition->isOneValue()) ||
+        (I.getFalseValue() == LastVisited->first && Condition->isZeroValue()))
       return LastVisited->second;
   return nullptr;
 }
