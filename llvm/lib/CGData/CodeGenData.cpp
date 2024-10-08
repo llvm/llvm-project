@@ -15,8 +15,10 @@
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 
 #define DEBUG_TYPE "cg-data"
@@ -30,6 +32,11 @@ cl::opt<bool>
 cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
+cl::opt<bool> CodeGenDataThinLTOTwoRounds(
+    "codegen-data-thinlto-two-rounds", cl::init(false), cl::Hidden,
+    cl::desc("Enable two-round ThinLTO code generation. The first round "
+             "emits codegen data, while the second round uses the emitted "
+             "codegen data for further optimizations."));
 
 static std::string getCGDataErrString(cgdata_error Err,
                                       const std::string &ErrMsg = "") {
@@ -139,7 +146,7 @@ CodeGenData &CodeGenData::getInstance() {
   std::call_once(CodeGenData::OnceFlag, []() {
     Instance = std::unique_ptr<CodeGenData>(new CodeGenData());
 
-    if (CodeGenDataGenerate)
+    if (CodeGenDataGenerate || CodeGenDataThinLTOTwoRounds)
       Instance->EmitCGData = true;
     else if (!CodeGenDataUsePath.empty()) {
       // Initialize the global CGData if the input file name is given.
@@ -213,6 +220,97 @@ void warn(Error E, StringRef Whence) {
       warn(IPE.message(), Whence.str(), "");
     });
   }
+}
+
+void initializeTwoCodegenRounds(StreamCacheData &CG, StreamCacheData &IR,
+                                const FileCache &OrigCache) {
+  assert(CodeGenDataThinLTOTwoRounds);
+  CG.AddStream = [&](size_t Task, const Twine &ModuleName) {
+    return std::make_unique<CachedFileStream>(
+        std::make_unique<raw_svector_ostream>(CG.Outputs[Task]));
+  };
+  IR.AddStream = [&](size_t Task, const Twine &ModuleName) {
+    return std::make_unique<CachedFileStream>(
+        std::make_unique<raw_svector_ostream>(IR.Outputs[Task]));
+  };
+
+  if (OrigCache.isValid()) {
+    auto CGCacheOrErr =
+        localCache("ThinLTO", "CG", OrigCache.getCacheDirectoryPath(),
+                   [&](size_t Task, const Twine &ModuleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
+                     CG.Files[Task] = std::move(MB);
+                   });
+    if (Error Err = CGCacheOrErr.takeError())
+      report_fatal_error(std::move(Err));
+    CG.Cache = std::move(*CGCacheOrErr);
+    auto IRCacheOrErr =
+        localCache("ThinLTO", "IR", OrigCache.getCacheDirectoryPath(),
+                   [&](size_t Task, const Twine &NoduleName,
+                       std::unique_ptr<MemoryBuffer> MB) {
+                     IR.Files[Task] = std::move(MB);
+                   });
+    if (Error Err = IRCacheOrErr.takeError())
+      report_fatal_error(std::move(Err));
+    IR.Cache = std::move(*IRCacheOrErr);
+  }
+}
+
+void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
+                            AddStreamFn AddStream) {
+  LLVM_DEBUG(dbgs() << "Saving module: " << TheModule.getModuleIdentifier()
+                    << " in Task " << Task << "\n");
+  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
+      AddStream(Task, TheModule.getModuleIdentifier());
+  if (Error Err = StreamOrErr.takeError())
+    report_fatal_error(std::move(Err));
+  std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+
+  WriteBitcodeToFile(TheModule, *Stream->OS,
+                     /*ShouldPreserveUseListOrder=*/true);
+}
+
+std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
+                                               unsigned Task,
+                                               LLVMContext &Context,
+                                               ArrayRef<StringRef> IRFiles) {
+  LLVM_DEBUG(dbgs() << "Loading module: " << OrigModule.getModuleIdentifier()
+                    << " in Task " << Task << "\n");
+  std::unique_ptr<MemoryBuffer> FileBuffer = MemoryBuffer::getMemBuffer(
+      IRFiles[Task], "in-memory IR file", /*RequiresNullTerminator=*/false);
+  auto RestoredModule = parseBitcodeFile(*FileBuffer, Context);
+  if (!RestoredModule)
+    report_fatal_error(
+        Twine("Failed to parse optimized bitcode loaded for Task: ") +
+        Twine(Task) + "\n");
+
+  // Restore the original module identifier.
+  (*RestoredModule)->setModuleIdentifier(OrigModule.getModuleIdentifier());
+  return std::move(*RestoredModule);
+}
+
+Error mergeCodeGenData(ArrayRef<StringRef> CGFiles, stable_hash *CombinedHash) {
+  OutlinedHashTreeRecord GlobalOutlineRecord;
+  for (auto File : CGFiles) {
+    if (File.empty())
+      continue;
+    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
+        File, "in-memory object file", /*RequiresNullTerminator=*/false);
+    Expected<std::unique_ptr<object::ObjectFile>> BinOrErr =
+        object::ObjectFile::createObjectFile(Buffer->getMemBufferRef());
+    if (!BinOrErr)
+      return BinOrErr.takeError();
+
+    std::unique_ptr<object::ObjectFile> &Obj = BinOrErr.get();
+    if (auto E = CodeGenDataReader::mergeFromObjectFile(
+            Obj.get(), GlobalOutlineRecord, CombinedHash))
+      return E;
+  }
+
+  if (!GlobalOutlineRecord.empty())
+    cgdata::publishOutlinedHashTree(std::move(GlobalOutlineRecord.HashTree));
+
+  return Error::success();
 }
 
 } // end namespace cgdata
