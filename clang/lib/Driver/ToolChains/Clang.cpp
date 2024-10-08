@@ -660,7 +660,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     llvm::sys::path::append(Path, "default_%m.profraw");
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--instrument-sample-cold-function-path=") + Path));
+        Twine("--instrument-cold-function-coverage-path=") + Path));
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--instrument-cold-function-coverage");
     CmdArgs.push_back("-mllvm");

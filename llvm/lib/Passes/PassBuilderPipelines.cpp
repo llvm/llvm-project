@@ -298,7 +298,7 @@ static cl::opt<bool> UseLoopVersioningLICM(
 
 static cl::opt<std::string> InstrumentColdFuncCoveragePath(
     "instrument-cold-function-coverage-path", cl::init(""),
-    cl::desc("File path for cold function coverage instrumentation"));,
+    cl::desc("File path for cold function coverage instrumentation"),
     cl::Hidden);
 
 extern cl::opt<std::string> UseCtxProfile;

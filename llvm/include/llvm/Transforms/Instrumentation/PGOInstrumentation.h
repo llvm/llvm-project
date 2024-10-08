@@ -53,6 +53,8 @@ private:
   bool ProfileSampling;
 };
 
+enum class InstrColdFuncCovMode { Conservative = 0, Optimistic };
+
 enum class PGOInstrumentationType { Invalid = 0, FDO, CSFDO, CTXPROF };
 /// The instrumentation (profile-instr-gen) pass for IR based PGO.
 class PGOInstrumentationGen : public PassInfoMixin<PGOInstrumentationGen> {
