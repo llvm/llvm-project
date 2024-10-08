@@ -691,7 +691,7 @@ private:
 
       // Build a map of module to the GUIDs and summary objects that should
       // be written to its index.
-      std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+      ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
       GVSummaryPtrSet DecSummaries;
       ThinGenerator.gatherImportedSummariesForModule(
           *TheModule, *Index, ModuleToSummariesForIndex, DecSummaries, *Input);

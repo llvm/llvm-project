@@ -301,6 +301,7 @@ public:
     Type *Ty = nullptr;
     bool IsSExt : 1;
     bool IsZExt : 1;
+    bool IsNoExt : 1;
     bool IsInReg : 1;
     bool IsSRet : 1;
     bool IsNest : 1;
@@ -317,10 +318,11 @@ public:
     Type *IndirectType = nullptr;
 
     ArgListEntry()
-        : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
-          IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
-          IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
-          IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
+        : IsSExt(false), IsZExt(false), IsNoExt(false), IsInReg(false),
+          IsSRet(false), IsNest(false), IsByVal(false), IsByRef(false),
+          IsInAlloca(false), IsPreallocated(false), IsReturned(false),
+          IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
+          IsCFGuardTarget(false) {}
 
     void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };
@@ -450,6 +452,13 @@ public:
                                                     const DataLayout &DL) const;
 
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
+    return true;
+  }
+
+  /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
+  /// should be expanded using generic code in SelectionDAGBuilder.
+  virtual bool
+  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {
     return true;
   }
 
@@ -2908,6 +2917,8 @@ public:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINIMUM:
     case ISD::FMAXIMUM:
+    case ISD::FMINIMUMNUM:
+    case ISD::FMAXIMUMNUM:
     case ISD::AVGFLOORS:
     case ISD::AVGFLOORU:
     case ISD::AVGCEILS:
@@ -3297,7 +3308,7 @@ public:
   /// Return true if it's profitable to narrow operations of type SrcVT to
   /// DestVT. e.g. on x86, it's profitable to narrow from i32 to i8 but not from
   /// i32 to i16.
-  virtual bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
+  virtual bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const {
     return false;
   }
 
@@ -3400,7 +3411,7 @@ public:
 
   /// Should we expand [US]CMP nodes using two selects and two compares, or by
   /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects() const { return false; }
+  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
 
   /// Does this target support complex deinterleaving
   virtual bool isComplexDeinterleavingSupported() const { return false; }
@@ -5283,6 +5294,9 @@ public:
   /// Expand fminimum/fmaximum into multiple comparison with selects.
   SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand fminimumnum/fmaximumnum into multiple comparison with selects.
+  SDValue expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
   /// \returns The expansion result
@@ -5601,6 +5615,10 @@ public:
   virtual bool isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode, EVT) const {
     return true;
   }
+
+  // Expand vector operation by dividing it into smaller length operations and
+  // joining their results. SDValue() is returned when expansion did not happen.
+  SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

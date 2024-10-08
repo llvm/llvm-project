@@ -44,6 +44,11 @@ function basicAlloc()
   allocate(basicAlloc)
 end
 
+function allocPtr()
+  real, pointer :: allocPtr
+  allocate(allocPtr) ! good enough for pointer
+end
+
 function sourcedAlloc()
   real, allocatable :: sourcedAlloc
   allocate(sourcedAlloc, source=0.)
@@ -142,4 +147,9 @@ function defdByAssociate()
   associate(s => defdByAssociate)
     s = 1.
   end associate
+end
+
+function defdByElementArgToImplicit() result(r)
+  real r(1)
+  call define(r(1))
 end

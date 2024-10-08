@@ -209,8 +209,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; ARM5:       @ %bb.0:
 ; ARM5-NEXT:    lsl r1, r0, #26
 ; ARM5-NEXT:    mov r2, #3
-; ARM5-NEXT:    asr r1, r1, #26
-; ARM5-NEXT:    and r1, r2, r1, lsr #9
+; ARM5-NEXT:    and r1, r2, r1, asr #31
 ; ARM5-NEXT:    add r1, r0, r1
 ; ARM5-NEXT:    and r1, r1, #60
 ; ARM5-NEXT:    sub r0, r0, r1
@@ -222,8 +221,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; ARM6:       @ %bb.0:
 ; ARM6-NEXT:    lsl r1, r0, #26
 ; ARM6-NEXT:    mov r2, #3
-; ARM6-NEXT:    asr r1, r1, #26
-; ARM6-NEXT:    and r1, r2, r1, lsr #9
+; ARM6-NEXT:    and r1, r2, r1, asr #31
 ; ARM6-NEXT:    add r1, r0, r1
 ; ARM6-NEXT:    and r1, r1, #60
 ; ARM6-NEXT:    sub r0, r0, r1
@@ -233,8 +231,9 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ;
 ; ARM7-LABEL: test_srem_pow2_setne:
 ; ARM7:       @ %bb.0:
-; ARM7-NEXT:    sbfx r1, r0, #0, #6
-; ARM7-NEXT:    ubfx r1, r1, #9, #2
+; ARM7-NEXT:    lsl r1, r0, #26
+; ARM7-NEXT:    mov r2, #3
+; ARM7-NEXT:    and r1, r2, r1, asr #31
 ; ARM7-NEXT:    add r1, r0, r1
 ; ARM7-NEXT:    and r1, r1, #60
 ; ARM7-NEXT:    sub r0, r0, r1
@@ -244,8 +243,9 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ;
 ; ARM8-LABEL: test_srem_pow2_setne:
 ; ARM8:       @ %bb.0:
-; ARM8-NEXT:    sbfx r1, r0, #0, #6
-; ARM8-NEXT:    ubfx r1, r1, #9, #2
+; ARM8-NEXT:    lsl r1, r0, #26
+; ARM8-NEXT:    mov r2, #3
+; ARM8-NEXT:    and r1, r2, r1, asr #31
 ; ARM8-NEXT:    add r1, r0, r1
 ; ARM8-NEXT:    and r1, r1, #60
 ; ARM8-NEXT:    sub r0, r0, r1
@@ -255,8 +255,9 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ;
 ; NEON7-LABEL: test_srem_pow2_setne:
 ; NEON7:       @ %bb.0:
-; NEON7-NEXT:    sbfx r1, r0, #0, #6
-; NEON7-NEXT:    ubfx r1, r1, #9, #2
+; NEON7-NEXT:    lsl r1, r0, #26
+; NEON7-NEXT:    mov r2, #3
+; NEON7-NEXT:    and r1, r2, r1, asr #31
 ; NEON7-NEXT:    add r1, r0, r1
 ; NEON7-NEXT:    and r1, r1, #60
 ; NEON7-NEXT:    sub r0, r0, r1
@@ -266,8 +267,9 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ;
 ; NEON8-LABEL: test_srem_pow2_setne:
 ; NEON8:       @ %bb.0:
-; NEON8-NEXT:    sbfx r1, r0, #0, #6
-; NEON8-NEXT:    ubfx r1, r1, #9, #2
+; NEON8-NEXT:    lsl r1, r0, #26
+; NEON8-NEXT:    mov r2, #3
+; NEON8-NEXT:    and r1, r2, r1, asr #31
 ; NEON8-NEXT:    add r1, r0, r1
 ; NEON8-NEXT:    and r1, r1, #60
 ; NEON8-NEXT:    sub r0, r0, r1

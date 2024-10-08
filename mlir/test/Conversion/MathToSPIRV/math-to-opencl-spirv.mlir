@@ -20,26 +20,34 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.CL.log %[[ADDONE]]
   %5 = math.log1p %arg0 : f32
+  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant 1.44269502 : f32
+  // CHECK: %[[LOG0:.+]] = spirv.CL.log {{.+}}
+  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  %6 = math.log2 %arg0 : f32
+  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant 0.434294492 : f32
+  // CHECK: %[[LOG1:.+]] = spirv.CL.log {{.+}}
+  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  %7 = math.log10 %arg0 : f32
   // CHECK: spirv.CL.rint %{{.*}}: f32
-  %6 = math.roundeven %arg0 : f32
+  %8 = math.roundeven %arg0 : f32
   // CHECK: spirv.CL.rsqrt %{{.*}}: f32
-  %7 = math.rsqrt %arg0 : f32
+  %9 = math.rsqrt %arg0 : f32
   // CHECK: spirv.CL.sqrt %{{.*}}: f32
-  %8 = math.sqrt %arg0 : f32
+  %10 = math.sqrt %arg0 : f32
   // CHECK: spirv.CL.tanh %{{.*}}: f32
-  %9 = math.tanh %arg0 : f32
+  %11 = math.tanh %arg0 : f32
   // CHECK: spirv.CL.sin %{{.*}}: f32
-  %10 = math.sin %arg0 : f32
+  %12 = math.sin %arg0 : f32
   // CHECK: spirv.CL.fabs %{{.*}}: f32
-  %11 = math.absf %arg0 : f32
+  %13 = math.absf %arg0 : f32
   // CHECK: spirv.CL.ceil %{{.*}}: f32
-  %12 = math.ceil %arg0 : f32
+  %14 = math.ceil %arg0 : f32
   // CHECK: spirv.CL.floor %{{.*}}: f32
-  %13 = math.floor %arg0 : f32
+  %15 = math.floor %arg0 : f32
   // CHECK: spirv.CL.erf %{{.*}}: f32
-  %14 = math.erf %arg0 : f32
+  %16 = math.erf %arg0 : f32
   // CHECK: spirv.CL.round %{{.*}}: f32
-  %15 = math.round %arg0 : f32
+  %17 = math.round %arg0 : f32
   return
 }
 
@@ -61,16 +69,24 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.CL.log %[[ADDONE]]
   %5 = math.log1p %arg0 : vector<3xf32>
+  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant dense<1.44269502> : vector<3xf32>
+  // CHECK: %[[LOG0:.+]] = spirv.CL.log {{.+}}
+  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  %6 = math.log2 %arg0 : vector<3xf32>
+  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant dense<0.434294492> : vector<3xf32>
+  // CHECK: %[[LOG1:.+]] = spirv.CL.log {{.+}}
+  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  %7 = math.log10 %arg0 : vector<3xf32>
   // CHECK: spirv.CL.rint %{{.*}}: vector<3xf32>
-  %6 = math.roundeven %arg0 : vector<3xf32>
+  %8 = math.roundeven %arg0 : vector<3xf32>
   // CHECK: spirv.CL.rsqrt %{{.*}}: vector<3xf32>
-  %7 = math.rsqrt %arg0 : vector<3xf32>
+  %9 = math.rsqrt %arg0 : vector<3xf32>
   // CHECK: spirv.CL.sqrt %{{.*}}: vector<3xf32>
-  %8 = math.sqrt %arg0 : vector<3xf32>
+  %10 = math.sqrt %arg0 : vector<3xf32>
   // CHECK: spirv.CL.tanh %{{.*}}: vector<3xf32>
-  %9 = math.tanh %arg0 : vector<3xf32>
+  %11 = math.tanh %arg0 : vector<3xf32>
   // CHECK: spirv.CL.sin %{{.*}}: vector<3xf32>
-  %10 = math.sin %arg0 : vector<3xf32>
+  %12 = math.sin %arg0 : vector<3xf32>
   return
 }
 

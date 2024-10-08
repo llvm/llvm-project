@@ -565,7 +565,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
-                       const std::vector<uint8_t> &CmdArgs) {
+                       bool CodeGenOnly, const std::vector<uint8_t> &CmdArgs) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -586,7 +586,9 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   Mod.setPartialSampleProfileRatio(CombinedIndex);
 
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
-  if (Conf.CodeGenOnly) {
+  if (CodeGenOnly) {
+    // If CodeGenOnly is set, we only perform code generation and skip
+    // optimization. This value may differ from Conf.CodeGenOnly.
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
@@ -726,14 +728,7 @@ bool lto::initImportList(const Module &M,
       if (Summary->modulePath() == M.getModuleIdentifier())
         continue;
       // Add an entry to provoke importing by thinBackend.
-      // Try emplace the entry first. If an entry with the same key already
-      // exists, set the value to 'std::min(existing-value, new-value)' to make
-      // sure a definition takes precedence over a declaration.
-      auto [Iter, Inserted] = ImportList[Summary->modulePath()].try_emplace(
-          GUID, Summary->importType());
-
-      if (!Inserted)
-        Iter->second = std::min(Iter->second, Summary->importType());
+      ImportList.addGUID(Summary->modulePath(), GUID, Summary->importType());
     }
   }
   return true;

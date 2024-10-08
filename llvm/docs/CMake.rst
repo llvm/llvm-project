@@ -309,6 +309,8 @@ These variables provide fine control over the build of LLVM and
 enabled sub-projects. Nearly all of these variable names begin with
 ``LLVM_``.
 
+.. _LLVM-related variables BUILD_SHARED_LIBS:
+
 **BUILD_SHARED_LIBS**:BOOL
   Flag indicating if each LLVM component (e.g. Support) is built as a shared
   library (ON) or as a static library (OFF). Its default value is OFF. On
@@ -571,11 +573,18 @@ enabled sub-projects. Nearly all of these variable names begin with
   Semicolon-separated list of projects to build, or *all* for building all
   (clang, lldb, lld, polly, etc) projects. This flag assumes that projects
   are checked out side-by-side and not nested, i.e. clang needs to be in
-  parallel of llvm instead of nested in `llvm/tools`. This feature allows
+  parallel of llvm instead of nested in ``llvm/tools``. This feature allows
   to have one build for only LLVM and another for clang+llvm using the same
   source checkout.
+
   The full list is:
-  ``clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
+
+  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl``
+
+  .. note::
+    Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
+    should only appear in one of the two lists. If a project is a valid possiblity
+    for both, prefer putting it in ``LLVM_ENABLE_RUNTIMES``.
 
 **LLVM_ENABLE_RTTI**:BOOL
   Build LLVM with run-time type information. Defaults to OFF.
@@ -586,10 +595,16 @@ enabled sub-projects. Nearly all of these variable names begin with
   It will build the builtins separately from the other runtimes to preserve
   correct dependency ordering. If you want to build the runtimes using a system
   compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
-  Note: the list should not have duplicates with `LLVM_ENABLE_PROJECTS`.
+
+  .. note::
+    The list should not have duplicates with ``LLVM_ENABLE_PROJECTS``.
+
   The full list is:
-  ``compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp``
+
+  ``libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
+
   To enable all of them, use:
+
   ``LLVM_ENABLE_RUNTIMES=all``
 
 **LLVM_ENABLE_SPHINX**:BOOL

@@ -10,6 +10,7 @@
 
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"

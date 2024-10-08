@@ -248,6 +248,12 @@ LIBC_INLINE T fdim(T x, T y) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE int issignaling(const T &x) {
+  FPBits<T> sx(x);
+  return sx.is_signaling_nan();
+}
+
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int canonicalize(T &cx, const T &x) {
   FPBits<T> sx(x);
   if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {

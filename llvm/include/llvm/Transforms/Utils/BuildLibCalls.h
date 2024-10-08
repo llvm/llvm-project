@@ -251,7 +251,7 @@ namespace llvm {
 
   /// Emit a call to the calloc function.
   Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
-                    const TargetLibraryInfo &TLI);
+                    const TargetLibraryInfo &TLI, unsigned AddrSpace);
 
   /// Emit a call to the hot/cold operator new function.
   Value *emitHotColdNew(Value *Num, IRBuilderBase &B,
@@ -267,6 +267,13 @@ namespace llvm {
                                       IRBuilderBase &B,
                                       const TargetLibraryInfo *TLI,
                                       LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
+                                     const TargetLibraryInfo *TLI,
+                                     LibFunc NewFunc, uint8_t HotCold);
+  Value *emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
+                                            IRBuilderBase &B,
+                                            const TargetLibraryInfo *TLI,
+                                            LibFunc NewFunc, uint8_t HotCold);
 }
 
 #endif

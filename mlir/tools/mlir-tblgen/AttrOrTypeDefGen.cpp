@@ -22,6 +22,8 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::Record;
+using llvm::RecordKeeper;
 
 //===----------------------------------------------------------------------===//
 // Utility Functions
@@ -30,14 +32,14 @@ using namespace mlir::tblgen;
 /// Find all the AttrOrTypeDef for the specified dialect. If no dialect
 /// specified and can only find one dialect's defs, use that.
 static void collectAllDefs(StringRef selectedDialect,
-                           std::vector<llvm::Record *> records,
+                           ArrayRef<const Record *> records,
                            SmallVectorImpl<AttrOrTypeDef> &resultDefs) {
   // Nothing to do if no defs were found.
   if (records.empty())
     return;
 
   auto defs = llvm::map_range(
-      records, [&](const llvm::Record *rec) { return AttrOrTypeDef(rec); });
+      records, [&](const Record *rec) { return AttrOrTypeDef(rec); });
   if (selectedDialect.empty()) {
     // If a dialect was not specified, ensure that all found defs belong to the
     // same dialect.
@@ -690,12 +692,12 @@ public:
   bool emitDefs(StringRef selectedDialect);
 
 protected:
-  DefGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os,
+  DefGenerator(ArrayRef<const Record *> defs, raw_ostream &os,
                StringRef defType, StringRef valueType, bool isAttrGenerator)
-      : defRecords(std::move(defs)), os(os), defType(defType),
-        valueType(valueType), isAttrGenerator(isAttrGenerator) {
+      : defRecords(defs), os(os), defType(defType), valueType(valueType),
+        isAttrGenerator(isAttrGenerator) {
     // Sort by occurrence in file.
-    llvm::sort(defRecords, [](llvm::Record *lhs, llvm::Record *rhs) {
+    llvm::sort(defRecords, [](const Record *lhs, const Record *rhs) {
       return lhs->getID() < rhs->getID();
     });
   }
@@ -706,7 +708,7 @@ protected:
   void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
 
   /// The set of def records to emit.
-  std::vector<llvm::Record *> defRecords;
+  std::vector<const Record *> defRecords;
   /// The attribute or type class to emit.
   /// The stream to emit to.
   raw_ostream &os;
@@ -721,13 +723,13 @@ protected:
 
 /// A specialized generator for AttrDefs.
 struct AttrDefGenerator : public DefGenerator {
-  AttrDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  AttrDefGenerator(const RecordKeeper &records, raw_ostream &os)
       : DefGenerator(records.getAllDerivedDefinitionsIfDefined("AttrDef"), os,
                      "Attr", "Attribute", /*isAttrGenerator=*/true) {}
 };
 /// A specialized generator for TypeDefs.
 struct TypeDefGenerator : public DefGenerator {
-  TypeDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
+  TypeDefGenerator(const RecordKeeper &records, raw_ostream &os)
       : DefGenerator(records.getAllDerivedDefinitionsIfDefined("TypeDef"), os,
                      "Type", "Type", /*isAttrGenerator=*/false) {}
 };
@@ -1024,6 +1026,55 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 }
 
 //===----------------------------------------------------------------------===//
+// Type Constraints
+//===----------------------------------------------------------------------===//
+
+/// Find all type constraints for which a C++ function should be generated.
+static std::vector<Constraint>
+getAllTypeConstraints(const RecordKeeper &records) {
+  std::vector<Constraint> result;
+  for (const Record *def :
+       records.getAllDerivedDefinitionsIfDefined("TypeConstraint")) {
+    // Ignore constraints defined outside of the top-level file.
+    if (llvm::SrcMgr.FindBufferContainingLoc(def->getLoc()[0]) !=
+        llvm::SrcMgr.getMainFileID())
+      continue;
+    Constraint constr(def);
+    // Generate C++ function only if "cppFunctionName" is set.
+    if (!constr.getCppFunctionName())
+      continue;
+    result.push_back(constr);
+  }
+  return result;
+}
+
+static void emitTypeConstraintDecls(const RecordKeeper &records,
+                                    raw_ostream &os) {
+  static const char *const typeConstraintDecl = R"(
+bool {0}(::mlir::Type type);
+)";
+
+  for (Constraint constr : getAllTypeConstraints(records))
+    os << strfmt(typeConstraintDecl, *constr.getCppFunctionName());
+}
+
+static void emitTypeConstraintDefs(const RecordKeeper &records,
+                                   raw_ostream &os) {
+  static const char *const typeConstraintDef = R"(
+bool {0}(::mlir::Type type) {
+  return ({1});
+}
+)";
+
+  for (Constraint constr : getAllTypeConstraints(records)) {
+    FmtContext ctx;
+    ctx.withSelf("type");
+    std::string condition = tgfmt(constr.getConditionTemplate(), &ctx);
+    os << strfmt(typeConstraintDef, *constr.getCppFunctionName(), condition);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // GEN: Registration hooks
 //===----------------------------------------------------------------------===//
 
@@ -1038,13 +1089,13 @@ static llvm::cl::opt<std::string>
 
 static mlir::GenRegistration
     genAttrDefs("gen-attrdef-defs", "Generate AttrDef definitions",
-                [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                [](const RecordKeeper &records, raw_ostream &os) {
                   AttrDefGenerator generator(records, os);
                   return generator.emitDefs(attrDialect);
                 });
 static mlir::GenRegistration
     genAttrDecls("gen-attrdef-decls", "Generate AttrDef declarations",
-                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                 [](const RecordKeeper &records, raw_ostream &os) {
                    AttrDefGenerator generator(records, os);
                    return generator.emitDecls(attrDialect);
                  });
@@ -1060,13 +1111,28 @@ static llvm::cl::opt<std::string>
 
 static mlir::GenRegistration
     genTypeDefs("gen-typedef-defs", "Generate TypeDef definitions",
-                [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                [](const RecordKeeper &records, raw_ostream &os) {
                   TypeDefGenerator generator(records, os);
                   return generator.emitDefs(typeDialect);
                 });
 static mlir::GenRegistration
     genTypeDecls("gen-typedef-decls", "Generate TypeDef declarations",
-                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                 [](const RecordKeeper &records, raw_ostream &os) {
                    TypeDefGenerator generator(records, os);
                    return generator.emitDecls(typeDialect);
                  });
+
+static mlir::GenRegistration
+    genTypeConstrDefs("gen-type-constraint-defs",
+                      "Generate type constraint definitions",
+                      [](const RecordKeeper &records, raw_ostream &os) {
+                        emitTypeConstraintDefs(records, os);
+                        return false;
+                      });
+static mlir::GenRegistration
+    genTypeConstrDecls("gen-type-constraint-decls",
+                       "Generate type constraint declarations",
+                       [](const RecordKeeper &records, raw_ostream &os) {
+                         emitTypeConstraintDecls(records, os);
+                         return false;
+                       });

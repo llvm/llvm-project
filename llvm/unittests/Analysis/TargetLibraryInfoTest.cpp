@@ -37,7 +37,7 @@ protected:
     Error.print("", os);
 
     if (!M)
-      report_fatal_error(Twine(os.str()));
+      report_fatal_error(Twine(errMsg));
   }
 
   ::testing::AssertionResult isLibFunc(const Function *FDecl,
@@ -212,6 +212,12 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @fmin(double, double)\n"
       "declare float @fminf(float, float)\n"
       "declare x86_fp80 @fminl(x86_fp80, x86_fp80)\n"
+      "declare double @fmaximum_num(double, double)\n"
+      "declare float @fmaximum_numf(float, float)\n"
+      "declare x86_fp80 @fmaximum_numl(x86_fp80, x86_fp80)\n"
+      "declare double @fminimum_num(double, double)\n"
+      "declare float @fminimum_numf(float, float)\n"
+      "declare x86_fp80 @fminimum_numl(x86_fp80, x86_fp80)\n"
       "declare double @fmod(double, double)\n"
       "declare float @fmodf(float, float)\n"
       "declare x86_fp80 @fmodl(x86_fp80, x86_fp80)\n"
@@ -311,6 +317,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @remquo(double, double, ptr)\n"
       "declare float @remquof(float, float, ptr)\n"
       "declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)\n"
+      "declare double @fdim(double, double)\n"
+      "declare float @fdimf(float, float)\n"
+      "declare x86_fp80 @fdiml(x86_fp80, x86_fp80)\n"
       "declare i32 @rename(i8*, i8*)\n"
       "declare void @rewind(%struct*)\n"
       "declare double @rint(double)\n"
@@ -333,6 +342,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare float @sinhf(float)\n"
       "declare x86_fp80 @sinhl(x86_fp80)\n"
       "declare x86_fp80 @sinl(x86_fp80)\n"
+      "declare void @sincos(double, ptr, ptr)\n"
+      "declare void @sincosf(float, ptr, ptr)\n"
+      "declare void @sincosl(x86_fp80, ptr, ptr)\n"
       "declare i32 @snprintf(i8*, i64, i8*, ...)\n"
       "declare i32 @sprintf(i8*, i8*, ...)\n"
       "declare double @sqrt(double)\n"
@@ -529,12 +541,14 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @__cxa_guard_abort(%struct*)\n"
       "declare i32 @__cxa_guard_acquire(%struct*)\n"
       "declare void @__cxa_guard_release(%struct*)\n"
+      "declare void @__cxa_throw(ptr, ptr, ptr)\n"
 
       "declare i32 @atexit(void ()*)\n"
 
       "declare void @abort()\n"
       "declare void @exit(i32)\n"
       "declare void @_Exit(i32)\n"
+      "declare void @_ZSt9terminatev()\n"
 
       "declare i32 @__nvvm_reflect(i8*)\n"
 

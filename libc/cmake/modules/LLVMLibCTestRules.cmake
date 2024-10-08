@@ -192,6 +192,7 @@ function(create_libc_unittest fq_target_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  target_link_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -465,8 +466,9 @@ function(add_integration_test test_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
-  _get_hermetic_test_compile_options(compile_options "${INTEGRATION_TEST_COMPILE_OPTIONS}")
-  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  _get_hermetic_test_compile_options(compile_options "")
+  target_compile_options(${fq_build_target_name} PRIVATE
+                         ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
@@ -638,11 +640,12 @@ function(add_libc_hermetic test_name)
       #OUTPUT_NAME ${fq_target_name}
   )
 
-  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_COMPILE_OPTIONS}")
-  target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
+  _get_hermetic_test_compile_options(compile_options "")
+  target_compile_options(${fq_build_target_name} PRIVATE
+                         ${compile_options}
+                         ${HERMETIC_TEST_COMPILE_OPTIONS})
 
   set(link_libraries "")
   foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)

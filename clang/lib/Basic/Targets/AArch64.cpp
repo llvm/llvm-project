@@ -373,6 +373,12 @@ void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
   getTargetDefinesARMV94A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV96A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.6-A does not have a v8.* equivalent, but is a superset of v9.5-A.
+  getTargetDefinesARMV95A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -399,7 +405,13 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AARCH64_CMODEL_" + CodeModel + "__");
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
-  Builder.defineMacro("__ARM_ACLE", "200");
+  Builder.defineMacro("__ARM_ACLE_VERSION(year, quarter, patch)",
+                      "(100 * (year) + 10 * (quarter) + (patch))");
+#define ARM_ACLE_VERSION(Y, Q, P) (100 * (Y) + 10 * (Q) + (P))
+  Builder.defineMacro("__ARM_ACLE", Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+  Builder.defineMacro("__FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL",
+                      Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+#undef ARM_ACLE_VERSION
   Builder.defineMacro("__ARM_ARCH",
                       std::to_string(ArchInfo->Version.getMajor()));
   Builder.defineMacro("__ARM_ARCH_PROFILE",
@@ -471,23 +483,25 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2 && HasSVE2SM4)
     Builder.defineMacro("__ARM_FEATURE_SVE2_SM4", "1");
 
+  if (HasSVEB16B16)
+    Builder.defineMacro("__ARM_FEATURE_SVE_B16B16", "1");
+
   if (HasSME) {
     Builder.defineMacro("__ARM_FEATURE_SME");
     Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
   }
 
-  if (HasSME2) {
-    Builder.defineMacro("__ARM_FEATURE_SME", "1");
+  if (HasSME2)
     Builder.defineMacro("__ARM_FEATURE_SME2", "1");
-    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
-  }
 
-  if (HasSME2p1) {
-    Builder.defineMacro("__ARM_FEATURE_SME", "1");
-    Builder.defineMacro("__ARM_FEATURE_SME2", "1");
+  if (HasSME2p1)
     Builder.defineMacro("__ARM_FEATURE_SME2p1", "1");
-    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
-  }
+
+  if (HasSMEF16F16)
+    Builder.defineMacro("__ARM_FEATURE_SME_F16F16", "1");
+
+  if (HasSMEB16B16)
+    Builder.defineMacro("__ARM_FEATURE_SME_B16B16", "1");
 
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
@@ -649,6 +663,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV94A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
     getTargetDefinesARMV95A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_6A)
+    getTargetDefinesARMV96A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -749,6 +765,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve", FPU & SveMode)
       .Case("sve-bf16", FPU & SveMode && HasBFloat16)
       .Case("sve-i8mm", FPU & SveMode && HasMatMul)
+      .Case("sve-b16b16", HasSVEB16B16)
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
@@ -763,6 +780,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
       .Case("sme-fa64", HasSMEFA64)
+      .Case("sme-f16f16", HasSMEF16F16)
+      .Case("sme-b16b16", HasSMEB16B16)
       .Cases("memtag", "memtag2", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
@@ -863,6 +882,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2SM4 = true;
     }
+    if (Feature == "+sve-b16b16")
+      HasSVEB16B16 = true;
     if (Feature == "+sve2-bitperm") {
       FPU |= NeonMode;
       FPU |= SveMode;
@@ -918,6 +939,21 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSME = true;
       HasSVE2 = true;
       HasSMEFA64 = true;
+    }
+    if (Feature == "+sme-f16f16") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+      HasSMEF16F16 = true;
+    }
+    if (Feature == "+sme-b16b16") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+      HasSVEB16B16 = true;
+      HasSMEB16B16 = true;
     }
     if (Feature == "+sb")
       HasSB = true;
@@ -1016,6 +1052,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.5a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_5A;
+    if (Feature == "+v9.6a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_6A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_6A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {

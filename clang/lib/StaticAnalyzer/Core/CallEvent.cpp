@@ -38,6 +38,7 @@
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -921,17 +922,6 @@ SVal AnyCXXConstructorCall::getCXXThisVal() const {
   if (Data)
     return loc::MemRegionVal(static_cast<const MemRegion *>(Data));
   return UnknownVal();
-}
-
-static bool isWithinStdNamespace(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext();
-  while (DC) {
-    if (const auto *NS = dyn_cast<NamespaceDecl>(DC);
-        NS && NS->isStdNamespace())
-      return true;
-    DC = DC->getParent();
-  }
-  return false;
 }
 
 void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,

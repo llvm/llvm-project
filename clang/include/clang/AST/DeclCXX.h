@@ -1547,6 +1547,10 @@ public:
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
 
+  /// Returns true if the class contains HLSL intangible type, either as
+  /// a field or in base class.
+  bool isHLSLIntangible() const { return data().IsHLSLIntangible; }
+
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
   const FunctionDecl *isLocalClass() const {
@@ -1961,9 +1965,11 @@ private:
                         ExplicitSpecifier ES,
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
-                        CXXConstructorDecl *Ctor, DeductionCandidate Kind)
+                        CXXConstructorDecl *Ctor, DeductionCandidate Kind,
+                        Expr *TrailingRequiresClause)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
-                     SC_None, false, false, ConstexprSpecKind::Unspecified),
+                     SC_None, false, false, ConstexprSpecKind::Unspecified,
+                     TrailingRequiresClause),
         Ctor(Ctor), ExplicitSpec(ES) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
@@ -1983,7 +1989,8 @@ public:
          ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
          TypeSourceInfo *TInfo, SourceLocation EndLocation,
          CXXConstructorDecl *Ctor = nullptr,
-         DeductionCandidate Kind = DeductionCandidate::Normal);
+         DeductionCandidate Kind = DeductionCandidate::Normal,
+         Expr *TrailingRequiresClause = nullptr);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);

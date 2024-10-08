@@ -5276,7 +5276,7 @@ static void __kmp_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
   switch (sched) {
   case 0: // no schedule clause specified, we can choose the default
     // let's try to schedule (team_size*10) tasks
-    grainsize = thread->th.th_team_nproc * 10;
+    grainsize = thread->th.th_team_nproc * static_cast<kmp_uint64>(10);
     KMP_FALLTHROUGH();
   case 2: // num_tasks provided
     if (grainsize > tc) {

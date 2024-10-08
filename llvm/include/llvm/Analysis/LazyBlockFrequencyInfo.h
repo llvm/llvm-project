@@ -21,7 +21,6 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-class AnalysisUsage;
 class Function;
 class LoopInfo;
 
@@ -125,5 +124,5 @@ public:
 
 /// Helper for client passes to initialize dependent passes for LBFI.
 void initializeLazyBFIPassPass(PassRegistry &Registry);
-}
+} // namespace llvm
 #endif

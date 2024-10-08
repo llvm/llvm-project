@@ -221,7 +221,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
-      : Info(InfoType::IT_namespace, USR, Name, Path) {}
+    : Info(InfoType::IT_namespace, USR, Name, Path) {}
 
 void NamespaceInfo::merge(NamespaceInfo &&Other) {
   assert(mergeable(Other));

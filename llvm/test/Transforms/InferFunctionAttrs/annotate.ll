@@ -830,6 +830,16 @@ declare float @remquof(float, float, ptr)
 ; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
 
+
+; CHECK: declare double @fdim(double, double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare double @fdim(double, double)
+
+; CHECK: declare float @fdimf(float, float) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare float @fdimf(float, float)
+
+; CHECK: declare x86_fp80 @fdiml(x86_fp80, x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare x86_fp80 @fdiml(x86_fp80, x86_fp80)
+
 ; CHECK: declare noundef i32 @rename(ptr nocapture noundef readonly, ptr nocapture noundef readonly) [[NOFREE_NOUNWIND]]
 declare i32 @rename(ptr, ptr)
 
@@ -1100,6 +1110,21 @@ declare i64 @write(i32, ptr, i64)
 ; CHECK: declare void @abort() [[NOFREE_COLD:#[0-9]+]]
 declare void @abort()
 
+; CHECK: declare void @__cxa_throw(ptr, ptr, ptr) [[COLD_NORETURN:#[0-9]+]]
+declare void @__cxa_throw(ptr, ptr, ptr)
+
+; CHECK: declare void @_ZSt9terminatev() [[NOFREE_COLD_NORETURN:#[0-9]+]]
+declare void @_ZSt9terminatev()
+
+; CHECK: declare void @sincos(double, ptr nocapture writeonly, ptr nocapture writeonly) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare void @sincos(double, ptr, ptr)
+
+; CHECK: declare void @sincosf(float, ptr nocapture writeonly, ptr nocapture writeonly) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare void @sincosf(float, ptr, ptr)
+
+; CHECK: declare void @sincosl(x86_fp80, ptr nocapture writeonly, ptr nocapture writeonly) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
+declare void @sincosl(x86_fp80, ptr, ptr)
+
 ; memset_pattern{4,8,16} aren't available everywhere.
 ; CHECK-DARWIN: declare void @memset_pattern4(ptr nocapture writeonly, ptr nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare void @memset_pattern4(ptr, ptr, i64)
@@ -1126,6 +1151,8 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[NOFREE_COLD]] = { cold nofree }
+; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN]] = { cold nofree noreturn }
+; CHECK-DAG: attributes [[COLD_NORETURN]] = { cold noreturn }
 
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind memory(none) }
 

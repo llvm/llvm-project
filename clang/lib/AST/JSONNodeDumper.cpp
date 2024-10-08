@@ -1090,6 +1090,7 @@ void JSONNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *ASD) {
 void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
   if (const TypeSourceInfo *T = FD->getFriendType())
     JOS.attribute("type", createQualType(T->getType()));
+  attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
 }
 
 void JSONNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
@@ -1352,6 +1353,9 @@ void JSONNodeDumper::VisitSYCLUniqueStableNameExpr(
   JOS.attribute("typeSourceInfo",
                 createQualType(E->getTypeSourceInfo()->getType()));
 }
+
+void JSONNodeDumper::VisitOpenACCAsteriskSizeExpr(
+    const OpenACCAsteriskSizeExpr *E) {}
 
 void JSONNodeDumper::VisitPredefinedExpr(const PredefinedExpr *PE) {
   JOS.attribute("name", PredefinedExpr::getIdentKindName(PE->getIdentKind()));
