@@ -1,6 +1,7 @@
 // RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
 
+!s32i = !cir.int<s, 32>
 module {
   cir.func @a() {
     cir.return
@@ -35,5 +36,67 @@ module {
     // MLIR: %{{[0-9]+}} = llvm.call @callee(%arg0) : (!llvm.ptr) -> !llvm.ptr
     cir.return %0 : !cir.ptr<i32>
   }
+
+  // check indirect call lowering
+  cir.global "private" external @fp : !cir.ptr<!cir.func<!s32i (!s32i)>>
+  cir.func @callIndirect(%arg: !s32i) -> !s32i {
+    %fpp = cir.get_global @fp : !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i)>>>
+    %fp = cir.load %fpp : !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i)>>>, !cir.ptr<!cir.func<!s32i (!s32i)>>
+    %retval = cir.call %fp(%arg) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
+    cir.return %retval : !s32i
+  }
+
+  // MLIR:      llvm.mlir.global external @fp() {addr_space = 0 : i32} : !llvm.ptr
+  // MLIR:      llvm.func @callIndirect(%arg0: i32) -> i32
+  // MLIR-NEXT:   %0 = llvm.mlir.addressof @fp : !llvm.ptr
+  // MLIR-NEXT:   %1 = llvm.load %0 {{.*}} : !llvm.ptr -> !llvm.ptr
+  // MLIR-NEXT:   %2 = llvm.call %1(%arg0) : !llvm.ptr, (i32) -> i32
+  // MLIR-NEXT:   llvm.return %2 : i32
+
+  // LLVM:      define i32 @callIndirect(i32 %0)
+  // LLVM-NEXT:   %2 = load ptr, ptr @fp
+  // LLVM-NEXT:   %3 = call i32 %2(i32 %0)
+  // LLVM-NEXT:   ret i32 %3
+
+  // check direct vararg call lowering
+  cir.func private @varargCallee(!s32i, ...) -> !s32i
+  cir.func @varargCaller() -> !s32i {
+    %zero = cir.const #cir.int<0> : !s32i
+    %retval = cir.call @varargCallee(%zero, %zero) : (!s32i, !s32i) -> !s32i
+    cir.return %retval : !s32i
+  }
+
+  // MLIR:      llvm.func @varargCallee(i32, ...) -> i32
+  // MLIR:      llvm.func @varargCaller() -> i32
+  // MLIR-NEXT:   %0 = llvm.mlir.constant(0 : i32) : i32
+  // MLIR-NEXT:   %1 = llvm.call @varargCallee(%0, %0) vararg(!llvm.func<i32 (i32, ...)>) : (i32, i32) -> i32
+  // MLIR-NEXT:   llvm.return %1 : i32
+
+  // LLVM:      define i32 @varargCaller()
+  // LLVM-NEXT:   %1 = call i32 (i32, ...) @varargCallee(i32 0, i32 0)
+  // LLVM-NEXT:   ret i32 %1
+
+  // check indirect vararg call lowering
+  cir.global "private" external @varargfp : !cir.ptr<!cir.func<!s32i (!s32i, ...)>>
+  cir.func @varargCallIndirect() -> !s32i {
+    %fpp = cir.get_global @varargfp : !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i, ...)>>>
+    %fp = cir.load %fpp : !cir.ptr<!cir.ptr<!cir.func<!s32i (!s32i, ...)>>>, !cir.ptr<!cir.func<!s32i (!s32i, ...)>>
+    %zero = cir.const #cir.int<0> : !s32i
+    %retval = cir.call %fp(%zero, %zero) : (!cir.ptr<!cir.func<!s32i (!s32i, ...)>>, !s32i, !s32i) -> !s32i
+    cir.return %retval : !s32i
+  }
+
+  // MLIR:      llvm.mlir.global external @varargfp() {addr_space = 0 : i32} : !llvm.ptr
+  // MLIR:      llvm.func @varargCallIndirect() -> i32
+  // MLIR-NEXT:   %0 = llvm.mlir.addressof @varargfp : !llvm.ptr
+  // MLIR-NEXT:   %1 = llvm.load %0 {{.*}} : !llvm.ptr -> !llvm.ptr
+  // MLIR-NEXT:   %2 = llvm.mlir.constant(0 : i32) : i32
+  // MLIR-NEXT:   %3 = llvm.call %1(%2, %2) vararg(!llvm.func<i32 (i32, ...)>) : !llvm.ptr, (i32, i32) -> i32
+  // MLIR-NEXT:   llvm.return %3 : i32
+
+  // LLVM:      define i32 @varargCallIndirect()
+  // LLVM-NEXT:   %1 = load ptr, ptr @varargfp
+  // LLVM-NEXT:   %2 = call i32 (i32, ...) %1(i32 0, i32 0)
+  // LLVM-NEXT:   ret i32 %2
 
 } // end module

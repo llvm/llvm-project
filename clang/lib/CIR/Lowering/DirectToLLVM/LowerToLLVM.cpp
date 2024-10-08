@@ -937,17 +937,14 @@ rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
 
   auto cconv = convertCallingConv(callIf.getCallingConv());
 
+  mlir::LLVM::LLVMFunctionType llvmFnTy;
   if (calleeAttr) { // direct call
-    if (landingPadBlock) {
-      auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
-          op, llvmResults, calleeAttr, callOperands, continueBlock,
-          mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
-      newOp.setCConv(cconv);
-    } else {
-      auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-          op, llvmResults, calleeAttr, callOperands);
-      newOp.setCConv(cconv);
-    }
+    auto fn =
+        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::FunctionOpInterface>(
+            op, calleeAttr);
+    assert(fn && "Did not find function for call");
+    llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
+        converter->convertType(fn.getFunctionType()));
   } else { // indirect call
     assert(op->getOperands().size() &&
            "operands list must no be empty for the indirect call");
@@ -956,21 +953,18 @@ rewriteToCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     auto ptyp = dyn_cast<mlir::cir::PointerType>(typ);
     auto ftyp = dyn_cast<mlir::cir::FuncType>(ptyp.getPointee());
     assert(ftyp && "expected a pointer to a function as the first operand");
+    llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp));
+  }
 
-    if (landingPadBlock) {
-      auto llvmFnTy =
-          dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp));
-      auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
-          op, llvmFnTy, mlir::FlatSymbolRefAttr{}, callOperands, continueBlock,
-          mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
-      newOp.setCConv(cconv);
-    } else {
-      auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-          op,
-          dyn_cast<mlir::LLVM::LLVMFunctionType>(converter->convertType(ftyp)),
-          callOperands);
-      newOp.setCConv(cconv);
-    }
+  if (landingPadBlock) {
+    auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
+        op, llvmFnTy, calleeAttr, callOperands, continueBlock,
+        mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
+    newOp.setCConv(cconv);
+  } else {
+    auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        op, llvmFnTy, calleeAttr, callOperands);
+    newOp.setCConv(cconv);
   }
   return mlir::success();
 }
