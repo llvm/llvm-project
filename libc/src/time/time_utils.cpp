@@ -129,7 +129,6 @@ volatile int file_usage = 0;
 void release_file(FILE *fp, char *timezone) {
   file_usage = 0;
   fclose(fp);
-  free(timezone);
 }
 
 void acquire_file(FILE *fp, char *timezone, size_t timezone_size) {
