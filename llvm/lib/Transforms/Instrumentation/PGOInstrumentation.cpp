@@ -319,6 +319,16 @@ static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
     cl::desc("Do not instrument functions with the number of critical edges "
              " greater than this threshold."));
 
+cl::opt<bool> InstrumentColdFunction(
+    "instrument-cold-function", cl::init(false), cl::Hidden,
+    cl::desc("Instrument cold functions (currently only used under sampling "
+             " PGO pipeline))"));
+
+static cl::opt<uint64_t> InstrumentColdFuncMaxEntryCount(
+    "instrument-cold-function-max-entry-count", cl::init(0), cl::Hidden,
+    cl::desc("When using --instrument-cold-function, skip instrumenting the "
+             "function whose entry count is above the given value"));
+
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
 namespace llvm {
@@ -1890,6 +1900,10 @@ static bool skipPGOGen(const Function &F) {
   if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
     return true;
   if (F.getInstructionCount() < PGOFunctionSizeThreshold)
+    return true;
+  if (InstrumentColdFunction &&
+      (!F.getEntryCount() ||
+       F.getEntryCount()->getCount() > InstrumentColdFuncMaxEntryCount))
     return true;
   return false;
 }

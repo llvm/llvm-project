@@ -296,7 +296,13 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+static cl::opt<std::string> InstrumentSampleColdFuncPath(
+    "instrument-sample-cold-function-path", cl::init(""),
+    cl::desc("File path for instrumenting sampling PGO guided cold functions"),
+    cl::Hidden);
+
 extern cl::opt<std::string> UseCtxProfile;
+extern cl::opt<bool> InstrumentColdFunction;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -1119,6 +1125,17 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       // removed.
       MPM.addPass(
           PGOIndirectCallPromotion(true /* IsInLTO */, true /* SamplePGO */));
+
+    if (InstrumentSampleColdFuncPath.getNumOccurrences() &&
+        Phase != ThinOrFullLTOPhase::ThinLTOPostLink) {
+      assert(!InstrumentSampleColdFuncPath.empty() &&
+             "File path is requeired for instrumentation generation");
+      InstrumentColdFunction = true;
+      addPreInlinerPasses(MPM, Level, Phase);
+      addPGOInstrPasses(MPM, Level, /* RunProfileGen */ true,
+                        /* IsCS */ false, /* AtomicCounterUpdate */ false,
+                        InstrumentSampleColdFuncPath, "", PGOOpt->FS);
+    }
   }
 
   // Try to perform OpenMP specific optimizations on the module. This is a
