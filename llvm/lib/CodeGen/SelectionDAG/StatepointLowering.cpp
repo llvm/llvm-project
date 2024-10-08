@@ -26,7 +26,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -339,6 +339,9 @@ static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
   // get_return_value can either be a sequence of CopyFromReg instructions
   // to grab the return value from the return register(s), or it can be a LOAD
   // to load a value returned by reference via a stack slot.
+
+  if (CallEnd->getOpcode() == ISD::EH_LABEL)
+    CallEnd = CallEnd->getOperand(0).getNode();
 
   bool HasDef = !SI.CLI.RetTy->isVoidTy();
   if (HasDef) {
@@ -670,7 +673,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // it is the contents of the slot which may get updated, not the pointer to
   // the alloca
   SmallVector<SDValue, 4> Allocas;
-  for (Value *V : SI.GCArgs) {
+  for (Value *V : SI.GCLives) {
     SDValue Incoming = Builder.getValue(V);
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
       // This handles allocas as arguments to the statepoint
@@ -1083,7 +1086,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
     }
   }
 
-  SI.GCArgs = ArrayRef<const Use>(I.gc_args_begin(), I.gc_args_end());
+  SI.GCLives = ArrayRef<const Use>(I.gc_live_begin(), I.gc_live_end());
   SI.StatepointInstr = &I;
   SI.ID = I.getID();
 

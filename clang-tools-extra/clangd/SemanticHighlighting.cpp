@@ -447,11 +447,10 @@ public:
     if (!RLoc.isValid())
       return;
 
-    const auto *RTok = TB.spelledTokenAt(RLoc);
-    // Handle `>>`. RLoc is always pointing at the right location, just change
-    // the end to be offset by 1.
-    // We'll either point at the beginning of `>>`, hence get a proper spelled
-    // or point in the middle of `>>` hence get no spelled tok.
+    const auto *RTok = TB.spelledTokenContaining(RLoc);
+    // Handle `>>`. RLoc is either part of `>>` or a spelled token on its own
+    // `>`. If it's the former, slice to have length of 1, if latter use the
+    // token as-is.
     if (!RTok || RTok->kind() == tok::greatergreater) {
       Position Begin = sourceLocToPosition(SourceMgr, RLoc);
       Position End = sourceLocToPosition(SourceMgr, RLoc.getLocWithOffset(1));
@@ -577,7 +576,7 @@ private:
       return std::nullopt;
     // We might have offsets in the main file that don't correspond to any
     // spelled tokens.
-    const auto *Tok = TB.spelledTokenAt(Loc);
+    const auto *Tok = TB.spelledTokenContaining(Loc);
     if (!Tok)
       return std::nullopt;
     return halfOpenToRange(SourceMgr,
@@ -693,17 +692,22 @@ public:
     return true;
   }
 
-  bool VisitClassTemplatePartialSpecializationDecl(
-      ClassTemplatePartialSpecializationDecl *D) {
-    if (auto *TPL = D->getTemplateParameters())
-      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+  bool
+  VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *D) {
     if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
+  bool VisitClassTemplatePartialSpecializationDecl(
+      ClassTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    return true;
+  }
+
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsInfo())
+    if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
@@ -712,8 +716,6 @@ public:
       VarTemplatePartialSpecializationDecl *D) {
     if (auto *TPL = D->getTemplateParameters())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    if (auto *Args = D->getTemplateArgsAsWritten())
-      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
@@ -1118,6 +1120,7 @@ public:
     case TemplateName::SubstTemplateTemplateParm:
     case TemplateName::SubstTemplateTemplateParmPack:
     case TemplateName::UsingTemplate:
+    case TemplateName::DeducedTemplate:
       // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }

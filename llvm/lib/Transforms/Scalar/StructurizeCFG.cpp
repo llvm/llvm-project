@@ -30,6 +30,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -85,7 +86,43 @@ using PhiMap = MapVector<PHINode *, BBValueVector>;
 using BB2BBVecMap = MapVector<BasicBlock *, BBVector>;
 
 using BBPhiMap = DenseMap<BasicBlock *, PhiMap>;
-using BBPredicates = DenseMap<BasicBlock *, Value *>;
+
+using MaybeCondBranchWeights = std::optional<class CondBranchWeights>;
+
+class CondBranchWeights {
+  uint32_t TrueWeight;
+  uint32_t FalseWeight;
+
+  CondBranchWeights(uint32_t T, uint32_t F) : TrueWeight(T), FalseWeight(F) {}
+
+public:
+  static MaybeCondBranchWeights tryParse(const BranchInst &Br) {
+    assert(Br.isConditional());
+
+    uint64_t T, F;
+    if (!extractBranchWeights(Br, T, F))
+      return std::nullopt;
+
+    return CondBranchWeights(T, F);
+  }
+
+  static void setMetadata(BranchInst &Br,
+                          const MaybeCondBranchWeights &Weights) {
+    assert(Br.isConditional());
+    if (!Weights)
+      return;
+    uint32_t Arr[] = {Weights->TrueWeight, Weights->FalseWeight};
+    setBranchWeights(Br, Arr, false);
+  }
+
+  CondBranchWeights invert() const {
+    return CondBranchWeights{FalseWeight, TrueWeight};
+  }
+};
+
+using ValueWeightPair = std::pair<Value *, MaybeCondBranchWeights>;
+
+using BBPredicates = DenseMap<BasicBlock *, ValueWeightPair>;
 using PredMap = DenseMap<BasicBlock *, BBPredicates>;
 using BB2BBMap = DenseMap<BasicBlock *, BasicBlock *>;
 
@@ -271,7 +308,7 @@ class StructurizeCFG {
 
   void analyzeLoops(RegionNode *N);
 
-  Value *buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
+  ValueWeightPair buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
 
   void gatherPredicates(RegionNode *N);
 
@@ -449,16 +486,22 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
 }
 
 /// Build the condition for one edge
-Value *StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
-                                      bool Invert) {
+ValueWeightPair StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
+                                               bool Invert) {
   Value *Cond = Invert ? BoolFalse : BoolTrue;
+  MaybeCondBranchWeights Weights;
+
   if (Term->isConditional()) {
     Cond = Term->getCondition();
+    Weights = CondBranchWeights::tryParse(*Term);
 
-    if (Idx != (unsigned)Invert)
+    if (Idx != (unsigned)Invert) {
       Cond = invertCondition(Cond);
+      if (Weights)
+        Weights = Weights->invert();
+    }
   }
-  return Cond;
+  return {Cond, Weights};
 }
 
 /// Analyze the predecessors of each block and build up predicates
@@ -490,8 +533,8 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
             if (Visited.count(Other) && !Loops.count(Other) &&
                 !Pred.count(Other) && !Pred.count(P)) {
 
-              Pred[Other] = BoolFalse;
-              Pred[P] = BoolTrue;
+              Pred[Other] = {BoolFalse, std::nullopt};
+              Pred[P] = {BoolTrue, std::nullopt};
               continue;
             }
           }
@@ -512,9 +555,9 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
 
       BasicBlock *Entry = R->getEntry();
       if (Visited.count(Entry))
-        Pred[Entry] = BoolTrue;
+        Pred[Entry] = {BoolTrue, std::nullopt};
       else
-        LPred[Entry] = BoolFalse;
+        LPred[Entry] = {BoolFalse, std::nullopt};
     }
   }
 }
@@ -578,12 +621,14 @@ void StructurizeCFG::insertConditions(bool Loops) {
     Dominator.addBlock(Parent);
 
     Value *ParentValue = nullptr;
-    for (std::pair<BasicBlock *, Value *> BBAndPred : Preds) {
+    MaybeCondBranchWeights ParentWeights = std::nullopt;
+    for (std::pair<BasicBlock *, ValueWeightPair> BBAndPred : Preds) {
       BasicBlock *BB = BBAndPred.first;
-      Value *Pred = BBAndPred.second;
+      auto [Pred, Weight] = BBAndPred.second;
 
       if (BB == Parent) {
         ParentValue = Pred;
+        ParentWeights = Weight;
         break;
       }
       PhiInserter.AddAvailableValue(BB, Pred);
@@ -592,6 +637,7 @@ void StructurizeCFG::insertConditions(bool Loops) {
 
     if (ParentValue) {
       Term->setCondition(ParentValue);
+      CondBranchWeights::setMetadata(*Term, ParentWeights);
     } else {
       if (!Dominator.resultIsRememberedBlock())
         PhiInserter.AddAvailableValue(Dominator.result(), Default);
@@ -607,7 +653,7 @@ void StructurizeCFG::simplifyConditions() {
   for (auto &I : concat<PredMap::value_type>(Predicates, LoopPreds)) {
     auto &Preds = I.second;
     for (auto &J : Preds) {
-      auto &Cond = J.second;
+      Value *Cond = J.second.first;
       Instruction *Inverted;
       if (match(Cond, m_Not(m_OneUse(m_Instruction(Inverted)))) &&
           !Cond->use_empty()) {
@@ -697,10 +743,9 @@ void StructurizeCFG::findUndefBlocks(
   // undefined value for the PHI being reconstructed.
   while (!Stack.empty()) {
     BasicBlock *Current = Stack.pop_back_val();
-    if (VisitedBlock.contains(Current))
+    if (!VisitedBlock.insert(Current).second)
       continue;
 
-    VisitedBlock.insert(Current);
     if (FlowSet.contains(Current)) {
       for (auto P : predecessors(Current))
         Stack.push_back(P);
@@ -772,7 +817,7 @@ void StructurizeCFG::simplifyAffectedPhis() {
   bool Changed;
   do {
     Changed = false;
-    SimplifyQuery Q(Func->getParent()->getDataLayout());
+    SimplifyQuery Q(Func->getDataLayout());
     Q.DT = DT;
     // Setting CanUseUndef to true might extend value liveness, set it to false
     // to achieve better register pressure.
@@ -905,9 +950,10 @@ void StructurizeCFG::setPrevNode(BasicBlock *BB) {
 /// Does BB dominate all the predicates of Node?
 bool StructurizeCFG::dominatesPredicates(BasicBlock *BB, RegionNode *Node) {
   BBPredicates &Preds = Predicates[Node->getEntry()];
-  return llvm::all_of(Preds, [&](std::pair<BasicBlock *, Value *> Pred) {
-    return DT->dominates(BB, Pred.first);
-  });
+  return llvm::all_of(Preds,
+                      [&](std::pair<BasicBlock *, ValueWeightPair> Pred) {
+                        return DT->dominates(BB, Pred.first);
+                      });
 }
 
 /// Can we predict that this node will always be called?
@@ -919,9 +965,9 @@ bool StructurizeCFG::isPredictableTrue(RegionNode *Node) {
   if (!PrevNode)
     return true;
 
-  for (std::pair<BasicBlock*, Value*> Pred : Preds) {
+  for (std::pair<BasicBlock *, ValueWeightPair> Pred : Preds) {
     BasicBlock *BB = Pred.first;
-    Value *V = Pred.second;
+    Value *V = Pred.second.first;
 
     if (V != BoolTrue)
       return false;
@@ -1212,20 +1258,46 @@ static void addRegionIntoQueue(Region &R, std::vector<Region *> &Regions) {
     addRegionIntoQueue(*E, Regions);
 }
 
+StructurizeCFGPass::StructurizeCFGPass(bool SkipUniformRegions_)
+    : SkipUniformRegions(SkipUniformRegions_) {
+  if (ForceSkipUniformRegions.getNumOccurrences())
+    SkipUniformRegions = ForceSkipUniformRegions.getValue();
+}
+
+void StructurizeCFGPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<StructurizeCFGPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (SkipUniformRegions)
+    OS << "<skip-uniform-regions>";
+}
+
 PreservedAnalyses StructurizeCFGPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
 
   bool Changed = false;
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = AM.getResult<RegionInfoAnalysis>(F);
+
+  UniformityInfo *UI = nullptr;
+  if (SkipUniformRegions)
+    UI = &AM.getResult<UniformityInfoAnalysis>(F);
+
   std::vector<Region *> Regions;
   addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
   while (!Regions.empty()) {
     Region *R = Regions.back();
+    Regions.pop_back();
+
     StructurizeCFG SCFG;
     SCFG.init(R);
+
+    if (SkipUniformRegions && SCFG.makeUniformRegion(R, *UI)) {
+      Changed = true; // May have added metadata.
+      continue;
+    }
+
     Changed |= SCFG.run(R, DT);
-    Regions.pop_back();
   }
   if (!Changed)
     return PreservedAnalyses::all();

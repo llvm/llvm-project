@@ -101,30 +101,31 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
     // chown uid:gid dst
     std::string src_path(source.GetPath());
     if (src_path.empty())
-      return Status("unable to get file path for source");
+      return Status::FromErrorString("unable to get file path for source");
     std::string dst_path(destination.GetPath());
     if (dst_path.empty())
-      return Status("unable to get file path for destination");
+      return Status::FromErrorString("unable to get file path for destination");
     StreamString command;
     command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
     RunShellCommand(command.GetData(), FileSpec(), &status, nullptr, nullptr,
                     std::chrono::seconds(10));
     if (status != 0)
-      return Status("unable to perform copy");
+      return Status::FromErrorString("unable to perform copy");
     if (uid == UINT32_MAX && gid == UINT32_MAX)
       return Status();
     if (chown_file(this, dst_path.c_str(), uid, gid) != 0)
-      return Status("unable to perform chown");
+      return Status::FromErrorString("unable to perform chown");
     return Status();
   } else if (m_remote_platform_sp) {
     if (GetSupportsRSync()) {
       std::string src_path(source.GetPath());
       if (src_path.empty())
-        return Status("unable to get file path for source");
+        return Status::FromErrorString("unable to get file path for source");
       std::string dst_path(destination.GetPath());
       if (dst_path.empty())
-        return Status("unable to get file path for destination");
+        return Status::FromErrorString(
+            "unable to get file path for destination");
       StreamString command;
       if (GetIgnoresRemoteHostname()) {
         if (!GetRSyncPrefix())
@@ -143,7 +144,8 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
       if (retcode == 0) {
         // Don't chown a local file for a remote system
         //                if (chown_file(this,dst_path.c_str(),uid,gid) != 0)
-        //                    return Status("unable to perform chown");
+        //                    return Status::FromErrorString("unable to perform
+        //                    chown");
         return Status();
       }
       // if we are still here rsync has failed - let's try the slow way before
@@ -162,14 +164,15 @@ lldb_private::Status PlatformPOSIX::GetFile(
   // Check the args, first.
   std::string src_path(source.GetPath());
   if (src_path.empty())
-    return Status("unable to get file path for source");
+    return Status::FromErrorString("unable to get file path for source");
   std::string dst_path(destination.GetPath());
   if (dst_path.empty())
-    return Status("unable to get file path for destination");
+    return Status::FromErrorString("unable to get file path for destination");
   if (IsHost()) {
     if (source == destination)
-      return Status("local scenario->source and destination are the same file "
-                    "path: no operation performed");
+      return Status::FromErrorString(
+          "local scenario->source and destination are the same file "
+          "path: no operation performed");
     // cp src dst
     StreamString cp_command;
     cp_command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
@@ -177,7 +180,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     RunShellCommand(cp_command.GetData(), FileSpec(), &status, nullptr, nullptr,
                     std::chrono::seconds(10));
     if (status != 0)
-      return Status("unable to perform copy");
+      return Status::FromErrorString("unable to perform copy");
     return Status();
   } else if (m_remote_platform_sp) {
     if (GetSupportsRSync()) {
@@ -212,7 +215,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
                                 lldb::eFilePermissionsFileDefault, error);
 
     if (fd_src == UINT64_MAX)
-      return Status("unable to open source file");
+      return Status::FromErrorString("unable to open source file");
 
     uint32_t permissions = 0;
     error = GetFilePermissions(source, permissions);
@@ -227,7 +230,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
 
     if (fd_dst == UINT64_MAX) {
       if (error.Success())
-        error.SetErrorString("unable to open destination file");
+        error = Status::FromErrorString("unable to open destination file");
     }
 
     if (error.Success()) {
@@ -245,7 +248,8 @@ lldb_private::Status PlatformPOSIX::GetFile(
                                                buffer_sp->GetBytes(), n_read,
                                                error) != n_read) {
           if (!error.Fail())
-            error.SetErrorString("unable to write to destination file");
+            error =
+                Status::FromErrorString("unable to write to destination file");
           break;
         }
         offset += n_read;
@@ -258,7 +262,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     if (fd_dst != UINT64_MAX &&
         !FileCache::GetInstance().CloseFile(fd_dst, error)) {
       if (!error.Fail())
-        error.SetErrorString("unable to close destination file");
+        error = Status::FromErrorString("unable to close destination file");
     }
     return error;
   }
@@ -303,7 +307,7 @@ const lldb::UnixSignalsSP &PlatformPOSIX::GetRemoteUnixSignals() {
 Status PlatformPOSIX::ConnectRemote(Args &args) {
   Status error;
   if (IsHost()) {
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "can't connect to the host platform '{0}', always connected",
         GetPluginName());
   } else {
@@ -315,7 +319,8 @@ Status PlatformPOSIX::ConnectRemote(Args &args) {
     if (m_remote_platform_sp && error.Success())
       error = m_remote_platform_sp->ConnectRemote(args);
     else
-      error.SetErrorString("failed to create a 'remote-gdb-server' platform");
+      error = Status::FromErrorString(
+          "failed to create a 'remote-gdb-server' platform");
 
     if (error.Fail())
       m_remote_platform_sp.reset();
@@ -348,14 +353,15 @@ Status PlatformPOSIX::DisconnectRemote() {
   Status error;
 
   if (IsHost()) {
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "can't disconnect from the host platform '{0}', always connected",
         GetPluginName());
   } else {
     if (m_remote_platform_sp)
       error = m_remote_platform_sp->DisconnectRemote();
     else
-      error.SetErrorString("the platform is not currently connected");
+      error =
+          Status::FromErrorString("the platform is not currently connected");
   }
   return error;
 }
@@ -410,7 +416,8 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
       process_sp =
           m_remote_platform_sp->Attach(attach_info, debugger, target, error);
     else
-      error.SetErrorString("the platform is not currently connected");
+      error =
+          Status::FromErrorString("the platform is not currently connected");
   }
   return process_sp;
 }
@@ -428,7 +435,8 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
       process_sp = m_remote_platform_sp->DebugProcess(launch_info, debugger,
                                                       target, error);
     else
-      error.SetErrorString("the platform is not currently connected");
+      error =
+          Status::FromErrorString("the platform is not currently connected");
     return process_sp;
   }
 
@@ -451,7 +459,8 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
                                     nullptr, true);
 
   if (!process_sp) {
-    error.SetErrorString("CreateProcess() failed for gdb-remote process");
+    error = Status::FromErrorString(
+        "CreateProcess() failed for gdb-remote process");
     LLDB_LOG(log, "error: {0}", error);
     return process_sp;
   }
@@ -510,11 +519,11 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
 
   ThreadSP thread_sp(process->GetThreadList().GetExpressionExecutionThread());
   if (!thread_sp)
-    return Status("Selected thread isn't valid");
+    return Status::FromErrorString("Selected thread isn't valid");
 
   StackFrameSP frame_sp(thread_sp->GetStackFrameAtIndex(0));
   if (!frame_sp)
-    return Status("Frame 0 isn't valid");
+    return Status::FromErrorString("Frame 0 isn't valid");
 
   ExecutionContext exe_ctx;
   frame_sp->CalculateExecutionContext(exe_ctx);
@@ -535,7 +544,7 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
     return expr_error;
 
   if (result_valobj_sp->GetError().Fail())
-    return result_valobj_sp->GetError();
+    return result_valobj_sp->GetError().Clone();
   return Status();
 }
 
@@ -616,7 +625,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
       std::move(expr), dlopen_wrapper_name, eLanguageTypeC_plus_plus, exe_ctx);
   if (!utility_fn_or_error) {
     std::string error_str = llvm::toString(utility_fn_or_error.takeError());
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "dlopen error: could not create utility function: %s",
         error_str.c_str());
     return nullptr;
@@ -653,7 +662,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   do_dlopen_function = dlopen_utility_func_up->MakeFunctionCaller(
       clang_void_pointer_type, arguments, exe_ctx.GetThreadSP(), utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "dlopen error: could not make function caller: %s",
         utility_error.AsCString());
     return nullptr;
@@ -661,7 +670,8 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   
   do_dlopen_function = dlopen_utility_func_up->GetFunctionCaller();
   if (!do_dlopen_function) {
-    error.SetErrorString("dlopen error: could not get function caller.");
+    error =
+        Status::FromErrorString("dlopen error: could not get function caller.");
     return nullptr;
   }
   
@@ -678,11 +688,12 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     loaded_image->Clear();
 
   std::string path;
-  path = remote_file.GetPath();
-  
+  path = remote_file.GetPath(false);
+
   ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
   if (!thread_sp) {
-    error.SetErrorString("dlopen error: no thread available to call dlopen.");
+    error = Status::FromErrorString(
+        "dlopen error: no thread available to call dlopen.");
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -708,7 +719,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     
   do_dlopen_function = dlopen_utility_func->GetFunctionCaller();
   if (!do_dlopen_function) {
-    error.SetErrorString("dlopen error: could not get function caller.");
+    error =
+        Status::FromErrorString("dlopen error: could not get function caller.");
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   arguments = do_dlopen_function->GetArgumentValues();
@@ -721,7 +733,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                    permissions,
                                                    utility_error);
   if (path_addr == LLDB_INVALID_ADDRESS) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "dlopen error: could not allocate memory for path: %s",
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
@@ -735,7 +747,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   process->WriteMemory(path_addr, path.c_str(), path_len, utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "dlopen error: could not write path string: %s",
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
@@ -748,7 +760,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                       permissions,
                                                       utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "dlopen error: could not allocate memory for path: %s",
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
@@ -797,7 +809,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                               permissions,
                                               utility_error);
     if (path_array_addr == LLDB_INVALID_ADDRESS) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "dlopen error: could not allocate memory for path array: %s",
           utility_error.AsCString());
       return LLDB_INVALID_IMAGE_TOKEN;
@@ -813,7 +825,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                          path_array.size(), utility_error);
 
     if (utility_error.Fail()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "dlopen error: could not write path array: %s",
           utility_error.AsCString());
       return LLDB_INVALID_IMAGE_TOKEN;
@@ -826,7 +838,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                           permissions,
                                           utility_error);
     if (buffer_addr == LLDB_INVALID_ADDRESS) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "dlopen error: could not allocate memory for buffer: %s",
           utility_error.AsCString());
       return LLDB_INVALID_IMAGE_TOKEN;
@@ -851,9 +863,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                  func_args_addr,
                                                  arguments,
                                                  diagnostics)) {
-    error.SetErrorStringWithFormat(
-        "dlopen error: could not write function arguments: %s",
-        diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        lldb::eExpressionSetupError,
+        "dlopen error: could not write function arguments:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -881,7 +893,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
   if (!scratch_ts_sp) {
-    error.SetErrorString("dlopen error: Unable to get TypeSystemClang");
+    error =
+        Status::FromErrorString("dlopen error: Unable to get TypeSystemClang");
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -893,9 +906,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   ExpressionResults results = do_dlopen_function->ExecuteFunction(
       exe_ctx, &func_args_addr, options, diagnostics, return_value);
   if (results != eExpressionCompleted) {
-    error.SetErrorStringWithFormat(
-        "dlopen error: failed executing dlopen wrapper function: %s",
-        diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        lldb::eExpressionSetupError,
+        "dlopen error: failed executing dlopen wrapper function:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -903,7 +916,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   lldb::addr_t token = process->ReadPointerFromMemory(return_addr, 
                                                       utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "dlopen error: could not read the return struct: %s",
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
@@ -928,7 +941,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   lldb::addr_t error_addr 
     = process->ReadPointerFromMemory(return_addr + addr_size, utility_error);
   if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "dlopen error: could not read error string: %s",
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
@@ -938,10 +951,11 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                     dlopen_error_str, 
                                                     utility_error);
   if (utility_error.Success() && num_chars > 0)
-    error.SetErrorStringWithFormat("dlopen error: %s",
-                                   dlopen_error_str.c_str());
+    error = Status::FromErrorStringWithFormat("dlopen error: %s",
+                                              dlopen_error_str.c_str());
   else
-    error.SetErrorStringWithFormat("dlopen failed for unknown reasons.");
+    error =
+        Status::FromErrorStringWithFormat("dlopen failed for unknown reasons.");
 
   return LLDB_INVALID_IMAGE_TOKEN;
 }
@@ -950,7 +964,7 @@ Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
                                   uint32_t image_token) {
   const addr_t image_addr = process->GetImagePtrFromToken(image_token);
   if (image_addr == LLDB_INVALID_IMAGE_TOKEN)
-    return Status("Invalid image token");
+    return Status::FromErrorString("Invalid image token");
 
   StreamString expr;
   expr.Printf("dlclose((void *)0x%" PRIx64 ")", image_addr);
@@ -962,12 +976,13 @@ Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
     return error;
 
   if (result_valobj_sp->GetError().Fail())
-    return result_valobj_sp->GetError();
+    return result_valobj_sp->GetError().Clone();
 
   Scalar scalar;
   if (result_valobj_sp->ResolveValue(scalar)) {
     if (scalar.UInt(1))
-      return Status("expression failed: \"%s\"", expr.GetData());
+      return Status::FromErrorStringWithFormat("expression failed: \"%s\"",
+                                               expr.GetData());
     process->ResetImageToken(image_token);
   }
   return Status();

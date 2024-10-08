@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -31,7 +32,7 @@ char WebAssemblyExceptionInfo::ID = 0;
 
 INITIALIZE_PASS_BEGIN(WebAssemblyExceptionInfo, DEBUG_TYPE,
                       "WebAssembly Exception Information", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(WebAssemblyExceptionInfo, DEBUG_TYPE,
                     "WebAssembly Exception Information", true, true)
@@ -45,7 +46,7 @@ bool WebAssemblyExceptionInfo::runOnMachineFunction(MachineFunction &MF) {
           ExceptionHandling::Wasm ||
       !MF.getFunction().hasPersonalityFn())
     return false;
-  auto &MDT = getAnalysis<MachineDominatorTree>();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto &MDF = getAnalysis<MachineDominanceFrontier>();
   recalculate(MF, MDT, MDF);
   LLVM_DEBUG(dump());
@@ -207,12 +208,12 @@ void WebAssemblyExceptionInfo::recalculate(
     auto *SrcWE = P.first;
     auto *DstWE = P.second;
 
-    for (auto *MBB : SrcWE->getBlocksSet()) {
+    SrcWE->getBlocksSet().remove_if([&](MachineBasicBlock *MBB){
       if (MBB->isEHPad()) {
         assert(!isReachableAmongDominated(DstWE->getEHPad(), MBB,
                                           SrcWE->getEHPad(), MDT) &&
                "We already handled EH pads above");
-        continue;
+        return false;
       }
       if (isReachableAmongDominated(DstWE->getEHPad(), MBB, SrcWE->getEHPad(),
                                     MDT)) {
@@ -227,15 +228,16 @@ void WebAssemblyExceptionInfo::recalculate(
           InnerWE->removeFromBlocksSet(MBB);
           InnerWE = InnerWE->getParentException();
         }
-        SrcWE->removeFromBlocksSet(MBB);
         LLVM_DEBUG(dbgs() << "  removed from " << SrcWE->getEHPad()->getNumber()
                           << "." << SrcWE->getEHPad()->getName()
                           << "'s exception\n");
         changeExceptionFor(MBB, SrcWE->getParentException());
         if (SrcWE->getParentException())
           SrcWE->getParentException()->addToBlocksSet(MBB);
+        return true;
       }
-    }
+      return false;
+    });
   }
 
   // Add BBs to exceptions' block vector
@@ -273,7 +275,7 @@ void WebAssemblyExceptionInfo::releaseMemory() {
 
 void WebAssemblyExceptionInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineDominanceFrontier>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }

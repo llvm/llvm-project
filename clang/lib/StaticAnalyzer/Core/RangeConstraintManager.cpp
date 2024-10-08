@@ -158,7 +158,7 @@ RangeSet RangeSet::Factory::unite(RangeSet Original, llvm::APSInt From,
 }
 
 template <typename T>
-void swapIterators(T &First, T &FirstEnd, T &Second, T &SecondEnd) {
+static void swapIterators(T &First, T &FirstEnd, T &Second, T &SecondEnd) {
   std::swap(First, Second);
   std::swap(FirstEnd, SecondEnd);
 }
@@ -2333,7 +2333,8 @@ inline ProgramStateRef EquivalenceClass::merge(RangeSet::Factory &F,
   //
   //        The moment we introduce symbolic casts, this restriction can be
   //        lifted.
-  if (getType() != Other.getType())
+  if (getType()->getCanonicalTypeUnqualified() !=
+      Other.getType()->getCanonicalTypeUnqualified())
     return State;
 
   SymbolSet Members = getClassMembers(State);
@@ -2623,7 +2624,7 @@ EquivalenceClass::removeMember(ProgramStateRef State, const SymbolRef Old) {
 }
 
 // Re-evaluate an SVal with top-level `State->assume` logic.
-[[nodiscard]] ProgramStateRef
+[[nodiscard]] static ProgramStateRef
 reAssume(ProgramStateRef State, const RangeSet *Constraint, SVal TheValue) {
   if (!Constraint)
     return State;
@@ -3282,7 +3283,7 @@ static std::string toString(const SymbolRef &Sym) {
   std::string S;
   llvm::raw_string_ostream O(S);
   Sym->dumpToStream(O);
-  return O.str();
+  return S;
 }
 
 void RangeConstraintManager::printConstraints(raw_ostream &Out,
@@ -3353,7 +3354,7 @@ static std::string toString(ProgramStateRef State, EquivalenceClass Class) {
     Out << "\"" << ClassMember << "\"";
   }
   Out << " ]";
-  return Out.str();
+  return Str;
 }
 
 void RangeConstraintManager::printEquivalenceClasses(raw_ostream &Out,

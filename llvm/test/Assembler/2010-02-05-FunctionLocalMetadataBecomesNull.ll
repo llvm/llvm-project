@@ -12,7 +12,7 @@ target triple = "x86_64-apple-darwin10.2"
 
 define i32 @main() nounwind readonly !dbg !1 {
   %diff1 = alloca i64                             ; <ptr> [#uses=2]
-; CHECK: call void @llvm.dbg.value(metadata i64 72,
+; CHECK: #dbg_value(i64 72,
   call void @llvm.dbg.declare(metadata ptr %diff1, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   store i64 72, ptr %diff1, align 8
   %v1 = load ptr, ptr @TestArrayPtr, align 8 ; <ptr> [#uses=1]

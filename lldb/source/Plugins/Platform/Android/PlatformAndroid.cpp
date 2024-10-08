@@ -177,17 +177,18 @@ Status PlatformAndroid::ConnectRemote(Args &args) {
   m_device_id.clear();
 
   if (IsHost())
-    return Status("can't connect to the host platform, always connected");
+    return Status::FromErrorString(
+        "can't connect to the host platform, always connected");
 
   if (!m_remote_platform_sp)
     m_remote_platform_sp = PlatformSP(new PlatformAndroidRemoteGDBServer());
 
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
-    return Status("URL is null.");
+    return Status::FromErrorString("URL is null.");
   std::optional<URI> parsed_url = URI::Parse(url);
   if (!parsed_url)
-    return Status("Invalid URL: %s", url);
+    return Status::FromErrorStringWithFormat("Invalid URL: %s", url);
   if (parsed_url->hostname != "localhost")
     m_device_id = parsed_url->hostname.str();
 
@@ -233,7 +234,8 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
             source_file.c_str());
 
   if (strchr(source_file.c_str(), '\'') != nullptr)
-    return Status("Doesn't support single-quotes in filenames");
+    return Status::FromErrorString(
+        "Doesn't support single-quotes in filenames");
 
   // mode == 0 can signify that adbd cannot access the file due security
   // constraints - try "cat ..." as a fallback.
@@ -280,14 +282,15 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
 
   std::string source_file = src_file_spec.GetPath(false);
   if (source_file.find('\'') != std::string::npos)
-    return Status("Doesn't support single-quotes in filenames");
+    return Status::FromErrorString(
+        "Doesn't support single-quotes in filenames");
 
   // For zip .so file, src_file_spec will be "zip_path!/so_path".
   // Extract "zip_path" from the source_file.
   static constexpr llvm::StringLiteral k_zip_separator("!/");
   size_t pos = source_file.find(k_zip_separator);
   if (pos != std::string::npos)
-    source_file = source_file.substr(0, pos);
+    source_file.resize(pos);
 
   Status error;
   AdbClientUP adb(GetAdbClient(error));
@@ -350,21 +353,22 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
   // For oat file we can try to fetch additional debug info from the device
   llvm::StringRef extension = module_sp->GetFileSpec().GetFileNameExtension();
   if (extension != ".oat" && extension != ".odex")
-    return Status(
+    return Status::FromErrorString(
         "Symbol file downloading only supported for oat and odex files");
 
   // If we have no information about the platform file we can't execute oatdump
   if (!module_sp->GetPlatformFileSpec())
-    return Status("No platform file specified");
+    return Status::FromErrorString("No platform file specified");
 
   // Symbolizer isn't available before SDK version 23
   if (GetSdkVersion() < 23)
-    return Status("Symbol file generation only supported on SDK 23+");
+    return Status::FromErrorString(
+        "Symbol file generation only supported on SDK 23+");
 
   // If we already have symtab then we don't have to try and generate one
   if (module_sp->GetSectionList()->FindSectionByName(ConstString(".symtab")) !=
       nullptr)
-    return Status("Symtab already available in the module");
+    return Status::FromErrorString("Symtab already available in the module");
 
   Status error;
   AdbClientUP adb(GetAdbClient(error));
@@ -374,8 +378,9 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
   error = adb->Shell("mktemp --directory --tmpdir /data/local/tmp", seconds(5),
                      &tmpdir);
   if (error.Fail() || tmpdir.empty())
-    return Status("Failed to generate temporary directory on the device (%s)",
-                  error.AsCString());
+    return Status::FromErrorStringWithFormat(
+        "Failed to generate temporary directory on the device (%s)",
+        error.AsCString());
   tmpdir = llvm::StringRef(tmpdir).trim().str();
 
   // Create file remover for the temporary directory created on the device
@@ -401,7 +406,8 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
                  symfile_platform_filespec.GetPath(false).c_str());
   error = adb->Shell(command.GetData(), minutes(1), nullptr);
   if (error.Fail())
-    return Status("Oatdump failed: %s", error.AsCString());
+    return Status::FromErrorStringWithFormat("Oatdump failed: %s",
+                                             error.AsCString());
 
   // Download the symbolfile from the remote device
   return GetFile(symfile_platform_filespec, dst_file_spec);
@@ -443,7 +449,7 @@ PlatformAndroid::AdbClientUP PlatformAndroid::GetAdbClient(Status &error) {
   if (adb)
     error.Clear();
   else
-    error = Status("Failed to create AdbClient");
+    error = Status::FromErrorString("Failed to create AdbClient");
   return adb;
 }
 

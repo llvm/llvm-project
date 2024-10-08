@@ -29,7 +29,7 @@ static bool shouldIgnoreArgument(const Value *V) {
 
 static Value *replaceIntrinsic(Module &M, IntrinsicInst *II,
                                Intrinsic::ID NewIID,
-                               ArrayRef<Type *> Tys = std::nullopt) {
+                               ArrayRef<Type *> Tys = {}) {
   Function *NewFunc = Intrinsic::getDeclaration(&M, NewIID, Tys);
   II->setCalledFunction(NewFunc);
   return II;
@@ -104,7 +104,7 @@ static bool callLooksLikeLoadStore(CallBase *CB, Value *&DataArg,
 
   // If we didn't find any arguments, we can fill in the pointer.
   if (!PtrArg) {
-    unsigned AS = CB->getModule()->getDataLayout().getAllocaAddrSpace();
+    unsigned AS = CB->getDataLayout().getAllocaAddrSpace();
 
     PointerType *PtrTy =
         PointerType::get(DataArg ? DataArg->getType()

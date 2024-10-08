@@ -75,16 +75,16 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
   }
 }
 
-AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
+AST_MATCHER_FUNCTION_P(StatementMatcher,
+                       isRefReturningMethodCallWithConstOverloads,
                        std::vector<StringRef>, ExcludedContainerTypes) {
   // Match method call expressions where the `this` argument is only used as
-  // const, this will be checked in `check()` part. This returned const
-  // reference is highly likely to outlive the local const reference of the
-  // variable being declared. The assumption is that the const reference being
-  // returned either points to a global static variable or to a member of the
-  // called object.
+  // const, this will be checked in `check()` part. This returned reference is
+  // highly likely to outlive the local const reference of the variable being
+  // declared. The assumption is that the reference being returned either points
+  // to a global static variable or to a member of the called object.
   const auto MethodDecl =
-      cxxMethodDecl(returns(hasCanonicalType(matchers::isReferenceToConst())))
+      cxxMethodDecl(returns(hasCanonicalType(referenceType())))
           .bind(MethodDeclId);
   const auto ReceiverExpr =
       ignoringParenImpCasts(declRefExpr(to(varDecl().bind(ObjectArgId))));
@@ -121,7 +121,7 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
       anyOf(isConstRefReturningFunctionCall(),
-            isConstRefReturningMethodCall(ExcludedContainerTypes),
+            isRefReturningMethodCallWithConstOverloads(ExcludedContainerTypes),
             ignoringImpCasts(OldVarDeclRef),
             ignoringImpCasts(unaryOperator(hasOperatorName("&"),
                                            hasUnaryOperand(OldVarDeclRef)))));
@@ -259,10 +259,11 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
         .bind("blockStmt");
   };
 
-  Finder->addMatcher(LocalVarCopiedFrom(anyOf(isConstRefReturningFunctionCall(),
-                                              isConstRefReturningMethodCall(
-                                                  ExcludedContainerTypes))),
-                     this);
+  Finder->addMatcher(
+      LocalVarCopiedFrom(anyOf(
+          isConstRefReturningFunctionCall(),
+          isRefReturningMethodCallWithConstOverloads(ExcludedContainerTypes))),
+      this);
 
   Finder->addMatcher(LocalVarCopiedFrom(declRefExpr(
                          to(varDecl(hasLocalStorage()).bind(OldVarDeclId)))),

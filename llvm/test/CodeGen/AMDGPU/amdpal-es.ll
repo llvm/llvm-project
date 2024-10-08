@@ -10,7 +10,8 @@
 ; GCN-NEXT:         .entry_point:    es_amdpal
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
-; GCN-NEXT:       0x2cca (SPI_SHADER_PGM_RSRC1_ES): 0
+; GCN-NEXT:       '0x2cca (SPI_SHADER_PGM_RSRC1_ES)': 0
+; GCN-NEXT:       '0x2ccb (SPI_SHADER_PGM_RSRC2_ES)': 0
 ; GCN-NEXT: ...
 ; GCN-NEXT:         .end_amdgpu_pal_metadata
 define amdgpu_es half @es_amdpal(half %arg0) {

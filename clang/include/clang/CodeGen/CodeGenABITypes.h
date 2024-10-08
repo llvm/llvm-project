@@ -42,6 +42,7 @@ class CXXConstructorDecl;
 class CXXDestructorDecl;
 class CXXRecordDecl;
 class CXXMethodDecl;
+class GlobalDecl;
 class ObjCMethodDecl;
 class ObjCProtocolDecl;
 
@@ -103,6 +104,13 @@ llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
 /// be a field in RD directly (i.e. not an inherited field).
 unsigned getLLVMFieldNumber(CodeGenModule &CGM,
                             const RecordDecl *RD, const FieldDecl *FD);
+
+/// Return a declaration discriminator for the given global decl.
+uint16_t getPointerAuthDeclDiscriminator(CodeGenModule &CGM, GlobalDecl GD);
+
+/// Return a type discriminator for the given function type.
+uint16_t getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
+                                         QualType FunctionType);
 
 /// Given the language and code-generation options that Clang was configured
 /// with, set the default LLVM IR attributes for a function definition.

@@ -20,7 +20,7 @@ class SPIRVTypeConverter;
 
 /// Appends to a pattern list additional patterns for translating Vector Ops to
 /// SPIR-V ops.
-void populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateVectorToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns);
 
 /// Appends patterns to convert vector reduction of the form:

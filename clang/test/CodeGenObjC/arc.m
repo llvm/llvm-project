@@ -362,7 +362,7 @@ void test13(void) {
 
   extern fnty ^test13_block;
   // CHECK-NEXT: [[TMP:%.*]] = load ptr, ptr @test13_block, align
-  // CHECK-NEXT: [[BLOCK_FN_PTR:%.*]] = getelementptr inbounds [[BLOCKTY:%.*]], ptr [[TMP]], i32 0, i32 3
+  // CHECK-NEXT: [[BLOCK_FN_PTR:%.*]] = getelementptr inbounds nuw [[BLOCKTY:%.*]], ptr [[TMP]], i32 0, i32 3
   // CHECK-NEXT: [[X_VAL:%.*]] = load ptr, ptr [[X]], align
   // CHECK-NEXT: [[X_TMP:%.*]] = call ptr @llvm.objc.retain(ptr [[X_VAL]]) [[NUW]]
   // CHECK-NEXT: [[BLOCK_FN_TMP:%.*]] = load ptr, ptr [[BLOCK_FN_PTR]]
@@ -1377,11 +1377,10 @@ void test71(void) {
 // CHECK: %[[T:.*]] = alloca [2 x ptr], align 16
 // CHECK: %[[V0:.*]] = call ptr @llvm.objc.retain(ptr %[[A]])
 // CHECK: %[[V1:.*]] = call ptr @llvm.objc.retain(ptr %[[B]]) #2
-// CHECK: %[[ARRAYINIT_BEGIN:.*]] = getelementptr inbounds [2 x ptr], ptr %[[T]], i64 0, i64 0
 // CHECK: %[[V3:.*]] = load ptr, ptr %[[A_ADDR]], align 8, !tbaa !7
 // CHECK: %[[V4:.*]] = call ptr @llvm.objc.retain(ptr %[[V3]]) #2
-// CHECK: store ptr %[[V4]], ptr %[[ARRAYINIT_BEGIN]], align 8, !tbaa !7
-// CHECK: %[[ARRAYINIT_ELEMENT:.*]] = getelementptr inbounds ptr, ptr %[[ARRAYINIT_BEGIN]], i64 1
+// CHECK: store ptr %[[V4]], ptr %[[T]], align 8, !tbaa !7
+// CHECK: %[[ARRAYINIT_ELEMENT:.*]] = getelementptr inbounds ptr, ptr %[[T]], i64 1
 // CHECK: %[[V5:.*]] = load ptr, ptr %[[B_ADDR]], align 8, !tbaa !7
 // CHECK: %[[V6:.*]] = call ptr @llvm.objc.retain(ptr %[[V5]]) #2
 // CHECK: store ptr %[[V6]], ptr %[[ARRAYINIT_ELEMENT]], align 8, !tbaa !7

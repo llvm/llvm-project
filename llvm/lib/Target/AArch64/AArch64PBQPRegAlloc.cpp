@@ -16,6 +16,7 @@
 
 #include "AArch64PBQPRegAlloc.h"
 #include "AArch64.h"
+#include "AArch64InstrInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -31,14 +32,6 @@
 using namespace llvm;
 
 namespace {
-
-#ifndef NDEBUG
-bool isFPReg(unsigned reg) {
-  return AArch64::FPR32RegClass.contains(reg) ||
-         AArch64::FPR64RegClass.contains(reg) ||
-         AArch64::FPR128RegClass.contains(reg);
-}
-#endif
 
 bool isOdd(unsigned reg) {
   switch (reg) {
@@ -147,8 +140,10 @@ bool isOdd(unsigned reg) {
 }
 
 bool haveSameParity(unsigned reg1, unsigned reg2) {
-  assert(isFPReg(reg1) && "Expecting an FP register for reg1");
-  assert(isFPReg(reg2) && "Expecting an FP register for reg2");
+  assert(AArch64InstrInfo::isFpOrNEON(reg1) &&
+         "Expecting an FP register for reg1");
+  assert(AArch64InstrInfo::isFpOrNEON(reg2) &&
+         "Expecting an FP register for reg2");
 
   return isOdd(reg1) == isOdd(reg2);
 }

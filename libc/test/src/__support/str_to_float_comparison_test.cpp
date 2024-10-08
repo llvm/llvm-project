@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
   int fails = 0;
 
   // Bitdiffs are cases where the expected result and actual result only differ
-  // by +/- the least significant bit. They are tracked seperately from larger
+  // by +/- the least significant bit. They are tracked separately from larger
   // failures since a bitdiff is most likely the result of a rounding error, and
   // splitting them off makes them easier to track down.
   int bitdiffs = 0;

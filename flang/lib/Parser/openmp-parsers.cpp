@@ -31,10 +31,11 @@ TYPE_PARSER(construct<OmpDefaultClause>(
     "SHARED" >> pure(OmpDefaultClause::Type::Shared) ||
     "NONE" >> pure(OmpDefaultClause::Type::None)))
 
-// 2.5 PROC_BIND (MASTER | CLOSE | SPREAD)
+// 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD )
 TYPE_PARSER(construct<OmpProcBindClause>(
     "CLOSE" >> pure(OmpProcBindClause::Type::Close) ||
     "MASTER" >> pure(OmpProcBindClause::Type::Master) ||
+    "PRIMARY" >> pure(OmpProcBindClause::Type::Primary) ||
     "SPREAD" >> pure(OmpProcBindClause::Type::Spread)))
 
 // 2.15.5.1 MAP ([ [ALWAYS[,]] map-type : ] variable-name-list)
@@ -231,6 +232,12 @@ TYPE_PARSER(construct<OmpOrderClause>(
 TYPE_PARSER(
     construct<OmpObject>(designator) || construct<OmpObject>("/" >> name / "/"))
 
+// OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
+TYPE_PARSER(construct<OmpLastprivateClause>(
+    maybe("CONDITIONAL" >>
+        pure(OmpLastprivateClause::LastprivateModifier::Conditional) / ":"),
+    Parser<OmpObjectList>{}))
+
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
@@ -266,6 +273,8 @@ TYPE_PARSER(
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
     "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
                    parenthesized(Parser<OmpObjectList>{}))) ||
+    "FILTER" >> construct<OmpClause>(construct<OmpClause::Filter>(
+                    parenthesized(scalarIntExpr))) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
                    parenthesized(scalarLogicalExpr))) ||
     "FULL" >> construct<OmpClause>(construct<OmpClause::Full>()) ||
@@ -286,7 +295,7 @@ TYPE_PARSER(
     "IS_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::IsDevicePtr>(
                            parenthesized(Parser<OmpObjectList>{}))) ||
     "LASTPRIVATE" >> construct<OmpClause>(construct<OmpClause::Lastprivate>(
-                         parenthesized(Parser<OmpObjectList>{}))) ||
+                         parenthesized(Parser<OmpLastprivateClause>{}))) ||
     "LINEAR" >> construct<OmpClause>(construct<OmpClause::Linear>(
                     parenthesized(Parser<OmpLinearClause>{}))) ||
     "LINK" >> construct<OmpClause>(construct<OmpClause::Link>(
@@ -376,12 +385,23 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
     "DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_distribute),
     "DO SIMD" >> pure(llvm::omp::Directive::OMPD_do_simd),
     "DO" >> pure(llvm::omp::Directive::OMPD_do),
+    "LOOP" >> pure(llvm::omp::Directive::OMPD_loop),
+    "MASKED TASKLOOP SIMD" >>
+        pure(llvm::omp::Directive::OMPD_masked_taskloop_simd),
+    "MASKED TASKLOOP" >> pure(llvm::omp::Directive::OMPD_masked_taskloop),
     "PARALLEL DO SIMD" >> pure(llvm::omp::Directive::OMPD_parallel_do_simd),
     "PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_parallel_do),
+    "PARALLEL MASKED TASKLOOP SIMD" >>
+        pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd),
+    "PARALLEL MASKED TASKLOOP" >>
+        pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop),
     "SIMD" >> pure(llvm::omp::Directive::OMPD_simd),
+    "TARGET LOOP" >> pure(llvm::omp::Directive::OMPD_target_loop),
     "TARGET PARALLEL DO SIMD" >>
         pure(llvm::omp::Directive::OMPD_target_parallel_do_simd),
     "TARGET PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_target_parallel_do),
+    "TARGET PARALLEL LOOP" >>
+        pure(llvm::omp::Directive::OMPD_target_parallel_loop),
     "TARGET SIMD" >> pure(llvm::omp::Directive::OMPD_target_simd),
     "TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD" >>
         pure(llvm::omp::Directive::
@@ -392,6 +412,7 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
         pure(llvm::omp::Directive::OMPD_target_teams_distribute_simd),
     "TARGET TEAMS DISTRIBUTE" >>
         pure(llvm::omp::Directive::OMPD_target_teams_distribute),
+    "TARGET TEAMS LOOP" >> pure(llvm::omp::Directive::OMPD_target_teams_loop),
     "TASKLOOP SIMD" >> pure(llvm::omp::Directive::OMPD_taskloop_simd),
     "TASKLOOP" >> pure(llvm::omp::Directive::OMPD_taskloop),
     "TEAMS DISTRIBUTE PARALLEL DO SIMD" >>
@@ -487,8 +508,10 @@ TYPE_PARSER(
 
 // Directives enclosing structured-block
 TYPE_PARSER(construct<OmpBlockDirective>(first(
+    "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
     "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
     "ORDERED" >> pure(llvm::omp::Directive::OMPD_ordered),
+    "PARALLEL MASKED" >> pure(llvm::omp::Directive::OMPD_parallel_masked),
     "PARALLEL WORKSHARE" >> pure(llvm::omp::Directive::OMPD_parallel_workshare),
     "PARALLEL" >> pure(llvm::omp::Directive::OMPD_parallel),
     "SINGLE" >> pure(llvm::omp::Directive::OMPD_single),
@@ -634,18 +657,20 @@ TYPE_PARSER(
 
 // Declarative constructs
 TYPE_PARSER(startOmpLine >>
-    sourced(construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPDeclareReductionConstruct>{}) ||
-        construct<OpenMPDeclarativeConstruct>(
-            Parser<OpenMPDeclareSimdConstruct>{}) ||
-        construct<OpenMPDeclarativeConstruct>(
-            Parser<OpenMPDeclareTargetConstruct>{}) ||
-        construct<OpenMPDeclarativeConstruct>(
-            Parser<OpenMPDeclarativeAllocate>{}) ||
-        construct<OpenMPDeclarativeConstruct>(
-            Parser<OpenMPRequiresConstruct>{}) ||
-        construct<OpenMPDeclarativeConstruct>(Parser<OpenMPThreadprivate>{})) /
-        endOmpLine)
+    withMessage("expected OpenMP construct"_err_en_US,
+        sourced(construct<OpenMPDeclarativeConstruct>(
+                    Parser<OpenMPDeclareReductionConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPDeclareSimdConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPDeclareTargetConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPDeclarativeAllocate>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPRequiresConstruct>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPThreadprivate>{})) /
+            endOmpLine))
 
 // Block Construct
 TYPE_PARSER(construct<OpenMPBlockConstruct>(
@@ -681,17 +706,18 @@ TYPE_PARSER(construct<OpenMPSectionsConstruct>(
 
 TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
     startOmpLine >>
-        first(construct<OpenMPConstruct>(Parser<OpenMPSectionsConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPLoopConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPBlockConstruct>{}),
-            // OpenMPBlockConstruct is attempted before
-            // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
-            construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
-            construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{})))
+        withMessage("expected OpenMP construct"_err_en_US,
+            first(construct<OpenMPConstruct>(Parser<OpenMPSectionsConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPLoopConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPBlockConstruct>{}),
+                // OpenMPBlockConstruct is attempted before
+                // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
+                construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}))))
 
 // END OMP Block directives
 TYPE_PARSER(

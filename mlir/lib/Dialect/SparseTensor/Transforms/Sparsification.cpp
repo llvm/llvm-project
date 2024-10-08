@@ -357,6 +357,9 @@ static Value genSubscript(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
     const auto pos = env.emitter().getValPosits(tid);
     assert(!pos.empty());
     args.append(pos);
+    // Simply returns the tensor to extract value using iterators.
+    if (env.options().sparseEmitStrategy == SparseEmitStrategy::kSparseIterator)
+      return t->get();
   } else {
     // For dense tensors we push all level's coordinates onto `args`.
     const Level lvlRank = stt.getLvlRank();
@@ -403,6 +406,22 @@ static Value genInsertionLoadReduce(CodegenEnv &env, OpBuilder &builder,
   return builder.create<arith::SelectOp>(loc, isFilled, valAtIndex, identity);
 }
 
+static Value genConditionalInsert(Location loc, OpBuilder &builder, Value cond,
+                                  Value sparseOut, ValueRange ivs, Value v) {
+  scf::IfOp condInsert =
+      builder.create<scf::IfOp>(loc, sparseOut.getType(), cond, true);
+  // True branch.
+  builder.setInsertionPointToStart(condInsert.thenBlock());
+  Value res = builder.create<tensor::InsertOp>(loc, v, sparseOut, ivs);
+  builder.create<scf::YieldOp>(loc, res);
+  // False branch.
+  builder.setInsertionPointToStart(condInsert.elseBlock());
+  builder.create<scf::YieldOp>(loc, sparseOut);
+  // Value assignment.
+  builder.setInsertionPointAfter(condInsert);
+  return condInsert.getResult(0);
+}
+
 /// Generates insertion code to implement dynamic tensor store.
 static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
                               Value rhs) {
@@ -423,23 +442,21 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
       //     return updated chain
       //   else
       //     return unmodified chain
-      scf::IfOp ifValidLexInsert = builder.create<scf::IfOp>(
-          loc, chain.getType(), env.getValidLexInsert(),
-          /*else=*/true);
-      // True branch.
-      builder.setInsertionPointToStart(ifValidLexInsert.thenBlock());
-      Value res = builder.create<tensor::InsertOp>(loc, rhs, chain, ivs);
-      builder.create<scf::YieldOp>(loc, res);
-      // False branch.
-      builder.setInsertionPointToStart(ifValidLexInsert.elseBlock());
-      builder.create<scf::YieldOp>(loc, chain);
-      // Value assignment.
-      builder.setInsertionPointAfter(ifValidLexInsert);
-      env.updateInsertionChain(ifValidLexInsert.getResult(0));
+      Value out = genConditionalInsert(loc, builder, env.getValidLexInsert(),
+                                       chain, ivs, rhs);
+      env.updateInsertionChain(out);
     } else {
+      Value sparseOut;
+      if (!hasAnySparseType(env.op().getInputs().getTypes())) {
+        // This is an all-dense -> sparse kernel, test rhs != 0 before
+        // insertion.
+        Value nz = genIsNonzero(builder, loc, rhs);
+        sparseOut = genConditionalInsert(loc, builder, nz, chain, ivs, rhs);
+      } else {
+        sparseOut = builder.create<tensor::InsertOp>(loc, rhs, chain, ivs);
+      }
       // Generates regular insertion chain.
-      env.updateInsertionChain(
-          builder.create<tensor::InsertOp>(loc, rhs, chain, ivs));
+      env.updateInsertionChain(sparseOut);
     }
     return;
   }
@@ -484,18 +501,31 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   Value val = env.exp(exp).val;
   if (val)
     return val;
-  // Load during insertion.
+  // Get tensor operand.
   linalg::GenericOp op = env.op();
+  Location loc = op.getLoc();
   OpOperand *t = &op->getOpOperand(env.exp(exp).tensor);
+  // Fold binary-valued tensor into explicit value.
+  const auto stt = getSparseTensorType(t->get());
+  if (auto explVal = stt.getExplicitVal())
+    return genValFromAttr(builder, loc, explVal);
+  // Load during insertion.
   if (env.isSparseOutput(t)) {
     if (env.isCustomReduc())
       return genInsertionLoadReduce(env, builder, t);
     return genInsertionLoad(env, builder, t);
   }
+
   // Actual load.
   SmallVector<Value> args;
   Value ptr = genSubscript(env, builder, t, args);
-  return builder.create<memref::LoadOp>(op.getLoc(), ptr, args);
+  if (llvm::isa<TensorType>(ptr.getType())) {
+    assert(env.options().sparseEmitStrategy ==
+               SparseEmitStrategy::kSparseIterator &&
+           args.size() == 1);
+    return builder.create<ExtractValOp>(loc, ptr, args.front());
+  }
+  return builder.create<memref::LoadOp>(loc, ptr, args);
 }
 
 /// Generates a store on a dense or sparse tensor.
@@ -812,11 +842,13 @@ static bool shouldTryParallize(CodegenEnv &env, LoopId curr,
 /// one sparse level in the list.
 static Operation *genCoIteration(CodegenEnv &env, OpBuilder &builder,
                                  ArrayRef<TensorLevel> tidLvls,
-                                 bool tryParallel, bool needsUniv) {
+                                 unsigned numCases, bool tryParallel,
+                                 bool needsUniv) {
   Operation *loop = *env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
     // Construct while-loop with a parameter for each index.
     return env.emitter().enterCoIterationOverTensorsAtLvls(
-        builder, env.op().getLoc(), tidLvls, reduc, tryParallel, needsUniv);
+        builder, env.op().getLoc(), tidLvls, numCases, reduc, tryParallel,
+        needsUniv);
   });
   assert(loop);
   return loop;
@@ -825,9 +857,11 @@ static Operation *genCoIteration(CodegenEnv &env, OpBuilder &builder,
 /// Generates a for-loop or a while-loop, depending on whether it implements
 /// singleton iteration or co-iteration over the given conjunction.
 static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, LoopId curr,
-                          bool needsUniv, ArrayRef<TensorLevel> tidLvls) {
+                          unsigned numCases, bool needsUniv,
+                          ArrayRef<TensorLevel> tidLvls) {
   bool tryParallel = shouldTryParallize(env, curr, tidLvls);
-  return genCoIteration(env, builder, tidLvls, tryParallel, needsUniv);
+  return genCoIteration(env, builder, tidLvls, numCases, tryParallel,
+                        needsUniv);
 }
 
 /// Generates the induction structure for a while-loop.
@@ -868,6 +902,26 @@ static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder,
   }
   // No need to set the insertion point here as LoopEmitter keeps track of the
   // basic block where scf::Yield should be inserted.
+}
+
+/// Generates a case region in the coiterate operation.
+static void genCoIterationCase(CodegenEnv &env, OpBuilder &builder,
+                               unsigned caseIdx, LatPointId allCase,
+                               LatPointId curCase,
+                               MutableArrayRef<Value> reduc) {
+  assert(allCase == curCase || env.merger().latGT(allCase, curCase));
+  const BitVector &allCaseBits = env.merger().lat(allCase).simple;
+  const BitVector &curCaseBits = env.merger().lat(curCase).simple;
+
+  /// Computes the subset of iterators that are valid in the current case being
+  /// generated.
+  I64BitSet caseBit(0);
+  for (auto [idx, set] : llvm::enumerate(allCaseBits.set_bits()))
+    if (curCaseBits.test(set))
+      caseBit.set(idx);
+
+  env.emitter().enterCurrentCoIterationCase(builder, env.op().getLoc(), caseBit,
+                                            caseIdx, reduc);
 }
 
 /// Generates a single if-statement within a while-loop.
@@ -1051,7 +1105,11 @@ static bool getAllTidLvlsInLatPoints(
   }
   // If we just need to one loop conditions and the conditions is not imposed on
   // non-unique level, the loop can be generated by a for loop.
-  return numloopCond == 1 && !hasNonUnique;
+  // Or, if we are generating sparse-iterator-based loops, we always generate
+  // `sparse_tensor.iterate` regardless whether the level is unique or not.
+  return numloopCond == 1 &&
+         (!hasNonUnique || env.options().sparseEmitStrategy ==
+                               SparseEmitStrategy::kSparseIterator);
 }
 
 /// Starts a loop sequence at given level. Returns true if
@@ -1141,7 +1199,10 @@ static bool translateBitsToTidLvlPairs(
 /// Starts a single loop in current sequence.
 static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
                                               OpBuilder &builder, LoopId curr,
-                                              LatPointId li, bool needsUniv) {
+                                              LatPointId li, unsigned numCases,
+                                              bool needsUniv) {
+  // TODO: numCases only used when generating iterator-based loops. Cleanup
+  // after fully migration.
   // The set of tensors + lvls to generate loops on
   SmallVector<TensorLevel> tidLvls;
 
@@ -1152,7 +1213,7 @@ static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
       translateBitsToTidLvlPairs(env, li, curr, tidLvls, affineTidLvls);
 
   // Emit the for/while-loop control.
-  Operation *loop = genLoop(env, builder, curr, needsUniv, tidLvls);
+  Operation *loop = genLoop(env, builder, curr, numCases, needsUniv, tidLvls);
   Location loc = env.op().getLoc();
   for (auto [tidLvl, exp] : affineTidLvls) {
     env.emitter().locateLvlAtAffineAddress(builder, loc, tidLvl, exp);
@@ -1225,42 +1286,73 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
   // Start a loop sequence.
   bool needsUniv = startLoopSeq(env, rewriter, exp, curr, lts);
 
-  // Emit a loop for every lattice point L0 >= Li in this loop sequence.
-  // We cannot change this to `for (const LatPointId li : env.set(lts))`
-  // because the loop body causes data-movement which invalidates
-  // the iterator.
+  // When using sparse-iterator-based loops, we only need one loops, as
+  // opposed to a loop sequence, to cover all the iterator spaces.
   const unsigned lsize = env.set(lts).size();
-  for (unsigned i = 0; i < lsize; i++) {
-    const LatPointId li = env.set(lts)[i];
-    // Start a loop.
-    auto [loop, isSingleCond] = startLoop(env, rewriter, curr, li, needsUniv);
-
-    // Visit all lattices points with Li >= Lj to generate the
-    // loop-body, possibly with if statements for coiteration.
-    Value redInput = env.getReduc();
-    Value cntInput = env.getExpandCount();
-    Value insInput = env.getInsertionChain();
-    Value validIns = env.getValidLexInsert();
-    // We cannot change this to `for (const LatPointId lj : env.set(lts))`
-    // because the loop body causes data-movement which invalidates the
-    // iterator.
+  if (env.generatingSparseIterator()) {
+    // Get the largest lattice point and start a loop.
+    const LatPointId li = env.set(lts)[0];
+    auto [loop, isSingleCond] =
+        startLoop(env, rewriter, curr, li, lsize, needsUniv);
+    assert(isSingleCond == llvm::isa<IterateOp>(loop));
+    // We cannot change this to `for (const LatPointId li : env.set(lts))`
+    // because the loop body causes data-movement which invalidates
+    // the iterator.
     for (unsigned j = 0; j < lsize; j++) {
       const LatPointId lj = env.set(lts)[j];
       const ExprId ej = env.lat(lj).exp;
-      if (li == lj || env.merger().latGT(li, lj)) {
-        // Recurse into body of each branch.
-        if (!isSingleCond) {
-          scf::IfOp ifOp = genIf(env, rewriter, curr, lj);
+      // Recurse into body of each branch.
+      if (!isSingleCond) {
+        env.genLoopBoundary([&, curr, j, li, lj](MutableArrayRef<Value> reduc) {
+          genCoIterationCase(env, rewriter, /*caseIdx*/ j, li, lj, reduc);
           genStmt(env, rewriter, ej, curr + 1);
-          endIf(env, rewriter, ifOp, redInput, cntInput, insInput, validIns);
-        } else {
-          genStmt(env, rewriter, ej, curr + 1);
-        }
+          // TODO: handle yield values.
+          assert(reduc.empty() && "Not Implemented");
+          rewriter.create<sparse_tensor::YieldOp>(env.op().getLoc());
+          return std::nullopt;
+        });
+        // endIf(env, rewriter, ifOp, redInput, cntInput, insInput, validIns);
+      } else {
+        genStmt(env, rewriter, ej, curr + 1);
       }
     }
-
     // End a loop.
     needsUniv = endLoop(env, rewriter, loop, curr, needsUniv, isSingleCond);
+  } else {
+    // Emit a loop for every lattice point L0 >= Li in this loop sequence.
+    for (unsigned i = 0; i < lsize; i++) {
+      const LatPointId li = env.set(lts)[i];
+      // Start a loop.
+      auto [loop, isSingleCond] =
+          startLoop(env, rewriter, curr, li, lsize, needsUniv);
+
+      // Visit all lattices points with Li >= Lj to generate the
+      // loop-body, possibly with if statements for coiteration.
+      Value redInput = env.getReduc();
+      Value cntInput = env.getExpandCount();
+      Value insInput = env.getInsertionChain();
+      Value validIns = env.getValidLexInsert();
+      // We cannot change this to `for (const LatPointId lj : env.set(lts))`
+      // because the loop body causes data-movement which invalidates the
+      // iterator.
+      for (unsigned j = 0; j < lsize; j++) {
+        const LatPointId lj = env.set(lts)[j];
+        const ExprId ej = env.lat(lj).exp;
+        if (li == lj || env.merger().latGT(li, lj)) {
+          // Recurse into body of each branch.
+          if (!isSingleCond) {
+            scf::IfOp ifOp = genIf(env, rewriter, curr, lj);
+            genStmt(env, rewriter, ej, curr + 1);
+            endIf(env, rewriter, ifOp, redInput, cntInput, insInput, validIns);
+          } else {
+            genStmt(env, rewriter, ej, curr + 1);
+          }
+        }
+      }
+
+      // End a loop.
+      needsUniv = endLoop(env, rewriter, loop, curr, needsUniv, isSingleCond);
+    }
   }
 
   // End a loop sequence.

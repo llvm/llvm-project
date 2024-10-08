@@ -107,9 +107,18 @@ class CommandLineCompletionTestCase(TestBase):
             self, "// Break here", lldb.SBFileSpec("main.cpp")
         )
         err = lldb.SBError()
-        self.process().LoadImage(
-            lldb.SBFileSpec(self.getBuildArtifact("libshared.so")), err
-        )
+        local_spec = lldb.SBFileSpec(self.getBuildArtifact("libshared.so"))
+        if lldb.remote_platform:
+            self.process().LoadImage(
+                local_spec,
+                lldb.SBFileSpec(
+                    lldbutil.append_to_process_working_directory(self, "libshared.so"),
+                    False,
+                ),
+                err,
+            )
+        else:
+            self.process().LoadImage(local_spec, err)
         self.assertSuccess(err)
 
         self.complete_from_to("process unload ", "process unload 0")
@@ -186,12 +195,6 @@ class CommandLineCompletionTestCase(TestBase):
 
     def test_plugin_load(self):
         self.complete_from_to("plugin load ", [])
-
-    def test_log_enable(self):
-        self.complete_from_to("log enable ll", ["lldb"])
-        self.complete_from_to("log enable dw", ["dwarf"])
-        self.complete_from_to("log enable lldb al", ["all"])
-        self.complete_from_to("log enable lldb sym", ["symbol"])
 
     def test_log_enable(self):
         self.complete_from_to("log disable ll", ["lldb"])
@@ -473,7 +476,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("my_test_cmd main.cp", ["main.cpp"])
         self.expect("my_test_cmd main.cpp", substrs=["main.cpp"])
 
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     def test_completion_target_create_from_root_dir(self):
         """Tests source file completion by completing ."""
         root_dir = os.path.abspath(os.sep)
@@ -705,7 +708,7 @@ class CommandLineCompletionTestCase(TestBase):
         )
         self.check_completion_with_desc(
             "frame recognizer delete ",
-            [["0", "py_class, module module_name, symbol recognizer_name"]],
+            [["0", "py_class, module module_name, demangled symbol recognizer_name"]],
         )
 
     def test_platform_install_local_file(self):
@@ -897,3 +900,40 @@ class CommandLineCompletionTestCase(TestBase):
     def test_ambiguous_subcommand(self):
         """Test completing a subcommand of an ambiguous command"""
         self.complete_from_to("settings s ta", [])
+
+    def test_shlib_name(self):
+        self.build()
+        error = lldb.SBError()
+        # Create a target, but don't load dependent modules
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"), None, None, False, error)
+        self.assertSuccess(error)
+        self.registerSharedLibrariesWithTarget(target, ["shared"])
+
+        basenames = []
+        paths = []
+        for m in target.modules:
+            basenames.append(m.file.basename)
+            paths.append(m.file.fullpath)
+
+        # To see all the diffs
+        self.maxDiff = None
+
+        # An empty string completes to everything
+        self.completions_match("target symbols add -s ", basenames + paths)
+
+        # Base name completion
+        self.completions_match("target symbols add -s a.", ["a.out"])
+
+        # Full path completion
+        prefix = os.path.commonpath(paths)
+        self.completions_match("target symbols add -s '" + prefix, paths)
+
+        # Full path, but ending with a path separator
+        prefix_sep = prefix + os.path.sep
+        self.completions_match("target symbols add -s '" + prefix_sep, paths)
+
+        # The completed path should match the spelling of the input, so if the
+        # input contains a double separator, so should the completions.
+        prefix_sep_sep = prefix_sep + os.path.sep
+        paths_sep = [prefix_sep_sep + p[len(prefix_sep) :] for p in paths]
+        self.completions_match("target symbols add -s '" + prefix_sep_sep, paths_sep)

@@ -14,8 +14,6 @@
 //   void
 //   inplace_merge(Iter first, Iter middle, Iter last);
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 #include <algorithm>
 #include <cassert>
 #include <random>

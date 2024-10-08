@@ -62,7 +62,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // 'int main() { }' compiled for arm64-apple-ios with clang
   uint8_t data[] = {
@@ -77,7 +77,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
 
   // UnwindPlan we expect:
 
-  // row[0]:    0: CFA=sp +0 =>
+  // row[0]:    0: CFA=sp +0 => fp= <same> lr= <same>
   // row[1]:    4: CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
   // row[2]:    8: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8]
   // row[2]:   16: CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
@@ -88,12 +88,18 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
       sample_range, data, sizeof(data), unwind_plan));
 
-  // CFA=sp +0
+  // CFA=sp +0 => fp= <same> lr= <same>
   row_sp = unwind_plan.GetRowForFunctionOffset(0);
   EXPECT_EQ(0ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_fp_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_lr_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
 
   // CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
   row_sp = unwind_plan.GetRowForFunctionOffset(4);
@@ -146,6 +152,12 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_fp_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_lr_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
 }
 
 TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
@@ -158,7 +170,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // disassembly of -[NSPlaceholderString initWithBytes:length:encoding:]
   // from Foundation for iOS.
@@ -320,7 +332,7 @@ TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // disassembly of JSC::ARM64LogicalImmediate::findBitRange<16u>
   // from JavaScriptcore for iOS.
@@ -381,8 +393,12 @@ TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
   EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_x26_arm64, regloc));
   EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_x27_arm64, regloc));
   EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_x28_arm64, regloc));
-  EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_fp_arm64, regloc));
-  EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_lr_arm64, regloc));
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_fp_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_lr_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
 
   row_sp = unwind_plan.GetRowForFunctionOffset(36);
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
@@ -415,7 +431,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // disassembly of mach_msg_sever_once from libsystem_kernel.dylib for iOS.
   uint8_t data[] = {
@@ -517,7 +533,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterDoubleSpills) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // this file built with clang for iOS arch arm64 optimization -Os
   // #include <stdio.h>
@@ -689,7 +705,7 @@ TEST_F(TestArm64InstEmulation, TestCFARegisterTrackedAcrossJumps) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   uint8_t data[] = {
       // prologue
@@ -788,7 +804,7 @@ TEST_F(TestArm64InstEmulation, TestCFAResetToSP) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // The called_from_nodebug() from TestStepNoDebug.py
   // Most of the previous unit tests have $sp being set as

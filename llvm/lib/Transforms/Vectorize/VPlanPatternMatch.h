@@ -26,11 +26,16 @@ namespace llvm {
 namespace VPlanPatternMatch {
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
-  return const_cast<Pattern &>(P).match(V);
+  return P.match(V);
+}
+
+template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
+  auto *R = dyn_cast<VPRecipeBase>(U);
+  return R && match(R, P);
 }
 
 template <typename Class> struct class_match {
-  template <typename ITy> bool match(ITy *V) { return isa<Class>(V); }
+  template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
 };
 
 /// Match an arbitrary VPValue and ignore it.
@@ -41,7 +46,7 @@ template <typename Class> struct bind_ty {
 
   bind_ty(Class *&V) : VR(V) {}
 
-  template <typename ITy> bool match(ITy *V) {
+  template <typename ITy> bool match(ITy *V) const {
     if (auto *CV = dyn_cast<Class>(V)) {
       VR = CV;
       return true;
@@ -58,7 +63,7 @@ template <unsigned BitWidth = 0> struct specific_intval {
 
   specific_intval(APInt V) : Val(std::move(V)) {}
 
-  bool match(VPValue *VPV) {
+  bool match(VPValue *VPV) const {
     if (!VPV->isLiveIn())
       return false;
     Value *V = VPV->getLiveInIRValue();
@@ -89,7 +94,7 @@ template <typename LTy, typename RTy> struct match_combine_or {
 
   match_combine_or(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
 
-  template <typename ITy> bool match(ITy *V) {
+  template <typename ITy> bool match(ITy *V) const {
     if (L.match(V))
       return true;
     if (R.match(V))
@@ -134,12 +139,16 @@ struct UnaryRecipe_match {
 
   UnaryRecipe_match(Op0_t Op0) : Op0(Op0) {}
 
-  bool match(const VPValue *V) {
+  bool match(const VPValue *V) const {
     auto *DefR = V->getDefiningRecipe();
     return DefR && match(DefR);
   }
 
-  bool match(const VPRecipeBase *R) {
+  bool match(const VPSingleDefRecipe *R) const {
+    return match(static_cast<const VPRecipeBase *>(R));
+  }
+
+  bool match(const VPRecipeBase *R) const {
     if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
       return false;
     assert(R->getNumOperands() == 1 &&
@@ -157,7 +166,7 @@ using AllUnaryRecipe_match =
     UnaryRecipe_match<Op0_t, Opcode, VPWidenRecipe, VPReplicateRecipe,
                       VPWidenCastRecipe, VPInstruction>;
 
-template <typename Op0_t, typename Op1_t, unsigned Opcode,
+template <typename Op0_t, typename Op1_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
 struct BinaryRecipe_match {
   Op0_t Op0;
@@ -165,32 +174,37 @@ struct BinaryRecipe_match {
 
   BinaryRecipe_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
 
-  bool match(const VPValue *V) {
+  bool match(const VPValue *V) const {
     auto *DefR = V->getDefiningRecipe();
     return DefR && match(DefR);
   }
 
-  bool match(const VPSingleDefRecipe *R) {
+  bool match(const VPSingleDefRecipe *R) const {
     return match(static_cast<const VPRecipeBase *>(R));
   }
 
-  bool match(const VPRecipeBase *R) {
+  bool match(const VPRecipeBase *R) const {
     if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
       return false;
     assert(R->getNumOperands() == 2 &&
            "recipe with matched opcode does not have 2 operands");
-    return Op0.match(R->getOperand(0)) && Op1.match(R->getOperand(1));
+    if (Op0.match(R->getOperand(0)) && Op1.match(R->getOperand(1)))
+      return true;
+    return Commutative && Op0.match(R->getOperand(1)) &&
+           Op1.match(R->getOperand(0));
   }
 };
 
 template <typename Op0_t, typename Op1_t, unsigned Opcode>
 using BinaryVPInstruction_match =
-    BinaryRecipe_match<Op0_t, Op1_t, Opcode, VPInstruction>;
+    BinaryRecipe_match<Op0_t, Op1_t, Opcode, /*Commutative*/ false,
+                       VPInstruction>;
 
-template <typename Op0_t, typename Op1_t, unsigned Opcode>
+template <typename Op0_t, typename Op1_t, unsigned Opcode,
+          bool Commutative = false>
 using AllBinaryRecipe_match =
-    BinaryRecipe_match<Op0_t, Op1_t, Opcode, VPWidenRecipe, VPReplicateRecipe,
-                       VPWidenCastRecipe, VPInstruction>;
+    BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
+                       VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
 
 template <unsigned Opcode, typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Opcode>
@@ -256,10 +270,11 @@ m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
-template <unsigned Opcode, typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode> m_Binary(const Op0_t &Op0,
-                                                            const Op1_t &Op1) {
-  return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
+template <unsigned Opcode, typename Op0_t, typename Op1_t,
+          bool Commutative = false>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>
+m_Binary(const Op0_t &Op0, const Op1_t &Op1) {
+  return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -269,10 +284,76 @@ m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or>
-m_Or(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul,
+                             /* Commutative =*/true>
+m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::Mul, Op0_t, Op1_t, true>(Op0, Op1);
 }
+
+/// Match a binary OR operation. Note that while conceptually the operands can
+/// be matched commutatively, \p Commutative defaults to false in line with the
+/// IR-based pattern matching infrastructure. Use m_c_BinaryOr for a commutative
+/// version of the matcher.
+template <typename Op0_t, typename Op1_t, bool Commutative = false>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or, Commutative>
+m_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::Or, Op0_t, Op1_t, Commutative>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or,
+                             /*Commutative*/ true>
+m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd>
+m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1);
+}
+
+struct VPCanonicalIVPHI_match {
+  bool match(const VPValue *V) const {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPRecipeBase *R) const {
+    return isa<VPCanonicalIVPHIRecipe>(R);
+  }
+};
+
+inline VPCanonicalIVPHI_match m_CanonicalIV() {
+  return VPCanonicalIVPHI_match();
+}
+
+template <typename Op0_t, typename Op1_t> struct VPScalarIVSteps_match {
+  Op0_t Op0;
+  Op1_t Op1;
+
+  VPScalarIVSteps_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
+
+  bool match(const VPValue *V) const {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPRecipeBase *R) const {
+    if (!isa<VPScalarIVStepsRecipe>(R))
+      return false;
+    assert(R->getNumOperands() == 2 &&
+           "VPScalarIVSteps must have exactly 2 operands");
+    return Op0.match(R->getOperand(0)) && Op1.match(R->getOperand(1));
+  }
+};
+
+template <typename Op0_t, typename Op1_t>
+inline VPScalarIVSteps_match<Op0_t, Op1_t> m_ScalarIVSteps(const Op0_t &Op0,
+                                                           const Op1_t &Op1) {
+  return VPScalarIVSteps_match<Op0_t, Op1_t>(Op0, Op1);
+}
+
 } // namespace VPlanPatternMatch
 } // namespace llvm
 

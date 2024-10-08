@@ -15,9 +15,12 @@
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
@@ -99,13 +102,23 @@ public:
   /// expanded.
   std::optional<bool> IsGPU;
 
-  // Flag for specifying if offloading is mandatory.
+  /// Flag for specifying if LLVMUsed information should be emitted.
+  std::optional<bool> EmitLLVMUsedMetaInfo;
+
+  /// Flag for specifying if offloading is mandatory.
   std::optional<bool> OpenMPOffloadMandatory;
 
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;
   /// Separator used between all of the rest consecutive parts of s name
   std::optional<StringRef> Separator;
+
+  // Grid Value for the GPU target
+  std::optional<omp::GV> GridValue;
+
+  /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
+  /// false`), this contains the list of offloading triples associated, if any.
+  SmallVector<Triple> TargetTriples;
 
   OpenMPIRBuilderConfig();
   OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
@@ -130,6 +143,11 @@ public:
     assert(OpenMPOffloadMandatory.has_value() &&
            "OpenMPOffloadMandatory is not set");
     return *OpenMPOffloadMandatory;
+  }
+
+  omp::GV getGridValue() const {
+    assert(GridValue.has_value() && "GridValue is not set");
+    return *GridValue;
   }
 
   bool hasRequiresFlags() const { return RequiresFlags; }
@@ -164,9 +182,11 @@ public:
 
   void setIsTargetDevice(bool Value) { IsTargetDevice = Value; }
   void setIsGPU(bool Value) { IsGPU = Value; }
+  void setEmitLLVMUsed(bool Value = true) { EmitLLVMUsedMetaInfo = Value; }
   void setOpenMPOffloadMandatory(bool Value) { OpenMPOffloadMandatory = Value; }
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
+  void setGridValue(omp::GV G) { GridValue = G; }
 
   void setHasRequiresReverseOffload(bool Value);
   void setHasRequiresUnifiedAddress(bool Value);
@@ -181,6 +201,9 @@ private:
 /// Data structure to contain the information needed to uniquely identify
 /// a target entry.
 struct TargetRegionEntryInfo {
+  /// The prefix used for kernel names.
+  static constexpr const char *KernelNamePrefix = "__omp_offloading_";
+
   std::string ParentName;
   unsigned DeviceID;
   unsigned FileID;
@@ -198,7 +221,7 @@ struct TargetRegionEntryInfo {
                                          unsigned DeviceID, unsigned FileID,
                                          unsigned Line, unsigned Count);
 
-  bool operator<(const TargetRegionEntryInfo RHS) const {
+  bool operator<(const TargetRegionEntryInfo &RHS) const {
     return std::make_tuple(ParentName, DeviceID, FileID, Line, Count) <
            std::make_tuple(RHS.ParentName, RHS.DeviceID, RHS.FileID, RHS.Line,
                            RHS.Count);
@@ -457,6 +480,27 @@ public:
         T(Triple(M.getTargetTriple())) {}
   ~OpenMPIRBuilder();
 
+  class AtomicInfo : public llvm::AtomicInfo<IRBuilder<>> {
+    llvm::Value *AtomicVar;
+
+  public:
+    AtomicInfo(IRBuilder<> *Builder, llvm::Type *Ty, uint64_t AtomicSizeInBits,
+               uint64_t ValueSizeInBits, llvm::Align AtomicAlign,
+               llvm::Align ValueAlign, bool UseLibcall, llvm::Value *AtomicVar)
+        : llvm::AtomicInfo<IRBuilder<>>(Builder, Ty, AtomicSizeInBits,
+                                        ValueSizeInBits, AtomicAlign,
+                                        ValueAlign, UseLibcall),
+          AtomicVar(AtomicVar) {}
+
+    llvm::Value *getAtomicPointer() const override { return AtomicVar; }
+    void decorateWithTBAA(llvm::Instruction *I) override {}
+    llvm::AllocaInst *CreateAlloca(llvm::Type *Ty,
+                                   const llvm::Twine &Name) const override {
+      llvm::AllocaInst *allocaInst = Builder->CreateAlloca(Ty);
+      allocaInst->setName(Name);
+      return allocaInst;
+    }
+  };
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
   /// before any other method and only once! This internal state includes types
@@ -607,14 +651,15 @@ public:
   /// Generator for '#omp barrier'
   ///
   /// \param Loc The location where the barrier directive was encountered.
-  /// \param DK The kind of directive that caused the barrier.
+  /// \param Kind The kind of directive that caused the barrier.
   /// \param ForceSimpleCall Flag to force a simple (=non-cancellation) barrier.
   /// \param CheckCancelFlag Flag to indicate a cancel barrier return value
   ///                        should be checked and acted upon.
+  /// \param ThreadID Optional parameter to pass in any existing ThreadID value.
   ///
   /// \returns The insertion point after the barrier.
-  InsertPointTy createBarrier(const LocationDescription &Loc, omp::Directive DK,
-                              bool ForceSimpleCall = false,
+  InsertPointTy createBarrier(const LocationDescription &Loc,
+                              omp::Directive Kind, bool ForceSimpleCall = false,
                               bool CheckCancelFlag = true);
 
   /// Generator for '#omp cancel'
@@ -1235,27 +1280,55 @@ public:
   getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
                            StringRef ParentName = "");
 
-  /// Functions used to generate reductions. Such functions take two Values
-  /// representing LHS and RHS of the reduction, respectively, and a reference
-  /// to the value that is updated to refer to the reduction result.
-  using ReductionGenTy =
-      function_ref<InsertPointTy(InsertPointTy, Value *, Value *, Value *&)>;
+  /// Enum class for the RedctionGen CallBack type to be used.
+  enum class ReductionGenCBKind { Clang, MLIR };
+
+  /// ReductionGen CallBack for Clang
+  ///
+  /// \param CodeGenIP InsertPoint for CodeGen.
+  /// \param Index Index of the ReductionInfo to generate code for.
+  /// \param LHSPtr Optionally used by Clang to return the LHSPtr it used for
+  /// codegen, used for fixup later.
+  /// \param RHSPtr Optionally used by Clang to
+  /// return the RHSPtr it used for codegen, used for fixup later.
+  /// \param CurFn Optionally used by Clang to pass in the Current Function as
+  /// Clang context may be old.
+  using ReductionGenClangCBTy =
+      std::function<InsertPointTy(InsertPointTy CodeGenIP, unsigned Index,
+                                  Value **LHS, Value **RHS, Function *CurFn)>;
+
+  /// ReductionGen CallBack for MLIR
+  ///
+  /// \param CodeGenIP InsertPoint for CodeGen.
+  /// \param LHS Pass in the LHS Value to be used for CodeGen.
+  /// \param RHS Pass in the RHS Value to be used for CodeGen.
+  using ReductionGenCBTy = std::function<InsertPointTy(
+      InsertPointTy CodeGenIP, Value *LHS, Value *RHS, Value *&Res)>;
 
   /// Functions used to generate atomic reductions. Such functions take two
   /// Values representing pointers to LHS and RHS of the reduction, as well as
   /// the element type of these pointers. They are expected to atomically
   /// update the LHS to the reduced value.
-  using AtomicReductionGenTy =
-      function_ref<InsertPointTy(InsertPointTy, Type *, Value *, Value *)>;
+  using ReductionGenAtomicCBTy =
+      std::function<InsertPointTy(InsertPointTy, Type *, Value *, Value *)>;
+
+  /// Enum class for reduction evaluation types scalar, complex and aggregate.
+  enum class EvalKind { Scalar, Complex, Aggregate };
 
   /// Information about an OpenMP reduction.
   struct ReductionInfo {
     ReductionInfo(Type *ElementType, Value *Variable, Value *PrivateVariable,
-                  ReductionGenTy ReductionGen,
-                  AtomicReductionGenTy AtomicReductionGen)
+                  EvalKind EvaluationKind, ReductionGenCBTy ReductionGen,
+                  ReductionGenClangCBTy ReductionGenClang,
+                  ReductionGenAtomicCBTy AtomicReductionGen)
         : ElementType(ElementType), Variable(Variable),
-          PrivateVariable(PrivateVariable), ReductionGen(ReductionGen),
+          PrivateVariable(PrivateVariable), EvaluationKind(EvaluationKind),
+          ReductionGen(ReductionGen), ReductionGenClang(ReductionGenClang),
           AtomicReductionGen(AtomicReductionGen) {}
+    ReductionInfo(Value *PrivateVariable)
+        : ElementType(nullptr), Variable(nullptr),
+          PrivateVariable(PrivateVariable), EvaluationKind(EvalKind::Scalar),
+          ReductionGen(), ReductionGenClang(), AtomicReductionGen() {}
 
     /// Reduction element type, must match pointee type of variable.
     Type *ElementType;
@@ -1266,17 +1339,546 @@ public:
     /// Thread-private partial reduction variable.
     Value *PrivateVariable;
 
+    /// Reduction evaluation kind - scalar, complex or aggregate.
+    EvalKind EvaluationKind;
+
     /// Callback for generating the reduction body. The IR produced by this will
     /// be used to combine two values in a thread-safe context, e.g., under
     /// lock or within the same thread, and therefore need not be atomic.
-    ReductionGenTy ReductionGen;
+    ReductionGenCBTy ReductionGen;
+
+    /// Clang callback for generating the reduction body. The IR produced by
+    /// this will be used to combine two values in a thread-safe context, e.g.,
+    /// under lock or within the same thread, and therefore need not be atomic.
+    ReductionGenClangCBTy ReductionGenClang;
 
     /// Callback for generating the atomic reduction body, may be null. The IR
     /// produced by this will be used to atomically combine two values during
     /// reduction. If null, the implementation will use the non-atomic version
     /// along with the appropriate synchronization mechanisms.
-    AtomicReductionGenTy AtomicReductionGen;
+    ReductionGenAtomicCBTy AtomicReductionGen;
   };
+
+  enum class CopyAction : unsigned {
+    // RemoteLaneToThread: Copy over a Reduce list from a remote lane in
+    // the warp using shuffle instructions.
+    RemoteLaneToThread,
+    // ThreadCopy: Make a copy of a Reduce list on the thread's stack.
+    ThreadCopy,
+  };
+
+  struct CopyOptionsTy {
+    Value *RemoteLaneOffset = nullptr;
+    Value *ScratchpadIndex = nullptr;
+    Value *ScratchpadWidth = nullptr;
+  };
+
+  /// Supporting functions for Reductions CodeGen.
+private:
+  /// Emit the llvm.used metadata.
+  void emitUsed(StringRef Name, std::vector<llvm::WeakTrackingVH> &List);
+
+  /// Get the id of the current thread on the GPU.
+  Value *getGPUThreadID();
+
+  /// Get the GPU warp size.
+  Value *getGPUWarpSize();
+
+  /// Get the id of the warp in the block.
+  /// We assume that the warp size is 32, which is always the case
+  /// on the NVPTX device, to generate more efficient code.
+  Value *getNVPTXWarpID();
+
+  /// Get the id of the current lane in the Warp.
+  /// We assume that the warp size is 32, which is always the case
+  /// on the NVPTX device, to generate more efficient code.
+  Value *getNVPTXLaneID();
+
+  /// Cast value to the specified type.
+  Value *castValueToType(InsertPointTy AllocaIP, Value *From, Type *ToType);
+
+  /// This function creates calls to one of two shuffle functions to copy
+  /// variables between lanes in a warp.
+  Value *createRuntimeShuffleFunction(InsertPointTy AllocaIP, Value *Element,
+                                      Type *ElementType, Value *Offset);
+
+  /// Function to shuffle over the value from the remote lane.
+  void shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr, Value *DstAddr,
+                       Type *ElementType, Value *Offset,
+                       Type *ReductionArrayTy);
+
+  /// Emit instructions to copy a Reduce list, which contains partially
+  /// aggregated values, in the specified direction.
+  void emitReductionListCopy(
+      InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
+      ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
+      CopyOptionsTy CopyOptions = {nullptr, nullptr, nullptr});
+
+  /// Emit a helper that reduces data across two OpenMP threads (lanes)
+  /// in the same warp.  It uses shuffle instructions to copy over data from
+  /// a remote lane's stack.  The reduction algorithm performed is specified
+  /// by the fourth parameter.
+  ///
+  /// Algorithm Versions.
+  /// Full Warp Reduce (argument value 0):
+  ///   This algorithm assumes that all 32 lanes are active and gathers
+  ///   data from these 32 lanes, producing a single resultant value.
+  /// Contiguous Partial Warp Reduce (argument value 1):
+  ///   This algorithm assumes that only a *contiguous* subset of lanes
+  ///   are active.  This happens for the last warp in a parallel region
+  ///   when the user specified num_threads is not an integer multiple of
+  ///   32.  This contiguous subset always starts with the zeroth lane.
+  /// Partial Warp Reduce (argument value 2):
+  ///   This algorithm gathers data from any number of lanes at any position.
+  /// All reduced values are stored in the lowest possible lane.  The set
+  /// of problems every algorithm addresses is a super set of those
+  /// addressable by algorithms with a lower version number.  Overhead
+  /// increases as algorithm version increases.
+  ///
+  /// Terminology
+  /// Reduce element:
+  ///   Reduce element refers to the individual data field with primitive
+  ///   data types to be combined and reduced across threads.
+  /// Reduce list:
+  ///   Reduce list refers to a collection of local, thread-private
+  ///   reduce elements.
+  /// Remote Reduce list:
+  ///   Remote Reduce list refers to a collection of remote (relative to
+  ///   the current thread) reduce elements.
+  ///
+  /// We distinguish between three states of threads that are important to
+  /// the implementation of this function.
+  /// Alive threads:
+  ///   Threads in a warp executing the SIMT instruction, as distinguished from
+  ///   threads that are inactive due to divergent control flow.
+  /// Active threads:
+  ///   The minimal set of threads that has to be alive upon entry to this
+  ///   function.  The computation is correct iff active threads are alive.
+  ///   Some threads are alive but they are not active because they do not
+  ///   contribute to the computation in any useful manner.  Turning them off
+  ///   may introduce control flow overheads without any tangible benefits.
+  /// Effective threads:
+  ///   In order to comply with the argument requirements of the shuffle
+  ///   function, we must keep all lanes holding data alive.  But at most
+  ///   half of them perform value aggregation; we refer to this half of
+  ///   threads as effective. The other half is simply handing off their
+  ///   data.
+  ///
+  /// Procedure
+  /// Value shuffle:
+  ///   In this step active threads transfer data from higher lane positions
+  ///   in the warp to lower lane positions, creating Remote Reduce list.
+  /// Value aggregation:
+  ///   In this step, effective threads combine their thread local Reduce list
+  ///   with Remote Reduce list and store the result in the thread local
+  ///   Reduce list.
+  /// Value copy:
+  ///   In this step, we deal with the assumption made by algorithm 2
+  ///   (i.e. contiguity assumption).  When we have an odd number of lanes
+  ///   active, say 2k+1, only k threads will be effective and therefore k
+  ///   new values will be produced.  However, the Reduce list owned by the
+  ///   (2k+1)th thread is ignored in the value aggregation.  Therefore
+  ///   we copy the Reduce list from the (2k+1)th lane to (k+1)th lane so
+  ///   that the contiguity assumption still holds.
+  ///
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param ReduceFn The reduction function.
+  /// \param FuncAttrs Optional param to specify any function attributes that
+  ///                  need to be copied to the new function.
+  ///
+  /// \return The ShuffleAndReduce function.
+  Function *emitShuffleAndReduceFunction(
+      ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
+      Function *ReduceFn, AttributeList FuncAttrs);
+
+  /// This function emits a helper that gathers Reduce lists from the first
+  /// lane of every active warp to lanes in the first warp.
+  ///
+  /// void inter_warp_copy_func(void* reduce_data, num_warps)
+  ///   shared smem[warp_size];
+  ///   For all data entries D in reduce_data:
+  ///     sync
+  ///     If (I am the first lane in each warp)
+  ///       Copy my local D to smem[warp_id]
+  ///     sync
+  ///     if (I am the first warp)
+  ///       Copy smem[thread_id] to my local D
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param FuncAttrs Optional param to specify any function attributes that
+  ///                  need to be copied to the new function.
+  ///
+  /// \return The InterWarpCopy function.
+  Function *emitInterWarpCopyFunction(const LocationDescription &Loc,
+                                      ArrayRef<ReductionInfo> ReductionInfos,
+                                      AttributeList FuncAttrs);
+
+  /// This function emits a helper that copies all the reduction variables from
+  /// the team into the provided global buffer for the reduction variables.
+  ///
+  /// void list_to_global_copy_func(void *buffer, int Idx, void *reduce_data)
+  ///   For all data entries D in reduce_data:
+  ///     Copy local D to buffer.D[Idx]
+  ///
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param ReductionsBufferTy The StructTy for the reductions buffer.
+  /// \param FuncAttrs Optional param to specify any function attributes that
+  ///                  need to be copied to the new function.
+  ///
+  /// \return The ListToGlobalCopy function.
+  Function *emitListToGlobalCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                                         Type *ReductionsBufferTy,
+                                         AttributeList FuncAttrs);
+
+  /// This function emits a helper that copies all the reduction variables from
+  /// the team into the provided global buffer for the reduction variables.
+  ///
+  /// void list_to_global_copy_func(void *buffer, int Idx, void *reduce_data)
+  ///   For all data entries D in reduce_data:
+  ///     Copy buffer.D[Idx] to local D;
+  ///
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param ReductionsBufferTy The StructTy for the reductions buffer.
+  /// \param FuncAttrs Optional param to specify any function attributes that
+  ///                  need to be copied to the new function.
+  ///
+  /// \return The GlobalToList function.
+  Function *emitGlobalToListCopyFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                                         Type *ReductionsBufferTy,
+                                         AttributeList FuncAttrs);
+
+  /// This function emits a helper that reduces all the reduction variables from
+  /// the team into the provided global buffer for the reduction variables.
+  ///
+  /// void list_to_global_reduce_func(void *buffer, int Idx, void *reduce_data)
+  ///  void *GlobPtrs[];
+  ///  GlobPtrs[0] = (void*)&buffer.D0[Idx];
+  ///  ...
+  ///  GlobPtrs[N] = (void*)&buffer.DN[Idx];
+  ///  reduce_function(GlobPtrs, reduce_data);
+  ///
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param ReduceFn The reduction function.
+  /// \param ReductionsBufferTy The StructTy for the reductions buffer.
+  /// \param FuncAttrs Optional param to specify any function attributes that
+  ///                  need to be copied to the new function.
+  ///
+  /// \return The ListToGlobalReduce function.
+  Function *
+  emitListToGlobalReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                                 Function *ReduceFn, Type *ReductionsBufferTy,
+                                 AttributeList FuncAttrs);
+
+  /// This function emits a helper that reduces all the reduction variables from
+  /// the team into the provided global buffer for the reduction variables.
+  ///
+  /// void global_to_list_reduce_func(void *buffer, int Idx, void *reduce_data)
+  ///  void *GlobPtrs[];
+  ///  GlobPtrs[0] = (void*)&buffer.D0[Idx];
+  ///  ...
+  ///  GlobPtrs[N] = (void*)&buffer.DN[Idx];
+  ///  reduce_function(reduce_data, GlobPtrs);
+  ///
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param ReduceFn The reduction function.
+  /// \param ReductionsBufferTy The StructTy for the reductions buffer.
+  /// \param FuncAttrs Optional param to specify any function attributes that
+  ///                  need to be copied to the new function.
+  ///
+  /// \return The GlobalToListReduce function.
+  Function *
+  emitGlobalToListReduceFunction(ArrayRef<ReductionInfo> ReductionInfos,
+                                 Function *ReduceFn, Type *ReductionsBufferTy,
+                                 AttributeList FuncAttrs);
+
+  /// Get the function name of a reduction function.
+  std::string getReductionFuncName(StringRef Name) const;
+
+  /// Emits reduction function.
+  /// \param ReducerName Name of the function calling the reduction.
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  /// \param ReductionGenCBKind Optional param to specify Clang or MLIR
+  ///                           CodeGenCB kind.
+  /// \param FuncAttrs Optional param to specify any function attributes that
+  ///                  need to be copied to the new function.
+  ///
+  /// \return The reduction function.
+  Function *createReductionFunction(
+      StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
+      ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
+      AttributeList FuncAttrs = {});
+
+public:
+  ///
+  /// Design of OpenMP reductions on the GPU
+  ///
+  /// Consider a typical OpenMP program with one or more reduction
+  /// clauses:
+  ///
+  /// float foo;
+  /// double bar;
+  /// #pragma omp target teams distribute parallel for \
+  ///             reduction(+:foo) reduction(*:bar)
+  /// for (int i = 0; i < N; i++) {
+  ///   foo += A[i]; bar *= B[i];
+  /// }
+  ///
+  /// where 'foo' and 'bar' are reduced across all OpenMP threads in
+  /// all teams.  In our OpenMP implementation on the NVPTX device an
+  /// OpenMP team is mapped to a CUDA threadblock and OpenMP threads
+  /// within a team are mapped to CUDA threads within a threadblock.
+  /// Our goal is to efficiently aggregate values across all OpenMP
+  /// threads such that:
+  ///
+  ///   - the compiler and runtime are logically concise, and
+  ///   - the reduction is performed efficiently in a hierarchical
+  ///     manner as follows: within OpenMP threads in the same warp,
+  ///     across warps in a threadblock, and finally across teams on
+  ///     the NVPTX device.
+  ///
+  /// Introduction to Decoupling
+  ///
+  /// We would like to decouple the compiler and the runtime so that the
+  /// latter is ignorant of the reduction variables (number, data types)
+  /// and the reduction operators.  This allows a simpler interface
+  /// and implementation while still attaining good performance.
+  ///
+  /// Pseudocode for the aforementioned OpenMP program generated by the
+  /// compiler is as follows:
+  ///
+  /// 1. Create private copies of reduction variables on each OpenMP
+  ///    thread: 'foo_private', 'bar_private'
+  /// 2. Each OpenMP thread reduces the chunk of 'A' and 'B' assigned
+  ///    to it and writes the result in 'foo_private' and 'bar_private'
+  ///    respectively.
+  /// 3. Call the OpenMP runtime on the GPU to reduce within a team
+  ///    and store the result on the team master:
+  ///
+  ///     __kmpc_nvptx_parallel_reduce_nowait_v2(...,
+  ///        reduceData, shuffleReduceFn, interWarpCpyFn)
+  ///
+  ///     where:
+  ///       struct ReduceData {
+  ///         double *foo;
+  ///         double *bar;
+  ///       } reduceData
+  ///       reduceData.foo = &foo_private
+  ///       reduceData.bar = &bar_private
+  ///
+  ///     'shuffleReduceFn' and 'interWarpCpyFn' are pointers to two
+  ///     auxiliary functions generated by the compiler that operate on
+  ///     variables of type 'ReduceData'.  They aid the runtime perform
+  ///     algorithmic steps in a data agnostic manner.
+  ///
+  ///     'shuffleReduceFn' is a pointer to a function that reduces data
+  ///     of type 'ReduceData' across two OpenMP threads (lanes) in the
+  ///     same warp.  It takes the following arguments as input:
+  ///
+  ///     a. variable of type 'ReduceData' on the calling lane,
+  ///     b. its lane_id,
+  ///     c. an offset relative to the current lane_id to generate a
+  ///        remote_lane_id.  The remote lane contains the second
+  ///        variable of type 'ReduceData' that is to be reduced.
+  ///     d. an algorithm version parameter determining which reduction
+  ///        algorithm to use.
+  ///
+  ///     'shuffleReduceFn' retrieves data from the remote lane using
+  ///     efficient GPU shuffle intrinsics and reduces, using the
+  ///     algorithm specified by the 4th parameter, the two operands
+  ///     element-wise.  The result is written to the first operand.
+  ///
+  ///     Different reduction algorithms are implemented in different
+  ///     runtime functions, all calling 'shuffleReduceFn' to perform
+  ///     the essential reduction step.  Therefore, based on the 4th
+  ///     parameter, this function behaves slightly differently to
+  ///     cooperate with the runtime to ensure correctness under
+  ///     different circumstances.
+  ///
+  ///     'InterWarpCpyFn' is a pointer to a function that transfers
+  ///     reduced variables across warps.  It tunnels, through CUDA
+  ///     shared memory, the thread-private data of type 'ReduceData'
+  ///     from lane 0 of each warp to a lane in the first warp.
+  /// 4. Call the OpenMP runtime on the GPU to reduce across teams.
+  ///    The last team writes the global reduced value to memory.
+  ///
+  ///     ret = __kmpc_nvptx_teams_reduce_nowait(...,
+  ///             reduceData, shuffleReduceFn, interWarpCpyFn,
+  ///             scratchpadCopyFn, loadAndReduceFn)
+  ///
+  ///     'scratchpadCopyFn' is a helper that stores reduced
+  ///     data from the team master to a scratchpad array in
+  ///     global memory.
+  ///
+  ///     'loadAndReduceFn' is a helper that loads data from
+  ///     the scratchpad array and reduces it with the input
+  ///     operand.
+  ///
+  ///     These compiler generated functions hide address
+  ///     calculation and alignment information from the runtime.
+  /// 5. if ret == 1:
+  ///     The team master of the last team stores the reduced
+  ///     result to the globals in memory.
+  ///     foo += reduceData.foo; bar *= reduceData.bar
+  ///
+  ///
+  /// Warp Reduction Algorithms
+  ///
+  /// On the warp level, we have three algorithms implemented in the
+  /// OpenMP runtime depending on the number of active lanes:
+  ///
+  /// Full Warp Reduction
+  ///
+  /// The reduce algorithm within a warp where all lanes are active
+  /// is implemented in the runtime as follows:
+  ///
+  /// full_warp_reduce(void *reduce_data,
+  ///                  kmp_ShuffleReductFctPtr ShuffleReduceFn) {
+  ///   for (int offset = WARPSIZE/2; offset > 0; offset /= 2)
+  ///     ShuffleReduceFn(reduce_data, 0, offset, 0);
+  /// }
+  ///
+  /// The algorithm completes in log(2, WARPSIZE) steps.
+  ///
+  /// 'ShuffleReduceFn' is used here with lane_id set to 0 because it is
+  /// not used therefore we save instructions by not retrieving lane_id
+  /// from the corresponding special registers.  The 4th parameter, which
+  /// represents the version of the algorithm being used, is set to 0 to
+  /// signify full warp reduction.
+  ///
+  /// In this version, 'ShuffleReduceFn' behaves, per element, as follows:
+  ///
+  /// #reduce_elem refers to an element in the local lane's data structure
+  /// #remote_elem is retrieved from a remote lane
+  /// remote_elem = shuffle_down(reduce_elem, offset, WARPSIZE);
+  /// reduce_elem = reduce_elem REDUCE_OP remote_elem;
+  ///
+  /// Contiguous Partial Warp Reduction
+  ///
+  /// This reduce algorithm is used within a warp where only the first
+  /// 'n' (n <= WARPSIZE) lanes are active.  It is typically used when the
+  /// number of OpenMP threads in a parallel region is not a multiple of
+  /// WARPSIZE.  The algorithm is implemented in the runtime as follows:
+  ///
+  /// void
+  /// contiguous_partial_reduce(void *reduce_data,
+  ///                           kmp_ShuffleReductFctPtr ShuffleReduceFn,
+  ///                           int size, int lane_id) {
+  ///   int curr_size;
+  ///   int offset;
+  ///   curr_size = size;
+  ///   mask = curr_size/2;
+  ///   while (offset>0) {
+  ///     ShuffleReduceFn(reduce_data, lane_id, offset, 1);
+  ///     curr_size = (curr_size+1)/2;
+  ///     offset = curr_size/2;
+  ///   }
+  /// }
+  ///
+  /// In this version, 'ShuffleReduceFn' behaves, per element, as follows:
+  ///
+  /// remote_elem = shuffle_down(reduce_elem, offset, WARPSIZE);
+  /// if (lane_id < offset)
+  ///     reduce_elem = reduce_elem REDUCE_OP remote_elem
+  /// else
+  ///     reduce_elem = remote_elem
+  ///
+  /// This algorithm assumes that the data to be reduced are located in a
+  /// contiguous subset of lanes starting from the first.  When there is
+  /// an odd number of active lanes, the data in the last lane is not
+  /// aggregated with any other lane's dat but is instead copied over.
+  ///
+  /// Dispersed Partial Warp Reduction
+  ///
+  /// This algorithm is used within a warp when any discontiguous subset of
+  /// lanes are active.  It is used to implement the reduction operation
+  /// across lanes in an OpenMP simd region or in a nested parallel region.
+  ///
+  /// void
+  /// dispersed_partial_reduce(void *reduce_data,
+  ///                          kmp_ShuffleReductFctPtr ShuffleReduceFn) {
+  ///   int size, remote_id;
+  ///   int logical_lane_id = number_of_active_lanes_before_me() * 2;
+  ///   do {
+  ///       remote_id = next_active_lane_id_right_after_me();
+  ///       # the above function returns 0 of no active lane
+  ///       # is present right after the current lane.
+  ///       size = number_of_active_lanes_in_this_warp();
+  ///       logical_lane_id /= 2;
+  ///       ShuffleReduceFn(reduce_data, logical_lane_id,
+  ///                       remote_id-1-threadIdx.x, 2);
+  ///   } while (logical_lane_id % 2 == 0 && size > 1);
+  /// }
+  ///
+  /// There is no assumption made about the initial state of the reduction.
+  /// Any number of lanes (>=1) could be active at any position.  The reduction
+  /// result is returned in the first active lane.
+  ///
+  /// In this version, 'ShuffleReduceFn' behaves, per element, as follows:
+  ///
+  /// remote_elem = shuffle_down(reduce_elem, offset, WARPSIZE);
+  /// if (lane_id % 2 == 0 && offset > 0)
+  ///     reduce_elem = reduce_elem REDUCE_OP remote_elem
+  /// else
+  ///     reduce_elem = remote_elem
+  ///
+  ///
+  /// Intra-Team Reduction
+  ///
+  /// This function, as implemented in the runtime call
+  /// '__kmpc_nvptx_parallel_reduce_nowait_v2', aggregates data across OpenMP
+  /// threads in a team.  It first reduces within a warp using the
+  /// aforementioned algorithms.  We then proceed to gather all such
+  /// reduced values at the first warp.
+  ///
+  /// The runtime makes use of the function 'InterWarpCpyFn', which copies
+  /// data from each of the "warp master" (zeroth lane of each warp, where
+  /// warp-reduced data is held) to the zeroth warp.  This step reduces (in
+  /// a mathematical sense) the problem of reduction across warp masters in
+  /// a block to the problem of warp reduction.
+  ///
+  ///
+  /// Inter-Team Reduction
+  ///
+  /// Once a team has reduced its data to a single value, it is stored in
+  /// a global scratchpad array.  Since each team has a distinct slot, this
+  /// can be done without locking.
+  ///
+  /// The last team to write to the scratchpad array proceeds to reduce the
+  /// scratchpad array.  One or more workers in the last team use the helper
+  /// 'loadAndReduceDataFn' to load and reduce values from the array, i.e.,
+  /// the k'th worker reduces every k'th element.
+  ///
+  /// Finally, a call is made to '__kmpc_nvptx_parallel_reduce_nowait_v2' to
+  /// reduce across workers and compute a globally reduced value.
+  ///
+  /// \param Loc                The location where the reduction was
+  ///                           encountered. Must be within the associate
+  ///                           directive and after the last local access to the
+  ///                           reduction variables.
+  /// \param AllocaIP           An insertion point suitable for allocas usable
+  ///                           in reductions.
+  /// \param CodeGenIP           An insertion point suitable for code
+  /// generation. \param ReductionInfos     A list of info on each reduction
+  /// variable. \param IsNoWait           Optional flag set if the reduction is
+  /// marked as
+  ///                           nowait.
+  /// \param IsTeamsReduction   Optional flag set if it is a teams
+  ///                           reduction.
+  /// \param HasDistribute      Optional flag set if it is a
+  ///                           distribute reduction.
+  /// \param GridValue          Optional GPU grid value.
+  /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
+  /// used for teams reduction.
+  /// \param SrcLocInfo         Source location information global.
+  InsertPointTy createReductionsGPU(
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
+      bool IsNoWait = false, bool IsTeamsReduction = false,
+      bool HasDistribute = false,
+      ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
+      std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
+      Value *SrcLocInfo = nullptr);
 
   // TODO: provide atomic and non-atomic reduction generators for reduction
   // operators defined by the OpenMP specification.
@@ -1344,7 +1946,7 @@ public:
   InsertPointTy createReductions(const LocationDescription &Loc,
                                  InsertPointTy AllocaIP,
                                  ArrayRef<ReductionInfo> ReductionInfos,
-                                 bool IsNoWait = false, bool IsByRef = false);
+                                 ArrayRef<bool> IsByRef, bool IsNoWait = false);
 
   ///}
 
@@ -1420,19 +2022,6 @@ public:
                                  Value *Ident, Value *DeviceID, Value *NumTeams,
                                  Value *NumThreads, Value *HostPtr,
                                  ArrayRef<Value *> KernelArgs);
-
-  /// Generate a barrier runtime call.
-  ///
-  /// \param Loc The location at which the request originated and is fulfilled.
-  /// \param DK The directive which caused the barrier
-  /// \param ForceSimpleCall Flag to force a simple (=non-cancellation) barrier.
-  /// \param CheckCancelFlag Flag to indicate a cancel barrier return value
-  ///                        should be checked and acted upon.
-  ///
-  /// \returns The insertion point after the barrier.
-  InsertPointTy emitBarrierImpl(const LocationDescription &Loc,
-                                omp::Directive DK, bool ForceSimpleCall,
-                                bool CheckCancelFlag);
 
   /// Generate a flush runtime call.
   ///
@@ -1620,24 +2209,26 @@ public:
   /// kernel args vector.
   struct TargetKernelArgs {
     /// Number of arguments passed to the runtime library.
-    unsigned NumTargetItems;
+    unsigned NumTargetItems = 0;
     /// Arguments passed to the runtime library
     TargetDataRTArgs RTArgs;
     /// The number of iterations
-    Value *NumIterations;
+    Value *NumIterations = nullptr;
     /// The number of teams.
-    Value *NumTeams;
+    ArrayRef<Value *> NumTeams;
     /// The number of threads.
-    Value *NumThreads;
+    ArrayRef<Value *> NumThreads;
     /// The size of the dynamic shared memory.
-    Value *DynCGGroupMem;
+    Value *DynCGGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
-    bool HasNoWait;
+    bool HasNoWait = false;
 
-    /// Constructor for TargetKernelArgs
+    // Constructors for TargetKernelArgs.
+    TargetKernelArgs() {}
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
-                     Value *NumIterations, Value *NumTeams, Value *NumThreads,
-                     Value *DynCGGroupMem, bool HasNoWait)
+                     Value *NumIterations, ArrayRef<Value *> NumTeams,
+                     ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
+                     bool HasNoWait)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
@@ -1670,6 +2261,8 @@ public:
     bool HasMapper = false;
     /// The total number of pointers passed to the runtime library.
     unsigned NumberOfPtrs = 0u;
+
+    bool EmitDebug = false;
 
     explicit TargetDataInfo() {}
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
@@ -1762,6 +2355,26 @@ public:
       EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
       Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
 
+  /// Generate a target-task for the target construct
+  ///
+  /// \param OutlinedFn The outlined device/target kernel function.
+  /// \param OutlinedFnID The ooulined function ID.
+  /// \param EmitTargetCallFallbackCB Call back function to generate host
+  ///        fallback code.
+  /// \param Args Data structure holding information about the kernel arguments.
+  /// \param DeviceID Identifier for the device via the 'device' clause.
+  /// \param RTLoc Source location identifier
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param Dependencies Vector of DependData objects holding information of
+  ///        dependencies as specified by the 'depend' clause.
+  /// \param HasNoWait True if the target construct had 'nowait' on it, false
+  ///        otherwise
+  InsertPointTy emitTargetTask(
+      Function *OutlinedFn, Value *OutlinedFnID,
+      EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
+      Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP,
+      SmallVector<OpenMPIRBuilder::DependData> &Dependencies, bool HasNoWait);
+
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
   /// ForEndCall, emit map types to be passed for the end of the region instead
@@ -1769,7 +2382,6 @@ public:
   void emitOffloadingArraysArgument(IRBuilderBase &Builder,
                                     OpenMPIRBuilder::TargetDataRTArgs &RTArgs,
                                     OpenMPIRBuilder::TargetDataInfo &Info,
-                                    bool EmitDebug = false,
                                     bool ForEndCall = false);
 
   /// Emit an array of struct descriptors to be assigned to the offload args.
@@ -1780,10 +2392,25 @@ public:
 
   /// Emit the arrays used to pass the captures and map information to the
   /// offloading runtime library. If there is no map or capture information,
-  /// return nullptr by reference.
+  /// return nullptr by reference. Accepts a reference to a MapInfosTy object
+  /// that contains information generated for mappable clauses,
+  /// including base pointers, pointers, sizes, map types, user-defined mappers.
   void emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
       TargetDataInfo &Info, bool IsNonContiguous = false,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
+      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+
+  /// Allocates memory for and populates the arrays required for offloading
+  /// (offload_{baseptrs|ptrs|mappers|sizes|maptypes|mapnames}). Then, it
+  /// emits their base addresses as arguments to be passed to the runtime
+  /// library. In essence, this function is a combination of
+  /// emitOffloadingArrays and emitOffloadingArraysArgument and should arguably
+  /// be preferred by clients of OpenMPIRBuilder.
+  void emitOffloadingArraysAndArgs(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
+      TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo,
+      bool IsNonContiguous = false, bool ForEndCall = false,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
 
@@ -2235,6 +2862,7 @@ public:
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
+  /// \param IsOffloadEntry whether it is an offload entry.
   /// \param CodeGenIP The insertion point where the call to the outlined
   /// function should be emitted.
   /// \param EntryInfo The entry information about the function.
@@ -2245,15 +2873,18 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param ArgAccessorFuncCB Callback that will generate accessors
   /// instructions for passed in target arguments where neccessary
-  InsertPointTy createTarget(const LocationDescription &Loc,
-                             OpenMPIRBuilder::InsertPointTy AllocaIP,
-                             OpenMPIRBuilder::InsertPointTy CodeGenIP,
-                             TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
-                             int32_t NumThreads,
-                             SmallVectorImpl<Value *> &Inputs,
-                             GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB,
-                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
+  /// \param Dependencies A vector of DependData objects that carry
+  // dependency information as passed in the depend clause
+  InsertPointTy
+  createTarget(const LocationDescription &Loc, bool IsOffloadEntry,
+               OpenMPIRBuilder::InsertPointTy AllocaIP,
+               OpenMPIRBuilder::InsertPointTy CodeGenIP,
+               TargetRegionEntryInfo &EntryInfo, ArrayRef<int32_t> NumTeams,
+               ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Inputs,
+               GenMapInfoCallbackTy GenMapInfoCB,
+               TargetBodyGenCallbackTy BodyGenCB,
+               TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+               SmallVector<DependData> Dependencies = {});
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -2272,6 +2903,9 @@ public:
   /// Returns __kmpc_dispatch_fini_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned.
   FunctionCallee createDispatchFiniFunction(unsigned IVSize, bool IVSigned);
+
+  /// Returns __kmpc_dispatch_deinit runtime function.
+  FunctionCallee createDispatchDeinitFunction();
 
   /// Declarations for LLVM-IR types (simple, array, function and structure) are
   /// generated below. Their names are defined and used in OpenMPKinds.def. Here
@@ -2426,6 +3060,15 @@ private:
                    AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX,
                    bool IsXBinopExpr);
+
+  std::pair<llvm::LoadInst *, llvm::AllocaInst *>
+  EmitAtomicLoadLibcall(Value *X, Type *XElemTy, llvm::AtomicOrdering AO,
+                        uint64_t AtomicSizeInBits);
+
+  std::pair<llvm::Value *, llvm::Value *> EmitAtomicCompareExchangeLibcall(
+      Value *X, Type *XElemTy, uint64_t AtomicSizeInBits,
+      llvm::Value *ExpectedVal, llvm::Value *DesiredVal,
+      llvm::AtomicOrdering Success, llvm::AtomicOrdering Failure);
 
   /// Emit the binary op. described by \p RMWOp, using \p Src1 and \p Src2 .
   ///

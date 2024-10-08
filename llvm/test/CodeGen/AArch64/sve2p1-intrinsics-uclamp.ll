@@ -137,7 +137,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 
 
 attributes #0 = { "target-features"="+sve2p1" }
-attributes #1 = { "target-features"="+sme2" }
+attributes #1 = { "target-features"="+sme2" "aarch64_pstate_sm_enabled" }
 
 declare <vscale x 16 x i8> @llvm.aarch64.sve.uclamp.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.uclamp.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>)

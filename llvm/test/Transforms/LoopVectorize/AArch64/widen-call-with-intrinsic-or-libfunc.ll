@@ -23,7 +23,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%conv> = fpext ir<%l> to double
-; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using library function: __simd_sin_v2f64)
+; CHECK-NEXT:     WIDEN-CALL ir<%s> = call reassoc nnan ninf nsz arcp contract afn @llvm.sin.f64(ir<%conv>) (using library function: __simd_sin_v2f64)
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -33,6 +33,14 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VTC]]>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
@@ -52,7 +60,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%conv> = fpext ir<%l> to double
-; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using vector intrinsic)
+; CHECK-NEXT:     WIDEN-CALL ir<%s> = call reassoc nnan ninf nsz arcp contract afn @llvm.sin.f64(ir<%conv>) (using vector intrinsic)
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -62,6 +70,14 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VTC]]>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

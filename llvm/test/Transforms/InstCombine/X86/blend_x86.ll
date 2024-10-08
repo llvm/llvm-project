@@ -282,6 +282,33 @@ define <2 x i64> @sel_v16i8_sse_reality(ptr nocapture readonly %x, <2 x i64> %y,
   ret <2 x i64> %rcast
 }
 
+define <4 x float> @sel_v16i8_bitcast_shuffle_bitcast_cmp(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d) {
+; CHECK-LABEL: @sel_v16i8_bitcast_shuffle_bitcast_cmp(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <8 x float> [[A]] to <8 x i32>
+; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <8 x float> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <8 x i32> [[A_BC]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <8 x i32> [[B_BC]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[B_LO]], <4 x i32> [[A_LO]]
+; CHECK-NEXT:    [[RES:%.*]] = bitcast <4 x i32> [[TMP2]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[RES]]
+;
+  %cmp = fcmp olt <8 x float> %a, %b
+  %sext = sext <8 x i1> %cmp to <8 x i32>
+  %a.bc = bitcast <8 x float> %a to <8 x i32>
+  %b.bc = bitcast <8 x float> %b to <8 x i32>
+  %sext.lo = shufflevector <8 x i32> %sext, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a.lo = shufflevector <8 x i32> %a.bc, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %b.lo = shufflevector <8 x i32> %b.bc, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a.lo.bc = bitcast <4 x i32> %a.lo to <16 x i8>
+  %b.lo.bc = bitcast <4 x i32> %b.lo to <16 x i8>
+  %sext.lo.bc = bitcast <4 x i32> %sext.lo to <16 x i8>
+  %blendv = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %a.lo.bc, <16 x i8> %b.lo.bc, <16 x i8> %sext.lo.bc)
+  %res = bitcast <16 x i8> %blendv to <4 x float>
+  ret <4 x float> %res
+}
+
 declare <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8>, <16 x i8>, <16 x i8>)
 declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>, <4 x float>)
 declare <2 x double> @llvm.x86.sse41.blendvpd(<2 x double>, <2 x double>, <2 x double>)

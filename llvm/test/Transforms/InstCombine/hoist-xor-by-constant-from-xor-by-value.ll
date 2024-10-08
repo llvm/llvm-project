@@ -64,7 +64,7 @@ define i8 @t4_extrause(i8 %x, i8 %y) {
 define i8 @t5_commutativity(i8 %x) {
 ; CHECK-LABEL: @t5_commutativity(
 ; CHECK-NEXT:    [[Y:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], 42
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -94,7 +94,8 @@ entry:
 
 define i16 @constantexpr2() {
 ; CHECK-LABEL: @constantexpr2(
-; CHECK-NEXT:    [[I1:%.*]] = zext i1 icmp ne (ptr getelementptr inbounds ([6 x [1 x i64]], ptr @global_constant3, i64 0, i64 5, i64 0), ptr @global_constant4) to i16
+; CHECK-NEXT:    [[I0:%.*]] = icmp ne ptr getelementptr inbounds (i8, ptr @global_constant3, i64 40), @global_constant4
+; CHECK-NEXT:    [[I1:%.*]] = zext i1 [[I0]] to i16
 ; CHECK-NEXT:    [[I2:%.*]] = load ptr, ptr @global_constant5, align 1
 ; CHECK-NEXT:    [[I3:%.*]] = load i16, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = xor i16 [[I3]], [[I1]]

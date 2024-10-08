@@ -181,6 +181,10 @@ public:
 
   long double LongDouble(long double fail_value = 0.0) const;
 
+  llvm::APSInt GetAPSInt() const { return m_integer; }
+
+  llvm::APFloat GetAPFloat() const { return m_float; }
+
   Status SetValueFromCString(const char *s, lldb::Encoding encoding,
                              size_t byte_size);
 
@@ -206,6 +210,7 @@ protected:
   static PromotionKey GetFloatPromoKey(const llvm::fltSemantics &semantics);
 
 private:
+  friend llvm::APFloat::cmpResult compare(Scalar lhs, Scalar rhs);
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
   friend const Scalar operator-(Scalar lhs, Scalar rhs);
   friend const Scalar operator/(Scalar lhs, Scalar rhs);
@@ -216,9 +221,9 @@ private:
   friend const Scalar operator^(Scalar lhs, Scalar rhs);
   friend const Scalar operator<<(const Scalar &lhs, const Scalar &rhs);
   friend const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator==(Scalar lhs, Scalar rhs);
+  friend bool operator==(const Scalar &lhs, const Scalar &rhs);
   friend bool operator!=(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator<(Scalar lhs, Scalar rhs);
+  friend bool operator<(const Scalar &lhs, const Scalar &rhs);
   friend bool operator<=(const Scalar &lhs, const Scalar &rhs);
   friend bool operator>(const Scalar &lhs, const Scalar &rhs);
   friend bool operator>=(const Scalar &lhs, const Scalar &rhs);
@@ -237,6 +242,7 @@ private:
 //  Item 19 of "Effective C++ Second Edition" by Scott Meyers
 //  Differentiate among members functions, non-member functions, and
 //  friend functions
+llvm::APFloat::cmpResult compare(Scalar lhs, Scalar rhs);
 const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator-(Scalar lhs, Scalar rhs);
 const Scalar operator/(Scalar lhs, Scalar rhs);
@@ -247,9 +253,9 @@ const Scalar operator%(Scalar lhs, Scalar rhs);
 const Scalar operator^(Scalar lhs, Scalar rhs);
 const Scalar operator<<(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
-bool operator==(Scalar lhs, Scalar rhs);
+bool operator==(const Scalar &lhs, const Scalar &rhs);
 bool operator!=(const Scalar &lhs, const Scalar &rhs);
-bool operator<(Scalar lhs, Scalar rhs);
+bool operator<(const Scalar &lhs, const Scalar &rhs);
 bool operator<=(const Scalar &lhs, const Scalar &rhs);
 bool operator>(const Scalar &lhs, const Scalar &rhs);
 bool operator>=(const Scalar &lhs, const Scalar &rhs);

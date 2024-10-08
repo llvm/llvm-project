@@ -9,13 +9,14 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_BCMP_H
 
 #include "src/__support/macros/attributes.h"               // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_RISCV64
 #include "src/string/memory_utils/generic/aligned_access.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 [[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_riscv(CPtr p1, CPtr p2,
                                                               size_t count) {
@@ -28,6 +29,6 @@ namespace LIBC_NAMESPACE {
 #endif
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_BCMP_H

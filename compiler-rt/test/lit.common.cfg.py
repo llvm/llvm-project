@@ -148,6 +148,9 @@ if compiler_id == "Clang":
         # requested it because it makes ASan reports more precise.
         config.debug_info_flags.append("-gcodeview")
         config.debug_info_flags.append("-gcolumn-info")
+elif compiler_id == "MSVC":
+    config.debug_info_flags = ["/Z7"]
+    config.cxx_mode_flags = []
 elif compiler_id == "GNU":
     config.cxx_mode_flags = ["-x c++"]
     config.debug_info_flags = ["-g"]
@@ -312,6 +315,8 @@ config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.have_zlib:
     config.available_features.add("zlib")
+    config.substitutions.append(("%zlib_include_dir", config.zlib_include_dir))
+    config.substitutions.append(("%zlib_library", config.zlib_library))
 
 if config.have_internal_symbolizer:
     config.available_features.add("internal_symbolizer")
@@ -586,21 +591,18 @@ if config.host_os == "Darwin":
     for vers in min_macos_deployment_target_substitutions:
         flag = config.apple_platform_min_deployment_target_flag
         major, minor = get_macos_aligned_version(vers)
-        if "mtargetos" in flag:
+        apple_device = ""
+        sim = ""
+        if "target" in flag:
+            apple_device = config.apple_platform.split("sim")[0]
             sim = "-simulator" if "sim" in config.apple_platform else ""
-            config.substitutions.append(
-                (
-                    "%%min_macos_deployment_target=%s.%s" % vers,
-                    "{}{}.{}{}".format(flag, major, minor, sim),
-                )
+
+        config.substitutions.append(
+            (
+                "%%min_macos_deployment_target=%s.%s" % vers,
+                "{}={}{}.{}{}".format(flag, apple_device, major, minor, sim),
             )
-        else:
-            config.substitutions.append(
-                (
-                    "%%min_macos_deployment_target=%s.%s" % vers,
-                    "{}={}.{}".format(flag, major, minor),
-                )
-            )
+        )
 else:
     for vers in min_macos_deployment_target_substitutions:
         config.substitutions.append(("%%min_macos_deployment_target=%s.%s" % vers, ""))
@@ -677,7 +679,16 @@ if config.host_os == "Linux":
 
         ver = LooseVersion(ver_string)
         any_glibc = False
-        for required in ["2.19", "2.27", "2.30", "2.33", "2.34", "2.37", "2.38"]:
+        for required in [
+            "2.19",
+            "2.27",
+            "2.30",
+            "2.33",
+            "2.34",
+            "2.37",
+            "2.38",
+            "2.40",
+        ]:
             if ver >= LooseVersion(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True
@@ -744,6 +755,13 @@ def is_binutils_lto_supported():
     return True
 
 
+def is_lld_lto_supported():
+    # LLD does support LTO, but we require it to be built with the latest
+    # changes to claim support. Otherwise older copies of LLD may not
+    # understand new bitcode versions.
+    return os.path.exists(os.path.join(config.llvm_tools_dir, "lld"))
+
+
 def is_windows_lto_supported():
     if not target_is_msvc:
         return True
@@ -755,7 +773,7 @@ if config.host_os == "Darwin" and is_darwin_lto_supported():
     config.lto_flags = ["-Wl,-lto_library," + liblto_path()]
 elif config.host_os in ["Linux", "FreeBSD", "NetBSD"]:
     config.lto_supported = False
-    if config.use_lld:
+    if config.use_lld and is_lld_lto_supported():
         config.lto_supported = True
     if is_binutils_lto_supported():
         config.available_features.add("binutils_lto")
@@ -987,3 +1005,9 @@ if config.compiler_id == "GNU":
     gcc_dir = os.path.dirname(config.clang)
     libasan_dir = os.path.join(gcc_dir, "..", "lib" + config.bits)
     push_dynamic_library_lookup_path(config, libasan_dir)
+
+
+# Help tests that make sure certain files are in-sync between compiler-rt and
+# llvm.
+config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
+config.substitutions.append(("%llvm_src", config.llvm_src_root))

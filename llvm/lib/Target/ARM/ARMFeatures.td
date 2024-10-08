@@ -15,6 +15,18 @@ def ModeSoftFloat         : SubtargetFeature<"soft-float","UseSoftFloat",
 // ARM Subtarget features.
 //
 
+// This is currently only used by AArch64, but is required here because ARM and
+// AArch64 share a tablegen backend for TargetParser.
+class Extension<
+  string TargetFeatureName,            // String used for -target-feature.
+  string Spelling,                     // The XYZ in HasXYZ and AEK_XYZ.
+  string Desc,                         // Description.
+  list<SubtargetFeature> Implies = []  // List of dependent features.
+> : SubtargetFeature<TargetFeatureName, "Has" # Spelling, "true", Desc, Implies>
+{
+    string ArchExtKindSpelling = "AEK_" # Spelling; // ArchExtKind enum name.
+}
+
 // Floating Point, HW Division and Neon Support
 
 // FP loads/stores/moves, shared between VFP and MVE (even in the integer-only
@@ -360,8 +372,11 @@ def FeatureVMLxForwarding : SubtargetFeature<"vmlx-forwarding",
 def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Prefers32BitThumb", "true",
                                              "Prefer 32-bit Thumb instrs">;
 
-def FeaturePrefLoopAlign32 : SubtargetFeature<"loop-align", "PrefLoopLogAlignment","2",
-                                              "Prefer 32-bit alignment for loops">;
+def FeaturePreferBranchAlign32 : SubtargetFeature<"loop-align", "PreferBranchLogAlignment","2",
+                                              "Prefer 32-bit alignment for branch targets">;
+
+def FeaturePreferBranchAlign64 : SubtargetFeature<"branch-align-64", "PreferBranchLogAlignment","3",
+                                              "Prefer 64-bit alignment for branch targets">;
 
 def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "4",
                         "Model MVE instructions as a 1 beat per tick architecture">;
@@ -536,15 +551,14 @@ def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098
   "FixCortexA57AES1742098", "true",
   "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
 
+// If frame pointers are in use, they must follow the AAPCS definition, which
+// always uses R11 as the frame pointer. If this is not set, we can use R7 as
+// the frame pointer for Thumb1-only code, which is more efficient, but less
+// compatible. Note that this feature does not control whether frame pointers
+// are emitted, that is controlled by the "frame-pointer" function attribute.
 def FeatureAAPCSFrameChain : SubtargetFeature<"aapcs-frame-chain",
                                               "CreateAAPCSFrameChain", "true",
                                               "Create an AAPCS compliant frame chain">;
-
-def FeatureAAPCSFrameChainLeaf : SubtargetFeature<"aapcs-frame-chain-leaf",
-                                                  "CreateAAPCSFrameChainLeaf", "true",
-                                                  "Create an AAPCS compliant frame chain "
-                                                  "for leaf functions",
-                                                  [FeatureAAPCSFrameChain]>;
 
 // Assume that lock-free 32-bit atomics are available, even if the target
 // and operating system combination would not usually provide them. The user
@@ -691,6 +705,11 @@ def HasV9_4aOps   : SubtargetFeature<"v9.4a", "HasV9_4aOps", "true",
 def HasV9_5aOps   : SubtargetFeature<"v9.5a", "HasV9_5aOps", "true",
                                    "Support ARM v9.5a instructions",
                                    [HasV9_4aOps]>;
+
+// Armv9.6-A is a v9-only architecture.
+def HasV9_6aOps   : SubtargetFeature<"v9.6a", "HasV9_6aOps", "true",
+                                   "Support ARM v9.6a instructions",
+                                   [HasV9_5aOps]>;
 
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",

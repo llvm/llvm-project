@@ -95,8 +95,6 @@ public:
   NODE(parser, AccObjectList)
   NODE(parser, AccObjectListWithModifier)
   NODE(parser, AccObjectListWithReduction)
-  NODE(parser, AccReductionOperator)
-  NODE_ENUM(parser::AccReductionOperator, Operator)
   NODE(parser, AccSizeExpr)
   NODE(parser, AccSizeExprList)
   NODE(parser, AccSelfClause)
@@ -203,11 +201,12 @@ public:
   NODE(parser, CommonStmt)
   NODE(CommonStmt, Block)
   NODE(parser, CompilerDirective)
+  NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, IgnoreTKR)
   NODE(CompilerDirective, LoopCount)
-  NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, NameValue)
   NODE(CompilerDirective, Unrecognized)
+  NODE(CompilerDirective, VectorAlways)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)
@@ -236,6 +235,7 @@ public:
   NODE(parser, CUFKernelDoConstruct)
   NODE(CUFKernelDoConstruct, StarOrExpr)
   NODE(CUFKernelDoConstruct, Directive)
+  NODE(parser, CUFReduction)
   NODE(parser, CycleStmt)
   NODE(parser, DataComponentDefStmt)
   NODE(parser, DataIDoObject)
@@ -435,10 +435,13 @@ public:
   NODE(parser, LetterSpec)
   NODE(parser, LiteralConstant)
   NODE(parser, IntLiteralConstant)
+  NODE(parser, ReductionOperator)
+  NODE_ENUM(parser::ReductionOperator, Operator)
   NODE(parser, LocalitySpec)
   NODE(LocalitySpec, DefaultNone)
   NODE(LocalitySpec, Local)
   NODE(LocalitySpec, LocalInit)
+  NODE(LocalitySpec, Reduce)
   NODE(LocalitySpec, Shared)
   NODE(parser, LockStmt)
   NODE(LockStmt, LockStat)
@@ -519,6 +522,8 @@ public:
   NODE(parser, OmpEndSectionsDirective)
   NODE(parser, OmpIfClause)
   NODE_ENUM(OmpIfClause, DirectiveNameModifier)
+  NODE_ENUM(OmpLastprivateClause, LastprivateModifier)
+  NODE(parser, OmpLastprivateClause)
   NODE(parser, OmpLinearClause)
   NODE(OmpLinearClause, WithModifier)
   NODE(OmpLinearClause, WithoutModifier)
@@ -872,7 +877,7 @@ protected:
       ss << x;
     }
     if (ss.tell()) {
-      return ss.str();
+      return buf;
     }
     if constexpr (std::is_same_v<T, Name>) {
       return x.source.ToString();

@@ -59,7 +59,6 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_shr] = Desc(Op::Dwarf2);
   Descriptions[DW_OP_shra] = Desc(Op::Dwarf2);
   Descriptions[DW_OP_xor] = Desc(Op::Dwarf2);
-  Descriptions[DW_OP_skip] = Desc(Op::Dwarf2, Op::SignedSize2);
   Descriptions[DW_OP_bra] = Desc(Op::Dwarf2, Op::SignedSize2);
   Descriptions[DW_OP_eq] = Desc(Op::Dwarf2);
   Descriptions[DW_OP_ge] = Desc(Op::Dwarf2);
@@ -67,6 +66,7 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_le] = Desc(Op::Dwarf2);
   Descriptions[DW_OP_lt] = Desc(Op::Dwarf2);
   Descriptions[DW_OP_ne] = Desc(Op::Dwarf2);
+  Descriptions[DW_OP_skip] = Desc(Op::Dwarf2, Op::SignedSize2);
   for (uint16_t LA = DW_OP_lit0; LA <= DW_OP_lit31; ++LA)
     Descriptions[LA] = Desc(Op::Dwarf2);
   for (uint16_t LA = DW_OP_reg0; LA <= DW_OP_reg31; ++LA)
@@ -88,20 +88,22 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_call_frame_cfa] = Desc(Op::Dwarf3);
   Descriptions[DW_OP_bit_piece] = Desc(Op::Dwarf3, Op::SizeLEB, Op::SizeLEB);
   Descriptions[DW_OP_implicit_value] =
-      Desc(Op::Dwarf3, Op::SizeLEB, Op::SizeBlock);
-  Descriptions[DW_OP_stack_value] = Desc(Op::Dwarf3);
+      Desc(Op::Dwarf4, Op::SizeLEB, Op::SizeBlock);
+  Descriptions[DW_OP_stack_value] = Desc(Op::Dwarf4);
+  Descriptions[DW_OP_implicit_pointer] =
+      Desc(Op::Dwarf5, Op::SizeRefAddr, Op::SignedSizeLEB);
+  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
+  Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
+  Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
+  Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
+  Descriptions[DW_OP_regval_type] =
+      Desc(Op::Dwarf5, Op::SizeLEB, Op::BaseTypeRef);
   Descriptions[DW_OP_WASM_location] =
       Desc(Op::Dwarf4, Op::SizeLEB, Op::WasmLocationArg);
   Descriptions[DW_OP_GNU_push_tls_address] = Desc(Op::Dwarf3);
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_entry_value] = Desc(Op::Dwarf4, Op::SizeLEB);
-  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
-  Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
-  Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
-  Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
-  Descriptions[DW_OP_regval_type] =
-      Desc(Op::Dwarf5, Op::SizeLEB, Op::BaseTypeRef);
   // This Description acts as a marker that getSubOpDesc must be called
   // to fetch the final Description for the operation. Each such final
   // Description must share the same first SizeSubOpLEB operand.
@@ -240,6 +242,10 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
                                    ArrayRef<uint64_t> Operands,
                                    unsigned Operand) {
   assert(Operand < Operands.size() && "operand out of bounds");
+  if (!U) {
+    OS << format(" <base_type ref: 0x%" PRIx64 ">", Operands[Operand]);
+    return;
+  }
   auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
   if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
     OS << " (";
@@ -249,8 +255,7 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
     if (auto Name = dwarf::toString(Die.find(dwarf::DW_AT_name)))
       OS << " \"" << *Name << "\"";
   } else {
-    OS << format(" <invalid base_type ref: 0x%" PRIx64 ">",
-                 Operands[Operand]);
+    OS << format(" <invalid base_type ref: 0x%" PRIx64 ">", Operands[Operand]);
   }
 }
 

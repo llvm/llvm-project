@@ -57,10 +57,10 @@ public:
   //
   // LanguageRuntime implementation
   //
-  bool GetObjectDescription(Stream &str, Value &value,
-                            ExecutionContextScope *exe_scope) override;
+  llvm::Error GetObjectDescription(Stream &str, Value &value,
+                                   ExecutionContextScope *exe_scope) override;
 
-  bool GetObjectDescription(Stream &str, ValueObject &object) override;
+  llvm::Error GetObjectDescription(Stream &str, ValueObject &object) override;
 
   bool CouldHaveDynamicValue(ValueObject &in_value) override;
 

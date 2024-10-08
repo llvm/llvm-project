@@ -59,9 +59,10 @@ static cl::opt<bool> PGOWarnMisExpect(
     cl::desc("Use this option to turn on/off "
              "warnings about incorrect usage of llvm.expect intrinsics."));
 
+// Command line option for setting the diagnostic tolerance threshold
 static cl::opt<uint32_t> MisExpectTolerance(
     "misexpect-tolerance", cl::init(0),
-    cl::desc("Prevents emiting diagnostics when profile counts are "
+    cl::desc("Prevents emitting diagnostics when profile counts are "
              "within N% of the threshold.."));
 
 } // namespace llvm
@@ -150,15 +151,9 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
   uint64_t TotalBranchWeight =
       LikelyBranchWeight + (UnlikelyBranchWeight * NumUnlikelyTargets);
 
-  // FIXME: When we've addressed sample profiling, restore the assertion
-  //
-  // We cannot calculate branch probability if either of these invariants aren't
-  // met. However, MisExpect diagnostics should not prevent code from compiling,
-  // so we simply forgo emitting diagnostics here, and return early.
-  // assert((TotalBranchWeight >= LikelyBranchWeight) && (TotalBranchWeight > 0)
-  //              && "TotalBranchWeight is less than the Likely branch weight");
-  if ((TotalBranchWeight == 0) || (TotalBranchWeight <= LikelyBranchWeight))
-    return;
+  // Failing this assert means that we have corrupted metadata.
+  assert((TotalBranchWeight >= LikelyBranchWeight) && (TotalBranchWeight > 0) &&
+         "TotalBranchWeight is less than the Likely branch weight");
 
   // To determine our threshold value we need to obtain the branch probability
   // for the weights added by llvm.expect and use that proportion to calculate
@@ -185,6 +180,13 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
 
 void checkBackendInstrumentation(Instruction &I,
                                  const ArrayRef<uint32_t> RealWeights) {
+  // Backend checking assumes any existing weight comes from an `llvm.expect`
+  // intrinsic. However, SampleProfiling + ThinLTO add branch weights  multiple
+  // times, leading to an invalid assumption in our checking. Backend checks
+  // should only operate on branch weights that carry the "!expected" field,
+  // since they are guaranteed to be added by the LowerExpectIntrinsic pass.
+  if (!hasBranchWeightOrigin(I))
+    return;
   SmallVector<uint32_t> ExpectedWeights;
   if (!extractBranchWeights(I, ExpectedWeights))
     return;

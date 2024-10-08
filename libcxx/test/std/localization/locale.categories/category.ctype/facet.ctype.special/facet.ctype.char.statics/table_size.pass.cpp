@@ -12,10 +12,9 @@
 
 // Make sure we can reference std::ctype<char>::table_size.
 
-// Before https://llvm.org/D110647, the shared library did not contain
+// Before https://llvm.org/D110647 (049f6c29a6f0), the shared library did not contain
 // std::ctype<char>::table_size, so this test fails with a link error.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{11.0|12.0|13.0}}
+// XFAIL: using-built-library-before-llvm-14
 
 #include <locale>
 #include <cassert>

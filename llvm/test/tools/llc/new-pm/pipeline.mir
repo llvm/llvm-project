@@ -1,6 +1,9 @@
 # RUN: llc -mtriple=x86_64-pc-linux-gnu -x mir -passes=no-op-machine-function --print-pipeline-passes -filetype=null < %s | FileCheck %s --match-full-lines
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -x mir -passes='require<machine-dom-tree>,print<machine-dom-tree>' -print-pipeline-passes < %s | FileCheck --check-prefix=ANALYSIS %s
 
-# CHECK: machine-function(no-op-machine-function),PrintMIRPreparePass,machine-function(print,FreeMachineFunctionPass)
+# CHECK: function(machine-function(no-op-machine-function)),PrintMIRPreparePass,function(machine-function(verify,print))
+
+# ANALYSIS: require<machine-dom-tree>,print<machine-dom-tree>
 
 ---
 name: f

@@ -22,8 +22,8 @@
 ; CHECK: %call = call
 ; CHECK-NEXT: %0 = extractvalue { <2 x float>, <2 x float> } %call, 0
 ; CHECK-NEXT: %1 = extractvalue { <2 x float>, <2 x float> } %call, 1
-; CHECK-NEXT: call void @llvm.dbg.value(metadata <2 x float> %0, metadata ![[var:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 256, 64))
-; CHECK-NEXT: call void @llvm.dbg.value(metadata <2 x float> %1, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 320, 64))
+; CHECK-NEXT: #dbg_value(<2 x float> %0, ![[var:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 256, 64),
+; CHECK-NEXT: #dbg_value(<2 x float> %1, ![[var]], !DIExpression(DW_OP_LLVM_fragment, 320, 64),
 
 %class.c = type { [4 x float] }
 

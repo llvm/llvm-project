@@ -192,8 +192,9 @@ inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
   return !(LHS == RHS);
 }
 
-/// Describes API notes data for an Objective-C class or protocol.
-class ObjCContextInfo : public CommonTypeInfo {
+/// Describes API notes data for an Objective-C class or protocol or a C++
+/// namespace.
+class ContextInfo : public CommonTypeInfo {
   /// Whether this class has a default nullability.
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasDefaultNullability : 1;
@@ -217,7 +218,7 @@ class ObjCContextInfo : public CommonTypeInfo {
   unsigned SwiftObjCMembers : 1;
 
 public:
-  ObjCContextInfo()
+  ContextInfo()
       : HasDefaultNullability(0), DefaultNullability(0), HasDesignatedInits(0),
         SwiftImportAsNonGenericSpecified(false), SwiftImportAsNonGeneric(false),
         SwiftObjCMembersSpecified(false), SwiftObjCMembers(false) {}
@@ -262,16 +263,9 @@ public:
     SwiftObjCMembers = Value.value_or(false);
   }
 
-  /// Strip off any information within the class information structure that is
-  /// module-local, such as 'audited' flags.
-  void stripModuleLocalInfo() {
-    HasDefaultNullability = false;
-    DefaultNullability = 0;
-  }
+  friend bool operator==(const ContextInfo &, const ContextInfo &);
 
-  friend bool operator==(const ObjCContextInfo &, const ObjCContextInfo &);
-
-  ObjCContextInfo &operator|=(const ObjCContextInfo &RHS) {
+  ContextInfo &operator|=(const ContextInfo &RHS) {
     // Merge inherited info.
     static_cast<CommonTypeInfo &>(*this) |= RHS;
 
@@ -294,7 +288,7 @@ public:
   LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
 };
 
-inline bool operator==(const ObjCContextInfo &LHS, const ObjCContextInfo &RHS) {
+inline bool operator==(const ContextInfo &LHS, const ContextInfo &RHS) {
   return static_cast<const CommonTypeInfo &>(LHS) == RHS &&
          LHS.getDefaultNullability() == RHS.getDefaultNullability() &&
          LHS.HasDesignatedInits == RHS.HasDesignatedInits &&
@@ -302,7 +296,7 @@ inline bool operator==(const ObjCContextInfo &LHS, const ObjCContextInfo &RHS) {
          LHS.getSwiftObjCMembers() == RHS.getSwiftObjCMembers();
 }
 
-inline bool operator!=(const ObjCContextInfo &LHS, const ObjCContextInfo &RHS) {
+inline bool operator!=(const ContextInfo &LHS, const ContextInfo &RHS) {
   return !(LHS == RHS);
 }
 
@@ -387,7 +381,7 @@ public:
   friend bool operator==(const ObjCPropertyInfo &, const ObjCPropertyInfo &);
 
   /// Merge class-wide information into the given property.
-  ObjCPropertyInfo &operator|=(const ObjCContextInfo &RHS) {
+  ObjCPropertyInfo &operator|=(const ContextInfo &RHS) {
     static_cast<CommonEntityInfo &>(*this) |= RHS;
 
     // Merge nullability.
@@ -626,7 +620,7 @@ public:
 
   friend bool operator==(const ObjCMethodInfo &, const ObjCMethodInfo &);
 
-  ObjCMethodInfo &operator|=(const ObjCContextInfo &RHS) {
+  ObjCMethodInfo &operator|=(const ContextInfo &RHS) {
     // Merge Nullability.
     if (!NullabilityAudited) {
       if (auto Nullable = RHS.getDefaultNullability()) {
@@ -662,6 +656,18 @@ public:
   GlobalFunctionInfo() {}
 };
 
+/// Describes API notes data for a C/C++ record field.
+class FieldInfo : public VariableInfo {
+public:
+  FieldInfo() {}
+};
+
+/// Describes API notes data for a C++ method.
+class CXXMethodInfo : public FunctionInfo {
+public:
+  CXXMethodInfo() {}
+};
+
 /// Describes API notes data for an enumerator.
 class EnumConstantInfo : public CommonEntityInfo {
 public:
@@ -675,14 +681,24 @@ class TagInfo : public CommonTypeInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFlagEnum : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftCopyableSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftCopyable : 1;
+
 public:
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
 
+  /// The Swift protocol that this type should be automatically conformed to.
+  std::optional<std::string> SwiftConformance;
+
   std::optional<EnumExtensibilityKind> EnumExtensibility;
 
-  TagInfo() : HasFlagEnum(0), IsFlagEnum(0) {}
+  TagInfo()
+      : HasFlagEnum(0), IsFlagEnum(0), SwiftCopyableSpecified(false),
+        SwiftCopyable(false) {}
 
   std::optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
@@ -692,6 +708,15 @@ public:
   void setFlagEnum(std::optional<bool> Value) {
     HasFlagEnum = Value.has_value();
     IsFlagEnum = Value.value_or(false);
+  }
+
+  std::optional<bool> isSwiftCopyable() const {
+    return SwiftCopyableSpecified ? std::optional<bool>(SwiftCopyable)
+                                  : std::nullopt;
+  }
+  void setSwiftCopyable(std::optional<bool> Value) {
+    SwiftCopyableSpecified = Value.has_value();
+    SwiftCopyable = Value.value_or(false);
   }
 
   TagInfo &operator|=(const TagInfo &RHS) {
@@ -704,11 +729,17 @@ public:
     if (!SwiftReleaseOp)
       SwiftReleaseOp = RHS.SwiftReleaseOp;
 
+    if (!SwiftConformance)
+      SwiftConformance = RHS.SwiftConformance;
+
     if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
 
     if (!EnumExtensibility)
       EnumExtensibility = RHS.EnumExtensibility;
+
+    if (!SwiftCopyableSpecified)
+      setSwiftCopyable(RHS.isSwiftCopyable());
 
     return *this;
   }
@@ -723,7 +754,9 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftImportAs == RHS.SwiftImportAs &&
          LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
          LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
+         LHS.SwiftConformance == RHS.SwiftConformance &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
+         LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
          LHS.EnumExtensibility == RHS.EnumExtensibility;
 }
 
@@ -775,6 +808,7 @@ enum class ContextKind : uint8_t {
   ObjCClass = 0,
   ObjCProtocol = 1,
   Namespace = 2,
+  Tag = 3,
 };
 
 struct Context {

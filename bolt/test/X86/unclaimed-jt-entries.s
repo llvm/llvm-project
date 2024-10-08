@@ -1,5 +1,5 @@
-# This test ensures that "unclaimed" jump table entries are accounted later
-# in postProcessIndirectBranches and the function is marked as non-simple.
+## This test ensures that "unclaimed" jump table entries are accounted later
+## in postProcessIndirectBranches and the function is marked as non-simple.
 
 # The test is compiled from the following source using GCC 12.2 -O3:
 # https://godbolt.org/z/YcPG131s6
@@ -18,7 +18,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -v=1 -o %t.out |& FileCheck %s
+# RUN: llvm-bolt %t.exe -v=1 -o %t.out 2>&1 | FileCheck %s
 
 # CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main
 # CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main

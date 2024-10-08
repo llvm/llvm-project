@@ -594,7 +594,7 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   }
 }
 
-void DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
+bool DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
     ImageInfo &image_info) {
   if (image_info.header.filetype == llvm::MachO::MH_DYLINKER) {
     const bool can_create = true;
@@ -605,8 +605,30 @@ void DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
       target.GetImages().AppendIfNeeded(dyld_sp);
       UpdateImageLoadAddress(dyld_sp.get(), image_info);
       SetDYLDModule(dyld_sp);
+      return true;
     }
   }
+  return false;
+}
+
+std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+
+  auto log_err = [log](llvm::StringLiteral err_msg) -> std::nullopt_t {
+    LLDB_LOGV(log, "{}", err_msg);
+    return std::nullopt;
+  };
+
+  ModuleSP dyld_sp = GetDYLDModule();
+  if (!dyld_sp)
+    return log_err("Couldn't retrieve DYLD module. Cannot get `start` symbol.");
+
+  const Symbol *symbol =
+      dyld_sp->FindFirstSymbolWithNameAndType(ConstString("_dyld_start"));
+  if (!symbol)
+    return log_err("Cannot find `start` symbol in DYLD module.");
+
+  return symbol->GetAddress();
 }
 
 void DynamicLoaderDarwin::SetDYLDModule(lldb::ModuleSP &dyld_module_sp) {
@@ -1131,7 +1153,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     // TLS data for the pthread_key on a specific thread yet. If we have we
     // can re-use it since its location will not change unless the process
     // execs.
-    const tid_t tid = thread_sp->GetID();
+    const lldb::tid_t tid = thread_sp->GetID();
     auto tid_pos = m_tid_to_tls_map.find(tid);
     if (tid_pos != m_tid_to_tls_map.end()) {
       auto tls_pos = tid_pos->second.find(key);

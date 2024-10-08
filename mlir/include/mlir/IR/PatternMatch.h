@@ -289,7 +289,7 @@ protected:
   using Pattern::Pattern;
 
 private:
-  /// Trait to check if T provides a `getOperationName` method.
+  /// Trait to check if T provides a `initialize` method.
   template <typename T, typename... Args>
   using has_initialize = decltype(std::declval<T>().initialize());
   template <typename T>
@@ -784,6 +784,7 @@ public:
 /// place.
 class PatternRewriter : public RewriterBase {
 public:
+  explicit PatternRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
   using RewriterBase::RewriterBase;
 
   /// A hook used to indicate if the pattern rewriter can recover from failure

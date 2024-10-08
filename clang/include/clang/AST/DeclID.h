@@ -17,6 +17,7 @@
 #define LLVM_CLANG_AST_DECLID_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/iterator.h"
 
 namespace clang {
@@ -29,65 +30,65 @@ namespace clang {
 /// it is created.
 enum PredefinedDeclIDs {
   /// The NULL declaration.
-  PREDEF_DECL_NULL_ID = 0,
+  PREDEF_DECL_NULL_ID,
 
   /// The translation unit.
-  PREDEF_DECL_TRANSLATION_UNIT_ID = 1,
+  PREDEF_DECL_TRANSLATION_UNIT_ID,
 
   /// The Objective-C 'id' type.
-  PREDEF_DECL_OBJC_ID_ID = 2,
+  PREDEF_DECL_OBJC_ID_ID,
 
   /// The Objective-C 'SEL' type.
-  PREDEF_DECL_OBJC_SEL_ID = 3,
+  PREDEF_DECL_OBJC_SEL_ID,
 
   /// The Objective-C 'Class' type.
-  PREDEF_DECL_OBJC_CLASS_ID = 4,
+  PREDEF_DECL_OBJC_CLASS_ID,
 
   /// The Objective-C 'Protocol' type.
-  PREDEF_DECL_OBJC_PROTOCOL_ID = 5,
+  PREDEF_DECL_OBJC_PROTOCOL_ID,
 
   /// The signed 128-bit integer type.
-  PREDEF_DECL_INT_128_ID = 6,
+  PREDEF_DECL_INT_128_ID,
 
   /// The unsigned 128-bit integer type.
-  PREDEF_DECL_UNSIGNED_INT_128_ID = 7,
+  PREDEF_DECL_UNSIGNED_INT_128_ID,
 
   /// The internal 'instancetype' typedef.
-  PREDEF_DECL_OBJC_INSTANCETYPE_ID = 8,
+  PREDEF_DECL_OBJC_INSTANCETYPE_ID,
 
   /// The internal '__builtin_va_list' typedef.
-  PREDEF_DECL_BUILTIN_VA_LIST_ID = 9,
+  PREDEF_DECL_BUILTIN_VA_LIST_ID,
 
   /// The internal '__va_list_tag' struct, if any.
-  PREDEF_DECL_VA_LIST_TAG = 10,
+  PREDEF_DECL_VA_LIST_TAG,
 
   /// The internal '__builtin_ms_va_list' typedef.
-  PREDEF_DECL_BUILTIN_MS_VA_LIST_ID = 11,
+  PREDEF_DECL_BUILTIN_MS_VA_LIST_ID,
 
   /// The predeclared '_GUID' struct.
-  PREDEF_DECL_BUILTIN_MS_GUID_ID = 12,
+  PREDEF_DECL_BUILTIN_MS_GUID_ID,
 
   /// The extern "C" context.
-  PREDEF_DECL_EXTERN_C_CONTEXT_ID = 13,
+  PREDEF_DECL_EXTERN_C_CONTEXT_ID,
 
   /// The internal '__make_integer_seq' template.
-  PREDEF_DECL_MAKE_INTEGER_SEQ_ID = 14,
+  PREDEF_DECL_MAKE_INTEGER_SEQ_ID,
 
   /// The internal '__NSConstantString' typedef.
-  PREDEF_DECL_CF_CONSTANT_STRING_ID = 15,
+  PREDEF_DECL_CF_CONSTANT_STRING_ID,
 
   /// The internal '__NSConstantString' tag type.
-  PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID = 16,
+  PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID,
 
   /// The internal '__type_pack_element' template.
-  PREDEF_DECL_TYPE_PACK_ELEMENT_ID = 17,
-};
+  PREDEF_DECL_TYPE_PACK_ELEMENT_ID,
 
-/// The number of declaration IDs that are predefined.
-///
-/// For more information about predefined declarations, see the
-/// \c PredefinedDeclIDs type and the PREDEF_DECL_*_ID constants.
-const unsigned int NUM_PREDEF_DECL_IDS = 18;
+  /// The internal '__builtin_common_type' template.
+  PREDEF_DECL_COMMON_TYPE_ID,
+
+  /// The number of declaration IDs that are predefined.
+  NUM_PREDEF_DECL_IDS
+};
 
 /// GlobalDeclID means DeclID in the current ASTContext and LocalDeclID means
 /// DeclID specific to a certain ModuleFile. Specially, in ASTWriter, the
@@ -107,14 +108,14 @@ public:
   ///
   /// DeclID should only be used directly in serialization. All other users
   /// should use LocalDeclID or GlobalDeclID.
-  using DeclID = uint32_t;
+  using DeclID = uint64_t;
 
 protected:
   DeclIDBase() : ID(PREDEF_DECL_NULL_ID) {}
   explicit DeclIDBase(DeclID ID) : ID(ID) {}
 
 public:
-  DeclID get() const { return ID; }
+  DeclID getRawValue() const { return ID; }
 
   explicit operator DeclID() const { return ID; }
 
@@ -124,12 +125,37 @@ public:
 
   bool isInvalid() const { return ID == PREDEF_DECL_NULL_ID; }
 
+  unsigned getModuleFileIndex() const { return ID >> 32; }
+
+  unsigned getLocalDeclIndex() const;
+
+  // The DeclID may be compared with predefined decl ID.
+  friend bool operator==(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID == RHS;
+  }
+  friend bool operator!=(const DeclIDBase &LHS, const DeclID &RHS) {
+    return !operator==(LHS, RHS);
+  }
+  friend bool operator<(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID < RHS;
+  }
+  friend bool operator<=(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID <= RHS;
+  }
+  friend bool operator>(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID > RHS;
+  }
+  friend bool operator>=(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID >= RHS;
+  }
+
   friend bool operator==(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID == RHS.ID;
   }
   friend bool operator!=(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID != RHS.ID;
   }
+
   // We may sort the decl ID.
   friend bool operator<(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID < RHS.ID;
@@ -148,13 +174,30 @@ protected:
   DeclID ID;
 };
 
+class ASTWriter;
+class ASTReader;
+namespace serialization {
+class ModuleFile;
+} // namespace serialization
+
 class LocalDeclID : public DeclIDBase {
   using Base = DeclIDBase;
 
-public:
-  LocalDeclID() : Base() {}
   LocalDeclID(PredefinedDeclIDs ID) : Base(ID) {}
   explicit LocalDeclID(DeclID ID) : Base(ID) {}
+
+  // Every Decl ID is a local decl ID to the module being writing in ASTWriter.
+  friend class ASTWriter;
+  friend class GlobalDeclID;
+  friend struct llvm::DenseMapInfo<clang::LocalDeclID>;
+
+public:
+  LocalDeclID() : Base() {}
+
+  static LocalDeclID get(ASTReader &Reader, serialization::ModuleFile &MF,
+                         DeclID ID);
+  static LocalDeclID get(ASTReader &Reader, serialization::ModuleFile &MF,
+                         unsigned ModuleFileIndex, unsigned LocalDeclID);
 
   LocalDeclID &operator++() {
     ++ID;
@@ -174,6 +217,9 @@ class GlobalDeclID : public DeclIDBase {
 public:
   GlobalDeclID() : Base() {}
   explicit GlobalDeclID(DeclID ID) : Base(ID) {}
+
+  explicit GlobalDeclID(unsigned ModuleFileIndex, unsigned LocalID)
+      : Base((DeclID)ModuleFileIndex << 32 | (DeclID)LocalID) {}
 
   // For DeclIDIterator<GlobalDeclID> to be able to convert a GlobalDeclID
   // to a LocalDeclID.
@@ -214,10 +260,31 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static unsigned getHashValue(const GlobalDeclID &Key) {
-    return DenseMapInfo<DeclID>::getHashValue(Key.get());
+    return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {
+    return L == R;
+  }
+};
+
+template <> struct DenseMapInfo<clang::LocalDeclID> {
+  using LocalDeclID = clang::LocalDeclID;
+  using DeclID = LocalDeclID::DeclID;
+
+  static LocalDeclID getEmptyKey() {
+    return LocalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
+  }
+
+  static LocalDeclID getTombstoneKey() {
+    return LocalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const LocalDeclID &Key) {
+    return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
+  }
+
+  static bool isEqual(const LocalDeclID &L, const LocalDeclID &R) {
     return L == R;
   }
 };

@@ -12,6 +12,7 @@
 #include "scope.h"
 #include "symbol.h"
 #include "flang/Common/Fortran-features.h"
+#include "flang/Common/LangOptions.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
@@ -65,7 +66,8 @@ using ConstructStack = std::vector<ConstructNode>;
 class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
-      const common::LanguageFeatureControl &, parser::AllCookedSources &);
+      const common::LanguageFeatureControl &, const common::LangOptions &,
+      parser::AllCookedSources &);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {
@@ -73,7 +75,8 @@ public:
   }
   const common::LanguageFeatureControl &languageFeatures() const {
     return languageFeatures_;
-  };
+  }
+  const common::LangOptions &langOptions() const { return langOpts_; }
   int GetDefaultKind(TypeCategory) const;
   int doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
@@ -110,6 +113,9 @@ public:
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
   ModuleDependences &moduleDependences() { return moduleDependences_; }
+  std::map<const Symbol *, SourceName> &moduleFileOutputRenamings() {
+    return moduleFileOutputRenamings_;
+  }
 
   SemanticsContext &set_location(
       const std::optional<parser::CharBlock> &location) {
@@ -182,6 +188,24 @@ public:
     return message;
   }
 
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(
+      FeatureOrUsageWarning warning, parser::CharBlock at, A &&...args) {
+    if (languageFeatures_.ShouldWarn(warning) && !IsInModuleFile(at)) {
+      parser::Message &msg{
+          messages_.Say(warning, at, std::forward<A>(args)...)};
+      return &msg;
+    } else {
+      return nullptr;
+    }
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(FeatureOrUsageWarning warning, A &&...args) {
+    CHECK(location_);
+    return Warn(warning, *location_, std::forward<A>(args)...);
+  }
+
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
   void UpdateScopeIndex(Scope &, parser::CharBlock);
@@ -215,8 +239,10 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
-  void UsePPCBuiltinTypesModule();
   const Scope &GetCUDABuiltinsScope();
+  const Scope &GetCUDADeviceScope();
+
+  void UsePPCBuiltinTypesModule();
   void UsePPCBuiltinsModule();
   Scope *GetPPCBuiltinTypesScope() { return ppcBuiltinTypesScope_; }
   const Scope *GetPPCBuiltinsScope() const { return ppcBuiltinsScope_; }
@@ -249,6 +275,11 @@ public:
   // behavior.
   CommonBlockList GetCommonBlocks() const;
 
+  void NoteDefinedSymbol(const Symbol &);
+  bool IsSymbolDefined(const Symbol &) const;
+
+  void DumpSymbols(llvm::raw_ostream &);
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -257,12 +288,13 @@ private:
       std::multimap<parser::CharBlock, Scope &, ScopeIndexComparator>;
   ScopeIndex::iterator SearchScopeIndex(parser::CharBlock);
 
-  void CheckIndexVarRedefine(
+  parser::Message *CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   void CheckError(const Symbol &);
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl &languageFeatures_;
+  const common::LangOptions &langOpts_;
   parser::AllCookedSources &allCookedSources_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
@@ -292,18 +324,22 @@ private:
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
   Scope *ppcBuiltinTypesScope_{nullptr}; // module __Fortran_PPC_types
   std::optional<const Scope *> cudaBuiltinsScope_; // module __CUDA_builtins
+  std::optional<const Scope *> cudaDeviceScope_; // module cudadevice
   const Scope *ppcBuiltinsScope_{nullptr}; // module __ppc_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
   ModuleDependences moduleDependences_;
+  std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
+  UnorderedSymbolSet isDefined_;
 };
 
 class Semantics {
 public:
-  explicit Semantics(SemanticsContext &context, parser::Program &program,
-      bool debugModuleWriter = false)
-      : context_{context}, program_{program} {
-    context.set_debugModuleWriter(debugModuleWriter);
+  explicit Semantics(SemanticsContext &context, parser::Program &program)
+      : context_{context}, program_{program} {}
+  Semantics &set_hermeticModuleFileOutput(bool yes = true) {
+    hermeticModuleFileOutput_ = yes;
+    return *this;
   }
 
   SemanticsContext &context() const { return context_; }
@@ -312,13 +348,14 @@ public:
     return context_.FindScope(where);
   }
   bool AnyFatalError() const { return context_.AnyFatalError(); }
-  void EmitMessages(llvm::raw_ostream &) const;
+  void EmitMessages(llvm::raw_ostream &);
   void DumpSymbols(llvm::raw_ostream &);
   void DumpSymbolsSources(llvm::raw_ostream &) const;
 
 private:
   SemanticsContext &context_;
   parser::Program &program_;
+  bool hermeticModuleFileOutput_{false};
 };
 
 // Base class for semantics checkers.

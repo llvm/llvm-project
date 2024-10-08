@@ -178,6 +178,7 @@ cc_library(
         ":PluginCPlusPlusLanguageHeaders",
         ":PluginExpressionParserClangHeaders",
         ":PluginObjCRuntime",
+        ":PluginPlatformMacOSX",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
         "//clang:ast",
@@ -202,6 +203,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
         "//llvm:IPO",
@@ -249,7 +251,12 @@ objc_library(
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = [":PluginPlatformMacOSXObjCXXHeaders"],
+    deps = [
+        ":PluginPlatformMacOSXObjCXXHeaders",
+        "//lldb:Host",
+        "//lldb:HostMacOSXPrivateHeaders",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
@@ -264,6 +271,7 @@ cc_library(
            }),
     hdrs = glob(["Platform/MacOSX/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PlatformMacOSXProperties",
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -281,7 +289,11 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
     ] + select({
-        "@platforms//os:macos": [":PluginPlatformMacOSXObjCXX"],
+        "@platforms//os:macos": [
+            ":PluginPlatformMacOSXObjCXX",
+            ":PluginPlatformMacOSXObjCXXHeaders",
+            "//lldb:HostMacOSXPrivateHeaders",
+        ],
         "//conditions:default": [],
     }),
 )
@@ -333,6 +345,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:Object",
@@ -433,6 +446,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:DebugInfoCodeView",
         "//llvm:DebugInfoPDB",
+        "//llvm:config",
     ],
 )
 
@@ -477,6 +491,7 @@ cc_library(
         "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:config",
         "@llvm_zlib//:zlib",
     ],
 )
@@ -1074,7 +1089,9 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
         "//llvm:Core",
+        "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )
@@ -1254,6 +1271,7 @@ cc_library(
     name = "PluginDynamicLoaderDarwinKernel",
     srcs = glob(["DynamicLoader/Darwin-Kernel/*.cpp"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":DynamicLoaderDarwinKernelProperties",
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -1376,6 +1394,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
+        "//llvm:config",
         "@llvm_zlib//:zlib",
     ],
 )
@@ -1747,6 +1766,10 @@ cc_library(
         "//lldb:Host",
         "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1947,6 +1970,7 @@ cc_library(
         ":PluginProcessMinidump",
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1956,6 +1980,7 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2131,6 +2156,7 @@ cc_library(
     srcs = glob(["Process/mach-core/*.cpp"]),
     hdrs = glob(["Process/mach-core/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PluginDynamicLoaderDarwinKernelHeaders",
         ":PluginDynamicLoaderMacOSXDYLD",

@@ -22,7 +22,7 @@
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
 namespace llvm {
@@ -280,6 +280,9 @@ private:
   LegalizeResult createResetStateLibcall(MachineIRBuilder &MIRBuilder,
                                          MachineInstr &MI,
                                          LostDebugLocObserver &LocObserver);
+  LegalizeResult createFCMPLibcall(MachineIRBuilder &MIRBuilder,
+                                   MachineInstr &MI,
+                                   LostDebugLocObserver &LocObserver);
 
   MachineInstrBuilder
   getNeutralElementForVecReduce(unsigned Opcode, MachineIRBuilder &MIRBuilder,
@@ -373,6 +376,10 @@ public:
   /// Perform Bitcast legalize action on G_INSERT_VECTOR_ELT.
   LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                         LLT CastTy);
+  LegalizeResult bitcastConcatVector(MachineInstr &MI, unsigned TypeIdx,
+                                     LLT CastTy);
+  LegalizeResult bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT CastTy);
 
   LegalizeResult lowerConstant(MachineInstr &MI);
   LegalizeResult lowerFConstant(MachineInstr &MI);
@@ -389,10 +396,13 @@ public:
   LegalizeResult lowerRotate(MachineInstr &MI);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
+  LegalizeResult lowerU64ToF32WithSITOFP(MachineInstr &MI);
+  LegalizeResult lowerU64ToF64BitFloatOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI);
   LegalizeResult lowerSITOFP(MachineInstr &MI);
   LegalizeResult lowerFPTOUI(MachineInstr &MI);
   LegalizeResult lowerFPTOSI(MachineInstr &MI);
+  LegalizeResult lowerFPTOINT_SAT(MachineInstr &MI);
 
   LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LegalizeResult lowerFPTRUNC(MachineInstr &MI);
@@ -400,6 +410,7 @@ public:
 
   LegalizeResult lowerISFPCLASS(MachineInstr &MI);
 
+  LegalizeResult lowerThreewayCompare(MachineInstr &MI);
   LegalizeResult lowerMinMax(MachineInstr &MI);
   LegalizeResult lowerFCopySign(MachineInstr &MI);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
@@ -410,6 +421,7 @@ public:
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
+  LegalizeResult lowerVECTOR_COMPRESS(MachineInstr &MI);
   Register getDynStackAllocTargetPtr(Register SPReg, Register AllocSize,
                                      Align Alignment, LLT PtrTy);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
@@ -430,6 +442,7 @@ public:
   LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
   LegalizeResult lowerAbsToCNeg(MachineInstr &MI);
+  LegalizeResult lowerFAbs(MachineInstr &MI);
   LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);

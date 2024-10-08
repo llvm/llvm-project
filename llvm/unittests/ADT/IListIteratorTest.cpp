@@ -13,7 +13,10 @@ using namespace llvm;
 
 namespace {
 
+class Parent {};
+
 struct Node : ilist_node<Node> {};
+struct ParentNode : ilist_node<ParentNode, ilist_parent<Parent>> {};
 
 TEST(IListIteratorTest, DefaultConstructor) {
   simple_ilist<Node>::iterator I;
@@ -166,6 +169,34 @@ TEST(IListIteratorTest, ReverseConstructor) {
                 "unexpected implicit conversion");
   static_assert(!std::is_convertible_v<const_reverse_iterator, const_iterator>,
                 "unexpected implicit conversion");
+}
+
+TEST(IListIteratorTest, GetParent) {
+  simple_ilist<ParentNode, ilist_parent<Parent>> L;
+  Parent P;
+  ParentNode A;
+  const simple_ilist<ParentNode, ilist_parent<Parent>> &CL = L;
+
+  // Parents are not set automatically.
+  A.setParent(&P);
+  L.insert(L.end(), A);
+  L.end().getNodePtr()->setParent(&P);
+
+  // Check we can get the node parent from all iterators, including for the
+  // sentinel.
+  EXPECT_EQ(&P, L.begin().getNodeParent());
+  EXPECT_EQ(&P, L.end().getNodeParent());
+  EXPECT_EQ(&P, L.rbegin().getNodeParent());
+  EXPECT_EQ(&P, L.rend().getNodeParent());
+
+  using VarParentTy =
+      std::remove_pointer_t<decltype(L.begin().getNodeParent())>;
+  using ConstParentTy =
+      std::remove_pointer_t<decltype(CL.begin().getNodeParent())>;
+  static_assert(
+      std::is_const_v<ConstParentTy> &&
+          std::is_same_v<VarParentTy, std::remove_const_t<ConstParentTy>>,
+      "`getNodeParent() const` adds const to parent type");
 }
 
 } // end namespace

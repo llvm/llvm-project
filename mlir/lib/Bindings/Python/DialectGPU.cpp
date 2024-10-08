@@ -25,6 +25,20 @@ using namespace mlir::python::adaptors;
 
 PYBIND11_MODULE(_mlirDialectsGPU, m) {
   m.doc() = "MLIR GPU Dialect";
+  //===-------------------------------------------------------------------===//
+  // AsyncTokenType
+  //===-------------------------------------------------------------------===//
+
+  auto mlirGPUAsyncTokenType =
+      mlir_type_subclass(m, "AsyncTokenType", mlirTypeIsAGPUAsyncTokenType);
+
+  mlirGPUAsyncTokenType.def_classmethod(
+      "get",
+      [](py::object cls, MlirContext ctx) {
+        return cls(mlirGPUAsyncTokenTypeGet(ctx));
+      },
+      "Gets an instance of AsyncTokenType in the same context", py::arg("cls"),
+      py::arg("ctx") = py::none());
 
   //===-------------------------------------------------------------------===//
   // ObjectAttr
@@ -34,17 +48,21 @@ PYBIND11_MODULE(_mlirDialectsGPU, m) {
       .def_classmethod(
           "get",
           [](py::object cls, MlirAttribute target, uint32_t format,
-             py::bytes object, std::optional<MlirAttribute> mlirObjectProps) {
+             py::bytes object, std::optional<MlirAttribute> mlirObjectProps,
+             std::optional<MlirAttribute> mlirKernelsAttr) {
             py::buffer_info info(py::buffer(object).request());
             MlirStringRef objectStrRef =
                 mlirStringRefCreate(static_cast<char *>(info.ptr), info.size);
-            return cls(mlirGPUObjectAttrGet(
+            return cls(mlirGPUObjectAttrGetWithKernels(
                 mlirAttributeGetContext(target), target, format, objectStrRef,
                 mlirObjectProps.has_value() ? *mlirObjectProps
+                                            : MlirAttribute{nullptr},
+                mlirKernelsAttr.has_value() ? *mlirKernelsAttr
                                             : MlirAttribute{nullptr}));
           },
           "cls"_a, "target"_a, "format"_a, "object"_a,
-          "properties"_a = py::none(), "Gets a gpu.object from parameters.")
+          "properties"_a = py::none(), "kernels"_a = py::none(),
+          "Gets a gpu.object from parameters.")
       .def_property_readonly(
           "target",
           [](MlirAttribute self) { return mlirGPUObjectAttrGetTarget(self); })
@@ -57,9 +75,16 @@ PYBIND11_MODULE(_mlirDialectsGPU, m) {
             MlirStringRef stringRef = mlirGPUObjectAttrGetObject(self);
             return py::bytes(stringRef.data, stringRef.length);
           })
-      .def_property_readonly("properties", [](MlirAttribute self) {
-        if (mlirGPUObjectAttrHasProperties(self))
-          return py::cast(mlirGPUObjectAttrGetProperties(self));
+      .def_property_readonly("properties",
+                             [](MlirAttribute self) {
+                               if (mlirGPUObjectAttrHasProperties(self))
+                                 return py::cast(
+                                     mlirGPUObjectAttrGetProperties(self));
+                               return py::none().cast<py::object>();
+                             })
+      .def_property_readonly("kernels", [](MlirAttribute self) {
+        if (mlirGPUObjectAttrHasKernels(self))
+          return py::cast(mlirGPUObjectAttrGetKernels(self));
         return py::none().cast<py::object>();
       });
 }

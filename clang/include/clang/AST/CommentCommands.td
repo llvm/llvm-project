@@ -18,6 +18,7 @@ class Command<string name> {
   bit IsThrowsCommand = 0;
   bit IsDeprecatedCommand = 0;
   bit IsHeaderfileCommand = 0;
+  bit IsParCommand = 0;
 
   bit IsEmptyParagraphAllowed = 0;
 
@@ -132,9 +133,9 @@ def Tparam : BlockCommand<"tparam"> { let IsTParamCommand = 1; }
 // HeaderDoc command for template parameter documentation.
 def Templatefield : BlockCommand<"templatefield"> { let IsTParamCommand = 1; }
 
-def Throws    : BlockCommand<"throws"> { let IsThrowsCommand = 1; }
-def Throw     : BlockCommand<"throw"> { let IsThrowsCommand = 1; }
-def Exception : BlockCommand<"exception"> { let IsThrowsCommand = 1; }
+def Throws    : BlockCommand<"throws"> { let IsThrowsCommand = 1; let NumArgs = 1; }
+def Throw     : BlockCommand<"throw"> { let IsThrowsCommand = 1; let NumArgs = 1; }
+def Exception : BlockCommand<"exception"> { let IsThrowsCommand = 1; let NumArgs = 1;}
 
 def Deprecated : BlockCommand<"deprecated"> {
   let IsEmptyParagraphAllowed = 1;
@@ -156,7 +157,7 @@ def Date       : BlockCommand<"date">;
 def Invariant  : BlockCommand<"invariant">;
 def Li         : BlockCommand<"li">;
 def Note       : BlockCommand<"note">;
-def Par        : BlockCommand<"par">;
+def Par        : BlockCommand<"par"> { let IsParCommand = 1; let NumArgs = 1; }
 def Post       : BlockCommand<"post">;
 def Pre        : BlockCommand<"pre">;
 def Remark     : BlockCommand<"remark">;

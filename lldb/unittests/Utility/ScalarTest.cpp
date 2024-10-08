@@ -13,8 +13,11 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include <algorithm>
 #include <cmath>
 
 using namespace lldb_private;
@@ -161,6 +164,33 @@ TEST(ScalarTest, GetBytes) {
       llvm::Succeeded());
   f_scalar.GetBytes(Storage);
   ASSERT_EQ(0, memcmp(f, Storage, sizeof(f)));
+}
+
+TEST(ScalarTest, GetData) {
+  auto get_data = [](llvm::APSInt v) {
+    DataExtractor data;
+    Scalar(v).GetData(data);
+    return data.GetData().vec();
+  };
+
+  auto vec = [](std::initializer_list<uint8_t> l) {
+    std::vector<uint8_t> v(l.begin(), l.end());
+    if (endian::InlHostByteOrder() == lldb::eByteOrderLittle)
+      std::reverse(v.begin(), v.end());
+    return v;
+  };
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/1, /*Unsigned=*/true)),
+      vec({0x01}));
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/8, /*Unsigned=*/true)),
+      vec({0xff}));
+
+  EXPECT_THAT(
+      get_data(llvm::APSInt::getMaxValue(/*numBits=*/9, /*Unsigned=*/true)),
+      vec({0x01, 0xff}));
 }
 
 TEST(ScalarTest, SetValueFromData) {

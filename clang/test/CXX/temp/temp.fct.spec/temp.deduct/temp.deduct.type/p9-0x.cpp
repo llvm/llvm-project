@@ -3,7 +3,7 @@
 template<typename ...Types> struct tuple;
 template<unsigned> struct unsigned_c;
 
-template<typename T, typename U> 
+template<typename T, typename U>
 struct is_same {
   static const bool value = false;
 };
@@ -29,10 +29,14 @@ namespace PackExpansionNotAtEnd {
                                                 >::value? 1 : -1];
 
   template<typename ... Types> struct UselessPartialSpec;
+  // expected-note@-1 {{template is declared here}}
 
+  // FIXME: We should simply disallow a pack expansion which is not at
+  // the end of the partial spec template argument list.
   template<typename ... Types, // expected-note{{non-deducible template parameter 'Types'}}
            typename Tail> // expected-note{{non-deducible template parameter 'Tail'}}
   struct UselessPartialSpec<Types..., Tail>; // expected-error{{class template partial specialization contains template parameters that cannot be deduced; this partial specialization will never be used}}
+  // expected-error@-1 {{is not more specialized than the primary template}}
 }
 
 // When a pack expansion occurs within a template argument list, the entire
@@ -93,7 +97,7 @@ namespace DeduceNonTypeTemplateArgsInArray {
 }
 
 namespace DeduceWithDefaultArgs {
-  template<template<typename...> class Container> void f(Container<int>); // expected-note {{deduced type 'X<[...], (default) int>' of 1st parameter does not match adjusted type 'X<[...], double>' of argument [with Container = DeduceWithDefaultArgs::X]}}
+  template<template<typename...> class Container> void f(Container<int>); // expected-note {{deduced type 'X<[...], (default) int>' of 1st parameter does not match adjusted type 'X<[...], double>' of argument [with Container = X]}}
   template<typename, typename = int> struct X {};
   void g() {
     // OK, use default argument for the second template parameter.

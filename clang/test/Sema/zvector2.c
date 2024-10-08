@@ -25,6 +25,10 @@ vector float ff, ff2;
 // Verify that __vector is also recognized
 __vector float ff3;
 
+// With z14 we support vector float, but still no vector _Complex float.
+vector float _Complex cf; // expected-error {{cannot use '_Complex' with '__vector'}}
+__vector float _Complex cf3; // expected-error {{cannot use '_Complex' with '__vector'}}
+
 // Verify operation of vec_step
 int res_ff[vec_step(ff) == 4 ? 1 : -1];
 

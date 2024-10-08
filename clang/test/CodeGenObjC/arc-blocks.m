@@ -33,7 +33,7 @@ void test2(id x) {
 // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
 // CHECK-NEXT: [[PARM:%.*]] = call ptr @llvm.objc.retain(ptr {{%.*}})
 // CHECK-NEXT: store ptr [[PARM]], ptr [[X]]
-// CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+// CHECK:      [[SLOT:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[X]],
 // CHECK-NEXT: [[T1:%.*]] = call ptr @llvm.objc.retain(ptr [[T0]])
 // CHECK-NEXT: store ptr [[T1]], ptr [[SLOT]],
@@ -49,7 +49,7 @@ void test2(id x) {
 // CHECK:    define linkonce_odr hidden void @__copy_helper_block_8_32s(ptr noundef %0, ptr noundef %1) unnamed_addr #{{[0-9]+}} {
 // CHECK:      [[SRC:%.*]] = load ptr, ptr
 // CHECK-NEXT: [[DST:%.*]] = load ptr, ptr
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[SRC]], i32 0, i32 5
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[SRC]], i32 0, i32 5
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
 // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retain(ptr [[T1]]) [[NUW]]
 // CHECK-NEXT: ret void
@@ -57,7 +57,7 @@ void test2(id x) {
 
 // CHECK:    define linkonce_odr hidden void @__destroy_helper_block_8_32s(ptr noundef %0) unnamed_addr #{{[0-9]+}} {
 // CHECK:      [[T0:%.*]] = load ptr, ptr
-// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[T0]], i32 0, i32 5
+// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[T0]], i32 0, i32 5
 // CHECK-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
 // CHECK-NEXT: call void @llvm.objc.release(ptr [[T3]])
 // CHECK-NEXT: ret void
@@ -108,14 +108,14 @@ void test4(void) {
   // CHECK-LABEL:    define{{.*}} void @test4()
   // CHECK:      [[VAR:%.*]] = alloca [[BYREF_T:%.*]],
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[VAR]], i32 0, i32 2
+  // CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[VAR]], i32 0, i32 2
   // 0x02000000 - has copy/dispose helpers strong
   // CHECK-NEXT: store i32 838860800, ptr [[T0]]
-  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[VAR]], i32 0, i32 6
+  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[VAR]], i32 0, i32 6
   // CHECK-NEXT: [[T0:%.*]] = call ptr @test4_source() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]], ptr [[SLOT]]
-  // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[VAR]], i32 0, i32 6
+  // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[VAR]], i32 0, i32 6
   // 0x42800000 - has signature, copy/dispose helpers, as well as BLOCK_HAS_EXTENDED_LAYOUT
   // CHECK:      store i32 -1040187392,
   // CHECK: store ptr [[VAR]], ptr
@@ -126,20 +126,20 @@ void test4(void) {
   // CHECK: ret void
 
   // CHECK-LABEL:    define internal void @__Block_byref_object_copy_(ptr noundef %0, ptr noundef %1) #{{[0-9]+}} {
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
+  // CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: load ptr, ptr
-  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
+  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: [[T2:%.*]] = load ptr, ptr [[T1]]
   // CHECK-NEXT: store ptr [[T2]], ptr [[T0]]
   // CHECK-NEXT: store ptr null, ptr [[T1]]
 
   // CHECK-LABEL:    define internal void @__Block_byref_object_dispose_(ptr noundef %0) #{{[0-9]+}} {
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
+  // CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]]
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T1]])
 
   // CHECK-LABEL:    define internal void @__test4_block_invoke
-  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds {{.*}}, i32 0, i32 6
+  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds nuw {{.*}}, i32 0, i32 6
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[SLOT]], align 8
   // CHECK-NEXT: store ptr null, ptr [[SLOT]],
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]])
@@ -168,7 +168,7 @@ void test5(void) {
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T1]])
   // 0x40800000 - has signature but no copy/dispose, as well as BLOCK_HAS_EXTENDED_LAYOUT
   // CHECK:      store i32 -1073741824, ptr
-  // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[VAR]]
   // CHECK-NEXT: store ptr [[T0]], ptr [[CAPTURE]]
   // CHECK: call void @test5_helper
@@ -186,18 +186,18 @@ void test6(void) {
   // CHECK:      [[VAR:%.*]] = alloca [[BYREF_T:%.*]],
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 48, ptr [[VAR]])
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[VAR]], i32 0, i32 2
+  // CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[VAR]], i32 0, i32 2
   // 0x02000000 - has copy/dispose helpers weak
   // CHECK-NEXT: store i32 1107296256, ptr [[T0]]
-  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[VAR]], i32 0, i32 6
+  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[VAR]], i32 0, i32 6
   // CHECK-NEXT: [[T1:%.*]] = call ptr @test6_source() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T1]])
   // CHECK-NEXT: call ptr @llvm.objc.initWeak(ptr [[SLOT]], ptr [[T1]])
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T1]])
-  // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[VAR]], i32 0, i32 6
+  // CHECK-NEXT: [[SLOT:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[VAR]], i32 0, i32 6
   // 0x42800000 - has signature, copy/dispose helpers, as well as BLOCK_HAS_EXTENDED_LAYOUT
   // CHECK:      store i32 -1040187392,
-  // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
+  // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCRIPTOR_TMP9]], ptr %[[BLOCK_DESCRIPTOR]], align 8
   // CHECK: store ptr [[VAR]], ptr
   // CHECK:      call void @test6_helper(
@@ -207,17 +207,17 @@ void test6(void) {
   // CHECK-NEXT: ret void
 
   // CHECK-LABEL:    define internal void @__Block_byref_object_copy_.{{[0-9]+}}(ptr noundef %0, ptr noundef %1) #{{[0-9]+}} {
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
+  // CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: load ptr, ptr
-  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
+  // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: call void @llvm.objc.moveWeak(ptr [[T0]], ptr [[T1]])
 
   // CHECK-LABEL:    define internal void @__Block_byref_object_dispose_.{{[0-9]+}}(ptr noundef %0) #{{[0-9]+}} {
-  // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
+  // CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr {{%.*}}, i32 0, i32 6
   // CHECK-NEXT: call void @llvm.objc.destroyWeak(ptr [[T0]])
 
   // CHECK-LABEL:    define internal void @__test6_block_invoke
-  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds {{.*}}, i32 0, i32 6
+  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds nuw {{.*}}, i32 0, i32 6
   // CHECK-NEXT: call ptr @llvm.objc.storeWeak(ptr [[SLOT]], ptr null)
   // CHECK-NEXT: ret void
 }
@@ -238,7 +238,7 @@ void test7(void) {
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T1]])
   // 0x42800000 - has signature, copy/dispose helpers, as well as BLOCK_HAS_EXTENDED_LAYOUT
   // CHECK:      store i32 -1040187392,
-  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: call void @llvm.objc.copyWeak(ptr [[SLOT]], ptr [[VAR]])
   // CHECK:      call void @test7_helper(
   // CHECK-NEXT: call void @llvm.objc.destroyWeak(ptr {{%.*}})
@@ -246,7 +246,7 @@ void test7(void) {
   // CHECK: ret void
 
   // CHECK-LABEL:    define internal void @__test7_block_invoke
-  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr {{%.*}}, i32 0, i32 5
+  // CHECK:      [[SLOT:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr {{%.*}}, i32 0, i32 5
   // CHECK-NEXT: [[T0:%.*]] = call ptr @llvm.objc.loadWeakRetained(ptr [[SLOT]])
   // CHECK-NEXT: call void @test7_consume(ptr noundef [[T0]])
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]])
@@ -271,7 +271,7 @@ void test7(void) {
 // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
 // CHECK: store
 // CHECK-NEXT: store
-// CHECK:      [[T0:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+// CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[SELF]],
 // CHECK-NEXT: store ptr [[T1]], ptr [[T0]]
 // CHECK: call void @test8_helper(
@@ -312,21 +312,21 @@ void test10a(void) {
   // CHECK-NOHEAP:      [[BLOCK1:%.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
 
   // Zero-initialization before running the initializer.
-  // CHECK:             [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[BYREF]], i32 0, i32 6
+  // CHECK:             [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 6
   // CHECK-NEXT:        store ptr null, ptr [[T0]], align 8
 
   // Run the initializer as an assignment.
   // CHECK-HEAP:   [[T1:%.*]] = call ptr @llvm.objc.retainBlock(ptr {{%.*}})
-  // CHECK:        [[T3:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[BYREF]], i32 0, i32 1
+  // CHECK:        [[T3:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 1
   // CHECK-NEXT:        [[T4:%.*]] = load ptr, ptr [[T3]]
-  // CHECK-NEXT:        [[T5:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[T4]], i32 0, i32 6
+  // CHECK-NEXT:        [[T5:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[T4]], i32 0, i32 6
   // CHECK-NEXT:        [[T6:%.*]] = load ptr, ptr [[T5]], align 8
   // CHECK-HEAP-NEXT:   store ptr {{%.*}}, ptr [[T5]], align 8
   // CHECK-NOHEAP-NEXT: store ptr [[BLOCK1]], ptr [[T5]], align 8
   // CHECK-NEXT:        call void @llvm.objc.release(ptr [[T6]])
 
   // Destroy at end of function.
-  // CHECK-NEXT:        [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[BYREF]], i32 0, i32 6
+  // CHECK-NEXT:        [[SLOT:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 6
   // CHECK-NEXT:        call void @_Block_object_dispose(ptr [[BYREF]], i32 8)
   // CHECK-NEXT:        [[T1:%.*]] = load ptr, ptr [[SLOT]]
   // CHECK-NEXT:        call void @llvm.objc.release(ptr [[T1]])
@@ -339,9 +339,9 @@ void test10a(void) {
 
 // CHECK-LABEL: define internal void @__Block_byref_object_copy_.{{[0-9]+}}(ptr noundef %0, ptr noundef %1) #{{[0-9]+}} {
 // CHECK:      [[D0:%.*]] = load ptr, ptr {{%.*}}
-// CHECK-NEXT: [[D2:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[D0]], i32 0, i32 6
+// CHECK-NEXT: [[D2:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[D0]], i32 0, i32 6
 // CHECK-NEXT: [[S0:%.*]] = load ptr, ptr {{%.*}}
-// CHECK-NEXT: [[S2:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[S0]], i32 0, i32 6
+// CHECK-NEXT: [[S2:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[S0]], i32 0, i32 6
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[S2]], align 8
 // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retainBlock(ptr [[T0]])
 // CHECK-NEXT: store ptr [[T2]], ptr [[D2]], align 8
@@ -349,7 +349,7 @@ void test10a(void) {
 
 // CHECK-LABEL: define internal void @__Block_byref_object_dispose_.{{[0-9]+}}(ptr noundef %0) #{{[0-9]+}} {
 // CHECK:      [[T0:%.*]] = load ptr, ptr {{%.*}}
-// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[T0]], i32 0, i32 6
+// CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[T0]], i32 0, i32 6
 // CHECK-NEXT: [[T3:%.*]] = load ptr, ptr [[T2]]
 // CHECK-NEXT: call void @llvm.objc.release(ptr [[T3]])
 // CHECK-NEXT: ret void
@@ -365,16 +365,16 @@ void test10b(void) {
   // CHECK-NOHEAP:      [[BLOCK3:%.*]] = alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
 
   // Zero-initialize.
-  // CHECK:             [[T0:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[BYREF]], i32 0, i32 6
+  // CHECK:             [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 6
   // CHECK-NEXT:        store ptr null, ptr [[T0]], align 8
 
-  // CHECK-NEXT:        [[SLOT:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[BYREF]], i32 0, i32 6
+  // CHECK-NEXT:        [[SLOT:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 6
 
   // The assignment.
   // CHECK-HEAP:   [[T1:%.*]] = call ptr @llvm.objc.retainBlock(ptr {{%.*}})
-  // CHECK:        [[T3:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[BYREF]], i32 0, i32 1
+  // CHECK:        [[T3:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[BYREF]], i32 0, i32 1
   // CHECK-NEXT:        [[T4:%.*]] = load ptr, ptr [[T3]]
-  // CHECK-NEXT:        [[T5:%.*]] = getelementptr inbounds [[BYREF_T]], ptr [[T4]], i32 0, i32 6
+  // CHECK-NEXT:        [[T5:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[T4]], i32 0, i32 6
   // CHECK-NEXT:        [[T6:%.*]] = load ptr, ptr [[T5]], align 8
   // CHECK-HEAP-NEXT:   store ptr {{%.*}}, ptr [[T5]], align 8
   // CHECK-NOHEAP-NEXT: store ptr [[BLOCK3]], ptr [[T5]], align 8
@@ -445,8 +445,8 @@ void test13(id x) {
   // CHECK:      [[X:%.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[B:%.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align 8
-  // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
   // CHECK-NEXT: [[COND_CLEANUP_SAVE:%.*]] = alloca ptr,
+  // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
   // CHECK-NEXT: [[T0:%.*]] = call ptr @llvm.objc.retain(ptr {{%.*}})
   // CHECK-NEXT: store ptr [[T0]], ptr [[X]], align 8
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[B]])
@@ -456,12 +456,12 @@ void test13(id x) {
   // CHECK-NEXT: br i1 [[T1]],
 
   // CHECK-NOT:  br
-  // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[X]], align 8
   // CHECK-NEXT: [[T1:%.*]] = call ptr @llvm.objc.retain(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T1]], ptr [[CAPTURE]], align 8
-  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: store ptr [[CAPTURE]], ptr [[COND_CLEANUP_SAVE]], align 8
+  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br label
   // CHECK:      br label
   // CHECK:      [[T0:%.*]] = phi ptr
@@ -525,7 +525,7 @@ id (^test17(id self, int which))(void) {
 // CHECK-NEXT: store ptr [[T0]], ptr [[SELF]], align
 // CHECK-NOT:  objc_retain
 // CHECK-NOT:  objc_release
-// CHECK:      [[CAPTURED:%.*]] = getelementptr inbounds [[BLOCK]], ptr [[B0]], i32 0, i32 5
+// CHECK:      [[CAPTURED:%.*]] = getelementptr inbounds nuw [[BLOCK]], ptr [[B0]], i32 0, i32 5
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[SELF]], align
 // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retain(ptr [[T1]])
 // CHECK-NEXT: store ptr [[T2]], ptr [[CAPTURED]],
@@ -537,7 +537,7 @@ id (^test17(id self, int which))(void) {
 // CHECK-NEXT: br label
 // CHECK-NOT:  objc_retain
 // CHECK-NOT:  objc_release
-// CHECK:      [[CAPTURED:%.*]] = getelementptr inbounds [[BLOCK]], ptr [[B1]], i32 0, i32 5
+// CHECK:      [[CAPTURED:%.*]] = getelementptr inbounds nuw [[BLOCK]], ptr [[B1]], i32 0, i32 5
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[SELF]], align
 // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retain(ptr [[T1]])
 // CHECK-NEXT: store ptr [[T2]], ptr [[CAPTURED]],
@@ -554,9 +554,9 @@ void test18(id x) {
 // CHECK-UNOPT-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
 // CHECK-UNOPT-NEXT: store ptr null, ptr [[X]]
 // CHECK-UNOPT-NEXT: call void @llvm.objc.storeStrong(ptr [[X]], 
-// CHECK-UNOPT: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 4
+// CHECK-UNOPT: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 4
 // CHECK-UNOPT: store ptr @[[BLOCK_DESCRIPTOR_TMP44]], ptr %[[BLOCK_DESCRIPTOR]], align 8
-// CHECK-UNOPT:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+// CHECK-UNOPT:      [[SLOT:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
 // CHECK-UNOPT-NEXT: [[T0:%.*]] = load ptr, ptr [[X]],
 // CHECK-UNOPT-NEXT: [[T1:%.*]] = call ptr @llvm.objc.retain(ptr [[T0]])
 // CHECK-UNOPT-NEXT: store ptr [[T1]], ptr [[SLOT]],
@@ -576,7 +576,7 @@ void testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers(id x, id y) {
 }
 
 // CHECK-LABEL: define{{.*}} void @testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers
-// %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
+// %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCRIPTOR_TMP46]], ptr %[[BLOCK_DESCRIPTOR]], align 8
 
 // CHECK-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
@@ -592,9 +592,9 @@ void test19(void (^b)(void)) {
 // CHECK-NEXT: store ptr [[T1]], ptr [[B]]
 
 //   Block setup.  We skip most of this.  Note the bare retain.
-// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 4
+// CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCRIPTOR_TMP48]], ptr %[[BLOCK_DESCRIPTOR]], align 8
-// CHECK:      [[SLOT:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+// CHECK:      [[SLOT:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[B]],
 // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retain(ptr [[T0]])
 // CHECK-NEXT: store ptr [[T2]], ptr [[SLOT]],
@@ -619,7 +619,7 @@ void test19(void (^b)(void)) {
 // CHECK-NEXT: [[BLOCK:%.*]] = alloca <[[BLOCKTY:.*]]>
 // CHECK-NEXT: [[RETAINEDX:%.*]] = call ptr @llvm.objc.retain(ptr %{{.*}})
 // CHECK-NEXT: store ptr [[RETAINEDX]], ptr [[XADDR]]
-// CHECK: [[BLOCKCAPTURED:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK: [[BLOCKCAPTURED:%.*]] = getelementptr inbounds nuw <[[BLOCKTY]]>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK: [[CAPTURED:%.*]] = load ptr, ptr [[XADDR]]
 // CHECK: store ptr [[CAPTURED]], ptr [[BLOCKCAPTURED]]
 // CHECK: [[CAPTURE:%.*]] = load ptr, ptr [[BLOCKCAPTURED]]
@@ -631,7 +631,7 @@ void test19(void (^b)(void)) {
 // CHECK-UNOPT-LABEL: define{{.*}} void @test20(
 // CHECK-UNOPT: [[XADDR:%.*]] = alloca ptr
 // CHECK-UNOPT-NEXT: [[BLOCK:%.*]] = alloca <[[BLOCKTY:.*]]>
-// CHECK-UNOPT: [[BLOCKCAPTURED:%.*]] = getelementptr inbounds <[[BLOCKTY]]>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK-UNOPT: [[BLOCKCAPTURED:%.*]] = getelementptr inbounds nuw <[[BLOCKTY]]>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK-UNOPT: [[CAPTURED:%.*]] = load ptr, ptr [[XADDR]]
 // CHECK-UNOPT: [[RETAINED:%.*]] = call ptr @llvm.objc.retain(ptr [[CAPTURED]])
 // CHECK-UNOPT: store ptr [[RETAINED]], ptr [[BLOCKCAPTURED]]
@@ -655,7 +655,7 @@ void test21(id x) {
 // expression, should be extended.
 
 // CHECK-COMMON-LABEL: define{{.*}} ptr @test22(
-// CHECK-COMMON: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 5
+// CHECK-COMMON: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 5
 // CHECK-COMMON: %[[V3:.*]] = call ptr @llvm.objc.retain(ptr %{{.*}})
 // CHECK-COMMON: store ptr %[[V3]], ptr %[[BLOCK_CAPTURED]], align 8
 // CHECK-COMMON: call void @test22_1()
@@ -682,7 +682,7 @@ void test23(id x, Test23 *t) {
 }
 
 // CHECK-COMMON-LABEL: define internal void @"\01+[Test24 m]"(
-// CHECK-COMMON: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
+// CHECK-COMMON: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr }>, ptr %{{.*}}, i32 0, i32 4
 // CHECK: store ptr @[[BLOCK_DESCRIPTOR_TMP10]], ptr %[[BLOCK_DESCRIPTOR]],
 
 @interface Test24

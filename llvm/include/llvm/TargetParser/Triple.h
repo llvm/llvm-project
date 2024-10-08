@@ -88,8 +88,6 @@ public:
     xtensa,         // Tensilica: Xtensa
     nvptx,          // NVPTX: 32-bit
     nvptx64,        // NVPTX: 64-bit
-    le32,           // le32: generic little-endian 32-bit CPU (PNaCl)
-    le64,           // le64: generic little-endian 64-bit CPU (PNaCl)
     amdil,          // AMDIL
     amdil64,        // AMDIL with 64-bit pointers
     hsail,          // AMD HSAIL
@@ -112,6 +110,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_6a,
     ARMSubArch_v9_5a,
     ARMSubArch_v9_4a,
     ARMSubArch_v9_3a,
@@ -176,6 +175,7 @@ public:
     DXILSubArch_v1_6,
     DXILSubArch_v1_7,
     DXILSubArch_v1_8,
+    LatestDXILSubArch = DXILSubArch_v1_8,
   };
   enum VendorType {
     UnknownVendor,
@@ -258,8 +258,12 @@ public:
     EABIHF,
     Android,
     Musl,
+    MuslABIN32,
+    MuslABI64,
     MuslEABI,
     MuslEABIHF,
+    MuslF32,
+    MuslSF,
     MuslX32,
 
     MSVC,
@@ -267,7 +271,7 @@ public:
     Cygnus,
     CoreCLR,
     Simulator, // Simulator variants of other systems, e.g., Apple's iOS
-    MacABI, // Mac Catalyst variant of Apple's iOS deployment target.
+    MacABI,    // Mac Catalyst variant of Apple's iOS deployment target.
 
     // Shader Stages
     // The order of these values matters, and must be kept in sync with the
@@ -291,7 +295,9 @@ public:
     OpenCL,
     OpenHOS,
 
-    LastEnvironmentType = OpenHOS
+    PAuthTest,
+
+    LastEnvironmentType = PAuthTest
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -427,6 +433,10 @@ public:
   /// Parse the Vulkan version number from the OSVersion and SPIR-V version
   /// (SubArch).  This should only be called with Vulkan SPIR-V triples.
   VersionTuple getVulkanVersion() const;
+
+  /// Parse the DXIL version number from the OSVersion and DXIL version
+  /// (SubArch).  This should only be called with DXIL triples.
+  VersionTuple getDXILVersion() const;
 
   /// @}
   /// @name Direct Component Access
@@ -778,8 +788,12 @@ public:
   /// Tests whether the environment is musl-libc
   bool isMusl() const {
     return getEnvironment() == Triple::Musl ||
+           getEnvironment() == Triple::MuslABIN32 ||
+           getEnvironment() == Triple::MuslABI64 ||
            getEnvironment() == Triple::MuslEABI ||
            getEnvironment() == Triple::MuslEABIHF ||
+           getEnvironment() == Triple::MuslF32 ||
+           getEnvironment() == Triple::MuslSF ||
            getEnvironment() == Triple::MuslX32 ||
            getEnvironment() == Triple::OpenHOS || isOSLiteOS();
   }
@@ -1026,6 +1040,12 @@ public:
   bool isArm64e() const {
     return getArch() == Triple::aarch64 &&
            getSubArch() == Triple::AArch64SubArch_arm64e;
+  }
+
+  // Tests whether the target is N32.
+  bool isABIN32() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == Triple::GNUABIN32 || Env == Triple::MuslABIN32;
   }
 
   /// Tests whether the target is X32.

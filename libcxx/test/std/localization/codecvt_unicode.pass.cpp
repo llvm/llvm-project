@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0}}
+
+// Requires the fix in 390840f.
+// XFAIL: using-built-library-before-llvm-18
 
 #include <algorithm>
 #include <cassert>

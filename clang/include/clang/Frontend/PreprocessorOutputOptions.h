@@ -32,6 +32,8 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ShowIncludeDirectives : 1;  ///< Print includes, imports etc. within preprocessed output.
   LLVM_PREFERRED_TYPE(bool)
+  unsigned ShowEmbedDirectives : 1; ///< Print embeds, etc. within preprocessed
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RewriteIncludes : 1;    ///< Preprocess include directives only.
   LLVM_PREFERRED_TYPE(bool)
   unsigned RewriteImports  : 1;    ///< Include contents of transitively-imported modules.
@@ -51,6 +53,7 @@ public:
     ShowMacroComments = 0;
     ShowMacros = 0;
     ShowIncludeDirectives = 0;
+    ShowEmbedDirectives = 0;
     RewriteIncludes = 0;
     RewriteImports = 0;
     MinimizeWhitespace = 0;

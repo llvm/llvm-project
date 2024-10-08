@@ -67,11 +67,15 @@ namespace spec {
 
 namespace spec_join1 {
   template<typename T> T va = T(10);
-  template<> extern float va<float>;
+#ifdef ERROR
+  template<> float va<float>; // expected-note {{previous definition is here}}
+#endif
   extern template int va<int>;
 
   template<typename T> T vb = T(10);
-  template<> extern float vb<float>;
+#ifdef ERROR
+  template<> float vb<float>; // expected-note {{previous definition is here}}
+#endif
 
   template<typename T> T vc = T(10);
 
@@ -102,15 +106,19 @@ namespace join {
 
 namespace spec_join1 {
   template<typename T> extern T va;
-  template<> float va<float> = 1.5;
+#ifdef ERROR
+  template<> float va<float> = 1.5; // expected-error {{redefinition of 'va<float>'}}
+#endif
   extern template int va<int>;
-  
-  template<> float vb<float> = 1.5;
+
+#ifdef ERROR
+  template<> float vb<float> = 1.5; // expected-error {{redefinition of 'vb<float>'}}
+#endif
   template int vb<int>;
 
   template<> float vc<float> = 1.5;
   template int vc<int>;
-  
+
   template<typename T> extern T vd;
   template<typename T> T* vd<T*> = new T();
 }
@@ -123,9 +131,9 @@ namespace spec_join1 {
 template int var0a<int>;
 float fvara = var0a<float>;
 
-template<typename T> extern T var0a; 
+template<typename T> extern T var0a;
 
-template<typename T> T var0b = T(); 
+template<typename T> T var0b = T();
 template int var0b<int>;
 float fvarb = var0b<float>;
 

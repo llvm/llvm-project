@@ -43,6 +43,10 @@ bool isIntegerIndexOrOpaqueType(Type type);
 
 /// Determines whether \p type is a valid floating-point type in EmitC.
 bool isSupportedFloatType(mlir::Type type);
+
+/// Determines whether \p type is a emitc.size_t/ssize_t type.
+bool isPointerWideType(mlir::Type type);
+
 } // namespace emitc
 } // namespace mlir
 

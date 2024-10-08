@@ -221,3 +221,12 @@ TRAIT_IS_TRUE(__is_trivially_relocatable, __unsafe_unretained id);
 TRAIT_IS_TRUE(__is_trivially_relocatable, HasStrong);
 TRAIT_IS_FALSE(__is_trivially_relocatable, HasWeak);
 TRAIT_IS_TRUE(__is_trivially_relocatable, HasUnsafeUnretained);
+
+// __is_bitwise_cloneable
+TRAIT_IS_FALSE(__is_bitwise_cloneable, __strong id);
+TRAIT_IS_FALSE(__is_bitwise_cloneable, __weak id);
+TRAIT_IS_FALSE(__is_bitwise_cloneable, __autoreleasing id);
+TRAIT_IS_TRUE(__is_trivial, __unsafe_unretained id);
+TRAIT_IS_FALSE(__is_bitwise_cloneable, HasStrong);
+TRAIT_IS_FALSE(__is_bitwise_cloneable, HasWeak);
+TRAIT_IS_TRUE(__is_bitwise_cloneable, HasUnsafeUnretained);

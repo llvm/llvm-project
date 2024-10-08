@@ -13,9 +13,15 @@
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
 
+// Note: this test fails on musl because:
+//
+//  (a) musl disables emission of unwind information for its build, and
+//  (b) musl's signal trampolines don't include unwind information
+//
+// XFAIL: target={{.*}}-musl
+
 #undef NDEBUG
 #include <assert.h>
-#include <dlfcn.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,16 +30,24 @@
 #include <unistd.h>
 #include <unwind.h>
 
+// Using __attribute__((section("main_func"))) is ELF specific, but then
+// this entire test is marked as requiring Linux, so we should be good.
+//
+// We don't use dladdr() because on musl it's a no-op when statically linked.
+extern char __start_main_func;
+extern char __stop_main_func;
+
 _Unwind_Reason_Code frame_handler(struct _Unwind_Context* ctx, void* arg) {
   (void)arg;
-  Dl_info info = { 0, 0, 0, 0 };
 
-  // Unwind util the main is reached, above frames depend on the platform and
+  // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
-  if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(ctx)), &info) &&
-      info.dli_sname && !strcmp("main", info.dli_sname)) {
+  uintptr_t ip = _Unwind_GetIP(ctx);
+  if (ip >= (uintptr_t)&__start_main_func &&
+      ip < (uintptr_t)&__stop_main_func) {
     _Exit(0);
   }
+
   return _URC_NO_REASON;
 }
 
@@ -43,7 +57,7 @@ void signal_handler(int signum) {
   _Exit(-1);
 }
 
-int main(int, char**) {
+__attribute__((section("main_func"))) int main(int, char **) {
   signal(SIGUSR1, signal_handler);
   kill(getpid(), SIGUSR1);
   return -2;

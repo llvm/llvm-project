@@ -193,7 +193,7 @@ define i32 @cttz_of_lowest_set_bit_wrong_const(i32 %x) {
 define i32 @cttz_of_lowest_set_bit_wrong_operand(i32 %x, i32 %y) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_wrong_operand(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[AND]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
@@ -206,7 +206,7 @@ define i32 @cttz_of_lowest_set_bit_wrong_operand(i32 %x, i32 %y) {
 define i32 @cttz_of_lowest_set_bit_wrong_intrinsic(i32 %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_wrong_intrinsic(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[SUB]]
 ; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[AND]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
@@ -214,4 +214,86 @@ define i32 @cttz_of_lowest_set_bit_wrong_intrinsic(i32 %x) {
   %and = and i32 %sub, %x
   %tz = call i32 @llvm.ctlz.i32(i32 %and, i1 false)
   ret i32 %tz
+}
+
+define i32 @cttz_of_power_of_two(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two(
+; CHECK-NEXT:    [[R:%.*]] = sub i32 32, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -1, %x
+  %add = add i32 %lshr, 1
+  %r = call i32 @llvm.cttz.i32(i32 %add, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_of_power_of_two_zero_poison(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two_zero_poison(
+; CHECK-NEXT:    [[R:%.*]] = sub i32 32, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -1, %x
+  %add = add i32 %lshr, 1
+  %r = call i32 @llvm.cttz.i32(i32 %add, i1 true)
+  ret i32 %r
+}
+
+define i32 @cttz_of_power_of_two_wrong_intrinsic(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two_wrong_intrinsic(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -1, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LSHR]], 1
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ADD]], i1 false)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -1, %x
+  %add = add i32 %lshr, 1
+  %r = call i32 @llvm.ctlz.i32(i32 %add, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_of_power_of_two_wrong_constant_1(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two_wrong_constant_1(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[LSHR]], 1
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ADD]], i1 true)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -2, %x
+  %add = add i32 %lshr, 1
+  %r = call i32 @llvm.cttz.i32(i32 %add, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_of_power_of_two_wrong_constant_2(i32 %x) {
+; CHECK-LABEL: @cttz_of_power_of_two_wrong_constant_2(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -1, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[LSHR]], -1
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[ADD]], i1 false)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lshr = lshr i32 -1, %x
+  %add = add i32 %lshr, -1
+  %r = call i32 @llvm.cttz.i32(i32 %add, i1 false)
+  ret i32 %r
+}
+
+define i16 @cttz_assume(i16 %x) {
+; CHECK-LABEL: @cttz_assume(
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND0:%.*]] = icmp ult i16 [[ADD]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND0]])
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i16 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND1]])
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    ret i16 [[CTTZ]]
+;
+  %add = add i16 %x, 1
+  %cond0 = icmp ult i16 %add, 10
+  call void @llvm.assume(i1 %cond0)
+
+  %cond1 = icmp ne i16 %x, 0
+  call void @llvm.assume(i1 %cond1)
+
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 false)
+  ret i16 %cttz
 }

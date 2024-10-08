@@ -3,7 +3,7 @@ add_startup_object(
   SRC
     tls.cpp
   DEPENDS
-    libc.config.linux.app_h
+    libc.config.app_h
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -20,7 +20,7 @@ add_startup_object(
   SRC
     start.cpp
   DEPENDS
-    libc.config.linux.app_h
+    libc.config.app_h
     libc.src.__support.macros.attributes
   COMPILE_OPTIONS
     -fno-stack-protector

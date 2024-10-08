@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -I%S %s -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s -check-prefix=AS
+// RUN: %clang_cc1 -I%S %s -triple spirv64-amd-amdhsa -emit-llvm -o - | FileCheck %s -check-prefix=NONZERO-DEFAULT-AS
 // RUN: %clang_cc1 -I%S %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s -check-prefix=NO-AS
 #include <typeinfo>
 
@@ -25,24 +26,30 @@ class B : A {
 
 unsigned long Fn(B& b) {
 // AS: %call = call noundef zeroext i1 @_ZNKSt9type_infoeqERKS_(ptr {{.*}} addrspacecast (ptr addrspace(1) @_ZTISt9type_info to ptr), ptr {{.*}} %2)
+// NONZERO-DEFAULT-AS: %call = call{{.*}} noundef zeroext{{.*}} i1 @_ZNKSt9type_infoeqERKS_(ptr addrspace(4) {{.*}} addrspacecast (ptr addrspace(1) @_ZTISt9type_info to ptr addrspace(4)), ptr addrspace(4) {{.*}} %2)
 // NO-AS: %call = call noundef zeroext i1 @_ZNKSt9type_infoeqERKS_(ptr {{.*}} @_ZTISt9type_info, ptr {{.*}} %2)
     if (typeid(std::type_info) == typeid(b))
         return 42;
 // AS: %call2 = call noundef zeroext i1 @_ZNKSt9type_infoneERKS_(ptr {{.*}} addrspacecast (ptr addrspace(1) @_ZTIi to ptr), ptr {{.*}} %5)
+// NONZERO-DEFAULT-AS: %call2 = call{{.*}} noundef zeroext{{.*}} i1 @_ZNKSt9type_infoneERKS_(ptr addrspace(4) {{.*}} addrspacecast (ptr addrspace(1) @_ZTIi to ptr addrspace(4)), ptr addrspace(4) {{.*}} %5)
 // NO-AS: %call2 = call noundef zeroext i1 @_ZNKSt9type_infoneERKS_(ptr {{.*}} @_ZTIi, ptr {{.*}} %5)
     if (typeid(int) != typeid(b))
         return 1712;
 // AS: %call5 = call noundef ptr @_ZNKSt9type_info4nameEv(ptr {{.*}} addrspacecast (ptr addrspace(1) @_ZTI1A to ptr))
+// NONZERO-DEFAULT-AS: %call5 = call{{.*}} noundef{{.*}} ptr addrspace(4) @_ZNKSt9type_info4nameEv(ptr addrspace(4) {{.*}} addrspacecast (ptr addrspace(1) @_ZTI1A to ptr addrspace(4)))
 // NO-AS: %call5 = call noundef ptr @_ZNKSt9type_info4nameEv(ptr {{.*}} @_ZTI1A)
 // AS: %call7 = call noundef ptr @_ZNKSt9type_info4nameEv(ptr {{.*}} %8)
+// NONZERO-DEFAULT-AS: %call7 = call{{.*}} noundef{{.*}} ptr addrspace(4) @_ZNKSt9type_info4nameEv(ptr addrspace(4) {{.*}} %8)
 // NO-AS: %call7 = call noundef ptr @_ZNKSt9type_info4nameEv(ptr {{.*}} %8)
     if (typeid(A).name() == typeid(b).name())
         return 0;
 // AS: %call11 = call noundef zeroext i1 @_ZNKSt9type_info6beforeERKS_(ptr {{.*}} %11, ptr {{.*}} addrspacecast (ptr addrspace(1) @_ZTIf to ptr))
+// NONZERO-DEFAULT-AS: %call11 = call{{.*}} noundef zeroext{{.*}} i1 @_ZNKSt9type_info6beforeERKS_(ptr addrspace(4) {{.*}} %11, ptr addrspace(4) {{.*}} addrspacecast (ptr addrspace(1) @_ZTIf to ptr addrspace(4)))
 // NO-AS:   %call11 = call noundef zeroext i1 @_ZNKSt9type_info6beforeERKS_(ptr {{.*}} %11, ptr {{.*}} @_ZTIf)
     if (typeid(b).before(typeid(float)))
         return 1;
 // AS: %call15 = call noundef i64 @_ZNKSt9type_info9hash_codeEv(ptr {{.*}} %14)
+// NONZERO-DEFAULT-AS: %call15 = call{{.*}} noundef{{.*}} i64 @_ZNKSt9type_info9hash_codeEv(ptr addrspace(4) {{.*}} %14)
 // NO-AS: %call15 = call noundef i64 @_ZNKSt9type_info9hash_codeEv(ptr {{.*}} %14)
     return typeid(b).hash_code();
 }

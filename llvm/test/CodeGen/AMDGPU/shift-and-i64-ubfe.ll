@@ -391,8 +391,7 @@ define amdgpu_kernel void @v_uextract_bit_33_36_use_upper_half_shift_i64(ptr add
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
-
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
+attributes #1 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

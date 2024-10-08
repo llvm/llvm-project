@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "CommonArgs.h"
 #include "HIPUtility.h"
+#include "SPIRV.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Driver/Compilation.h"
@@ -34,43 +35,6 @@ using namespace llvm::opt;
 #else
 #define NULL_FILE "/dev/null"
 #endif
-
-static bool shouldSkipSanitizeOption(const ToolChain &TC,
-                                     const llvm::opt::ArgList &DriverArgs,
-                                     StringRef TargetID,
-                                     const llvm::opt::Arg *A) {
-  // For actions without targetID, do nothing.
-  if (TargetID.empty())
-    return false;
-  Option O = A->getOption();
-  if (!O.matches(options::OPT_fsanitize_EQ))
-    return false;
-
-  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize, true))
-    return true;
-
-  auto &Diags = TC.getDriver().getDiags();
-
-  // For simplicity, we only allow -fsanitize=address
-  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
-  if (K != SanitizerKind::Address)
-    return true;
-
-  llvm::StringMap<bool> FeatureMap;
-  auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
-
-  assert(OptionalGpuArch && "Invalid Target ID");
-  (void)OptionalGpuArch;
-  auto Loc = FeatureMap.find("xnack");
-  if (Loc == FeatureMap.end() || !Loc->second) {
-    Diags.Report(
-        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
-        << A->getAsString(DriverArgs) << TargetID << "xnack+";
-    return true;
-  }
-  return false;
-}
 
 void AMDGCN::Linker::constructLlvmLinkCommand(Compilation &C,
                                          const JobAction &JA,
@@ -119,7 +83,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
   assert(!Inputs.empty() && "Must have at least one input.");
-  bool IsThinLTO = D.getLTOMode(/*IsOffload=*/true) == LTOK_Thin;
+  bool IsThinLTO = D.getOffloadLTOMode() == LTOK_Thin;
   addLTOOptions(TC, Args, LldArgs, Output, Inputs[0], IsThinLTO);
 
   // Extract all the -m options
@@ -193,6 +157,33 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                          Lld, LldArgs, Inputs, Output));
 }
 
+// For SPIR-V the inputs for the job are device AMDGCN SPIR-V flavoured bitcode
+// and the output is either a compiled SPIR-V binary or bitcode (-emit-llvm). It
+// calls llvm-link and then the llvm-spirv translator. Once the SPIR-V BE will
+// be promoted from experimental, we will switch to using that. TODO: consider
+// if we want to run any targeted optimisations over IR here, over generic
+// SPIR-V.
+void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
+    Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
+    const InputInfo &Output, const llvm::opt::ArgList &Args) const {
+  assert(!Inputs.empty() && "Must have at least one input.");
+
+  constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+
+  // Linked BC is now in Output
+
+  // Emit SPIR-V binary.
+  llvm::opt::ArgStringList TrArgs{
+      "--spirv-max-version=1.6",
+      "--spirv-ext=+all",
+      "--spirv-allow-extra-diexpressions",
+      "--spirv-allow-unknown-intrinsics",
+      "--spirv-lower-const-expr",
+      "--spirv-preserve-auxdata",
+      "--spirv-debug-info-version=nonsemantic-shader-200"};
+  SPIRV::constructTranslateCommand(C, *this, JA, Output, Output, TrArgs);
+}
+
 // For amdgcn the inputs of the linker job are device bitcode and output is
 // either an object file or bitcode (-emit-llvm). It calls llvm-link, opt,
 // llc, then lld steps.
@@ -213,6 +204,9 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (JA.getType() == types::TY_LLVM_BC)
     return constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+
+  if (getToolChain().getTriple().isSPIRV())
+    return constructLinkAndEmitSpirvCommand(C, JA, Inputs, Output, Args);
 
   return constructLldCommand(C, JA, Inputs, Output, Args);
 }
@@ -270,6 +264,13 @@ void HIPAMDToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
+  // For SPIR-V we embed the command-line into the generated binary, in order to
+  // retrieve it at JIT time and be able to do target specific compilation with
+  // options that match the user-supplied ones.
+  if (getTriple().isSPIRV() &&
+      !DriverArgs.hasArg(options::OPT_fembed_bitcode_marker))
+    CC1Args.push_back("-fembed-bitcode=marker");
+
   for (auto BCFile : getDeviceLibs(DriverArgs)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
@@ -303,7 +304,8 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 }
 
 Tool *HIPAMDToolChain::buildLinker() const {
-  assert(getTriple().getArch() == llvm::Triple::amdgcn);
+  assert(getTriple().getArch() == llvm::Triple::amdgcn ||
+         getTriple().getArch() == llvm::Triple::spirv64);
   return new tools::AMDGCN::Linker(*this);
 }
 
@@ -358,7 +360,9 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (DriverArgs.hasArg(options::OPT_nogpulib) ||
+      (getTriple().getArch() == llvm::Triple::spirv64 &&
+       getTriple().getVendor() == llvm::Triple::AMD))
     return {};
   ArgStringList LibraryPaths;
 

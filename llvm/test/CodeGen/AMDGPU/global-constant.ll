@@ -49,8 +49,8 @@ define amdgpu_kernel void @private_test(i32 %index, ptr addrspace(1) %out) {
 
 ; R600-LABEL: available_externally_test
 
-; GCN-PAL:    s_mov_b32 s3, available_externally@abs32@hi
-; GCN-PAL:    s_mov_b32 s2, available_externally@abs32@lo
+; GCN-PAL:    s_mov_b32 s1, available_externally@abs32@hi
+; GCN-PAL:    s_mov_b32 s0, available_externally@abs32@lo
 define amdgpu_kernel void @available_externally_test(ptr addrspace(1) %out) {
   %ptr = getelementptr [256 x i32], ptr addrspace(4) @available_externally, i32 0, i32 1
   %val = load i32, ptr addrspace(4) %ptr

@@ -15,11 +15,13 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
 #include <bitset>
@@ -133,6 +135,12 @@ enum {
   /// - Ops(ULEB128) - Expected number of operands
   GIM_CheckNumOperands,
 
+  /// Check the instruction has a number of operands <= or >= than given number.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Ops(ULEB128) - Number of operands
+  GIM_CheckNumOperandsLE,
+  GIM_CheckNumOperandsGE,
+
   /// Check an immediate predicate on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID
   /// - Pred(2) - The predicate to test
@@ -168,7 +176,7 @@ enum {
   /// operand.
   /// - InsnID(ULEB128) - Instruction ID
   /// - MMOIdx(ULEB128) - MMO index
-  /// - NumAddrSpace(ULEB128) - Number of valid address spaces
+  /// - NumAddrSpace(1) - Number of valid address spaces
   /// - AddrSpaceN(ULEB128) - An allowed space of the memory access
   /// - AddrSpaceN+1 ...
   GIM_CheckMemoryAddressSpace,
@@ -177,7 +185,7 @@ enum {
   /// memory operand.
   /// - InsnID(ULEB128) - Instruction ID
   /// - MMOIdx(ULEB128) - MMO index
-  /// - MinAlign(ULEB128) - Minimum acceptable alignment
+  /// - MinAlign(1) - Minimum acceptable alignment
   GIM_CheckMemoryAlignment,
 
   /// Check the size of the memory access for the given machine memory operand
@@ -211,6 +219,10 @@ enum {
   /// Check if there's no use of the first result.
   /// - InsnID(ULEB128) - Instruction ID
   GIM_CheckHasNoUse,
+
+  /// Check if there's one use of the first result.
+  /// - InsnID(ULEB128) - Instruction ID
+  GIM_CheckHasOneUse,
 
   /// Check the type for the specified operand
   /// - InsnID(ULEB128) - Instruction ID
@@ -290,12 +302,15 @@ enum {
   /// Check the specified operands are identical.
   /// The IgnoreCopies variant looks through COPY instructions before
   /// comparing the operands.
+  /// The "All" variants check all operands starting from the index.
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index
   /// - OtherInsnID(ULEB128) - Other instruction ID
   /// - OtherOpIdx(ULEB128) - Other operand index
   GIM_CheckIsSameOperand,
   GIM_CheckIsSameOperandIgnoreCopies,
+  GIM_CheckAllSameOperand,
+  GIM_CheckAllSameOperandIgnoreCopies,
 
   /// Check we can replace all uses of a register with another.
   /// - OldInsnID(ULEB128)
@@ -357,6 +372,13 @@ enum {
   GIR_Copy,
   /// GIR_Copy but with both New/OldInsnIDs omitted and defaulting to zero.
   GIR_RootToRootCopy,
+
+  /// Copies all operand starting from OpIdx in OldInsnID into the new
+  /// instruction NewInsnID.
+  /// - NewInsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to copy from
+  /// - OpIdx(ULEB128) - The first operand to copy
+  GIR_CopyRemaining,
 
   /// Copy an operand to the specified instruction or add a zero register if the
   /// operand is a zero immediate.
@@ -471,16 +493,11 @@ enum {
   /// - RendererFnID(2) - Custom renderer function to call
   GIR_CustomRenderer,
 
-  /// Calls a C++ function to perform an action when a match is complete.
-  /// The MatcherState is passed to the function to allow it to modify
-  /// instructions.
-  /// This is less constrained than a custom renderer and can update
-  /// instructions
-  /// in the state.
+  /// Calls a C++ function that concludes the current match.
+  /// The C++ function is free to return false and reject the match, or
+  /// return true and mutate the instruction(s) (or do nothing, even).
   /// - FnID(2) - The function to call.
-  /// TODO: Remove this at some point when combiners aren't reliant on it. It's
-  /// a bit of a hack.
-  GIR_CustomAction,
+  GIR_DoneWithCustomAction,
 
   /// Render operands to the specified instruction using a custom function,
   /// reading from a specific operand.
@@ -688,7 +705,7 @@ protected:
     llvm_unreachable("Subclass does not implement testSimplePredicate!");
   }
 
-  virtual void runCustomAction(unsigned, const MatcherState &State,
+  virtual bool runCustomAction(unsigned, const MatcherState &State,
                                NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
@@ -712,6 +729,34 @@ protected:
     Ty Ret;
     memcpy(&Ret, MatchTable, sizeof(Ret));
     return Ret;
+  }
+
+  static ArrayRef<MachineOperand> getRemainingOperands(const MachineInstr &MI,
+                                                       unsigned FirstVarOp) {
+    auto Operands = drop_begin(MI.operands(), FirstVarOp);
+    return {Operands.begin(), Operands.end()};
+  }
+
+public:
+  // Faster ULEB128 decoder tailored for the Match Table Executor.
+  //
+  // - Arguments are fixed to avoid mid-function checks.
+  // - Unchecked execution, assumes no error.
+  // - Fast common case handling (1 byte values).
+  LLVM_ATTRIBUTE_ALWAYS_INLINE static uint64_t
+  fastDecodeULEB128(const uint8_t *LLVM_ATTRIBUTE_RESTRICT MatchTable,
+                    uint64_t &CurrentIdx) {
+    uint64_t Value = MatchTable[CurrentIdx++];
+    if (LLVM_UNLIKELY(Value >= 128)) {
+      Value &= 0x7f;
+      unsigned Shift = 7;
+      do {
+        uint64_t Slice = MatchTable[CurrentIdx] & 0x7f;
+        Value += Slice << Shift;
+        Shift += 7;
+      } while (MatchTable[CurrentIdx++] >= 128);
+    }
+    return Value;
   }
 };
 

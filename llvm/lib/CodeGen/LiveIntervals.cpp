@@ -57,14 +57,39 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
-char LiveIntervals::ID = 0;
-char &llvm::LiveIntervalsID = LiveIntervals::ID;
-INITIALIZE_PASS_BEGIN(LiveIntervals, "liveintervals", "Live Interval Analysis",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
-INITIALIZE_PASS_END(LiveIntervals, "liveintervals",
-                "Live Interval Analysis", false, false)
+AnalysisKey LiveIntervalsAnalysis::Key;
+
+LiveIntervalsAnalysis::Result
+LiveIntervalsAnalysis::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  return Result(MF, MFAM.getResult<SlotIndexesAnalysis>(MF),
+                MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+}
+
+PreservedAnalyses
+LiveIntervalsPrinterPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  OS << "Live intervals for machine function: " << MF.getName() << ":\n";
+  MFAM.getResult<LiveIntervalsAnalysis>(MF).print(OS);
+  return PreservedAnalyses::all();
+}
+
+char LiveIntervalsWrapperPass::ID = 0;
+char &llvm::LiveIntervalsID = LiveIntervalsWrapperPass::ID;
+INITIALIZE_PASS_BEGIN(LiveIntervalsWrapperPass, "liveintervals",
+                      "Live Interval Analysis", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_END(LiveIntervalsWrapperPass, "liveintervals",
+                    "Live Interval Analysis", false, false)
+
+bool LiveIntervalsWrapperPass::runOnMachineFunction(MachineFunction &MF) {
+  LIS.Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
+  LIS.DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  LIS.analyze(MF);
+  LLVM_DEBUG(dump());
+  return false;
+}
 
 #ifndef NDEBUG
 static cl::opt<bool> EnablePrecomputePhysRegs(
@@ -83,24 +108,24 @@ cl::opt<bool> UseSegmentSetForPhysRegs(
 
 } // end namespace llvm
 
-void LiveIntervals::getAnalysisUsage(AnalysisUsage &AU) const {
+void LiveIntervalsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<LiveVariables>();
+  AU.addPreserved<LiveVariablesWrapperPass>();
   AU.addPreservedID(MachineLoopInfoID);
   AU.addRequiredTransitiveID(MachineDominatorsID);
   AU.addPreservedID(MachineDominatorsID);
-  AU.addPreserved<SlotIndexes>();
-  AU.addRequiredTransitive<SlotIndexes>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequiredTransitive<SlotIndexesWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-LiveIntervals::LiveIntervals() : MachineFunctionPass(ID) {
-  initializeLiveIntervalsPass(*PassRegistry::getPassRegistry());
+LiveIntervalsWrapperPass::LiveIntervalsWrapperPass() : MachineFunctionPass(ID) {
+  initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-LiveIntervals::~LiveIntervals() { delete LICalc; }
+LiveIntervals::~LiveIntervals() { clear(); }
 
-void LiveIntervals::releaseMemory() {
+void LiveIntervals::clear() {
   // Free the live intervals themselves.
   for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i)
     delete VirtRegIntervals[Register::index2VirtReg(i)];
@@ -117,16 +142,14 @@ void LiveIntervals::releaseMemory() {
   VNInfoAllocator.Reset();
 }
 
-bool LiveIntervals::runOnMachineFunction(MachineFunction &fn) {
+void LiveIntervals::analyze(MachineFunction &fn) {
   MF = &fn;
   MRI = &MF->getRegInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
   TII = MF->getSubtarget().getInstrInfo();
-  Indexes = &getAnalysis<SlotIndexes>();
-  DomTree = &getAnalysis<MachineDominatorTree>();
 
   if (!LICalc)
-    LICalc = new LiveIntervalCalc();
+    LICalc = std::make_unique<LiveIntervalCalc>();
 
   // Allocate space for all virtual registers.
   VirtRegIntervals.resize(MRI->getNumVirtRegs());
@@ -141,11 +164,9 @@ bool LiveIntervals::runOnMachineFunction(MachineFunction &fn) {
     for (unsigned i = 0, e = TRI->getNumRegUnits(); i != e; ++i)
       getRegUnit(i);
   }
-  LLVM_DEBUG(dump());
-  return false;
 }
 
-void LiveIntervals::print(raw_ostream &OS, const Module* ) const {
+void LiveIntervals::print(raw_ostream &OS) const {
   OS << "********** INTERVALS **********\n";
 
   // Dump the regunits.
@@ -177,6 +198,10 @@ void LiveIntervals::printInstrs(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void LiveIntervals::dumpInstrs() const {
   printInstrs(dbgs());
 }
+#endif
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void LiveIntervals::dump() const { print(dbgs()); }
 #endif
 
 LiveInterval *LiveIntervals::createInterval(Register reg) {
@@ -1080,7 +1105,7 @@ private:
     else
       handleMoveUp(LR, Reg, LaneMask);
     LLVM_DEBUG(dbgs() << "        -->\t" << LR << '\n');
-    LR.verify();
+    assert(LR.verify());
   }
 
   /// Update LR to reflect an instruction has been moved downwards from OldIdx
@@ -1536,8 +1561,7 @@ void LiveIntervals::handleMoveIntoNewBundle(MachineInstr &BundleStart,
 
   // Fix up dead defs
   const SlotIndex Index = getInstructionIndex(BundleStart);
-  for (unsigned Idx = 0, E = BundleStart.getNumOperands(); Idx != E; ++Idx) {
-    MachineOperand &MO = BundleStart.getOperand(Idx);
+  for (MachineOperand &MO : BundleStart.operands()) {
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
@@ -1657,7 +1681,7 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
   Indexes->repairIndexesInRange(MBB, Begin, End);
 
   // Make sure a live interval exists for all register operands in the range.
-  SmallVector<Register> RegsToRepair(OrigRegs.begin(), OrigRegs.end());
+  SmallVector<Register> RegsToRepair(OrigRegs);
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;

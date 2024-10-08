@@ -1,8 +1,6 @@
-// RUN: mlir-opt %s --transform-interpreter \
-// RUN:             --test-transform-dialect-erase-schedule \
-// RUN:             --math-uplift-to-fma \
-// RUN:             --convert-bufferization-to-memref \
-// RUN:             --test-lower-to-llvm |\
+// RUN: mlir-opt %s --transform-interpreter="debug-payload-root-tag=payload" \
+// RUN:             --test-transform-dialect-erase-schedule |\
+// RUN: mlir-opt -pass-pipeline='builtin.module(builtin.module(math-uplift-to-fma,convert-bufferization-to-memref,test-lower-to-llvm))' - |\
 // RUN: FileCheck %s
 
 // Fixed-size tensor types to be used in convolution.
@@ -19,6 +17,7 @@
 // tensors annotated with attributes from the `bufferization` dialect. These
 // attributes hint the bufferization pass to assume buffers can be directly
 // used for these tensors without reshaping.
+module @payload attributes { transform.target_tag = "payload" } {
 func.func @conv(
     %input: !tinput {bufferization.writable = false,
                      bufferization.access = "read",
@@ -84,7 +83,7 @@ func.func @conv(
 
   return %relued : !toutput
 }
-
+}
 // Module containing the transformation script to be applied. The attribute
 // is required to correctly verify the use of named (macro-like) sequences.
 module attributes { transform.with_named_sequence } {
@@ -380,27 +379,29 @@ module attributes { transform.with_named_sequence } {
 // immediately adjacent fma on vector<64xf32>.
 
 // CHECK:      %[[R0:.+]] = llvm.mlir.undef : !llvm.array<5 x vector<64xf32>>
-// CHECK-NEXT: %[[LINE0:.+]] = llvm.extractvalue %[[V:.+]][0] : !llvm.array<5 x vector<64xf32>>
+
+// CHECK:      %[[V:.+]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE0:.+]] = llvm.extractvalue %[[V]][0] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA0:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE0]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R1:.+]] = llvm.insertvalue %[[FMA0]], %[[R0]][0]
 
-// CHECK-NEXT: %[[LINE1:.+]] = llvm.extractvalue %[[V:.+]][1] : !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE1:.+]] = llvm.extractvalue %[[V]][1] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA1:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE1]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R2:.+]] = llvm.insertvalue %[[FMA1]], %[[R1]][1]
 
-// CHECK-NEXT: %[[LINE2:.+]] = llvm.extractvalue %[[V:.+]][2] : !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE2:.+]] = llvm.extractvalue %[[V]][2] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA2:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE2]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R3:.+]] = llvm.insertvalue %[[FMA2]], %[[R2]][2]
 
-// CHECK-NEXT: %[[LINE3:.+]] = llvm.extractvalue %[[V:.+]][3] : !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE3:.+]] = llvm.extractvalue %[[V]][3] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA3:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE3]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R4:.+]] = llvm.insertvalue %[[FMA3]], %[[R3]][3]
 
-// CHECK-NEXT: %[[LINE4:.+]] = llvm.extractvalue %[[V:.+]][4] : !llvm.array<5 x vector<64xf32>>
+// CHECK-NEXT: %[[LINE4:.+]] = llvm.extractvalue %[[V]][4] : !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[FMA4:.+]] = llvm.intr.fma(%{{.*}}, %{{.*}}, %[[LINE4]])
 // CHECK-SAME: -> vector<64xf32>
 // CHECK-NEXT: %[[R5:.+]] = llvm.insertvalue %[[FMA4]], %[[R4]][4]

@@ -29,7 +29,7 @@
 ;;
 ;; $ clang test.c -Xclang -fexperimental-assignment-tracking  -O2 -g
 
-; CHECK: call void @llvm.dbg.assign(metadata i1 false, metadata !{{.+}}, metadata !DIExpression(), metadata !{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg ![[DBG:[0-9]+]]
+; CHECK: #dbg_assign(i1 false, !{{.+}}, !DIExpression(), !{{.+}}, ptr undef, !DIExpression(), ![[DBG:[0-9]+]]
 
 ; CHECK-DAG: ![[DBG]] = !DILocation(line: 0, scope: ![[INL_SC:[0-9]+]], inlinedAt: ![[IA:[0-9]+]])
 ; CHECK-DAG: ![[IA]] = distinct !DILocation(line: 21, column: 12, scope: ![[SC:[0-9]+]])

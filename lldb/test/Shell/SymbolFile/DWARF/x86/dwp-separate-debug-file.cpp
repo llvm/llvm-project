@@ -1,4 +1,4 @@
-// REQUIRES: lld
+// REQUIRES: lld, python
 
 // Now test with DWARF5
 // RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -c %s -o %t.dwarf5.o

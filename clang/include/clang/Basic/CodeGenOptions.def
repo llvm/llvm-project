@@ -36,7 +36,8 @@ VALUE_CODEGENOPT(Name, Bits, Default)
 #endif
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
-CODEGENOPT(RelaxELFRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
+CODEGENOPT(Crel, 1, 0) ///< -Wa,--crel
+CODEGENOPT(ImplicitMapSyms, 1, 0) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
@@ -57,10 +58,11 @@ CODEGENOPT(UniqueSectionNames, 1, 1) ///< Set for -funique-section-names.
 CODEGENOPT(UniqueBasicBlockSectionNames, 1, 1) ///< Set for -funique-basic-block-section-names,
                                                ///< Produce unique section names with
                                                ///< basic block sections.
+CODEGENOPT(SeparateNamedSections, 1, 0) ///< Set for -fseparate-named-sections.
 CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
 CODEGENOPT(XCOFFReadOnlyPointers, 1, 0) ///< Set for -mxcoff-roptr.
 CODEGENOPT(AllTocData, 1, 0) ///< AIX -mtocdata
-ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None) /// frame-pointer: all,non-leaf,none
+ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None) /// frame-pointer: all,non-leaf,reserved,none
 
 CODEGENOPT(ClearASTBeforeBackend , 1, 0) ///< Free the AST before running backend code generation. Only works with -disable-free.
 CODEGENOPT(DisableFree       , 1, 0) ///< Don't free memory.
@@ -94,6 +96,7 @@ CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set by default or -f[no-]emulated-tls.
 ENUM_CODEGENOPT(EmbedBitcode, EmbedBitcodeKind, 2, Embed_Off)
 /// Inline asm dialect, -masm=(att|intel)
 ENUM_CODEGENOPT(InlineAsmDialect, InlineAsmDialectKind, 1, IAD_ATT)
+CODEGENOPT(OutputAsmVariant, 2, 3) ///< Set the asm variant for output (3: unspecified).
 CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
                                         ///< are required.
 CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
@@ -108,6 +111,8 @@ CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or return.
 CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or branch.
+ENUM_CODEGENOPT(CFBranchLabelScheme, CFBranchLabelSchemeKind, 2,
+    CFBranchLabelSchemeKind::Default) ///< if -mcf-branch-label-scheme is set.
 CODEGENOPT(FunctionReturnThunks, 1, 0) ///< -mfunction-return={keep|thunk-extern}
 CODEGENOPT(IndirectBranchCSPrefix, 1, 0) ///< if -mindirect-branch-cs-prefix
                                          ///< is set.
@@ -175,6 +180,7 @@ CODEGENOPT(MergeAllConstants , 1, 1) ///< Merge identical constants.
 CODEGENOPT(MergeFunctions    , 1, 0) ///< Set when -fmerge-functions is enabled.
 CODEGENOPT(NoCommon          , 1, 0) ///< Set when -fno-common or C++ is enabled.
 CODEGENOPT(NoExecStack       , 1, 0) ///< Set when -Wa,--noexecstack is enabled.
+CODEGENOPT(MipsMsa           , 1, 0) ///< Set when -Wa,-mmsa is enabled.
 CODEGENOPT(FatalWarnings     , 1, 0) ///< Set when -Wa,--fatal-warnings is
                                      ///< enabled.
 CODEGENOPT(NoWarn            , 1, 0) ///< Set when -Wa,--no-warn is enabled.
@@ -186,10 +192,13 @@ CODEGENOPT(NoImplicitFloat   , 1, 0) ///< Set when -mno-implicit-float is enable
 CODEGENOPT(NullPointerIsValid , 1, 0) ///< Assume Null pointer deference is defined.
 CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
+CODEGENOPT(DisableBlockSignatureString, 1, 0) ///< Set when -fdisable-block-signature-string is enabled.
 CODEGENOPT(HIPSaveKernelArgName, 1, 0) ///< Set when -fhip-kernel-arg-name is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profile information.
 CODEGENOPT(PPCUseFullRegisterNames, 1, 0) ///< Print full register names in assembly
+CODEGENOPT(X86RelaxRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
+CODEGENOPT(X86Sse2Avx        , 1, 0)   ///< -Wa,-msse2avx
 
 /// When false, this attempts to generate code as if the result of an
 /// overflowing conversion matches the overflowing behavior of a target's native
@@ -222,12 +231,15 @@ CODEGENOPT(CoverageMapping , 1, 0) ///< Generate coverage mapping regions to
 CODEGENOPT(DumpCoverageMapping , 1, 0) ///< Dump the generated coverage mapping
                                        ///< regions.
 CODEGENOPT(MCDCCoverage , 1, 0) ///< Enable MC/DC code coverage criteria.
+VALUE_CODEGENOPT(MCDCMaxConds, 16, 32767) ///< MC/DC Maximum conditions.
+VALUE_CODEGENOPT(MCDCMaxTVs, 32, 0x7FFFFFFE) ///< MC/DC Maximum test vectors.
 
   /// If -fpcc-struct-return or -freg-struct-return is specified.
 ENUM_CODEGENOPT(StructReturnConvention, StructReturnConventionKind, 2, SRCK_Default)
 
 CODEGENOPT(RelaxAll          , 1, 0) ///< Relax all machine code instructions.
 CODEGENOPT(RelaxedAliasing   , 1, 0) ///< Set when -fno-strict-aliasing is enabled.
+CODEGENOPT(PointerTBAA, 1, 0)        ///< Whether or not to use distinct TBAA tags for pointers.
 CODEGENOPT(StructPathTBAA    , 1, 0) ///< Whether or not to use struct-path TBAA.
 CODEGENOPT(NewStructPathTBAA , 1, 0) ///< Whether or not to use enhanced struct-path TBAA.
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
@@ -308,6 +320,7 @@ CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.
 VALUE_CODEGENOPT(UnwindTables, 2, 0) ///< Unwind tables (1) or asynchronous unwind tables (2)
+CODEGENOPT(LinkBitcodePostopt, 1, 0) ///< Link builtin bitcodes after optimization pipeline.
 CODEGENOPT(VectorizeLoop     , 1, 0) ///< Run loop vectorizer.
 CODEGENOPT(VectorizeSLP      , 1, 0) ///< Run SLP vectorizer.
 CODEGENOPT(ProfileSampleAccurate, 1, 0) ///< Sample profile is accurate.
@@ -420,6 +433,9 @@ CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)
 
 /// Assume that by-value parameters do not alias any other values.
 CODEGENOPT(PassByValueIsNoAlias, 1, 0)
+
+/// Whether to store register parameters to stack.
+CODEGENOPT(SaveRegParams, 1, 0)
 
 /// Whether to not follow the AAPCS that enforces volatile bit-field access width to be
 /// according to the field declaring type width.

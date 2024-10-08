@@ -18,12 +18,12 @@ void test0(void) {
 // CHECK-NEXT: alloca <{ ptr, i32, i32, ptr, ptr, ptr }>, align 8
 // CHECK-NEXT: [[TEMP:%.*]] = alloca [[AGG]], align 4
 // CHECK:      [[RESULT:%.*]] = call i32 @makeAgg()
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TEMP]], i32 0, i32 0
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TEMP]], i32 0, i32 0
 // CHECK-NEXT: store i32 [[RESULT]], ptr [[T0]]
 //   Check that we properly assign into the forwarding pointer.
-// CHECK-NEXT: [[A_FORWARDING:%.*]] = getelementptr inbounds [[BYREF]], ptr [[A]], i32 0, i32 1
+// CHECK-NEXT: [[A_FORWARDING:%.*]] = getelementptr inbounds nuw [[BYREF]], ptr [[A]], i32 0, i32 1
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[A_FORWARDING]]
-// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[BYREF]], ptr [[T0]], i32 0, i32 4
+// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw [[BYREF]], ptr [[T0]], i32 0, i32 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i1 false)
 //   Verify that there's nothing else significant in the function.
 // CHECK-NEXT: call void @_Block_object_dispose(ptr [[A]], i32 8)
@@ -42,17 +42,17 @@ void test1(void) {
 // CHECK-NEXT: alloca <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, align 8
 // CHECK-NEXT: [[TEMP:%.*]] = alloca [[AGG]], align 4
 // CHECK:      [[RESULT:%.*]] = call i32 @makeAgg()
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[AGG]], ptr [[TEMP]], i32 0, i32 0
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[TEMP]], i32 0, i32 0
 // CHECK-NEXT: store i32 [[RESULT]], ptr [[T0]]
 //   Check that we properly assign into the forwarding pointer, first for b:
-// CHECK-NEXT: [[B_FORWARDING:%.*]] = getelementptr inbounds [[B_BYREF]], ptr [[B]], i32 0, i32 1
+// CHECK-NEXT: [[B_FORWARDING:%.*]] = getelementptr inbounds nuw [[B_BYREF]], ptr [[B]], i32 0, i32 1
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[B_FORWARDING]]
-// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[B_BYREF]], ptr [[T0]], i32 0, i32 4
+// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw [[B_BYREF]], ptr [[T0]], i32 0, i32 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i1 false)
 //   Then for 'a':
-// CHECK-NEXT: [[A_FORWARDING:%.*]] = getelementptr inbounds [[A_BYREF]], ptr [[A]], i32 0, i32 1
+// CHECK-NEXT: [[A_FORWARDING:%.*]] = getelementptr inbounds nuw [[A_BYREF]], ptr [[A]], i32 0, i32 1
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[A_FORWARDING]]
-// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[A_BYREF]], ptr [[T0]], i32 0, i32 4
+// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds nuw [[A_BYREF]], ptr [[T0]], i32 0, i32 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i1 false)
 //   Verify that there's nothing else significant in the function.
 // CHECK-NEXT: call void @_Block_object_dispose(ptr [[B]], i32 8)

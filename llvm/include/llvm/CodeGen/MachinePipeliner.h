@@ -44,10 +44,12 @@
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/WindowScheduler.h"
 #include "llvm/InitializePasses.h"
 
 #include <deque>
@@ -107,6 +109,9 @@ private:
   bool scheduleLoop(MachineLoop &L);
   bool swingModuloScheduler(MachineLoop &L);
   void setPragmaPipelineOptions(MachineLoop &L);
+  bool runWindowScheduler(MachineLoop &L);
+  bool useSwingModuloScheduler();
+  bool useWindowScheduler(bool Changed);
 };
 
 /// This class builds the dependence graph for the instructions in a loop,
@@ -192,7 +197,8 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
     }
 
     void createAdjacencyStructure(SwingSchedulerDAG *DAG);
-    bool circuit(int V, int S, NodeSetType &NodeSets, bool HasBackedge = false);
+    bool circuit(int V, int S, NodeSetType &NodeSets,
+                 const SwingSchedulerDAG *DAG, bool HasBackedge = false);
     void unblock(int U);
   };
 
@@ -255,7 +261,8 @@ public:
     return Source->getInstr()->isPHI() || Dep.getSUnit()->getInstr()->isPHI();
   }
 
-  bool isLoopCarriedDep(SUnit *Source, const SDep &Dep, bool isSucc = true);
+  bool isLoopCarriedDep(SUnit *Source, const SDep &Dep,
+                        bool isSucc = true) const;
 
   /// The distance function, which indicates that operation V of iteration I
   /// depends on operations U of iteration I-distance.
@@ -306,7 +313,7 @@ private:
   void computeNodeOrder(NodeSetType &NodeSets);
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
-  bool computeDelta(MachineInstr &MI, unsigned &Delta);
+  bool computeDelta(MachineInstr &MI, unsigned &Delta) const;
   MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
@@ -334,24 +341,56 @@ public:
   using iterator = SetVector<SUnit *>::const_iterator;
 
   NodeSet() = default;
-  NodeSet(iterator S, iterator E) : Nodes(S, E), HasRecurrence(true) {
-    Latency = 0;
-    for (const SUnit *Node : Nodes) {
-      DenseMap<SUnit *, unsigned> SuccSUnitLatency;
-      for (const SDep &Succ : Node->Succs) {
-        auto SuccSUnit = Succ.getSUnit();
-        if (!Nodes.count(SuccSUnit))
+  NodeSet(iterator S, iterator E, const SwingSchedulerDAG *DAG)
+      : Nodes(S, E), HasRecurrence(true) {
+    // Calculate the latency of this node set.
+    // Example to demonstrate the calculation:
+    // Given: N0 -> N1 -> N2 -> N0
+    // Edges:
+    // (N0 -> N1, 3)
+    // (N0 -> N1, 5)
+    // (N1 -> N2, 2)
+    // (N2 -> N0, 1)
+    // The total latency which is a lower bound of the recurrence MII is the
+    // longest path from N0 back to N0 given only the edges of this node set.
+    // In this example, the latency is: 5 + 2 + 1 = 8.
+    //
+    // Hold a map from each SUnit in the circle to the maximum distance from the
+    // source node by only considering the nodes.
+    DenseMap<SUnit *, unsigned> SUnitToDistance;
+    for (auto *Node : Nodes)
+      SUnitToDistance[Node] = 0;
+
+    for (unsigned I = 1, E = Nodes.size(); I <= E; ++I) {
+      SUnit *U = Nodes[I - 1];
+      SUnit *V = Nodes[I % Nodes.size()];
+      for (const SDep &Succ : U->Succs) {
+        SUnit *SuccSUnit = Succ.getSUnit();
+        if (V != SuccSUnit)
           continue;
-        unsigned CurLatency = Succ.getLatency();
-        unsigned MaxLatency = 0;
-        if (SuccSUnitLatency.count(SuccSUnit))
-          MaxLatency = SuccSUnitLatency[SuccSUnit];
-        if (CurLatency > MaxLatency)
-          SuccSUnitLatency[SuccSUnit] = CurLatency;
+        if (SUnitToDistance[U] + Succ.getLatency() > SUnitToDistance[V]) {
+          SUnitToDistance[V] = SUnitToDistance[U] + Succ.getLatency();
+        }
       }
-      for (auto SUnitLatency : SuccSUnitLatency)
-        Latency += SUnitLatency.second;
     }
+    // Handle a back-edge in loop carried dependencies
+    SUnit *FirstNode = Nodes[0];
+    SUnit *LastNode = Nodes[Nodes.size() - 1];
+
+    for (auto &PI : LastNode->Preds) {
+      // If we have an order dep that is potentially loop carried then a
+      // back-edge exists between the last node and the first node that isn't
+      // modeled in the DAG. Handle it manually by adding 1 to the distance of
+      // the last node.
+      if (PI.getSUnit() != FirstNode || PI.getKind() != SDep::Order ||
+          !DAG->isLoopCarriedDep(LastNode, PI, false))
+        continue;
+      SUnitToDistance[FirstNode] =
+          std::max(SUnitToDistance[FirstNode], SUnitToDistance[LastNode] + 1);
+    }
+
+    // The latency is the distance from the source node to itself.
+    Latency = SUnitToDistance[Nodes.front()];
   }
 
   bool insert(SUnit *SU) { return Nodes.insert(SU); }
@@ -449,7 +488,7 @@ private:
   const MCSchedModel &SM;
   const TargetSubtargetInfo *ST;
   const TargetInstrInfo *TII;
-  SwingSchedulerDAG *DAG;
+  ScheduleDAGInstrs *DAG;
   const bool UseDFA;
   /// DFA resources for each slot
   llvm::SmallVector<std::unique_ptr<DFAPacketizer>> DFAResources;
@@ -493,7 +532,7 @@ private:
 #endif
 
 public:
-  ResourceManager(const TargetSubtargetInfo *ST, SwingSchedulerDAG *DAG)
+  ResourceManager(const TargetSubtargetInfo *ST, ScheduleDAGInstrs *DAG)
       : STI(ST), SM(ST->getSchedModel()), ST(ST), TII(ST->getInstrInfo()),
         DAG(DAG), UseDFA(ST->useDFAforSMS()),
         ProcResourceMasks(SM.getNumProcResourceKinds(), 0),
@@ -594,8 +633,8 @@ public:
   /// chain.
   int latestCycleInChain(const SDep &Dep);
 
-  void computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
-                    int *MinEnd, int *MaxStart, int II, SwingSchedulerDAG *DAG);
+  void computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart, int II,
+                    SwingSchedulerDAG *DAG);
   bool insert(SUnit *SU, int StartCycle, int EndCycle, int II);
 
   /// Iterators for the cycle to instruction map.
@@ -653,6 +692,9 @@ public:
   bool isLoopCarried(const SwingSchedulerDAG *SSD, MachineInstr &Phi) const;
   bool isLoopCarriedDefOfUse(const SwingSchedulerDAG *SSD, MachineInstr *Def,
                              MachineOperand &MO) const;
+
+  bool onlyHasLoopCarriedOutputOrOrderPreds(SUnit *SU,
+                                            SwingSchedulerDAG *DAG) const;
   void print(raw_ostream &os) const;
   void dump() const;
 };

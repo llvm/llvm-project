@@ -184,9 +184,7 @@ bool ICF::equalsConstant(const SectionChunk *a, const SectionChunk *b) {
 // Compare "moving" part of two sections, namely relocation targets.
 bool ICF::equalsVariable(const SectionChunk *a, const SectionChunk *b) {
   // Compare relocations.
-  auto eq = [&](const coff_relocation &r1, const coff_relocation &r2) {
-    Symbol *b1 = a->file->getSymbol(r1.SymbolTableIndex);
-    Symbol *b2 = b->file->getSymbol(r2.SymbolTableIndex);
+  auto eqSym = [&](Symbol *b1, Symbol *b2) {
     if (b1 == b2)
       return true;
     if (auto *d1 = dyn_cast<DefinedRegular>(b1))
@@ -194,6 +192,17 @@ bool ICF::equalsVariable(const SectionChunk *a, const SectionChunk *b) {
         return d1->getChunk()->eqClass[cnt % 2] == d2->getChunk()->eqClass[cnt % 2];
     return false;
   };
+  auto eq = [&](const coff_relocation &r1, const coff_relocation &r2) {
+    Symbol *b1 = a->file->getSymbol(r1.SymbolTableIndex);
+    Symbol *b2 = b->file->getSymbol(r2.SymbolTableIndex);
+    return eqSym(b1, b2);
+  };
+
+  Symbol *e1 = a->getEntryThunk();
+  Symbol *e2 = b->getEntryThunk();
+  if ((e1 || e2) && (!e1 || !e2 || !eqSym(e1, e2)))
+    return false;
+
   return std::equal(a->getRelocs().begin(), a->getRelocs().end(),
                     b->getRelocs().begin(), eq) &&
          assocEquals(a, b);

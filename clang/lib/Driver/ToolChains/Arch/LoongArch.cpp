@@ -103,8 +103,10 @@ StringRef loongarch::getLoongArchABI(const Driver &D, const ArgList &Args,
   // present, falling back to {ILP32,LP64}D otherwise.
   switch (Triple.getEnvironment()) {
   case llvm::Triple::GNUSF:
+  case llvm::Triple::MuslSF:
     return IsLA32 ? "ilp32s" : "lp64s";
   case llvm::Triple::GNUF32:
+  case llvm::Triple::MuslF32:
     return IsLA32 ? "ilp32f" : "lp64f";
   case llvm::Triple::GNUF64:
     // This was originally permitted (and indeed the canonical way) to
@@ -127,6 +129,11 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
                                            const llvm::Triple &Triple,
                                            const ArgList &Args,
                                            std::vector<StringRef> &Features) {
+  // Enable the `lsx` feature on 64-bit LoongArch by default.
+  if (Triple.isLoongArch64() &&
+      (!Args.hasArgNoClaim(clang::driver::options::OPT_march_EQ)))
+    Features.push_back("+lsx");
+
   std::string ArchName;
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
     ArchName = A->getValue();
@@ -145,9 +152,11 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     } else if (A->getOption().matches(options::OPT_msingle_float)) {
       Features.push_back("+f");
       Features.push_back("-d");
+      Features.push_back("-lsx");
     } else /*Soft-float*/ {
       Features.push_back("-f");
       Features.push_back("-d");
+      Features.push_back("-lsx");
     }
   } else if (const Arg *A = Args.getLastArg(options::OPT_mfpu_EQ)) {
     StringRef FPU = A->getValue();
@@ -157,9 +166,11 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     } else if (FPU == "32") {
       Features.push_back("+f");
       Features.push_back("-d");
+      Features.push_back("-lsx");
     } else if (FPU == "0" || FPU == "none") {
       Features.push_back("-f");
       Features.push_back("-d");
+      Features.push_back("-lsx");
     } else {
       D.Diag(diag::err_drv_loongarch_invalid_mfpu_EQ) << FPU;
     }
@@ -174,6 +185,42 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     A->ignoreTargetSpecific();
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_mfpu_EQ))
     A->ignoreTargetSpecific();
+  if (Arg *A = Args.getLastArgNoClaim(options::OPT_msimd_EQ))
+    A->ignoreTargetSpecific();
+
+  // Select lsx/lasx feature determined by -msimd=.
+  // Option -msimd= precedes -m[no-]lsx and -m[no-]lasx.
+  if (const Arg *A = Args.getLastArg(options::OPT_msimd_EQ)) {
+    StringRef MSIMD = A->getValue();
+    if (MSIMD == "lsx") {
+      // Option -msimd=lsx depends on 64-bit FPU.
+      // -m*-float and -mfpu=none/0/32 conflict with -msimd=lsx.
+      if (llvm::find(Features, "-d") != Features.end())
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LSX*/ 0;
+      else
+        Features.push_back("+lsx");
+    } else if (MSIMD == "lasx") {
+      // Option -msimd=lasx depends on 64-bit FPU and LSX.
+      // -m*-float, -mfpu=none/0/32 and -mno-lsx conflict with -msimd=lasx.
+      if (llvm::find(Features, "-d") != Features.end())
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LASX*/ 1;
+      else if (llvm::find(Features, "-lsx") != Features.end())
+        D.Diag(diag::err_drv_loongarch_invalid_simd_option_combination);
+
+      // The command options do not contain -mno-lasx.
+      if (!Args.getLastArg(options::OPT_mno_lasx)) {
+        Features.push_back("+lsx");
+        Features.push_back("+lasx");
+      }
+    } else if (MSIMD == "none") {
+      if (llvm::find(Features, "+lsx") != Features.end())
+        Features.push_back("-lsx");
+      if (llvm::find(Features, "+lasx") != Features.end())
+        Features.push_back("-lasx");
+    } else {
+      D.Diag(diag::err_drv_loongarch_invalid_msimd_EQ) << MSIMD;
+    }
+  }
 
   // Select lsx feature determined by -m[no-]lsx.
   if (const Arg *A = Args.getLastArg(options::OPT_mlsx, options::OPT_mno_lsx)) {
@@ -181,7 +228,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     // -m*-float and -mfpu=none/0/32 conflict with -mlsx.
     if (A->getOption().matches(options::OPT_mlsx)) {
       if (llvm::find(Features, "-d") != Features.end())
-        D.Diag(diag::err_drv_loongarch_wrong_fpu_width_for_lsx);
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LSX*/ 0;
       else /*-mlsx*/
         Features.push_back("+lsx");
     } else /*-mno-lsx*/ {
@@ -196,9 +243,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     // -mno-lsx conflicts with -mlasx.
     if (A->getOption().matches(options::OPT_mlasx)) {
       if (llvm::find(Features, "-d") != Features.end())
-        D.Diag(diag::err_drv_loongarch_wrong_fpu_width_for_lasx);
-      else if (llvm::find(Features, "-lsx") != Features.end())
-        D.Diag(diag::err_drv_loongarch_invalid_simd_option_combination);
+        D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LASX*/ 1;
       else { /*-mlasx*/
         Features.push_back("+lsx");
         Features.push_back("+lasx");
@@ -224,8 +269,14 @@ std::string loongarch::postProcessTargetCPUString(const std::string &CPU,
 std::string loongarch::getLoongArchTargetCPU(const llvm::opt::ArgList &Args,
                                              const llvm::Triple &Triple) {
   std::string CPU;
+  std::string Arch;
   // If we have -march, use that.
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    CPU = A->getValue();
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+    Arch = A->getValue();
+    if (Arch == "la64v1.0" || Arch == "la64v1.1")
+      CPU = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
+    else
+      CPU = Arch;
+  }
   return postProcessTargetCPUString(CPU, Triple);
 }

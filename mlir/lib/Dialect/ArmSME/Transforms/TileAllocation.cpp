@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass allocates SME tiles at the 'func.func' op level for ArmSME
-// operations. It does this using a 16-bit tile mask that has a bit for each
-// 128-bit element tile (ZA0.Q-ZA15.Q), the smallest ZA tile granule.
+// This transform allocates SME tiles at the 'func.func' op level for ArmSME
+// operations. It roughly implements a linear scan register allocator, similar
+// to the one outlined in [1], but with simplifications and assumptions made for
+// our use case. Note that this is a greedy allocator (so it may not always find
+// the most optimal allocation of tiles).
+//
+// The allocator operates at the CF dialect level. It is the responsibility of
+// users to ensure the IR has been lowered to CF before invoking the tile
+// allocator.
 //
 // The 128-bit tiles overlap with other element tiles as follows (see section
-// B2.3.2 of SME spec [1]):
+// B2.3.2 of SME spec [2]):
 //
 //   Tile    Overlaps
 //   ---------------------------------------------------------------------------
@@ -32,38 +38,34 @@
 //   ZA6.D   ZA6.Q, ZA14.Q
 //   ZA7.D   ZA7.Q, ZA15.Q
 //
-// The tiles in use are tracked via a function attribute 'arm_sme.tiles_in_use'
-// that is initalized during the first tile allocation within a function and
-// updated on each subsequent allocation.
-//
-// [1] https://developer.arm.com/documentation/ddi0616/aa
+// [1] "Linear Scan Register Allocation in the Context of SSA Form and Register
+//      Constraints" (Hanspeter Mössenböck and Michael Pfeiffer)
+//     https://link.springer.com/content/pdf/10.1007/3-540-45937-5_17.pdf
+// [2] https://developer.arm.com/documentation/ddi0616/aa
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/Liveness.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
+#include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <algorithm>
 
-#define DEBUG_TYPE "allocate-arm-sme-tiles"
-
-namespace mlir {
-namespace arm_sme {
-#define GEN_PASS_DEF_TILEALLOCATION
+namespace mlir::arm_sme {
+#define GEN_PASS_DEF_TESTTILEALLOCATION
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h.inc"
-} // namespace arm_sme
-} // namespace mlir
+} // namespace mlir::arm_sme
 
 using namespace mlir;
 using namespace mlir::arm_sme;
 
 namespace {
-
-static constexpr StringLiteral kTilesInUseAttr("arm_sme.tiles_in_use");
-static constexpr StringLiteral
-    kNextInMemoryTileIdAttr("arm_sme.next_in_memory_tile_id");
 
 enum class TileMask : unsigned {
   // clang-format off
@@ -137,172 +139,717 @@ static ArrayRef<TileMask> getMasks(ArmSMETileType type) {
   }
 }
 
-/// Allocates and returns a tile ID. Returns an error if there are no tiles
-/// left.
-static FailureOr<unsigned> allocateTileId(ArmSMETileType tileType,
-                                          TileMask &tilesInUse) {
-  auto masks = getMasks(tileType);
-  for (auto [tileId, tileMask] : llvm::enumerate(masks)) {
-    if ((tilesInUse & tileMask) == TileMask::kNone) {
-      tilesInUse |= tileMask;
-      return tileId;
+class TileAllocator {
+public:
+  /// Allocates and returns a tile ID. Fails if there are no tiles left.
+  FailureOr<unsigned> allocateTileId(ArmSMETileType tileType) {
+    auto masks = getMasks(tileType);
+    for (auto [tileId, tileMask] : llvm::enumerate(masks)) {
+      if ((tilesInUse & tileMask) == TileMask::kNone) {
+        tilesInUse |= tileMask;
+        return tileId;
+      }
     }
+    return failure();
   }
-  return failure();
+
+  /// Acquires a specific tile ID. Asserts the tile is initially free.
+  void acquireTileId(ArmSMETileType tileType, unsigned tileId) {
+    TileMask tileMask = getMasks(tileType)[tileId];
+    assert((tilesInUse & tileMask) == TileMask::kNone &&
+           "cannot acquire allocated tile!");
+    tilesInUse |= tileMask;
+  }
+
+  /// Releases a previously allocated tile ID.
+  void releaseTileId(ArmSMETileType tileType, unsigned tileId) {
+    TileMask tileMask = getMasks(tileType)[tileId];
+    assert((tilesInUse & tileMask) == tileMask &&
+           "cannot release unallocated tile!");
+    tilesInUse ^= tileMask;
+  }
+
+  /// Allocates an in-memory tile ID.
+  unsigned allocateInMemoryTileId() {
+    // Note: We never release in-memory tile IDs. We could, which may allow
+    // reusing an allocation, but as we _never_ want to spill an SME tile this
+    // is not optimized.
+    return nextInMemoryTileId++;
+  }
+
+private:
+  TileMask tilesInUse = TileMask::kNone;
+  unsigned nextInMemoryTileId = kInMemoryTileIdBase;
+};
+
+/// Add new intermediate blocks for the true and false destinations of
+/// `cf.cond_br`s that contain tile operands. This prevents spurious liveness
+/// overlaps due to copies at branches.
+///
+///  BEFORE:
+///  ```mlir
+///  cf.cond_br %cond, ^bb1(%tile: vector<[4]x[4]xf32>), ^bb2
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///    cf.cond_br %cond, ^bb1_copy, ^bb2_copy
+///  ^bb1_copy:
+///    cf.br ^bb1(%tile: vector<[4]x[4]xf32>)
+///  ^bb2_copy:
+///    cf.br ^bb2
+///  ```
+void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
+  SmallVector<cf::CondBranchOp> worklist;
+  function.walk([&](cf::CondBranchOp condBranch) {
+    if (llvm::any_of(condBranch->getOperands(), [&](Value value) {
+          return isValidSMETileVectorType(value.getType());
+        })) {
+      worklist.push_back(condBranch);
+    }
+  });
+
+  auto insertJump = [&](Location loc, Block *source, Block *dest, auto args) {
+    rewriter.setInsertionPointToEnd(source);
+    rewriter.create<cf::BranchOp>(loc, dest, args);
+  };
+
+  for (auto condBranch : worklist) {
+    auto loc = condBranch.getLoc();
+    Block *block = condBranch->getBlock();
+    auto newTrueBranch = rewriter.splitBlock(block, block->end());
+    auto newFalseBranch = rewriter.splitBlock(block, block->end());
+    insertJump(loc, newTrueBranch, condBranch.getTrueDest(),
+               condBranch.getTrueDestOperands());
+    insertJump(loc, newFalseBranch, condBranch.getFalseDest(),
+               condBranch.getFalseDestOperands());
+    rewriter.modifyOpInPlace(condBranch, [&] {
+      condBranch.getFalseDestOperandsMutable().clear();
+      condBranch.getTrueDestOperandsMutable().clear();
+      condBranch.setSuccessor(newTrueBranch, 0);
+      condBranch.setSuccessor(newFalseBranch, 1);
+    });
+  }
 }
 
-/// Collects transitive uses of a root value through control flow. This can
-/// handle basic SCF constructs, along with control flow (br and cond_br).
-/// Simple loops work at the SCF level, while more complex control flow can be
-/// dealt with after lowering to CF. This is used to implement basic tile
-/// allocation.
-static void findDependantOps(Value rootValue,
-                             SetVector<Operation *> &dependantOps) {
-  auto traverseCorrespondingValues = [&](auto inputValues, auto exitValues) {
-    for (auto [idx, value] : llvm::enumerate(inputValues)) {
-      if (value == rootValue)
-        findDependantOps(exitValues[idx], dependantOps);
-    }
-  };
-  for (Operation *user : rootValue.getUsers()) {
-    if (dependantOps.contains(user))
+/// Inserts tile copies at `cf.br` operations.
+///
+///  BEFORE:
+///  ```mlir
+///  cf.br ^bb1(%tile: vector<[4]x[4]xf32>)
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %copy = arm_sme.copy_tile %tile : vector<[4]x[4]xf32>
+///  cf.br ^bb1(%copy: vector<[4]x[4]xf32>)
+///  ```
+void insertCopiesAtBranches(IRRewriter &rewriter,
+                            FunctionOpInterface function) {
+  for (Block &block : function.getBlocks()) {
+    Operation *terminator = block.getTerminator();
+    if (!isa<cf::BranchOp>(terminator))
       continue;
-    dependantOps.insert(user);
-    TypeSwitch<Operation *>(user)
-        .Case<cf::BranchOp>([&](auto branchOp) {
-          // (CF) Follow branch.
-          traverseCorrespondingValues(branchOp.getDestOperands(),
-                                      branchOp.getDest()->getArguments());
+    rewriter.setInsertionPoint(terminator);
+    for (OpOperand &operand : terminator->getOpOperands()) {
+      if (isValidSMETileVectorType(operand.get().getType())) {
+        auto copy =
+            rewriter.create<CopyTileOp>(terminator->getLoc(), operand.get());
+        rewriter.modifyOpInPlace(terminator, [&] { operand.assign(copy); });
+      }
+    }
+  }
+}
+
+/// Prepares the IR for tile allocation. It does this by first 'splitting'
+/// conditional branches (see `splitCondBranches`), then inserting tile copies
+/// at branch operations. The conditional branches are split to prevent the
+/// copies needed for them overlapping between the true and false paths of the
+/// branch (see `tile-allocation-copies.mlir` and
+/// `tile-allocation-liveness.mlir` for examples). The copies break up live
+/// ranges and ensure when moving out of SSA the semantics of the program are
+/// preserved.
+void preprocessForTileAllocation(IRRewriter &rewriter,
+                                 FunctionOpInterface function) {
+  splitCondBranches(rewriter, function);
+  insertCopiesAtBranches(rewriter, function);
+}
+
+/// A live range for a (collection of) tile values. A live range is built up of
+/// non-overlapping intervals [start, end) which represent parts of the program
+/// where a value in the range needs to be live (i.e. in an SME virtual tile).
+/// Note that as the intervals are non-overlapping all values within a live
+/// range can be allocated to the same SME virtual tile.
+struct LiveRange {
+  using RangeSet = llvm::IntervalMap<uint64_t, uint8_t, 16,
+                                     llvm::IntervalMapHalfOpenInfo<unsigned>>;
+  using Allocator = RangeSet::Allocator;
+  // Dummy value for the IntervalMap. Only the keys matter (the intervals).
+  static constexpr uint8_t kValidLiveRange = 0xff;
+
+  LiveRange(Allocator &allocator)
+      : ranges(std::make_unique<RangeSet>(allocator)) {}
+
+  /// Returns true if this range overlaps with `otherRange`.
+  bool overlaps(LiveRange const &otherRange) const {
+    return llvm::IntervalMapOverlaps<RangeSet, RangeSet>(*ranges,
+                                                         *otherRange.ranges)
+        .valid();
+  }
+
+  /// Returns true if this range is active at `point` in the program.
+  bool overlaps(uint64_t point) const {
+    return ranges->lookup(point) == kValidLiveRange;
+  }
+
+  /// Unions this live range with `otherRange`, aborts if the ranges overlap.
+  void unionWith(LiveRange const &otherRange) {
+    for (auto it = otherRange.ranges->begin(); it != otherRange.ranges->end();
+         ++it)
+      ranges->insert(it.start(), it.stop(), kValidLiveRange);
+    values.set_union(otherRange.values);
+  }
+
+  /// Inserts an interval [start, end) for `value` into this range.
+  void insert(Value value, unsigned start, unsigned end) {
+    values.insert(value);
+    if (start != end)
+      ranges->insert(start, end, kValidLiveRange);
+  }
+
+  bool empty() const { return ranges->empty(); }
+  unsigned start() const { return ranges->start(); }
+  unsigned end() const { return ranges->stop(); }
+  bool operator<(LiveRange const &other) const {
+    return start() < other.start();
+  }
+
+  ArmSMETileType getTileType() const {
+    return *getSMETileType(cast<VectorType>(values[0].getType()));
+  }
+
+  /// The values contained in this live range.
+  SetVector<Value> values;
+
+  /// A set of (non-overlapping) intervals that mark where any value in `values`
+  /// is live.
+  std::unique_ptr<RangeSet> ranges;
+
+  /// The tile ID (or none) assigned to this live range.
+  std::optional<unsigned> tileId;
+};
+
+/// Number operations within a function to allow computing live ranges.
+/// Operations are numbered consecutively wihin blocks, and the blocks are
+/// topologically sorted (using forward edges). This function is only correct if
+/// all ArmSME have been converted to CF (which is asserted).
+DenseMap<Operation *, unsigned>
+generateOperationNumbering(FunctionOpInterface function) {
+  unsigned index = 0;
+  SetVector<Block *> blocks =
+      getBlocksSortedByDominance(function.getFunctionBody());
+  DenseMap<Operation *, unsigned> operationToIndexMap;
+  for (Block *block : blocks) {
+    index++; // We want block args to have their own number.
+    for (Operation &op : block->getOperations()) {
+#ifndef NDEBUG
+      op.walk([&](ArmSMETileOpInterface nestedOp) {
+        assert(&op == nestedOp.getOperation() &&
+               "ArmSME tile allocation does not support nested regions");
+      });
+#endif
+      operationToIndexMap.try_emplace(&op, index++);
+    }
+  }
+  return operationToIndexMap;
+}
+
+/// Gather live ranges for SME tiles from the MLIR liveness analysis.
+DenseMap<Value, LiveRange>
+gatherTileLiveRanges(DenseMap<Operation *, unsigned> const &operationToIndexMap,
+                     LiveRange::Allocator &liveRangeAllocator,
+                     Liveness &liveness, FunctionOpInterface function) {
+  assert(!operationToIndexMap.empty() && "expected operation numbering");
+  DenseMap<Value, LiveRange> liveRanges;
+  /// Defines or updates a live range for an SME tile value. Live-ins may update
+  /// an existing live range (rather than define a new one). Note: If
+  /// `liveAtBlockEntry` is true then `firstUseOrDef` is the first operation in
+  /// the block.
+  auto defineOrUpdateValueLiveRange = [&](Value value, Operation *firstUseOrDef,
+                                          LivenessBlockInfo const &livenessInfo,
+                                          bool liveAtBlockEntry = false) {
+    if (!isValidSMETileVectorType(value.getType()))
+      return;
+    // Find or create a live range for `value`.
+    auto [it, _] = liveRanges.try_emplace(value, liveRangeAllocator);
+    LiveRange &valueLiveRange = it->second;
+    auto lastUseInBlock = livenessInfo.getEndOperation(value, firstUseOrDef);
+    // Add the interval [firstUseOrDef, lastUseInBlock) to the live range.
+    unsigned startOpIdx =
+        operationToIndexMap.at(firstUseOrDef) + (liveAtBlockEntry ? -1 : 0);
+    unsigned endOpIdx = operationToIndexMap.at(lastUseInBlock);
+    valueLiveRange.insert(value, startOpIdx, endOpIdx);
+  };
+
+  for (Block &block : function.getBlocks()) {
+    LivenessBlockInfo const *livenessInfo = liveness.getLiveness(&block);
+    // Handle block arguments:
+    for (Value argument : block.getArguments())
+      defineOrUpdateValueLiveRange(argument, &block.front(), *livenessInfo,
+                                   /*liveAtBlockEntry=*/true);
+    // Handle live-ins:
+    for (Value liveIn : livenessInfo->in())
+      defineOrUpdateValueLiveRange(liveIn, &block.front(), *livenessInfo,
+                                   /*liveAtBlockEntry=*/true);
+    // Handle new definitions:
+    for (Operation &op : block) {
+      for (Value result : op.getResults())
+        defineOrUpdateValueLiveRange(result, &op, *livenessInfo);
+    }
+  }
+
+  return liveRanges;
+}
+
+/// Iterate over all predecessor tile values to a (tile) block argument.
+static void forEachPredecessorTileValue(BlockArgument blockArg,
+                                        function_ref<void(Value)> callback) {
+  Block *block = blockArg.getOwner();
+  unsigned argNumber = blockArg.getArgNumber();
+  for (Block *pred : block->getPredecessors()) {
+    TypeSwitch<Operation *>(pred->getTerminator())
+        .Case<cf::BranchOp>([&](auto branch) {
+          Value predecessorOperand = branch.getDestOperands()[argNumber];
+          callback(predecessorOperand);
         })
-        .Case<cf::CondBranchOp>([&](auto condBranchOp) {
-          // (CF) Follow true branch.
-          traverseCorrespondingValues(
-              condBranchOp.getTrueOperands(),
-              condBranchOp.getTrueDest()->getArguments());
-          // (CF) Follow false branch.
-          traverseCorrespondingValues(
-              condBranchOp.getFalseOperands(),
-              condBranchOp.getFalseDest()->getArguments());
-        })
-        .Case<LoopLikeOpInterface>([&](auto loopOp) {
-          // (SCF) Follow iter_args of (basic) loops (e.g. for loops).
-          traverseCorrespondingValues(loopOp.getInits(),
-                                      loopOp.getRegionIterArgs());
-        })
-        .Case<scf::YieldOp>([&](auto yieldOp) {
-          // (SCF) Follow yields of (basic) control flow (e.g. for loops).
-          auto parent = user->getParentOp();
-          traverseCorrespondingValues(user->getOperands(),
-                                      parent->getResults());
-        })
-        .Default([&](auto) {
-          // Otherwise, assume users of _any_ result are dependant.
-          for (Value result : user->getResults())
-            findDependantOps(result, dependantOps);
+        .Case<cf::CondBranchOp>([&](auto condBranch) {
+          if (condBranch.getFalseDest() == block) {
+            Value predecessorOperand =
+                condBranch.getFalseDestOperands()[argNumber];
+            callback(predecessorOperand);
+          }
+          if (condBranch.getTrueDest() == block) {
+            Value predecessorOperand =
+                condBranch.getTrueDestOperands()[argNumber];
+            callback(predecessorOperand);
+          }
         });
   }
 }
-struct AssignTileIDsPattern
-    : public OpInterfaceRewritePattern<ArmSMETileOpInterface> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
-  LogicalResult matchAndRewrite(ArmSMETileOpInterface tileOp,
-                                PatternRewriter &rewriter) const override {
-    if (tileOp.getTileId())
-      return failure();
 
-    auto func = tileOp->getParentOfType<FunctionOpInterface>();
-    auto getDiscardableIntAttr = [&](StringRef name, unsigned defaultVal = 0) {
-      if (auto attr = llvm::dyn_cast_or_null<IntegerAttr>(
-              func->getDiscardableAttr(name)))
-        return unsigned(attr.getInt());
-      return defaultVal;
-    };
-    auto setDiscardableIntAttr = [&](StringRef name, auto value) {
-      rewriter.modifyOpInPlace(tileOp, [&] {
-        func->setDiscardableAttr(name,
-                                 rewriter.getI32IntegerAttr((unsigned)value));
-      });
-    };
-
-    std::optional<ArmSMETileType> tileType = tileOp.getAllocatedTileType();
-    if (!tileType)
-      return rewriter.notifyMatchFailure(tileOp, "op does not allocate a tile");
-
-    TileMask tilesInUse =
-        static_cast<TileMask>(getDiscardableIntAttr(kTilesInUseAttr));
-    auto tileId = allocateTileId(*tileType, tilesInUse);
-    bool tileIsInMemory = failed(tileId);
-    if (tileIsInMemory) {
-      // If we could not find a real tile ID, use an in-memory tile ID (ID >=
-      // 16). A later pass will insert the necessary spills and reloads.
-      tileId =
-          getDiscardableIntAttr(kNextInMemoryTileIdAttr, kInMemoryTileIdBase);
-      tileOp->emitWarning(
-          "failed to allocate SME virtual tile to operation, all tile "
-          "operations will go through memory, expect degraded performance");
-    }
-
-    // Set all operations dependent on `tileOp` to use the same tile ID.
-    // This is a naive tile allocation scheme, but works for common cases. For
-    // example, as this only allocates tile IDs to existing ops, it can't solve
-    // cases like this (%tileA and %tileB come from different root operations):
-    //
-    // %tile = scf.if %some_cond -> vector<[4]x[4]xi32> {
-    //   scf.yield %tileA {tile_id = 0} : vector<[4]x[4]xi32>
-    // } else {
-    //   scf.yield %tileB {tile_id = 1} : vector<[4]x[4]xi32>
-    // }
-    //
-    // This case would require allocating a new tile for the result of the
-    // scf.if, and moving the contents of %tileA or %tileB to result tile (based
-    // on the %some_cond).
-    // Find all the ops that (transitively) depend on this tile.
-    SetVector<Operation *> dependantOps;
-    findDependantOps(tileOp->getResult(0), dependantOps);
-    auto tileIDAttr = rewriter.getI32IntegerAttr(*tileId);
-    for (auto *op : dependantOps) {
-      if (auto dependantTileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
-        auto currentTileId = dependantTileOp.getTileId();
-        if (currentTileId && unsigned(currentTileId.getInt()) != tileId)
-          return dependantTileOp.emitOpError(
-              "already assigned different SME virtual tile!");
-      }
-    }
-
-    // Rewrite IR.
-    if (!tileIsInMemory)
-      setDiscardableIntAttr(kTilesInUseAttr, tilesInUse);
-    else
-      setDiscardableIntAttr(kNextInMemoryTileIdAttr, *tileId + 1);
-    rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIDAttr); });
-    for (auto *op : dependantOps) {
-      if (auto dependantTileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
-        rewriter.modifyOpInPlace(
-            dependantTileOp, [&] { dependantTileOp.setTileId(tileIDAttr); });
-      }
-    }
-
-    return success();
+/// Coalesce live ranges where it would prevent unnecessary tile moves.
+SmallVector<LiveRange *>
+coalesceTileLiveRanges(DenseMap<Value, LiveRange> &initialLiveRanges) {
+  DenseMap<Value, LiveRange *> liveRanges;
+  for (auto &[value, liveRange] : initialLiveRanges) {
+    liveRanges.insert({value, &liveRange});
   }
-};
 
-struct TileAllocationPass
-    : public arm_sme::impl::TileAllocationBase<TileAllocationPass> {
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    patterns.add<AssignTileIDsPattern>(patterns.getContext());
-    GreedyRewriteConfig config;
-    // Setting useTopDownTraversal ensures tiles are allocated in program
-    // order.
-    config.useTopDownTraversal = true;
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            getOperation(), std::move(patterns), config))) {
-      signalPassFailure();
+  // Merge the live ranges of values `a` and `b` into one (if they do not
+  // overlap). After this, the values `a` and `b` will both point to the same
+  // live range (which will contain multiple values).
+  auto mergeValuesIfNonOverlapping = [&](Value a, Value b) {
+    LiveRange *aLiveRange = liveRanges.at(a);
+    LiveRange *bLiveRange = liveRanges.at(b);
+    if (aLiveRange != bLiveRange && !aLiveRange->overlaps(*bLiveRange)) {
+      aLiveRange->unionWith(*bLiveRange);
+      for (Value value : bLiveRange->values)
+        liveRanges[value] = aLiveRange;
     }
+  };
+
+  // Merge the live ranges of new definitions with their tile operands.
+  auto unifyDefinitionsWithOperands = [&](Value value) {
+    auto armSMEOp = value.getDefiningOp<ArmSMETileOpInterface>();
+    if (!armSMEOp)
+      return;
+    for (auto operand : armSMEOp->getOperands()) {
+      if (isValidSMETileVectorType(operand.getType()))
+        mergeValuesIfNonOverlapping(value, operand);
+    }
+  };
+
+  // Merge the live ranges of block arguments with their predecessors.
+  auto unifyBlockArgumentsWithPredecessors = [&](Value value) {
+    auto blockArg = dyn_cast<BlockArgument>(value);
+    if (!blockArg)
+      return;
+    forEachPredecessorTileValue(blockArg, [&](Value predecessorTile) {
+      mergeValuesIfNonOverlapping(blockArg, predecessorTile);
+    });
+  };
+
+  auto applyRule = [&](auto rule) {
+    llvm::for_each(llvm::make_first_range(initialLiveRanges), rule);
+  };
+
+  // Unify as many live ranges as we can. This prevents unnecessary moves.
+  applyRule(unifyBlockArgumentsWithPredecessors);
+  applyRule(unifyDefinitionsWithOperands);
+
+  // Remove duplicate live range entries.
+  SetVector<LiveRange *> uniqueLiveRanges;
+  for (auto [_, liveRange] : liveRanges) {
+    if (!liveRange->empty())
+      uniqueLiveRanges.insert(liveRange);
+  }
+
+  // Sort the new live ranges by starting point (ready for tile allocation).
+  auto coalescedLiveRanges = uniqueLiveRanges.takeVector();
+  std::sort(coalescedLiveRanges.begin(), coalescedLiveRanges.end(),
+            [](LiveRange *a, LiveRange *b) { return *a < *b; });
+  return std::move(coalescedLiveRanges);
+}
+
+/// Choose a live range to spill (via some heuristics). This picks either a live
+/// range from `overlappingRanges`, or the new live range `newRange`.
+template <typename OverlappingRangesIterator>
+LiveRange *
+chooseSpillUsingHeuristics(OverlappingRangesIterator overlappingRanges,
+                           LiveRange *newRange) {
+  // Heuristic: Spill trivially copyable operations (usually free).
+  auto isTrivialSpill = [&](LiveRange &allocatedRange) {
+    return isTileTypeGreaterOrEqual(allocatedRange.getTileType(),
+                                    newRange->getTileType()) &&
+           allocatedRange.values.size() == 1 &&
+           isTriviallyCloneableTileOp(
+               allocatedRange.values[0].getDefiningOp<ArmSMETileOpInterface>());
+  };
+  if (isTrivialSpill(*newRange))
+    return newRange;
+  auto trivialSpill = llvm::find_if(overlappingRanges, isTrivialSpill);
+  if (trivialSpill != overlappingRanges.end())
+    return &*trivialSpill;
+
+  // Heuristic: Spill the range that ends last (with a compatible tile type).
+  auto isSmallerTileTypeOrEndsEarlier = [](LiveRange &a, LiveRange &b) {
+    return !isTileTypeGreaterOrEqual(a.getTileType(), b.getTileType()) ||
+           a.end() < b.end();
+  };
+  LiveRange &latestEndingLiveRange =
+      *std::max_element(overlappingRanges.begin(), overlappingRanges.end(),
+                        isSmallerTileTypeOrEndsEarlier);
+  if (!isSmallerTileTypeOrEndsEarlier(latestEndingLiveRange, *newRange))
+    return &latestEndingLiveRange;
+  return newRange;
+}
+
+/// Greedily allocate tile IDs to live ranges. Spill using simple heuristics.
+void allocateTilesToLiveRanges(
+    ArrayRef<LiveRange *> liveRangesSortedByStartPoint) {
+  TileAllocator tileAllocator;
+  // `activeRanges` = Live ranges that need to be in a tile at the
+  // `currentPoint` in the program.
+  SetVector<LiveRange *> activeRanges;
+  // `inactiveRanges` = Live ranges that _do not_ need to be in a tile
+  // at the `currentPoint` in the program but could become active again later.
+  // An inactive section of a live range can be seen as a 'hole' in the live
+  // range, where it is possible to reuse the live range's tile ID _before_ it
+  // has ended. By identifying 'holes', the allocator can reuse tiles more
+  // often, which helps avoid costly tile spills.
+  SetVector<LiveRange *> inactiveRanges;
+  for (LiveRange *nextRange : liveRangesSortedByStartPoint) {
+    auto currentPoint = nextRange->start();
+    // 1. Update the `activeRanges` at `currentPoint`.
+    activeRanges.remove_if([&](LiveRange *activeRange) {
+      // Check for live ranges that have expired.
+      if (activeRange->end() <= currentPoint) {
+        tileAllocator.releaseTileId(activeRange->getTileType(),
+                                    *activeRange->tileId);
+        return true;
+      }
+      // Check for live ranges that have become inactive.
+      if (!activeRange->overlaps(currentPoint)) {
+        tileAllocator.releaseTileId(activeRange->getTileType(),
+                                    *activeRange->tileId);
+        inactiveRanges.insert(activeRange);
+        return true;
+      }
+      return false;
+    });
+    // 2. Update the `inactiveRanges` at `currentPoint`.
+    inactiveRanges.remove_if([&](LiveRange *inactiveRange) {
+      // Check for live ranges that have expired.
+      if (inactiveRange->end() <= currentPoint) {
+        return true;
+      }
+      // Check for live ranges that have become active.
+      if (inactiveRange->overlaps(currentPoint)) {
+        tileAllocator.acquireTileId(inactiveRange->getTileType(),
+                                    *inactiveRange->tileId);
+        activeRanges.insert(inactiveRange);
+        return true;
+      }
+      return false;
+    });
+
+    // 3. Collect inactive live ranges that overlap with the new live range.
+    // Note: The overlap checks in steps 1 and 2 only look at the `currentPoint`
+    // whereas this checks if there is an overlap at any future point too.
+    SmallVector<LiveRange *> overlappingInactiveRanges;
+    for (LiveRange *inactiveRange : inactiveRanges) {
+      if (inactiveRange->overlaps(*nextRange)) {
+        // We need to reserve the tile IDs of overlapping inactive ranges to
+        // prevent two (overlapping) live ranges from getting the same tile ID.
+        tileAllocator.acquireTileId(inactiveRange->getTileType(),
+                                    *inactiveRange->tileId);
+        overlappingInactiveRanges.push_back(inactiveRange);
+      }
+    }
+
+    // 4. Allocate a tile ID to `nextRange`.
+    auto rangeTileType = nextRange->getTileType();
+    auto tileId = tileAllocator.allocateTileId(rangeTileType);
+    if (succeeded(tileId)) {
+      nextRange->tileId = *tileId;
+    } else {
+      // Create an iterator over all overlapping live ranges.
+      auto allOverlappingRanges = llvm::concat<LiveRange>(
+          llvm::make_pointee_range(activeRanges.getArrayRef()),
+          llvm::make_pointee_range(overlappingInactiveRanges));
+      // Choose an overlapping live range to spill.
+      LiveRange *rangeToSpill =
+          chooseSpillUsingHeuristics(allOverlappingRanges, nextRange);
+      if (rangeToSpill != nextRange) {
+        // Spill an (in)active live range (so release its tile ID first).
+        tileAllocator.releaseTileId(rangeToSpill->getTileType(),
+                                    *rangeToSpill->tileId);
+        // This will always succeed after a spill (of an active live range).
+        nextRange->tileId = *tileAllocator.allocateTileId(rangeTileType);
+        // Remove the live range from the active/inactive sets.
+        if (!activeRanges.remove(rangeToSpill)) {
+          bool removed = inactiveRanges.remove(rangeToSpill);
+          assert(removed && "expected a range to be removed!");
+          (void)removed;
+        }
+      }
+      rangeToSpill->tileId = tileAllocator.allocateInMemoryTileId();
+    }
+
+    // 5. Insert the live range into the active ranges.
+    if (nextRange->tileId < kInMemoryTileIdBase)
+      activeRanges.insert(nextRange);
+
+    // 6. Release tiles reserved for inactive live ranges (in step 3).
+    for (LiveRange *range : overlappingInactiveRanges) {
+      if (*range->tileId < kInMemoryTileIdBase)
+        tileAllocator.releaseTileId(range->getTileType(), *range->tileId);
+    }
+  }
+}
+
+/// Assigns a tile ID to an MLIR value.
+void assignTileIdToValue(IRRewriter &rewriter, Value value,
+                         IntegerAttr tileIdAttr) {
+  if (auto tileOp = value.getDefiningOp<ArmSMETileOpInterface>())
+    rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIdAttr); });
+  for (Operation *user : value.getUsers()) {
+    if (auto tileOp = dyn_cast<ArmSMETileOpInterface>(user)) {
+      // Ensure ArmSME ops that don't produce a value still get a tile ID.
+      if (!hasTileResult(tileOp))
+        rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIdAttr); });
+    }
+  }
+}
+
+/// Assign tile IDs back to IR and attempt to resolve trivial tile ID conflicts.
+LogicalResult assignTileIdsAndResolveTrivialConflicts(
+    IRRewriter &rewriter, FunctionOpInterface function,
+    ArrayRef<LiveRange *> allocatedLiveRanges) {
+  for (LiveRange const *liveRange : allocatedLiveRanges) {
+    auto tileIdAttr = rewriter.getI32IntegerAttr(*liveRange->tileId);
+    auto isAllocatedToSameTile = [&](Value value) {
+      if (auto tileOp = value.getDefiningOp<ArmSMETileOpInterface>();
+          tileOp && tileOp.getTileId() == tileIdAttr)
+        return true;
+      return liveRange->values.contains(value);
+    };
+
+    /// Eliminates copies where the operand has the same tile ID.
+    auto foldRedundantCopies = [&](Value value) -> LogicalResult {
+      auto copyOp = value.getDefiningOp<CopyTileOp>();
+      if (!copyOp || !isAllocatedToSameTile(copyOp.getTile()))
+        return failure();
+      rewriter.replaceAllUsesWith(copyOp, copyOp.getTile());
+      return success();
+    };
+
+    /// Validates each predecessor to a tile block argument has been assigned
+    /// the same tile ID.
+    auto validateBlockArguments = [&](Value value) {
+      auto blockArg = dyn_cast<BlockArgument>(value);
+      if (!blockArg) {
+        // Not a block argument (nothing to validate).
+        return success();
+      }
+      bool tileMismatch = false;
+      forEachPredecessorTileValue(blockArg, [&](Value predecessorTile) {
+        if (tileMismatch)
+          return;
+        if (!isAllocatedToSameTile(predecessorTile)) {
+          blockArg.getOwner()->getParentOp()->emitOpError(
+              "block argument not allocated to the same SME virtial tile as "
+              "predecessors");
+          tileMismatch = true;
+        }
+      });
+      return success(/*isSuccess=*/!tileMismatch);
+    };
+
+    /// Attempts to resolve (trivial) tile ID conflicts.
+    auto resolveTrivialTileConflicts = [&](Value value) -> LogicalResult {
+      auto tileOp = value.getDefiningOp<ArmSMETileOpInterface>();
+      OpOperand *tileOperand = getTileOpOperand(tileOp);
+      if (!tileOperand || isAllocatedToSameTile(tileOperand->get())) {
+        // Operand already allocated to the correct tile.
+        // No conflict to resolve.
+        return success();
+      }
+      auto operandTileOp =
+          tileOperand->get().getDefiningOp<ArmSMETileOpInterface>();
+      if (!isTriviallyCloneableTileOp(operandTileOp)) {
+        auto error =
+            tileOp.emitOpError("tile operand allocated to different SME "
+                               "virtial tile (move required)");
+        error.attachNote(tileOperand->get().getLoc())
+            << "tile operand is: " << tileOperand->get();
+        return error;
+      }
+      // Cloning prevents a move/spill (though may require recomputation).
+      rewriter.setInsertionPoint(tileOp);
+      auto clonedOp = operandTileOp.clone();
+      rewriter.modifyOpInPlace(clonedOp,
+                               [&] { clonedOp.setTileId(tileOp.getTileId()); });
+      rewriter.insert(clonedOp);
+      if (isa<CopyTileOp>(tileOp)) {
+        rewriter.replaceAllUsesWith(tileOp->getResult(0),
+                                    clonedOp->getResult(0));
+      } else {
+        rewriter.modifyOpInPlace(
+            tileOp, [&] { tileOperand->assign(clonedOp->getResult(0)); });
+      }
+      return success();
+    };
+
+    for (Value value : liveRange->values) {
+      // 1. Assign the tile ID to the value.
+      assignTileIdToValue(rewriter, value, tileIdAttr);
+
+      // 2. Attempt to eliminate redundant tile copies.
+      if (succeeded(foldRedundantCopies(value)))
+        continue;
+
+      // 3. Validate tile block arguments.
+      if (failed(validateBlockArguments(value)))
+        return failure();
+
+      // 4. Attempt to resolve (trivial) tile ID conflicts.
+      if (failed(resolveTrivialTileConflicts(value)))
+        return failure();
+    }
+  }
+  return success();
+}
+
+/// Prints live ranges alongside operation names for debugging.
+void dumpLiveRanges(DenseMap<Operation *, unsigned> const &operationToIndexMap,
+                    ArrayRef<LiveRange const *> liveRanges,
+                    FunctionOpInterface function) {
+  llvm::errs() << "SME Tile Liveness: @" << function.getName()
+               << "\nKey:\nS - Start\nE - End\n| - Live\n";
+  for (auto [blockIdx, block] : llvm::enumerate(function.getBlocks())) {
+    llvm::errs() << "^bb" << blockIdx << ":\n";
+    for (Operation &op : block.getOperations()) {
+      unsigned operationIndex = operationToIndexMap.at(&op);
+      for (LiveRange const *range : liveRanges) {
+        char liveness = ' ';
+        for (auto it = range->ranges->begin(); it != range->ranges->end();
+             ++it) {
+          if (it.start() == operationIndex)
+            liveness = (liveness == 'E' ? '|' : 'S');
+          else if (it.stop() == operationIndex)
+            liveness = (liveness == 'S' ? '|' : 'E');
+          else if (operationIndex >= it.start() && operationIndex < it.stop())
+            liveness = '|';
+        }
+        llvm::errs() << liveness;
+      }
+      llvm::errs() << ' ' << op.getName() << '\n';
+    }
+  }
+  llvm::errs() << "==========\n";
+}
+
+struct TestTileAllocationPass
+    : public arm_sme::impl::TestTileAllocationBase<TestTileAllocationPass> {
+  using TestTileAllocationBase::TestTileAllocationBase;
+  void runOnOperation() override {
+    FunctionOpInterface function = getOperation();
+    if (preprocessOnly) {
+      IRRewriter rewriter(function);
+      return preprocessForTileAllocation(rewriter, function);
+    }
+    if (failed(arm_sme::allocateSMETiles(function, dumpTileLiveRanges)))
+      signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::arm_sme::createTileAllocationPass() {
-  return std::make_unique<TileAllocationPass>();
+LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
+                                              bool dumpRanges) {
+  if (function.empty()) {
+    // TODO: Also return early if the function contains no ArmSME ops?
+    return success();
+  }
+
+  LiveRange::Allocator liveRangeAllocator;
+  IRRewriter rewriter(function.getContext());
+
+  // 1. Preprocess the IR for tile allocation.
+  preprocessForTileAllocation(rewriter, function);
+
+  // 2. Gather live ranges for each ArmSME tile within the function.
+  Liveness liveness(function);
+  auto operationToIndexMap = generateOperationNumbering(function);
+  auto initialLiveRanges = gatherTileLiveRanges(
+      operationToIndexMap, liveRangeAllocator, liveness, function);
+  if (initialLiveRanges.empty())
+    return success();
+
+  if (dumpRanges) {
+    // Wrangle initial live ranges into a form suitable for printing.
+    auto nonEmpty = llvm::make_filter_range(
+        llvm::make_second_range(initialLiveRanges),
+        [&](LiveRange const &liveRange) { return !liveRange.empty(); });
+    auto initialRanges = llvm::to_vector(llvm::map_range(
+        nonEmpty, [](LiveRange const &liveRange) { return &liveRange; }));
+    std::sort(initialRanges.begin(), initialRanges.end(),
+              [](LiveRange const *a, LiveRange const *b) { return *a < *b; });
+    llvm::errs() << "\n========== Initial Live Ranges:\n";
+    dumpLiveRanges(operationToIndexMap, initialRanges, function);
+  }
+
+  // 3. Coalesce (non-overlapping) live ranges where it would be beneficial
+  // for tile allocation. E.g. Unify the result of an operation with its
+  // operands.
+  auto coalescedLiveRanges = coalesceTileLiveRanges(initialLiveRanges);
+
+  if (dumpRanges) {
+    llvm::errs() << "\n========== Coalesced Live Ranges:\n";
+    dumpLiveRanges(operationToIndexMap, coalescedLiveRanges, function);
+  }
+
+  // 4. Allocate tile IDs to live ranges.
+  allocateTilesToLiveRanges(coalescedLiveRanges);
+
+  // 5. Assign the tile IDs back to the ArmSME operations.
+  if (failed(assignTileIdsAndResolveTrivialConflicts(rewriter, function,
+                                                     coalescedLiveRanges))) {
+    return failure();
+  }
+
+  // 6. Erase trivially dead tile operations (e.g. a ZeroOp with no
+  // users). This prevents the LLVM conversion needlessly inserting spills.
+  eraseTriviallyDeadTileOps(rewriter, function);
+  return success();
 }

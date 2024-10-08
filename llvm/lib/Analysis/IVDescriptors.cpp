@@ -95,7 +95,7 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
                                                      AssumptionCache *AC,
                                                      DominatorTree *DT) {
   bool IsSigned = false;
-  const DataLayout &DL = Exit->getModule()->getDataLayout();
+  const DataLayout &DL = Exit->getDataLayout();
   uint64_t MaxBitWidth = DL.getTypeSizeInBits(Exit->getType());
 
   if (DB) {
@@ -635,9 +635,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  // Only match select with single use cmp condition.
-  if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
-                         m_Value())))
+  if (!match(I,
+             m_Select(m_Cmp(Pred, m_Value(), m_Value()), m_Value(), m_Value())))
     return InstDesc(false, I);
 
   SelectInst *SI = cast<SelectInst>(I);
@@ -735,13 +734,12 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
   Value *FalseVal = SI->getFalseValue();
   // Handle only when either of operands of select instruction is a PHI
   // node for now.
-  if ((isa<PHINode>(*TrueVal) && isa<PHINode>(*FalseVal)) ||
-      (!isa<PHINode>(*TrueVal) && !isa<PHINode>(*FalseVal)))
+  if ((isa<PHINode>(TrueVal) && isa<PHINode>(FalseVal)) ||
+      (!isa<PHINode>(TrueVal) && !isa<PHINode>(FalseVal)))
     return InstDesc(false, I);
 
-  Instruction *I1 =
-      isa<PHINode>(*TrueVal) ? dyn_cast<Instruction>(FalseVal)
-                             : dyn_cast<Instruction>(TrueVal);
+  Instruction *I1 = isa<PHINode>(TrueVal) ? dyn_cast<Instruction>(FalseVal)
+                                          : dyn_cast<Instruction>(TrueVal);
   if (!I1 || !I1->isBinaryOp())
     return InstDesc(false, I);
 
@@ -755,8 +753,8 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
         (m_Mul(m_Value(Op1), m_Value(Op2)).match(I1))))
     return InstDesc(false, I);
 
-  Instruction *IPhi = isa<PHINode>(*Op1) ? dyn_cast<Instruction>(Op1)
-                                         : dyn_cast<Instruction>(Op2);
+  Instruction *IPhi = isa<PHINode>(Op1) ? dyn_cast<Instruction>(Op1)
+                                        : dyn_cast<Instruction>(Op2);
   if (!IPhi || IPhi != FalseVal)
     return InstDesc(false, I);
 
@@ -1031,67 +1029,6 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   }
 
   return true;
-}
-
-/// This function returns the identity element (or neutral element) for
-/// the operation K.
-Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
-                                                   FastMathFlags FMF) const {
-  switch (K) {
-  case RecurKind::Xor:
-  case RecurKind::Add:
-  case RecurKind::Or:
-    // Adding, Xoring, Oring zero to a number does not change it.
-    return ConstantInt::get(Tp, 0);
-  case RecurKind::Mul:
-    // Multiplying a number by 1 does not change it.
-    return ConstantInt::get(Tp, 1);
-  case RecurKind::And:
-    // AND-ing a number with an all-1 value does not change it.
-    return ConstantInt::get(Tp, -1, true);
-  case RecurKind::FMul:
-    // Multiplying a number by 1 does not change it.
-    return ConstantFP::get(Tp, 1.0L);
-  case RecurKind::FMulAdd:
-  case RecurKind::FAdd:
-    // Adding zero to a number does not change it.
-    // FIXME: Ideally we should not need to check FMF for FAdd and should always
-    // use -0.0. However, this will currently result in mixed vectors of 0.0/-0.0.
-    // Instead, we should ensure that 1) the FMF from FAdd are propagated to the PHI
-    // nodes where possible, and 2) PHIs with the nsz flag + -0.0 use 0.0. This would
-    // mean we can then remove the check for noSignedZeros() below (see D98963).
-    if (FMF.noSignedZeros())
-      return ConstantFP::get(Tp, 0.0L);
-    return ConstantFP::get(Tp, -0.0L);
-  case RecurKind::UMin:
-    return ConstantInt::get(Tp, -1, true);
-  case RecurKind::UMax:
-    return ConstantInt::get(Tp, 0);
-  case RecurKind::SMin:
-    return ConstantInt::get(Tp,
-                            APInt::getSignedMaxValue(Tp->getIntegerBitWidth()));
-  case RecurKind::SMax:
-    return ConstantInt::get(Tp,
-                            APInt::getSignedMinValue(Tp->getIntegerBitWidth()));
-  case RecurKind::FMin:
-    assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
-           "nnan, nsz is expected to be set for FP min reduction.");
-    return ConstantFP::getInfinity(Tp, false /*Negative*/);
-  case RecurKind::FMax:
-    assert((FMF.noNaNs() && FMF.noSignedZeros()) &&
-           "nnan, nsz is expected to be set for FP max reduction.");
-    return ConstantFP::getInfinity(Tp, true /*Negative*/);
-  case RecurKind::FMinimum:
-    return ConstantFP::getInfinity(Tp, false /*Negative*/);
-  case RecurKind::FMaximum:
-    return ConstantFP::getInfinity(Tp, true /*Negative*/);
-  case RecurKind::IAnyOf:
-  case RecurKind::FAnyOf:
-    return getRecurrenceStartValue();
-    break;
-  default:
-    llvm_unreachable("Unknown recurrence kind");
-  }
 }
 
 unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
@@ -1480,8 +1417,8 @@ bool InductionDescriptor::isInductionPHI(
     InductionDescriptor &D, const SCEV *Expr,
     SmallVectorImpl<Instruction *> *CastsToIgnore) {
   Type *PhiTy = Phi->getType();
-  // We only handle integer and pointer inductions variables.
-  if (!PhiTy->isIntegerTy() && !PhiTy->isPointerTy())
+  // isSCEVable returns true for integer and pointer types.
+  if (!SE->isSCEVable(PhiTy))
     return false;
 
   // Check that the PHI is consecutive.

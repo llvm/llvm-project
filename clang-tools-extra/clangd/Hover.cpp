@@ -150,7 +150,6 @@ std::string printDefinition(const Decl *D, PrintingPolicy PP,
   std::string Definition;
   llvm::raw_string_ostream OS(Definition);
   D->print(OS, PP);
-  OS.flush();
   return Definition;
 }
 
@@ -179,7 +178,6 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
       OS << TT->getDecl()->getKindName() << " ";
   }
   QT.print(OS, PP);
-  OS.flush();
 
   const Config &Cfg = Config::current();
   if (!QT.isNull() && Cfg.Hover.ShowAKA) {
@@ -229,7 +227,6 @@ HoverInfo::PrintedType printType(const TemplateTemplateParmDecl *TTP,
   // FIXME: TemplateTemplateParameter doesn't store the info on whether this
   // param was a "typename" or "class".
   OS << "> class";
-  OS.flush();
   return Result;
 }
 
@@ -247,8 +244,12 @@ fetchTemplateParameters(const TemplateParameterList *Params,
       if (!TTP->getName().empty())
         P.Name = TTP->getNameAsString();
 
-      if (TTP->hasDefaultArgument())
-        P.Default = TTP->getDefaultArgument().getAsString(PP);
+      if (TTP->hasDefaultArgument()) {
+        P.Default.emplace();
+        llvm::raw_string_ostream Out(*P.Default);
+        TTP->getDefaultArgument().getArgument().print(PP, Out,
+                                                      /*IncludeType=*/false);
+      }
     } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
       P.Type = printType(NTTP, PP);
 
@@ -258,7 +259,8 @@ fetchTemplateParameters(const TemplateParameterList *Params,
       if (NTTP->hasDefaultArgument()) {
         P.Default.emplace();
         llvm::raw_string_ostream Out(*P.Default);
-        NTTP->getDefaultArgument()->printPretty(Out, nullptr, PP);
+        NTTP->getDefaultArgument().getArgument().print(PP, Out,
+                                                       /*IncludeType=*/false);
       }
     } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
       P.Type = printType(TTPD, PP);
@@ -816,7 +818,6 @@ std::string typeAsDefinition(const HoverInfo::PrintedType &PType) {
   OS << PType.Type;
   if (PType.AKA)
     OS << " // aka: " << *PType.AKA;
-  OS.flush();
   return Result;
 }
 

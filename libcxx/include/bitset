@@ -128,6 +128,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 
 #include <__algorithm/count.h>
 #include <__algorithm/fill.h>
+#include <__algorithm/fill_n.h>
 #include <__algorithm/find.h>
 #include <__bit_reference>
 #include <__config>
@@ -375,8 +376,11 @@ template <size_t _N_words, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long
 __bitset<_N_words, _Size>::to_ullong(true_type, true_type) const {
   unsigned long long __r = __first_[0];
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wshift-count-overflow")
   for (size_t __i = 1; __i < sizeof(unsigned long long) / sizeof(__storage_type); ++__i)
     __r |= static_cast<unsigned long long>(__first_[__i]) << (sizeof(__storage_type) * CHAR_BIT);
+  _LIBCPP_DIAGNOSTIC_POP
   return __r;
 }
 

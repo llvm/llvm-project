@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Calls C-Reduce to create a minimal reproducer for clang crashes.
+Unknown arguments are treated at creduce options.
 
 Output files:
   *.reduced.sh -- crash reproducer with minimal arguments
@@ -7,7 +8,6 @@ Output files:
   *.test.sh -- interestingness test for C-Reduce
 """
 
-from __future__ import print_function
 from argparse import ArgumentParser, RawTextHelpFormatter
 import os
 import re
@@ -15,7 +15,6 @@ import shutil
 import stat
 import sys
 import subprocess
-import pipes
 import shlex
 import tempfile
 import shutil
@@ -61,7 +60,7 @@ def check_cmd(cmd_name, cmd_dir, cmd_path=None):
 
 
 def quote_cmd(cmd):
-    return " ".join(pipes.quote(arg) for arg in cmd)
+    return " ".join(shlex.quote(arg) for arg in cmd)
 
 
 def write_to_script(text, filename):
@@ -71,7 +70,7 @@ def write_to_script(text, filename):
 
 
 class Reduce(object):
-    def __init__(self, crash_script, file_to_reduce, core_number):
+    def __init__(self, crash_script, file_to_reduce, creduce_flags):
         crash_script_name, crash_script_ext = os.path.splitext(crash_script)
         file_reduce_name, file_reduce_ext = os.path.splitext(file_to_reduce)
 
@@ -84,8 +83,7 @@ class Reduce(object):
         self.clang_args = []
         self.expected_output = []
         self.needs_stack_trace = False
-        self.creduce_flags = ["--tidy"]
-        self.creduce_flags = ["--n", str(core_number)]
+        self.creduce_flags = ["--tidy"] + creduce_flags
 
         self.read_clang_args(crash_script, file_to_reduce)
         self.read_expected_output()
@@ -220,7 +218,7 @@ fi
         )
 
         for msg in self.expected_output:
-            output += "grep -F %s t.log || exit 1\n" % pipes.quote(msg)
+            output += "grep -F %s t.log || exit 1\n" % shlex.quote(msg)
 
         write_to_script(output, self.testfile)
         self.check_interestingness()
@@ -229,8 +227,7 @@ fi
         testfile = os.path.abspath(self.testfile)
 
         # Check that the test considers the original file interesting
-        with open(os.devnull, "w") as devnull:
-            returncode = subprocess.call(testfile, stdout=devnull)
+        returncode = subprocess.call(testfile, stdout=subprocess.DEVNULL)
         if returncode:
             sys.exit("The interestingness test does not pass for the original file.")
 
@@ -318,9 +315,17 @@ fi
         interestingness test takes to run.
         """
         print("\nSimplifying the clang command...")
+        new_args = self.clang_args
+
+        # Remove the color diagnostics flag to make it easier to match error
+        # text.
+        new_args = self.try_remove_args(
+            new_args,
+            msg="Removed -fcolor-diagnostics",
+            opts_equal=["-fcolor-diagnostics"],
+        )
 
         # Remove some clang arguments to speed up the interestingness test
-        new_args = self.clang_args
         new_args = self.try_remove_args(
             new_args,
             msg="Removed debug info options",
@@ -405,13 +410,13 @@ fi
         print("Reduced command:", reduced_cmd)
 
     def run_creduce(self):
+        full_creduce_cmd = (
+            [creduce_cmd] + self.creduce_flags + [self.testfile, self.file_to_reduce]
+        )
         print("\nRunning C-Reduce...")
+        verbose_print(quote_cmd(full_creduce_cmd))
         try:
-            p = subprocess.Popen(
-                [creduce_cmd]
-                + self.creduce_flags
-                + [self.testfile, self.file_to_reduce]
-            )
+            p = subprocess.Popen(full_creduce_cmd)
             p.communicate()
         except KeyboardInterrupt:
             # Hack to kill C-Reduce because it jumps into its own pgid
@@ -451,26 +456,20 @@ def main():
         help="The path to the `creduce` executable. "
         "Required if `creduce` is not in PATH environment.",
     )
-    parser.add_argument(
-        "--n",
-        dest="core_number",
-        type=int,
-        default=max(4, multiprocessing.cpu_count() // 2),
-        help="Number of cores to use.",
-    )
     parser.add_argument("-v", "--verbose", action="store_true")
-    args = parser.parse_args()
-
+    args, creduce_flags = parser.parse_known_args()
     verbose = args.verbose
     llvm_bin = os.path.abspath(args.llvm_bin) if args.llvm_bin else None
     creduce_cmd = check_cmd("creduce", None, args.creduce)
     clang_cmd = check_cmd("clang", llvm_bin, args.clang)
-    core_number = args.core_number
 
     crash_script = check_file(args.crash_script[0])
     file_to_reduce = check_file(args.file_to_reduce[0])
 
-    r = Reduce(crash_script, file_to_reduce, core_number)
+    if "--n" not in creduce_flags:
+        creduce_flags += ["--n", str(max(4, multiprocessing.cpu_count() // 2))]
+
+    r = Reduce(crash_script, file_to_reduce, creduce_flags)
 
     r.simplify_clang_args()
     r.write_interestingness_test()

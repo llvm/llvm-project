@@ -30,7 +30,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
@@ -51,9 +50,7 @@ class Constant;
 class ConstantInt;
 class DataLayout;
 class DominatorTree;
-class Function;
 class GEPOperator;
-class Instruction;
 class LLVMContext;
 class Loop;
 class LoopInfo;
@@ -64,7 +61,6 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
-class Value;
 enum SCEVTypes : unsigned short;
 
 extern bool VerifySCEV;
@@ -427,9 +423,7 @@ private:
 public:
   SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds);
 
-  const SmallVectorImpl<const SCEVPredicate *> &getPredicates() const {
-    return Preds;
-  }
+  ArrayRef<const SCEVPredicate *> getPredicates() const { return Preds; }
 
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;
@@ -829,8 +823,11 @@ public:
 
   /// Returns the upper bound of the loop trip count as a normal unsigned
   /// value.
-  /// Returns 0 if the trip count is unknown or not constant.
-  unsigned getSmallConstantMaxTripCount(const Loop *L);
+  /// Returns 0 if the trip count is unknown, not constant or requires
+  /// SCEV predicates and \p Predicates is nullptr.
+  unsigned getSmallConstantMaxTripCount(
+      const Loop *L,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
   /// Returns the largest constant divisor of the trip count as a normal
   /// unsigned value, if possible. This means that the actual trip count is
@@ -877,6 +874,13 @@ public:
   const SCEV *getExitCount(const Loop *L, const BasicBlock *ExitingBlock,
                            ExitCountKind Kind = Exact);
 
+  /// Same as above except this uses the predicated backedge taken info and
+  /// may require predicates.
+  const SCEV *
+  getPredicatedExitCount(const Loop *L, const BasicBlock *ExitingBlock,
+                         SmallVectorImpl<const SCEVPredicate *> *Predicates,
+                         ExitCountKind Kind = Exact);
+
   /// If the specified loop has a predictable backedge-taken count, return it,
   /// otherwise return a SCEVCouldNotCompute object. The backedge-taken count is
   /// the number of times the loop header will be branched to from within the
@@ -893,8 +897,8 @@ public:
   /// SCEV predicates to Predicates that are required to be true in order for
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
-  const SCEV *getPredicatedBackedgeTakenCount(const Loop *L,
-                                              SmallVector<const SCEVPredicate *, 4> &Predicates);
+  const SCEV *getPredicatedBackedgeTakenCount(
+      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
 
   /// When successful, this returns a SCEVConstant that is greater than or equal
   /// to (i.e. a "conservative over-approximation") of the value returend by
@@ -904,6 +908,13 @@ public:
     return getBackedgeTakenCount(L, ConstantMaximum);
   }
 
+  /// Similar to getConstantMaxBackedgeTakenCount, except it will add a set of
+  /// SCEV predicates to Predicates that are required to be true in order for
+  /// the answer to be correct. Predicates can be checked with run-time
+  /// checks and can be used to perform loop versioning.
+  const SCEV *getPredicatedConstantMaxBackedgeTakenCount(
+      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
+
   /// When successful, this returns a SCEV that is greater than or equal
   /// to (i.e. a "conservative over-approximation") of the value returend by
   /// getBackedgeTakenCount.  If such a value cannot be computed, it returns the
@@ -911,6 +922,13 @@ public:
   const SCEV *getSymbolicMaxBackedgeTakenCount(const Loop *L) {
     return getBackedgeTakenCount(L, SymbolicMaximum);
   }
+
+  /// Similar to getSymbolicMaxBackedgeTakenCount, except it will add a set of
+  /// SCEV predicates to Predicates that are required to be true in order for
+  /// the answer to be correct. Predicates can be checked with run-time
+  /// checks and can be used to perform loop versioning.
+  const SCEV *getPredicatedSymbolicMaxBackedgeTakenCount(
+      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
 
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
@@ -1021,6 +1039,11 @@ public:
   /// Test if the given expression is known to be non-zero.
   bool isKnownNonZero(const SCEV *S);
 
+  /// Test if the given expression is known to be a power of 2.  OrNegative
+  /// allows matching negative power of 2s, and OrZero allows matching 0.
+  bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
+                              bool OrNegative = false);
+
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L
   /// with initial value of that SCEV. The second is obtained from \p S by
@@ -1102,30 +1125,23 @@ public:
     // Not taken either exactly ConstantMaxNotTaken or zero times
     bool MaxOrZero = false;
 
-    /// A set of predicate guards for this ExitLimit. The result is only valid
-    /// if all of the predicates in \c Predicates evaluate to 'true' at
+    /// A vector of predicate guards for this ExitLimit. The result is only
+    /// valid if all of the predicates in \c Predicates evaluate to 'true' at
     /// run-time.
-    SmallPtrSet<const SCEVPredicate *, 4> Predicates;
-
-    void addPredicate(const SCEVPredicate *P) {
-      assert(!isa<SCEVUnionPredicate>(P) && "Only add leaf predicates here!");
-      Predicates.insert(P);
-    }
+    SmallVector<const SCEVPredicate *, 4> Predicates;
 
     /// Construct either an exact exit limit from a constant, or an unknown
     /// one from a SCEVCouldNotCompute.  No other types of SCEVs are allowed
     /// as arguments and asserts enforce that internally.
     /*implicit*/ ExitLimit(const SCEV *E);
 
-    ExitLimit(
-        const SCEV *E, const SCEV *ConstantMaxNotTaken,
-        const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
-        ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList =
-            std::nullopt);
+    ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
+              const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
+              ArrayRef<ArrayRef<const SCEVPredicate *>> PredLists = {});
 
     ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
               const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
-              const SmallPtrSetImpl<const SCEVPredicate *> &PredSet);
+              ArrayRef<const SCEVPredicate *> PredList);
 
     /// Test whether this ExitLimit contains any computed information, or
     /// whether it's all SCEVCouldNotCompute values.
@@ -1258,9 +1274,7 @@ public:
 
   /// Return the DataLayout associated with the module this SCEV instance is
   /// operating on.
-  const DataLayout &getDataLayout() const {
-    return F.getParent()->getDataLayout();
-  }
+  const DataLayout &getDataLayout() const { return DL; }
 
   const SCEVPredicate *getEqualPredicate(const SCEV *LHS, const SCEV *RHS);
   const SCEVPredicate *getComparePredicate(ICmpInst::Predicate Pred,
@@ -1277,7 +1291,7 @@ public:
   /// adding additional predicates to \p Preds as required.
   const SCEVAddRecExpr *convertSCEVToAddRecWithPredicates(
       const SCEV *S, const Loop *L,
-      SmallPtrSetImpl<const SCEVPredicate *> &Preds);
+      SmallVectorImpl<const SCEVPredicate *> &Preds);
 
   /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
   /// constant, and std::nullopt if it isn't.
@@ -1294,8 +1308,26 @@ public:
   /// sharpen it.
   void setNoWrapFlags(SCEVAddRecExpr *AddRec, SCEV::NoWrapFlags Flags);
 
+  class LoopGuards {
+    DenseMap<const SCEV *, const SCEV *> RewriteMap;
+    bool PreserveNUW = false;
+    bool PreserveNSW = false;
+    ScalarEvolution &SE;
+
+    LoopGuards(ScalarEvolution &SE) : SE(SE) {}
+
+  public:
+    /// Collect rewrite map for loop guards for loop \p L, together with flags
+    /// indicating if NUW and NSW can be preserved during rewriting.
+    static LoopGuards collect(const Loop *L, ScalarEvolution &SE);
+
+    /// Try to apply the collected loop guards to \p Expr.
+    const SCEV *rewrite(const SCEV *Expr) const;
+  };
+
   /// Try to apply information from loop guards for \p L to \p Expr.
   const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
+  const SCEV *applyLoopGuards(const SCEV *Expr, const LoopGuards &Guards);
 
   /// Return true if the loop has no abnormal exits. That is, if the loop
   /// is not infinite, it must exit through an explicit edge in the CFG.
@@ -1365,6 +1397,9 @@ private:
 
   /// The function we are analyzing.
   Function &F;
+
+  /// Data layout of the module.
+  const DataLayout &DL;
 
   /// Does the module have any calls to the llvm.experimental.guard intrinsic
   /// at all?  If this is false, we avoid doing work that will only help if
@@ -1448,12 +1483,13 @@ private:
     const SCEV *ExactNotTaken;
     const SCEV *ConstantMaxNotTaken;
     const SCEV *SymbolicMaxNotTaken;
-    SmallPtrSet<const SCEVPredicate *, 4> Predicates;
+    SmallVector<const SCEVPredicate *, 4> Predicates;
 
-    explicit ExitNotTakenInfo(
-        PoisoningVH<BasicBlock> ExitingBlock, const SCEV *ExactNotTaken,
-        const SCEV *ConstantMaxNotTaken, const SCEV *SymbolicMaxNotTaken,
-        const SmallPtrSet<const SCEVPredicate *, 4> &Predicates)
+    explicit ExitNotTakenInfo(PoisoningVH<BasicBlock> ExitingBlock,
+                              const SCEV *ExactNotTaken,
+                              const SCEV *ConstantMaxNotTaken,
+                              const SCEV *SymbolicMaxNotTaken,
+                              ArrayRef<const SCEVPredicate *> Predicates)
         : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
           ConstantMaxNotTaken(ConstantMaxNotTaken),
           SymbolicMaxNotTaken(SymbolicMaxNotTaken), Predicates(Predicates) {}
@@ -1475,7 +1511,7 @@ private:
 
     /// Expression indicating the least constant maximum backedge-taken count of
     /// the loop that is known, or a SCEVCouldNotCompute. This expression is
-    /// only valid if the redicates associated with all loop exits are true.
+    /// only valid if the predicates associated with all loop exits are true.
     const SCEV *ConstantMax = nullptr;
 
     /// Indicating if \c ExitNotTaken has an element for every exiting block in
@@ -1491,6 +1527,10 @@ private:
 
     bool isComplete() const { return IsComplete; }
     const SCEV *getConstantMax() const { return ConstantMax; }
+
+    const ExitNotTakenInfo *getExitNotTaken(
+        const BasicBlock *ExitingBlock,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
 
   public:
     BackedgeTakenInfo() = default;
@@ -1531,29 +1571,53 @@ private:
     /// If we allowed SCEV predicates to be generated when populating this
     /// vector, this information can contain them and therefore a
     /// SCEVPredicate argument should be added to getExact.
-    const SCEV *getExact(const Loop *L, ScalarEvolution *SE,
-                         SmallVector<const SCEVPredicate *, 4> *Predicates = nullptr) const;
+    const SCEV *getExact(
+        const Loop *L, ScalarEvolution *SE,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
 
     /// Return the number of times this loop exit may fall through to the back
     /// edge, or SCEVCouldNotCompute. The loop is guaranteed not to exit via
     /// this block before this number of iterations, but may exit via another
-    /// block.
-    const SCEV *getExact(const BasicBlock *ExitingBlock,
-                         ScalarEvolution *SE) const;
+    /// block. If \p Predicates is null the function returns CouldNotCompute if
+    /// predicates are required, otherwise it fills in the required predicates.
+    const SCEV *getExact(
+        const BasicBlock *ExitingBlock, ScalarEvolution *SE,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const {
+      if (auto *ENT = getExitNotTaken(ExitingBlock, Predicates))
+        return ENT->ExactNotTaken;
+      else
+        return SE->getCouldNotCompute();
+    }
 
     /// Get the constant max backedge taken count for the loop.
-    const SCEV *getConstantMax(ScalarEvolution *SE) const;
+    const SCEV *getConstantMax(
+        ScalarEvolution *SE,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const;
 
     /// Get the constant max backedge taken count for the particular loop exit.
-    const SCEV *getConstantMax(const BasicBlock *ExitingBlock,
-                               ScalarEvolution *SE) const;
+    const SCEV *getConstantMax(
+        const BasicBlock *ExitingBlock, ScalarEvolution *SE,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const {
+      if (auto *ENT = getExitNotTaken(ExitingBlock, Predicates))
+        return ENT->ConstantMaxNotTaken;
+      else
+        return SE->getCouldNotCompute();
+    }
 
     /// Get the symbolic max backedge taken count for the loop.
-    const SCEV *getSymbolicMax(const Loop *L, ScalarEvolution *SE);
+    const SCEV *getSymbolicMax(
+        const Loop *L, ScalarEvolution *SE,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
     /// Get the symbolic max backedge taken count for the particular loop exit.
-    const SCEV *getSymbolicMax(const BasicBlock *ExitingBlock,
-                               ScalarEvolution *SE) const;
+    const SCEV *getSymbolicMax(
+        const BasicBlock *ExitingBlock, ScalarEvolution *SE,
+        SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) const {
+      if (auto *ENT = getExitNotTaken(ExitingBlock, Predicates))
+        return ENT->SymbolicMaxNotTaken;
+      else
+        return SE->getCouldNotCompute();
+    }
 
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getConstantMax or zero.
@@ -1647,9 +1711,7 @@ private:
     DenseMap<const SCEV *, ConstantRange> &Cache =
         Hint == HINT_RANGE_UNSIGNED ? UnsignedRanges : SignedRanges;
 
-    auto Pair = Cache.try_emplace(S, std::move(CR));
-    if (!Pair.second)
-      Pair.first->second = std::move(CR);
+    auto Pair = Cache.insert_or_assign(S, std::move(CR));
     return Pair.first->second;
   }
 
@@ -1746,7 +1808,7 @@ private:
 
   /// Similar to getBackedgeTakenInfo, but will add predicates as required
   /// with the purpose of returning complete information.
-  const BackedgeTakenInfo &getPredicatedBackedgeTakenInfo(const Loop *L);
+  BackedgeTakenInfo &getPredicatedBackedgeTakenInfo(const Loop *L);
 
   /// Compute the number of times the specified loop will iterate.
   /// If AllowPredicates is set, we will create new SCEV predicates as
@@ -1759,12 +1821,7 @@ private:
   /// this call will try to use a minimal set of SCEV predicates in order to
   /// return an exact answer.
   ExitLimit computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
-                             bool AllowPredicates = false);
-
-  /// Return a symbolic upper bound for the backedge taken count of the loop.
-  /// This is more general than getConstantMaxBackedgeTakenCount as it returns
-  /// an arbitrary expression as opposed to only constants.
-  const SCEV *computeSymbolicMaxBackedgeTakenCount(const Loop *L);
+                             bool IsOnlyExit, bool AllowPredicates = false);
 
   // Helper functions for computeExitLimitFromCond to avoid exponential time
   // complexity.
@@ -2316,6 +2373,9 @@ public:
   /// Get the (predicated) backedge count for the analyzed loop.
   const SCEV *getBackedgeTakenCount();
 
+  /// Get the (predicated) symbolic max backedge count for the analyzed loop.
+  const SCEV *getSymbolicMaxBackedgeTakenCount();
+
   /// Adds a new predicate.
   void addPredicate(const SCEVPredicate &Pred);
 
@@ -2384,6 +2444,9 @@ private:
 
   /// The backedge taken count.
   const SCEV *BackedgeCount = nullptr;
+
+  /// The symbolic backedge taken count.
+  const SCEV *SymbolicMaxBackedgeCount = nullptr;
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {

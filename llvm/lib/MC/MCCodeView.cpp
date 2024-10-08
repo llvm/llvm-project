@@ -16,7 +16,6 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -26,13 +25,11 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-CodeViewContext::CodeViewContext() = default;
-
 CodeViewContext::~CodeViewContext() {
   // If someone inserted strings into the string table but never actually
   // emitted them somewhere, clean up the fragment.
-  if (!InsertedStrTabFragment)
-    delete StrTabFragment;
+  if (!InsertedStrTabFragment && StrTabFragment)
+    StrTabFragment->destroy();
 }
 
 /// This is a valid number for use with .cv_loc if we've already seen a .cv_file
@@ -138,7 +135,7 @@ void CodeViewContext::recordCVLoc(MCContext &Ctx, const MCSymbol *Label,
 
 MCDataFragment *CodeViewContext::getStringTableFragment() {
   if (!StrTabFragment) {
-    StrTabFragment = new MCDataFragment();
+    StrTabFragment = MCCtx->allocFragment<MCDataFragment>();
     // Start a new string table out with a null byte.
     StrTabFragment->getContents().push_back('\0');
   }
@@ -341,9 +338,9 @@ CodeViewContext::getLineExtentIncludingInlinees(unsigned FuncId) {
 
 ArrayRef<MCCVLoc> CodeViewContext::getLinesForExtent(size_t L, size_t R) {
   if (R <= L)
-    return std::nullopt;
+    return {};
   if (L >= MCCVLines.size())
-    return std::nullopt;
+    return {};
   return ArrayRef(&MCCVLines[L], R - L);
 }
 
@@ -450,9 +447,9 @@ void CodeViewContext::emitInlineLineTableForFunction(MCObjectStreamer &OS,
                                                      const MCSymbol *FnEndSym) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  new MCCVInlineLineTableFragment(PrimaryFunctionId, SourceFileId,
-                                  SourceLineNum, FnStartSym, FnEndSym,
-                                  OS.getCurrentSectionOnly());
+  auto *F = MCCtx->allocFragment<MCCVInlineLineTableFragment>(
+      PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym);
+  OS.insert(F);
 }
 
 MCFragment *CodeViewContext::emitDefRange(
@@ -461,20 +458,22 @@ MCFragment *CodeViewContext::emitDefRange(
     StringRef FixedSizePortion) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  return new MCCVDefRangeFragment(Ranges, FixedSizePortion,
-                           OS.getCurrentSectionOnly());
+  auto *F =
+      MCCtx->allocFragment<MCCVDefRangeFragment>(Ranges, FixedSizePortion);
+  OS.insert(F);
+  return F;
 }
 
-static unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,
+static unsigned computeLabelDiff(const MCAssembler &Asm, const MCSymbol *Begin,
                                  const MCSymbol *End) {
-  MCContext &Ctx = Layout.getAssembler().getContext();
+  MCContext &Ctx = Asm.getContext();
   MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
   const MCExpr *BeginRef = MCSymbolRefExpr::create(Begin, Variant, Ctx),
                *EndRef = MCSymbolRefExpr::create(End, Variant, Ctx);
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, EndRef, BeginRef, Ctx);
   int64_t Result;
-  bool Success = AddrDelta->evaluateKnownAbsolute(Result, Layout);
+  bool Success = AddrDelta->evaluateKnownAbsolute(Result, Asm);
   assert(Success && "failed to evaluate label difference as absolute");
   (void)Success;
   assert(Result >= 0 && "negative label difference requested");
@@ -482,7 +481,7 @@ static unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,
   return unsigned(Result);
 }
 
-void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
+void CodeViewContext::encodeInlineLineTable(const MCAssembler &Asm,
                                             MCCVInlineLineTableFragment &Frag) {
   size_t LocBegin;
   size_t LocEnd;
@@ -549,7 +548,7 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
         // We've hit a cv_loc not attributed to this inline call site. Use this
         // label to end the PC range.
         if (HaveOpenRange) {
-          unsigned Length = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
+          unsigned Length = computeLabelDiff(Asm, LastLabel, Loc.getLabel());
           compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeLength, Buffer);
           compressAnnotation(Length, Buffer);
           LastLabel = Loc.getLabel();
@@ -579,7 +578,7 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
 
     int LineDelta = CurSourceLoc.Line - LastSourceLoc.Line;
     unsigned EncodedLineDelta = encodeSignedNumber(LineDelta);
-    unsigned CodeDelta = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
+    unsigned CodeDelta = computeLabelDiff(Asm, LastLabel, Loc.getLabel());
     if (EncodedLineDelta < 0x8 && CodeDelta <= 0xf) {
       // The ChangeCodeOffsetAndLineOffset combination opcode is used when the
       // encoded line delta uses 3 or fewer set bits and the code offset fits
@@ -605,23 +604,23 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
   assert(HaveOpenRange);
 
   unsigned EndSymLength =
-      computeLabelDiff(Layout, LastLabel, Frag.getFnEndSym());
+      computeLabelDiff(Asm, LastLabel, Frag.getFnEndSym());
   unsigned LocAfterLength = ~0U;
   ArrayRef<MCCVLoc> LocAfter = getLinesForExtent(LocEnd, LocEnd + 1);
   if (!LocAfter.empty()) {
     // Only try to compute this difference if we're in the same section.
     const MCCVLoc &Loc = LocAfter[0];
     if (&Loc.getLabel()->getSection() == &LastLabel->getSection())
-      LocAfterLength = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
+      LocAfterLength = computeLabelDiff(Asm, LastLabel, Loc.getLabel());
   }
 
   compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeLength, Buffer);
   compressAnnotation(std::min(EndSymLength, LocAfterLength), Buffer);
 }
 
-void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
+void CodeViewContext::encodeDefRange(const MCAssembler &Asm,
                                      MCCVDefRangeFragment &Frag) {
-  MCContext &Ctx = Layout.getAssembler().getContext();
+  MCContext &Ctx = Asm.getContext();
   SmallVectorImpl<char> &Contents = Frag.getContents();
   Contents.clear();
   SmallVectorImpl<MCFixup> &Fixups = Frag.getFixups();
@@ -633,8 +632,8 @@ void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
   const MCSymbol *LastLabel = nullptr;
   for (std::pair<const MCSymbol *, const MCSymbol *> Range : Frag.getRanges()) {
     unsigned GapSize =
-        LastLabel ? computeLabelDiff(Layout, LastLabel, Range.first) : 0;
-    unsigned RangeSize = computeLabelDiff(Layout, Range.first, Range.second);
+        LastLabel ? computeLabelDiff(Asm, LastLabel, Range.first) : 0;
+    unsigned RangeSize = computeLabelDiff(Asm, Range.first, Range.second);
     GapAndRangeSizes.push_back({GapSize, RangeSize});
     LastLabel = Range.second;
   }

@@ -8,7 +8,7 @@ tablegen(LLVM X86GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
 tablegen(LLVM X86GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM X86GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM X86GenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM X86GenCompressEVEXTables.inc -gen-x86-compress-evex-tables)
+tablegen(LLVM X86GenInstrMapping.inc -gen-x86-instr-mapping)
 tablegen(LLVM X86GenExegesis.inc -gen-exegesis)
 tablegen(LLVM X86GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
@@ -83,6 +83,7 @@ set(sources
   X86TargetTransformInfo.cpp
   X86VZeroUpper.cpp
   X86WinEHState.cpp
+  X86WinFixupBufferSecurityCheck.cpp
   X86InsertWait.cpp
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp

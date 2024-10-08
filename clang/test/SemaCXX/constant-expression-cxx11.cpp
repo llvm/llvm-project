@@ -1,6 +1,10 @@
-// RUN: %clang_cc1 -std=c++23 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx20_23,cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++23 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx20_23,cxx23              -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23,pre-cxx23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11,pre-cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+
+// This macro forces its argument to be constant-folded, even if it's not
+// otherwise a constant expression.
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
 
 namespace StaticAssertFoldTest {
 
@@ -358,10 +362,35 @@ struct Str {
 
 extern char externalvar[];
 constexpr bool constaddress = (void *)externalvar == (void *)0x4000UL; // expected-error {{must be initialized by a constant expression}} expected-note {{reinterpret_cast}}
-constexpr bool litaddress = "foo" == "foo"; // expected-error {{must be initialized by a constant expression}}
-// expected-note@-1 {{comparison of addresses of literals has unspecified value}}
-// cxx20_23-warning@-2 {{comparison between two arrays is deprecated}}
 static_assert(0 != "foo", "");
+
+// OK: These string literals cannot possibly overlap.
+static_assert(+"foo" != +"bar", "");
+static_assert("xfoo" + 1 != "yfoo" + 1, "");
+static_assert(+"foot" != +"foo", "");
+static_assert(+"foo\0bar" != +"foo\0baz", "");
+
+// These can't overlap because the null terminator for UTF-16 is two bytes wide.
+static_assert(fold((const char*)u"A" != (const char*)"\0A\0x"), "");
+static_assert(fold((const char*)u"A" != (const char*)"A\0\0x"), "");
+
+constexpr const char *string = "hello";
+constexpr const char *also_string = string;
+static_assert(string == string, "");
+static_assert(string == also_string, "");
+
+// These strings may overlap, and so the result of the comparison is unknown.
+constexpr bool may_overlap_1 = +"foo" == +"foo"; // expected-error {{}} expected-note {{addresses of literals}}
+constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // expected-error {{}} expected-note {{addresses of literals}}
+constexpr bool may_overlap_3 = +"foo" == "bar\0foo" + 4; // expected-error {{}} expected-note {{addresses of literals}}
+constexpr bool may_overlap_4 = "xfoo" + 1 == "xfoo" + 1; // expected-error {{}} expected-note {{addresses of literals}}
+
+// These may overlap even though they have different encodings.
+// One of these two comparisons is non-constant, but due to endianness we don't
+// know which one.
+constexpr bool may_overlap_different_encoding[] =
+  {fold((const char*)u"A" != (const char*)"xA\0\0\0x" + 1), fold((const char*)u"A" != (const char*)"x\0A\0\0x" + 1)};
+  // expected-error@-2 {{}} expected-note@-1 {{addresses of literals}}
 
 }
 
@@ -1011,10 +1040,12 @@ constexpr bool b(int n) { return &n; }
 static_assert(b(0), "");
 
 struct NonLiteral {
-  NonLiteral();
+  NonLiteral(); // cxx23-note {{declared here}}
   int f();
 };
-constexpr int k = NonLiteral().f(); // expected-error {{constant expression}} expected-note {{non-literal type 'NonLiteral'}}
+constexpr int k = NonLiteral().f(); // expected-error {{constant expression}} \
+				    // pre-cxx23-note {{non-literal type 'NonLiteral'}} \
+				    // cxx23-note {{non-constexpr constructor 'NonLiteral' cannot be used in a constant expression}}
 
 }
 
@@ -1266,12 +1297,17 @@ constexpr complex_wrap makeComplexWrap(int re, int im) {
 static_assert(makeComplexWrap(1,0) == complex(1), "");
 static_assert(makeComplexWrap(1,0) != complex(0, 1), "");
 
+constexpr auto GH55390 = 1 / 65536j; // expected-note {{division by zero}} \
+                                     // expected-error {{constexpr variable 'GH55390' must be initialized by a constant expression}} \
+                                     // expected-warning {{imaginary constants are a GNU extension}}
 }
 
 namespace PR11595 {
   struct A { constexpr bool operator==(int x) const { return true; } };
-  struct B { B(); A& x; };
-  static_assert(B().x == 3, "");  // expected-error {{constant expression}} expected-note {{non-literal type 'B' cannot be used in a constant expression}}
+  struct B { B(); A& x; }; // cxx23-note {{declared here}}
+  static_assert(B().x == 3, "");  // expected-error {{constant expression}} \
+				  // pre-cxx23-note {{non-literal type 'B' cannot be used in a constant expression}} \
+				  // cxx23-note {{non-constexpr constructor 'B' cannot be used in a constant expression}}
 
   constexpr bool f(int k) { // cxx11_20-error {{constexpr function never produces a constant expression}}
     return B().x == k; // cxx11_20-note {{non-literal type 'B' cannot be used in a constant expression}}
@@ -1536,15 +1572,9 @@ namespace MutableMembers {
 
 namespace Fold {
 
-  // This macro forces its argument to be constant-folded, even if it's not
-  // otherwise a constant expression.
-  #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
-
   constexpr int n = (long)(char*)123; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
   constexpr int m = fold((long)(char*)123); // ok
   static_assert(m == 123, "");
-
-  #undef fold
 
 }
 
@@ -2456,52 +2486,62 @@ E2 testDefaultArgForParam(E2 e2Param = (E2)-1) { // ok, not a constant expressio
 void testValueInRangeOfEnumerationValues() {
   constexpr E1 x1 = static_cast<E1>(-8);
   constexpr E1 x2 = static_cast<E1>(8);
-  // expected-error@-1 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
+  // expected-error@-1 {{constexpr variable 'x2' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
   E1 x2b = static_cast<E1>(8); // ok, not a constant expression context
 
   constexpr E2 x3 = static_cast<E2>(-8);
-  // expected-error@-1 {{integer value -8 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
+  // expected-error@-1 {{constexpr variable 'x3' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value -8 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
   constexpr E2 x4 = static_cast<E2>(0);
   constexpr E2 x5 = static_cast<E2>(8);
-  // expected-error@-1 {{integer value 8 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
+  // expected-error@-1 {{constexpr variable 'x5' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 8 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
 
   constexpr E3 x6 = static_cast<E3>(-2048);
   constexpr E3 x7 = static_cast<E3>(-8);
   constexpr E3 x8 = static_cast<E3>(0);
   constexpr E3 x9 = static_cast<E3>(8);
   constexpr E3 x10 = static_cast<E3>(2048);
-  // expected-error@-1 {{integer value 2048 is outside the valid range of values [-2048, 2047] for the enumeration type 'E3'}}
+  // expected-error@-1 {{constexpr variable 'x10' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 2048 is outside the valid range of values [-2048, 2047] for the enumeration type 'E3'}}
 
   constexpr E4 x11 = static_cast<E4>(0);
   constexpr E4 x12 = static_cast<E4>(1);
   constexpr E4 x13 = static_cast<E4>(2);
-  // expected-error@-1 {{integer value 2 is outside the valid range of values [0, 1] for the enumeration type 'E4'}}
+  // expected-error@-1 {{constexpr variable 'x13' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 2 is outside the valid range of values [0, 1] for the enumeration type 'E4'}}
 
   constexpr EEmpty x14 = static_cast<EEmpty>(0);
   constexpr EEmpty x15 = static_cast<EEmpty>(1);
   constexpr EEmpty x16 = static_cast<EEmpty>(2);
-  // expected-error@-1 {{integer value 2 is outside the valid range of values [0, 1] for the enumeration type 'EEmpty'}}
+  // expected-error@-1 {{constexpr variable 'x16' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 2 is outside the valid range of values [0, 1] for the enumeration type 'EEmpty'}}
 
   constexpr EFixed x17 = static_cast<EFixed>(100);
   constexpr EScoped x18 = static_cast<EScoped>(100);
 
   constexpr EMaxInt x19 = static_cast<EMaxInt>(__INT_MAX__-1);
   constexpr EMaxInt x20 = static_cast<EMaxInt>((long)__INT_MAX__+1);
-  // expected-error@-1 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for the enumeration type 'EMaxInt'}}
+  // expected-error@-1 {{constexpr variable 'x20' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for the enumeration type 'EMaxInt'}}
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
 
   CONSTEXPR_CAST_TO_SYSTEM_ENUM_OUTSIDE_OF_RANGE;
-  // expected-error@-1 {{integer value 123 is outside the valid range of values [0, 1] for the enumeration type 'SystemEnum'}}
+  // expected-error@-1 {{constexpr variable 'system_enum' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 123 is outside the valid range of values [0, 1] for the enumeration type 'SystemEnum'}}
 }
 
 template<class T, unsigned size> struct Bitfield {
-  static constexpr T max = static_cast<T>((1 << size) - 1); // #enum
+  static constexpr T max = static_cast<T>((1 << size) - 1);
+  // cxx11-error@-1 {{constexpr variable 'max' must be initialized by a constant expression}}
+  // cxx11-note@-2 {{integer value 15 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
 };
 
 void testValueInRangeOfEnumerationValuesViaTemplate() {
   Bitfield<E2, 3> good;
-  Bitfield<E2, 4> bad; // cxx11-error@#enum {{integer value 15 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
+  Bitfield<E2, 4> bad; // cxx11-note {{in instantiation}}
 }
 
 enum SortOrder {
@@ -2522,4 +2562,5 @@ void A::f(SortOrder order) {
 GH50055::E2 GlobalInitNotCE1 = (GH50055::E2)-1; // ok, not a constant expression context
 GH50055::E2 GlobalInitNotCE2 = GH50055::testDefaultArgForParam(); // ok, not a constant expression context
 constexpr GH50055::E2 GlobalInitCE = (GH50055::E2)-1;
-// expected-error@-1 {{integer value -1 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
+// expected-error@-1 {{constexpr variable 'GlobalInitCE' must be initialized by a constant expression}}
+// expected-note@-2 {{integer value -1 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}

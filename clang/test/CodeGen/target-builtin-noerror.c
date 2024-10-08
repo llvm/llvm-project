@@ -68,8 +68,6 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("avx512bw");
   (void)__builtin_cpu_supports("avx512dq");
   (void)__builtin_cpu_supports("avx512cd");
-  (void)__builtin_cpu_supports("avx512er");
-  (void)__builtin_cpu_supports("avx512pf");
   (void)__builtin_cpu_supports("avx512vbmi");
   (void)__builtin_cpu_supports("avx512ifma");
   (void)__builtin_cpu_supports("avx5124vnniw");
@@ -145,6 +143,8 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("usermsr");
   (void)__builtin_cpu_supports("avx10.1-256");
   (void)__builtin_cpu_supports("avx10.1-512");
+  (void)__builtin_cpu_supports("avx10.2-256");
+  (void)__builtin_cpu_supports("avx10.2-512");
 }
 
 void verifycpustrings(void) {
@@ -207,4 +207,5 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("znver2");
   (void)__builtin_cpu_is("znver3");
   (void)__builtin_cpu_is("znver4");
+  (void)__builtin_cpu_is("znver5");
 }

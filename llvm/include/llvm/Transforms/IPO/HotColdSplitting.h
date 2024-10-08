@@ -19,6 +19,7 @@ namespace llvm {
 
 class Module;
 class ProfileSummaryInfo;
+class BasicBlock;
 class BlockFrequencyInfo;
 class TargetTransformInfo;
 class OptimizationRemarkEmitter;

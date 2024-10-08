@@ -15,7 +15,6 @@
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -80,16 +79,6 @@ static LogicalResult isCompatible(PatternRewriter &rewriter,
   return success();
 }
 
-// Create 'llvm.experimental.vector.interleave2' intrinsic from `lhs` and `rhs`.
-static Value createInterleave2Intrinsic(RewriterBase &rewriter, Location loc,
-                                        Value lhs, Value rhs) {
-  auto inputType = cast<VectorType>(lhs.getType());
-  VectorType inputTypeX2 =
-      VectorType::Builder(inputType).setDim(0, inputType.getShape()[0] * 2);
-  return rewriter.create<LLVM::experimental_vector_interleave2>(
-      loc, inputTypeX2, lhs, rhs);
-}
-
 // Fuse two 'arm_sme.outerproduct' operations that are chained via the
 // accumulator into 2-way outer product operation.
 //
@@ -107,10 +96,8 @@ static Value createInterleave2Intrinsic(RewriterBase &rewriter, Location loc,
 //
 // Becomes:
 //
-//  %a_packed = "llvm.intr.experimental.vector.interleave2"(%a0, %a1)
-//    : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
-//  %b_packed = "llvm.intr.experimental.vector.interleave2"(%b0, %b1)
-//    : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+//  %a_packed = vector.interleave %a0, %a1 : vector<[4]xf16> -> vector<[8]xf16>
+//  %b_packed = vector.interleave %b0, %b1 : vector<[4]xf16> -> vector<[8]xf16>
 //  %0 = arm_sme.fmopa_2way %a_packed, %b_packed
 //    : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
 class OuterProductFusion2Way
@@ -136,28 +123,7 @@ public:
 
     if (!op1->hasOneUse()) {
       // If the first outer product has uses other than as the input to another
-      // outer product, it can't be erased after fusion. This is a problem when
-      // it also has an accumulator as this will be used as the root for tile
-      // allocation and since the widening outer product uses the same
-      // accumulator it will get assigned the same tile ID, resulting in 3
-      // outer products accumulating to the same tile and incorrect results.
-      //
-      // Example:
-      //
-      //  %acc = arith.constant dense<0.0> ; root for tile allocation
-      //  %0 = arm_sme.outerproduct %a0, %b0 acc(%acc)
-      //  vector.print %0                  ; intermediary use, can't erase %0
-      //  %1 = arm_sme.outerproduct %a1, %b1 acc(%0)
-      //
-      // After fusion and tile allocation
-      //
-      //  %0 = arm_sme.zero {tile_id = 0 : i32}
-      //  %1 = arm_sme.outerproduct %a0, %b0 acc(%0) {tile_id = 0 : i32}
-      //  vector.print %1
-      //  %2 = arm_sme.fmopa_2way %a, %b acc(%0) {tile_id = 0 : i32}
-      //
-      // No accumulator would be ok, but it's simpler to prevent this
-      // altogether, since it has no benefit.
+      // outer product, it can't be erased after fusion.
       return rewriter.notifyMatchFailure(op,
                                          kMatchFailureOuterProductNotSingleUse);
     }
@@ -170,7 +136,7 @@ public:
 
     auto loc = op.getLoc();
     auto packInputs = [&](Value lhs, Value rhs) {
-      return createInterleave2Intrinsic(rewriter, loc, lhs, rhs);
+      return rewriter.create<vector::InterleaveOp>(loc, lhs, rhs);
     };
 
     auto lhs = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -226,8 +192,6 @@ public:
     } else {
       llvm_unreachable("unexpected arm_sme::CombiningKind!");
     }
-
-    rewriter.eraseOp(op1);
 
     return success();
   }
@@ -320,7 +284,7 @@ public:
 
     auto loc = op.getLoc();
     auto packInputs = [&](Value lhs, Value rhs) {
-      return createInterleave2Intrinsic(rewriter, loc, lhs, rhs);
+      return rewriter.create<vector::InterleaveOp>(loc, lhs, rhs);
     };
 
     auto lhs0 = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -401,10 +365,6 @@ public:
       llvm_unreachable("unexpected arm_sme::CombiningKind!");
     }
 
-    rewriter.eraseOp(op3);
-    rewriter.eraseOp(op2);
-    rewriter.eraseOp(op1);
-
     return success();
   }
 
@@ -480,7 +440,7 @@ struct SwapVectorExtractOfArithExtend
       return rewriter.notifyMatchFailure(extractOp,
                                          "extracted type is not a vector type");
 
-    auto numScalableDims = llvm::count(resultType.getScalableDims(), true);
+    auto numScalableDims = resultType.getNumScalableDims();
     if (numScalableDims != 1)
       return rewriter.notifyMatchFailure(
           extractOp, "extracted type is not a 1-D scalable vector type");

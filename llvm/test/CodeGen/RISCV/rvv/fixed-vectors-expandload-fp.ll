@@ -44,15 +44,16 @@ define <2 x half> @expandload_v2f16(ptr %base, <2 x half> %src0, <2 x i1> %mask)
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB1_3: # %cond.load
 ; RV32-NEXT:    flh fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, m2, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 2
 ; RV32-NEXT:    andi a1, a1, 2
 ; RV32-NEXT:    beqz a1, .LBB1_2
 ; RV32-NEXT:  .LBB1_4: # %cond.load1
 ; RV32-NEXT:    flh fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vfmv.s.f v9, fa5
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    ret
 ;
@@ -69,15 +70,16 @@ define <2 x half> @expandload_v2f16(ptr %base, <2 x half> %src0, <2 x i1> %mask)
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB1_3: # %cond.load
 ; RV64-NEXT:    flh fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, m2, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 2
 ; RV64-NEXT:    andi a1, a1, 2
 ; RV64-NEXT:    beqz a1, .LBB1_2
 ; RV64-NEXT:  .LBB1_4: # %cond.load1
 ; RV64-NEXT:    flh fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vfmv.s.f v9, fa5
+; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    ret
   %res = call <2 x half> @llvm.masked.expandload.v2f16(ptr align 2 %base, <2 x i1> %mask, <2 x half> %src0)
@@ -105,15 +107,16 @@ define <4 x half> @expandload_v4f16(ptr %base, <4 x half> %src0, <4 x i1> %mask)
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB2_5: # %cond.load
 ; RV32-NEXT:    flh fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 4, e16, m2, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 2
 ; RV32-NEXT:    andi a2, a1, 2
 ; RV32-NEXT:    beqz a2, .LBB2_2
 ; RV32-NEXT:  .LBB2_6: # %cond.load1
 ; RV32-NEXT:    flh fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vfmv.s.f v9, fa5
+; RV32-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    addi a0, a0, 2
 ; RV32-NEXT:    andi a2, a1, 4
@@ -152,15 +155,16 @@ define <4 x half> @expandload_v4f16(ptr %base, <4 x half> %src0, <4 x i1> %mask)
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB2_5: # %cond.load
 ; RV64-NEXT:    flh fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 4, e16, m2, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 2
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB2_2
 ; RV64-NEXT:  .LBB2_6: # %cond.load1
 ; RV64-NEXT:    flh fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vfmv.s.f v9, fa5
+; RV64-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    addi a0, a0, 2
 ; RV64-NEXT:    andi a2, a1, 4
@@ -216,15 +220,16 @@ define <8 x half> @expandload_v8f16(ptr %base, <8 x half> %src0, <8 x i1> %mask)
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB3_9: # %cond.load
 ; RV32-NEXT:    flh fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 8, e16, m2, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 2
 ; RV32-NEXT:    andi a2, a1, 2
 ; RV32-NEXT:    beqz a2, .LBB3_2
 ; RV32-NEXT:  .LBB3_10: # %cond.load1
 ; RV32-NEXT:    flh fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vfmv.s.f v9, fa5
+; RV32-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    addi a0, a0, 2
 ; RV32-NEXT:    andi a2, a1, 4
@@ -307,15 +312,16 @@ define <8 x half> @expandload_v8f16(ptr %base, <8 x half> %src0, <8 x i1> %mask)
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB3_9: # %cond.load
 ; RV64-NEXT:    flh fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 8, e16, m2, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 2
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB3_2
 ; RV64-NEXT:  .LBB3_10: # %cond.load1
 ; RV64-NEXT:    flh fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vfmv.s.f v9, fa5
+; RV64-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    addi a0, a0, 2
 ; RV64-NEXT:    andi a2, a1, 4
@@ -412,15 +418,16 @@ define <2 x float> @expandload_v2f32(ptr %base, <2 x float> %src0, <2 x i1> %mas
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB5_3: # %cond.load
 ; RV32-NEXT:    flw fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e32, m4, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 4
 ; RV32-NEXT:    andi a1, a1, 2
 ; RV32-NEXT:    beqz a1, .LBB5_2
 ; RV32-NEXT:  .LBB5_4: # %cond.load1
 ; RV32-NEXT:    flw fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; RV32-NEXT:    vfmv.s.f v9, fa5
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    ret
 ;
@@ -437,15 +444,16 @@ define <2 x float> @expandload_v2f32(ptr %base, <2 x float> %src0, <2 x i1> %mas
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB5_3: # %cond.load
 ; RV64-NEXT:    flw fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e32, m4, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 4
 ; RV64-NEXT:    andi a1, a1, 2
 ; RV64-NEXT:    beqz a1, .LBB5_2
 ; RV64-NEXT:  .LBB5_4: # %cond.load1
 ; RV64-NEXT:    flw fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; RV64-NEXT:    vfmv.s.f v9, fa5
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    ret
   %res = call <2 x float> @llvm.masked.expandload.v2f32(ptr align 4 %base, <2 x i1> %mask, <2 x float> %src0)
@@ -473,15 +481,16 @@ define <4 x float> @expandload_v4f32(ptr %base, <4 x float> %src0, <4 x i1> %mas
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB6_5: # %cond.load
 ; RV32-NEXT:    flw fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 4
 ; RV32-NEXT:    andi a2, a1, 2
 ; RV32-NEXT:    beqz a2, .LBB6_2
 ; RV32-NEXT:  .LBB6_6: # %cond.load1
 ; RV32-NEXT:    flw fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; RV32-NEXT:    vfmv.s.f v9, fa5
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    addi a0, a0, 4
 ; RV32-NEXT:    andi a2, a1, 4
@@ -520,15 +529,16 @@ define <4 x float> @expandload_v4f32(ptr %base, <4 x float> %src0, <4 x i1> %mas
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB6_5: # %cond.load
 ; RV64-NEXT:    flw fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 4
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB6_2
 ; RV64-NEXT:  .LBB6_6: # %cond.load1
 ; RV64-NEXT:    flw fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; RV64-NEXT:    vfmv.s.f v9, fa5
+; RV64-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    addi a0, a0, 4
 ; RV64-NEXT:    andi a2, a1, 4
@@ -584,15 +594,16 @@ define <8 x float> @expandload_v8f32(ptr %base, <8 x float> %src0, <8 x i1> %mas
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB7_9: # %cond.load
 ; RV32-NEXT:    flw fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 4
 ; RV32-NEXT:    andi a2, a1, 2
 ; RV32-NEXT:    beqz a2, .LBB7_2
 ; RV32-NEXT:  .LBB7_10: # %cond.load1
 ; RV32-NEXT:    flw fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; RV32-NEXT:    vfmv.s.f v10, fa5
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 1
 ; RV32-NEXT:    addi a0, a0, 4
 ; RV32-NEXT:    andi a2, a1, 4
@@ -675,15 +686,16 @@ define <8 x float> @expandload_v8f32(ptr %base, <8 x float> %src0, <8 x i1> %mas
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB7_9: # %cond.load
 ; RV64-NEXT:    flw fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 4
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB7_2
 ; RV64-NEXT:  .LBB7_10: # %cond.load1
 ; RV64-NEXT:    flw fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; RV64-NEXT:    vfmv.s.f v10, fa5
+; RV64-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 1
 ; RV64-NEXT:    addi a0, a0, 4
 ; RV64-NEXT:    andi a2, a1, 4
@@ -780,15 +792,16 @@ define <2 x double> @expandload_v2f64(ptr %base, <2 x double> %src0, <2 x i1> %m
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB9_3: # %cond.load
 ; RV32-NEXT:    fld fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e64, m8, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a1, a1, 2
 ; RV32-NEXT:    beqz a1, .LBB9_2
 ; RV32-NEXT:  .LBB9_4: # %cond.load1
 ; RV32-NEXT:    fld fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vfmv.s.f v9, fa5
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    ret
 ;
@@ -805,15 +818,16 @@ define <2 x double> @expandload_v2f64(ptr %base, <2 x double> %src0, <2 x i1> %m
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB9_3: # %cond.load
 ; RV64-NEXT:    fld fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e64, m8, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a1, a1, 2
 ; RV64-NEXT:    beqz a1, .LBB9_2
 ; RV64-NEXT:  .LBB9_4: # %cond.load1
 ; RV64-NEXT:    fld fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vfmv.s.f v9, fa5
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    ret
   %res = call <2 x double> @llvm.masked.expandload.v2f64(ptr align 8 %base, <2 x i1> %mask, <2 x double> %src0)
@@ -841,15 +855,16 @@ define <4 x double> @expandload_v4f64(ptr %base, <4 x double> %src0, <4 x i1> %m
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB10_5: # %cond.load
 ; RV32-NEXT:    fld fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 4, e64, m8, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 2
 ; RV32-NEXT:    beqz a2, .LBB10_2
 ; RV32-NEXT:  .LBB10_6: # %cond.load1
 ; RV32-NEXT:    fld fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vfmv.s.f v10, fa5
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 1
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 4
@@ -888,15 +903,16 @@ define <4 x double> @expandload_v4f64(ptr %base, <4 x double> %src0, <4 x i1> %m
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB10_5: # %cond.load
 ; RV64-NEXT:    fld fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 4, e64, m8, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB10_2
 ; RV64-NEXT:  .LBB10_6: # %cond.load1
 ; RV64-NEXT:    fld fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vfmv.s.f v10, fa5
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 1
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 4
@@ -952,15 +968,16 @@ define <8 x double> @expandload_v8f64(ptr %base, <8 x double> %src0, <8 x i1> %m
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB11_9: # %cond.load
 ; RV32-NEXT:    fld fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 8, e64, m8, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 2
 ; RV32-NEXT:    beqz a2, .LBB11_2
 ; RV32-NEXT:  .LBB11_10: # %cond.load1
 ; RV32-NEXT:    fld fa5, 0(a0)
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vfmv.s.f v12, fa5
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; RV32-NEXT:    vslideup.vi v8, v12, 1
 ; RV32-NEXT:    addi a0, a0, 8
 ; RV32-NEXT:    andi a2, a1, 4
@@ -1043,15 +1060,16 @@ define <8 x double> @expandload_v8f64(ptr %base, <8 x double> %src0, <8 x i1> %m
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB11_9: # %cond.load
 ; RV64-NEXT:    fld fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 8, e64, m8, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB11_2
 ; RV64-NEXT:  .LBB11_10: # %cond.load1
 ; RV64-NEXT:    fld fa5, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vfmv.s.f v12, fa5
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v12, 1
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 4

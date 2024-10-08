@@ -108,21 +108,6 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
   // if we dont have a load address we cant re-base
   bool rebase_exec = load_offset != LLDB_INVALID_ADDRESS;
 
-  // if we have a valid executable
-  if (executable_sp.get()) {
-    lldb_private::ObjectFile *obj = executable_sp->GetObjectFile();
-    if (obj) {
-      // don't rebase if the module already has a load address
-      Target &target = m_process->GetTarget();
-      Address addr = obj->GetImageInfoAddress(&target);
-      if (addr.GetLoadAddress(&target) != LLDB_INVALID_ADDRESS)
-        rebase_exec = false;
-    }
-  } else {
-    // no executable, nothing to re-base
-    rebase_exec = false;
-  }
-
   // if the target executable should be re-based
   if (rebase_exec) {
     ModuleList module_list;
@@ -506,6 +491,19 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   Target &target = thread.GetProcess()->GetTarget();
   const ModuleList &images = target.GetImages();
 
+  llvm::StringRef target_name = sym_name.GetStringRef();
+  // On AArch64, the trampoline name has a prefix (__AArch64ADRPThunk_ or
+  // __AArch64AbsLongThunk_) added to the function name. If we detect a
+  // trampoline with the prefix, we need to remove the prefix to find the
+  // function symbol.
+  if (target_name.consume_front("__AArch64ADRPThunk_") ||
+      target_name.consume_front("__AArch64AbsLongThunk_")) {
+    // An empty target name can happen for trampolines generated for
+    // section-referencing relocations.
+    if (!target_name.empty()) {
+      sym_name = ConstString(target_name);
+    }
+  }
   images.FindSymbolsWithNameAndType(sym_name, eSymbolTypeCode, target_symbols);
   if (!target_symbols.GetSize())
     return thread_plan_sp;

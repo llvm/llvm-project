@@ -60,8 +60,11 @@ void ManualDWARFIndex::Index() {
   }
   if (dwp_info && dwp_info->ContainsTypeUnits()) {
     for (size_t U = 0; U < dwp_info->GetNumUnits(); ++U) {
-      if (auto *tu = llvm::dyn_cast<DWARFTypeUnit>(dwp_info->GetUnitAtIndex(U)))
-        units_to_index.push_back(tu);
+      if (auto *tu =
+              llvm::dyn_cast<DWARFTypeUnit>(dwp_info->GetUnitAtIndex(U))) {
+        if (!m_type_sigs_to_avoid.contains(tu->GetTypeHash()))
+          units_to_index.push_back(tu);
+      }
     }
   }
 
@@ -694,7 +697,7 @@ std::string ManualDWARFIndex::GetCacheKey() {
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   strm << objfile->GetModule()->GetCacheKey() << "-dwarf-index-"
       << llvm::format_hex(objfile->GetCacheHash(), 10);
-  return strm.str();
+  return key;
 }
 
 bool ManualDWARFIndex::LoadFromCache() {

@@ -25,7 +25,7 @@
 
 ; CHECK: %[[SELECT:.*]] = select i1 %tobool
 ; CHECK-NEXT: store i32 %[[SELECT]], ptr %c{{.*}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %[[SELECT]], metadata ![[VAR_C:[0-9]+]], metadata !DIExpression(), metadata ![[ID]], metadata ptr %c, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign(i32 %[[SELECT]], ![[VAR_C:[0-9]+]], !DIExpression(), ![[ID]], ptr %c, !DIExpression(),
 ; CHECK: ![[VAR_C]] = !DILocalVariable(name: "c",
 
 @a = dso_local global i32 0, align 4, !dbg !0

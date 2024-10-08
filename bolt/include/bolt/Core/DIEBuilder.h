@@ -127,18 +127,17 @@ private:
   DWARFContext *DwarfContext{nullptr};
   DWARFUnit *SkeletonCU{nullptr};
   uint64_t UnitSize{0};
+  /// Adds separate UnitSize counter for updating DebugNames
+  /// so there is no dependency between the functions.
+  uint64_t DebugNamesUnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
   DWARF5AcceleratorTable &DebugNamesTable;
+  // Unordered map to handle name collision if output DWO directory is
+  // specified.
+  std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
   /// Returns current state of the DIEBuilder
   State &getState() { return *BuilderState.get(); }
-  /// Resolve the reference in DIE, if target is not loaded into IR,
-  /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
-  /// RefValue.
-  DWARFDie resolveDIEReference(
-      const DWARFFormValue &RefValue,
-      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      DWARFUnit *&RefCU, DWARFDebugInfoEntry &DwarfDebugInfoEntry);
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
@@ -162,10 +161,9 @@ private:
       const DWARFFormValue &Val);
 
   /// Clone an attribute in reference format.
-  void cloneDieReferenceAttribute(
+  void cloneDieOffsetReferenceAttribute(
       DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
-      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      const DWARFFormValue &Val);
+      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref);
 
   /// Clone an attribute in block format.
   void cloneBlockAttribute(
@@ -208,14 +206,16 @@ private:
   /// Update references once the layout is finalized.
   void updateReferences();
 
-  /// Update the Offset and Size of DIE, populate DebugNames table.
+  /// Update the Offset and Size of DIE.
   /// Along with current CU, and DIE being processed and the new DIE offset to
   /// be updated, it takes in Parents vector that can be empty if this DIE has
   /// no parents.
-  uint32_t
-  finalizeDIEs(DWARFUnit &CU, DIE &Die,
-               std::vector<std::optional<BOLTDWARF5AccelTableData *>> &Parents,
-               uint32_t &CurOffset);
+  uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
+
+  /// Populates DebugNames table.
+  void populateDebugNamesTable(DWARFUnit &CU, const DIE &Die,
+                               std::optional<BOLTDWARF5AccelTableData *> Parent,
+                               uint32_t NumberParentsInChain);
 
   void registerUnit(DWARFUnit &DU, bool NeedSort);
 
@@ -344,6 +344,9 @@ public:
   /// Finish current DIE construction.
   void finish();
 
+  /// Update debug names table.
+  void updateDebugNamesTable();
+
   // Interface to edit DIE
   template <class T> T *allocateDIEValue() {
     return new (getState().DIEAlloc) T;
@@ -384,6 +387,17 @@ public:
   bool deleteValue(DIEValueList *Die, dwarf::Attribute Attribute) {
     return Die->deleteValue(Attribute);
   }
+  /// Updates DWO Name and Compilation directory for Skeleton CU \p Unit.
+  std::string updateDWONameCompDir(DebugStrOffsetsWriter &StrOffstsWriter,
+                                   DebugStrWriter &StrWriter,
+                                   DWARFUnit &SkeletonCU,
+                                   std::optional<StringRef> DwarfOutputPath,
+                                   std::optional<StringRef> DWONameToUse);
+  /// Updates DWO Name and Compilation directory for Type Units.
+  void updateDWONameCompDirForTypes(DebugStrOffsetsWriter &StrOffstsWriter,
+                                    DebugStrWriter &StrWriter, DWARFUnit &Unit,
+                                    std::optional<StringRef> DwarfOutputPath,
+                                    const StringRef DWOName);
 };
 } // namespace bolt
 } // namespace llvm

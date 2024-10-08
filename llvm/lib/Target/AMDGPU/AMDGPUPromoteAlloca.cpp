@@ -333,22 +333,26 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   bool Changed = false;
   for (AllocaInst *AI : Allocas) {
     const unsigned AllocaCost = DL->getTypeSizeInBits(AI->getAllocatedType());
-    if (AllocaCost > VectorizationBudget) {
-      LLVM_DEBUG(dbgs() << "  Alloca too big for vectorization: " << *AI
-                        << "\n");
-      return Changed;
+    // First, check if we have enough budget to vectorize this alloca.
+    if (AllocaCost <= VectorizationBudget) {
+      // If we do, attempt vectorization, otherwise, fall through and try
+      // promoting to LDS instead.
+      if (tryPromoteAllocaToVector(*AI)) {
+        Changed = true;
+        assert((VectorizationBudget - AllocaCost) < VectorizationBudget &&
+               "Underflow!");
+        VectorizationBudget -= AllocaCost;
+        LLVM_DEBUG(dbgs() << "  Remaining vectorization budget:"
+                          << VectorizationBudget << "\n");
+        continue;
+      }
+    } else {
+      LLVM_DEBUG(dbgs() << "Alloca too big for vectorization (size:"
+                        << AllocaCost << ", budget:" << VectorizationBudget
+                        << "): " << *AI << "\n");
     }
 
-    if (tryPromoteAllocaToVector(*AI)) {
-      Changed = true;
-      assert((VectorizationBudget - AllocaCost) < VectorizationBudget &&
-             "Underflow!");
-      VectorizationBudget -= AllocaCost;
-      LLVM_DEBUG(dbgs() << "  Remaining vectorization budget:"
-                        << VectorizationBudget << "\n");
-      if (VectorizationBudget == 0)
-        break;
-    } else if (PromoteToLDS && tryPromoteAllocaToLDS(*AI, SufficientLDS))
+    if (PromoteToLDS && tryPromoteAllocaToLDS(*AI, SufficientLDS))
       Changed = true;
   }
 
@@ -398,7 +402,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
-  MapVector<Value *, APInt> VarOffsets;
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
   if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
       !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
@@ -1029,19 +1033,17 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   DispatchPtr->addDereferenceableRetAttr(64);
 
   Type *I32Ty = Type::getInt32Ty(Mod->getContext());
-  Value *CastDispatchPtr = Builder.CreateBitCast(
-      DispatchPtr, PointerType::get(I32Ty, AMDGPUAS::CONSTANT_ADDRESS));
 
   // We could do a single 64-bit load here, but it's likely that the basic
   // 32-bit and extract sequence is already present, and it is probably easier
   // to CSE this. The loads should be mergeable later anyway.
-  Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(I32Ty, CastDispatchPtr, 1);
+  Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(I32Ty, DispatchPtr, 1);
   LoadInst *LoadXY = Builder.CreateAlignedLoad(I32Ty, GEPXY, Align(4));
 
-  Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(I32Ty, CastDispatchPtr, 2);
+  Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(I32Ty, DispatchPtr, 2);
   LoadInst *LoadZU = Builder.CreateAlignedLoad(I32Ty, GEPZU, Align(4));
 
-  MDNode *MD = MDNode::get(Mod->getContext(), std::nullopt);
+  MDNode *MD = MDNode::get(Mod->getContext(), {});
   LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
   LoadZU->setMetadata(LLVMContext::MD_invariant_load, MD);
   ST.makeLIDRangeMetadata(LoadZU);
@@ -1191,14 +1193,10 @@ bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
       WorkList.push_back(ICmp);
     }
 
-    if (UseInst->getOpcode() == Instruction::AddrSpaceCast) {
-      // Give up if the pointer may be captured.
-      if (PointerMayBeCaptured(UseInst, true, true))
-        return false;
-      // Don't collect the users of this.
-      WorkList.push_back(User);
-      continue;
-    }
+    // TODO: If we know the address is only observed through flat pointers, we
+    // could still promote.
+    if (UseInst->getOpcode() == Instruction::AddrSpaceCast)
+      return false;
 
     // Do not promote vector/aggregate type instructions. It is hard to track
     // their users.

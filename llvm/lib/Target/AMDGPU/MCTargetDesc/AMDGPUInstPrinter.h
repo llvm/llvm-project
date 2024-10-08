@@ -32,16 +32,12 @@ public:
   void printRegName(raw_ostream &OS, MCRegister Reg) const override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
-  static void printRegOperand(unsigned RegNo, raw_ostream &O,
+  static void printRegOperand(MCRegister Reg, raw_ostream &O,
                               const MCRegisterInfo &MRI);
 
 private:
-  void printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU4ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printU8ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
@@ -52,24 +48,16 @@ private:
   void printFlatOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                        raw_ostream &O);
 
-  void printOffset0(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
-  void printOffset1(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
   void printSMRDOffset8(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMEMOffset(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
-  void printSMEMOffsetMod(const MCInst *MI, unsigned OpNo,
-                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printCPol(const MCInst *MI, unsigned OpNo,
                  const MCSubtargetInfo &STI, raw_ostream &O);
   void printTH(const MCInst *MI, int64_t TH, int64_t Scope, raw_ostream &O);
   void printScope(int64_t Scope, raw_ostream &O);
-  void printDMask(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
   void printDim(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printR128A16(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -114,10 +102,6 @@ private:
                  raw_ostream &O);
   void printDPPCtrl(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
-  void printDppRowMask(const MCInst *MI, unsigned OpNo,
-                       const MCSubtargetInfo &STI, raw_ostream &O);
-  void printDppBankMask(const MCInst *MI, unsigned OpNo,
-                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printDppBoundCtrl(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printDppFI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -158,21 +142,9 @@ private:
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printBLGP(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                  raw_ostream &O);
-  void printCBSZ(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printABID(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
   bool needsImpliedVcc(const MCInstrDesc &Desc, unsigned OpNo) const;
   void printDefaultVccOperand(bool FirstOperand, const MCSubtargetInfo &STI,
                               raw_ostream &O);
-  void printWaitVDST(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
-  void printWaitEXP(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
-  void printWaitVAVDst(const MCInst *MI, unsigned OpNo,
-                       const MCSubtargetInfo &STI, raw_ostream &O);
-  void printWaitVMVSrc(const MCInst *MI, unsigned OpNo,
-                       const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printExpSrcN(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O, unsigned N);
@@ -186,6 +158,9 @@ private:
                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printExpTgt(const MCInst *MI, unsigned OpNo,
                    const MCSubtargetInfo &STI, raw_ostream &O);
+  void printNamedInt(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O,
+                     StringRef Prefix, bool PrintInHex, bool AlwaysPrint);
 
 public:
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,

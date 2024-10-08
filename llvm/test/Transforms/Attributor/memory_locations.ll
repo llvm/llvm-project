@@ -8,7 +8,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 declare noalias ptr @malloc(i64) inaccessiblememonly
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local global i32, align 4
+; CHECK: @G = external dso_local global i32, align 4
 ;.
 define dso_local ptr @internal_only(i32 %arg) {
 ; CHECK: Function Attrs: memory(inaccessiblemem: readwrite)
@@ -35,7 +35,7 @@ define dso_local ptr @internal_only_rec(i32 %arg) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ARG]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_only_rec(i32 [[DIV]])
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @internal_only_rec(i32 [[DIV]])
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
@@ -235,16 +235,16 @@ define internal ptr @internal_argmem_only_rec_1(ptr %arg) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TRUETMP1:%.*]] = load i32, ptr [[ARG]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TRUETMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 -1
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_argmem_only_rec_2(ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ADD_PTR]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       if.end3:
-; CHECK-NEXT:    [[TRUETMP2:%.*]] = load i32, ptr [[ARG]], align 4
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TRUETMP2]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[CALL4:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:

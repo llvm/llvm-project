@@ -331,8 +331,10 @@
 ; CHECK-SPIRV-DAG: %[[#false:]] = OpConstantFalse %[[#bool]]
 ; CHECK-SPIRV-DAG: %[[#ScopeSubgroup:]] = OpConstant %[[#int]] 3
 ; CHECK-SPIRV-DAG: %[[#char_0:]] = OpConstant %[[#char]] 0
+; CHECK-SPIRV-DAG: %[[#char_10:]] = OpConstant %[[#char]] 10
 ; CHECK-SPIRV-DAG: %[[#short_0:]] = OpConstant %[[#short]] 0
 ; CHECK-SPIRV-DAG: %[[#int_0:]] = OpConstant %[[#int]] 0
+; CHECK-SPIRV-DAG: %[[#int_32:]] = OpConstant %[[#int]] 32
 ; CHECK-SPIRV-DAG: %[[#long_0:]] = OpConstantNull %[[#long]]
 ; CHECK-SPIRV-DAG: %[[#half_0:]] = OpConstant %[[#half]] 0
 ; CHECK-SPIRV-DAG: %[[#float_0:]] = OpConstant %[[#float]] 0
@@ -340,9 +342,13 @@
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIAdd %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIAdd %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_10]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIMul %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIMul %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_10]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMin %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMin %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_10]] %[[#int_32]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMax %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMax %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_10]] %[[#int_32]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIAdd %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIMul %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMin %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
@@ -355,14 +361,18 @@
 
 define dso_local spir_kernel void @testNonUniformArithmeticChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i8 @_Z32sub_group_non_uniform_reduce_addc(i8 signext 0)
+  %r2 = tail call spir_func signext i8 @__spirv_GroupNonUniformIAdd(i32 3, i32 0, i8 signext 10)
   store i8 %2, i8 addrspace(1)* %0, align 1
   %3 = tail call spir_func signext i8 @_Z32sub_group_non_uniform_reduce_mulc(i8 signext 0)
+  %r3 = tail call spir_func signext i8 @__spirv_GroupNonUniformIMul(i32 3, i32 1, i8 signext 10)
   %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
   store i8 %3, i8 addrspace(1)* %4, align 1
   %5 = tail call spir_func signext i8 @_Z32sub_group_non_uniform_reduce_minc(i8 signext 0)
+  %r5 = tail call spir_func signext i8 @__spirv_GroupNonUniformSMin(i32 3, i32 0, i8 signext 10, i32 32)
   %6 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 2
   store i8 %5, i8 addrspace(1)* %6, align 1
   %7 = tail call spir_func signext i8 @_Z32sub_group_non_uniform_reduce_maxc(i8 signext 0)
+  %r7 = tail call spir_func signext i8 @__spirv_GroupNonUniformSMax(i32 3, i32 0, i8 signext 10, i32 32)
   %8 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 3
   store i8 %7, i8 addrspace(1)* %8, align 1
   %9 = tail call spir_func signext i8 @_Z40sub_group_non_uniform_scan_inclusive_addc(i8 signext 0)
@@ -393,12 +403,16 @@ define dso_local spir_kernel void @testNonUniformArithmeticChar(i8 addrspace(1)*
 }
 
 declare dso_local spir_func signext i8 @_Z32sub_group_non_uniform_reduce_addc(i8 signext) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformIAdd(i32, i32, i8)
 
 declare dso_local spir_func signext i8 @_Z32sub_group_non_uniform_reduce_mulc(i8 signext) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformIMul(i32, i32, i8)
 
 declare dso_local spir_func signext i8 @_Z32sub_group_non_uniform_reduce_minc(i8 signext) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformSMin(i32, i32, i8, i32)
 
 declare dso_local spir_func signext i8 @_Z32sub_group_non_uniform_reduce_maxc(i8 signext) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformSMax(i32, i32, i8, i32)
 
 declare dso_local spir_func signext i8 @_Z40sub_group_non_uniform_scan_inclusive_addc(i8 signext) local_unnamed_addr
 
@@ -576,7 +590,9 @@ declare dso_local spir_func signext i16 @_Z40sub_group_non_uniform_scan_exclusiv
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIAdd %[[#short]] %[[#ScopeSubgroup]] Reduce %[[#short_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIMul %[[#short]] %[[#ScopeSubgroup]] Reduce %[[#short_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMin %[[#short]] %[[#ScopeSubgroup]] Reduce %[[#short_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMin %[[#short]] %[[#ScopeSubgroup]] Reduce %[[#short_0]] %[[#int_32]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMax %[[#short]] %[[#ScopeSubgroup]] Reduce %[[#short_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMax %[[#short]] %[[#ScopeSubgroup]] Reduce %[[#short_0]] %[[#int_32]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIAdd %[[#short]] %[[#ScopeSubgroup]] InclusiveScan %[[#short_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformIMul %[[#short]] %[[#ScopeSubgroup]] InclusiveScan %[[#short_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMin %[[#short]] %[[#ScopeSubgroup]] InclusiveScan %[[#short_0]]
@@ -594,9 +610,11 @@ define dso_local spir_kernel void @testNonUniformArithmeticUShort(i16 addrspace(
   %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
   store i16 %3, i16 addrspace(1)* %4, align 2
   %5 = tail call spir_func zeroext i16 @_Z32sub_group_non_uniform_reduce_mint(i16 zeroext 0)
+  %r5 = tail call spir_func signext i16 @__spirv_GroupNonUniformUMin(i32 3, i32 0, i16 signext 0, i32 32)
   %6 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 2
   store i16 %5, i16 addrspace(1)* %6, align 2
   %7 = tail call spir_func zeroext i16 @_Z32sub_group_non_uniform_reduce_maxt(i16 zeroext 0)
+  %r7 = tail call spir_func signext i16 @__spirv_GroupNonUniformUMax(i32 3, i32 0, i16 signext 0, i32 32)
   %8 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 3
   store i16 %7, i16 addrspace(1)* %8, align 2
   %9 = tail call spir_func zeroext i16 @_Z40sub_group_non_uniform_scan_inclusive_addt(i16 zeroext 0)
@@ -631,8 +649,10 @@ declare dso_local spir_func zeroext i16 @_Z32sub_group_non_uniform_reduce_addt(i
 declare dso_local spir_func zeroext i16 @_Z32sub_group_non_uniform_reduce_mult(i16 zeroext) local_unnamed_addr
 
 declare dso_local spir_func zeroext i16 @_Z32sub_group_non_uniform_reduce_mint(i16 zeroext) local_unnamed_addr
+declare dso_local spir_func zeroext i16 @__spirv_GroupNonUniformUMin(i32, i32, i16 signext, i32)
 
 declare dso_local spir_func zeroext i16 @_Z32sub_group_non_uniform_reduce_maxt(i16 zeroext) local_unnamed_addr
+declare dso_local spir_func zeroext i16 @__spirv_GroupNonUniformUMax(i32, i32, i16 signext, i32)
 
 declare dso_local spir_func zeroext i16 @_Z40sub_group_non_uniform_scan_inclusive_addt(i16 zeroext) local_unnamed_addr
 
@@ -963,10 +983,10 @@ declare dso_local spir_func i64 @_Z40sub_group_non_uniform_scan_exclusive_minm(i
 declare dso_local spir_func i64 @_Z40sub_group_non_uniform_scan_exclusive_maxm(i64) local_unnamed_addr
 
 ; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFAdd %[[#float]] %[[#ScopeSubgroup]] Reduce %[[#float_0]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFMul %[[#float]] %[[#ScopeSubgroup]] Reduce %[[#float_0]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFMin %[[#float]] %[[#ScopeSubgroup]] Reduce %[[#float_0]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFMax %[[#float]] %[[#ScopeSubgroup]] Reduce %[[#float_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformFAdd %[[#float]] %[[#ScopeSubgroup]] Reduce %[[#float_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformFMul %[[#float]] %[[#ScopeSubgroup]] Reduce %[[#float_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformFMin %[[#float]] %[[#ScopeSubgroup]] Reduce %[[#float_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformFMax %[[#float]] %[[#ScopeSubgroup]] Reduce %[[#float_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFAdd %[[#float]] %[[#ScopeSubgroup]] InclusiveScan %[[#float_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFMul %[[#float]] %[[#ScopeSubgroup]] InclusiveScan %[[#float_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFMin %[[#float]] %[[#ScopeSubgroup]] InclusiveScan %[[#float_0]]
@@ -979,14 +999,18 @@ declare dso_local spir_func i64 @_Z40sub_group_non_uniform_scan_exclusive_maxm(i
 
 define dso_local spir_kernel void @testNonUniformArithmeticFloat(float addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func float @_Z32sub_group_non_uniform_reduce_addf(float 0.000000e+00)
+  %r2 = tail call spir_func float @__spirv_GroupNonUniformFAdd(i32 3, i32 0, float 0.000000e+00)
   store float %2, float addrspace(1)* %0, align 4
   %3 = tail call spir_func float @_Z32sub_group_non_uniform_reduce_mulf(float 0.000000e+00)
+  %r3 = tail call spir_func float @__spirv_GroupNonUniformFMul(i32 3, i32 0, float 0.000000e+00)
   %4 = getelementptr inbounds float, float addrspace(1)* %0, i64 1
   store float %3, float addrspace(1)* %4, align 4
   %5 = tail call spir_func float @_Z32sub_group_non_uniform_reduce_minf(float 0.000000e+00)
+  %r5 = tail call spir_func float @__spirv_GroupNonUniformFMin(i32 3, i32 0, float 0.000000e+00)
   %6 = getelementptr inbounds float, float addrspace(1)* %0, i64 2
   store float %5, float addrspace(1)* %6, align 4
   %7 = tail call spir_func float @_Z32sub_group_non_uniform_reduce_maxf(float 0.000000e+00)
+  %r7 = tail call spir_func float @__spirv_GroupNonUniformFMax(i32 3, i32 0, float 0.000000e+00)
   %8 = getelementptr inbounds float, float addrspace(1)* %0, i64 3
   store float %7, float addrspace(1)* %8, align 4
   %9 = tail call spir_func float @_Z40sub_group_non_uniform_scan_inclusive_addf(float 0.000000e+00)
@@ -1017,12 +1041,16 @@ define dso_local spir_kernel void @testNonUniformArithmeticFloat(float addrspace
 }
 
 declare dso_local spir_func float @_Z32sub_group_non_uniform_reduce_addf(float) local_unnamed_addr
+declare dso_local spir_func float @__spirv_GroupNonUniformFAdd(i32, i32, float)
 
 declare dso_local spir_func float @_Z32sub_group_non_uniform_reduce_mulf(float) local_unnamed_addr
+declare dso_local spir_func float @__spirv_GroupNonUniformFMul(i32, i32, float)
 
 declare dso_local spir_func float @_Z32sub_group_non_uniform_reduce_minf(float) local_unnamed_addr
+declare dso_local spir_func float @__spirv_GroupNonUniformFMin(i32, i32, float)
 
 declare dso_local spir_func float @_Z32sub_group_non_uniform_reduce_maxf(float) local_unnamed_addr
+declare dso_local spir_func float @__spirv_GroupNonUniformFMax(i32, i32, float)
 
 declare dso_local spir_func float @_Z40sub_group_non_uniform_scan_inclusive_addf(float) local_unnamed_addr
 
@@ -1197,12 +1225,12 @@ declare dso_local spir_func double @_Z40sub_group_non_uniform_scan_exclusive_min
 declare dso_local spir_func double @_Z40sub_group_non_uniform_scan_exclusive_maxd(double) local_unnamed_addr
 
 ; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseAnd %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseOr  %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseAnd %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseOr  %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformBitwiseAnd %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformBitwiseOr  %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformBitwiseXor %[[#char]] %[[#ScopeSubgroup]] Reduce %[[#char_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformBitwiseAnd %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformBitwiseOr  %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformBitwiseXor %[[#char]] %[[#ScopeSubgroup]] InclusiveScan %[[#char_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseAnd %[[#char]] %[[#ScopeSubgroup]] ExclusiveScan %[[#char_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseOr  %[[#char]] %[[#ScopeSubgroup]] ExclusiveScan %[[#char_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#char]] %[[#ScopeSubgroup]] ExclusiveScan %[[#char_0]]
@@ -1210,20 +1238,26 @@ declare dso_local spir_func double @_Z40sub_group_non_uniform_scan_exclusive_max
 
 define dso_local spir_kernel void @testNonUniformBitwiseChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i8 @_Z32sub_group_non_uniform_reduce_andc(i8 signext 0)
+  %r2 = tail call spir_func signext i8 @__spirv_GroupNonUniformBitwiseAnd(i32 3, i32 0, i8 signext 0)
   store i8 %2, i8 addrspace(1)* %0, align 1
   %3 = tail call spir_func signext i8 @_Z31sub_group_non_uniform_reduce_orc(i8 signext 0)
+  %r3 = tail call spir_func signext i8 @__spirv_GroupNonUniformBitwiseOr(i32 3, i32 0, i8 signext 0)
   %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
   store i8 %3, i8 addrspace(1)* %4, align 1
   %5 = tail call spir_func signext i8 @_Z32sub_group_non_uniform_reduce_xorc(i8 signext 0)
+  %r5 = tail call spir_func signext i8 @__spirv_GroupNonUniformBitwiseXor(i32 3, i32 0, i8 signext 0)
   %6 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 2
   store i8 %5, i8 addrspace(1)* %6, align 1
   %7 = tail call spir_func signext i8 @_Z40sub_group_non_uniform_scan_inclusive_andc(i8 signext 0)
+  %r7 = tail call spir_func signext i8 @__spirv_GroupNonUniformBitwiseAnd(i32 3, i32 1, i8 signext 0)
   %8 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 3
   store i8 %7, i8 addrspace(1)* %8, align 1
   %9 = tail call spir_func signext i8 @_Z39sub_group_non_uniform_scan_inclusive_orc(i8 signext 0)
+  %r9 = tail call spir_func signext i8 @__spirv_GroupNonUniformBitwiseOr(i32 3, i32 1, i8 signext 0)
   %10 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 4
   store i8 %9, i8 addrspace(1)* %10, align 1
   %11 = tail call spir_func signext i8 @_Z40sub_group_non_uniform_scan_inclusive_xorc(i8 signext 0)
+  %r11 = tail call spir_func signext i8 @__spirv_GroupNonUniformBitwiseXor(i32 3, i32 1, i8 signext 0)
   %12 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 5
   store i8 %11, i8 addrspace(1)* %12, align 1
   %13 = tail call spir_func signext i8 @_Z40sub_group_non_uniform_scan_exclusive_andc(i8 signext 0)
@@ -1239,10 +1273,13 @@ define dso_local spir_kernel void @testNonUniformBitwiseChar(i8 addrspace(1)* no
 }
 
 declare dso_local spir_func signext i8 @_Z32sub_group_non_uniform_reduce_andc(i8 signext) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformBitwiseAnd(i32, i32, i8 signext)
 
 declare dso_local spir_func signext i8 @_Z31sub_group_non_uniform_reduce_orc(i8 signext) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformBitwiseOr(i32, i32, i8 signext)
 
 declare dso_local spir_func signext i8 @_Z32sub_group_non_uniform_reduce_xorc(i8 signext) local_unnamed_addr
+declare dso_local spir_func signext i8 @__spirv_GroupNonUniformBitwiseXor(i32, i32, i8 signext)
 
 declare dso_local spir_func signext i8 @_Z40sub_group_non_uniform_scan_inclusive_andc(i8 signext) local_unnamed_addr
 
@@ -1677,9 +1714,9 @@ declare dso_local spir_func i64 @_Z39sub_group_non_uniform_scan_exclusive_orm(i6
 declare dso_local spir_func i64 @_Z40sub_group_non_uniform_scan_exclusive_xorm(i64) local_unnamed_addr
 
 ; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformLogicalAnd %[[#bool]] %[[#ScopeSubgroup]] Reduce %[[#false]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformLogicalOr  %[[#bool]] %[[#ScopeSubgroup]] Reduce %[[#false]]
-; CHECK-SPIRV: %[[#]] = OpGroupNonUniformLogicalXor %[[#bool]] %[[#ScopeSubgroup]] Reduce %[[#false]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformLogicalAnd %[[#bool]] %[[#ScopeSubgroup]] Reduce %[[#false]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformLogicalOr  %[[#bool]] %[[#ScopeSubgroup]] Reduce %[[#false]]
+; CHECK-SPIRV-COUNT-2: %[[#]] = OpGroupNonUniformLogicalXor %[[#bool]] %[[#ScopeSubgroup]] Reduce %[[#false]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformLogicalAnd %[[#bool]] %[[#ScopeSubgroup]] InclusiveScan %[[#false]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformLogicalOr  %[[#bool]] %[[#ScopeSubgroup]] InclusiveScan %[[#false]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformLogicalXor %[[#bool]] %[[#ScopeSubgroup]] InclusiveScan %[[#false]]
@@ -1690,11 +1727,14 @@ declare dso_local spir_func i64 @_Z40sub_group_non_uniform_scan_exclusive_xorm(i
 
 define dso_local spir_kernel void @testNonUniformLogical(i32 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z40sub_group_non_uniform_reduce_logical_andi(i32 0)
+  %r2 = tail call spir_func i1 @__spirv_GroupNonUniformLogicalAnd(i32 3, i32 0, i1 false)
   store i32 %2, i32 addrspace(1)* %0, align 4
   %3 = tail call spir_func i32 @_Z39sub_group_non_uniform_reduce_logical_ori(i32 0)
+  %r3 = tail call spir_func i1 @__spirv_GroupNonUniformLogicalOr(i32 3, i32 0, i1 false)
   %4 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
   store i32 %3, i32 addrspace(1)* %4, align 4
   %5 = tail call spir_func i32 @_Z40sub_group_non_uniform_reduce_logical_xori(i32 0)
+  %r5 = tail call spir_func i1 @__spirv_GroupNonUniformLogicalXor(i32 3, i32 0, i1 false)
   %6 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 2
   store i32 %5, i32 addrspace(1)* %6, align 4
   %7 = tail call spir_func i32 @_Z48sub_group_non_uniform_scan_inclusive_logical_andi(i32 0)
@@ -1719,10 +1759,13 @@ define dso_local spir_kernel void @testNonUniformLogical(i32 addrspace(1)* nocap
 }
 
 declare dso_local spir_func i32 @_Z40sub_group_non_uniform_reduce_logical_andi(i32) local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformLogicalAnd(i32, i32, i1)
 
 declare dso_local spir_func i32 @_Z39sub_group_non_uniform_reduce_logical_ori(i32) local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformLogicalOr(i32, i32, i1)
 
 declare dso_local spir_func i32 @_Z40sub_group_non_uniform_reduce_logical_xori(i32) local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformLogicalXor(i32, i32, i1)
 
 declare dso_local spir_func i32 @_Z48sub_group_non_uniform_scan_inclusive_logical_andi(i32) local_unnamed_addr
 

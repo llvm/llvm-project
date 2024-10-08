@@ -2022,7 +2022,8 @@
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_ZdaPv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_ZdaPvSt11align_val_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_ZdlPv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'wIMP', 'is_defined': False, 'name': '_ZdlPvSt11align_val_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'wIMP', 'is_defined': False, 'name': '_ZdlPvm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'wIMP', 'is_defined': False, 'name': '_ZdlPvmSt11align_val_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_Znam', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_ZnamSt11align_val_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_Znwm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

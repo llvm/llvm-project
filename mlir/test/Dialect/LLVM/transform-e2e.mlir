@@ -1,21 +1,23 @@
-// RUN: mlir-opt %s --transform-interpreter -test-transform-dialect-erase-schedule --test-lower-to-llvm --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter="debug-payload-root-tag=payload" -test-transform-dialect-erase-schedule --test-lower-to-llvm --split-input-file | FileCheck %s
 
 // CHECK-LABEL: llvm.func @matmul_tensors
-func.func @matmul_tensors(
-  %arg0: tensor<2x4xf32>, %arg1: tensor<4x6xf32>, %arg2: tensor<2x6xf32>)
-    -> tensor<2x6xf32> {
-// CHECK-NOT: linalg
-// CHECK: llvm.intr.fmuladd{{.*}}
-  %0 = linalg.matmul  ins(%arg0, %arg1: tensor<2x4xf32>, tensor<4x6xf32>)
-                     outs(%arg2: tensor<2x6xf32>)
-    -> tensor<2x6xf32>
-  return %0 : tensor<2x6xf32>
+module @payload attributes { transform.target_tag = "payload" } {
+  func.func @matmul_tensors(
+    %arg0: tensor<2x4xf32>, %arg1: tensor<4x6xf32>, %arg2: tensor<2x6xf32>)
+      -> tensor<2x6xf32> {
+  // CHECK-NOT: linalg
+  // CHECK: llvm.intr.fmuladd{{.*}}
+    %0 = linalg.matmul  ins(%arg0, %arg1: tensor<2x4xf32>, tensor<4x6xf32>)
+                       outs(%arg2: tensor<2x6xf32>)
+      -> tensor<2x6xf32>
+    return %0 : tensor<2x6xf32>
+  }
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.consumed}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op : (!transform.any_op) -> !transform.any_op
-    %1, %loops:3 = transform.structured.tile_using_for %0 [2, 2, 2] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [2, 2, 2] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     %2 = transform.get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op
     %b = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap}

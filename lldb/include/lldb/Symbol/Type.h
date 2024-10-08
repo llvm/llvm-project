@@ -21,6 +21,8 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 #include <set>
@@ -60,11 +62,8 @@ struct CompilerContext {
   CompilerContextKind kind;
   ConstString name;
 };
-
-/// Match \p context_chain against \p pattern, which may contain "Any"
-/// kinds. The \p context_chain should *not* contain any "Any" kinds.
-bool contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
-                    llvm::ArrayRef<CompilerContext> pattern);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                              const CompilerContext &rhs);
 
 FLAGS_ENUM(TypeQueryOptions){
     e_none = 0u,
@@ -75,10 +74,16 @@ FLAGS_ENUM(TypeQueryOptions){
     /// If set, TypeQuery::m_context is a clang module compiler context. If not
     /// set TypeQuery::m_context is normal type lookup context.
     e_module_search = (1u << 1),
+    /// If set, the query will ignore all Module entries in the type context,
+    /// even for exact matches.
+    e_ignore_modules = (1u << 2),
+    /// If set, all anonymous namespaces in the context must be matched exactly
+    /// by the pattern. Otherwise, superfluous namespaces are skipped.
+    e_strict_namespaces = (1u << 3),
     /// When true, the find types call should stop the query as soon as a single
     /// matching type is found. When false, the type query should find all
     /// matching types.
-    e_find_one = (1u << 2),
+    e_find_one = (1u << 4),
 };
 LLDB_MARK_AS_BITMASK_ENUM(TypeQueryOptions)
 
@@ -260,6 +265,25 @@ public:
   bool LanguageMatches(lldb::LanguageType language) const;
 
   bool GetExactMatch() const { return (m_options & e_exact_match) != 0; }
+
+  bool GetIgnoreModules() const { return (m_options & e_ignore_modules) != 0; }
+  void SetIgnoreModules(bool b) {
+    if (b)
+      m_options |= e_ignore_modules;
+    else
+      m_options &= ~e_ignore_modules;
+  }
+
+  bool GetStrictNamespaces() const {
+    return (m_options & e_strict_namespaces) != 0;
+  }
+  void SetStrictNamespaces(bool b) {
+    if (b)
+      m_options |= e_strict_namespaces;
+    else
+      m_options &= ~e_strict_namespaces;
+  }
+
   /// The \a m_context can be used in two ways: normal types searching with
   /// the context containing a stanadard declaration context for a type, or
   /// with the context being more complete for exact matches in clang modules.
@@ -273,7 +297,7 @@ public:
     if (b)
       m_options |= e_find_one;
     else
-      m_options &= (e_exact_match | e_find_one);
+      m_options &= ~e_find_one;
   }
 
   /// Access the internal compiler context array.
@@ -401,7 +425,9 @@ public:
     /// This type is the type whose UID is m_encoding_uid as an atomic type.
     eEncodingIsAtomicUID,
     /// This type is the synthetic type whose UID is m_encoding_uid.
-    eEncodingIsSyntheticUID
+    eEncodingIsSyntheticUID,
+    /// This type is a signed pointer.
+    eEncodingIsLLVMPtrAuthUID
   };
 
   enum class ResolveState : unsigned char {
@@ -490,12 +516,37 @@ public:
 
   static int Compare(const Type &a, const Type &b);
 
+  // Represents a parsed type name coming out of GetTypeScopeAndBasename. The
+  // structure holds StringRefs pointing to portions of the original name, and
+  // so must not be used after the name is destroyed.
+  struct ParsedName {
+    lldb::TypeClass type_class = lldb::eTypeClassAny;
+
+    // Scopes of the type, starting with the outermost. Absolute type references
+    // have a "::" as the first scope.
+    llvm::SmallVector<llvm::StringRef> scope;
+
+    llvm::StringRef basename;
+
+    friend bool operator==(const ParsedName &lhs, const ParsedName &rhs) {
+      return lhs.type_class == rhs.type_class && lhs.scope == rhs.scope &&
+             lhs.basename == rhs.basename;
+    }
+
+    friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                         const ParsedName &name) {
+      return os << llvm::formatv(
+                 "Type::ParsedName({0:x}, [{1}], {2})",
+                 llvm::to_underlying(name.type_class),
+                 llvm::make_range(name.scope.begin(), name.scope.end()),
+                 name.basename);
+    }
+  };
   // From a fully qualified typename, split the type into the type basename and
   // the remaining type scope (namespaces/classes).
-  static bool GetTypeScopeAndBasename(llvm::StringRef name,
-                                      llvm::StringRef &scope,
-                                      llvm::StringRef &basename,
-                                      lldb::TypeClass &type_class);
+  static std::optional<ParsedName>
+  GetTypeScopeAndBasename(llvm::StringRef name);
+
   void SetEncodingType(Type *encoding_type) { m_encoding_type = encoding_type; }
 
   uint32_t GetEncodingMask();

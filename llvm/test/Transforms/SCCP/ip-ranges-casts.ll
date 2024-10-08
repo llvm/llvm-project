@@ -4,7 +4,7 @@
 ; x = [100, 301)
 define internal i1 @f.trunc(i32 %x) {
 ; CHECK-LABEL: define internal i1 @f.trunc(
-; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-SAME: i32 range(i32 100, 301) [[X:%.*]]) {
 ; CHECK-NEXT:    [[T_1:%.*]] = trunc nuw nsw i32 [[X]] to i16
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i16 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i16 [[T_1]], 101
@@ -60,7 +60,7 @@ define i1 @caller1() {
 ; x = [100, 301)
 define internal i1 @f.zext(i32 %x, i32 %y) {
 ; CHECK-LABEL: define internal i1 @f.zext(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-SAME: i32 range(i32 100, 301) [[X:%.*]], i32 range(i32 -120, 901) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[T_1:%.*]] = zext nneg i32 [[X]] to i64
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[T_1]], 101
@@ -114,7 +114,7 @@ define i1 @caller.zext() {
 ; x = [100, 301)
 define internal i1 @f.sext(i32 %x, i32 %y) {
 ; CHECK-LABEL: define internal i1 @f.sext(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-SAME: i32 range(i32 100, 301) [[X:%.*]], i32 range(i32 -120, 901) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[T_1:%.*]] = zext nneg i32 [[X]] to i64
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[T_1]], 101
@@ -166,8 +166,8 @@ define i1 @caller.sext() {
 ; There's nothing we can do besides going to the full range or overdefined.
 define internal i1 @f.fptosi(i32 %x) {
 ; CHECK-LABEL: define internal i1 @f.fptosi(
-; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TO_DOUBLE:%.*]] = sitofp i32 [[X]] to double
+; CHECK-SAME: i32 range(i32 100, 301) [[X:%.*]]) {
+; CHECK-NEXT:    [[TO_DOUBLE:%.*]] = uitofp nneg i32 [[X]] to double
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double 0.000000e+00, [[TO_DOUBLE]]
 ; CHECK-NEXT:    [[TO_I32:%.*]] = fptosi double [[ADD]] to i32
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[TO_I32]], 300
@@ -208,8 +208,8 @@ define i1 @caller.fptosi() {
 ; There's nothing we can do besides going to the full range or overdefined.
 define internal i1 @f.fpext(i16 %x) {
 ; CHECK-LABEL: define internal i1 @f.fpext(
-; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[TO_FLOAT:%.*]] = sitofp i16 [[X]] to float
+; CHECK-SAME: i16 range(i16 100, 301) [[X:%.*]]) {
+; CHECK-NEXT:    [[TO_FLOAT:%.*]] = uitofp nneg i16 [[X]] to float
 ; CHECK-NEXT:    [[TO_DOUBLE:%.*]] = fpext float [[TO_FLOAT]] to double
 ; CHECK-NEXT:    [[TO_I64:%.*]] = fptoui float [[TO_FLOAT]] to i64
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i64 [[TO_I64]], 300
@@ -251,7 +251,7 @@ define i1 @caller.fpext() {
 ; There's nothing we can do besides going to the full range or overdefined.
 define internal i1 @f.inttoptr.ptrtoint(i64 %x) {
 ; CHECK-LABEL: define internal i1 @f.inttoptr.ptrtoint(
-; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-SAME: i64 range(i64 100, 301) [[X:%.*]]) {
 ; CHECK-NEXT:    [[TO_PTR:%.*]] = inttoptr i64 [[X]] to ptr
 ; CHECK-NEXT:    [[TO_I64:%.*]] = ptrtoint ptr [[TO_PTR]] to i64
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i64 [[TO_I64]], 300
@@ -293,7 +293,7 @@ define i1 @int_range_to_double_cast(i32 %a) {
 ; CHECK-LABEL: define i1 @int_range_to_double_cast(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], 255
-; CHECK-NEXT:    [[T4:%.*]] = sitofp i32 [[R]] to double
+; CHECK-NEXT:    [[T4:%.*]] = uitofp nneg i32 [[R]] to double
 ; CHECK-NEXT:    [[T10:%.*]] = fadd double 0.000000e+00, [[T4]]
 ; CHECK-NEXT:    [[T11:%.*]] = fcmp olt double [[T4]], [[T10]]
 ; CHECK-NEXT:    ret i1 [[T11]]
@@ -325,7 +325,7 @@ entry:
 
 define internal i64 @f.sext_to_zext(i32 %t) {
 ; CHECK-LABEL: define internal range(i64 0, 2) i64 @f.sext_to_zext(
-; CHECK-SAME: i32 [[T:%.*]]) {
+; CHECK-SAME: i32 range(i32 0, 2) [[T:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[A]]
 ;

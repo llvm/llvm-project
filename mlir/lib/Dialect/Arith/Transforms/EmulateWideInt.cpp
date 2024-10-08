@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1123,7 +1122,8 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
 }
 
 void arith::populateArithWideIntEmulationPatterns(
-    WideIntEmulationConverter &typeConverter, RewritePatternSet &patterns) {
+    const WideIntEmulationConverter &typeConverter,
+    RewritePatternSet &patterns) {
   // Populate `func.*` conversion patterns.
   populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                  typeConverter);

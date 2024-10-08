@@ -1,6 +1,6 @@
-// RUN: not --crash llvm-mc -triple i386-pc-win32 -filetype=obj < %s 2>&1 |  FileCheck %s
+// RUN: not llvm-mc -triple i386-pc-win32 -filetype=obj < %s 2>&1 |  FileCheck %s
 
-// CHECK: conflicting sections for symbol
+// CHECK: <unknown>:0: error: invalid symbol redefinition
 
         .section .xyz
         .global bar

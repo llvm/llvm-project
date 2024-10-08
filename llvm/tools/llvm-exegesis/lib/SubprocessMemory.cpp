@@ -126,7 +126,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
   int *AuxiliaryMemoryMapping =
       (int *)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED,
                   AuxiliaryMemoryFileDescriptor, 0);
-  if ((intptr_t)AuxiliaryMemoryMapping == -1)
+  if (reinterpret_cast<intptr_t>(AuxiliaryMemoryMapping) == -1)
     return make_error<Failure>("Mapping auxiliary memory failed");
   AuxiliaryMemoryMapping[0] = CounterFileDescriptor;
   for (auto &[Name, MemVal] : MemoryDefinitions) {
@@ -143,7 +143,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 }
 
 SubprocessMemory::~SubprocessMemory() {
-  for (std::string SharedMemoryName : SharedMemoryNames) {
+  for (const std::string &SharedMemoryName : SharedMemoryNames) {
     if (shm_unlink(SharedMemoryName.c_str()) != 0) {
       errs() << "Failed to unlink shared memory section: " << strerror(errno)
              << "\n";

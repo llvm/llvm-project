@@ -20,9 +20,9 @@ if.end:                                           ; preds = %if.then, %entry
   br i1 %tobool1, label %if.else, label %if.then2, !dbg !23
 
 ; CHECK-LABEL: if.then2:
-; CHECK: call void @llvm.dbg.value({{.+}}, metadata ![[B:[0-9]+]], metadata !DIExpression())
-; CHECK: call void @llvm.dbg.value({{.+}}, metadata ![[B:[0-9]+]], metadata !DIExpression())
-; CHECK-NOT: call void @llvm.dbg.value({{.+}}, metadata ![[B]], metadata !DIExpression())
+; CHECK: #dbg_value({{.+}}, ![[B:[0-9]+]], !DIExpression(),
+; CHECK: #dbg_value({{.+}}, ![[B:[0-9]+]], !DIExpression(),
+; CHECK-NOT: #dbg_value({{.+}}, ![[B]], !DIExpression(),
 if.then2:                                         ; preds = %if.end
   call void @llvm.dbg.value(metadata i32 4, metadata !24, metadata !DIExpression()), !dbg !13
   br label %if.end3, !dbg !25

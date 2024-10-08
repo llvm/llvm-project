@@ -224,14 +224,14 @@ define <16 x i16> @concat_bitcast_v4i32_v16i16(<4 x i32> %a0, <4 x i32> %a1) {
   ret <16 x i16> %r
 }
 
-; negative - multiuse
+; multiuse - ensure cost of any duplicated casts are worth it
 
 define <8 x i16> @concat_trunc_v4i32_v8i16_multiuse(<4 x i32> %a0, <4 x i32> %a1, ptr %a2) {
 ; CHECK-LABEL: define <8 x i16> @concat_trunc_v4i32_v8i16_multiuse(
 ; CHECK-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]], ptr [[A2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[X0:%.*]] = trunc <4 x i32> [[A0]] to <4 x i16>
-; CHECK-NEXT:    [[X1:%.*]] = trunc <4 x i32> [[A1]] to <4 x i16>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[X0]], <4 x i16> [[X1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A0]], <4 x i32> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = trunc <8 x i32> [[TMP1]] to <8 x i16>
 ; CHECK-NEXT:    store <4 x i16> [[X0]], ptr [[A2]], align 8
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
@@ -240,6 +240,24 @@ define <8 x i16> @concat_trunc_v4i32_v8i16_multiuse(<4 x i32> %a0, <4 x i32> %a1
   %r = shufflevector <4 x i16> %x0, <4 x i16> %x1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <4 x i16> %x0, ptr %a2
   ret <8 x i16> %r
+}
+
+; negative - multiuse - ensure cost of any duplicated casts are worth it
+
+define <16 x i8> @concat_trunc_v8i64_v16i8_multiuse(<8 x i64> %a0, <8 x i64> %a1, ptr %a2) {
+; CHECK-LABEL: define <16 x i8> @concat_trunc_v8i64_v16i8_multiuse(
+; CHECK-SAME: <8 x i64> [[A0:%.*]], <8 x i64> [[A1:%.*]], ptr [[A2:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X0:%.*]] = trunc <8 x i64> [[A0]] to <8 x i8>
+; CHECK-NEXT:    [[X1:%.*]] = trunc <8 x i64> [[A1]] to <8 x i8>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i8> [[X0]], <8 x i8> [[X1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 4, i32 15>
+; CHECK-NEXT:    store <8 x i8> [[X0]], ptr [[A2]], align 8
+; CHECK-NEXT:    ret <16 x i8> [[R]]
+;
+  %x0 = trunc <8 x i64> %a0 to <8 x i8>
+  %x1 = trunc <8 x i64> %a1 to <8 x i8>
+  %r = shufflevector <8 x i8> %x0, <8 x i8> %x1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 4, i32 15>
+  store <8 x i8> %x0, ptr %a2
+  ret <16 x i8> %r
 }
 
 ; negative - bitcasts (unscalable higher element count)

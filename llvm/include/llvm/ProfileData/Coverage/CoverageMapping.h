@@ -462,10 +462,7 @@ public:
 
   CounterMappingRegion getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
-    unsigned NumConditions = Region.getDecisionParams().NumConditions;
-    assert(NumConditions != 0 &&
-           "In MC/DC, NumConditions should never be zero!");
-    return NumConditions;
+    return Region.getDecisionParams().NumConditions;
   }
   unsigned getNumTestVectors() const { return TV.size(); }
   bool isCondFolded(unsigned Condition) const { return Folded[Condition]; }
@@ -663,7 +660,7 @@ class CounterMappingContext {
 
 public:
   CounterMappingContext(ArrayRef<CounterExpression> Expressions,
-                        ArrayRef<uint64_t> CounterValues = std::nullopt)
+                        ArrayRef<uint64_t> CounterValues = {})
       : Expressions(Expressions), CounterValues(CounterValues) {}
 
   void setCounts(ArrayRef<uint64_t> Counts) { CounterValues = Counts; }
@@ -680,7 +677,8 @@ public:
   /// pairs.
   Expected<MCDCRecord>
   evaluateMCDCRegion(const CounterMappingRegion &Region,
-                     ArrayRef<const CounterMappingRegion *> Branches);
+                     ArrayRef<const CounterMappingRegion *> Branches,
+                     bool IsVersion11);
 
   unsigned getMaxCounterID(const Counter &C) const;
 };
@@ -972,7 +970,7 @@ public:
   /// Ignores non-instrumented object files unless all are not instrumented.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       vfs::FileSystem &FS, ArrayRef<StringRef> Arches = std::nullopt,
+       vfs::FileSystem &FS, ArrayRef<StringRef> Arches = {},
        StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
        bool CheckBinaryIDs = false);

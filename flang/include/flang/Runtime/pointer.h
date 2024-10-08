@@ -115,6 +115,11 @@ bool RTDECL(PointerIsAssociated)(const Descriptor &);
 bool RTDECL(PointerIsAssociatedWith)(
     const Descriptor &, const Descriptor *target);
 
+// Fortran POINTERs are allocated with an extra validation word after their
+// payloads in order to detect erroneous deallocations later.
+RT_API_ATTRS void *AllocateValidatedPointerPayload(std::size_t);
+RT_API_ATTRS bool ValidatePointerPayload(const ISO::CFI_cdesc_t &);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_POINTER_H_

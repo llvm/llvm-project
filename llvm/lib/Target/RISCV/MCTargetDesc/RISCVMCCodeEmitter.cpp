@@ -126,6 +126,10 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
   if (MI.getOpcode() == RISCV::PseudoTAIL) {
     Func = MI.getOperand(0);
     Ra = RISCV::X6;
+    // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
+    // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
+    if (STI.hasFeature(RISCV::FeatureStdExtZicfilp))
+      Ra = RISCV::X7;
   } else if (MI.getOpcode() == RISCV::PseudoCALLReg) {
     Func = MI.getOperand(1);
     Ra = MI.getOperand(0).getReg();
@@ -168,7 +172,7 @@ void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI,
   const RISCVMCExpr *Expr = dyn_cast<RISCVMCExpr>(SrcSymbol.getExpr());
   MCRegister Link = MI.getOperand(0).getReg();
   MCRegister Dest = MI.getOperand(1).getReg();
-  MCRegister Imm = MI.getOperand(2).getImm();
+  int64_t Imm = MI.getOperand(2).getImm();
   Fixups.push_back(MCFixup::create(
       0, Expr, MCFixupKind(RISCV::fixup_riscv_tlsdesc_call), MI.getLoc()));
   MCInst Call =
@@ -279,13 +283,18 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
     Offset = 4;
   }
 
+  // Save the number fixups.
+  size_t FixupStartIndex = Fixups.size();
+
   // Emit an unconditional jump to the destination.
   MCInst TmpInst =
       MCInstBuilder(RISCV::JAL).addReg(RISCV::X0).addOperand(SrcSymbol);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
   support::endian::write(CB, Binary, llvm::endianness::little);
 
-  Fixups.clear();
+  // Drop any fixup added so we can add the correct one.
+  Fixups.resize(FixupStartIndex);
+
   if (SrcSymbol.isExpr()) {
     Fixups.push_back(MCFixup::create(Offset, SrcSymbol.getExpr(),
                                      MCFixupKind(RISCV::fixup_riscv_jal),

@@ -58,6 +58,7 @@ driver_executable("clang") {
     "//clang/lib/FrontendTool",
     "//clang/lib/Headers",
     "//clang/tools/clang-linker-wrapper",
+    "//clang/tools/clang-nvlink-wrapper",
     "//clang/tools/clang-offload-bundler",
     "//clang/tools/clang-offload-packager",
     "//llvm/include/llvm/Config:llvm-config",

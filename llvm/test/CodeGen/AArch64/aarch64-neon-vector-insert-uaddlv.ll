@@ -146,11 +146,11 @@ define void @insert_vec_v6i64_uaddlv_from_v4i32(ptr %0) {
 ; CHECK-LABEL: insert_vec_v6i64_uaddlv_from_v4i32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    movi.2d v2, #0000000000000000
 ; CHECK-NEXT:    uaddlv.4s d1, v0
-; CHECK-NEXT:    str d2, [x0, #16]
 ; CHECK-NEXT:    mov.d v0[0], v1[0]
+; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    ucvtf.2d v0, v0
+; CHECK-NEXT:    str d1, [x0, #16]
 ; CHECK-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -483,5 +483,97 @@ entry:
   %1 = insertelement <4 x i32> zeroinitializer, i32 %vaddlv, i64 2
   %2 = uitofp <4 x i32> %1 to <4 x float>
   store <4 x float> %2, ptr %0, align 8
+  ret void
+}
+
+define void @store_saddlv_v8i8(ptr %H, <8 x i8> %sum_h, i32 %idx) {
+; CHECK-LABEL: store_saddlv_v8i8:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    saddlv.8b h0, v0
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sbfiz x8, x1, #3, #32
+; CHECK-NEXT:    str s0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %vaddlvq_s32.i = tail call i32 @llvm.aarch64.neon.saddlv.i32.v8i8(<8 x i8> %sum_h)
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i64, ptr %H, i64 %idxprom
+  store i32 %vaddlvq_s32.i, ptr %arrayidx, align 8
+  ret void
+}
+
+define void @store_saddlv_v16i8(ptr %H, <16 x i8> %sum_h, i32 %idx) {
+; CHECK-LABEL: store_saddlv_v16i8:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    saddlv.16b h0, v0
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sbfiz x8, x1, #3, #32
+; CHECK-NEXT:    str s0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %vaddlvq_s32.i = tail call i32 @llvm.aarch64.neon.saddlv.i32.v16i8(<16 x i8> %sum_h)
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i64, ptr %H, i64 %idxprom
+  store i32 %vaddlvq_s32.i, ptr %arrayidx, align 8
+  ret void
+}
+
+define void @store_saddlv_v4i16(ptr %H, <4 x i16> %sum_h, i32 %idx) {
+; CHECK-LABEL: store_saddlv_v4i16:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    saddlv.4h s0, v0
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sbfiz x8, x1, #3, #32
+; CHECK-NEXT:    str s0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %vaddlvq_s32.i = tail call i32 @llvm.aarch64.neon.saddlv.i32.v4i16(<4 x i16> %sum_h)
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i64, ptr %H, i64 %idxprom
+  store i32 %vaddlvq_s32.i, ptr %arrayidx, align 8
+  ret void
+}
+
+define void @store_saddlv_v8i16(ptr %H, <8 x i16> %sum_h, i32 %idx) {
+; CHECK-LABEL: store_saddlv_v8i16:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    saddlv.8h s0, v0
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sbfiz x8, x1, #3, #32
+; CHECK-NEXT:    str s0, [x0, x8]
+; CHECK-NEXT:    ret
+entry:
+  %vaddlvq_s32.i = tail call i32 @llvm.aarch64.neon.saddlv.i32.v8i16(<8 x i16> %sum_h)
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i64, ptr %H, i64 %idxprom
+  store i32 %vaddlvq_s32.i, ptr %arrayidx, align 8
+  ret void
+}
+
+define void @store_saddlv_v2i32(ptr %H, <2 x i32> %sum_h, i32 %idx) {
+; CHECK-LABEL: store_saddlv_v2i32:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    saddlp.1d v0, v0
+; CHECK-NEXT:    str d0, [x0, w1, sxtw #3]
+; CHECK-NEXT:    ret
+entry:
+  %vaddlvq_s32.i = tail call i64 @llvm.aarch64.neon.saddlv.i64.v2i32(<2 x i32> %sum_h)
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i64, ptr %H, i64 %idxprom
+  store i64 %vaddlvq_s32.i, ptr %arrayidx, align 8
+  ret void
+}
+
+define void @store_saddlv_v4i32(ptr %H, <4 x i32> %sum_h, i32 %idx) {
+; CHECK-LABEL: store_saddlv_v4i32:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    saddlv.4s d0, v0
+; CHECK-NEXT:    str d0, [x0, w1, sxtw #3]
+; CHECK-NEXT:    ret
+entry:
+  %vaddlvq_s32.i = tail call i64 @llvm.aarch64.neon.saddlv.i64.v4i32(<4 x i32> %sum_h)
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i64, ptr %H, i64 %idxprom
+  store i64 %vaddlvq_s32.i, ptr %arrayidx, align 8
   ret void
 }

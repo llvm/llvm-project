@@ -90,7 +90,7 @@ namespace aliastemplateinst {
   template<typename T> struct A { };
   template<typename T> using APtr = A<T*>; // expected-note{{previous use is here}}
 
-  template struct APtr<int>; // expected-error{{type alias template 'APtr' cannot be referenced with a struct specifier}}
+  template struct APtr<int>; // expected-error{{alias template 'APtr' cannot be referenced with the 'struct' specifier}}
 }
 
 namespace DontDiagnoseInvalidTest {

@@ -36,8 +36,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __starts_with {
-struct __fn {
+struct __starts_with {
   template <input_iterator _Iter1,
             sentinel_for<_Iter1> _Sent1,
             input_iterator _Iter2,
@@ -65,9 +64,10 @@ struct __fn {
       }
 
       if constexpr (contiguous_iterator<_Iter1> && contiguous_iterator<_Iter2>) {
+        auto __end1 = ranges::next(__first1, __n2);
         return ranges::equal(
             std::move(__first1),
-            ranges::next(__first1, __n2),
+            std::move(__end1),
             std::move(__first2),
             std::move(__last2),
             std::ref(__pred),
@@ -128,10 +128,9 @@ struct __fn {
                .in2 == ranges::end(__range2);
   }
 };
-} // namespace __starts_with
 
 inline namespace __cpo {
-inline constexpr auto starts_with = __starts_with::__fn{};
+inline constexpr auto starts_with = __starts_with{};
 } // namespace __cpo
 } // namespace ranges
 

@@ -7,8 +7,8 @@ from lldbsuite.test import lldbutil
 class StaticInitializers(TestBase):
     @expectedFailureAll(
         archs="aarch64",
-        oslist=["freebsd", "linux"],
-        bugnumber="https://bugs.llvm.org/show_bug.cgi?id=44053",
+        oslist=["freebsd"],
+        bugnumber="llvm.org/pr44053",
     )
     def test(self):
         """Test a static initializer."""
@@ -35,7 +35,7 @@ class StaticInitializers(TestBase):
         self.expect(
             "expr -p -- struct Foo2 { Foo2() { do_abort(); } }; Foo2 f;",
             error=True,
-            substrs=["error: couldn't run static initializer:"],
+            substrs=["couldn't run static initializer:"],
         )
 
     def test_without_process(self):

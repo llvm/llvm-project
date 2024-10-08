@@ -128,11 +128,8 @@ protected:
 } // namespace serialized_diags
 } // namespace clang
 
-namespace std {
-
 template <>
-struct is_error_code_enum<clang::serialized_diags::SDError> : std::true_type {};
-
-} // namespace std
+struct std::is_error_code_enum<clang::serialized_diags::SDError>
+    : std::true_type {};
 
 #endif // LLVM_CLANG_FRONTEND_SERIALIZEDDIAGNOSTICREADER_H

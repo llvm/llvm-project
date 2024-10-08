@@ -169,6 +169,10 @@ private:
       if (auto Values = scalarValues(N))
         F.IgnoreHeader = std::move(*Values);
     });
+    Dict.handle("AnalyzeAngledIncludes", [&](Node &N) {
+      if (auto Value = boolValue(N, "AnalyzeAngledIncludes"))
+        F.AnalyzeAngledIncludes = *Value;
+    });
     Dict.parse(N);
   }
 
@@ -225,6 +229,10 @@ private:
     Dict.handle("AllScopes", [&](Node &N) {
       if (auto AllScopes = boolValue(N, "AllScopes"))
         F.AllScopes = *AllScopes;
+    });
+    Dict.handle("ArgumentLists", [&](Node &N) {
+      if (auto ArgumentLists = scalarValue(N, "ArgumentLists"))
+        F.ArgumentLists = *ArgumentLists;
     });
     Dict.parse(N);
   }

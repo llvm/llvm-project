@@ -9,10 +9,11 @@ define void @mainTest(ptr %ptr) #0  {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[BAIL_OUT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[OP_RDX3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])

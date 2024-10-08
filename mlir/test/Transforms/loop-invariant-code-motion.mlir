@@ -923,6 +923,120 @@ func.func @speculate_ceildivsi_const(
   return
 }
 
+func.func @no_speculate_divui_range(
+// CHECK-LABEL: @no_speculate_divui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_range(
+// CHECK-LABEL: @no_speculate_divsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = -1: i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK-COUNT-2: arith.divsi
+    %val0 = arith.divsi %num, %denom0 : i8
+    %val1 = arith.divsi %num, %denom1 : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui_range(
+// CHECK-LABEL: @no_speculate_ceildivui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_range(
+// CHECK-LABEL: @no_speculate_ceildivsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = -1 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = 127 : i8, smin = 0 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK-COUNT-2: arith.ceildivsi
+    %val0 = arith.ceildivsi %num, %denom0 : i8
+    %val1 = arith.ceildivsi %num, %denom1 : i8
+  }
+
+  return
+}
+
+func.func @speculate_divui_range(
+// CHECK-LABEL: @speculate_divui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 1 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.divui
+// CHECK: scf.for
+    %val = arith.divui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @speculate_divsi_range(
+// CHECK-LABEL: @speculate_divsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK-COUNT-2: arith.divsi
+// CHECK: scf.for
+    %val0 = arith.divsi %num, %denom0 : i8
+    %val1 = arith.divsi %num, %denom1 : i8
+
+  }
+
+  return
+}
+
+func.func @speculate_ceildivui_range(
+// CHECK-LABEL: @speculate_ceildivui_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom = test.with_bounds {smax = 127 : i8, smin = -128 : i8, umax = 255 : i8, umin = 1 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.ceildivui
+// CHECK: scf.for
+    %val = arith.ceildivui %num, %denom : i8
+  }
+
+  return
+}
+
+func.func @speculate_ceildivsi_range(
+// CHECK-LABEL: @speculate_ceildivsi_range(
+    %num: i8, %lb: index, %ub: index, %step: index) {
+  %denom0 = test.with_bounds {smax = 127 : i8, smin = 1 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  %denom1 = test.with_bounds {smax = -2 : i8, smin = -128 : i8, umax = 255 : i8, umin = 0 : i8} : i8
+  scf.for %i = %lb to %ub step %step {
+// CHECK-COUNT-2: arith.ceildivsi
+// CHECK: scf.for
+    %val0 = arith.ceildivsi %num, %denom0 : i8
+    %val1 = arith.ceildivsi %num, %denom1 : i8
+
+  }
+
+  return
+}
+
 // -----
 
 func.func @speculate_static_pack_and_unpack(%source: tensor<128x256xf32>,
@@ -1003,4 +1117,95 @@ func.func @hoist_from_scf_while(%arg0: i32, %arg1: i32) -> i32 {
     scf.yield %added2 : i32
   }
   return %0 : i32
+}
+
+// -----
+
+#trait = {
+  indexing_maps = [
+    affine_map<(m, n, k) -> (m, k)>,
+    affine_map<(m, n, k) -> (k, n)>,
+    affine_map<(m, n, k) -> (m, n)>
+  ],
+  iterator_types = ["parallel", "parallel", "reduction"] 
+}
+
+// CHECK-LABEL: func @hoist_linalg_ops
+// CHECK: linalg.generic
+// CHECK: scf.for
+// CHECK-NOT: linalg.generic
+// CHECK: tensor.insert_slice
+// CHECK: scf.yield
+func.func @hoist_linalg_ops(%a : tensor<128x128xf32>, 
+                            %b : tensor<128x128xf32>, 
+                            %c: tensor<128x128xf32>,
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %output : tensor<?x128xf32>) -> tensor<?x128xf32> {
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %output) 
+                                            -> tensor<?x128xf32> {
+    %compute = linalg.generic #trait
+               ins(%a, %b : tensor<128x128xf32>, tensor<128x128xf32>) 
+               outs(%c : tensor<128x128xf32>) {
+    ^bb0(%in : f32, %in2 : f32, %in3 : f32):
+      %mul = arith.mulf %in, %in2 : f32
+      %add = arith.addf %mul, %in3 : f32
+      linalg.yield %in3 : f32
+    } -> tensor<128x128xf32>
+
+    %newacc = tensor.insert_slice %compute into 
+                                  %output[%i, 0][128, 128][1, 1] 
+                                  : tensor<128x128xf32> into tensor<?x128xf32>
+    scf.yield %newacc : tensor<?x128xf32>
+  }
+
+  func.return %final : tensor<?x128xf32>
+}
+
+// -----
+
+#trait = {
+  indexing_maps = [
+    affine_map<(m, n, k) -> (m, k)>,
+    affine_map<(m, n, k) -> (k, n)>,
+    affine_map<(m, n, k) -> (m, n)>
+  ],
+  iterator_types = ["parallel", "parallel", "reduction"] 
+}
+
+// CHECK-LABEL: func @hoist_linalg_ops_div_by_zero
+// CHECK-NOT: linalg.generic
+// CHECK: scf.for
+// CHECK: linalg.generic
+// CHECK: tensor.insert_slice
+// CHECK: scf.yield
+func.func @hoist_linalg_ops_div_by_zero(%a : tensor<128x128xi32>, 
+                            %b : tensor<128x128xi32>, 
+                            %c: tensor<128x128xi32>,
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %output : tensor<?x128xi32>) -> tensor<?x128xi32> {
+  %cst0 = arith.constant 0 : i32
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %output) 
+                                            -> tensor<?x128xi32> {
+    %compute = linalg.generic #trait
+               ins(%a, %b : tensor<128x128xi32>, tensor<128x128xi32>) 
+               outs(%c : tensor<128x128xi32>) {
+    ^bb0(%in : i32, %in2 : i32, %in3 : i32):
+      %div = arith.divui %in, %in2 : i32
+      %add = arith.addi %div, %in3 : i32
+      linalg.yield %in3 : i32
+    } -> tensor<128x128xi32>
+
+    %newacc = tensor.insert_slice %compute into 
+                                  %output[%i, 0][128, 128][1, 1] 
+                                  : tensor<128x128xi32> into tensor<?x128xi32>
+    scf.yield %newacc : tensor<?x128xi32>
+  }
+
+  func.return %final : tensor<?x128xi32>
 }

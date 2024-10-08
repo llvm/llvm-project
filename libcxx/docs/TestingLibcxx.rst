@@ -1,11 +1,11 @@
+.. _testing:
+
 ==============
 Testing libc++
 ==============
 
 .. contents::
   :local:
-
-.. _testing:
 
 Getting Started
 ===============
@@ -26,7 +26,7 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 Usage
 -----
 
-After building libc++, you can run parts of the libc++ test suite by simply
+After :ref:`building libc++ <VendorDocumentation>`, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
 ``cxx-test-depends`` target. For example:
@@ -83,6 +83,12 @@ like the compiler to use for running the tests, which default compiler and linke
 flags to use, and how to run an executable. This system is meant to be easily
 extended for custom needs, in particular when porting the libc++ test suite to
 new platforms.
+
+.. note::
+  If you run the test suite on Apple platforms, we recommend adding the terminal application
+  used to run the test suite to the list of "Developer Tools". This prevents the system from
+  trying to scan each individual test binary for malware and dramatically speeds up the test
+  suite.
 
 Using a Custom Site Configuration
 ---------------------------------
@@ -351,7 +357,7 @@ Test Filenames`_ when determining the names for new test files.
      - Same as ``FOO.pass.cpp``, but for Objective-C++.
 
    * - ``FOO.compile.pass.cpp``
-     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests, 
+     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests,
        subject to the specific recommendations, below, for when to write ``verify`` tests.
    * - ``FOO.compile.pass.mm``
      - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.
@@ -447,23 +453,11 @@ An example build would look like:
 
 .. code-block:: bash
 
-  $ cd build
-  $ ninja cxx-benchmarks
+  $ ninja -C build cxx-benchmarks
 
-This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
+This will build all of the benchmarks under ``<libcxx>/test/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
-``build/projects/libcxx/benchmarks``.
-
-The benchmarks can also be built against the platforms native standard library
-using the ``-DLIBCXX_BUILD_BENCHMARKS_NATIVE_STDLIB=ON`` CMake option. This
-is useful for comparing the performance of libc++ to other standard libraries.
-The compiled benchmarks are named ``<test>.libcxx.out`` if they test libc++ and
-``<test>.native.out`` otherwise.
-
-Also See:
-
-  * :ref:`Building Libc++ <build instructions>`
-  * :ref:`CMake Options`
+``build/libcxx/test/benchmarks``.
 
 Running Benchmarks
 ------------------
@@ -475,8 +469,53 @@ For example:
 
 .. code-block:: bash
 
-  $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.libcxx.out # Runs all the benchmarks
-  $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
+  $ cd build/libcxx/test/benchmarks
+  $ ./find.bench.out # Runs all the benchmarks
+  $ ./find.bench.out --benchmark_filter="bm_ranges_find<std::vector<char>>" # Only runs that specific benchmark
 
 For more information about running benchmarks see `Google Benchmark`_.
+
+
+.. _testing-hardening-assertions:
+
+Testing hardening assertions
+============================
+
+Each hardening assertion should be tested using death tests (via the
+``TEST_LIBCPP_ASSERT_FAILURE`` macro). Use the ``libcpp-hardening-mode`` Lit
+feature to make sure the assertion is enabled in (and only in) the intended
+modes. The convention is to use `assert.` in the name of the test file to make
+it easier to identify as a hardening test, e.g. ``assert.my_func.pass.cpp``.
+A toy example:
+
+.. code-block:: cpp
+
+  // Note: the following three annotations are currently needed to use the
+  // `TEST_LIBCPP_ASSERT_FAILURE`.
+  // REQUIRES: has-unix-headers
+  // UNSUPPORTED: c++03
+  // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+
+  // Example: only run this test in `fast`/`extensive`/`debug` modes.
+  // UNSUPPORTED: libcpp-hardening-mode=none
+  // Example: only run this test in the `debug` mode.
+  // REQUIRES: libcpp-hardening-mode=debug
+  // Example: only run this test in `extensive`/`debug` modes.
+  // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+
+  #include <header_being_tested>
+
+  #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
+
+  int main(int, char**) {
+    std::type_being_tested foo;
+    int bad_input = -1;
+    TEST_LIBCPP_ASSERT_FAILURE(foo.some_function_that_asserts(bad_input),
+        "The expected assertion message");
+
+    return 0;
+  }
+
+Note that error messages are only tested (matched) if the ``debug``
+hardening mode is used.
+

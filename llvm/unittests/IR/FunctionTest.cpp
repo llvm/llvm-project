@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Function.h"
+#include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
@@ -486,4 +487,144 @@ TEST(FunctionTest, EraseBBs) {
   It = F->erase(F->begin(), F->end());
   EXPECT_EQ(F->size(), 0u);
 }
+
+TEST(FunctionTest, BasicBlockNumbers) {
+  LLVMContext Context;
+  Type *VoidType = Type::getVoidTy(Context);
+  FunctionType *FuncType = FunctionType::get(VoidType, false);
+  std::unique_ptr<Function> Func(
+      Function::Create(FuncType, GlobalValue::ExternalLinkage));
+
+  EXPECT_EQ(Func->getBlockNumberEpoch(), 0u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 0u);
+
+  BasicBlock *BB1 = BasicBlock::Create(Context, "bb1", Func.get());
+  EXPECT_EQ(BB1->getNumber(), 0u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 1u);
+  BasicBlock *BB2 = BasicBlock::Create(Context, "bb2", Func.get());
+  EXPECT_EQ(BB2->getNumber(), 1u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 2u);
+  BasicBlock *BB3 = BasicBlock::Create(Context, "bb3", Func.get());
+  EXPECT_EQ(BB3->getNumber(), 2u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 3u);
+
+  BB2->eraseFromParent();
+  // Erasing doesn't trigger renumbering
+  EXPECT_EQ(BB1->getNumber(), 0u);
+  EXPECT_EQ(BB3->getNumber(), 2u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 3u);
+  // ... and number are assigned monotonically increasing
+  BasicBlock *BB4 = BasicBlock::Create(Context, "bb4", Func.get());
+  EXPECT_EQ(BB4->getNumber(), 3u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 4u);
+  // ... even if inserted not at the end
+  BasicBlock *BB5 = BasicBlock::Create(Context, "bb5", Func.get(), BB1);
+  EXPECT_EQ(BB5->getNumber(), 4u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 5u);
+
+  // Func is now: bb5, bb1, bb3, bb4
+  // Renumbering assigns numbers in their order in the function
+  EXPECT_EQ(Func->getBlockNumberEpoch(), 0u);
+  Func->renumberBlocks();
+  EXPECT_EQ(Func->getBlockNumberEpoch(), 1u);
+  EXPECT_EQ(BB5->getNumber(), 0u);
+  EXPECT_EQ(BB1->getNumber(), 1u);
+  EXPECT_EQ(BB3->getNumber(), 2u);
+  EXPECT_EQ(BB4->getNumber(), 3u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 4u);
+
+  // Moving a block inside the function doesn't change numbers
+  BB1->moveBefore(BB5);
+  EXPECT_EQ(BB5->getNumber(), 0u);
+  EXPECT_EQ(BB1->getNumber(), 1u);
+  EXPECT_EQ(BB3->getNumber(), 2u);
+  EXPECT_EQ(BB4->getNumber(), 3u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 4u);
+
+  // Removing a block and adding it back assigns a new number, because the
+  // block was temporarily without a parent.
+  BB4->removeFromParent();
+  BB4->insertInto(Func.get());
+  EXPECT_EQ(BB5->getNumber(), 0u);
+  EXPECT_EQ(BB1->getNumber(), 1u);
+  EXPECT_EQ(BB3->getNumber(), 2u);
+  EXPECT_EQ(BB4->getNumber(), 4u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 5u);
+
+  std::unique_ptr<Function> Func2(
+      Function::Create(FuncType, GlobalValue::ExternalLinkage));
+  BasicBlock *BB6 = BasicBlock::Create(Context, "bb6", Func2.get());
+  EXPECT_EQ(BB6->getNumber(), 0u);
+  EXPECT_EQ(Func2->getMaxBlockNumber(), 1u);
+  // Moving a block to a different function assigns a new number
+  BB3->removeFromParent();
+  BB3->insertInto(Func2.get(), BB6);
+  EXPECT_EQ(BB3->getParent(), Func2.get());
+  EXPECT_EQ(BB3->getNumber(), 1u);
+  EXPECT_EQ(Func2->getMaxBlockNumber(), 2u);
+
+  EXPECT_EQ(Func2->getBlockNumberEpoch(), 0u);
+  Func2->renumberBlocks();
+  EXPECT_EQ(Func2->getBlockNumberEpoch(), 1u);
+  EXPECT_EQ(BB3->getNumber(), 0u);
+  EXPECT_EQ(BB6->getNumber(), 1u);
+  EXPECT_EQ(Func2->getMaxBlockNumber(), 2u);
+
+  // splice works as expected and assigns new numbers
+  Func->splice(Func->end(), Func2.get());
+  EXPECT_EQ(BB5->getNumber(), 0u);
+  EXPECT_EQ(BB1->getNumber(), 1u);
+  EXPECT_EQ(BB4->getNumber(), 4u);
+  EXPECT_EQ(BB3->getNumber(), 5u);
+  EXPECT_EQ(BB6->getNumber(), 6u);
+  EXPECT_EQ(Func->getMaxBlockNumber(), 7u);
+}
+
+TEST(FunctionTest, UWTable) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @foo() {
+     bb1:
+       ret void
+    }
+)");
+
+  Function &F = *M->getFunction("foo");
+
+  EXPECT_FALSE(F.hasUWTable());
+  EXPECT_TRUE(F.getUWTableKind() == UWTableKind::None);
+
+  F.setUWTableKind(UWTableKind::Async);
+  EXPECT_TRUE(F.hasUWTable());
+  EXPECT_TRUE(F.getUWTableKind() == UWTableKind::Async);
+
+  F.setUWTableKind(UWTableKind::None);
+  EXPECT_FALSE(F.hasUWTable());
+  EXPECT_TRUE(F.getUWTableKind() == UWTableKind::None);
+}
+
+TEST(FunctionTest, Personality) {
+  LLVMContext Ctx;
+  Module M("test", Ctx);
+  Type *Int8Ty = Type::getInt8Ty(Ctx);
+  FunctionType *FTy = FunctionType::get(Int8Ty, false);
+  Function *F = Function::Create(FTy, GlobalValue::ExternalLinkage, "F", &M);
+  Function *PersonalityFn =
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "PersonalityFn", &M);
+
+  EXPECT_FALSE(F->hasPersonalityFn());
+  F->setPersonalityFn(PersonalityFn);
+  EXPECT_TRUE(F->hasPersonalityFn());
+  EXPECT_EQ(F->getPersonalityFn(), PersonalityFn);
+  F->setPersonalityFn(nullptr);
+  EXPECT_FALSE(F->hasPersonalityFn());
+
+  EXPECT_FALSE(LLVMHasPersonalityFn(wrap(F)));
+  LLVMSetPersonalityFn(wrap(F), wrap(PersonalityFn));
+  EXPECT_TRUE(LLVMHasPersonalityFn(wrap(F)));
+  EXPECT_EQ(LLVMGetPersonalityFn(wrap(F)), wrap(PersonalityFn));
+  LLVMSetPersonalityFn(wrap(F), nullptr);
+  EXPECT_FALSE(LLVMHasPersonalityFn(wrap(F)));
+}
+
 } // end namespace

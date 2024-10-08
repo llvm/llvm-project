@@ -906,19 +906,12 @@ define <4 x i64> @vwsll_vi_v4i64_v4i8(<4 x i8> %a) {
 ; CHECK-NEXT:    vsll.vi v8, v10, 2
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-RV32-LABEL: vwsll_vi_v4i64_v4i8:
-; CHECK-ZVBB-RV32:       # %bb.0:
-; CHECK-ZVBB-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-ZVBB-RV32-NEXT:    vzext.vf8 v10, v8
-; CHECK-ZVBB-RV32-NEXT:    vsll.vi v8, v10, 2
-; CHECK-ZVBB-RV32-NEXT:    ret
-;
-; CHECK-ZVBB-RV64-LABEL: vwsll_vi_v4i64_v4i8:
-; CHECK-ZVBB-RV64:       # %bb.0:
-; CHECK-ZVBB-RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-ZVBB-RV64-NEXT:    vzext.vf4 v10, v8
-; CHECK-ZVBB-RV64-NEXT:    vwsll.vi v8, v10, 2
-; CHECK-ZVBB-RV64-NEXT:    ret
+; CHECK-ZVBB-LABEL: vwsll_vi_v4i64_v4i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vzext.vf4 v10, v8
+; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2
+; CHECK-ZVBB-NEXT:    ret
   %x = zext <4 x i8> %a to <4 x i64>
   %z = shl <4 x i64> %x, splat (i64 2)
   ret <4 x i64> %z

@@ -221,5 +221,5 @@ void tu2(int &i) {
   }
 }
 
-// CHECK: [[BW_LIKELY]] = !{!"branch_weights", i32 2000, i32 1}
-// CHECK: [[BW_UNLIKELY]] = !{!"branch_weights", i32 1, i32 2000}
+// CHECK: [[BW_LIKELY]] = !{!"branch_weights", !"expected", i32 2000, i32 1}
+// CHECK: [[BW_UNLIKELY]] = !{!"branch_weights", !"expected", i32 1, i32 2000}

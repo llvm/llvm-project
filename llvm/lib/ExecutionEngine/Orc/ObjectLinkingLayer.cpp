@@ -14,8 +14,8 @@
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/MemoryBuffer.h"
+
 #include <string>
-#include <vector>
 
 #define DEBUG_TYPE "orc"
 
@@ -156,7 +156,10 @@ public:
       std::unique_ptr<MaterializationResponsibility> MR,
       std::unique_ptr<MemoryBuffer> ObjBuffer)
       : JITLinkContext(&MR->getTargetJITDylib()), Layer(Layer),
-        MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
+        MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {
+    std::lock_guard<std::mutex> Lock(Layer.LayerMutex);
+    Plugins = Layer.Plugins;
+  }
 
   ~ObjectLinkingLayerJITLinkContext() {
     // If there is an object buffer return function then use it to
@@ -168,14 +171,14 @@ public:
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
   void notifyMaterializing(LinkGraph &G) {
-    for (auto &P : Layer.Plugins)
+    for (auto &P : Plugins)
       P->notifyMaterializing(*MR, G, *this,
                              ObjBuffer ? ObjBuffer->getMemBufferRef()
                              : MemoryBufferRef());
   }
 
   void notifyFailed(Error Err) override {
-    for (auto &P : Layer.Plugins)
+    for (auto &P : Plugins)
       Err = joinErrors(std::move(Err), P->notifyFailed(*MR));
     Layer.getExecutionSession().reportError(std::move(Err));
     MR->failMaterialization();
@@ -272,24 +275,22 @@ public:
 
       // First check that there aren't any missing symbols.
       size_t NumMaterializationSideEffectsOnlySymbols = 0;
-      SymbolNameVector ExtraSymbols;
       SymbolNameVector MissingSymbols;
-      for (auto &KV : MR->getSymbols()) {
+      for (auto &[Sym, Flags] : MR->getSymbols()) {
 
-        auto I = InternedResult.find(KV.first);
+        auto I = InternedResult.find(Sym);
 
         // If this is a materialization-side-effects only symbol then bump
-        // the counter and make sure it's *not* defined, otherwise make
-        // sure that it is defined.
-        if (KV.second.hasMaterializationSideEffectsOnly()) {
+        // the counter and remove in from the result, otherwise make sure that
+        // it's defined.
+        if (Flags.hasMaterializationSideEffectsOnly()) {
           ++NumMaterializationSideEffectsOnlySymbols;
-          if (I != InternedResult.end())
-            ExtraSymbols.push_back(KV.first);
+          InternedResult.erase(Sym);
           continue;
         } else if (I == InternedResult.end())
-          MissingSymbols.push_back(KV.first);
+          MissingSymbols.push_back(Sym);
         else if (Layer.OverrideObjectFlags)
-          I->second.setFlags(KV.second);
+          I->second.setFlags(Flags);
       }
 
       // If there were missing symbols then report the error.
@@ -300,6 +301,7 @@ public:
 
       // If there are more definitions than expected, add them to the
       // ExtraSymbols vector.
+      SymbolNameVector ExtraSymbols;
       if (InternedResult.size() >
           MR->getSymbols().size() - NumMaterializationSideEffectsOnlySymbols) {
         for (auto &KV : InternedResult)
@@ -317,16 +319,17 @@ public:
     if (auto Err = MR->notifyResolved(InternedResult))
       return Err;
 
-    Layer.notifyLoaded(*MR);
+    notifyLoaded();
     return Error::success();
   }
 
   void notifyFinalized(JITLinkMemoryManager::FinalizedAlloc A) override {
-    if (auto Err = Layer.notifyEmitted(*MR, std::move(A))) {
+    if (auto Err = notifyEmitted(std::move(A))) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR->failMaterialization();
       return;
     }
+
     if (auto Err = MR->notifyEmitted(SymbolDepGroups)) {
       Layer.getExecutionSession().reportError(std::move(Err));
       MR->failMaterialization();
@@ -344,7 +347,8 @@ public:
       return claimOrExternalizeWeakAndCommonSymbols(G);
     });
 
-    Layer.modifyPassConfig(*MR, LG, Config);
+    for (auto &P : Plugins)
+      P->modifyPassConfig(*MR, LG, Config);
 
     Config.PreFixupPasses.push_back(
         [this](LinkGraph &G) { return registerDependencies(G); });
@@ -352,85 +356,30 @@ public:
     return Error::success();
   }
 
+  void notifyLoaded() {
+    for (auto &P : Plugins)
+      P->notifyLoaded(*MR);
+  }
+
+  Error notifyEmitted(jitlink::JITLinkMemoryManager::FinalizedAlloc FA) {
+    Error Err = Error::success();
+    for (auto &P : Plugins)
+      Err = joinErrors(std::move(Err), P->notifyEmitted(*MR));
+
+    if (Err) {
+      if (FA)
+        Err =
+            joinErrors(std::move(Err), Layer.MemMgr.deallocate(std::move(FA)));
+      return Err;
+    }
+
+    if (FA)
+      return Layer.recordFinalizedAlloc(*MR, std::move(FA));
+
+    return Error::success();
+  }
+
 private:
-  // Symbol name dependencies:
-  // Internal: Defined in this graph.
-  // External: Defined externally.
-  struct BlockSymbolDependencies {
-    SymbolNameSet Internal, External;
-  };
-
-  // Lazily populated map of blocks to BlockSymbolDependencies values.
-  class BlockDependenciesMap {
-  public:
-    BlockDependenciesMap(ExecutionSession &ES,
-                         DenseMap<const Block *, DenseSet<Block *>> BlockDeps)
-        : ES(ES), BlockDeps(std::move(BlockDeps)) {}
-
-    const BlockSymbolDependencies &operator[](const Block &B) {
-      // Check the cache first.
-      auto I = BlockTransitiveDepsCache.find(&B);
-      if (I != BlockTransitiveDepsCache.end())
-        return I->second;
-
-      // No value. Populate the cache.
-      BlockSymbolDependencies BTDCacheVal;
-      auto BDI = BlockDeps.find(&B);
-      assert(BDI != BlockDeps.end() && "No block dependencies");
-
-      for (auto *BDep : BDI->second) {
-        auto &BID = getBlockImmediateDeps(*BDep);
-        for (auto &ExternalDep : BID.External)
-          BTDCacheVal.External.insert(ExternalDep);
-        for (auto &InternalDep : BID.Internal)
-          BTDCacheVal.Internal.insert(InternalDep);
-      }
-
-      return BlockTransitiveDepsCache
-          .insert(std::make_pair(&B, std::move(BTDCacheVal)))
-          .first->second;
-    }
-
-    SymbolStringPtr &getInternedName(Symbol &Sym) {
-      auto I = NameCache.find(&Sym);
-      if (I != NameCache.end())
-        return I->second;
-
-      return NameCache.insert(std::make_pair(&Sym, ES.intern(Sym.getName())))
-          .first->second;
-    }
-
-  private:
-    BlockSymbolDependencies &getBlockImmediateDeps(Block &B) {
-      // Check the cache first.
-      auto I = BlockImmediateDepsCache.find(&B);
-      if (I != BlockImmediateDepsCache.end())
-        return I->second;
-
-      BlockSymbolDependencies BIDCacheVal;
-      for (auto &E : B.edges()) {
-        auto &Tgt = E.getTarget();
-        if (Tgt.getScope() != Scope::Local) {
-          if (Tgt.isExternal()) {
-            if (Tgt.getAddress() || !Tgt.isWeaklyReferenced())
-              BIDCacheVal.External.insert(getInternedName(Tgt));
-          } else
-            BIDCacheVal.Internal.insert(getInternedName(Tgt));
-        }
-      }
-
-      return BlockImmediateDepsCache
-          .insert(std::make_pair(&B, std::move(BIDCacheVal)))
-          .first->second;
-    }
-
-    ExecutionSession &ES;
-    DenseMap<const Block *, DenseSet<Block *>> BlockDeps;
-    DenseMap<const Symbol *, SymbolStringPtr> NameCache;
-    DenseMap<const Block *, BlockSymbolDependencies> BlockImmediateDepsCache;
-    DenseMap<const Block *, BlockSymbolDependencies> BlockTransitiveDepsCache;
-  };
-
   Error claimOrExternalizeWeakAndCommonSymbols(LinkGraph &G) {
     auto &ES = Layer.getExecutionSession();
 
@@ -482,164 +431,174 @@ private:
   }
 
   Error registerDependencies(LinkGraph &G) {
-    auto &TargetJD = MR->getTargetJITDylib();
-    auto &ES = TargetJD.getExecutionSession();
-    auto BlockDeps = computeBlockNonLocalDeps(G);
 
-    DenseSet<Block *> BlockDepsProcessed;
-    DenseMap<Block *, SymbolDependenceGroup> DepGroupForBlock;
+    struct BlockInfo {
+      bool InWorklist = false;
+      DenseSet<Symbol *> Defs;
+      DenseSet<Symbol *> SymbolDeps;
+      DenseSet<Block *> AnonEdges, AnonBackEdges;
+    };
 
-    // Compute dependencies for symbols defined in the JITLink graph.
+    DenseMap<Block *, BlockInfo> BlockInfos;
+
+    // Reserve space so that BlockInfos doesn't need to resize. This is
+    // essential to avoid invalidating pointers to entries below.
+    {
+      size_t NumBlocks = 0;
+      for (auto &Sec : G.sections())
+        NumBlocks += Sec.blocks_size();
+      BlockInfos.reserve(NumBlocks);
+    }
+
+    // Identify non-locally-scoped symbols defined by each block.
     for (auto *Sym : G.defined_symbols()) {
+      if (Sym->getScope() != Scope::Local)
+        BlockInfos[&Sym->getBlock()].Defs.insert(Sym);
+    }
 
-      // Skip local symbols.
-      if (Sym->getScope() == Scope::Local)
-        continue;
-      assert(Sym->hasName() &&
-             "Defined non-local jitlink::Symbol should have a name");
+    // Identify the symbolic and anonymous-block dependencies for each block.
+    for (auto *B : G.blocks()) {
+      auto &BI = BlockInfos[B];
 
-      auto &BDeps = BlockDeps[Sym->getBlock()];
+      for (auto &E : B->edges()) {
 
-      // Skip symbols in blocks that don't depend on anything.
-      if (BDeps.Internal.empty() && BDeps.External.empty())
-        continue;
-
-      SymbolDependenceGroup &SDG = DepGroupForBlock[&Sym->getBlock()];
-      SDG.Symbols.insert(ES.intern(Sym->getName()));
-
-      if (!BlockDepsProcessed.count(&Sym->getBlock())) {
-        BlockDepsProcessed.insert(&Sym->getBlock());
-
-        if (!BDeps.Internal.empty())
-          SDG.Dependencies[&TargetJD] = BDeps.Internal;
-        for (auto &Dep : BDeps.External) {
-          auto DepSrcItr = SymbolSourceJDs.find(NonOwningSymbolStringPtr(Dep));
-          if (DepSrcItr != SymbolSourceJDs.end())
-            SDG.Dependencies[DepSrcItr->second].insert(Dep);
+        // External symbols are trivially depended on.
+        if (E.getTarget().isExternal()) {
+          BI.SymbolDeps.insert(&E.getTarget());
+          continue;
         }
+
+        // Anonymous symbols aren't depended on at all (they're assumed to be
+        // already available).
+        if (E.getTarget().isAbsolute())
+          continue;
+
+        // If we get here then we depend on a symbol defined by some other
+        // block.
+        auto &TgtBI = BlockInfos[&E.getTarget().getBlock()];
+
+        // If that block has any definitions then use the first one as the
+        // "effective" dependence here (all symbols in TgtBI will become
+        // ready at the same time, and chosing a single symbol to represent
+        // the block keeps the SymbolDepGroup size small).
+        if (!TgtBI.Defs.empty()) {
+          BI.SymbolDeps.insert(*TgtBI.Defs.begin());
+          continue;
+        }
+
+        // Otherwise we've got a dependence on an anonymous block. Record it
+        // here for back-propagating symbol dependencies below.
+        BI.AnonEdges.insert(&E.getTarget().getBlock());
+        TgtBI.AnonBackEdges.insert(B);
       }
     }
 
-    SymbolDependenceGroup SynthSDG;
+    // Prune anonymous blocks.
+    {
+      std::vector<Block *> BlocksToRemove;
+      for (auto &[B, BI] : BlockInfos) {
+        // Skip blocks with defs. We only care about anonyous blocks.
+        if (!BI.Defs.empty())
+          continue;
 
-    for (auto &P : Layer.Plugins) {
-      auto SynthDeps = P->getSyntheticSymbolDependencies(*MR);
-      if (SynthDeps.empty())
-        continue;
+        BlocksToRemove.push_back(B);
 
-      DenseSet<Block *> BlockVisited;
-      for (auto &[Name, DepSyms] : SynthDeps) {
-        SynthSDG.Symbols.insert(Name);
-        for (auto *Sym : DepSyms) {
-          if (Sym->getScope() == Scope::Local) {
-            auto &BDeps = BlockDeps[Sym->getBlock()];
-            for (auto &S : BDeps.Internal)
-              SynthSDG.Dependencies[&TargetJD].insert(S);
-            for (auto &S : BDeps.External) {
-              auto DepSrcItr =
-                  SymbolSourceJDs.find(NonOwningSymbolStringPtr(S));
-              if (DepSrcItr != SymbolSourceJDs.end())
-                SynthSDG.Dependencies[DepSrcItr->second].insert(S);
-            }
-          } else {
-            auto SymName = ES.intern(Sym->getName());
-            if (Sym->isExternal()) {
-              assert(SymbolSourceJDs.count(NonOwningSymbolStringPtr(SymName)) &&
-                     "External symbol source entry missing");
-              SynthSDG
-                  .Dependencies[SymbolSourceJDs[NonOwningSymbolStringPtr(
-                      SymName)]]
-                  .insert(SymName);
-            } else
-              SynthSDG.Dependencies[&TargetJD].insert(SymName);
+        for (auto *FB : BI.AnonEdges)
+          BlockInfos[FB].AnonBackEdges.erase(B);
+
+        for (auto *BB : BI.AnonBackEdges)
+          BlockInfos[BB].AnonEdges.erase(B);
+
+        for (auto *FB : BI.AnonEdges) {
+          auto &FBI = BlockInfos[FB];
+          for (auto *BB : BI.AnonBackEdges)
+            FBI.AnonBackEdges.insert(BB);
+        }
+
+        for (auto *BB : BI.AnonBackEdges) {
+          auto &BBI = BlockInfos[BB];
+          for (auto *SD : BI.SymbolDeps)
+            BBI.SymbolDeps.insert(SD);
+          for (auto *FB : BI.AnonEdges)
+            BBI.AnonEdges.insert(FB);
+        }
+      }
+
+      for (auto *B : BlocksToRemove)
+        BlockInfos.erase(B);
+    }
+
+    // Build the initial dependence propagation worklist.
+    std::deque<Block *> Worklist;
+    for (auto &[B, BI] : BlockInfos) {
+      if (!BI.SymbolDeps.empty() && !BI.AnonBackEdges.empty()) {
+        Worklist.push_back(B);
+        BI.InWorklist = true;
+      }
+    }
+
+    // Propagate symbol deps through the graph.
+    while (!Worklist.empty()) {
+      auto *B = Worklist.front();
+      Worklist.pop_front();
+
+      auto &BI = BlockInfos[B];
+      BI.InWorklist = false;
+
+      for (auto *DB : BI.AnonBackEdges) {
+        auto &DBI = BlockInfos[DB];
+        for (auto *Sym : BI.SymbolDeps) {
+          if (DBI.SymbolDeps.insert(Sym).second && !DBI.InWorklist) {
+            Worklist.push_back(DB);
+            DBI.InWorklist = true;
           }
         }
       }
     }
 
-    // Transfer SDGs to SymbolDepGroups.
-    DepGroupForBlock.reserve(DepGroupForBlock.size() + 1);
-    for (auto &[B, SDG] : DepGroupForBlock) {
-      assert(!SDG.Symbols.empty() && "SymbolDependenceGroup covers no symbols");
-      if (!SDG.Dependencies.empty())
-        SymbolDepGroups.push_back(std::move(SDG));
+    // Transform our local dependence information into a list of
+    // SymbolDependenceGroups (in the SymbolDepGroups member), ready for use in
+    // the upcoming notifyFinalized call.
+    auto &TargetJD = MR->getTargetJITDylib();
+    auto &ES = TargetJD.getExecutionSession();
+
+    DenseMap<Symbol *, SymbolStringPtr> InternedNames;
+    auto GetInternedName = [&](Symbol *S) {
+      auto &Name = InternedNames[S];
+      if (!Name)
+        Name = ES.intern(S->getName());
+      return Name;
+    };
+
+    for (auto &[B, BI] : BlockInfos) {
+      if (!BI.Defs.empty()) {
+        SymbolDepGroups.push_back(SymbolDependenceGroup());
+        auto &SDG = SymbolDepGroups.back();
+
+        for (auto *Def : BI.Defs)
+          SDG.Symbols.insert(GetInternedName(Def));
+
+        for (auto *Dep : BI.SymbolDeps) {
+          auto DepName = GetInternedName(Dep);
+          if (Dep->isDefined())
+            SDG.Dependencies[&TargetJD].insert(std::move(DepName));
+          else {
+            auto SourceJDItr =
+                SymbolSourceJDs.find(NonOwningSymbolStringPtr(DepName));
+            if (SourceJDItr != SymbolSourceJDs.end())
+              SDG.Dependencies[SourceJDItr->second].insert(std::move(DepName));
+          }
+        }
+      }
     }
-    if (!SynthSDG.Symbols.empty() && !SynthSDG.Dependencies.empty())
-      SymbolDepGroups.push_back(std::move(SynthSDG));
 
     return Error::success();
   }
 
-  BlockDependenciesMap computeBlockNonLocalDeps(LinkGraph &G) {
-    // First calculate the reachable-via-non-local-symbol blocks for each block.
-    struct BlockInfo {
-      DenseSet<Block *> Dependencies;
-      DenseSet<Block *> Dependants;
-      bool DependenciesChanged = true;
-    };
-    DenseMap<Block *, BlockInfo> BlockInfos;
-    SmallVector<Block *> WorkList;
-
-    // Pre-allocate map entries. This prevents any iterator/reference
-    // invalidation in the next loop.
-    for (auto *B : G.blocks())
-      (void)BlockInfos[B];
-
-    // Build initial worklist, record block dependencies/dependants and
-    // non-local symbol dependencies.
-    for (auto *B : G.blocks()) {
-      auto &BI = BlockInfos[B];
-      for (auto &E : B->edges()) {
-        if (E.getTarget().getScope() == Scope::Local &&
-            !E.getTarget().isAbsolute()) {
-          auto &TgtB = E.getTarget().getBlock();
-          if (&TgtB != B) {
-            BI.Dependencies.insert(&TgtB);
-            BlockInfos[&TgtB].Dependants.insert(B);
-          }
-        }
-      }
-
-      // If this node has both dependants and dependencies then add it to the
-      // worklist to propagate the dependencies to the dependants.
-      if (!BI.Dependants.empty() && !BI.Dependencies.empty())
-        WorkList.push_back(B);
-    }
-
-    // Propagate block-level dependencies through the block-dependence graph.
-    while (!WorkList.empty()) {
-      auto *B = WorkList.pop_back_val();
-
-      auto &BI = BlockInfos[B];
-      assert(BI.DependenciesChanged &&
-             "Block in worklist has unchanged dependencies");
-      BI.DependenciesChanged = false;
-      for (auto *Dependant : BI.Dependants) {
-        auto &DependantBI = BlockInfos[Dependant];
-        for (auto *Dependency : BI.Dependencies) {
-          if (Dependant != Dependency &&
-              DependantBI.Dependencies.insert(Dependency).second)
-            if (!DependantBI.DependenciesChanged) {
-              DependantBI.DependenciesChanged = true;
-              WorkList.push_back(Dependant);
-            }
-        }
-      }
-    }
-
-    DenseMap<const Block *, DenseSet<Block *>> BlockDeps;
-    for (auto &KV : BlockInfos)
-      BlockDeps[KV.first] = std::move(KV.second.Dependencies);
-
-    return BlockDependenciesMap(Layer.getExecutionSession(),
-                                std::move(BlockDeps));
-  }
-
   ObjectLinkingLayer &Layer;
+  std::vector<std::shared_ptr<ObjectLinkingLayer::Plugin>> Plugins;
   std::unique_ptr<MaterializationResponsibility> MR;
   std::unique_ptr<MemoryBuffer> ObjBuffer;
-  DenseMap<Block *, SymbolNameSet> ExternalBlockDeps;
-  DenseMap<Block *, SymbolNameSet> InternalBlockDeps;
   DenseMap<NonOwningSymbolStringPtr, JITDylib *> SymbolSourceJDs;
   std::vector<SymbolDependenceGroup> SymbolDepGroups;
 };
@@ -686,6 +645,7 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
 
   auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
       *this, std::move(R), std::move(O));
+
   if (auto G = createLinkGraphFromObject(ObjBuffer)) {
     Ctx->notifyMaterializing(**G);
     link(std::move(*G), std::move(Ctx));
@@ -702,34 +662,9 @@ void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
   link(std::move(G), std::move(Ctx));
 }
 
-void ObjectLinkingLayer::modifyPassConfig(MaterializationResponsibility &MR,
-                                          LinkGraph &G,
-                                          PassConfiguration &PassConfig) {
-  for (auto &P : Plugins)
-    P->modifyPassConfig(MR, G, PassConfig);
-}
-
-void ObjectLinkingLayer::notifyLoaded(MaterializationResponsibility &MR) {
-  for (auto &P : Plugins)
-    P->notifyLoaded(MR);
-}
-
-Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
-                                        FinalizedAlloc FA) {
-  Error Err = Error::success();
-  for (auto &P : Plugins)
-    Err = joinErrors(std::move(Err), P->notifyEmitted(MR));
-
-  if (Err) {
-    if (FA)
-      Err = joinErrors(std::move(Err), MemMgr.deallocate(std::move(FA)));
-    return Err;
-  }
-
-  if (!FA)
-    return Error::success();
-
-  Err = MR.withResourceKeyDo(
+Error ObjectLinkingLayer::recordFinalizedAlloc(
+    MaterializationResponsibility &MR, FinalizedAlloc FA) {
+  auto Err = MR.withResourceKeyDo(
       [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });
 
   if (Err)

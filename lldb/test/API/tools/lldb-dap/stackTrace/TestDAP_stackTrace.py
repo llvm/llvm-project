@@ -1,13 +1,11 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap stackTrace request
 """
 
 
 import os
 
-import dap_server
 import lldbdap_testcase
-from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
@@ -17,11 +15,14 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
     source_key_path = ["source", "path"]
     line_key_path = ["line"]
 
+    # stackTrace additioanl frames for paginated traces
+    page_size = 20
+
     def verify_stackFrames(self, start_idx, stackFrames):
         frame_idx = start_idx
         for stackFrame in stackFrames:
             # Don't care about frame above main
-            if frame_idx > 20:
+            if frame_idx > 40:
                 return
             self.verify_stackFrame(frame_idx, stackFrame)
             frame_idx += 1
@@ -33,7 +34,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         if frame_idx == 0:
             expected_line = self.recurse_end
             expected_name = "recurse"
-        elif frame_idx < 20:
+        elif frame_idx < 40:
             expected_line = self.recurse_call
             expected_name = "recurse"
         else:
@@ -57,7 +58,6 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_stackTrace(self):
         """
         Tests the 'stackTrace' packet and all its variants.
@@ -84,10 +84,24 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount()
         frameCount = len(stackFrames)
         self.assertGreaterEqual(
-            frameCount, 20, "verify we get at least 20 frames for all frames"
+            frameCount, 40, "verify we get at least 40 frames for all frames"
         )
         self.assertEqual(
-            totalFrames, frameCount, "verify we get correct value for totalFrames count"
+            totalFrames,
+            frameCount,
+            "verify total frames returns a speculative page size",
+        )
+        self.verify_stackFrames(startFrame, stackFrames)
+
+        # Verify totalFrames contains a speculative page size of additional frames with startFrame = 0 and levels = 0
+        (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
+            startFrame=0, levels=10
+        )
+        self.assertEqual(len(stackFrames), 10, "verify we get levels=10 frames")
+        self.assertEqual(
+            totalFrames,
+            len(stackFrames) + self.page_size,
+            "verify total frames returns a speculative page size",
         )
         self.verify_stackFrames(startFrame, stackFrames)
 
@@ -190,7 +204,6 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_functionNameWithArgs(self):
         """
         Test that the stack frame without a function name is given its pc in the response.

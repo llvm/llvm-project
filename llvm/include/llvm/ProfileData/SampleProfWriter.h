@@ -28,9 +28,9 @@ namespace sampleprof {
 
 enum SectionLayout {
   DefaultLayout,
-  // The layout splits profile with context information from profile without
-  // context information. When Thinlto is enabled, ThinLTO postlink phase only
-  // has to load profile with context information and can skip the other part.
+  // The layout splits profile with inlined functions from profile without
+  // inlined functions. When Thinlto is enabled, ThinLTO postlink phase only
+  // has to load profile with inlined functions and can skip the other part.
   CtxSplitLayout,
   NumOfLayout,
 };
@@ -128,7 +128,7 @@ public:
   virtual void setToCompressAllSections() {}
   virtual void setUseMD5() {}
   virtual void setPartialProfile() {}
-  virtual void resetSecLayout(SectionLayout SL) {}
+  virtual void setUseCtxSplitLayout() {}
 
 protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
@@ -169,18 +169,28 @@ public:
 
 protected:
   SampleProfileWriterText(std::unique_ptr<raw_ostream> &OS)
-      : SampleProfileWriter(OS), Indent(0) {}
+      : SampleProfileWriter(OS) {}
 
   std::error_code writeHeader(const SampleProfileMap &ProfileMap) override {
     LineCount = 0;
     return sampleprof_error::success;
   }
 
+  void setUseCtxSplitLayout() override {
+    MarkFlatProfiles = true;
+  }
+
 private:
   /// Indent level to use when writing.
   ///
   /// This is used when printing inlined callees.
-  unsigned Indent;
+  unsigned Indent = 0;
+
+  /// If set, writes metadata "!Flat" to functions without inlined functions.
+  /// This flag is for manual inspection only, it has no effect for the profile
+  /// reader because a text sample profile is read sequentially and functions
+  /// cannot be skipped.
+  bool MarkFlatProfiles = false;
 
   friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
@@ -242,11 +252,11 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
         // CtxSplitLayout
         SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
                                           {SecNameTable, 0, 0, 0, 0},
-                                          // profile with context
+                                          // profile with inlined functions
                                           // for next two sections
                                           {SecFuncOffsetTable, 0, 0, 0, 0},
                                           {SecLBRProfile, 0, 0, 0, 0},
-                                          // profile without context
+                                          // profile without inlined functions
                                           // for next two sections
                                           {SecFuncOffsetTable, 0, 0, 0, 0},
                                           {SecLBRProfile, 0, 0, 0, 0},
@@ -283,7 +293,11 @@ public:
     ProfSymList = PSL;
   };
 
-  void resetSecLayout(SectionLayout SL) override {
+  void setUseCtxSplitLayout() override {
+    resetSecLayout(SectionLayout::CtxSplitLayout);
+  }
+
+  void resetSecLayout(SectionLayout SL) {
     verifySecLayout(SL);
 #ifndef NDEBUG
     // Make sure resetSecLayout is called before any flag setting.

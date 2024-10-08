@@ -32,6 +32,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGFRAGMENT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGFRAGMENT_H
 
+#include "Config.h"
 #include "ConfigProvider.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -254,6 +255,10 @@ struct Fragment {
       /// unused or missing. These can match any suffix of the header file in
       /// question.
       std::vector<Located<std::string>> IgnoreHeader;
+
+      /// If false (default), unused system headers will be ignored.
+      /// Standard library headers are analyzed regardless of this option.
+      std::optional<Located<bool>> AnalyzeAngledIncludes;
     };
     IncludesBlock Includes;
 
@@ -304,6 +309,13 @@ struct Fragment {
     /// Whether code completion should include suggestions from scopes that are
     /// not visible. The required scope prefix will be inserted.
     std::optional<Located<bool>> AllScopes;
+    /// How to present the argument list between '()' and '<>':
+    /// valid values are enum Config::ArgumentListsPolicy values:
+    ///   None: Nothing at all
+    ///   OpenDelimiter: only opening delimiter "(" or "<"
+    ///   Delimiters: empty pair of delimiters "()" or "<>"
+    ///   FullPlaceholders: full name of both type and parameter
+    std::optional<Located<std::string>> ArgumentLists;
   };
   CompletionBlock Completion;
 

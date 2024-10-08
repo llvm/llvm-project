@@ -12,11 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
+#include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -188,10 +193,9 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Predicate and clone the given call site.
 ///
 /// This function creates an if-then-else structure at the location of the call
-/// site. The "if" condition compares the call site's called value to the given
-/// callee. The original call site is moved into the "else" block, and a clone
-/// of the call site is placed in the "then" block. The cloned instruction is
-/// returned.
+/// site. The "if" condition is specified by `Cond`.
+/// The original call site is moved into the "else" block, and a clone of the
+/// call site is placed in the "then" block. The cloned instruction is returned.
 ///
 /// For example, the call instruction below:
 ///
@@ -202,7 +206,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replace by the following:
 ///
 ///   orig_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -232,7 +236,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replace by the following:
 ///
 ///   orig_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %else_bb
 ///
 ///   then_bb:
@@ -267,7 +271,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Is replaced by the following:
 ///
 ///   cond_bb:
-///     %cond = icmp eq i32 ()* %ptr, @func
+///     %cond = Cond
 ///     br i1 %cond, %then_bb, %orig_bb
 ///
 ///   then_bb:
@@ -280,18 +284,12 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 ///     ; The original call instruction stays in its original block.
 ///     %t0 = musttail call i32 %ptr()
 ///     ret %t0
-CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
-                                MDNode *BranchWeights) {
+static CallBase &versionCallSiteWithCond(CallBase &CB, Value *Cond,
+                                         MDNode *BranchWeights) {
 
   IRBuilder<> Builder(&CB);
   CallBase *OrigInst = &CB;
   BasicBlock *OrigBlock = OrigInst->getParent();
-
-  // Create the compare. The called value and callee must have the same type to
-  // be compared.
-  if (CB.getCalledOperand()->getType() != Callee->getType())
-    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
-  auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
 
   if (OrigInst->isMustTailCall()) {
     // Create an if-then structure. The original instruction stays in its block,
@@ -380,11 +378,27 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
   return *NewInst;
 }
 
+// Predicate and clone the given call site using condition `CB.callee ==
+// Callee`. See the comment `versionCallSiteWithCond` for the transformation.
+CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
+                                MDNode *BranchWeights) {
+
+  IRBuilder<> Builder(&CB);
+
+  // Create the compare. The called value and callee must have the same type to
+  // be compared.
+  if (CB.getCalledOperand()->getType() != Callee->getType())
+    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
+  auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
+
+  return versionCallSiteWithCond(CB, Cond, BranchWeights);
+}
+
 bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
                             const char **FailureReason) {
   assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
 
-  auto &DL = Callee->getParent()->getDataLayout();
+  auto &DL = Callee->getDataLayout();
 
   // Check the return type. The callee's return value type must be bitcast
   // compatible with the call site's type.
@@ -509,7 +523,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
+      auto *Cast =
+          CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
@@ -554,6 +569,112 @@ CallBase &llvm::promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
   // callee, 'NewInst' will be executed, otherwise the original call site will
   // be executed.
   CallBase &NewInst = versionCallSite(CB, Callee, BranchWeights);
+
+  // Promote 'NewInst' so that it directly calls the desired function.
+  return promoteCall(NewInst, Callee);
+}
+
+CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
+                                          PGOContextualProfile &CtxProf) {
+  assert(CB.isIndirectCall());
+  if (!CtxProf.isFunctionKnown(Callee))
+    return nullptr;
+  auto &Caller = *CB.getFunction();
+  auto *CSInstr = CtxProfAnalysis::getCallsiteInstrumentation(CB);
+  if (!CSInstr)
+    return nullptr;
+  const uint64_t CSIndex = CSInstr->getIndex()->getZExtValue();
+
+  CallBase &DirectCall = promoteCall(
+      versionCallSite(CB, &Callee, /*BranchWeights=*/nullptr), &Callee);
+  CSInstr->moveBefore(&CB);
+  const auto NewCSID = CtxProf.allocateNextCallsiteIndex(Caller);
+  auto *NewCSInstr = cast<InstrProfCallsite>(CSInstr->clone());
+  NewCSInstr->setIndex(NewCSID);
+  NewCSInstr->setCallee(&Callee);
+  NewCSInstr->insertBefore(&DirectCall);
+  auto &DirectBB = *DirectCall.getParent();
+  auto &IndirectBB = *CB.getParent();
+
+  assert((CtxProfAnalysis::getBBInstrumentation(IndirectBB) == nullptr) &&
+         "The ICP direct BB is new, it shouldn't have instrumentation");
+  assert((CtxProfAnalysis::getBBInstrumentation(DirectBB) == nullptr) &&
+         "The ICP indirect BB is new, it shouldn't have instrumentation");
+
+  // Allocate counters for the new basic blocks.
+  const uint32_t DirectID = CtxProf.allocateNextCounterIndex(Caller);
+  const uint32_t IndirectID = CtxProf.allocateNextCounterIndex(Caller);
+  auto *EntryBBIns =
+      CtxProfAnalysis::getBBInstrumentation(Caller.getEntryBlock());
+  auto *DirectBBIns = cast<InstrProfCntrInstBase>(EntryBBIns->clone());
+  DirectBBIns->setIndex(DirectID);
+  DirectBBIns->insertInto(&DirectBB, DirectBB.getFirstInsertionPt());
+
+  auto *IndirectBBIns = cast<InstrProfCntrInstBase>(EntryBBIns->clone());
+  IndirectBBIns->setIndex(IndirectID);
+  IndirectBBIns->insertInto(&IndirectBB, IndirectBB.getFirstInsertionPt());
+
+  const GlobalValue::GUID CalleeGUID = AssignGUIDPass::getGUID(Callee);
+  const uint32_t NewCountersSize = IndirectID + 1;
+
+  auto ProfileUpdater = [&](PGOCtxProfContext &Ctx) {
+    assert(Ctx.guid() == AssignGUIDPass::getGUID(Caller));
+    assert(NewCountersSize - 2 == Ctx.counters().size());
+    // All the ctx-es belonging to a function must have the same size counters.
+    Ctx.resizeCounters(NewCountersSize);
+
+    // Maybe in this context, the indirect callsite wasn't observed at all. That
+    // would make both direct and indirect BBs cold - which is what we already
+    // have from resising the counters.
+    if (!Ctx.hasCallsite(CSIndex))
+      return;
+    auto &CSData = Ctx.callsite(CSIndex);
+
+    uint64_t TotalCount = 0;
+    for (const auto &[_, V] : CSData)
+      TotalCount += V.getEntrycount();
+    uint64_t DirectCount = 0;
+    // If we called the direct target, update the DirectCount. If we didn't, we
+    // still want to update the indirect BB (to which the TotalCount goes, in
+    // that case).
+    if (auto It = CSData.find(CalleeGUID); It != CSData.end()) {
+      assert(CalleeGUID == It->second.guid());
+      DirectCount = It->second.getEntrycount();
+      // This direct target needs to be moved to this caller under the
+      // newly-allocated callsite index.
+      assert(Ctx.callsites().count(NewCSID) == 0);
+      Ctx.ingestContext(NewCSID, std::move(It->second));
+      CSData.erase(CalleeGUID);
+    }
+
+    assert(TotalCount >= DirectCount);
+    uint64_t IndirectCount = TotalCount - DirectCount;
+    // The ICP's effect is as-if the direct BB would have been taken DirectCount
+    // times, and the indirect BB, IndirectCount times
+    Ctx.counters()[DirectID] = DirectCount;
+    Ctx.counters()[IndirectID] = IndirectCount;
+
+  };
+  CtxProf.update(ProfileUpdater, Caller);
+  return &DirectCall;
+}
+
+CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
+                                         Function *Callee,
+                                         ArrayRef<Constant *> AddressPoints,
+                                         MDNode *BranchWeights) {
+  assert(!AddressPoints.empty() && "Caller should guarantee");
+  IRBuilder<> Builder(&CB);
+  SmallVector<Value *, 2> ICmps;
+  for (auto &AddressPoint : AddressPoints)
+    ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
+
+  // TODO: Perform tree height reduction if the number of ICmps is high.
+  Value *Cond = Builder.CreateOr(ICmps);
+
+  // Version the indirect call site. If Cond is true, 'NewInst' will be
+  // executed, otherwise the original call site will be executed.
+  CallBase &NewInst = versionCallSiteWithCond(CB, Cond, BranchWeights);
 
   // Promote 'NewInst' so that it directly calls the desired function.
   return promoteCall(NewInst, Callee);

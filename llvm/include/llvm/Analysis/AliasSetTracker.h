@@ -23,7 +23,6 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include <cassert>
@@ -37,10 +36,12 @@ class AnyMemSetInst;
 class AnyMemTransferInst;
 class BasicBlock;
 class BatchAAResults;
+class Function;
+class Instruction;
+class StoreInst;
 class LoadInst;
 enum class ModRefInfo : uint8_t;
 class raw_ostream;
-class StoreInst;
 class VAArgInst;
 class Value;
 
@@ -120,7 +121,7 @@ public:
   iterator begin() const { return MemoryLocs.begin(); }
   iterator end() const { return MemoryLocs.end(); }
 
-  unsigned size() { return MemoryLocs.size(); }
+  unsigned size() const { return MemoryLocs.size(); }
 
   /// Retrieve the pointer values for the memory locations in this alias set.
   /// The order matches that of the memory locations, but duplicate pointer

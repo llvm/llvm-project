@@ -22,268 +22,316 @@ def ParamAttr : AttrProperty;
 /// Can be used as return attribute.
 def RetAttr : AttrProperty;
 
+
+
+/// Intersection rules. Used for example in sinking/hoisting two
+/// callbases to find a set of attributes that apply to both.
+/// Note, there are some attributes we can (probably) legally drop
+/// but are intentionally excluded as of now.
+///
+/// When intersecting the attributes both must be present and equal.
+/// Use this for attributes it is not safe to drop at any time. E.g.
+/// `byval(Ty)` on a parameter.
+def IntersectPreserve : AttrProperty;
+
+/// When intersecting take the AND of the two attrs.
+/// Only valid for Enum attrs.
+def IntersectAnd : AttrProperty;
+
+/// When intersecting take the min value of the two attrs.
+/// Only valid for Int attrs.
+def IntersectMin : AttrProperty;
+
+/// When intersecting rely on some specially defined code.
+def IntersectCustom : AttrProperty;
+
+
+
 /// Attribute base class.
-class Attr<string S, list<AttrProperty> P> {
+class Attr<string S, AttrProperty I, list<AttrProperty> P> {
   // String representation of this attribute in the IR.
   string AttrString = S;
-  list<AttrProperty> Properties = P;
+  list<AttrProperty> Properties = P # [I];
 }
 
 /// Enum attribute.
-class EnumAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+class EnumAttr<string S, AttrProperty I, list<AttrProperty> P> : Attr<S, I, P>;
 
 /// Int attribute.
-class IntAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+class IntAttr<string S, AttrProperty I, list<AttrProperty> P> : Attr<S, I, P>;
 
 /// Type attribute.
-class TypeAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+class TypeAttr<string S, AttrProperty I, list<AttrProperty> P> : Attr<S, I, P>;
 
 /// StringBool attribute.
-class StrBoolAttr<string S> : Attr<S, []>;
+class StrBoolAttr<string S> : Attr<S, IntersectPreserve, []>;
 
 /// Arbitrary string attribute.
-class ComplexStrAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+class ComplexStrAttr<string S, list<AttrProperty> P> : Attr<S, IntersectPreserve, P>;
 
 /// ConstantRange attribute.
-class ConstantRangeAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+class ConstantRangeAttr<string S, AttrProperty I, list<AttrProperty> P> : Attr<S, I, P>;
+
+/// ConstantRangeList attribute.
+class ConstantRangeListAttr<string S, AttrProperty I, list<AttrProperty> P> : Attr<S, I, P>;
 
 /// Target-independent enum attributes.
 
 /// Alignment of parameter (5 bits) stored as log2 of alignment with +1 bias.
 /// 0 means unaligned (different from align(1)).
-def Alignment : IntAttr<"align", [ParamAttr, RetAttr]>;
+def Alignment : IntAttr<"align", IntersectCustom, [ParamAttr, RetAttr]>;
 
 /// Parameter of a function that tells us the alignment of an allocation, as in
 /// aligned_alloc and aligned ::operator::new.
-def AllocAlign: EnumAttr<"allocalign", [ParamAttr]>;
+def AllocAlign: EnumAttr<"allocalign", IntersectAnd, [ParamAttr]>;
 
 /// Describes behavior of an allocator function in terms of known properties.
-def AllocKind: IntAttr<"allockind", [FnAttr]>;
+def AllocKind: IntAttr<"allockind", IntersectPreserve, [FnAttr]>;
 
 /// Parameter is the pointer to be manipulated by the allocator function.
-def AllocatedPointer : EnumAttr<"allocptr", [ParamAttr]>;
+def AllocatedPointer : EnumAttr<"allocptr", IntersectAnd, [ParamAttr]>;
 
 /// The result of the function is guaranteed to point to a number of bytes that
 /// we can determine if we know the value of the function's arguments.
-def AllocSize : IntAttr<"allocsize", [FnAttr]>;
+def AllocSize : IntAttr<"allocsize", IntersectPreserve, [FnAttr]>;
 
 /// inline=always.
-def AlwaysInline : EnumAttr<"alwaysinline", [FnAttr]>;
+def AlwaysInline : EnumAttr<"alwaysinline", IntersectPreserve, [FnAttr]>;
 
 /// Callee is recognized as a builtin, despite nobuiltin attribute on its
 /// declaration.
-def Builtin : EnumAttr<"builtin", [FnAttr]>;
+def Builtin : EnumAttr<"builtin", IntersectPreserve, [FnAttr]>;
 
 /// Pass structure by value.
-def ByVal : TypeAttr<"byval", [ParamAttr]>;
+def ByVal : TypeAttr<"byval", IntersectPreserve, [ParamAttr]>;
 
 /// Mark in-memory ABI type.
-def ByRef : TypeAttr<"byref", [ParamAttr]>;
+def ByRef : TypeAttr<"byref", IntersectPreserve, [ParamAttr]>;
 
 /// Parameter or return value may not contain uninitialized or poison bits.
-def NoUndef : EnumAttr<"noundef", [ParamAttr, RetAttr]>;
+def NoUndef : EnumAttr<"noundef", IntersectAnd, [ParamAttr, RetAttr]>;
 
 /// Marks function as being in a cold path.
-def Cold : EnumAttr<"cold", [FnAttr]>;
+def Cold : EnumAttr<"cold", IntersectAnd, [FnAttr]>;
 
 /// Can only be moved to control-equivalent blocks.
-def Convergent : EnumAttr<"convergent", [FnAttr]>;
+/// NB: Could be IntersectCustom with "or" handling.
+def Convergent : EnumAttr<"convergent", IntersectPreserve, [FnAttr]>;
 
 /// Marks function as being in a hot path and frequently called.
-def Hot: EnumAttr<"hot", [FnAttr]>;
+def Hot: EnumAttr<"hot", IntersectAnd, [FnAttr]>;
 
 /// Pointer is known to be dereferenceable.
-def Dereferenceable : IntAttr<"dereferenceable", [ParamAttr, RetAttr]>;
+def Dereferenceable : IntAttr<"dereferenceable", IntersectMin, [ParamAttr, RetAttr]>;
 
 /// Pointer is either null or dereferenceable.
-def DereferenceableOrNull : IntAttr<"dereferenceable_or_null",
+def DereferenceableOrNull : IntAttr<"dereferenceable_or_null", IntersectMin,
                                     [ParamAttr, RetAttr]>;
 
 /// Do not instrument function with sanitizers.
-def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation", [FnAttr]>;
+def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation", IntersectPreserve, [FnAttr]>;
 
 /// Provide pointer element type to intrinsic.
-def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
+def ElementType : TypeAttr<"elementtype", IntersectPreserve, [ParamAttr]>;
 
 /// Whether to keep return instructions, or replace with a jump to an external
 /// symbol.
-def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", [FnAttr]>;
+def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", IntersectPreserve, [FnAttr]>;
+
+/// Function has a hybrid patchable thunk.
+def HybridPatchable : EnumAttr<"hybrid_patchable", IntersectPreserve, [FnAttr]>;
 
 /// Pass structure in an alloca.
-def InAlloca : TypeAttr<"inalloca", [ParamAttr]>;
+def InAlloca : TypeAttr<"inalloca", IntersectPreserve, [ParamAttr]>;
+
+/// Pointer argument memory is initialized.
+def Initializes : ConstantRangeListAttr<"initializes", IntersectPreserve, [ParamAttr]>;
 
 /// Source said inlining was desirable.
-def InlineHint : EnumAttr<"inlinehint", [FnAttr]>;
+def InlineHint : EnumAttr<"inlinehint", IntersectAnd, [FnAttr]>;
 
 /// Force argument to be passed in register.
-def InReg : EnumAttr<"inreg", [ParamAttr, RetAttr]>;
+def InReg : EnumAttr<"inreg", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Build jump-instruction tables and replace refs.
-def JumpTable : EnumAttr<"jumptable", [FnAttr]>;
+def JumpTable : EnumAttr<"jumptable", IntersectPreserve, [FnAttr]>;
 
 /// Memory effects of the function.
-def Memory : IntAttr<"memory", [FnAttr]>;
+def Memory : IntAttr<"memory", IntersectCustom, [FnAttr]>;
 
 /// Forbidden floating-point classes.
-def NoFPClass : IntAttr<"nofpclass", [ParamAttr, RetAttr]>;
+def NoFPClass : IntAttr<"nofpclass", IntersectCustom, [ParamAttr, RetAttr]>;
 
 /// Function must be optimized for size first.
-def MinSize : EnumAttr<"minsize", [FnAttr]>;
+def MinSize : EnumAttr<"minsize", IntersectPreserve, [FnAttr]>;
 
 /// Naked function.
-def Naked : EnumAttr<"naked", [FnAttr]>;
+def Naked : EnumAttr<"naked", IntersectPreserve, [FnAttr]>;
 
 /// Nested function static chain.
-def Nest : EnumAttr<"nest", [ParamAttr]>;
+def Nest : EnumAttr<"nest", IntersectPreserve, [ParamAttr]>;
 
 /// Considered to not alias after call.
-def NoAlias : EnumAttr<"noalias", [ParamAttr, RetAttr]>;
+def NoAlias : EnumAttr<"noalias", IntersectAnd, [ParamAttr, RetAttr]>;
 
 /// Callee isn't recognized as a builtin.
-def NoBuiltin : EnumAttr<"nobuiltin", [FnAttr]>;
+def NoBuiltin : EnumAttr<"nobuiltin", IntersectPreserve, [FnAttr]>;
 
 /// Function cannot enter into caller's translation unit.
-def NoCallback : EnumAttr<"nocallback", [FnAttr]>;
+def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 
 /// Function creates no aliases of pointer.
-def NoCapture : EnumAttr<"nocapture", [ParamAttr]>;
+def NoCapture : EnumAttr<"nocapture", IntersectAnd, [ParamAttr]>;
 
 /// Call cannot be duplicated.
-def NoDuplicate : EnumAttr<"noduplicate", [FnAttr]>;
+def NoDuplicate : EnumAttr<"noduplicate", IntersectPreserve, [FnAttr]>;
+
+/// No extension needed before/after call (high bits are undefined).
+def NoExt : EnumAttr<"noext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Function does not deallocate memory.
-def NoFree : EnumAttr<"nofree", [FnAttr, ParamAttr]>;
+def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
 
 /// Argument is dead if the call unwinds.
-def DeadOnUnwind : EnumAttr<"dead_on_unwind", [ParamAttr]>;
+def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
 
 /// Disable implicit floating point insts.
-def NoImplicitFloat : EnumAttr<"noimplicitfloat", [FnAttr]>;
+def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
 /// inline=never.
-def NoInline : EnumAttr<"noinline", [FnAttr]>;
+def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
-def NonLazyBind : EnumAttr<"nonlazybind", [FnAttr]>;
+def NonLazyBind : EnumAttr<"nonlazybind", IntersectPreserve, [FnAttr]>;
 
 /// Disable merging for specified functions or call sites.
-def NoMerge : EnumAttr<"nomerge", [FnAttr]>;
+def NoMerge : EnumAttr<"nomerge", IntersectPreserve, [FnAttr]>;
 
 /// Pointer is known to be not null.
-def NonNull : EnumAttr<"nonnull", [ParamAttr, RetAttr]>;
+def NonNull : EnumAttr<"nonnull", IntersectAnd, [ParamAttr, RetAttr]>;
 
 /// The function does not recurse.
-def NoRecurse : EnumAttr<"norecurse", [FnAttr]>;
+def NoRecurse : EnumAttr<"norecurse", IntersectAnd, [FnAttr]>;
 
 /// Disable redzone.
-def NoRedZone : EnumAttr<"noredzone", [FnAttr]>;
+def NoRedZone : EnumAttr<"noredzone", IntersectPreserve, [FnAttr]>;
 
 /// Mark the function as not returning.
-def NoReturn : EnumAttr<"noreturn", [FnAttr]>;
+def NoReturn : EnumAttr<"noreturn", IntersectAnd, [FnAttr]>;
 
 /// Function does not synchronize.
-def NoSync : EnumAttr<"nosync", [FnAttr]>;
+def NoSync : EnumAttr<"nosync", IntersectAnd, [FnAttr]>;
 
 /// Disable Indirect Branch Tracking.
-def NoCfCheck : EnumAttr<"nocf_check", [FnAttr]>;
+def NoCfCheck : EnumAttr<"nocf_check", IntersectPreserve, [FnAttr]>;
 
 /// Function should not be instrumented.
-def NoProfile : EnumAttr<"noprofile", [FnAttr]>;
+def NoProfile : EnumAttr<"noprofile", IntersectPreserve, [FnAttr]>;
 
 /// This function should not be instrumented but it is ok to inline profiled
 // functions into it.
-def SkipProfile : EnumAttr<"skipprofile", [FnAttr]>;
+def SkipProfile : EnumAttr<"skipprofile", IntersectPreserve, [FnAttr]>;
 
 /// Function doesn't unwind stack.
-def NoUnwind : EnumAttr<"nounwind", [FnAttr]>;
+def NoUnwind : EnumAttr<"nounwind", IntersectAnd, [FnAttr]>;
 
 /// No SanitizeBounds instrumentation.
-def NoSanitizeBounds : EnumAttr<"nosanitize_bounds", [FnAttr]>;
+def NoSanitizeBounds : EnumAttr<"nosanitize_bounds", IntersectPreserve, [FnAttr]>;
 
 /// No SanitizeCoverage instrumentation.
-def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage", [FnAttr]>;
+def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage", IntersectPreserve, [FnAttr]>;
 
 /// Null pointer in address space zero is valid.
-def NullPointerIsValid : EnumAttr<"null_pointer_is_valid", [FnAttr]>;
+def NullPointerIsValid : EnumAttr<"null_pointer_is_valid", IntersectPreserve, [FnAttr]>;
 
 /// Select optimizations that give decent debug info.
-def OptimizeForDebugging : EnumAttr<"optdebug", [FnAttr]>;
+def OptimizeForDebugging : EnumAttr<"optdebug", IntersectPreserve, [FnAttr]>;
 
 /// Select optimizations for best fuzzing signal.
-def OptForFuzzing : EnumAttr<"optforfuzzing", [FnAttr]>;
+def OptForFuzzing : EnumAttr<"optforfuzzing", IntersectPreserve, [FnAttr]>;
 
 /// opt_size.
-def OptimizeForSize : EnumAttr<"optsize", [FnAttr]>;
+def OptimizeForSize : EnumAttr<"optsize", IntersectPreserve, [FnAttr]>;
 
 /// Function must not be optimized.
-def OptimizeNone : EnumAttr<"optnone", [FnAttr]>;
+def OptimizeNone : EnumAttr<"optnone", IntersectPreserve, [FnAttr]>;
 
 /// Similar to byval but without a copy.
-def Preallocated : TypeAttr<"preallocated", [FnAttr, ParamAttr]>;
+def Preallocated : TypeAttr<"preallocated", IntersectPreserve, [FnAttr, ParamAttr]>;
 
 /// Parameter or return value is within the specified range.
-def Range : ConstantRangeAttr<"range", [ParamAttr, RetAttr]>;
+def Range : ConstantRangeAttr<"range", IntersectCustom, [ParamAttr, RetAttr]>;
 
 /// Function does not access memory.
-def ReadNone : EnumAttr<"readnone", [ParamAttr]>;
+def ReadNone : EnumAttr<"readnone", IntersectAnd, [ParamAttr]>;
 
 /// Function only reads from memory.
-def ReadOnly : EnumAttr<"readonly", [ParamAttr]>;
+def ReadOnly : EnumAttr<"readonly", IntersectAnd, [ParamAttr]>;
 
 /// Return value is always equal to this argument.
-def Returned : EnumAttr<"returned", [ParamAttr]>;
+def Returned : EnumAttr<"returned", IntersectAnd, [ParamAttr]>;
 
 /// Parameter is required to be a trivial constant.
-def ImmArg : EnumAttr<"immarg", [ParamAttr]>;
+def ImmArg : EnumAttr<"immarg", IntersectPreserve, [ParamAttr]>;
 
 /// Function can return twice.
-def ReturnsTwice : EnumAttr<"returns_twice", [FnAttr]>;
+def ReturnsTwice : EnumAttr<"returns_twice", IntersectPreserve, [FnAttr]>;
 
 /// Safe Stack protection.
-def SafeStack : EnumAttr<"safestack", [FnAttr]>;
+def SafeStack : EnumAttr<"safestack", IntersectPreserve, [FnAttr]>;
 
 /// Shadow Call Stack protection.
-def ShadowCallStack : EnumAttr<"shadowcallstack", [FnAttr]>;
+def ShadowCallStack : EnumAttr<"shadowcallstack", IntersectPreserve, [FnAttr]>;
 
 /// Sign extended before/after call.
-def SExt : EnumAttr<"signext", [ParamAttr, RetAttr]>;
+def SExt : EnumAttr<"signext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Alignment of stack for function (3 bits)  stored as log2 of alignment with
 /// +1 bias 0 means unaligned (different from alignstack=(1)).
-def StackAlignment : IntAttr<"alignstack", [FnAttr, ParamAttr]>;
+def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr]>;
 
 /// Function can be speculated.
-def Speculatable : EnumAttr<"speculatable", [FnAttr]>;
+def Speculatable : EnumAttr<"speculatable", IntersectAnd, [FnAttr]>;
 
 /// Stack protection.
-def StackProtect : EnumAttr<"ssp", [FnAttr]>;
+def StackProtect : EnumAttr<"ssp", IntersectPreserve, [FnAttr]>;
 
 /// Stack protection required.
-def StackProtectReq : EnumAttr<"sspreq", [FnAttr]>;
+def StackProtectReq : EnumAttr<"sspreq", IntersectPreserve, [FnAttr]>;
 
 /// Strong Stack protection.
-def StackProtectStrong : EnumAttr<"sspstrong", [FnAttr]>;
+def StackProtectStrong : EnumAttr<"sspstrong", IntersectPreserve, [FnAttr]>;
 
 /// Function was called in a scope requiring strict floating point semantics.
-def StrictFP : EnumAttr<"strictfp", [FnAttr]>;
+def StrictFP : EnumAttr<"strictfp", IntersectPreserve, [FnAttr]>;
 
 /// Hidden pointer to structure to return.
-def StructRet : TypeAttr<"sret", [ParamAttr]>;
+def StructRet : TypeAttr<"sret", IntersectPreserve, [ParamAttr]>;
 
 /// AddressSanitizer is on.
-def SanitizeAddress : EnumAttr<"sanitize_address", [FnAttr]>;
+def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
 
 /// ThreadSanitizer is on.
-def SanitizeThread : EnumAttr<"sanitize_thread", [FnAttr]>;
+def SanitizeThread : EnumAttr<"sanitize_thread", IntersectPreserve, [FnAttr]>;
 
 /// MemorySanitizer is on.
-def SanitizeMemory : EnumAttr<"sanitize_memory", [FnAttr]>;
+def SanitizeMemory : EnumAttr<"sanitize_memory", IntersectPreserve, [FnAttr]>;
 
 /// HWAddressSanitizer is on.
-def SanitizeHWAddress : EnumAttr<"sanitize_hwaddress", [FnAttr]>;
+def SanitizeHWAddress : EnumAttr<"sanitize_hwaddress", IntersectPreserve, [FnAttr]>;
 
 /// MemTagSanitizer is on.
-def SanitizeMemTag : EnumAttr<"sanitize_memtag", [FnAttr]>;
+def SanitizeMemTag : EnumAttr<"sanitize_memtag", IntersectPreserve, [FnAttr]>;
+
+/// NumericalStabilitySanitizer is on.
+def SanitizeNumericalStability : EnumAttr<"sanitize_numerical_stability", IntersectPreserve, [FnAttr]>;
+
+/// RealtimeSanitizer is on.
+def SanitizeRealtime : EnumAttr<"sanitize_realtime", IntersectPreserve, [FnAttr]>;
+
+/// RealtimeSanitizer should error if a real-time unsafe function is invoked
+/// during a real-time sanitized function (see `sanitize_realtime`).
+def SanitizeRealtimeUnsafe : EnumAttr<"sanitize_realtime_unsafe", IntersectPreserve, [FnAttr]>;
 
 /// Speculative Load Hardening is enabled.
 ///
@@ -292,43 +340,48 @@ def SanitizeMemTag : EnumAttr<"sanitize_memtag", [FnAttr]>;
 /// body will add the attribute to the caller. This ensures that code carrying
 /// this attribute will always be lowered with hardening enabled.
 def SpeculativeLoadHardening : EnumAttr<"speculative_load_hardening",
+                                        IntersectPreserve,
                                         [FnAttr]>;
 
 /// Argument is swift error.
-def SwiftError : EnumAttr<"swifterror", [ParamAttr]>;
+def SwiftError : EnumAttr<"swifterror", IntersectPreserve, [ParamAttr]>;
 
 /// Argument is swift self/context.
-def SwiftSelf : EnumAttr<"swiftself", [ParamAttr]>;
+def SwiftSelf : EnumAttr<"swiftself", IntersectPreserve, [ParamAttr]>;
 
 /// Argument is swift async context.
-def SwiftAsync : EnumAttr<"swiftasync", [ParamAttr]>;
+def SwiftAsync : EnumAttr<"swiftasync", IntersectPreserve, [ParamAttr]>;
 
 /// Function must be in a unwind table.
-def UWTable : IntAttr<"uwtable", [FnAttr]>;
+def UWTable : IntAttr<"uwtable", IntersectPreserve, [FnAttr]>;
 
 /// Minimum/Maximum vscale value for function.
-def VScaleRange : IntAttr<"vscale_range", [FnAttr]>;
+def VScaleRange : IntAttr<"vscale_range", IntersectPreserve, [FnAttr]>;
 
 /// Function always comes back to callsite.
-def WillReturn : EnumAttr<"willreturn", [FnAttr]>;
+def WillReturn : EnumAttr<"willreturn", IntersectAnd, [FnAttr]>;
 
 /// Pointer argument is writable.
-def Writable : EnumAttr<"writable", [ParamAttr]>;
+def Writable : EnumAttr<"writable", IntersectAnd, [ParamAttr]>;
 
 /// Function only writes to memory.
-def WriteOnly : EnumAttr<"writeonly", [ParamAttr]>;
+def WriteOnly : EnumAttr<"writeonly", IntersectAnd, [ParamAttr]>;
 
 /// Zero extended before/after call.
-def ZExt : EnumAttr<"zeroext", [ParamAttr, RetAttr]>;
+def ZExt : EnumAttr<"zeroext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Function is required to make Forward Progress.
-def MustProgress : EnumAttr<"mustprogress", [FnAttr]>;
+def MustProgress : EnumAttr<"mustprogress", IntersectAnd, [FnAttr]>;
 
 /// Function is a presplit coroutine.
-def PresplitCoroutine : EnumAttr<"presplitcoroutine", [FnAttr]>;
+def PresplitCoroutine : EnumAttr<"presplitcoroutine", IntersectPreserve, [FnAttr]>;
 
 /// The coroutine would only be destroyed when it is complete.
-def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", [FnAttr]>;
+def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", IntersectPreserve, [FnAttr]>;
+
+/// The coroutine call meets the elide requirement. Hint the optimization
+/// pipeline to perform elide on the call or invoke instruction.
+def CoroElideSafe : EnumAttr<"coro_elide_safe", IntersectPreserve, [FnAttr]>;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
@@ -372,6 +425,9 @@ def : CompatRule<"isEqual<SanitizeThreadAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;
+def : CompatRule<"isEqual<SanitizeNumericalStabilityAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeAttr>">;
+def : CompatRule<"isEqual<SanitizeRealtimeUnsafeAttr>">;
 def : CompatRule<"isEqual<SafeStackAttr>">;
 def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;

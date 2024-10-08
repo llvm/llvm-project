@@ -87,6 +87,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_3A:
   case ArchKind::ARMV9_4A:
   case ArchKind::ARMV9_5A:
+  case ArchKind::ARMV9_6A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -125,6 +126,7 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV9_3A:
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
+  case ARM::ArchKind::ARMV9_6A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:
@@ -610,7 +612,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     return StringRef();
 
   StringRef CPU = llvm::ARM::getDefaultCPU(MArch);
-  if (!CPU.empty() && !CPU.equals("invalid"))
+  if (!CPU.empty() && CPU != "invalid")
     return CPU;
 
   // If no specific architecture version is requested, return the minimum CPU

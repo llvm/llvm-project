@@ -141,6 +141,36 @@ public:
    void MyLock() EXCLUSIVE_LOCK_FUNCTION(mu);
 };
 
+struct TestingMoreComplexAttributes {
+   Mutex lock;
+   struct { Mutex lock; } strct;
+   union {
+       bool a __attribute__((guarded_by(lock)));
+       bool b __attribute__((guarded_by(strct.lock)));
+       bool *ptr_a __attribute__((pt_guarded_by(lock)));
+       bool *ptr_b __attribute__((pt_guarded_by(strct.lock)));
+       Mutex lock1 __attribute__((acquired_before(lock))) __attribute__((acquired_before(strct.lock)));
+       Mutex lock2 __attribute__((acquired_after(lock))) __attribute__((acquired_after(strct.lock)));
+   };
+} more_complex_atttributes;
+
+void more_complex_attributes() {
+    more_complex_atttributes.a = true; // expected-warning{{writing variable 'a' requires holding mutex 'lock' exclusively}}
+    more_complex_atttributes.b = true; // expected-warning{{writing variable 'b' requires holding mutex 'strct.lock' exclusively}}
+    *more_complex_atttributes.ptr_a = true; // expected-warning{{writing the value pointed to by 'ptr_a' requires holding mutex 'lock' exclusively}}
+    *more_complex_atttributes.ptr_b = true; // expected-warning{{writing the value pointed to by 'ptr_b' requires holding mutex 'strct.lock' exclusively}}
+
+    more_complex_atttributes.lock.Lock();
+    more_complex_atttributes.lock1.Lock(); // expected-warning{{mutex 'lock1' must be acquired before 'lock'}}
+    more_complex_atttributes.lock1.Unlock();
+    more_complex_atttributes.lock.Unlock();
+
+    more_complex_atttributes.lock2.Lock();
+    more_complex_atttributes.lock.Lock(); // expected-warning{{mutex 'lock' must be acquired before 'lock2'}}
+    more_complex_atttributes.lock.Unlock();
+    more_complex_atttributes.lock2.Unlock();
+}
+
 MutexWrapper sls_mw;
 
 void sls_fun_0() {
@@ -5341,7 +5371,7 @@ void dispatch_log(const char *msg) __attribute__((requires_capability(!FlightCon
 void dispatch_log2(const char *msg) __attribute__((requires_capability(Logger))) {}
 
 void flight_control_entry(void) __attribute__((requires_capability(FlightControl))) {
-  dispatch_log("wrong"); /* expected-warning {{cannot call function 'dispatch_log' while mutex 'FlightControl' is held}} */
+  dispatch_log("wrong"); /* expected-warning {{cannot call function 'dispatch_log' while role 'FlightControl' is held}} */
   dispatch_log2("also wrong"); /* expected-warning {{calling function 'dispatch_log2' requires holding role 'Logger' exclusively}} */
 }
 
@@ -5838,12 +5868,12 @@ class Foo5 {
 
 
 class Foo6 {
-  Mutex mu1 ACQUIRED_AFTER(mu3);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu1'}}
-  Mutex mu2 ACQUIRED_AFTER(mu1);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu2'}}
-  Mutex mu3 ACQUIRED_AFTER(mu2);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu3'}}
+  Mutex mu1 ACQUIRED_AFTER(mu3);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu1'}}
+  Mutex mu2 ACQUIRED_AFTER(mu1);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu2'}}
+  Mutex mu3 ACQUIRED_AFTER(mu2);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu3'}}
 
-  Mutex mu_b ACQUIRED_BEFORE(mu_b);  // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu_b'}}
-  Mutex mu_a ACQUIRED_AFTER(mu_a);   // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu_a'}}
+  Mutex mu_b ACQUIRED_BEFORE(mu_b);  // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu_b'}}
+  Mutex mu_a ACQUIRED_AFTER(mu_a);   // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu_a'}}
 
   void test0() {
     mu_a.Lock();
@@ -6047,24 +6077,20 @@ namespace ReturnScopedLockable {
 class Object {
 public:
   MutexLock lock() EXCLUSIVE_LOCK_FUNCTION(mutex) {
-    // TODO: False positive because scoped lock isn't destructed.
-    return MutexLock(&mutex); // expected-note {{mutex acquired here}}
-  }                           // expected-warning {{mutex 'mutex' is still held at the end of function}}
+    return MutexLock(&mutex);
+  }
 
   ReaderMutexLock lockShared() SHARED_LOCK_FUNCTION(mutex) {
-    // TODO: False positive because scoped lock isn't destructed.
-    return ReaderMutexLock(&mutex); // expected-note {{mutex acquired here}}
-  }                                 // expected-warning {{mutex 'mutex' is still held at the end of function}}
+    return ReaderMutexLock(&mutex);
+  }
 
   MutexLock adopt() EXCLUSIVE_LOCKS_REQUIRED(mutex) {
-    // TODO: False positive because scoped lock isn't destructed.
-    return MutexLock(&mutex, true); // expected-note {{mutex acquired here}}
-  }                                 // expected-warning {{mutex 'mutex' is still held at the end of function}}
+    return MutexLock(&mutex, true);
+  }
 
   ReaderMutexLock adoptShared() SHARED_LOCKS_REQUIRED(mutex) {
-    // TODO: False positive because scoped lock isn't destructed.
-    return ReaderMutexLock(&mutex, true); // expected-note {{mutex acquired here}}
-  }                                       // expected-warning {{mutex 'mutex' is still held at the end of function}}
+    return ReaderMutexLock(&mutex, true);
+  }
 
   int x GUARDED_BY(mutex);
   void needsLock() EXCLUSIVE_LOCKS_REQUIRED(mutex);

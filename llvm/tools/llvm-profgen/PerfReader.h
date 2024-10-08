@@ -570,7 +570,7 @@ public:
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase>
   create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
-         std::optional<uint32_t> PIDFilter);
+         std::optional<int32_t> PIDFilter);
 
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() = 0;
@@ -595,15 +595,15 @@ protected:
 class PerfScriptReader : public PerfReaderBase {
 public:
   PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace,
-                   std::optional<uint32_t> PID)
-      : PerfReaderBase(B, PerfTrace), PIDFilter(PID){};
+                   std::optional<int32_t> PID)
+      : PerfReaderBase(B, PerfTrace), PIDFilter(PID) {};
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
   // Generate perf script from perf data
-  static PerfInputFile
-  convertPerfDataToTrace(ProfiledBinary *Binary, PerfInputFile &File,
-                         std::optional<uint32_t> PIDFilter);
+  static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
+                                              bool SkipPID, PerfInputFile &File,
+                                              std::optional<int32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
 
@@ -615,7 +615,7 @@ public:
 protected:
   // The parsed MMap event
   struct MMapEvent {
-    uint64_t PID = 0;
+    int64_t PID = 0;
     uint64_t Address = 0;
     uint64_t Size = 0;
     uint64_t Offset = 0;
@@ -625,15 +625,15 @@ protected:
   // Check whether a given line is LBR sample
   static bool isLBRSample(StringRef Line);
   // Check whether a given line is MMAP event
-  static bool isMMap2Event(StringRef Line);
-  // Parse a single line of a PERF_RECORD_MMAP2 event looking for a
+  static bool isMMapEvent(StringRef Line);
+  // Parse a single line of a PERF_RECORD_MMAP event looking for a
   // mapping between the binary name and its memory layout.
-  static bool extractMMap2EventForBinary(ProfiledBinary *Binary, StringRef Line,
-                                         MMapEvent &MMap);
+  static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
+                                        MMapEvent &MMap);
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
   // Parse mmap event and update binary address
-  void parseMMap2Event(TraceStream &TraceIt);
+  void parseMMapEvent(TraceStream &TraceIt);
   // Parse perf events/samples and do aggregation
   void parseAndAggregateTrace();
   // Parse either an MMAP event or a perf sample
@@ -669,7 +669,7 @@ protected:
   // Keep track of all invalid return addresses
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
-  std::optional<uint32_t> PIDFilter;
+  std::optional<int32_t> PIDFilter;
 };
 
 /*
@@ -681,8 +681,8 @@ protected:
 class LBRPerfReader : public PerfScriptReader {
 public:
   LBRPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                std::optional<uint32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID){};
+                std::optional<int32_t> PID)
+      : PerfScriptReader(Binary, PerfTrace, PID) {};
   // Parse the LBR only sample.
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
 };
@@ -699,8 +699,8 @@ public:
 class HybridPerfReader : public PerfScriptReader {
 public:
   HybridPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                   std::optional<uint32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID){};
+                   std::optional<int32_t> PID)
+      : PerfScriptReader(Binary, PerfTrace, PID) {};
   // Parse the hybrid sample including the call and LBR line
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateUnsymbolizedProfile() override;

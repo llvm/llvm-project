@@ -12,6 +12,21 @@
 # CHECK-NEXT: cmdsize 32
 # CHECK-NEXT: path /another/rpath
 
+## Check that -rpath entries are deduplicated.
+# RUN: not %lld %t.o -o /dev/null -rpath /some/rpath -rpath /other/rpath -rpath /some/rpath 2>&1 | \
+# RUN:     FileCheck --check-prefix=FATAL %s
+# FATAL: error: duplicate -rpath '/some/rpath' ignored [--warn-duplicate-rpath]
+
+# RUN: %lld -o %t-dup %t.o -rpath /some/rpath -rpath /other/rpath -rpath /some/rpath --no-warn-duplicate-rpath
+# RUN: llvm-objdump --macho --all-headers %t-dup | FileCheck %s --check-prefix=DEDUP
+# DEDUP:      LC_RPATH
+# DEDUP-NEXT: cmdsize 24
+# DEDUP-NEXT: path /some/rpath
+# DEDUP:      LC_RPATH
+# DEDUP-NEXT: cmdsize 32
+# DEDUP-NEXT: path /other/rpath
+# DEDUP-NOT:  LC_RPATH
+
 .text
 .global _main
 _main:

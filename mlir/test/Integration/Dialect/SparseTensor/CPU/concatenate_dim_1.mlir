@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -116,11 +117,11 @@ module {
     // CHECK-NEXT: nse = 18
     // CHECK-NEXT: dim = ( 4, 9 )
     // CHECK-NEXT: lvl = ( 4, 9 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 5, 9, 14, 18
-    // CHECK-NEXT: crd[1] : ( 0, 2, 4, 7, 8, 0, 2, 4, 6, 1, 4, 5, 6, 7, 2, 3, 5, 6
-    // CHECK-NEXT: values : ( 1, 1, 1, 1.5, 1, 3.1, 1, 0.5, 3.5, 2, 1, 1, 5, 2, 5, 2, 1, 0.5
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 5, 9, 14, 18 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 4, 7, 8, 0, 2, 4, 6, 1, 4, 5, 6, 7, 2, 3, 5, 6 )
+    // CHECK-NEXT: values : ( 1, 1, 1, 1.5, 1, 3.1, 1, 0.5, 3.5, 2, 1, 1, 5, 2, 5, 2, 1, 0.5 )
     // CHECK-NEXT: ----
     //
     %8 = call @concat_sparse_sparse_dim1(%sm42cc, %sm43cd, %sm44dc)
@@ -140,11 +141,11 @@ module {
     // CHECK-NEXT: nse = 18
     // CHECK-NEXT: dim = ( 4, 9 )
     // CHECK-NEXT: lvl = ( 4, 9 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 5, 9, 14, 18
-    // CHECK-NEXT: crd[1] : ( 0, 2, 4, 7, 8, 0, 2, 4, 6, 1, 4, 5, 6, 7, 2, 3, 5, 6
-    // CHECK-NEXT: values : ( 1, 1, 1, 1.5, 1, 3.1, 1, 0.5, 3.5, 2, 1, 1, 5, 2, 5, 2, 1, 0.5
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 5, 9, 14, 18 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 4, 7, 8, 0, 2, 4, 6, 1, 4, 5, 6, 7, 2, 3, 5, 6 )
+    // CHECK-NEXT: values : ( 1, 1, 1, 1.5, 1, 3.1, 1, 0.5, 3.5, 2, 1, 1, 5, 2, 5, 2, 1, 0.5 )
     // CHECK-NEXT: ----
     //
     %10 = call @concat_mix_sparse_dim1(%m42, %sm43cd, %sm44dc)

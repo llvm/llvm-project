@@ -9,7 +9,6 @@
 // RUN:   -target-feature +zvknhb \
 // RUN:   -target-feature +zvksed \
 // RUN:   -target-feature +zvksh \
-// RUN:   -target-feature +experimental \
 // RUN:   -disable-O0-optnone \
 // RUN:   -emit-llvm %s -o - | opt -S -passes=mem2reg | \
 // RUN:   FileCheck --check-prefix=CHECK-RV64 %s

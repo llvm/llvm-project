@@ -5,7 +5,7 @@
 define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; SI-LABEL: v_ubfe_sub_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -23,7 +23,7 @@ define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; VI-LABEL: v_ubfe_sub_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -55,7 +55,7 @@ define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
 define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; SI-LABEL: v_ubfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -78,7 +78,7 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
 ;
 ; VI-LABEL: v_ubfe_sub_multi_use_shl_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -115,7 +115,7 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
 define amdgpu_kernel void @s_ubfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
 ; SI-LABEL: s_ubfe_sub_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -131,7 +131,7 @@ define amdgpu_kernel void @s_ubfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %
 ;
 ; VI-LABEL: s_ubfe_sub_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
@@ -155,7 +155,7 @@ define amdgpu_kernel void @s_ubfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %
 define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
 ; SI-LABEL: s_ubfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -175,7 +175,7 @@ define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i
 ;
 ; VI-LABEL: s_ubfe_sub_multi_use_shl_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
@@ -203,7 +203,7 @@ define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i
 define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; SI-LABEL: v_sbfe_sub_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -221,7 +221,7 @@ define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; VI-LABEL: v_sbfe_sub_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -253,7 +253,7 @@ define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1
 define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; SI-LABEL: v_sbfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -276,7 +276,7 @@ define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
 ;
 ; VI-LABEL: v_sbfe_sub_multi_use_shl_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -313,7 +313,7 @@ define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
 define amdgpu_kernel void @s_sbfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
 ; SI-LABEL: s_sbfe_sub_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -329,7 +329,7 @@ define amdgpu_kernel void @s_sbfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %
 ;
 ; VI-LABEL: s_sbfe_sub_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
@@ -353,7 +353,7 @@ define amdgpu_kernel void @s_sbfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %
 define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
 ; SI-LABEL: s_sbfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -373,7 +373,7 @@ define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i
 ;
 ; VI-LABEL: s_sbfe_sub_multi_use_shl_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
@@ -401,8 +401,8 @@ define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i
 define amdgpu_kernel void @s_sbfe_or_shl_shl_uniform_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
 ; SI-LABEL: s_sbfe_or_shl_shl_uniform_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -417,8 +417,8 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_uniform_i32(ptr addrspace(1) %out, 
 ;
 ; VI-LABEL: s_sbfe_or_shl_shl_uniform_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -444,8 +444,8 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_uniform_i32(ptr addrspace(1) %out, 
 define amdgpu_kernel void @s_sbfe_or_shl_shl_nonuniform_i32(ptr addrspace(1) %out, ptr addrspace(1) %x, ptr addrspace(1) %y) {
 ; SI-LABEL: s_sbfe_or_shl_shl_nonuniform_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -462,8 +462,8 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_nonuniform_i32(ptr addrspace(1) %ou
 ;
 ; VI-LABEL: s_sbfe_or_shl_shl_nonuniform_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -491,8 +491,8 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_nonuniform_i32(ptr addrspace(1) %ou
 define amdgpu_kernel void @s_sbfe_or_shl_shl_toosmall_i32(ptr addrspace(1) %out, ptr addrspace(1) %x, ptr addrspace(1) %y) {
 ; SI-LABEL: s_sbfe_or_shl_shl_toosmall_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -509,8 +509,8 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_toosmall_i32(ptr addrspace(1) %out,
 ;
 ; VI-LABEL: s_sbfe_or_shl_shl_toosmall_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s2, s[6:7], 0x0
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0

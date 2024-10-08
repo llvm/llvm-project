@@ -36,7 +36,7 @@ DiagnosedSilenceableFailure transform::BufferLoopHoistingOp::applyToOne(
 
 void transform::BufferLoopHoistingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -110,7 +110,7 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::EliminateEmptyTensorsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -150,6 +150,9 @@ class BufferizationTransformDialectExtension
     : public transform::TransformDialectExtension<
           BufferizationTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      BufferizationTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

@@ -264,9 +264,10 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     if (!m_user_expression_sp->Parse(diagnostics, exe_ctx,
                                      eExecutionPolicyOnlyWhenNeeded, true,
                                      false)) {
-      error.SetErrorStringWithFormat(
-          "Couldn't parse conditional expression:\n%s",
-          diagnostics.GetString().c_str());
+      error = Status::FromError(
+          diagnostics.GetAsError(lldb::eExpressionParseError,
+                                 "Couldn't parse conditional expression:"));
+
       m_user_expression_sp.reset();
       return true;
     }
@@ -299,7 +300,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
 
   if (result_code == eExpressionCompleted) {
     if (!result_variable_sp) {
-      error.SetErrorString("Expression did not return a result");
+      error = Status::FromErrorString("Expression did not return a result");
       return false;
     }
 
@@ -312,19 +313,20 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
           LLDB_LOGF(log, "Condition successfully evaluated, result is %s.\n",
                     ret ? "true" : "false");
         } else {
-          error.SetErrorString(
+          error = Status::FromErrorString(
               "Failed to get an integer result from the expression");
           ret = false;
         }
       }
     } else {
       ret = false;
-      error.SetErrorString("Failed to get any result from the expression");
+      error = Status::FromErrorString(
+          "Failed to get any result from the expression");
     }
   } else {
     ret = false;
-    error.SetErrorStringWithFormat("Couldn't execute expression:\n%s",
-                                   diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        lldb::eExpressionParseError, "Couldn't execute expression:"));
   }
 
   return ret;
@@ -507,7 +509,7 @@ void BreakpointLocation::GetDescription(Stream *s,
       else
         s->PutCString("where = ");
       sc.DumpStopContext(s, m_owner.GetTarget().GetProcessSP().get(), m_address,
-                         false, true, false, true, true);
+                         false, true, false, true, true, true);
     } else {
       if (sc.module_sp) {
         s->EOL();

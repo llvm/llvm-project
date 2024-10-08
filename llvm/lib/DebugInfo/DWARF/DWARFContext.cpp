@@ -247,6 +247,7 @@ DWARFContext::DWARFContextState::parseMacroOrMacinfo(MacroSecType SectionType) {
   return Macro;
 }
 
+namespace {
 class ThreadUnsafeDWARFContextState : public DWARFContext::DWARFContextState {
 
   DWARFUnitVector NormalUnits;
@@ -740,8 +741,7 @@ public:
     return ThreadUnsafeDWARFContextState::getTypeUnitMap(IsDWO);
   }
 };
-
-
+} // namespace
 
 DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
                            std::string DWPName,
@@ -807,13 +807,14 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
   // type units in dwo or dwp files) share contributions. We don't want
   // to report them more than once.
   Contributions.erase(
-      std::unique(Contributions.begin(), Contributions.end(),
-                  [](const std::optional<StrOffsetsContributionDescriptor> &L,
-                     const std::optional<StrOffsetsContributionDescriptor> &R) {
-                    if (L && R)
-                      return L->Base == R->Base && L->Size == R->Size;
-                    return false;
-                  }),
+      llvm::unique(
+          Contributions,
+          [](const std::optional<StrOffsetsContributionDescriptor> &L,
+             const std::optional<StrOffsetsContributionDescriptor> &R) {
+            if (L && R)
+              return L->Base == R->Base && L->Size == R->Size;
+            return false;
+          }),
       Contributions.end());
   return Contributions;
 }
@@ -1509,9 +1510,12 @@ DWARFUnitVector &DWARFContext::getDWOUnits(bool Lazy) {
   return State->getDWOUnits(Lazy);
 }
 
+DWARFUnit *DWARFContext::getUnitForOffset(uint64_t Offset) {
+  return State->getNormalUnits().getUnitForOffset(Offset);
+}
+
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint64_t Offset) {
-  return dyn_cast_or_null<DWARFCompileUnit>(
-      State->getNormalUnits().getUnitForOffset(Offset));
+  return dyn_cast_or_null<DWARFCompileUnit>(getUnitForOffset(Offset));
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForCodeAddress(uint64_t Address) {
@@ -1742,8 +1746,8 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   if (Spec.FLIKind != FileLineInfoKind::None) {
     if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
       LineTable->getFileLineInfoForAddress(
-          {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-          Spec.FLIKind, Result);
+          {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
+          CU->getCompilationDir(), Spec.FLIKind, Result);
     }
   }
 
@@ -1837,9 +1841,10 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
     if (Spec.FLIKind != FileLineInfoKind::None) {
       DILineInfo Frame;
       LineTable = getLineTableForUnit(CU);
-      if (LineTable && LineTable->getFileLineInfoForAddress(
-                           {Address.Address, Address.SectionIndex},
-                           CU->getCompilationDir(), Spec.FLIKind, Frame))
+      if (LineTable &&
+          LineTable->getFileLineInfoForAddress(
+              {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
+              CU->getCompilationDir(), Spec.FLIKind, Frame))
         InliningInfo.addFrame(Frame);
     }
     return InliningInfo;
@@ -1865,8 +1870,8 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
         // For the topmost routine, get file/line info from line table.
         if (LineTable)
           LineTable->getFileLineInfoForAddress(
-              {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-              Spec.FLIKind, Frame);
+              {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
+              CU->getCompilationDir(), Spec.FLIKind, Frame);
       } else {
         // Otherwise, use call file, call line and call column from
         // previous DIE in inlined chain.

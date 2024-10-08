@@ -1,5 +1,4 @@
 # UNSUPPORTED: system-windows
-# REQUIRES: shell
 
 ## Don't delete the output if it is special, otherwise root may accidentally
 ## remove important special files.

@@ -99,21 +99,17 @@ foreach(tool ${SUPPORTED_TOOLS})
 endforeach()
 
 # Unit tests.
-if(COMPILER_RT_INCLUDE_TESTS)
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
-  # FIXME: support unit test in the android test runner
-  if (NOT ANDROID)
-    list(APPEND SANITIZER_COMMON_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
-    list(APPEND SANITIZER_COMMON_TEST_DEPS SanitizerUnitTests)
-  endif()
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
+# FIXME: support unit test in the android test runner
+if (NOT ANDROID)
+  list(APPEND SANITIZER_COMMON_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
+  list(APPEND SANITIZER_COMMON_TEST_DEPS SanitizerUnitTests)
 endif()
 
 if(SANITIZER_COMMON_TESTSUITES)
   add_lit_testsuite(check-sanitizer "Running sanitizer_common tests"
     ${SANITIZER_COMMON_TESTSUITES}
     DEPENDS ${SANITIZER_COMMON_TEST_DEPS})
-  set_target_properties(check-sanitizer PROPERTIES FOLDER
-                        "Compiler-RT Misc")
 endif()

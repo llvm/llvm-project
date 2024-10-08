@@ -1,0 +1,31 @@
+# REQUIRES: target-aarch64 && native
+# UNSUPPORTED: system-windows
+# llvm.org/pr91610, rdar://128031075
+# XFAIL: system-darwin
+
+# RUN: %clang_host %S/Inputs/unaligned-pc-sigbus.c -o %t
+# RUN: %lldb -s %s -o exit %t | FileCheck %s
+
+# Convert EXC_BAD_ACCESS into SIGBUS on darwin.
+settings set platform.plugin.darwin.ignored-exceptions EXC_BAD_ACCESS
+
+breakpoint set -n sigbus_handler
+# CHECK: Breakpoint 1: where = {{.*}}`sigbus_handler
+
+run
+# CHECK: thread #1, {{.*}} stop reason = signal SIGBUS
+
+thread backtrace
+# CHECK: (lldb) thread backtrace
+# CHECK: frame #0: [[TARGET:0x[0-9a-fA-F]*]] {{.*}}`target_function
+
+continue
+# CHECK: thread #1, {{.*}} stop reason = breakpoint 1
+
+
+thread backtrace
+# CHECK: (lldb) thread backtrace
+# CHECK: frame #0: {{.*}}`sigbus_handler
+# Unknown number of signal trampoline frames
+# CHECK: frame #{{[0-9]+}}: [[TARGET]] {{.*}}`target_function
+

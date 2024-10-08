@@ -92,7 +92,7 @@ class TestSuspendedThreadHandling(TestBase):
         thread = lldb.SBThread()
         for thread in process.threads:
             th_name = thread.GetName()
-            if th_name == None:
+            if th_name is None:
                 continue
             if "Look for me" in th_name:
                 break
