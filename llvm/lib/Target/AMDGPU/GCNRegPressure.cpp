@@ -302,24 +302,24 @@ collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
 LaneBitmask llvm::getLiveLaneMask(unsigned Reg, SlotIndex SI,
                                   const LiveIntervals &LIS,
                                   const MachineRegisterInfo &MRI,
-                                  LaneBitmask Mask) {
-  return getLiveLaneMask(LIS.getInterval(Reg), SI, MRI, Mask);
+                                  LaneBitmask MaxLaneMask) {
+  return getLiveLaneMask(LIS.getInterval(Reg), SI, MRI, MaxLaneMask);
 }
 
 LaneBitmask llvm::getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
                                   const MachineRegisterInfo &MRI,
-                                  LaneBitmask Mask) {
+                                  LaneBitmask MaxLaneMask) {
   LaneBitmask LiveMask;
   if (LI.hasSubRanges()) {
     for (const auto &S : LI.subranges())
-      if ((S.LaneMask & Mask).any() && S.liveAt(SI)) {
+      if ((S.LaneMask & MaxLaneMask).any() && S.liveAt(SI)) {
         LiveMask |= S.LaneMask;
         assert(LiveMask == (LiveMask & MRI.getMaxLaneMaskForVReg(LI.reg())));
       }
   } else if (LI.liveAt(SI)) {
     LiveMask = MRI.getMaxLaneMaskForVReg(LI.reg());
   }
-  LiveMask &= Mask;
+  LiveMask &= MaxLaneMask;
   return LiveMask;
 }
 

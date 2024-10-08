@@ -265,14 +265,18 @@ public:
                const LiveRegSet *LiveRegsCopy = nullptr);
 };
 
+/// \returns the LaneMask of live lanes of \p Reg at position \p SI. Only the
+/// active lanes of \p MaxLaneMask will be set in the return value. This is
+/// used, for example, to limit the live lanes to a specific subreg when
+/// calculating use masks.
 LaneBitmask getLiveLaneMask(unsigned Reg, SlotIndex SI,
                             const LiveIntervals &LIS,
                             const MachineRegisterInfo &MRI,
-                            LaneBitmask Mask = LaneBitmask::getAll());
+                            LaneBitmask MaxLaneMask = LaneBitmask::getAll());
 
 LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
                             const MachineRegisterInfo &MRI,
-                            LaneBitmask Mask = LaneBitmask::getAll());
+                            LaneBitmask MaxLaneMask = LaneBitmask::getAll());
 
 GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
                                      const MachineRegisterInfo &MRI);
