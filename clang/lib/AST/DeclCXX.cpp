@@ -2023,19 +2023,27 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
     if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
-      while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
-        if (NewCTD->isMemberSpecialization())
+      while (true) {
+        CTD = CTD->getMostRecentDecl();
+        if (CTD->isMemberSpecialization())
           break;
-        CTD = NewCTD;
+        if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
+          CTD = NewCTD;
+        else
+          break;
       }
       return GetDefinitionOrSelf(CTD->getTemplatedDecl());
     }
     if (auto *CTPSD =
             From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
-        if (NewCTPSD->isMemberSpecialization())
+      while (true) {
+        CTPSD = CTPSD->getMostRecentDecl();
+        if (CTPSD->isMemberSpecialization())
           break;
-        CTPSD = NewCTPSD;
+        if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
+          CTPSD = NewCTPSD;
+        else
+          break;
       }
       return GetDefinitionOrSelf(CTPSD);
     }
