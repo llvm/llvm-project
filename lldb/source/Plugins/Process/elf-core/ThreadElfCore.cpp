@@ -49,16 +49,15 @@ using namespace lldb_private;
 
 // Construct a Thread object with given data
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
-    : Thread(process, td.tid), m_thread_reg_ctx_sp(),
-      m_gpregset_data(td.gpregset), m_notes(td.notes), m_siginfo(std::move(td.siginfo)) {}
+    : Thread(process, td.tid), m_thread_reg_ctx_sp(), m_thread_name(td.name),
+      m_gpregset_data(td.gpregset), m_notes(td.notes),
+      m_siginfo(std::move(td.siginfo)) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
 void ThreadElfCore::RefreshStateAfterStop() {
   GetRegisterContext()->InvalidateIfNeeded(false);
 }
-
-
 
 RegisterContextSP ThreadElfCore::GetRegisterContext() {
   if (!m_reg_context_sp) {
@@ -246,9 +245,15 @@ bool ThreadElfCore::CalculateStopInfo() {
   if (!unix_signals_sp)
     return false;
 
+  const char *sig_description;
+  std::string description = m_siginfo.GetDescription(*unix_signals_sp);
+  if (description.empty())
+    sig_description = nullptr;
+  else
+    sig_description = description.c_str();
+
   SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-      *this, m_siginfo.si_signo, 
-      m_siginfo.GetDescription(*unix_signals_sp).c_str(), m_siginfo.si_code));
+      *this, m_siginfo.si_signo, sig_description, m_siginfo.si_code));
 
   SetStopInfo(m_stop_info_sp);
   return true;
@@ -561,6 +566,8 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
     return error;
   }
 
+  // Set that we've parsed the siginfo from a SIGINFO note.
+  note_type = eNT_SIGINFO;
   // Parsing from a 32 bit ELF core file, and populating/reusing the structure
   // properly, because the struct is for the 64 bit version
   offset_t offset = 0;
@@ -592,18 +599,20 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
   return error;
 }
 
-std::string
-ELFLinuxSigInfo::GetDescription(const lldb_private::UnixSignals &unix_signals) const {
-  if (unix_signals.GetShouldStop(si_signo) && sigfault.si_addr != 0) {
+std::string ELFLinuxSigInfo::GetDescription(
+    const lldb_private::UnixSignals &unix_signals) const {
+  if (unix_signals.GetShouldStop(si_signo) && note_type == eNT_SIGINFO) {
     if (sigfault.bounds._addr_bnd._upper != 0)
       return unix_signals.GetSignalDescription(
-          si_signo, si_code, sigfault.si_addr,
-          sigfault.bounds._addr_bnd._lower,
+          si_signo, si_code, sigfault.si_addr, sigfault.bounds._addr_bnd._lower,
           sigfault.bounds._addr_bnd._upper);
     else
       return unix_signals.GetSignalDescription(si_signo, si_code,
-                                                   sigfault.si_addr);
+                                               sigfault.si_addr);
   }
 
-  return unix_signals.GetSignalDescription(si_signo, si_code);
+  // This looks weird, but there is an existing pattern where we don't pass a
+  // description to keep up with that, we return empty here, and then the above
+  // function will set the description whether or not this is empty.
+  return std::string();
 }

@@ -98,13 +98,16 @@ struct ELFLinuxSigInfo {
     } bounds;
   } sigfault;
 
+  enum { eUnspecified, eNT_SIGINFO } note_type;
+
   ELFLinuxSigInfo();
 
   lldb_private::Status Parse(const lldb_private::DataExtractor &data,
                              const lldb_private::ArchSpec &arch,
                              const lldb_private::UnixSignals &unix_signals);
 
-  std::string GetDescription(const lldb_private::UnixSignals &unix_signals) const;
+  std::string
+  GetDescription(const lldb_private::UnixSignals &unix_signals) const;
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
@@ -114,7 +117,7 @@ struct ELFLinuxSigInfo {
   static size_t GetSize(const lldb_private::ArchSpec &arch);
 };
 
-static_assert(sizeof(ELFLinuxSigInfo) == 48,
+static_assert(sizeof(ELFLinuxSigInfo) == 56,
               "sizeof ELFLinuxSigInfo is not correct!");
 
 // PRPSINFO structure's size differs based on architecture.
@@ -196,7 +199,8 @@ public:
       m_thread_name.clear();
   }
 
-  void CreateStopFromSigInfo(const ELFLinuxSigInfo &siginfo, const lldb_private::UnixSignals &unix_signals);
+  void CreateStopFromSigInfo(const ELFLinuxSigInfo &siginfo,
+                             const lldb_private::UnixSignals &unix_signals);
 
 protected:
   // Member variables.
