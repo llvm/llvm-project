@@ -1393,6 +1393,23 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   return false;
 }
 
+bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
+                              const FixedPoint &FP) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.checkingForUndefinedBehavior()) {
+    S.getASTContext().getDiagnostics().Report(
+        E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
+        << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+  }
+  S.CCEDiag(E, diag::note_constexpr_overflow)
+      << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+  return S.noteUndefinedBehavior();
+}
+
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", off)
+#endif
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
@@ -1417,6 +1434,10 @@ bool Interpret(InterpState &S, APValue &Result) {
     }
   }
 }
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", on)
+#endif
 
 } // namespace interp
 } // namespace clang

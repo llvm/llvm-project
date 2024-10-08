@@ -53,6 +53,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -610,25 +611,32 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
   std::string sourceMapCommand;
   llvm::raw_string_ostream strm(sourceMapCommand);
   strm << "settings set target.source-map ";
-  auto sourcePath = GetString(arguments, "sourcePath");
+  const auto sourcePath = GetString(arguments, "sourcePath");
 
   // sourceMap is the new, more general form of sourcePath and overrides it.
-  auto sourceMap = arguments.getArray("sourceMap");
-  if (sourceMap) {
-    for (const auto &value : *sourceMap) {
-      auto mapping = value.getAsArray();
+  constexpr llvm::StringRef sourceMapKey = "sourceMap";
+
+  if (const auto *sourceMapArray = arguments.getArray(sourceMapKey)) {
+    for (const auto &value : *sourceMapArray) {
+      const auto *mapping = value.getAsArray();
       if (mapping == nullptr || mapping->size() != 2 ||
           (*mapping)[0].kind() != llvm::json::Value::String ||
           (*mapping)[1].kind() != llvm::json::Value::String) {
         g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
         return;
       }
-      auto mapFrom = GetAsString((*mapping)[0]);
-      auto mapTo = GetAsString((*mapping)[1]);
+      const auto mapFrom = GetAsString((*mapping)[0]);
+      const auto mapTo = GetAsString((*mapping)[1]);
       strm << "\"" << mapFrom << "\" \"" << mapTo << "\" ";
     }
+  } else if (const auto *sourceMapObj = arguments.getObject(sourceMapKey)) {
+    for (const auto &[key, value] : *sourceMapObj) {
+      if (value.kind() == llvm::json::Value::String) {
+        strm << "\"" << key.str() << "\" \"" << GetAsString(value) << "\" ";
+      }
+    }
   } else {
-    if (ObjectContainsKey(arguments, "sourceMap")) {
+    if (ObjectContainsKey(arguments, sourceMapKey)) {
       g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
       return;
     }
@@ -1395,9 +1403,20 @@ void request_completions(const llvm::json::Object &request) {
   }
   llvm::json::Array targets;
 
-  if (!text.empty() &&
-      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
-    text = text.substr(g_dap.command_escape_prefix.size());
+  bool had_escape_prefix =
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix);
+  ReplMode completion_mode = g_dap.DetectReplMode(frame, text, true);
+
+  // Handle the offset change introduced by stripping out the
+  // `command_escape_prefix`.
+  if (had_escape_prefix) {
+    if (offset < static_cast<int64_t>(g_dap.command_escape_prefix.size())) {
+      body.try_emplace("targets", std::move(targets));
+      response.try_emplace("body", std::move(body));
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+    offset -= g_dap.command_escape_prefix.size();
   }
 
   // While the user is typing then we likely have an incomplete input and cannot
@@ -1409,7 +1428,7 @@ void request_completions(const llvm::json::Object &request) {
        std::make_tuple(ReplMode::Variable, expr_prefix + text,
                        offset + expr_prefix.size())}};
   for (const auto &[mode, line, cursor] : exprs) {
-    if (g_dap.repl_mode != ReplMode::Auto && g_dap.repl_mode != mode)
+    if (completion_mode != ReplMode::Auto && completion_mode != mode)
       continue;
 
     lldb::SBStringList matches;
@@ -1571,10 +1590,10 @@ void request_evaluate(const llvm::json::Object &request) {
   bool repeat_last_command =
       expression.empty() && g_dap.last_nonempty_var_expression.empty();
 
-  if (context == "repl" && (repeat_last_command ||
-                            (!expression.empty() &&
-                             g_dap.DetectExpressionContext(frame, expression) ==
-                                 ExpressionContext::Command))) {
+  if (context == "repl" &&
+      (repeat_last_command ||
+       (!expression.empty() &&
+        g_dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
     // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
     g_dap.last_nonempty_var_expression.clear();
@@ -2058,9 +2077,8 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     launch_info.SetArguments(MakeArgv(args).data(), true);
 
   // Pass any environment variables along that the user specified.
-  auto envs = GetStrings(arguments, "env");
-  if (!envs.empty())
-    launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
+  const auto envs = GetEnvironmentFromArguments(*arguments);
+  launch_info.SetEnvironment(envs, true);
 
   auto flags = launch_info.GetLaunchFlags();
 

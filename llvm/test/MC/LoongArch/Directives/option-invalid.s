@@ -1,4 +1,4 @@
-# RUN: not llvm-mc --triple loongarch64 < %s 2>&1 \
+# RUN: not llvm-mc --triple=loongarch64 %s 2>&1 \
 # RUN:   | FileCheck --implicit-check-not=error: %s
 
 # CHECK: :[[#@LINE+1]]:8: error: expected identifier

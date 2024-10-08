@@ -1,7 +1,7 @@
 libclc
 ------
 
-libclc is an open source, BSD licensed implementation of the library
+libclc is an open source implementation of the library
 requirements of the OpenCL C programming language, as specified by the
 OpenCL 1.1 Specification. The following sections of the specification
 impose library requirements:

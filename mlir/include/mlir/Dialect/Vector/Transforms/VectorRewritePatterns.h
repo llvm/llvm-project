@@ -366,7 +366,7 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating vector operations over narrow types with ops
 /// over wider types.
 void populateVectorNarrowTypeEmulationPatterns(
-    arith::NarrowTypeEmulationConverter &typeConverter,
+    const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns);
 
 /// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
@@ -403,10 +403,9 @@ void populateVectorLinearizeTypeConversionsAndLegality(
 
 /// Populates patterns for linearizing ND (N >= 2) vector operations to 1D
 /// vector shuffle operations.
-void populateVectorLinearizeShuffleLikeOpsPatterns(TypeConverter &typeConverter,
-                                                   RewritePatternSet &patterns,
-                                                   ConversionTarget &target,
-                                                   unsigned targetBitWidth);
+void populateVectorLinearizeShuffleLikeOpsPatterns(
+    const TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target, unsigned targetBitWidth);
 
 } // namespace vector
 } // namespace mlir

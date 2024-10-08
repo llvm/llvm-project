@@ -1,12 +1,12 @@
-# RUN: llvm-mc --triple loongarch64 --mattr=-relax < %s \
+# RUN: llvm-mc --triple=loongarch64 --mattr=-relax %s \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM %s
-# RUN: llvm-mc --triple loongarch64 --filetype=obj < %s \
+# RUN: llvm-mc --triple=loongarch64 --mattr=-relax --filetype=obj %s \
 # RUN:     | llvm-readobj -r - | FileCheck --check-prefix=CHECK-RELOC %s
 
-# Test the operation of the push and pop assembler directives when
-# using .option relax. Checks that using .option pop correctly restores 
-# all target features to their state at the point where .option pop was
-# last used.
+## Test the operation of the push and pop assembler directives when
+## using .option relax. Checks that using .option pop correctly restores 
+## all target features to their state at the point where .option pop was
+## last used.
 
 # CHECK-ASM: .option push
 .option push # relax = false

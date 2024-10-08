@@ -193,7 +193,7 @@ public:
   bool erase(const T &V) {
     if (!isSmall())
       return Set.erase(V);
-    auto I = std::find(Vector.begin(), Vector.end(), V);
+    auto I = vfind(V);
     if (I != Vector.end()) {
       Vector.erase(I);
       return true;
@@ -221,7 +221,7 @@ public:
   /// Check if the SmallSet contains the given element.
   bool contains(const T &V) const {
     if (isSmall())
-      return std::find(Vector.begin(), Vector.end(), V) != Vector.end();
+      return vfind(V) != Vector.end();
     return Set.find(V) != Set.end();
   }
 
@@ -237,19 +237,27 @@ private:
       return {const_iterator(I), Inserted};
     }
 
-    auto I = std::find(Vector.begin(), Vector.end(), V);
+    auto I = vfind(V);
     if (I != Vector.end()) // Don't reinsert if it already exists.
       return {const_iterator(I), false};
     if (Vector.size() < N) {
       Vector.push_back(std::forward<ArgType>(V));
       return {const_iterator(std::prev(Vector.end())), true};
     }
-
     // Otherwise, grow from vector to set.
     Set.insert(std::make_move_iterator(Vector.begin()),
                std::make_move_iterator(Vector.end()));
     Vector.clear();
     return {const_iterator(Set.insert(std::forward<ArgType>(V)).first), true};
+  }
+
+  // Handwritten linear search. The use of std::find might hurt performance as
+  // its implementation may be optimized for larger containers.
+  typename SmallVector<T, N>::const_iterator vfind(const T &V) const {
+    for (auto I = Vector.begin(), E = Vector.end(); I != E; ++I)
+      if (*I == V)
+        return I;
+    return Vector.end();
   }
 };
 

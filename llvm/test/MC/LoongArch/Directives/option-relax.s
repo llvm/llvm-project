@@ -1,9 +1,9 @@
-# RUN: llvm-mc --triple loongarch64 < %s | FileCheck --check-prefix=CHECK-ASM %s
-# RUN: llvm-mc -filetype=obj --triple loongarch64 < %s \
+# RUN: llvm-mc --triple=loongarch64 %s | FileCheck --check-prefix=CHECK-ASM %s
+# RUN: llvm-mc -filetype=obj --triple=loongarch64 %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
 
-# Check .option relax causes R_LARCH_RELAX to be emitted, and .option
-# norelax suppresses it.
+## Check .option relax causes R_LARCH_RELAX to be emitted, and .option
+## norelax suppresses it.
 
 # CHECK-ASM: .option relax
 .option relax
