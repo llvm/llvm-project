@@ -435,6 +435,7 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
   EXPECT_EQ(SomePos.getSignBit(), false);
   EXPECT_EQ(SomeNeg.getSignBit(), true);
 
+#if defined(EXPENSIVE_CHECKS)
   EnumerateConstantFPRanges(
       [](const ConstantFPRange &CR) {
         unsigned Mask = fcNone;
@@ -458,6 +459,7 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
         EXPECT_EQ(Mask, CR.classify()) << CR;
       },
       /*Exhaustive=*/true);
+#endif
 }
 
 TEST_F(ConstantFPRangeTest, Print) {
@@ -500,6 +502,36 @@ TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
 #endif
 
 TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OLE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat(2.0)));
+  EXPECT_EQ(
+      ConstantFPRange::makeAllowedFCmpRegion(
+          FCmpInst::FCMP_OLT,
+          ConstantFPRange::getNonNaN(APFloat(1.0),
+                                     APFloat::getInf(Sem, /*Negative=*/false))),
+      ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                 APFloat::getLargest(Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::makeAllowedFCmpRegion(
+          FCmpInst::FCMP_OGT,
+          ConstantFPRange::getNonNaN(APFloat::getZero(Sem, /*Negative=*/true),
+                                     APFloat(2.0))),
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/false),
+                                 APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OGE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(
+                APFloat(1.0), APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OEQ,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0)));
+
+#if defined(EXPENSIVE_CHECKS)
   for (auto Pred : FCmpInst::predicates()) {
     EnumerateConstantFPRanges(
         [Pred](const ConstantFPRange &CR) {
@@ -529,6 +561,7 @@ TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
         },
         /*Exhaustive=*/false);
   }
+#endif
 }
 
 } // anonymous namespace
