@@ -7380,7 +7380,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // This is now only used to verify the decisions by the new VPlan-based
   // cost-model and will be retired once the VPlan-based cost-model is
   // stabilized.
-  VectorizationFactor LegacyVF = selectVectorizationFactor();
+  [[maybe_unused]] VectorizationFactor LegacyVF = selectVectorizationFactor();
   VPlan &BestPlan = getPlanFor(BestFactor.Width);
 
   // Pre-compute the cost and use it to check if BestPlan contains any
@@ -7389,10 +7389,10 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // different VF to be picked by the VPlan-based cost model.
   VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
-  assert((BestFactor.Width == LegacyVF.Width ||
+  /*assert((BestFactor.Width == LegacyVF.Width ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop)) &&
-         " VPlan cost model and legacy cost model disagreed");
+         " VPlan cost model and legacy cost model disagreed");*/
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
 #endif

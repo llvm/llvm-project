@@ -58,6 +58,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case VPInstruction::CalculateTripCountMinusVF: {
+    return inferScalarType(R->getOperand(0));
+  }
   case Instruction::ICmp:
   case VPInstruction::ActiveLaneMask:
     return inferScalarType(R->getOperand(1));

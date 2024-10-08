@@ -1298,199 +1298,9 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-LABEL: define void @test_conditional_interleave_group(
 ; PRED-SAME: ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[SRC_3:%.*]], ptr noalias [[SRC_4:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR3:[0-9]+]] {
 ; PRED-NEXT:  entry:
-; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; PRED:       vector.scevcheck:
-; PRED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
-; PRED-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
-; PRED-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
-; PRED-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; PRED-NEXT:    [[TMP1:%.*]] = sub i64 0, [[MUL_RESULT]]
-; PRED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; PRED-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[SCEVGEP]]
-; PRED-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
-; PRED-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 8
-; PRED-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
-; PRED-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
-; PRED-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; PRED-NEXT:    [[TMP5:%.*]] = sub i64 0, [[MUL_RESULT3]]
-; PRED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
-; PRED-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[TMP6]], [[SCEVGEP1]]
-; PRED-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW4]]
-; PRED-NEXT:    [[MUL5:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
-; PRED-NEXT:    [[MUL_RESULT6:%.*]] = extractvalue { i64, i1 } [[MUL5]], 0
-; PRED-NEXT:    [[MUL_OVERFLOW7:%.*]] = extractvalue { i64, i1 } [[MUL5]], 1
-; PRED-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT6]]
-; PRED-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT6]]
-; PRED-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[DST]]
-; PRED-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW7]]
-; PRED-NEXT:    [[TMP13:%.*]] = or i1 [[TMP4]], [[TMP8]]
-; PRED-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP12]]
-; PRED-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
-; PRED:       vector.ph:
-; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 7
-; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
-; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; PRED-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP0]], 8
-; PRED-NEXT:    [[TMP16:%.*]] = icmp ugt i64 [[TMP0]], 8
-; PRED-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i64 [[TMP15]], i64 0
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 0, i64 [[TMP0]])
-; PRED-NEXT:    br label [[VECTOR_BODY:%.*]]
-; PRED:       vector.body:
-; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE27:%.*]] ]
-; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_STORE_CONTINUE27]] ]
-; PRED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE27]] ]
-; PRED-NEXT:    [[TMP18:%.*]] = load float, ptr [[SRC_1]], align 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <8 x float> poison, float [[TMP18]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT8]], <8 x float> poison, <8 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP19:%.*]] = load float, ptr [[SRC_2]], align 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP19]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP20:%.*]] = fmul <8 x float> [[BROADCAST_SPLAT]], zeroinitializer
-; PRED-NEXT:    [[TMP21:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT9]], <8 x float> zeroinitializer, <8 x float> [[TMP20]])
-; PRED-NEXT:    [[TMP22:%.*]] = load float, ptr [[SRC_3]], align 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP22]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP23:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT11]], <8 x float> zeroinitializer, <8 x float> [[TMP21]])
-; PRED-NEXT:    [[TMP24:%.*]] = load float, ptr [[SRC_3]], align 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x float> poison, float [[TMP24]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT12]], <8 x float> poison, <8 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP25:%.*]] = fcmp ogt <8 x float> [[TMP23]], [[BROADCAST_SPLAT13]]
-; PRED-NEXT:    [[TMP26:%.*]] = select <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i1> [[TMP25]], <8 x i1> zeroinitializer
-; PRED-NEXT:    [[TMP27:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
-; PRED-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP26]], i32 0
-; PRED-NEXT:    br i1 [[TMP28]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; PRED:       pred.store.if:
-; PRED-NEXT:    [[TMP29:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 0
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP29]], align 4
-; PRED-NEXT:    [[TMP30:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 0
-; PRED-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP30]], i64 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP31]], align 4
-; PRED-NEXT:    [[TMP32:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 0
-; PRED-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP32]], i64 8
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP33]], align 4
-; PRED-NEXT:    [[TMP34:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 0
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP34]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; PRED:       pred.store.continue:
-; PRED-NEXT:    [[TMP35:%.*]] = extractelement <8 x i1> [[TMP26]], i32 1
-; PRED-NEXT:    br i1 [[TMP35]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15:%.*]]
-; PRED:       pred.store.if14:
-; PRED-NEXT:    [[TMP36:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 1
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP36]], align 4
-; PRED-NEXT:    [[TMP37:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 1
-; PRED-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[TMP37]], i64 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP38]], align 4
-; PRED-NEXT:    [[TMP39:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 1
-; PRED-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[TMP39]], i64 8
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP40]], align 4
-; PRED-NEXT:    [[TMP41:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 1
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP41]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE15]]
-; PRED:       pred.store.continue15:
-; PRED-NEXT:    [[TMP42:%.*]] = extractelement <8 x i1> [[TMP26]], i32 2
-; PRED-NEXT:    br i1 [[TMP42]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17:%.*]]
-; PRED:       pred.store.if16:
-; PRED-NEXT:    [[TMP43:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 2
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP43]], align 4
-; PRED-NEXT:    [[TMP44:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 2
-; PRED-NEXT:    [[TMP45:%.*]] = getelementptr i8, ptr [[TMP44]], i64 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP45]], align 4
-; PRED-NEXT:    [[TMP46:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 2
-; PRED-NEXT:    [[TMP47:%.*]] = getelementptr i8, ptr [[TMP46]], i64 8
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP47]], align 4
-; PRED-NEXT:    [[TMP48:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 2
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP48]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE17]]
-; PRED:       pred.store.continue17:
-; PRED-NEXT:    [[TMP49:%.*]] = extractelement <8 x i1> [[TMP26]], i32 3
-; PRED-NEXT:    br i1 [[TMP49]], label [[PRED_STORE_IF18:%.*]], label [[PRED_STORE_CONTINUE19:%.*]]
-; PRED:       pred.store.if18:
-; PRED-NEXT:    [[TMP50:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 3
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP50]], align 4
-; PRED-NEXT:    [[TMP51:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 3
-; PRED-NEXT:    [[TMP52:%.*]] = getelementptr i8, ptr [[TMP51]], i64 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP52]], align 4
-; PRED-NEXT:    [[TMP53:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 3
-; PRED-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[TMP53]], i64 8
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP54]], align 4
-; PRED-NEXT:    [[TMP55:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 3
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP55]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE19]]
-; PRED:       pred.store.continue19:
-; PRED-NEXT:    [[TMP56:%.*]] = extractelement <8 x i1> [[TMP26]], i32 4
-; PRED-NEXT:    br i1 [[TMP56]], label [[PRED_STORE_IF20:%.*]], label [[PRED_STORE_CONTINUE21:%.*]]
-; PRED:       pred.store.if20:
-; PRED-NEXT:    [[TMP57:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP57]], align 4
-; PRED-NEXT:    [[TMP58:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 4
-; PRED-NEXT:    [[TMP59:%.*]] = getelementptr i8, ptr [[TMP58]], i64 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP59]], align 4
-; PRED-NEXT:    [[TMP60:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 4
-; PRED-NEXT:    [[TMP61:%.*]] = getelementptr i8, ptr [[TMP60]], i64 8
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP61]], align 4
-; PRED-NEXT:    [[TMP62:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP62]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE21]]
-; PRED:       pred.store.continue21:
-; PRED-NEXT:    [[TMP63:%.*]] = extractelement <8 x i1> [[TMP26]], i32 5
-; PRED-NEXT:    br i1 [[TMP63]], label [[PRED_STORE_IF22:%.*]], label [[PRED_STORE_CONTINUE23:%.*]]
-; PRED:       pred.store.if22:
-; PRED-NEXT:    [[TMP64:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 5
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP64]], align 4
-; PRED-NEXT:    [[TMP65:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 5
-; PRED-NEXT:    [[TMP66:%.*]] = getelementptr i8, ptr [[TMP65]], i64 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP66]], align 4
-; PRED-NEXT:    [[TMP67:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 5
-; PRED-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[TMP67]], i64 8
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP68]], align 4
-; PRED-NEXT:    [[TMP69:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 5
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP69]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE23]]
-; PRED:       pred.store.continue23:
-; PRED-NEXT:    [[TMP70:%.*]] = extractelement <8 x i1> [[TMP26]], i32 6
-; PRED-NEXT:    br i1 [[TMP70]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
-; PRED:       pred.store.if24:
-; PRED-NEXT:    [[TMP71:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 6
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP71]], align 4
-; PRED-NEXT:    [[TMP72:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 6
-; PRED-NEXT:    [[TMP73:%.*]] = getelementptr i8, ptr [[TMP72]], i64 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP73]], align 4
-; PRED-NEXT:    [[TMP74:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 6
-; PRED-NEXT:    [[TMP75:%.*]] = getelementptr i8, ptr [[TMP74]], i64 8
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP75]], align 4
-; PRED-NEXT:    [[TMP76:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 6
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP76]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE25]]
-; PRED:       pred.store.continue25:
-; PRED-NEXT:    [[TMP77:%.*]] = extractelement <8 x i1> [[TMP26]], i32 7
-; PRED-NEXT:    br i1 [[TMP77]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27]]
-; PRED:       pred.store.if26:
-; PRED-NEXT:    [[TMP78:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 7
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP78]], align 4
-; PRED-NEXT:    [[TMP79:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 7
-; PRED-NEXT:    [[TMP80:%.*]] = getelementptr i8, ptr [[TMP79]], i64 4
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP80]], align 4
-; PRED-NEXT:    [[TMP81:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 7
-; PRED-NEXT:    [[TMP82:%.*]] = getelementptr i8, ptr [[TMP81]], i64 8
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP82]], align 4
-; PRED-NEXT:    [[TMP83:%.*]] = extractelement <8 x ptr> [[TMP27]], i32 7
-; PRED-NEXT:    store float 0.000000e+00, ptr [[TMP83]], align 4
-; PRED-NEXT:    br label [[PRED_STORE_CONTINUE27]]
-; PRED:       pred.store.continue27:
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX]], i64 [[TMP17]])
-; PRED-NEXT:    [[TMP84:%.*]] = xor <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
-; PRED-NEXT:    [[TMP85:%.*]] = extractelement <8 x i1> [[TMP84]], i32 0
-; PRED-NEXT:    br i1 [[TMP85]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
-; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; PRED-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; PRED:       loop.header:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; PRED-NEXT:    [[TMP86:%.*]] = load float, ptr [[SRC_1]], align 4
 ; PRED-NEXT:    [[TMP87:%.*]] = load float, ptr [[SRC_2]], align 4
 ; PRED-NEXT:    [[MUL8_I_US:%.*]] = fmul float [[TMP87]], 0.000000e+00
@@ -1513,7 +1323,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED:       loop.latch:
 ; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP24:![0-9]+]]
+; PRED-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -1659,7 +1469,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; PRED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; PRED:       scalar.ph:
@@ -1675,7 +1485,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; PRED-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
 ; PRED-NEXT:    store i32 [[T]], ptr [[DST]], align 4
 ; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 21
-; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP26:![0-9]+]]
+; PRED-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP24:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -1762,7 +1572,5 @@ attributes #2 = { vscale_range(2,2) "target-cpu"="neoverse-512tvb" }
 ; PRED: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]], [[META2]]}
 ; PRED: [[LOOP22]] = distinct !{[[LOOP22]], [[META2]], [[META1]]}
 ; PRED: [[LOOP23]] = distinct !{[[LOOP23]], [[META1]], [[META2]]}
-; PRED: [[LOOP24]] = distinct !{[[LOOP24]], [[META1]]}
-; PRED: [[LOOP25]] = distinct !{[[LOOP25]], [[META1]], [[META2]]}
-; PRED: [[LOOP26]] = distinct !{[[LOOP26]], [[META2]], [[META1]]}
+; PRED: [[LOOP24]] = distinct !{[[LOOP24]], [[META2]], [[META1]]}
 ;.
