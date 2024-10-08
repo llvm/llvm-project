@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/time_utils.h"
-#include "hdr/stdint_proxy.h"
+#include "src/time/timezone.h"
 #include "src/__support/CPP/limits.h" // INT_MIN, INT_MAX
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/time/time_constants.h"
+#include "src/__support/CPP/string_view.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
@@ -120,9 +122,10 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 
 volatile int file_usage = 0;
 
-void release_file(FILE *fp) {
+void release_file(FILE *fp, char *timezone) {
   file_usage = 0;
   fclose(fp);
+  free(timezone);
 }
 
 void acquire_file(FILE *fp, char *timezone, size_t timezone_size) {
@@ -134,7 +137,7 @@ void acquire_file(FILE *fp, char *timezone, size_t timezone_size) {
   }
 
   if (fgets(timezone, (int)timezone_size, fp) == NULL) {
-    release_file(fp);
+    release_file(fp, timezone);
   }
 }
 
@@ -240,27 +243,25 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   if (years > INT_MAX || years < INT_MIN)
     return time_utils::out_of_range();
 
-  char timezone[TimeConstants::TIMEZONE_SIZE];
-
+  char *timezone = (char *)malloc(sizeof(char) * TimeConstants::TIMEZONE_SIZE);
+  timezone = getenv("TZ");
   FILE *fp = NULL;
-  fp = fopen("/etc/timezone", "rb");
-  if (fp == NULL) {
-    // TODO: implement getting timezone from `TZ` environment variable and
-    // storing the value in `timezone`
-  } else {
+  if (timezone == NULL) {
+    timezone = (char *)realloc(timezone, sizeof(char) * TimeConstants::TIMEZONE_SIZE);
+    fp = fopen("/etc/timezone", "rb");
+    if (fp == NULL) {
+      return time_utils::out_of_range();
+    }
+
     acquire_file(fp, timezone, TimeConstants::TIMEZONE_SIZE);
   }
 
-  if (file_usage == 0) {
-    release_file(fp);
+  if (fp != NULL && file_usage == 0) {
+    release_file(fp, timezone);
     return time_utils::out_of_range();
   }
 
-  // UTC = 0
-  int offset = 0;
-  // TODO: Add more timezones
-  if (internal::same_string(timezone, "Europe/Berlin") == 0)
-    offset = 1;
+  int offset = timezone::get_timezone_offset(timezone);
 
   // All the data (years, month and remaining days) was calculated from
   // March, 2000. Thus adjust the data to be from January, 1900.
@@ -281,19 +282,18 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   tm->tm_isdst = 0;
       static_cast<int>(remainingSeconds % TimeConstants::SECONDS_PER_MIN);
 
-  if (offset == 0) {
-    tm->tm_isdst = 0;
-  } else if (offset > 0) {
-    tm->tm_isdst = 1;
-    tm->tm_hour += offset;
-  } else {
-    tm->tm_isdst = -1;
+  set_dst(tm);
   if (tm->tm_isdst > 0) {
     tm->tm_hour += 1;
   }
-  tm->tm_hour += offset;
 
-  release_file(fp);
+  if (offset != 0) {
+    tm->tm_hour += offset;
+  }
+
+  if (file_usage == 1) {
+    release_file(fp, timezone);
+  }
 
   return 0;
 }

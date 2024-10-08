@@ -33,6 +33,18 @@ add_object_library(
     libc.hdr.stdint_proxy
 )
 
+add_object_library(
+  timezone
+  SRCS
+    timezone.cpp
+  HDRS
+    timezone.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.CPP.limits
+    libc.src.errno.errno
+)
+
 add_entrypoint_object(
   asctime
   SRCS
@@ -93,6 +105,7 @@ add_entrypoint_object(
     localtime.h
   DEPENDS
     .time_utils
+    .timezone
     libc.hdr.types.time_t
     libc.include.time
 )
