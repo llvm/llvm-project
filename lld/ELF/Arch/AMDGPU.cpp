@@ -219,4 +219,7 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-void elf::setAMDGPUTargetInfo(Ctx &ctx) { ctx.target.reset(new AMDGPU(ctx)); }
+TargetInfo *elf::getAMDGPUTargetInfo(Ctx &ctx) {
+  static AMDGPU target(ctx);
+  return &target;
+}
