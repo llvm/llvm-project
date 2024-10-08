@@ -4,6 +4,7 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIf(archs=no_match(["arm64", "arm64e", "x86_64"]))
 class TestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
@@ -37,6 +38,26 @@ class TestCase(lldbtest.TestBase):
             prologue_to_skip = parent_frame.GetFunction().GetPrologueByteSize()
             self.assertEqual(continuation_ptr + prologue_to_skip, parent_frame.GetPC())
 
+    def check_async_regs_one_frame(self, frame, process):
+        async_reg_name = "r14" if self.getArchitecture() == "x86_64" else "x22"
+
+        cfa = frame.GetCFA()
+        is_indirect = "await resume" in frame.GetFunctionName()
+        async_register = frame.FindRegister(async_reg_name).GetValueAsUnsigned()
+
+        if is_indirect:
+            deref_async_reg = self.read_ptr_from_memory(process, async_register)
+            self.assertEqual(deref_async_reg, cfa)
+        else:
+            self.assertEqual(async_register, cfa)
+
+    def check_async_regs(self, async_frames, process):
+        for frame in async_frames:
+            # The frames from the implicit main function don't have a demangled
+            # name, so we can't test whether they are a Q funclet or not.
+            if "Main" in frame.GetFunctionName():
+                break
+            self.check_async_regs_one_frame(frame, process)
 
     def check_variables(self, async_frames, expected_values):
         for frame, expected_value in zip(async_frames, expected_values):
@@ -58,6 +79,7 @@ class TestCase(lldbtest.TestBase):
         self.check_cfas(async_frames, process)
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["222", "333", "444", "555"])
+        self.check_async_regs(async_frames, process)
 
         target.DeleteAllBreakpoints()
         target.BreakpointCreateBySourceRegex("breakpoint2", source_file)
@@ -68,6 +90,7 @@ class TestCase(lldbtest.TestBase):
         self.check_cfas(async_frames, process)
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["111", "222", "333", "444", "555"])
+        self.check_async_regs(async_frames, process)
 
         # Now stop at the Q funclet right after the await to ASYNC___1
         target.DeleteAllBreakpoints()
@@ -77,6 +100,7 @@ class TestCase(lldbtest.TestBase):
         self.check_cfas(async_frames, process)
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["222", "333", "444", "555"])
+        self.check_async_regs(async_frames, process)
 
         target.DeleteAllBreakpoints()
         target.BreakpointCreateBySourceRegex("breakpoint3", source_file)
@@ -85,3 +109,4 @@ class TestCase(lldbtest.TestBase):
         self.check_cfas(async_frames, process)
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["222", "333", "444", "555"])
+        self.check_async_regs(async_frames, process)
