@@ -2321,8 +2321,8 @@ define <N x TY> @vfnmsub_vf(<N x TY> %a, TY %b, <N x TY> %c) {
 define <N x TY> @trunc(<N x TY> %a) {
 ; V8F16ZVFH-LABEL: trunc:
 ; V8F16ZVFH:       # %bb.0:
-; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI37_0)
-; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI37_0)(a0)
+; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI34_0)
+; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI34_0)(a0)
 ; V8F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V8F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V8F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2351,8 +2351,8 @@ define <N x TY> @trunc(<N x TY> %a) {
 ;
 ; V6F16ZVFH-LABEL: trunc:
 ; V6F16ZVFH:       # %bb.0:
-; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI37_0)
-; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI37_0)(a0)
+; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI34_0)
+; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI34_0)(a0)
 ; V6F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V6F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V6F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2407,8 +2407,8 @@ define <N x TY> @trunc(<N x TY> %a) {
 ;
 ; V2F64-LABEL: trunc:
 ; V2F64:       # %bb.0:
-; V2F64-NEXT:    lui a0, %hi(.LCPI37_0)
-; V2F64-NEXT:    fld fa5, %lo(.LCPI37_0)(a0)
+; V2F64-NEXT:    lui a0, %hi(.LCPI34_0)
+; V2F64-NEXT:    fld fa5, %lo(.LCPI34_0)(a0)
 ; V2F64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; V2F64-NEXT:    vfabs.v v9, v8
 ; V2F64-NEXT:    vmflt.vf v0, v9, fa5
@@ -2420,8 +2420,8 @@ define <N x TY> @trunc(<N x TY> %a) {
 ;
 ; V3F64-LABEL: trunc:
 ; V3F64:       # %bb.0:
-; V3F64-NEXT:    lui a0, %hi(.LCPI37_0)
-; V3F64-NEXT:    fld fa5, %lo(.LCPI37_0)(a0)
+; V3F64-NEXT:    lui a0, %hi(.LCPI34_0)
+; V3F64-NEXT:    fld fa5, %lo(.LCPI34_0)(a0)
 ; V3F64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V3F64-NEXT:    vfabs.v v10, v8
 ; V3F64-NEXT:    vmflt.vf v0, v10, fa5
@@ -2437,8 +2437,8 @@ define <N x TY> @trunc(<N x TY> %a) {
 define <N x TY> @ceil(<N x TY> %a) {
 ; V8F16ZVFH-LABEL: ceil:
 ; V8F16ZVFH:       # %bb.0:
-; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI38_0)
-; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI38_0)(a0)
+; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI35_0)
+; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI35_0)(a0)
 ; V8F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V8F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V8F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2471,8 +2471,8 @@ define <N x TY> @ceil(<N x TY> %a) {
 ;
 ; V6F16ZVFH-LABEL: ceil:
 ; V6F16ZVFH:       # %bb.0:
-; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI38_0)
-; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI38_0)(a0)
+; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI35_0)
+; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI35_0)(a0)
 ; V6F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V6F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V6F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2535,8 +2535,8 @@ define <N x TY> @ceil(<N x TY> %a) {
 ;
 ; V2F64-LABEL: ceil:
 ; V2F64:       # %bb.0:
-; V2F64-NEXT:    lui a0, %hi(.LCPI38_0)
-; V2F64-NEXT:    fld fa5, %lo(.LCPI38_0)(a0)
+; V2F64-NEXT:    lui a0, %hi(.LCPI35_0)
+; V2F64-NEXT:    fld fa5, %lo(.LCPI35_0)(a0)
 ; V2F64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; V2F64-NEXT:    vfabs.v v9, v8
 ; V2F64-NEXT:    vmflt.vf v0, v9, fa5
@@ -2550,8 +2550,8 @@ define <N x TY> @ceil(<N x TY> %a) {
 ;
 ; V3F64-LABEL: ceil:
 ; V3F64:       # %bb.0:
-; V3F64-NEXT:    lui a0, %hi(.LCPI38_0)
-; V3F64-NEXT:    fld fa5, %lo(.LCPI38_0)(a0)
+; V3F64-NEXT:    lui a0, %hi(.LCPI35_0)
+; V3F64-NEXT:    fld fa5, %lo(.LCPI35_0)(a0)
 ; V3F64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V3F64-NEXT:    vfabs.v v10, v8
 ; V3F64-NEXT:    vmflt.vf v0, v10, fa5
@@ -2569,8 +2569,8 @@ define <N x TY> @ceil(<N x TY> %a) {
 define <N x TY> @floor(<N x TY> %a) {
 ; V8F16ZVFH-LABEL: floor:
 ; V8F16ZVFH:       # %bb.0:
-; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI39_0)
-; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI39_0)(a0)
+; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI36_0)
+; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI36_0)(a0)
 ; V8F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V8F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V8F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2603,8 +2603,8 @@ define <N x TY> @floor(<N x TY> %a) {
 ;
 ; V6F16ZVFH-LABEL: floor:
 ; V6F16ZVFH:       # %bb.0:
-; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI39_0)
-; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI39_0)(a0)
+; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI36_0)
+; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI36_0)(a0)
 ; V6F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V6F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V6F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2667,8 +2667,8 @@ define <N x TY> @floor(<N x TY> %a) {
 ;
 ; V2F64-LABEL: floor:
 ; V2F64:       # %bb.0:
-; V2F64-NEXT:    lui a0, %hi(.LCPI39_0)
-; V2F64-NEXT:    fld fa5, %lo(.LCPI39_0)(a0)
+; V2F64-NEXT:    lui a0, %hi(.LCPI36_0)
+; V2F64-NEXT:    fld fa5, %lo(.LCPI36_0)(a0)
 ; V2F64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; V2F64-NEXT:    vfabs.v v9, v8
 ; V2F64-NEXT:    vmflt.vf v0, v9, fa5
@@ -2682,8 +2682,8 @@ define <N x TY> @floor(<N x TY> %a) {
 ;
 ; V3F64-LABEL: floor:
 ; V3F64:       # %bb.0:
-; V3F64-NEXT:    lui a0, %hi(.LCPI39_0)
-; V3F64-NEXT:    fld fa5, %lo(.LCPI39_0)(a0)
+; V3F64-NEXT:    lui a0, %hi(.LCPI36_0)
+; V3F64-NEXT:    fld fa5, %lo(.LCPI36_0)(a0)
 ; V3F64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V3F64-NEXT:    vfabs.v v10, v8
 ; V3F64-NEXT:    vmflt.vf v0, v10, fa5
@@ -2701,8 +2701,8 @@ define <N x TY> @floor(<N x TY> %a) {
 define <N x TY> @round(<N x TY> %a) {
 ; V8F16ZVFH-LABEL: round:
 ; V8F16ZVFH:       # %bb.0:
-; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI40_0)
-; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI40_0)(a0)
+; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI37_0)
+; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI37_0)(a0)
 ; V8F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V8F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V8F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2735,8 +2735,8 @@ define <N x TY> @round(<N x TY> %a) {
 ;
 ; V6F16ZVFH-LABEL: round:
 ; V6F16ZVFH:       # %bb.0:
-; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI40_0)
-; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI40_0)(a0)
+; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI37_0)
+; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI37_0)(a0)
 ; V6F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V6F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V6F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2799,8 +2799,8 @@ define <N x TY> @round(<N x TY> %a) {
 ;
 ; V2F64-LABEL: round:
 ; V2F64:       # %bb.0:
-; V2F64-NEXT:    lui a0, %hi(.LCPI40_0)
-; V2F64-NEXT:    fld fa5, %lo(.LCPI40_0)(a0)
+; V2F64-NEXT:    lui a0, %hi(.LCPI37_0)
+; V2F64-NEXT:    fld fa5, %lo(.LCPI37_0)(a0)
 ; V2F64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; V2F64-NEXT:    vfabs.v v9, v8
 ; V2F64-NEXT:    vmflt.vf v0, v9, fa5
@@ -2814,8 +2814,8 @@ define <N x TY> @round(<N x TY> %a) {
 ;
 ; V3F64-LABEL: round:
 ; V3F64:       # %bb.0:
-; V3F64-NEXT:    lui a0, %hi(.LCPI40_0)
-; V3F64-NEXT:    fld fa5, %lo(.LCPI40_0)(a0)
+; V3F64-NEXT:    lui a0, %hi(.LCPI37_0)
+; V3F64-NEXT:    fld fa5, %lo(.LCPI37_0)(a0)
 ; V3F64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V3F64-NEXT:    vfabs.v v10, v8
 ; V3F64-NEXT:    vmflt.vf v0, v10, fa5
@@ -2830,16 +2830,11 @@ define <N x TY> @round(<N x TY> %a) {
   ret <N x TY> %b
 }
 
-define <N x TY> @roundeven(<N x TY> %a) {
-  %b = call <N x TY> @llvm.roundeven(<N x TY> %a)
-  ret <N x TY> %b
-}
-
 define <N x TY> @rint(<N x TY> %a) {
 ; V8F16ZVFH-LABEL: rint:
 ; V8F16ZVFH:       # %bb.0:
-; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI41_0)
-; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI41_0)(a0)
+; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI38_0)
+; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI38_0)(a0)
 ; V8F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V8F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V8F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2868,8 +2863,8 @@ define <N x TY> @rint(<N x TY> %a) {
 ;
 ; V6F16ZVFH-LABEL: rint:
 ; V6F16ZVFH:       # %bb.0:
-; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI41_0)
-; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI41_0)(a0)
+; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI38_0)
+; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI38_0)(a0)
 ; V6F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V6F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V6F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2924,8 +2919,8 @@ define <N x TY> @rint(<N x TY> %a) {
 ;
 ; V2F64-LABEL: rint:
 ; V2F64:       # %bb.0:
-; V2F64-NEXT:    lui a0, %hi(.LCPI41_0)
-; V2F64-NEXT:    fld fa5, %lo(.LCPI41_0)(a0)
+; V2F64-NEXT:    lui a0, %hi(.LCPI38_0)
+; V2F64-NEXT:    fld fa5, %lo(.LCPI38_0)(a0)
 ; V2F64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; V2F64-NEXT:    vfabs.v v9, v8
 ; V2F64-NEXT:    vmflt.vf v0, v9, fa5
@@ -2937,8 +2932,8 @@ define <N x TY> @rint(<N x TY> %a) {
 ;
 ; V3F64-LABEL: rint:
 ; V3F64:       # %bb.0:
-; V3F64-NEXT:    lui a0, %hi(.LCPI41_0)
-; V3F64-NEXT:    fld fa5, %lo(.LCPI41_0)(a0)
+; V3F64-NEXT:    lui a0, %hi(.LCPI38_0)
+; V3F64-NEXT:    fld fa5, %lo(.LCPI38_0)(a0)
 ; V3F64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V3F64-NEXT:    vfabs.v v10, v8
 ; V3F64-NEXT:    vmflt.vf v0, v10, fa5
@@ -2954,8 +2949,8 @@ define <N x TY> @rint(<N x TY> %a) {
 define <N x TY> @nearbyint(<N x TY> %a) {
 ; V8F16ZVFH-LABEL: nearbyint:
 ; V8F16ZVFH:       # %bb.0:
-; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI42_0)
-; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI42_0)(a0)
+; V8F16ZVFH-NEXT:    lui a0, %hi(.LCPI39_0)
+; V8F16ZVFH-NEXT:    flh fa5, %lo(.LCPI39_0)(a0)
 ; V8F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V8F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V8F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -2988,8 +2983,8 @@ define <N x TY> @nearbyint(<N x TY> %a) {
 ;
 ; V6F16ZVFH-LABEL: nearbyint:
 ; V6F16ZVFH:       # %bb.0:
-; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI42_0)
-; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI42_0)(a0)
+; V6F16ZVFH-NEXT:    lui a0, %hi(.LCPI39_0)
+; V6F16ZVFH-NEXT:    flh fa5, %lo(.LCPI39_0)(a0)
 ; V6F16ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V6F16ZVFH-NEXT:    vfabs.v v9, v8
 ; V6F16ZVFH-NEXT:    vmflt.vf v0, v9, fa5
@@ -3052,8 +3047,8 @@ define <N x TY> @nearbyint(<N x TY> %a) {
 ;
 ; V2F64-LABEL: nearbyint:
 ; V2F64:       # %bb.0:
-; V2F64-NEXT:    lui a0, %hi(.LCPI42_0)
-; V2F64-NEXT:    fld fa5, %lo(.LCPI42_0)(a0)
+; V2F64-NEXT:    lui a0, %hi(.LCPI39_0)
+; V2F64-NEXT:    fld fa5, %lo(.LCPI39_0)(a0)
 ; V2F64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; V2F64-NEXT:    vfabs.v v9, v8
 ; V2F64-NEXT:    vmflt.vf v0, v9, fa5
@@ -3067,8 +3062,8 @@ define <N x TY> @nearbyint(<N x TY> %a) {
 ;
 ; V3F64-LABEL: nearbyint:
 ; V3F64:       # %bb.0:
-; V3F64-NEXT:    lui a0, %hi(.LCPI42_0)
-; V3F64-NEXT:    fld fa5, %lo(.LCPI42_0)(a0)
+; V3F64-NEXT:    lui a0, %hi(.LCPI39_0)
+; V3F64-NEXT:    fld fa5, %lo(.LCPI39_0)(a0)
 ; V3F64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V3F64-NEXT:    vfabs.v v10, v8
 ; V3F64-NEXT:    vmflt.vf v0, v10, fa5
