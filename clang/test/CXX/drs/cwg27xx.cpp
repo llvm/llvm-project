@@ -183,7 +183,7 @@ struct B {
 };
 
 template<typename T>
-int f(T t, typename B<T>::type u) requires (sizeof t == 1);
+int f(T t, typename B<T>::type u) requires (sizeof(t) == 1);
 
 template<typename T>
 int f(T t, long);
