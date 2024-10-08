@@ -408,6 +408,8 @@ Bug Fixes to Compiler Builtins
 
 - ``__noop`` can now be used in a constant expression. (#GH102064)
 
+- Fix ``__has_builtin`` incorrectly returning ``false`` for some C++ type traits. (#GH111477)
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
