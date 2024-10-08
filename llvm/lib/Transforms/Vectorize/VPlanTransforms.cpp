@@ -806,9 +806,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       LoopBuilder.setInsertPoint(InsertBlock,
                                  std::next(Previous->getIterator()));
 
-    auto *RecurSplice = cast<VPInstruction>(
+    VPInstruction *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
-                                 {FOR, FOR->getBackedgeValue()}));
+                                 {FOR, FOR->getBackedgeValue()});
 
     FOR->replaceAllUsesWith(RecurSplice);
     // Set the first operand of RecurSplice to FOR again, after replacing
