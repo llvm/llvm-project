@@ -404,6 +404,26 @@ out:
   ret void
 }
 
+; !noalias_addrspace is not safe to speculate as it causes immediate undefined behavior.
+define ptr @speculate_noalias_addrspace(i1 %c, ptr dereferenceable(8) align 8 %p) {
+; CHECK-LABEL: @speculate_noalias_addrspace(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull [[META2]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], ptr [[V]], ptr null
+; CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  %v = load ptr, ptr %p, !nonnull !{}, !noundef !{}, !noalias.addrspace !4
+  br label %join
+
+join:
+  %phi = phi ptr [ %v, %if ], [ null, %entry ]
+  ret ptr %phi
+}
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
