@@ -154,7 +154,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableEuropeBerlin) {
   ASSERT_EQ(1, result->tm_isdst);
 }
 
-TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableRussiaMoscow) {
+TEST(LlvmLibcLocaltime, ValidUnixTimestampTzEnvironmentVariableEuropeMoscow) {
   set_env_var("TZ=Europe/Moscow");
 
   time_t t_ptr = 1627225465;
