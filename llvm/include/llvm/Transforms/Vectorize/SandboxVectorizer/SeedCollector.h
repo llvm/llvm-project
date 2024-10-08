@@ -124,10 +124,16 @@ public:
 #endif // NDEBUG
 };
 
+/// Specialization of SeedBundle for memory access instructions. Keeps
+/// seeds sorted in ascending memory order, which is convenient for slicing
+/// these bundles into vectorizable groups.
 template <typename LoadOrStoreT> class MemSeedBundle : public SeedBundle {
 public:
   explicit MemSeedBundle(SmallVector<Instruction *> &&SV, ScalarEvolution &SE)
       : SeedBundle(std::move(SV)) {
+    static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
+                      std::is_same<LoadOrStoreT, StoreInst>::value,
+                  "Expected LoadInst or StoreInst!");
     assert(all_of(Seeds, [](auto *S) { return isa<LoadOrStoreT>(S); }) &&
            "Expected Load or Store instructions!");
     auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
@@ -137,6 +143,9 @@ public:
     std::sort(Seeds.begin(), Seeds.end(), Cmp);
   }
   explicit MemSeedBundle(LoadOrStoreT *MemI) : SeedBundle(MemI) {
+    static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
+                      std::is_same<LoadOrStoreT, StoreInst>::value,
+                  "Expected LoadInst or StoreInst!");
     assert(isa<LoadOrStoreT>(MemI) && "Expected Load or Store!");
   }
   void insert(sandboxir::Instruction *I, ScalarEvolution &SE) {
