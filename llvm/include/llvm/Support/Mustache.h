@@ -63,13 +63,14 @@
 #include "Error.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/JSON.h"
 #include <vector>
 
 namespace llvm {
 namespace mustache {
 
-using Accessor = SmallVector<SmallString<128>>;
+using Accessor = SmallVector<SmallString<0>>;
 using Lambda = std::function<llvm::json::Value()>;
 using SectionLambda = std::function<llvm::json::Value(StringRef)>;
 
@@ -94,7 +95,7 @@ public:
 
   StringRef getRawBody() const { return RawBody; };
 
-  void setTokenBody(SmallString<128> NewBody) { TokenBody = NewBody; };
+  void setTokenBody(StringRef NewBody) { TokenBody = NewBody; };
 
   Accessor getAccessor() const { return Accessor; };
 
@@ -109,9 +110,11 @@ public:
 private:
   size_t Indentation;
   Type TokenType;
-  SmallString<128> RawBody;
+  // RawBody is the original string that was tokenized
+  SmallString<0> RawBody;
   Accessor Accessor;
-  SmallString<128> TokenBody;
+  // TokenBody is the original string with the identifier removed
+  SmallString<0> TokenBody;
 };
 
 class ASTNode {
@@ -147,15 +150,29 @@ public:
 
   void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
 
-  SmallString<128> render(llvm::json::Value Data,
-                          llvm::BumpPtrAllocator &Allocator,
-                          StringMap<ASTNode *> &Partials,
-                          StringMap<Lambda> &Lambdas,
-                          StringMap<SectionLambda> &SectionLambdas,
-                          DenseMap<char, StringRef> &Escapes);
-
+  void render(llvm::json::Value Data, SmallString<0> &Output);
+  
+  void setUpNode(llvm::BumpPtrAllocator &Allocator,
+                 StringMap<ASTNode *> &Partials,
+                 StringMap<Lambda> &Lambdas,
+                 StringMap<SectionLambda> &SectionLambdas,
+                 DenseMap<char, StringRef> &Escapes);
 private:
+  
+  void renderLambdas(llvm::json::Value& Contexts, SmallString<0> &Output);
+  
+  void renderPartial(llvm::json::Value& Contexts, SmallString<0> &Output);
+
+  void renderChild(llvm::json::Value& Context, SmallString<0> &Output);
+  
   llvm::json::Value findContext();
+  
+  llvm::BumpPtrAllocator *Allocator;
+  StringMap<ASTNode *> *Partials;
+  StringMap<Lambda> *Lambdas;
+  StringMap<SectionLambda> *SectionLambdas;
+  DenseMap<char, StringRef> *Escapes;
+  
   Type T;
   size_t Indentation;
   SmallString<128> RawBody;
@@ -172,7 +189,7 @@ class Template {
 public:
   Template(StringRef TemplateStr);
 
-  SmallString<128> render(llvm::json::Value Data);
+  StringRef render(llvm::json::Value Data);
 
   void registerPartial(StringRef Name, StringRef Partial);
 
@@ -186,6 +203,7 @@ public:
   void registerEscape(DenseMap<char, StringRef> Escapes);
 
 private:
+  SmallString<0> Output;
   StringMap<ASTNode *> Partials;
   StringMap<Lambda> Lambdas;
   StringMap<SectionLambda> SectionLambdas;

@@ -14,16 +14,17 @@ using namespace llvm;
 using namespace llvm::json;
 using namespace llvm::mustache;
 
-SmallString<128> escapeString(StringRef Input,
-                              DenseMap<char, StringRef> &Escape) {
-  SmallString<128> EscapedString("");
+SmallString<0> escapeString(StringRef Input,
+                  DenseMap<char, StringRef> &Escape) {
+  
+  SmallString<0> Output;
   for (char C : Input) {
     if (Escape.find(C) != Escape.end())
-      EscapedString += Escape[C];
+      Output += Escape[C];
     else
-      EscapedString += C;
+      Output += C;
   }
-  return EscapedString;
+  return Output;
 }
 
 Accessor split(StringRef Str, char Delimiter) {
@@ -41,10 +42,10 @@ Accessor split(StringRef Str, char Delimiter) {
   return Tokens;
 }
 
-void addIndentation(llvm::SmallString<128> &PartialStr,
+void addIndentation(llvm::SmallString<0> &PartialStr,
                     size_t IndentationSize) {
   std::string Indent(IndentationSize, ' ');
-  llvm::SmallString<128> Result;
+  llvm::SmallString<0> Result;
   for (size_t I = 0; I < PartialStr.size(); ++I) {
     Result.push_back(PartialStr[I]);
     if (PartialStr[I] == '\n' && I < PartialStr.size() - 1)
@@ -116,8 +117,8 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
   SmallVector<Token, 0> Tokens;
   StringRef Open("{{");
   StringRef Close("}}");
-  std::size_t Start = 0;
-  std::size_t DelimiterStart = Template.find(Open);
+  size_t Start = 0;
+  size_t DelimiterStart = Template.find(Open);
   if (DelimiterStart == StringRef::npos) {
     Tokens.emplace_back(Template);
     return Tokens;
@@ -296,10 +297,11 @@ void Parser::parseMustache(ASTNode *Parent) {
   }
 }
 
-SmallString<128> Template::render(Value Data) {
+StringRef Template::render(Value Data) {
   BumpPtrAllocator LocalAllocator;
-  return Tree->render(Data, LocalAllocator, Partials, Lambdas, SectionLambdas,
-                      Escapes);
+  Tree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas, Escapes);
+  Tree->render(Data, Output);
+  return Output.str();
 }
 
 void Template::registerPartial(StringRef Name, StringRef Partial) {
@@ -328,25 +330,23 @@ Template::Template(StringRef TemplateStr) {
   registerEscape(HtmlEntities);
 }
 
-SmallString<128> printJson(Value &Data) {
-
-  SmallString<128> Result;
+void printJson(Value &Data, SmallString<0>& Output) {
   if (Data.getAsNull())
-    return Result;
+    return;
   if (auto *Arr = Data.getAsArray())
     if (Arr->empty())
-      return Result;
+      return;
   if (Data.getAsString()) {
-    Result += Data.getAsString()->str();
-    return Result;
+    Output = Data.getAsString()->str();
+    return;
   }
   if (auto Num = Data.getAsNumber()) {
     std::ostringstream Oss;
     Oss << *Num;
-    Result += Oss.str();
-    return Result;
+    Output = Oss.str();
+    return;
   }
-  return formatv("{0:2}", Data);
+  Output = formatv("{0:2}", Data);
 }
 
 bool isFalsey(Value &V) {
@@ -355,97 +355,72 @@ bool isFalsey(Value &V) {
          (V.getAsObject() && V.getAsObject()->empty());
 }
 
-SmallString<128> ASTNode::render(Value Data, llvm::BumpPtrAllocator &Allocator,
-                                 StringMap<ASTNode *> &Partials,
-                                 StringMap<Lambda> &Lambdas,
-                                 StringMap<SectionLambda> &SectionLambdas,
-                                 DenseMap<char, StringRef> &Escapes) {
+
+void ASTNode::render(Value Data, SmallString<0> &Output) {
   LocalContext = Data;
   Value Context = T == Root ? Data : findContext();
-  SmallString<128> Result;
   switch (T) {
-  case Root: {
-    for (ASTNode *Child : Children)
-      Result += Child->render(Context, Allocator, Partials, Lambdas,
-                              SectionLambdas, Escapes);
-    return Result;
-  }
+  case Root:
+    renderChild(Data, Output);
+    return;
   case Text:
-    return Body;
+    Output = Body;
+    return;
   case Partial: {
-    if (Partials.find(Accessor[0]) != Partials.end()) {
-      ASTNode *Partial = Partials[Accessor[0]];
-      Result += Partial->render(Data, Allocator, Partials, Lambdas,
-                                SectionLambdas, Escapes);
-      addIndentation(Result, Indentation);
-    }
-    return Result;
+    if (Lambdas->find(Accessor[0]) != Lambdas->end())
+      renderPartial(Context, Output);
+    return;
   }
   case Variable: {
-    if (Lambdas.find(Accessor[0]) != Lambdas.end()) {
-      Lambda &L = Lambdas[Accessor[0]];
-      Value LambdaResult = L();
-      StringRef LambdaStr = printJson(LambdaResult);
-      Parser P = Parser(LambdaStr, Allocator);
-      ASTNode *LambdaNode = P.parse();
-      SmallString<128> RenderStr = LambdaNode->render(
-          Data, Allocator, Partials, Lambdas, SectionLambdas, Escapes);
-      return escapeString(RenderStr, Escapes);
+    if (Lambdas->find(Accessor[0]) != Lambdas->end())
+      renderLambdas(Data, Output);
+    else {
+      printJson(Context, Output);
+      Output = escapeString(Output, *Escapes);
     }
-    return escapeString(printJson(Context), Escapes);
+    return;
   }
   case UnescapeVariable: {
-    if (Lambdas.find(Accessor[0]) != Lambdas.end()) {
-      Lambda &L = Lambdas[Accessor[0]];
-      Value LambdaResult = L();
-      StringRef LambdaStr = printJson(LambdaResult);
-      Parser P = Parser(LambdaStr, Allocator);
-      ASTNode *LambdaNode = P.parse();
-      DenseMap<char, StringRef> EmptyEscapes;
-      return LambdaNode->render(Data, Allocator, Partials, Lambdas,
-                                SectionLambdas, EmptyEscapes);
+    if (Lambdas->find(Accessor[0]) != Lambdas->end())
+      renderLambdas(Data, Output);
+    else {
+      printJson(Context, Output);
     }
-    return printJson(Context);
+    return;
   }
   case Section: {
     // Sections are not rendered if the context is falsey
-    bool IsLambda = SectionLambdas.find(Accessor[0]) != SectionLambdas.end();
+    bool IsLambda = SectionLambdas->find(Accessor[0]) != 
+                    SectionLambdas->end();
+    
     if (isFalsey(Context) && !IsLambda)
-      return Result;
+      return;
+    
     if (IsLambda) {
-      SectionLambda &Lambda = SectionLambdas[Accessor[0]];
-      Value Return = Lambda(RawBody);
-      if (isFalsey(Return))
-        return Result;
-      StringRef LambdaStr = printJson(Return);
-      Parser P = Parser(LambdaStr, Allocator);
-      ASTNode *LambdaNode = P.parse();
-      Result = LambdaNode->render(Data, Allocator, Partials, Lambdas,
-                                  SectionLambdas, Escapes);
-      return Result;
+        renderLambdas(Data, Output);
+        return;
     }
+    
     if (Context.getAsArray()) {
+      SmallString<0> Result;
       json::Array *Arr = Context.getAsArray();
       for (Value &V : *Arr) {
-        for (ASTNode *Child : Children)
-          Result += Child->render(V, Allocator, Partials, Lambdas,
-                                  SectionLambdas, Escapes);
+        renderChild(V, Result);
       }
-      return Result;
+      Output = Result;
+      return;
     }
-    for (ASTNode *Child : Children)
-      Result += Child->render(Context, Allocator, Partials, Lambdas,
-                              SectionLambdas, Escapes);
-    return Result;
+    
+    renderChild(Context, Output);
   }
   case InvertSection: {
-    bool IsLambda = SectionLambdas.find(Accessor[0]) != SectionLambdas.end();
+    bool IsLambda = SectionLambdas->find(Accessor[0]) != 
+                    SectionLambdas->end();
+    
     if (!isFalsey(Context) || IsLambda)
-      return Result;
-    for (ASTNode *Child : Children)
-      Result += Child->render(Context, Allocator, Partials, Lambdas,
-                              SectionLambdas, Escapes);
-    return Result;
+      return;
+    
+    renderChild(Context, Output);
   }
   }
   llvm_unreachable("Invalid ASTNode type");
@@ -486,4 +461,79 @@ Value ASTNode::findContext() {
       Context = *CurrentValue;
   }
   return Context;
+}
+
+void ASTNode::renderChild(Value &Context, SmallString<0> &Output) {
+  for (ASTNode *Child : Children) {
+    SmallString<0> ChildResult;
+    Child->render(Context, ChildResult);
+    Output += ChildResult;
+  }
+}
+
+void ASTNode::renderPartial(Value &Context, SmallString<0> &Output) {
+  ASTNode *Partial = (*Partials)[Accessor[0]];
+  Partial->render(Context, Output);
+  addIndentation(Output, Indentation);
+}
+
+void ASTNode::renderLambdas(Value &Context, SmallString<0> &Output) {
+  
+  switch (T) {
+  case Variable:
+  case UnescapeVariable: {
+    Lambda &L = (*Lambdas)[Accessor[0]];
+    Value LambdaResult = L();
+    SmallString<0> LambdaStr;
+    printJson(LambdaResult, LambdaStr);
+    Parser P = Parser(LambdaStr, *Allocator);
+    ASTNode *LambdaNode = P.parse();
+    LambdaNode->setUpNode(*Allocator, 
+                          *Partials, 
+                          *Lambdas, 
+                          *SectionLambdas,
+                          *Escapes);
+    LambdaNode->render(Context, Output);
+    if (T == Variable)
+      Output = escapeString(Output, *Escapes);
+    return;
+  }
+  case Section: {
+    SectionLambda &Lambda = (*SectionLambdas)[Accessor[0]];
+    Value Return = Lambda(RawBody);
+    if (isFalsey(Return))
+      return;
+    SmallString<0> LambdaStr;
+    printJson(Return, LambdaStr);
+    Parser P = Parser(LambdaStr, *Allocator);
+    ASTNode *LambdaNode = P.parse();
+    LambdaNode->setUpNode(*Allocator, 
+                          *Partials, 
+                          *Lambdas, 
+                          *SectionLambdas,
+                          *Escapes);
+    LambdaNode->render(Context, Output);
+    return;
+  }
+  default:
+    llvm_unreachable("Invalid ASTNode type");
+  }
+}
+
+void ASTNode::setUpNode(BumpPtrAllocator &Alloc,
+                        StringMap<ASTNode *> &Par,
+                        StringMap<Lambda> &L,
+                        StringMap<SectionLambda> &SC,
+                        DenseMap<char, StringRef> &E) {
+  
+  // Passed down datastructures needed for rendering to
+  // the children nodes
+  Allocator = &Alloc;
+  Partials = &Par;
+  Lambdas = &L;
+  SectionLambdas = &SC;
+  Escapes = &E;
+  for (ASTNode *Child : Children)
+    Child->setUpNode(Alloc, Par, L, SC, E);
+  
 }
