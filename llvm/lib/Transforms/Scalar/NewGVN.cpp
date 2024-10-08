@@ -2626,34 +2626,63 @@ bool NewGVN::OpIsSafeForPHIOfOps(Value *V, const BasicBlock *PHIBlock,
   Worklist.push_back(V);
   while (!Worklist.empty()) {
     auto *I = Worklist.pop_back_val();
-    if (!isa<Instruction>(I))
+    if (alwaysAvailable(I))
       continue;
+    assert((isa<Instruction>(I) || isa<MemoryPhi>(I)) &&
+           "Should have been an Instruction or MemoryPhi");
 
     auto OISIt = OpSafeForPHIOfOps.find({I, CacheIdx});
     if (OISIt != OpSafeForPHIOfOps.end())
       return OISIt->second;
 
+    auto *IBlock = getBlockForValue(I);
     // Keep walking until we either dominate the phi block, or hit a phi, or run
     // out of things to check.
-    if (DT->properlyDominates(getBlockForValue(I), PHIBlock)) {
+    if (DT->properlyDominates(IBlock, PHIBlock)) {
       OpSafeForPHIOfOps.insert({{I, CacheIdx}, true});
       continue;
     }
     // PHI in the same block.
-    if (isa<PHINode>(I) && getBlockForValue(I) == PHIBlock) {
+    if ((isa<PHINode>(I) || isa<MemoryPhi>(I)) && IBlock == PHIBlock) {
       OpSafeForPHIOfOps.insert({{I, CacheIdx}, false});
       return false;
     }
 
-    auto *OrigI = cast<Instruction>(I);
-    // When we hit an instruction that reads memory (load, call, etc), we must
-    // consider any store that may happen in the loop. For now, we assume the
-    // worst: there is a store in the loop that alias with this read.
-    // The case where the load is outside the loop is already covered by the
-    // dominator check above.
-    // TODO: relax this condition
-    if (OrigI->mayReadFromMemory())
-      return false;
+    auto *OrigI = dyn_cast<Instruction>(I);
+    // When we encounter an instruction that reads memory (load, call, etc.) or
+    // a MemoryAccess, we must ensure that it does not depend on a memory Phi in
+    // PHIBlock. The base cases are already checked above; now we must check its
+    // operands.
+    MemoryAccess *MA = nullptr;
+    if (OrigI && OrigI->mayReadOrWriteMemory())
+      MA = getMemoryAccess(OrigI);
+    else if (isa<MemoryPhi>(I))
+      MA = cast<MemoryPhi>(I);
+    if (MA) {
+      for (auto *Op : MA->operand_values()) {
+        // Null => LiveOnEntryDef
+        if (!Op || MSSA->isLiveOnEntryDef(cast<MemoryAccess>(Op)))
+          continue;
+        // Add the instruction that the memory access represents.
+        if (auto *MUD = dyn_cast<MemoryUseOrDef>(Op))
+          Op = MUD->getMemoryInst();
+        // Stop now if we find an unsafe operand.
+        auto OISIt = OpSafeForPHIOfOps.find({Op, CacheIdx});
+        if (OISIt != OpSafeForPHIOfOps.end()) {
+          if (!OISIt->second) {
+            OpSafeForPHIOfOps.insert({{I, CacheIdx}, false});
+            return false;
+          }
+          continue;
+        }
+        if (!Visited.insert(Op).second)
+          continue;
+        Worklist.push_back(Op);
+      }
+    }
+    // If it's a MemoryPhi there is nothing more to do.
+    if (isa<MemoryPhi>(I))
+      continue;
 
     // Check the operands of the current instruction.
     for (auto *Op : OrigI->operand_values()) {
@@ -2670,7 +2699,7 @@ bool NewGVN::OpIsSafeForPHIOfOps(Value *V, const BasicBlock *PHIBlock,
       }
       if (!Visited.insert(Op).second)
         continue;
-      Worklist.push_back(cast<Instruction>(Op));
+      Worklist.push_back(Op);
     }
   }
   OpSafeForPHIOfOps.insert({{V, CacheIdx}, true});
