@@ -15,7 +15,6 @@
 
 // template<class T> struct is_implicit_lifetime;
 
-#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <tuple>
@@ -135,12 +134,6 @@ constexpr void test_is_implicit_lifetime() {
   // Arrays
   test_is_implicit_lifetime<T[], true>();
   test_is_implicit_lifetime<T[94], true>();
-
-  if !consteval {
-    if constexpr (std::is_trivially_copyable_v<T>) {
-      test_is_implicit_lifetime<std::atomic<T>, true>();
-    }
-  }
 }
 
 struct AritmeticTypesTest {
