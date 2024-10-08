@@ -819,6 +819,10 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
     return LLDB_INVALID_ADDRESS;
   }
 
+  ModuleList non_local_images = target->GetImages();
+  // We'll process module_sp separately, before the other modules.
+  non_local_images.Remove(sc.module_sp);
+
   LoadAddressResolver resolver(target, symbol_was_missing_weak);
 
   ModuleFunctionSearchOptions function_options;
@@ -826,6 +830,11 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   function_options.include_inlines = false;
 
   for (const ConstString &name : names) {
+    // The lookup order here is as follows:
+    // 1) Functions in `sc.module_sp`
+    // 2) Functions in the other modules
+    // 3) Symbols in `sc.module_sp`
+    // 4) Symbols in the other modules
     if (sc.module_sp) {
       SymbolContextList sc_list;
       sc.module_sp->FindFunctions(name, CompilerDeclContext(),
@@ -842,14 +851,28 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
         if (lldb::ModuleSP module_sp = m_jit_module_wp.lock())
           images.Remove(module_sp);
       // END SWIFT
+    }
 
+    {
       SymbolContextList sc_list;
-      images.FindFunctions(name, lldb::eFunctionNameTypeFull, function_options,
-                           sc_list);
+      non_local_images.FindFunctions(name, lldb::eFunctionNameTypeFull,
+                                     function_options, sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
+    }
 
-      images.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny, sc_list);
+    if (sc.module_sp) {
+      SymbolContextList sc_list;
+      sc.module_sp->FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
+                                               sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
+    }
+
+    {
+      SymbolContextList sc_list;
+      non_local_images.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
+                                                  sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
