@@ -255,3 +255,58 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_EQ(Buff, "test-rpm(test-pass1,test-pass2)");
 #endif // NDEBUG
 }
+
+TEST_F(PassTest, SetPassPipeline) {
+  auto *F = parseFunction(R"IR(
+define void @f() {
+  ret void
+}
+)IR",
+                          "f");
+  class FooPass final : public FunctionPass {
+    std::string &Str;
+
+  public:
+    FooPass(std::string &Str) : FunctionPass("foo-pass"), Str(Str) {}
+    bool runOnFunction(Function &F) final {
+      Str += "foo";
+      return false;
+    }
+  };
+  class BarPass final : public FunctionPass {
+    std::string &Str;
+
+  public:
+    BarPass(std::string &Str) : FunctionPass("bar-pass"), Str(Str) {}
+    bool runOnFunction(Function &F) final {
+      Str += "bar";
+      return false;
+    }
+  };
+
+  std::string Str;
+  auto CreatePass =
+      [&Str](llvm::StringRef Name) -> std::unique_ptr<FunctionPass> {
+    if (Name == "foo")
+      return std::make_unique<FooPass>(Str);
+    if (Name == "bar")
+      return std::make_unique<BarPass>(Str);
+    return nullptr;
+  };
+
+  FunctionPassManager FPM("test-fpm");
+  FPM.setPassPipeline("foo,bar,foo", CreatePass);
+  FPM.runOnFunction(*F);
+  EXPECT_EQ(Str, "foobarfoo");
+
+  // Check that a second call to setPassPipeline clears the previous pipeline.
+  Str.clear();
+  FPM.setPassPipeline("bar,bar,foo", CreatePass);
+  FPM.runOnFunction(*F);
+  EXPECT_EQ(Str, "barbarfoo");
+
+  EXPECT_DEATH(FPM.setPassPipeline("bad-pass-name", CreatePass),
+               ".*not registered.*");
+  EXPECT_DEATH(FPM.setPassPipeline("", CreatePass), ".*not registered.*");
+  EXPECT_DEATH(FPM.setPassPipeline(",", CreatePass), ".*not registered.*");
+}

@@ -48,6 +48,44 @@ public:
     // TODO: Check that Pass's class type works with this PassManager type.
     Passes.push_back(std::move(Pass));
   }
+
+  using CreatePassFunc =
+      std::function<std::unique_ptr<ContainedPass>(StringRef)>;
+
+  /// Parses \p Pipeline as a comma-separated sequence of pass names and sets
+  /// the pass pipeline, using \p CreatePass to instantiate passes by name.
+  ///
+  /// After calling this function, the PassManager contains only the specified
+  /// pipeline, any previously added passes are cleared.
+  void setPassPipeline(StringRef Pipeline, CreatePassFunc CreatePass) {
+    static constexpr const char EndToken = '\0';
+    static constexpr const char PassDelimToken = ',';
+
+    Passes.clear();
+    // Add EndToken to the end to ease parsing.
+    std::string PipelineStr = std::string(Pipeline) + EndToken;
+    int FlagBeginIdx = 0;
+
+    for (auto [Idx, C] : enumerate(PipelineStr)) {
+      // Keep moving Idx until we find the end of the pass name.
+      bool FoundDelim = C == EndToken || C == PassDelimToken;
+      if (!FoundDelim)
+        continue;
+      unsigned Sz = Idx - FlagBeginIdx;
+      std::string PassName(&PipelineStr[FlagBeginIdx], Sz);
+      FlagBeginIdx = Idx + 1;
+
+      // Get the pass that corresponds to PassName and add it to the pass
+      // manager.
+      auto Pass = CreatePass(PassName);
+      if (Pass == nullptr) {
+        errs() << "Pass '" << PassName << "' not registered!\n";
+        exit(1);
+      }
+      addPass(std::move(Pass));
+    }
+  }
+
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
     OS << this->getName();
