@@ -23,8 +23,8 @@ generic implementations of most library requirements, allowing the target
 to override the generic implementation at the granularity of individual
 functions.
 
-libclc currently supports NVPTX, AMDGPU and SPIRV targets, but support for more
-targets is welcome.
+libclc currently supports PTX, AMDGPU, SPIRV and CLSPV targets, but support for
+more targets is welcome.
 
 Compiling and installing
 ------------------------
@@ -45,7 +45,7 @@ Note you can use the DESTDIR Makefile variable to do staged installs.
 
 $ DESTDIR=/path/for/staged/install ninja install
 
-To build against an existing LLVM build or install:
+To build out of tree, or in other words, against an existing LLVM build or install:
 
 $ cmake <path-to>/llvm-project/libclc/CMakeLists.txt -DCMAKE_BUILD_TYPE=Release \
   -G Ninja -DLLVM_DIR=$(<path-to>/llvm-config --cmakedir)
@@ -53,10 +53,15 @@ $ ninja
 
 Then install as before.
 
-In both cases, the LLVM used must include the targets you want libclc support for.
-AMDGPU and NVPTX are enabled in LLVM by default, but SPIRV must be enabled by
-passing `-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=SPIRV` to CMake when configuring
-LLVM.
+In both cases this will include all supported targets. You can choose which
+targets are enabled by passing `-DLIBCLC_TARGETS_TO_BUILD` to CMake. The default
+is "all".
+
+In both cases, the LLVM used must include the targets you want libclc support for
+(AMDGPU and NVPTX are enabled in LLVM by default). Apart from SPIRV where you do
+not need an LLVM target but you do need the llvm-spirv tool
+(https://github.com/KhronosGroup/SPIRV-LLVM-Translator) available. Either build
+this in-tree, or place it in the directory pointed to by `LLVM_TOOLS_BINARY_DIR`.
 
 Website
 -------
