@@ -21,9 +21,8 @@ template <typename OnViolationAction>
 void ExpectNotRealtime(Context &context, OnViolationAction &&OnViolation) {
   CHECK(__rtsan_is_initialized());
   if (context.InRealtimeContext() && !context.IsBypassed()) {
-    context.BypassPush();
+    ScopedBypass sb{context};
     OnViolation();
-    context.BypassPop();
   }
 }
 
