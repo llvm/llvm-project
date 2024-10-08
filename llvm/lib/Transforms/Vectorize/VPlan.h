@@ -828,9 +828,7 @@ public:
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
-  /// instructions. Returns InstructionCost::max() if the cost of this recipe
-  /// should be ignored. Forced target instruction cost is not applied for such
-  /// recipes.
+  /// instructions.
   virtual InstructionCost computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const;
 };
@@ -916,6 +914,9 @@ public:
     }
     llvm_unreachable("Unhandled VPDefID");
   }
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
@@ -1411,6 +1412,9 @@ public:
   }
 
   void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   Instruction &getInstruction() { return I; }
 
@@ -2328,6 +2332,9 @@ public:
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
 
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2560,6 +2567,9 @@ public:
   /// Generate the extraction of the appropriate bit from the block mask and the
   /// conditional branch.
   void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

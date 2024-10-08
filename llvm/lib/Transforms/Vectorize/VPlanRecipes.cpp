@@ -274,32 +274,28 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
   insertBefore(BB, I);
 }
 
-/// Return the underlying instruction to be used for computing \p R's cost via
-/// the legacy cost model. Return nullptr if there's no suitable instruction or
-/// computeCost is already implemented for the recipe and there is no need for
-/// the underlying instruction, i.e. it does not need to be skipped for cost
-/// computations.
-static Instruction *getInstructionForCost(const VPRecipeBase *R) {
-  if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
-    return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-  if (auto *IG = dyn_cast<VPInterleaveRecipe>(R))
-    return IG->getInsertPos();
-  return nullptr;
-}
-
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
-  auto *UI = getInstructionForCost(this);
-  if (UI && Ctx.skipCostComputation(UI, VF.isVector()))
-    return 0;
+  // Get the underlying instruction for the recipe, if there is one. Is is used
+  // to
+  //   * decide if cost computation should be skipped for this recipe
+  //   * apply forced target instr
+  Instruction *UI = nullptr;
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(this))
+    UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+  else if (auto *IG = dyn_cast<VPInterleaveRecipe>(this))
+    UI = IG->getInsertPos();
+  else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
+    UI = &WidenMem->getIngredient();
 
-  InstructionCost RecipeCost = computeCost(VF, Ctx);
-  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-      (RecipeCost.isValid() && RecipeCost != InstructionCost::getMax()))
-    RecipeCost = InstructionCost(ForceTargetInstructionCost);
-  // Max cost is used as a sentinel value to detect recipes without underlying
-  // instructions for which no forced target instruction cost should be applied.
-  else if (RecipeCost == InstructionCost::getMax())
+  InstructionCost RecipeCost;
+  if (UI && Ctx.skipCostComputation(UI, VF.isVector())) {
     RecipeCost = 0;
+  } else {
+    RecipeCost = computeCost(VF, Ctx);
+    if (UI && ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+        RecipeCost.isValid())
+      RecipeCost = InstructionCost(ForceTargetInstructionCost);
+  }
 
   LLVM_DEBUG({
     dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
@@ -310,20 +306,18 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
 
 InstructionCost VPRecipeBase::computeCost(ElementCount VF,
                                           VPCostContext &Ctx) const {
-  // Compute the cost for the recipe falling back to the legacy cost model using
-  // the underlying instruction. If there is no underlying instruction or the
-  // cost is computed by the recipe's computeCost, returns
-  // InstructionCost::getMax. It is used as  a sentinel value to detect recipes
-  // without underlying instructions for which no forced target instruction cost
-  // should be applied.
+  llvm_unreachable("subclasses should implement computeCost");
+}
 
-  Instruction *UI = getInstructionForCost(this);
+InstructionCost VPSingleDefRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  Instruction *UI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
   if (UI && isa<VPReplicateRecipe>(this)) {
     // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
     // transform, avoid computing their cost multiple times for now.
     Ctx.SkipCostComputation.insert(UI);
   }
-  return UI ? Ctx.getLegacyCost(UI, VF) : InstructionCost::getMax();
+  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
 }
 
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
@@ -865,6 +859,11 @@ void VPIRInstruction::execute(VPTransformState &State) {
   // Advance the insert point after the wrapped IR instruction. This allows
   // interleaving VPIRInstructions and other recipes.
   State.Builder.SetInsertPoint(I.getParent(), std::next(I.getIterator()));
+}
+
+InstructionCost VPIRInstruction::computeCost(ElementCount VF,
+                                             VPCostContext &Ctx) const {
+  return 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2159,6 +2158,11 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   ReplaceInstWithInst(CurrentTerminator, CondBr);
 }
 
+InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
+                                                  VPCostContext &Ctx) const {
+  return 0;
+}
+
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   assert(State.Lane && "Predicated instruction PHI works per instance.");
   Instruction *ScalarPredInst =
@@ -2840,6 +2844,11 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
   }
 }
 #endif
+
+InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
+                                                VPCostContext &Ctx) const {
+  return Ctx.getLegacyCost(IG->getInsertPos(), VF);
+}
 
 void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
   Value *Start = getStartValue()->getLiveInIRValue();
