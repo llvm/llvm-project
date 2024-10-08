@@ -3393,7 +3393,8 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
-          K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
+          K->setMetadata(Kind,
+                         MDNode::getMostGenericNoaliasAddrspace(JMD, KMD));
         break;
     }
   }
