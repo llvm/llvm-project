@@ -18,7 +18,8 @@ define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr n
 ; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[STR]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -1
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP41]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i8> [[STRIDED_VEC2]], [[STRIDED_VEC]]
@@ -92,8 +93,9 @@ define void @test_ig_insert_pos_at_end_of_vpbb(ptr noalias %dst, ptr noalias %sr
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr { i16, i16, i16, i16 }, ptr [[SRC]], i64 [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[TMP4]], i32 -2
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP5]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 -4
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr i16, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP51]], align 2
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[STRIDED_VEC]], i32 3

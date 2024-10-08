@@ -142,7 +142,7 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
                             const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
-    auto MMO = MF.getMachineMemOperand(
+    auto *MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemTy,
         inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
@@ -244,7 +244,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     uint64_t LocMemOffset = VA.getLocMemOffset();
     const auto &ST = MF.getSubtarget<GCNSubtarget>();
 
-    auto MMO = MF.getMachineMemOperand(
+    auto *MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, MemTy,
         commonAlignment(ST.getStackAlignment(), LocMemOffset));
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
@@ -1036,7 +1036,7 @@ bool AMDGPUCallLowering::doCallerAndCalleePassArgsTheSameWay(
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // Make sure that the caller and callee preserve all of the same registers.
-  auto TRI = ST.getRegisterInfo();
+  const auto *TRI = ST.getRegisterInfo();
 
   const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
   const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
@@ -1171,6 +1171,9 @@ bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
     return false;
   }
 
+  // FIXME: We need to check if any arguments passed in SGPR are uniform. If
+  // they are not, this cannot be a tail call. If they are uniform, but may be
+  // VGPR, we need to insert readfirstlanes.
   if (!areCalleeOutgoingArgsTailCallable(Info, MF, OutArgs))
     return false;
 
@@ -1336,7 +1339,7 @@ bool AMDGPUCallLowering::lowerTailCall(
 #if LLPC_BUILD_GFX12
 #else /* LLPC_BUILD_GFX12 */
 
-    if (auto CI = dyn_cast<ConstantInt>(ExecArg.OrigValue)) {
+    if (const auto *CI = dyn_cast<ConstantInt>(ExecArg.OrigValue)) {
       MIB.addImm(CI->getSExtValue());
     } else {
       MIB.addReg(ExecArg.Regs[0]);

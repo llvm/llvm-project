@@ -220,6 +220,14 @@ def FeatureInstFwdPrefetchBug : SubtargetFeature<"inst-fwd-prefetch-bug",
   "S_INST_PREFETCH instruction causes shader to hang"
 >;
 
+#ifdef LLPC_BUILD_GFX12
+def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
+  "HasSafeSmemPrefetch",
+  "true",
+  "SMEM prefetches do not fail on illegal address"
+>;
+
+#endif /* LLPC_BUILD_GFX12 */
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
   "HasVcmpxExecWARHazard",
   "true",

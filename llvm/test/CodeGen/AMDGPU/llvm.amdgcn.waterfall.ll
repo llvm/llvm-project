@@ -4116,10 +4116,10 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s8, 4
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s9, 5
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s30, 6
-; PRE-GFX10-NEXT:    v_writelane_b32 v40, s31, 7
 ; PRE-GFX10-NEXT:    s_mov_b32 s5, 0
 ; PRE-GFX10-NEXT:    s_mov_b64 s[6:7], exec
 ; PRE-GFX10-NEXT:    s_addk_i32 s32, 0x400
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s31, 7
 ; PRE-GFX10-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s4, v1
 ; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[34:35], s4, v1

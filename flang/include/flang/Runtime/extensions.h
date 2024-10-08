@@ -36,6 +36,8 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit);
 // GNU extension subroutine FDATE
 void FORTRAN_PROCEDURE_NAME(fdate)(char *string, std::int64_t length);
 
+void RTNAME(Free)(std::intptr_t ptr);
+
 // GNU Fortran 77 compatibility function IARGC.
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)();
 
@@ -51,6 +53,8 @@ uid_t RTNAME(GetUID)();
 
 // GNU extension subroutine GETLOG(C).
 void FORTRAN_PROCEDURE_NAME(getlog)(char *name, std::int64_t length);
+
+std::intptr_t RTNAME(Malloc)(std::size_t size);
 
 // GNU extension function STATUS = SIGNAL(number, handler)
 std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int));

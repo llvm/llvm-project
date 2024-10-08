@@ -361,7 +361,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                     - tgsplit           flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
                                                     - xnack             scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
                                                     - kernarg preload - Packed
-                                                                        work-item
+                                                      (except MI210)    work-item
                                                                         IDs
 
      ``gfx90c``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
@@ -1638,6 +1638,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              relevant on subtargets with AGPRs. The behavior is undefined if a
                                              function which requires AGPRs is reached through any function marked
                                              with this attribute.
+
+     "amdgpu-hidden-argument"                This attribute is used internally by the backend to mark function arguments
+                                             as hidden. Hidden arguments are managed by the compiler and are not part of
+                                             the explicit arguments supplied by the user.
 
      ======================================= ==========================================================
 
@@ -5855,6 +5859,12 @@ start of the kernel entry will be skipped. Additionally, the compiler backend
 may insert a trap instruction at the start of the kernel prologue to manage
 situations where kernarg preloading is attempted on hardware with incompatible
 firmware.
+
+With code object V5 and later, hidden kernel arguments that are normally
+accessed through the Implicit Argument Ptr, may be preloaded into User SGPRs.
+These arguments are added to the kernel function signature and are marked with
+the attributes "inreg" and "amdgpu-hidden-argument". (See
+:ref:`amdgpu-llvm-ir-attributes-table`).
 
 .. _amdgpu-amdhsa-kernel-prolog:
 

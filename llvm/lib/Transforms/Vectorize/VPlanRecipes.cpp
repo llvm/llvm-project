@@ -641,7 +641,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
            "can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), /* IsScalar */ true);
     Value *Addend = State.get(getOperand(1), /* IsScalar */ true);
-    return Builder.CreatePtrAdd(Ptr, Addend, Name);
+    return isInBounds() ? Builder.CreateInBoundsPtrAdd(Ptr, Addend, Name)
+                        : Builder.CreatePtrAdd(Ptr, Addend, Name);
   }
   case VPInstruction::ResumePhi: {
     Value *IncomingFromVPlanPred =
@@ -935,8 +936,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
-  if (isa<FPMathOperator>(V))
-    V->copyFastMathFlags(CI);
+  setFlags(V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
@@ -951,11 +951,6 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                     Variant->getFunctionType()->params(),
                                     CostKind);
   }
-
-  FastMathFlags FMF;
-  // TODO: Manage flags via VPRecipeWithIRFlags.
-  if (auto *FPMO = dyn_cast_or_null<FPMathOperator>(getUnderlyingValue()))
-    FMF = FPMO->getFastMathFlags();
 
   // Some backends analyze intrinsic arguments to determine cost. Use the
   // underlying value for the operand if it has one. Otherwise try to use the
@@ -984,6 +979,7 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
+  FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
       VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
       dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()));
@@ -1003,7 +999,9 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
     O << " = ";
   }
 
-  O << "call @" << CalledFn->getName() << "(";
+  O << "call";
+  printFlags(O);
+  O << "  @" << CalledFn->getName() << "(";
   interleaveComma(arg_operands(), O, [&O, &SlotTracker](VPValue *Op) {
     Op->printAsOperand(O, SlotTracker);
   });
@@ -2188,6 +2186,9 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
     // predicated iteration inserts its generated value in the correct vector.
     State.reset(getOperand(0), VPhi);
   } else {
+    if (vputils::onlyFirstLaneUsed(this) && !State.Lane->isFirstLane())
+      return;
+
     Type *PredInstType = getOperand(0)->getUnderlyingValue()->getType();
     PHINode *Phi = State.Builder.CreatePHI(PredInstType, 2);
     Phi->addIncoming(PoisonValue::get(ScalarPredInst->getType()),
@@ -2605,15 +2606,12 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   unsigned InterleaveFactor = Group->getFactor();
   auto *VecTy = VectorType::get(ScalarTy, State.VF * InterleaveFactor);
 
-  // Prepare for the new pointers.
-  unsigned Index = Group->getIndex(Instr);
-
   // TODO: extend the masked interleaved-group support to reversed access.
   VPValue *BlockInMask = getMask();
   assert((!BlockInMask || !Group->isReverse()) &&
          "Reversed masked interleave-group not supported.");
 
-  Value *Idx;
+  Value *Index;
   // If the group is reverse, adjust the index to refer to the last vector lane
   // instead of the first. We adjust the index from the first vector lane,
   // rather than directly getting the pointer for lane VF - 1, because the
@@ -2621,35 +2619,24 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   if (Group->isReverse()) {
     Value *RuntimeVF =
         getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);
-    Idx = State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
-    Idx = State.Builder.CreateMul(Idx,
-                                  State.Builder.getInt32(Group->getFactor()));
-    Idx = State.Builder.CreateAdd(Idx, State.Builder.getInt32(Index));
-    Idx = State.Builder.CreateNeg(Idx);
-  } else
-    Idx = State.Builder.getInt32(-Index);
+    Index = State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
+    Index = State.Builder.CreateMul(Index,
+                                    State.Builder.getInt32(Group->getFactor()));
+    Index = State.Builder.CreateNeg(Index);
+  } else {
+    // TODO: Drop redundant 0-index GEP as follow-up.
+    Index = State.Builder.getInt32(0);
+  }
 
   VPValue *Addr = getAddr();
   Value *ResAddr = State.get(Addr, VPLane(0));
   if (auto *I = dyn_cast<Instruction>(ResAddr))
     State.setDebugLocFrom(I->getDebugLoc());
 
-  // Notice current instruction could be any index. Need to adjust the address
-  // to the member of index 0.
-  //
-  // E.g.  a = A[i+1];     // Member of index 1 (Current instruction)
-  //       b = A[i];       // Member of index 0
-  // Current pointer is pointed to A[i+1], adjust it to A[i].
-  //
-  // E.g.  A[i+1] = a;     // Member of index 1
-  //       A[i]   = b;     // Member of index 0
-  //       A[i+2] = c;     // Member of index 2 (Current instruction)
-  // Current pointer is pointed to A[i+2], adjust it to A[i].
-
   bool InBounds = false;
   if (auto *gep = dyn_cast<GetElementPtrInst>(ResAddr->stripPointerCasts()))
     InBounds = gep->isInBounds();
-  ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Idx, "", InBounds);
+  ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Index, "", InBounds);
 
   State.setDebugLocFrom(Instr->getDebugLoc());
   Value *PoisonVec = PoisonValue::get(VecTy);

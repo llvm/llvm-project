@@ -500,7 +500,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    const TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target, unsigned int targetBitWidth) {
   target.addDynamicallyLegalOp<vector::ShuffleOp>(
       [=](vector::ShuffleOp shuffleOp) -> bool {

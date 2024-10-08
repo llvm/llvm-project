@@ -226,6 +226,9 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+#if LLPC_BUILD_GFX12
+  bool HasSafeSmemPrefetch = false;
+#endif /* LLPC_BUILD_GFX12 */
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -948,6 +951,10 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
+#if LLPC_BUILD_GFX12
+  bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
+
+#endif /* LLPC_BUILD_GFX12 */
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
