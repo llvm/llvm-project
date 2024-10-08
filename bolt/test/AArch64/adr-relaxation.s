@@ -9,21 +9,21 @@
 
 ## ADR below references its containing function that is split. But ADR is always
 ## in the main fragment, thus there is no need to relax it.
-	.text
+  .text
   .globl _start
   .type _start, %function
 _start:
 # CHECK: <_start>:
-	.cfi_startproc
+  .cfi_startproc
   adr x1, _start
 # CHECK-NOT: adrp
 # CHECK: adr
-	cmp	x1, x11
-	b.hi	.L1
-	mov	x0, #0x0
+  cmp  x1, x11
+  b.hi  .L1
+  mov  x0, #0x0
 .L1:
-	ret	x30
-	.cfi_endproc
+  ret  x30
+  .cfi_endproc
 .size _start, .-_start
 
 
@@ -32,17 +32,17 @@ _start:
   .globl foo
   .type foo, %function
 foo:
-	.cfi_startproc
-	cmp	x1, x11
-	b.hi	.L2
-	mov	x0, #0x0
+  .cfi_startproc
+  cmp  x1, x11
+  b.hi  .L2
+  mov  x0, #0x0
 .L2:
 # CHECK-FOO: <foo.cold.0>:
   adr x1, foo
 # CHECK-FOO: adrp
 # CHECK-FOO-NEXT: add
-	ret	x30
-	.cfi_endproc
+  ret  x30
+  .cfi_endproc
 .size foo, .-foo
 
 ## Force relocation mode.
