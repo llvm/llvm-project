@@ -41,7 +41,7 @@ public:
   virtual void init() = 0;
 
   // Allocate the coroutine frame and do spill/reload as needed.
-  virtual void buildCoroutineFrame();
+  virtual void buildCoroutineFrame(bool OptimizeFrame);
 
   // Perform the function splitting according to the ABI.
   virtual void splitCoroutine(Function &F, coro::Shape &Shape,
