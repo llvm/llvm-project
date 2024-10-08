@@ -99,7 +99,7 @@ void Ctx::reset() {
   driver.~LinkerDriver();
   new (&driver) LinkerDriver(*this);
   script = nullptr;
-  target.reset();
+  target = nullptr;
 
   bufferStart = nullptr;
   mainPart = nullptr;
@@ -3126,7 +3126,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
   // values such as a default image base address.
-  setTarget(ctx);
+  ctx.target = getTarget(ctx);
 
   ctx.arg.eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that
