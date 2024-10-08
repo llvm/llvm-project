@@ -1048,15 +1048,14 @@ private:
     }
 
     void checkIndirectCall(CallExpr *Call, QualType CalleeType) {
-      auto *FPT =
-          CalleeType->getAs<FunctionProtoType>(); // Null if FunctionType.
       FunctionEffectKindSet CalleeEffects;
-      if (FPT)
-        CalleeEffects.insert(FPT->getFunctionEffects());
+      if (FunctionEffectsRef Effects = FunctionEffectsRef::get(CalleeType);
+          !Effects.empty())
+        CalleeEffects.insert(Effects);
 
       auto Check1Effect = [&](FunctionEffect Effect, bool Inferring) {
-        if (FPT == nullptr || Effect.shouldDiagnoseFunctionCall(
-                                  /*direct=*/false, CalleeEffects))
+        if (Effect.shouldDiagnoseFunctionCall(
+                /*direct=*/false, CalleeEffects))
           addViolation(Inferring, Effect, ViolationID::CallsExprWithoutEffect,
                        Call->getBeginLoc());
       };
