@@ -599,27 +599,29 @@ else()
   set(COMPILER_RT_LINK_OR_COPY copy)
 endif()
 
-foreach(pat cas swp ldadd ldclr ldeor ldset)
-  foreach(size 1 2 4 8 16)
-    foreach(model 1 2 3 4 5)
-      if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
-        set(source_asm "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S")
-        set(helper_asm "${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S")
-        add_custom_command(
-          OUTPUT "${helper_asm}"
-          COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${source_asm}" "${helper_asm}"
-          DEPENDS "${source_asm}"
-        )
-        set_source_files_properties("${helper_asm}"
-          PROPERTIES
-          COMPILE_DEFINITIONS "L_${pat};SIZE=${size};MODEL=${model}"
-          INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}"
-        )
-        list(APPEND aarch64_SOURCES "${helper_asm}")
-      endif()
-    endforeach(model)
-  endforeach(size)
-endforeach(pat)
+if(COMPILER_RT_HAS_ASM_LSE)
+  foreach(pat cas swp ldadd ldclr ldeor ldset)
+    foreach(size 1 2 4 8 16)
+      foreach(model 1 2 3 4 5)
+        if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
+          set(source_asm "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S")
+          set(helper_asm "${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S")
+          add_custom_command(
+            OUTPUT "${helper_asm}"
+            COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${source_asm}" "${helper_asm}"
+            DEPENDS "${source_asm}"
+          )
+          set_source_files_properties("${helper_asm}"
+            PROPERTIES
+            COMPILE_DEFINITIONS "L_${pat};SIZE=${size};MODEL=${model}"
+            INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}"
+          )
+          list(APPEND aarch64_SOURCES "${helper_asm}")
+        endif()
+      endforeach(model)
+    endforeach(size)
+  endforeach(pat)
+endif()
 
 if (MINGW)
   set(aarch64_SOURCES
