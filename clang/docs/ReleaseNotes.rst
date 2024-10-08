@@ -395,6 +395,8 @@ Bug Fixes in This Version
 - Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 - Fixed a crash when diagnosing format strings and encountering an empty
   delimited escape sequence (e.g., ``"\o{}"``). #GH102218
+- The warning emitted for an unsupported register variable type now points to
+  the unsupported type instead of the ``register`` keyword (#GH109776).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -477,6 +479,11 @@ Bug Fixes to C++ Support
   conformance of explicit instantiation behaviour with MSVC. (#GH111266)
 - Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
   in certain friend declarations. (#GH93099)
+- Clang now instantiates the correct lambda call operator when a lambda's class type is
+  merged across modules. (#GH110401)
+- Clang now uses the correct set of template argument lists when comparing the constraints of
+  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
+  a class template. (#GH102320)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
   and undeclared templates. (#GH107047, #GH49093)
 
