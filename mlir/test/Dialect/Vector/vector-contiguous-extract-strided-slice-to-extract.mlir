@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -test-vector-contiguous-extract-strided-slice-to-extract %s | FileCheck %s
+// RUN: mlir-opt --test-vector-contiguous-extract-strided-slice-to-extract %s | FileCheck %s
 
 // CHECK-LABEL: @extract_strided_slice_to_extract_i8
 // CHECK:       %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0, 0, 0] : vector<8xi8> from vector<8x1x1x2x8xi8>
