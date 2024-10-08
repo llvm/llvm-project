@@ -577,7 +577,6 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 }
 
-
 // Marks the specified number of bytes in a granule as accessible or
 // poisones the whole granule with kAsanContiguousContainerOOBMagic value.
 static void SetContainerGranule(uptr ptr, u8 n) {
@@ -729,9 +728,9 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
   bool copy_in_reversed_order = src_beg < dst_beg && dst_beg <= src_end_up;
   if (src_beg % granularity != dst_beg % granularity ||
       RoundDownTo(dst_end - 1, granularity) <= dst_beg) {
-    if (copy_in_reversed_order) 
+    if (copy_in_reversed_order)
       SlowReversedCopyContainerAnnotations(src_beg, src_end, dst_beg, dst_end);
-     else 
+    else
       SlowCopyContainerAnnotations(src_beg, src_end, dst_beg, dst_end);
     return;
   }
