@@ -632,3 +632,30 @@ define float @test_fcmp_multiple_uses(float %in) {
   %res = fadd float %sel.1, %sel.2
   ret float %res
 }
+
+; Rewrite-based flags propagation
+define float @test_fcmp_ogt_fadd_select_rewrite_flags(float %in) {
+; CHECK-LABEL: define float @test_fcmp_ogt_fadd_select_rewrite_flags(
+; CHECK-SAME: float [[IN:%.*]]) {
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = call reassoc nnan nsz arcp contract afn float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd reassoc arcp contract afn float [[SEL_NEW]], 1.000000e+00
+; CHECK-NEXT:    ret float [[ADD_NEW]]
+;
+  %cmp1 = fcmp ogt float %in, 0.000000e+00
+  %add = fadd reassoc afn arcp contract float %in, 1.000000e+00
+  %sel = select nnan nsz reassoc afn arcp contract i1 %cmp1, float %add, float 1.000000e+00
+  ret float %sel
+}
+
+define float @test_fcmp_ogt_fadd_select_rewrite_and_fastmath(float %in) {
+; CHECK-LABEL: define float @test_fcmp_ogt_fadd_select_rewrite_and_fastmath(
+; CHECK-SAME: float [[IN:%.*]]) {
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = call fast float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
+; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd fast float [[SEL_NEW]], 1.000000e+00
+; CHECK-NEXT:    ret float [[ADD_NEW]]
+;
+  %cmp1 = fcmp ogt float %in, 0.000000e+00
+  %add = fadd fast float %in, 1.000000e+00
+  %sel = select fast i1 %cmp1, float %add, float 1.000000e+00
+  ret float %sel
+}
