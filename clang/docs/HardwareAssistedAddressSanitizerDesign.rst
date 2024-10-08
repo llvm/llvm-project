@@ -262,6 +262,14 @@ than that of AddressSanitizer:
 `1/TG` extra memory for the shadow
 and some overhead due to `TG`-aligning all objects.
 
+Security Considerations
+=======================
+
+HWASAN is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+HWASAN's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
+
 Supported architectures
 =======================
 HWASAN relies on `Address Tagging`_ which is only available on AArch64.
