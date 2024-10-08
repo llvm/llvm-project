@@ -193,4 +193,7 @@ void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
   relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
 }
 
-void elf::setSPARCV9TargetInfo(Ctx &ctx) { ctx.target.reset(new SPARCV9(ctx)); }
+TargetInfo *elf::getSPARCV9TargetInfo(Ctx &ctx) {
+  static SPARCV9 target(ctx);
+  return &target;
+}
