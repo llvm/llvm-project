@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRLinalgOpsEnumsIncGen
   MLIRLinalgOpsIncGen
   MLIRLinalgStructuredOpsIncGen
+  MLIRShardingInterface
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
