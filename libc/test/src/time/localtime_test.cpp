@@ -13,16 +13,16 @@
 
 extern char **environ;
 
-void set_env_var(const char* env) {
+void set_env_var(const char *env) {
   int i = 0;
   if (environ[i] != NULL) {
     i++;
   }
 
-  environ[i] = (char*)malloc(strlen(env)+1);
-  if (environ[i] != nullptr) {
-    memcpy(environ[i], env, strlen(env)+1);
-    environ[i+1] = nullptr;
+  environ[i] = (char *)malloc(strlen(env) + 1);
+  if (environ[i] != NULL) {
+    memcpy(environ[i], env, strlen(env) + 1);
+    environ[i + 1] = NULL;
   }
 }
 
