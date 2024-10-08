@@ -5206,7 +5206,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
   if (N->getOpcode() == ISD::ZERO_EXTEND &&
       getTypeAction(InVT) == TargetLowering::TypePromoteInteger &&
       TLI.getTypeToTransformTo(Ctx, InVT).getScalarSizeInBits() !=
-      WidenVT.getScalarSizeInBits()) {
+          WidenVT.getScalarSizeInBits()) {
     InOp = ZExtPromotedInteger(InOp);
     InVT = InOp.getValueType();
     if (WidenVT.getScalarSizeInBits() < InVT.getScalarSizeInBits())
@@ -5223,7 +5223,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
     InVTEC = InVT.getVectorElementCount();
     if (InVTEC == WidenEC) {
       if (N->getNumOperands() == 1)
-        return DAG.getNode(Opcode, DL, WidenVT, InOp);
+        return DAG.getNode(Opcode, DL, WidenVT, InOp, Flags);
       if (N->getNumOperands() == 3) {
         assert(N->isVPOpcode() && "Expected VP opcode");
         SDValue Mask =
@@ -5259,7 +5259,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
       Ops[0] = InOp;
       SDValue InVec = DAG.getNode(ISD::CONCAT_VECTORS, DL, InWidenVT, Ops);
       if (N->getNumOperands() == 1)
-        return DAG.getNode(Opcode, DL, WidenVT, InVec);
+        return DAG.getNode(Opcode, DL, WidenVT, InVec, Flags);
       return DAG.getNode(Opcode, DL, WidenVT, InVec, N->getOperand(1), Flags);
     }
 
@@ -5268,7 +5268,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
                                   DAG.getVectorIdxConstant(0, DL));
       // Extract the input and convert the shorten input vector.
       if (N->getNumOperands() == 1)
-        return DAG.getNode(Opcode, DL, WidenVT, InVal);
+        return DAG.getNode(Opcode, DL, WidenVT, InVal, Flags);
       return DAG.getNode(Opcode, DL, WidenVT, InVal, N->getOperand(1), Flags);
     }
   }
@@ -5283,7 +5283,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
     SDValue Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, InEltVT, InOp,
                               DAG.getVectorIdxConstant(i, DL));
     if (N->getNumOperands() == 1)
-      Ops[i] = DAG.getNode(Opcode, DL, EltVT, Val);
+      Ops[i] = DAG.getNode(Opcode, DL, EltVT, Val, Flags);
     else
       Ops[i] = DAG.getNode(Opcode, DL, EltVT, Val, N->getOperand(1), Flags);
   }

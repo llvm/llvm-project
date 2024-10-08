@@ -568,6 +568,16 @@ define float @ull2f(i64 %x) {
   ret float %r
 }
 
+define float @ull2f_nneg(i64 %x) {
+; CHECK-LABEL: ull2f_nneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cvt.d.l %s0, %s0
+; CHECK-NEXT:    cvt.s.d %s0, %s0
+; CHECK-NEXT:    b.l.t (, %s10)
+  %r = uitofp nneg i64 %x to float
+  ret float %r
+}
+
 define double @ull2d(i64 %x) {
 ; CHECK-LABEL: ull2d:
 ; CHECK:       # %bb.0:
