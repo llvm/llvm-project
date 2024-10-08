@@ -743,4 +743,28 @@ TEST_F(ConstantFPRangeTest, fcmp) {
   }
 }
 
+TEST_F(ConstantFPRangeTest, makeExactFCmpRegion) {
+  for (auto Pred : FCmpInst::predicates()) {
+    EnumerateValuesInConstantFPRange(
+        ConstantFPRange::getFull(APFloat::Float8E4M3()),
+        [Pred](const APFloat &V) {
+          std::optional<ConstantFPRange> Res =
+              ConstantFPRange::makeExactFCmpRegion(Pred, V);
+          ConstantFPRange Allowed =
+              ConstantFPRange::makeAllowedFCmpRegion(Pred, ConstantFPRange(V));
+          ConstantFPRange Satisfying =
+              ConstantFPRange::makeSatisfyingFCmpRegion(Pred,
+                                                        ConstantFPRange(V));
+          if (Allowed == Satisfying)
+            EXPECT_EQ(Res, Allowed) << "Wrong result for makeExactFCmpRegion("
+                                    << Pred << ", " << V << ").";
+          else
+            EXPECT_FALSE(Res.has_value())
+                << "Wrong result for makeExactFCmpRegion(" << Pred << ", " << V
+                << ").";
+        },
+        /*IgnoreNaNPayload=*/true);
+  }
+}
+
 } // anonymous namespace

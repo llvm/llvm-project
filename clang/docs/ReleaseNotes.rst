@@ -395,6 +395,8 @@ Bug Fixes in This Version
 - Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 - Fixed a crash when diagnosing format strings and encountering an empty
   delimited escape sequence (e.g., ``"\o{}"``). #GH102218
+- The warning emitted for an unsupported register variable type now points to
+  the unsupported type instead of the ``register`` keyword (#GH109776).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -644,8 +646,8 @@ New features
   if class of allocation and deallocation function mismatches.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
 
-- Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint" 
-  attributes, are now verified. For example, for functions declared with the ``nonblocking`` 
+- Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint"
+  attributes, are now verified. For example, for functions declared with the ``nonblocking``
   attribute, the compiler can generate warnings about the use of any language features, or calls to
   other functions, which may block.
 
