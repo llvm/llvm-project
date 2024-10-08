@@ -238,7 +238,8 @@ public:
     LiteOS,
     Serenity,
     Vulkan, // Vulkan SPIR-V
-    LastOSType = Vulkan
+    QNX,        // BlackBerry QNX
+    LastOSType = QNX
   };
   enum EnvironmentType {
     UnknownEnvironment,
