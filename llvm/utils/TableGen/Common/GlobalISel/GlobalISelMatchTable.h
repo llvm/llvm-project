@@ -1004,6 +1004,11 @@ public:
                             RuleMatcher &Rule) const override;
 };
 
+/// Generates code to check that an operand is an integer that has a width of a
+/// pointer type.
+///
+/// If SizeInBits is zero, then the pointer size will be obtained from the
+/// subtarget.
 class IntPtrOperandMatcher : public OperandPredicateMatcher {
 protected:
   unsigned SizeInBits;
