@@ -268,7 +268,10 @@ ConstantFPRange::makeSatisfyingFCmpRegion(FCmpInst::Predicate Pred,
 std::optional<ConstantFPRange>
 ConstantFPRange::makeExactFCmpRegion(FCmpInst::Predicate Pred,
                                      const APFloat &Other) {
-  return std::nullopt;
+  if ((Pred == FCmpInst::FCMP_UNE || Pred == FCmpInst::FCMP_ONE) &&
+      !Other.isNaN())
+    return std::nullopt;
+  return makeSatisfyingFCmpRegion(Pred, ConstantFPRange(Other));
 }
 
 bool ConstantFPRange::fcmp(FCmpInst::Predicate Pred,
