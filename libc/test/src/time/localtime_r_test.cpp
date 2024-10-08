@@ -9,11 +9,27 @@
 #include "src/time/localtime_r.h"
 #include "src/time/time_utils.h"
 #include "test/UnitTest/Test.h"
-#include "test/src/time/TmHelper.h"
 
-using LIBC_NAMESPACE::time_utils::TimeConstants;
+#include <string.h>
+
+extern char **environ;
+
+void set_env_var(const char* env) {
+  int i = 0;
+  if (environ[i] != NULL) {
+    i++;
+  }
+
+  environ[i] = (char*)malloc(strlen(env)+1);
+  if (environ[i] != nullptr) {
+    memcpy(environ[i], env, strlen(env)+1);
+    environ[i+1] = nullptr;
+  }
+}
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
+  set_env_var("TZ=Europe/Berlin");
+
   struct tm input;
   time_t t_ptr = 0;
   struct tm *result = LIBC_NAMESPACE::localtime_r(&t_ptr, &input);
@@ -40,6 +56,8 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
 }
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp32Int) {
+  set_env_var("TZ=Europe/Berlin");
+
   time_t t_ptr = 2147483647;
   struct tm input = (struct tm){.tm_sec = 0,
                                 .tm_min = 0,
@@ -74,6 +92,8 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp32Int) {
 }
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp32IntDst) {
+  set_env_var("TZ=Europe/Berlin");
+
   time_t t_ptr = 1627225465;
   struct tm input = (struct tm){.tm_sec = 0,
                                 .tm_min = 0,
