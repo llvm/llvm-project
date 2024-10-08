@@ -189,6 +189,12 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
+llvm::Error GsymCreator::loadCallSitesFromYAML(StringRef YAMLFile) {
+  // Use the loader to load call site information from the YAML file.
+  CallSiteInfoLoader Loader(*this);
+  return Loader.loadYAML(Funcs, YAMLFile);
+}
+
 void GsymCreator::prepareMergedFunctions(OutputAggregator &Out) {
   // Nothing to do if we have less than 2 functions.
   if (Funcs.size() < 2)
@@ -377,6 +383,12 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   // another.
   StringOffsetMap.try_emplace(StrOff, CHStr);
   return StrOff;
+}
+
+StringRef GsymCreator::getString(uint32_t offset) {
+  assert(StringOffsetMap.count(offset) &&
+         "GsymCreator::getString expects a valid offset as parameter.");
+  return StringOffsetMap.find(offset)->second.val();
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
