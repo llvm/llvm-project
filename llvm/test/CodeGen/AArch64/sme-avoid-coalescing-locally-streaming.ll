@@ -13,7 +13,7 @@ define void @dont_coalesce_args(<2 x i64> %a) "aarch64_pstate_sm_body" nounwind 
   ; CHECK-COALESCER-BARRIER-NEXT:   [[COALESCER_BARRIER_FPR128_:%[0-9]+]]:fpr128 = COALESCER_BARRIER_FPR128 [[COPY]]
   ; CHECK-COALESCER-BARRIER-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg
   ; CHECK-COALESCER-BARRIER-NEXT:   [[DEF:%[0-9]+]]:zpr = IMPLICIT_DEF
-  ; CHECK-COALESCER-BARRIER-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:zpr = INSERT_SUBREG [[DEF]], [[COALESCER_BARRIER_FPR128_]], %subreg.qsub
+  ; CHECK-COALESCER-BARRIER-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:zpr = INSERT_SUBREG [[DEF]], [[COALESCER_BARRIER_FPR128_]], %subreg.zsub
   ; CHECK-COALESCER-BARRIER-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-COALESCER-BARRIER-NEXT:   $z0 = COPY [[INSERT_SUBREG]]
   ; CHECK-COALESCER-BARRIER-NEXT:   BL @scalable_args, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $z0, implicit-def $sp
@@ -47,7 +47,7 @@ define <2 x i64> @dont_coalesce_res() "aarch64_pstate_sm_body" nounwind {
   ; CHECK-COALESCER-BARRIER-NEXT:   BL @scalable_res, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $z0
   ; CHECK-COALESCER-BARRIER-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-COALESCER-BARRIER-NEXT:   [[COPY:%[0-9]+]]:zpr = COPY $z0
-  ; CHECK-COALESCER-BARRIER-NEXT:   [[COPY1:%[0-9]+]]:fpr128 = COPY [[COPY]].qsub
+  ; CHECK-COALESCER-BARRIER-NEXT:   [[COPY1:%[0-9]+]]:fpr128 = COPY [[COPY]].zsub
   ; CHECK-COALESCER-BARRIER-NEXT:   [[COALESCER_BARRIER_FPR128_:%[0-9]+]]:fpr128 = COALESCER_BARRIER_FPR128 [[COPY1]]
   ; CHECK-COALESCER-BARRIER-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit-def $q0, implicit $vg, implicit-def $vg
   ; CHECK-COALESCER-BARRIER-NEXT:   $q0 = COPY [[COALESCER_BARRIER_FPR128_]]
@@ -78,7 +78,7 @@ define <2 x i64> @dont_coalesce_arg_that_is_also_res(<2 x i64> %a) "aarch64_psta
   ; CHECK-COALESCER-BARRIER-NEXT:   [[COALESCER_BARRIER_FPR128_:%[0-9]+]]:fpr128 = COALESCER_BARRIER_FPR128 [[COPY]]
   ; CHECK-COALESCER-BARRIER-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg
   ; CHECK-COALESCER-BARRIER-NEXT:   [[DEF:%[0-9]+]]:zpr = IMPLICIT_DEF
-  ; CHECK-COALESCER-BARRIER-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:zpr = INSERT_SUBREG [[DEF]], [[COALESCER_BARRIER_FPR128_]], %subreg.qsub
+  ; CHECK-COALESCER-BARRIER-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:zpr = INSERT_SUBREG [[DEF]], [[COALESCER_BARRIER_FPR128_]], %subreg.zsub
   ; CHECK-COALESCER-BARRIER-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-COALESCER-BARRIER-NEXT:   $z0 = COPY [[INSERT_SUBREG]]
   ; CHECK-COALESCER-BARRIER-NEXT:   BL @scalable_args, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $z0, implicit-def $sp
