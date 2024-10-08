@@ -29205,6 +29205,9 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
 
   if (ScalarTy->isIntegerTy() && Subtarget->hasSVE2() && VTy->isScalableTy()) {
     unsigned ScalarWidth = ScalarTy->getScalarSizeInBits();
+
+    if (Operation == ComplexDeinterleavingOperation::CDot)
+      return ScalarWidth == 32 || ScalarWidth == 64;
     return 8 <= ScalarWidth && ScalarWidth <= 64;
   }
 
@@ -29312,6 +29315,12 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
       return nullptr;
 
     return B.CreateIntrinsic(IntId, Ty, {InputA, InputB});
+  }
+
+  if (OperationType == ComplexDeinterleavingOperation::CDot && IsInt && IsScalable) {
+    return B.CreateIntrinsic(
+            Intrinsic::aarch64_sve_cdot, Accumulator->getType(),
+            {Accumulator, InputA, InputB, B.getInt32((int)Rotation * 90)});
   }
 
   return nullptr;
