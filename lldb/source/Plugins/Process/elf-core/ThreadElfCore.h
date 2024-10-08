@@ -35,6 +35,8 @@ class ProcessInstanceInfo;
 #undef si_signo
 #undef si_code
 #undef si_errno
+#undef si_addr
+#undef si_addr_lsb
 
 struct ELFLinuxPrStatus {
   int32_t si_signo;
@@ -76,15 +78,15 @@ static_assert(sizeof(ELFLinuxPrStatus) == 112,
               "sizeof ELFLinuxPrStatus is not correct!");
 
 struct ELFLinuxSigInfo {
+
   int32_t si_signo; // Order matters for the first 3.
   int32_t si_errno;
   int32_t si_code;
   // Copied from siginfo_t so we don't have to include signal.h on non 'Nix
-  // builds, we add `g` to the si_ prefix because siginfo_t defines them as
-  // macros.
+  // builds.
   struct {
-    lldb::addr_t sig_addr;  /* faulting insn/memory ref. */
-    short int sig_addr_lsb; /* Valid LSB of the reported address.  */
+    lldb::addr_t si_addr;  /* faulting insn/memory ref. */
+    short int si_addr_lsb; /* Valid LSB of the reported address.  */
     union {
       /* used when si_code=SEGV_BNDERR */
       struct {
@@ -93,8 +95,8 @@ struct ELFLinuxSigInfo {
       } _addr_bnd;
       /* used when si_code=SEGV_PKUERR */
       uint32_t _pkey;
-    } _bounds;
-  } _sigfault;
+    } bounds;
+  } sigfault;
 
   ELFLinuxSigInfo();
 
@@ -102,7 +104,7 @@ struct ELFLinuxSigInfo {
                              const lldb_private::ArchSpec &arch,
                              const lldb_private::UnixSignals &unix_signals);
 
-  std::string GetDescription(const lldb_private::UnixSignals &unix_signals);
+  std::string GetDescription(const lldb_private::UnixSignals &unix_signals) const;
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
@@ -161,11 +163,9 @@ struct ThreadData {
   lldb_private::DataExtractor gpregset;
   std::vector<lldb_private::CoreNote> notes;
   lldb::tid_t tid;
-  int signo = 0;
-  int code = 0;
-  int prstatus_sig = 0;
-  std::string description;
   std::string name;
+  ELFLinuxSigInfo siginfo;
+  int prstatus_sig = 0;
 };
 
 class ThreadElfCore : public lldb_private::Thread {
@@ -196,17 +196,16 @@ public:
       m_thread_name.clear();
   }
 
+  void CreateStopFromSigInfo(const ELFLinuxSigInfo &siginfo, const lldb_private::UnixSignals &unix_signals);
+
 protected:
   // Member variables.
   std::string m_thread_name;
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
 
-  int m_signo;
-  int m_code;
-  std::string m_sig_description;
-
   lldb_private::DataExtractor m_gpregset_data;
   std::vector<lldb_private::CoreNote> m_notes;
+  ELFLinuxSigInfo m_siginfo;
 
   bool CalculateStopInfo() override;
 };
