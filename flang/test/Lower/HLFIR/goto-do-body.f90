@@ -83,8 +83,8 @@ subroutine sub2()
 
   do i = 1, 2, 3 * j - 8
 ! CHECK:    %[[TMP2:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
-! CHECK:    %[[TMP3:.*]] = arith.muli %[[TMP2]], %[[C3]] : i32
-! CHECK:    %[[STEP:.*]] = arith.subi %[[TMP3]], %[[C8]] : i32
+! CHECK:    %[[TMP3:.*]] = arith.muli %[[TMP2]], %[[C3]] overflow<nsw> : i32
+! CHECK:    %[[STEP:.*]] = arith.subi %[[TMP3]], %[[C8]] overflow<nsw> : i32
 ! CHECK:    fir.store %[[STEP]] to %[[STEP_VAR:.*]] : !fir.ref<i32>
 ! CHECK:    %[[TMP4:.*]] = arith.addi %[[TMP3]], %[[C_7]] : i32
 ! CHECK:    %[[TMP5:.*]] = arith.divsi %[[TMP4]], %[[STEP]] : i32

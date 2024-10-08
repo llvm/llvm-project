@@ -2132,6 +2132,7 @@ private:
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
     mlir::Operation *boundsAndStepIP = nullptr;
+    mlir::arith::IntegerOverflowFlags iofBackup{};
 
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
       mlir::Value lowerValue;
@@ -2148,11 +2149,18 @@ private:
 
         info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
                                                    info.isUnordered);
+        if (!getLoweringOptions().getIntegerWrapAround()) {
+          iofBackup = builder->getIntegerOverflowFlags();
+          builder->setIntegerOverflowFlags(
+              mlir::arith::IntegerOverflowFlags::nsw);
+        }
         lowerValue = genControlValue(info.lowerExpr, info);
         upperValue = genControlValue(info.upperExpr, info);
         bool isConst = true;
         stepValue = genControlValue(info.stepExpr, info,
                                     info.isStructured() ? nullptr : &isConst);
+        if (!getLoweringOptions().getIntegerWrapAround())
+          builder->setIntegerOverflowFlags(iofBackup);
         boundsAndStepIP = stepValue.getDefiningOp();
 
         // Use a temp variable for unstructured loops with non-const step.
