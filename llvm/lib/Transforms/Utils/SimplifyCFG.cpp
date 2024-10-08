@@ -284,7 +284,7 @@ class SimplifyCFGOpt {
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
 
-  bool hoistCommonCodeFromSuccessors(Instruction *TI, bool EqTermsOnly);
+  bool hoistCommonCodeFromSuccessors(Instruction *TI, bool EqInstsOnly);
   bool hoistSuccIdenticalTerminatorToSwitchOrIf(
       Instruction *TI, Instruction *I1,
       SmallVectorImpl<Instruction *> &OtherSuccTIs);
@@ -1747,13 +1747,88 @@ static bool isSafeCheapLoadStore(const Instruction *I,
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
+namespace {
+
+  // LockstepReverseIterator - Iterates through instructions
+  // in a set of blocks in reverse order from the first non-terminator.
+  // For example (assume all blocks have size n):
+  //   LockstepReverseIterator I([B1, B2, B3]);
+  //   *I-- = [B1[n], B2[n], B3[n]];
+  //   *I-- = [B1[n-1], B2[n-1], B3[n-1]];
+  //   *I-- = [B1[n-2], B2[n-2], B3[n-2]];
+  //   ...
+  class LockstepReverseIterator {
+    ArrayRef<BasicBlock*> Blocks;
+    SmallVector<Instruction*,4> Insts;
+    bool Fail;
+
+  public:
+    LockstepReverseIterator(ArrayRef<BasicBlock*> Blocks) : Blocks(Blocks) {
+      reset();
+    }
+
+    void reset() {
+      Fail = false;
+      Insts.clear();
+      for (auto *BB : Blocks) {
+        Instruction *Inst = BB->getTerminator();
+        for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+          Inst = Inst->getPrevNode();
+        if (!Inst) {
+          // Block wasn't big enough.
+          Fail = true;
+          return;
+        }
+        Insts.push_back(Inst);
+      }
+    }
+
+    bool isValid() const {
+      return !Fail;
+    }
+
+    void operator--() {
+      if (Fail)
+        return;
+      for (auto *&Inst : Insts) {
+        for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+          Inst = Inst->getPrevNode();
+        // Already at beginning of block.
+        if (!Inst) {
+          Fail = true;
+          return;
+        }
+      }
+    }
+
+    void operator++() {
+      if (Fail)
+        return;
+      for (auto *&Inst : Insts) {
+        for (Inst = Inst->getNextNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+          Inst = Inst->getNextNode();
+        // Already at end of block.
+        if (!Inst) {
+          Fail = true;
+          return;
+        }
+      }
+    }
+
+    ArrayRef<Instruction*> operator * () const {
+      return Insts;
+    }
+  };
+
+} // end anonymous namespace
+
 /// Hoist any common code in the successor blocks up into the block. This
-/// function guarantees that BB dominates all successors. If EqTermsOnly is
-/// given, only perform hoisting in case both blocks only contain a terminator.
-/// In that case, only the original BI will be replaced and selects for PHIs are
-/// added.
+/// function guarantees that BB dominates all successors. If EqInstsOnly is
+/// given, only perform hoisting in case both blocks contain equivalent
+/// instructions. In that case, no selects need to be added for the hoisted
+/// instruction. We still have to add selects for PHIs
 bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
-                                                   bool EqTermsOnly) {
+                                                   bool EqInstsOnly) {
   // This does very trivial matching, with limited scanning, to find identical
   // instructions in the two blocks. In particular, we don't want to get into
   // O(N1*N2*...) situations here where Ni are the sizes of these successors. As
@@ -1782,14 +1857,20 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     SuccIterPairs.push_back(SuccIterPair(SuccItr, 0));
   }
 
-  // Check if only hoisting terminators is allowed. This does not add new
-  // instructions to the hoist location.
-  if (EqTermsOnly) {
-    // Skip any debug intrinsics, as they are free to hoist.
-    for (auto &SuccIter : make_first_range(SuccIterPairs)) {
-      auto *INonDbg = &*skipDebugIntrinsics(SuccIter);
-      if (!INonDbg->isTerminator())
+  // Check if only hoisting equivalent instructions is allowed. This may add new
+  // instructions to the hoist location, but is guaranteed to remove at least
+  // twice as many instructions from the source blocks.
+  if (EqInstsOnly) {
+    LockstepReverseIterator LRI(to_vector(successors(BB)));
+    while (LRI.isValid()) {
+      auto Insts = *LRI;
+      Instruction *I0 = Insts.front();
+      if (any_of(Insts.drop_front(), [I0](Instruction *I) {
+            return !I->isSameOperationAs(I0) ||
+                   !equal(I->operands(), I0->operands());
+          }))
         return false;
+      --LRI;
     }
     // Now we know that we only need to hoist debug intrinsics and the
     // terminator. Let the loop below handle those 2 cases.
@@ -2324,81 +2405,6 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     I->eraseFromParent();
   }
 }
-
-namespace {
-
-  // LockstepReverseIterator - Iterates through instructions
-  // in a set of blocks in reverse order from the first non-terminator.
-  // For example (assume all blocks have size n):
-  //   LockstepReverseIterator I([B1, B2, B3]);
-  //   *I-- = [B1[n], B2[n], B3[n]];
-  //   *I-- = [B1[n-1], B2[n-1], B3[n-1]];
-  //   *I-- = [B1[n-2], B2[n-2], B3[n-2]];
-  //   ...
-  class LockstepReverseIterator {
-    ArrayRef<BasicBlock*> Blocks;
-    SmallVector<Instruction*,4> Insts;
-    bool Fail;
-
-  public:
-    LockstepReverseIterator(ArrayRef<BasicBlock*> Blocks) : Blocks(Blocks) {
-      reset();
-    }
-
-    void reset() {
-      Fail = false;
-      Insts.clear();
-      for (auto *BB : Blocks) {
-        Instruction *Inst = BB->getTerminator();
-        for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-          Inst = Inst->getPrevNode();
-        if (!Inst) {
-          // Block wasn't big enough.
-          Fail = true;
-          return;
-        }
-        Insts.push_back(Inst);
-      }
-    }
-
-    bool isValid() const {
-      return !Fail;
-    }
-
-    void operator--() {
-      if (Fail)
-        return;
-      for (auto *&Inst : Insts) {
-        for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-          Inst = Inst->getPrevNode();
-        // Already at beginning of block.
-        if (!Inst) {
-          Fail = true;
-          return;
-        }
-      }
-    }
-
-    void operator++() {
-      if (Fail)
-        return;
-      for (auto *&Inst : Insts) {
-        for (Inst = Inst->getNextNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-          Inst = Inst->getNextNode();
-        // Already at end of block.
-        if (!Inst) {
-          Fail = true;
-          return;
-        }
-      }
-    }
-
-    ArrayRef<Instruction*> operator * () const {
-      return Insts;
-    }
-  };
-
-} // end anonymous namespace
 
 /// Check whether BB's predecessors end with unconditional branches. If it is
 /// true, sink any common code from the predecessors to BB.

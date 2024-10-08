@@ -94,13 +94,12 @@ define void @c() {
 ; CHECK:       Succ:
 ; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 1, [[BB_NOMERGE]] ], [ 1, [[COMMON:%.*]] ], [ 2, [[PRE_EXIT:%.*]] ]
 ; CHECK-NEXT:    [[CONDE:%.*]] = call i1 @foo()
+; CHECK-NEXT:    [[COND:%.*]] = call i1 @foo()
 ; CHECK-NEXT:    br i1 [[CONDE]], label [[COMMON]], label [[PRE_EXIT]]
 ; CHECK:       Common:
-; CHECK-NEXT:    [[COND:%.*]] = call i1 @foo()
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB_NOMERGE]], label [[SUCC]]
 ; CHECK:       Pre-Exit:
-; CHECK-NEXT:    [[COND2:%.*]] = call i1 @foo()
-; CHECK-NEXT:    br i1 [[COND2]], label [[SUCC]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[SUCC]], label [[EXIT:%.*]]
 ; CHECK:       Exit:
 ; CHECK-NEXT:    ret void
 ;
