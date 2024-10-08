@@ -1533,7 +1533,10 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
           "': " + toString(std::move(e)));
 }
 
-void elf::setARMTargetInfo(Ctx &ctx) { ctx.target.reset(new ARM(ctx)); }
+TargetInfo *elf::getARMTargetInfo(Ctx &ctx) {
+  static ARM target(ctx);
+  return &target;
+}
 
 template void elf::writeARMCmseImportLib<ELF32LE>(Ctx &);
 template void elf::writeARMCmseImportLib<ELF32BE>(Ctx &);

@@ -7,7 +7,7 @@
   .functype  foo () -> ()
 
 eh_test:
-  .functype  eh_test () -> ()
+  .functype  eh_test (exnref) -> ()
 
   # try_table with all four kinds of catch clauses
   block exnref
@@ -82,6 +82,18 @@ eh_test:
   end_try_table
   drop
   drop
+
+  # try_table targeting loops
+  i32.const 0
+  loop (i32) -> ()
+    local.get 0
+    loop (exnref) -> ()
+      try_table (catch __cpp_exception 1) (catch_all_ref 0)
+      end_try_table
+      drop
+    end_loop
+    drop
+  end_loop
   end_function
 
 eh_legacy_test:
@@ -202,6 +214,17 @@ eh_legacy_test:
 # CHECK-NEXT:    end_try_table
 # CHECK-NEXT:    drop
 # CHECK-NEXT:    drop
+
+# CHECK:         i32.const       0
+# CHECK-NEXT:    loop            (i32) -> ()
+# CHECK-NEXT:    local.get       0
+# CHECK-NEXT:    loop            (exnref) -> ()
+# CHECK-NEXT:    try_table        (catch __cpp_exception 1) (catch_all_ref 0)
+# CHECK:         end_try_table
+# CHECK-NEXT:    drop
+# CHECK-NEXT:    end_loop
+# CHECK-NEXT:    drop
+# CHECK-NEXT:    end_loop
 
 # CHECK:       eh_legacy_test:
 # CHECK:         try

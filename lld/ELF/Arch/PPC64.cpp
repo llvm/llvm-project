@@ -1747,4 +1747,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   return true;
 }
 
-void elf::setPPC64TargetInfo(Ctx &ctx) { ctx.target.reset(new PPC64(ctx)); }
+TargetInfo *elf::getPPC64TargetInfo(Ctx &ctx) {
+  static PPC64 target(ctx);
+  return &target;
+}
