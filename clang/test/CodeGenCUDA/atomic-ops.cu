@@ -1,11 +1,10 @@
 // RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn -fcuda-is-device -emit-llvm %s -o - | FileCheck -enable-var-scope %s
 #include "Inputs/cuda.h"
 
-// FIXME: noalias.addrspace missing from cmpxchg
 // CHECK-LABEL: @_Z24atomic32_op_singlethreadPiii
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 4{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 4{{$}}
-// CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK:[0-9]+]]{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK:[0-9]+]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw and ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -41,8 +40,8 @@ __device__ unsigned int atomicu32_op_singlethread(unsigned int *ptr, unsigned in
 }
 
 // CHECK-LABEL: @_Z21atomic32_op_wavefrontPiii
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 4{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 4{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -79,8 +78,8 @@ __device__ unsigned int atomicu32_op_wavefront(unsigned int *ptr, unsigned int v
 }
 
 // CHECK-LABEL: @_Z21atomic32_op_workgroupPiii
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 4{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 4{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -115,8 +114,8 @@ __device__ unsigned int atomicu32_op_workgroup(unsigned int *ptr, unsigned int v
 }
 
 // CHECK-LABEL: @_Z17atomic32_op_agentPiii
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 4{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 4{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("agent-one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -151,8 +150,8 @@ __device__ unsigned int atomicu32_op_agent(unsigned int *ptr, unsigned int val, 
 }
 
 // CHECK-LABEL: @_Z18atomic32_op_systemPiii
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 4{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 4{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i32 {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i32 {{%[0-9]+}} syncscope("one-as") monotonic, align 4, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -189,8 +188,8 @@ __device__ unsigned int atomicu32_op_system(unsigned int *ptr, unsigned int val,
 }
 
 // CHECK-LABEL: @_Z24atomic64_op_singlethreadPxS_xx
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 8{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 8{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("singlethread-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -229,8 +228,8 @@ __device__ unsigned long long atomicu64_op_singlethread(unsigned long long *ptr,
 }
 
 // CHECK-LABEL: @_Z21atomic64_op_wavefrontPxS_xx
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 8{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 8{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("wavefront-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -271,8 +270,8 @@ __device__ unsigned long long atomicu64_op_wavefront(unsigned long long *ptr, un
 }
 
 // CHECK-LABEL: @_Z21atomic64_op_workgroupPxS_xx
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 8{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 8{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -309,8 +308,8 @@ __device__ unsigned long long atomicu64_op_workgroup(unsigned long long *ptr, un
 }
 
 // CHECK-LABEL: @_Z17atomic64_op_agentPxS_xx
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 8{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 8{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("agent-one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
@@ -347,8 +346,8 @@ __device__ unsigned long long atomicu64_op_agent(unsigned long long *ptr, unsign
 }
 
 // CHECK-LABEL: @_Z18atomic64_op_systemPxS_xx
-// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 8{{$}}
-// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 8{{$}}
+// CHECK: cmpxchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
+// CHECK: cmpxchg weak ptr {{%[0-9]+}}, i64 {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as") monotonic monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw xchg ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw add ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
 // CHECK: atomicrmw sub ptr {{%[0-9]+}}, i64 {{%[0-9]+}} syncscope("one-as") monotonic, align 8, !noalias.addrspace ![[$NOALIAS_ADDRSPACE_STACK]]{{$}}
