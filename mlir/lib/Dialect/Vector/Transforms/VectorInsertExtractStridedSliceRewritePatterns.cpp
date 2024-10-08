@@ -347,10 +347,13 @@ public:
     if (op.hasNonUnitStrides()) {
       return failure();
     }
+    Value source = op.getOperand();
+    VectorType sourceType = cast<VectorType>(source.getType());
+    if (sourceType.isScalable()) {
+      return failure();
+    }
     SmallVector<int64_t> sizes;
     populateFromInt64AttrArray(op.getSizes(), sizes);
-    Value source = op.getOperand();
-    ShapedType sourceType = cast<ShapedType>(source.getType());
 
     // Compute the number of offsets to pass to ExtractOp::build. That is the
     // difference between the source rank and the desired slice rank. We walk

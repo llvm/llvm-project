@@ -235,9 +235,8 @@ void populateVectorExtractStridedSliceToExtractInsertChainPatterns(
     std::function<bool(ExtractStridedSliceOp)> controlFn = nullptr,
     PatternBenefit benefit = 1);
 
-/// Populate `patterns` with a pattern to rewrite simple cases of N-D
-/// extract_strided_slice, where the slice is contiguous, into extract and
-/// shape_cast.
+/// Pattern to rewrite simple cases of N-D extract_strided_slice, where the
+/// slice is contiguous, into extract and shape_cast.
 void populateVectorContiguousExtractStridedSliceToExtractPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
