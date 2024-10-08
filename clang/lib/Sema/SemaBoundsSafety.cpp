@@ -162,6 +162,8 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
+  CountFD->setBoundsSafetyCounter(true);
+
   if (FD->getParent() != CountFD->getParent()) {
     if (CountFD->getParent()->isUnion()) {
       Diag(CountFD->getBeginLoc(), diag::err_count_attr_refer_to_union)

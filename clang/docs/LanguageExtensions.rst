@@ -3774,6 +3774,74 @@ type-generic alternative to the ``__builtin_clz{,l,ll}`` (respectively
 ``__builtin_ctz{,l,ll}``) builtins, with support for other integer types, such
 as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
+``__builtin_counted_by_ref``
+----------------------------
+
+``__builtin_counted_by_ref`` returns a pointer to the count field from the
+``counted_by`` attribute.
+
+The argument must be a pointer to a flexible array member. If the argument
+isn't a flexible array member or doesn't have the ``counted_by`` attribute, the
+builtin returns ``(void *)0``.
+
+**Syntax**:
+
+.. code-block:: c
+
+  T *__builtin_counted_by_ref(void *array)
+
+**Examples**:
+
+.. code-block:: c
+
+  #define alloc(P, FAM, COUNT) ({                                 \
+     sizeof_t __ignored_assignment;                               \
+     typeof(P) __p = NULL;                                        \
+     __p = malloc(MAX(sizeof(*__p),                               \
+                      sizeof(*__p) + sizeof(*__p->FAM) * COUNT)); \
+                                                                  \
+     *_Generic(                                                   \
+       __builtin_counted_by_ref(__p->FAM),                        \
+         void *: &__ignored_assignment,                           \
+         default: __builtin_counted_by_ref(__p->FAM)) = COUNT;    \
+                                                                  \
+     __p;                                                         \
+  })
+
+**Description**:
+
+The ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
+common error associated with the ``counted_by`` attribute. When using the
+``counted_by`` attribute, the ``count`` field **must** be set before the
+flexible array member can be accessed. Otherwise, the sanitizers may view such
+accesses as false positives. For instance, it's not uncommon for programmers to
+initialize the flexible array before setting the ``count`` field:
+
+.. code-block:: c
+
+  struct s {
+    int dummy;
+    short count;
+    long array[] __attribute__((counted_by(count)));
+  };
+
+  struct s *ptr = malloc(sizeof(struct s) + sizeof(long) * COUNT);
+
+  for (int i = 0; i < COUNT; ++i)
+    ptr->array[i] = i;
+
+  ptr->count = COUNT;
+
+Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
+allocation of a struct with a flexible array member with the ``counted_by``
+attribute is prone to failure in large code bases. This builtin mitigates this
+for allocators (like in Linux) that are implemented in a way where the counter
+assignment can happen automatically.
+
+**Note: The value returned by ``__builtin_counted_by_ref`` cannot be assigned
+to a variable or passed into a function, because doing so violates bounds
+safety conventions.**
+
 Multiprecision Arithmetic Builtins
 ----------------------------------
 
