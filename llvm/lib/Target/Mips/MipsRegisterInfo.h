@@ -36,6 +36,8 @@ public:
     StackPointer = 2,
     /// The global pointer only.
     GlobalPointer = 3,
+    /// The subset of registers permitted in most MIPS16 instructions
+    CPU16Regs = 4,
   };
 
   MipsRegisterInfo();

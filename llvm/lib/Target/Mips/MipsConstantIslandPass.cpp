@@ -1502,6 +1502,7 @@ MipsConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
   if (isBBInRange(MI, DestBB, BimmX16MaxDisp)) {
     Br.MaxDisp = BimmX16MaxDisp;
     MI->setDesc(TII->get(Mips::BimmX16));
+    BBInfo[MBB->getNumber()].Size += 2;
   }
   else {
     // need to give the math a more careful look here
@@ -1518,8 +1519,12 @@ MipsConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
     DestBB->setAlignment(Align(4));
     Br.MaxDisp = ((1<<24)-1) * 2;
     MI->setDesc(TII->get(Mips::JalB16));
+    MachineInstr *DelaySlotNop =
+        BuildMI(MBB, DebugLoc(), TII->get(Mips::Move32R16), Mips::ZERO)
+            .addReg(Mips::S0);
+    DelaySlotNop->bundleWithPred();
+    BBInfo[MBB->getNumber()].Size += 4;
   }
-  BBInfo[MBB->getNumber()].Size += 2;
   adjustBBOffsetsAfter(MBB);
   HasFarJump = true;
   ++NumUBrFixed;

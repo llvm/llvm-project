@@ -11,7 +11,7 @@ declare void @bar(ptr)
 define void @foo(i32 %sz) {
   ; ALL-LABEL: foo:
 
-  ; M16-NOT:        addiu     $sp, 0 # 16 bit inst
+  ; M16-NOT:        addiu     $sp, 0 
   ; GP32-NOT:       addiu     $sp, $sp, 0
   ; GP64-NOT:       daddiu    $sp, $sp, 0
   %a = alloca i32, i32 %sz

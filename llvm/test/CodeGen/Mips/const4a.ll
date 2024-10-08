@@ -15,7 +15,7 @@ define void @t() #0 {
 entry:
   store i32 -559023410, ptr @i, align 4
   %0 = load i32, ptr @b, align 4
-; no-load-relax:	lw	${{[0-9]+}}, $CPI0_1	# 16 bit inst
+; no-load-relax:	lw	$[[#]], $CPI0_1
   %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.else
 ; no-load-relax:	beqz	${{[0-9]+}}, $BB0_3

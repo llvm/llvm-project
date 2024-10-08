@@ -79,15 +79,15 @@ cond.end14:                                       ; preds = %cond.false13, %cond
 attributes #0 = { nounwind "target-cpu"="mips16" "target-features"="+mips16,+o32" }
 attributes #1 = { "target-cpu"="mips16" "target-features"="+mips16,+o32" }
 
-; 16:	slt	${{[0-9]+}}, ${{[0-9]+}}
-; 16:	btnez	$BB{{[0-9]+}}_{{[0-9]}}
+; 16:	slt	$[[#]], $[[#]]
+; 16:	btnez	$BB[[#]]_[[#]]
 
-; 16:	slt	${{[0-9]+}}, ${{[0-9]+}}
-; 16:	btnez	$BB{{[0-9]+}}_{{[0-9]}}
+; 16:	slt	$[[#]], $[[#]]
+; 16:	btnez	$BB[[#]]_[[#]]
 
-; 16:	slti	${{[0-9]+}}, 3 	# 16 bit inst
-; 16:	btnez	$BB{{[0-9]+}}_{{[0-9]}}
+; 16:	slti	$[[#]], 3 	
+; 16:	btnez	$BB[[#]]_[[#]]
 
-; 16:	slti	${{[0-9]+}}, 3 	# 16 bit inst
-; 16:	btnez	$BB{{[0-9]+}}_{{[0-9]}}
+; 16:	slti	$[[#]], 3 	
+; 16:	btnez	$BB[[#]]_[[#]]
 

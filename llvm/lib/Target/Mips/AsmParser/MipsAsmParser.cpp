@@ -206,6 +206,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   ParseStatus parseJumpTarget(OperandVector &Operands);
   ParseStatus parseInvNum(OperandVector &Operands);
   ParseStatus parseRegisterList(OperandVector &Operands);
+  ParseStatus parseSaveRestoreOperands(OperandVector &Operands);
 
   bool searchSymbolAlias(OperandVector &Operands);
 
@@ -429,6 +430,8 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   int matchMSA128CtrlRegisterName(StringRef Name);
 
+  int matchPCRegisterName(StringRef Name);
+
   unsigned getReg(int RC, int RegNo);
 
   /// Returns the internal register number for the current AT. Also checks if
@@ -582,7 +585,11 @@ public:
   }
 
   bool isJalrRelocAvailable(const MCExpr *JalExpr) {
-    if (!EmitJalrReloc)
+    // FIXME: A similar check was disabled for MIPS16 in
+    // MipsAsmPrinter::emitInstruction(), so disable it here
+    // as well for now to be safe. If this is updated, also
+    // update that FIXME in MipsAsmPrinter.
+    if (!EmitJalrReloc || inMips16Mode())
       return false;
     MCValue Res;
     if (!JalExpr->evaluateAsRelocatable(Res, nullptr, nullptr))
@@ -825,9 +832,14 @@ public:
     RegKind_COP3 = 512,   /// COP3
     RegKind_COP0 = 1024,  /// COP0
     /// Potentially any (e.g. $1)
+    // This purposefully does not include RegKind_PC because it is not a real
+    // register and has no number.
     RegKind_Numeric = RegKind_GPR | RegKind_FGR | RegKind_FCC | RegKind_MSA128 |
                       RegKind_MSACtrl | RegKind_COP2 | RegKind_ACC |
-                      RegKind_CCR | RegKind_HWRegs | RegKind_COP3 | RegKind_COP0
+                      RegKind_CCR | RegKind_HWRegs | RegKind_COP3 |
+                      RegKind_COP0,
+    RegKind_PC = 2048 /// Program counter (not a real register; used in
+                      /// some MIPS16 instructions).
   };
 
 private:
@@ -837,6 +849,7 @@ private:
     k_RegisterIndex, /// A register index in one or more RegKind.
     k_Token,         /// A simple token
     k_RegList,       /// A physical register list
+    k_SaveRestore,   /// Operands used in MIPS16 save/restore instructions
   } Kind;
 
 public:
@@ -853,6 +866,7 @@ public:
     case k_Immediate:
     case k_RegisterIndex:
     case k_Token:
+    case k_SaveRestore:
       break;
     }
   }
@@ -886,12 +900,19 @@ private:
     SmallVector<unsigned, 10> *List;
   };
 
+  struct SaveRestoreOp {
+    unsigned SavedRegsMask;
+    unsigned StaticRegsMask;
+    unsigned Framesize;
+  };
+
   union {
     struct Token Tok;
     struct RegIdxOp RegIdx;
     struct ImmOp Imm;
     struct MemOp Mem;
     struct RegListOp RegList;
+    struct SaveRestoreOp SaveRestore;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -926,6 +947,14 @@ public:
   /// Coerce the register to GPR32 and return the real register for the current
   /// target.
   unsigned getGPRMM16Reg() const {
+    assert(isRegIdx() && (RegIdx.Kind & RegKind_GPR) && "Invalid access!");
+    unsigned ClassID = Mips::GPR32RegClassID;
+    return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
+  }
+
+  /// Coerce the register to GPR32 and return the real register for the current
+  /// target.
+  unsigned getCPU16Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_GPR) && "Invalid access!");
     unsigned ClassID = Mips::GPR32RegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -1115,6 +1144,31 @@ public:
     Inst.addOperand(MCOperand::createReg(getGPRMM16Reg()));
   }
 
+  void addCPU16AsmRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getCPU16Reg()));
+  }
+
+  void addCPU16AsmRegPlusSPOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getCPU16Reg()));
+  }
+
+  void addPCPseudoRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(Mips::PC));
+  }
+
+  void addSPPseudoRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(Mips::SP));
+  }
+
+  void addRAPseudoRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(Mips::RA));
+  }
+
   /// Render the operand to an MCInst as a GPR64
   /// Asserts if the wrong number of operands are requested, or the operand
   /// is not a k_RegisterIndex compatible with RegKind_GPR
@@ -1282,11 +1336,49 @@ public:
     addExpr(Inst, Expr);
   }
 
+  void addMips16MemOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 2 && "Invalid number of operands!");
+
+    MipsOperand *BaseOp = getMemBase();
+
+    if (BaseOp->isPCPseudoReg())
+      Inst.addOperand(MCOperand::createReg(Mips::PC));
+    else
+      Inst.addOperand(MCOperand::createReg(BaseOp->getCPU16Reg()));
+
+    const MCExpr *Expr = getMemOff();
+    addExpr(Inst, Expr);
+  }
+
   void addRegListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
 
     for (auto RegNo : getRegList())
       Inst.addOperand(MCOperand::createReg(RegNo));
+  }
+
+  void addSaveRestoreOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+
+    int RC =
+        (AsmParser.isGP64bit() ? Mips::GPR64RegClassID : Mips::GPR32RegClassID);
+    auto &RegClass = AsmParser.getContext().getRegisterInfo()->getRegClass(RC);
+
+    auto Mask = getSaveRestoreSavedRegs();
+    while (Mask) {
+      unsigned RegNo = RegClass.getRegister(llvm::countr_zero(Mask));
+      Inst.addOperand(MCOperand::createReg(RegNo));
+      Mask &= (Mask - 1);
+    }
+
+    Inst.addOperand(MCOperand::createImm(getSaveRestoreFramesize()));
+
+    Mask = getSaveRestoreStaticRegs();
+    while (Mask) {
+      unsigned RegNo = RegClass.getRegister(llvm::countr_zero(Mask));
+      Inst.addOperand(MCOperand::createReg(RegNo));
+      Mask &= (Mask - 1);
+    }
   }
 
   bool isReg() const override {
@@ -1397,6 +1489,60 @@ public:
       && (getMemBase()->getGPR32Reg() == Mips::GP);
   }
 
+  template <unsigned ShiftAmount = 0> bool isMemWithCPU16Base() const {
+    return isMem() && getMemBase()->isCPU16AsmReg() && isConstantMemOff() &&
+           isShiftedUInt<5, ShiftAmount>(getConstantMemOff());
+  }
+
+  bool isMemWithCPU16PCBase() const {
+    return isMem() && getMemBase()->isPCPseudoReg() && isConstantMemOff() &&
+           isShiftedUInt<8, 2>(getConstantMemOff());
+  }
+
+  bool isMemWithCPU16SPBase() const {
+    return isMem() && getMemBase()->isSPPseudoReg() && isConstantMemOff() &&
+           isShiftedUInt<8, 2>(getConstantMemOff());
+  }
+
+  bool isMemWithExtCPU16Base() const {
+    if (!isMem())
+      return false;
+    if (!getMemBase()->isCPU16AsmReg())
+      return false;
+    if (isa<MCTargetExpr>(getMemOff()) ||
+        (isConstantMemOff() && isInt<16>(getConstantMemOff())))
+      return true;
+    MCValue Res;
+    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    return IsReloc && isInt<16>(Res.getConstant());
+  }
+
+  bool isMemWithExtCPU16PCBase() const {
+    if (!isMem())
+      return false;
+    if (!getMemBase()->isPCPseudoReg())
+      return false;
+    if (isa<MCTargetExpr>(getMemOff()) ||
+        (isConstantMemOff() && isInt<16>(getConstantMemOff())))
+      return true;
+    MCValue Res;
+    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    return IsReloc && isInt<16>(Res.getConstant());
+  }
+
+  bool isMemWithExtCPU16SPBase() const {
+    if (!isMem())
+      return false;
+    if (!getMemBase()->isSPPseudoReg())
+      return false;
+    if (isa<MCTargetExpr>(getMemOff()) ||
+        (isConstantMemOff() && isInt<16>(getConstantMemOff())))
+      return true;
+    MCValue Res;
+    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    return IsReloc && isInt<16>(Res.getConstant());
+  }
+
   template <unsigned Bits, unsigned ShiftLeftAmount>
   bool isScaledUImm() const {
     return isConstantImm() &&
@@ -1404,9 +1550,14 @@ public:
   }
 
   template <unsigned Bits, unsigned ShiftLeftAmount>
+  bool isConstantScaledSImm() const {
+    return isConstantImm() &&
+           isShiftedInt<Bits, ShiftLeftAmount>(getConstantImm());
+  }
+
+  template <unsigned Bits, unsigned ShiftLeftAmount>
   bool isScaledSImm() const {
-    if (isConstantImm() &&
-        isShiftedInt<Bits, ShiftLeftAmount>(getConstantImm()))
+    if (isConstantScaledSImm<Bits, ShiftLeftAmount>())
       return true;
     // Operand can also be a symbol or symbol plus
     // offset in case of relocations.
@@ -1442,6 +1593,23 @@ public:
     return true;
   }
 
+  bool isSaveRestore16() const {
+    if (!isSaveRestore())
+      return false;
+
+    if (SaveRestore.Framesize == 0 || SaveRestore.Framesize > 128)
+      return false;
+
+    if (SaveRestore.StaticRegsMask != 0)
+      return false;
+
+    // The 16-bit instruction can save only regs $16, $17, and $31.
+    if (SaveRestore.SavedRegsMask & ~0x80030000)
+      return false;
+
+    return true;
+  }
+
   bool isInvNum() const { return Kind == k_Immediate; }
 
   bool isLSAImm() const {
@@ -1452,6 +1620,8 @@ public:
   }
 
   bool isRegList() const { return Kind == k_RegList; }
+
+  bool isSaveRestore() const { return Kind == k_SaveRestore; }
 
   StringRef getToken() const {
     assert(Kind == k_Token && "Invalid access!");
@@ -1498,6 +1668,21 @@ public:
   const SmallVectorImpl<unsigned> &getRegList() const {
     assert((Kind == k_RegList) && "Invalid access!");
     return *(RegList.List);
+  }
+
+  unsigned getSaveRestoreSavedRegs() const {
+    assert((Kind == k_SaveRestore) && "Invalid access!");
+    return SaveRestore.SavedRegsMask;
+  }
+
+  unsigned getSaveRestoreStaticRegs() const {
+    assert((Kind == k_SaveRestore) && "Invalid access!");
+    return SaveRestore.StaticRegsMask;
+  }
+
+  unsigned getSaveRestoreFramesize() const {
+    assert((Kind == k_SaveRestore) && "Invalid access!");
+    return SaveRestore.Framesize;
   }
 
   static std::unique_ptr<MipsOperand> CreateToken(StringRef Str, SMLoc S,
@@ -1607,13 +1792,32 @@ public:
     return Op;
   }
 
- bool isGPRZeroAsmReg() const {
+  static std::unique_ptr<MipsOperand>
+  CreateSaveRestore(unsigned SavedRegsMask, unsigned StaticRegsMask,
+                    unsigned Framesize, SMLoc StartLoc, SMLoc EndLoc,
+                    MipsAsmParser &Parser) {
+    auto Op = std::make_unique<MipsOperand>(k_SaveRestore, Parser);
+    Op->SaveRestore.SavedRegsMask = SavedRegsMask;
+    Op->SaveRestore.StaticRegsMask = StaticRegsMask;
+    Op->SaveRestore.Framesize = Framesize;
+    Op->StartLoc = StartLoc;
+    Op->EndLoc = EndLoc;
+    return Op;
+  }
+
+  static std::unique_ptr<MipsOperand> createPCReg(const MCRegisterInfo *RegInfo,
+                                                  SMLoc S, SMLoc E,
+                                                  MipsAsmParser &Parser) {
+    return CreateReg(0, "pc", RegKind_PC, RegInfo, S, E, Parser);
+  }
+
+  bool isGPRZeroAsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_GPR && RegIdx.Index == 0;
   }
 
- bool isGPRNonZeroAsmReg() const {
-   return isRegIdx() && RegIdx.Kind & RegKind_GPR && RegIdx.Index > 0 &&
-          RegIdx.Index <= 31;
+  bool isGPRNonZeroAsmReg() const {
+    return isRegIdx() && RegIdx.Kind & RegKind_GPR && RegIdx.Index > 0 &&
+           RegIdx.Index <= 31;
   }
 
   bool isGPRAsmReg() const {
@@ -1653,6 +1857,41 @@ public:
       return false;
     return (RegIdx.Index == 21 || RegIdx.Index == 22 ||
       (RegIdx.Index >= 5 && RegIdx.Index <= 7));
+  }
+
+  bool isCPU16AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index >= 2 && RegIdx.Index <= 7) || RegIdx.Index == 16 ||
+            RegIdx.Index == 17);
+  }
+
+  bool isCPU16AsmRegPlusSP() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index >= 2 && RegIdx.Index <= 7) || RegIdx.Index == 16 ||
+            RegIdx.Index == 17 || RegIdx.Index == 29);
+  }
+
+  // These next three are used in MIPS16 mode to find instructions that perform
+  // operations involving the program counter, SP, or RA. They are "pseudo
+  // registers" because they determine the opcode instead of being encoded as
+  // an operand. In this way, they are part of the instruction mnemonic.
+  bool isPCPseudoReg() const {
+    // "pc" is not a real register and has no number
+    return isRegIdx() && RegIdx.Kind == RegKind_PC;
+  }
+
+  bool isSPPseudoReg() const {
+    // Purposefully do not allow numeric registers; that is, require "$sp"
+    // instead of "$29"
+    return isRegIdx() && RegIdx.Kind == RegKind_GPR && RegIdx.Index == 29;
+  }
+
+  bool isRAPseudoReg() const {
+    // Purposefully do not allow numeric registers; that is, require "$ra"
+    // instead of "$31"
+    return isRegIdx() && RegIdx.Kind == RegKind_GPR && RegIdx.Index == 31;
   }
 
   bool isFGRAsmReg() const {
@@ -1735,6 +1974,13 @@ public:
         OS << Reg << " ";
       OS <<  ">";
       break;
+    case k_SaveRestore:
+      OS << "SaveRestore<CallerSaved 0x";
+      OS.write_hex(SaveRestore.SavedRegsMask);
+      OS << ", Framesize " << SaveRestore.Framesize << ", CalleeSaved 0x";
+      OS.write_hex(SaveRestore.StaticRegsMask);
+      OS << ">";
+      break;
     }
   }
 
@@ -1771,6 +2017,11 @@ static bool hasShortDelaySlot(MCInst &Inst) {
     case Mips::JALRS16_MM:
     case Mips::BGEZALS_MM:
     case Mips::BLTZALS_MM:
+    case Mips::Jal16:
+    case Mips::Jalx16:
+    case Mips::JrRa16:
+    case Mips::JrRx16:
+    case Mips::JalrRaRx16:
       return true;
     case Mips::J_MM:
       return !Inst.getOperand(0).isReg();
@@ -1986,6 +2237,44 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       if (!isInt<8>(Offset.getImm()))
         return Error(IDLoc, "branch target out of range");
       if (offsetToAlignment(Offset.getImm(), Align(2)))
+        return Error(IDLoc, "branch to misaligned address");
+      break;
+    // MIPS16 extended branches/jumps.
+    // The 16-bit variants do not need handling here because their predicate
+    // methods require a scaled 8-bit constant immediate. The instruction
+    // matcher will fall back to these extended variants as needed.
+    case Mips::BimmX16:
+    case Mips::BteqzX16:
+    case Mips::BtnezX16:
+      assert(MCID.getNumOperands() == 1 && "unexpected number of operands");
+      Offset = Inst.getOperand(0);
+      if (!Offset.isImm())
+        break; // We'll deal with this situation later on when applying fixups.
+      if (!isInt<17>(Offset.getImm()))
+        return Error(IDLoc, "branch target out of range");
+      if (offsetToAlignment(Offset.getImm(), Align(2)))
+        return Error(IDLoc, "branch to misaligned address");
+      break;
+    case Mips::BeqzRxImmX16:
+    case Mips::BnezRxImmX16:
+      assert(MCID.getNumOperands() == 2 && "unexpected number of operands");
+      Offset = Inst.getOperand(1);
+      if (!Offset.isImm())
+        break; // We'll deal with this situation later on when applying fixups.
+      if (!isInt<17>(Offset.getImm()))
+        return Error(IDLoc, "branch target out of range");
+      if (offsetToAlignment(Offset.getImm(), Align(2)))
+        return Error(IDLoc, "branch to misaligned address");
+      break;
+    case Mips::Jal16:
+    case Mips::Jalx16:
+      assert(MCID.getNumOperands() == 1 && "unexpected number of operands");
+      Offset = Inst.getOperand(0);
+      if (!Offset.isImm())
+        break; // We'll deal with this situation later on when applying fixups.
+      if (!isUInt<28>(Offset.getImm()))
+        return Error(IDLoc, "branch target out of range");
+      if (offsetToAlignment(Offset.getImm(), Align(4)))
         return Error(IDLoc, "branch to misaligned address");
       break;
     }
@@ -2385,6 +2674,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     TOut.setUsesMicroMips();
     TOut.updateABIInfo(*this);
   }
+  // FIXME: Do something similar for MIPS16?
 
   // If this instruction has a delay slot and .set reorder is active,
   // emit a NOP after it.
@@ -6057,6 +6347,9 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm3_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 3-bit unsigned immediate");
+  case Match_UImm3_1:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range 1 ... 8");
   case Match_UImm4_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 4-bit unsigned immediate");
@@ -6110,6 +6403,9 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm8_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 8-bit unsigned immediate");
+  case Match_SImm8_Lsl3:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected both 11-bit signed immediate and multiple of 8");
   case Match_UImm10_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 10-bit unsigned immediate");
@@ -6124,6 +6420,9 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm16_AltRelaxed:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 16-bit unsigned immediate");
+  case Match_SImm15:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 15-bit signed immediate");
   case Match_SImm16:
   case Match_SImm16_Relaxed:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
@@ -6382,6 +6681,15 @@ int MipsAsmParser::matchMSA128CtrlRegisterName(StringRef Name) {
            .Default(-1);
 
   return CC;
+}
+
+int MipsAsmParser::matchPCRegisterName(StringRef Name) {
+  // Used only in MIPS16; check in case someone was using "pc" as a symbol name
+  // in other MIPS modes.
+  if (inMips16Mode() && Name == "pc")
+    return 0;
+
+  return -1;
 }
 
 bool MipsAsmParser::canUseATReg() {
@@ -6740,6 +7048,13 @@ ParseStatus MipsAsmParser::matchAnyRegisterNameWithoutDollar(
     return ParseStatus::Success;
   }
 
+  Index = matchPCRegisterName(Identifier);
+  if (Index != -1) {
+    Operands.push_back(MipsOperand::createPCReg(getContext().getRegisterInfo(),
+                                                S, getLexer().getLoc(), *this));
+    return ParseStatus::Success;
+  }
+
   return ParseStatus::NoMatch;
 }
 
@@ -6924,6 +7239,122 @@ ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
   SMLoc E = Parser.getTok().getLoc();
   Operands.push_back(MipsOperand::CreateRegList(Regs, S, E, *this));
   parseMemOperand(Operands);
+  return ParseStatus::Success;
+}
+
+ParseStatus MipsAsmParser::parseSaveRestoreOperands(OperandVector &Operands) {
+  MCAsmParser &Parser = getParser();
+  SMLoc OperandsStart = Parser.getTok().getLoc();
+  uint32_t SavedRegMask = 0;
+  uint32_t StaticRegMask = 0;
+  uint32_t *RegMaskPtr = &SavedRegMask;
+  unsigned PrevRegIndex = 0;
+  unsigned Framesize = 0;
+  bool FramesizeSet = false;
+  bool IsRange = false;
+  const llvm::MCRegisterInfo *RegInfo = getContext().getRegisterInfo();
+
+  // MIPS16 Save and Restore instructions are weird and the MIPS16 docs do
+  // not provide useful syntax info. This will use a syntax similar to GNU AS:
+  //
+  //   save/restore {saved aregs and sregs}, frame size, {static aregs}
+  //
+  // where the saved and static regs are register lists and the frame size
+  // is a mulitple of 8 from 0 to 2040.
+
+  SMLoc TokStart;
+  SMLoc TokEnd;
+  while (Parser.getTok().isNot(AsmToken::EndOfStatement)) {
+    TokStart = Parser.getTok().getLoc();
+    TokEnd = TokStart;
+
+    if (Parser.getTok().is(AsmToken::Dollar)) {
+      MCRegister Reg;
+      if (parseRegister(Reg, TokStart, TokEnd)) {
+        return Error(TokEnd, "expected register operand");
+      }
+
+      unsigned RegIndex = RegInfo->getEncodingValue(Reg);
+      if (RegIndex > 31) {
+        return Error(TokEnd, "invalid register operand");
+      }
+
+      if (IsRange) {
+        uint32_t width = AbsoluteDifference(RegIndex, PrevRegIndex) + 1;
+        uint32_t shift = (RegIndex > PrevRegIndex ? PrevRegIndex : RegIndex);
+
+        *RegMaskPtr |= (maskTrailingOnes<uint32_t>(width) << shift);
+        IsRange = false;
+      } else {
+        *RegMaskPtr |= (1 << RegIndex);
+
+        if (Parser.getTok().is(AsmToken::Minus)) {
+          IsRange = true;
+          Lex(); // eat minus
+        }
+      }
+
+      PrevRegIndex = RegIndex;
+    } else {
+      // If it's not a register, try parsing this as an expression for
+      // presumably the frame size. Any args after the frame size are
+      // static registers.
+      if (FramesizeSet) {
+        return Error(TokEnd, "expected static register");
+      }
+
+      const MCExpr *FramesizeExpr;
+      if (Parser.parseExpression(FramesizeExpr, TokEnd)) {
+        return Error(TokEnd, "expected frame size value");
+      }
+
+      const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(FramesizeExpr);
+      if (nullptr == MCE) {
+        return Error(TokEnd, "frame size not an absolute expression");
+      }
+
+      int64_t FramesizeVal = MCE->getValue();
+      if (FramesizeVal > 2040 || FramesizeVal < 0 || FramesizeVal & 0x07) {
+        return Error(
+            TokEnd,
+            "frame size must be in range 0 .. 2040 and a multiple of 8");
+      }
+
+      RegMaskPtr = &StaticRegMask;
+      Framesize = (unsigned)FramesizeVal;
+      FramesizeSet = true;
+    }
+
+    if (!IsRange) {
+      if (Parser.getTok().isNot(AsmToken::EndOfStatement) &&
+          Parser.getTok().isNot(AsmToken::Comma)) {
+        return Error(Parser.getTok().getLoc(),
+                     "unexpected token, expected comma");
+      }
+
+      if (Parser.getTok().is(AsmToken::Comma))
+        Lex(); // eat comma
+    } else if (Parser.getTok().isNot(AsmToken::Dollar)) {
+      return Error(Parser.getTok().getLoc(), "expected end of register range");
+    }
+  }
+
+  TokEnd = Parser.getTok().getLoc();
+
+  if (SavedRegMask & ~0xC0FF00F0) {
+    return Error(TokEnd,
+                 "only registers $4-7, $16-23, $30, and $31 can be used");
+  }
+  if (StaticRegMask & ~0xF0) {
+    return Error(TokEnd,
+                 "only registers $4-7 can be saved as static registers");
+  }
+  if (SavedRegMask & StaticRegMask) {
+    return Error(TokEnd, "registers cannot be both in saved and static lists");
+  }
+
+  Operands.push_back(MipsOperand::CreateSaveRestore(
+      SavedRegMask, StaticRegMask, Framesize, OperandsStart, TokEnd, *this));
   return ParseStatus::Success;
 }
 

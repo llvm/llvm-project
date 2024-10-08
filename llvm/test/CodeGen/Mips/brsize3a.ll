@@ -16,7 +16,7 @@ x:                                                ; preds = %x, %entry
 ; b-short:	#APP
 ; b-short:	.space 200
 ; b-short:	#NO_APP
-; b-short:	b	$BB0_1 # 16 bit inst
+; b-short:	b	$BB0_1
 
 }
 

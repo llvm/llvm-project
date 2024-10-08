@@ -50,8 +50,8 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i32 0
 }
 
-; ci:	bnez	$3, $BB1_1  # 16 bit inst
-; ci:	jal	$BB1_2	# branch
+; ci:	bnez	$3, $BB1_1  
+; ci:	jal	$BB1_2
 ; ci:	nop
 ; ci: $BB1_1:                                 # %if.else
 
