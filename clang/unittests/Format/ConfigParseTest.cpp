@@ -302,41 +302,37 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     Style.FIELD.Enabled = true;                                                \
     CHECK_PARSE(#FIELD ": None", FIELD,                                        \
                 FormatStyle::AlignConsecutiveStyle({}));                       \
-    CHECK_PARSE(                                                               \
-        #FIELD ": Consecutive", FIELD,                                         \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true,           \
-             /*AlignBlockComments=*/false}));                                  \
-    CHECK_PARSE(                                                               \
-        #FIELD ": AcrossEmptyLines", FIELD,                                    \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true,           \
-             /*AlignBlockComments=*/false}));                                  \
-    CHECK_PARSE(                                                               \
-        #FIELD ": AcrossEmptyLinesAndComments", FIELD,                         \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
-             /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true,           \
-             /*AlignBlockComments=*/false}));                                  \
+    CHECK_PARSE(#FIELD ": Consecutive", FIELD,                                 \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,             \
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true,   \
+                     /*AlignBlockComments=*/false}));                          \
+    CHECK_PARSE(#FIELD ": AcrossEmptyLines", FIELD,                            \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/true,              \
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true,   \
+                     /*AlignBlockComments=*/false}));                          \
+    CHECK_PARSE(#FIELD ": AcrossEmptyLinesAndComments", FIELD,                 \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/true,              \
+                     /*AcrossComments=*/true, /*AlignCompound=*/false,         \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true,   \
+                     /*AlignBlockComments=*/false}));                          \
     /* For backwards compability, false / true should still parse */           \
     CHECK_PARSE(#FIELD ": false", FIELD,                                       \
                 FormatStyle::AlignConsecutiveStyle({}));                       \
-    CHECK_PARSE(                                                               \
-        #FIELD ": true", FIELD,                                                \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true,           \
-             /*AlignBlockComments=*/false}));                                  \
+    CHECK_PARSE(#FIELD ": true", FIELD,                                        \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,             \
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false, /*PadOperators=*/true,   \
+                     /*AlignBlockComments=*/false}));                          \
                                                                                \
     CHECK_PARSE_NESTED_BOOL(FIELD, Enabled);                                   \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossEmptyLines);                          \
