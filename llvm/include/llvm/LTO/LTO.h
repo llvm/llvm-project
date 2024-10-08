@@ -241,13 +241,22 @@ public:
                   const std::string &NewModulePath) const;
 };
 
-/// A ThinBackend defines what happens after the thin-link phase during ThinLTO.
-/// The details of this type definition aren't important; clients can only
-/// create a ThinBackend using one of the create*ThinBackend() functions below.
+/// This callable defines the behavior of a ThinLTO backend after the thin-link
+/// phase. It accepts a configuration \p C, a combined module summary index
+/// \p CombinedIndex, a map of module identifiers to global variable summaries
+/// \p ModuleToDefinedGVSummaries, a function to add output streams \p
+/// AddStream, and a file cache \p Cache. It returns a unique pointer to a
+/// ThinBackendProc, which can be used to launch backends in parallel.
 using ThinBackendFunction = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     AddStreamFn AddStream, FileCache Cache)>;
+
+/// This type defines the behavior following the thin-link phase during ThinLTO.
+/// It encapsulates a backend function and a strategy for thread pool
+/// parallelism. Clients should use one of the provided create*ThinBackend()
+/// functions to instantiate a ThinBackend. Parallelism defines the thread pool
+/// strategy to be used for processing.
 struct ThinBackend {
   ThinBackend(ThinBackendFunction Func, ThreadPoolStrategy Parallelism)
       : Func(std::move(Func)), Parallelism(std::move(Parallelism)) {}
