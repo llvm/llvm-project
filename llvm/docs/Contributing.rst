@@ -181,8 +181,8 @@ of LLVM's high-level design, as well as its internals:
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
 .. _good first issue: https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22
 .. _bug tracker: https://github.com/llvm/llvm-project/issues
-.. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
-.. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
+.. _clang-format-diff.py: https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/clang-format-diff.py
+.. _git-clang-format: https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's GitHub: https://github.com/llvm/llvm-project
 .. _LLVM's Phabricator (read-only): https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what
