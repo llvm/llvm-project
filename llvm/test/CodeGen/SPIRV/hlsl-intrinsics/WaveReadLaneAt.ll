@@ -24,6 +24,6 @@ entry:
   ret void
 }
 
-declare float @__hlsl_waveReadLaneAt.f32(float, i32)
-declare i32 @__hlsl_waveReadLaneAt.i32(i32, i32)
-declare <4 x i1> @__hlsl_waveReadLaneAt.v4i1(<4 x i1>, i32)
+declare float @llvm.spv.waveReadLaneAt.f32(float, i32)
+declare i32 @llvm.spv.waveReadLaneAt.i32(i32, i32)
+declare <4 x i1> @llvm.spv.waveReadLaneAt.v4i1(<4 x i1>, i32)

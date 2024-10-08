@@ -19,3 +19,8 @@ float3 test_index_type_check(float3 p0, double idx) {
   return __builtin_hlsl_wave_read_lane_at(p0, idx);
   // expected-error@-1 {{passing 'double' to parameter of incompatible type 'unsigned int'}}
 }
+
+float3 test_index_type_check(float3 p0, int3 idxs) {
+  return __builtin_hlsl_wave_read_lane_at(p0, idxs);
+  // expected-error@-1 {{passing 'int3' (aka 'vector<int, 3>') to parameter of incompatible type 'unsigned int'}}
+}

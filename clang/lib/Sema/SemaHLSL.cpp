@@ -1963,7 +1963,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // Ensure index parameter type can be interpreted as a uint
     ExprResult Index = TheCall->getArg(1);
     QualType ArgTyIndex = Index.get()->getType();
-    if (!ArgTyIndex->hasIntegerRepresentation()) {
+    if (!ArgTyIndex->isIntegerType()) {
       SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
                    diag::err_typecheck_convert_incompatible)
           << ArgTyIndex << SemaRef.Context.UnsignedIntTy << 1 << 0 << 0;
