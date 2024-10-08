@@ -1248,3 +1248,27 @@ void test() {
 }
 
 }
+
+// Test that we don't redundantly instantiate the friend declaration in
+// RemoveNestedImmediateInvocation(). Otherwise, we would end up with spurious
+// redefinition errors.
+namespace GH107175 {
+
+consteval void consteval_func() {}
+
+template <auto> struct define_f {
+  friend void foo() {}
+};
+
+template <auto = [] {}> struct A {};
+
+struct B {
+  template <auto T> consteval void func() { (void)define_f<T>{}; }
+};
+
+int main() {
+  B{}.func<A{}>();
+  consteval_func();
+}
+
+} // namespace GH107175

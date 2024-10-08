@@ -158,6 +158,7 @@ enum NodeType : unsigned {
   FP_EXTEND_MERGE_PASSTHRU,
   UINT_TO_FP_MERGE_PASSTHRU,
   SINT_TO_FP_MERGE_PASSTHRU,
+  FCVTX_MERGE_PASSTHRU,
   FCVTZU_MERGE_PASSTHRU,
   FCVTZS_MERGE_PASSTHRU,
   SIGN_EXTEND_INREG_MERGE_PASSTHRU,
@@ -280,9 +281,10 @@ enum NodeType : unsigned {
   SADDLP,
   UADDLP,
 
-  // udot/sdot instructions
+  // udot/sdot/usdot instructions
   UDOT,
   SDOT,
+  USDOT,
 
   // Vector across-lanes min/max
   // Only the lower result lane is defined.

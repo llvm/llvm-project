@@ -1601,9 +1601,9 @@ def SPRWriteResGroup126 : SchedWriteRes<[SPRPort02_03_11]> {
 def : InstRW<[SPRWriteResGroup126], (instregex "^MMX_MOV(D|Q)64rm$",
                                                "^VBROADCAST(F|I)128rm$",
                                                "^VBROADCAST(F|I)32X(2|4)Z256rm$",
-                                               "^VBROADCAST(F|I)32X(8|2Z)rm$",
-                                               "^VBROADCAST(F|I)(32|64)X4rm$",
-                                               "^VBROADCAST(F|I)64X2((Z128)?)rm$",
+                                               "^VBROADCAST(F|I)32X(8|2)Zrm$",
+                                               "^VBROADCAST(F|I)(32|64)X4Zrm$",
+                                               "^VBROADCAST(F|I)64X2(Z|Z256)rm$",
                                                "^VBROADCASTS(DY|SZ)rm$",
                                                "^VBROADCASTS(D|S)Z256rm$",
                                                "^VBROADCASTS(DZ|SY)rm$",
@@ -1652,9 +1652,9 @@ def SPRWriteResGroup131 : SchedWriteRes<[SPRPort00_05, SPRPort02_03_11]> {
   let Latency = 9;
   let NumMicroOps = 2;
 }
-def : InstRW<[SPRWriteResGroup131], (instregex "^VBROADCAST(F|I)32X(8|2Z)rmk(z?)$",
-                                               "^VBROADCAST(F|I)(32|64)X4rmk(z?)$",
-                                               "^VBROADCAST(F|I)64X2rmk(z?)$",
+def : InstRW<[SPRWriteResGroup131], (instregex "^VBROADCAST(F|I)32X(8|2)Zrmk(z?)$",
+                                               "^VBROADCAST(F|I)(32|64)X4Zrmk(z?)$",
+                                               "^VBROADCAST(F|I)64X2Zrmk(z?)$",
                                                "^VBROADCASTS(D|S)Zrmk(z?)$",
                                                "^VMOV(A|U)P(D|S)Zrmk(z?)$",
                                                "^VMOV(D|SH|SL)DUPZrmk(z?)$",
@@ -2698,7 +2698,7 @@ def SPRWriteResGroup262 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[SPRWriteResGroup262], (instregex "^VBROADCAST(F|I)32X(2|4)Z256rmk(z?)$",
-                                               "^VBROADCAST(F|I)64X2Z128rmk(z?)$",
+                                               "^VBROADCAST(F|I)64X2Z256rmk(z?)$",
                                                "^VBROADCASTS(D|S)Z256rmk(z?)$",
                                                "^VMOV(A|U)P(D|S)Z256rmk(z?)$",
                                                "^VMOV(D|SH|SL)DUPZ256rmk(z?)$",

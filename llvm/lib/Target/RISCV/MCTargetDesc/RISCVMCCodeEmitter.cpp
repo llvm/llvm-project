@@ -283,13 +283,18 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
     Offset = 4;
   }
 
+  // Save the number fixups.
+  size_t FixupStartIndex = Fixups.size();
+
   // Emit an unconditional jump to the destination.
   MCInst TmpInst =
       MCInstBuilder(RISCV::JAL).addReg(RISCV::X0).addOperand(SrcSymbol);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
   support::endian::write(CB, Binary, llvm::endianness::little);
 
-  Fixups.clear();
+  // Drop any fixup added so we can add the correct one.
+  Fixups.resize(FixupStartIndex);
+
   if (SrcSymbol.isExpr()) {
     Fixups.push_back(MCFixup::create(Offset, SrcSymbol.getExpr(),
                                      MCFixupKind(RISCV::fixup_riscv_jal),
@@ -347,6 +352,21 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
   case 4: {
     uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
+    support::endian::write(CB, Bits, llvm::endianness::little);
+    break;
+  }
+  case 6: {
+    uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI) & 0xffff'ffff'ffffu;
+    SmallVector<char, 8> Encoding;
+    support::endian::write(Encoding, Bits, llvm::endianness::little);
+    assert(Encoding[6] == 0 && Encoding[7] == 0 &&
+           "Unexpected encoding for 48-bit instruction");
+    Encoding.truncate(6);
+    CB.append(Encoding);
+    break;
+  }
+  case 8: {
+    uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
     support::endian::write(CB, Bits, llvm::endianness::little);
     break;
   }

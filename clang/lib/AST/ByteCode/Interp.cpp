@@ -90,10 +90,12 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
 
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD) {
-  if (!S.getLangOpts().CPlusPlus)
-    return;
-
   const SourceInfo &Loc = S.Current->getSource(OpPC);
+  if (!S.getLangOpts().CPlusPlus) {
+    S.FFDiag(Loc);
+    return;
+  }
+
   if (const auto *VarD = dyn_cast<VarDecl>(VD);
       VarD && VarD->getType().isConstQualified() &&
       !VarD->getAnyInitializer()) {
@@ -560,13 +562,25 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
+static bool CheckWeak(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!Ptr.isWeak())
+    return true;
+
+  const auto *VD = Ptr.getDeclDesc()->asVarDecl();
+  assert(VD);
+  S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_var_init_weak)
+      << VD;
+  S.Note(VD->getLocation(), diag::note_declared_at);
+
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
   if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
-
   if (!CheckDummy(S, OpPC, Ptr, AK))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
@@ -578,6 +592,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckInitialized(S, OpPC, Ptr, AK))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK))
+    return false;
+  if (!CheckWeak(S, OpPC, Ptr))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
@@ -605,6 +621,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckWeak(S, OpPC, Ptr))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
@@ -994,6 +1012,56 @@ void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
   }
 }
 
+bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
+  assert(T);
+  assert(!S.getLangOpts().CPlusPlus23);
+
+  // C++1y: A constant initializer for an object o [...] may also invoke
+  // constexpr constructors for o and its subobjects even if those objects
+  // are of non-literal class types.
+  //
+  // C++11 missed this detail for aggregates, so classes like this:
+  //   struct foo_t { union { int i; volatile int j; } u; };
+  // are not (obviously) initializable like so:
+  //   __attribute__((__require_constant_initialization__))
+  //   static const foo_t x = {{0}};
+  // because "i" is a subobject with non-literal initialization (due to the
+  // volatile member of the union). See:
+  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
+  // Therefore, we use the C++1y behavior.
+
+  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
+      S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl) {
+    return true;
+  }
+
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.getLangOpts().CPlusPlus11)
+    S.FFDiag(E, diag::note_constexpr_nonliteral) << E->getType();
+  else
+    S.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+  return false;
+}
+
+static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
+                             const Pointer &ThisPtr) {
+  assert(Func->isConstructor());
+
+  const Descriptor *D = ThisPtr.getFieldDesc();
+
+  // FIXME: I think this case is not 100% correct. E.g. a pointer into a
+  // subobject of a composite array.
+  if (!D->ElemRecord)
+    return true;
+
+  if (D->ElemRecord->getNumVirtualBases() == 0)
+    return true;
+
+  S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_virtual_base)
+      << Func->getParentDecl();
+  return false;
+}
+
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -1068,6 +1136,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return cleanup();
     }
+
+    if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
+      return false;
   }
 
   if (!CheckCallable(S, OpPC, Func))
@@ -1087,6 +1158,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
+  InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
   APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
@@ -1237,6 +1309,107 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   return Call(S, OpPC, F, VarArgSize);
 }
 
+bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
+                          std::optional<uint64_t> ArraySize) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+  if (!CheckStore(S, OpPC, Ptr))
+    return false;
+
+  if (!InvalidNewDeleteExpr(S, OpPC, E))
+    return false;
+
+  const auto *NewExpr = cast<CXXNewExpr>(E);
+  QualType StorageType = Ptr.getType();
+
+  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) &&
+      StorageType->isPointerType()) {
+    // FIXME: Are there other cases where this is a problem?
+    StorageType = StorageType->getPointeeType();
+  }
+
+  const ASTContext &ASTCtx = S.getASTContext();
+  QualType AllocType;
+  if (ArraySize) {
+    AllocType = ASTCtx.getConstantArrayType(
+        NewExpr->getAllocatedType(),
+        APInt(64, static_cast<uint64_t>(*ArraySize), false), nullptr,
+        ArraySizeModifier::Normal, 0);
+  } else {
+    AllocType = NewExpr->getAllocatedType();
+  }
+
+  unsigned StorageSize = 1;
+  unsigned AllocSize = 1;
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
+    AllocSize = CAT->getZExtSize();
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(StorageType))
+    StorageSize = CAT->getZExtSize();
+
+  if (AllocSize > StorageSize ||
+      !ASTCtx.hasSimilarType(ASTCtx.getBaseElementType(AllocType),
+                             ASTCtx.getBaseElementType(StorageType))) {
+    S.FFDiag(S.Current->getLocation(OpPC),
+             diag::note_constexpr_placement_new_wrong_type)
+        << StorageType << AllocType;
+    return false;
+  }
+  return true;
+}
+
+bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
+  assert(E);
+  const auto &Loc = S.Current->getSource(OpPC);
+
+  if (S.getLangOpts().CPlusPlus26)
+    return true;
+
+  if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
+    const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
+
+    if (!S.getLangOpts().CPlusPlus26 && NewExpr->getNumPlacementArgs() > 0) {
+      // This is allowed pre-C++26, but only an std function.
+      if (S.Current->isStdFunction())
+        return true;
+      S.FFDiag(Loc, diag::note_constexpr_new_placement)
+          << /*C++26 feature*/ 1 << E->getSourceRange();
+    } else if (NewExpr->getNumPlacementArgs() == 1 &&
+               !OperatorNew->isReservedGlobalPlacementOperator()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_placement)
+          << /*Unsupported*/ 0 << E->getSourceRange();
+    } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+          << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
+    }
+  } else {
+    const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
+    const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
+    if (!OperatorDelete->isReplaceableGlobalAllocationFunction()) {
+      S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+          << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
+    }
+  }
+
+  return false;
+}
+
+bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
+                              const FixedPoint &FP) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.checkingForUndefinedBehavior()) {
+    S.getASTContext().getDiagnostics().Report(
+        E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
+        << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+  }
+  S.CCEDiag(E, diag::note_constexpr_overflow)
+      << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+  return S.noteUndefinedBehavior();
+}
+
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", off)
+#endif
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
@@ -1261,6 +1434,10 @@ bool Interpret(InterpState &S, APValue &Result) {
     }
   }
 }
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", on)
+#endif
 
 } // namespace interp
 } // namespace clang

@@ -338,6 +338,13 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
                 NumThreadsAttr->getZ());
     Fn->addFnAttr(NumThreadsKindStr, NumThreadsStr);
   }
+  if (HLSLWaveSizeAttr *WaveSizeAttr = FD->getAttr<HLSLWaveSizeAttr>()) {
+    const StringRef WaveSizeKindStr = "hlsl.wavesize";
+    std::string WaveSizeStr =
+        formatv("{0},{1},{2}", WaveSizeAttr->getMin(), WaveSizeAttr->getMax(),
+                WaveSizeAttr->getPreferred());
+    Fn->addFnAttr(WaveSizeKindStr, WaveSizeStr);
+  }
   Fn->addFnAttr(llvm::Attribute::NoInline);
 }
 
@@ -408,7 +415,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   }
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args);
-  (void)CI;
+  CI->setCallingConv(Fn->getCallingConv());
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();

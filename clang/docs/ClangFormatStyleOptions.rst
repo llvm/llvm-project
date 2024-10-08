@@ -273,7 +273,7 @@ the configuration (without a prefix: ``Auto``).
 .. _AlignArrayOfStructures:
 
 **AlignArrayOfStructures** (``ArrayInitializerAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <AlignArrayOfStructures>`
-  if not ``None``, when using initialization for an array of structs
+  If not ``None``, when using initialization for an array of structs
   aligns the fields into columns.
 
 
@@ -331,11 +331,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -416,6 +417,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -473,11 +489,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -558,6 +575,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -615,11 +647,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -700,6 +733,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -758,11 +806,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -842,6 +891,21 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
 
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
@@ -1020,11 +1084,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -1105,6 +1170,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -1160,11 +1240,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -1245,6 +1326,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -1300,11 +1396,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -1384,6 +1481,21 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
 
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
@@ -6577,6 +6689,15 @@ the configuration (without a prefix: ``Auto``).
     );
     let DAGArgOtherID = (other i32:$other1, i32:$other2);
     let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+
+.. _TemplateNames:
+
+**TemplateNames** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <TemplateNames>`
+  A vector of non-keyword identifiers that should be interpreted as
+  template names.
+
+  A ``<`` after a template name is annotated as a template opener instead of
+  a binary operator.
 
 .. _TypeNames:
 

@@ -77,6 +77,8 @@ public:
   }
 
   unsigned getMask() const {
+    // None of the target SGPRs or VGPRs are expected to have a 'zero' mask.
+    assert(Mask && "Invalid mask.");
     return Mask;
   }
 

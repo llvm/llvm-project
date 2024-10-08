@@ -3604,7 +3604,8 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
   if (Arg *A = Args.getLastArg(options::OPT_mstack_protector_guard_EQ)) {
     StringRef Value = A->getValue();
     if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64() &&
-        !EffectiveTriple.isARM() && !EffectiveTriple.isThumb())
+        !EffectiveTriple.isARM() && !EffectiveTriple.isThumb() &&
+        !EffectiveTriple.isRISCV())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     if ((EffectiveTriple.isX86() || EffectiveTriple.isARM() ||
@@ -3644,13 +3645,28 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
           << A->getOption().getName() << Value << "sysreg global";
       return;
     }
+    if (EffectiveTriple.isRISCV()) {
+      if (Value != "tls" && Value != "global") {
+        D.Diag(diag::err_drv_invalid_value_with_suggestion)
+            << A->getOption().getName() << Value << "tls global";
+        return;
+      }
+      if (Value == "tls") {
+        if (!Args.hasArg(options::OPT_mstack_protector_guard_offset_EQ)) {
+          D.Diag(diag::err_drv_ssp_missing_offset_argument)
+              << A->getAsString(Args);
+          return;
+        }
+      }
+    }
     A->render(Args, CmdArgs);
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mstack_protector_guard_offset_EQ)) {
     StringRef Value = A->getValue();
     if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64() &&
-        !EffectiveTriple.isARM() && !EffectiveTriple.isThumb())
+        !EffectiveTriple.isARM() && !EffectiveTriple.isThumb() &&
+        !EffectiveTriple.isRISCV())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     int Offset;
@@ -3669,7 +3685,8 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
 
   if (Arg *A = Args.getLastArg(options::OPT_mstack_protector_guard_reg_EQ)) {
     StringRef Value = A->getValue();
-    if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64())
+    if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64() &&
+        !EffectiveTriple.isRISCV())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     if (EffectiveTriple.isX86() && (Value != "fs" && Value != "gs")) {
@@ -3679,6 +3696,11 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     }
     if (EffectiveTriple.isAArch64() && Value != "sp_el0") {
       D.Diag(diag::err_drv_invalid_value) << A->getOption().getName() << Value;
+      return;
+    }
+    if (EffectiveTriple.isRISCV() && Value != "tp") {
+      D.Diag(diag::err_drv_invalid_value_with_suggestion)
+          << A->getOption().getName() << Value << "tp";
       return;
     }
     A->render(Args, CmdArgs);
@@ -4214,6 +4236,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodule_output_EQ);
   }
 
+  if (Args.hasArg(options::OPT_fmodules_embed_all_files))
+    CmdArgs.push_back("-fmodules-embed-all-files");
+
   return HaveModules;
 }
 
@@ -4421,21 +4446,7 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
       CmdArgs.push_back("-fno-diagnostics-show-note-include-stack");
   }
 
-  // Color diagnostics are parsed by the driver directly from argv and later
-  // re-parsed to construct this job; claim any possible color diagnostic here
-  // to avoid warn_drv_unused_argument and diagnose bad
-  // OPT_fdiagnostics_color_EQ values.
-  Args.getLastArg(options::OPT_fcolor_diagnostics,
-                  options::OPT_fno_color_diagnostics);
-  if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_color_EQ)) {
-    StringRef Value(A->getValue());
-    if (Value != "always" && Value != "never" && Value != "auto")
-      D.Diag(diag::err_drv_invalid_argument_to_option)
-          << Value << A->getOption().getName();
-  }
-
-  if (D.getDiags().getDiagnosticOptions().ShowColors)
-    CmdArgs.push_back("-fcolor-diagnostics");
+  handleColorDiagnosticsArgs(D, Args, CmdArgs);
 
   if (Args.hasArg(options::OPT_fansi_escape_codes))
     CmdArgs.push_back("-fansi-escape-codes");
@@ -6225,9 +6236,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_sections_EQ)) {
     StringRef Val = A->getValue();
-    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
-      if (Val != "all" && Val != "labels" && Val != "none" &&
-          !Val.starts_with("list="))
+    if (Val == "labels") {
+      D.Diag(diag::warn_drv_deprecated_arg)
+          << A->getAsString(Args) << /*hasReplacement=*/true
+          << "-fbasic-block-address-map";
+      CmdArgs.push_back("-fbasic-block-address-map");
+    } else if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+      if (Val != "all" && Val != "none" && !Val.starts_with("list="))
         D.Diag(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
       else
@@ -6265,8 +6280,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_unique_internal_linkage_names);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
                     options::OPT_fno_unique_basic_block_section_names);
-  Args.addOptInFlag(CmdArgs, options::OPT_fconvergent_functions,
-                    options::OPT_fno_convergent_functions);
 
   if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                options::OPT_fno_split_machine_functions)) {
@@ -6283,6 +6296,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
                   options::OPT_finstrument_functions_after_inlining,
                   options::OPT_finstrument_function_entry_bare);
+  Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
+                  options::OPT_fno_convergent_functions);
 
   // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
   // for sampling, overhead of call arc collection is way too high and there's
@@ -7009,6 +7024,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
+
+    if (Arg *SA = Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ))
+      CmdArgs.push_back(Args.MakeArgString(Twine("-mcf-branch-label-scheme=") +
+                                           SA->getValue()));
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))
@@ -9221,6 +9240,31 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(A->getValue());
     A->claim();
+  }
+
+  // Pass in the C library for GPUs if present and not disabled.
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_r, options::OPT_nogpulib,
+                   options::OPT_nodefaultlibs, options::OPT_nolibc,
+                   options::OPT_nogpulibc)) {
+    forAllAssociatedToolChains(C, JA, getToolChain(), [&](const ToolChain &TC) {
+      // The device C library is only available for NVPTX and AMDGPU targets
+      // currently.
+      if (!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU())
+        return;
+      bool HasLibC = TC.getStdlibIncludePath().has_value();
+      if (HasLibC) {
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-linker=" + TC.getTripleString() + "=" + "-lc"));
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-linker=" + TC.getTripleString() + "=" + "-lm"));
+      }
+      auto HasCompilerRT = getToolChain().getVFS().exists(
+          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static));
+      if (HasCompilerRT)
+        CmdArgs.push_back(
+            Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
+                               "-lclang_rt.builtins"));
+    });
   }
 
   // If we disable the GPU C library support it needs to be forwarded to the

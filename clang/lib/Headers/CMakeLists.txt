@@ -120,6 +120,7 @@ set(ppc_htm_files
 
 set(riscv_files
   riscv_bitmanip.h
+        riscv_corev_alu.h
   riscv_crypto.h
   riscv_ntlh.h
   sifive_vector.h
@@ -156,6 +157,7 @@ set(x86_files
   avx10_2_512satcvtintrin.h
   avx10_2bf16intrin.h
   avx10_2convertintrin.h
+  avx10_2copyintrin.h
   avx10_2minmaxintrin.h
   avx10_2niintrin.h
   avx10_2satcvtdsintrin.h

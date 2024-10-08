@@ -1,0 +1,11 @@
+; REQUIRES: x86
+
+; RUN: llvm-lib -machine:amd64 -out:%t.imp.lib -def:%s
+; RUN: lld-link -machine:amd64 -out:%t.dll %t.imp.lib -dll -noentry -export:__imp_func,DATA -map
+
+; FileCheck %s < %t.imp.map
+; CHECK: 0001:00000098       __imp_func                 0000000180001098     export-imp-thunk.test.tmp.imp:imp.dll
+
+LIBRARY imp.dll
+EXPORTS
+        func

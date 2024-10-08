@@ -837,7 +837,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
           // Reverse scan, starting at the end or at the element before "--".
           auto R = std::make_reverse_iterator(FlagsEnd);
-          for (auto I = R, E = Args.rend(); I != E; ++I) {
+          auto E = Args.rend();
+          // Don't include Args[0] in the iteration; that's the executable, not
+          // an option.
+          if (E != R)
+            E--;
+          for (auto I = R; I != E; ++I) {
             StringRef Arg = *I;
             if (ClangCLMode) {
               // Ignore arguments that are preceded by "-Xclang".

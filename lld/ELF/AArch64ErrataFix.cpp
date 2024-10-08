@@ -372,11 +372,11 @@ static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
 
 class elf::Patch843419Section final : public SyntheticSection {
 public:
-  Patch843419Section(InputSection *p, uint64_t off);
+  Patch843419Section(Ctx &, InputSection *p, uint64_t off);
 
-  void writeTo(uint8_t *buf) override;
+  void writeTo(Ctx &, uint8_t *buf) override;
 
-  size_t getSize() const override { return 8; }
+  size_t getSize(Ctx &) const override { return 8; }
 
   uint64_t getLDSTAddr() const;
 
@@ -392,14 +392,14 @@ public:
   Symbol *patchSym;
 };
 
-Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
+Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
                        ".text.patch"),
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(
       saver().save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC,
-      0, getSize(), *this);
+      0, getSize(ctx), *this);
   addSyntheticLocal(saver().save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
@@ -407,7 +407,7 @@ uint64_t Patch843419Section::getLDSTAddr() const {
   return patchee->getVA(patcheeOffset);
 }
 
-void Patch843419Section::writeTo(uint8_t *buf) {
+void Patch843419Section::writeTo(Ctx &ctx, uint8_t *buf) {
   // Copy the instruction that we will be replacing with a branch in the
   // patchee Section.
   write32le(buf, read32le(patchee->content().begin() + patcheeOffset));
@@ -529,7 +529,7 @@ void AArch64Err843419Patcher::insertPatches(
 // instruction that we need to patch at patcheeOffset from the start of
 // InputSection isec, create a Patch843419 Section and add it to the
 // Patches that we need to insert.
-static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
+static void implementPatch(Ctx &ctx, uint64_t adrpAddr, uint64_t patcheeOffset,
                            InputSection *isec,
                            std::vector<Patch843419Section *> &patches) {
   // There may be a relocation at the same offset that we are patching. There
@@ -556,7 +556,7 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
   log("detected cortex-a53-843419 erratum sequence starting at " +
       utohexstr(adrpAddr) + " in unpatched output.");
 
-  auto *ps = make<Patch843419Section>(isec, patcheeOffset);
+  auto *ps = make<Patch843419Section>(ctx, isec, patcheeOffset);
   patches.push_back(ps);
 
   auto makeRelToPatch = [](uint64_t offset, Symbol *patchSym) {
@@ -599,7 +599,7 @@ AArch64Err843419Patcher::patchInputSectionDescription(
         uint64_t startAddr = isec->getVA(off);
         if (uint64_t patcheeOffset =
                 scanCortexA53Errata843419(isec, off, limit))
-          implementPatch(startAddr, patcheeOffset, isec, patches);
+          implementPatch(ctx, startAddr, patcheeOffset, isec, patches);
       }
       if (dataSym == mapSyms.end())
         break;

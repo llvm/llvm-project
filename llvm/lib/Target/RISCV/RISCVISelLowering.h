@@ -411,9 +411,12 @@ enum NodeType : unsigned {
   CZERO_EQZ, // vt.maskc for XVentanaCondOps.
   CZERO_NEZ, // vt.maskcn for XVentanaCondOps.
 
-  /// Software guarded BRIND node. Operand 0 is the chain operand and
-  /// operand 1 is the target address.
+  // Software guarded BRIND node. Operand 0 is the chain operand and
+  // operand 1 is the target address.
   SW_GUARDED_BRIND,
+  // Software guarded calls for large code model
+  SW_GUARDED_CALL,
+  SW_GUARDED_TAIL,
 
   SF_VC_XV_SE,
   SF_VC_IV_SE,
@@ -684,6 +687,9 @@ public:
 
   bool preferZeroCompareBranch() const override { return true; }
 
+  // Note that one specific case requires fence insertion for an
+  // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather
+  // than this hook due to limitations in the interface here.
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {
     return isa<LoadInst>(I) || isa<StoreInst>(I);
   }

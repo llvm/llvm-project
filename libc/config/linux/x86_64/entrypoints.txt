@@ -346,6 +346,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wctob
 )
 
+if(LLVM_LIBC_INCLUDE_SCUDO)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # malloc.h external entrypoints
+    libc.src.stdlib.mallopt
+  )
+endif()
+
 set(TARGET_LIBM_ENTRYPOINTS
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
@@ -479,9 +486,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.iscanonical
+    libc.src.math.iscanonicalf
+    libc.src.math.iscanonicall
     libc.src.math.isnan
     libc.src.math.isnanf
     libc.src.math.isnanl
+    libc.src.math.issignaling
+    libc.src.math.issignalingf
+    libc.src.math.issignalingl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -637,6 +650,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
     libc.src.math.ilogbf16
+    libc.src.math.iscanonicalf16
+    libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
@@ -717,6 +732,8 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
+    libc.src.math.iscanonicalf128
+    libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.llrintf128
@@ -1041,8 +1058,15 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # sys/socket.h entrypoints
-    libc.src.sys.socket.bind
     libc.src.sys.socket.socket
+    libc.src.sys.socket.bind
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.send
+    libc.src.sys.socket.sendto
+    libc.src.sys.socket.sendmsg
+    libc.src.sys.socket.recv
+    libc.src.sys.socket.recvfrom
+    libc.src.sys.socket.recvmsg
   )
 endif()
 

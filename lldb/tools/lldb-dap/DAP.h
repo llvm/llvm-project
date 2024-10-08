@@ -94,12 +94,6 @@ enum class PacketStatus {
 
 enum class ReplMode { Variable = 0, Command, Auto };
 
-/// The detected context of an expression based off the current repl mode.
-enum class ExpressionContext {
-  Variable = 0,
-  Command,
-};
-
 struct Variables {
   /// Variable_reference start index of permanent expandable variable.
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
@@ -185,7 +179,7 @@ struct DAP {
   bool is_attach;
   bool enable_auto_variable_summaries;
   bool enable_synthetic_child_debugging;
-  bool enable_display_extended_backtrace;
+  bool display_extended_backtrace;
   // The process event thread normally responds to process exited events by
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
@@ -205,6 +199,12 @@ struct DAP {
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
+  // This is used to allow request_evaluate to handle empty expressions
+  // (ie the user pressed 'return' and expects the previous expression to
+  // repeat). If the previous expression was a command, this string will be
+  // empty; if the previous expression was a variable expression, this string
+  // will contain that expression.
+  std::string last_nonempty_var_expression;
 
   DAP();
   ~DAP();
@@ -239,12 +239,24 @@ struct DAP {
 
   void PopulateExceptionBreakpoints();
 
-  /// \return
-  ///   Attempt to determine if an expression is a variable expression or
-  ///   lldb command using a hueristic based on the first term of the
-  ///   expression.
-  ExpressionContext DetectExpressionContext(lldb::SBFrame frame,
-                                            std::string &expression);
+  /// Attempt to determine if an expression is a variable expression or
+  /// lldb command using a heuristic based on the first term of the
+  /// expression.
+  ///
+  /// \param[in] frame
+  ///     The frame, used as context to detect local variable names
+  /// \param[inout] expression
+  ///     The expression string. Might be modified by this function to
+  ///     remove the leading escape character.
+  /// \param[in] partial_expression
+  ///     Whether the provided `expression` is only a prefix of the
+  ///     final expression. If `true`, this function might return
+  ///     `ReplMode::Auto` to indicate that the expression could be
+  ///     either an expression or a statement, depending on the rest of
+  ///     the expression.
+  /// \return the expression mode
+  ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
+                          bool partial_expression);
 
   /// \return
   ///   \b false if a fatal error was found while executing these commands,

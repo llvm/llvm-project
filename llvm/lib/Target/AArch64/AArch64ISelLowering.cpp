@@ -268,6 +268,7 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::FP_EXTEND_MERGE_PASSTHRU:
   case AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU:
   case AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU:
+  case AArch64ISD::FCVTX_MERGE_PASSTHRU:
   case AArch64ISD::FCVTZU_MERGE_PASSTHRU:
   case AArch64ISD::FCVTZS_MERGE_PASSTHRU:
   case AArch64ISD::FSQRT_MERGE_PASSTHRU:
@@ -1663,11 +1664,42 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      setOperationAction(ISD::FABS, VT, Legal);
+      setOperationAction(ISD::FNEG, VT, Legal);
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
+      setOperationAction(ISD::FP_ROUND, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+
+      if (Subtarget->hasSVEB16B16()) {
+        setOperationAction(ISD::FADD, VT, Legal);
+        setOperationAction(ISD::FMA, VT, Custom);
+        setOperationAction(ISD::FMAXIMUM, VT, Custom);
+        setOperationAction(ISD::FMAXNUM, VT, Custom);
+        setOperationAction(ISD::FMINIMUM, VT, Custom);
+        setOperationAction(ISD::FMINNUM, VT, Custom);
+        setOperationAction(ISD::FMUL, VT, Legal);
+        setOperationAction(ISD::FSUB, VT, Legal);
+      }
+    }
+
+    for (auto Opcode :
+         {ISD::FCEIL, ISD::FDIV, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
+          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC}) {
+      setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
+      setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
+      setOperationAction(Opcode, MVT::nxv8bf16, Expand);
+    }
+
+    if (!Subtarget->hasSVEB16B16()) {
+      for (auto Opcode : {ISD::FADD, ISD::FMA, ISD::FMAXIMUM, ISD::FMAXNUM,
+                          ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
+        setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
+        setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
+        setOperationAction(Opcode, MVT::nxv8bf16, Expand);
+      }
     }
 
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
@@ -1995,8 +2027,8 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
-  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64 && VT != MVT::v4i32 &&
-         VT != MVT::v2i32;
+  return VT != MVT::nxv4i64 && VT != MVT::nxv4i32 && VT != MVT::nxv2i64 &&
+         VT != MVT::v4i64 && VT != MVT::v4i32 && VT != MVT::v2i32;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
@@ -2621,6 +2653,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FP_EXTEND_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::FCVTX_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FCVTZU_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FCVTZS_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FSQRT_MERGE_PASSTHRU)
@@ -2701,6 +2734,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::SADDLV)
     MAKE_CASE(AArch64ISD::SDOT)
     MAKE_CASE(AArch64ISD::UDOT)
+    MAKE_CASE(AArch64ISD::USDOT)
     MAKE_CASE(AArch64ISD::SMINV)
     MAKE_CASE(AArch64ISD::UMINV)
     MAKE_CASE(AArch64ISD::SMAXV)
@@ -3240,6 +3274,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZero(MI, BB);
   case AArch64::ZERO_T_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
+  case AArch64::MOVT_TIZ_PSEUDO:
+    return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
   }
 }
 
@@ -4297,6 +4333,29 @@ static SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) {
                      Op.getOperand(1));
 }
 
+// Converts SETCC (AND X Y) Z ULT -> SETCC (AND X (Y & ~(Z - 1)) 0 EQ when Y is
+// a power of 2. This is then lowered to ANDS X (Y & ~(Z - 1)) instead of SUBS
+// (AND X Y) Z which produces a better opt with EmitComparison
+static void simplifySetCCIntoEq(ISD::CondCode &CC, SDValue &LHS, SDValue &RHS,
+                                SelectionDAG &DAG, const SDLoc dl) {
+  if (CC == ISD::SETULT && LHS.getOpcode() == ISD::AND && LHS->hasOneUse()) {
+    ConstantSDNode *LHSConstOp = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+    ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
+    if (LHSConstOp && RHSConst) {
+      uint64_t LHSConstValue = LHSConstOp->getZExtValue();
+      uint64_t RHSConstant = RHSConst->getZExtValue();
+      if (isPowerOf2_64(RHSConstant)) {
+        uint64_t NewMaskValue = LHSConstValue & ~(RHSConstant - 1);
+        LHS =
+            DAG.getNode(ISD::AND, dl, LHS.getValueType(), LHS.getOperand(0),
+                        DAG.getConstant(NewMaskValue, dl, LHS.getValueType()));
+        RHS = DAG.getConstant(0, dl, RHS.getValueType());
+        CC = ISD::SETEQ;
+      }
+    }
+  }
+}
+
 SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                                               SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -4333,13 +4392,69 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
 SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
                                              SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  if (VT.isScalableVector())
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
-
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = SrcVal.getValueType();
   bool Trunc = Op.getConstantOperandVal(IsStrict ? 2 : 1) == 1;
+
+  if (VT.isScalableVector()) {
+    if (VT.getScalarType() != MVT::bf16)
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+
+    SDLoc DL(Op);
+    constexpr EVT I32 = MVT::nxv4i32;
+    auto ImmV = [&](int I) -> SDValue { return DAG.getConstant(I, DL, I32); };
+
+    SDValue NaN;
+    SDValue Narrow;
+
+    if (SrcVT == MVT::nxv2f32 || SrcVT == MVT::nxv4f32) {
+      if (Subtarget->hasBF16())
+        return LowerToPredicatedOp(Op, DAG,
+                                   AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+
+      Narrow = getSVESafeBitCast(I32, SrcVal, DAG);
+
+      // Set the quiet bit.
+      if (!DAG.isKnownNeverSNaN(SrcVal))
+        NaN = DAG.getNode(ISD::OR, DL, I32, Narrow, ImmV(0x400000));
+    } else if (SrcVT == MVT::nxv2f64 &&
+               (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+      // Round to float without introducing rounding errors and try again.
+      SDValue Pg = getPredicateForVector(DAG, DL, MVT::nxv2f32);
+      Narrow = DAG.getNode(AArch64ISD::FCVTX_MERGE_PASSTHRU, DL, MVT::nxv2f32,
+                           Pg, SrcVal, DAG.getUNDEF(MVT::nxv2f32));
+
+      SmallVector<SDValue, 3> NewOps;
+      if (IsStrict)
+        NewOps.push_back(Op.getOperand(0));
+      NewOps.push_back(Narrow);
+      NewOps.push_back(Op.getOperand(IsStrict ? 2 : 1));
+      return DAG.getNode(Op.getOpcode(), DL, VT, NewOps, Op->getFlags());
+    } else
+      return SDValue();
+
+    if (!Trunc) {
+      SDValue Lsb = DAG.getNode(ISD::SRL, DL, I32, Narrow, ImmV(16));
+      Lsb = DAG.getNode(ISD::AND, DL, I32, Lsb, ImmV(1));
+      SDValue RoundingBias = DAG.getNode(ISD::ADD, DL, I32, Lsb, ImmV(0x7fff));
+      Narrow = DAG.getNode(ISD::ADD, DL, I32, Narrow, RoundingBias);
+    }
+
+    // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
+    // 0x80000000.
+    if (NaN) {
+      EVT I1 = I32.changeElementType(MVT::i1);
+      EVT CondVT = VT.changeElementType(MVT::i1);
+      SDValue IsNaN = DAG.getSetCC(DL, CondVT, SrcVal, SrcVal, ISD::SETUO);
+      IsNaN = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, I1, IsNaN);
+      Narrow = DAG.getSelect(DL, I32, IsNaN, NaN, Narrow);
+    }
+
+    // Now that we have rounded, shift the bits into position.
+    Narrow = DAG.getNode(ISD::SRL, DL, I32, Narrow, ImmV(16));
+    return getSVESafeBitCast(VT, Narrow, DAG);
+  }
 
   if (useSVEForFixedLengthVectorVT(SrcVT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPRoundToSVE(Op, DAG);
@@ -5502,9 +5617,16 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
          "Only expect to cast between legal scalable predicate types!");
 
   // Return the operand if the cast isn't changing type,
-  // e.g. <n x 16 x i1> -> <n x 16 x i1>
   if (InVT == VT)
     return Op;
+
+  // Look through casts to <vscale x 16 x i1> when their input has more lanes
+  // than VT. This will increase the chances of removing casts that introduce
+  // new lanes, which have to be explicitly zero'd.
+  if (Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+      Op.getConstantOperandVal(0) == Intrinsic::aarch64_sve_convert_to_svbool &&
+      Op.getOperand(1).getValueType().bitsGT(VT))
+    Op = Op.getOperand(1);
 
   SDValue Reinterpret = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Op);
 
@@ -6113,6 +6235,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                           : AArch64ISD::SDOT;
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
+  }
+  case Intrinsic::aarch64_neon_usdot:
+  case Intrinsic::aarch64_sve_usdot: {
+    return DAG.getNode(AArch64ISD::USDOT, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
   case Intrinsic::get_active_lane_mask: {
     SDValue ID =
@@ -10537,6 +10664,9 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (LHS.getValueType().isInteger()) {
+
+    simplifySetCCIntoEq(CC, LHS, RHS, DAG, dl);
+
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(
         LHS, RHS, ISD::getSetCCInverse(CC, LHS.getValueType()), CCVal, DAG, dl);
@@ -21849,37 +21979,66 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   auto ExtA = MulOp->getOperand(0);
   auto ExtB = MulOp->getOperand(1);
-  bool IsSExt = ExtA->getOpcode() == ISD::SIGN_EXTEND;
-  bool IsZExt = ExtA->getOpcode() == ISD::ZERO_EXTEND;
-  if (ExtA->getOpcode() != ExtB->getOpcode() || (!IsSExt && !IsZExt))
+
+  if (!ISD::isExtOpcode(ExtA->getOpcode()) ||
+      !ISD::isExtOpcode(ExtB->getOpcode()))
     return SDValue();
+  bool AIsSigned = ExtA->getOpcode() == ISD::SIGN_EXTEND;
+  bool BIsSigned = ExtB->getOpcode() == ISD::SIGN_EXTEND;
 
   auto A = ExtA->getOperand(0);
   auto B = ExtB->getOperand(0);
   if (A.getValueType() != B.getValueType())
     return SDValue();
 
-  unsigned Opcode = 0;
-
-  if (IsSExt)
-    Opcode = AArch64ISD::SDOT;
-  else if (IsZExt)
-    Opcode = AArch64ISD::UDOT;
-
-  assert(Opcode != 0 && "Unexpected dot product case encountered.");
-
   EVT ReducedType = N->getValueType(0);
   EVT MulSrcType = A.getValueType();
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if ((ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) ||
-      (ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) ||
-      (ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) ||
-      (ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
-    return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
+  if (!(ReducedType == MVT::nxv4i64 && MulSrcType == MVT::nxv16i8) &&
+      !(ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) &&
+      !(ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) &&
+      !(ReducedType == MVT::v4i64 && MulSrcType == MVT::v16i8) &&
+      !(ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) &&
+      !(ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
+    return SDValue();
 
-  return SDValue();
+  // If the extensions are mixed, we should lower it to a usdot instead
+  unsigned Opcode = 0;
+  if (AIsSigned != BIsSigned) {
+    if (!Subtarget->hasMatMulInt8())
+      return SDValue();
+
+    bool Scalable = N->getValueType(0).isScalableVT();
+    // There's no nxv2i64 version of usdot
+    if (Scalable && ReducedType != MVT::nxv4i32 && ReducedType != MVT::nxv4i64)
+      return SDValue();
+
+    Opcode = AArch64ISD::USDOT;
+    // USDOT expects the signed operand to be last
+    if (!BIsSigned)
+      std::swap(A, B);
+  } else if (AIsSigned)
+    Opcode = AArch64ISD::SDOT;
+  else
+    Opcode = AArch64ISD::UDOT;
+
+  // Partial reduction lowering for (nx)v16i8 to (nx)v4i64 requires an i32 dot
+  // product followed by a zero / sign extension
+  if ((ReducedType == MVT::nxv4i64 && MulSrcType == MVT::nxv16i8) ||
+      (ReducedType == MVT::v4i64 && MulSrcType == MVT::v16i8)) {
+    EVT ReducedTypeI32 =
+        (ReducedType.isScalableVector()) ? MVT::nxv4i32 : MVT::v4i32;
+
+    auto DotI32 = DAG.getNode(Opcode, DL, ReducedTypeI32,
+                              DAG.getConstant(0, DL, ReducedTypeI32), A, B);
+    auto Extended = DAG.getSExtOrTrunc(DotI32, DL, ReducedType);
+    return DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(), NarrowOp,
+                       Extended);
+  }
+
+  return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,
