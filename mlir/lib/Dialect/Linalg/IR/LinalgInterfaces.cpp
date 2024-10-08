@@ -521,8 +521,9 @@ struct ConvAccessExprWalker
         unConvolvedDims.erase(dimPos);
         // If a duplicate dim is marked as convolved, the pair of the duplicate
         // dim must be removed from the map as well.
-        if (convolvedDimMapping.contains(dimPos)) {
-          int64_t pairedDim = convolvedDimMapping[dimPos];
+        auto it = convolvedDimMapping.find(dimPos);
+        if (it != convolvedDimMapping.end()) {
+          int64_t pairedDim = it->second;
           convolvedDims.erase(pairedDim);
           unConvolvedDims.erase(pairedDim);
           strideAndDilationMapping.erase(pairedDim);

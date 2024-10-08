@@ -1603,7 +1603,7 @@ def remap_metavar_names(
 
                 if rhs_value.name in new_color.mapping:
                     # Same, but for a possible commit happening on the same line
-                    if new_color.color[rhs_value.name] == lhs_value.name:
+                    if new_color.mapping[rhs_value.name] == lhs_value.name:
                         continue
                     else:
                         break
