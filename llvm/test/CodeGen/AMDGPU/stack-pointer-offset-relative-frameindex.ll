@@ -22,7 +22,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, 0x400000
 ; MUBUF-NEXT:    s_mov_b32 s32, 0xc0000
-; MUBUF-NEXT:    v_add_nc_u32_e64 v40, 4, 0x4000
+; MUBUF-NEXT:    v_mov_b32_e32 v40, 0x4004
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, svm_eval_nodes@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, svm_eval_nodes@rel32@hi+12

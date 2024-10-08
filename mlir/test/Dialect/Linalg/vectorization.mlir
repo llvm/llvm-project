@@ -130,7 +130,7 @@ func.func @vectorize_dynamic_1d_broadcast(%arg0: tensor<?xf32>,
 // CHECK-LABEL:   @vectorize_dynamic_1d_broadcast
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = tensor.dim %{{.*}}, %[[VAL_3]] : tensor<?xf32>
-// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %{{.*}} {in_bounds = {{.*}}, permutation_map = #{{.*}}} : tensor<?xf32>, vector<4xf32>
+// CHECK:           %[[VAL_7:.*]] = vector.transfer_read %{{.*}} {permutation_map = #{{.*}}} : tensor<?xf32>, vector<4xf32>
 // CHECK:           %[[VAL_9:.*]] = vector.create_mask %[[VAL_4]] : vector<4xi1>
 // CHECK:           %[[VAL_10:.*]] = vector.mask %[[VAL_9]] { vector.transfer_read %{{.*}} {in_bounds = [true]} : tensor<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
 // CHECK:           %[[VAL_12:.*]] = vector.mask %[[VAL_9]] { vector.transfer_read %{{.*}} {in_bounds = [true]} : tensor<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
@@ -666,6 +666,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Input identical as the test in vectorization-with-patterns.mlir. Output is
+// different - vector sizes are inferred (rather than user-specified) and hence
+// masking was used.
+
 func.func @test_vectorize_pack(%arg0: tensor<32x8x16xf32>, %arg1: tensor<4x1x32x16x2xf32>) -> tensor<4x1x32x16x2xf32> {
   %pack = tensor.pack %arg0 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %arg1 : tensor<32x8x16xf32> -> tensor<4x1x32x16x2xf32>
   return %pack : tensor<4x1x32x16x2xf32>
@@ -691,6 +695,10 @@ module attributes {transform.with_named_sequence} {
 }
 
 // -----
+
+// Input identical as the test in vectorization-with-patterns.mlir. Output is
+// different - vector sizes are inferred (rather than user-specified) and hence
+// masking was used.
 
 func.func @test_vectorize_padded_pack(%arg0: tensor<32x7x15xf32>, %arg1: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
   %pad = arith.constant 0.000000e+00 : f32

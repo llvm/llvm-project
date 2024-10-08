@@ -2,6 +2,7 @@
 
 struct SomeStruct{};
 
+constexpr int get_value() { return 1; }
 void foo() {
 // CHECK: #pragma acc loop
 // CHECK-NEXT: for (;;)
@@ -57,4 +58,41 @@ void foo() {
 // CHECK-NEXT: ;
 #pragma acc loop private(i, array[1], array, array[1:2])
   for(;;);
+
+// CHECK: #pragma acc loop collapse(1)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop collapse(1)
+  for(;;);
+// CHECK: #pragma acc loop collapse(force:1)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop collapse(force:1)
+  for(;;);
+// CHECK: #pragma acc loop collapse(2)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop collapse(2)
+  for(;;)
+    for(;;);
+// CHECK: #pragma acc loop collapse(force:2)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop collapse(force:2)
+  for(;;)
+    for(;;);
+
+// CHECK: #pragma acc loop tile(1, 3, *, get_value())
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop tile(1, 3, *, get_value())
+  for(;;)
+    for(;;)
+      for(;;)
+        for(;;);
 }

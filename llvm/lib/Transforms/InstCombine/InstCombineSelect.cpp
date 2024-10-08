@@ -1410,6 +1410,44 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   return nullptr;
 }
 
+/// Fold the following code sequence:
+/// \code
+///   %XeqZ = icmp eq i64 %X, %Z
+///   %YeqZ = icmp eq i64 %Y, %Z
+///   %XeqY = icmp eq i64 %X, %Y
+///   %not.YeqZ = xor i1 %YeqZ, true
+///   %and = select i1 %not.YeqZ, i1 %XeqY, i1 false
+///   %equal = select i1 %XeqZ, i1 %YeqZ, i1 %and
+/// \code
+///
+/// into:
+///   %equal = icmp eq i64 %X, %Y
+Instruction *InstCombinerImpl::foldSelectEqualityTest(SelectInst &Sel) {
+  Value *X, *Y, *Z;
+  Value *XeqY, *XeqZ = Sel.getCondition(), *YeqZ = Sel.getTrueValue();
+
+  if (!match(XeqZ, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(X), m_Value(Z))))
+    return nullptr;
+
+  if (!match(YeqZ,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(Y), m_Specific(Z))))
+    std::swap(X, Z);
+
+  if (!match(YeqZ,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(Y), m_Specific(Z))))
+    return nullptr;
+
+  if (!match(Sel.getFalseValue(),
+             m_c_LogicalAnd(m_Not(m_Specific(YeqZ)), m_Value(XeqY))))
+    return nullptr;
+
+  if (!match(XeqY,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(X), m_Specific(Y))))
+    return nullptr;
+
+  return replaceInstUsesWith(Sel, XeqY);
+}
+
 // See if this is a pattern like:
 //   %old_cmp1 = icmp slt i32 %x, C2
 //   %old_replacement = select i1 %old_cmp1, i32 %target_low, i32 %target_high
@@ -4110,6 +4148,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return I;
 
   if (Instruction *I = foldSelectToCmp(SI))
+    return I;
+
+  if (Instruction *I = foldSelectEqualityTest(SI))
     return I;
 
   // Fold:

@@ -109,7 +109,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
     // a symbol value as-is (.dynamic section, `Elf_Ehdr::e_entry`
     // field etc) do the same trick as compiler uses to mark microMIPS
     // for CPU - set the less-significant bit.
-    if (ctx.arg.emachine == EM_MIPS && isMicroMips() &&
+    if (ctx.arg.emachine == EM_MIPS && isMicroMips(ctx) &&
         ((sym.stOther & STO_MIPS_MICROMIPS) || sym.hasFlag(NEEDS_COPY)))
       va |= 1;
 
@@ -145,39 +145,39 @@ uint64_t Symbol::getVA(int64_t addend) const {
   return getSymVA(*this, addend) + addend;
 }
 
-uint64_t Symbol::getGotVA() const {
+uint64_t Symbol::getGotVA(Ctx &ctx) const {
   if (gotInIgot)
-    return ctx.in.igotPlt->getVA() + getGotPltOffset();
-  return ctx.in.got->getVA() + getGotOffset();
+    return ctx.in.igotPlt->getVA() + getGotPltOffset(ctx);
+  return ctx.in.got->getVA() + getGotOffset(ctx);
 }
 
-uint64_t Symbol::getGotOffset() const {
-  return getGotIdx() * ctx.target->gotEntrySize;
+uint64_t Symbol::getGotOffset(Ctx &ctx) const {
+  return getGotIdx(ctx) * ctx.target->gotEntrySize;
 }
 
-uint64_t Symbol::getGotPltVA() const {
+uint64_t Symbol::getGotPltVA(Ctx &ctx) const {
   if (isInIplt)
-    return ctx.in.igotPlt->getVA() + getGotPltOffset();
-  return ctx.in.gotPlt->getVA() + getGotPltOffset();
+    return ctx.in.igotPlt->getVA() + getGotPltOffset(ctx);
+  return ctx.in.gotPlt->getVA() + getGotPltOffset(ctx);
 }
 
-uint64_t Symbol::getGotPltOffset() const {
+uint64_t Symbol::getGotPltOffset(Ctx &ctx) const {
   if (isInIplt)
-    return getPltIdx() * ctx.target->gotEntrySize;
-  return (getPltIdx() + ctx.target->gotPltHeaderEntriesNum) *
+    return getPltIdx(ctx) * ctx.target->gotEntrySize;
+  return (getPltIdx(ctx) + ctx.target->gotPltHeaderEntriesNum) *
          ctx.target->gotEntrySize;
 }
 
-uint64_t Symbol::getPltVA() const {
-  uint64_t outVA =
-      isInIplt ? ctx.in.iplt->getVA() + getPltIdx() * ctx.target->ipltEntrySize
-               : ctx.in.plt->getVA() + ctx.in.plt->headerSize +
-                     getPltIdx() * ctx.target->pltEntrySize;
+uint64_t Symbol::getPltVA(Ctx &ctx) const {
+  uint64_t outVA = isInIplt ? ctx.in.iplt->getVA() +
+                                  getPltIdx(ctx) * ctx.target->ipltEntrySize
+                            : ctx.in.plt->getVA() + ctx.in.plt->headerSize +
+                                  getPltIdx(ctx) * ctx.target->pltEntrySize;
 
   // While linking microMIPS code PLT code are always microMIPS
   // code. Set the less-significant bit to track that fact.
   // See detailed comment in the `getSymVA` function.
-  if (ctx.arg.emachine == EM_MIPS && isMicroMips())
+  if (ctx.arg.emachine == EM_MIPS && isMicroMips(ctx))
     outVA |= 1;
   return outVA;
 }
@@ -225,7 +225,7 @@ void Symbol::parseSymbolVersion() {
   if (isDefault)
     verstr = verstr.substr(1);
 
-  for (const VersionDefinition &ver : namedVersionDefs()) {
+  for (const VersionDefinition &ver : namedVersionDefs(ctx)) {
     if (ver.name != verstr)
       continue;
 
@@ -334,7 +334,7 @@ void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
-bool elf::computeIsPreemptible(const Symbol &sym) {
+bool elf::computeIsPreemptible(Ctx &ctx, const Symbol &sym) {
   assert(!sym.isLocal() || sym.isPlaceholder());
 
   // Only symbols with default visibility that appear in dynsym can be
@@ -511,7 +511,7 @@ bool Symbol::shouldReplace(const Defined &other) const {
   return !isGlobal() && other.isGlobal();
 }
 
-void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
+void elf::reportDuplicate(Ctx &ctx, const Symbol &sym, const InputFile *newFile,
                           InputSectionBase *errSec, uint64_t errOffset) {
   if (ctx.arg.allowMultipleDefinition)
     return;
@@ -555,7 +555,7 @@ void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
 
 void Symbol::checkDuplicate(const Defined &other) const {
   if (isDefined() && !isWeak() && !other.isWeak())
-    reportDuplicate(*this, other.file,
+    reportDuplicate(ctx, *this, other.file,
                     dyn_cast_or_null<InputSectionBase>(other.section),
                     other.value);
 }
