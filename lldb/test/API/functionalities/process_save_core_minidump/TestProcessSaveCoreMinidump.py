@@ -3,6 +3,7 @@ Test saving a mini dump.
 """
 
 import os
+
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -466,6 +467,27 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                     mem_tuple not in range_set, "Duplicate memory region found"
                 )
                 range_set.add(mem_tuple)
+        finally:
+            if os.path.isfile(custom_file):
+                os.unlink(custom_file)
+
+    def save_core_one_thread_one_heap(self, process, region_index):
+        try:
+            custom_file = self.getBuildArtifact("core.one_thread_one_heap.dmp")
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            thread = process.GetThreadAtIndex(0)
+            options.save_thread_with_heaps(thread)
+
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success())
+            core_target = self.dbg.CreateTarget(None)
+            core_proc = core_target.LoadCore(custom_file)
+            # proc/pid maps prevent us from checking the number of regions, but
+            # this is mostly a smoke test for the extension.
+            self.assertEqual(core_proc.GetNumThreads(), 1)
         finally:
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)

@@ -26,6 +26,7 @@
 %include "./interface/SBCommunicationDocstrings.i"
 %include "./interface/SBCompileUnitDocstrings.i"
 %include "./interface/SBSaveCoreOptionsDocstrings.i"
+#include "./interface/SBSaveCoreOptionsExtensions.i"
 %include "./interface/SBDataDocstrings.i"
 %include "./interface/SBDebuggerDocstrings.i"
 %include "./interface/SBDeclarationDocstrings.i"
