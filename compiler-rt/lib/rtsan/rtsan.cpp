@@ -46,8 +46,8 @@ static InitializationState GetInitializationState() {
       atomic_load(&rtsan_initialized, memory_order_acquire));
 }
 
-static auto OnViolationAction(const BufferedStackTrace &stack,
-                              const DiagnosticsInfo &info) {
+static auto OnViolation(const BufferedStackTrace &stack,
+                        const DiagnosticsInfo &info) {
   IncrementTotalErrorCount();
 
   // If in the future we interop with other sanitizers, we will
@@ -134,7 +134,7 @@ __rtsan_notify_intercepted_call(const char *func_name) {
   GET_CALLER_PC_BP;
   ExpectNotRealtime(GetContextForThisThread(),
                     {DiagnosticsInfoType::InterceptedCall, func_name, pc, bp},
-                    OnViolationAction);
+                    OnViolation);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void
@@ -143,7 +143,7 @@ __rtsan_notify_blocking_call(const char *func_name) {
   GET_CALLER_PC_BP;
   ExpectNotRealtime(GetContextForThisThread(),
                     {DiagnosticsInfoType::BlockingCall, func_name, pc, bp},
-                    OnViolationAction);
+                    OnViolation);
 }
 
 } // extern "C"
