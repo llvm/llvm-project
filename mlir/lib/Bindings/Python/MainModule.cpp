@@ -22,7 +22,7 @@ using namespace mlir::python;
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-PYBIND11_MODULE(_mlir, m) {
+PYBIND11_MODULE(_mlir, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR Python Native Extension";
 
   py::class_<PyGlobals>(m, "_Globals", py::module_local())

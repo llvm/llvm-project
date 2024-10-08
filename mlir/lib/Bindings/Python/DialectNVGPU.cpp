@@ -34,7 +34,7 @@ static void populateDialectNVGPUSubmodule(const pybind11::module &m) {
       py::arg("ctx") = py::none());
 }
 
-PYBIND11_MODULE(_mlirDialectsNVGPU, m) {
+PYBIND11_MODULE(_mlirDialectsNVGPU, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR NVGPU dialect.";
 
   populateDialectNVGPUSubmodule(m);

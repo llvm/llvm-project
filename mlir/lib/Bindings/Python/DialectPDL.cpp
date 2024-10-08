@@ -100,7 +100,7 @@ void populateDialectPDLSubmodule(const pybind11::module &m) {
       py::arg("context") = py::none());
 }
 
-PYBIND11_MODULE(_mlirDialectsPDL, m) {
+PYBIND11_MODULE(_mlirDialectsPDL, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR PDL dialect.";
   populateDialectPDLSubmodule(m);
 }

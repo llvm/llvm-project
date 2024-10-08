@@ -64,7 +64,7 @@ private:
 } // namespace
 
 /// Create the `mlir.execution_engine` module here.
-PYBIND11_MODULE(_mlirExecutionEngine, m) {
+PYBIND11_MODULE(_mlirExecutionEngine, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR Execution Engine";
 
   //----------------------------------------------------------------------------

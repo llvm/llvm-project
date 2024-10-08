@@ -21,7 +21,7 @@ static void populateDialectLinalgSubmodule(py::module m) {
       "op.");
 }
 
-PYBIND11_MODULE(_mlirDialectsLinalg, m) {
+PYBIND11_MODULE(_mlirDialectsLinalg, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR Linalg dialect.";
 
   populateDialectLinalgSubmodule(m);

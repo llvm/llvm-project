@@ -143,7 +143,7 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
       });
 }
 
-PYBIND11_MODULE(_mlirDialectsSparseTensor, m) {
+PYBIND11_MODULE(_mlirDialectsSparseTensor, m, py::mod_gil_not_used()) {
   m.doc() = "MLIR SparseTensor dialect.";
   populateDialectSparseTensorSubmodule(m);
 }
