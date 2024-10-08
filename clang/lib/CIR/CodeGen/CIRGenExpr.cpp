@@ -128,10 +128,6 @@ static Address buildPointerWithAlignment(const Expr *expr,
       cgf.CGM.buildExplicitCastExprType(ECE, &cgf);
 
     switch (CE->getCastKind()) {
-    default: {
-      llvm::errs() << CE->getCastKindName() << "\n";
-      assert(0 && "not implemented");
-    }
     // Non-converting casts (but not C's implicit conversion from void*).
     case CK_BitCast:
     case CK_NoOp:
@@ -183,12 +179,6 @@ static Address buildPointerWithAlignment(const Expr *expr,
       }
       break;
 
-    // Nothing to do here...
-    case CK_LValueToRValue:
-    case CK_NullToPointer:
-    case CK_IntegralToPointer:
-      break;
-
     // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
     case CK_ArrayToPointerDecay:
       return cgf.buildArrayToPointerDecay(CE->getSubExpr());
@@ -205,6 +195,11 @@ static Address buildPointerWithAlignment(const Expr *expr,
           Addr, Derived, CE->path_begin(), CE->path_end(),
           cgf.shouldNullCheckClassCastValue(CE), CE->getExprLoc());
     }
+
+    // TODO: Is there any reason to treat base-to-derived conversions
+    // specially?
+    default:
+      break;
     }
   }
 
