@@ -91,5 +91,5 @@ class TestSwiftDeploymentTarget(TestBase):
         self.filecheck(
             f'platform shell cat "{log}"', __file__, "-check-prefix=CHECK-PRECISE"
         )
-#       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::CreateInstance() -- Fully specified target triple {{.*}}-apple-macosx11.1.0
+#       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::CreateInstance() -- Fully specified triple {{.*}}-apple-macosx11.1.0
 #       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::SetTriple("{{.*}}-apple-macosx11.1.0")
