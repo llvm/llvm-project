@@ -15,31 +15,6 @@ using namespace llvm;
 
 namespace {
 
-// Exhaustive testing is expensive in debug builds, so we only do it when
-// optimizations are enabled. We don't use EXPENSIVE_CHECKS here because it's
-// not enabled by default in optimized builds.
-#if defined(__GNUC__)
-// GCC and GCC-compatible compilers define __OPTIMIZE__ when optimizations are
-// enabled.
-#if defined(__OPTIMIZE__)
-#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 1
-#else
-#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 0
-#endif
-#elif defined(_MSC_VER)
-// MSVC doesn't have a predefined macro indicating if optimizations are enabled.
-// Use _DEBUG instead. This macro actually corresponds to the choice between
-// debug and release CRTs, but it is a reasonable proxy.
-#if defined(_DEBUG)
-#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 0
-#else
-#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 1
-#endif
-#else
-// Otherwise, for an unknown compiler, assume this is an optimized build.
-#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 1
-#endif
-
 class ConstantFPRangeTest : public ::testing::Test {
 protected:
   static const fltSemantics &Sem;
@@ -460,7 +435,7 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
   EXPECT_EQ(SomePos.getSignBit(), false);
   EXPECT_EQ(SomeNeg.getSignBit(), true);
 
-#if LLVM_ENABLE_CFR_EXPENSIVE_CHECKS
+#if defined(EXPENSIVE_CHECKS)
   EnumerateConstantFPRanges(
       [](const ConstantFPRange &CR) {
         unsigned Mask = fcNone;
@@ -527,7 +502,36 @@ TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
 #endif
 
 TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
-#if LLVM_ENABLE_CFR_EXPENSIVE_CHECKS
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OLE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat(2.0)));
+  EXPECT_EQ(
+      ConstantFPRange::makeAllowedFCmpRegion(
+          FCmpInst::FCMP_OLT,
+          ConstantFPRange::getNonNaN(APFloat(1.0),
+                                     APFloat::getInf(Sem, /*Negative=*/false))),
+      ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                 APFloat::getLargest(Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::makeAllowedFCmpRegion(
+          FCmpInst::FCMP_OGT,
+          ConstantFPRange::getNonNaN(APFloat::getZero(Sem, /*Negative=*/true),
+                                     APFloat(2.0))),
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/false),
+                                 APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OGE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(
+                APFloat(1.0), APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeAllowedFCmpRegion(
+                FCmpInst::FCMP_OEQ,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0)));
+
+#if defined(EXPENSIVE_CHECKS)
   for (auto Pred : FCmpInst::predicates()) {
     EnumerateConstantFPRanges(
         [Pred](const ConstantFPRange &CR) {
