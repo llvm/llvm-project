@@ -16,6 +16,7 @@ static_library("Vectorize") {
     "SandboxVectorizer/DependencyGraph.cpp",
     "SandboxVectorizer/Passes/BottomUpVec.cpp",
     "SandboxVectorizer/SandboxVectorizer.cpp",
+    "SandboxVectorizer/SeedCollector.cpp",
     "VPlan.cpp",
     "VPlanAnalysis.cpp",
     "VPlanHCFGBuilder.cpp",
