@@ -2725,11 +2725,6 @@ static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
   if (matchOpWithOpEqZero(X, Y))
     return true;
 
-  // TODO: Move this case into isKnownNonEqual().
-  if (auto *C = dyn_cast<Constant>(X))
-    if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Q, Depth))
-      return true;
-
   return ::isKnownNonEqual(X, Y, DemandedElts, Depth, Q);
 }
 
@@ -3565,25 +3560,17 @@ static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
     return false;
 
   SmallPtrSet<const BasicBlock *, 8> VisitedBBs;
-  bool UsedFullRecursion = false;
   for (const BasicBlock *IncomBB : PN1->blocks()) {
     if (!VisitedBBs.insert(IncomBB).second)
       continue; // Don't reprocess blocks that we have dealt with already.
     const Value *IV1 = PN1->getIncomingValueForBlock(IncomBB);
     const Value *IV2 = PN2->getIncomingValueForBlock(IncomBB);
-    const APInt *C1, *C2;
-    if (match(IV1, m_APInt(C1)) && match(IV2, m_APInt(C2)) && *C1 != *C2)
-      continue;
-
-    // Only one pair of phi operands is allowed for full recursion.
-    if (UsedFullRecursion)
-      return false;
-
+    const unsigned PhiRecursionLimit =
+        std::max(Depth + 1, MaxAnalysisRecursionDepth - 2);
     SimplifyQuery RecQ = Q.getWithoutCondContext();
     RecQ.CxtI = IncomBB->getTerminator();
-    if (!isKnownNonEqual(IV1, IV2, DemandedElts, Depth + 1, RecQ))
+    if (!isKnownNonEqual(IV1, IV2, DemandedElts, PhiRecursionLimit, RecQ))
       return false;
-    UsedFullRecursion = true;
   }
   return true;
 }
@@ -3669,6 +3656,12 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
   if (V1->getType() != V2->getType())
     // We can't look through casts yet.
     return false;
+
+  if (isa<Constant>(V2))
+    std::swap(V1, V2);
+  if (auto *C = dyn_cast<Constant>(V1))
+    if (C->isNullValue() && isKnownNonZero(V2, DemandedElts, Q, Depth))
+      return true;
 
   if (Depth >= MaxAnalysisRecursionDepth)
     return false;
