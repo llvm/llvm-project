@@ -91,13 +91,13 @@ Token::Type Token::getTokenType(char Identifier) {
 
 // Function to check if there's no meaningful text behind
 bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
-  if(Idx == 0)
+  if (Idx == 0)
     return false;
-  
+
   int PrevIdx = Idx - 1;
   if (Tokens[PrevIdx].getType() != Token::Type::Text)
     return false;
-  
+
   const Token &PrevToken = Tokens[Idx - 1];
   StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v\t");
   // We make an exception for when previous token is empty
@@ -113,11 +113,11 @@ bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
 bool noTextAhead(size_t Idx, const SmallVector<Token, 0> &Tokens) {
   if (Idx >= Tokens.size() - 1)
     return false;
-  
+
   int PrevIdx = Idx + 1;
   if (Tokens[Idx + 1].getType() != Token::Type::Text)
     return false;
-  
+
   const Token &NextToken = Tokens[Idx + 1];
   StringRef TokenBody = NextToken.getRawBody().ltrim(" ");
   return TokenBody.starts_with("\r\n") || TokenBody.starts_with("\n");
@@ -136,7 +136,7 @@ bool requiresCleanUp(Token::Type T) {
 //  "{{! Comment }} \nLine 2"
 // would be considered as no text ahead and should be render as
 //  " Line 2"
-void stripTokenAhead(SmallVector<Token, 0>& Tokens, size_t Idx) {
+void stripTokenAhead(SmallVector<Token, 0> &Tokens, size_t Idx) {
   Token &NextToken = Tokens[Idx + 1];
   StringRef NextTokenBody = NextToken.getTokenBody();
   // cut off the leading newline which could be \n or \r\n
@@ -154,10 +154,8 @@ void stripTokenAhead(SmallVector<Token, 0>& Tokens, size_t Idx) {
 //  "A"
 // The exception for this is partial tag which requires us to
 // keep track of the indentation once it's rendered
-void stripTokenBefore(SmallVector<Token, 0>& Tokens, 
-                      size_t Idx,
-                      Token& CurrentToken,
-                      Token::Type CurrentType) {
+void stripTokenBefore(SmallVector<Token, 0> &Tokens, size_t Idx,
+                      Token &CurrentToken, Token::Type CurrentType) {
   Token &PrevToken = Tokens[Idx - 1];
   StringRef PrevTokenBody = PrevToken.getTokenBody();
   StringRef Unindented = PrevTokenBody.rtrim(" \t\v");
@@ -228,20 +226,20 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
     if (!RequiresCleanUp)
       continue;
 
-    // We adjust the token body if there's no text behind or ahead. 
+    // We adjust the token body if there's no text behind or ahead.
     // A token is considered to have no text ahead if the right of the previous
     // token is a newline followed by spaces.
-    // A token is considered to have no text behind if the left of the next 
+    // A token is considered to have no text behind if the left of the next
     // token is spaces followed by a newline.
     // eg.
     //  "Line 1\n {{#section}} \n Line 2 \n {{/section}} \n Line 3"
     bool NoTextBehind = noTextBehind(Idx, Tokens);
     bool NoTextAhead = noTextAhead(Idx, Tokens);
-    
+
     if ((NoTextBehind && NoTextAhead) || (NoTextAhead && Idx == 0)) {
       stripTokenAhead(Tokens, Idx);
     }
-    
+
     if (((NoTextBehind && NoTextAhead) || (NoTextBehind && Idx == LastIdx))) {
       stripTokenBefore(Tokens, Idx, CurrentToken, CurrentType);
     }
@@ -346,7 +344,7 @@ StringRef Template::render(Value &Data) {
 void Template::registerPartial(StringRef Name, StringRef Partial) {
   Parser P = Parser(Partial, Allocator);
   ASTNode *PartialTree = P.parse();
-  PartialTree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas, 
+  PartialTree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas,
                          Escapes);
   Partials.insert(std::make_pair(Name, PartialTree));
 }
@@ -369,8 +367,7 @@ Template::Template(StringRef TemplateStr) {
                                             {'"', "&quot;"},
                                             {'\'', "&#39;"}};
   registerEscape(HtmlEntities);
-  Tree->setUpNode(LocalAllocator,
-                  Partials, Lambdas, SectionLambdas, Escapes);
+  Tree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas, Escapes);
 }
 
 void toJsonString(const Value &Data, SmallString<0> &Output) {
@@ -531,7 +528,7 @@ void ASTNode::renderLambdas(const Value &Contexts, SmallString<0> &Output,
   toJsonString(LambdaResult, LambdaStr);
   Parser P = Parser(LambdaStr, *Allocator);
   ASTNode *LambdaNode = P.parse();
-  LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas, 
+  LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
                         *Escapes);
   LambdaNode->render(Contexts, Output);
   if (T == Variable)
@@ -548,7 +545,7 @@ void ASTNode::renderSectionLambdas(const Value &Contexts,
   toJsonString(Return, LambdaStr);
   Parser P = Parser(LambdaStr, *Allocator);
   ASTNode *LambdaNode = P.parse();
-  LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas, 
+  LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
                         *Escapes);
   LambdaNode->render(Contexts, Output);
   return;
@@ -568,4 +565,3 @@ void ASTNode::setUpNode(llvm::BumpPtrAllocator &Alloc,
   for (ASTNode *Child : Children)
     Child->setUpNode(Alloc, Par, L, SC, E);
 }
-
