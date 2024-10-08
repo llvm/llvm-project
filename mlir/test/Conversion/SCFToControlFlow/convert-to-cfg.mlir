@@ -622,8 +622,8 @@ func.func @func_execute_region_elim_multi_yield() {
 
 // CHECK-LABEL: @index_switch
 func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
-  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i32
-  // CHECK: cf.switch %[[CASE]] : i32
+  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i64
+  // CHECK: cf.switch %[[CASE]] : i64
   // CHECK-NEXT: default: ^[[DEFAULT:.+]],
   // CHECK-NEXT: 0: ^[[bb1:.+]],
   // CHECK-NEXT: 1: ^[[bb2:.+]]
@@ -646,6 +646,23 @@ func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
   // CHECK: ^[[bb4]](%[[V:.*]]: i32
   // CHECK-NEXT: return %[[V]]
   return %0 : i32
+}
+
+// CHECK-LABEL: @index_switch_large_case
+func.func @index_switch_large_case(%i : index) {
+  // CHECK: cf.switch
+  // CHECK: 4294967296: ^[[bb1:.+]]
+  scf.index_switch %i
+  case 4294967296 { // 2^32
+    // CHECK: ^[[bb1]]:
+    // CHECK-NEXT: "test.op"
+    "test.op"() : () -> ()
+    scf.yield
+  }
+  default {
+    scf.yield
+  }
+  return
 }
 
 // Note: scf.forall is lowered to scf.parallel, which is currently lowered to
