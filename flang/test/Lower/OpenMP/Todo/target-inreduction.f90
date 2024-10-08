@@ -5,9 +5,11 @@
 ! `mergeable` clause
 !===============================================================================
 
-! CHECK: not yet implemented: Unhandled clause MERGEABLE in TASK construct
-subroutine omp_task_mergeable()
-  !$omp task mergeable
-  call foo()
-  !$omp end task
-end subroutine omp_task_mergeable
+! CHECK: not yet implemented: Unhandled clause IN_REDUCTION in TARGET construct
+subroutine omp_targer_inreduction()
+  integer i
+  i = 0
+  !$omp target in_reduction(+:i)
+  i = i + 1
+  !$omp end target
+end subroutine omp_targer_inreduction
