@@ -2756,7 +2756,8 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     }
 
     if (Header)
-      OS << "class " << R.getName() << "Attr : public " << SuperName << " {\n";
+      OS << "class CLANG_ABI " << R.getName() << "Attr : public " << SuperName
+         << " {\n";
     else
       OS << "\n// " << R.getName() << "Attr implementation\n\n";
 
@@ -3214,7 +3215,8 @@ void clang::EmitClangAttrClass(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' definitions", OS, Records);
 
   OS << "#ifndef LLVM_CLANG_ATTR_CLASSES_INC\n";
-  OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n\n";
+  OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n";
+  OS << "#include \"clang/Support/Compiler.h\"\n\n";
 
   emitAttributes(Records, OS, true);
 
