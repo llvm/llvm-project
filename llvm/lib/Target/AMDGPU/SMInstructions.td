@@ -475,6 +475,11 @@ def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_
 }
 } // end let SubtargetPredicate = isGFX12Plus
 
+let SubtargetPredicate = isGFX13Plus in {
+def S_EVICT_INST        : SM_Prefetch_Pseudo <"s_evict_inst", SReg_64, 1>;
+def S_EVICT_INST_PC_REL : SM_Prefetch_Pseudo <"s_evict_inst_pc_rel", SReg_64, 0>;
+} // end let SubtargetPredicate = isGFX13Plus
+
 //===----------------------------------------------------------------------===//
 // Targets
 //===----------------------------------------------------------------------===//
@@ -1610,6 +1615,9 @@ def S_PREFETCH_INST_PC_REL_gfx13 : SMEM_Real_Prefetch_gfx13<0x23, S_PREFETCH_INS
 def S_PREFETCH_DATA_gfx13        : SMEM_Real_Prefetch_gfx13<0x2c, S_PREFETCH_DATA>;
 def S_BUFFER_PREFETCH_DATA_gfx13 : SMEM_Real_Prefetch_gfx13<0x2d, S_BUFFER_PREFETCH_DATA>;
 def S_PREFETCH_DATA_PC_REL_gfx13 : SMEM_Real_Prefetch_gfx13<0x2e, S_PREFETCH_DATA_PC_REL>;
+
+def S_EVICT_INST_gfx13           : SMEM_Real_Prefetch_gfx13<0x28, S_EVICT_INST>;
+def S_EVICT_INST_PC_REL_gfx13    : SMEM_Real_Prefetch_gfx13<0x29, S_EVICT_INST_PC_REL>;
 
 multiclass SMEM_Real_Probe_gfx13<bits<6> op> {
   defvar ps = NAME;
