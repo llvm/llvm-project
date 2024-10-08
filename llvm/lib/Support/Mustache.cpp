@@ -287,7 +287,7 @@ void Parser::parseMustache(ASTNode *Parent) {
         for (std::size_t I = Start + 1; I < End - 1; I++)
           RawBody += Tokens[I].getRawBody();
       } else if (Start + 1 == End - 1) {
-        RawBody = Tokens[Start + 1].getRawBody();
+        RawBody = Tokens[Start].getRawBody();
       }
       CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
@@ -303,7 +303,7 @@ void Parser::parseMustache(ASTNode *Parent) {
         for (size_t Idx = Start + 1; Idx < End - 1; Idx++)
           RawBody += Tokens[Idx].getRawBody();
       } else if (Start + 1 == End - 1) {
-        RawBody = Tokens[Start + 1].getRawBody();
+        RawBody = Tokens[Start].getRawBody();
       }
       CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
@@ -388,7 +388,7 @@ void ASTNode::render(Value Data, SmallString<0> &Output) {
   case Partial: {
     auto Partial = Partials->find(Accessor[0]);
     if (Partial != Partials->end())
-      renderPartial(Context, Output, Partial->getValue());
+      renderPartial(Data, Output, Partial->getValue());
     return;
   }
   case Variable: {
@@ -439,6 +439,7 @@ void ASTNode::render(Value Data, SmallString<0> &Output) {
       return;
 
     renderChild(Context, Output);
+    return;
   }
   }
   llvm_unreachable("Invalid ASTNode type");
@@ -491,6 +492,8 @@ void ASTNode::renderChild(Value &Context, SmallString<0> &Output) {
 
 void ASTNode::renderPartial(Value &Context, SmallString<0> &Output,
                             ASTNode *Partial) {
+  Partial->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
+                     *Escapes);
   Partial->render(Context, Output);
   addIndentation(Output, Indentation);
 }
