@@ -9051,6 +9051,10 @@ def err_global_call_not_config : Error<
 def err_ref_bad_target : Error<
   "reference to %select{__device__|__global__|__host__|__host__ __device__}0 "
   "%select{function|variable}1 %2 in %select{__device__|__global__|__host__|__host__ __device__}3 function">;
+def warn_target_specfier_ignored : Warning<
+  "target attribute has been ignored for overload resolution; "
+  "move the target attribute to the beginning of the declaration to use it for overload resolution">,
+  InGroup<IgnoredAttributes>;
 def note_cuda_const_var_unpromoted : Note<
   "const variable cannot be emitted on device side due to dynamic initialization">;
 def note_cuda_host_var : Note<

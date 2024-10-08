@@ -21,6 +21,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1133,6 +1134,13 @@ bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
 Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     ParsedAttributes &Attrs, ParsedAttributes &DeclSpecAttrs,
     ParsingDeclSpec &DS, AccessSpecifier AS) {
+  SemaCUDA::CUDATargetContextRAII CTCRAII(Actions.CUDA(),
+                                          SemaCUDA::CTCK_Declaration);
+  if (Actions.getLangOpts().CUDA) {
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(Attrs);
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(DeclSpecAttrs);
+  }
+
   // Because we assume that the DeclSpec has not yet been initialised, we simply
   // overwrite the source range and attribute the provided leading declspec
   // attributes.

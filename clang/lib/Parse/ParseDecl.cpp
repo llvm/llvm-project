@@ -336,6 +336,9 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
   }
 
   Attrs.Range = SourceRange(StartLoc, EndLoc);
+
+  if (Actions.getLangOpts().CUDA)
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(Attrs);
 }
 
 /// Determine whether the given attribute has an identifier argument.
@@ -1028,6 +1031,9 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
   }
 
   Attrs.Range = SourceRange(StartLoc, EndLoc);
+
+  if (Actions.getLangOpts().CUDA)
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(Attrs);
 }
 
 void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
@@ -2047,6 +2053,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
   // Must temporarily exit the objective-c container scope for
   // parsing c none objective-c decls.
   ObjCDeclContextSwitch ObjCDC(*this);
+
+  SemaCUDA::CUDATargetContextRAII CTCRAII(Actions.CUDA(),
+                                          SemaCUDA::CTCK_Declaration);
+  if (Actions.getLangOpts().CUDA) {
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(DeclAttrs);
+    Actions.CUDA().CurCUDATargetCtx.tryRegisterTargetAttrs(DeclSpecAttrs);
+  }
 
   Decl *SingleDecl = nullptr;
   switch (Tok.getKind()) {
