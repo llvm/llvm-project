@@ -8,8 +8,8 @@
 ## correctly handle situations where FAKE_USE has additional `killed` operands
 ## added by other passes.
 
-# CHECK: DELETING: FAKE_USE renamable $eax
 # CHECK: DELETING: renamable $rax = MOV64rm $rbp
+# CHECK: DELETING: FAKE_USE renamable $eax
 
 ## Also verify that the store to the stack slot still exists.
 
