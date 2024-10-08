@@ -35,7 +35,8 @@ public:
   using Local = Scope::Local;
 
   EvaluationResult interpretExpr(const Expr *E,
-                                 bool ConvertResultToRValue = false);
+                                 bool ConvertResultToRValue = false,
+                                 bool DestroyToplevelScope = false);
   EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
 
   /// Clean up all resources.
@@ -54,7 +55,7 @@ protected:
   LabelTy getLabel();
 
   /// Methods implemented by the compiler.
-  virtual bool visitExpr(const Expr *E) = 0;
+  virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
   virtual bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
 

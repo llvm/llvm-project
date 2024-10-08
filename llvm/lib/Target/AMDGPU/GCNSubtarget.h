@@ -215,7 +215,6 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
-  bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
 
@@ -239,6 +238,7 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
+  bool HasVmemWriteVgprInOrder = false;
 
   bool RequiresCOV6 = false;
 
@@ -1246,6 +1246,8 @@ public:
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
@@ -1277,13 +1279,13 @@ public:
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
-  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
-
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
 
   bool hasRequiredExportPriority() const { return HasRequiredExportPriority; }
+
+  bool hasVmemWriteVgprInOrder() const { return HasVmemWriteVgprInOrder; }
 
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
@@ -1581,6 +1583,12 @@ public:
     // Currently all targets that support the dealloc VGPRs message also require
     // the nop.
     return true;
+  }
+
+  bool requiresDisjointEarlyClobberAndUndef() const override {
+    // AMDGPU doesn't care if early-clobber and undef operands are allocated
+    // to the same register.
+    return false;
   }
 };
 

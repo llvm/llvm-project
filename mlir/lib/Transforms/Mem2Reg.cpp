@@ -13,6 +13,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
@@ -255,6 +256,18 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // delete itself). We thus need to start from the use of the slot pointer and
   // propagate further requests through the forward slice.
 
+  // Because this pass currently only supports analysing the parent region of
+  // the slot pointer, if a promotable memory op that needs promotion is within
+  // a graph region, the slot may only be used in a graph region and should
+  // therefore be ignored.
+  Region *slotPtrRegion = slot.ptr.getParentRegion();
+  auto slotPtrRegionOp =
+      dyn_cast<RegionKindInterface>(slotPtrRegion->getParentOp());
+  if (slotPtrRegionOp &&
+      slotPtrRegionOp.getRegionKind(slotPtrRegion->getRegionNumber()) ==
+          RegionKind::Graph)
+    return failure();
+
   // First insert that all immediate users of the slot pointer must no longer
   // use it.
   for (OpOperand &use : slot.ptr.getUses()) {
@@ -272,10 +285,11 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
   for (Operation *user : forwardSlice) {
     // If the next operation has no blocking uses, everything is fine.
-    if (!userToBlockingUses.contains(user))
+    auto it = userToBlockingUses.find(user);
+    if (it == userToBlockingUses.end())
       continue;
 
-    SmallPtrSet<OpOperand *, 4> &blockingUses = userToBlockingUses[user];
+    SmallPtrSet<OpOperand *, 4> &blockingUses = it->second;
 
     SmallVector<OpOperand *> newBlockingUses;
     // If the operation decides it cannot deal with removing the blocking uses,
@@ -330,9 +344,8 @@ SmallPtrSet<Block *, 16> MemorySlotPromotionAnalyzer::computeSlotLiveIn(
   // blocks.
   SmallPtrSet<Block *, 16> visited;
   for (Operation *user : slot.ptr.getUsers()) {
-    if (visited.contains(user->getBlock()))
+    if (!visited.insert(user->getBlock()).second)
       continue;
-    visited.insert(user->getBlock());
 
     for (Operation &op : user->getBlock()->getOperations()) {
       if (auto memOp = dyn_cast<PromotableMemOpInterface>(op)) {

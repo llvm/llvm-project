@@ -45,7 +45,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _CharT* __statically_widen(const char* __s
 #    define _LIBCPP_STATICALLY_WIDEN(_CharT, __str) ::std::__statically_widen<_CharT>(__str)
 #  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

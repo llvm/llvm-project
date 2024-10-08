@@ -219,7 +219,6 @@ if (LIBCXX_ENABLE_SHARED)
 
     # TODO: These exports controls should not be tied to whether we re-export libc++abi symbols
     target_link_libraries(cxx_shared PRIVATE
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
   endif()
@@ -309,7 +308,6 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
-add_dependencies(cxx-test-depends cxx)
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
@@ -357,7 +355,6 @@ set_target_properties(cxx_experimental
 )
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
-add_dependencies(cxx-test-depends cxx_experimental)
 
 if (LIBCXX_INSTALL_SHARED_LIBRARY)
   install(TARGETS cxx_shared

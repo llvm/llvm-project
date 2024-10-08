@@ -392,6 +392,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -533,6 +548,21 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
 
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
@@ -676,6 +706,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -818,6 +863,21 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
 
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
@@ -1081,6 +1141,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -1221,6 +1296,21 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
+
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
 
@@ -1360,6 +1450,21 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionDeclarations`` Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    are aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned int f1(void);
+      void         f2(void);
+      size_t       f3(void);
+
+      false:
+      unsigned int f1(void);
+      void f2(void);
+      size_t f3(void);
 
   * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     aligned.
@@ -1617,7 +1722,7 @@ the configuration (without a prefix: ``Auto``).
 **AllowAllParametersOfDeclarationOnNextLine** (``Boolean``) :versionbadge:`clang-format 3.3` :ref:`¶ <AllowAllParametersOfDeclarationOnNextLine>`
   If the function declaration doesn't fit on a line,
   allow putting all parameters of a function declaration onto
-  the next line even if ``BinPackParameters`` is ``false``.
+  the next line even if ``BinPackParameters`` is ``OnePerLine``.
 
   .. code-block:: c++
 
@@ -2067,20 +2172,41 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BinPackParameters:
 
-**BinPackParameters** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
-  If ``false``, a function declaration's or function definition's
-  parameters will either all be on the same line or will have one line each.
+**BinPackParameters** (``BinPackParametersStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
+  The bin pack parameters style to use.
 
-  .. code-block:: c++
+  Possible values:
 
-    true:
-    void f(int aaaaaaaaaaaaaaaaaaaa, int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
+  * ``BPPS_BinPack`` (in configuration: ``BinPack``)
+    Bin-pack parameters.
 
-    false:
-    void f(int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaa,
-           int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {}
+    .. code-block:: c++
+
+       void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+              int ccccccccccccccccccccccccccccccccccccccccccc);
+
+  * ``BPPS_OnePerLine`` (in configuration: ``OnePerLine``)
+    Put all parameters on the current line if they fit.
+    Otherwise, put each one on its own line.
+
+    .. code-block:: c++
+
+       void f(int a, int b, int c);
+
+       void f(int a,
+              int b,
+              int ccccccccccccccccccccccccccccccccccccc);
+
+  * ``BPPS_AlwaysOnePerLine`` (in configuration: ``AlwaysOnePerLine``)
+    Always put each parameter on its own line.
+
+    .. code-block:: c++
+
+       void f(int a,
+              int b,
+              int c);
+
+
 
 .. _BitFieldColonSpacing:
 
@@ -4817,7 +4943,7 @@ the configuration (without a prefix: ``Auto``).
   items into as few lines as possible when they go over ``ColumnLimit``.
 
   If ``Auto`` (the default), delegates to the value in
-  ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
+  ``BinPackParameters``. If that is ``BinPack``, bin-packs Objective-C
   protocol conformance list items into as few lines as possible
   whenever they go over ``ColumnLimit``.
 
@@ -4831,13 +4957,13 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: objc
 
-     Always (or Auto, if BinPackParameters=true):
+     Always (or Auto, if BinPackParameters==BinPack):
      @interface ccccccccccccc () <
          ccccccccccccc, ccccccccccccc,
          ccccccccccccc, ccccccccccccc> {
      }
 
-     Never (or Auto, if BinPackParameters=false):
+     Never (or Auto, if BinPackParameters!=BinPack):
      @interface ddddddddddddd () <
          ddddddddddddd,
          ddddddddddddd,
@@ -6532,6 +6658,15 @@ the configuration (without a prefix: ``Auto``).
     );
     let DAGArgOtherID = (other i32:$other1, i32:$other2);
     let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+
+.. _TemplateNames:
+
+**TemplateNames** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <TemplateNames>`
+  A vector of non-keyword identifiers that should be interpreted as
+  template names.
+
+  A ``<`` after a template name is annotated as a template opener instead of
+  a binary operator.
 
 .. _TypeNames:
 

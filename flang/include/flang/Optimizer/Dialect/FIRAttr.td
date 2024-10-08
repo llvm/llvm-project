@@ -58,6 +58,35 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
         "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
 }
 
+
+/// Fortran procedure attributes (F2023 15.6.2.1). BIND attribute (18.3.7)
+/// is also tracked in the same enum. Recursive (resp. Impure) attribute
+/// is implied by the absence of opposite NonRecursive (resp. Pure) attribute.
+/// Beware that "elemental" does not implicitly imply "pure" as it does in
+/// Fortran, "pure" must be made explicit when generating the FIR attribute.
+def FIRfuncNoAttributes  : I32BitEnumAttrCaseNone<"none">;
+def FIRfuncElemental     : I32BitEnumAttrCaseBit<"elemental", 0>;
+def FIRfuncPure          : I32BitEnumAttrCaseBit<"pure", 1>;
+def FIRfuncNonRecursive  : I32BitEnumAttrCaseBit<"non_recursive", 2>;
+def FIRfuncSimple        : I32BitEnumAttrCaseBit<"simple", 3>;
+def FIRfuncBind_c        : I32BitEnumAttrCaseBit<"bind_c", 4>;
+
+def fir_FortranProcedureFlagsEnum : I32BitEnumAttr<
+    "FortranProcedureFlagsEnum",
+    "Fortran procedure attributes",
+    [FIRfuncNoAttributes, FIRfuncElemental, FIRfuncPure, FIRfuncNonRecursive,
+     FIRfuncSimple, FIRfuncBind_c]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def fir_FortranProcedureFlagsAttr :
+    EnumAttr<FIROpsDialect, fir_FortranProcedureFlagsEnum, "proc_attrs"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def fir_BoxFieldAttr : I32EnumAttr<
     "BoxFieldAttr", "",
     [

@@ -1557,6 +1557,9 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation Loc) {
     return Visit(MakeCursorTemplateRef(
         Name.getAsSubstTemplateTemplateParmPack()->getParameterPack(), Loc,
         TU));
+
+  case TemplateName::DeducedTemplate:
+    llvm_unreachable("DeducedTemplate shouldn't appear in source");
   }
 
   llvm_unreachable("Invalid TemplateName::Kind!");
@@ -1643,7 +1646,7 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -1784,6 +1787,11 @@ bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
+  return Visit(TL.getWrappedLoc());
+}
+
+bool CursorVisitor::VisitHLSLAttributedResourceTypeLoc(
+    HLSLAttributedResourceTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
 
@@ -2831,6 +2839,11 @@ void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
     Visitor.AddStmt(IE);
 }
 
+void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
+  for (Expr *IE : C.getSizeExprs())
+    Visitor.AddStmt(IE);
+}
+
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
   VisitVarList(C);
 }
@@ -2885,6 +2898,9 @@ void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
+void OpenACCClauseEnqueue::VisitCollapseClause(const OpenACCCollapseClause &C) {
+  Visitor.AddStmt(C.getLoopCount());
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

@@ -76,11 +76,10 @@ HelperDeclRefGraph::getReachableNodes(const Decl *Root) const {
   llvm::DenseSet<const CallGraphNode *> ConnectedNodes;
   std::function<void(const CallGraphNode *)> VisitNode =
       [&](const CallGraphNode *Node) {
-        if (ConnectedNodes.count(Node))
+        if (!ConnectedNodes.insert(Node).second)
           return;
-        ConnectedNodes.insert(Node);
-        for (auto It = Node->begin(), End = Node->end(); It != End; ++It)
-          VisitNode(*It);
+        for (const CallGraphNode::CallRecord &Callee : *Node)
+          VisitNode(Callee);
       };
 
   VisitNode(RootNode);

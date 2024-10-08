@@ -183,6 +183,11 @@
 #define SANITIZER_INTERCEPT_FPUTS SI_POSIX
 #define SANITIZER_INTERCEPT_PUTS SI_POSIX
 
+#define SANITIZER_INTERCEPT_CREAT64 (SI_GLIBC || SI_SOLARIS32)
+#define SANITIZER_INTERCEPT_FCNTL64 (SI_GLIBC || SI_SOLARIS32)
+#define SANITIZER_INTERCEPT_OPEN64 (SI_GLIBC || SI_SOLARIS32)
+#define SANITIZER_INTERCEPT_OPENAT64 (SI_GLIBC || SI_SOLARIS32)
+
 #define SANITIZER_INTERCEPT_PREAD64 (SI_GLIBC || SI_SOLARIS32)
 #define SANITIZER_INTERCEPT_PWRITE64 (SI_GLIBC || SI_SOLARIS32)
 
@@ -274,8 +279,9 @@
 #if SI_LINUX_NOT_ANDROID &&                                                \
     (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
      defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
-     defined(__s390__) || defined(__loongarch__) || SANITIZER_RISCV64)
-#define SANITIZER_INTERCEPT_PTRACE 1
+     defined(__s390__) || defined(__loongarch__) || SANITIZER_RISCV64 ||   \
+     defined(__sparc__))
+#  define SANITIZER_INTERCEPT_PTRACE 1
 #else
 #define SANITIZER_INTERCEPT_PTRACE 0
 #endif

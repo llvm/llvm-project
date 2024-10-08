@@ -32,6 +32,7 @@ class BreakpointTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
     @skipIf(oslist=["windows"])
+    @skipIf(hostoslist=["windows"])
     def test_file_line_breakpoint_realpath_and_source_map(self):
         """Test file/line breakpoint with realpathing and source-mapping."""
         self.buildAndCreateTarget()

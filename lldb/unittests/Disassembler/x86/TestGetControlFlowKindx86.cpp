@@ -145,14 +145,19 @@ TEST_F(TestGetControlFlowKindx86, TestX86_64Instruction) {
     EXPECT_EQ(kind, result[i]);
 
     // Also, test the DisassemblerLLVMC::MCDisasmInstance methods.
-    if (kind == eInstructionControlFlowKindReturn)
+    if (kind == eInstructionControlFlowKindReturn) {
       EXPECT_FALSE(inst_sp->IsCall());
-    if (kind == eInstructionControlFlowKindCall)
+    }
+
+    if (kind == eInstructionControlFlowKindCall) {
       EXPECT_TRUE(inst_sp->IsCall());
+    }
+
     if (kind == eInstructionControlFlowKindCall ||
         kind == eInstructionControlFlowKindJump ||
         kind == eInstructionControlFlowKindCondJump ||
-        kind == eInstructionControlFlowKindReturn)
+        kind == eInstructionControlFlowKindReturn) {
       EXPECT_TRUE(inst_sp->DoesBranch());
+    }
   }
 }

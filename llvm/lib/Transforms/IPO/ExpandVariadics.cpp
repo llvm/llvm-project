@@ -748,10 +748,10 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   // This is an awkward way to guess whether there is a known stack alignment
   // without hitting an assert in DL.getStackAlignment, 1024 is an arbitrary
   // number likely to be greater than the natural stack alignment.
-  // TODO: DL.getStackAlignment could return a MaybeAlign instead of assert
   Align AllocaAlign = MaxFieldAlign;
-  if (DL.exceedsNaturalStackAlignment(Align(1024)))
-    AllocaAlign = std::max(AllocaAlign, DL.getStackAlignment());
+  if (MaybeAlign StackAlign = DL.getStackAlignment();
+      StackAlign && *StackAlign > AllocaAlign)
+    AllocaAlign = *StackAlign;
 
   // Put the alloca to hold the variadic args in the entry basic block.
   Builder.SetInsertPointPastAllocas(CBF);

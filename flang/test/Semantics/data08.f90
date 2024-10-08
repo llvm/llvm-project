@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -fdebug-dump-symbols -pedantic %s 2>&1 | FileCheck %s \
-! RUN:   --check-prefixes=%if system-aix %{"CHECK","BE"%} \
+! RUN:   --check-prefixes=%if target={{.*-aix.*|sparc.*}} %{"CHECK","BE"%} \
 ! RUN:                    %else %{"CHECK","LE"%}
 
 ! CHECK: DATA statement value initializes 'jx' of type 'INTEGER(4)' with CHARACTER

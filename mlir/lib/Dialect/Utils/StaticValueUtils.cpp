@@ -124,7 +124,7 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
     auto cv = getConstantIntValue(ofr);
     if (!cv.has_value())
       failed = true;
-    return cv.has_value() ? cv.value() : 0;
+    return cv.value_or(0);
   });
   if (failed)
     return std::nullopt;

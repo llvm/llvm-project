@@ -107,7 +107,6 @@ static std::string getNameOfNamespace(const CXXRecordDecl *Decl) {
   std::string Ns;
   llvm::raw_string_ostream OStream(Ns);
   NsDecl->printQualifiedName(OStream);
-  OStream.flush();
   return Ns.empty() ? "(global)" : Ns;
 }
 

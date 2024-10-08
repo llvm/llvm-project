@@ -47,7 +47,7 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[BLOCKSIZE]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[WHILE_BODY_PREHEADER18]]
 ; CHECK:       while.body.preheader18:
 ; CHECK-NEXT:    [[BLKCNT_06_PH:%.*]] = phi i32 [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]

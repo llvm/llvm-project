@@ -21,7 +21,8 @@ llvm::cl::list<std::string>
 
 } // anonymous namespace
 
-bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
+bool TestGeneratorMain(llvm::raw_ostream &OS,
+                       const llvm::RecordKeeper &records) {
   OS << "#include \"src/__support/CPP/type_traits.h\"\n";
   llvm_libc::APIIndexer G(records);
   std::unordered_set<std::string> headerFileSet;

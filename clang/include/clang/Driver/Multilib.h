@@ -18,12 +18,15 @@
 #include "llvm/Support/SourceMgr.h"
 #include <cassert>
 #include <functional>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace clang {
 namespace driver {
+
+class Driver;
 
 /// This corresponds to a single GCC Multilib, or a segment of one controlled
 /// by a command line flag.
@@ -48,13 +51,19 @@ private:
   // directory is not mutually exclusive with anything else.
   std::string ExclusiveGroup;
 
+  // Some Multilib objects don't actually represent library directories you can
+  // select. Instead, they represent failures of multilib selection, of the
+  // form 'Sorry, we don't have any library compatible with these constraints'.
+  std::optional<std::string> Error;
+
 public:
   /// GCCSuffix, OSSuffix & IncludeSuffix will be appended directly to the
   /// sysroot string so they must either be empty or begin with a '/' character.
   /// This is enforced with an assert in the constructor.
   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
            StringRef IncludeSuffix = {}, const flags_list &Flags = flags_list(),
-           StringRef ExclusiveGroup = {});
+           StringRef ExclusiveGroup = {},
+           std::optional<StringRef> Error = std::nullopt);
 
   /// Get the detected GCC installation path suffix for the multi-arch
   /// target variant. Always starts with a '/', unless empty
@@ -84,6 +93,10 @@ public:
   { return GCCSuffix.empty() && OSSuffix.empty() && IncludeSuffix.empty(); }
 
   bool operator==(const Multilib &Other) const;
+
+  bool isError() const { return Error.has_value(); }
+
+  const std::string &getErrorMessage() const { return Error.value(); }
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const Multilib &M);
@@ -129,7 +142,7 @@ public:
   const_iterator end() const { return Multilibs.end(); }
 
   /// Select compatible variants, \returns false if none are compatible
-  bool select(const Multilib::flags_list &Flags,
+  bool select(const Driver &D, const Multilib::flags_list &Flags,
               llvm::SmallVectorImpl<Multilib> &) const;
 
   unsigned size() const { return Multilibs.size(); }

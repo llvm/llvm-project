@@ -65,7 +65,6 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
   auto subroutineTypeAttr =
       LLVM::DISubroutineTypeAttr::get(context, llvm::dwarf::DW_CC_normal, {});
 
-  StringAttr funcNameAttr = llvmFunc.getNameAttr();
   // Only definitions need a distinct identifier and a compilation unit.
   DistinctAttr id;
   auto subprogramFlags = LLVM::DISubprogramFlags::Optimized;
@@ -75,11 +74,11 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
   } else {
     compileUnitAttr = {};
   }
+  auto funcName = StringAttr::get(context, llvmFunc.getName());
   auto subprogramAttr = LLVM::DISubprogramAttr::get(
-      context, id, compileUnitAttr, fileAttr, funcNameAttr, funcNameAttr,
-      fileAttr,
-      /*line=*/line,
-      /*scopeline=*/col, subprogramFlags, subroutineTypeAttr);
+      context, id, compileUnitAttr, fileAttr, funcName, funcName, fileAttr,
+      /*line=*/line, /*scopeline=*/col, subprogramFlags, subroutineTypeAttr,
+      /*retainedNodes=*/{}, /*annotations=*/{});
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
 }
 
@@ -92,6 +91,10 @@ struct DIScopeForLLVMFuncOp
     Location loc = module.getLoc();
 
     MLIRContext *context = &getContext();
+    if (!context->getLoadedDialect<LLVM::LLVMDialect>()) {
+      emitError(loc, "LLVM dialect is not loaded.");
+      return signalPassFailure();
+    }
 
     // To find a DICompileUnitAttr attached to a parent (the module for
     // example), otherwise create a default one.
@@ -117,7 +120,7 @@ struct DIScopeForLLVMFuncOp
       compileUnitAttr = LLVM::DICompileUnitAttr::get(
           DistinctAttr::create(UnitAttr::get(context)), llvm::dwarf::DW_LANG_C,
           fileAttr, StringAttr::get(context, "MLIR"),
-          /*isOptimized=*/true, LLVM::DIEmissionKind::LineTablesOnly);
+          /*isOptimized=*/true, emissionKind);
     }
 
     // Create subprograms for each function with the same distinct compile unit.
