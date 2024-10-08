@@ -5800,8 +5800,10 @@ Not all targets support this attribute. ELF target support depends on both the
 linker and runtime linker, and is available in at least lld 4.0 and later,
 binutils 2.20.1 and later, glibc v2.11.1 and later, and FreeBSD 9.1 and later.
 Mach-O targets support it, but with slightly different semantics: the resolver
-is run at first call, instead of at load time by the runtime linker. Targets
-other than ELF and Mach-O currently do not support this attribute.
+is run at first call, instead of at load time by the runtime linker. Windows on
+AArch64 the ``ifunc`` is replaced with global function pointer and the call is
+replaced by an indirect call. The pointer is initialized by a contructor that
+calls the resolver. Other targets currently do not support this attribute.
   }];
 }
 
