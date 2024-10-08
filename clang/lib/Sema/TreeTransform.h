@@ -15662,12 +15662,14 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       return true;
   }
 
+  if (ParenExpr *PE = dyn_cast_or_null<ParenExpr>(Result.get()))
+    PE->setIsProducedByFoldExpansion();
+
   // If we had no init and an empty pack, and we're not retaining an expansion,
   // then produce a fallback value or error.
   if (Result.isUnset())
     return getDerived().RebuildEmptyCXXFoldExpr(E->getEllipsisLoc(),
                                                 E->getOperator());
-
   return Result;
 }
 
