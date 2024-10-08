@@ -2002,9 +2002,9 @@ let Predicates = [HasSVEorSME] in {
   // extract/insert 128-bit fixed length vector from/into a scalable vector
   foreach VT = [v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64, v8bf16] in {
     def : Pat<(VT (vector_extract_subvec NEONType<VT>.SVEContainer:$Zs, (i64 0))),
-              (EXTRACT_SUBREG ZPR:$Zs, zsub)>;
+              (EXTRACT_SUBREG ZPR:$Zs, qsub)>;
     def : Pat<(NEONType<VT>.SVEContainer (vector_insert_subvec undef, (VT V128:$src), (i64 0))),
-              (INSERT_SUBREG (IMPLICIT_DEF), $src, zsub)>;
+              (INSERT_SUBREG (IMPLICIT_DEF), $src, qsub)>;
   }
 
   // Concatenate two predicates.
@@ -3357,28 +3357,28 @@ let Predicates = [HasSVEorSME] in {
   // Extract element from vector with immediate index that's within the bottom 128-bits.
   let Predicates = [HasNEON], AddedComplexity = 1 in {
   def : Pat<(i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index)),
-            (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
+            (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexB:$index)>;
   def : Pat<(i32 (vector_extract nxv8i16:$vec, VectorIndexH:$index)),
-            (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)>;
+            (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexH:$index)>;
   def : Pat<(i32 (vector_extract nxv4i32:$vec, VectorIndexS:$index)),
-            (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
+            (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexS:$index)>;
   def : Pat<(i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)),
-            (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index)>;
+            (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexD:$index)>;
   } // End HasNEON
 
   let Predicates = [HasNEON] in {
   def : Pat<(sext_inreg (vector_extract nxv16i8:$vec, VectorIndexB:$index), i8),
-            (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
+            (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexB:$index)>;
   def : Pat<(sext_inreg (anyext (i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index))), i8),
-            (SMOVvi8to64 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
+            (SMOVvi8to64 (v16i8 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexB:$index)>;
 
   def : Pat<(sext_inreg (vector_extract nxv8i16:$vec, VectorIndexH:$index), i16),
-            (SMOVvi16to32 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)>;
+            (SMOVvi16to32 (v8i16 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexH:$index)>;
   def : Pat<(sext_inreg (anyext (i32 (vector_extract nxv8i16:$vec, VectorIndexH:$index))), i16),
-            (SMOVvi16to64 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)>;
+            (SMOVvi16to64 (v8i16 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexH:$index)>;
 
   def : Pat<(sext (i32 (vector_extract nxv4i32:$vec, VectorIndexS:$index))),
-            (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
+            (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexS:$index)>;
   } // End HasNEON
 
   // Extract first element from vector.
