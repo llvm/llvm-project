@@ -381,6 +381,28 @@ out:
   ret void
 }
 
+define void @hoist_noalias_addrspace_switch_multiple(i64 %i, ptr %p, i64 %val) {
+; CHECK-LABEL: @hoist_noalias_addrspace_switch_multiple(
+; CHECK-NEXT:  out:
+; CHECK-NEXT:    [[T:%.*]] = atomicrmw add ptr [[P:%.*]], i64 [[VAL:%.*]] seq_cst, align 8, !noalias.addrspace [[META9:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  switch i64 %i, label %bb0 [
+  i64 1, label %bb1
+  i64 2, label %bb2
+  ]
+bb0:
+  %t = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !7
+  br label %out
+bb1:
+  %e = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !8
+  br label %out
+bb2:
+  %f = atomicrmw add ptr %p, i64 %val seq_cst, !noalias.addrspace !9
+  br label %out
+out:
+  ret void
+}
 
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
@@ -389,6 +411,9 @@ out:
 !4 = !{i32 5, i32 6}
 !5 = !{i32 5, i32 7}
 !6 = !{i32 4, i32 8}
+!7 = !{i32 4, i32 8, i32 20, i32 31}
+!8 = !{i32 2, i32 5}
+!9 = !{i32 2, i32 5, i32 22, i32 42, i32 45, i32 50}
 
 ;.
 ; CHECK: [[RNG0]] = !{i8 0, i8 1, i8 3, i8 5}
@@ -400,4 +425,5 @@ out:
 ; CHECK: [[META6]] = !{float 2.500000e+00}
 ; CHECK: [[META7]] = !{i32 5, i32 6}
 ; CHECK: [[META8]] = !{i32 4, i32 8}
+; CHECK: [[META9]] = !{i32 2, i32 8, i32 20, i32 42, i32 45, i32 50}
 ;.
