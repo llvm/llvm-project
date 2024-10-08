@@ -65,7 +65,7 @@ extern "C" int disc_std_type_info = __builtin_ptrauth_string_discriminator("_ZTV
 
 // NODISC: @_ZTI10TestStruct = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2), ptr @_ZTS10TestStruct }, align 8
 
-// DISC: @_ZTI10TestStruct = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2, i64 [[STDTYPEINFO_DISC]]), ptr @_ZTS10TestStruct }, align 8
+// DISC: @_ZTI10TestStruct = constant { ptr, ptr } { ptr ptrauth (ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), i32 2, i64 [[STDTYPEINFO_DISC]], ptr @_ZTI10TestStruct), ptr @_ZTS10TestStruct }, align 8
 
 struct TestStruct {
   virtual ~TestStruct();
