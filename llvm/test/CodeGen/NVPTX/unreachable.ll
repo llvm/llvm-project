@@ -1,17 +1,17 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs -trap-unreachable=false \
-; RUN:     | FileCheck %s  --check-prefix=CHECK --check-prefix=CHECK-NOTRAP
+; RUN:     | FileCheck %s  --check-prefixes=CHECK,CHECK-NOTRAP
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -trap-unreachable=false \
-; RUN:     | FileCheck %s  --check-prefix=CHECK --check-prefix=CHECK-NOTRAP
+; RUN:     | FileCheck %s  --check-prefixes=CHECK,CHECK-NOTRAP
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -no-trap-after-noreturn \
-; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOTRAP
+; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-NOTRAP
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -no-trap-after-noreturn \
-; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOTRAP
+; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-NOTRAP
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -no-trap-after-noreturn=false \
-; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-TRAP
+; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-TRAP
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -no-trap-after-noreturn=false \
-; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-TRAP
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -mattr=+ptx75 \
-; RUN:     | FileCheck %s  --check-prefixes=CHECK-BUG-FIXED
+; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-TRAP
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -mattr=+ptx83 \
+; RUN:     | FileCheck %s  --check-prefix=CHECK-BUG-FIXED
 ; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
@@ -26,21 +26,26 @@ define void @kernel_func() {
   call void @throw()
 ; CHECK-TRAP-NOT: exit;
 ; CHECK-TRAP: trap;
+
 ; CHECK-NOTRAP-NOT: trap;
 ; CHECK: exit;
+
 ; CHECK-BUG-FIXED-NOT: exit;
+; CHECK-BUG-FIXED: trap;
   unreachable
 }
 
 ; CHECK-LABEL: kernel_func_2
 define void @kernel_func_2() {
 ; CHECK: trap; exit;
-; CHECK-BUG-FIXED-NOT: exit;
+; CHECK-BUG-FIXED: trap;
+; CHECK-BUG-FIXED-NOT: trap; exit;
   call void @llvm.trap()
 
 ;; Make sure we avoid emitting two trap instructions.
 ; CHECK-NOT: trap;
 ; CHECK-NOT: exit;
+; CHECK-BUG-FIXED-NOT: trap; 
   unreachable
 }
 
