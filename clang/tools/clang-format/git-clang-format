@@ -31,6 +31,7 @@ import os
 import re
 import subprocess
 import sys
+import shutil
 
 usage = ('git clang-format [OPTIONS] [<commit>] [<commit>|--staged] '
          '[--] [<file>...]')
@@ -413,6 +414,8 @@ def filter_ignored_files(dictionary, binary):
 def cd_to_toplevel():
   """Change to the top level of the git repository."""
   toplevel = run('git', 'rev-parse', '--show-toplevel')
+  if "MSYSTEM" in os.environ and shutil.which('cygpath') is not None:
+    toplevel = run('cygpath', '-w', toplevel)
   os.chdir(toplevel)
 
 
