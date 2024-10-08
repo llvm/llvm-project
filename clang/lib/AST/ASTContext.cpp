@@ -14325,9 +14325,17 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
   } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
-    llvm::SmallVector<StringRef, 8> Feats;
-    TV->getFeatures(Feats);
-    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+    std::vector<std::string> Features;
+    if (Target->getTriple().isRISCV()) {
+      ParsedTargetAttr ParsedAttr = Target->parseTargetAttr(TV->getName());
+      Features.insert(Features.begin(), ParsedAttr.Features.begin(),
+                      ParsedAttr.Features.end());
+    } else {
+      assert(Target->getTriple().isAArch64());
+      llvm::SmallVector<StringRef, 8> Feats;
+      TV->getFeatures(Feats);
+      Features = getFMVBackendFeaturesFor(Feats);
+    }
     Features.insert(Features.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.end());
