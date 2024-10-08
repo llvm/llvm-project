@@ -133,6 +133,7 @@ jobs:
           GIT_STATUS="$(git status --porcelain=v1 clang/docs/ClangFormatStyleOptions.rst)"
           if [ ! -z "${GIT_STATUS}" ]; then
             echo "Error: you must build the 'clang-format-style-options' target and commit any changes to 'clang/docs/ClangFormatStyleOptions.rst'"
+            exit 1
           fi
       - name: Build clang-tools-extra docs
         if: steps.docs-changed-subprojects.outputs.clang-tools-extra_any_changed == 'true'
