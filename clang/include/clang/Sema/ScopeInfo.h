@@ -793,6 +793,16 @@ public:
   /// Its return type may be BuiltinType::Dependent.
   QualType FunctionType;
 
+  /// We sometimes diagnose unexpanded parameter packs in block literals,
+  /// but an error while the block is parsed can cause it to be discarded,
+  /// in which case we need to reset the enclosing lambda's
+  /// ContainsUnexpandedParameterPack flag.
+  ///
+  /// Note: This issue does not exist with lambdas because they push a new
+  /// LambdaScopeInfo, so if the expression is discarded, the 'enclosing
+  /// lambda' is discarded along with it.
+  bool EnclosingLambdaContainsUnexpandedParameterPack = false;
+
   BlockScopeInfo(DiagnosticsEngine &Diag, Scope *BlockScope, BlockDecl *Block)
       : CapturingScopeInfo(Diag, ImpCap_Block), TheDecl(Block),
         TheScope(BlockScope) {

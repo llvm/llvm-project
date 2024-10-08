@@ -16186,6 +16186,16 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
 }
 
 void Sema::ActOnBlockError(SourceLocation CaretLoc, Scope *CurScope) {
+  // If the enclosing lambda did not contain any unexpanded parameter
+  // packs before this block, then reset the unexpanded parameter pack
+  // flag, otherwise, we might end up crashing trying to find a pack
+  // that we are about to discard along with the rest of the block.
+  if (!getCurBlock()->EnclosingLambdaContainsUnexpandedParameterPack) {
+    LambdaScopeInfo *L = getEnclosingLambda();
+    if (L)
+      L->ContainsUnexpandedParameterPack = false;
+  }
+
   // Leave the expression-evaluation context.
   DiscardCleanupsInEvaluationContext();
   PopExpressionEvaluationContext();
@@ -16380,6 +16390,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   if (getCurFunction())
     getCurFunction()->addBlock(BD);
 
+  // This can happen if the block's return type is deduced, but
+  // the return expression is invalid.
   if (BD->isInvalidDecl())
     return CreateRecoveryExpr(Result->getBeginLoc(), Result->getEndLoc(),
                               {Result}, Result->getType());

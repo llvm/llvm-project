@@ -2190,9 +2190,13 @@ void Sema::PushFunctionScope() {
 }
 
 void Sema::PushBlockScope(Scope *BlockScope, BlockDecl *Block) {
-  FunctionScopes.push_back(new BlockScopeInfo(getDiagnostics(),
-                                              BlockScope, Block));
+  auto *BSI = new BlockScopeInfo(getDiagnostics(), BlockScope, Block);
+  FunctionScopes.push_back(BSI);
   CapturingFunctionScopes++;
+
+  LambdaScopeInfo *Enclosing = getEnclosingLambda();
+  BSI->EnclosingLambdaContainsUnexpandedParameterPack =
+      Enclosing && Enclosing->ContainsUnexpandedParameterPack;
 }
 
 LambdaScopeInfo *Sema::PushLambdaScope() {
