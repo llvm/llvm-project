@@ -8869,83 +8869,6 @@ INTERCEPTOR(char *, RMD160Data, u8 *data, SIZE_T len, char *buf) {
 #define INIT_RMD160
 #endif
 
-#if SANITIZER_INTERCEPT_MD5
-INTERCEPTOR(void, MD5Init, void *context) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, MD5Init, context);
-  REAL(MD5Init)(context);
-  if (context)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, MD5_CTX_sz);
-}
-
-INTERCEPTOR(void, MD5Update, void *context, const unsigned char *data,
-            unsigned int len) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, MD5Update, context, data, len);
-  if (data && len > 0)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, data, len);
-  if (context)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, context, MD5_CTX_sz);
-  REAL(MD5Update)(context, data, len);
-  if (context)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, MD5_CTX_sz);
-}
-
-INTERCEPTOR(void, MD5Final, unsigned char digest[16], void *context) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, MD5Final, digest, context);
-  if (context)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, context, MD5_CTX_sz);
-  REAL(MD5Final)(digest, context);
-  if (digest)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, digest, sizeof(unsigned char) * 16);
-}
-
-INTERCEPTOR(char *, MD5End, void *context, char *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, MD5End, context, buf);
-  if (context)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, context, MD5_CTX_sz);
-  char *ret = REAL(MD5End)(context, buf);
-  if (ret)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, MD5_return_length);
-  return ret;
-}
-
-INTERCEPTOR(char *, MD5File, const char *filename, char *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, MD5File, filename, buf);
-  if (filename)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, filename, internal_strlen(filename) + 1);
-  char *ret = REAL(MD5File)(filename, buf);
-  if (ret)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, MD5_return_length);
-  return ret;
-}
-
-INTERCEPTOR(char *, MD5Data, const unsigned char *data, unsigned int len,
-            char *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, MD5Data, data, len, buf);
-  if (data && len > 0)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, data, len);
-  char *ret = REAL(MD5Data)(data, len, buf);
-  if (ret)
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, MD5_return_length);
-  return ret;
-}
-
-#define INIT_MD5                                                               \
-  COMMON_INTERCEPT_FUNCTION(MD5Init);                                          \
-  COMMON_INTERCEPT_FUNCTION(MD5Update);                                        \
-  COMMON_INTERCEPT_FUNCTION(MD5Final);                                         \
-  COMMON_INTERCEPT_FUNCTION(MD5End);                                           \
-  COMMON_INTERCEPT_FUNCTION(MD5File);                                          \
-  COMMON_INTERCEPT_FUNCTION(MD5Data)
-#else
-#define INIT_MD5
-#endif
-
 #if SANITIZER_INTERCEPT_FSEEK
 INTERCEPTOR(int, fseek, __sanitizer_FILE *stream, long int offset, int whence) {
   void *ctx;
@@ -10551,7 +10474,6 @@ static void InitializeCommonInterceptors() {
   INIT_SHA1;
   INIT_MD4;
   INIT_RMD160;
-  INIT_MD5;
   INIT_FSEEK;
   INIT_MD2;
   INIT_VIS;
