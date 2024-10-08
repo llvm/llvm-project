@@ -452,8 +452,8 @@ void SharedFile::parse() {
   }
 }
 
-/// Returns the alignment for a custom section. This is used to concatenate
-/// custom sections with the same name into a single custom section.
+// Returns the alignment for a custom section. This is used to concatenate
+// custom sections with the same name into a single custom section.
 static uint32_t getCustomSectionAlignment(const WasmSection &sec) {
   // TODO: Add a section attribute for alignment in the linking spec.
   if (sec.Name == getInstrProfSectionName(IPSK_covfun, Triple::Wasm) ||
