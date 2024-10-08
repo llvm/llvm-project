@@ -19,13 +19,13 @@ void Matcher::anchor() {}
 
 void Matcher::dump() const { print(errs()); }
 
-void Matcher::print(raw_ostream &OS, unsigned Indent) const {
+void Matcher::print(raw_ostream &OS, indent Indent) const {
   printImpl(OS, Indent);
   if (Next)
     return Next->print(OS, Indent);
 }
 
-void Matcher::printOne(raw_ostream &OS) const { printImpl(OS, 0); }
+void Matcher::printOne(raw_ostream &OS) const { printImpl(OS, indent(0)); }
 
 /// unlinkNode - Unlink the specified node from this chain.  If Other == this,
 /// we unlink the next pointer and return it.  Otherwise we unlink Other from
@@ -111,156 +111,150 @@ unsigned CheckPredicateMatcher::getOperandNo(unsigned i) const {
 
 // printImpl methods.
 
-void ScopeMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "Scope\n";
+void ScopeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "Scope\n";
   for (const Matcher *C : Children) {
     if (!C)
-      OS.indent(Indent + 1) << "NULL POINTER\n";
+      OS << Indent + 1 << "NULL POINTER\n";
     else
       C->print(OS, Indent + 2);
   }
 }
 
-void RecordMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "Record\n";
+void RecordMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "Record\n";
 }
 
-void RecordChildMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "RecordChild: " << ChildNo << '\n';
+void RecordChildMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "RecordChild: " << ChildNo << '\n';
 }
 
-void RecordMemRefMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "RecordMemRef\n";
+void RecordMemRefMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "RecordMemRef\n";
 }
 
-void CaptureGlueInputMatcher::printImpl(raw_ostream &OS,
-                                        unsigned Indent) const {
-  OS.indent(Indent) << "CaptureGlueInput\n";
+void CaptureGlueInputMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CaptureGlueInput\n";
 }
 
-void MoveChildMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "MoveChild " << ChildNo << '\n';
+void MoveChildMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "MoveChild " << ChildNo << '\n';
 }
 
-void MoveSiblingMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "MoveSibling " << SiblingNo << '\n';
+void MoveSiblingMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "MoveSibling " << SiblingNo << '\n';
 }
 
-void MoveParentMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "MoveParent\n";
+void MoveParentMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "MoveParent\n";
 }
 
-void CheckSameMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckSame " << MatchNumber << '\n';
+void CheckSameMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckSame " << MatchNumber << '\n';
 }
 
-void CheckChildSameMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckChild" << ChildNo << "Same\n";
+void CheckChildSameMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckChild" << ChildNo << "Same\n";
 }
 
 void CheckPatternPredicateMatcher::printImpl(raw_ostream &OS,
-                                             unsigned Indent) const {
-  OS.indent(Indent) << "CheckPatternPredicate " << Predicate << '\n';
+                                             indent Indent) const {
+  OS << Indent << "CheckPatternPredicate " << Predicate << '\n';
 }
 
-void CheckPredicateMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckPredicate " << getPredicate().getFnName() << '\n';
+void CheckPredicateMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckPredicate " << getPredicate().getFnName() << '\n';
 }
 
-void CheckOpcodeMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckOpcode " << Opcode.getEnumName() << '\n';
+void CheckOpcodeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckOpcode " << Opcode.getEnumName() << '\n';
 }
 
-void SwitchOpcodeMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "SwitchOpcode: {\n";
+void SwitchOpcodeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "SwitchOpcode: {\n";
   for (const auto &C : Cases) {
-    OS.indent(Indent) << "case " << C.first->getEnumName() << ":\n";
+    OS << Indent << "case " << C.first->getEnumName() << ":\n";
     C.second->print(OS, Indent + 2);
   }
-  OS.indent(Indent) << "}\n";
+  OS << Indent << "}\n";
 }
 
-void CheckTypeMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckType " << getEnumName(Type) << ", ResNo=" << ResNo
-                    << '\n';
+void CheckTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckType " << getEnumName(Type) << ", ResNo=" << ResNo
+     << '\n';
 }
 
-void SwitchTypeMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "SwitchType: {\n";
+void SwitchTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "SwitchType: {\n";
   for (const auto &C : Cases) {
-    OS.indent(Indent) << "case " << getEnumName(C.first) << ":\n";
+    OS << Indent << "case " << getEnumName(C.first) << ":\n";
     C.second->print(OS, Indent + 2);
   }
-  OS.indent(Indent) << "}\n";
+  OS << Indent << "}\n";
 }
 
-void CheckChildTypeMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckChildType " << ChildNo << " " << getEnumName(Type)
-                    << '\n';
+void CheckChildTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckChildType " << ChildNo << " " << getEnumName(Type)
+     << '\n';
 }
 
-void CheckIntegerMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckInteger " << Value << '\n';
+void CheckIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckInteger " << Value << '\n';
 }
 
-void CheckChildIntegerMatcher::printImpl(raw_ostream &OS,
-                                         unsigned Indent) const {
-  OS.indent(Indent) << "CheckChildInteger " << ChildNo << " " << Value << '\n';
+void CheckChildIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckChildInteger " << ChildNo << " " << Value << '\n';
 }
 
-void CheckCondCodeMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckCondCode ISD::" << CondCodeName << '\n';
+void CheckCondCodeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckCondCode ISD::" << CondCodeName << '\n';
 }
 
 void CheckChild2CondCodeMatcher::printImpl(raw_ostream &OS,
-                                           unsigned Indent) const {
-  OS.indent(Indent) << "CheckChild2CondCode ISD::" << CondCodeName << '\n';
+                                           indent Indent) const {
+  OS << Indent << "CheckChild2CondCode ISD::" << CondCodeName << '\n';
 }
 
-void CheckValueTypeMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckValueType " << getEnumName(VT) << '\n';
+void CheckValueTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckValueType " << getEnumName(VT) << '\n';
 }
 
-void CheckComplexPatMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckComplexPat " << Pattern.getSelectFunc() << '\n';
+void CheckComplexPatMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckComplexPat " << Pattern.getSelectFunc() << '\n';
 }
 
-void CheckAndImmMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckAndImm " << Value << '\n';
+void CheckAndImmMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckAndImm " << Value << '\n';
 }
 
-void CheckOrImmMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CheckOrImm " << Value << '\n';
+void CheckOrImmMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckOrImm " << Value << '\n';
 }
 
 void CheckFoldableChainNodeMatcher::printImpl(raw_ostream &OS,
-                                              unsigned Indent) const {
-  OS.indent(Indent) << "CheckFoldableChainNode\n";
+                                              indent Indent) const {
+  OS << Indent << "CheckFoldableChainNode\n";
 }
 
-void CheckImmAllOnesVMatcher::printImpl(raw_ostream &OS,
-                                        unsigned Indent) const {
-  OS.indent(Indent) << "CheckAllOnesV\n";
+void CheckImmAllOnesVMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckAllOnesV\n";
 }
 
-void CheckImmAllZerosVMatcher::printImpl(raw_ostream &OS,
-                                         unsigned Indent) const {
-  OS.indent(Indent) << "CheckAllZerosV\n";
+void CheckImmAllZerosVMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckAllZerosV\n";
 }
 
-void EmitIntegerMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "EmitInteger " << Val << " VT=" << getEnumName(VT)
-                    << '\n';
+void EmitIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "EmitInteger " << Val << " VT=" << getEnumName(VT) << '\n';
 }
 
-void EmitStringIntegerMatcher::printImpl(raw_ostream &OS,
-                                         unsigned Indent) const {
-  OS.indent(Indent) << "EmitStringInteger " << Val << " VT=" << getEnumName(VT)
-                    << '\n';
+void EmitStringIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "EmitStringInteger " << Val << " VT=" << getEnumName(VT)
+     << '\n';
 }
 
-void EmitRegisterMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "EmitRegister ";
+void EmitRegisterMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "EmitRegister ";
   if (Reg)
     OS << Reg->getName();
   else
@@ -269,26 +263,26 @@ void EmitRegisterMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
 }
 
 void EmitConvertToTargetMatcher::printImpl(raw_ostream &OS,
-                                           unsigned Indent) const {
-  OS.indent(Indent) << "EmitConvertToTarget " << Slot << '\n';
+                                           indent Indent) const {
+  OS << Indent << "EmitConvertToTarget " << Slot << '\n';
 }
 
 void EmitMergeInputChainsMatcher::printImpl(raw_ostream &OS,
-                                            unsigned Indent) const {
-  OS.indent(Indent) << "EmitMergeInputChains <todo: args>\n";
+                                            indent Indent) const {
+  OS << Indent << "EmitMergeInputChains <todo: args>\n";
 }
 
-void EmitCopyToRegMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "EmitCopyToReg <todo: args>\n";
+void EmitCopyToRegMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "EmitCopyToReg <todo: args>\n";
 }
 
-void EmitNodeXFormMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "EmitNodeXForm " << NodeXForm->getName()
-                    << " Slot=" << Slot << '\n';
+void EmitNodeXFormMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "EmitNodeXForm " << NodeXForm->getName() << " Slot=" << Slot
+     << '\n';
 }
 
-void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent);
+void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent;
   OS << (isa<MorphNodeToMatcher>(this) ? "MorphNodeTo: " : "EmitNode: ")
      << CGI.Namespace << "::" << CGI.TheDef->getName() << ": <todo flags> ";
 
@@ -300,10 +294,10 @@ void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, unsigned Indent) const {
   OS << ")\n";
 }
 
-void CompleteMatchMatcher::printImpl(raw_ostream &OS, unsigned Indent) const {
-  OS.indent(Indent) << "CompleteMatch <todo args>\n";
-  OS.indent(Indent) << "Src = " << Pattern.getSrcPattern() << "\n";
-  OS.indent(Indent) << "Dst = " << Pattern.getDstPattern() << "\n";
+void CompleteMatchMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CompleteMatch <todo args>\n";
+  OS << Indent << "Src = " << Pattern.getSrcPattern() << "\n";
+  OS << Indent << "Dst = " << Pattern.getDstPattern() << "\n";
 }
 
 bool CheckOpcodeMatcher::isEqualImpl(const Matcher *M) const {

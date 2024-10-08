@@ -186,7 +186,6 @@ public:
 };
 } // end anonymous namespace
 
-
 /// canSpeculateInstrs - Returns true if all the instructions in MBB can safely
 /// be speculated. The terminators are not considered.
 ///

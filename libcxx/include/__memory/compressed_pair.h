@@ -52,12 +52,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
 
-template <class _ToPad>
+template <class _ToPad,
+          bool _Empty = ((is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value) ||
+                         is_reference<_ToPad>::value || sizeof(_ToPad) == __datasizeof_v<_ToPad>)>
 class __compressed_pair_padding {
-  char __padding_[((is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value) || is_reference<_ToPad>::value)
-                      ? 0
-                      : sizeof(_ToPad) - __datasizeof_v<_ToPad>];
+  char __padding_[sizeof(_ToPad) - __datasizeof_v<_ToPad>] = {};
 };
+
+template <class _ToPad>
+class __compressed_pair_padding<_ToPad, true> {};
 
 #  define _LIBCPP_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)                                                  \
     _LIBCPP_NO_UNIQUE_ADDRESS __attribute__((__aligned__(_LIBCPP_ALIGNOF(T2)))) T1 Initializer1;                       \

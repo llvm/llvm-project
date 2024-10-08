@@ -107,10 +107,8 @@ void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   error(GetErrorStream()) << msg << '\n';
 }
 
-void CommandReturnObject::SetError(const Status &error,
-                                   const char *fallback_error_cstr) {
-  if (error.Fail())
-    AppendError(error.AsCString(fallback_error_cstr));
+void CommandReturnObject::SetError(Status error) {
+  SetError(error.takeError());
 }
 
 void CommandReturnObject::SetError(llvm::Error error) {

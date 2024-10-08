@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
+#include "llvm/ADT/ArrayRef.h"
 
 using namespace llvm::sandboxir;
 
@@ -30,16 +31,48 @@ void DGNode::dump() const {
 }
 #endif // NDEBUG
 
-void DependencyGraph::extend(BasicBlock *BB) {
-  if (BB->empty())
-    return;
+Interval<MemDGNode>
+MemDGNodeIntervalBuilder::make(const Interval<Instruction> &Instrs,
+                               DependencyGraph &DAG) {
+  // If top or bottom instructions are not mem-dep candidate nodes we need to
+  // walk down/up the chain and find the mem-dep ones.
+  Instruction *MemTopI = Instrs.top();
+  Instruction *MemBotI = Instrs.bottom();
+  while (!DGNode::isMemDepNodeCandidate(MemTopI) && MemTopI != MemBotI)
+    MemTopI = MemTopI->getNextNode();
+  while (!DGNode::isMemDepNodeCandidate(MemBotI) && MemBotI != MemTopI)
+    MemBotI = MemBotI->getPrevNode();
+  // If we couldn't find a mem node in range TopN - BotN then it's empty.
+  if (!DGNode::isMemDepNodeCandidate(MemTopI))
+    return {};
+  // Now that we have the mem-dep nodes, create and return the range.
+  return Interval<MemDGNode>(cast<MemDGNode>(DAG.getNode(MemTopI)),
+                             cast<MemDGNode>(DAG.getNode(MemBotI)));
+}
+
+Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
+  if (Instrs.empty())
+    return {};
   // TODO: For now create a chain of dependencies.
-  DGNode *LastN = getOrCreateNode(&*BB->begin());
-  for (auto &I : drop_begin(*BB)) {
-    auto *N = getOrCreateNode(&I);
-    N->addMemPred(LastN);
+  Interval<Instruction> Interval(Instrs);
+  auto *TopI = Interval.top();
+  auto *BotI = Interval.bottom();
+  DGNode *LastN = getOrCreateNode(TopI);
+  MemDGNode *LastMemN = dyn_cast<MemDGNode>(LastN);
+  for (Instruction *I = TopI->getNextNode(), *E = BotI->getNextNode(); I != E;
+       I = I->getNextNode()) {
+    auto *N = getOrCreateNode(I);
+    N->addMemPred(LastMemN);
+    // Build the Mem node chain.
+    if (auto *MemN = dyn_cast<MemDGNode>(N)) {
+      MemN->setPrevNode(LastMemN);
+      if (LastMemN != nullptr)
+        LastMemN->setNextNode(MemN);
+      LastMemN = MemN;
+    }
     LastN = N;
   }
+  return Interval;
 }
 
 #ifndef NDEBUG

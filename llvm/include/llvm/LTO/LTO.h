@@ -231,7 +231,8 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
 /// the objects with NativeObjectPrefix instead of NewPrefix. OnWrite is
 /// callback which receives module identifier and notifies LTO user that index
 /// file for the module (and optionally imports file) was created.
-ThinBackend createWriteIndexesThinBackend(std::string OldPrefix,
+ThinBackend createWriteIndexesThinBackend(ThreadPoolStrategy Parallelism,
+                                          std::string OldPrefix,
                                           std::string NewPrefix,
                                           std::string NativeObjectPrefix,
                                           bool ShouldEmitImportsFiles,
@@ -298,7 +299,7 @@ public:
   ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  Error run(AddStreamFn AddStream, FileCache Cache = nullptr);
+  Error run(AddStreamFn AddStream, FileCache Cache = {});
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.

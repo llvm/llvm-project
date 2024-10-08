@@ -179,8 +179,7 @@ static RankedTensorType
 foldDynamicToStaticDimSizes(RankedTensorType type, ValueRange dynamicSizes,
                             SmallVector<Value> &foldedDynamicSizes) {
   SmallVector<int64_t> staticShape(type.getShape());
-  assert(type.getNumDynamicDims() ==
-             static_cast<int64_t>(dynamicSizes.size()) &&
+  assert(type.getNumDynamicDims() == dynamicSizes.size() &&
          "incorrect number of dynamic sizes");
 
   // Compute new static and dynamic sizes.
@@ -894,8 +893,7 @@ void EmptyOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult EmptyOp::verify() {
-  if (getType().getNumDynamicDims() !=
-      static_cast<int64_t>(getDynamicSizes().size()))
+  if (getType().getNumDynamicDims() != getDynamicSizes().size())
     return emitOpError("incorrect number of dynamic sizes, has ")
            << getDynamicSizes().size() << ", expected "
            << getType().getNumDynamicDims();
@@ -3672,8 +3670,7 @@ void SplatOp::getAsmResultNames(
 }
 
 LogicalResult SplatOp::verify() {
-  if (getType().getNumDynamicDims() !=
-      static_cast<int64_t>(getDynamicSizes().size()))
+  if (getType().getNumDynamicDims() != getDynamicSizes().size())
     return emitOpError("incorrect number of dynamic sizes, has ")
            << getDynamicSizes().size() << ", expected "
            << getType().getNumDynamicDims();
@@ -3985,6 +3982,23 @@ SmallVector<OpFoldResult> PackOp::getMixedTiles() {
 
 SmallVector<int64_t> PackOp::getStaticTiles() {
   return getStaticTilesImpl(*this);
+}
+
+ArrayRef<int64_t> PackOp::getAllOuterDims() {
+  ShapedType inputType = getSourceType();
+  int64_t inputRank = inputType.getRank();
+  return getDestType().getShape().take_front(inputRank);
+}
+
+SmallVector<int64_t> PackOp::getTiledOuterDims() {
+  auto innerDimsPos = getInnerDimsPos();
+  auto packedShape = getDestType().getShape();
+  SmallVector<int64_t> res;
+
+  for (auto index : innerDimsPos)
+    res.push_back(packedShape[index]);
+
+  return res;
 }
 
 bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
@@ -4323,11 +4337,16 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
       dest =
           rewriter.create<tensor::CastOp>(loc, newDestType, packOp.getDest());
     }
-    Value newOp = rewriter.create<tensor::PackOp>(
-        loc, source, dest, packOp.getInnerDimsPos(), packOp.getMixedTiles(),
-        packOp.getPaddingValue(), packOp.getOuterDimsPerm());
+    auto clonedPackOp = cast<PackOp>(rewriter.clone(*packOp));
+    Value res = clonedPackOp.getResult();
+    rewriter.startOpModification(clonedPackOp);
+    clonedPackOp.getSourceMutable().assign(source);
+    clonedPackOp.getDestMutable().assign(dest);
+    res.setType(dest.getType());
+    rewriter.finalizeOpModification(clonedPackOp);
+
     rewriter.replaceOpWithNewOp<tensor::CastOp>(
-        packOp, packOp.getResult().getType(), newOp);
+        packOp, packOp.getResult().getType(), clonedPackOp);
     return success();
   }
 
@@ -4409,6 +4428,23 @@ SmallVector<OpFoldResult> UnPackOp::getMixedTiles() {
 
 SmallVector<int64_t> UnPackOp::getStaticTiles() {
   return getStaticTilesImpl(*this);
+}
+
+ArrayRef<int64_t> UnPackOp::getAllOuterDims() {
+  ShapedType destType = getDestType();
+  int64_t destRank = destType.getRank();
+  return getSourceType().getShape().take_front(destRank);
+}
+
+SmallVector<int64_t> UnPackOp::getTiledOuterDims() {
+  auto innerDimsPos = getInnerDimsPos();
+  auto packedShape = getSourceType().getShape();
+  SmallVector<int64_t> res;
+
+  for (auto index : innerDimsPos)
+    res.push_back(packedShape[index]);
+
+  return res;
 }
 
 LogicalResult UnPackOp::verify() {

@@ -9,6 +9,7 @@
 #ifndef FORTRAN_TOOLS_TARGET_SETUP_H
 #define FORTRAN_TOOLS_TARGET_SETUP_H
 
+#include "flang/Common/float128.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
@@ -57,6 +58,9 @@ namespace Fortran::tools {
 
   if (targetTriple.isPPC())
     targetCharacteristics.set_isPPC(true);
+
+  if (targetTriple.isOSWindows())
+    targetCharacteristics.set_isOSWindows(true);
 
   // TODO: use target machine data layout to set-up the target characteristics
   // type size and alignment info.

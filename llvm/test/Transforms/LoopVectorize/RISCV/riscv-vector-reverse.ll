@@ -53,13 +53,13 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = VF * UF
-; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT:  vp<%2> = original trip-count
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
-; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (zext i32 %n to i64)
+; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
@@ -67,27 +67,27 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%8>
-; CHECK-NEXT:      vp<%4> = DERIVED-IV ir<%n> + vp<%3> * ir<-1>
-; CHECK-NEXT:      vp<%5> = SCALAR-STEPS vp<%4>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<%5>, ir<-1>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<%6> = vector-pointer (reverse) ir<%arrayidx>
-; CHECK-NEXT:      WIDEN ir<%1> = load vp<%6>
+; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx>
+; CHECK-NEXT:      WIDEN ir<%1> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:      WIDEN ir<%add9> = add ir<%1>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<%7> = vector-pointer (reverse) ir<%arrayidx3>
-; CHECK-NEXT:      WIDEN store vp<%7>, ir<%add9>
-; CHECK-NEXT:      EMIT vp<%8> = add nuw vp<%3>, vp<%0>
-; CHECK-NEXT:      EMIT branch-on-count vp<%8>, vp<%1>
+; CHECK-NEXT:      vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
+; CHECK-NEXT:      WIDEN store vp<[[VEC_PTR2]]>, ir<%add9>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<%10> = icmp eq vp<%2>, vp<%1>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%10>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
@@ -136,14 +136,14 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
-; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = VF * UF
-; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT:  vp<%2> = original trip-count
+; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF={1}' {
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
-; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (zext i32 %n to i64)
+; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
@@ -151,27 +151,27 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%8>
-; CHECK-NEXT:      vp<%4> = DERIVED-IV ir<%n> + vp<%3> * ir<-1>
-; CHECK-NEXT:      vp<%5> = SCALAR-STEPS vp<%4>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<%5>, ir<-1>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<%6> = vector-pointer (reverse) ir<%arrayidx>
-; CHECK-NEXT:      WIDEN ir<%13> = load vp<%6>
+; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx>
+; CHECK-NEXT:      WIDEN ir<%13> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:      WIDEN ir<%add9> = add ir<%13>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<%7> = vector-pointer (reverse) ir<%arrayidx3>
-; CHECK-NEXT:      WIDEN store vp<%7>, ir<%add9>
-; CHECK-NEXT:      EMIT vp<%8> = add nuw vp<%3>, vp<%0>
-; CHECK-NEXT:      EMIT branch-on-count vp<%8>, vp<%1>
+; CHECK-NEXT:      vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
+; CHECK-NEXT:      WIDEN store vp<[[VEC_PTR2]]>, ir<%add9>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<%10> = icmp eq vp<%2>, vp<%1>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%10>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
@@ -257,13 +257,13 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = VF * UF
-; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT:  vp<%2> = original trip-count
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
-; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (zext i32 %n to i64)
+; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
@@ -271,27 +271,27 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%8>
-; CHECK-NEXT:      vp<%4> = DERIVED-IV ir<%n> + vp<%3> * ir<-1>
-; CHECK-NEXT:      vp<%5> = SCALAR-STEPS vp<%4>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<%5>, ir<-1>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<%6> = vector-pointer (reverse) ir<%arrayidx>
-; CHECK-NEXT:      WIDEN ir<%1> = load vp<%6>
+; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx>
+; CHECK-NEXT:      WIDEN ir<%1> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:      WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<%7> = vector-pointer (reverse) ir<%arrayidx3>
-; CHECK-NEXT:      WIDEN store vp<%7>, ir<%conv1>
-; CHECK-NEXT:      EMIT vp<%8> = add nuw vp<%3>, vp<%0>
-; CHECK-NEXT:      EMIT branch-on-count vp<%8>, vp<%1>
+; CHECK-NEXT:      vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
+; CHECK-NEXT:      WIDEN store vp<[[VEC_PTR2]]>, ir<%conv1>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<%10> = icmp eq vp<%2>, vp<%1>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%10>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
@@ -340,14 +340,14 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
-; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = VF * UF
-; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT:  vp<%2> = original trip-count
+; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF={1}' {
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
-; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (zext i32 %n to i64)
+; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
@@ -355,27 +355,27 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%8>
-; CHECK-NEXT:      vp<%4> = DERIVED-IV ir<%n> + vp<%3> * ir<-1>
-; CHECK-NEXT:      vp<%5> = SCALAR-STEPS vp<%4>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<%5>, ir<-1>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<%6> = vector-pointer (reverse) ir<%arrayidx>
-; CHECK-NEXT:      WIDEN ir<%13> = load vp<%6>
+; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx>
+; CHECK-NEXT:      WIDEN ir<%13> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:      WIDEN ir<%conv1> = fadd ir<%13>, ir<1.000000e+00>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<%7> = vector-pointer (reverse) ir<%arrayidx3>
-; CHECK-NEXT:      WIDEN store vp<%7>, ir<%conv1>
-; CHECK-NEXT:      EMIT vp<%8> = add nuw vp<%3>, vp<%0>
-; CHECK-NEXT:      EMIT branch-on-count vp<%8>, vp<%1>
+; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
+; CHECK-NEXT:      WIDEN store vp<[[VEC_PTR]]>, ir<%conv1>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<%10> = icmp eq vp<%2>, vp<%1>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%10>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:

@@ -142,6 +142,27 @@ llvm.func @rocdl.barrier() {
   llvm.return
 }
 
+llvm.func @rocdl.s.barrier.signal() {
+  // CHECK-LABEL: rocdl.s.barrier.signal
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.signal(i32 -1)
+  rocdl.s.barrier.signal -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.wait() {
+  // CHECK-LABEL: rocdl.s.barrier.wait
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.wait(i16 -1)
+  rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.dscnt() {
+  // CHECK-LABEL: rocdl.s.wait.dscnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.dscnt(i16 0)
+  rocdl.s.wait.dscnt 0
+  llvm.return
+}
+
 llvm.func @rocdl.setprio() {
   // CHECK: call void @llvm.amdgcn.s.setprio(i16 0)
   rocdl.s.setprio 0

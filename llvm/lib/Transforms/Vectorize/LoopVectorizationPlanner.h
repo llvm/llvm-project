@@ -156,6 +156,15 @@ public:
                               DebugLoc DL, const Twine &Name = "") {
     return createInstruction(Opcode, Operands, DL, Name);
   }
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              std::optional<FastMathFlags> FMFs = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    if (FMFs)
+      return tryInsertInstruction(
+          new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
+    return createInstruction(Opcode, Operands, DL, Name);
+  }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
@@ -164,6 +173,7 @@ public:
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
+
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
                      const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
@@ -210,6 +220,17 @@ public:
         new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
   }
 
+  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                              const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(false), DL, Name));
+  }
+  VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                                const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+  }
+
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPCanonicalIVPHIRecipe *CanonicalIV,
@@ -221,6 +242,11 @@ public:
   VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                        Type *ResultTy) {
     return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+  }
+
+  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
+                                     Type *ResultTy) {
+    return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
   }
 
   VPScalarIVStepsRecipe *
@@ -415,11 +441,10 @@ public:
   /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
   /// to re-use expansion results generated during main plan execution.
   ///
-  /// Returns a mapping of SCEVs to their expanded IR values and a mapping for
-  /// the reduction resume values. Note that this is a temporary workaround
-  /// needed due to the current epilogue handling.
-  std::pair<DenseMap<const SCEV *, Value *>,
-            DenseMap<const RecurrenceDescriptor *, Value *>>
+  /// Returns a mapping of SCEVs to their expanded IR values.
+  /// Note that this is a temporary workaround needed due to the current
+  /// epilogue handling.
+  DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
               bool IsEpilogueVectorization,

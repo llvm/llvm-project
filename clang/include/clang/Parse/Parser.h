@@ -1355,6 +1355,10 @@ private:
     void ParseLexedAttributes() override;
     void ParseLexedPragmas() override;
 
+    // Delete copy constructor and copy assignment operator.
+    LateParsedClass(const LateParsedClass &) = delete;
+    LateParsedClass &operator=(const LateParsedClass &) = delete;
+
   private:
     Parser *Self;
     ParsingClass *Class;
@@ -3782,10 +3786,13 @@ private:
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
                                                       OpenACCClauseKind CK,
                                                       SourceLocation Loc);
+
   /// Parses the 'size-expr', which is an integral value, or an asterisk.
-  bool ParseOpenACCSizeExpr();
+  /// Asterisk is represented by a OpenACCAsteriskSizeExpr
+  ExprResult ParseOpenACCSizeExpr(OpenACCClauseKind CK);
   /// Parses a comma delimited list of 'size-expr's.
-  bool ParseOpenACCSizeExprList();
+  bool ParseOpenACCSizeExprList(OpenACCClauseKind CK,
+                                llvm::SmallVectorImpl<Expr *> &SizeExprs);
   /// Parses a 'gang-arg-list', used for the 'gang' clause.
   bool ParseOpenACCGangArgList(SourceLocation GangLoc);
   /// Parses a 'gang-arg', used for the 'gang' clause.

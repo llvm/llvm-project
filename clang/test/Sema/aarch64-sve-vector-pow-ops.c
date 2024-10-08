@@ -7,5 +7,5 @@
 svfloat32_t test_pow_vv_i8mf8(svfloat32_t v) {
 
   return __builtin_elementwise_pow(v, v);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
+  // expected-error@-1 {{1st argument must be a floating point type}}
 }
