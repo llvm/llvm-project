@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -fast-isel -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -fast-isel -fast-isel-abort=1 -verify-machineinstrs | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 
@@ -59,8 +59,8 @@ define void @dont_fold_non_nuw_add_store_2() {
 
 ; CHECK-LABEL: dont_fold_non_nuw_sub_load:
 ; CHECK:       local.get  0
-; CHECK-NEXT:  i32.const  2147483644
-; CHECK-NEXT:  i32.add
+; CHECK-NEXT:  i32.const  -2147483644
+; CHECK-NEXT:  i32.sub
 ; CHECK-NEXT:  i32.load  0
 define i32 @dont_fold_non_nuw_sub_load(ptr %p) {
   %q = ptrtoint ptr %p to i32
@@ -72,8 +72,8 @@ define i32 @dont_fold_non_nuw_sub_load(ptr %p) {
 
 ; CHECK-LABEL: dont_fold_non_nuw_sub_store:
 ; CHECK:       local.get  0
-; CHECK-NEXT:  i32.const  2147483644
-; CHECK-NEXT:  i32.add
+; CHECK-NEXT:  i32.const  -2147483644
+; CHECK-NEXT:  i32.sub
 ; CHECK-NEXT:  i32.const  5
 ; CHECK-NEXT:  i32.store  0
 define void @dont_fold_non_nuw_sub_store(ptr %p) {
@@ -86,8 +86,8 @@ define void @dont_fold_non_nuw_sub_store(ptr %p) {
 
 ; CHECK-LABEL: dont_fold_non_nuw_sub_load_2:
 ; CHECK:       i32.const  mylabel
-; CHECK-NEXT:  i32.const  -4
-; CHECK-NEXT:  i32.add
+; CHECK-NEXT:  i32.const  4
+; CHECK-NEXT:  i32.sub
 ; CHECK-NEXT:  i32.load  0
 define i32 @dont_fold_non_nuw_sub_load_2() {
   %t = load i32, ptr inttoptr (i32 sub (i32 ptrtoint (ptr @mylabel to i32), i32 4) to ptr), align 4
@@ -96,8 +96,8 @@ define i32 @dont_fold_non_nuw_sub_load_2() {
 
 ; CHECK-LABEL: dont_fold_non_nuw_sub_store_2:
 ; CHECK:       i32.const  mylabel
-; CHECK-NEXT:  i32.const  -4
-; CHECK-NEXT:  i32.add
+; CHECK-NEXT:  i32.const  4
+; CHECK-NEXT:  i32.sub
 ; CHECK-NEXT:  i32.const  5
 ; CHECK-NEXT:  i32.store  0
 define void @dont_fold_non_nuw_sub_store_2() {

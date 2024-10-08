@@ -341,7 +341,7 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     // is not present, because the address calculation does not wrap.
     if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(U))
       if (!OFBinOp->hasNoUnsignedWrap())
-        return false;
+        break;
 
     // Adds of constants are common and easy enough.
     const Value *LHS = U->getOperand(0);
@@ -370,7 +370,7 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     // is not present, because the address calculation does not wrap.
     if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(U))
       if (!OFBinOp->hasNoUnsignedWrap())
-        return false;
+        break;
 
     // Subs of constants are common and easy enough.
     const Value *LHS = U->getOperand(0);
