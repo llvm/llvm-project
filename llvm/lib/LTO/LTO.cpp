@@ -578,10 +578,10 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
   CombinedModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
 }
 
-LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
-    : Backend(Backend), CombinedIndex(/*HaveGVs*/ false) {
-  if (!Backend)
-    this->Backend =
+LTO::ThinLTOState::ThinLTOState(ThinBackend BackendParam)
+    : Backend(std::move(BackendParam)), CombinedIndex(/*HaveGVs*/ false) {
+  if (!Backend.isValid())
+    Backend =
         createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
 }
 
@@ -1368,75 +1368,33 @@ SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
   return LibcallSymbols;
 }
 
-/// This class defines the interface to the ThinLTO backend.
-class lto::ThinBackendProc {
-protected:
-  const Config &Conf;
-  ModuleSummaryIndex &CombinedIndex;
-  const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries;
-  lto::IndexWriteCallback OnWrite;
-  bool ShouldEmitImportsFiles;
-  DefaultThreadPool BackendThreadPool;
-  std::optional<Error> Err;
-  std::mutex ErrMu;
+Error ThinBackendProc::emitFiles(
+    const FunctionImporter::ImportMapTy &ImportList, llvm::StringRef ModulePath,
+    const std::string &NewModulePath) const {
+  ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
+  GVSummaryPtrSet DeclarationSummaries;
 
-public:
-  ThinBackendProc(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
-      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      lto::IndexWriteCallback OnWrite, bool ShouldEmitImportsFiles,
-      ThreadPoolStrategy ThinLTOParallelism)
-      : Conf(Conf), CombinedIndex(CombinedIndex),
-        ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries),
-        OnWrite(OnWrite), ShouldEmitImportsFiles(ShouldEmitImportsFiles),
-        BackendThreadPool(ThinLTOParallelism) {}
+  std::error_code EC;
+  gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
+                                   ImportList, ModuleToSummariesForIndex,
+                                   DeclarationSummaries);
 
-  virtual ~ThinBackendProc() = default;
-  virtual Error start(
-      unsigned Task, BitcodeModule BM,
-      const FunctionImporter::ImportMapTy &ImportList,
-      const FunctionImporter::ExportSetTy &ExportList,
-      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
-  Error wait() {
-    BackendThreadPool.wait();
-    if (Err)
-      return std::move(*Err);
-    return Error::success();
+  raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
+                    sys::fs::OpenFlags::OF_None);
+  if (EC)
+    return createFileError("cannot open " + NewModulePath + ".thinlto.bc", EC);
+
+  writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
+                   &DeclarationSummaries);
+
+  if (ShouldEmitImportsFiles) {
+    Error ImportFilesError = EmitImportsFiles(
+        ModulePath, NewModulePath + ".imports", ModuleToSummariesForIndex);
+    if (ImportFilesError)
+      return ImportFilesError;
   }
-  unsigned getThreadCount() { return BackendThreadPool.getMaxConcurrency(); }
-  virtual bool isSensitiveToInputOrder() { return false; }
-
-  // Write sharded indices and (optionally) imports to disk
-  Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
-                  llvm::StringRef ModulePath,
-                  const std::string &NewModulePath) const {
-    ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
-    GVSummaryPtrSet DeclarationSummaries;
-
-    std::error_code EC;
-    gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportList, ModuleToSummariesForIndex,
-                                     DeclarationSummaries);
-
-    raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
-                      sys::fs::OpenFlags::OF_None);
-    if (EC)
-      return createFileError("cannot open " + NewModulePath + ".thinlto.bc",
-                             EC);
-
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
-                     &DeclarationSummaries);
-
-    if (ShouldEmitImportsFiles) {
-      Error ImportFilesError = EmitImportsFiles(
-          ModulePath, NewModulePath + ".imports", ModuleToSummariesForIndex);
-      if (ImportFilesError)
-        return ImportFilesError;
-    }
-    return Error::success();
-  }
-};
+  return Error::success();
+}
 
 namespace {
 class InProcessThinBackend : public ThinBackendProc {
@@ -1561,7 +1519,7 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
                                             lto::IndexWriteCallback OnWrite,
                                             bool ShouldEmitIndexFiles,
                                             bool ShouldEmitImportsFiles) {
-  return
+  auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache) {
@@ -1570,6 +1528,7 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
             ShouldEmitImportsFiles);
       };
+  return ThinBackend(Func, Parallelism);
 }
 
 StringLiteral lto::getThinLTODefaultCPU(const Triple &TheTriple) {
@@ -1681,7 +1640,7 @@ ThinBackend lto::createWriteIndexesThinBackend(
     std::string NewPrefix, std::string NativeObjectPrefix,
     bool ShouldEmitImportsFiles, raw_fd_ostream *LinkedObjectsFile,
     IndexWriteCallback OnWrite) {
-  return
+  auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache) {
@@ -1690,6 +1649,7 @@ ThinBackend lto::createWriteIndexesThinBackend(
             OldPrefix, NewPrefix, NativeObjectPrefix, ShouldEmitImportsFiles,
             LinkedObjectsFile, OnWrite);
       };
+  return ThinBackend(Func, Parallelism);
 }
 
 Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
