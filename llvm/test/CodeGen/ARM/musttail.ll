@@ -209,9 +209,6 @@ entry:
   ret void
 }
 
-; TODO: This test swaps the two byval arguments, but does so without copying to
-; a temporary location first, so the first copy overwrites the memory which
-; will be ready by the second.
 declare void @two_byvals_callee(%twenty_bytes* byval(%twenty_bytes) align 4, %twenty_bytes* byval(%twenty_bytes) align 4)
 define void @swap_byvals(%twenty_bytes* byval(%twenty_bytes) align 4 %a, %twenty_bytes* byval(%twenty_bytes) align 4 %b) {
 ; CHECK-LABEL: swap_byvals:
