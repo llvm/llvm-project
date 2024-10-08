@@ -1619,11 +1619,16 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
-  /// Scalar type of the result produced by the intrinsic.
+  /// Scalar return type of the intrinsic.
   Type *ResultTy;
 
-  bool MayWriteToMemory;
+  /// True if the intrinsic may read from memory.
   bool MayReadFromMemory;
+
+  /// True if the intrinsic may read write to memory.
+  bool MayWriteToMemory;
+
+  /// True if the intrinsic may have side-effects.
   bool MayHaveSideEffects;
 
 public:
@@ -1632,8 +1637,8 @@ public:
                          DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
-        MayWriteToMemory(CI.mayWriteToMemory()),
         MayReadFromMemory(CI.mayReadFromMemory()),
+        MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
   ~VPWidenIntrinsicRecipe() override = default;
@@ -1653,21 +1658,26 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  Type *getResultTy() const { return ResultTy; }
+  /// Return the scalar return type of the intrinsic.
+  Type *getResultType() const { return ResultTy; }
 
   /// Return to name of the intrinsic as string.
   StringRef getIntrinsicName() const;
+
+  /// Returns true if the intrinsic may read from memory.
+  bool mayReadFromMemory() const { return MayReadFromMemory; }
+
+  /// Returns true if the intrinsic may write to memory.
+  bool mayWriteToMemory() const { return MayWriteToMemory; }
+
+  /// Returns true if the intrinsic may have side-effects.
+  bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-  bool mayWriteToMemory() const { return MayWriteToMemory; }
-
-  bool mayReadFromMemory() const { return MayReadFromMemory; }
-
-  bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 };
 
 /// A recipe for widening Call instructions using library calls.
