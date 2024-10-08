@@ -167,7 +167,6 @@ static VectorTypeModifier getTupleVTM(unsigned NF) {
       static_cast<uint8_t>(VectorTypeModifier::Tuple2) + (NF - 2));
 }
 
-
 static unsigned getIndexedLoadStorePtrIdx(const RVVIntrinsic *RVVI) {
   // We need a special rule for segment load/store since the data width is not
   // encoded in the instrinsic name itself.
