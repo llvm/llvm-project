@@ -1649,10 +1649,10 @@ SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
   }
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  SDValue Hi = DAG.getNode(Opcode, DL,
-                           DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
+  SDValue Hi =
+      DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
   SDValue Lo(Hi.getNode(), 1);
-  SDValue Ops[] = { Hi, Lo };
+  SDValue Ops[] = {Hi, Lo};
   return DAG.getMergeValues(Ops, DL);
 }
 
@@ -1683,7 +1683,7 @@ SDValue WebAssemblyTargetLowering::Replace128Op(SDNode *N,
   SDValue RHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C0);
   SDValue RHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C1);
   SDValue Result_LO = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64),
-      LHS_0, LHS_1, RHS_0, RHS_1);
+                                  LHS_0, LHS_1, RHS_0, RHS_1);
   SDValue Result_HI(Result_LO.getNode(), 1);
   return DAG.getNode(ISD::BUILD_PAIR, DL, N->getVTList(), Result_LO, Result_HI);
 }
