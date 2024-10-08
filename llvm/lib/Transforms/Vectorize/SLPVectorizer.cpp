@@ -18496,14 +18496,14 @@ public:
         8>
         PossibleReducedVals;
     initReductionOps(Root);
-    DenseMap<Value *, SmallVector<LoadInst *>> LoadsMap;
+    DenseMap<std::pair<size_t, Value *>, SmallVector<LoadInst *>> LoadsMap;
     SmallSet<size_t, 2> LoadKeyUsed;
 
     auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
       Key = hash_combine(hash_value(LI->getParent()), Key);
       Value *Ptr = getUnderlyingObject(LI->getPointerOperand());
-      if (LoadKeyUsed.contains(Key)) {
-        auto LIt = LoadsMap.find(Ptr);
+      if (!LoadKeyUsed.insert(Key).second) {
+        auto LIt = LoadsMap.find(std::make_pair(Key, Ptr));
         if (LIt != LoadsMap.end()) {
           for (LoadInst *RLI : LIt->second) {
             if (getPointersDiff(RLI->getType(), RLI->getPointerOperand(),
@@ -18525,8 +18525,8 @@ public:
           }
         }
       }
-      LoadKeyUsed.insert(Key);
-      LoadsMap.try_emplace(Ptr).first->second.push_back(LI);
+      LoadsMap.try_emplace(std::make_pair(Key, Ptr))
+          .first->second.push_back(LI);
       return hash_value(LI->getPointerOperand());
     };
 
