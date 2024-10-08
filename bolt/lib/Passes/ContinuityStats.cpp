@@ -60,7 +60,7 @@ void printDistribution(raw_ostream &OS, std::vector<T> &values,
   };
 
   printLine("MAX", 0);
-  int percentages[] = {1, 5, 10, 20, 50, 80};
+  const int percentages[] = {1, 5, 10, 20, 50, 80};
   for (size_t i = 0; i < sizeof(percentages) / sizeof(percentages[0]); ++i) {
     printLine("TOP " + std::to_string(percentages[i]) + "%", percentages[i]);
   }
@@ -68,8 +68,7 @@ void printDistribution(raw_ostream &OS, std::vector<T> &values,
 }
 
 void printCFGContinuityStats(raw_ostream &OS,
-                             iterator_range<function_iterator> &Functions,
-                             bool Verbose = false) {
+                             iterator_range<function_iterator> &Functions) {
   // Given a perfect profile, every positive-execution-count BB should be
   // connected to an entry of the function through a positive-execution-count
   // directed path in the control flow graph.
@@ -86,7 +85,7 @@ void printCFGContinuityStats(raw_ostream &OS,
     size_t NumPosECBBs = 0;
     size_t SumAllBBEC = 0;
     for (const BinaryBasicBlock &BB : *Function) {
-      size_t BBEC = BB.getKnownExecutionCount();
+      const size_t BBEC = BB.getKnownExecutionCount();
       NumPosECBBs += BBEC > 0 ? 1 : 0;
       SumAllBBEC += BBEC;
     }
@@ -107,12 +106,12 @@ void printCFGContinuityStats(raw_ostream &OS,
       }
     }
     while (!Queue.empty()) {
-      unsigned BBIndex = Queue.front();
+      const unsigned BBIndex = Queue.front();
       const BinaryBasicBlock *BB = IndexToBB[BBIndex];
       Queue.pop();
       auto SuccBIIter = BB->branch_info_begin();
-      for (BinaryBasicBlock *Succ : BB->successors()) {
-        uint64_t Count = SuccBIIter->Count;
+      for (const BinaryBasicBlock *Succ : BB->successors()) {
+        const uint64_t Count = SuccBIIter->Count;
         if (Count == BinaryBasicBlock::COUNT_NO_PROFILE || Count == 0) {
           ++SuccBIIter;
           continue;
@@ -126,19 +125,21 @@ void printCFGContinuityStats(raw_ostream &OS,
       }
     }
 
-    size_t NumReachableBBs = Visited.size();
+    const size_t NumReachableBBs = Visited.size();
 
     // Loop through Visited, and sum the corresponding BBs' execution counts
     // (ECs).
     size_t SumReachableBBEC = 0;
-    for (unsigned BBIndex : Visited) {
+    for (const unsigned BBIndex : Visited) {
       const BinaryBasicBlock *BB = IndexToBB[BBIndex];
       SumReachableBBEC += BB->getKnownExecutionCount();
     }
 
-    size_t NumPosECBBsUnreachableFromEntry = NumPosECBBs - NumReachableBBs;
-    size_t SumUnreachableBBEC = SumAllBBEC - SumReachableBBEC;
-    double FractionECUnreachable = (double)SumUnreachableBBEC / SumAllBBEC;
+    const size_t NumPosECBBsUnreachableFromEntry =
+        NumPosECBBs - NumReachableBBs;
+    const size_t SumUnreachableBBEC = SumAllBBEC - SumReachableBBEC;
+    const double FractionECUnreachable =
+        (double)SumUnreachableBBEC / SumAllBBEC;
 
     if (opts::Verbosity >= 2 && FractionECUnreachable >= 0.05) {
       OS << "Non-trivial CFG discontinuity observed in function "
@@ -154,36 +155,25 @@ void printCFGContinuityStats(raw_ostream &OS,
   if (FractionECUnreachables.empty())
     return;
 
-  size_t NumConsideredFunctions =
-      std::distance(Functions.begin(), Functions.end());
-  if (!Verbose) {
-    std::sort(FractionECUnreachables.begin(), FractionECUnreachables.end());
-    int Rank = int(FractionECUnreachables.size() * 0.95);
-    OS << format("BOLT-INFO: among the hottest %zu functions ",
-                 NumConsideredFunctions)
-       << format("the top 5%% function CFG discontinuity is %.2lf%%",
-                 FractionECUnreachables[Rank] * 100)
-       << "\n";
-    return;
+  std::sort(FractionECUnreachables.begin(), FractionECUnreachables.end());
+  const int Rank = int(FractionECUnreachables.size() * 0.95);
+  OS << format("top 5%% function CFG discontinuity is %.2lf%%\n",
+               FractionECUnreachables[Rank] * 100);
+
+  if (opts::Verbosity >= 1) {
+    OS << "abbreviations: EC = execution count, POS BBs = positive EC BBs\n"
+       << "distribution of NUM(unreachable POS BBs) among all focal "
+          "functions\n";
+    printDistribution(OS, NumUnreachables);
+
+    OS << "distribution of SUM_EC(unreachable POS BBs) among all focal "
+          "functions\n";
+    printDistribution(OS, SumECUnreachables);
+
+    OS << "distribution of [(SUM_EC(unreachable POS BBs) / SUM_EC(all "
+          "POS BBs))] among all focal functions\n";
+    printDistribution(OS, FractionECUnreachables, /*Fraction=*/true);
   }
-
-  OS << format("Focus on %zu (%.2lf%%) of considered functions that have at "
-               "least 2 basic blocks\n",
-               SumECUnreachables.size(),
-               100.0 * (double)SumECUnreachables.size() /
-                   NumConsideredFunctions);
-
-  OS << "- Distribution of NUM(unreachable POS BBs) among all focal "
-        "functions\n";
-  printDistribution(OS, NumUnreachables);
-
-  OS << "- Distribution of SUM(unreachable POS BBs) among all focal "
-        "functions\n";
-  printDistribution(OS, SumECUnreachables);
-
-  OS << "- Distribution of [(SUM(unreachable POS BBs) / SUM(all "
-        "POS BBs))] among all focal functions\n";
-  printDistribution(OS, FractionECUnreachables, /*Fraction=*/true);
 }
 
 void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
@@ -194,29 +184,28 @@ void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
                return A->getKnownExecutionCount() > B->getKnownExecutionCount();
              });
 
-  size_t RealNumTopFunctions = std::min(NumTopFunctions, ValidFunctions.size());
+  const size_t RealNumTopFunctions =
+      std::min(NumTopFunctions, ValidFunctions.size());
 
   iterator_range<function_iterator> Functions(
       ValidFunctions.begin(), ValidFunctions.begin() + RealNumTopFunctions);
-  printCFGContinuityStats(BC.outs(), Functions, /*Verbose=*/false);
+
+  BC.outs() << format("BOLT-INFO: among the hottest %zu functions ",
+                      RealNumTopFunctions);
+  printCFGContinuityStats(BC.outs(), Functions);
 
   // Print more detailed bucketed stats if requested.
   if (opts::Verbosity >= 1 && RealNumTopFunctions >= 5) {
-    size_t PerBucketSize = RealNumTopFunctions / 5;
+    const size_t PerBucketSize = RealNumTopFunctions / 5;
     BC.outs() << format(
         "Detailed stats for 5 buckets, each with  %zu functions:\n",
         PerBucketSize);
-    BC.outs() << "For each considered function, identify positive "
-                 "execution-count basic blocks\n"
-              << "(abbr. POS BBs) that are *unreachable* from the function "
-                 "entry through a\n"
-              << "positive-execution-count path.\n";
 
     // For each bucket, print the CFG continuity stats of the functions in the
     // bucket.
     for (size_t BucketIndex = 0; BucketIndex < 5; ++BucketIndex) {
       const size_t StartIndex = BucketIndex * PerBucketSize;
-      size_t EndIndex = StartIndex + PerBucketSize;
+      const size_t EndIndex = StartIndex + PerBucketSize;
       iterator_range<function_iterator> Functions(
           ValidFunctions.begin() + StartIndex,
           ValidFunctions.begin() + EndIndex);
@@ -225,12 +214,14 @@ void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
       const size_t MinFunctionExecutionCount =
           ValidFunctions[EndIndex - 1]->getKnownExecutionCount();
       BC.outs() << format("----------------\n|   Bucket %zu:  "
-                          "|\n----------------\nExecution counts of the %zu "
-                          "functions in the bucket: "
-                          "%zu-%zu\n",
-                          BucketIndex + 1, EndIndex - StartIndex,
-                          MinFunctionExecutionCount, MaxFunctionExecutionCount);
-      printCFGContinuityStats(BC.outs(), Functions, /*Verbose=*/true);
+                          "|\n----------------\n",
+                          BucketIndex + 1)
+                << format(
+                       "execution counts of the %zu functions in the bucket: "
+                       "%zu-%zu\n",
+                       EndIndex - StartIndex, MinFunctionExecutionCount,
+                       MaxFunctionExecutionCount);
+      printCFGContinuityStats(BC.outs(), Functions);
     }
   }
 }
