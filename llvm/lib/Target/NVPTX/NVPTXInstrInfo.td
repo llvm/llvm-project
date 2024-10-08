@@ -3741,7 +3741,7 @@ def Callseq_End :
 def trapinst : NVPTXInst<(outs), (ins), "trap;", [(trap)]>, Requires<[noPTXASUnreachableBug]>;
 // Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
 // This won't be necessary in a future version of ptxas.
-def trapinstexit : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>, Requires<[hasPTXASUnreachableBug]>;
+def trapexitinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>, Requires<[hasPTXASUnreachableBug]>;
 // brkpt instruction
 def debugtrapinst : NVPTXInst<(outs), (ins), "brkpt;", [(debugtrap)]>;
 
