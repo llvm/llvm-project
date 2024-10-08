@@ -279,8 +279,10 @@ void ProcessMinidump::RefreshStateAfterStop() {
         description = reinterpret_cast<const char *>(
             exception_stream.ExceptionRecord.ExceptionInformation);
 
-      stop_info = StopInfo::CreateStopReasonWithSignal(*stop_thread, signo,
-                                                       description);
+      llvm::StringRef description_str(description,
+                                      Exception::MaxParameterBytes);
+      stop_info = StopInfo::CreateStopReasonWithSignal(
+          *stop_thread, signo, description_str.str().c_str());
     } else if (arch.GetTriple().getVendor() == llvm::Triple::Apple) {
       stop_info = StopInfoMachException::CreateStopReasonWithMachException(
           *stop_thread, exception_stream.ExceptionRecord.ExceptionCode, 2,

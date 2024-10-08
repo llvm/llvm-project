@@ -75,7 +75,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     if (stop_info_sp) {
       const StopReason &stop_reason = stop_info_sp->GetStopReason();
-      if (stop_reason)
+      if (stop_reason != lldb::eStopReasonInvalid)
         m_expected_directories++;
     }
   }
@@ -684,7 +684,9 @@ Status MinidumpFileBuilder::AddExceptions() {
   Status error;
   for (const ThreadSP &thread_sp : thread_list) {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
-    if (!stop_info_sp)
+    // If we don't have a stop info, or if it's invalid, skip.
+    if (!stop_info_sp ||
+        stop_info_sp->GetStopReason() == lldb::eStopReasonInvalid)
       continue;
 
     constexpr size_t minidump_exception_size =
