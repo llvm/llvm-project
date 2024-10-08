@@ -207,7 +207,7 @@ public:
   /// context.
   static lldb::TypeSystemSP
   CreateInstance(const SymbolContext &sc,
-                 TypeSystemSwiftTypeRefForExpressions &typeref_typesystem,
+                 TypeSystemSwiftTypeRef &typeref_typesystem,
                  const char *extra_options = nullptr);
 
   /// Returns true if Swift C++ interop is enabled for the given compiler unit.

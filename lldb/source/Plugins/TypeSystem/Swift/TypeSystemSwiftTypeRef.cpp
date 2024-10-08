@@ -1839,8 +1839,7 @@ TypeSystemSwiftTypeRef::GetSwiftASTContext(const SymbolContext &sc) const {
 
   // Create a new SwiftASTContextForExpressions.
   TypeSystemSP ts = SwiftASTContext::CreateInstance(
-      LanguageType::eLanguageTypeSwift, *m_module,
-      *const_cast<TypeSystemSwiftTypeRef *>(this));
+      sc, *const_cast<TypeSystemSwiftTypeRef *>(this));
   m_swift_ast_context_map.insert({key, ts});
 
   auto *swift_ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(ts.get());
