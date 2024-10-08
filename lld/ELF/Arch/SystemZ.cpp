@@ -600,7 +600,4 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-TargetInfo *elf::getSystemZTargetInfo(Ctx &ctx) {
-  static SystemZ t(ctx);
-  return &t;
-}
+void elf::setSystemZTargetInfo(Ctx &ctx) { ctx.target.reset(new SystemZ(ctx)); }
