@@ -185,6 +185,8 @@ bool SystemZABIInfo::isFPArgumentType(QualType Ty) const {
 
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
     switch (BT->getKind()) {
+//  case BuiltinType::Half:     // __fp16    Support __fp16??
+    case BuiltinType::Float16:  // _Float16
     case BuiltinType::Float:
     case BuiltinType::Double:
       return true;
@@ -277,7 +279,8 @@ RValue SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   } else {
     if (AI.getCoerceToType())
       ArgTy = AI.getCoerceToType();
-    InFPRs = (!IsSoftFloatABI && (ArgTy->isFloatTy() || ArgTy->isDoubleTy()));
+    InFPRs = (!IsSoftFloatABI &&
+              (ArgTy->isHalfTy() || ArgTy->isFloatTy() || ArgTy->isDoubleTy()));
     IsVector = ArgTy->isVectorTy();
     UnpaddedSize = TyInfo.Width;
     DirectAlign = TyInfo.Align;
@@ -446,10 +449,11 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
 
     // The structure is passed as an unextended integer, a float, or a double.
     if (isFPArgumentType(SingleElementTy)) {
-      assert(Size == 32 || Size == 64);
+      assert(Size == 16 || Size == 32 || Size == 64);
       return ABIArgInfo::getDirect(
-          Size == 32 ? llvm::Type::getFloatTy(getVMContext())
-                     : llvm::Type::getDoubleTy(getVMContext()));
+          Size == 16 ? llvm::Type::getHalfTy(getVMContext())
+                     : Size == 32 ? llvm::Type::getFloatTy(getVMContext())
+                                  : llvm::Type::getDoubleTy(getVMContext()));
     } else {
       llvm::IntegerType *PassTy = llvm::IntegerType::get(getVMContext(), Size);
       return Size <= 32 ? ABIArgInfo::getNoExtend(PassTy)

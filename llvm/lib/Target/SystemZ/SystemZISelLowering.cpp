@@ -711,6 +711,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::f32, Custom);
   }
 
+  // Expand FP16 <=> FP32 conversions to libcalls and handle FP16 loads and
+  // stores in GPRs.
+  setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+
   // VASTART and VACOPY need to deal with the SystemZ-specific varargs
   // structure, but VAEND is a no-op.
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
@@ -782,6 +789,20 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
 bool SystemZTargetLowering::useSoftFloat() const {
   return Subtarget.hasSoftFloat();
+}
+
+MVT SystemZTargetLowering::getRegisterTypeForCallingConv(
+      LLVMContext &Context, CallingConv::ID CC,
+      EVT VT) const {
+  // 128-bit single-element vector types are passed like other vectors,
+  // not like their element type.
+  if (VT.isVector() && VT.getSizeInBits() == 128 &&
+      VT.getVectorNumElements() == 1)
+    return MVT::v16i8;
+  // Keep f16 so that they can be recognized and handled.
+  if (VT == MVT::f16)
+    return MVT::f16;
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
 EVT SystemZTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -1597,6 +1618,15 @@ bool SystemZTargetLowering::splitValueIntoRegisterParts(
     return true;
   }
 
+  // Convert f16 to f32 (Out-arg).
+  if (PartVT == MVT::f16) {
+    assert(NumParts == 1 && "");
+    SDValue I16Val = DAG.getBitcast(MVT::i16, Val);
+    SDValue I32Val = DAG.getAnyExtOrTrunc(I16Val, DL, MVT::i32);
+    Parts[0] = DAG.getBitcast(MVT::f32, I32Val);
+    return true;
+  }
+
   return false;
 }
 
@@ -1610,6 +1640,18 @@ SDValue SystemZTargetLowering::joinRegisterPartsIntoValue(
   }
 
   return SDValue();
+}
+
+// F32Val holds a f16 value in f32, return it as an f16 (In-arg). The
+// CopyFromReg was made into an f32 as required as FP32 registers are used
+// for arguments, now convert it to f16.
+static SDValue convertF32ToF16(SDValue F32Val, SelectionDAG &DAG,
+                               const SDLoc &DL) {
+  assert(F32Val->getOpcode() == ISD::CopyFromReg &&
+         "Only expecting to handle f16 with CopyFromReg here.");
+  SDValue I32Val = DAG.getBitcast(MVT::i32, F32Val);
+  SDValue I16Val = DAG.getAnyExtOrTrunc(I32Val, DL, MVT::i16);
+  return DAG.getBitcast(MVT::f16, I16Val);
 }
 
 SDValue SystemZTargetLowering::LowerFormalArguments(
@@ -1651,6 +1693,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
         NumFixedGPRs += 1;
         RC = &SystemZ::GR64BitRegClass;
         break;
+      case MVT::f16:
       case MVT::f32:
         NumFixedFPRs += 1;
         RC = &SystemZ::FP32BitRegClass;
@@ -1675,7 +1718,11 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
 
       Register VReg = MRI.createVirtualRegister(RC);
       MRI.addLiveIn(VA.getLocReg(), VReg);
-      ArgValue = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
+      // Special handling is needed for f16.
+      MVT ArgVT = VA.getLocVT() == MVT::f16 ? MVT::f32 : VA.getLocVT();
+      ArgValue = DAG.getCopyFromReg(Chain, DL, VReg, ArgVT);
+      if (VA.getLocVT() == MVT::f16)
+        ArgValue = convertF32ToF16(ArgValue, DAG, DL);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
 
@@ -1695,9 +1742,12 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       // from this parameter.  Unpromoted ints and floats are
       // passed as right-justified 8-byte values.
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
-      if (VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::f32)
+      if (VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::f32 ||
+          VA.getLocVT() == MVT::f16) {
+        unsigned SlotOffs = VA.getLocVT() == MVT::f16 ? 6 : 4;
         FIN = DAG.getNode(ISD::ADD, DL, PtrVT, FIN,
-                          DAG.getIntPtrConstant(4, DL));
+                          DAG.getIntPtrConstant(SlotOffs, DL));
+      }
       ArgValue = DAG.getLoad(LocVT, DL, Chain, FIN,
                              MachinePointerInfo::getFixedStack(MF, FI));
     }
@@ -2116,10 +2166,14 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Copy all of the result registers out of their specified physreg.
   for (CCValAssign &VA : RetLocs) {
     // Copy the value out, gluing the copy to the end of the call sequence.
+    // Special handling is needed for f16.
+    MVT ArgVT = VA.getLocVT() == MVT::f16 ? MVT::f32 : VA.getLocVT();
     SDValue RetValue = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(),
-                                          VA.getLocVT(), Glue);
+                                          ArgVT, Glue);
     Chain = RetValue.getValue(1);
     Glue = RetValue.getValue(2);
+    if (VA.getLocVT() == MVT::f16)
+      RetValue = convertF32ToF16(RetValue, DAG, DL);
 
     // Convert the value of the return register into the value that's
     // being returned.
