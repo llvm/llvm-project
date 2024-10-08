@@ -18,3 +18,5 @@
 #endif
 
 REGION_PASS("null", NullPass())
+
+#undef REGION_PASS
