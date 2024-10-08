@@ -1,0 +1,22 @@
+# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s --implicit-check-not="Bad machine code"
+# REQUIRES: aarch64-registered-target
+
+# Check that errors are reported from only one function.
+# CHECK: *** Bad machine code: Generic virtual register use cannot be undef ***
+# CHECK: Found 1 machine code errors.
+
+---
+name:            foo
+liveins:
+body:             |
+  bb.0:
+    $x0 = COPY undef %0:_(s64)
+...
+
+---
+name:            bar
+liveins:
+body:             |
+  bb.0:
+    $x0 = COPY undef %0:_(s64)
+...

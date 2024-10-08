@@ -77,8 +77,10 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
@@ -93,21 +95,29 @@ using namespace llvm;
 
 namespace {
 
+static ManagedStatic<sys::SmartMutex<true>> ReportedErrorsLock;
+
 struct MachineVerifier {
   MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b,
-                  raw_ostream *OS)
-      : MFAM(&MFAM), OS(OS ? *OS : nulls()), Banner(b) {}
+                  raw_ostream *OS, bool AbortOnError = true)
+      : MFAM(&MFAM), OS(OS ? *OS : nulls()), Banner(b),
+        ReportedErrs(AbortOnError) {}
 
-  MachineVerifier(Pass *pass, const char *b, raw_ostream *OS)
-      : PASS(pass), OS(OS ? *OS : nulls()), Banner(b) {}
+  MachineVerifier(Pass *pass, const char *b, raw_ostream *OS,
+                  bool AbortOnError = true)
+      : PASS(pass), OS(OS ? *OS : nulls()), Banner(b),
+        ReportedErrs(AbortOnError) {}
 
   MachineVerifier(const char *b, LiveVariables *LiveVars,
                   LiveIntervals *LiveInts, LiveStacks *LiveStks,
-                  SlotIndexes *Indexes, raw_ostream *OS)
+                  SlotIndexes *Indexes, raw_ostream *OS,
+                  bool AbortOnError = true)
       : OS(OS ? *OS : nulls()), Banner(b), LiveVars(LiveVars),
-        LiveInts(LiveInts), LiveStks(LiveStks), Indexes(Indexes) {}
+        LiveInts(LiveInts), LiveStks(LiveStks), Indexes(Indexes),
+        ReportedErrs(AbortOnError) {}
 
-  unsigned verify(const MachineFunction &MF);
+  /// \returns true if no problems were found.
+  bool verify(const MachineFunction &MF);
 
   MachineFunctionAnalysisManager *MFAM = nullptr;
   Pass *const PASS = nullptr;
@@ -119,8 +129,6 @@ struct MachineVerifier {
   const TargetRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   const RegisterBankInfo *RBI = nullptr;
-
-  unsigned foundErrors = 0;
 
   // Avoid querying the MachineFunctionProperties for each operand.
   bool isFunctionRegBankSelected = false;
@@ -231,6 +239,39 @@ struct MachineVerifier {
   LiveStacks *LiveStks = nullptr;
   SlotIndexes *Indexes = nullptr;
 
+  class ReportedErrors {
+    unsigned NumReported = 0;
+    bool AbortOnError;
+
+  public:
+    ReportedErrors(bool AbortOnError) : AbortOnError(AbortOnError) {}
+    ~ReportedErrors() {
+      if (!hasError())
+        return;
+      if (AbortOnError)
+        report_fatal_error("Found " + Twine(NumReported) +
+                           " machine code errors.");
+      // Since we haven't aborted, release the lock to allow other threads to
+      // report errors.
+      ReportedErrorsLock->unlock();
+    }
+
+    /// Increment the number of reported errors.
+    /// \returns true if this is the first reported error.
+    bool increment() {
+      // If this is the first error this thread has encountered, grab the lock
+      // to prevent other threads from reporting errors at the same time.
+      // Otherwise we assume we already have the lock.
+      if (!hasError())
+        ReportedErrorsLock->lock();
+      ++NumReported;
+      return NumReported == 1;
+    }
+
+    bool hasError() { return NumReported; }
+  };
+  ReportedErrors ReportedErrs;
+
   // This is calculated only when trying to verify convergence control tokens.
   // Similar to the LLVM IR verifier, we calculate this locally instead of
   // relying on the pass manager.
@@ -337,11 +378,7 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
             MachineFunctionProperties::Property::FailsVerification))
       return false;
 
-    unsigned FoundErrors =
-        MachineVerifier(this, Banner.c_str(), &errs()).verify(MF);
-    if (FoundErrors)
-      report_fatal_error("Found " + Twine(FoundErrors) +
-                         " machine code errors.");
+    MachineVerifier(this, Banner.c_str(), &errs()).verify(MF);
     return false;
   }
 };
@@ -357,10 +394,7 @@ MachineVerifierPass::run(MachineFunction &MF,
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailsVerification))
     return PreservedAnalyses::all();
-  unsigned FoundErrors =
-      MachineVerifier(MFAM, Banner.c_str(), &errs()).verify(MF);
-  if (FoundErrors)
-    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+  MachineVerifier(MFAM, Banner.c_str(), &errs()).verify(MF);
   return PreservedAnalyses::all();
 }
 
@@ -380,31 +414,20 @@ void llvm::verifyMachineFunction(const std::string &Banner,
   // LiveIntervals *LiveInts;
   // LiveStacks *LiveStks;
   // SlotIndexes *Indexes;
-  unsigned FoundErrors =
-      MachineVerifier(nullptr, Banner.c_str(), &errs()).verify(MF);
-  if (FoundErrors)
-    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+  MachineVerifier(nullptr, Banner.c_str(), &errs()).verify(MF);
 }
 
 bool MachineFunction::verify(Pass *p, const char *Banner, raw_ostream *OS,
-                             bool AbortOnErrors) const {
-  MachineFunction &MF = const_cast<MachineFunction&>(*this);
-  unsigned FoundErrors = MachineVerifier(p, Banner, OS).verify(MF);
-  if (AbortOnErrors && FoundErrors)
-    report_fatal_error("Found "+Twine(FoundErrors)+" machine code errors.");
-  return FoundErrors == 0;
+                             bool AbortOnError) const {
+  return MachineVerifier(p, Banner, OS, AbortOnError).verify(*this);
 }
 
 bool MachineFunction::verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
                              const char *Banner, raw_ostream *OS,
-                             bool AbortOnErrors) const {
-  MachineFunction &MF = const_cast<MachineFunction &>(*this);
-  unsigned FoundErrors =
-      MachineVerifier(Banner, nullptr, LiveInts, nullptr, Indexes, OS)
-          .verify(MF);
-  if (AbortOnErrors && FoundErrors)
-    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
-  return FoundErrors == 0;
+                             bool AbortOnError) const {
+  return MachineVerifier(Banner, /*LiveVars=*/nullptr, LiveInts,
+                         /*LiveStks=*/nullptr, Indexes, OS, AbortOnError)
+      .verify(*this);
 }
 
 void MachineVerifier::verifySlotIndexes() const {
@@ -430,9 +453,7 @@ void MachineVerifier::verifyProperties(const MachineFunction &MF) {
     report("Function has NoVRegs property but there are VReg operands", &MF);
 }
 
-unsigned MachineVerifier::verify(const MachineFunction &MF) {
-  foundErrors = 0;
-
+bool MachineVerifier::verify(const MachineFunction &MF) {
   this->MF = &MF;
   TM = &MF.getTarget();
   TII = MF.getSubtarget().getInstrInfo();
@@ -447,7 +468,7 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
   // it's expected that the MIR is somewhat broken but that's ok since we'll
   // reset it and clear the FailedISel attribute in ResetMachineFunctions.
   if (isFunctionFailedISel)
-    return foundErrors;
+    return true;
 
   isFunctionRegBankSelected = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::RegBankSelected);
@@ -544,13 +565,13 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
   regMasks.clear();
   MBBInfoMap.clear();
 
-  return foundErrors;
+  return !ReportedErrs.hasError();
 }
 
 void MachineVerifier::report(const char *msg, const MachineFunction *MF) {
   assert(MF);
   OS << '\n';
-  if (!foundErrors++) {
+  if (ReportedErrs.increment()) {
     if (Banner)
       OS << "# " << Banner << '\n';
 
