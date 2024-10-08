@@ -15,6 +15,7 @@
 
 // template<class T> struct is_implicit_lifetime;
 
+#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <tuple>
@@ -134,6 +135,12 @@ constexpr void test_is_implicit_lifetime() {
   // Arrays
   test_is_implicit_lifetime<T[], true>();
   test_is_implicit_lifetime<T[94], true>();
+
+  if !consteval {
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      test_is_implicit_lifetime<std::atomic<T>, true>();
+    }
+  }
 }
 
 struct AritmeticTypesTest {
@@ -152,27 +159,7 @@ constexpr bool test() {
   test_is_implicit_lifetime<const void, false>();
   test_is_implicit_lifetime<volatile void, false>();
 
-  test_is_implicit_lifetime<bool>();
-
-  test_is_implicit_lifetime<char>();
-  test_is_implicit_lifetime<signed char>();
-  test_is_implicit_lifetime<unsigned char>();
-
-#if !defined(TEST_HAS_NO_WIDE_CHARACTERS)
-  test_is_implicit_lifetime<wchar_t>();
-#endif
-
-#if !defined(TEST_HAS_NO_CHAR8_T)
-  test_is_implicit_lifetime<char8_t>();
-#endif
-  test_is_implicit_lifetime<char16_t>();
-  test_is_implicit_lifetime<char32_t>();
-
   types::for_each(types::arithmetic_types(), AritmeticTypesTest{});
-
-  test_is_implicit_lifetime<float>();
-  test_is_implicit_lifetime<double>();
-  test_is_implicit_lifetime<long double>();
 
   test_is_implicit_lifetime<Enum>();
   test_is_implicit_lifetime<SignedEnum>();
