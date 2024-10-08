@@ -64,12 +64,13 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/StringSaver.h"
 #include <vector>
 
 namespace llvm {
 namespace mustache {
 
-using Accessor = SmallVector<SmallString<128>>;
+using Accessor = SmallVector<SmallString<0>>;
 using Lambda = std::function<llvm::json::Value()>;
 using SectionLambda = std::function<llvm::json::Value(StringRef)>;
 
@@ -100,13 +101,20 @@ public:
 
   Type getType() const { return TokenType; };
 
+  void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
+
+  size_t getIndentation() const { return Indentation; };
+
   static Type getTokenType(char Identifier);
 
 private:
+  size_t Indentation;
   Type TokenType;
+  // RawBody is the original string that was tokenized
   SmallString<128> RawBody;
   Accessor Accessor;
-  SmallString<128> TokenBody;
+  // TokenBody is the original string with the identifier removed
+  SmallString<0> TokenBody;
 };
 
 class ASTNode {
@@ -121,36 +129,55 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), LocalContext(nullptr) {};
+  ASTNode() : T(Type::Root), LocalContext(nullptr){};
 
   ASTNode(StringRef Body, ASTNode *Parent)
-      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr) {};
+      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr),
+        Indentation(0){};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        LocalContext(nullptr) {};
+        LocalContext(nullptr), Indentation(0){};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
-
-  SmallString<128> getBody() const { return Body; };
 
   void setBody(StringRef NewBody) { Body = NewBody; };
 
   void setRawBody(StringRef NewBody) { RawBody = NewBody; };
 
-  SmallString<128> render(llvm::json::Value Data,
-                          llvm::BumpPtrAllocator &Allocator,
-                          DenseMap<StringRef, ASTNode *> &Partials,
-                          DenseMap<StringRef, Lambda> &Lambdas,
-                          DenseMap<StringRef, SectionLambda> &SectionLambdas,
-                          DenseMap<char, StringRef> &Escapes);
+  void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
+
+  void render(llvm::json::Value Data, SmallString<0> &Output);
+
+  void setUpNode(llvm::BumpPtrAllocator &Allocator,
+                 StringMap<ASTNode *> &Partials, StringMap<Lambda> &Lambdas,
+                 StringMap<SectionLambda> &SectionLambdas,
+                 DenseMap<char, StringRef> &Escapes);
 
 private:
+  void renderLambdas(llvm::json::Value &Contexts, SmallString<0> &Output,
+                     Lambda &L);
+
+  void renderSectionLambdas(llvm::json::Value &Contexts, SmallString<0> &Output,
+                            SectionLambda &L);
+
+  void renderPartial(llvm::json::Value &Contexts, SmallString<0> &Output,
+                     ASTNode *Partial);
+
+  void renderChild(llvm::json::Value &Context, SmallString<0> &Output);
+
   llvm::json::Value findContext();
+
+  llvm::BumpPtrAllocator *Allocator;
+  StringMap<ASTNode *> *Partials;
+  StringMap<Lambda> *Lambdas;
+  StringMap<SectionLambda> *SectionLambdas;
+  DenseMap<char, StringRef> *Escapes;
   Type T;
-  SmallString<128> RawBody;
-  SmallString<128> Body;
+  size_t Indentation;
+  SmallString<0> RawBody;
+  SmallString<0> Body;
   ASTNode *Parent;
   std::vector<ASTNode *> Children;
   const Accessor Accessor;
@@ -163,7 +190,7 @@ class Template {
 public:
   Template(StringRef TemplateStr);
 
-  SmallString<128> render(llvm::json::Value Data);
+  StringRef render(llvm::json::Value Data);
 
   void registerPartial(StringRef Name, StringRef Partial);
 
@@ -177,14 +204,14 @@ public:
   void registerEscape(DenseMap<char, StringRef> Escapes);
 
 private:
-  DenseMap<StringRef, ASTNode *> Partials;
-  DenseMap<StringRef, Lambda> Lambdas;
-  DenseMap<StringRef, SectionLambda> SectionLambdas;
+  SmallString<0> Output;
+  StringMap<ASTNode *> Partials;
+  StringMap<Lambda> Lambdas;
+  StringMap<SectionLambda> SectionLambdas;
   DenseMap<char, StringRef> Escapes;
   llvm::BumpPtrAllocator Allocator;
   ASTNode *Tree;
 };
-
 } // namespace mustache
 } // end namespace llvm
 #endif // LLVM_SUPPORT_MUSTACHE
