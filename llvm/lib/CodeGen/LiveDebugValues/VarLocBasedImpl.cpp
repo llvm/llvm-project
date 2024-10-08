@@ -1247,13 +1247,7 @@ void VarLocBasedLDV::getUsedRegs(const VarLocSet &CollectFrom,
       LocIndex::rawIndexForReg(LocIndex::kFirstInvalidRegLocation);
   uint64_t FirstVirtualRegIndex =
       LocIndex::rawIndexForReg(LocIndex::kFirstVirtualRegLocation);
-  for (auto It = CollectFrom.find(FirstRegIndex),
-            PhysEnd = CollectFrom.find(FirstInvalidIndex);
-       It != CollectFrom.end();) {
-    if (It == PhysEnd) {
-      It = CollectFrom.find(FirstVirtualRegIndex);
-      continue;
-    }
+  auto doGetUsedRegs = [&](VarLocSet::const_iterator &It) {
     // We found a VarLoc ID for a VarLoc that lives in a register. Figure out
     // which register and add it to UsedRegs.
     uint32_t FoundReg = LocIndex::fromRawInteger(*It).Location;
@@ -1266,6 +1260,16 @@ void VarLocBasedLDV::getUsedRegs(const VarLocSet &CollectFrom,
     // guaranteed to move on to the next register (or to end()).
     uint64_t NextRegIndex = LocIndex::rawIndexForReg(FoundReg + 1);
     It.advanceToLowerBound(NextRegIndex);
+  };
+  for (auto It = CollectFrom.find(FirstRegIndex),
+            End = CollectFrom.find(FirstInvalidIndex);
+       It != End;) {
+    doGetUsedRegs(It);
+  }
+  for (auto It = CollectFrom.find(FirstVirtualRegIndex),
+            End = CollectFrom.end();
+       It != End;) {
+    doGetUsedRegs(It);
   }
 }
 
