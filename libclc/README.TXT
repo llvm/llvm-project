@@ -23,28 +23,45 @@ generic implementations of most library requirements, allowing the target
 to override the generic implementation at the granularity of individual
 functions.
 
-libclc currently only supports the PTX target, but support for more
-targets is welcome.
+libclc currently supports PTX, AMDGPU, SPIRV and CLSPV targets, but support for
+more targets is welcome.
 
-Compiling and installing with Make
-----------------------------------
+Compiling and installing
+------------------------
 
-$ ./configure.py --with-llvm-config=/path/to/llvm-config && make
-$ make install
+(in the following instructions you can use make or ninja)
+
+For an in-tree build, Clang must also be built at the same time:
+
+$ cmake <path-to>/llvm-project/llvm/CMakeLists.txt -DLLVM_ENABLE_PROJECTS="libclc;clang" \
+    -DCMAKE_BUILD_TYPE=Release -G Ninja
+$ ninja
+
+Then install:
+
+$ ninja install
 
 Note you can use the DESTDIR Makefile variable to do staged installs.
 
-$ make install DESTDIR=/path/for/staged/install
-
-Compiling and installing with Ninja
------------------------------------
-
-$ ./configure.py -g ninja --with-llvm-config=/path/to/llvm-config && ninja
-$ ninja install
-
-Note you can use the DESTDIR environment variable to do staged installs.
-
 $ DESTDIR=/path/for/staged/install ninja install
+
+To build out of tree, or in other words, against an existing LLVM build or install:
+
+$ cmake <path-to>/llvm-project/libclc/CMakeLists.txt -DCMAKE_BUILD_TYPE=Release \
+  -G Ninja -DLLVM_DIR=$(<path-to>/llvm-config --cmakedir)
+$ ninja
+
+Then install as before.
+
+In both cases this will include all supported targets. You can choose which
+targets are enabled by passing `-DLIBCLC_TARGETS_TO_BUILD` to CMake. The default
+is "all".
+
+In both cases, the LLVM used must include the targets you want libclc support for
+(AMDGPU and NVPTX are enabled in LLVM by default). Apart from SPIRV where you do
+not need an LLVM target but you do need the llvm-spirv tool
+(https://github.com/KhronosGroup/SPIRV-LLVM-Translator) available. Either build
+this in-tree, or place it in the directory pointed to by `LLVM_TOOLS_BINARY_DIR`.
 
 Website
 -------
