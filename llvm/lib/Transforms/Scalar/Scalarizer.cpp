@@ -197,9 +197,15 @@ struct VectorLayout {
   uint64_t SplitSize = 0;
 };
 
-static bool isStructOfVectors(Type *Ty) {
-  return isa<StructType>(Ty) && Ty->getNumContainedTypes() > 0 &&
-         isa<FixedVectorType>(Ty->getContainedType(0));
+static bool isStructAllVectors(Type *Ty) {
+  if (!isa<StructType>(Ty))
+    return false;
+
+  for(unsigned I = 0; I < Ty->getNumContainedTypes(); I++)
+    if (!isa<FixedVectorType>(Ty->getContainedType(I)))
+      return false;
+
+  return true;
 }
 
 /// Concatenate the given fragments to a single vector value of the type
@@ -558,10 +564,7 @@ void ScalarizerVisitor::transferMetadataAndIRFlags(Instruction *Op,
 // Determine how Ty is split, if at all.
 std::optional<VectorSplit> ScalarizerVisitor::getVectorSplit(Type *Ty) {
   VectorSplit Split;
-  if (isStructOfVectors(Ty))
-    Split.VecTy = cast<FixedVectorType>(Ty->getContainedType(0));
-  else
-    Split.VecTy = dyn_cast<FixedVectorType>(Ty);
+  Split.VecTy = dyn_cast<FixedVectorType>(Ty);
   if (!Split.VecTy)
     return {};
 
@@ -676,6 +679,10 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
 bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
   if (isTriviallyVectorizable(ID))
     return true;
+  switch (ID) {
+    case Intrinsic::frexp:
+    return true;
+  }
   return Intrinsic::isTargetIntrinsic(ID) &&
          TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 }
@@ -683,7 +690,13 @@ bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
 /// If a call to a vector typed intrinsic function, split into a scalar call per
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
-  std::optional<VectorSplit> VS = getVectorSplit(CI.getType());
+  Type* CallType = CI.getType();
+  bool areAllVectors = isStructAllVectors(CallType);
+   std::optional<VectorSplit> VS;
+  if (areAllVectors)
+    VS = getVectorSplit(CallType->getContainedType(0));
+  else
+    VS = getVectorSplit(CallType);
   if (!VS)
     return false;
 
@@ -708,6 +721,18 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
     Tys.push_back(VS->SplitTy);
 
+  if(areAllVectors) {
+    Type* PrevType = CallType->getContainedType(0);
+    Type* CallType = CI.getType();
+    for(unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
+      Type* CurrType = cast<FixedVectorType>(CallType->getContainedType(I));
+      if(PrevType != CurrType) {
+        std::optional<VectorSplit> CurrVS = getVectorSplit(CurrType);
+        Tys.push_back(CurrVS->SplitTy);
+        PrevType = CurrType;
+      }
+    }
+  }
   // Assumes that any vector type has the same number of elements as the return
   // vector type, which is true for all current intrinsics.
   for (unsigned I = 0; I != NumArgs; ++I) {
@@ -1043,15 +1068,13 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   Value *Op = EVI.getOperand(0);
   Type *OpTy = Op->getType();
   ValueVector Res;
-  if (!isStructOfVectors(OpTy))
+  if (!isStructAllVectors(OpTy))
     return false;
-  // Note: isStructOfVectors is also used in getVectorSplit.
-  // The intent is to bail on this visit if it isn't a struct
-  // of vectors. Downside is that when it is true we do two
-  // isStructOfVectors calls.
-  std::optional<VectorSplit> VS = getVectorSplit(OpTy);
+  Type* VecType = cast<FixedVectorType>(OpTy->getContainedType(0));
+  std::optional<VectorSplit> VS = getVectorSplit(VecType);
   if (!VS)
     return false;
+  IRBuilder<> Builder(&EVI);
   Scatterer Op0 = scatter(&EVI, Op, *VS);
   assert(!EVI.getIndices().empty() && "Make sure an index exists");
   // Note for our use case we only care about the top level index.
@@ -1252,7 +1275,7 @@ bool ScalarizerVisitor::finish() {
           Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
 
         // Iterate over each element in the struct
-        uint NumOfStructElements = Ty->getNumElements();
+        unsigned NumOfStructElements = Ty->getNumElements();
         SmallVector<ValueVector, 4> ElemCV(NumOfStructElements);
         for (unsigned I = 0; I < NumOfStructElements; ++I) {
           for (auto *CVelem : CV) {
