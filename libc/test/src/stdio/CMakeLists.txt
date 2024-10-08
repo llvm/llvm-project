@@ -545,4 +545,5 @@ endif()
 
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
+add_subdirectory(strftime_core)
 add_subdirectory(testdata)

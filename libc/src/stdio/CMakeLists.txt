@@ -239,6 +239,7 @@ add_entrypoint_object(
 
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
+add_subdirectory(strftime_core)
 
 add_entrypoint_object(
   remove
