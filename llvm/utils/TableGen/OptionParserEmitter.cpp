@@ -15,7 +15,6 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cstring>
 #include <map>
-#include <memory>
 
 using namespace llvm;
 
