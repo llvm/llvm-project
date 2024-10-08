@@ -20,11 +20,10 @@ import lldbsuite.test.lldbutil as lldbutil
 # frame from another virtual frame.
 # * The plan for ASYNC___3___ -> ASYNC___4___ is created through
 # GetFollowAsyncContextUnwindPlan, but this time it follow the code path where
-# `is_indirect = True` (see its implementation).
+# `is_indirect = true` (see its implementation).
 # * The plan for ASYNC___4___ -> ASYNC___5___ is created through the same code
-# path as the previous one. It is not technically needed, but we keep it here
-# because it is the first time where we should be creating an identical plan as
-# the one from the previous frame.
+# path as the previous one. However, it is the first time an unwind plan
+# created from that path is used to create another unwind plan.
 
 class TestCase(lldbtest.TestBase):
 

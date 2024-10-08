@@ -2603,17 +2603,16 @@ static llvm::Expected<addr_t> ReadRegisterAsAddress(RegisterContext &regctx,
 
 /// Functional wrapper to read a pointer from process memory at `addr +
 /// offset`.
-static llvm::Expected<addr_t>
-ReadPtrFromAddr(Process &process, llvm::Expected<addr_t> addr, int offset = 0) {
-  if (!addr)
-    return addr;
+static llvm::Expected<addr_t> ReadPtrFromAddr(Process &process, addr_t addr,
+                                              int offset = 0) {
   Status error;
-  addr_t ptr = process.ReadPointerFromMemory(*addr + offset, error);
+  addr_t ptr = process.ReadPointerFromMemory(addr + offset, error);
   if (ptr != LLDB_INVALID_ADDRESS)
     return ptr;
   return llvm::createStringError("SwiftLanguageRuntime: Failed to read ptr "
-                                 "from memory address 0x%8.8" PRIx64,
-                                 *addr + offset);
+                                 "from memory address 0x%8.8" PRIx64
+                                 " Error was %s",
+                                 addr + offset, error.AsCString());
 }
 
 /// Computes the Canonical Frame Address (CFA) by converting the abstract
@@ -2703,7 +2702,9 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
   case RestoreType::atCFAPlusOffset: {
     llvm::Expected<addr_t> cfa =
         GetCFA(process, regctx, unwind_regkind, row->GetCFAValue());
-    return ReadPtrFromAddr(process, std::move(cfa), regloc.GetOffset());
+    if (!cfa)
+      return cfa.takeError();
+    return ReadPtrFromAddr(process, *cfa, regloc.GetOffset());
   }
   case RestoreType::isCFAPlusOffset: {
     if (llvm::Expected<addr_t> cfa =
@@ -2736,7 +2737,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   LLDB_SCOPED_TIMER();
   auto log_expected = [](llvm::Error error) {
     Log *log = GetLog(LLDBLog::Unwind);
-    LLDB_LOG_ERROR(log, std::move(error), "SwiftLanguageRuntime: error {0}");
+    LLDB_LOG_ERROR(log, std::move(error), "{0}");
     return UnwindPlanSP();
   };
 
