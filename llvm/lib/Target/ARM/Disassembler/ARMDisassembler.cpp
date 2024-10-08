@@ -1528,15 +1528,19 @@ static const uint16_t DPRDecoderTable[] = {
     ARM::D28, ARM::D29, ARM::D30, ARM::D31
 };
 
+// Does this instruction/subtarget permit use of registers d16-d31?
+static bool PermitsD32(const MCInst &Inst, const MCDisassembler *Decoder) {
+  if (Inst.getOpcode() == ARM::VSCCLRMD)
+    return true;
+  const FeatureBitset &featureBits =
+    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
+  return featureBits[ARM::FeatureD32];
+}
+
 static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  const FeatureBitset &featureBits =
-    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
-
-  bool hasD32 = featureBits[ARM::FeatureD32];
-
-  if (RegNo > 31 || (!hasD32 && RegNo > 15))
+  if (RegNo > (PermitsD32(Inst, Decoder) ? 31 : 15))
     return MCDisassembler::Fail;
 
   unsigned Register = DPRDecoderTable[RegNo];
@@ -1815,10 +1819,11 @@ static DecodeStatus DecodeDPRRegListOperand(MCInst &Inst, unsigned Val,
   unsigned regs = fieldFromInstruction(Val, 1, 7);
 
   // In case of unpredictable encoding, tweak the operands.
-  if (regs == 0 || regs > 16 || (Vd + regs) > 32) {
-    regs = Vd + regs > 32 ? 32 - Vd : regs;
+  unsigned MaxReg = PermitsD32(Inst, Decoder) ? 32 : 16;
+  if (regs == 0 || (Vd + regs) > MaxReg) {
+    regs = Vd + regs > MaxReg ? MaxReg - Vd : regs;
     regs = std::max( 1u, regs);
-    regs = std::min(16u, regs);
+    regs = std::min(MaxReg, regs);
     S = MCDisassembler::SoftFail;
   }
 
@@ -6446,16 +6451,17 @@ static DecodeStatus DecodeVSCCLRM(MCInst &Inst, unsigned Insn, uint64_t Address,
 
   Inst.addOperand(MCOperand::createImm(ARMCC::AL));
   Inst.addOperand(MCOperand::createReg(0));
-  if (Inst.getOpcode() == ARM::VSCCLRMD) {
-    unsigned reglist = (fieldFromInstruction(Insn, 1, 7) << 1) |
-                       (fieldFromInstruction(Insn, 12, 4) << 8) |
+  unsigned regs = fieldFromInstruction(Insn, 0, 8);
+  if (regs == 0) {
+    // Register list contains only VPR
+  } else if (Inst.getOpcode() == ARM::VSCCLRMD) {
+    unsigned reglist = regs | (fieldFromInstruction(Insn, 12, 4) << 8) |
                        (fieldFromInstruction(Insn, 22, 1) << 12);
     if (!Check(S, DecodeDPRRegListOperand(Inst, reglist, Address, Decoder))) {
       return MCDisassembler::Fail;
     }
   } else {
-    unsigned reglist = fieldFromInstruction(Insn, 0, 8) |
-                       (fieldFromInstruction(Insn, 22, 1) << 8) |
+    unsigned reglist = regs | (fieldFromInstruction(Insn, 22, 1) << 8) |
                        (fieldFromInstruction(Insn, 12, 4) << 9);
     if (!Check(S, DecodeSPRRegListOperand(Inst, reglist, Address, Decoder))) {
       return MCDisassembler::Fail;
