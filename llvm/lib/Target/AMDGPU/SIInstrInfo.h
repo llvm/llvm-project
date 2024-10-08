@@ -52,12 +52,12 @@ struct SIInstrWorklist {
   void insert(MachineInstr *MI);
 
   MachineInstr *top() const {
-    auto iter = InstrList.begin();
+    const auto *iter = InstrList.begin();
     return *iter;
   }
 
   void erase_top() {
-    auto iter = InstrList.begin();
+    const auto *iter = InstrList.begin();
     InstrList.erase(iter);
   }
 
@@ -222,6 +222,7 @@ public:
     MO_ABS32_LO = 9,
     MO_ABS32_HI = 10,
     MO_ABS64 = 11,
+    MO_NUM_VGPRS = 12,
   };
 
   explicit SIInstrInfo(const GCNSubtarget &ST);

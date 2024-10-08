@@ -531,13 +531,13 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
   if (!MI1.hasOneMemOperand() || !MI2.hasOneMemOperand())
     return false;
 
-  auto MO1 = *MI1.memoperands_begin();
-  auto MO2 = *MI2.memoperands_begin();
+  auto *MO1 = *MI1.memoperands_begin();
+  auto *MO2 = *MI2.memoperands_begin();
   if (MO1->getAddrSpace() != MO2->getAddrSpace())
     return false;
 
-  auto Base1 = MO1->getValue();
-  auto Base2 = MO2->getValue();
+  const auto *Base1 = MO1->getValue();
+  const auto *Base2 = MO2->getValue();
   if (!Base1 || !Base2)
     return false;
   Base1 = getUnderlyingObject(Base1);
@@ -2035,7 +2035,7 @@ void SIInstrInfo::insertNoops(MachineBasicBlock &MBB,
 }
 
 void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
-  auto MF = MBB.getParent();
+  auto *MF = MBB.getParent();
   SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
   assert(Info->isEntryFunction());
@@ -2856,6 +2856,9 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (CommutedMI) {
     swapSourceModifiers(MI, Src0, AMDGPU::OpName::src0_modifiers,
                         Src1, AMDGPU::OpName::src1_modifiers);
+
+    swapSourceModifiers(MI, Src0, AMDGPU::OpName::src0_sel, Src1,
+                        AMDGPU::OpName::src1_sel);
 
     CommutedMI->setDesc(get(CommutedOpcode));
   }
@@ -3908,7 +3911,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         SlotIndex NewIndex = LIS->getInstructionIndex(*MIB).getRegSlot(true);
         auto &LI = LIS->getInterval(Def.getReg());
         auto UpdateDefIndex = [&](LiveRange &LR) {
-          auto S = LR.find(OldIndex);
+          auto *S = LR.find(OldIndex);
           if (S != LR.end() && S->start == OldIndex) {
             assert(S->valno && S->valno->def == OldIndex);
             S->start = NewIndex;
@@ -5162,7 +5165,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   if (isSOPK(MI)) {
-    auto Op = getNamedOperand(MI, AMDGPU::OpName::simm16);
+    const auto *Op = getNamedOperand(MI, AMDGPU::OpName::simm16);
     if (Desc.isBranch()) {
       if (!Op->isMBB()) {
         ErrInfo = "invalid branch target for SOPK instruction";
@@ -6558,7 +6561,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
         }
       } // End for loop.
 
-      auto SScalarOpRC =
+      const auto *SScalarOpRC =
           TRI->getEquivalentSGPRClass(MRI.getRegClass(VScalarOp));
       Register SScalarOp = MRI.createVirtualRegister(SScalarOpRC);
 
@@ -9005,7 +9008,7 @@ SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
           I->getOperand(0).getReg() == RegNo)
         return &*I;
     }
-  } else if (Op.isUse()) {
+  } else if (Op.isUse() && Op.isInternalRead()) {
     auto I = MI.getReverseIterator();
     auto E = MI.getParent()->instr_rend();
     while (++I != E && I->isInsideBundle()) {
@@ -9220,7 +9223,7 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
 
   uint16_t Opcode = MI.getOpcode();
   return IsNullOrVectorRegister &&
-         (isSGPRSpill(Opcode) ||
+         (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode) ||
           (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
            MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }

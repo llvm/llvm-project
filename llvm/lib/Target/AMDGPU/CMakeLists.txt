@@ -98,6 +98,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURegisterBankInfo.cpp
   AMDGPURegPressAnalysis.cpp
   AMDGPURemoveIncompatibleFunctions.cpp
+  AMDGPUReserveWWMRegs.cpp
   AMDGPUResourceUsageAnalysis.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPURewriteUndefForPHI.cpp
@@ -175,7 +176,6 @@ add_llvm_target(AMDGPUCodeGen
   SIProgramInfo.cpp
   SIRegisterInfo.cpp
   SIShrinkInstructions.cpp
-  AMDGPUFixWaveGroupEntry.cpp
   AMDGPUMarkPromotableLaneShared.cpp
   AMDGPUMarkPromotablePrivate.cpp
   AMDGPUIdxRegAlloc.cpp

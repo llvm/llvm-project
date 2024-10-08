@@ -2092,6 +2092,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureMLMathInsts,
    FeatureVGPRIndexingRegisters,
    FeatureMaxHardClauseLength63,
+   FeatureMin3Max3PKF16,
    FeatureMinimum3Maximum3PKF16,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,

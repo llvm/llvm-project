@@ -222,8 +222,6 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
     // Live range reaches from uniform control flow to last use.
     Register NewReg =
         MRI->createVirtualRegister(MRI->getRegClass(Assignments[PhysReg][0]));
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    MFI->setFlag(NewReg, AMDGPU::VirtRegFlag::WWM_REG);
     NewRegisters.push_back(NewReg);
 
     LLVM_DEBUG(dbgs() << "New virtual " << printReg(NewReg, TRI) << "\n");

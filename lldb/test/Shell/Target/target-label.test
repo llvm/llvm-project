@@ -4,16 +4,16 @@
 
 target create -l "ls" /bin/ls
 target list
-# CHECK: * target #0 (ls): /bin/ls
+# CHECK: * target #0 (ls): [[LS_PATH:.*]]
 
 script lldb.target.SetLabel("")
 target list
-# CHECK: * target #0: /bin/ls
+# CHECK: * target #0: [[LS_PATH]]
 
 target create -l "cat" /bin/cat
 target list
-# CHECK: target #0: /bin/ls
-# CHECK-NEXT: * target #1 (cat): /bin/cat
+# CHECK: target #0: [[LS_PATH]]
+# CHECK-NEXT: * target #1 (cat): [[CAT_PATH:.*]]
 
 target create -l "cat" /bin/cat
 # CHECK: Cannot use label 'cat' since it's set in target #1.
@@ -22,12 +22,12 @@ target create -l 42 /bin/cat
 # CHECK: error: Cannot use integer as target label.
 
 target select 0
-# CHECK: * target #0: /bin/ls
-# CHECK-NEXT: target #1 (cat): /bin/cat
+# CHECK: * target #0: [[LS_PATH]]
+# CHECK-NEXT: target #1 (cat): [[CAT_PATH]]
 
 target select cat
-# CHECK: target #0: /bin/ls
-# CHECK-NEXT: * target #1 (cat): /bin/cat
+# CHECK: target #0: [[LS_PATH]]
+# CHECK-NEXT: * target #1 (cat): [[CAT_PATH]]
 
 script lldb.target.GetLabel()
 # CHECK: 'cat'
@@ -36,5 +36,5 @@ script lldb.debugger.GetTargetAtIndex(0).SetLabel('Not cat')
 # CHECK: success
 
 target list
-# CHECK: target #0 (Not cat): /bin/ls
-# CHECK-NEXT: * target #1 (cat): /bin/cat
+# CHECK: target #0 (Not cat): [[LS_PATH]]
+# CHECK-NEXT: * target #1 (cat): [[CAT_PATH]]

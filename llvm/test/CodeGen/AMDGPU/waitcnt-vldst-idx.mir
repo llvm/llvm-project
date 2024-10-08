@@ -103,13 +103,13 @@ body:             |
     ; CHECK-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
     ; CHECK-NEXT: BUNDLE {
     ; CHECK-NEXT:   $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; CHECK-NEXT:   V_STORE_IDX killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX internal $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_WAIT_LOADCNT 0
     ; CHECK-NEXT: BUNDLE {
     ; CHECK-NEXT:   $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
-    ; CHECK-NEXT:   $vgpr1 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, killed $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; CHECK-NEXT:   V_STORE_IDX killed $vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   $vgpr1 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, internal $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
+    ; CHECK-NEXT:   V_STORE_IDX internal $vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_ENDPGM 0
     ;
@@ -132,13 +132,13 @@ body:             |
     ; ESM2-NEXT: BUNDLE {
     ; ESM2-NEXT:   S_WAITCNT_DEPCTR 4095
     ; ESM2-NEXT:   $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; ESM2-NEXT:   V_STORE_IDX killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ESM2-NEXT:   V_STORE_IDX internal $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ESM2-NEXT: }
     ; ESM2-NEXT: S_WAIT_LOADCNT 0
     ; ESM2-NEXT: BUNDLE {
     ; ESM2-NEXT:   $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
-    ; ESM2-NEXT:   $vgpr1 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, killed $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; ESM2-NEXT:   V_STORE_IDX killed $vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ESM2-NEXT:   $vgpr1 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, internal $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
+    ; ESM2-NEXT:   V_STORE_IDX internal $vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ESM2-NEXT: }
     ; ESM2-NEXT: S_ENDPGM 0
     $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
@@ -148,12 +148,12 @@ body:             |
     $idx1 = S_SET_GPR_IDX_U32 0
     BUNDLE {
     $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    V_STORE_IDX killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX internal $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     }
     BUNDLE {
     $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
-    $vgpr1 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, killed $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    V_STORE_IDX killed $vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    $vgpr1 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, internal $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
+    V_STORE_IDX internal $vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     }
     S_ENDPGM 0
 
@@ -186,13 +186,13 @@ body:             |
     ; CHECK-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
     ; CHECK-NEXT: BUNDLE {
     ; CHECK-NEXT:   $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; CHECK-NEXT:   V_STORE_IDX killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX internal $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_WAIT_LOADCNT 0
     ; CHECK-NEXT: BUNDLE {
     ; CHECK-NEXT:   $vgpr0_vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
-    ; CHECK-NEXT:   $vgpr0_vgpr1 = GLOBAL_ATOMIC_DEC_X2_SADDR_RTN killed renamable $vgpr0, killed $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; CHECK-NEXT:   V_STORE_IDX killed $vgpr0_vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   $vgpr0_vgpr1 = GLOBAL_ATOMIC_DEC_X2_SADDR_RTN killed renamable $vgpr0, internal $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
+    ; CHECK-NEXT:   V_STORE_IDX internal $vgpr0_vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_ENDPGM 0
     ;
@@ -215,13 +215,13 @@ body:             |
     ; ESM2-NEXT: BUNDLE {
     ; ESM2-NEXT:   S_WAITCNT_DEPCTR 4095
     ; ESM2-NEXT:   $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; ESM2-NEXT:   V_STORE_IDX killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ESM2-NEXT:   V_STORE_IDX internal $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ESM2-NEXT: }
     ; ESM2-NEXT: S_WAIT_LOADCNT 0
     ; ESM2-NEXT: BUNDLE {
     ; ESM2-NEXT:   $vgpr0_vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
-    ; ESM2-NEXT:   $vgpr0_vgpr1 = GLOBAL_ATOMIC_DEC_X2_SADDR_RTN killed renamable $vgpr0, killed $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; ESM2-NEXT:   V_STORE_IDX killed $vgpr0_vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ESM2-NEXT:   $vgpr0_vgpr1 = GLOBAL_ATOMIC_DEC_X2_SADDR_RTN killed renamable $vgpr0, internal $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
+    ; ESM2-NEXT:   V_STORE_IDX internal $vgpr0_vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ESM2-NEXT: }
     ; ESM2-NEXT: S_ENDPGM 0
     $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
@@ -231,11 +231,11 @@ body:             |
     $idx1 = S_SET_GPR_IDX_U32 0
     BUNDLE {
     $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    V_STORE_IDX killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX internal $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     }
     BUNDLE {
     $vgpr0_vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
-    $vgpr0_vgpr1 = GLOBAL_ATOMIC_DEC_X2_SADDR_RTN killed renamable $vgpr0, killed $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    V_STORE_IDX killed $vgpr0_vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    $vgpr0_vgpr1 = GLOBAL_ATOMIC_DEC_X2_SADDR_RTN killed renamable $vgpr0, internal $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
+    V_STORE_IDX internal $vgpr0_vgpr1, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     }
     S_ENDPGM 0

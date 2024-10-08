@@ -43,7 +43,6 @@ FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createAMDGPUBundleIdxLdStPass();
-ModulePass *createAMDGPUFixWaveGroupEntryPass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangePass();
@@ -60,6 +59,7 @@ FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
+FunctionPass *createAMDGPUReserveWWMRegsPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -184,6 +184,9 @@ private:
   const TargetMachine &TM;
 };
 
+void initializeAMDGPUReserveWWMRegsPass(PassRegistry &);
+extern char &AMDGPUReserveWWMRegsID;
+
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
@@ -228,9 +231,6 @@ extern char &SIWholeQuadModeID;
 
 void initializeAMDGPUBundleIdxLdStPass(PassRegistry &);
 extern char &AMDGPUBundleIdxLdStID;
-
-void initializeAMDGPUFixWaveGroupEntryPass(PassRegistry &);
-extern char &AMDGPUFixWaveGroupEntryID;
 
 void initializeAMDGPUIdxRegAllocPass(PassRegistry &);
 extern char &AMDGPUIdxRegAllocID;

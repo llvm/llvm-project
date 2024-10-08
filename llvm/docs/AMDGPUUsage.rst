@@ -361,7 +361,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                     - tgsplit           flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
                                                     - xnack             scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
                                                     - kernarg preload - Packed
-                                                                        work-item
+                                                      (except MI210)    work-item
                                                                         IDs
 
      ``gfx90c``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
@@ -548,6 +548,9 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
+                                                                      - Globally
+                                                                        Accessible
+                                                                        Scratch
 
      ``gfx1211``                 ``amdgcn``   APU                     - Architected                   *TBA*
                                                                         flat
@@ -555,6 +558,9 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
+                                                                      - Globally
+                                                                        Accessible
+                                                                        Scratch
 
      ``gfx1300``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -1003,11 +1009,13 @@ supported for the ``amdgcn`` target.
   access is not supported except by flat and scratch instructions in
   GFX9-GFX11.
 
-  Code that manipulates the stack values in other lanes of a wavefront,
-  such as by ``addrspacecast``-ing stack pointers to generic ones and taking offsets
-  that reach other lanes or by explicitly constructing the scratch buffer descriptor,
-  triggers undefined behavior when it modifies the scratch values of other lanes.
-  The compiler may assume that such modifications do not occur.
+  On targets without "Globally Accessible Scratch" (introduced in GFX121x), code that
+  manipulates the stack values in other lanes of a wavefront, such as by
+  ``addrspacecast``-ing stack pointers to generic ones and taking offsets that reach other
+  lanes or by explicitly constructing the scratch buffer descriptor, triggers undefined
+  behavior when it modifies the scratch values of other lanes. The compiler may assume
+  that such modifications do not occur for such targets.
+
   When using code object V5 ``LIBOMPTARGET_STACK_SIZE`` may be used to provide the
   private segment size in bytes, for cases where a dynamic stack is used.
 
@@ -1738,6 +1746,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              relevant on subtargets with AGPRs. The behavior is undefined if a
                                              function which requires AGPRs is reached through any function marked
                                              with this attribute.
+
+     "amdgpu-hidden-argument"                This attribute is used internally by the backend to mark function arguments
+                                             as hidden. Hidden arguments are managed by the compiler and are not part of
+                                             the explicit arguments supplied by the user.
 
      "amdgpu-wavegroup-enable"               GFX13+ only. Indicate that a kernel uses wavegroup launch. Requires
                                              `!reqd_work_group_size` metadata on the kernel function.
@@ -6111,6 +6123,12 @@ may insert a trap instruction at the start of the kernel prologue to manage
 situations where kernarg preloading is attempted on hardware with incompatible
 firmware.
 
+With code object V5 and later, hidden kernel arguments that are normally
+accessed through the Implicit Argument Ptr, may be preloaded into User SGPRs.
+These arguments are added to the kernel function signature and are marked with
+the attributes "inreg" and "amdgpu-hidden-argument". (See
+:ref:`amdgpu-llvm-ir-attributes-table`).
+
 .. _amdgpu-amdhsa-kernel-prolog:
 
 Kernel Prolog
@@ -6443,6 +6461,7 @@ following sections:
 * :ref:`amdgpu-amdhsa-memory-model-gfx942`
 * :ref:`amdgpu-amdhsa-memory-model-gfx10-gfx11`
 * :ref:`amdgpu-amdhsa-memory-model-gfx12`
+* :ref:`amdgpu-amdhsa-memory-model-gfx121x`
 
 .. _amdgpu-fence-as:
 
@@ -16580,6 +16599,117 @@ the instruction in the code sequence that references the table.
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
+
+.. _amdgpu-amdhsa-memory-model-gfx121x:
+
+Memory Model GFX121x
+++++++++++++++++++++++++
+
+For GFX121x:
+
+* Each agent has multiple Active Interposer Dies (AID).
+* Each AID has a GL2 cache, and supports multiple Accelerator Compute Die (XCD).
+* Each XCD has multiple shader engines (SE).
+* Each SE has multiple Compute Units (CU).
+* Each CU has 4 SIMD32s that execute wavefronts.
+* The wavefronts for a single work-group are executed in the same CU.
+* Each CU has a CU$ (CU Cache) which is split between
+
+  * LDS memory
+  * Vector L0 cache (GL0/vLO).
+
+* The CU$ has two ports, each with a distinct addresser. Each port is used by
+  one SIMD32 pair, but the CU$ memory is shared between all 4 SIMD32s.
+* The vector memory operations are performed as wavefront wide operations.
+  Vector memory operations are divided in different types.
+  The types of vector memory operations
+  (and their associated ``s_wait`` instructions) are:
+
+  * LDS: ``s_wait_dscnt``
+  * Load (global, scratch, flat, buffer): ``s_wait_loadcnt``
+  * Store (global, scratch, flat, buffer): ``s_wait_storecnt``
+  * Async: ``s_wait_asynccnt``
+  * Tensor: ``s_wait_tensorcnt``
+
+* Vector and scalar memory instructions contain a ``SCOPE`` field with values
+  corresponding to each cache level. The ``SCOPE`` determines whether a cache
+  can complete an operation locally or whether it needs to forward the operation
+  to the next cache level. The ``SCOPE`` values are:
+
+  * ``SCOPE_CU``: Compute Unit
+  * ``SCOPE_SE``: Shader Engine
+  * ``SCOPE_DEV``: Device/Agent
+  * ``SCOPE_SYS``: System
+
+* When a memory operation with a given ``SCOPE`` reaches a cache with a smaller
+  ``SCOPE`` value, it is forwarded to the next level of cache.
+* When a memory operation with a given ``SCOPE`` reaches a cache with a ``SCOPE``
+  value greater than or equal to its own, the operation can proceed:
+
+  * Reads can hit into the cache
+  * Writes can happen in this cache and the transaction is acknowledged
+    from this level of cache.
+  * RMW operations can be done locally.
+
+* ``global_inv``, ``global_wb`` and ``global_wbinv`` instructions are used to
+  invalidate, write-back and write-back+invalidate caches. The affected
+  cache(s) are controlled by the ``SCOPE:`` of the instruction. Only caches whose
+  scope is strictly smaller than the instruction's are affected.
+
+  * ``global_inv`` invalidates the data in affected caches so that subsequent reads
+    will re-read from the next level in the cache hierarchy.
+    The invalidation requests cannot be reordered with pending or upcoming
+    memory operations.
+  * ``global_wb``  flushes the dirty data in affected caches to the next level in
+    the cache hierarchy. This instruction additionally ensures previous
+    memory operation done at a lower scope level have reached the desired
+    ``SCOPE:``.
+
+.. note::
+
+  This section is currently incomplete and has inaccuracies. It is WIP that will
+  be updated as information is determined.
+
+The code sequences used to implement the memory model for GFX121x are defined in
+table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx121x-table`.
+
+The mapping of LLVM IR syncscope to GFX121x instruction ``scope`` operands is
+defined in :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx121x-scopes-table`.
+
+The table only applies if and only if it is directly referenced by an entry in
+:ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx121x-table`, and it only applies to
+the instruction in the code sequence that references the table.
+
+  .. table:: AMDHSA Memory Model Code Sequences GFX121x - Instruction Scopes
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx121x-scopes-table
+
+     ================================= =======================
+     LLVM syncscope                    ISA
+
+
+     ================================= =======================
+     *none*, one-as                    ``scope:SCOPE_SYS``
+     system, system-one-as             ``scope:SCOPE_SYS``
+     agent, agent-one-as               ``scope:SCOPE_DEV``
+     workgroup, workgroup-one-as       ``scope:SCOPE_CU`` [1]_
+     wavefront, wavefront-one-as       ``scope:SCOPE_CU`` [1]_
+     singlethread, singlethread-one-as ``scope:SCOPE_CU`` [1]_
+     ================================= =======================
+
+  .. [1] ``SCOPE_CU`` is the default ``scope:`` emitted by the compiler.
+     It will be omitted when instructions are emitted in textual form by the compiler.
+
+  .. table:: AMDHSA Memory Model Code Sequences GFX121x
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx121x-table
+
+     ============ ============ ============== ========== ================================
+     LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
+                  Ordering     Sync Scope     Address    GFX12
+                                              Space
+     ============ ============ ============== ========== ================================
+     TBA
+     ============ ============ ============== ========== ================================
+
 
 .. _amdgpu-amdhsa-trap-handler-abi:
 

@@ -1077,7 +1077,7 @@ multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<
   VOP1_Real_FULL_with_name<GFX12Gen, op, opName, asmName>,
   VOP1_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
 
-multiclass VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<bits<9> op, string asmName,
+multiclass VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<bits<9> op, string asmName,
                                           string opName = NAME> {
   defm opName#"_t16" :
 	VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<op, opName#"_t16", asmName>;
@@ -1153,10 +1153,10 @@ defm V_NOT_B16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x069, "v_no
 defm V_CVT_I32_I16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x06a, "v_cvt_i32_i16">;
 defm V_CVT_U32_U16_fake16    : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x06b, "v_cvt_u32_u16">;
 
-defm V_CVT_F16_U16           : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x050, "v_cvt_f16_u16">;
-defm V_CVT_F16_I16           : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x051, "v_cvt_f16_i16">;
-defm V_CVT_U16_F16           : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x052, "v_cvt_u16_f16">;
-defm V_CVT_I16_F16           : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x053, "v_cvt_i16_f16">;
+defm V_CVT_F16_U16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x050, "v_cvt_f16_u16">;
+defm V_CVT_F16_I16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x051, "v_cvt_f16_i16">;
+defm V_CVT_U16_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x052, "v_cvt_u16_f16">;
+defm V_CVT_I16_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x053, "v_cvt_i16_f16">;
 defm V_RCP_F16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x054, "v_rcp_f16">;
 defm V_RCP_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x054, "v_rcp_f16">;
 defm V_SQRT_F16_t16          : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x055, "v_sqrt_f16">;
@@ -1168,7 +1168,7 @@ defm V_LOG_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x057, "v_lo
 defm V_EXP_F16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x058, "v_exp_f16">;
 defm V_EXP_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x058, "v_exp_f16">;
 defm V_FREXP_MANT_F16_fake16 : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x059, "v_frexp_mant_f16">;
-defm V_FREXP_EXP_I16_F16     : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x05a, "v_frexp_exp_i16_f16">;
+defm V_FREXP_EXP_I16_F16     : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x05a, "v_frexp_exp_i16_f16">;
 defm V_FLOOR_F16_t16         : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x05b, "v_floor_f16">;
 defm V_FLOOR_F16_fake16      : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x05b, "v_floor_f16">;
 defm V_CEIL_F16_t16          : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x05c, "v_ceil_f16">;
@@ -1179,11 +1179,11 @@ defm V_FRACT_F16_fake16      : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x05f, "v_fr
 defm V_SIN_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x060, "v_sin_f16">;
 defm V_COS_F16_fake16        : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x061, "v_cos_f16">;
 defm V_SAT_PK_U8_I16_fake16  : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x062, "v_sat_pk_u8_i16">;
-defm V_CVT_NORM_I16_F16      : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x063, "v_cvt_norm_i16_f16">;
-defm V_CVT_NORM_U16_F16      : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x064, "v_cvt_norm_u16_f16">;
+defm V_CVT_NORM_I16_F16      : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x063, "v_cvt_norm_i16_f16">;
+defm V_CVT_NORM_U16_F16      : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x064, "v_cvt_norm_u16_f16">;
 
-defm V_CVT_F16_F32           : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x00a, "v_cvt_f16_f32">;
-defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_f16_gfx11_gfx12_gfx13<0x00b, "v_cvt_f32_f16">;
+defm V_CVT_F16_F32           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x00a, "v_cvt_f16_f32">;
+defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x00b, "v_cvt_f32_f16">;
 
 defm V_TANH_F32              : VOP1_Real_FULL_gfx1210_gfx13<0x01e>;
 defm V_TANH_F16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x01f>;
@@ -1740,7 +1740,8 @@ defm V_CVT_F32_BF8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x55>;
 defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
-defm V_PRNG_B32              : VOP1_Real_gfx9 <0x58>;
+let SubtargetPredicate = HasPrngInst in
+defm V_PRNG_B32            : VOP1_Real_gfx9 <0x58>;
 defm V_PERMLANE16_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x059>;
 defm V_PERMLANE32_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x05a>;
 

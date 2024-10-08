@@ -3031,12 +3031,12 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
   const MCRegisterClass RC = TRI->getRegClass(RCID);
   if (RegIdx >= RC.getNumRegs()) {
     Error(Loc, "register index is out of range");
-    return MCRegister();
+    return AMDGPU::NoRegister;
   }
 
   if (RegKind == IS_VGPR && !isGFX1210Plus() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
-    return AMDGPU::NoRegister;
+    return MCRegister();
   }
 
   MCRegister Reg = RC.getRegister(RegIdx);
@@ -6663,7 +6663,7 @@ bool AMDGPUAsmParser::ParseDirectivePALMetadataBegin() {
                           AMDGPU::PALMD::AssemblerDirectiveEnd, String))
     return true;
 
-  auto PALMetadata = getTargetStreamer().getPALMetadata();
+  auto *PALMetadata = getTargetStreamer().getPALMetadata();
   if (!PALMetadata->setFromString(String))
     return Error(getLoc(), "invalid PAL metadata");
   return false;
@@ -6677,7 +6677,7 @@ bool AMDGPUAsmParser::ParseDirectivePALMetadata() {
                  "not available on non-amdpal OSes")).str());
   }
 
-  auto PALMetadata = getTargetStreamer().getPALMetadata();
+  auto *PALMetadata = getTargetStreamer().getPALMetadata();
   PALMetadata->setLegacy();
   for (;;) {
     uint32_t Key, Value;
@@ -8573,7 +8573,7 @@ AMDGPUAsmParser::parseStructuredOpFields(ArrayRef<StructuredOpField *> Fields) {
         !skipToken(AsmToken::Colon, "colon expected"))
       return ParseStatus::Failure;
 
-    auto I =
+    const auto *I =
         find_if(Fields, [Id](StructuredOpField *F) { return F->Id == Id; });
     if (I == Fields.end())
       return Error(IdLoc, "unknown field");
@@ -9416,7 +9416,7 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
   // we don't allow modifiers for this operand in assembler so src2_modifiers
   // should be 0.
   if (isMAC(Opc)) {
-    auto it = Inst.begin();
+    auto *it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2
     ++it;
@@ -10326,7 +10326,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
   // it has src2 register operand that is tied to dst operand
   if (Inst.getOpcode() == AMDGPU::V_MAC_F32_sdwa_vi ||
       Inst.getOpcode() == AMDGPU::V_MAC_F16_sdwa_vi)  {
-    auto it = Inst.begin();
+    auto *it = Inst.begin();
     std::advance(
       it, AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::src2));
     Inst.insert(it, Inst.getOperand(0)); // src2 = dst

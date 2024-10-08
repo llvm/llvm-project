@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+
+; TODO: Test with flat scratch
 
 ; GCN-LABEL: {{^}}store_fi_lifetime:
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
@@ -143,7 +145,7 @@ define amdgpu_kernel void @stored_fi_to_global_2_small_objects(ptr addrspace(1) 
   ret void
 }
 
-; GCN-LABEL: {{^}}stored_fi_to_global_huge_frame_offset:
+; GCN-LABEL: {{^}}kernel_stored_fi_to_global_huge_frame_offset:
 ; GCN: v_mov_b32_e32 [[BASE_0:v[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dword [[BASE_0]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4{{$}}
 
@@ -158,7 +160,32 @@ define amdgpu_kernel void @stored_fi_to_global_2_small_objects(ptr addrspace(1) 
 ; GCN: buffer_store_dword [[K]], [[BASE_1_OFF_1]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
 
 ; GCN: buffer_store_dword [[BASE_1_OFF_2]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-define amdgpu_kernel void @stored_fi_to_global_huge_frame_offset(ptr addrspace(1) %ptr) #0 {
+define amdgpu_kernel void @kernel_stored_fi_to_global_huge_frame_offset(ptr addrspace(1) %ptr) #0 {
+  %tmp0 = alloca [4096 x i32], addrspace(5)
+  %tmp1 = alloca [4096 x i32], addrspace(5)
+  store volatile i32 0, ptr addrspace(5) %tmp0
+  %gep1.tmp0 = getelementptr [4096 x i32], ptr addrspace(5) %tmp0, i32 0, i32 4095
+  store volatile i32 999, ptr addrspace(5) %gep1.tmp0
+  %gep0.tmp1 = getelementptr [4096 x i32], ptr addrspace(5) %tmp0, i32 0, i32 14
+  store ptr addrspace(5) %gep0.tmp1, ptr addrspace(1) %ptr
+  ret void
+}
+
+; GCN-LABEL: {{^}}func_stored_fi_to_global_huge_frame_offset:
+; GCN: v_mov_b32_e32 [[BASE_0:v[0-9]+]], 0{{$}}
+; GCN: buffer_store_dword [[BASE_0]], off, s{{\[[0-9]+:[0-9]+\]}}, s32 offset:4{{$}}
+
+; GCN: v_lshr_b32_e64 [[FI_TMP:v[0-9]+]], s32, 6
+; GCN: v_add_i32_e32 [[BASE_0_1:v[0-9]+]], vcc, 4, [[FI_TMP]]{{$}}
+
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
+; GCN-DAG: v_add_i32_e32 [[BASE_1_OFF_1:v[0-9]+]], vcc, 0x3ffc, [[BASE_0_1]]
+
+; GCN: v_add_i32_e32 [[BASE_1_OFF_2:v[0-9]+]], vcc, 56, [[BASE_0_1]]
+; GCN: buffer_store_dword [[K]], [[BASE_1_OFF_1]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
+
+; GCN: buffer_store_dword [[BASE_1_OFF_2]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
+define void @func_stored_fi_to_global_huge_frame_offset(ptr addrspace(1) %ptr) #0 {
   %tmp0 = alloca [4096 x i32], addrspace(5)
   %tmp1 = alloca [4096 x i32], addrspace(5)
   store volatile i32 0, ptr addrspace(5) %tmp0
@@ -187,6 +214,124 @@ entry:
   %arrayidx = getelementptr inbounds i32, ptr addrspace(5) %tmp1, i32 %idx
   %tmp2 = load i32, ptr addrspace(5) %arrayidx, align 4
   store volatile ptr addrspace(5) %b, ptr addrspace(1) undef
+  ret void
+}
+
+; FIXME: This is broken, and the sgpr input just gets replaced with a VGPR
+; GCN-LABEL: {{^}}func_alloca_offset0__use_asm_sgpr:
+; GCN: v_lshr_b32_e64 [[FI:v[0-9]+]], s32, 6
+; GCN: ; use [[FI]]
+define void @func_alloca_offset0__use_asm_sgpr() {
+  %alloca = alloca i32, addrspace(5)
+  call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %alloca)
+  ret void
+}
+
+; GCN-LABEL: {{^}}func_alloca_offset0__use_asm_vgpr:
+; GCN: v_lshr_b32_e64 [[FI:v[0-9]+]], s32, 6
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ; use [[FI]]
+define void @func_alloca_offset0__use_asm_vgpr() {
+  %alloca = alloca i32, addrspace(5)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca)
+  ret void
+}
+
+; GCN-LABEL: {{^}}func_alloca_offset0__use_asm_phys_sgpr:
+; GCN: s_lshr_b32 s8, s32, 6
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ; use s8
+define void @func_alloca_offset0__use_asm_phys_sgpr() {
+  %alloca = alloca i32, addrspace(5)
+  call void asm sideeffect "; use $0", "{s8}"(ptr addrspace(5) %alloca)
+  ret void
+}
+
+; GCN-LABEL: {{^}}func_alloca_offset0__use_asm_phys_vgpr:
+; GCN: v_lshr_b32_e64 v8, s32, 6
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ; use v8
+define void @func_alloca_offset0__use_asm_phys_vgpr() {
+  %alloca = alloca i32, addrspace(5)
+  call void asm sideeffect "; use $0", "{v8}"(ptr addrspace(5) %alloca)
+  ret void
+}
+
+; GCN-LABEL: {{^}}func_alloca_offset_use_asm_sgpr:
+; GCN: v_lshr_b32_e64 [[FI0_TMP0:v[0-9]+]], s32, 6
+; GCN-NEXT: v_add_i32_e32 [[FI0:v[0-9]+]], vcc, 16, [[FI0_TMP0]]
+
+; GCN: v_lshr_b32_e64 [[TMP:v[0-9]+]], s32, 6
+; GCN-NEXT: s_movk_i32 vcc_lo, 0x4010
+; GCN-NEXT: v_add_i32_e32 [[TMP]], vcc, vcc_lo, [[TMP]]
+; GCN-NEXT: ;;#ASMSTART
+; GCN: ; use [[TMP]]
+define void @func_alloca_offset_use_asm_sgpr() {
+  %alloca0 = alloca [4096 x i32], align 16, addrspace(5)
+  %alloca1 = alloca i32, addrspace(5)
+  call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %alloca0)
+  call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %alloca1)
+  ret void
+}
+
+; FIXME: Shouldn't need to materialize constant
+; GCN-LABEL: {{^}}func_alloca_offset_use_asm_vgpr:
+; GCN: v_lshr_b32_e64 [[FI0_TMP:v[0-9]+]], s32, 6
+; GCN-NEXT: v_add_i32_e32 [[FI0:v[0-9]+]], vcc, 16, [[FI0_TMP]]
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ; use [[FI0]]
+; GCN-NEXT: ;;#ASMEND
+
+; GCN: v_lshr_b32_e64 [[FI1_TMP:v[0-9]+]], s32, 6
+; GCN-NEXT: s_movk_i32 vcc_lo, 0x4010
+; GCN-NEXT: v_add_i32_e32 [[FI1:v[0-9]+]], vcc, vcc_lo, [[FI1_TMP]]
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ; use [[FI1]]
+; GCN-NEXT: ;;#ASMEND
+define void @func_alloca_offset_use_asm_vgpr() {
+  %alloca0 = alloca [4096 x i32], align 16, addrspace(5)
+  %alloca1 = alloca i32, addrspace(5)
+  call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %alloca0)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca1)
+  ret void
+}
+
+; FIXME: Using VGPR for SGPR input
+; GCN-LABEL: {{^}}kernel_alloca_offset_use_asm_sgpr:
+; GCN: v_mov_b32_e32 v0, 16
+; GCN-NOT: v0
+; GCN: ;;#ASMSTART
+; GCN-NEXT: ; use v0
+; GCN-NEXT: ;;#ASMEND
+
+; GCN: v_mov_b32_e32 v0, 0x4010
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ; use v0
+; GCN-NEXT: ;;#ASMEND
+define amdgpu_kernel void @kernel_alloca_offset_use_asm_sgpr() {
+  %alloca0 = alloca [4096 x i32], align 16, addrspace(5)
+  %alloca1 = alloca i32, addrspace(5)
+  call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %alloca0)
+  call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %alloca1)
+  ret void
+}
+
+; GCN-LABEL: {{^}}kernel_alloca_offset_use_asm_vgpr:
+; GCN: v_mov_b32_e32 v0, 16
+; GCN-NOT: v0
+; GCN: ;;#ASMSTART
+; GCN-NEXT: ; use v0
+; GCN-NEXT: ;;#ASMEND
+
+; GCN: v_mov_b32_e32 v0, 0x4010
+; GCN-NEXT: ;;#ASMSTART
+; GCN-NEXT: ; use v0
+; GCN-NEXT: ;;#ASMEND
+define amdgpu_kernel void @kernel_alloca_offset_use_asm_vgpr() {
+  %alloca0 = alloca [4096 x i32], align 16, addrspace(5)
+  %alloca1 = alloca i32, addrspace(5)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca0)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(5) %alloca1)
   ret void
 }
 

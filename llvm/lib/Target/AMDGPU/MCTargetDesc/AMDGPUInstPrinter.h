@@ -75,7 +75,7 @@ private:
   void printSymbolicFormat(const MCInst *MI,
                            const MCSubtargetInfo &STI, raw_ostream &O);
 
-  void printRegOperand(unsigned RegNo, raw_ostream &O);
+  void printRegOperand(MCRegister Reg, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

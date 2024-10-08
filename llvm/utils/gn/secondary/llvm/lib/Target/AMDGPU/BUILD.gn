@@ -182,6 +182,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPURegBankSelect.cpp",
     "AMDGPURegisterBankInfo.cpp",
     "AMDGPURemoveIncompatibleFunctions.cpp",
+    "AMDGPUReserveWWMRegs.cpp",
     "AMDGPUResourceUsageAnalysis.cpp",
     "AMDGPURewriteOutArguments.cpp",
     "AMDGPURewriteUndefForPHI.cpp",
@@ -259,7 +260,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIProgramInfo.cpp",
     "SIRegisterInfo.cpp",
     "SIShrinkInstructions.cpp",
-    "AMDGPUFixWaveGroupEntry.cpp",
     "SIWholeQuadMode.cpp",
   ]
 }

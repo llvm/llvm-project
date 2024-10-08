@@ -5788,6 +5788,8 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   assert(Ty->isIntegerTy());
 
   unsigned BitSize = Ty->getPrimitiveSizeInBits();
+  unsigned ImmBitWidth = Imm.getBitWidth();
+
   // There is no cost model for constants with a bit size of 0. Return TCC_Free
   // here, so that constant hoisting will ignore this constant.
   if (BitSize == 0)
@@ -5813,7 +5815,7 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // 32-bits. The backend can optimize these cases using a right shift by 32.
     // Ideally we would check the compare predicate here. There also other
     // similar immediates the backend can use shifts for.
-    if (Idx == 1 && Imm.getBitWidth() == 64) {
+    if (Idx == 1 && ImmBitWidth == 64) {
       uint64_t ImmVal = Imm.getZExtValue();
       if (ImmVal == 0x100000000ULL || ImmVal == 0xffffffff)
         return TTI::TCC_Free;
@@ -5824,14 +5826,18 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // We support 64-bit ANDs with immediates with 32-bits of leading zeroes
     // by using a 32-bit operation with implicit zero extension. Detect such
     // immediates here as the normal path expects bit 31 to be sign extended.
-    if (Idx == 1 && Imm.getBitWidth() == 64 && Imm.isIntN(32))
+    if (Idx == 1 && ImmBitWidth == 64 && Imm.isIntN(32))
       return TTI::TCC_Free;
+    // If we have BMI then we can use BEXTR/BZHI to mask out upper i64 bits.
+    if (Idx == 1 && ImmBitWidth == 64 && ST->is64Bit() && ST->hasBMI() &&
+        Imm.isMask())
+      return X86TTIImpl::getIntImmCost(ST->hasBMI2() ? 255 : 65535);
     ImmIdx = 1;
     break;
   case Instruction::Add:
   case Instruction::Sub:
     // For add/sub, we can use the opposite instruction for INT32_MIN.
-    if (Idx == 1 && Imm.getBitWidth() == 64 && Imm.getZExtValue() == 0x80000000)
+    if (Idx == 1 && ImmBitWidth == 64 && Imm.getZExtValue() == 0x80000000)
       return TTI::TCC_Free;
     ImmIdx = 1;
     break;

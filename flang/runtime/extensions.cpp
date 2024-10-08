@@ -115,6 +115,10 @@ void FORTRAN_PROCEDURE_NAME(fdate)(char *arg, std::int64_t length) {
   CopyAndPad(arg, str, length, 24);
 }
 
+std::intptr_t RTNAME(Malloc)(std::size_t size) {
+  return reinterpret_cast<std::intptr_t>(std::malloc(size));
+}
+
 // RESULT = IARGC()
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
 
@@ -141,6 +145,10 @@ void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #else
   GetUsernameEnvVar("LOGNAME", arg, length);
 #endif
+}
+
+void RTNAME(Free)(std::intptr_t ptr) {
+  std::free(reinterpret_cast<void *>(ptr));
 }
 
 std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int)) {
