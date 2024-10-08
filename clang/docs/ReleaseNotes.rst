@@ -378,6 +378,8 @@ Improvements to Clang's diagnostics
 
 - Clang now emits a diagnostic note at the class declaration when the method definition does not match any declaration (#GH110638).
 
+- Clang now omits warnings for extra parentheses in fold expressions with single expansion (#GH101863).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -393,6 +395,8 @@ Bug Fixes in This Version
 - Fixed a crash when trying to transform a dependent address space type. Fixes #GH101685.
 - Fixed a crash when diagnosing format strings and encountering an empty
   delimited escape sequence (e.g., ``"\o{}"``). #GH102218
+- The warning emitted for an unsupported register variable type now points to
+  the unsupported type instead of the ``register`` keyword (#GH109776).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -471,8 +475,15 @@ Bug Fixes to C++ Support
 - Fixed an issue deducing non-type template arguments of reference type. (#GH73460)
 - Fixed an issue in constraint evaluation, where type constraints on the lambda expression
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
+- Fixes crashes with function template member specializations, and increases
+  conformance of explicit instantiation behaviour with MSVC. (#GH111266)
 - Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
   in certain friend declarations. (#GH93099)
+- Clang now instantiates the correct lambda call operator when a lambda's class type is
+  merged across modules. (#GH110401)
+- Clang now uses the correct set of template argument lists when comparing the constraints of
+  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
+  a class template. (#GH102320)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -509,6 +520,10 @@ OpenACC Specific Changes
 
 Target Specific Changes
 -----------------------
+
+- Clang now implements the Solaris-specific mangling of ``std::tm`` as
+  ``tm``, same for ``std::div_t``, ``std::ldiv_t``, and
+  ``std::lconv``, for Solaris ABI compatibility. (#GH33114)
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
@@ -636,8 +651,8 @@ New features
   if class of allocation and deallocation function mismatches.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
 
-- Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint" 
-  attributes, are now verified. For example, for functions declared with the ``nonblocking`` 
+- Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint"
+  attributes, are now verified. For example, for functions declared with the ``nonblocking``
   attribute, the compiler can generate warnings about the use of any language features, or calls to
   other functions, which may block.
 

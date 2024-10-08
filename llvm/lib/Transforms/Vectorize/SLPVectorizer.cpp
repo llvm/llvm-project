@@ -1153,8 +1153,8 @@ static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
 
 /// \returns a bitset for selecting opcodes. false for Opcode0 and true for
 /// Opcode1.
-SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, unsigned Opcode0,
-                               unsigned Opcode1) {
+static SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, unsigned Opcode0,
+                                      unsigned Opcode1) {
   Type *ScalarTy = VL[0]->getType();
   unsigned ScalarTyNumElements = getNumElements(ScalarTy);
   SmallBitVector OpcodeMask(VL.size() * ScalarTyNumElements, false);
@@ -1373,7 +1373,7 @@ public:
     EntryToLastInstruction.clear();
     LoadEntriesToVectorize.clear();
     IsGraphTransformMode = false;
-    GatheredLoadsEntriesFirst = NoGatheredLoads;
+    GatheredLoadsEntriesFirst.reset();
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
     for (auto &Iter : BlocksSchedules) {
@@ -3195,7 +3195,7 @@ private:
     SmallVector<EdgeInfo, 1> UserTreeIndices;
 
     /// The index of this treeEntry in VectorizableTree.
-    int Idx = -1;
+    unsigned Idx = 0;
 
     /// For gather/buildvector/alt opcode (TODO) nodes, which are combined from
     /// other nodes as a series of insertvector instructions.
@@ -3463,7 +3463,7 @@ private:
             (Bundle && EntryState != TreeEntry::NeedToGather)) &&
            "Need to vectorize gather entry?");
     // Gathered loads still gathered? Do not create entry, use the original one.
-    if (GatheredLoadsEntriesFirst != NoGatheredLoads &&
+    if (GatheredLoadsEntriesFirst.has_value() &&
         EntryState == TreeEntry::NeedToGather &&
         S.getOpcode() == Instruction::Load && UserTreeIdx.EdgeIdx == UINT_MAX &&
         !UserTreeIdx.UserTE)
@@ -3624,8 +3624,7 @@ private:
   bool IsGraphTransformMode = false;
 
   /// The index of the first gathered load entry in the VectorizeTree.
-  constexpr static int NoGatheredLoads = -1;
-  int GatheredLoadsEntriesFirst = NoGatheredLoads;
+  std::optional<unsigned> GatheredLoadsEntriesFirst;
 
   /// This POD struct describes one external user in the vectorized tree.
   struct ExternalUser {
@@ -7043,9 +7042,9 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
   }
   // If no new entries created, consider it as no gathered loads entries must be
   // handled.
-  if (static_cast<unsigned>(GatheredLoadsEntriesFirst) ==
+  if (static_cast<unsigned>(*GatheredLoadsEntriesFirst) ==
       VectorizableTree.size())
-    GatheredLoadsEntriesFirst = NoGatheredLoads;
+    GatheredLoadsEntriesFirst.reset();
 }
 
 /// \return true if the specified list of values has only one instruction that
@@ -7781,7 +7780,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   if (S.getOpcode()) {
     if (TreeEntry *E = getTreeEntry(S.OpValue)) {
       LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.OpValue << ".\n");
-      if (GatheredLoadsEntriesFirst != NoGatheredLoads || !E->isSame(VL)) {
+      if (GatheredLoadsEntriesFirst.has_value() || !E->isSame(VL)) {
         auto It = MultiNodeScalars.find(S.OpValue);
         if (It != MultiNodeScalars.end()) {
           auto *TEIt = find_if(It->getSecond(),
@@ -11188,9 +11187,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                            "Not supported shufflevector usage.");
                     auto *SV = cast<ShuffleVectorInst>(V);
                     int Index;
-                    [[maybe_unused]] bool isExtractSubvectorMask =
+                    [[maybe_unused]] bool IsExtractSubvectorMask =
                         SV->isExtractSubvectorMask(Index);
-                    assert(isExtractSubvectorMask &&
+                    assert(IsExtractSubvectorMask &&
                            "Not supported shufflevector usage.");
                     if (NextIndex != Index)
                       return false;
@@ -11916,8 +11915,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           KeepScalar = true;
         } else if (KeepScalar && ScalarCost != TTI::TCC_Free &&
                    ExtraCost - ScalarCost <= TTI::TCC_Basic &&
-                   (GatheredLoadsEntriesFirst == NoGatheredLoads ||
-                    Entry->Idx < GatheredLoadsEntriesFirst)) {
+                   (!GatheredLoadsEntriesFirst.has_value() ||
+                    Entry->Idx < *GatheredLoadsEntriesFirst)) {
           unsigned ScalarUsesCount = count_if(Entry->Scalars, [&](Value *V) {
             return ValueToExtUses->contains(V);
           });
@@ -12375,7 +12374,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       VToTEs.insert(TEPtr);
     }
     if (const TreeEntry *VTE = getTreeEntry(V)) {
-      if (ForOrder && VTE->Idx < GatheredLoadsEntriesFirst) {
+      if (ForOrder && VTE->Idx < GatheredLoadsEntriesFirst.value_or(0)) {
         if (VTE->State != TreeEntry::Vectorize) {
           auto It = MultiNodeScalars.find(V);
           if (It == MultiNodeScalars.end())
@@ -12654,7 +12653,7 @@ BoUpSLP::isGatherShuffledEntry(
   Entries.clear();
   // No need to check for the topmost gather node.
   if (TE == VectorizableTree.front().get() &&
-      (GatheredLoadsEntriesFirst == NoGatheredLoads ||
+      (!GatheredLoadsEntriesFirst.has_value() ||
        none_of(ArrayRef(VectorizableTree).drop_front(),
                [](const std::unique_ptr<TreeEntry> &TE) {
                  return !TE->isGather();
@@ -12806,9 +12805,9 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // constant indices or gathered loads).
   auto *Front = E->getMainOp();
   auto *BB = Front->getParent();
-  assert(((GatheredLoadsEntriesFirst != NoGatheredLoads &&
+  assert(((GatheredLoadsEntriesFirst.has_value() &&
            E->getOpcode() == Instruction::Load && E->isGather() &&
-           E->Idx < GatheredLoadsEntriesFirst) ||
+           E->Idx < *GatheredLoadsEntriesFirst) ||
           all_of(E->Scalars,
                  [=](Value *V) -> bool {
                    if (E->getOpcode() == Instruction::GetElementPtr &&
@@ -12836,9 +12835,9 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                !isa<GetElementPtrInst>(I)) ||
               (isVectorLikeInstWithConstOps(LastInst) &&
                isVectorLikeInstWithConstOps(I)) ||
-              (GatheredLoadsEntriesFirst != NoGatheredLoads &&
+              (GatheredLoadsEntriesFirst.has_value() &&
                E->getOpcode() == Instruction::Load && E->isGather() &&
-               E->Idx < GatheredLoadsEntriesFirst)) &&
+               E->Idx < *GatheredLoadsEntriesFirst)) &&
              "Expected vector-like or non-GEP in GEP node insts only.");
       if (!DT->isReachableFromEntry(LastInst->getParent())) {
         LastInst = I;
@@ -12896,8 +12895,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   };
 
   // Set insertpoint for gathered loads to the very first load.
-  if (GatheredLoadsEntriesFirst != NoGatheredLoads &&
-      E->Idx >= GatheredLoadsEntriesFirst && !E->isGather() &&
+  if (GatheredLoadsEntriesFirst.has_value() &&
+      E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
       E->getOpcode() == Instruction::Load) {
     Res = FindFirstInst();
     return *Res;
@@ -15275,8 +15274,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // Emit gathered loads first to emit better code for the users of those
   // gathered loads.
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
-    if (GatheredLoadsEntriesFirst != NoGatheredLoads &&
-        TE->Idx >= GatheredLoadsEntriesFirst &&
+    if (GatheredLoadsEntriesFirst.has_value() &&
+        TE->Idx >= *GatheredLoadsEntriesFirst &&
         (!TE->isGather() || !TE->UserTreeIndices.empty())) {
       assert((!TE->UserTreeIndices.empty() ||
               (TE->getOpcode() == Instruction::Load && !TE->isGather())) &&
@@ -15848,8 +15847,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                      return EI.UserTE == VectorizableTree.front().get() &&
                             EI.EdgeIdx == UINT_MAX;
                    })) &&
-          !(GatheredLoadsEntriesFirst != NoGatheredLoads &&
-            IE->Idx >= GatheredLoadsEntriesFirst &&
+          !(GatheredLoadsEntriesFirst.has_value() &&
+            IE->Idx >= *GatheredLoadsEntriesFirst &&
             VectorizableTree.front()->isGather() &&
             is_contained(VectorizableTree.front()->Scalars, I)))
         continue;
@@ -17063,8 +17062,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       (NodeIdx == 0 && !VectorizableTree[NodeIdx]->UserTreeIndices.empty()) ||
       (NodeIdx != 0 && any_of(VectorizableTree[NodeIdx]->UserTreeIndices,
                               [NodeIdx](const EdgeInfo &EI) {
-                                return EI.UserTE->Idx >
-                                       static_cast<int>(NodeIdx);
+                                return EI.UserTE->Idx > NodeIdx;
                               })))
     return;
 
