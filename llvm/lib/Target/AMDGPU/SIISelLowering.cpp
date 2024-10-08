@@ -11273,7 +11273,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, CntOp,
                                    DAG.getTargetConstant(0x3F, DL, MVT::i32)),
                 0);
-    constexpr unsigned ShAmt = 16;
+    unsigned ShAmt = Subtarget->getBarrierMemberCountShift();
     M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
@@ -11323,9 +11323,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       }
       // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
       SDValue M0Val;
-      unsigned ShAmt = Subtarget->getBarrierMemberCountShift();
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
-                          DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
+                          DAG.getShiftAmountConstant(4, MVT::i32, DL));
       M0Val =
           SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, M0Val,
                                      DAG.getTargetConstant(0x3F, DL, MVT::i32)),
