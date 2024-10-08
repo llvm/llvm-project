@@ -16,8 +16,8 @@ assistance.
 
 The lead maintainer is responsible for all parts of LLVM not covered by somebody else.
 
-Chris Lattner \
-sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattner (Discourse)
+Nikita Popov \
+llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (GitHub), nikic (Discourse)
 
 ### Transforms and analyses
 
@@ -425,6 +425,9 @@ responsibilities but are no longer active in that role. Thank you for all your
 help with the success of the project!
 
 ### Emeritus lead maintainers
+
+Chris Lattner \
+sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattner (Discourse)
 
 ### Inactive or former component maintainers
 
