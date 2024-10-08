@@ -11,10 +11,10 @@ define void @pr58722_load_interleave_group(ptr %src, ptr %dst) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 40004
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 80007
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[UGLYGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 40004
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 80007
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -36,10 +36,10 @@ define void @pr58722_load_interleave_group(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = load i24, ptr [[TMP9]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[TMP14:%.*]] = load i24, ptr [[TMP10]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[TMP15:%.*]] = load i24, ptr [[TMP11]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[TMP16:%.*]] = load i24, ptr [[TMP12]], align 4, !alias.scope !0
+; CHECK-NEXT:    [[TMP13:%.*]] = load i24, ptr [[TMP9]], align 4, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i24, ptr [[TMP10]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i24, ptr [[TMP11]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load i24, ptr [[TMP12]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i24> poison, i24 [[TMP13]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i24> [[TMP17]], i24 [[TMP14]], i32 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i24> [[TMP18]], i24 [[TMP15]], i32 2
@@ -48,7 +48,7 @@ define void @pr58722_load_interleave_group(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP23]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP22]], ptr [[TMP24]], align 4, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store <4 x i32> [[TMP22]], ptr [[TMP24]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

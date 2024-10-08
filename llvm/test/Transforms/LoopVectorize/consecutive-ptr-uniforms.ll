@@ -315,9 +315,9 @@ for.end:
 ; INTER:       %[[I2:.+]] = or disjoint i64 %[[I0]], 32
 ; INTER:       %[[I3:.+]] = or disjoint i64 %[[I0]], 48
 ; INTER:       %next.gep = getelementptr i8, ptr %a, i64 %[[I0]]
-; INTER:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I1]]
-; INTER:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I2]]
-; INTER:       %next.gep4 = getelementptr i8, ptr %a, i64 %[[I3]]
+; INTER:       %next.gep1 = getelementptr i8, ptr %a, i64 %[[I1]]
+; INTER:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I2]]
+; INTER:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I3]]
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
@@ -362,9 +362,9 @@ for.end:
 ; CHECK:       %[[I2:.+]] = or disjoint i64 [[SHL1]], 32
 ; CHECK:       %[[I3:.+]] = or disjoint i64 [[SHL1]], 48
 ; CHECK:       %next.gep = getelementptr i8, ptr %a, i64 [[SHL1]]
-; CHECK:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I1]]
-; CHECK:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I2]]
-; CHECK:       %next.gep4 = getelementptr i8, ptr %a, i64 %[[I3]]
+; CHECK:       %next.gep1 = getelementptr i8, ptr %a, i64 %[[I1]]
+; CHECK:       %next.gep2 = getelementptr i8, ptr %a, i64 %[[I2]]
+; CHECK:       %next.gep3 = getelementptr i8, ptr %a, i64 %[[I3]]
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
