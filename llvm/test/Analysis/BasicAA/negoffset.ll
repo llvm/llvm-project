@@ -5,6 +5,7 @@ target triple = "i386-unknown-linux-gnu"
 
 declare ptr @random.i32(ptr %ptr)
 declare ptr @random.i8(ptr %ptr)
+declare ptr @malloc(i64) allockind("alloc")
 
 ; CHECK-LABEL: Function: arr:
 ; CHECK-DAG: MayAlias: i32* %alloca, i32* %p0
@@ -17,6 +18,20 @@ define void @arr() {
   load i32, ptr %alloca
   load i32, ptr %p0
   load i32, ptr %p1
+  ret void
+}
+
+; CHECK-LABEL: Function: allocfn:
+; CHECK-DAG: MayAlias: i8* %malloc, i8* %p0
+; CHECK-DAG: NoAlias:  i8* %malloc, i8* %p1
+define void @allocfn() {
+  %malloc = call ptr @malloc(i64 4)
+  %random = call ptr @random.i8(ptr %malloc)
+  %p0 = getelementptr inbounds i32, ptr %random, i32 0
+  %p1 = getelementptr inbounds i32, ptr %random, i32 1
+  load i8, ptr %malloc
+  load i8, ptr %p0
+  load i8, ptr %p1
   ret void
 }
 

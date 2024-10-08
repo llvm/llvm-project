@@ -1071,12 +1071,14 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
 /// for the underlying object.  Note that just being isIdentifiedObject() is
 /// not enough - For example, a negative offset from a noalias argument or call
 /// can be inbounds w.r.t the actual underlying object.
-static bool isBaseOfObject(const Value *V) {
-  // TODO: We can handle other cases here
-  // 1) For GC languages, arguments to functions are often required to be
-  //    base pointers.
-  // 2) Result of allocation routines are often base pointers.  Leverage TLI.
-  return (isa<AllocaInst>(V) || isa<GlobalVariable>(V));
+static bool isBaseOfObject(const Value *V, const TargetLibraryInfo *TLI) {
+  // TODO: for GC languages, arguments to functions are often required to be
+  // base pointers.
+  if (isa<AllocaInst>(V) || isa<GlobalVariable>(V))
+    return true;
+  if (auto *I = dyn_cast<Instruction>(V))
+    return isAllocationFn(I, TLI);
+  return false;
 }
 
 /// Provides a bunch of ad-hoc rules to disambiguate a GEP instruction against
@@ -1131,14 +1133,14 @@ AliasResult BasicAAResult::aliasGEP(
   if (DecompGEP1.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
       V2Size.hasValue() && !V2Size.isScalable() &&
       DecompGEP1.Offset.sge(V2Size.getValue()) &&
-      isBaseOfObject(DecompGEP2.Base))
+      isBaseOfObject(DecompGEP2.Base, &TLI))
     return AliasResult::NoAlias;
 
   // Symmetric case to above.
   if (DecompGEP2.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
       V1Size.hasValue() && !V1Size.isScalable() &&
       DecompGEP1.Offset.sle(-V1Size.getValue()) &&
-      isBaseOfObject(DecompGEP1.Base))
+      isBaseOfObject(DecompGEP1.Base, &TLI))
     return AliasResult::NoAlias;
 
   // For GEPs with identical offsets, we can preserve the size and AAInfo
