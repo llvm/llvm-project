@@ -575,8 +575,8 @@ void Sema::runWithSufficientStackSpace(SourceLocation Loc,
   clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
 }
 
-bool Sema::makeUnavailableInSystemHeader(SourceLocation loc,
-                                      UnavailableAttr::ImplicitReason reason) {
+bool Sema::makeUnavailableInSystemHeader(
+    SourceLocation loc, UnavailableAttr::ImplicitReason reason) {
   // If we're not in a function, it's an error.
   FunctionDecl *fn = dyn_cast<FunctionDecl>(CurContext);
   if (!fn) return false;
