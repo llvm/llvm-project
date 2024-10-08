@@ -5146,11 +5146,11 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopH
     const char *session_dictionary_name, const StructuredDataImpl &args_impl,
     Status &error) {
   if (python_class_name == NULL || python_class_name[0] == '\0') {
-    error.SetErrorString("Empty class name.");
+    error = Status::FromErrorString("Empty class name.");
     return PythonObject();
   }
   if (!session_dictionary_name) {
-    error.SetErrorString("No session dictionary");
+    error = Status::FromErrorString("No session dictionary");
     return PythonObject();
   }
 
@@ -5162,8 +5162,8 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopH
       python_class_name, dict);
 
   if (!pfunc.IsAllocated()) {
-    error.SetErrorStringWithFormat("Could not find class: %s.",
-                                   python_class_name);
+    error = Status::FromErrorStringWithFormat("Could not find class: %s.",
+                                              python_class_name);
     return PythonObject();
   }
 
@@ -5177,7 +5177,7 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopH
       if (auto args_info = callback_func.GetArgInfo()) {
         size_t num_args = (*args_info).max_positional_args;
         if (num_args != 2) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "Wrong number of args for "
               "handle_stop callback, should be 2 (excluding self), got: %zu",
               num_args);
@@ -5185,15 +5185,17 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopH
         } else
           return result;
       } else {
-        error.SetErrorString("Couldn't get num arguments for handle_stop "
-                             "callback.");
+        error = Status::FromErrorString(
+            "Couldn't get num arguments for handle_stop "
+            "callback.");
         return PythonObject();
       }
       return result;
     } else {
-      error.SetErrorStringWithFormat("Class \"%s\" is missing the required "
-                                     "handle_stop callback.",
-                                     python_class_name);
+      error = Status::FromErrorStringWithFormat(
+          "Class \"%s\" is missing the required "
+          "handle_stop callback.",
+          python_class_name);
     }
   }
   return PythonObject();
@@ -22172,6 +22174,277 @@ fail:
   return NULL;
 }
 
+SWIGINTERN PyObject *_wrap_SBSaveCoreOptions_SetProcess(PyObject *self,
+                                                        PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBSaveCoreOptions *arg1 = (lldb::SBSaveCoreOptions *)0;
+  lldb::SBProcess arg2;
+  void *argp1 = 0;
+  int res1 = 0;
+  void *argp2;
+  int res2 = 0;
+  PyObject *swig_obj[2];
+  lldb::SBError result;
+
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBSaveCoreOptions_SetProcess", 2, 2,
+                               swig_obj))
+    SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,
+                         SWIGTYPE_p_lldb__SBSaveCoreOptions, 0 | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '"
+                                             "SBSaveCoreOptions_SetProcess"
+                                             "', argument "
+                                             "1"
+                                             " of type '"
+                                             "lldb::SBSaveCoreOptions *"
+                                             "'");
+  }
+  arg1 = reinterpret_cast<lldb::SBSaveCoreOptions *>(argp1);
+  {
+    res2 =
+        SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_lldb__SBProcess, 0 | 0);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '"
+                                               "SBSaveCoreOptions_SetProcess"
+                                               "', argument "
+                                               "2"
+                                               " of type '"
+                                               "lldb::SBProcess"
+                                               "'");
+    }
+    if (!argp2) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference "
+                                           "in method '"
+                                           "SBSaveCoreOptions_SetProcess"
+                                           "', argument "
+                                           "2"
+                                           " of type '"
+                                           "lldb::SBProcess"
+                                           "'");
+    } else {
+      lldb::SBProcess *temp = reinterpret_cast<lldb::SBProcess *>(argp2);
+      arg2 = *temp;
+      if (SWIG_IsNewObj(res2))
+        delete temp;
+    }
+  }
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->SetProcess(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj =
+      SWIG_NewPointerObj((new lldb::SBError(result)), SWIGTYPE_p_lldb__SBError,
+                         SWIG_POINTER_OWN | 0);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+SWIGINTERN PyObject *_wrap_SBSaveCoreOptions_AddThread(PyObject *self,
+                                                       PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBSaveCoreOptions *arg1 = (lldb::SBSaveCoreOptions *)0;
+  lldb::SBThread arg2;
+  void *argp1 = 0;
+  int res1 = 0;
+  void *argp2;
+  int res2 = 0;
+  PyObject *swig_obj[2];
+  lldb::SBError result;
+
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBSaveCoreOptions_AddThread", 2, 2,
+                               swig_obj))
+    SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,
+                         SWIGTYPE_p_lldb__SBSaveCoreOptions, 0 | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '"
+                                             "SBSaveCoreOptions_AddThread"
+                                             "', argument "
+                                             "1"
+                                             " of type '"
+                                             "lldb::SBSaveCoreOptions *"
+                                             "'");
+  }
+  arg1 = reinterpret_cast<lldb::SBSaveCoreOptions *>(argp1);
+  {
+    res2 =
+        SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_lldb__SBThread, 0 | 0);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '"
+                                               "SBSaveCoreOptions_AddThread"
+                                               "', argument "
+                                               "2"
+                                               " of type '"
+                                               "lldb::SBThread"
+                                               "'");
+    }
+    if (!argp2) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference "
+                                           "in method '"
+                                           "SBSaveCoreOptions_AddThread"
+                                           "', argument "
+                                           "2"
+                                           " of type '"
+                                           "lldb::SBThread"
+                                           "'");
+    } else {
+      lldb::SBThread *temp = reinterpret_cast<lldb::SBThread *>(argp2);
+      arg2 = *temp;
+      if (SWIG_IsNewObj(res2))
+        delete temp;
+    }
+  }
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->AddThread(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj =
+      SWIG_NewPointerObj((new lldb::SBError(result)), SWIGTYPE_p_lldb__SBError,
+                         SWIG_POINTER_OWN | 0);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+SWIGINTERN PyObject *_wrap_SBSaveCoreOptions_RemoveThread(PyObject *self,
+                                                          PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBSaveCoreOptions *arg1 = (lldb::SBSaveCoreOptions *)0;
+  lldb::SBThread arg2;
+  void *argp1 = 0;
+  int res1 = 0;
+  void *argp2;
+  int res2 = 0;
+  PyObject *swig_obj[2];
+  bool result;
+
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBSaveCoreOptions_RemoveThread", 2, 2,
+                               swig_obj))
+    SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,
+                         SWIGTYPE_p_lldb__SBSaveCoreOptions, 0 | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '"
+                                             "SBSaveCoreOptions_RemoveThread"
+                                             "', argument "
+                                             "1"
+                                             " of type '"
+                                             "lldb::SBSaveCoreOptions *"
+                                             "'");
+  }
+  arg1 = reinterpret_cast<lldb::SBSaveCoreOptions *>(argp1);
+  {
+    res2 =
+        SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_lldb__SBThread, 0 | 0);
+    if (!SWIG_IsOK(res2)) {
+      SWIG_exception_fail(SWIG_ArgError(res2), "in method '"
+                                               "SBSaveCoreOptions_RemoveThread"
+                                               "', argument "
+                                               "2"
+                                               " of type '"
+                                               "lldb::SBThread"
+                                               "'");
+    }
+    if (!argp2) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference "
+                                           "in method '"
+                                           "SBSaveCoreOptions_RemoveThread"
+                                           "', argument "
+                                           "2"
+                                           " of type '"
+                                           "lldb::SBThread"
+                                           "'");
+    } else {
+      lldb::SBThread *temp = reinterpret_cast<lldb::SBThread *>(argp2);
+      arg2 = *temp;
+      if (SWIG_IsNewObj(res2))
+        delete temp;
+    }
+  }
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->RemoveThread(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast<bool>(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+SWIGINTERN PyObject *
+_wrap_SBSaveCoreOptions_AddMemoryRegionToSave(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBSaveCoreOptions *arg1 = (lldb::SBSaveCoreOptions *)0;
+  lldb::SBMemoryRegionInfo *arg2 = 0;
+  void *argp1 = 0;
+  int res1 = 0;
+  void *argp2 = 0;
+  int res2 = 0;
+  PyObject *swig_obj[2];
+  lldb::SBError result;
+
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBSaveCoreOptions_AddMemoryRegionToSave",
+                               2, 2, swig_obj))
+    SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,
+                         SWIGTYPE_p_lldb__SBSaveCoreOptions, 0 | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1),
+                        "in method '"
+                        "SBSaveCoreOptions_AddMemoryRegionToSave"
+                        "', argument "
+                        "1"
+                        " of type '"
+                        "lldb::SBSaveCoreOptions *"
+                        "'");
+  }
+  arg1 = reinterpret_cast<lldb::SBSaveCoreOptions *>(argp1);
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,
+                         SWIGTYPE_p_lldb__SBMemoryRegionInfo, 0 | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2),
+                        "in method '"
+                        "SBSaveCoreOptions_AddMemoryRegionToSave"
+                        "', argument "
+                        "2"
+                        " of type '"
+                        "lldb::SBMemoryRegionInfo const &"
+                        "'");
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError,
+                        "invalid null reference "
+                        "in method '"
+                        "SBSaveCoreOptions_AddMemoryRegionToSave"
+                        "', argument "
+                        "2"
+                        " of type '"
+                        "lldb::SBMemoryRegionInfo const &"
+                        "'");
+  }
+  arg2 = reinterpret_cast<lldb::SBMemoryRegionInfo *>(argp2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result =
+        (arg1)->AddMemoryRegionToSave((lldb::SBMemoryRegionInfo const &)*arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj =
+      SWIG_NewPointerObj((new lldb::SBError(result)), SWIGTYPE_p_lldb__SBError,
+                         SWIG_POINTER_OWN | 0);
+  return resultobj;
+fail:
+  return NULL;
+}
 
 SWIGINTERN PyObject *_wrap_SBSaveCoreOptions_Clear(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
@@ -95184,4981 +95457,8923 @@ SWIGINTERN PyObject *SBWatchpointOptions_swiginit(PyObject *SWIGUNUSEDPARM(self)
 }
 
 static PyMethodDef SwigMethods[] = {
-	 { "new_SBAddress", _wrap_new_SBAddress, METH_VARARGS, "\n"
-		"SBAddress()\n"
-		"SBAddress(SBAddress rhs)\n"
-		"SBAddress(SBSection section, lldb::addr_t offset)\n"
-		"new_SBAddress(lldb::addr_t load_addr, SBTarget target) -> SBAddress\n"
-		"\n"
-		"    Create an address by resolving a load address using the supplied target.\n"
-		""},
-	 { "delete_SBAddress", _wrap_delete_SBAddress, METH_O, "delete_SBAddress(SBAddress self)"},
-	 { "SBAddress___nonzero__", _wrap_SBAddress___nonzero__, METH_O, "SBAddress___nonzero__(SBAddress self) -> bool"},
-	 { "SBAddress___ne__", _wrap_SBAddress___ne__, METH_VARARGS, "SBAddress___ne__(SBAddress self, SBAddress rhs) -> bool"},
-	 { "SBAddress_IsValid", _wrap_SBAddress_IsValid, METH_O, "SBAddress_IsValid(SBAddress self) -> bool"},
-	 { "SBAddress_Clear", _wrap_SBAddress_Clear, METH_O, "SBAddress_Clear(SBAddress self)"},
-	 { "SBAddress_GetFileAddress", _wrap_SBAddress_GetFileAddress, METH_O, "SBAddress_GetFileAddress(SBAddress self) -> lldb::addr_t"},
-	 { "SBAddress_GetLoadAddress", _wrap_SBAddress_GetLoadAddress, METH_VARARGS, "SBAddress_GetLoadAddress(SBAddress self, SBTarget target) -> lldb::addr_t"},
-	 { "SBAddress_SetAddress", _wrap_SBAddress_SetAddress, METH_VARARGS, "SBAddress_SetAddress(SBAddress self, SBSection section, lldb::addr_t offset)"},
-	 { "SBAddress_SetLoadAddress", _wrap_SBAddress_SetLoadAddress, METH_VARARGS, "SBAddress_SetLoadAddress(SBAddress self, lldb::addr_t load_addr, SBTarget target)"},
-	 { "SBAddress_OffsetAddress", _wrap_SBAddress_OffsetAddress, METH_VARARGS, "SBAddress_OffsetAddress(SBAddress self, lldb::addr_t offset) -> bool"},
-	 { "SBAddress_GetDescription", _wrap_SBAddress_GetDescription, METH_VARARGS, "SBAddress_GetDescription(SBAddress self, SBStream description) -> bool"},
-	 { "SBAddress_GetSymbolContext", _wrap_SBAddress_GetSymbolContext, METH_VARARGS, "\n"
-		"SBAddress_GetSymbolContext(SBAddress self, uint32_t resolve_scope) -> SBSymbolContext\n"
-		"\n"
-		"    GetSymbolContext() and the following can lookup symbol information for a given address.\n"
-		"    An address might refer to code or data from an existing module, or it\n"
-		"    might refer to something on the stack or heap. The following functions\n"
-		"    will only return valid values if the address has been resolved to a code\n"
-		"    or data address using :py:class:`SBAddress.SetLoadAddress' or\n"
-		"    :py:class:`SBTarget.ResolveLoadAddress`.\n"
-		""},
-	 { "SBAddress_GetSection", _wrap_SBAddress_GetSection, METH_O, "SBAddress_GetSection(SBAddress self) -> SBSection"},
-	 { "SBAddress_GetOffset", _wrap_SBAddress_GetOffset, METH_O, "SBAddress_GetOffset(SBAddress self) -> lldb::addr_t"},
-	 { "SBAddress_GetModule", _wrap_SBAddress_GetModule, METH_O, "\n"
-		"SBAddress_GetModule(SBAddress self) -> SBModule\n"
-		"\n"
-		"    GetModule() and the following grab individual objects for a given address and\n"
-		"    are less efficient if you want more than one symbol related objects.\n"
-		"    Use :py:class:`SBAddress.GetSymbolContext` or\n"
-		"    :py:class:`SBTarget.ResolveSymbolContextForAddress` when you want multiple\n"
-		"    debug symbol related objects for an address.\n"
-		"    One or more bits from the SymbolContextItem enumerations can be logically\n"
-		"    OR'ed together to more efficiently retrieve multiple symbol objects.\n"
-		""},
-	 { "SBAddress_GetCompileUnit", _wrap_SBAddress_GetCompileUnit, METH_O, "SBAddress_GetCompileUnit(SBAddress self) -> SBCompileUnit"},
-	 { "SBAddress_GetFunction", _wrap_SBAddress_GetFunction, METH_O, "SBAddress_GetFunction(SBAddress self) -> SBFunction"},
-	 { "SBAddress_GetBlock", _wrap_SBAddress_GetBlock, METH_O, "SBAddress_GetBlock(SBAddress self) -> SBBlock"},
-	 { "SBAddress_GetSymbol", _wrap_SBAddress_GetSymbol, METH_O, "SBAddress_GetSymbol(SBAddress self) -> SBSymbol"},
-	 { "SBAddress_GetLineEntry", _wrap_SBAddress_GetLineEntry, METH_O, "SBAddress_GetLineEntry(SBAddress self) -> SBLineEntry"},
-	 { "SBAddress___repr__", _wrap_SBAddress___repr__, METH_O, "SBAddress___repr__(SBAddress self) -> std::string"},
-	 { "SBAddress_swigregister", SBAddress_swigregister, METH_O, NULL},
-	 { "SBAddress_swiginit", SBAddress_swiginit, METH_VARARGS, NULL},
-	 { "new_SBAddressRange", _wrap_new_SBAddressRange, METH_VARARGS, "\n"
-		"SBAddressRange()\n"
-		"SBAddressRange(SBAddressRange rhs)\n"
-		"new_SBAddressRange(SBAddress addr, lldb::addr_t byte_size) -> SBAddressRange\n"
-		""},
-	 { "delete_SBAddressRange", _wrap_delete_SBAddressRange, METH_O, "delete_SBAddressRange(SBAddressRange self)"},
-	 { "SBAddressRange_Clear", _wrap_SBAddressRange_Clear, METH_O, "SBAddressRange_Clear(SBAddressRange self)"},
-	 { "SBAddressRange_IsValid", _wrap_SBAddressRange_IsValid, METH_O, "SBAddressRange_IsValid(SBAddressRange self) -> bool"},
-	 { "SBAddressRange_GetBaseAddress", _wrap_SBAddressRange_GetBaseAddress, METH_O, "SBAddressRange_GetBaseAddress(SBAddressRange self) -> SBAddress"},
-	 { "SBAddressRange_GetByteSize", _wrap_SBAddressRange_GetByteSize, METH_O, "SBAddressRange_GetByteSize(SBAddressRange self) -> lldb::addr_t"},
-	 { "SBAddressRange___eq__", _wrap_SBAddressRange___eq__, METH_VARARGS, "SBAddressRange___eq__(SBAddressRange self, SBAddressRange rhs) -> bool"},
-	 { "SBAddressRange___ne__", _wrap_SBAddressRange___ne__, METH_VARARGS, "SBAddressRange___ne__(SBAddressRange self, SBAddressRange rhs) -> bool"},
-	 { "SBAddressRange_GetDescription", _wrap_SBAddressRange_GetDescription, METH_VARARGS, "SBAddressRange_GetDescription(SBAddressRange self, SBStream description, SBTarget target) -> bool"},
-	 { "SBAddressRange_swigregister", SBAddressRange_swigregister, METH_O, NULL},
-	 { "SBAddressRange_swiginit", SBAddressRange_swiginit, METH_VARARGS, NULL},
-	 { "new_SBAddressRangeList", _wrap_new_SBAddressRangeList, METH_VARARGS, "\n"
-		"SBAddressRangeList()\n"
-		"new_SBAddressRangeList(SBAddressRangeList rhs) -> SBAddressRangeList\n"
-		""},
-	 { "delete_SBAddressRangeList", _wrap_delete_SBAddressRangeList, METH_O, "delete_SBAddressRangeList(SBAddressRangeList self)"},
-	 { "SBAddressRangeList_GetSize", _wrap_SBAddressRangeList_GetSize, METH_O, "SBAddressRangeList_GetSize(SBAddressRangeList self) -> uint32_t"},
-	 { "SBAddressRangeList_Clear", _wrap_SBAddressRangeList_Clear, METH_O, "SBAddressRangeList_Clear(SBAddressRangeList self)"},
-	 { "SBAddressRangeList_GetAddressRangeAtIndex", _wrap_SBAddressRangeList_GetAddressRangeAtIndex, METH_VARARGS, "SBAddressRangeList_GetAddressRangeAtIndex(SBAddressRangeList self, uint64_t idx) -> SBAddressRange"},
-	 { "SBAddressRangeList_Append", _wrap_SBAddressRangeList_Append, METH_VARARGS, "\n"
-		"SBAddressRangeList_Append(SBAddressRangeList self, SBAddressRange addr_range)\n"
-		"SBAddressRangeList_Append(SBAddressRangeList self, SBAddressRangeList addr_range_list)\n"
-		""},
-	 { "SBAddressRangeList_GetDescription", _wrap_SBAddressRangeList_GetDescription, METH_VARARGS, "SBAddressRangeList_GetDescription(SBAddressRangeList self, SBStream description, SBTarget target) -> bool"},
-	 { "SBAddressRangeList_swigregister", SBAddressRangeList_swigregister, METH_O, NULL},
-	 { "SBAddressRangeList_swiginit", SBAddressRangeList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBAttachInfo", _wrap_new_SBAttachInfo, METH_VARARGS, "\n"
-		"SBAttachInfo()\n"
-		"SBAttachInfo(lldb::pid_t pid)\n"
-		"SBAttachInfo(char const * path, bool wait_for)\n"
-		"SBAttachInfo(char const * path, bool wait_for, bool _async)\n"
-		"new_SBAttachInfo(SBAttachInfo rhs) -> SBAttachInfo\n"
-		""},
-	 { "delete_SBAttachInfo", _wrap_delete_SBAttachInfo, METH_O, "delete_SBAttachInfo(SBAttachInfo self)"},
-	 { "SBAttachInfo_GetProcessID", _wrap_SBAttachInfo_GetProcessID, METH_O, "SBAttachInfo_GetProcessID(SBAttachInfo self) -> lldb::pid_t"},
-	 { "SBAttachInfo_SetProcessID", _wrap_SBAttachInfo_SetProcessID, METH_VARARGS, "SBAttachInfo_SetProcessID(SBAttachInfo self, lldb::pid_t pid)"},
-	 { "SBAttachInfo_SetExecutable", _wrap_SBAttachInfo_SetExecutable, METH_VARARGS, "\n"
-		"SBAttachInfo_SetExecutable(SBAttachInfo self, char const * path)\n"
-		"SBAttachInfo_SetExecutable(SBAttachInfo self, SBFileSpec exe_file)\n"
-		""},
-	 { "SBAttachInfo_GetWaitForLaunch", _wrap_SBAttachInfo_GetWaitForLaunch, METH_O, "SBAttachInfo_GetWaitForLaunch(SBAttachInfo self) -> bool"},
-	 { "SBAttachInfo_SetWaitForLaunch", _wrap_SBAttachInfo_SetWaitForLaunch, METH_VARARGS, "\n"
-		"SBAttachInfo_SetWaitForLaunch(SBAttachInfo self, bool b)\n"
-		"SBAttachInfo_SetWaitForLaunch(SBAttachInfo self, bool b, bool _async)\n"
-		""},
-	 { "SBAttachInfo_GetIgnoreExisting", _wrap_SBAttachInfo_GetIgnoreExisting, METH_O, "SBAttachInfo_GetIgnoreExisting(SBAttachInfo self) -> bool"},
-	 { "SBAttachInfo_SetIgnoreExisting", _wrap_SBAttachInfo_SetIgnoreExisting, METH_VARARGS, "SBAttachInfo_SetIgnoreExisting(SBAttachInfo self, bool b)"},
-	 { "SBAttachInfo_GetResumeCount", _wrap_SBAttachInfo_GetResumeCount, METH_O, "SBAttachInfo_GetResumeCount(SBAttachInfo self) -> uint32_t"},
-	 { "SBAttachInfo_SetResumeCount", _wrap_SBAttachInfo_SetResumeCount, METH_VARARGS, "SBAttachInfo_SetResumeCount(SBAttachInfo self, uint32_t c)"},
-	 { "SBAttachInfo_GetProcessPluginName", _wrap_SBAttachInfo_GetProcessPluginName, METH_O, "SBAttachInfo_GetProcessPluginName(SBAttachInfo self) -> char const *"},
-	 { "SBAttachInfo_SetProcessPluginName", _wrap_SBAttachInfo_SetProcessPluginName, METH_VARARGS, "SBAttachInfo_SetProcessPluginName(SBAttachInfo self, char const * plugin_name)"},
-	 { "SBAttachInfo_GetUserID", _wrap_SBAttachInfo_GetUserID, METH_O, "SBAttachInfo_GetUserID(SBAttachInfo self) -> uint32_t"},
-	 { "SBAttachInfo_GetGroupID", _wrap_SBAttachInfo_GetGroupID, METH_O, "SBAttachInfo_GetGroupID(SBAttachInfo self) -> uint32_t"},
-	 { "SBAttachInfo_UserIDIsValid", _wrap_SBAttachInfo_UserIDIsValid, METH_O, "SBAttachInfo_UserIDIsValid(SBAttachInfo self) -> bool"},
-	 { "SBAttachInfo_GroupIDIsValid", _wrap_SBAttachInfo_GroupIDIsValid, METH_O, "SBAttachInfo_GroupIDIsValid(SBAttachInfo self) -> bool"},
-	 { "SBAttachInfo_SetUserID", _wrap_SBAttachInfo_SetUserID, METH_VARARGS, "SBAttachInfo_SetUserID(SBAttachInfo self, uint32_t uid)"},
-	 { "SBAttachInfo_SetGroupID", _wrap_SBAttachInfo_SetGroupID, METH_VARARGS, "SBAttachInfo_SetGroupID(SBAttachInfo self, uint32_t gid)"},
-	 { "SBAttachInfo_GetEffectiveUserID", _wrap_SBAttachInfo_GetEffectiveUserID, METH_O, "SBAttachInfo_GetEffectiveUserID(SBAttachInfo self) -> uint32_t"},
-	 { "SBAttachInfo_GetEffectiveGroupID", _wrap_SBAttachInfo_GetEffectiveGroupID, METH_O, "SBAttachInfo_GetEffectiveGroupID(SBAttachInfo self) -> uint32_t"},
-	 { "SBAttachInfo_EffectiveUserIDIsValid", _wrap_SBAttachInfo_EffectiveUserIDIsValid, METH_O, "SBAttachInfo_EffectiveUserIDIsValid(SBAttachInfo self) -> bool"},
-	 { "SBAttachInfo_EffectiveGroupIDIsValid", _wrap_SBAttachInfo_EffectiveGroupIDIsValid, METH_O, "SBAttachInfo_EffectiveGroupIDIsValid(SBAttachInfo self) -> bool"},
-	 { "SBAttachInfo_SetEffectiveUserID", _wrap_SBAttachInfo_SetEffectiveUserID, METH_VARARGS, "SBAttachInfo_SetEffectiveUserID(SBAttachInfo self, uint32_t uid)"},
-	 { "SBAttachInfo_SetEffectiveGroupID", _wrap_SBAttachInfo_SetEffectiveGroupID, METH_VARARGS, "SBAttachInfo_SetEffectiveGroupID(SBAttachInfo self, uint32_t gid)"},
-	 { "SBAttachInfo_GetParentProcessID", _wrap_SBAttachInfo_GetParentProcessID, METH_O, "SBAttachInfo_GetParentProcessID(SBAttachInfo self) -> lldb::pid_t"},
-	 { "SBAttachInfo_SetParentProcessID", _wrap_SBAttachInfo_SetParentProcessID, METH_VARARGS, "SBAttachInfo_SetParentProcessID(SBAttachInfo self, lldb::pid_t pid)"},
-	 { "SBAttachInfo_ParentProcessIDIsValid", _wrap_SBAttachInfo_ParentProcessIDIsValid, METH_O, "SBAttachInfo_ParentProcessIDIsValid(SBAttachInfo self) -> bool"},
-	 { "SBAttachInfo_GetListener", _wrap_SBAttachInfo_GetListener, METH_O, "SBAttachInfo_GetListener(SBAttachInfo self) -> SBListener"},
-	 { "SBAttachInfo_SetListener", _wrap_SBAttachInfo_SetListener, METH_VARARGS, "SBAttachInfo_SetListener(SBAttachInfo self, SBListener listener)"},
-	 { "SBAttachInfo_GetShadowListener", _wrap_SBAttachInfo_GetShadowListener, METH_O, "SBAttachInfo_GetShadowListener(SBAttachInfo self) -> SBListener"},
-	 { "SBAttachInfo_SetShadowListener", _wrap_SBAttachInfo_SetShadowListener, METH_VARARGS, "SBAttachInfo_SetShadowListener(SBAttachInfo self, SBListener listener)"},
-	 { "SBAttachInfo_GetScriptedProcessClassName", _wrap_SBAttachInfo_GetScriptedProcessClassName, METH_O, "SBAttachInfo_GetScriptedProcessClassName(SBAttachInfo self) -> char const *"},
-	 { "SBAttachInfo_SetScriptedProcessClassName", _wrap_SBAttachInfo_SetScriptedProcessClassName, METH_VARARGS, "SBAttachInfo_SetScriptedProcessClassName(SBAttachInfo self, char const * class_name)"},
-	 { "SBAttachInfo_GetScriptedProcessDictionary", _wrap_SBAttachInfo_GetScriptedProcessDictionary, METH_O, "SBAttachInfo_GetScriptedProcessDictionary(SBAttachInfo self) -> SBStructuredData"},
-	 { "SBAttachInfo_SetScriptedProcessDictionary", _wrap_SBAttachInfo_SetScriptedProcessDictionary, METH_VARARGS, "SBAttachInfo_SetScriptedProcessDictionary(SBAttachInfo self, SBStructuredData dict)"},
-	 { "SBAttachInfo_swigregister", SBAttachInfo_swigregister, METH_O, NULL},
-	 { "SBAttachInfo_swiginit", SBAttachInfo_swiginit, METH_VARARGS, NULL},
-	 { "new_SBBlock", _wrap_new_SBBlock, METH_VARARGS, "\n"
-		"SBBlock()\n"
-		"new_SBBlock(SBBlock rhs) -> SBBlock\n"
-		""},
-	 { "delete_SBBlock", _wrap_delete_SBBlock, METH_O, "delete_SBBlock(SBBlock self)"},
-	 { "SBBlock_IsInlined", _wrap_SBBlock_IsInlined, METH_O, "\n"
-		"SBBlock_IsInlined(SBBlock self) -> bool\n"
-		"Is this block contained within an inlined function?\n"
-		""},
-	 { "SBBlock___nonzero__", _wrap_SBBlock___nonzero__, METH_O, "SBBlock___nonzero__(SBBlock self) -> bool"},
-	 { "SBBlock_IsValid", _wrap_SBBlock_IsValid, METH_O, "SBBlock_IsValid(SBBlock self) -> bool"},
-	 { "SBBlock_GetInlinedName", _wrap_SBBlock_GetInlinedName, METH_O, "\n"
-		"SBBlock_GetInlinedName(SBBlock self) -> char const *\n"
-		"\n"
-		"    Get the function name if this block represents an inlined function;\n"
-		"    otherwise, return None.\n"
-		""},
-	 { "SBBlock_GetInlinedCallSiteFile", _wrap_SBBlock_GetInlinedCallSiteFile, METH_O, "\n"
-		"SBBlock_GetInlinedCallSiteFile(SBBlock self) -> SBFileSpec\n"
-		"\n"
-		"    Get the call site file if this block represents an inlined function;\n"
-		"    otherwise, return an invalid file spec.\n"
-		""},
-	 { "SBBlock_GetInlinedCallSiteLine", _wrap_SBBlock_GetInlinedCallSiteLine, METH_O, "\n"
-		"SBBlock_GetInlinedCallSiteLine(SBBlock self) -> uint32_t\n"
-		"\n"
-		"    Get the call site line if this block represents an inlined function;\n"
-		"    otherwise, return 0.\n"
-		""},
-	 { "SBBlock_GetInlinedCallSiteColumn", _wrap_SBBlock_GetInlinedCallSiteColumn, METH_O, "\n"
-		"SBBlock_GetInlinedCallSiteColumn(SBBlock self) -> uint32_t\n"
-		"\n"
-		"    Get the call site column if this block represents an inlined function;\n"
-		"    otherwise, return 0.\n"
-		""},
-	 { "SBBlock_GetParent", _wrap_SBBlock_GetParent, METH_O, "\n"
-		"SBBlock_GetParent(SBBlock self) -> SBBlock\n"
-		"Get the parent block.\n"
-		""},
-	 { "SBBlock_GetSibling", _wrap_SBBlock_GetSibling, METH_O, "\n"
-		"SBBlock_GetSibling(SBBlock self) -> SBBlock\n"
-		"Get the sibling block for this block.\n"
-		""},
-	 { "SBBlock_GetFirstChild", _wrap_SBBlock_GetFirstChild, METH_O, "\n"
-		"SBBlock_GetFirstChild(SBBlock self) -> SBBlock\n"
-		"Get the first child block.\n"
-		""},
-	 { "SBBlock_GetNumRanges", _wrap_SBBlock_GetNumRanges, METH_O, "SBBlock_GetNumRanges(SBBlock self) -> uint32_t"},
-	 { "SBBlock_GetRangeStartAddress", _wrap_SBBlock_GetRangeStartAddress, METH_VARARGS, "SBBlock_GetRangeStartAddress(SBBlock self, uint32_t idx) -> SBAddress"},
-	 { "SBBlock_GetRangeEndAddress", _wrap_SBBlock_GetRangeEndAddress, METH_VARARGS, "SBBlock_GetRangeEndAddress(SBBlock self, uint32_t idx) -> SBAddress"},
-	 { "SBBlock_GetRanges", _wrap_SBBlock_GetRanges, METH_O, "SBBlock_GetRanges(SBBlock self) -> SBAddressRangeList"},
-	 { "SBBlock_GetRangeIndexForBlockAddress", _wrap_SBBlock_GetRangeIndexForBlockAddress, METH_VARARGS, "SBBlock_GetRangeIndexForBlockAddress(SBBlock self, SBAddress block_addr) -> uint32_t"},
-	 { "SBBlock_GetVariables", _wrap_SBBlock_GetVariables, METH_VARARGS, "\n"
-		"SBBlock_GetVariables(SBBlock self, SBFrame frame, bool arguments, bool locals, bool statics, lldb::DynamicValueType use_dynamic) -> SBValueList\n"
-		"SBBlock_GetVariables(SBBlock self, SBTarget target, bool arguments, bool locals, bool statics) -> SBValueList\n"
-		""},
-	 { "SBBlock_GetContainingInlinedBlock", _wrap_SBBlock_GetContainingInlinedBlock, METH_O, "\n"
-		"SBBlock_GetContainingInlinedBlock(SBBlock self) -> SBBlock\n"
-		"Get the inlined block that is or contains this block.\n"
-		""},
-	 { "SBBlock_GetDescription", _wrap_SBBlock_GetDescription, METH_VARARGS, "SBBlock_GetDescription(SBBlock self, SBStream description) -> bool"},
-	 { "SBBlock___repr__", _wrap_SBBlock___repr__, METH_O, "SBBlock___repr__(SBBlock self) -> std::string"},
-	 { "SBBlock_swigregister", SBBlock_swigregister, METH_O, NULL},
-	 { "SBBlock_swiginit", SBBlock_swiginit, METH_VARARGS, NULL},
-	 { "new_SBBreakpoint", _wrap_new_SBBreakpoint, METH_VARARGS, "\n"
-		"SBBreakpoint()\n"
-		"new_SBBreakpoint(SBBreakpoint rhs) -> SBBreakpoint\n"
-		""},
-	 { "delete_SBBreakpoint", _wrap_delete_SBBreakpoint, METH_O, "delete_SBBreakpoint(SBBreakpoint self)"},
-	 { "SBBreakpoint___eq__", _wrap_SBBreakpoint___eq__, METH_VARARGS, "SBBreakpoint___eq__(SBBreakpoint self, SBBreakpoint rhs) -> bool"},
-	 { "SBBreakpoint___ne__", _wrap_SBBreakpoint___ne__, METH_VARARGS, "SBBreakpoint___ne__(SBBreakpoint self, SBBreakpoint rhs) -> bool"},
-	 { "SBBreakpoint_GetID", _wrap_SBBreakpoint_GetID, METH_O, "SBBreakpoint_GetID(SBBreakpoint self) -> lldb::break_id_t"},
-	 { "SBBreakpoint___nonzero__", _wrap_SBBreakpoint___nonzero__, METH_O, "SBBreakpoint___nonzero__(SBBreakpoint self) -> bool"},
-	 { "SBBreakpoint_IsValid", _wrap_SBBreakpoint_IsValid, METH_O, "SBBreakpoint_IsValid(SBBreakpoint self) -> bool"},
-	 { "SBBreakpoint_ClearAllBreakpointSites", _wrap_SBBreakpoint_ClearAllBreakpointSites, METH_O, "SBBreakpoint_ClearAllBreakpointSites(SBBreakpoint self)"},
-	 { "SBBreakpoint_GetTarget", _wrap_SBBreakpoint_GetTarget, METH_O, "SBBreakpoint_GetTarget(SBBreakpoint self) -> SBTarget"},
-	 { "SBBreakpoint_FindLocationByAddress", _wrap_SBBreakpoint_FindLocationByAddress, METH_VARARGS, "SBBreakpoint_FindLocationByAddress(SBBreakpoint self, lldb::addr_t vm_addr) -> SBBreakpointLocation"},
-	 { "SBBreakpoint_FindLocationIDByAddress", _wrap_SBBreakpoint_FindLocationIDByAddress, METH_VARARGS, "SBBreakpoint_FindLocationIDByAddress(SBBreakpoint self, lldb::addr_t vm_addr) -> lldb::break_id_t"},
-	 { "SBBreakpoint_FindLocationByID", _wrap_SBBreakpoint_FindLocationByID, METH_VARARGS, "SBBreakpoint_FindLocationByID(SBBreakpoint self, lldb::break_id_t bp_loc_id) -> SBBreakpointLocation"},
-	 { "SBBreakpoint_GetLocationAtIndex", _wrap_SBBreakpoint_GetLocationAtIndex, METH_VARARGS, "SBBreakpoint_GetLocationAtIndex(SBBreakpoint self, uint32_t index) -> SBBreakpointLocation"},
-	 { "SBBreakpoint_SetEnabled", _wrap_SBBreakpoint_SetEnabled, METH_VARARGS, "SBBreakpoint_SetEnabled(SBBreakpoint self, bool enable)"},
-	 { "SBBreakpoint_IsEnabled", _wrap_SBBreakpoint_IsEnabled, METH_O, "SBBreakpoint_IsEnabled(SBBreakpoint self) -> bool"},
-	 { "SBBreakpoint_SetOneShot", _wrap_SBBreakpoint_SetOneShot, METH_VARARGS, "SBBreakpoint_SetOneShot(SBBreakpoint self, bool one_shot)"},
-	 { "SBBreakpoint_IsOneShot", _wrap_SBBreakpoint_IsOneShot, METH_O, "SBBreakpoint_IsOneShot(SBBreakpoint self) -> bool"},
-	 { "SBBreakpoint_IsInternal", _wrap_SBBreakpoint_IsInternal, METH_O, "SBBreakpoint_IsInternal(SBBreakpoint self) -> bool"},
-	 { "SBBreakpoint_GetHitCount", _wrap_SBBreakpoint_GetHitCount, METH_O, "SBBreakpoint_GetHitCount(SBBreakpoint self) -> uint32_t"},
-	 { "SBBreakpoint_SetIgnoreCount", _wrap_SBBreakpoint_SetIgnoreCount, METH_VARARGS, "SBBreakpoint_SetIgnoreCount(SBBreakpoint self, uint32_t count)"},
-	 { "SBBreakpoint_GetIgnoreCount", _wrap_SBBreakpoint_GetIgnoreCount, METH_O, "SBBreakpoint_GetIgnoreCount(SBBreakpoint self) -> uint32_t"},
-	 { "SBBreakpoint_SetCondition", _wrap_SBBreakpoint_SetCondition, METH_VARARGS, "\n"
-		"SBBreakpoint_SetCondition(SBBreakpoint self, char const * condition)\n"
-		"\n"
-		"    The breakpoint stops only if the condition expression evaluates to true.\n"
-		""},
-	 { "SBBreakpoint_GetCondition", _wrap_SBBreakpoint_GetCondition, METH_O, "\n"
-		"SBBreakpoint_GetCondition(SBBreakpoint self) -> char const *\n"
-		"\n"
-		"    Get the condition expression for the breakpoint.\n"
-		""},
-	 { "SBBreakpoint_SetAutoContinue", _wrap_SBBreakpoint_SetAutoContinue, METH_VARARGS, "SBBreakpoint_SetAutoContinue(SBBreakpoint self, bool auto_continue)"},
-	 { "SBBreakpoint_GetAutoContinue", _wrap_SBBreakpoint_GetAutoContinue, METH_O, "SBBreakpoint_GetAutoContinue(SBBreakpoint self) -> bool"},
-	 { "SBBreakpoint_SetThreadID", _wrap_SBBreakpoint_SetThreadID, METH_VARARGS, "SBBreakpoint_SetThreadID(SBBreakpoint self, lldb::tid_t sb_thread_id)"},
-	 { "SBBreakpoint_GetThreadID", _wrap_SBBreakpoint_GetThreadID, METH_O, "SBBreakpoint_GetThreadID(SBBreakpoint self) -> lldb::tid_t"},
-	 { "SBBreakpoint_SetThreadIndex", _wrap_SBBreakpoint_SetThreadIndex, METH_VARARGS, "SBBreakpoint_SetThreadIndex(SBBreakpoint self, uint32_t index)"},
-	 { "SBBreakpoint_GetThreadIndex", _wrap_SBBreakpoint_GetThreadIndex, METH_O, "SBBreakpoint_GetThreadIndex(SBBreakpoint self) -> uint32_t"},
-	 { "SBBreakpoint_SetThreadName", _wrap_SBBreakpoint_SetThreadName, METH_VARARGS, "SBBreakpoint_SetThreadName(SBBreakpoint self, char const * thread_name)"},
-	 { "SBBreakpoint_GetThreadName", _wrap_SBBreakpoint_GetThreadName, METH_O, "SBBreakpoint_GetThreadName(SBBreakpoint self) -> char const *"},
-	 { "SBBreakpoint_SetQueueName", _wrap_SBBreakpoint_SetQueueName, METH_VARARGS, "SBBreakpoint_SetQueueName(SBBreakpoint self, char const * queue_name)"},
-	 { "SBBreakpoint_GetQueueName", _wrap_SBBreakpoint_GetQueueName, METH_O, "SBBreakpoint_GetQueueName(SBBreakpoint self) -> char const *"},
-	 { "SBBreakpoint_SetScriptCallbackFunction", _wrap_SBBreakpoint_SetScriptCallbackFunction, METH_VARARGS, "\n"
-		"SBBreakpoint_SetScriptCallbackFunction(SBBreakpoint self, char const * callback_function_name)\n"
-		"SBBreakpoint_SetScriptCallbackFunction(SBBreakpoint self, char const * callback_function_name, SBStructuredData extra_args) -> SBError\n"
-		"\n"
-		"    Set the name of the script function to be called when the breakpoint is hit.\n"
-		"    To use this variant, the function should take (frame, bp_loc, extra_args, internal_dict) and\n"
-		"    when the breakpoint is hit the extra_args will be passed to the callback function.\n"
-		""},
-	 { "SBBreakpoint_SetCommandLineCommands", _wrap_SBBreakpoint_SetCommandLineCommands, METH_VARARGS, "SBBreakpoint_SetCommandLineCommands(SBBreakpoint self, SBStringList commands)"},
-	 { "SBBreakpoint_GetCommandLineCommands", _wrap_SBBreakpoint_GetCommandLineCommands, METH_VARARGS, "SBBreakpoint_GetCommandLineCommands(SBBreakpoint self, SBStringList commands) -> bool"},
-	 { "SBBreakpoint_SetScriptCallbackBody", _wrap_SBBreakpoint_SetScriptCallbackBody, METH_VARARGS, "\n"
-		"SBBreakpoint_SetScriptCallbackBody(SBBreakpoint self, char const * script_body_text) -> SBError\n"
-		"\n"
-		"    Provide the body for the script function to be called when the breakpoint is hit.\n"
-		"    The body will be wrapped in a function, which be passed two arguments:\n"
-		"    'frame' - which holds the bottom-most SBFrame of the thread that hit the breakpoint\n"
-		"    'bpno'  - which is the SBBreakpointLocation to which the callback was attached.\n"
-		"\n"
-		"    The error parameter is currently ignored, but will at some point hold the Python\n"
-		"    compilation diagnostics.\n"
-		"    Returns true if the body compiles successfully, false if not.\n"
-		""},
-	 { "SBBreakpoint_AddName", _wrap_SBBreakpoint_AddName, METH_VARARGS, "SBBreakpoint_AddName(SBBreakpoint self, char const * new_name) -> bool"},
-	 { "SBBreakpoint_AddNameWithErrorHandling", _wrap_SBBreakpoint_AddNameWithErrorHandling, METH_VARARGS, "SBBreakpoint_AddNameWithErrorHandling(SBBreakpoint self, char const * new_name) -> SBError"},
-	 { "SBBreakpoint_RemoveName", _wrap_SBBreakpoint_RemoveName, METH_VARARGS, "SBBreakpoint_RemoveName(SBBreakpoint self, char const * name_to_remove)"},
-	 { "SBBreakpoint_MatchesName", _wrap_SBBreakpoint_MatchesName, METH_VARARGS, "SBBreakpoint_MatchesName(SBBreakpoint self, char const * name) -> bool"},
-	 { "SBBreakpoint_GetNames", _wrap_SBBreakpoint_GetNames, METH_VARARGS, "SBBreakpoint_GetNames(SBBreakpoint self, SBStringList names)"},
-	 { "SBBreakpoint_GetNumResolvedLocations", _wrap_SBBreakpoint_GetNumResolvedLocations, METH_O, "SBBreakpoint_GetNumResolvedLocations(SBBreakpoint self) -> size_t"},
-	 { "SBBreakpoint_GetNumLocations", _wrap_SBBreakpoint_GetNumLocations, METH_O, "SBBreakpoint_GetNumLocations(SBBreakpoint self) -> size_t"},
-	 { "SBBreakpoint_GetDescription", _wrap_SBBreakpoint_GetDescription, METH_VARARGS, "\n"
-		"SBBreakpoint_GetDescription(SBBreakpoint self, SBStream description) -> bool\n"
-		"SBBreakpoint_GetDescription(SBBreakpoint self, SBStream description, bool include_locations) -> bool\n"
-		""},
-	 { "SBBreakpoint_EventIsBreakpointEvent", _wrap_SBBreakpoint_EventIsBreakpointEvent, METH_O, "SBBreakpoint_EventIsBreakpointEvent(SBEvent event) -> bool"},
-	 { "SBBreakpoint_GetBreakpointEventTypeFromEvent", _wrap_SBBreakpoint_GetBreakpointEventTypeFromEvent, METH_O, "SBBreakpoint_GetBreakpointEventTypeFromEvent(SBEvent event) -> lldb::BreakpointEventType"},
-	 { "SBBreakpoint_GetBreakpointFromEvent", _wrap_SBBreakpoint_GetBreakpointFromEvent, METH_O, "SBBreakpoint_GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"},
-	 { "SBBreakpoint_GetBreakpointLocationAtIndexFromEvent", _wrap_SBBreakpoint_GetBreakpointLocationAtIndexFromEvent, METH_VARARGS, "SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(SBEvent event, uint32_t loc_idx) -> SBBreakpointLocation"},
-	 { "SBBreakpoint_GetNumBreakpointLocationsFromEvent", _wrap_SBBreakpoint_GetNumBreakpointLocationsFromEvent, METH_O, "SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"},
-	 { "SBBreakpoint_IsHardware", _wrap_SBBreakpoint_IsHardware, METH_O, "SBBreakpoint_IsHardware(SBBreakpoint self) -> bool"},
-	 { "SBBreakpoint_AddLocation", _wrap_SBBreakpoint_AddLocation, METH_VARARGS, "SBBreakpoint_AddLocation(SBBreakpoint self, SBAddress address) -> SBError"},
-	 { "SBBreakpoint_SerializeToStructuredData", _wrap_SBBreakpoint_SerializeToStructuredData, METH_O, "SBBreakpoint_SerializeToStructuredData(SBBreakpoint self) -> SBStructuredData"},
-	 { "SBBreakpoint___repr__", _wrap_SBBreakpoint___repr__, METH_O, "SBBreakpoint___repr__(SBBreakpoint self) -> std::string"},
-	 { "SBBreakpoint_swigregister", SBBreakpoint_swigregister, METH_O, NULL},
-	 { "SBBreakpoint_swiginit", SBBreakpoint_swiginit, METH_VARARGS, NULL},
-	 { "new_SBBreakpointList", _wrap_new_SBBreakpointList, METH_O, "new_SBBreakpointList(SBTarget target) -> SBBreakpointList"},
-	 { "delete_SBBreakpointList", _wrap_delete_SBBreakpointList, METH_O, "delete_SBBreakpointList(SBBreakpointList self)"},
-	 { "SBBreakpointList_GetSize", _wrap_SBBreakpointList_GetSize, METH_O, "SBBreakpointList_GetSize(SBBreakpointList self) -> size_t"},
-	 { "SBBreakpointList_GetBreakpointAtIndex", _wrap_SBBreakpointList_GetBreakpointAtIndex, METH_VARARGS, "SBBreakpointList_GetBreakpointAtIndex(SBBreakpointList self, size_t idx) -> SBBreakpoint"},
-	 { "SBBreakpointList_FindBreakpointByID", _wrap_SBBreakpointList_FindBreakpointByID, METH_VARARGS, "SBBreakpointList_FindBreakpointByID(SBBreakpointList self, lldb::break_id_t arg2) -> SBBreakpoint"},
-	 { "SBBreakpointList_Append", _wrap_SBBreakpointList_Append, METH_VARARGS, "SBBreakpointList_Append(SBBreakpointList self, SBBreakpoint sb_bkpt)"},
-	 { "SBBreakpointList_AppendIfUnique", _wrap_SBBreakpointList_AppendIfUnique, METH_VARARGS, "SBBreakpointList_AppendIfUnique(SBBreakpointList self, SBBreakpoint sb_bkpt) -> bool"},
-	 { "SBBreakpointList_AppendByID", _wrap_SBBreakpointList_AppendByID, METH_VARARGS, "SBBreakpointList_AppendByID(SBBreakpointList self, lldb::break_id_t id)"},
-	 { "SBBreakpointList_Clear", _wrap_SBBreakpointList_Clear, METH_O, "SBBreakpointList_Clear(SBBreakpointList self)"},
-	 { "SBBreakpointList_swigregister", SBBreakpointList_swigregister, METH_O, NULL},
-	 { "SBBreakpointList_swiginit", SBBreakpointList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBBreakpointLocation", _wrap_new_SBBreakpointLocation, METH_VARARGS, "\n"
-		"SBBreakpointLocation()\n"
-		"new_SBBreakpointLocation(SBBreakpointLocation rhs) -> SBBreakpointLocation\n"
-		""},
-	 { "delete_SBBreakpointLocation", _wrap_delete_SBBreakpointLocation, METH_O, "delete_SBBreakpointLocation(SBBreakpointLocation self)"},
-	 { "SBBreakpointLocation_GetID", _wrap_SBBreakpointLocation_GetID, METH_O, "SBBreakpointLocation_GetID(SBBreakpointLocation self) -> lldb::break_id_t"},
-	 { "SBBreakpointLocation___nonzero__", _wrap_SBBreakpointLocation___nonzero__, METH_O, "SBBreakpointLocation___nonzero__(SBBreakpointLocation self) -> bool"},
-	 { "SBBreakpointLocation_IsValid", _wrap_SBBreakpointLocation_IsValid, METH_O, "SBBreakpointLocation_IsValid(SBBreakpointLocation self) -> bool"},
-	 { "SBBreakpointLocation_GetAddress", _wrap_SBBreakpointLocation_GetAddress, METH_O, "SBBreakpointLocation_GetAddress(SBBreakpointLocation self) -> SBAddress"},
-	 { "SBBreakpointLocation_GetLoadAddress", _wrap_SBBreakpointLocation_GetLoadAddress, METH_O, "SBBreakpointLocation_GetLoadAddress(SBBreakpointLocation self) -> lldb::addr_t"},
-	 { "SBBreakpointLocation_SetEnabled", _wrap_SBBreakpointLocation_SetEnabled, METH_VARARGS, "SBBreakpointLocation_SetEnabled(SBBreakpointLocation self, bool enabled)"},
-	 { "SBBreakpointLocation_IsEnabled", _wrap_SBBreakpointLocation_IsEnabled, METH_O, "SBBreakpointLocation_IsEnabled(SBBreakpointLocation self) -> bool"},
-	 { "SBBreakpointLocation_GetHitCount", _wrap_SBBreakpointLocation_GetHitCount, METH_O, "SBBreakpointLocation_GetHitCount(SBBreakpointLocation self) -> uint32_t"},
-	 { "SBBreakpointLocation_GetIgnoreCount", _wrap_SBBreakpointLocation_GetIgnoreCount, METH_O, "SBBreakpointLocation_GetIgnoreCount(SBBreakpointLocation self) -> uint32_t"},
-	 { "SBBreakpointLocation_SetIgnoreCount", _wrap_SBBreakpointLocation_SetIgnoreCount, METH_VARARGS, "SBBreakpointLocation_SetIgnoreCount(SBBreakpointLocation self, uint32_t n)"},
-	 { "SBBreakpointLocation_SetCondition", _wrap_SBBreakpointLocation_SetCondition, METH_VARARGS, "\n"
-		"SBBreakpointLocation_SetCondition(SBBreakpointLocation self, char const * condition)\n"
-		"\n"
-		"    The breakpoint location stops only if the condition expression evaluates\n"
-		"    to true.\n"
-		""},
-	 { "SBBreakpointLocation_GetCondition", _wrap_SBBreakpointLocation_GetCondition, METH_O, "\n"
-		"SBBreakpointLocation_GetCondition(SBBreakpointLocation self) -> char const *\n"
-		"\n"
-		"    Get the condition expression for the breakpoint location.\n"
-		""},
-	 { "SBBreakpointLocation_SetAutoContinue", _wrap_SBBreakpointLocation_SetAutoContinue, METH_VARARGS, "SBBreakpointLocation_SetAutoContinue(SBBreakpointLocation self, bool auto_continue)"},
-	 { "SBBreakpointLocation_GetAutoContinue", _wrap_SBBreakpointLocation_GetAutoContinue, METH_O, "SBBreakpointLocation_GetAutoContinue(SBBreakpointLocation self) -> bool"},
-	 { "SBBreakpointLocation_SetScriptCallbackFunction", _wrap_SBBreakpointLocation_SetScriptCallbackFunction, METH_VARARGS, "\n"
-		"SBBreakpointLocation_SetScriptCallbackFunction(SBBreakpointLocation self, char const * callback_function_name)\n"
-		"SBBreakpointLocation_SetScriptCallbackFunction(SBBreakpointLocation self, char const * callback_function_name, SBStructuredData extra_args) -> SBError\n"
-		"\n"
-		"    Set the name of the script function to be called when the breakpoint is hit.\n"
-		"    To use this variant, the function should take (frame, bp_loc, extra_args, internal_dict) and\n"
-		"    when the breakpoint is hit the extra_args will be passed to the callback function.\n"
-		""},
-	 { "SBBreakpointLocation_SetScriptCallbackBody", _wrap_SBBreakpointLocation_SetScriptCallbackBody, METH_VARARGS, "\n"
-		"SBBreakpointLocation_SetScriptCallbackBody(SBBreakpointLocation self, char const * script_body_text) -> SBError\n"
-		"\n"
-		"    Provide the body for the script function to be called when the breakpoint location is hit.\n"
-		"    The body will be wrapped in a function, which be passed two arguments:\n"
-		"    'frame' - which holds the bottom-most SBFrame of the thread that hit the breakpoint\n"
-		"    'bpno'  - which is the SBBreakpointLocation to which the callback was attached.\n"
-		"\n"
-		"    The error parameter is currently ignored, but will at some point hold the Python\n"
-		"    compilation diagnostics.\n"
-		"    Returns true if the body compiles successfully, false if not.\n"
-		""},
-	 { "SBBreakpointLocation_SetCommandLineCommands", _wrap_SBBreakpointLocation_SetCommandLineCommands, METH_VARARGS, "SBBreakpointLocation_SetCommandLineCommands(SBBreakpointLocation self, SBStringList commands)"},
-	 { "SBBreakpointLocation_GetCommandLineCommands", _wrap_SBBreakpointLocation_GetCommandLineCommands, METH_VARARGS, "SBBreakpointLocation_GetCommandLineCommands(SBBreakpointLocation self, SBStringList commands) -> bool"},
-	 { "SBBreakpointLocation_SetThreadID", _wrap_SBBreakpointLocation_SetThreadID, METH_VARARGS, "SBBreakpointLocation_SetThreadID(SBBreakpointLocation self, lldb::tid_t sb_thread_id)"},
-	 { "SBBreakpointLocation_GetThreadID", _wrap_SBBreakpointLocation_GetThreadID, METH_O, "SBBreakpointLocation_GetThreadID(SBBreakpointLocation self) -> lldb::tid_t"},
-	 { "SBBreakpointLocation_SetThreadIndex", _wrap_SBBreakpointLocation_SetThreadIndex, METH_VARARGS, "SBBreakpointLocation_SetThreadIndex(SBBreakpointLocation self, uint32_t index)"},
-	 { "SBBreakpointLocation_GetThreadIndex", _wrap_SBBreakpointLocation_GetThreadIndex, METH_O, "SBBreakpointLocation_GetThreadIndex(SBBreakpointLocation self) -> uint32_t"},
-	 { "SBBreakpointLocation_SetThreadName", _wrap_SBBreakpointLocation_SetThreadName, METH_VARARGS, "SBBreakpointLocation_SetThreadName(SBBreakpointLocation self, char const * thread_name)"},
-	 { "SBBreakpointLocation_GetThreadName", _wrap_SBBreakpointLocation_GetThreadName, METH_O, "SBBreakpointLocation_GetThreadName(SBBreakpointLocation self) -> char const *"},
-	 { "SBBreakpointLocation_SetQueueName", _wrap_SBBreakpointLocation_SetQueueName, METH_VARARGS, "SBBreakpointLocation_SetQueueName(SBBreakpointLocation self, char const * queue_name)"},
-	 { "SBBreakpointLocation_GetQueueName", _wrap_SBBreakpointLocation_GetQueueName, METH_O, "SBBreakpointLocation_GetQueueName(SBBreakpointLocation self) -> char const *"},
-	 { "SBBreakpointLocation_IsResolved", _wrap_SBBreakpointLocation_IsResolved, METH_O, "SBBreakpointLocation_IsResolved(SBBreakpointLocation self) -> bool"},
-	 { "SBBreakpointLocation_GetDescription", _wrap_SBBreakpointLocation_GetDescription, METH_VARARGS, "SBBreakpointLocation_GetDescription(SBBreakpointLocation self, SBStream description, lldb::DescriptionLevel level) -> bool"},
-	 { "SBBreakpointLocation_GetBreakpoint", _wrap_SBBreakpointLocation_GetBreakpoint, METH_O, "SBBreakpointLocation_GetBreakpoint(SBBreakpointLocation self) -> SBBreakpoint"},
-	 { "SBBreakpointLocation___repr__", _wrap_SBBreakpointLocation___repr__, METH_O, "SBBreakpointLocation___repr__(SBBreakpointLocation self) -> std::string"},
-	 { "SBBreakpointLocation_swigregister", SBBreakpointLocation_swigregister, METH_O, NULL},
-	 { "SBBreakpointLocation_swiginit", SBBreakpointLocation_swiginit, METH_VARARGS, NULL},
-	 { "new_SBBreakpointName", _wrap_new_SBBreakpointName, METH_VARARGS, "\n"
-		"SBBreakpointName()\n"
-		"SBBreakpointName(SBTarget target, char const * name)\n"
-		"SBBreakpointName(SBBreakpoint bkpt, char const * name)\n"
-		"new_SBBreakpointName(SBBreakpointName rhs) -> SBBreakpointName\n"
-		""},
-	 { "delete_SBBreakpointName", _wrap_delete_SBBreakpointName, METH_O, "delete_SBBreakpointName(SBBreakpointName self)"},
-	 { "SBBreakpointName___eq__", _wrap_SBBreakpointName___eq__, METH_VARARGS, "SBBreakpointName___eq__(SBBreakpointName self, SBBreakpointName rhs) -> bool"},
-	 { "SBBreakpointName___ne__", _wrap_SBBreakpointName___ne__, METH_VARARGS, "SBBreakpointName___ne__(SBBreakpointName self, SBBreakpointName rhs) -> bool"},
-	 { "SBBreakpointName___nonzero__", _wrap_SBBreakpointName___nonzero__, METH_O, "SBBreakpointName___nonzero__(SBBreakpointName self) -> bool"},
-	 { "SBBreakpointName_IsValid", _wrap_SBBreakpointName_IsValid, METH_O, "SBBreakpointName_IsValid(SBBreakpointName self) -> bool"},
-	 { "SBBreakpointName_GetName", _wrap_SBBreakpointName_GetName, METH_O, "SBBreakpointName_GetName(SBBreakpointName self) -> char const *"},
-	 { "SBBreakpointName_SetEnabled", _wrap_SBBreakpointName_SetEnabled, METH_VARARGS, "SBBreakpointName_SetEnabled(SBBreakpointName self, bool enable)"},
-	 { "SBBreakpointName_IsEnabled", _wrap_SBBreakpointName_IsEnabled, METH_O, "SBBreakpointName_IsEnabled(SBBreakpointName self) -> bool"},
-	 { "SBBreakpointName_SetOneShot", _wrap_SBBreakpointName_SetOneShot, METH_VARARGS, "SBBreakpointName_SetOneShot(SBBreakpointName self, bool one_shot)"},
-	 { "SBBreakpointName_IsOneShot", _wrap_SBBreakpointName_IsOneShot, METH_O, "SBBreakpointName_IsOneShot(SBBreakpointName self) -> bool"},
-	 { "SBBreakpointName_SetIgnoreCount", _wrap_SBBreakpointName_SetIgnoreCount, METH_VARARGS, "SBBreakpointName_SetIgnoreCount(SBBreakpointName self, uint32_t count)"},
-	 { "SBBreakpointName_GetIgnoreCount", _wrap_SBBreakpointName_GetIgnoreCount, METH_O, "SBBreakpointName_GetIgnoreCount(SBBreakpointName self) -> uint32_t"},
-	 { "SBBreakpointName_SetCondition", _wrap_SBBreakpointName_SetCondition, METH_VARARGS, "SBBreakpointName_SetCondition(SBBreakpointName self, char const * condition)"},
-	 { "SBBreakpointName_GetCondition", _wrap_SBBreakpointName_GetCondition, METH_O, "SBBreakpointName_GetCondition(SBBreakpointName self) -> char const *"},
-	 { "SBBreakpointName_SetAutoContinue", _wrap_SBBreakpointName_SetAutoContinue, METH_VARARGS, "SBBreakpointName_SetAutoContinue(SBBreakpointName self, bool auto_continue)"},
-	 { "SBBreakpointName_GetAutoContinue", _wrap_SBBreakpointName_GetAutoContinue, METH_O, "SBBreakpointName_GetAutoContinue(SBBreakpointName self) -> bool"},
-	 { "SBBreakpointName_SetThreadID", _wrap_SBBreakpointName_SetThreadID, METH_VARARGS, "SBBreakpointName_SetThreadID(SBBreakpointName self, lldb::tid_t sb_thread_id)"},
-	 { "SBBreakpointName_GetThreadID", _wrap_SBBreakpointName_GetThreadID, METH_O, "SBBreakpointName_GetThreadID(SBBreakpointName self) -> lldb::tid_t"},
-	 { "SBBreakpointName_SetThreadIndex", _wrap_SBBreakpointName_SetThreadIndex, METH_VARARGS, "SBBreakpointName_SetThreadIndex(SBBreakpointName self, uint32_t index)"},
-	 { "SBBreakpointName_GetThreadIndex", _wrap_SBBreakpointName_GetThreadIndex, METH_O, "SBBreakpointName_GetThreadIndex(SBBreakpointName self) -> uint32_t"},
-	 { "SBBreakpointName_SetThreadName", _wrap_SBBreakpointName_SetThreadName, METH_VARARGS, "SBBreakpointName_SetThreadName(SBBreakpointName self, char const * thread_name)"},
-	 { "SBBreakpointName_GetThreadName", _wrap_SBBreakpointName_GetThreadName, METH_O, "SBBreakpointName_GetThreadName(SBBreakpointName self) -> char const *"},
-	 { "SBBreakpointName_SetQueueName", _wrap_SBBreakpointName_SetQueueName, METH_VARARGS, "SBBreakpointName_SetQueueName(SBBreakpointName self, char const * queue_name)"},
-	 { "SBBreakpointName_GetQueueName", _wrap_SBBreakpointName_GetQueueName, METH_O, "SBBreakpointName_GetQueueName(SBBreakpointName self) -> char const *"},
-	 { "SBBreakpointName_SetScriptCallbackFunction", _wrap_SBBreakpointName_SetScriptCallbackFunction, METH_VARARGS, "\n"
-		"SBBreakpointName_SetScriptCallbackFunction(SBBreakpointName self, char const * callback_function_name)\n"
-		"SBBreakpointName_SetScriptCallbackFunction(SBBreakpointName self, char const * callback_function_name, SBStructuredData extra_args) -> SBError\n"
-		""},
-	 { "SBBreakpointName_SetCommandLineCommands", _wrap_SBBreakpointName_SetCommandLineCommands, METH_VARARGS, "SBBreakpointName_SetCommandLineCommands(SBBreakpointName self, SBStringList commands)"},
-	 { "SBBreakpointName_GetCommandLineCommands", _wrap_SBBreakpointName_GetCommandLineCommands, METH_VARARGS, "SBBreakpointName_GetCommandLineCommands(SBBreakpointName self, SBStringList commands) -> bool"},
-	 { "SBBreakpointName_SetScriptCallbackBody", _wrap_SBBreakpointName_SetScriptCallbackBody, METH_VARARGS, "SBBreakpointName_SetScriptCallbackBody(SBBreakpointName self, char const * script_body_text) -> SBError"},
-	 { "SBBreakpointName_GetHelpString", _wrap_SBBreakpointName_GetHelpString, METH_O, "SBBreakpointName_GetHelpString(SBBreakpointName self) -> char const *"},
-	 { "SBBreakpointName_SetHelpString", _wrap_SBBreakpointName_SetHelpString, METH_VARARGS, "SBBreakpointName_SetHelpString(SBBreakpointName self, char const * help_string)"},
-	 { "SBBreakpointName_GetAllowList", _wrap_SBBreakpointName_GetAllowList, METH_O, "SBBreakpointName_GetAllowList(SBBreakpointName self) -> bool"},
-	 { "SBBreakpointName_SetAllowList", _wrap_SBBreakpointName_SetAllowList, METH_VARARGS, "SBBreakpointName_SetAllowList(SBBreakpointName self, bool value)"},
-	 { "SBBreakpointName_GetAllowDelete", _wrap_SBBreakpointName_GetAllowDelete, METH_O, "SBBreakpointName_GetAllowDelete(SBBreakpointName self) -> bool"},
-	 { "SBBreakpointName_SetAllowDelete", _wrap_SBBreakpointName_SetAllowDelete, METH_VARARGS, "SBBreakpointName_SetAllowDelete(SBBreakpointName self, bool value)"},
-	 { "SBBreakpointName_GetAllowDisable", _wrap_SBBreakpointName_GetAllowDisable, METH_O, "SBBreakpointName_GetAllowDisable(SBBreakpointName self) -> bool"},
-	 { "SBBreakpointName_SetAllowDisable", _wrap_SBBreakpointName_SetAllowDisable, METH_VARARGS, "SBBreakpointName_SetAllowDisable(SBBreakpointName self, bool value)"},
-	 { "SBBreakpointName_GetDescription", _wrap_SBBreakpointName_GetDescription, METH_VARARGS, "SBBreakpointName_GetDescription(SBBreakpointName self, SBStream description) -> bool"},
-	 { "SBBreakpointName___repr__", _wrap_SBBreakpointName___repr__, METH_O, "SBBreakpointName___repr__(SBBreakpointName self) -> std::string"},
-	 { "SBBreakpointName_swigregister", SBBreakpointName_swigregister, METH_O, NULL},
-	 { "SBBreakpointName_swiginit", SBBreakpointName_swiginit, METH_VARARGS, NULL},
-	 { "new_SBBroadcaster", _wrap_new_SBBroadcaster, METH_VARARGS, "\n"
-		"SBBroadcaster()\n"
-		"SBBroadcaster(char const * name)\n"
-		"new_SBBroadcaster(SBBroadcaster rhs) -> SBBroadcaster\n"
-		""},
-	 { "delete_SBBroadcaster", _wrap_delete_SBBroadcaster, METH_O, "delete_SBBroadcaster(SBBroadcaster self)"},
-	 { "SBBroadcaster___nonzero__", _wrap_SBBroadcaster___nonzero__, METH_O, "SBBroadcaster___nonzero__(SBBroadcaster self) -> bool"},
-	 { "SBBroadcaster_IsValid", _wrap_SBBroadcaster_IsValid, METH_O, "SBBroadcaster_IsValid(SBBroadcaster self) -> bool"},
-	 { "SBBroadcaster_Clear", _wrap_SBBroadcaster_Clear, METH_O, "SBBroadcaster_Clear(SBBroadcaster self)"},
-	 { "SBBroadcaster_BroadcastEventByType", _wrap_SBBroadcaster_BroadcastEventByType, METH_VARARGS, "SBBroadcaster_BroadcastEventByType(SBBroadcaster self, uint32_t event_type, bool unique=False)"},
-	 { "SBBroadcaster_BroadcastEvent", _wrap_SBBroadcaster_BroadcastEvent, METH_VARARGS, "SBBroadcaster_BroadcastEvent(SBBroadcaster self, SBEvent event, bool unique=False)"},
-	 { "SBBroadcaster_AddInitialEventsToListener", _wrap_SBBroadcaster_AddInitialEventsToListener, METH_VARARGS, "SBBroadcaster_AddInitialEventsToListener(SBBroadcaster self, SBListener listener, uint32_t requested_events)"},
-	 { "SBBroadcaster_AddListener", _wrap_SBBroadcaster_AddListener, METH_VARARGS, "SBBroadcaster_AddListener(SBBroadcaster self, SBListener listener, uint32_t event_mask) -> uint32_t"},
-	 { "SBBroadcaster_GetName", _wrap_SBBroadcaster_GetName, METH_O, "SBBroadcaster_GetName(SBBroadcaster self) -> char const *"},
-	 { "SBBroadcaster_EventTypeHasListeners", _wrap_SBBroadcaster_EventTypeHasListeners, METH_VARARGS, "SBBroadcaster_EventTypeHasListeners(SBBroadcaster self, uint32_t event_type) -> bool"},
-	 { "SBBroadcaster_RemoveListener", _wrap_SBBroadcaster_RemoveListener, METH_VARARGS, "SBBroadcaster_RemoveListener(SBBroadcaster self, SBListener listener, uint32_t event_mask=4294967295U) -> bool"},
-	 { "SBBroadcaster___eq__", _wrap_SBBroadcaster___eq__, METH_VARARGS, "SBBroadcaster___eq__(SBBroadcaster self, SBBroadcaster rhs) -> bool"},
-	 { "SBBroadcaster___ne__", _wrap_SBBroadcaster___ne__, METH_VARARGS, "SBBroadcaster___ne__(SBBroadcaster self, SBBroadcaster rhs) -> bool"},
-	 { "SBBroadcaster___lt__", _wrap_SBBroadcaster___lt__, METH_VARARGS, "SBBroadcaster___lt__(SBBroadcaster self, SBBroadcaster rhs) -> bool"},
-	 { "SBBroadcaster_swigregister", SBBroadcaster_swigregister, METH_O, NULL},
-	 { "SBBroadcaster_swiginit", SBBroadcaster_swiginit, METH_VARARGS, NULL},
-	 { "new_SBCommandInterpreter", _wrap_new_SBCommandInterpreter, METH_VARARGS, "\n"
-		"SBCommandInterpreter()\n"
-		"new_SBCommandInterpreter(SBCommandInterpreter rhs) -> SBCommandInterpreter\n"
-		""},
-	 { "delete_SBCommandInterpreter", _wrap_delete_SBCommandInterpreter, METH_O, "delete_SBCommandInterpreter(SBCommandInterpreter self)"},
-	 { "SBCommandInterpreter_GetArgumentTypeAsCString", _wrap_SBCommandInterpreter_GetArgumentTypeAsCString, METH_O, "SBCommandInterpreter_GetArgumentTypeAsCString(lldb::CommandArgumentType const arg_type) -> char const *"},
-	 { "SBCommandInterpreter_GetArgumentDescriptionAsCString", _wrap_SBCommandInterpreter_GetArgumentDescriptionAsCString, METH_O, "SBCommandInterpreter_GetArgumentDescriptionAsCString(lldb::CommandArgumentType const arg_type) -> char const *"},
-	 { "SBCommandInterpreter_EventIsCommandInterpreterEvent", _wrap_SBCommandInterpreter_EventIsCommandInterpreterEvent, METH_O, "SBCommandInterpreter_EventIsCommandInterpreterEvent(SBEvent event) -> bool"},
-	 { "SBCommandInterpreter___nonzero__", _wrap_SBCommandInterpreter___nonzero__, METH_O, "SBCommandInterpreter___nonzero__(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_IsValid", _wrap_SBCommandInterpreter_IsValid, METH_O, "SBCommandInterpreter_IsValid(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_CommandExists", _wrap_SBCommandInterpreter_CommandExists, METH_VARARGS, "SBCommandInterpreter_CommandExists(SBCommandInterpreter self, char const * cmd) -> bool"},
-	 { "SBCommandInterpreter_UserCommandExists", _wrap_SBCommandInterpreter_UserCommandExists, METH_VARARGS, "SBCommandInterpreter_UserCommandExists(SBCommandInterpreter self, char const * cmd) -> bool"},
-	 { "SBCommandInterpreter_AliasExists", _wrap_SBCommandInterpreter_AliasExists, METH_VARARGS, "SBCommandInterpreter_AliasExists(SBCommandInterpreter self, char const * cmd) -> bool"},
-	 { "SBCommandInterpreter_GetBroadcaster", _wrap_SBCommandInterpreter_GetBroadcaster, METH_O, "SBCommandInterpreter_GetBroadcaster(SBCommandInterpreter self) -> SBBroadcaster"},
-	 { "SBCommandInterpreter_GetBroadcasterClass", _wrap_SBCommandInterpreter_GetBroadcasterClass, METH_NOARGS, "SBCommandInterpreter_GetBroadcasterClass() -> char const *"},
-	 { "SBCommandInterpreter_HasCommands", _wrap_SBCommandInterpreter_HasCommands, METH_O, "SBCommandInterpreter_HasCommands(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_HasAliases", _wrap_SBCommandInterpreter_HasAliases, METH_O, "SBCommandInterpreter_HasAliases(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_HasAliasOptions", _wrap_SBCommandInterpreter_HasAliasOptions, METH_O, "SBCommandInterpreter_HasAliasOptions(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_IsInteractive", _wrap_SBCommandInterpreter_IsInteractive, METH_O, "SBCommandInterpreter_IsInteractive(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_GetProcess", _wrap_SBCommandInterpreter_GetProcess, METH_O, "SBCommandInterpreter_GetProcess(SBCommandInterpreter self) -> SBProcess"},
-	 { "SBCommandInterpreter_GetDebugger", _wrap_SBCommandInterpreter_GetDebugger, METH_O, "SBCommandInterpreter_GetDebugger(SBCommandInterpreter self) -> SBDebugger"},
-	 { "SBCommandInterpreter_SourceInitFileInHomeDirectory", _wrap_SBCommandInterpreter_SourceInitFileInHomeDirectory, METH_VARARGS, "\n"
-		"SBCommandInterpreter_SourceInitFileInHomeDirectory(SBCommandInterpreter self, SBCommandReturnObject result)\n"
-		"SBCommandInterpreter_SourceInitFileInHomeDirectory(SBCommandInterpreter self, SBCommandReturnObject result, bool is_repl)\n"
-		""},
-	 { "SBCommandInterpreter_SourceInitFileInCurrentWorkingDirectory", _wrap_SBCommandInterpreter_SourceInitFileInCurrentWorkingDirectory, METH_VARARGS, "SBCommandInterpreter_SourceInitFileInCurrentWorkingDirectory(SBCommandInterpreter self, SBCommandReturnObject result)"},
-	 { "SBCommandInterpreter_HandleCommand", _wrap_SBCommandInterpreter_HandleCommand, METH_VARARGS, "\n"
-		"SBCommandInterpreter_HandleCommand(SBCommandInterpreter self, char const * command_line, SBCommandReturnObject result, bool add_to_history=False) -> lldb::ReturnStatus\n"
-		"SBCommandInterpreter_HandleCommand(SBCommandInterpreter self, char const * command_line, SBExecutionContext exe_ctx, SBCommandReturnObject result, bool add_to_history=False) -> lldb::ReturnStatus\n"
-		""},
-	 { "SBCommandInterpreter_HandleCommandsFromFile", _wrap_SBCommandInterpreter_HandleCommandsFromFile, METH_VARARGS, "SBCommandInterpreter_HandleCommandsFromFile(SBCommandInterpreter self, SBFileSpec file, SBExecutionContext override_context, SBCommandInterpreterRunOptions options, SBCommandReturnObject result)"},
-	 { "SBCommandInterpreter_HandleCompletion", _wrap_SBCommandInterpreter_HandleCompletion, METH_VARARGS, "SBCommandInterpreter_HandleCompletion(SBCommandInterpreter self, char const * current_line, uint32_t cursor_pos, int match_start_point, int max_return_elements, SBStringList matches) -> int"},
-	 { "SBCommandInterpreter_HandleCompletionWithDescriptions", _wrap_SBCommandInterpreter_HandleCompletionWithDescriptions, METH_VARARGS, "SBCommandInterpreter_HandleCompletionWithDescriptions(SBCommandInterpreter self, char const * current_line, uint32_t cursor_pos, int match_start_point, int max_return_elements, SBStringList matches, SBStringList descriptions) -> int"},
-	 { "SBCommandInterpreter_WasInterrupted", _wrap_SBCommandInterpreter_WasInterrupted, METH_O, "SBCommandInterpreter_WasInterrupted(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_InterruptCommand", _wrap_SBCommandInterpreter_InterruptCommand, METH_O, "SBCommandInterpreter_InterruptCommand(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_SetCommandOverrideCallback", _wrap_SBCommandInterpreter_SetCommandOverrideCallback, METH_VARARGS, "SBCommandInterpreter_SetCommandOverrideCallback(SBCommandInterpreter self, char const * command_name, lldb::CommandOverrideCallback callback) -> bool"},
-	 { "SBCommandInterpreter_IsActive", _wrap_SBCommandInterpreter_IsActive, METH_O, "SBCommandInterpreter_IsActive(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_GetIOHandlerControlSequence", _wrap_SBCommandInterpreter_GetIOHandlerControlSequence, METH_VARARGS, "SBCommandInterpreter_GetIOHandlerControlSequence(SBCommandInterpreter self, char ch) -> char const *"},
-	 { "SBCommandInterpreter_GetPromptOnQuit", _wrap_SBCommandInterpreter_GetPromptOnQuit, METH_O, "SBCommandInterpreter_GetPromptOnQuit(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_SetPromptOnQuit", _wrap_SBCommandInterpreter_SetPromptOnQuit, METH_VARARGS, "SBCommandInterpreter_SetPromptOnQuit(SBCommandInterpreter self, bool b)"},
-	 { "SBCommandInterpreter_AllowExitCodeOnQuit", _wrap_SBCommandInterpreter_AllowExitCodeOnQuit, METH_VARARGS, "SBCommandInterpreter_AllowExitCodeOnQuit(SBCommandInterpreter self, bool allow)"},
-	 { "SBCommandInterpreter_HasCustomQuitExitCode", _wrap_SBCommandInterpreter_HasCustomQuitExitCode, METH_O, "SBCommandInterpreter_HasCustomQuitExitCode(SBCommandInterpreter self) -> bool"},
-	 { "SBCommandInterpreter_GetQuitStatus", _wrap_SBCommandInterpreter_GetQuitStatus, METH_O, "SBCommandInterpreter_GetQuitStatus(SBCommandInterpreter self) -> int"},
-	 { "SBCommandInterpreter_ResolveCommand", _wrap_SBCommandInterpreter_ResolveCommand, METH_VARARGS, "SBCommandInterpreter_ResolveCommand(SBCommandInterpreter self, char const * command_line, SBCommandReturnObject result)"},
-	 { "SBCommandInterpreter_GetStatistics", _wrap_SBCommandInterpreter_GetStatistics, METH_O, "SBCommandInterpreter_GetStatistics(SBCommandInterpreter self) -> SBStructuredData"},
-	 { "SBCommandInterpreter_GetTranscript", _wrap_SBCommandInterpreter_GetTranscript, METH_O, "SBCommandInterpreter_GetTranscript(SBCommandInterpreter self) -> SBStructuredData"},
-	 { "SBCommandInterpreter_swigregister", SBCommandInterpreter_swigregister, METH_O, NULL},
-	 { "SBCommandInterpreter_swiginit", SBCommandInterpreter_swiginit, METH_VARARGS, NULL},
-	 { "new_SBCommandInterpreterRunOptions", _wrap_new_SBCommandInterpreterRunOptions, METH_VARARGS, "\n"
-		"SBCommandInterpreterRunOptions()\n"
-		"new_SBCommandInterpreterRunOptions(SBCommandInterpreterRunOptions rhs) -> SBCommandInterpreterRunOptions\n"
-		""},
-	 { "delete_SBCommandInterpreterRunOptions", _wrap_delete_SBCommandInterpreterRunOptions, METH_O, "delete_SBCommandInterpreterRunOptions(SBCommandInterpreterRunOptions self)"},
-	 { "SBCommandInterpreterRunOptions_GetStopOnContinue", _wrap_SBCommandInterpreterRunOptions_GetStopOnContinue, METH_O, "SBCommandInterpreterRunOptions_GetStopOnContinue(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetStopOnContinue", _wrap_SBCommandInterpreterRunOptions_SetStopOnContinue, METH_VARARGS, "SBCommandInterpreterRunOptions_SetStopOnContinue(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetStopOnError", _wrap_SBCommandInterpreterRunOptions_GetStopOnError, METH_O, "SBCommandInterpreterRunOptions_GetStopOnError(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetStopOnError", _wrap_SBCommandInterpreterRunOptions_SetStopOnError, METH_VARARGS, "SBCommandInterpreterRunOptions_SetStopOnError(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetStopOnCrash", _wrap_SBCommandInterpreterRunOptions_GetStopOnCrash, METH_O, "SBCommandInterpreterRunOptions_GetStopOnCrash(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetStopOnCrash", _wrap_SBCommandInterpreterRunOptions_SetStopOnCrash, METH_VARARGS, "SBCommandInterpreterRunOptions_SetStopOnCrash(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetEchoCommands", _wrap_SBCommandInterpreterRunOptions_GetEchoCommands, METH_O, "SBCommandInterpreterRunOptions_GetEchoCommands(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetEchoCommands", _wrap_SBCommandInterpreterRunOptions_SetEchoCommands, METH_VARARGS, "SBCommandInterpreterRunOptions_SetEchoCommands(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetEchoCommentCommands", _wrap_SBCommandInterpreterRunOptions_GetEchoCommentCommands, METH_O, "SBCommandInterpreterRunOptions_GetEchoCommentCommands(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetEchoCommentCommands", _wrap_SBCommandInterpreterRunOptions_SetEchoCommentCommands, METH_VARARGS, "SBCommandInterpreterRunOptions_SetEchoCommentCommands(SBCommandInterpreterRunOptions self, bool echo)"},
-	 { "SBCommandInterpreterRunOptions_GetPrintResults", _wrap_SBCommandInterpreterRunOptions_GetPrintResults, METH_O, "SBCommandInterpreterRunOptions_GetPrintResults(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetPrintResults", _wrap_SBCommandInterpreterRunOptions_SetPrintResults, METH_VARARGS, "SBCommandInterpreterRunOptions_SetPrintResults(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetPrintErrors", _wrap_SBCommandInterpreterRunOptions_GetPrintErrors, METH_O, "SBCommandInterpreterRunOptions_GetPrintErrors(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetPrintErrors", _wrap_SBCommandInterpreterRunOptions_SetPrintErrors, METH_VARARGS, "SBCommandInterpreterRunOptions_SetPrintErrors(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetAddToHistory", _wrap_SBCommandInterpreterRunOptions_GetAddToHistory, METH_O, "SBCommandInterpreterRunOptions_GetAddToHistory(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetAddToHistory", _wrap_SBCommandInterpreterRunOptions_SetAddToHistory, METH_VARARGS, "SBCommandInterpreterRunOptions_SetAddToHistory(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetAutoHandleEvents", _wrap_SBCommandInterpreterRunOptions_GetAutoHandleEvents, METH_O, "SBCommandInterpreterRunOptions_GetAutoHandleEvents(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetAutoHandleEvents", _wrap_SBCommandInterpreterRunOptions_SetAutoHandleEvents, METH_VARARGS, "SBCommandInterpreterRunOptions_SetAutoHandleEvents(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetSpawnThread", _wrap_SBCommandInterpreterRunOptions_GetSpawnThread, METH_O, "SBCommandInterpreterRunOptions_GetSpawnThread(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetSpawnThread", _wrap_SBCommandInterpreterRunOptions_SetSpawnThread, METH_VARARGS, "SBCommandInterpreterRunOptions_SetSpawnThread(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_GetAllowRepeats", _wrap_SBCommandInterpreterRunOptions_GetAllowRepeats, METH_O, "SBCommandInterpreterRunOptions_GetAllowRepeats(SBCommandInterpreterRunOptions self) -> bool"},
-	 { "SBCommandInterpreterRunOptions_SetAllowRepeats", _wrap_SBCommandInterpreterRunOptions_SetAllowRepeats, METH_VARARGS, "SBCommandInterpreterRunOptions_SetAllowRepeats(SBCommandInterpreterRunOptions self, bool arg2)"},
-	 { "SBCommandInterpreterRunOptions_swigregister", SBCommandInterpreterRunOptions_swigregister, METH_O, NULL},
-	 { "SBCommandInterpreterRunOptions_swiginit", SBCommandInterpreterRunOptions_swiginit, METH_VARARGS, NULL},
-	 { "new_SBCommandReturnObject", _wrap_new_SBCommandReturnObject, METH_VARARGS, "\n"
-		"SBCommandReturnObject()\n"
-		"new_SBCommandReturnObject(SBCommandReturnObject rhs) -> SBCommandReturnObject\n"
-		""},
-	 { "delete_SBCommandReturnObject", _wrap_delete_SBCommandReturnObject, METH_O, "delete_SBCommandReturnObject(SBCommandReturnObject self)"},
-	 { "SBCommandReturnObject___nonzero__", _wrap_SBCommandReturnObject___nonzero__, METH_O, "SBCommandReturnObject___nonzero__(SBCommandReturnObject self) -> bool"},
-	 { "SBCommandReturnObject_IsValid", _wrap_SBCommandReturnObject_IsValid, METH_O, "SBCommandReturnObject_IsValid(SBCommandReturnObject self) -> bool"},
-	 { "SBCommandReturnObject_PutOutput", _wrap_SBCommandReturnObject_PutOutput, METH_VARARGS, "\n"
-		"SBCommandReturnObject_PutOutput(SBCommandReturnObject self, SBFile file) -> size_t\n"
-		"SBCommandReturnObject_PutOutput(SBCommandReturnObject self, lldb::FileSP BORROWED) -> size_t\n"
-		""},
-	 { "SBCommandReturnObject_GetOutputSize", _wrap_SBCommandReturnObject_GetOutputSize, METH_O, "SBCommandReturnObject_GetOutputSize(SBCommandReturnObject self) -> size_t"},
-	 { "SBCommandReturnObject_GetErrorSize", _wrap_SBCommandReturnObject_GetErrorSize, METH_O, "SBCommandReturnObject_GetErrorSize(SBCommandReturnObject self) -> size_t"},
-	 { "SBCommandReturnObject_PutError", _wrap_SBCommandReturnObject_PutError, METH_VARARGS, "\n"
-		"SBCommandReturnObject_PutError(SBCommandReturnObject self, SBFile file) -> size_t\n"
-		"SBCommandReturnObject_PutError(SBCommandReturnObject self, lldb::FileSP BORROWED) -> size_t\n"
-		""},
-	 { "SBCommandReturnObject_Clear", _wrap_SBCommandReturnObject_Clear, METH_O, "SBCommandReturnObject_Clear(SBCommandReturnObject self)"},
-	 { "SBCommandReturnObject_GetStatus", _wrap_SBCommandReturnObject_GetStatus, METH_O, "SBCommandReturnObject_GetStatus(SBCommandReturnObject self) -> lldb::ReturnStatus"},
-	 { "SBCommandReturnObject_SetStatus", _wrap_SBCommandReturnObject_SetStatus, METH_VARARGS, "SBCommandReturnObject_SetStatus(SBCommandReturnObject self, lldb::ReturnStatus status)"},
-	 { "SBCommandReturnObject_Succeeded", _wrap_SBCommandReturnObject_Succeeded, METH_O, "SBCommandReturnObject_Succeeded(SBCommandReturnObject self) -> bool"},
-	 { "SBCommandReturnObject_HasResult", _wrap_SBCommandReturnObject_HasResult, METH_O, "SBCommandReturnObject_HasResult(SBCommandReturnObject self) -> bool"},
-	 { "SBCommandReturnObject_AppendMessage", _wrap_SBCommandReturnObject_AppendMessage, METH_VARARGS, "SBCommandReturnObject_AppendMessage(SBCommandReturnObject self, char const * message)"},
-	 { "SBCommandReturnObject_AppendWarning", _wrap_SBCommandReturnObject_AppendWarning, METH_VARARGS, "SBCommandReturnObject_AppendWarning(SBCommandReturnObject self, char const * message)"},
-	 { "SBCommandReturnObject_GetDescription", _wrap_SBCommandReturnObject_GetDescription, METH_VARARGS, "SBCommandReturnObject_GetDescription(SBCommandReturnObject self, SBStream description) -> bool"},
-	 { "SBCommandReturnObject_PutCString", _wrap_SBCommandReturnObject_PutCString, METH_VARARGS, "SBCommandReturnObject_PutCString(SBCommandReturnObject self, char const * string)"},
-	 { "SBCommandReturnObject_GetOutput", _wrap_SBCommandReturnObject_GetOutput, METH_VARARGS, "\n"
-		"SBCommandReturnObject_GetOutput(SBCommandReturnObject self) -> char const\n"
-		"SBCommandReturnObject_GetOutput(SBCommandReturnObject self, bool only_if_no_immediate) -> char const *\n"
-		""},
-	 { "SBCommandReturnObject_GetError", _wrap_SBCommandReturnObject_GetError, METH_VARARGS, "\n"
-		"SBCommandReturnObject_GetError(SBCommandReturnObject self) -> char const\n"
-		"SBCommandReturnObject_GetError(SBCommandReturnObject self, bool only_if_no_immediate) -> char const *\n"
-		""},
-	 { "SBCommandReturnObject_SetError", _wrap_SBCommandReturnObject_SetError, METH_VARARGS, "\n"
-		"SBCommandReturnObject_SetError(SBCommandReturnObject self, SBError error, char const * fallback_error_cstr=None)\n"
-		"SBCommandReturnObject_SetError(SBCommandReturnObject self, char const * error_cstr)\n"
-		""},
-	 { "SBCommandReturnObject___repr__", _wrap_SBCommandReturnObject___repr__, METH_O, "SBCommandReturnObject___repr__(SBCommandReturnObject self) -> std::string"},
-	 { "SBCommandReturnObject_SetImmediateOutputFile", _wrap_SBCommandReturnObject_SetImmediateOutputFile, METH_VARARGS, "\n"
-		"SBCommandReturnObject_SetImmediateOutputFile(SBCommandReturnObject self, SBFile file)\n"
-		"SBCommandReturnObject_SetImmediateOutputFile(SBCommandReturnObject self, lldb::FileSP BORROWED)\n"
-		"SBCommandReturnObject_SetImmediateOutputFile(SBCommandReturnObject self, lldb::FileSP BORROWED, bool transfer_ownership)\n"
-		""},
-	 { "SBCommandReturnObject_SetImmediateErrorFile", _wrap_SBCommandReturnObject_SetImmediateErrorFile, METH_VARARGS, "\n"
-		"SBCommandReturnObject_SetImmediateErrorFile(SBCommandReturnObject self, SBFile file)\n"
-		"SBCommandReturnObject_SetImmediateErrorFile(SBCommandReturnObject self, lldb::FileSP BORROWED)\n"
-		"SBCommandReturnObject_SetImmediateErrorFile(SBCommandReturnObject self, lldb::FileSP BORROWED, bool transfer_ownership)\n"
-		""},
-	 { "SBCommandReturnObject_Print", _wrap_SBCommandReturnObject_Print, METH_VARARGS, "SBCommandReturnObject_Print(SBCommandReturnObject self, char const * str)"},
-	 { "SBCommandReturnObject_write", _wrap_SBCommandReturnObject_write, METH_VARARGS, "SBCommandReturnObject_write(SBCommandReturnObject self, char const * str)"},
-	 { "SBCommandReturnObject_flush", _wrap_SBCommandReturnObject_flush, METH_O, "SBCommandReturnObject_flush(SBCommandReturnObject self)"},
-	 { "SBCommandReturnObject_swigregister", SBCommandReturnObject_swigregister, METH_O, NULL},
-	 { "SBCommandReturnObject_swiginit", SBCommandReturnObject_swiginit, METH_VARARGS, NULL},
-	 { "new_SBCommunication", _wrap_new_SBCommunication, METH_VARARGS, "\n"
-		"SBCommunication()\n"
-		"new_SBCommunication(char const * broadcaster_name) -> SBCommunication\n"
-		""},
-	 { "delete_SBCommunication", _wrap_delete_SBCommunication, METH_O, "delete_SBCommunication(SBCommunication self)"},
-	 { "SBCommunication___nonzero__", _wrap_SBCommunication___nonzero__, METH_O, "SBCommunication___nonzero__(SBCommunication self) -> bool"},
-	 { "SBCommunication_IsValid", _wrap_SBCommunication_IsValid, METH_O, "SBCommunication_IsValid(SBCommunication self) -> bool"},
-	 { "SBCommunication_GetBroadcaster", _wrap_SBCommunication_GetBroadcaster, METH_O, "SBCommunication_GetBroadcaster(SBCommunication self) -> SBBroadcaster"},
-	 { "SBCommunication_GetBroadcasterClass", _wrap_SBCommunication_GetBroadcasterClass, METH_NOARGS, "SBCommunication_GetBroadcasterClass() -> char const *"},
-	 { "SBCommunication_AdoptFileDesriptor", _wrap_SBCommunication_AdoptFileDesriptor, METH_VARARGS, "SBCommunication_AdoptFileDesriptor(SBCommunication self, int fd, bool owns_fd) -> lldb::ConnectionStatus"},
-	 { "SBCommunication_Connect", _wrap_SBCommunication_Connect, METH_VARARGS, "SBCommunication_Connect(SBCommunication self, char const * url) -> lldb::ConnectionStatus"},
-	 { "SBCommunication_Disconnect", _wrap_SBCommunication_Disconnect, METH_O, "SBCommunication_Disconnect(SBCommunication self) -> lldb::ConnectionStatus"},
-	 { "SBCommunication_IsConnected", _wrap_SBCommunication_IsConnected, METH_O, "SBCommunication_IsConnected(SBCommunication self) -> bool"},
-	 { "SBCommunication_GetCloseOnEOF", _wrap_SBCommunication_GetCloseOnEOF, METH_O, "SBCommunication_GetCloseOnEOF(SBCommunication self) -> bool"},
-	 { "SBCommunication_SetCloseOnEOF", _wrap_SBCommunication_SetCloseOnEOF, METH_VARARGS, "SBCommunication_SetCloseOnEOF(SBCommunication self, bool b)"},
-	 { "SBCommunication_Read", _wrap_SBCommunication_Read, METH_VARARGS, "SBCommunication_Read(SBCommunication self, void * dst, size_t dst_len, uint32_t timeout_usec, lldb::ConnectionStatus & status) -> size_t"},
-	 { "SBCommunication_Write", _wrap_SBCommunication_Write, METH_VARARGS, "SBCommunication_Write(SBCommunication self, void const * src, size_t src_len, lldb::ConnectionStatus & status) -> size_t"},
-	 { "SBCommunication_ReadThreadStart", _wrap_SBCommunication_ReadThreadStart, METH_O, "SBCommunication_ReadThreadStart(SBCommunication self) -> bool"},
-	 { "SBCommunication_ReadThreadStop", _wrap_SBCommunication_ReadThreadStop, METH_O, "SBCommunication_ReadThreadStop(SBCommunication self) -> bool"},
-	 { "SBCommunication_ReadThreadIsRunning", _wrap_SBCommunication_ReadThreadIsRunning, METH_O, "SBCommunication_ReadThreadIsRunning(SBCommunication self) -> bool"},
-	 { "SBCommunication_SetReadThreadBytesReceivedCallback", _wrap_SBCommunication_SetReadThreadBytesReceivedCallback, METH_VARARGS, "SBCommunication_SetReadThreadBytesReceivedCallback(SBCommunication self, lldb::SBCommunication::ReadThreadBytesReceived callback, void * callback_baton) -> bool"},
-	 { "SBCommunication_swigregister", SBCommunication_swigregister, METH_O, NULL},
-	 { "SBCommunication_swiginit", SBCommunication_swiginit, METH_VARARGS, NULL},
-	 { "new_SBCompileUnit", _wrap_new_SBCompileUnit, METH_VARARGS, "\n"
-		"SBCompileUnit()\n"
-		"new_SBCompileUnit(SBCompileUnit rhs) -> SBCompileUnit\n"
-		""},
-	 { "delete_SBCompileUnit", _wrap_delete_SBCompileUnit, METH_O, "delete_SBCompileUnit(SBCompileUnit self)"},
-	 { "SBCompileUnit___nonzero__", _wrap_SBCompileUnit___nonzero__, METH_O, "SBCompileUnit___nonzero__(SBCompileUnit self) -> bool"},
-	 { "SBCompileUnit_IsValid", _wrap_SBCompileUnit_IsValid, METH_O, "SBCompileUnit_IsValid(SBCompileUnit self) -> bool"},
-	 { "SBCompileUnit_GetFileSpec", _wrap_SBCompileUnit_GetFileSpec, METH_O, "SBCompileUnit_GetFileSpec(SBCompileUnit self) -> SBFileSpec"},
-	 { "SBCompileUnit_GetNumLineEntries", _wrap_SBCompileUnit_GetNumLineEntries, METH_O, "SBCompileUnit_GetNumLineEntries(SBCompileUnit self) -> uint32_t"},
-	 { "SBCompileUnit_GetLineEntryAtIndex", _wrap_SBCompileUnit_GetLineEntryAtIndex, METH_VARARGS, "SBCompileUnit_GetLineEntryAtIndex(SBCompileUnit self, uint32_t idx) -> SBLineEntry"},
-	 { "SBCompileUnit_FindLineEntryIndex", _wrap_SBCompileUnit_FindLineEntryIndex, METH_VARARGS, "\n"
-		"SBCompileUnit_FindLineEntryIndex(SBCompileUnit self, SBLineEntry line_entry, bool exact=False) -> uint32_t\n"
-		"SBCompileUnit_FindLineEntryIndex(SBCompileUnit self, uint32_t start_idx, uint32_t line, SBFileSpec inline_file_spec) -> uint32_t\n"
-		"SBCompileUnit_FindLineEntryIndex(SBCompileUnit self, uint32_t start_idx, uint32_t line, SBFileSpec inline_file_spec, bool exact) -> uint32_t\n"
-		"\n"
-		"     Get the index for a provided line entry in this compile unit.\n"
-		"\n"
-		"     @param[in] line_entry\n"
-		"        The SBLineEntry object for which we are looking for the index.\n"
-		"\n"
-		"     @param[in] exact\n"
-		"        An optional boolean defaulting to false that ensures that the provided\n"
-		"        line entry has a perfect match in the compile unit.\n"
-		"\n"
-		"     @return\n"
-		"        The index of the user-provided line entry. UINT32_MAX if the line entry\n"
-		"        was not found in the compile unit.\n"
-		""},
-	 { "SBCompileUnit_GetSupportFileAtIndex", _wrap_SBCompileUnit_GetSupportFileAtIndex, METH_VARARGS, "SBCompileUnit_GetSupportFileAtIndex(SBCompileUnit self, uint32_t idx) -> SBFileSpec"},
-	 { "SBCompileUnit_GetNumSupportFiles", _wrap_SBCompileUnit_GetNumSupportFiles, METH_O, "SBCompileUnit_GetNumSupportFiles(SBCompileUnit self) -> uint32_t"},
-	 { "SBCompileUnit_FindSupportFileIndex", _wrap_SBCompileUnit_FindSupportFileIndex, METH_VARARGS, "SBCompileUnit_FindSupportFileIndex(SBCompileUnit self, uint32_t start_idx, SBFileSpec sb_file, bool full) -> uint32_t"},
-	 { "SBCompileUnit_GetTypes", _wrap_SBCompileUnit_GetTypes, METH_VARARGS, "\n"
-		"SBCompileUnit_GetTypes(SBCompileUnit self, uint32_t type_mask=eTypeClassAny) -> SBTypeList\n"
-		"\n"
-		"     Get all types matching type_mask from debug info in this\n"
-		"     compile unit.\n"
-		"\n"
-		"     @param[in] type_mask\n"
-		"        A bitfield that consists of one or more bits logically OR'ed\n"
-		"        together from the lldb::TypeClass enumeration. This allows\n"
-		"        you to request only structure types, or only class, struct\n"
-		"        and union types. Passing in lldb::eTypeClassAny will return\n"
-		"        all types found in the debug information for this compile\n"
-		"        unit.\n"
-		"\n"
-		"     @return\n"
-		"        A list of types in this compile unit that match type_mask\n"
-		""},
-	 { "SBCompileUnit_GetLanguage", _wrap_SBCompileUnit_GetLanguage, METH_O, "SBCompileUnit_GetLanguage(SBCompileUnit self) -> lldb::LanguageType"},
-	 { "SBCompileUnit___eq__", _wrap_SBCompileUnit___eq__, METH_VARARGS, "SBCompileUnit___eq__(SBCompileUnit self, SBCompileUnit rhs) -> bool"},
-	 { "SBCompileUnit___ne__", _wrap_SBCompileUnit___ne__, METH_VARARGS, "SBCompileUnit___ne__(SBCompileUnit self, SBCompileUnit rhs) -> bool"},
-	 { "SBCompileUnit_GetDescription", _wrap_SBCompileUnit_GetDescription, METH_VARARGS, "SBCompileUnit_GetDescription(SBCompileUnit self, SBStream description) -> bool"},
-	 { "SBCompileUnit___repr__", _wrap_SBCompileUnit___repr__, METH_O, "SBCompileUnit___repr__(SBCompileUnit self) -> std::string"},
-	 { "SBCompileUnit_swigregister", SBCompileUnit_swigregister, METH_O, NULL},
-	 { "SBCompileUnit_swiginit", SBCompileUnit_swiginit, METH_VARARGS, NULL},
-	 { "new_SBSaveCoreOptions", _wrap_new_SBSaveCoreOptions, METH_VARARGS, "\n"
-		"SBSaveCoreOptions()\n"
-		"new_SBSaveCoreOptions(SBSaveCoreOptions rhs) -> SBSaveCoreOptions\n"
-		""},
-	 { "delete_SBSaveCoreOptions", _wrap_delete_SBSaveCoreOptions, METH_O, "delete_SBSaveCoreOptions(SBSaveCoreOptions self)"},
-	 { "SBSaveCoreOptions_SetPluginName", _wrap_SBSaveCoreOptions_SetPluginName, METH_VARARGS, "SBSaveCoreOptions_SetPluginName(SBSaveCoreOptions self, char const * plugin) -> SBError"},
-	 { "SBSaveCoreOptions_GetPluginName", _wrap_SBSaveCoreOptions_GetPluginName, METH_O, "SBSaveCoreOptions_GetPluginName(SBSaveCoreOptions self) -> char const *"},
-	 { "SBSaveCoreOptions_SetStyle", _wrap_SBSaveCoreOptions_SetStyle, METH_VARARGS, "SBSaveCoreOptions_SetStyle(SBSaveCoreOptions self, lldb::SaveCoreStyle style)"},
-	 { "SBSaveCoreOptions_GetStyle", _wrap_SBSaveCoreOptions_GetStyle, METH_O, "SBSaveCoreOptions_GetStyle(SBSaveCoreOptions self) -> lldb::SaveCoreStyle"},
-	 { "SBSaveCoreOptions_SetOutputFile", _wrap_SBSaveCoreOptions_SetOutputFile, METH_VARARGS, "SBSaveCoreOptions_SetOutputFile(SBSaveCoreOptions self, SBFileSpec output_file)"},
-	 { "SBSaveCoreOptions_GetOutputFile", _wrap_SBSaveCoreOptions_GetOutputFile, METH_O, "SBSaveCoreOptions_GetOutputFile(SBSaveCoreOptions self) -> SBFileSpec"},
-	 { "SBSaveCoreOptions_Clear", _wrap_SBSaveCoreOptions_Clear, METH_O, "SBSaveCoreOptions_Clear(SBSaveCoreOptions self)"},
-	 { "SBSaveCoreOptions_swigregister", SBSaveCoreOptions_swigregister, METH_O, NULL},
-	 { "SBSaveCoreOptions_swiginit", SBSaveCoreOptions_swiginit, METH_VARARGS, NULL},
-	 { "new_SBData", _wrap_new_SBData, METH_VARARGS, "\n"
-		"SBData()\n"
-		"new_SBData(SBData rhs) -> SBData\n"
-		""},
-	 { "delete_SBData", _wrap_delete_SBData, METH_O, "delete_SBData(SBData self)"},
-	 { "SBData_GetAddressByteSize", _wrap_SBData_GetAddressByteSize, METH_O, "SBData_GetAddressByteSize(SBData self) -> uint8_t"},
-	 { "SBData_SetAddressByteSize", _wrap_SBData_SetAddressByteSize, METH_VARARGS, "SBData_SetAddressByteSize(SBData self, uint8_t addr_byte_size)"},
-	 { "SBData_Clear", _wrap_SBData_Clear, METH_O, "SBData_Clear(SBData self)"},
-	 { "SBData___nonzero__", _wrap_SBData___nonzero__, METH_O, "SBData___nonzero__(SBData self) -> bool"},
-	 { "SBData_IsValid", _wrap_SBData_IsValid, METH_O, "SBData_IsValid(SBData self) -> bool"},
-	 { "SBData_GetByteSize", _wrap_SBData_GetByteSize, METH_O, "SBData_GetByteSize(SBData self) -> size_t"},
-	 { "SBData_GetByteOrder", _wrap_SBData_GetByteOrder, METH_O, "SBData_GetByteOrder(SBData self) -> lldb::ByteOrder"},
-	 { "SBData_SetByteOrder", _wrap_SBData_SetByteOrder, METH_VARARGS, "SBData_SetByteOrder(SBData self, lldb::ByteOrder endian)"},
-	 { "SBData_GetFloat", _wrap_SBData_GetFloat, METH_VARARGS, "SBData_GetFloat(SBData self, SBError error, lldb::offset_t offset) -> float"},
-	 { "SBData_GetDouble", _wrap_SBData_GetDouble, METH_VARARGS, "SBData_GetDouble(SBData self, SBError error, lldb::offset_t offset) -> double"},
-	 { "SBData_GetLongDouble", _wrap_SBData_GetLongDouble, METH_VARARGS, "SBData_GetLongDouble(SBData self, SBError error, lldb::offset_t offset) -> long double"},
-	 { "SBData_GetAddress", _wrap_SBData_GetAddress, METH_VARARGS, "SBData_GetAddress(SBData self, SBError error, lldb::offset_t offset) -> lldb::addr_t"},
-	 { "SBData_GetUnsignedInt8", _wrap_SBData_GetUnsignedInt8, METH_VARARGS, "SBData_GetUnsignedInt8(SBData self, SBError error, lldb::offset_t offset) -> uint8_t"},
-	 { "SBData_GetUnsignedInt16", _wrap_SBData_GetUnsignedInt16, METH_VARARGS, "SBData_GetUnsignedInt16(SBData self, SBError error, lldb::offset_t offset) -> uint16_t"},
-	 { "SBData_GetUnsignedInt32", _wrap_SBData_GetUnsignedInt32, METH_VARARGS, "SBData_GetUnsignedInt32(SBData self, SBError error, lldb::offset_t offset) -> uint32_t"},
-	 { "SBData_GetUnsignedInt64", _wrap_SBData_GetUnsignedInt64, METH_VARARGS, "SBData_GetUnsignedInt64(SBData self, SBError error, lldb::offset_t offset) -> uint64_t"},
-	 { "SBData_GetSignedInt8", _wrap_SBData_GetSignedInt8, METH_VARARGS, "SBData_GetSignedInt8(SBData self, SBError error, lldb::offset_t offset) -> int8_t"},
-	 { "SBData_GetSignedInt16", _wrap_SBData_GetSignedInt16, METH_VARARGS, "SBData_GetSignedInt16(SBData self, SBError error, lldb::offset_t offset) -> int16_t"},
-	 { "SBData_GetSignedInt32", _wrap_SBData_GetSignedInt32, METH_VARARGS, "SBData_GetSignedInt32(SBData self, SBError error, lldb::offset_t offset) -> int32_t"},
-	 { "SBData_GetSignedInt64", _wrap_SBData_GetSignedInt64, METH_VARARGS, "SBData_GetSignedInt64(SBData self, SBError error, lldb::offset_t offset) -> int64_t"},
-	 { "SBData_GetString", _wrap_SBData_GetString, METH_VARARGS, "SBData_GetString(SBData self, SBError error, lldb::offset_t offset) -> char const *"},
-	 { "SBData_ReadRawData", _wrap_SBData_ReadRawData, METH_VARARGS, "SBData_ReadRawData(SBData self, SBError error, lldb::offset_t offset, void * buf) -> size_t"},
-	 { "SBData_GetDescription", _wrap_SBData_GetDescription, METH_VARARGS, "SBData_GetDescription(SBData self, SBStream description, lldb::addr_t base_addr=18446744073709551615ULL) -> bool"},
-	 { "SBData_SetData", _wrap_SBData_SetData, METH_VARARGS, "SBData_SetData(SBData self, SBError error, void const * buf, lldb::ByteOrder endian, uint8_t addr_size)"},
-	 { "SBData_SetDataWithOwnership", _wrap_SBData_SetDataWithOwnership, METH_VARARGS, "SBData_SetDataWithOwnership(SBData self, SBError error, void const * buf, lldb::ByteOrder endian, uint8_t addr_size)"},
-	 { "SBData_Append", _wrap_SBData_Append, METH_VARARGS, "SBData_Append(SBData self, SBData rhs) -> bool"},
-	 { "SBData_CreateDataFromCString", _wrap_SBData_CreateDataFromCString, METH_VARARGS, "SBData_CreateDataFromCString(lldb::ByteOrder endian, uint32_t addr_byte_size, char const * data) -> SBData"},
-	 { "SBData_CreateDataFromUInt64Array", _wrap_SBData_CreateDataFromUInt64Array, METH_VARARGS, "SBData_CreateDataFromUInt64Array(lldb::ByteOrder endian, uint32_t addr_byte_size, uint64_t * array) -> SBData"},
-	 { "SBData_CreateDataFromUInt32Array", _wrap_SBData_CreateDataFromUInt32Array, METH_VARARGS, "SBData_CreateDataFromUInt32Array(lldb::ByteOrder endian, uint32_t addr_byte_size, uint32_t * array) -> SBData"},
-	 { "SBData_CreateDataFromSInt64Array", _wrap_SBData_CreateDataFromSInt64Array, METH_VARARGS, "SBData_CreateDataFromSInt64Array(lldb::ByteOrder endian, uint32_t addr_byte_size, int64_t * array) -> SBData"},
-	 { "SBData_CreateDataFromSInt32Array", _wrap_SBData_CreateDataFromSInt32Array, METH_VARARGS, "SBData_CreateDataFromSInt32Array(lldb::ByteOrder endian, uint32_t addr_byte_size, int32_t * array) -> SBData"},
-	 { "SBData_CreateDataFromDoubleArray", _wrap_SBData_CreateDataFromDoubleArray, METH_VARARGS, "SBData_CreateDataFromDoubleArray(lldb::ByteOrder endian, uint32_t addr_byte_size, double * array) -> SBData"},
-	 { "SBData_SetDataFromCString", _wrap_SBData_SetDataFromCString, METH_VARARGS, "SBData_SetDataFromCString(SBData self, char const * data) -> bool"},
-	 { "SBData_SetDataFromUInt64Array", _wrap_SBData_SetDataFromUInt64Array, METH_VARARGS, "SBData_SetDataFromUInt64Array(SBData self, uint64_t * array) -> bool"},
-	 { "SBData_SetDataFromUInt32Array", _wrap_SBData_SetDataFromUInt32Array, METH_VARARGS, "SBData_SetDataFromUInt32Array(SBData self, uint32_t * array) -> bool"},
-	 { "SBData_SetDataFromSInt64Array", _wrap_SBData_SetDataFromSInt64Array, METH_VARARGS, "SBData_SetDataFromSInt64Array(SBData self, int64_t * array) -> bool"},
-	 { "SBData_SetDataFromSInt32Array", _wrap_SBData_SetDataFromSInt32Array, METH_VARARGS, "SBData_SetDataFromSInt32Array(SBData self, int32_t * array) -> bool"},
-	 { "SBData_SetDataFromDoubleArray", _wrap_SBData_SetDataFromDoubleArray, METH_VARARGS, "SBData_SetDataFromDoubleArray(SBData self, double * array) -> bool"},
-	 { "SBData___repr__", _wrap_SBData___repr__, METH_O, "SBData___repr__(SBData self) -> std::string"},
-	 { "SBData_swigregister", SBData_swigregister, METH_O, NULL},
-	 { "SBData_swiginit", SBData_swiginit, METH_VARARGS, NULL},
-	 { "new_SBDebugger", _wrap_new_SBDebugger, METH_VARARGS, "\n"
-		"SBDebugger()\n"
-		"new_SBDebugger(SBDebugger rhs) -> SBDebugger\n"
-		""},
-	 { "delete_SBDebugger", _wrap_delete_SBDebugger, METH_O, "delete_SBDebugger(SBDebugger self)"},
-	 { "SBDebugger_GetBroadcasterClass", _wrap_SBDebugger_GetBroadcasterClass, METH_NOARGS, "SBDebugger_GetBroadcasterClass() -> char const *"},
-	 { "SBDebugger_SupportsLanguage", _wrap_SBDebugger_SupportsLanguage, METH_O, "SBDebugger_SupportsLanguage(lldb::LanguageType language) -> bool"},
-	 { "SBDebugger_GetBroadcaster", _wrap_SBDebugger_GetBroadcaster, METH_O, "SBDebugger_GetBroadcaster(SBDebugger self) -> SBBroadcaster"},
-	 { "SBDebugger_GetProgressFromEvent", _wrap_SBDebugger_GetProgressFromEvent, METH_O, "SBDebugger_GetProgressFromEvent(SBEvent event) -> char const *"},
-	 { "SBDebugger_GetProgressDataFromEvent", _wrap_SBDebugger_GetProgressDataFromEvent, METH_O, "SBDebugger_GetProgressDataFromEvent(SBEvent event) -> SBStructuredData"},
-	 { "SBDebugger_GetDiagnosticFromEvent", _wrap_SBDebugger_GetDiagnosticFromEvent, METH_O, "SBDebugger_GetDiagnosticFromEvent(SBEvent event) -> SBStructuredData"},
-	 { "SBDebugger_Initialize", _wrap_SBDebugger_Initialize, METH_NOARGS, "SBDebugger_Initialize()"},
-	 { "SBDebugger_InitializeWithErrorHandling", _wrap_SBDebugger_InitializeWithErrorHandling, METH_NOARGS, "SBDebugger_InitializeWithErrorHandling() -> SBError"},
-	 { "SBDebugger_PrintStackTraceOnError", _wrap_SBDebugger_PrintStackTraceOnError, METH_NOARGS, "SBDebugger_PrintStackTraceOnError()"},
-	 { "SBDebugger_PrintDiagnosticsOnError", _wrap_SBDebugger_PrintDiagnosticsOnError, METH_NOARGS, "SBDebugger_PrintDiagnosticsOnError()"},
-	 { "SBDebugger_Terminate", _wrap_SBDebugger_Terminate, METH_NOARGS, "SBDebugger_Terminate()"},
-	 { "SBDebugger_Create", _wrap_SBDebugger_Create, METH_VARARGS, "\n"
-		"SBDebugger_Create() -> SBDebugger\n"
-		"SBDebugger_Create(bool source_init_files) -> SBDebugger\n"
-		"SBDebugger_Create(bool source_init_files, lldb::LogOutputCallback log_callback) -> SBDebugger\n"
-		""},
-	 { "SBDebugger_Destroy", _wrap_SBDebugger_Destroy, METH_O, "SBDebugger_Destroy(SBDebugger debugger)"},
-	 { "SBDebugger_MemoryPressureDetected", _wrap_SBDebugger_MemoryPressureDetected, METH_NOARGS, "SBDebugger_MemoryPressureDetected()"},
-	 { "SBDebugger___nonzero__", _wrap_SBDebugger___nonzero__, METH_O, "SBDebugger___nonzero__(SBDebugger self) -> bool"},
-	 { "SBDebugger_IsValid", _wrap_SBDebugger_IsValid, METH_O, "SBDebugger_IsValid(SBDebugger self) -> bool"},
-	 { "SBDebugger_Clear", _wrap_SBDebugger_Clear, METH_O, "SBDebugger_Clear(SBDebugger self)"},
-	 { "SBDebugger_GetSetting", _wrap_SBDebugger_GetSetting, METH_VARARGS, "SBDebugger_GetSetting(SBDebugger self, char const * setting=None) -> SBStructuredData"},
-	 { "SBDebugger_SetAsync", _wrap_SBDebugger_SetAsync, METH_VARARGS, "SBDebugger_SetAsync(SBDebugger self, bool b)"},
-	 { "SBDebugger_GetAsync", _wrap_SBDebugger_GetAsync, METH_O, "SBDebugger_GetAsync(SBDebugger self) -> bool"},
-	 { "SBDebugger_SkipLLDBInitFiles", _wrap_SBDebugger_SkipLLDBInitFiles, METH_VARARGS, "SBDebugger_SkipLLDBInitFiles(SBDebugger self, bool b)"},
-	 { "SBDebugger_SkipAppInitFiles", _wrap_SBDebugger_SkipAppInitFiles, METH_VARARGS, "SBDebugger_SkipAppInitFiles(SBDebugger self, bool b)"},
-	 { "SBDebugger_SetInputString", _wrap_SBDebugger_SetInputString, METH_VARARGS, "SBDebugger_SetInputString(SBDebugger self, char const * data) -> SBError"},
-	 { "SBDebugger_SetInputFile", _wrap_SBDebugger_SetInputFile, METH_VARARGS, "\n"
-		"SBDebugger_SetInputFile(SBDebugger self, SBFile file) -> SBError\n"
-		"SBDebugger_SetInputFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
-		""},
-	 { "SBDebugger_SetOutputFile", _wrap_SBDebugger_SetOutputFile, METH_VARARGS, "\n"
-		"SBDebugger_SetOutputFile(SBDebugger self, SBFile file) -> SBError\n"
-		"SBDebugger_SetOutputFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
-		""},
-	 { "SBDebugger_SetErrorFile", _wrap_SBDebugger_SetErrorFile, METH_VARARGS, "\n"
-		"SBDebugger_SetErrorFile(SBDebugger self, SBFile file) -> SBError\n"
-		"SBDebugger_SetErrorFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
-		""},
-	 { "SBDebugger_GetInputFile", _wrap_SBDebugger_GetInputFile, METH_O, "SBDebugger_GetInputFile(SBDebugger self) -> SBFile"},
-	 { "SBDebugger_GetOutputFile", _wrap_SBDebugger_GetOutputFile, METH_O, "SBDebugger_GetOutputFile(SBDebugger self) -> SBFile"},
-	 { "SBDebugger_GetErrorFile", _wrap_SBDebugger_GetErrorFile, METH_O, "SBDebugger_GetErrorFile(SBDebugger self) -> SBFile"},
-	 { "SBDebugger_SaveInputTerminalState", _wrap_SBDebugger_SaveInputTerminalState, METH_O, "SBDebugger_SaveInputTerminalState(SBDebugger self)"},
-	 { "SBDebugger_RestoreInputTerminalState", _wrap_SBDebugger_RestoreInputTerminalState, METH_O, "SBDebugger_RestoreInputTerminalState(SBDebugger self)"},
-	 { "SBDebugger_GetCommandInterpreter", _wrap_SBDebugger_GetCommandInterpreter, METH_O, "SBDebugger_GetCommandInterpreter(SBDebugger self) -> SBCommandInterpreter"},
-	 { "SBDebugger_HandleCommand", _wrap_SBDebugger_HandleCommand, METH_VARARGS, "SBDebugger_HandleCommand(SBDebugger self, char const * command)"},
-	 { "SBDebugger_RequestInterrupt", _wrap_SBDebugger_RequestInterrupt, METH_O, "SBDebugger_RequestInterrupt(SBDebugger self)"},
-	 { "SBDebugger_CancelInterruptRequest", _wrap_SBDebugger_CancelInterruptRequest, METH_O, "SBDebugger_CancelInterruptRequest(SBDebugger self)"},
-	 { "SBDebugger_InterruptRequested", _wrap_SBDebugger_InterruptRequested, METH_O, "SBDebugger_InterruptRequested(SBDebugger self) -> bool"},
-	 { "SBDebugger_GetListener", _wrap_SBDebugger_GetListener, METH_O, "SBDebugger_GetListener(SBDebugger self) -> SBListener"},
-	 { "SBDebugger_HandleProcessEvent", _wrap_SBDebugger_HandleProcessEvent, METH_VARARGS, "\n"
-		"SBDebugger_HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, SBFile out, SBFile err)\n"
-		"SBDebugger_HandleProcessEvent(SBDebugger self, SBProcess process, SBEvent event, lldb::FileSP arg4, lldb::FileSP arg5)\n"
-		""},
-	 { "SBDebugger_CreateTargetWithFileAndTargetTriple", _wrap_SBDebugger_CreateTargetWithFileAndTargetTriple, METH_VARARGS, "SBDebugger_CreateTargetWithFileAndTargetTriple(SBDebugger self, char const * filename, char const * target_triple) -> SBTarget"},
-	 { "SBDebugger_CreateTargetWithFileAndArch", _wrap_SBDebugger_CreateTargetWithFileAndArch, METH_VARARGS, "SBDebugger_CreateTargetWithFileAndArch(SBDebugger self, char const * filename, char const * archname) -> SBTarget"},
-	 { "SBDebugger_CreateTarget", _wrap_SBDebugger_CreateTarget, METH_VARARGS, "\n"
-		"SBDebugger_CreateTarget(SBDebugger self, char const * filename, char const * target_triple, char const * platform_name, bool add_dependent_modules, SBError error) -> SBTarget\n"
-		"SBDebugger_CreateTarget(SBDebugger self, char const * filename) -> SBTarget\n"
-		""},
-	 { "SBDebugger_GetDummyTarget", _wrap_SBDebugger_GetDummyTarget, METH_O, "\n"
-		"SBDebugger_GetDummyTarget(SBDebugger self) -> SBTarget\n"
-		"The dummy target holds breakpoints and breakpoint names that will prime newly created targets.\n"
-		""},
-	 { "SBDebugger_DeleteTarget", _wrap_SBDebugger_DeleteTarget, METH_VARARGS, "\n"
-		"SBDebugger_DeleteTarget(SBDebugger self, SBTarget target) -> bool\n"
-		"Return true if target is deleted from the target list of the debugger.\n"
-		""},
-	 { "SBDebugger_GetTargetAtIndex", _wrap_SBDebugger_GetTargetAtIndex, METH_VARARGS, "SBDebugger_GetTargetAtIndex(SBDebugger self, uint32_t idx) -> SBTarget"},
-	 { "SBDebugger_GetIndexOfTarget", _wrap_SBDebugger_GetIndexOfTarget, METH_VARARGS, "SBDebugger_GetIndexOfTarget(SBDebugger self, SBTarget target) -> uint32_t"},
-	 { "SBDebugger_FindTargetWithProcessID", _wrap_SBDebugger_FindTargetWithProcessID, METH_VARARGS, "SBDebugger_FindTargetWithProcessID(SBDebugger self, lldb::pid_t pid) -> SBTarget"},
-	 { "SBDebugger_FindTargetWithFileAndArch", _wrap_SBDebugger_FindTargetWithFileAndArch, METH_VARARGS, "SBDebugger_FindTargetWithFileAndArch(SBDebugger self, char const * filename, char const * arch) -> SBTarget"},
-	 { "SBDebugger_GetNumTargets", _wrap_SBDebugger_GetNumTargets, METH_O, "SBDebugger_GetNumTargets(SBDebugger self) -> uint32_t"},
-	 { "SBDebugger_GetSelectedTarget", _wrap_SBDebugger_GetSelectedTarget, METH_O, "SBDebugger_GetSelectedTarget(SBDebugger self) -> SBTarget"},
-	 { "SBDebugger_SetSelectedTarget", _wrap_SBDebugger_SetSelectedTarget, METH_VARARGS, "SBDebugger_SetSelectedTarget(SBDebugger self, SBTarget target)"},
-	 { "SBDebugger_GetSelectedPlatform", _wrap_SBDebugger_GetSelectedPlatform, METH_O, "SBDebugger_GetSelectedPlatform(SBDebugger self) -> SBPlatform"},
-	 { "SBDebugger_SetSelectedPlatform", _wrap_SBDebugger_SetSelectedPlatform, METH_VARARGS, "SBDebugger_SetSelectedPlatform(SBDebugger self, SBPlatform platform)"},
-	 { "SBDebugger_GetNumPlatforms", _wrap_SBDebugger_GetNumPlatforms, METH_O, "\n"
-		"SBDebugger_GetNumPlatforms(SBDebugger self) -> uint32_t\n"
-		"Get the number of currently active platforms.\n"
-		""},
-	 { "SBDebugger_GetPlatformAtIndex", _wrap_SBDebugger_GetPlatformAtIndex, METH_VARARGS, "\n"
-		"SBDebugger_GetPlatformAtIndex(SBDebugger self, uint32_t idx) -> SBPlatform\n"
-		"Get one of the currently active platforms.\n"
-		""},
-	 { "SBDebugger_GetNumAvailablePlatforms", _wrap_SBDebugger_GetNumAvailablePlatforms, METH_O, "\n"
-		"SBDebugger_GetNumAvailablePlatforms(SBDebugger self) -> uint32_t\n"
-		"Get the number of available platforms.\n"
-		""},
-	 { "SBDebugger_GetAvailablePlatformInfoAtIndex", _wrap_SBDebugger_GetAvailablePlatformInfoAtIndex, METH_VARARGS, "\n"
-		"SBDebugger_GetAvailablePlatformInfoAtIndex(SBDebugger self, uint32_t idx) -> SBStructuredData\n"
-		"\n"
-		"    Get the name and description of one of the available platforms.\n"
-		"\n"
-		"    @param idx Zero-based index of the platform for which info should be\n"
-		"               retrieved, must be less than the value returned by\n"
-		"               GetNumAvailablePlatforms().\n"
-		""},
-	 { "SBDebugger_GetSourceManager", _wrap_SBDebugger_GetSourceManager, METH_O, "SBDebugger_GetSourceManager(SBDebugger self) -> SBSourceManager"},
-	 { "SBDebugger_SetCurrentPlatform", _wrap_SBDebugger_SetCurrentPlatform, METH_VARARGS, "SBDebugger_SetCurrentPlatform(SBDebugger self, char const * platform_name) -> SBError"},
-	 { "SBDebugger_SetCurrentPlatformSDKRoot", _wrap_SBDebugger_SetCurrentPlatformSDKRoot, METH_VARARGS, "SBDebugger_SetCurrentPlatformSDKRoot(SBDebugger self, char const * sysroot) -> bool"},
-	 { "SBDebugger_SetUseExternalEditor", _wrap_SBDebugger_SetUseExternalEditor, METH_VARARGS, "SBDebugger_SetUseExternalEditor(SBDebugger self, bool input) -> bool"},
-	 { "SBDebugger_GetUseExternalEditor", _wrap_SBDebugger_GetUseExternalEditor, METH_O, "SBDebugger_GetUseExternalEditor(SBDebugger self) -> bool"},
-	 { "SBDebugger_SetUseColor", _wrap_SBDebugger_SetUseColor, METH_VARARGS, "SBDebugger_SetUseColor(SBDebugger self, bool use_color) -> bool"},
-	 { "SBDebugger_GetUseColor", _wrap_SBDebugger_GetUseColor, METH_O, "SBDebugger_GetUseColor(SBDebugger self) -> bool"},
-	 { "SBDebugger_SetUseSourceCache", _wrap_SBDebugger_SetUseSourceCache, METH_VARARGS, "SBDebugger_SetUseSourceCache(SBDebugger self, bool use_source_cache) -> bool"},
-	 { "SBDebugger_GetUseSourceCache", _wrap_SBDebugger_GetUseSourceCache, METH_O, "SBDebugger_GetUseSourceCache(SBDebugger self) -> bool"},
-	 { "SBDebugger_GetDefaultArchitecture", _wrap_SBDebugger_GetDefaultArchitecture, METH_VARARGS, "SBDebugger_GetDefaultArchitecture(char * arch_name, size_t arch_name_len) -> bool"},
-	 { "SBDebugger_SetDefaultArchitecture", _wrap_SBDebugger_SetDefaultArchitecture, METH_O, "SBDebugger_SetDefaultArchitecture(char const * arch_name) -> bool"},
-	 { "SBDebugger_GetScriptingLanguage", _wrap_SBDebugger_GetScriptingLanguage, METH_VARARGS, "SBDebugger_GetScriptingLanguage(SBDebugger self, char const * script_language_name) -> lldb::ScriptLanguage"},
-	 { "SBDebugger_GetScriptInterpreterInfo", _wrap_SBDebugger_GetScriptInterpreterInfo, METH_VARARGS, "SBDebugger_GetScriptInterpreterInfo(SBDebugger self, lldb::ScriptLanguage arg2) -> SBStructuredData"},
-	 { "SBDebugger_GetVersionString", _wrap_SBDebugger_GetVersionString, METH_NOARGS, "SBDebugger_GetVersionString() -> char const *"},
-	 { "SBDebugger_StateAsCString", _wrap_SBDebugger_StateAsCString, METH_O, "SBDebugger_StateAsCString(lldb::StateType state) -> char const *"},
-	 { "SBDebugger_GetBuildConfiguration", _wrap_SBDebugger_GetBuildConfiguration, METH_NOARGS, "SBDebugger_GetBuildConfiguration() -> SBStructuredData"},
-	 { "SBDebugger_StateIsRunningState", _wrap_SBDebugger_StateIsRunningState, METH_O, "SBDebugger_StateIsRunningState(lldb::StateType state) -> bool"},
-	 { "SBDebugger_StateIsStoppedState", _wrap_SBDebugger_StateIsStoppedState, METH_O, "SBDebugger_StateIsStoppedState(lldb::StateType state) -> bool"},
-	 { "SBDebugger_EnableLog", _wrap_SBDebugger_EnableLog, METH_VARARGS, "SBDebugger_EnableLog(SBDebugger self, char const * channel, char const ** categories) -> bool"},
-	 { "SBDebugger_SetLoggingCallback", _wrap_SBDebugger_SetLoggingCallback, METH_VARARGS, "SBDebugger_SetLoggingCallback(SBDebugger self, lldb::LogOutputCallback log_callback)"},
-	 { "SBDebugger_SetDestroyCallback", _wrap_SBDebugger_SetDestroyCallback, METH_VARARGS, "SBDebugger_SetDestroyCallback(SBDebugger self, lldb::SBDebuggerDestroyCallback destroy_callback)"},
-	 { "SBDebugger_AddDestroyCallback", _wrap_SBDebugger_AddDestroyCallback, METH_VARARGS, "SBDebugger_AddDestroyCallback(SBDebugger self, lldb::SBDebuggerDestroyCallback destroy_callback) -> lldb::callback_token_t"},
-	 { "SBDebugger_RemoveDestroyCallback", _wrap_SBDebugger_RemoveDestroyCallback, METH_VARARGS, "SBDebugger_RemoveDestroyCallback(SBDebugger self, lldb::callback_token_t token) -> bool"},
-	 { "SBDebugger_DispatchInput", _wrap_SBDebugger_DispatchInput, METH_VARARGS, "SBDebugger_DispatchInput(SBDebugger self, void const * data)"},
-	 { "SBDebugger_DispatchInputInterrupt", _wrap_SBDebugger_DispatchInputInterrupt, METH_O, "SBDebugger_DispatchInputInterrupt(SBDebugger self)"},
-	 { "SBDebugger_DispatchInputEndOfFile", _wrap_SBDebugger_DispatchInputEndOfFile, METH_O, "SBDebugger_DispatchInputEndOfFile(SBDebugger self)"},
-	 { "SBDebugger_GetInstanceName", _wrap_SBDebugger_GetInstanceName, METH_O, "SBDebugger_GetInstanceName(SBDebugger self) -> char const *"},
-	 { "SBDebugger_FindDebuggerWithID", _wrap_SBDebugger_FindDebuggerWithID, METH_O, "SBDebugger_FindDebuggerWithID(int id) -> SBDebugger"},
-	 { "SBDebugger_SetInternalVariable", _wrap_SBDebugger_SetInternalVariable, METH_VARARGS, "SBDebugger_SetInternalVariable(char const * var_name, char const * value, char const * debugger_instance_name) -> SBError"},
-	 { "SBDebugger_GetInternalVariableValue", _wrap_SBDebugger_GetInternalVariableValue, METH_VARARGS, "SBDebugger_GetInternalVariableValue(char const * var_name, char const * debugger_instance_name) -> SBStringList"},
-	 { "SBDebugger_GetDescription", _wrap_SBDebugger_GetDescription, METH_VARARGS, "SBDebugger_GetDescription(SBDebugger self, SBStream description) -> bool"},
-	 { "SBDebugger_GetTerminalWidth", _wrap_SBDebugger_GetTerminalWidth, METH_O, "SBDebugger_GetTerminalWidth(SBDebugger self) -> uint32_t"},
-	 { "SBDebugger_SetTerminalWidth", _wrap_SBDebugger_SetTerminalWidth, METH_VARARGS, "SBDebugger_SetTerminalWidth(SBDebugger self, uint32_t term_width)"},
-	 { "SBDebugger_GetID", _wrap_SBDebugger_GetID, METH_O, "SBDebugger_GetID(SBDebugger self) -> lldb::user_id_t"},
-	 { "SBDebugger_GetPrompt", _wrap_SBDebugger_GetPrompt, METH_O, "SBDebugger_GetPrompt(SBDebugger self) -> char const *"},
-	 { "SBDebugger_SetPrompt", _wrap_SBDebugger_SetPrompt, METH_VARARGS, "SBDebugger_SetPrompt(SBDebugger self, char const * prompt)"},
-	 { "SBDebugger_GetReproducerPath", _wrap_SBDebugger_GetReproducerPath, METH_O, "SBDebugger_GetReproducerPath(SBDebugger self) -> char const *"},
-	 { "SBDebugger_GetScriptLanguage", _wrap_SBDebugger_GetScriptLanguage, METH_O, "SBDebugger_GetScriptLanguage(SBDebugger self) -> lldb::ScriptLanguage"},
-	 { "SBDebugger_SetScriptLanguage", _wrap_SBDebugger_SetScriptLanguage, METH_VARARGS, "SBDebugger_SetScriptLanguage(SBDebugger self, lldb::ScriptLanguage script_lang)"},
-	 { "SBDebugger_GetREPLLanguage", _wrap_SBDebugger_GetREPLLanguage, METH_O, "SBDebugger_GetREPLLanguage(SBDebugger self) -> lldb::LanguageType"},
-	 { "SBDebugger_SetREPLLanguage", _wrap_SBDebugger_SetREPLLanguage, METH_VARARGS, "SBDebugger_SetREPLLanguage(SBDebugger self, lldb::LanguageType repl_lang)"},
-	 { "SBDebugger_GetCloseInputOnEOF", _wrap_SBDebugger_GetCloseInputOnEOF, METH_O, "SBDebugger_GetCloseInputOnEOF(SBDebugger self) -> bool"},
-	 { "SBDebugger_SetCloseInputOnEOF", _wrap_SBDebugger_SetCloseInputOnEOF, METH_VARARGS, "SBDebugger_SetCloseInputOnEOF(SBDebugger self, bool b)"},
-	 { "SBDebugger_GetCategory", _wrap_SBDebugger_GetCategory, METH_VARARGS, "\n"
-		"SBDebugger_GetCategory(SBDebugger self, char const * category_name) -> SBTypeCategory\n"
-		"SBDebugger_GetCategory(SBDebugger self, lldb::LanguageType lang_type) -> SBTypeCategory\n"
-		""},
-	 { "SBDebugger_CreateCategory", _wrap_SBDebugger_CreateCategory, METH_VARARGS, "SBDebugger_CreateCategory(SBDebugger self, char const * category_name) -> SBTypeCategory"},
-	 { "SBDebugger_DeleteCategory", _wrap_SBDebugger_DeleteCategory, METH_VARARGS, "SBDebugger_DeleteCategory(SBDebugger self, char const * category_name) -> bool"},
-	 { "SBDebugger_GetNumCategories", _wrap_SBDebugger_GetNumCategories, METH_O, "SBDebugger_GetNumCategories(SBDebugger self) -> uint32_t"},
-	 { "SBDebugger_GetCategoryAtIndex", _wrap_SBDebugger_GetCategoryAtIndex, METH_VARARGS, "SBDebugger_GetCategoryAtIndex(SBDebugger self, uint32_t arg2) -> SBTypeCategory"},
-	 { "SBDebugger_GetDefaultCategory", _wrap_SBDebugger_GetDefaultCategory, METH_O, "SBDebugger_GetDefaultCategory(SBDebugger self) -> SBTypeCategory"},
-	 { "SBDebugger_GetFormatForType", _wrap_SBDebugger_GetFormatForType, METH_VARARGS, "SBDebugger_GetFormatForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeFormat"},
-	 { "SBDebugger_GetSummaryForType", _wrap_SBDebugger_GetSummaryForType, METH_VARARGS, "SBDebugger_GetSummaryForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeSummary"},
-	 { "SBDebugger_GetFilterForType", _wrap_SBDebugger_GetFilterForType, METH_VARARGS, "SBDebugger_GetFilterForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeFilter"},
-	 { "SBDebugger_GetSyntheticForType", _wrap_SBDebugger_GetSyntheticForType, METH_VARARGS, "SBDebugger_GetSyntheticForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeSynthetic"},
-	 { "SBDebugger_RunCommandInterpreter", _wrap_SBDebugger_RunCommandInterpreter, METH_VARARGS, "\n"
-		"SBDebugger_RunCommandInterpreter(SBDebugger self, bool auto_handle_events, bool spawn_thread, SBCommandInterpreterRunOptions options, int & num_errors, bool & quit_requested, bool & stopped_for_crash)\n"
-		"Launch a command interpreter session. Commands are read from standard input or\n"
-		"from the input handle specified for the debugger object. Output/errors are\n"
-		"similarly redirected to standard output/error or the configured handles.\n"
-		"\n"
-		"@param[in] auto_handle_events If true, automatically handle resulting events.\n"
-		"@param[in] spawn_thread If true, start a new thread for IO handling.\n"
-		"@param[in] options Parameter collection of type SBCommandInterpreterRunOptions.\n"
-		"@param[in] num_errors Initial error counter.\n"
-		"@param[in] quit_requested Initial quit request flag.\n"
-		"@param[in] stopped_for_crash Initial crash flag.\n"
-		"\n"
-		"@return\n"
-		"A tuple with the number of errors encountered by the interpreter, a boolean\n"
-		"indicating whether quitting the interpreter was requested and another boolean\n"
-		"set to True in case of a crash.\n"
-		"\n"
-		"Example: ::\n"
-		"\n"
-		"    # Start an interactive lldb session from a script (with a valid debugger object\n"
-		"    # created beforehand):\n"
-		"    n_errors, quit_requested, has_crashed = debugger.RunCommandInterpreter(True,\n"
-		"        False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)\n"
-		""},
-	 { "SBDebugger_RunREPL", _wrap_SBDebugger_RunREPL, METH_VARARGS, "SBDebugger_RunREPL(SBDebugger self, lldb::LanguageType language, char const * repl_options) -> SBError"},
-	 { "SBDebugger_LoadTraceFromFile", _wrap_SBDebugger_LoadTraceFromFile, METH_VARARGS, "SBDebugger_LoadTraceFromFile(SBDebugger self, SBError error, SBFileSpec trace_description_file) -> SBTrace"},
-	 { "SBDebugger___repr__", _wrap_SBDebugger___repr__, METH_O, "SBDebugger___repr__(SBDebugger self) -> std::string"},
-	 { "SBDebugger_GetInputFileHandle", _wrap_SBDebugger_GetInputFileHandle, METH_O, "SBDebugger_GetInputFileHandle(SBDebugger self) -> lldb::FileSP"},
-	 { "SBDebugger_GetOutputFileHandle", _wrap_SBDebugger_GetOutputFileHandle, METH_O, "SBDebugger_GetOutputFileHandle(SBDebugger self) -> lldb::FileSP"},
-	 { "SBDebugger_GetErrorFileHandle", _wrap_SBDebugger_GetErrorFileHandle, METH_O, "SBDebugger_GetErrorFileHandle(SBDebugger self) -> lldb::FileSP"},
-	 { "SBDebugger_swigregister", SBDebugger_swigregister, METH_O, NULL},
-	 { "SBDebugger_swiginit", SBDebugger_swiginit, METH_VARARGS, NULL},
-	 { "new_SBDeclaration", _wrap_new_SBDeclaration, METH_VARARGS, "\n"
-		"SBDeclaration()\n"
-		"new_SBDeclaration(SBDeclaration rhs) -> SBDeclaration\n"
-		""},
-	 { "delete_SBDeclaration", _wrap_delete_SBDeclaration, METH_O, "delete_SBDeclaration(SBDeclaration self)"},
-	 { "SBDeclaration___nonzero__", _wrap_SBDeclaration___nonzero__, METH_O, "SBDeclaration___nonzero__(SBDeclaration self) -> bool"},
-	 { "SBDeclaration_IsValid", _wrap_SBDeclaration_IsValid, METH_O, "SBDeclaration_IsValid(SBDeclaration self) -> bool"},
-	 { "SBDeclaration_GetFileSpec", _wrap_SBDeclaration_GetFileSpec, METH_O, "SBDeclaration_GetFileSpec(SBDeclaration self) -> SBFileSpec"},
-	 { "SBDeclaration_GetLine", _wrap_SBDeclaration_GetLine, METH_O, "SBDeclaration_GetLine(SBDeclaration self) -> uint32_t"},
-	 { "SBDeclaration_GetColumn", _wrap_SBDeclaration_GetColumn, METH_O, "SBDeclaration_GetColumn(SBDeclaration self) -> uint32_t"},
-	 { "SBDeclaration_SetFileSpec", _wrap_SBDeclaration_SetFileSpec, METH_VARARGS, "SBDeclaration_SetFileSpec(SBDeclaration self, SBFileSpec filespec)"},
-	 { "SBDeclaration_SetLine", _wrap_SBDeclaration_SetLine, METH_VARARGS, "SBDeclaration_SetLine(SBDeclaration self, uint32_t line)"},
-	 { "SBDeclaration_SetColumn", _wrap_SBDeclaration_SetColumn, METH_VARARGS, "SBDeclaration_SetColumn(SBDeclaration self, uint32_t column)"},
-	 { "SBDeclaration___eq__", _wrap_SBDeclaration___eq__, METH_VARARGS, "SBDeclaration___eq__(SBDeclaration self, SBDeclaration rhs) -> bool"},
-	 { "SBDeclaration___ne__", _wrap_SBDeclaration___ne__, METH_VARARGS, "SBDeclaration___ne__(SBDeclaration self, SBDeclaration rhs) -> bool"},
-	 { "SBDeclaration_GetDescription", _wrap_SBDeclaration_GetDescription, METH_VARARGS, "SBDeclaration_GetDescription(SBDeclaration self, SBStream description) -> bool"},
-	 { "SBDeclaration___repr__", _wrap_SBDeclaration___repr__, METH_O, "SBDeclaration___repr__(SBDeclaration self) -> std::string"},
-	 { "SBDeclaration_swigregister", SBDeclaration_swigregister, METH_O, NULL},
-	 { "SBDeclaration_swiginit", SBDeclaration_swiginit, METH_VARARGS, NULL},
-	 { "new_SBError", _wrap_new_SBError, METH_VARARGS, "\n"
-		"SBError()\n"
-		"SBError(SBError rhs)\n"
-		"new_SBError(char const * message) -> SBError\n"
-		""},
-	 { "delete_SBError", _wrap_delete_SBError, METH_O, "delete_SBError(SBError self)"},
-	 { "SBError_GetCString", _wrap_SBError_GetCString, METH_O, "SBError_GetCString(SBError self) -> char const *"},
-	 { "SBError_Clear", _wrap_SBError_Clear, METH_O, "SBError_Clear(SBError self)"},
-	 { "SBError_Fail", _wrap_SBError_Fail, METH_O, "SBError_Fail(SBError self) -> bool"},
-	 { "SBError_Success", _wrap_SBError_Success, METH_O, "SBError_Success(SBError self) -> bool"},
-	 { "SBError_GetError", _wrap_SBError_GetError, METH_O, "SBError_GetError(SBError self) -> uint32_t"},
-	 { "SBError_GetType", _wrap_SBError_GetType, METH_O, "SBError_GetType(SBError self) -> lldb::ErrorType"},
-	 { "SBError_SetError", _wrap_SBError_SetError, METH_VARARGS, "SBError_SetError(SBError self, uint32_t err, lldb::ErrorType type)"},
-	 { "SBError_SetErrorToErrno", _wrap_SBError_SetErrorToErrno, METH_O, "SBError_SetErrorToErrno(SBError self)"},
-	 { "SBError_SetErrorToGenericError", _wrap_SBError_SetErrorToGenericError, METH_O, "SBError_SetErrorToGenericError(SBError self)"},
-	 { "SBError_SetErrorString", _wrap_SBError_SetErrorString, METH_VARARGS, "SBError_SetErrorString(SBError self, char const * err_str)"},
-	 { "SBError_SetErrorStringWithFormat", _wrap_SBError_SetErrorStringWithFormat, METH_VARARGS, "SBError_SetErrorStringWithFormat(SBError self, char const * format, char * str1=None, char * str2=None, char * str3=None) -> int"},
-	 { "SBError___nonzero__", _wrap_SBError___nonzero__, METH_O, "SBError___nonzero__(SBError self) -> bool"},
-	 { "SBError_IsValid", _wrap_SBError_IsValid, METH_O, "SBError_IsValid(SBError self) -> bool"},
-	 { "SBError_GetDescription", _wrap_SBError_GetDescription, METH_VARARGS, "SBError_GetDescription(SBError self, SBStream description) -> bool"},
-	 { "SBError___repr__", _wrap_SBError___repr__, METH_O, "SBError___repr__(SBError self) -> std::string"},
-	 { "SBError_swigregister", SBError_swigregister, METH_O, NULL},
-	 { "SBError_swiginit", SBError_swiginit, METH_VARARGS, NULL},
-	 { "new_SBEnvironment", _wrap_new_SBEnvironment, METH_VARARGS, "\n"
-		"SBEnvironment()\n"
-		"new_SBEnvironment(SBEnvironment rhs) -> SBEnvironment\n"
-		""},
-	 { "delete_SBEnvironment", _wrap_delete_SBEnvironment, METH_O, "delete_SBEnvironment(SBEnvironment self)"},
-	 { "SBEnvironment_Get", _wrap_SBEnvironment_Get, METH_VARARGS, "SBEnvironment_Get(SBEnvironment self, char const * name) -> char const *"},
-	 { "SBEnvironment_GetNumValues", _wrap_SBEnvironment_GetNumValues, METH_O, "SBEnvironment_GetNumValues(SBEnvironment self) -> size_t"},
-	 { "SBEnvironment_GetNameAtIndex", _wrap_SBEnvironment_GetNameAtIndex, METH_VARARGS, "SBEnvironment_GetNameAtIndex(SBEnvironment self, size_t index) -> char const *"},
-	 { "SBEnvironment_GetValueAtIndex", _wrap_SBEnvironment_GetValueAtIndex, METH_VARARGS, "SBEnvironment_GetValueAtIndex(SBEnvironment self, size_t index) -> char const *"},
-	 { "SBEnvironment_GetEntries", _wrap_SBEnvironment_GetEntries, METH_O, "SBEnvironment_GetEntries(SBEnvironment self) -> SBStringList"},
-	 { "SBEnvironment_PutEntry", _wrap_SBEnvironment_PutEntry, METH_VARARGS, "SBEnvironment_PutEntry(SBEnvironment self, char const * name_and_value)"},
-	 { "SBEnvironment_SetEntries", _wrap_SBEnvironment_SetEntries, METH_VARARGS, "SBEnvironment_SetEntries(SBEnvironment self, SBStringList entries, bool append)"},
-	 { "SBEnvironment_Set", _wrap_SBEnvironment_Set, METH_VARARGS, "SBEnvironment_Set(SBEnvironment self, char const * name, char const * value, bool overwrite) -> bool"},
-	 { "SBEnvironment_Unset", _wrap_SBEnvironment_Unset, METH_VARARGS, "SBEnvironment_Unset(SBEnvironment self, char const * name) -> bool"},
-	 { "SBEnvironment_Clear", _wrap_SBEnvironment_Clear, METH_O, "SBEnvironment_Clear(SBEnvironment self)"},
-	 { "SBEnvironment_swigregister", SBEnvironment_swigregister, METH_O, NULL},
-	 { "SBEnvironment_swiginit", SBEnvironment_swiginit, METH_VARARGS, NULL},
-	 { "new_SBEvent", _wrap_new_SBEvent, METH_VARARGS, "__init__(self, int type, str data) -> SBEvent (make an event that contains a C string)__init__(self, int type, str data) -> SBEvent (make an event that contains a C string)__init__(self, int type, str data) -> SBEvent (make an event that contains a C string)"},
-	 { "delete_SBEvent", _wrap_delete_SBEvent, METH_O, "delete_SBEvent(SBEvent self)"},
-	 { "SBEvent___nonzero__", _wrap_SBEvent___nonzero__, METH_O, "SBEvent___nonzero__(SBEvent self) -> bool"},
-	 { "SBEvent_IsValid", _wrap_SBEvent_IsValid, METH_O, "SBEvent_IsValid(SBEvent self) -> bool"},
-	 { "SBEvent_GetDataFlavor", _wrap_SBEvent_GetDataFlavor, METH_O, "SBEvent_GetDataFlavor(SBEvent self) -> char const *"},
-	 { "SBEvent_GetType", _wrap_SBEvent_GetType, METH_O, "SBEvent_GetType(SBEvent self) -> uint32_t"},
-	 { "SBEvent_GetBroadcaster", _wrap_SBEvent_GetBroadcaster, METH_O, "SBEvent_GetBroadcaster(SBEvent self) -> SBBroadcaster"},
-	 { "SBEvent_GetBroadcasterClass", _wrap_SBEvent_GetBroadcasterClass, METH_O, "SBEvent_GetBroadcasterClass(SBEvent self) -> char const *"},
-	 { "SBEvent_BroadcasterMatchesRef", _wrap_SBEvent_BroadcasterMatchesRef, METH_VARARGS, "SBEvent_BroadcasterMatchesRef(SBEvent self, SBBroadcaster broadcaster) -> bool"},
-	 { "SBEvent_Clear", _wrap_SBEvent_Clear, METH_O, "SBEvent_Clear(SBEvent self)"},
-	 { "SBEvent_GetCStringFromEvent", _wrap_SBEvent_GetCStringFromEvent, METH_O, "SBEvent_GetCStringFromEvent(SBEvent event) -> char const *"},
-	 { "SBEvent_GetDescription", _wrap_SBEvent_GetDescription, METH_VARARGS, "\n"
-		"SBEvent_GetDescription(SBEvent self, SBStream description) -> bool\n"
-		"SBEvent_GetDescription(SBEvent self, SBStream description) -> bool\n"
-		""},
-	 { "SBEvent_swigregister", SBEvent_swigregister, METH_O, NULL},
-	 { "SBEvent_swiginit", SBEvent_swiginit, METH_VARARGS, NULL},
-	 { "new_SBExecutionContext", _wrap_new_SBExecutionContext, METH_VARARGS, "\n"
-		"SBExecutionContext()\n"
-		"SBExecutionContext(SBExecutionContext rhs)\n"
-		"SBExecutionContext(SBTarget target)\n"
-		"SBExecutionContext(SBProcess process)\n"
-		"SBExecutionContext(SBThread thread)\n"
-		"new_SBExecutionContext(SBFrame frame) -> SBExecutionContext\n"
-		""},
-	 { "delete_SBExecutionContext", _wrap_delete_SBExecutionContext, METH_O, "delete_SBExecutionContext(SBExecutionContext self)"},
-	 { "SBExecutionContext_GetTarget", _wrap_SBExecutionContext_GetTarget, METH_O, "SBExecutionContext_GetTarget(SBExecutionContext self) -> SBTarget"},
-	 { "SBExecutionContext_GetProcess", _wrap_SBExecutionContext_GetProcess, METH_O, "SBExecutionContext_GetProcess(SBExecutionContext self) -> SBProcess"},
-	 { "SBExecutionContext_GetThread", _wrap_SBExecutionContext_GetThread, METH_O, "SBExecutionContext_GetThread(SBExecutionContext self) -> SBThread"},
-	 { "SBExecutionContext_GetFrame", _wrap_SBExecutionContext_GetFrame, METH_O, "SBExecutionContext_GetFrame(SBExecutionContext self) -> SBFrame"},
-	 { "SBExecutionContext_swigregister", SBExecutionContext_swigregister, METH_O, NULL},
-	 { "SBExecutionContext_swiginit", SBExecutionContext_swiginit, METH_VARARGS, NULL},
-	 { "new_SBExpressionOptions", _wrap_new_SBExpressionOptions, METH_VARARGS, "\n"
-		"SBExpressionOptions()\n"
-		"new_SBExpressionOptions(SBExpressionOptions rhs) -> SBExpressionOptions\n"
-		""},
-	 { "delete_SBExpressionOptions", _wrap_delete_SBExpressionOptions, METH_O, "delete_SBExpressionOptions(SBExpressionOptions self)"},
-	 { "SBExpressionOptions_GetCoerceResultToId", _wrap_SBExpressionOptions_GetCoerceResultToId, METH_O, "SBExpressionOptions_GetCoerceResultToId(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetCoerceResultToId", _wrap_SBExpressionOptions_SetCoerceResultToId, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetCoerceResultToId(SBExpressionOptions self, bool coerce=True)\n"
-		"Sets whether to coerce the expression result to ObjC id type after evaluation.\n"
-		""},
-	 { "SBExpressionOptions_GetUnwindOnError", _wrap_SBExpressionOptions_GetUnwindOnError, METH_O, "SBExpressionOptions_GetUnwindOnError(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetUnwindOnError", _wrap_SBExpressionOptions_SetUnwindOnError, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetUnwindOnError(SBExpressionOptions self, bool unwind=True)\n"
-		"Sets whether to unwind the expression stack on error.\n"
-		""},
-	 { "SBExpressionOptions_GetIgnoreBreakpoints", _wrap_SBExpressionOptions_GetIgnoreBreakpoints, METH_O, "SBExpressionOptions_GetIgnoreBreakpoints(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetIgnoreBreakpoints", _wrap_SBExpressionOptions_SetIgnoreBreakpoints, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetIgnoreBreakpoints(SBExpressionOptions self, bool ignore=True)\n"
-		"Sets whether to ignore breakpoint hits while running expressions.\n"
-		""},
-	 { "SBExpressionOptions_GetFetchDynamicValue", _wrap_SBExpressionOptions_GetFetchDynamicValue, METH_O, "SBExpressionOptions_GetFetchDynamicValue(SBExpressionOptions self) -> lldb::DynamicValueType"},
-	 { "SBExpressionOptions_SetFetchDynamicValue", _wrap_SBExpressionOptions_SetFetchDynamicValue, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetFetchDynamicValue(SBExpressionOptions self, lldb::DynamicValueType dynamic=eDynamicCanRunTarget)\n"
-		"Sets whether to cast the expression result to its dynamic type.\n"
-		""},
-	 { "SBExpressionOptions_GetTimeoutInMicroSeconds", _wrap_SBExpressionOptions_GetTimeoutInMicroSeconds, METH_O, "SBExpressionOptions_GetTimeoutInMicroSeconds(SBExpressionOptions self) -> uint32_t"},
-	 { "SBExpressionOptions_SetTimeoutInMicroSeconds", _wrap_SBExpressionOptions_SetTimeoutInMicroSeconds, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetTimeoutInMicroSeconds(SBExpressionOptions self, uint32_t timeout=0)\n"
-		"Sets the timeout in microseconds to run the expression for. If try all threads is set to true and the expression doesn't complete within the specified timeout, all threads will be resumed for the same timeout to see if the expression will finish.\n"
-		""},
-	 { "SBExpressionOptions_GetOneThreadTimeoutInMicroSeconds", _wrap_SBExpressionOptions_GetOneThreadTimeoutInMicroSeconds, METH_O, "SBExpressionOptions_GetOneThreadTimeoutInMicroSeconds(SBExpressionOptions self) -> uint32_t"},
-	 { "SBExpressionOptions_SetOneThreadTimeoutInMicroSeconds", _wrap_SBExpressionOptions_SetOneThreadTimeoutInMicroSeconds, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetOneThreadTimeoutInMicroSeconds(SBExpressionOptions self, uint32_t timeout=0)\n"
-		"Sets the timeout in microseconds to run the expression on one thread before either timing out or trying all threads.\n"
-		""},
-	 { "SBExpressionOptions_GetTryAllThreads", _wrap_SBExpressionOptions_GetTryAllThreads, METH_O, "SBExpressionOptions_GetTryAllThreads(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetTryAllThreads", _wrap_SBExpressionOptions_SetTryAllThreads, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetTryAllThreads(SBExpressionOptions self, bool run_others=True)\n"
-		"Sets whether to run all threads if the expression does not complete on one thread.\n"
-		""},
-	 { "SBExpressionOptions_GetStopOthers", _wrap_SBExpressionOptions_GetStopOthers, METH_O, "SBExpressionOptions_GetStopOthers(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetStopOthers", _wrap_SBExpressionOptions_SetStopOthers, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetStopOthers(SBExpressionOptions self, bool stop_others=True)\n"
-		"Sets whether to stop other threads at all while running expressions.  If false, TryAllThreads does nothing.\n"
-		""},
-	 { "SBExpressionOptions_GetTrapExceptions", _wrap_SBExpressionOptions_GetTrapExceptions, METH_O, "SBExpressionOptions_GetTrapExceptions(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetTrapExceptions", _wrap_SBExpressionOptions_SetTrapExceptions, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetTrapExceptions(SBExpressionOptions self, bool trap_exceptions=True)\n"
-		"Sets whether to abort expression evaluation if an exception is thrown while executing.  Don't set this to false unless you know the function you are calling traps all exceptions itself.\n"
-		""},
-	 { "SBExpressionOptions_SetLanguage", _wrap_SBExpressionOptions_SetLanguage, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetLanguage(SBExpressionOptions self, lldb::LanguageType language)\n"
-		"SBExpressionOptions_SetLanguage(SBExpressionOptions self, lldb::SBSourceLanguageName name, uint32_t version)\n"
-		"Sets the language that LLDB should assume the expression is written in\n"
-		""},
-	 { "SBExpressionOptions_GetPlaygroundTransformEnabled", _wrap_SBExpressionOptions_GetPlaygroundTransformEnabled, METH_O, "SBExpressionOptions_GetPlaygroundTransformEnabled(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetPlaygroundTransformEnabled", _wrap_SBExpressionOptions_SetPlaygroundTransformEnabled, METH_VARARGS, "SBExpressionOptions_SetPlaygroundTransformEnabled(SBExpressionOptions self, bool enable_playground_transform=True)"},
-	 { "SBExpressionOptions_GetPlaygroundTransformHighPerformance", _wrap_SBExpressionOptions_GetPlaygroundTransformHighPerformance, METH_O, "SBExpressionOptions_GetPlaygroundTransformHighPerformance(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetPlaygroundTransformHighPerformance", _wrap_SBExpressionOptions_SetPlaygroundTransformHighPerformance, METH_VARARGS, "SBExpressionOptions_SetPlaygroundTransformHighPerformance(SBExpressionOptions self, bool playground_transforms_hp=True)"},
-	 { "SBExpressionOptions_GetREPLMode", _wrap_SBExpressionOptions_GetREPLMode, METH_O, "SBExpressionOptions_GetREPLMode(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetREPLMode", _wrap_SBExpressionOptions_SetREPLMode, METH_VARARGS, "SBExpressionOptions_SetREPLMode(SBExpressionOptions self, bool enable_repl_mode=True)"},
-	 { "SBExpressionOptions_GetGenerateDebugInfo", _wrap_SBExpressionOptions_GetGenerateDebugInfo, METH_O, "SBExpressionOptions_GetGenerateDebugInfo(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetGenerateDebugInfo", _wrap_SBExpressionOptions_SetGenerateDebugInfo, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetGenerateDebugInfo(SBExpressionOptions self, bool b=True)\n"
-		"Sets whether to generate debug information for the expression and also controls if a SBModule is generated.\n"
-		""},
-	 { "SBExpressionOptions_GetSuppressPersistentResult", _wrap_SBExpressionOptions_GetSuppressPersistentResult, METH_O, "SBExpressionOptions_GetSuppressPersistentResult(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetSuppressPersistentResult", _wrap_SBExpressionOptions_SetSuppressPersistentResult, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetSuppressPersistentResult(SBExpressionOptions self, bool b=False)\n"
-		"Sets whether to produce a persistent result that can be used in future expressions.\n"
-		""},
-	 { "SBExpressionOptions_GetPrefix", _wrap_SBExpressionOptions_GetPrefix, METH_O, "\n"
-		"SBExpressionOptions_GetPrefix(SBExpressionOptions self) -> char const *\n"
-		"Gets the prefix to use for this expression.\n"
-		""},
-	 { "SBExpressionOptions_SetPrefix", _wrap_SBExpressionOptions_SetPrefix, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetPrefix(SBExpressionOptions self, char const * prefix)\n"
-		"Sets the prefix to use for this expression. This prefix gets inserted after the 'target.expr-prefix' prefix contents, but before the wrapped expression function body.\n"
-		""},
-	 { "SBExpressionOptions_SetAutoApplyFixIts", _wrap_SBExpressionOptions_SetAutoApplyFixIts, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetAutoApplyFixIts(SBExpressionOptions self, bool b=True)\n"
-		"Sets whether to auto-apply fix-it hints to the expression being evaluated.\n"
-		""},
-	 { "SBExpressionOptions_GetAutoApplyFixIts", _wrap_SBExpressionOptions_GetAutoApplyFixIts, METH_O, "\n"
-		"SBExpressionOptions_GetAutoApplyFixIts(SBExpressionOptions self) -> bool\n"
-		"Gets whether to auto-apply fix-it hints to an expression.\n"
-		""},
-	 { "SBExpressionOptions_SetRetriesWithFixIts", _wrap_SBExpressionOptions_SetRetriesWithFixIts, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetRetriesWithFixIts(SBExpressionOptions self, uint64_t retries)\n"
-		"Sets how often LLDB should retry applying fix-its to an expression.\n"
-		""},
-	 { "SBExpressionOptions_GetRetriesWithFixIts", _wrap_SBExpressionOptions_GetRetriesWithFixIts, METH_O, "\n"
-		"SBExpressionOptions_GetRetriesWithFixIts(SBExpressionOptions self) -> uint64_t\n"
-		"Gets how often LLDB will retry applying fix-its to an expression.\n"
-		""},
-	 { "SBExpressionOptions_GetTopLevel", _wrap_SBExpressionOptions_GetTopLevel, METH_O, "SBExpressionOptions_GetTopLevel(SBExpressionOptions self) -> bool"},
-	 { "SBExpressionOptions_SetTopLevel", _wrap_SBExpressionOptions_SetTopLevel, METH_VARARGS, "SBExpressionOptions_SetTopLevel(SBExpressionOptions self, bool b=True)"},
-	 { "SBExpressionOptions_GetAllowJIT", _wrap_SBExpressionOptions_GetAllowJIT, METH_O, "\n"
-		"SBExpressionOptions_GetAllowJIT(SBExpressionOptions self) -> bool\n"
-		"Gets whether to JIT an expression if it cannot be interpreted.\n"
-		""},
-	 { "SBExpressionOptions_SetAllowJIT", _wrap_SBExpressionOptions_SetAllowJIT, METH_VARARGS, "\n"
-		"SBExpressionOptions_SetAllowJIT(SBExpressionOptions self, bool allow)\n"
-		"Sets whether to JIT an expression if it cannot be interpreted.\n"
-		""},
-	 { "SBExpressionOptions_swigregister", SBExpressionOptions_swigregister, METH_O, NULL},
-	 { "SBExpressionOptions_swiginit", SBExpressionOptions_swiginit, METH_VARARGS, NULL},
-	 { "new_SBFile", _wrap_new_SBFile, METH_VARARGS, "\n"
-		"SBFile()\n"
-		"SBFile(lldb::FileSP file_sp)\n"
-		"new_SBFile(int fd, char const * mode, bool transfer_ownership) -> SBFile\n"
-		"initialize a SBFile from a python file object\n"
-		""},
-	 { "delete_SBFile", _wrap_delete_SBFile, METH_O, "delete_SBFile(SBFile self)"},
-	 { "SBFile_Read", _wrap_SBFile_Read, METH_VARARGS, "Read(buffer) -> SBError, bytes_read"},
-	 { "SBFile_Write", _wrap_SBFile_Write, METH_VARARGS, "Write(buffer) -> SBError, written_read"},
-	 { "SBFile_Flush", _wrap_SBFile_Flush, METH_O, "SBFile_Flush(SBFile self) -> SBError"},
-	 { "SBFile_IsValid", _wrap_SBFile_IsValid, METH_O, "SBFile_IsValid(SBFile self) -> bool"},
-	 { "SBFile_Close", _wrap_SBFile_Close, METH_O, "SBFile_Close(SBFile self) -> SBError"},
-	 { "SBFile___nonzero__", _wrap_SBFile___nonzero__, METH_O, "SBFile___nonzero__(SBFile self) -> bool"},
-	 { "SBFile_GetFile", _wrap_SBFile_GetFile, METH_O, "\n"
-		"SBFile_GetFile(SBFile self) -> lldb::FileSP\n"
-		"\n"
-		"    Convert this SBFile into a python io.IOBase file object.\n"
-		"\n"
-		"    If the SBFile is itself a wrapper around a python file object,\n"
-		"    this will return that original object.\n"
-		"\n"
-		"    The file returned from here should be considered borrowed,\n"
-		"    in the sense that you may read and write to it, and flush it,\n"
-		"    etc, but you should not close it.   If you want to close the\n"
-		"    SBFile, call SBFile.Close().\n"
-		"\n"
-		"    If there is no underlying python file to unwrap, GetFile will\n"
-		"    use the file descriptor, if available to create a new python\n"
-		"    file object using ``open(fd, mode=..., closefd=False)``\n"
-		"\n"
-		""},
-	 { "SBFile_MakeBorrowed", _wrap_SBFile_MakeBorrowed, METH_O, "SBFile_MakeBorrowed(lldb::FileSP BORROWED) -> SBFile"},
-	 { "SBFile_MakeForcingIOMethods", _wrap_SBFile_MakeForcingIOMethods, METH_O, "SBFile_MakeForcingIOMethods(lldb::FileSP FORCE_IO_METHODS) -> SBFile"},
-	 { "SBFile_MakeBorrowedForcingIOMethods", _wrap_SBFile_MakeBorrowedForcingIOMethods, METH_O, "SBFile_MakeBorrowedForcingIOMethods(lldb::FileSP BORROWED_FORCE_IO_METHODS) -> SBFile"},
-	 { "SBFile_swigregister", SBFile_swigregister, METH_O, NULL},
-	 { "SBFile_swiginit", SBFile_swiginit, METH_VARARGS, NULL},
-	 { "new_SBFileSpec", _wrap_new_SBFileSpec, METH_VARARGS, "\n"
-		"SBFileSpec()\n"
-		"SBFileSpec(SBFileSpec rhs)\n"
-		"SBFileSpec(char const * path)\n"
-		"new_SBFileSpec(char const * path, bool resolve) -> SBFileSpec\n"
-		""},
-	 { "delete_SBFileSpec", _wrap_delete_SBFileSpec, METH_O, "delete_SBFileSpec(SBFileSpec self)"},
-	 { "SBFileSpec___nonzero__", _wrap_SBFileSpec___nonzero__, METH_O, "SBFileSpec___nonzero__(SBFileSpec self) -> bool"},
-	 { "SBFileSpec___eq__", _wrap_SBFileSpec___eq__, METH_VARARGS, "SBFileSpec___eq__(SBFileSpec self, SBFileSpec rhs) -> bool"},
-	 { "SBFileSpec___ne__", _wrap_SBFileSpec___ne__, METH_VARARGS, "SBFileSpec___ne__(SBFileSpec self, SBFileSpec rhs) -> bool"},
-	 { "SBFileSpec_IsValid", _wrap_SBFileSpec_IsValid, METH_O, "SBFileSpec_IsValid(SBFileSpec self) -> bool"},
-	 { "SBFileSpec_Exists", _wrap_SBFileSpec_Exists, METH_O, "SBFileSpec_Exists(SBFileSpec self) -> bool"},
-	 { "SBFileSpec_ResolveExecutableLocation", _wrap_SBFileSpec_ResolveExecutableLocation, METH_O, "SBFileSpec_ResolveExecutableLocation(SBFileSpec self) -> bool"},
-	 { "SBFileSpec_GetFilename", _wrap_SBFileSpec_GetFilename, METH_O, "SBFileSpec_GetFilename(SBFileSpec self) -> char const *"},
-	 { "SBFileSpec_GetDirectory", _wrap_SBFileSpec_GetDirectory, METH_O, "SBFileSpec_GetDirectory(SBFileSpec self) -> char const *"},
-	 { "SBFileSpec_SetFilename", _wrap_SBFileSpec_SetFilename, METH_VARARGS, "SBFileSpec_SetFilename(SBFileSpec self, char const * filename)"},
-	 { "SBFileSpec_SetDirectory", _wrap_SBFileSpec_SetDirectory, METH_VARARGS, "SBFileSpec_SetDirectory(SBFileSpec self, char const * directory)"},
-	 { "SBFileSpec_GetPath", _wrap_SBFileSpec_GetPath, METH_VARARGS, "SBFileSpec_GetPath(SBFileSpec self, char * dst_path, size_t dst_len) -> uint32_t"},
-	 { "SBFileSpec_ResolvePath", _wrap_SBFileSpec_ResolvePath, METH_VARARGS, "SBFileSpec_ResolvePath(char const * src_path, char * dst_path, size_t dst_len) -> int"},
-	 { "SBFileSpec_GetDescription", _wrap_SBFileSpec_GetDescription, METH_VARARGS, "SBFileSpec_GetDescription(SBFileSpec self, SBStream description) -> bool"},
-	 { "SBFileSpec_AppendPathComponent", _wrap_SBFileSpec_AppendPathComponent, METH_VARARGS, "SBFileSpec_AppendPathComponent(SBFileSpec self, char const * file_or_directory)"},
-	 { "SBFileSpec___repr__", _wrap_SBFileSpec___repr__, METH_O, "SBFileSpec___repr__(SBFileSpec self) -> std::string"},
-	 { "SBFileSpec_swigregister", SBFileSpec_swigregister, METH_O, NULL},
-	 { "SBFileSpec_swiginit", SBFileSpec_swiginit, METH_VARARGS, NULL},
-	 { "new_SBFileSpecList", _wrap_new_SBFileSpecList, METH_VARARGS, "\n"
-		"SBFileSpecList()\n"
-		"new_SBFileSpecList(SBFileSpecList rhs) -> SBFileSpecList\n"
-		""},
-	 { "delete_SBFileSpecList", _wrap_delete_SBFileSpecList, METH_O, "delete_SBFileSpecList(SBFileSpecList self)"},
-	 { "SBFileSpecList_GetSize", _wrap_SBFileSpecList_GetSize, METH_O, "SBFileSpecList_GetSize(SBFileSpecList self) -> uint32_t"},
-	 { "SBFileSpecList_GetDescription", _wrap_SBFileSpecList_GetDescription, METH_VARARGS, "SBFileSpecList_GetDescription(SBFileSpecList self, SBStream description) -> bool"},
-	 { "SBFileSpecList_Append", _wrap_SBFileSpecList_Append, METH_VARARGS, "SBFileSpecList_Append(SBFileSpecList self, SBFileSpec sb_file)"},
-	 { "SBFileSpecList_AppendIfUnique", _wrap_SBFileSpecList_AppendIfUnique, METH_VARARGS, "SBFileSpecList_AppendIfUnique(SBFileSpecList self, SBFileSpec sb_file) -> bool"},
-	 { "SBFileSpecList_Clear", _wrap_SBFileSpecList_Clear, METH_O, "SBFileSpecList_Clear(SBFileSpecList self)"},
-	 { "SBFileSpecList_FindFileIndex", _wrap_SBFileSpecList_FindFileIndex, METH_VARARGS, "SBFileSpecList_FindFileIndex(SBFileSpecList self, uint32_t idx, SBFileSpec sb_file, bool full) -> uint32_t"},
-	 { "SBFileSpecList_GetFileSpecAtIndex", _wrap_SBFileSpecList_GetFileSpecAtIndex, METH_VARARGS, "SBFileSpecList_GetFileSpecAtIndex(SBFileSpecList self, uint32_t idx) -> SBFileSpec"},
-	 { "SBFileSpecList___repr__", _wrap_SBFileSpecList___repr__, METH_O, "SBFileSpecList___repr__(SBFileSpecList self) -> std::string"},
-	 { "SBFileSpecList_swigregister", SBFileSpecList_swigregister, METH_O, NULL},
-	 { "SBFileSpecList_swiginit", SBFileSpecList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBFormat", _wrap_new_SBFormat, METH_VARARGS, "\n"
-		"SBFormat()\n"
-		"SBFormat(char const * format, SBError error)\n"
-		"new_SBFormat(SBFormat rhs) -> SBFormat\n"
-		""},
-	 { "delete_SBFormat", _wrap_delete_SBFormat, METH_O, "delete_SBFormat(SBFormat self)"},
-	 { "SBFormat___nonzero__", _wrap_SBFormat___nonzero__, METH_O, "SBFormat___nonzero__(SBFormat self) -> bool"},
-	 { "SBFormat_swigregister", SBFormat_swigregister, METH_O, NULL},
-	 { "SBFormat_swiginit", SBFormat_swiginit, METH_VARARGS, NULL},
-	 { "new_SBFrame", _wrap_new_SBFrame, METH_VARARGS, "\n"
-		"SBFrame()\n"
-		"new_SBFrame(SBFrame rhs) -> SBFrame\n"
-		""},
-	 { "delete_SBFrame", _wrap_delete_SBFrame, METH_O, "delete_SBFrame(SBFrame self)"},
-	 { "SBFrame_IsEqual", _wrap_SBFrame_IsEqual, METH_VARARGS, "SBFrame_IsEqual(SBFrame self, SBFrame that) -> bool"},
-	 { "SBFrame___nonzero__", _wrap_SBFrame___nonzero__, METH_O, "SBFrame___nonzero__(SBFrame self) -> bool"},
-	 { "SBFrame_IsValid", _wrap_SBFrame_IsValid, METH_O, "SBFrame_IsValid(SBFrame self) -> bool"},
-	 { "SBFrame_GetFrameID", _wrap_SBFrame_GetFrameID, METH_O, "SBFrame_GetFrameID(SBFrame self) -> uint32_t"},
-	 { "SBFrame_GetCFA", _wrap_SBFrame_GetCFA, METH_O, "\n"
-		"SBFrame_GetCFA(SBFrame self) -> lldb::addr_t\n"
-		"\n"
-		"    Get the Canonical Frame Address for this stack frame.\n"
-		"    This is the DWARF standard's definition of a CFA, a stack address\n"
-		"    that remains constant throughout the lifetime of the function.\n"
-		"    Returns an lldb::addr_t stack address, or LLDB_INVALID_ADDRESS if\n"
-		"    the CFA cannot be determined.\n"
-		""},
-	 { "SBFrame_GetPC", _wrap_SBFrame_GetPC, METH_O, "SBFrame_GetPC(SBFrame self) -> lldb::addr_t"},
-	 { "SBFrame_SetPC", _wrap_SBFrame_SetPC, METH_VARARGS, "SBFrame_SetPC(SBFrame self, lldb::addr_t new_pc) -> bool"},
-	 { "SBFrame_GetSP", _wrap_SBFrame_GetSP, METH_O, "SBFrame_GetSP(SBFrame self) -> lldb::addr_t"},
-	 { "SBFrame_GetFP", _wrap_SBFrame_GetFP, METH_O, "SBFrame_GetFP(SBFrame self) -> lldb::addr_t"},
-	 { "SBFrame_GetPCAddress", _wrap_SBFrame_GetPCAddress, METH_O, "SBFrame_GetPCAddress(SBFrame self) -> SBAddress"},
-	 { "SBFrame_GetSymbolContext", _wrap_SBFrame_GetSymbolContext, METH_VARARGS, "SBFrame_GetSymbolContext(SBFrame self, uint32_t resolve_scope) -> SBSymbolContext"},
-	 { "SBFrame_GetModule", _wrap_SBFrame_GetModule, METH_O, "SBFrame_GetModule(SBFrame self) -> SBModule"},
-	 { "SBFrame_GetCompileUnit", _wrap_SBFrame_GetCompileUnit, METH_O, "SBFrame_GetCompileUnit(SBFrame self) -> SBCompileUnit"},
-	 { "SBFrame_GetFunction", _wrap_SBFrame_GetFunction, METH_O, "SBFrame_GetFunction(SBFrame self) -> SBFunction"},
-	 { "SBFrame_GetSymbol", _wrap_SBFrame_GetSymbol, METH_O, "SBFrame_GetSymbol(SBFrame self) -> SBSymbol"},
-	 { "SBFrame_GetBlock", _wrap_SBFrame_GetBlock, METH_O, "\n"
-		"SBFrame_GetBlock(SBFrame self) -> SBBlock\n"
-		"\n"
-		"    Gets the deepest block that contains the frame PC.\n"
-		"\n"
-		"    See also GetFrameBlock().\n"
-		""},
-	 { "SBFrame_GetDisplayFunctionName", _wrap_SBFrame_GetDisplayFunctionName, METH_O, "SBFrame_GetDisplayFunctionName(SBFrame self) -> char const *"},
-	 { "SBFrame_GetFunctionName", _wrap_SBFrame_GetFunctionName, METH_VARARGS, "\n"
-		"SBFrame_GetFunctionName(SBFrame self) -> char const\n"
-		"SBFrame_GetFunctionName(SBFrame self) -> char const *\n"
-		"\n"
-		"    Get the appropriate function name for this frame. Inlined functions in\n"
-		"    LLDB are represented by Blocks that have inlined function information, so\n"
-		"    just looking at the SBFunction or SBSymbol for a frame isn't enough.\n"
-		"    This function will return the appropriate function, symbol or inlined\n"
-		"    function name for the frame.\n"
-		"\n"
-		"    This function returns:\n"
-		"    - the name of the inlined function (if there is one)\n"
-		"    - the name of the concrete function (if there is one)\n"
-		"    - the name of the symbol (if there is one)\n"
-		"    - NULL\n"
-		"\n"
-		"    See also IsInlined().\n"
-		""},
-	 { "SBFrame_GuessLanguage", _wrap_SBFrame_GuessLanguage, METH_O, "\n"
-		"SBFrame_GuessLanguage(SBFrame self) -> lldb::LanguageType\n"
-		"\n"
-		"    Returns the language of the frame's SBFunction, or if there.\n"
-		"    is no SBFunction, guess the language from the mangled name.\n"
-		"    .\n"
-		""},
-	 { "SBFrame_IsSwiftThunk", _wrap_SBFrame_IsSwiftThunk, METH_O, "SBFrame_IsSwiftThunk(SBFrame self) -> bool"},
-	 { "SBFrame_GetLanguageSpecificData", _wrap_SBFrame_GetLanguageSpecificData, METH_O, "SBFrame_GetLanguageSpecificData(SBFrame self) -> SBStructuredData"},
-	 { "SBFrame_IsInlined", _wrap_SBFrame_IsInlined, METH_VARARGS, "\n"
-		"SBFrame_IsInlined(SBFrame self) -> bool\n"
-		"SBFrame_IsInlined(SBFrame self) -> bool\n"
-		"\n"
-		"    Return true if this frame represents an inlined function.\n"
-		"\n"
-		"    See also GetFunctionName().\n"
-		""},
-	 { "SBFrame_IsArtificial", _wrap_SBFrame_IsArtificial, METH_VARARGS, "\n"
-		"SBFrame_IsArtificial(SBFrame self) -> bool\n"
-		"SBFrame_IsArtificial(SBFrame self) -> bool\n"
-		"\n"
-		"    Return true if this frame is artificial (e.g a frame synthesized to\n"
-		"    capture a tail call). Local variables may not be available in an artificial\n"
-		"    frame.\n"
-		""},
-	 { "SBFrame_IsHidden", _wrap_SBFrame_IsHidden, METH_O, "SBFrame_IsHidden(SBFrame self) -> bool"},
-	 { "SBFrame_EvaluateExpression", _wrap_SBFrame_EvaluateExpression, METH_VARARGS, "\n"
-		"SBFrame_EvaluateExpression(SBFrame self, char const * expr) -> SBValue\n"
-		"SBFrame_EvaluateExpression(SBFrame self, char const * expr, lldb::DynamicValueType use_dynamic) -> SBValue\n"
-		"SBFrame_EvaluateExpression(SBFrame self, char const * expr, lldb::DynamicValueType use_dynamic, bool unwind_on_error) -> SBValue\n"
-		"SBFrame_EvaluateExpression(SBFrame self, char const * expr, SBExpressionOptions options) -> SBValue\n"
-		"\n"
-		"    The version that doesn't supply a 'use_dynamic' value will use the\n"
-		"    target's default.\n"
-		""},
-	 { "SBFrame_GetFrameBlock", _wrap_SBFrame_GetFrameBlock, METH_O, "\n"
-		"SBFrame_GetFrameBlock(SBFrame self) -> SBBlock\n"
-		"\n"
-		"    Gets the lexical block that defines the stack frame. Another way to think\n"
-		"    of this is it will return the block that contains all of the variables\n"
-		"    for a stack frame. Inlined functions are represented as SBBlock objects\n"
-		"    that have inlined function information: the name of the inlined function,\n"
-		"    where it was called from. The block that is returned will be the first\n"
-		"    block at or above the block for the PC (SBFrame::GetBlock()) that defines\n"
-		"    the scope of the frame. When a function contains no inlined functions,\n"
-		"    this will be the top most lexical block that defines the function.\n"
-		"    When a function has inlined functions and the PC is currently\n"
-		"    in one of those inlined functions, this method will return the inlined\n"
-		"    block that defines this frame. If the PC isn't currently in an inlined\n"
-		"    function, the lexical block that defines the function is returned.\n"
-		""},
-	 { "SBFrame_GetLineEntry", _wrap_SBFrame_GetLineEntry, METH_O, "SBFrame_GetLineEntry(SBFrame self) -> SBLineEntry"},
-	 { "SBFrame_GetThread", _wrap_SBFrame_GetThread, METH_O, "SBFrame_GetThread(SBFrame self) -> SBThread"},
-	 { "SBFrame_Disassemble", _wrap_SBFrame_Disassemble, METH_O, "SBFrame_Disassemble(SBFrame self) -> char const *"},
-	 { "SBFrame_Clear", _wrap_SBFrame_Clear, METH_O, "SBFrame_Clear(SBFrame self)"},
-	 { "SBFrame___eq__", _wrap_SBFrame___eq__, METH_VARARGS, "SBFrame___eq__(SBFrame self, SBFrame rhs) -> bool"},
-	 { "SBFrame___ne__", _wrap_SBFrame___ne__, METH_VARARGS, "SBFrame___ne__(SBFrame self, SBFrame rhs) -> bool"},
-	 { "SBFrame_GetVariables", _wrap_SBFrame_GetVariables, METH_VARARGS, "\n"
-		"SBFrame_GetVariables(SBFrame self, bool arguments, bool locals, bool statics, bool in_scope_only) -> SBValueList\n"
-		"SBFrame_GetVariables(SBFrame self, bool arguments, bool locals, bool statics, bool in_scope_only, lldb::DynamicValueType use_dynamic) -> SBValueList\n"
-		"SBFrame_GetVariables(SBFrame self, SBVariablesOptions options) -> SBValueList\n"
-		"\n"
-		"    The version that doesn't supply a 'use_dynamic' value will use the\n"
-		"    target's default.\n"
-		""},
-	 { "SBFrame_GetRegisters", _wrap_SBFrame_GetRegisters, METH_O, "SBFrame_GetRegisters(SBFrame self) -> SBValueList"},
-	 { "SBFrame_FindRegister", _wrap_SBFrame_FindRegister, METH_VARARGS, "SBFrame_FindRegister(SBFrame self, char const * name) -> SBValue"},
-	 { "SBFrame_FindVariable", _wrap_SBFrame_FindVariable, METH_VARARGS, "\n"
-		"SBFrame_FindVariable(SBFrame self, char const * var_name) -> SBValue\n"
-		"SBFrame_FindVariable(SBFrame self, char const * var_name, lldb::DynamicValueType use_dynamic) -> SBValue\n"
-		"\n"
-		"    The version that doesn't supply a 'use_dynamic' value will use the\n"
-		"    target's default.\n"
-		""},
-	 { "SBFrame_GetValueForVariablePath", _wrap_SBFrame_GetValueForVariablePath, METH_VARARGS, "\n"
-		"SBFrame_GetValueForVariablePath(SBFrame self, char const * var_expr_cstr, lldb::DynamicValueType use_dynamic) -> SBValue\n"
-		"SBFrame_GetValueForVariablePath(SBFrame self, char const * var_path) -> SBValue\n"
-		"\n"
-		"    Get a lldb.SBValue for a variable path.\n"
-		"\n"
-		"    Variable paths can include access to pointer or instance members: ::\n"
-		"\n"
-		"        rect_ptr->origin.y\n"
-		"        pt.x\n"
-		"\n"
-		"    Pointer dereferences: ::\n"
-		"\n"
-		"        *this->foo_ptr\n"
-		"        **argv\n"
-		"\n"
-		"    Address of: ::\n"
-		"\n"
-		"        &pt\n"
-		"        &my_array[3].x\n"
-		"\n"
-		"    Array accesses and treating pointers as arrays: ::\n"
-		"\n"
-		"        int_array[1]\n"
-		"        pt_ptr[22].x\n"
-		"\n"
-		"    Unlike `EvaluateExpression()` which returns :py:class:`SBValue` objects\n"
-		"    with constant copies of the values at the time of evaluation,\n"
-		"    the result of this function is a value that will continue to\n"
-		"    track the current value of the value as execution progresses\n"
-		"    in the current frame.\n"
-		""},
-	 { "SBFrame_FindValue", _wrap_SBFrame_FindValue, METH_VARARGS, "\n"
-		"SBFrame_FindValue(SBFrame self, char const * name, lldb::ValueType value_type) -> SBValue\n"
-		"SBFrame_FindValue(SBFrame self, char const * name, lldb::ValueType value_type, lldb::DynamicValueType use_dynamic) -> SBValue\n"
-		"\n"
-		"    Find variables, register sets, registers, or persistent variables using\n"
-		"    the frame as the scope.\n"
-		"\n"
-		"    The version that doesn't supply a ``use_dynamic`` value will use the\n"
-		"    target's default.\n"
-		""},
-	 { "SBFrame_GetDescription", _wrap_SBFrame_GetDescription, METH_VARARGS, "SBFrame_GetDescription(SBFrame self, SBStream description) -> bool"},
-	 { "SBFrame_GetDescriptionWithFormat", _wrap_SBFrame_GetDescriptionWithFormat, METH_VARARGS, "SBFrame_GetDescriptionWithFormat(SBFrame self, SBFormat format, SBStream output) -> SBError"},
-	 { "SBFrame___repr__", _wrap_SBFrame___repr__, METH_O, "SBFrame___repr__(SBFrame self) -> std::string"},
-	 { "SBFrame_swigregister", SBFrame_swigregister, METH_O, NULL},
-	 { "SBFrame_swiginit", SBFrame_swiginit, METH_VARARGS, NULL},
-	 { "new_SBFunction", _wrap_new_SBFunction, METH_VARARGS, "\n"
-		"SBFunction()\n"
-		"new_SBFunction(SBFunction rhs) -> SBFunction\n"
-		""},
-	 { "delete_SBFunction", _wrap_delete_SBFunction, METH_O, "delete_SBFunction(SBFunction self)"},
-	 { "SBFunction___nonzero__", _wrap_SBFunction___nonzero__, METH_O, "SBFunction___nonzero__(SBFunction self) -> bool"},
-	 { "SBFunction_IsValid", _wrap_SBFunction_IsValid, METH_O, "SBFunction_IsValid(SBFunction self) -> bool"},
-	 { "SBFunction_GetName", _wrap_SBFunction_GetName, METH_O, "SBFunction_GetName(SBFunction self) -> char const *"},
-	 { "SBFunction_GetDisplayName", _wrap_SBFunction_GetDisplayName, METH_O, "SBFunction_GetDisplayName(SBFunction self) -> char const *"},
-	 { "SBFunction_GetMangledName", _wrap_SBFunction_GetMangledName, METH_O, "SBFunction_GetMangledName(SBFunction self) -> char const *"},
-	 { "SBFunction_GetInstructions", _wrap_SBFunction_GetInstructions, METH_VARARGS, "\n"
-		"SBFunction_GetInstructions(SBFunction self, SBTarget target) -> SBInstructionList\n"
-		"SBFunction_GetInstructions(SBFunction self, SBTarget target, char const * flavor) -> SBInstructionList\n"
-		""},
-	 { "SBFunction_GetStartAddress", _wrap_SBFunction_GetStartAddress, METH_O, "SBFunction_GetStartAddress(SBFunction self) -> SBAddress"},
-	 { "SBFunction_GetEndAddress", _wrap_SBFunction_GetEndAddress, METH_O, "SBFunction_GetEndAddress(SBFunction self) -> SBAddress"},
-	 { "SBFunction_GetRanges", _wrap_SBFunction_GetRanges, METH_O, "SBFunction_GetRanges(SBFunction self) -> SBAddressRangeList"},
-	 { "SBFunction_GetArgumentName", _wrap_SBFunction_GetArgumentName, METH_VARARGS, "SBFunction_GetArgumentName(SBFunction self, uint32_t arg_idx) -> char const *"},
-	 { "SBFunction_GetPrologueByteSize", _wrap_SBFunction_GetPrologueByteSize, METH_O, "SBFunction_GetPrologueByteSize(SBFunction self) -> uint32_t"},
-	 { "SBFunction_GetType", _wrap_SBFunction_GetType, METH_O, "SBFunction_GetType(SBFunction self) -> SBType"},
-	 { "SBFunction_GetBlock", _wrap_SBFunction_GetBlock, METH_O, "SBFunction_GetBlock(SBFunction self) -> SBBlock"},
-	 { "SBFunction_GetLanguage", _wrap_SBFunction_GetLanguage, METH_O, "SBFunction_GetLanguage(SBFunction self) -> lldb::LanguageType"},
-	 { "SBFunction_GetIsOptimized", _wrap_SBFunction_GetIsOptimized, METH_O, "\n"
-		"SBFunction_GetIsOptimized(SBFunction self) -> bool\n"
-		"\n"
-		"    Returns true if the function was compiled with optimization.\n"
-		"    Optimization, in this case, is meant to indicate that the debugger\n"
-		"    experience may be confusing for the user -- variables optimized away,\n"
-		"    stepping jumping between source lines -- and the driver may want to\n"
-		"    provide some guidance to the user about this.\n"
-		"    Returns false if unoptimized, or unknown.\n"
-		""},
-	 { "SBFunction_GetCanThrow", _wrap_SBFunction_GetCanThrow, METH_O, "SBFunction_GetCanThrow(SBFunction self) -> bool"},
-	 { "SBFunction___eq__", _wrap_SBFunction___eq__, METH_VARARGS, "SBFunction___eq__(SBFunction self, SBFunction rhs) -> bool"},
-	 { "SBFunction___ne__", _wrap_SBFunction___ne__, METH_VARARGS, "SBFunction___ne__(SBFunction self, SBFunction rhs) -> bool"},
-	 { "SBFunction_GetDescription", _wrap_SBFunction_GetDescription, METH_VARARGS, "SBFunction_GetDescription(SBFunction self, SBStream description) -> bool"},
-	 { "SBFunction___repr__", _wrap_SBFunction___repr__, METH_O, "SBFunction___repr__(SBFunction self) -> std::string"},
-	 { "SBFunction_swigregister", SBFunction_swigregister, METH_O, NULL},
-	 { "SBFunction_swiginit", SBFunction_swiginit, METH_VARARGS, NULL},
-	 { "SBHostOS_GetProgramFileSpec", _wrap_SBHostOS_GetProgramFileSpec, METH_NOARGS, "SBHostOS_GetProgramFileSpec() -> SBFileSpec"},
-	 { "SBHostOS_GetLLDBPythonPath", _wrap_SBHostOS_GetLLDBPythonPath, METH_NOARGS, "SBHostOS_GetLLDBPythonPath() -> SBFileSpec"},
-	 { "SBHostOS_GetLLDBPath", _wrap_SBHostOS_GetLLDBPath, METH_O, "SBHostOS_GetLLDBPath(lldb::PathType path_type) -> SBFileSpec"},
-	 { "SBHostOS_GetUserHomeDirectory", _wrap_SBHostOS_GetUserHomeDirectory, METH_NOARGS, "SBHostOS_GetUserHomeDirectory() -> SBFileSpec"},
-	 { "SBHostOS_ThreadCreated", _wrap_SBHostOS_ThreadCreated, METH_O, "SBHostOS_ThreadCreated(char const * name)"},
-	 { "SBHostOS_ThreadCreate", _wrap_SBHostOS_ThreadCreate, METH_VARARGS, "SBHostOS_ThreadCreate(char const * name, lldb::thread_func_t thread_function, void * thread_arg, SBError err) -> lldb::thread_t"},
-	 { "SBHostOS_ThreadCancel", _wrap_SBHostOS_ThreadCancel, METH_VARARGS, "SBHostOS_ThreadCancel(lldb::thread_t thread, SBError err) -> bool"},
-	 { "SBHostOS_ThreadDetach", _wrap_SBHostOS_ThreadDetach, METH_VARARGS, "SBHostOS_ThreadDetach(lldb::thread_t thread, SBError err) -> bool"},
-	 { "SBHostOS_ThreadJoin", _wrap_SBHostOS_ThreadJoin, METH_VARARGS, "SBHostOS_ThreadJoin(lldb::thread_t thread, lldb::thread_result_t * result, SBError err) -> bool"},
-	 { "new_SBHostOS", _wrap_new_SBHostOS, METH_NOARGS, "new_SBHostOS() -> SBHostOS"},
-	 { "delete_SBHostOS", _wrap_delete_SBHostOS, METH_O, "delete_SBHostOS(SBHostOS self)"},
-	 { "SBHostOS_swigregister", SBHostOS_swigregister, METH_O, NULL},
-	 { "SBHostOS_swiginit", SBHostOS_swiginit, METH_VARARGS, NULL},
-	 { "new_SBInstruction", _wrap_new_SBInstruction, METH_VARARGS, "\n"
-		"SBInstruction()\n"
-		"new_SBInstruction(SBInstruction rhs) -> SBInstruction\n"
-		""},
-	 { "delete_SBInstruction", _wrap_delete_SBInstruction, METH_O, "delete_SBInstruction(SBInstruction self)"},
-	 { "SBInstruction___nonzero__", _wrap_SBInstruction___nonzero__, METH_O, "SBInstruction___nonzero__(SBInstruction self) -> bool"},
-	 { "SBInstruction_IsValid", _wrap_SBInstruction_IsValid, METH_O, "SBInstruction_IsValid(SBInstruction self) -> bool"},
-	 { "SBInstruction_GetAddress", _wrap_SBInstruction_GetAddress, METH_O, "SBInstruction_GetAddress(SBInstruction self) -> SBAddress"},
-	 { "SBInstruction_GetMnemonic", _wrap_SBInstruction_GetMnemonic, METH_VARARGS, "SBInstruction_GetMnemonic(SBInstruction self, SBTarget target) -> char const *"},
-	 { "SBInstruction_GetOperands", _wrap_SBInstruction_GetOperands, METH_VARARGS, "SBInstruction_GetOperands(SBInstruction self, SBTarget target) -> char const *"},
-	 { "SBInstruction_GetComment", _wrap_SBInstruction_GetComment, METH_VARARGS, "SBInstruction_GetComment(SBInstruction self, SBTarget target) -> char const *"},
-	 { "SBInstruction_GetControlFlowKind", _wrap_SBInstruction_GetControlFlowKind, METH_VARARGS, "SBInstruction_GetControlFlowKind(SBInstruction self, SBTarget target) -> lldb::InstructionControlFlowKind"},
-	 { "SBInstruction_GetData", _wrap_SBInstruction_GetData, METH_VARARGS, "SBInstruction_GetData(SBInstruction self, SBTarget target) -> SBData"},
-	 { "SBInstruction_GetByteSize", _wrap_SBInstruction_GetByteSize, METH_O, "SBInstruction_GetByteSize(SBInstruction self) -> size_t"},
-	 { "SBInstruction_DoesBranch", _wrap_SBInstruction_DoesBranch, METH_O, "SBInstruction_DoesBranch(SBInstruction self) -> bool"},
-	 { "SBInstruction_HasDelaySlot", _wrap_SBInstruction_HasDelaySlot, METH_O, "SBInstruction_HasDelaySlot(SBInstruction self) -> bool"},
-	 { "SBInstruction_CanSetBreakpoint", _wrap_SBInstruction_CanSetBreakpoint, METH_O, "SBInstruction_CanSetBreakpoint(SBInstruction self) -> bool"},
-	 { "SBInstruction_Print", _wrap_SBInstruction_Print, METH_VARARGS, "\n"
-		"SBInstruction_Print(SBInstruction self, SBFile out)\n"
-		"SBInstruction_Print(SBInstruction self, lldb::FileSP BORROWED)\n"
-		""},
-	 { "SBInstruction_GetDescription", _wrap_SBInstruction_GetDescription, METH_VARARGS, "SBInstruction_GetDescription(SBInstruction self, SBStream description) -> bool"},
-	 { "SBInstruction_EmulateWithFrame", _wrap_SBInstruction_EmulateWithFrame, METH_VARARGS, "SBInstruction_EmulateWithFrame(SBInstruction self, SBFrame frame, uint32_t evaluate_options) -> bool"},
-	 { "SBInstruction_DumpEmulation", _wrap_SBInstruction_DumpEmulation, METH_VARARGS, "SBInstruction_DumpEmulation(SBInstruction self, char const * triple) -> bool"},
-	 { "SBInstruction_TestEmulation", _wrap_SBInstruction_TestEmulation, METH_VARARGS, "SBInstruction_TestEmulation(SBInstruction self, SBStream output_stream, char const * test_file) -> bool"},
-	 { "SBInstruction___repr__", _wrap_SBInstruction___repr__, METH_O, "SBInstruction___repr__(SBInstruction self) -> std::string"},
-	 { "SBInstruction_swigregister", SBInstruction_swigregister, METH_O, NULL},
-	 { "SBInstruction_swiginit", SBInstruction_swiginit, METH_VARARGS, NULL},
-	 { "new_SBInstructionList", _wrap_new_SBInstructionList, METH_VARARGS, "\n"
-		"SBInstructionList()\n"
-		"new_SBInstructionList(SBInstructionList rhs) -> SBInstructionList\n"
-		""},
-	 { "delete_SBInstructionList", _wrap_delete_SBInstructionList, METH_O, "delete_SBInstructionList(SBInstructionList self)"},
-	 { "SBInstructionList___nonzero__", _wrap_SBInstructionList___nonzero__, METH_O, "SBInstructionList___nonzero__(SBInstructionList self) -> bool"},
-	 { "SBInstructionList_IsValid", _wrap_SBInstructionList_IsValid, METH_O, "SBInstructionList_IsValid(SBInstructionList self) -> bool"},
-	 { "SBInstructionList_GetSize", _wrap_SBInstructionList_GetSize, METH_O, "SBInstructionList_GetSize(SBInstructionList self) -> size_t"},
-	 { "SBInstructionList_GetInstructionAtIndex", _wrap_SBInstructionList_GetInstructionAtIndex, METH_VARARGS, "SBInstructionList_GetInstructionAtIndex(SBInstructionList self, uint32_t idx) -> SBInstruction"},
-	 { "SBInstructionList_GetInstructionsCount", _wrap_SBInstructionList_GetInstructionsCount, METH_VARARGS, "SBInstructionList_GetInstructionsCount(SBInstructionList self, SBAddress start, SBAddress end, bool canSetBreakpoint=False) -> size_t"},
-	 { "SBInstructionList_Clear", _wrap_SBInstructionList_Clear, METH_O, "SBInstructionList_Clear(SBInstructionList self)"},
-	 { "SBInstructionList_AppendInstruction", _wrap_SBInstructionList_AppendInstruction, METH_VARARGS, "SBInstructionList_AppendInstruction(SBInstructionList self, SBInstruction inst)"},
-	 { "SBInstructionList_Print", _wrap_SBInstructionList_Print, METH_VARARGS, "\n"
-		"SBInstructionList_Print(SBInstructionList self, SBFile out)\n"
-		"SBInstructionList_Print(SBInstructionList self, lldb::FileSP BORROWED)\n"
-		""},
-	 { "SBInstructionList_GetDescription", _wrap_SBInstructionList_GetDescription, METH_VARARGS, "SBInstructionList_GetDescription(SBInstructionList self, SBStream description) -> bool"},
-	 { "SBInstructionList_DumpEmulationForAllInstructions", _wrap_SBInstructionList_DumpEmulationForAllInstructions, METH_VARARGS, "SBInstructionList_DumpEmulationForAllInstructions(SBInstructionList self, char const * triple) -> bool"},
-	 { "SBInstructionList___repr__", _wrap_SBInstructionList___repr__, METH_O, "SBInstructionList___repr__(SBInstructionList self) -> std::string"},
-	 { "SBInstructionList_swigregister", SBInstructionList_swigregister, METH_O, NULL},
-	 { "SBInstructionList_swiginit", SBInstructionList_swiginit, METH_VARARGS, NULL},
-	 { "SBLanguageRuntime_GetLanguageTypeFromString", _wrap_SBLanguageRuntime_GetLanguageTypeFromString, METH_O, "SBLanguageRuntime_GetLanguageTypeFromString(char const * string) -> lldb::LanguageType"},
-	 { "SBLanguageRuntime_GetNameForLanguageType", _wrap_SBLanguageRuntime_GetNameForLanguageType, METH_O, "SBLanguageRuntime_GetNameForLanguageType(lldb::LanguageType language) -> char const *"},
-	 { "SBLanguageRuntime_LanguageIsCPlusPlus", _wrap_SBLanguageRuntime_LanguageIsCPlusPlus, METH_O, "SBLanguageRuntime_LanguageIsCPlusPlus(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_LanguageIsObjC", _wrap_SBLanguageRuntime_LanguageIsObjC, METH_O, "SBLanguageRuntime_LanguageIsObjC(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_LanguageIsCFamily", _wrap_SBLanguageRuntime_LanguageIsCFamily, METH_O, "SBLanguageRuntime_LanguageIsCFamily(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow", _wrap_SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow, METH_O, "SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch", _wrap_SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch, METH_O, "SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch(lldb::LanguageType language) -> bool"},
-	 { "SBLanguageRuntime_GetThrowKeywordForLanguage", _wrap_SBLanguageRuntime_GetThrowKeywordForLanguage, METH_O, "SBLanguageRuntime_GetThrowKeywordForLanguage(lldb::LanguageType language) -> char const *"},
-	 { "SBLanguageRuntime_GetCatchKeywordForLanguage", _wrap_SBLanguageRuntime_GetCatchKeywordForLanguage, METH_O, "SBLanguageRuntime_GetCatchKeywordForLanguage(lldb::LanguageType language) -> char const *"},
-	 { "new_SBLanguageRuntime", _wrap_new_SBLanguageRuntime, METH_NOARGS, "new_SBLanguageRuntime() -> SBLanguageRuntime"},
-	 { "delete_SBLanguageRuntime", _wrap_delete_SBLanguageRuntime, METH_O, "delete_SBLanguageRuntime(SBLanguageRuntime self)"},
-	 { "SBLanguageRuntime_swigregister", SBLanguageRuntime_swigregister, METH_O, NULL},
-	 { "SBLanguageRuntime_swiginit", SBLanguageRuntime_swiginit, METH_VARARGS, NULL},
-	 { "new_SBLaunchInfo", _wrap_new_SBLaunchInfo, METH_O, "new_SBLaunchInfo(char const ** argv) -> SBLaunchInfo"},
-	 { "delete_SBLaunchInfo", _wrap_delete_SBLaunchInfo, METH_O, "delete_SBLaunchInfo(SBLaunchInfo self)"},
-	 { "SBLaunchInfo_GetProcessID", _wrap_SBLaunchInfo_GetProcessID, METH_O, "SBLaunchInfo_GetProcessID(SBLaunchInfo self) -> lldb::pid_t"},
-	 { "SBLaunchInfo_GetUserID", _wrap_SBLaunchInfo_GetUserID, METH_O, "SBLaunchInfo_GetUserID(SBLaunchInfo self) -> uint32_t"},
-	 { "SBLaunchInfo_GetGroupID", _wrap_SBLaunchInfo_GetGroupID, METH_O, "SBLaunchInfo_GetGroupID(SBLaunchInfo self) -> uint32_t"},
-	 { "SBLaunchInfo_UserIDIsValid", _wrap_SBLaunchInfo_UserIDIsValid, METH_O, "SBLaunchInfo_UserIDIsValid(SBLaunchInfo self) -> bool"},
-	 { "SBLaunchInfo_GroupIDIsValid", _wrap_SBLaunchInfo_GroupIDIsValid, METH_O, "SBLaunchInfo_GroupIDIsValid(SBLaunchInfo self) -> bool"},
-	 { "SBLaunchInfo_SetUserID", _wrap_SBLaunchInfo_SetUserID, METH_VARARGS, "SBLaunchInfo_SetUserID(SBLaunchInfo self, uint32_t uid)"},
-	 { "SBLaunchInfo_SetGroupID", _wrap_SBLaunchInfo_SetGroupID, METH_VARARGS, "SBLaunchInfo_SetGroupID(SBLaunchInfo self, uint32_t gid)"},
-	 { "SBLaunchInfo_GetExecutableFile", _wrap_SBLaunchInfo_GetExecutableFile, METH_O, "SBLaunchInfo_GetExecutableFile(SBLaunchInfo self) -> SBFileSpec"},
-	 { "SBLaunchInfo_SetExecutableFile", _wrap_SBLaunchInfo_SetExecutableFile, METH_VARARGS, "SBLaunchInfo_SetExecutableFile(SBLaunchInfo self, SBFileSpec exe_file, bool add_as_first_arg)"},
-	 { "SBLaunchInfo_GetListener", _wrap_SBLaunchInfo_GetListener, METH_O, "SBLaunchInfo_GetListener(SBLaunchInfo self) -> SBListener"},
-	 { "SBLaunchInfo_SetListener", _wrap_SBLaunchInfo_SetListener, METH_VARARGS, "SBLaunchInfo_SetListener(SBLaunchInfo self, SBListener listener)"},
-	 { "SBLaunchInfo_GetShadowListener", _wrap_SBLaunchInfo_GetShadowListener, METH_O, "SBLaunchInfo_GetShadowListener(SBLaunchInfo self) -> SBListener"},
-	 { "SBLaunchInfo_SetShadowListener", _wrap_SBLaunchInfo_SetShadowListener, METH_VARARGS, "SBLaunchInfo_SetShadowListener(SBLaunchInfo self, SBListener listener)"},
-	 { "SBLaunchInfo_GetNumArguments", _wrap_SBLaunchInfo_GetNumArguments, METH_O, "SBLaunchInfo_GetNumArguments(SBLaunchInfo self) -> uint32_t"},
-	 { "SBLaunchInfo_GetArgumentAtIndex", _wrap_SBLaunchInfo_GetArgumentAtIndex, METH_VARARGS, "SBLaunchInfo_GetArgumentAtIndex(SBLaunchInfo self, uint32_t idx) -> char const *"},
-	 { "SBLaunchInfo_SetArguments", _wrap_SBLaunchInfo_SetArguments, METH_VARARGS, "SBLaunchInfo_SetArguments(SBLaunchInfo self, char const ** argv, bool append)"},
-	 { "SBLaunchInfo_GetNumEnvironmentEntries", _wrap_SBLaunchInfo_GetNumEnvironmentEntries, METH_O, "SBLaunchInfo_GetNumEnvironmentEntries(SBLaunchInfo self) -> uint32_t"},
-	 { "SBLaunchInfo_GetEnvironmentEntryAtIndex", _wrap_SBLaunchInfo_GetEnvironmentEntryAtIndex, METH_VARARGS, "SBLaunchInfo_GetEnvironmentEntryAtIndex(SBLaunchInfo self, uint32_t idx) -> char const *"},
-	 { "SBLaunchInfo_SetEnvironmentEntries", _wrap_SBLaunchInfo_SetEnvironmentEntries, METH_VARARGS, "SBLaunchInfo_SetEnvironmentEntries(SBLaunchInfo self, char const ** envp, bool append)"},
-	 { "SBLaunchInfo_SetEnvironment", _wrap_SBLaunchInfo_SetEnvironment, METH_VARARGS, "SBLaunchInfo_SetEnvironment(SBLaunchInfo self, SBEnvironment env, bool append)"},
-	 { "SBLaunchInfo_GetEnvironment", _wrap_SBLaunchInfo_GetEnvironment, METH_O, "SBLaunchInfo_GetEnvironment(SBLaunchInfo self) -> SBEnvironment"},
-	 { "SBLaunchInfo_Clear", _wrap_SBLaunchInfo_Clear, METH_O, "SBLaunchInfo_Clear(SBLaunchInfo self)"},
-	 { "SBLaunchInfo_GetWorkingDirectory", _wrap_SBLaunchInfo_GetWorkingDirectory, METH_O, "SBLaunchInfo_GetWorkingDirectory(SBLaunchInfo self) -> char const *"},
-	 { "SBLaunchInfo_SetWorkingDirectory", _wrap_SBLaunchInfo_SetWorkingDirectory, METH_VARARGS, "SBLaunchInfo_SetWorkingDirectory(SBLaunchInfo self, char const * working_dir)"},
-	 { "SBLaunchInfo_GetLaunchFlags", _wrap_SBLaunchInfo_GetLaunchFlags, METH_O, "SBLaunchInfo_GetLaunchFlags(SBLaunchInfo self) -> uint32_t"},
-	 { "SBLaunchInfo_SetLaunchFlags", _wrap_SBLaunchInfo_SetLaunchFlags, METH_VARARGS, "SBLaunchInfo_SetLaunchFlags(SBLaunchInfo self, uint32_t flags)"},
-	 { "SBLaunchInfo_GetProcessPluginName", _wrap_SBLaunchInfo_GetProcessPluginName, METH_O, "SBLaunchInfo_GetProcessPluginName(SBLaunchInfo self) -> char const *"},
-	 { "SBLaunchInfo_SetProcessPluginName", _wrap_SBLaunchInfo_SetProcessPluginName, METH_VARARGS, "SBLaunchInfo_SetProcessPluginName(SBLaunchInfo self, char const * plugin_name)"},
-	 { "SBLaunchInfo_GetShell", _wrap_SBLaunchInfo_GetShell, METH_O, "SBLaunchInfo_GetShell(SBLaunchInfo self) -> char const *"},
-	 { "SBLaunchInfo_SetShell", _wrap_SBLaunchInfo_SetShell, METH_VARARGS, "SBLaunchInfo_SetShell(SBLaunchInfo self, char const * path)"},
-	 { "SBLaunchInfo_GetShellExpandArguments", _wrap_SBLaunchInfo_GetShellExpandArguments, METH_O, "SBLaunchInfo_GetShellExpandArguments(SBLaunchInfo self) -> bool"},
-	 { "SBLaunchInfo_SetShellExpandArguments", _wrap_SBLaunchInfo_SetShellExpandArguments, METH_VARARGS, "SBLaunchInfo_SetShellExpandArguments(SBLaunchInfo self, bool expand)"},
-	 { "SBLaunchInfo_GetResumeCount", _wrap_SBLaunchInfo_GetResumeCount, METH_O, "SBLaunchInfo_GetResumeCount(SBLaunchInfo self) -> uint32_t"},
-	 { "SBLaunchInfo_SetResumeCount", _wrap_SBLaunchInfo_SetResumeCount, METH_VARARGS, "SBLaunchInfo_SetResumeCount(SBLaunchInfo self, uint32_t c)"},
-	 { "SBLaunchInfo_AddCloseFileAction", _wrap_SBLaunchInfo_AddCloseFileAction, METH_VARARGS, "SBLaunchInfo_AddCloseFileAction(SBLaunchInfo self, int fd) -> bool"},
-	 { "SBLaunchInfo_AddDuplicateFileAction", _wrap_SBLaunchInfo_AddDuplicateFileAction, METH_VARARGS, "SBLaunchInfo_AddDuplicateFileAction(SBLaunchInfo self, int fd, int dup_fd) -> bool"},
-	 { "SBLaunchInfo_AddOpenFileAction", _wrap_SBLaunchInfo_AddOpenFileAction, METH_VARARGS, "SBLaunchInfo_AddOpenFileAction(SBLaunchInfo self, int fd, char const * path, bool read, bool write) -> bool"},
-	 { "SBLaunchInfo_AddSuppressFileAction", _wrap_SBLaunchInfo_AddSuppressFileAction, METH_VARARGS, "SBLaunchInfo_AddSuppressFileAction(SBLaunchInfo self, int fd, bool read, bool write) -> bool"},
-	 { "SBLaunchInfo_SetLaunchEventData", _wrap_SBLaunchInfo_SetLaunchEventData, METH_VARARGS, "SBLaunchInfo_SetLaunchEventData(SBLaunchInfo self, char const * data)"},
-	 { "SBLaunchInfo_GetLaunchEventData", _wrap_SBLaunchInfo_GetLaunchEventData, METH_O, "SBLaunchInfo_GetLaunchEventData(SBLaunchInfo self) -> char const *"},
-	 { "SBLaunchInfo_GetDetachOnError", _wrap_SBLaunchInfo_GetDetachOnError, METH_O, "SBLaunchInfo_GetDetachOnError(SBLaunchInfo self) -> bool"},
-	 { "SBLaunchInfo_SetDetachOnError", _wrap_SBLaunchInfo_SetDetachOnError, METH_VARARGS, "SBLaunchInfo_SetDetachOnError(SBLaunchInfo self, bool enable)"},
-	 { "SBLaunchInfo_GetScriptedProcessClassName", _wrap_SBLaunchInfo_GetScriptedProcessClassName, METH_O, "SBLaunchInfo_GetScriptedProcessClassName(SBLaunchInfo self) -> char const *"},
-	 { "SBLaunchInfo_SetScriptedProcessClassName", _wrap_SBLaunchInfo_SetScriptedProcessClassName, METH_VARARGS, "SBLaunchInfo_SetScriptedProcessClassName(SBLaunchInfo self, char const * class_name)"},
-	 { "SBLaunchInfo_GetScriptedProcessDictionary", _wrap_SBLaunchInfo_GetScriptedProcessDictionary, METH_O, "SBLaunchInfo_GetScriptedProcessDictionary(SBLaunchInfo self) -> SBStructuredData"},
-	 { "SBLaunchInfo_SetScriptedProcessDictionary", _wrap_SBLaunchInfo_SetScriptedProcessDictionary, METH_VARARGS, "SBLaunchInfo_SetScriptedProcessDictionary(SBLaunchInfo self, SBStructuredData dict)"},
-	 { "SBLaunchInfo_swigregister", SBLaunchInfo_swigregister, METH_O, NULL},
-	 { "SBLaunchInfo_swiginit", SBLaunchInfo_swiginit, METH_VARARGS, NULL},
-	 { "new_SBLineEntry", _wrap_new_SBLineEntry, METH_VARARGS, "\n"
-		"SBLineEntry()\n"
-		"new_SBLineEntry(SBLineEntry rhs) -> SBLineEntry\n"
-		""},
-	 { "delete_SBLineEntry", _wrap_delete_SBLineEntry, METH_O, "delete_SBLineEntry(SBLineEntry self)"},
-	 { "SBLineEntry_GetStartAddress", _wrap_SBLineEntry_GetStartAddress, METH_O, "SBLineEntry_GetStartAddress(SBLineEntry self) -> SBAddress"},
-	 { "SBLineEntry_GetEndAddress", _wrap_SBLineEntry_GetEndAddress, METH_O, "SBLineEntry_GetEndAddress(SBLineEntry self) -> SBAddress"},
-	 { "SBLineEntry_GetSameLineContiguousAddressRangeEnd", _wrap_SBLineEntry_GetSameLineContiguousAddressRangeEnd, METH_VARARGS, "SBLineEntry_GetSameLineContiguousAddressRangeEnd(SBLineEntry self, bool include_inlined_functions) -> SBAddress"},
-	 { "SBLineEntry___nonzero__", _wrap_SBLineEntry___nonzero__, METH_O, "SBLineEntry___nonzero__(SBLineEntry self) -> bool"},
-	 { "SBLineEntry_IsValid", _wrap_SBLineEntry_IsValid, METH_O, "SBLineEntry_IsValid(SBLineEntry self) -> bool"},
-	 { "SBLineEntry_GetFileSpec", _wrap_SBLineEntry_GetFileSpec, METH_O, "SBLineEntry_GetFileSpec(SBLineEntry self) -> SBFileSpec"},
-	 { "SBLineEntry_GetLine", _wrap_SBLineEntry_GetLine, METH_O, "SBLineEntry_GetLine(SBLineEntry self) -> uint32_t"},
-	 { "SBLineEntry_GetColumn", _wrap_SBLineEntry_GetColumn, METH_O, "SBLineEntry_GetColumn(SBLineEntry self) -> uint32_t"},
-	 { "SBLineEntry_SetFileSpec", _wrap_SBLineEntry_SetFileSpec, METH_VARARGS, "SBLineEntry_SetFileSpec(SBLineEntry self, SBFileSpec filespec)"},
-	 { "SBLineEntry_SetLine", _wrap_SBLineEntry_SetLine, METH_VARARGS, "SBLineEntry_SetLine(SBLineEntry self, uint32_t line)"},
-	 { "SBLineEntry_SetColumn", _wrap_SBLineEntry_SetColumn, METH_VARARGS, "SBLineEntry_SetColumn(SBLineEntry self, uint32_t column)"},
-	 { "SBLineEntry___eq__", _wrap_SBLineEntry___eq__, METH_VARARGS, "SBLineEntry___eq__(SBLineEntry self, SBLineEntry rhs) -> bool"},
-	 { "SBLineEntry___ne__", _wrap_SBLineEntry___ne__, METH_VARARGS, "SBLineEntry___ne__(SBLineEntry self, SBLineEntry rhs) -> bool"},
-	 { "SBLineEntry_GetDescription", _wrap_SBLineEntry_GetDescription, METH_VARARGS, "SBLineEntry_GetDescription(SBLineEntry self, SBStream description) -> bool"},
-	 { "SBLineEntry___repr__", _wrap_SBLineEntry___repr__, METH_O, "SBLineEntry___repr__(SBLineEntry self) -> std::string"},
-	 { "SBLineEntry_swigregister", SBLineEntry_swigregister, METH_O, NULL},
-	 { "SBLineEntry_swiginit", SBLineEntry_swiginit, METH_VARARGS, NULL},
-	 { "new_SBListener", _wrap_new_SBListener, METH_VARARGS, "\n"
-		"SBListener()\n"
-		"SBListener(char const * name)\n"
-		"new_SBListener(SBListener rhs) -> SBListener\n"
-		""},
-	 { "delete_SBListener", _wrap_delete_SBListener, METH_O, "delete_SBListener(SBListener self)"},
-	 { "SBListener_AddEvent", _wrap_SBListener_AddEvent, METH_VARARGS, "SBListener_AddEvent(SBListener self, SBEvent event)"},
-	 { "SBListener_Clear", _wrap_SBListener_Clear, METH_O, "SBListener_Clear(SBListener self)"},
-	 { "SBListener___nonzero__", _wrap_SBListener___nonzero__, METH_O, "SBListener___nonzero__(SBListener self) -> bool"},
-	 { "SBListener_IsValid", _wrap_SBListener_IsValid, METH_O, "SBListener_IsValid(SBListener self) -> bool"},
-	 { "SBListener_StartListeningForEventClass", _wrap_SBListener_StartListeningForEventClass, METH_VARARGS, "SBListener_StartListeningForEventClass(SBListener self, SBDebugger debugger, char const * broadcaster_class, uint32_t event_mask) -> uint32_t"},
-	 { "SBListener_StopListeningForEventClass", _wrap_SBListener_StopListeningForEventClass, METH_VARARGS, "SBListener_StopListeningForEventClass(SBListener self, SBDebugger debugger, char const * broadcaster_class, uint32_t event_mask) -> bool"},
-	 { "SBListener_StartListeningForEvents", _wrap_SBListener_StartListeningForEvents, METH_VARARGS, "SBListener_StartListeningForEvents(SBListener self, SBBroadcaster broadcaster, uint32_t event_mask) -> uint32_t"},
-	 { "SBListener_StopListeningForEvents", _wrap_SBListener_StopListeningForEvents, METH_VARARGS, "SBListener_StopListeningForEvents(SBListener self, SBBroadcaster broadcaster, uint32_t event_mask) -> bool"},
-	 { "SBListener_WaitForEvent", _wrap_SBListener_WaitForEvent, METH_VARARGS, "SBListener_WaitForEvent(SBListener self, uint32_t num_seconds, SBEvent event) -> bool"},
-	 { "SBListener_WaitForEventForBroadcaster", _wrap_SBListener_WaitForEventForBroadcaster, METH_VARARGS, "SBListener_WaitForEventForBroadcaster(SBListener self, uint32_t num_seconds, SBBroadcaster broadcaster, SBEvent sb_event) -> bool"},
-	 { "SBListener_WaitForEventForBroadcasterWithType", _wrap_SBListener_WaitForEventForBroadcasterWithType, METH_VARARGS, "SBListener_WaitForEventForBroadcasterWithType(SBListener self, uint32_t num_seconds, SBBroadcaster broadcaster, uint32_t event_type_mask, SBEvent sb_event) -> bool"},
-	 { "SBListener_PeekAtNextEvent", _wrap_SBListener_PeekAtNextEvent, METH_VARARGS, "SBListener_PeekAtNextEvent(SBListener self, SBEvent sb_event) -> bool"},
-	 { "SBListener_PeekAtNextEventForBroadcaster", _wrap_SBListener_PeekAtNextEventForBroadcaster, METH_VARARGS, "SBListener_PeekAtNextEventForBroadcaster(SBListener self, SBBroadcaster broadcaster, SBEvent sb_event) -> bool"},
-	 { "SBListener_PeekAtNextEventForBroadcasterWithType", _wrap_SBListener_PeekAtNextEventForBroadcasterWithType, METH_VARARGS, "SBListener_PeekAtNextEventForBroadcasterWithType(SBListener self, SBBroadcaster broadcaster, uint32_t event_type_mask, SBEvent sb_event) -> bool"},
-	 { "SBListener_GetNextEvent", _wrap_SBListener_GetNextEvent, METH_VARARGS, "SBListener_GetNextEvent(SBListener self, SBEvent sb_event) -> bool"},
-	 { "SBListener_GetNextEventForBroadcaster", _wrap_SBListener_GetNextEventForBroadcaster, METH_VARARGS, "SBListener_GetNextEventForBroadcaster(SBListener self, SBBroadcaster broadcaster, SBEvent sb_event) -> bool"},
-	 { "SBListener_GetNextEventForBroadcasterWithType", _wrap_SBListener_GetNextEventForBroadcasterWithType, METH_VARARGS, "SBListener_GetNextEventForBroadcasterWithType(SBListener self, SBBroadcaster broadcaster, uint32_t event_type_mask, SBEvent sb_event) -> bool"},
-	 { "SBListener_HandleBroadcastEvent", _wrap_SBListener_HandleBroadcastEvent, METH_VARARGS, "SBListener_HandleBroadcastEvent(SBListener self, SBEvent event) -> bool"},
-	 { "SBListener_swigregister", SBListener_swigregister, METH_O, NULL},
-	 { "SBListener_swiginit", SBListener_swiginit, METH_VARARGS, NULL},
-	 { "new_SBMemoryRegionInfo", _wrap_new_SBMemoryRegionInfo, METH_VARARGS, "\n"
-		"SBMemoryRegionInfo()\n"
-		"SBMemoryRegionInfo(SBMemoryRegionInfo rhs)\n"
-		"SBMemoryRegionInfo(char const * name, lldb::addr_t begin, lldb::addr_t end, uint32_t permissions, bool mapped, bool stack_memory=False)\n"
-		""},
-	 { "delete_SBMemoryRegionInfo", _wrap_delete_SBMemoryRegionInfo, METH_O, "delete_SBMemoryRegionInfo(SBMemoryRegionInfo self)"},
-	 { "SBMemoryRegionInfo_Clear", _wrap_SBMemoryRegionInfo_Clear, METH_O, "SBMemoryRegionInfo_Clear(SBMemoryRegionInfo self)"},
-	 { "SBMemoryRegionInfo_GetRegionBase", _wrap_SBMemoryRegionInfo_GetRegionBase, METH_O, "SBMemoryRegionInfo_GetRegionBase(SBMemoryRegionInfo self) -> lldb::addr_t"},
-	 { "SBMemoryRegionInfo_GetRegionEnd", _wrap_SBMemoryRegionInfo_GetRegionEnd, METH_O, "SBMemoryRegionInfo_GetRegionEnd(SBMemoryRegionInfo self) -> lldb::addr_t"},
-	 { "SBMemoryRegionInfo_IsReadable", _wrap_SBMemoryRegionInfo_IsReadable, METH_O, "SBMemoryRegionInfo_IsReadable(SBMemoryRegionInfo self) -> bool"},
-	 { "SBMemoryRegionInfo_IsWritable", _wrap_SBMemoryRegionInfo_IsWritable, METH_O, "SBMemoryRegionInfo_IsWritable(SBMemoryRegionInfo self) -> bool"},
-	 { "SBMemoryRegionInfo_IsExecutable", _wrap_SBMemoryRegionInfo_IsExecutable, METH_O, "SBMemoryRegionInfo_IsExecutable(SBMemoryRegionInfo self) -> bool"},
-	 { "SBMemoryRegionInfo_IsMapped", _wrap_SBMemoryRegionInfo_IsMapped, METH_O, "SBMemoryRegionInfo_IsMapped(SBMemoryRegionInfo self) -> bool"},
-	 { "SBMemoryRegionInfo_GetName", _wrap_SBMemoryRegionInfo_GetName, METH_O, "SBMemoryRegionInfo_GetName(SBMemoryRegionInfo self) -> char const *"},
-	 { "SBMemoryRegionInfo_HasDirtyMemoryPageList", _wrap_SBMemoryRegionInfo_HasDirtyMemoryPageList, METH_O, "\n"
-		"SBMemoryRegionInfo_HasDirtyMemoryPageList(SBMemoryRegionInfo self) -> bool\n"
-		"\n"
-		"        Returns whether this memory region has a list of modified (dirty)\n"
-		"        pages available or not.  When calling GetNumDirtyPages(), you will\n"
-		"        have 0 returned for both \"dirty page list is not known\" and \n"
-		"        \"empty dirty page list\" (that is, no modified pages in this\n"
-		"        memory region).  You must use this method to disambiguate.\n"
-		""},
-	 { "SBMemoryRegionInfo_GetNumDirtyPages", _wrap_SBMemoryRegionInfo_GetNumDirtyPages, METH_O, "\n"
-		"SBMemoryRegionInfo_GetNumDirtyPages(SBMemoryRegionInfo self) -> uint32_t\n"
-		"\n"
-		"        Return the number of dirty (modified) memory pages in this\n"
-		"        memory region, if available.  You must use the \n"
-		"        SBMemoryRegionInfo::HasDirtyMemoryPageList() method to\n"
-		"        determine if a dirty memory list is available; it will depend\n"
-		"        on the target system can provide this information.\n"
-		""},
-	 { "SBMemoryRegionInfo_GetDirtyPageAddressAtIndex", _wrap_SBMemoryRegionInfo_GetDirtyPageAddressAtIndex, METH_VARARGS, "\n"
-		"SBMemoryRegionInfo_GetDirtyPageAddressAtIndex(SBMemoryRegionInfo self, uint32_t idx) -> lldb::addr_t\n"
-		"\n"
-		"        Return the address of a modified, or dirty, page of memory.\n"
-		"        If the provided index is out of range, or this memory region \n"
-		"        does not have dirty page information, LLDB_INVALID_ADDRESS \n"
-		"        is returned.\n"
-		""},
-	 { "SBMemoryRegionInfo_GetPageSize", _wrap_SBMemoryRegionInfo_GetPageSize, METH_O, "\n"
-		"SBMemoryRegionInfo_GetPageSize(SBMemoryRegionInfo self) -> int\n"
-		"\n"
-		"        Return the size of pages in this memory region.  0 will be returned\n"
-		"        if this information was unavailable.\n"
-		""},
-	 { "SBMemoryRegionInfo___eq__", _wrap_SBMemoryRegionInfo___eq__, METH_VARARGS, "SBMemoryRegionInfo___eq__(SBMemoryRegionInfo self, SBMemoryRegionInfo rhs) -> bool"},
-	 { "SBMemoryRegionInfo___ne__", _wrap_SBMemoryRegionInfo___ne__, METH_VARARGS, "SBMemoryRegionInfo___ne__(SBMemoryRegionInfo self, SBMemoryRegionInfo rhs) -> bool"},
-	 { "SBMemoryRegionInfo_GetDescription", _wrap_SBMemoryRegionInfo_GetDescription, METH_VARARGS, "SBMemoryRegionInfo_GetDescription(SBMemoryRegionInfo self, SBStream description) -> bool"},
-	 { "SBMemoryRegionInfo___repr__", _wrap_SBMemoryRegionInfo___repr__, METH_O, "SBMemoryRegionInfo___repr__(SBMemoryRegionInfo self) -> std::string"},
-	 { "SBMemoryRegionInfo_swigregister", SBMemoryRegionInfo_swigregister, METH_O, NULL},
-	 { "SBMemoryRegionInfo_swiginit", SBMemoryRegionInfo_swiginit, METH_VARARGS, NULL},
-	 { "new_SBMemoryRegionInfoList", _wrap_new_SBMemoryRegionInfoList, METH_VARARGS, "\n"
-		"SBMemoryRegionInfoList()\n"
-		"new_SBMemoryRegionInfoList(SBMemoryRegionInfoList rhs) -> SBMemoryRegionInfoList\n"
-		""},
-	 { "delete_SBMemoryRegionInfoList", _wrap_delete_SBMemoryRegionInfoList, METH_O, "delete_SBMemoryRegionInfoList(SBMemoryRegionInfoList self)"},
-	 { "SBMemoryRegionInfoList_GetSize", _wrap_SBMemoryRegionInfoList_GetSize, METH_O, "SBMemoryRegionInfoList_GetSize(SBMemoryRegionInfoList self) -> uint32_t"},
-	 { "SBMemoryRegionInfoList_GetMemoryRegionContainingAddress", _wrap_SBMemoryRegionInfoList_GetMemoryRegionContainingAddress, METH_VARARGS, "SBMemoryRegionInfoList_GetMemoryRegionContainingAddress(SBMemoryRegionInfoList self, lldb::addr_t addr, SBMemoryRegionInfo region_info) -> bool"},
-	 { "SBMemoryRegionInfoList_GetMemoryRegionAtIndex", _wrap_SBMemoryRegionInfoList_GetMemoryRegionAtIndex, METH_VARARGS, "SBMemoryRegionInfoList_GetMemoryRegionAtIndex(SBMemoryRegionInfoList self, uint32_t idx, SBMemoryRegionInfo region_info) -> bool"},
-	 { "SBMemoryRegionInfoList_Append", _wrap_SBMemoryRegionInfoList_Append, METH_VARARGS, "\n"
-		"SBMemoryRegionInfoList_Append(SBMemoryRegionInfoList self, SBMemoryRegionInfo region)\n"
-		"SBMemoryRegionInfoList_Append(SBMemoryRegionInfoList self, SBMemoryRegionInfoList region_list)\n"
-		""},
-	 { "SBMemoryRegionInfoList_Clear", _wrap_SBMemoryRegionInfoList_Clear, METH_O, "SBMemoryRegionInfoList_Clear(SBMemoryRegionInfoList self)"},
-	 { "SBMemoryRegionInfoList_swigregister", SBMemoryRegionInfoList_swigregister, METH_O, NULL},
-	 { "SBMemoryRegionInfoList_swiginit", SBMemoryRegionInfoList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBModule", _wrap_new_SBModule, METH_VARARGS, "\n"
-		"SBModule()\n"
-		"SBModule(SBModule rhs)\n"
-		"SBModule(SBModuleSpec module_spec)\n"
-		"new_SBModule(SBProcess process, lldb::addr_t header_addr) -> SBModule\n"
-		""},
-	 { "delete_SBModule", _wrap_delete_SBModule, METH_O, "delete_SBModule(SBModule self)"},
-	 { "SBModule___nonzero__", _wrap_SBModule___nonzero__, METH_O, "SBModule___nonzero__(SBModule self) -> bool"},
-	 { "SBModule_IsValid", _wrap_SBModule_IsValid, METH_O, "SBModule_IsValid(SBModule self) -> bool"},
-	 { "SBModule_Clear", _wrap_SBModule_Clear, METH_O, "SBModule_Clear(SBModule self)"},
-	 { "SBModule_IsFileBacked", _wrap_SBModule_IsFileBacked, METH_O, "\n"
-		"SBModule_IsFileBacked(SBModule self) -> bool\n"
-		"\n"
-		"    Check if the module is file backed.\n"
-		"\n"
-		"    @return\n"
-		"\n"
-		"        True, if the module is backed by an object file on disk.\n"
-		"        False, if the module is backed by an object file in memory.\n"
-		""},
-	 { "SBModule_GetFileSpec", _wrap_SBModule_GetFileSpec, METH_O, "\n"
-		"SBModule_GetFileSpec(SBModule self) -> SBFileSpec\n"
-		"\n"
-		"    Get const accessor for the module file specification.\n"
-		"\n"
-		"    This function returns the file for the module on the host system\n"
-		"    that is running LLDB. This can differ from the path on the\n"
-		"    platform since we might be doing remote debugging.\n"
-		"\n"
-		"    @return\n"
-		"        A const reference to the file specification object.\n"
-		""},
-	 { "SBModule_GetPlatformFileSpec", _wrap_SBModule_GetPlatformFileSpec, METH_O, "\n"
-		"SBModule_GetPlatformFileSpec(SBModule self) -> SBFileSpec\n"
-		"\n"
-		"    Get accessor for the module platform file specification.\n"
-		"\n"
-		"    Platform file refers to the path of the module as it is known on\n"
-		"    the remote system on which it is being debugged. For local\n"
-		"    debugging this is always the same as Module::GetFileSpec(). But\n"
-		"    remote debugging might mention a file '/usr/lib/liba.dylib'\n"
-		"    which might be locally downloaded and cached. In this case the\n"
-		"    platform file could be something like:\n"
-		"    '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'\n"
-		"    The file could also be cached in a local developer kit directory.\n"
-		"\n"
-		"    @return\n"
-		"        A const reference to the file specification object.\n"
-		""},
-	 { "SBModule_SetPlatformFileSpec", _wrap_SBModule_SetPlatformFileSpec, METH_VARARGS, "SBModule_SetPlatformFileSpec(SBModule self, SBFileSpec platform_file) -> bool"},
-	 { "SBModule_GetRemoteInstallFileSpec", _wrap_SBModule_GetRemoteInstallFileSpec, METH_O, "SBModule_GetRemoteInstallFileSpec(SBModule self) -> SBFileSpec"},
-	 { "SBModule_SetRemoteInstallFileSpec", _wrap_SBModule_SetRemoteInstallFileSpec, METH_VARARGS, "SBModule_SetRemoteInstallFileSpec(SBModule self, SBFileSpec file) -> bool"},
-	 { "SBModule_GetByteOrder", _wrap_SBModule_GetByteOrder, METH_O, "SBModule_GetByteOrder(SBModule self) -> lldb::ByteOrder"},
-	 { "SBModule_GetAddressByteSize", _wrap_SBModule_GetAddressByteSize, METH_O, "SBModule_GetAddressByteSize(SBModule self) -> uint32_t"},
-	 { "SBModule_GetTriple", _wrap_SBModule_GetTriple, METH_O, "SBModule_GetTriple(SBModule self) -> char const *"},
-	 { "SBModule_GetUUIDBytes", _wrap_SBModule_GetUUIDBytes, METH_O, "SBModule_GetUUIDBytes(SBModule self) -> uint8_t const *"},
-	 { "SBModule_GetUUIDString", _wrap_SBModule_GetUUIDString, METH_O, "\n"
-		"SBModule_GetUUIDString(SBModule self) -> char const *\n"
-		"Returns the UUID of the module as a Python string.\n"
-		""},
-	 { "SBModule___eq__", _wrap_SBModule___eq__, METH_VARARGS, "SBModule___eq__(SBModule self, SBModule rhs) -> bool"},
-	 { "SBModule___ne__", _wrap_SBModule___ne__, METH_VARARGS, "SBModule___ne__(SBModule self, SBModule rhs) -> bool"},
-	 { "SBModule_FindSection", _wrap_SBModule_FindSection, METH_VARARGS, "SBModule_FindSection(SBModule self, char const * sect_name) -> SBSection"},
-	 { "SBModule_ResolveFileAddress", _wrap_SBModule_ResolveFileAddress, METH_VARARGS, "SBModule_ResolveFileAddress(SBModule self, lldb::addr_t vm_addr) -> SBAddress"},
-	 { "SBModule_ResolveSymbolContextForAddress", _wrap_SBModule_ResolveSymbolContextForAddress, METH_VARARGS, "SBModule_ResolveSymbolContextForAddress(SBModule self, SBAddress addr, uint32_t resolve_scope) -> SBSymbolContext"},
-	 { "SBModule_GetDescription", _wrap_SBModule_GetDescription, METH_VARARGS, "SBModule_GetDescription(SBModule self, SBStream description) -> bool"},
-	 { "SBModule_GetNumCompileUnits", _wrap_SBModule_GetNumCompileUnits, METH_O, "SBModule_GetNumCompileUnits(SBModule self) -> uint32_t"},
-	 { "SBModule_GetCompileUnitAtIndex", _wrap_SBModule_GetCompileUnitAtIndex, METH_VARARGS, "SBModule_GetCompileUnitAtIndex(SBModule self, uint32_t arg2) -> SBCompileUnit"},
-	 { "SBModule_FindCompileUnits", _wrap_SBModule_FindCompileUnits, METH_VARARGS, "\n"
-		"SBModule_FindCompileUnits(SBModule self, SBFileSpec sb_file_spec) -> SBSymbolContextList\n"
-		"\n"
-		"    Find compile units related to this module and passed source\n"
-		"    file.\n"
-		"\n"
-		"    @param[in] sb_file_spec\n"
-		"        A :py:class:`SBFileSpec` object that contains source file\n"
-		"        specification.\n"
-		"\n"
-		"    @return\n"
-		"        A :py:class:`SBSymbolContextList` that gets filled in with all of\n"
-		"        the symbol contexts for all the matches.\n"
-		""},
-	 { "SBModule_GetNumSymbols", _wrap_SBModule_GetNumSymbols, METH_O, "SBModule_GetNumSymbols(SBModule self) -> size_t"},
-	 { "SBModule_GetSymbolAtIndex", _wrap_SBModule_GetSymbolAtIndex, METH_VARARGS, "SBModule_GetSymbolAtIndex(SBModule self, size_t idx) -> SBSymbol"},
-	 { "SBModule_FindSymbol", _wrap_SBModule_FindSymbol, METH_VARARGS, "SBModule_FindSymbol(SBModule self, char const * name, lldb::SymbolType type=eSymbolTypeAny) -> SBSymbol"},
-	 { "SBModule_FindSymbols", _wrap_SBModule_FindSymbols, METH_VARARGS, "SBModule_FindSymbols(SBModule self, char const * name, lldb::SymbolType type=eSymbolTypeAny) -> SBSymbolContextList"},
-	 { "SBModule_GetNumSections", _wrap_SBModule_GetNumSections, METH_O, "SBModule_GetNumSections(SBModule self) -> size_t"},
-	 { "SBModule_GetSectionAtIndex", _wrap_SBModule_GetSectionAtIndex, METH_VARARGS, "SBModule_GetSectionAtIndex(SBModule self, size_t idx) -> SBSection"},
-	 { "SBModule_FindFunctions", _wrap_SBModule_FindFunctions, METH_VARARGS, "\n"
-		"SBModule_FindFunctions(SBModule self, char const * name, uint32_t name_type_mask=eFunctionNameTypeAny) -> SBSymbolContextList\n"
-		"\n"
-		"    Find functions by name.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        The name of the function we are looking for.\n"
-		"\n"
-		"    @param[in] name_type_mask\n"
-		"        A logical OR of one or more FunctionNameType enum bits that\n"
-		"        indicate what kind of names should be used when doing the\n"
-		"        lookup. Bits include fully qualified names, base names,\n"
-		"        C++ methods, or ObjC selectors.\n"
-		"        See FunctionNameType for more details.\n"
-		"\n"
-		"    @return\n"
-		"        A symbol context list that gets filled in with all of the\n"
-		"        matches.\n"
-		""},
-	 { "SBModule_FindGlobalVariables", _wrap_SBModule_FindGlobalVariables, METH_VARARGS, "\n"
-		"SBModule_FindGlobalVariables(SBModule self, SBTarget target, char const * name, uint32_t max_matches) -> SBValueList\n"
-		"\n"
-		"    Find global and static variables by name.\n"
-		"\n"
-		"    @param[in] target\n"
-		"        A valid SBTarget instance representing the debuggee.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        The name of the global or static variable we are looking\n"
-		"        for.\n"
-		"\n"
-		"    @param[in] max_matches\n"
-		"        Allow the number of matches to be limited to max_matches.\n"
-		"\n"
-		"    @return\n"
-		"        A list of matched variables in an SBValueList.\n"
-		""},
-	 { "SBModule_FindFirstGlobalVariable", _wrap_SBModule_FindFirstGlobalVariable, METH_VARARGS, "\n"
-		"SBModule_FindFirstGlobalVariable(SBModule self, SBTarget target, char const * name) -> SBValue\n"
-		"\n"
-		"    Find the first global (or static) variable by name.\n"
-		"\n"
-		"    @param[in] target\n"
-		"        A valid SBTarget instance representing the debuggee.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        The name of the global or static variable we are looking\n"
-		"        for.\n"
-		"\n"
-		"    @return\n"
-		"        An SBValue that gets filled in with the found variable (if any).\n"
-		""},
-	 { "SBModule_FindFirstType", _wrap_SBModule_FindFirstType, METH_VARARGS, "SBModule_FindFirstType(SBModule self, char const * name) -> SBType"},
-	 { "SBModule_FindTypes", _wrap_SBModule_FindTypes, METH_VARARGS, "SBModule_FindTypes(SBModule self, char const * type) -> SBTypeList"},
-	 { "SBModule_GetTypeByID", _wrap_SBModule_GetTypeByID, METH_VARARGS, "SBModule_GetTypeByID(SBModule self, lldb::user_id_t uid) -> SBType"},
-	 { "SBModule_GetBasicType", _wrap_SBModule_GetBasicType, METH_VARARGS, "SBModule_GetBasicType(SBModule self, lldb::BasicType type) -> SBType"},
-	 { "SBModule_GetTypes", _wrap_SBModule_GetTypes, METH_VARARGS, "\n"
-		"SBModule_GetTypes(SBModule self, uint32_t type_mask=eTypeClassAny) -> SBTypeList\n"
-		"\n"
-		"    Get all types matching type_mask from debug info in this\n"
-		"    module.\n"
-		"\n"
-		"    @param[in] type_mask\n"
-		"        A bitfield that consists of one or more bits logically OR'ed\n"
-		"        together from the lldb::TypeClass enumeration. This allows\n"
-		"        you to request only structure types, or only class, struct\n"
-		"        and union types. Passing in lldb::eTypeClassAny will return\n"
-		"        all types found in the debug information for this module.\n"
-		"\n"
-		"    @return\n"
-		"        A list of types in this module that match type_mask\n"
-		""},
-	 { "SBModule_GetVersion", _wrap_SBModule_GetVersion, METH_O, "SBModule_GetVersion(SBModule self) -> uint32_t"},
-	 { "SBModule_GetSymbolFileSpec", _wrap_SBModule_GetSymbolFileSpec, METH_O, "SBModule_GetSymbolFileSpec(SBModule self) -> SBFileSpec"},
-	 { "SBModule_GetObjectFileHeaderAddress", _wrap_SBModule_GetObjectFileHeaderAddress, METH_O, "SBModule_GetObjectFileHeaderAddress(SBModule self) -> SBAddress"},
-	 { "SBModule_GetObjectFileEntryPointAddress", _wrap_SBModule_GetObjectFileEntryPointAddress, METH_O, "SBModule_GetObjectFileEntryPointAddress(SBModule self) -> SBAddress"},
-	 { "SBModule_IsTypeSystemCompatible", _wrap_SBModule_IsTypeSystemCompatible, METH_VARARGS, "SBModule_IsTypeSystemCompatible(SBModule self, lldb::LanguageType language) -> SBError"},
-	 { "SBModule_GetNumberAllocatedModules", _wrap_SBModule_GetNumberAllocatedModules, METH_NOARGS, "\n"
-		"SBModule_GetNumberAllocatedModules() -> uint32_t\n"
-		"\n"
-		"    Returns the number of modules in the module cache. This is an\n"
-		"    implementation detail exposed for testing and should not be relied upon.\n"
-		"\n"
-		"    @return\n"
-		"        The number of modules in the module cache.\n"
-		""},
-	 { "SBModule_GarbageCollectAllocatedModules", _wrap_SBModule_GarbageCollectAllocatedModules, METH_NOARGS, "\n"
-		"SBModule_GarbageCollectAllocatedModules()\n"
-		"\n"
-		"    Removes all modules which are no longer needed by any part of LLDB from\n"
-		"    the module cache.\n"
-		"\n"
-		"    This is an implementation detail exposed for testing and should not be\n"
-		"    relied upon. Use SBDebugger::MemoryPressureDetected instead to reduce\n"
-		"    LLDB's memory consumption during execution.\n"
-		"\n"
-		""},
-	 { "SBModule___repr__", _wrap_SBModule___repr__, METH_O, "SBModule___repr__(SBModule self) -> std::string"},
-	 { "SBModule_swigregister", SBModule_swigregister, METH_O, NULL},
-	 { "SBModule_swiginit", SBModule_swiginit, METH_VARARGS, NULL},
-	 { "new_SBModuleSpec", _wrap_new_SBModuleSpec, METH_VARARGS, "\n"
-		"SBModuleSpec()\n"
-		"new_SBModuleSpec(SBModuleSpec rhs) -> SBModuleSpec\n"
-		""},
-	 { "delete_SBModuleSpec", _wrap_delete_SBModuleSpec, METH_O, "delete_SBModuleSpec(SBModuleSpec self)"},
-	 { "SBModuleSpec___nonzero__", _wrap_SBModuleSpec___nonzero__, METH_O, "SBModuleSpec___nonzero__(SBModuleSpec self) -> bool"},
-	 { "SBModuleSpec_IsValid", _wrap_SBModuleSpec_IsValid, METH_O, "SBModuleSpec_IsValid(SBModuleSpec self) -> bool"},
-	 { "SBModuleSpec_Clear", _wrap_SBModuleSpec_Clear, METH_O, "SBModuleSpec_Clear(SBModuleSpec self)"},
-	 { "SBModuleSpec_GetFileSpec", _wrap_SBModuleSpec_GetFileSpec, METH_O, "\n"
-		"SBModuleSpec_GetFileSpec(SBModuleSpec self) -> SBFileSpec\n"
-		"\n"
-		"    Get const accessor for the module file.\n"
-		"\n"
-		"    This function returns the file for the module on the host system\n"
-		"    that is running LLDB. This can differ from the path on the\n"
-		"    platform since we might be doing remote debugging.\n"
-		"\n"
-		"    @return\n"
-		"        A const reference to the file specification object.\n"
-		""},
-	 { "SBModuleSpec_SetFileSpec", _wrap_SBModuleSpec_SetFileSpec, METH_VARARGS, "SBModuleSpec_SetFileSpec(SBModuleSpec self, SBFileSpec fspec)"},
-	 { "SBModuleSpec_GetPlatformFileSpec", _wrap_SBModuleSpec_GetPlatformFileSpec, METH_O, "\n"
-		"SBModuleSpec_GetPlatformFileSpec(SBModuleSpec self) -> SBFileSpec\n"
-		"\n"
-		"    Get accessor for the module platform file.\n"
-		"\n"
-		"    Platform file refers to the path of the module as it is known on\n"
-		"    the remote system on which it is being debugged. For local\n"
-		"    debugging this is always the same as Module::GetFileSpec(). But\n"
-		"    remote debugging might mention a file '/usr/lib/liba.dylib'\n"
-		"    which might be locally downloaded and cached. In this case the\n"
-		"    platform file could be something like:\n"
-		"    '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'\n"
-		"    The file could also be cached in a local developer kit directory.\n"
-		"\n"
-		"    @return\n"
-		"        A const reference to the file specification object.\n"
-		""},
-	 { "SBModuleSpec_SetPlatformFileSpec", _wrap_SBModuleSpec_SetPlatformFileSpec, METH_VARARGS, "SBModuleSpec_SetPlatformFileSpec(SBModuleSpec self, SBFileSpec fspec)"},
-	 { "SBModuleSpec_GetSymbolFileSpec", _wrap_SBModuleSpec_GetSymbolFileSpec, METH_O, "SBModuleSpec_GetSymbolFileSpec(SBModuleSpec self) -> SBFileSpec"},
-	 { "SBModuleSpec_SetSymbolFileSpec", _wrap_SBModuleSpec_SetSymbolFileSpec, METH_VARARGS, "SBModuleSpec_SetSymbolFileSpec(SBModuleSpec self, SBFileSpec fspec)"},
-	 { "SBModuleSpec_GetObjectName", _wrap_SBModuleSpec_GetObjectName, METH_O, "SBModuleSpec_GetObjectName(SBModuleSpec self) -> char const *"},
-	 { "SBModuleSpec_SetObjectName", _wrap_SBModuleSpec_SetObjectName, METH_VARARGS, "SBModuleSpec_SetObjectName(SBModuleSpec self, char const * name)"},
-	 { "SBModuleSpec_GetTriple", _wrap_SBModuleSpec_GetTriple, METH_O, "SBModuleSpec_GetTriple(SBModuleSpec self) -> char const *"},
-	 { "SBModuleSpec_SetTriple", _wrap_SBModuleSpec_SetTriple, METH_VARARGS, "SBModuleSpec_SetTriple(SBModuleSpec self, char const * triple)"},
-	 { "SBModuleSpec_GetUUIDBytes", _wrap_SBModuleSpec_GetUUIDBytes, METH_O, "SBModuleSpec_GetUUIDBytes(SBModuleSpec self) -> uint8_t const *"},
-	 { "SBModuleSpec_GetUUIDLength", _wrap_SBModuleSpec_GetUUIDLength, METH_O, "SBModuleSpec_GetUUIDLength(SBModuleSpec self) -> size_t"},
-	 { "SBModuleSpec_SetUUIDBytes", _wrap_SBModuleSpec_SetUUIDBytes, METH_VARARGS, "SBModuleSpec_SetUUIDBytes(SBModuleSpec self, uint8_t const * uuid, size_t uuid_len) -> bool"},
-	 { "SBModuleSpec_GetObjectOffset", _wrap_SBModuleSpec_GetObjectOffset, METH_O, "SBModuleSpec_GetObjectOffset(SBModuleSpec self) -> uint64_t"},
-	 { "SBModuleSpec_SetObjectOffset", _wrap_SBModuleSpec_SetObjectOffset, METH_VARARGS, "SBModuleSpec_SetObjectOffset(SBModuleSpec self, uint64_t object_offset)"},
-	 { "SBModuleSpec_GetObjectSize", _wrap_SBModuleSpec_GetObjectSize, METH_O, "SBModuleSpec_GetObjectSize(SBModuleSpec self) -> uint64_t"},
-	 { "SBModuleSpec_SetObjectSize", _wrap_SBModuleSpec_SetObjectSize, METH_VARARGS, "SBModuleSpec_SetObjectSize(SBModuleSpec self, uint64_t object_size)"},
-	 { "SBModuleSpec_GetDescription", _wrap_SBModuleSpec_GetDescription, METH_VARARGS, "SBModuleSpec_GetDescription(SBModuleSpec self, SBStream description) -> bool"},
-	 { "SBModuleSpec___repr__", _wrap_SBModuleSpec___repr__, METH_O, "SBModuleSpec___repr__(SBModuleSpec self) -> std::string"},
-	 { "SBModuleSpec_swigregister", SBModuleSpec_swigregister, METH_O, NULL},
-	 { "SBModuleSpec_swiginit", SBModuleSpec_swiginit, METH_VARARGS, NULL},
-	 { "new_SBModuleSpecList", _wrap_new_SBModuleSpecList, METH_VARARGS, "\n"
-		"SBModuleSpecList()\n"
-		"new_SBModuleSpecList(SBModuleSpecList rhs) -> SBModuleSpecList\n"
-		""},
-	 { "delete_SBModuleSpecList", _wrap_delete_SBModuleSpecList, METH_O, "delete_SBModuleSpecList(SBModuleSpecList self)"},
-	 { "SBModuleSpecList_GetModuleSpecifications", _wrap_SBModuleSpecList_GetModuleSpecifications, METH_O, "SBModuleSpecList_GetModuleSpecifications(char const * path) -> SBModuleSpecList"},
-	 { "SBModuleSpecList_Append", _wrap_SBModuleSpecList_Append, METH_VARARGS, "\n"
-		"SBModuleSpecList_Append(SBModuleSpecList self, SBModuleSpec spec)\n"
-		"SBModuleSpecList_Append(SBModuleSpecList self, SBModuleSpecList spec_list)\n"
-		""},
-	 { "SBModuleSpecList_FindFirstMatchingSpec", _wrap_SBModuleSpecList_FindFirstMatchingSpec, METH_VARARGS, "SBModuleSpecList_FindFirstMatchingSpec(SBModuleSpecList self, SBModuleSpec match_spec) -> SBModuleSpec"},
-	 { "SBModuleSpecList_FindMatchingSpecs", _wrap_SBModuleSpecList_FindMatchingSpecs, METH_VARARGS, "SBModuleSpecList_FindMatchingSpecs(SBModuleSpecList self, SBModuleSpec match_spec) -> SBModuleSpecList"},
-	 { "SBModuleSpecList_GetSize", _wrap_SBModuleSpecList_GetSize, METH_O, "SBModuleSpecList_GetSize(SBModuleSpecList self) -> size_t"},
-	 { "SBModuleSpecList_GetSpecAtIndex", _wrap_SBModuleSpecList_GetSpecAtIndex, METH_VARARGS, "SBModuleSpecList_GetSpecAtIndex(SBModuleSpecList self, size_t i) -> SBModuleSpec"},
-	 { "SBModuleSpecList_GetDescription", _wrap_SBModuleSpecList_GetDescription, METH_VARARGS, "SBModuleSpecList_GetDescription(SBModuleSpecList self, SBStream description) -> bool"},
-	 { "SBModuleSpecList___repr__", _wrap_SBModuleSpecList___repr__, METH_O, "SBModuleSpecList___repr__(SBModuleSpecList self) -> std::string"},
-	 { "SBModuleSpecList_swigregister", SBModuleSpecList_swigregister, METH_O, NULL},
-	 { "SBModuleSpecList_swiginit", SBModuleSpecList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBPlatformConnectOptions", _wrap_new_SBPlatformConnectOptions, METH_VARARGS, "\n"
-		"SBPlatformConnectOptions(char const * url)\n"
-		"new_SBPlatformConnectOptions(SBPlatformConnectOptions rhs) -> SBPlatformConnectOptions\n"
-		""},
-	 { "delete_SBPlatformConnectOptions", _wrap_delete_SBPlatformConnectOptions, METH_O, "delete_SBPlatformConnectOptions(SBPlatformConnectOptions self)"},
-	 { "SBPlatformConnectOptions_GetURL", _wrap_SBPlatformConnectOptions_GetURL, METH_O, "SBPlatformConnectOptions_GetURL(SBPlatformConnectOptions self) -> char const *"},
-	 { "SBPlatformConnectOptions_SetURL", _wrap_SBPlatformConnectOptions_SetURL, METH_VARARGS, "SBPlatformConnectOptions_SetURL(SBPlatformConnectOptions self, char const * url)"},
-	 { "SBPlatformConnectOptions_GetRsyncEnabled", _wrap_SBPlatformConnectOptions_GetRsyncEnabled, METH_O, "SBPlatformConnectOptions_GetRsyncEnabled(SBPlatformConnectOptions self) -> bool"},
-	 { "SBPlatformConnectOptions_EnableRsync", _wrap_SBPlatformConnectOptions_EnableRsync, METH_VARARGS, "SBPlatformConnectOptions_EnableRsync(SBPlatformConnectOptions self, char const * options, char const * remote_path_prefix, bool omit_remote_hostname)"},
-	 { "SBPlatformConnectOptions_DisableRsync", _wrap_SBPlatformConnectOptions_DisableRsync, METH_O, "SBPlatformConnectOptions_DisableRsync(SBPlatformConnectOptions self)"},
-	 { "SBPlatformConnectOptions_GetLocalCacheDirectory", _wrap_SBPlatformConnectOptions_GetLocalCacheDirectory, METH_O, "SBPlatformConnectOptions_GetLocalCacheDirectory(SBPlatformConnectOptions self) -> char const *"},
-	 { "SBPlatformConnectOptions_SetLocalCacheDirectory", _wrap_SBPlatformConnectOptions_SetLocalCacheDirectory, METH_VARARGS, "SBPlatformConnectOptions_SetLocalCacheDirectory(SBPlatformConnectOptions self, char const * path)"},
-	 { "SBPlatformConnectOptions_swigregister", SBPlatformConnectOptions_swigregister, METH_O, NULL},
-	 { "SBPlatformConnectOptions_swiginit", SBPlatformConnectOptions_swiginit, METH_VARARGS, NULL},
-	 { "new_SBPlatformShellCommand", _wrap_new_SBPlatformShellCommand, METH_VARARGS, "\n"
-		"SBPlatformShellCommand(char const * shell, char const * shell_command)\n"
-		"SBPlatformShellCommand(char const * shell_command)\n"
-		"new_SBPlatformShellCommand(SBPlatformShellCommand rhs) -> SBPlatformShellCommand\n"
-		""},
-	 { "delete_SBPlatformShellCommand", _wrap_delete_SBPlatformShellCommand, METH_O, "delete_SBPlatformShellCommand(SBPlatformShellCommand self)"},
-	 { "SBPlatformShellCommand_Clear", _wrap_SBPlatformShellCommand_Clear, METH_O, "SBPlatformShellCommand_Clear(SBPlatformShellCommand self)"},
-	 { "SBPlatformShellCommand_GetShell", _wrap_SBPlatformShellCommand_GetShell, METH_O, "SBPlatformShellCommand_GetShell(SBPlatformShellCommand self) -> char const *"},
-	 { "SBPlatformShellCommand_SetShell", _wrap_SBPlatformShellCommand_SetShell, METH_VARARGS, "SBPlatformShellCommand_SetShell(SBPlatformShellCommand self, char const * shell)"},
-	 { "SBPlatformShellCommand_GetCommand", _wrap_SBPlatformShellCommand_GetCommand, METH_O, "SBPlatformShellCommand_GetCommand(SBPlatformShellCommand self) -> char const *"},
-	 { "SBPlatformShellCommand_SetCommand", _wrap_SBPlatformShellCommand_SetCommand, METH_VARARGS, "SBPlatformShellCommand_SetCommand(SBPlatformShellCommand self, char const * shell_command)"},
-	 { "SBPlatformShellCommand_GetWorkingDirectory", _wrap_SBPlatformShellCommand_GetWorkingDirectory, METH_O, "SBPlatformShellCommand_GetWorkingDirectory(SBPlatformShellCommand self) -> char const *"},
-	 { "SBPlatformShellCommand_SetWorkingDirectory", _wrap_SBPlatformShellCommand_SetWorkingDirectory, METH_VARARGS, "SBPlatformShellCommand_SetWorkingDirectory(SBPlatformShellCommand self, char const * path)"},
-	 { "SBPlatformShellCommand_GetTimeoutSeconds", _wrap_SBPlatformShellCommand_GetTimeoutSeconds, METH_O, "SBPlatformShellCommand_GetTimeoutSeconds(SBPlatformShellCommand self) -> uint32_t"},
-	 { "SBPlatformShellCommand_SetTimeoutSeconds", _wrap_SBPlatformShellCommand_SetTimeoutSeconds, METH_VARARGS, "SBPlatformShellCommand_SetTimeoutSeconds(SBPlatformShellCommand self, uint32_t sec)"},
-	 { "SBPlatformShellCommand_GetSignal", _wrap_SBPlatformShellCommand_GetSignal, METH_O, "SBPlatformShellCommand_GetSignal(SBPlatformShellCommand self) -> int"},
-	 { "SBPlatformShellCommand_GetStatus", _wrap_SBPlatformShellCommand_GetStatus, METH_O, "SBPlatformShellCommand_GetStatus(SBPlatformShellCommand self) -> int"},
-	 { "SBPlatformShellCommand_GetOutput", _wrap_SBPlatformShellCommand_GetOutput, METH_O, "SBPlatformShellCommand_GetOutput(SBPlatformShellCommand self) -> char const *"},
-	 { "SBPlatformShellCommand_swigregister", SBPlatformShellCommand_swigregister, METH_O, NULL},
-	 { "SBPlatformShellCommand_swiginit", SBPlatformShellCommand_swiginit, METH_VARARGS, NULL},
-	 { "new_SBPlatform", _wrap_new_SBPlatform, METH_VARARGS, "\n"
-		"SBPlatform()\n"
-		"SBPlatform(char const * platform_name)\n"
-		"new_SBPlatform(SBPlatform rhs) -> SBPlatform\n"
-		""},
-	 { "delete_SBPlatform", _wrap_delete_SBPlatform, METH_O, "delete_SBPlatform(SBPlatform self)"},
-	 { "SBPlatform_GetHostPlatform", _wrap_SBPlatform_GetHostPlatform, METH_NOARGS, "SBPlatform_GetHostPlatform() -> SBPlatform"},
-	 { "SBPlatform___nonzero__", _wrap_SBPlatform___nonzero__, METH_O, "SBPlatform___nonzero__(SBPlatform self) -> bool"},
-	 { "SBPlatform_IsValid", _wrap_SBPlatform_IsValid, METH_O, "SBPlatform_IsValid(SBPlatform self) -> bool"},
-	 { "SBPlatform_Clear", _wrap_SBPlatform_Clear, METH_O, "SBPlatform_Clear(SBPlatform self)"},
-	 { "SBPlatform_GetWorkingDirectory", _wrap_SBPlatform_GetWorkingDirectory, METH_O, "SBPlatform_GetWorkingDirectory(SBPlatform self) -> char const *"},
-	 { "SBPlatform_SetWorkingDirectory", _wrap_SBPlatform_SetWorkingDirectory, METH_VARARGS, "SBPlatform_SetWorkingDirectory(SBPlatform self, char const * path) -> bool"},
-	 { "SBPlatform_GetName", _wrap_SBPlatform_GetName, METH_O, "SBPlatform_GetName(SBPlatform self) -> char const *"},
-	 { "SBPlatform_ConnectRemote", _wrap_SBPlatform_ConnectRemote, METH_VARARGS, "SBPlatform_ConnectRemote(SBPlatform self, SBPlatformConnectOptions connect_options) -> SBError"},
-	 { "SBPlatform_DisconnectRemote", _wrap_SBPlatform_DisconnectRemote, METH_O, "SBPlatform_DisconnectRemote(SBPlatform self)"},
-	 { "SBPlatform_IsConnected", _wrap_SBPlatform_IsConnected, METH_O, "SBPlatform_IsConnected(SBPlatform self) -> bool"},
-	 { "SBPlatform_GetTriple", _wrap_SBPlatform_GetTriple, METH_O, "SBPlatform_GetTriple(SBPlatform self) -> char const *"},
-	 { "SBPlatform_GetHostname", _wrap_SBPlatform_GetHostname, METH_O, "SBPlatform_GetHostname(SBPlatform self) -> char const *"},
-	 { "SBPlatform_GetOSBuild", _wrap_SBPlatform_GetOSBuild, METH_O, "SBPlatform_GetOSBuild(SBPlatform self) -> char const *"},
-	 { "SBPlatform_GetOSDescription", _wrap_SBPlatform_GetOSDescription, METH_O, "SBPlatform_GetOSDescription(SBPlatform self) -> char const *"},
-	 { "SBPlatform_GetOSMajorVersion", _wrap_SBPlatform_GetOSMajorVersion, METH_O, "SBPlatform_GetOSMajorVersion(SBPlatform self) -> uint32_t"},
-	 { "SBPlatform_GetOSMinorVersion", _wrap_SBPlatform_GetOSMinorVersion, METH_O, "SBPlatform_GetOSMinorVersion(SBPlatform self) -> uint32_t"},
-	 { "SBPlatform_GetOSUpdateVersion", _wrap_SBPlatform_GetOSUpdateVersion, METH_O, "SBPlatform_GetOSUpdateVersion(SBPlatform self) -> uint32_t"},
-	 { "SBPlatform_SetSDKRoot", _wrap_SBPlatform_SetSDKRoot, METH_VARARGS, "SBPlatform_SetSDKRoot(SBPlatform self, char const * sysroot)"},
-	 { "SBPlatform_Put", _wrap_SBPlatform_Put, METH_VARARGS, "SBPlatform_Put(SBPlatform self, SBFileSpec src, SBFileSpec dst) -> SBError"},
-	 { "SBPlatform_Get", _wrap_SBPlatform_Get, METH_VARARGS, "SBPlatform_Get(SBPlatform self, SBFileSpec src, SBFileSpec dst) -> SBError"},
-	 { "SBPlatform_Install", _wrap_SBPlatform_Install, METH_VARARGS, "SBPlatform_Install(SBPlatform self, SBFileSpec src, SBFileSpec dst) -> SBError"},
-	 { "SBPlatform_Run", _wrap_SBPlatform_Run, METH_VARARGS, "SBPlatform_Run(SBPlatform self, SBPlatformShellCommand shell_command) -> SBError"},
-	 { "SBPlatform_Launch", _wrap_SBPlatform_Launch, METH_VARARGS, "SBPlatform_Launch(SBPlatform self, SBLaunchInfo launch_info) -> SBError"},
-	 { "SBPlatform_Attach", _wrap_SBPlatform_Attach, METH_VARARGS, "SBPlatform_Attach(SBPlatform self, SBAttachInfo attach_info, SBDebugger debugger, SBTarget target, SBError error) -> SBProcess"},
-	 { "SBPlatform_GetAllProcesses", _wrap_SBPlatform_GetAllProcesses, METH_VARARGS, "SBPlatform_GetAllProcesses(SBPlatform self, SBError error) -> SBProcessInfoList"},
-	 { "SBPlatform_Kill", _wrap_SBPlatform_Kill, METH_VARARGS, "SBPlatform_Kill(SBPlatform self, lldb::pid_t const pid) -> SBError"},
-	 { "SBPlatform_MakeDirectory", _wrap_SBPlatform_MakeDirectory, METH_VARARGS, "SBPlatform_MakeDirectory(SBPlatform self, char const * path, uint32_t file_permissions=eFilePermissionsDirectoryDefault) -> SBError"},
-	 { "SBPlatform_GetFilePermissions", _wrap_SBPlatform_GetFilePermissions, METH_VARARGS, "SBPlatform_GetFilePermissions(SBPlatform self, char const * path) -> uint32_t"},
-	 { "SBPlatform_SetFilePermissions", _wrap_SBPlatform_SetFilePermissions, METH_VARARGS, "SBPlatform_SetFilePermissions(SBPlatform self, char const * path, uint32_t file_permissions) -> SBError"},
-	 { "SBPlatform_GetUnixSignals", _wrap_SBPlatform_GetUnixSignals, METH_O, "SBPlatform_GetUnixSignals(SBPlatform self) -> SBUnixSignals"},
-	 { "SBPlatform_GetEnvironment", _wrap_SBPlatform_GetEnvironment, METH_O, "SBPlatform_GetEnvironment(SBPlatform self) -> SBEnvironment"},
-	 { "SBPlatform_SetLocateModuleCallback", _wrap_SBPlatform_SetLocateModuleCallback, METH_VARARGS, "SBPlatform_SetLocateModuleCallback(SBPlatform self, lldb::SBPlatformLocateModuleCallback callback) -> SBError"},
-	 { "SBPlatform_swigregister", SBPlatform_swigregister, METH_O, NULL},
-	 { "SBPlatform_swiginit", SBPlatform_swiginit, METH_VARARGS, NULL},
-	 { "new_SBProcess", _wrap_new_SBProcess, METH_VARARGS, "\n"
-		"SBProcess()\n"
-		"new_SBProcess(SBProcess rhs) -> SBProcess\n"
-		""},
-	 { "delete_SBProcess", _wrap_delete_SBProcess, METH_O, "delete_SBProcess(SBProcess self)"},
-	 { "SBProcess_GetBroadcasterClassName", _wrap_SBProcess_GetBroadcasterClassName, METH_NOARGS, "SBProcess_GetBroadcasterClassName() -> char const *"},
-	 { "SBProcess_GetPluginName", _wrap_SBProcess_GetPluginName, METH_O, "SBProcess_GetPluginName(SBProcess self) -> char const *"},
-	 { "SBProcess_GetShortPluginName", _wrap_SBProcess_GetShortPluginName, METH_O, "SBProcess_GetShortPluginName(SBProcess self) -> char const *"},
-	 { "SBProcess_Clear", _wrap_SBProcess_Clear, METH_O, "SBProcess_Clear(SBProcess self)"},
-	 { "SBProcess___nonzero__", _wrap_SBProcess___nonzero__, METH_O, "SBProcess___nonzero__(SBProcess self) -> bool"},
-	 { "SBProcess_IsValid", _wrap_SBProcess_IsValid, METH_O, "SBProcess_IsValid(SBProcess self) -> bool"},
-	 { "SBProcess_GetTarget", _wrap_SBProcess_GetTarget, METH_O, "SBProcess_GetTarget(SBProcess self) -> SBTarget"},
-	 { "SBProcess_GetByteOrder", _wrap_SBProcess_GetByteOrder, METH_O, "SBProcess_GetByteOrder(SBProcess self) -> lldb::ByteOrder"},
-	 { "SBProcess_PutSTDIN", _wrap_SBProcess_PutSTDIN, METH_VARARGS, "\n"
-		"SBProcess_PutSTDIN(SBProcess self, char const * src) -> size_t\n"
-		"\n"
-		"    Writes data into the current process's stdin. API client specifies a Python\n"
-		"    string as the only argument.\n"
-		""},
-	 { "SBProcess_GetSTDOUT", _wrap_SBProcess_GetSTDOUT, METH_VARARGS, "\n"
-		"SBProcess_GetSTDOUT(SBProcess self, char * dst) -> size_t\n"
-		"\n"
-		"    Reads data from the current process's stdout stream. API client specifies\n"
-		"    the size of the buffer to read data into. It returns the byte buffer in a\n"
-		"    Python string.\n"
-		""},
-	 { "SBProcess_GetSTDERR", _wrap_SBProcess_GetSTDERR, METH_VARARGS, "\n"
-		"SBProcess_GetSTDERR(SBProcess self, char * dst) -> size_t\n"
-		"\n"
-		"    Reads data from the current process's stderr stream. API client specifies\n"
-		"    the size of the buffer to read data into. It returns the byte buffer in a\n"
-		"    Python string.\n"
-		""},
-	 { "SBProcess_GetAsyncProfileData", _wrap_SBProcess_GetAsyncProfileData, METH_VARARGS, "SBProcess_GetAsyncProfileData(SBProcess self, char * dst) -> size_t"},
-	 { "SBProcess_ReportEventState", _wrap_SBProcess_ReportEventState, METH_VARARGS, "\n"
-		"SBProcess_ReportEventState(SBProcess self, SBEvent event, SBFile file)\n"
-		"SBProcess_ReportEventState(SBProcess self, SBEvent event, lldb::FileSP BORROWED)\n"
-		""},
-	 { "SBProcess_AppendEventStateReport", _wrap_SBProcess_AppendEventStateReport, METH_VARARGS, "SBProcess_AppendEventStateReport(SBProcess self, SBEvent event, SBCommandReturnObject result)"},
-	 { "SBProcess_RemoteAttachToProcessWithID", _wrap_SBProcess_RemoteAttachToProcessWithID, METH_VARARGS, "\n"
-		"SBProcess_RemoteAttachToProcessWithID(SBProcess self, lldb::pid_t pid, SBError error) -> bool\n"
-		"\n"
-		"    Remote connection related functions. These will fail if the\n"
-		"    process is not in eStateConnected. They are intended for use\n"
-		"    when connecting to an externally managed debugserver instance.\n"
-		""},
-	 { "SBProcess_RemoteLaunch", _wrap_SBProcess_RemoteLaunch, METH_VARARGS, "\n"
-		"SBProcess_RemoteLaunch(SBProcess self, char const ** argv, char const ** envp, char const * stdin_path, char const * stdout_path, char const * stderr_path, char const * working_directory, uint32_t launch_flags, bool stop_at_entry, SBError error) -> bool\n"
-		"See SBTarget.Launch for argument description and usage.\n"
-		""},
-	 { "SBProcess_GetNumThreads", _wrap_SBProcess_GetNumThreads, METH_O, "SBProcess_GetNumThreads(SBProcess self) -> uint32_t"},
-	 { "SBProcess_GetThreadAtIndex", _wrap_SBProcess_GetThreadAtIndex, METH_VARARGS, "\n"
-		"SBProcess_GetThreadAtIndex(SBProcess self, size_t index) -> SBThread\n"
-		"\n"
-		"    Returns the INDEX'th thread from the list of current threads.  The index\n"
-		"    of a thread is only valid for the current stop.  For a persistent thread\n"
-		"    identifier use either the thread ID or the IndexID.  See help on SBThread\n"
-		"    for more details.\n"
-		""},
-	 { "SBProcess_GetThreadByID", _wrap_SBProcess_GetThreadByID, METH_VARARGS, "\n"
-		"SBProcess_GetThreadByID(SBProcess self, lldb::tid_t sb_thread_id) -> SBThread\n"
-		"\n"
-		"    Returns the thread with the given thread ID.\n"
-		""},
-	 { "SBProcess_GetThreadByIndexID", _wrap_SBProcess_GetThreadByIndexID, METH_VARARGS, "\n"
-		"SBProcess_GetThreadByIndexID(SBProcess self, uint32_t index_id) -> SBThread\n"
-		"\n"
-		"    Returns the thread with the given thread IndexID.\n"
-		""},
-	 { "SBProcess_GetSelectedThread", _wrap_SBProcess_GetSelectedThread, METH_O, "\n"
-		"SBProcess_GetSelectedThread(SBProcess self) -> SBThread\n"
-		"\n"
-		"    Returns the currently selected thread.\n"
-		""},
-	 { "SBProcess_CreateOSPluginThread", _wrap_SBProcess_CreateOSPluginThread, METH_VARARGS, "\n"
-		"SBProcess_CreateOSPluginThread(SBProcess self, lldb::tid_t tid, lldb::addr_t context) -> SBThread\n"
-		"\n"
-		"    Lazily create a thread on demand through the current OperatingSystem plug-in, if the current OperatingSystem plug-in supports it.\n"
-		""},
-	 { "SBProcess_SetSelectedThread", _wrap_SBProcess_SetSelectedThread, METH_VARARGS, "SBProcess_SetSelectedThread(SBProcess self, SBThread thread) -> bool"},
-	 { "SBProcess_SetSelectedThreadByID", _wrap_SBProcess_SetSelectedThreadByID, METH_VARARGS, "SBProcess_SetSelectedThreadByID(SBProcess self, lldb::tid_t tid) -> bool"},
-	 { "SBProcess_SetSelectedThreadByIndexID", _wrap_SBProcess_SetSelectedThreadByIndexID, METH_VARARGS, "SBProcess_SetSelectedThreadByIndexID(SBProcess self, uint32_t index_id) -> bool"},
-	 { "SBProcess_GetNumQueues", _wrap_SBProcess_GetNumQueues, METH_O, "SBProcess_GetNumQueues(SBProcess self) -> uint32_t"},
-	 { "SBProcess_GetQueueAtIndex", _wrap_SBProcess_GetQueueAtIndex, METH_VARARGS, "SBProcess_GetQueueAtIndex(SBProcess self, size_t index) -> SBQueue"},
-	 { "SBProcess_GetState", _wrap_SBProcess_GetState, METH_O, "SBProcess_GetState(SBProcess self) -> lldb::StateType"},
-	 { "SBProcess_GetExitStatus", _wrap_SBProcess_GetExitStatus, METH_O, "SBProcess_GetExitStatus(SBProcess self) -> int"},
-	 { "SBProcess_GetExitDescription", _wrap_SBProcess_GetExitDescription, METH_O, "SBProcess_GetExitDescription(SBProcess self) -> char const *"},
-	 { "SBProcess_GetProcessID", _wrap_SBProcess_GetProcessID, METH_O, "\n"
-		"SBProcess_GetProcessID(SBProcess self) -> lldb::pid_t\n"
-		"\n"
-		"    Returns the process ID of the process.\n"
-		""},
-	 { "SBProcess_GetUniqueID", _wrap_SBProcess_GetUniqueID, METH_O, "\n"
-		"SBProcess_GetUniqueID(SBProcess self) -> uint32_t\n"
-		"\n"
-		"    Returns an integer ID that is guaranteed to be unique across all process instances. This is not the process ID, just a unique integer for comparison and caching purposes.\n"
-		""},
-	 { "SBProcess_GetAddressByteSize", _wrap_SBProcess_GetAddressByteSize, METH_O, "SBProcess_GetAddressByteSize(SBProcess self) -> uint32_t"},
-	 { "SBProcess_Destroy", _wrap_SBProcess_Destroy, METH_O, "\n"
-		"SBProcess_Destroy(SBProcess self) -> SBError\n"
-		"\n"
-		"    Kills the process and shuts down all threads that were spawned to\n"
-		"    track and monitor process.\n"
-		""},
-	 { "SBProcess_Continue", _wrap_SBProcess_Continue, METH_O, "SBProcess_Continue(SBProcess self) -> SBError"},
-	 { "SBProcess_Stop", _wrap_SBProcess_Stop, METH_O, "SBProcess_Stop(SBProcess self) -> SBError"},
-	 { "SBProcess_Kill", _wrap_SBProcess_Kill, METH_O, "\n"
-		"SBProcess_Kill(SBProcess self) -> SBError\n"
-		"Same as Destroy(self).\n"
-		""},
-	 { "SBProcess_Detach", _wrap_SBProcess_Detach, METH_VARARGS, "\n"
-		"SBProcess_Detach(SBProcess self) -> SBError\n"
-		"SBProcess_Detach(SBProcess self, bool keep_stopped) -> SBError\n"
-		""},
-	 { "SBProcess_Signal", _wrap_SBProcess_Signal, METH_VARARGS, "\n"
-		"SBProcess_Signal(SBProcess self, int signal) -> SBError\n"
-		"Sends the process a unix signal.\n"
-		""},
-	 { "SBProcess_GetUnixSignals", _wrap_SBProcess_GetUnixSignals, METH_O, "SBProcess_GetUnixSignals(SBProcess self) -> SBUnixSignals"},
-	 { "SBProcess_SendAsyncInterrupt", _wrap_SBProcess_SendAsyncInterrupt, METH_O, "SBProcess_SendAsyncInterrupt(SBProcess self)"},
-	 { "SBProcess_GetStopID", _wrap_SBProcess_GetStopID, METH_VARARGS, "\n"
-		"SBProcess_GetStopID(SBProcess self, bool include_expression_stops=False) -> uint32_t\n"
-		"\n"
-		"    Returns a stop id that will increase every time the process executes.  If\n"
-		"    include_expression_stops is true, then stops caused by expression evaluation\n"
-		"    will cause the returned value to increase, otherwise the counter returned will\n"
-		"    only increase when execution is continued explicitly by the user.  Note, the value\n"
-		"    will always increase, but may increase by more than one per stop.\n"
-		""},
-	 { "SBProcess_GetStopEventForStopID", _wrap_SBProcess_GetStopEventForStopID, METH_VARARGS, "SBProcess_GetStopEventForStopID(SBProcess self, uint32_t stop_id) -> SBEvent"},
-	 { "SBProcess_ForceScriptedState", _wrap_SBProcess_ForceScriptedState, METH_VARARGS, "SBProcess_ForceScriptedState(SBProcess self, lldb::StateType new_state)"},
-	 { "SBProcess_ReadMemory", _wrap_SBProcess_ReadMemory, METH_VARARGS, "\n"
-		"SBProcess_ReadMemory(SBProcess self, lldb::addr_t addr, void * buf, SBError error) -> size_t\n"
-		"\n"
-		"    Reads memory from the current process's address space and removes any\n"
-		"    traps that may have been inserted into the memory. It returns the byte\n"
-		"    buffer in a Python string. Example: ::\n"
-		"\n"
-		"        # Read 4 bytes from address 'addr' and assume error.Success() is True.\n"
-		"        content = process.ReadMemory(addr, 4, error)\n"
-		"        new_bytes = bytearray(content)\n"
-		""},
-	 { "SBProcess_WriteMemory", _wrap_SBProcess_WriteMemory, METH_VARARGS, "\n"
-		"SBProcess_WriteMemory(SBProcess self, lldb::addr_t addr, void const * buf, SBError error) -> size_t\n"
-		"\n"
-		"    Writes memory to the current process's address space and maintains any\n"
-		"    traps that might be present due to software breakpoints. Example: ::\n"
-		"\n"
-		"        # Create a Python string from the byte array.\n"
-		"        new_value = str(bytes)\n"
-		"        result = process.WriteMemory(addr, new_value, error)\n"
-		"        if not error.Success() or result != len(bytes):\n"
-		"            print('SBProcess.WriteMemory() failed!')\n"
-		""},
-	 { "SBProcess_ReadCStringFromMemory", _wrap_SBProcess_ReadCStringFromMemory, METH_VARARGS, "\n"
-		"SBProcess_ReadCStringFromMemory(SBProcess self, lldb::addr_t addr, void * char_buf, SBError error) -> size_t\n"
-		"\n"
-		"    Reads a NUL terminated C string from the current process's address space.\n"
-		"    It returns a python string of the exact length, or truncates the string if\n"
-		"    the maximum character limit is reached. Example: ::\n"
-		"\n"
-		"        # Read a C string of at most 256 bytes from address '0x1000'\n"
-		"        error = lldb.SBError()\n"
-		"        cstring = process.ReadCStringFromMemory(0x1000, 256, error)\n"
-		"        if error.Success():\n"
-		"            print('cstring: ', cstring)\n"
-		"        else\n"
-		"            print('error: ', error)\n"
-		""},
-	 { "SBProcess_ReadUnsignedFromMemory", _wrap_SBProcess_ReadUnsignedFromMemory, METH_VARARGS, "\n"
-		"SBProcess_ReadUnsignedFromMemory(SBProcess self, lldb::addr_t addr, uint32_t byte_size, SBError error) -> uint64_t\n"
-		"\n"
-		"    Reads an unsigned integer from memory given a byte size and an address.\n"
-		"    Returns the unsigned integer that was read. Example: ::\n"
-		"\n"
-		"        # Read a 4 byte unsigned integer from address 0x1000\n"
-		"        error = lldb.SBError()\n"
-		"        uint = ReadUnsignedFromMemory(0x1000, 4, error)\n"
-		"        if error.Success():\n"
-		"            print('integer: %u' % uint)\n"
-		"        else\n"
-		"            print('error: ', error)\n"
-		""},
-	 { "SBProcess_ReadPointerFromMemory", _wrap_SBProcess_ReadPointerFromMemory, METH_VARARGS, "\n"
-		"SBProcess_ReadPointerFromMemory(SBProcess self, lldb::addr_t addr, SBError error) -> lldb::addr_t\n"
-		"\n"
-		"    Reads a pointer from memory from an address and returns the value. Example: ::\n"
-		"\n"
-		"        # Read a pointer from address 0x1000\n"
-		"        error = lldb.SBError()\n"
-		"        ptr = ReadPointerFromMemory(0x1000, error)\n"
-		"        if error.Success():\n"
-		"            print('pointer: 0x%x' % ptr)\n"
-		"        else\n"
-		"            print('error: ', error)\n"
-		""},
-	 { "SBProcess_FindRangesInMemory", _wrap_SBProcess_FindRangesInMemory, METH_VARARGS, "SBProcess_FindRangesInMemory(SBProcess self, void const * buf, SBAddressRangeList ranges, uint32_t alignment, uint32_t max_matches, SBError error) -> SBAddressRangeList"},
-	 { "SBProcess_FindInMemory", _wrap_SBProcess_FindInMemory, METH_VARARGS, "SBProcess_FindInMemory(SBProcess self, void const * buf, SBAddressRange range, uint32_t alignment, SBError error) -> lldb::addr_t"},
-	 { "SBProcess_GetStateFromEvent", _wrap_SBProcess_GetStateFromEvent, METH_O, "SBProcess_GetStateFromEvent(SBEvent event) -> lldb::StateType"},
-	 { "SBProcess_GetRestartedFromEvent", _wrap_SBProcess_GetRestartedFromEvent, METH_O, "SBProcess_GetRestartedFromEvent(SBEvent event) -> bool"},
-	 { "SBProcess_GetNumRestartedReasonsFromEvent", _wrap_SBProcess_GetNumRestartedReasonsFromEvent, METH_O, "SBProcess_GetNumRestartedReasonsFromEvent(SBEvent event) -> size_t"},
-	 { "SBProcess_GetRestartedReasonAtIndexFromEvent", _wrap_SBProcess_GetRestartedReasonAtIndexFromEvent, METH_VARARGS, "SBProcess_GetRestartedReasonAtIndexFromEvent(SBEvent event, size_t idx) -> char const *"},
-	 { "SBProcess_GetProcessFromEvent", _wrap_SBProcess_GetProcessFromEvent, METH_O, "SBProcess_GetProcessFromEvent(SBEvent event) -> SBProcess"},
-	 { "SBProcess_GetInterruptedFromEvent", _wrap_SBProcess_GetInterruptedFromEvent, METH_O, "SBProcess_GetInterruptedFromEvent(SBEvent event) -> bool"},
-	 { "SBProcess_GetStructuredDataFromEvent", _wrap_SBProcess_GetStructuredDataFromEvent, METH_O, "SBProcess_GetStructuredDataFromEvent(SBEvent event) -> SBStructuredData"},
-	 { "SBProcess_EventIsProcessEvent", _wrap_SBProcess_EventIsProcessEvent, METH_O, "SBProcess_EventIsProcessEvent(SBEvent event) -> bool"},
-	 { "SBProcess_EventIsStructuredDataEvent", _wrap_SBProcess_EventIsStructuredDataEvent, METH_O, "SBProcess_EventIsStructuredDataEvent(SBEvent event) -> bool"},
-	 { "SBProcess_GetBroadcaster", _wrap_SBProcess_GetBroadcaster, METH_O, "SBProcess_GetBroadcaster(SBProcess self) -> SBBroadcaster"},
-	 { "SBProcess_GetBroadcasterClass", _wrap_SBProcess_GetBroadcasterClass, METH_NOARGS, "\n"
-		"SBProcess_GetBroadcasterClass() -> char const *\n"
-		"Get default process broadcaster class name (lldb.process).\n"
-		""},
-	 { "SBProcess_GetDescription", _wrap_SBProcess_GetDescription, METH_VARARGS, "SBProcess_GetDescription(SBProcess self, SBStream description) -> bool"},
-	 { "SBProcess_GetExtendedCrashInformation", _wrap_SBProcess_GetExtendedCrashInformation, METH_O, "\n"
-		"SBProcess_GetExtendedCrashInformation(SBProcess self) -> SBStructuredData\n"
-		"\n"
-		"    Returns the process' extended crash information.\n"
-		""},
-	 { "SBProcess_GetNumSupportedHardwareWatchpoints", _wrap_SBProcess_GetNumSupportedHardwareWatchpoints, METH_VARARGS, "SBProcess_GetNumSupportedHardwareWatchpoints(SBProcess self, SBError error) -> uint32_t"},
-	 { "SBProcess_LoadImage", _wrap_SBProcess_LoadImage, METH_VARARGS, "\n"
-		"SBProcess_LoadImage(SBProcess self, SBFileSpec remote_image_spec, SBError error) -> uint32_t\n"
-		"SBProcess_LoadImage(SBProcess self, SBFileSpec local_image_spec, SBFileSpec remote_image_spec, SBError error) -> uint32_t\n"
-		""},
-	 { "SBProcess_LoadImageUsingPaths", _wrap_SBProcess_LoadImageUsingPaths, METH_VARARGS, "\n"
-		"SBProcess_LoadImageUsingPaths(SBProcess self, SBFileSpec image_spec, SBStringList paths, SBFileSpec loaded_path, SBError error) -> uint32_t\n"
-		"\n"
-		"    Load the library whose filename is given by image_spec looking in all the\n"
-		"    paths supplied in the paths argument.  If successful, return a token that\n"
-		"    can be passed to UnloadImage and fill loaded_path with the path that was\n"
-		"    successfully loaded.  On failure, return\n"
-		"    lldb.LLDB_INVALID_IMAGE_TOKEN.\n"
-		""},
-	 { "SBProcess_UnloadImage", _wrap_SBProcess_UnloadImage, METH_VARARGS, "SBProcess_UnloadImage(SBProcess self, uint32_t image_token) -> SBError"},
-	 { "SBProcess_SendEventData", _wrap_SBProcess_SendEventData, METH_VARARGS, "SBProcess_SendEventData(SBProcess self, char const * data) -> SBError"},
-	 { "SBProcess_GetNumExtendedBacktraceTypes", _wrap_SBProcess_GetNumExtendedBacktraceTypes, METH_O, "\n"
-		"SBProcess_GetNumExtendedBacktraceTypes(SBProcess self) -> uint32_t\n"
-		"\n"
-		"    Return the number of different thread-origin extended backtraces\n"
-		"    this process can support as a uint32_t.\n"
-		"    When the process is stopped and you have an SBThread, lldb may be\n"
-		"    able to show a backtrace of when that thread was originally created,\n"
-		"    or the work item was enqueued to it (in the case of a libdispatch\n"
-		"    queue).\n"
-		""},
-	 { "SBProcess_GetExtendedBacktraceTypeAtIndex", _wrap_SBProcess_GetExtendedBacktraceTypeAtIndex, METH_VARARGS, "\n"
-		"SBProcess_GetExtendedBacktraceTypeAtIndex(SBProcess self, uint32_t idx) -> char const *\n"
-		"\n"
-		"    Takes an index argument, returns the name of one of the thread-origin\n"
-		"    extended backtrace methods as a str.\n"
-		""},
-	 { "SBProcess_GetHistoryThreads", _wrap_SBProcess_GetHistoryThreads, METH_VARARGS, "SBProcess_GetHistoryThreads(SBProcess self, lldb::addr_t addr) -> SBThreadCollection"},
-	 { "SBProcess_IsInstrumentationRuntimePresent", _wrap_SBProcess_IsInstrumentationRuntimePresent, METH_VARARGS, "SBProcess_IsInstrumentationRuntimePresent(SBProcess self, lldb::InstrumentationRuntimeType type) -> bool"},
-	 { "SBProcess_SaveCore", _wrap_SBProcess_SaveCore, METH_VARARGS, "\n"
-		"SBProcess_SaveCore(SBProcess self, char const * file_name, char const * flavor, lldb::SaveCoreStyle core_style) -> SBError\n"
-		"SBProcess_SaveCore(SBProcess self, char const * file_name) -> SBError\n"
-		"SBProcess_SaveCore(SBProcess self, SBSaveCoreOptions options) -> SBError\n"
-		""},
-	 { "SBProcess_GetMemoryRegionInfo", _wrap_SBProcess_GetMemoryRegionInfo, METH_VARARGS, "SBProcess_GetMemoryRegionInfo(SBProcess self, lldb::addr_t load_addr, SBMemoryRegionInfo region_info) -> SBError"},
-	 { "SBProcess_GetMemoryRegions", _wrap_SBProcess_GetMemoryRegions, METH_O, "SBProcess_GetMemoryRegions(SBProcess self) -> SBMemoryRegionInfoList"},
-	 { "SBProcess_GetProcessInfo", _wrap_SBProcess_GetProcessInfo, METH_O, "\n"
-		"SBProcess_GetProcessInfo(SBProcess self) -> SBProcessInfo\n"
-		"\n"
-		"    Get information about the process.\n"
-		"    Valid process info will only be returned when the process is alive,\n"
-		"    use IsValid() to check if the info returned is valid. ::\n"
-		"\n"
-		"        process_info = process.GetProcessInfo()\n"
-		"        if process_info.IsValid():\n"
-		"            process_info.GetProcessID()\n"
-		""},
-	 { "SBProcess_GetCoreFile", _wrap_SBProcess_GetCoreFile, METH_O, "SBProcess_GetCoreFile(SBProcess self) -> SBFileSpec"},
-	 { "SBProcess_GetAddressMask", _wrap_SBProcess_GetAddressMask, METH_VARARGS, "\n"
-		"SBProcess_GetAddressMask(SBProcess self, lldb::AddressMaskType type, lldb::AddressMaskRange addr_range=eAddressMaskRangeLow) -> lldb::addr_t\n"
-		"\n"
-		"    Get the current address mask in this Process of a given type.\n"
-		"    There are lldb.eAddressMaskTypeCode and lldb.eAddressMaskTypeData address\n"
-		"    masks, and on most Targets, the the Data address mask is more general\n"
-		"    because there are no alignment restrictions, as there can be with Code\n"
-		"    addresses.\n"
-		"    lldb.eAddressMaskTypeAny may be used to get the most general mask.\n"
-		"    The bits which are not used for addressing are set to 1 in the returned\n"
-		"    mask.\n"
-		"    In an unusual environment with different address masks for high and low\n"
-		"    memory, this may also be specified.  This is uncommon, default is\n"
-		"    lldb.eAddressMaskRangeLow.\n"
-		""},
-	 { "SBProcess_SetAddressMask", _wrap_SBProcess_SetAddressMask, METH_VARARGS, "\n"
-		"SBProcess_SetAddressMask(SBProcess self, lldb::AddressMaskType type, lldb::addr_t mask, lldb::AddressMaskRange addr_range=eAddressMaskRangeLow)\n"
-		"\n"
-		"    Set the current address mask in this Process for a given type,\n"
-		"    lldb.eAddressMaskTypeCode or lldb.eAddressMaskTypeData.  Bits that are not\n"
-		"    used for addressing should be set to 1 in the mask.\n"
-		"    When setting all masks, lldb.eAddressMaskTypeAll may be specified.\n"
-		"    In an unusual environment with different address masks for high and low\n"
-		"    memory, this may also be specified.  This is uncommon, default is\n"
-		"    lldb.eAddressMaskRangeLow.\n"
-		""},
-	 { "SBProcess_SetAddressableBits", _wrap_SBProcess_SetAddressableBits, METH_VARARGS, "\n"
-		"SBProcess_SetAddressableBits(SBProcess self, lldb::AddressMaskType type, uint32_t num_bits, lldb::AddressMaskRange addr_range=eAddressMaskRangeLow)\n"
-		"\n"
-		"    Set the number of low bits relevant for addressing in this Process \n"
-		"    for a given type, lldb.eAddressMaskTypeCode or lldb.eAddressMaskTypeData.\n"
-		"    When setting all masks, lldb.eAddressMaskTypeAll may be specified.\n"
-		"    In an unusual environment with different address masks for high and low\n"
-		"    memory, the address range  may also be specified.  This is uncommon, \n"
-		"    default is lldb.eAddressMaskRangeLow.\n"
-		""},
-	 { "SBProcess_FixAddress", _wrap_SBProcess_FixAddress, METH_VARARGS, "\n"
-		"SBProcess_FixAddress(SBProcess self, lldb::addr_t addr, lldb::AddressMaskType type=eAddressMaskTypeAny) -> lldb::addr_t\n"
-		"\n"
-		"    Given a virtual address, clear the bits that are not used for addressing\n"
-		"    (and may be used for metadata, memory tagging, point authentication, etc).\n"
-		"    By default the most general mask, lldb.eAddressMaskTypeAny is used to \n"
-		"    process the address, but lldb.eAddressMaskTypeData and \n"
-		"    lldb.eAddressMaskTypeCode may be specified if the type of address is known.\n"
-		""},
-	 { "SBProcess_AllocateMemory", _wrap_SBProcess_AllocateMemory, METH_VARARGS, "\n"
-		"SBProcess_AllocateMemory(SBProcess self, size_t size, uint32_t permissions, SBError error) -> lldb::addr_t\n"
-		"\n"
-		"    Allocates a block of memory within the process, with size and\n"
-		"    access permissions specified in the arguments. The permissions\n"
-		"    argument is an or-combination of zero or more of\n"
-		"    lldb.ePermissionsWritable, lldb.ePermissionsReadable, and\n"
-		"    lldb.ePermissionsExecutable. Returns the address\n"
-		"    of the allocated buffer in the process, or\n"
-		"    lldb.LLDB_INVALID_ADDRESS if the allocation failed.\n"
-		""},
-	 { "SBProcess_DeallocateMemory", _wrap_SBProcess_DeallocateMemory, METH_VARARGS, "\n"
-		"SBProcess_DeallocateMemory(SBProcess self, lldb::addr_t ptr) -> SBError\n"
-		"\n"
-		"    Deallocates the block of memory (previously allocated using\n"
-		"    AllocateMemory) given in the argument.\n"
-		""},
-	 { "SBProcess_GetScriptedImplementation", _wrap_SBProcess_GetScriptedImplementation, METH_O, "\n"
-		"SBProcess_GetScriptedImplementation(SBProcess self) -> SBScriptObject\n"
-		"\n"
-		"    Returns the implementation object of the process plugin if available. None\n"
-		"    otherwise.\n"
-		""},
-	 { "SBProcess_GetStatus", _wrap_SBProcess_GetStatus, METH_VARARGS, "SBProcess_GetStatus(SBProcess self, SBStream status)"},
-	 { "SBProcess___repr__", _wrap_SBProcess___repr__, METH_O, "SBProcess___repr__(SBProcess self) -> std::string"},
-	 { "SBProcess_swigregister", SBProcess_swigregister, METH_O, NULL},
-	 { "SBProcess_swiginit", SBProcess_swiginit, METH_VARARGS, NULL},
-	 { "new_SBProcessInfo", _wrap_new_SBProcessInfo, METH_VARARGS, "\n"
-		"SBProcessInfo()\n"
-		"new_SBProcessInfo(SBProcessInfo rhs) -> SBProcessInfo\n"
-		""},
-	 { "delete_SBProcessInfo", _wrap_delete_SBProcessInfo, METH_O, "delete_SBProcessInfo(SBProcessInfo self)"},
-	 { "SBProcessInfo___nonzero__", _wrap_SBProcessInfo___nonzero__, METH_O, "SBProcessInfo___nonzero__(SBProcessInfo self) -> bool"},
-	 { "SBProcessInfo_IsValid", _wrap_SBProcessInfo_IsValid, METH_O, "SBProcessInfo_IsValid(SBProcessInfo self) -> bool"},
-	 { "SBProcessInfo_GetName", _wrap_SBProcessInfo_GetName, METH_O, "SBProcessInfo_GetName(SBProcessInfo self) -> char const *"},
-	 { "SBProcessInfo_GetExecutableFile", _wrap_SBProcessInfo_GetExecutableFile, METH_O, "SBProcessInfo_GetExecutableFile(SBProcessInfo self) -> SBFileSpec"},
-	 { "SBProcessInfo_GetProcessID", _wrap_SBProcessInfo_GetProcessID, METH_O, "SBProcessInfo_GetProcessID(SBProcessInfo self) -> lldb::pid_t"},
-	 { "SBProcessInfo_GetUserID", _wrap_SBProcessInfo_GetUserID, METH_O, "SBProcessInfo_GetUserID(SBProcessInfo self) -> uint32_t"},
-	 { "SBProcessInfo_GetGroupID", _wrap_SBProcessInfo_GetGroupID, METH_O, "SBProcessInfo_GetGroupID(SBProcessInfo self) -> uint32_t"},
-	 { "SBProcessInfo_UserIDIsValid", _wrap_SBProcessInfo_UserIDIsValid, METH_O, "SBProcessInfo_UserIDIsValid(SBProcessInfo self) -> bool"},
-	 { "SBProcessInfo_GroupIDIsValid", _wrap_SBProcessInfo_GroupIDIsValid, METH_O, "SBProcessInfo_GroupIDIsValid(SBProcessInfo self) -> bool"},
-	 { "SBProcessInfo_GetEffectiveUserID", _wrap_SBProcessInfo_GetEffectiveUserID, METH_O, "SBProcessInfo_GetEffectiveUserID(SBProcessInfo self) -> uint32_t"},
-	 { "SBProcessInfo_GetEffectiveGroupID", _wrap_SBProcessInfo_GetEffectiveGroupID, METH_O, "SBProcessInfo_GetEffectiveGroupID(SBProcessInfo self) -> uint32_t"},
-	 { "SBProcessInfo_EffectiveUserIDIsValid", _wrap_SBProcessInfo_EffectiveUserIDIsValid, METH_O, "SBProcessInfo_EffectiveUserIDIsValid(SBProcessInfo self) -> bool"},
-	 { "SBProcessInfo_EffectiveGroupIDIsValid", _wrap_SBProcessInfo_EffectiveGroupIDIsValid, METH_O, "SBProcessInfo_EffectiveGroupIDIsValid(SBProcessInfo self) -> bool"},
-	 { "SBProcessInfo_GetParentProcessID", _wrap_SBProcessInfo_GetParentProcessID, METH_O, "SBProcessInfo_GetParentProcessID(SBProcessInfo self) -> lldb::pid_t"},
-	 { "SBProcessInfo_GetTriple", _wrap_SBProcessInfo_GetTriple, METH_O, "\n"
-		"SBProcessInfo_GetTriple(SBProcessInfo self) -> char const *\n"
-		"Return the target triple (arch-vendor-os) for the described process.\n"
-		""},
-	 { "SBProcessInfo_swigregister", SBProcessInfo_swigregister, METH_O, NULL},
-	 { "SBProcessInfo_swiginit", SBProcessInfo_swiginit, METH_VARARGS, NULL},
-	 { "delete_SBProcessInfoList", _wrap_delete_SBProcessInfoList, METH_O, "delete_SBProcessInfoList(SBProcessInfoList self)"},
-	 { "new_SBProcessInfoList", _wrap_new_SBProcessInfoList, METH_VARARGS, "\n"
-		"SBProcessInfoList()\n"
-		"new_SBProcessInfoList(SBProcessInfoList rhs) -> SBProcessInfoList\n"
-		""},
-	 { "SBProcessInfoList_GetSize", _wrap_SBProcessInfoList_GetSize, METH_O, "SBProcessInfoList_GetSize(SBProcessInfoList self) -> uint32_t"},
-	 { "SBProcessInfoList_GetProcessInfoAtIndex", _wrap_SBProcessInfoList_GetProcessInfoAtIndex, METH_VARARGS, "SBProcessInfoList_GetProcessInfoAtIndex(SBProcessInfoList self, uint32_t idx, SBProcessInfo info) -> bool"},
-	 { "SBProcessInfoList_Clear", _wrap_SBProcessInfoList_Clear, METH_O, "SBProcessInfoList_Clear(SBProcessInfoList self)"},
-	 { "SBProcessInfoList_swigregister", SBProcessInfoList_swigregister, METH_O, NULL},
-	 { "SBProcessInfoList_swiginit", SBProcessInfoList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBQueue", _wrap_new_SBQueue, METH_VARARGS, "\n"
-		"SBQueue()\n"
-		"new_SBQueue(SBQueue rhs) -> SBQueue\n"
-		""},
-	 { "delete_SBQueue", _wrap_delete_SBQueue, METH_O, "delete_SBQueue(SBQueue self)"},
-	 { "SBQueue___nonzero__", _wrap_SBQueue___nonzero__, METH_O, "SBQueue___nonzero__(SBQueue self) -> bool"},
-	 { "SBQueue_IsValid", _wrap_SBQueue_IsValid, METH_O, "SBQueue_IsValid(SBQueue self) -> bool"},
-	 { "SBQueue_Clear", _wrap_SBQueue_Clear, METH_O, "SBQueue_Clear(SBQueue self)"},
-	 { "SBQueue_GetProcess", _wrap_SBQueue_GetProcess, METH_O, "SBQueue_GetProcess(SBQueue self) -> SBProcess"},
-	 { "SBQueue_GetQueueID", _wrap_SBQueue_GetQueueID, METH_O, "\n"
-		"SBQueue_GetQueueID(SBQueue self) -> lldb::queue_id_t\n"
-		"\n"
-		"    Returns an lldb::queue_id_t type unique identifier number for this\n"
-		"    queue that will not be used by any other queue during this process'\n"
-		"    execution.  These ID numbers often start at 1 with the first\n"
-		"    system-created queues and increment from there.\n"
-		""},
-	 { "SBQueue_GetName", _wrap_SBQueue_GetName, METH_O, "SBQueue_GetName(SBQueue self) -> char const *"},
-	 { "SBQueue_GetIndexID", _wrap_SBQueue_GetIndexID, METH_O, "SBQueue_GetIndexID(SBQueue self) -> uint32_t"},
-	 { "SBQueue_GetNumThreads", _wrap_SBQueue_GetNumThreads, METH_O, "SBQueue_GetNumThreads(SBQueue self) -> uint32_t"},
-	 { "SBQueue_GetThreadAtIndex", _wrap_SBQueue_GetThreadAtIndex, METH_VARARGS, "SBQueue_GetThreadAtIndex(SBQueue self, uint32_t arg2) -> SBThread"},
-	 { "SBQueue_GetNumPendingItems", _wrap_SBQueue_GetNumPendingItems, METH_O, "SBQueue_GetNumPendingItems(SBQueue self) -> uint32_t"},
-	 { "SBQueue_GetPendingItemAtIndex", _wrap_SBQueue_GetPendingItemAtIndex, METH_VARARGS, "SBQueue_GetPendingItemAtIndex(SBQueue self, uint32_t arg2) -> SBQueueItem"},
-	 { "SBQueue_GetNumRunningItems", _wrap_SBQueue_GetNumRunningItems, METH_O, "SBQueue_GetNumRunningItems(SBQueue self) -> uint32_t"},
-	 { "SBQueue_GetKind", _wrap_SBQueue_GetKind, METH_O, "\n"
-		"SBQueue_GetKind(SBQueue self) -> lldb::QueueKind\n"
-		"\n"
-		"    Returns an lldb::QueueKind enumerated value (e.g. eQueueKindUnknown,\n"
-		"    eQueueKindSerial, eQueueKindConcurrent) describing the type of this\n"
-		"    queue.\n"
-		""},
-	 { "SBQueue_swigregister", SBQueue_swigregister, METH_O, NULL},
-	 { "SBQueue_swiginit", SBQueue_swiginit, METH_VARARGS, NULL},
-	 { "new_SBQueueItem", _wrap_new_SBQueueItem, METH_NOARGS, "new_SBQueueItem() -> SBQueueItem"},
-	 { "delete_SBQueueItem", _wrap_delete_SBQueueItem, METH_O, "delete_SBQueueItem(SBQueueItem self)"},
-	 { "SBQueueItem___nonzero__", _wrap_SBQueueItem___nonzero__, METH_O, "SBQueueItem___nonzero__(SBQueueItem self) -> bool"},
-	 { "SBQueueItem_IsValid", _wrap_SBQueueItem_IsValid, METH_O, "SBQueueItem_IsValid(SBQueueItem self) -> bool"},
-	 { "SBQueueItem_Clear", _wrap_SBQueueItem_Clear, METH_O, "SBQueueItem_Clear(SBQueueItem self)"},
-	 { "SBQueueItem_GetKind", _wrap_SBQueueItem_GetKind, METH_O, "SBQueueItem_GetKind(SBQueueItem self) -> lldb::QueueItemKind"},
-	 { "SBQueueItem_SetKind", _wrap_SBQueueItem_SetKind, METH_VARARGS, "SBQueueItem_SetKind(SBQueueItem self, lldb::QueueItemKind kind)"},
-	 { "SBQueueItem_GetAddress", _wrap_SBQueueItem_GetAddress, METH_O, "SBQueueItem_GetAddress(SBQueueItem self) -> SBAddress"},
-	 { "SBQueueItem_SetAddress", _wrap_SBQueueItem_SetAddress, METH_VARARGS, "SBQueueItem_SetAddress(SBQueueItem self, SBAddress addr)"},
-	 { "SBQueueItem_GetExtendedBacktraceThread", _wrap_SBQueueItem_GetExtendedBacktraceThread, METH_VARARGS, "SBQueueItem_GetExtendedBacktraceThread(SBQueueItem self, char const * type) -> SBThread"},
-	 { "SBQueueItem_swigregister", SBQueueItem_swigregister, METH_O, NULL},
-	 { "SBQueueItem_swiginit", SBQueueItem_swiginit, METH_VARARGS, NULL},
-	 { "SBReproducer_Capture", _wrap_SBReproducer_Capture, METH_O, "SBReproducer_Capture(char const * path) -> char const *"},
-	 { "SBReproducer_PassiveReplay", _wrap_SBReproducer_PassiveReplay, METH_O, "SBReproducer_PassiveReplay(char const * path) -> char const *"},
-	 { "SBReproducer_SetAutoGenerate", _wrap_SBReproducer_SetAutoGenerate, METH_O, "SBReproducer_SetAutoGenerate(bool b) -> bool"},
-	 { "SBReproducer_SetWorkingDirectory", _wrap_SBReproducer_SetWorkingDirectory, METH_O, "SBReproducer_SetWorkingDirectory(char const * path)"},
-	 { "new_SBReproducer", _wrap_new_SBReproducer, METH_NOARGS, "new_SBReproducer() -> SBReproducer"},
-	 { "delete_SBReproducer", _wrap_delete_SBReproducer, METH_O, "delete_SBReproducer(SBReproducer self)"},
-	 { "SBReproducer_swigregister", SBReproducer_swigregister, METH_O, NULL},
-	 { "SBReproducer_swiginit", SBReproducer_swiginit, METH_VARARGS, NULL},
-	 { "new_SBScriptObject", _wrap_new_SBScriptObject, METH_VARARGS, "\n"
-		"SBScriptObject(lldb::ScriptObjectPtr const ptr, lldb::ScriptLanguage lang)\n"
-		"new_SBScriptObject(SBScriptObject rhs) -> SBScriptObject\n"
-		""},
-	 { "delete_SBScriptObject", _wrap_delete_SBScriptObject, METH_O, "delete_SBScriptObject(SBScriptObject self)"},
-	 { "SBScriptObject___nonzero__", _wrap_SBScriptObject___nonzero__, METH_O, "SBScriptObject___nonzero__(SBScriptObject self) -> bool"},
-	 { "SBScriptObject___ne__", _wrap_SBScriptObject___ne__, METH_VARARGS, "SBScriptObject___ne__(SBScriptObject self, SBScriptObject rhs) -> bool"},
-	 { "SBScriptObject_IsValid", _wrap_SBScriptObject_IsValid, METH_O, "SBScriptObject_IsValid(SBScriptObject self) -> bool"},
-	 { "SBScriptObject_GetPointer", _wrap_SBScriptObject_GetPointer, METH_O, "SBScriptObject_GetPointer(SBScriptObject self) -> lldb::ScriptObjectPtr"},
-	 { "SBScriptObject_GetLanguage", _wrap_SBScriptObject_GetLanguage, METH_O, "SBScriptObject_GetLanguage(SBScriptObject self) -> lldb::ScriptLanguage"},
-	 { "SBScriptObject_swigregister", SBScriptObject_swigregister, METH_O, NULL},
-	 { "SBScriptObject_swiginit", SBScriptObject_swiginit, METH_VARARGS, NULL},
-	 { "new_SBSection", _wrap_new_SBSection, METH_VARARGS, "\n"
-		"SBSection()\n"
-		"new_SBSection(SBSection rhs) -> SBSection\n"
-		""},
-	 { "delete_SBSection", _wrap_delete_SBSection, METH_O, "delete_SBSection(SBSection self)"},
-	 { "SBSection___nonzero__", _wrap_SBSection___nonzero__, METH_O, "SBSection___nonzero__(SBSection self) -> bool"},
-	 { "SBSection_IsValid", _wrap_SBSection_IsValid, METH_O, "SBSection_IsValid(SBSection self) -> bool"},
-	 { "SBSection_GetName", _wrap_SBSection_GetName, METH_O, "SBSection_GetName(SBSection self) -> char const *"},
-	 { "SBSection_GetParent", _wrap_SBSection_GetParent, METH_O, "SBSection_GetParent(SBSection self) -> SBSection"},
-	 { "SBSection_FindSubSection", _wrap_SBSection_FindSubSection, METH_VARARGS, "SBSection_FindSubSection(SBSection self, char const * sect_name) -> SBSection"},
-	 { "SBSection_GetNumSubSections", _wrap_SBSection_GetNumSubSections, METH_O, "SBSection_GetNumSubSections(SBSection self) -> size_t"},
-	 { "SBSection_GetSubSectionAtIndex", _wrap_SBSection_GetSubSectionAtIndex, METH_VARARGS, "SBSection_GetSubSectionAtIndex(SBSection self, size_t idx) -> SBSection"},
-	 { "SBSection_GetFileAddress", _wrap_SBSection_GetFileAddress, METH_O, "SBSection_GetFileAddress(SBSection self) -> lldb::addr_t"},
-	 { "SBSection_GetLoadAddress", _wrap_SBSection_GetLoadAddress, METH_VARARGS, "SBSection_GetLoadAddress(SBSection self, SBTarget target) -> lldb::addr_t"},
-	 { "SBSection_GetByteSize", _wrap_SBSection_GetByteSize, METH_O, "SBSection_GetByteSize(SBSection self) -> lldb::addr_t"},
-	 { "SBSection_GetFileOffset", _wrap_SBSection_GetFileOffset, METH_O, "SBSection_GetFileOffset(SBSection self) -> uint64_t"},
-	 { "SBSection_GetFileByteSize", _wrap_SBSection_GetFileByteSize, METH_O, "SBSection_GetFileByteSize(SBSection self) -> uint64_t"},
-	 { "SBSection_GetSectionData", _wrap_SBSection_GetSectionData, METH_VARARGS, "\n"
-		"SBSection_GetSectionData(SBSection self) -> SBData\n"
-		"SBSection_GetSectionData(SBSection self, uint64_t offset, uint64_t size) -> SBData\n"
-		""},
-	 { "SBSection_GetSectionType", _wrap_SBSection_GetSectionType, METH_O, "SBSection_GetSectionType(SBSection self) -> lldb::SectionType"},
-	 { "SBSection_GetPermissions", _wrap_SBSection_GetPermissions, METH_O, "SBSection_GetPermissions(SBSection self) -> uint32_t"},
-	 { "SBSection_GetTargetByteSize", _wrap_SBSection_GetTargetByteSize, METH_O, "\n"
-		"SBSection_GetTargetByteSize(SBSection self) -> uint32_t\n"
-		"\n"
-		"    Return the size of a target's byte represented by this section\n"
-		"    in numbers of host bytes. Note that certain architectures have\n"
-		"    varying minimum addressable unit (i.e. byte) size for their\n"
-		"    CODE or DATA buses.\n"
-		"\n"
-		"    @return\n"
-		"        The number of host (8-bit) bytes needed to hold a target byte\n"
-		""},
-	 { "SBSection_GetAlignment", _wrap_SBSection_GetAlignment, METH_O, "SBSection_GetAlignment(SBSection self) -> uint32_t"},
-	 { "SBSection___eq__", _wrap_SBSection___eq__, METH_VARARGS, "SBSection___eq__(SBSection self, SBSection rhs) -> bool"},
-	 { "SBSection___ne__", _wrap_SBSection___ne__, METH_VARARGS, "SBSection___ne__(SBSection self, SBSection rhs) -> bool"},
-	 { "SBSection_GetDescription", _wrap_SBSection_GetDescription, METH_VARARGS, "SBSection_GetDescription(SBSection self, SBStream description) -> bool"},
-	 { "SBSection___repr__", _wrap_SBSection___repr__, METH_O, "SBSection___repr__(SBSection self) -> std::string"},
-	 { "SBSection_swigregister", SBSection_swigregister, METH_O, NULL},
-	 { "SBSection_swiginit", SBSection_swiginit, METH_VARARGS, NULL},
-	 { "new_SBSourceManager", _wrap_new_SBSourceManager, METH_VARARGS, "\n"
-		"SBSourceManager(SBDebugger debugger)\n"
-		"SBSourceManager(SBTarget target)\n"
-		"new_SBSourceManager(SBSourceManager rhs) -> SBSourceManager\n"
-		""},
-	 { "delete_SBSourceManager", _wrap_delete_SBSourceManager, METH_O, "delete_SBSourceManager(SBSourceManager self)"},
-	 { "SBSourceManager_DisplaySourceLinesWithLineNumbers", _wrap_SBSourceManager_DisplaySourceLinesWithLineNumbers, METH_VARARGS, "SBSourceManager_DisplaySourceLinesWithLineNumbers(SBSourceManager self, SBFileSpec file, uint32_t line, uint32_t context_before, uint32_t context_after, char const * current_line_cstr, SBStream s) -> size_t"},
-	 { "SBSourceManager_DisplaySourceLinesWithLineNumbersAndColumn", _wrap_SBSourceManager_DisplaySourceLinesWithLineNumbersAndColumn, METH_VARARGS, "SBSourceManager_DisplaySourceLinesWithLineNumbersAndColumn(SBSourceManager self, SBFileSpec file, uint32_t line, uint32_t column, uint32_t context_before, uint32_t context_after, char const * current_line_cstr, SBStream s) -> size_t"},
-	 { "SBSourceManager_swigregister", SBSourceManager_swigregister, METH_O, NULL},
-	 { "SBSourceManager_swiginit", SBSourceManager_swiginit, METH_VARARGS, NULL},
-	 { "new_SBStatisticsOptions", _wrap_new_SBStatisticsOptions, METH_VARARGS, "\n"
-		"SBStatisticsOptions()\n"
-		"new_SBStatisticsOptions(SBStatisticsOptions rhs) -> SBStatisticsOptions\n"
-		""},
-	 { "delete_SBStatisticsOptions", _wrap_delete_SBStatisticsOptions, METH_O, "delete_SBStatisticsOptions(SBStatisticsOptions self)"},
-	 { "SBStatisticsOptions_SetSummaryOnly", _wrap_SBStatisticsOptions_SetSummaryOnly, METH_VARARGS, "\n"
-		"SBStatisticsOptions_SetSummaryOnly(SBStatisticsOptions self, bool b)\n"
-		"Sets whether the statistics should only dump a summary.\n"
-		""},
-	 { "SBStatisticsOptions_GetSummaryOnly", _wrap_SBStatisticsOptions_GetSummaryOnly, METH_O, "\n"
-		"SBStatisticsOptions_GetSummaryOnly(SBStatisticsOptions self) -> bool\n"
-		"Gets whether the statistics only dump a summary.\n"
-		""},
-	 { "SBStatisticsOptions_SetIncludeTargets", _wrap_SBStatisticsOptions_SetIncludeTargets, METH_VARARGS, "SBStatisticsOptions_SetIncludeTargets(SBStatisticsOptions self, bool b)"},
-	 { "SBStatisticsOptions_GetIncludeTargets", _wrap_SBStatisticsOptions_GetIncludeTargets, METH_O, "SBStatisticsOptions_GetIncludeTargets(SBStatisticsOptions self) -> bool"},
-	 { "SBStatisticsOptions_SetIncludeModules", _wrap_SBStatisticsOptions_SetIncludeModules, METH_VARARGS, "SBStatisticsOptions_SetIncludeModules(SBStatisticsOptions self, bool b)"},
-	 { "SBStatisticsOptions_GetIncludeModules", _wrap_SBStatisticsOptions_GetIncludeModules, METH_O, "SBStatisticsOptions_GetIncludeModules(SBStatisticsOptions self) -> bool"},
-	 { "SBStatisticsOptions_SetIncludeTranscript", _wrap_SBStatisticsOptions_SetIncludeTranscript, METH_VARARGS, "SBStatisticsOptions_SetIncludeTranscript(SBStatisticsOptions self, bool b)"},
-	 { "SBStatisticsOptions_GetIncludeTranscript", _wrap_SBStatisticsOptions_GetIncludeTranscript, METH_O, "SBStatisticsOptions_GetIncludeTranscript(SBStatisticsOptions self) -> bool"},
-	 { "SBStatisticsOptions_SetReportAllAvailableDebugInfo", _wrap_SBStatisticsOptions_SetReportAllAvailableDebugInfo, METH_VARARGS, "\n"
-		"SBStatisticsOptions_SetReportAllAvailableDebugInfo(SBStatisticsOptions self, bool b)\n"
-		"\n"
-		"    Sets whether the statistics will force loading all possible debug info.\n"
-		""},
-	 { "SBStatisticsOptions_GetReportAllAvailableDebugInfo", _wrap_SBStatisticsOptions_GetReportAllAvailableDebugInfo, METH_O, "\n"
-		"SBStatisticsOptions_GetReportAllAvailableDebugInfo(SBStatisticsOptions self) -> bool\n"
-		"\n"
-		"    Gets whether the statistics will force loading all possible debug info.\n"
-		""},
-	 { "SBStatisticsOptions_swigregister", SBStatisticsOptions_swigregister, METH_O, NULL},
-	 { "SBStatisticsOptions_swiginit", SBStatisticsOptions_swiginit, METH_VARARGS, NULL},
-	 { "new_SBStream", _wrap_new_SBStream, METH_NOARGS, "new_SBStream() -> SBStream"},
-	 { "delete_SBStream", _wrap_delete_SBStream, METH_O, "delete_SBStream(SBStream self)"},
-	 { "SBStream___nonzero__", _wrap_SBStream___nonzero__, METH_O, "SBStream___nonzero__(SBStream self) -> bool"},
-	 { "SBStream_IsValid", _wrap_SBStream_IsValid, METH_O, "SBStream_IsValid(SBStream self) -> bool"},
-	 { "SBStream_GetData", _wrap_SBStream_GetData, METH_O, "\n"
-		"SBStream_GetData(SBStream self) -> char const *\n"
-		"\n"
-		"    If this stream is not redirected to a file, it will maintain a local\n"
-		"    cache for the stream data which can be accessed using this accessor.\n"
-		""},
-	 { "SBStream_GetSize", _wrap_SBStream_GetSize, METH_O, "\n"
-		"SBStream_GetSize(SBStream self) -> size_t\n"
-		"\n"
-		"    If this stream is not redirected to a file, it will maintain a local\n"
-		"    cache for the stream output whose length can be accessed using this\n"
-		"    accessor.\n"
-		""},
-	 { "SBStream_Print", _wrap_SBStream_Print, METH_VARARGS, "SBStream_Print(SBStream self, char const * str)"},
-	 { "SBStream_RedirectToFile", _wrap_SBStream_RedirectToFile, METH_VARARGS, "\n"
-		"SBStream_RedirectToFile(SBStream self, char const * path, bool append)\n"
-		"SBStream_RedirectToFile(SBStream self, SBFile file)\n"
-		"SBStream_RedirectToFile(SBStream self, lldb::FileSP file)\n"
-		""},
-	 { "SBStream_RedirectToFileDescriptor", _wrap_SBStream_RedirectToFileDescriptor, METH_VARARGS, "SBStream_RedirectToFileDescriptor(SBStream self, int fd, bool transfer_fh_ownership)"},
-	 { "SBStream_Clear", _wrap_SBStream_Clear, METH_O, "\n"
-		"SBStream_Clear(SBStream self)\n"
-		"\n"
-		"    If the stream is redirected to a file, forget about the file and if\n"
-		"    ownership of the file was transferred to this object, close the file.\n"
-		"    If the stream is backed by a local cache, clear this cache.\n"
-		""},
-	 { "SBStream_RedirectToFileHandle", _wrap_SBStream_RedirectToFileHandle, METH_VARARGS, "DEPRECATED, use RedirectToFile"},
-	 { "SBStream_write", _wrap_SBStream_write, METH_VARARGS, "SBStream_write(SBStream self, char const * str)"},
-	 { "SBStream_flush", _wrap_SBStream_flush, METH_O, "SBStream_flush(SBStream self)"},
-	 { "SBStream_swigregister", SBStream_swigregister, METH_O, NULL},
-	 { "SBStream_swiginit", SBStream_swiginit, METH_VARARGS, NULL},
-	 { "new_SBStringList", _wrap_new_SBStringList, METH_VARARGS, "\n"
-		"SBStringList()\n"
-		"new_SBStringList(SBStringList rhs) -> SBStringList\n"
-		""},
-	 { "delete_SBStringList", _wrap_delete_SBStringList, METH_O, "delete_SBStringList(SBStringList self)"},
-	 { "SBStringList___nonzero__", _wrap_SBStringList___nonzero__, METH_O, "SBStringList___nonzero__(SBStringList self) -> bool"},
-	 { "SBStringList_IsValid", _wrap_SBStringList_IsValid, METH_O, "SBStringList_IsValid(SBStringList self) -> bool"},
-	 { "SBStringList_AppendString", _wrap_SBStringList_AppendString, METH_VARARGS, "SBStringList_AppendString(SBStringList self, char const * str)"},
-	 { "SBStringList_AppendList", _wrap_SBStringList_AppendList, METH_VARARGS, "\n"
-		"SBStringList_AppendList(SBStringList self, char const ** strv, int strc)\n"
-		"SBStringList_AppendList(SBStringList self, SBStringList strings)\n"
-		""},
-	 { "SBStringList_GetSize", _wrap_SBStringList_GetSize, METH_O, "SBStringList_GetSize(SBStringList self) -> uint32_t"},
-	 { "SBStringList_GetStringAtIndex", _wrap_SBStringList_GetStringAtIndex, METH_VARARGS, "\n"
-		"SBStringList_GetStringAtIndex(SBStringList self, size_t idx) -> char const\n"
-		"SBStringList_GetStringAtIndex(SBStringList self, size_t idx) -> char const *\n"
-		""},
-	 { "SBStringList_Clear", _wrap_SBStringList_Clear, METH_O, "SBStringList_Clear(SBStringList self)"},
-	 { "SBStringList_swigregister", SBStringList_swigregister, METH_O, NULL},
-	 { "SBStringList_swiginit", SBStringList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBStructuredData", _wrap_new_SBStructuredData, METH_VARARGS, "\n"
-		"SBStructuredData()\n"
-		"SBStructuredData(SBStructuredData rhs)\n"
-		"new_SBStructuredData(SBScriptObject obj, SBDebugger debugger) -> SBStructuredData\n"
-		""},
-	 { "delete_SBStructuredData", _wrap_delete_SBStructuredData, METH_O, "delete_SBStructuredData(SBStructuredData self)"},
-	 { "SBStructuredData___nonzero__", _wrap_SBStructuredData___nonzero__, METH_O, "SBStructuredData___nonzero__(SBStructuredData self) -> bool"},
-	 { "SBStructuredData_IsValid", _wrap_SBStructuredData_IsValid, METH_O, "SBStructuredData_IsValid(SBStructuredData self) -> bool"},
-	 { "SBStructuredData_SetFromJSON", _wrap_SBStructuredData_SetFromJSON, METH_VARARGS, "\n"
-		"SBStructuredData_SetFromJSON(SBStructuredData self, SBStream stream) -> SBError\n"
-		"SBStructuredData_SetFromJSON(SBStructuredData self, char const * json) -> SBError\n"
-		""},
-	 { "SBStructuredData_Clear", _wrap_SBStructuredData_Clear, METH_O, "SBStructuredData_Clear(SBStructuredData self)"},
-	 { "SBStructuredData_GetAsJSON", _wrap_SBStructuredData_GetAsJSON, METH_VARARGS, "SBStructuredData_GetAsJSON(SBStructuredData self, SBStream stream) -> SBError"},
-	 { "SBStructuredData_GetDescription", _wrap_SBStructuredData_GetDescription, METH_VARARGS, "SBStructuredData_GetDescription(SBStructuredData self, SBStream stream) -> SBError"},
-	 { "SBStructuredData_GetType", _wrap_SBStructuredData_GetType, METH_O, "SBStructuredData_GetType(SBStructuredData self) -> lldb::StructuredDataType"},
-	 { "SBStructuredData_GetSize", _wrap_SBStructuredData_GetSize, METH_O, "SBStructuredData_GetSize(SBStructuredData self) -> size_t"},
-	 { "SBStructuredData_GetKeys", _wrap_SBStructuredData_GetKeys, METH_VARARGS, "SBStructuredData_GetKeys(SBStructuredData self, SBStringList keys) -> bool"},
-	 { "SBStructuredData_GetValueForKey", _wrap_SBStructuredData_GetValueForKey, METH_VARARGS, "SBStructuredData_GetValueForKey(SBStructuredData self, char const * key) -> SBStructuredData"},
-	 { "SBStructuredData_GetItemAtIndex", _wrap_SBStructuredData_GetItemAtIndex, METH_VARARGS, "SBStructuredData_GetItemAtIndex(SBStructuredData self, size_t idx) -> SBStructuredData"},
-	 { "SBStructuredData_GetUnsignedIntegerValue", _wrap_SBStructuredData_GetUnsignedIntegerValue, METH_VARARGS, "SBStructuredData_GetUnsignedIntegerValue(SBStructuredData self, uint64_t fail_value=0) -> uint64_t"},
-	 { "SBStructuredData_GetSignedIntegerValue", _wrap_SBStructuredData_GetSignedIntegerValue, METH_VARARGS, "SBStructuredData_GetSignedIntegerValue(SBStructuredData self, int64_t fail_value=0) -> int64_t"},
-	 { "SBStructuredData_GetIntegerValue", _wrap_SBStructuredData_GetIntegerValue, METH_VARARGS, "SBStructuredData_GetIntegerValue(SBStructuredData self, uint64_t fail_value=0) -> uint64_t"},
-	 { "SBStructuredData_GetFloatValue", _wrap_SBStructuredData_GetFloatValue, METH_VARARGS, "SBStructuredData_GetFloatValue(SBStructuredData self, double fail_value=0.0) -> double"},
-	 { "SBStructuredData_GetBooleanValue", _wrap_SBStructuredData_GetBooleanValue, METH_VARARGS, "SBStructuredData_GetBooleanValue(SBStructuredData self, bool fail_value=False) -> bool"},
-	 { "SBStructuredData_GetStringValue", _wrap_SBStructuredData_GetStringValue, METH_VARARGS, "SBStructuredData_GetStringValue(SBStructuredData self, char * dst) -> size_t"},
-	 { "SBStructuredData_GetGenericValue", _wrap_SBStructuredData_GetGenericValue, METH_O, "SBStructuredData_GetGenericValue(SBStructuredData self) -> SBScriptObject"},
-	 { "SBStructuredData___repr__", _wrap_SBStructuredData___repr__, METH_O, "SBStructuredData___repr__(SBStructuredData self) -> std::string"},
-	 { "SBStructuredData_swigregister", SBStructuredData_swigregister, METH_O, NULL},
-	 { "SBStructuredData_swiginit", SBStructuredData_swiginit, METH_VARARGS, NULL},
-	 { "delete_SBSymbol", _wrap_delete_SBSymbol, METH_O, "delete_SBSymbol(SBSymbol self)"},
-	 { "new_SBSymbol", _wrap_new_SBSymbol, METH_VARARGS, "\n"
-		"SBSymbol()\n"
-		"new_SBSymbol(SBSymbol rhs) -> SBSymbol\n"
-		""},
-	 { "SBSymbol___nonzero__", _wrap_SBSymbol___nonzero__, METH_O, "SBSymbol___nonzero__(SBSymbol self) -> bool"},
-	 { "SBSymbol_IsValid", _wrap_SBSymbol_IsValid, METH_O, "SBSymbol_IsValid(SBSymbol self) -> bool"},
-	 { "SBSymbol_GetName", _wrap_SBSymbol_GetName, METH_O, "SBSymbol_GetName(SBSymbol self) -> char const *"},
-	 { "SBSymbol_GetDisplayName", _wrap_SBSymbol_GetDisplayName, METH_O, "SBSymbol_GetDisplayName(SBSymbol self) -> char const *"},
-	 { "SBSymbol_GetMangledName", _wrap_SBSymbol_GetMangledName, METH_O, "SBSymbol_GetMangledName(SBSymbol self) -> char const *"},
-	 { "SBSymbol_GetInstructions", _wrap_SBSymbol_GetInstructions, METH_VARARGS, "\n"
-		"SBSymbol_GetInstructions(SBSymbol self, SBTarget target) -> SBInstructionList\n"
-		"SBSymbol_GetInstructions(SBSymbol self, SBTarget target, char const * flavor_string) -> SBInstructionList\n"
-		""},
-	 { "SBSymbol_GetStartAddress", _wrap_SBSymbol_GetStartAddress, METH_O, "SBSymbol_GetStartAddress(SBSymbol self) -> SBAddress"},
-	 { "SBSymbol_GetEndAddress", _wrap_SBSymbol_GetEndAddress, METH_O, "SBSymbol_GetEndAddress(SBSymbol self) -> SBAddress"},
-	 { "SBSymbol_GetValue", _wrap_SBSymbol_GetValue, METH_O, "SBSymbol_GetValue(SBSymbol self) -> uint64_t"},
-	 { "SBSymbol_GetSize", _wrap_SBSymbol_GetSize, METH_O, "SBSymbol_GetSize(SBSymbol self) -> uint64_t"},
-	 { "SBSymbol_GetPrologueByteSize", _wrap_SBSymbol_GetPrologueByteSize, METH_O, "SBSymbol_GetPrologueByteSize(SBSymbol self) -> uint32_t"},
-	 { "SBSymbol_GetType", _wrap_SBSymbol_GetType, METH_O, "SBSymbol_GetType(SBSymbol self) -> lldb::SymbolType"},
-	 { "SBSymbol___eq__", _wrap_SBSymbol___eq__, METH_VARARGS, "SBSymbol___eq__(SBSymbol self, SBSymbol rhs) -> bool"},
-	 { "SBSymbol___ne__", _wrap_SBSymbol___ne__, METH_VARARGS, "SBSymbol___ne__(SBSymbol self, SBSymbol rhs) -> bool"},
-	 { "SBSymbol_GetDescription", _wrap_SBSymbol_GetDescription, METH_VARARGS, "SBSymbol_GetDescription(SBSymbol self, SBStream description) -> bool"},
-	 { "SBSymbol_IsExternal", _wrap_SBSymbol_IsExternal, METH_O, "SBSymbol_IsExternal(SBSymbol self) -> bool"},
-	 { "SBSymbol_IsSynthetic", _wrap_SBSymbol_IsSynthetic, METH_O, "SBSymbol_IsSynthetic(SBSymbol self) -> bool"},
-	 { "SBSymbol___repr__", _wrap_SBSymbol___repr__, METH_O, "SBSymbol___repr__(SBSymbol self) -> std::string"},
-	 { "SBSymbol_swigregister", SBSymbol_swigregister, METH_O, NULL},
-	 { "SBSymbol_swiginit", SBSymbol_swiginit, METH_VARARGS, NULL},
-	 { "new_SBSymbolContext", _wrap_new_SBSymbolContext, METH_VARARGS, "\n"
-		"SBSymbolContext()\n"
-		"new_SBSymbolContext(SBSymbolContext rhs) -> SBSymbolContext\n"
-		""},
-	 { "delete_SBSymbolContext", _wrap_delete_SBSymbolContext, METH_O, "delete_SBSymbolContext(SBSymbolContext self)"},
-	 { "SBSymbolContext___nonzero__", _wrap_SBSymbolContext___nonzero__, METH_O, "SBSymbolContext___nonzero__(SBSymbolContext self) -> bool"},
-	 { "SBSymbolContext_IsValid", _wrap_SBSymbolContext_IsValid, METH_O, "SBSymbolContext_IsValid(SBSymbolContext self) -> bool"},
-	 { "SBSymbolContext_GetModule", _wrap_SBSymbolContext_GetModule, METH_O, "SBSymbolContext_GetModule(SBSymbolContext self) -> SBModule"},
-	 { "SBSymbolContext_GetCompileUnit", _wrap_SBSymbolContext_GetCompileUnit, METH_O, "SBSymbolContext_GetCompileUnit(SBSymbolContext self) -> SBCompileUnit"},
-	 { "SBSymbolContext_GetFunction", _wrap_SBSymbolContext_GetFunction, METH_O, "SBSymbolContext_GetFunction(SBSymbolContext self) -> SBFunction"},
-	 { "SBSymbolContext_GetBlock", _wrap_SBSymbolContext_GetBlock, METH_O, "SBSymbolContext_GetBlock(SBSymbolContext self) -> SBBlock"},
-	 { "SBSymbolContext_GetLineEntry", _wrap_SBSymbolContext_GetLineEntry, METH_O, "SBSymbolContext_GetLineEntry(SBSymbolContext self) -> SBLineEntry"},
-	 { "SBSymbolContext_GetSymbol", _wrap_SBSymbolContext_GetSymbol, METH_O, "SBSymbolContext_GetSymbol(SBSymbolContext self) -> SBSymbol"},
-	 { "SBSymbolContext_SetModule", _wrap_SBSymbolContext_SetModule, METH_VARARGS, "SBSymbolContext_SetModule(SBSymbolContext self, SBModule module)"},
-	 { "SBSymbolContext_SetCompileUnit", _wrap_SBSymbolContext_SetCompileUnit, METH_VARARGS, "SBSymbolContext_SetCompileUnit(SBSymbolContext self, SBCompileUnit compile_unit)"},
-	 { "SBSymbolContext_SetFunction", _wrap_SBSymbolContext_SetFunction, METH_VARARGS, "SBSymbolContext_SetFunction(SBSymbolContext self, SBFunction function)"},
-	 { "SBSymbolContext_SetBlock", _wrap_SBSymbolContext_SetBlock, METH_VARARGS, "SBSymbolContext_SetBlock(SBSymbolContext self, SBBlock block)"},
-	 { "SBSymbolContext_SetLineEntry", _wrap_SBSymbolContext_SetLineEntry, METH_VARARGS, "SBSymbolContext_SetLineEntry(SBSymbolContext self, SBLineEntry line_entry)"},
-	 { "SBSymbolContext_SetSymbol", _wrap_SBSymbolContext_SetSymbol, METH_VARARGS, "SBSymbolContext_SetSymbol(SBSymbolContext self, SBSymbol symbol)"},
-	 { "SBSymbolContext_GetParentOfInlinedScope", _wrap_SBSymbolContext_GetParentOfInlinedScope, METH_VARARGS, "SBSymbolContext_GetParentOfInlinedScope(SBSymbolContext self, SBAddress curr_frame_pc, SBAddress parent_frame_addr) -> SBSymbolContext"},
-	 { "SBSymbolContext_GetDescription", _wrap_SBSymbolContext_GetDescription, METH_VARARGS, "SBSymbolContext_GetDescription(SBSymbolContext self, SBStream description) -> bool"},
-	 { "SBSymbolContext___repr__", _wrap_SBSymbolContext___repr__, METH_O, "SBSymbolContext___repr__(SBSymbolContext self) -> std::string"},
-	 { "SBSymbolContext_swigregister", SBSymbolContext_swigregister, METH_O, NULL},
-	 { "SBSymbolContext_swiginit", SBSymbolContext_swiginit, METH_VARARGS, NULL},
-	 { "new_SBSymbolContextList", _wrap_new_SBSymbolContextList, METH_VARARGS, "\n"
-		"SBSymbolContextList()\n"
-		"new_SBSymbolContextList(SBSymbolContextList rhs) -> SBSymbolContextList\n"
-		""},
-	 { "delete_SBSymbolContextList", _wrap_delete_SBSymbolContextList, METH_O, "delete_SBSymbolContextList(SBSymbolContextList self)"},
-	 { "SBSymbolContextList___nonzero__", _wrap_SBSymbolContextList___nonzero__, METH_O, "SBSymbolContextList___nonzero__(SBSymbolContextList self) -> bool"},
-	 { "SBSymbolContextList_IsValid", _wrap_SBSymbolContextList_IsValid, METH_O, "SBSymbolContextList_IsValid(SBSymbolContextList self) -> bool"},
-	 { "SBSymbolContextList_GetSize", _wrap_SBSymbolContextList_GetSize, METH_O, "SBSymbolContextList_GetSize(SBSymbolContextList self) -> uint32_t"},
-	 { "SBSymbolContextList_GetContextAtIndex", _wrap_SBSymbolContextList_GetContextAtIndex, METH_VARARGS, "SBSymbolContextList_GetContextAtIndex(SBSymbolContextList self, uint32_t idx) -> SBSymbolContext"},
-	 { "SBSymbolContextList_GetDescription", _wrap_SBSymbolContextList_GetDescription, METH_VARARGS, "SBSymbolContextList_GetDescription(SBSymbolContextList self, SBStream description) -> bool"},
-	 { "SBSymbolContextList_Append", _wrap_SBSymbolContextList_Append, METH_VARARGS, "\n"
-		"SBSymbolContextList_Append(SBSymbolContextList self, SBSymbolContext sc)\n"
-		"SBSymbolContextList_Append(SBSymbolContextList self, SBSymbolContextList sc_list)\n"
-		""},
-	 { "SBSymbolContextList_Clear", _wrap_SBSymbolContextList_Clear, METH_O, "SBSymbolContextList_Clear(SBSymbolContextList self)"},
-	 { "SBSymbolContextList___repr__", _wrap_SBSymbolContextList___repr__, METH_O, "SBSymbolContextList___repr__(SBSymbolContextList self) -> std::string"},
-	 { "SBSymbolContextList_swigregister", SBSymbolContextList_swigregister, METH_O, NULL},
-	 { "SBSymbolContextList_swiginit", SBSymbolContextList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTarget", _wrap_new_SBTarget, METH_VARARGS, "\n"
-		"SBTarget()\n"
-		"new_SBTarget(SBTarget rhs) -> SBTarget\n"
-		""},
-	 { "delete_SBTarget", _wrap_delete_SBTarget, METH_O, "delete_SBTarget(SBTarget self)"},
-	 { "SBTarget___nonzero__", _wrap_SBTarget___nonzero__, METH_O, "SBTarget___nonzero__(SBTarget self) -> bool"},
-	 { "SBTarget_IsValid", _wrap_SBTarget_IsValid, METH_O, "SBTarget_IsValid(SBTarget self) -> bool"},
-	 { "SBTarget_EventIsTargetEvent", _wrap_SBTarget_EventIsTargetEvent, METH_O, "SBTarget_EventIsTargetEvent(SBEvent event) -> bool"},
-	 { "SBTarget_GetTargetFromEvent", _wrap_SBTarget_GetTargetFromEvent, METH_O, "SBTarget_GetTargetFromEvent(SBEvent event) -> SBTarget"},
-	 { "SBTarget_GetNumModulesFromEvent", _wrap_SBTarget_GetNumModulesFromEvent, METH_O, "SBTarget_GetNumModulesFromEvent(SBEvent event) -> uint32_t"},
-	 { "SBTarget_GetModuleAtIndexFromEvent", _wrap_SBTarget_GetModuleAtIndexFromEvent, METH_VARARGS, "SBTarget_GetModuleAtIndexFromEvent(uint32_t const idx, SBEvent event) -> SBModule"},
-	 { "SBTarget_GetBroadcasterClassName", _wrap_SBTarget_GetBroadcasterClassName, METH_NOARGS, "SBTarget_GetBroadcasterClassName() -> char const *"},
-	 { "SBTarget_GetProcess", _wrap_SBTarget_GetProcess, METH_O, "SBTarget_GetProcess(SBTarget self) -> SBProcess"},
-	 { "SBTarget_SetCollectingStats", _wrap_SBTarget_SetCollectingStats, METH_VARARGS, "SBTarget_SetCollectingStats(SBTarget self, bool v)"},
-	 { "SBTarget_GetCollectingStats", _wrap_SBTarget_GetCollectingStats, METH_O, "SBTarget_GetCollectingStats(SBTarget self) -> bool"},
-	 { "SBTarget_GetStatistics", _wrap_SBTarget_GetStatistics, METH_VARARGS, "\n"
-		"SBTarget_GetStatistics(SBTarget self) -> SBStructuredData\n"
-		"SBTarget_GetStatistics(SBTarget self, SBStatisticsOptions options) -> SBStructuredData\n"
-		""},
-	 { "SBTarget_GetPlatform", _wrap_SBTarget_GetPlatform, METH_O, "\n"
-		"SBTarget_GetPlatform(SBTarget self) -> SBPlatform\n"
-		"\n"
-		"    Return the platform object associated with the target.\n"
-		"\n"
-		"    After return, the platform object should be checked for\n"
-		"    validity.\n"
-		"\n"
-		"    @return\n"
-		"        A platform object.\n"
-		""},
-	 { "SBTarget_GetEnvironment", _wrap_SBTarget_GetEnvironment, METH_O, "SBTarget_GetEnvironment(SBTarget self) -> SBEnvironment"},
-	 { "SBTarget_Install", _wrap_SBTarget_Install, METH_O, "\n"
-		"SBTarget_Install(SBTarget self) -> SBError\n"
-		"\n"
-		"    Install any binaries that need to be installed.\n"
-		"\n"
-		"    This function does nothing when debugging on the host system.\n"
-		"    When connected to remote platforms, the target's main executable\n"
-		"    and any modules that have their install path set will be\n"
-		"    installed on the remote platform. If the main executable doesn't\n"
-		"    have an install location set, it will be installed in the remote\n"
-		"    platform's working directory.\n"
-		"\n"
-		"    @return\n"
-		"        An error describing anything that went wrong during\n"
-		"        installation.\n"
-		""},
-	 { "SBTarget_LoadCore", _wrap_SBTarget_LoadCore, METH_VARARGS, "\n"
-		"SBTarget_LoadCore(SBTarget self, char const * core_file) -> SBProcess\n"
-		"SBTarget_LoadCore(SBTarget self, char const * core_file, SBError error) -> SBProcess\n"
-		"\n"
-		"    Load a core file\n"
-		"\n"
-		"    @param[in] core_file\n"
-		"        File path of the core dump.\n"
-		"\n"
-		"    @param[out] error\n"
-		"        An error explaining what went wrong if the operation fails.\n"
-		"        (Optional)\n"
-		"\n"
-		"    @return\n"
-		"         A process object for the newly created core file.\n"
-		"\n"
-		"    For example,\n"
-		"\n"
-		"        process = target.LoadCore('./a.out.core')\n"
-		"\n"
-		"    loads a new core file and returns the process object.\n"
-		""},
-	 { "SBTarget_LaunchSimple", _wrap_SBTarget_LaunchSimple, METH_VARARGS, "\n"
-		"SBTarget_LaunchSimple(SBTarget self, char const ** argv, char const ** envp, char const * working_directory) -> SBProcess\n"
-		"\n"
-		"    Launch a new process with sensible defaults.\n"
-		"\n"
-		"    :param argv: The argument array.\n"
-		"    :param envp: The environment array.\n"
-		"    :param working_directory: The working directory to have the child process run in\n"
-		"    :return: The newly created process.\n"
-		"    :rtype: SBProcess\n"
-		"\n"
-		"    A pseudo terminal will be used as stdin/stdout/stderr.\n"
-		"    No launch flags are passed and the target's debuger is used as a listener.\n"
-		"\n"
-		"    For example, ::\n"
-		"\n"
-		"        process = target.LaunchSimple(['X', 'Y', 'Z'], None, os.getcwd())\n"
-		"\n"
-		"    launches a new process by passing 'X', 'Y', 'Z' as the args to the\n"
-		"    executable.\n"
-		""},
-	 { "SBTarget_Launch", _wrap_SBTarget_Launch, METH_VARARGS, "\n"
-		"SBTarget_Launch(SBTarget self, SBListener listener, char const ** argv, char const ** envp, char const * stdin_path, char const * stdout_path, char const * stderr_path, char const * working_directory, uint32_t launch_flags, bool stop_at_entry, SBError error) -> SBProcess\n"
-		"SBTarget_Launch(SBTarget self, SBLaunchInfo launch_info, SBError error) -> SBProcess\n"
-		"\n"
-		"    Launch a new process.\n"
-		"\n"
-		"    Launch a new process by spawning a new process using the\n"
-		"    target object's executable module's file as the file to launch.\n"
-		"    Arguments are given in argv, and the environment variables\n"
-		"    are in envp. Standard input and output files can be\n"
-		"    optionally re-directed to stdin_path, stdout_path, and\n"
-		"    stderr_path.\n"
-		"\n"
-		"    @param[in] listener\n"
-		"        An optional listener that will receive all process events.\n"
-		"        If listener is valid then listener will listen to all\n"
-		"        process events. If not valid, then this target's debugger\n"
-		"        (SBTarget::GetDebugger()) will listen to all process events.\n"
-		"\n"
-		"    @param[in] argv\n"
-		"        The argument array.\n"
-		"\n"
-		"    @param[in] envp\n"
-		"        The environment array.\n"
-		"\n"
-		"    @param[in] launch_flags\n"
-		"        Flags to modify the launch (@see lldb::LaunchFlags)\n"
-		"\n"
-		"    @param[in] stdin_path\n"
-		"        The path to use when re-directing the STDIN of the new\n"
-		"        process. If all stdXX_path arguments are NULL, a pseudo\n"
-		"        terminal will be used.\n"
-		"\n"
-		"    @param[in] stdout_path\n"
-		"        The path to use when re-directing the STDOUT of the new\n"
-		"        process. If all stdXX_path arguments are NULL, a pseudo\n"
-		"        terminal will be used.\n"
-		"\n"
-		"    @param[in] stderr_path\n"
-		"        The path to use when re-directing the STDERR of the new\n"
-		"        process. If all stdXX_path arguments are NULL, a pseudo\n"
-		"        terminal will be used.\n"
-		"\n"
-		"    @param[in] working_directory\n"
-		"        The working directory to have the child process run in\n"
-		"\n"
-		"    @param[in] launch_flags\n"
-		"        Some launch options specified by logical OR'ing\n"
-		"        lldb::LaunchFlags enumeration values together.\n"
-		"\n"
-		"    @param[in] stop_at_entry\n"
-		"        If false do not stop the inferior at the entry point.\n"
-		"\n"
-		"    @param[out]\n"
-		"        An error object. Contains the reason if there is some failure.\n"
-		"\n"
-		"    @return\n"
-		"         A process object for the newly created process.\n"
-		"\n"
-		"    For example,\n"
-		"\n"
-		"        process = target.Launch(self.dbg.GetListener(), None, None,\n"
-		"                                None, '/tmp/stdout.txt', None,\n"
-		"                                None, 0, False, error)\n"
-		"\n"
-		"    launches a new process by passing nothing for both the args and the envs\n"
-		"    and redirect the standard output of the inferior to the /tmp/stdout.txt\n"
-		"    file. It does not specify a working directory so that the debug server\n"
-		"    will use its idea of what the current working directory is for the\n"
-		"    inferior. Also, we ask the debugger not to stop the inferior at the\n"
-		"    entry point. If no breakpoint is specified for the inferior, it should\n"
-		"    run to completion if no user interaction is required.\n"
-		""},
-	 { "SBTarget_Attach", _wrap_SBTarget_Attach, METH_VARARGS, "SBTarget_Attach(SBTarget self, SBAttachInfo attach_info, SBError error) -> SBProcess"},
-	 { "SBTarget_AttachToProcessWithID", _wrap_SBTarget_AttachToProcessWithID, METH_VARARGS, "\n"
-		"SBTarget_AttachToProcessWithID(SBTarget self, SBListener listener, lldb::pid_t pid, SBError error) -> SBProcess\n"
-		"\n"
-		"    Attach to process with pid.\n"
-		"\n"
-		"    @param[in] listener\n"
-		"        An optional listener that will receive all process events.\n"
-		"        If listener is valid then listener will listen to all\n"
-		"        process events. If not valid, then this target's debugger\n"
-		"        (SBTarget::GetDebugger()) will listen to all process events.\n"
-		"\n"
-		"    @param[in] pid\n"
-		"        The process ID to attach to.\n"
-		"\n"
-		"    @param[out]\n"
-		"        An error explaining what went wrong if attach fails.\n"
-		"\n"
-		"    @return\n"
-		"         A process object for the attached process.\n"
-		""},
-	 { "SBTarget_AttachToProcessWithName", _wrap_SBTarget_AttachToProcessWithName, METH_VARARGS, "\n"
-		"SBTarget_AttachToProcessWithName(SBTarget self, SBListener listener, char const * name, bool wait_for, SBError error) -> SBProcess\n"
-		"\n"
-		"    Attach to process with name.\n"
-		"\n"
-		"    @param[in] listener\n"
-		"        An optional listener that will receive all process events.\n"
-		"        If listener is valid then listener will listen to all\n"
-		"        process events. If not valid, then this target's debugger\n"
-		"        (SBTarget::GetDebugger()) will listen to all process events.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        Basename of process to attach to.\n"
-		"\n"
-		"    @param[in] wait_for\n"
-		"        If true wait for a new instance of 'name' to be launched.\n"
-		"\n"
-		"    @param[out]\n"
-		"        An error explaining what went wrong if attach fails.\n"
-		"\n"
-		"    @return\n"
-		"         A process object for the attached process.\n"
-		""},
-	 { "SBTarget_ConnectRemote", _wrap_SBTarget_ConnectRemote, METH_VARARGS, "\n"
-		"SBTarget_ConnectRemote(SBTarget self, SBListener listener, char const * url, char const * plugin_name, SBError error) -> SBProcess\n"
-		"\n"
-		"    Connect to a remote debug server with url.\n"
-		"\n"
-		"    @param[in] listener\n"
-		"        An optional listener that will receive all process events.\n"
-		"        If listener is valid then listener will listen to all\n"
-		"        process events. If not valid, then this target's debugger\n"
-		"        (SBTarget::GetDebugger()) will listen to all process events.\n"
-		"\n"
-		"    @param[in] url\n"
-		"        The url to connect to, e.g., 'connect://localhost:12345'.\n"
-		"\n"
-		"    @param[in] plugin_name\n"
-		"        The plugin name to be used; can be NULL.\n"
-		"\n"
-		"    @param[out]\n"
-		"        An error explaining what went wrong if the connect fails.\n"
-		"\n"
-		"    @return\n"
-		"         A process object for the connected process.\n"
-		""},
-	 { "SBTarget_GetExecutable", _wrap_SBTarget_GetExecutable, METH_O, "SBTarget_GetExecutable(SBTarget self) -> SBFileSpec"},
-	 { "SBTarget_AppendImageSearchPath", _wrap_SBTarget_AppendImageSearchPath, METH_VARARGS, "\n"
-		"SBTarget_AppendImageSearchPath(SBTarget self, char const * _from, char const * to, SBError error)\n"
-		"\n"
-		"    Append the path mapping (from -> to) to the target's paths mapping list.\n"
-		""},
-	 { "SBTarget_AddModule", _wrap_SBTarget_AddModule, METH_VARARGS, "\n"
-		"SBTarget_AddModule(SBTarget self, SBModule module) -> bool\n"
-		"SBTarget_AddModule(SBTarget self, char const * path, char const * triple, char const * uuid) -> SBModule\n"
-		"SBTarget_AddModule(SBTarget self, char const * path, char const * triple, char const * uuid_cstr, char const * symfile) -> SBModule\n"
-		"SBTarget_AddModule(SBTarget self, SBModuleSpec module_spec) -> SBModule\n"
-		""},
-	 { "SBTarget_GetNumModules", _wrap_SBTarget_GetNumModules, METH_O, "SBTarget_GetNumModules(SBTarget self) -> uint32_t"},
-	 { "SBTarget_GetModuleAtIndex", _wrap_SBTarget_GetModuleAtIndex, METH_VARARGS, "SBTarget_GetModuleAtIndex(SBTarget self, uint32_t idx) -> SBModule"},
-	 { "SBTarget_RemoveModule", _wrap_SBTarget_RemoveModule, METH_VARARGS, "SBTarget_RemoveModule(SBTarget self, SBModule module) -> bool"},
-	 { "SBTarget_GetDebugger", _wrap_SBTarget_GetDebugger, METH_O, "SBTarget_GetDebugger(SBTarget self) -> SBDebugger"},
-	 { "SBTarget_FindModule", _wrap_SBTarget_FindModule, METH_VARARGS, "SBTarget_FindModule(SBTarget self, SBFileSpec file_spec) -> SBModule"},
-	 { "SBTarget_FindCompileUnits", _wrap_SBTarget_FindCompileUnits, METH_VARARGS, "\n"
-		"SBTarget_FindCompileUnits(SBTarget self, SBFileSpec sb_file_spec) -> SBSymbolContextList\n"
-		"\n"
-		"    Find compile units related to this target and passed source\n"
-		"    file.\n"
-		"\n"
-		"    :param sb_file_spec: A :py:class:`lldb::SBFileSpec` object that contains source file\n"
-		"        specification.\n"
-		"    :return: The symbol contexts for all the matches.\n"
-		"    :rtype: SBSymbolContextList\n"
-		""},
-	 { "SBTarget_GetByteOrder", _wrap_SBTarget_GetByteOrder, METH_O, "SBTarget_GetByteOrder(SBTarget self) -> lldb::ByteOrder"},
-	 { "SBTarget_GetAddressByteSize", _wrap_SBTarget_GetAddressByteSize, METH_O, "SBTarget_GetAddressByteSize(SBTarget self) -> uint32_t"},
-	 { "SBTarget_GetTriple", _wrap_SBTarget_GetTriple, METH_O, "SBTarget_GetTriple(SBTarget self) -> char const *"},
-	 { "SBTarget_GetABIName", _wrap_SBTarget_GetABIName, METH_O, "SBTarget_GetABIName(SBTarget self) -> char const *"},
-	 { "SBTarget_GetLabel", _wrap_SBTarget_GetLabel, METH_O, "SBTarget_GetLabel(SBTarget self) -> char const *"},
-	 { "SBTarget_SetLabel", _wrap_SBTarget_SetLabel, METH_VARARGS, "SBTarget_SetLabel(SBTarget self, char const * label) -> SBError"},
-	 { "SBTarget_GetDataByteSize", _wrap_SBTarget_GetDataByteSize, METH_O, "\n"
-		"SBTarget_GetDataByteSize(SBTarget self) -> uint32_t\n"
-		"\n"
-		"    Architecture data byte width accessor\n"
-		"\n"
-		"    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's data bus.\n"
-		"\n"
-		"\n"
-		""},
-	 { "SBTarget_GetCodeByteSize", _wrap_SBTarget_GetCodeByteSize, METH_O, "\n"
-		"SBTarget_GetCodeByteSize(SBTarget self) -> uint32_t\n"
-		"\n"
-		"    Architecture code byte width accessor.\n"
-		"\n"
-		"    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's code bus.\n"
-		"\n"
-		"\n"
-		""},
-	 { "SBTarget_GetMaximumNumberOfChildrenToDisplay", _wrap_SBTarget_GetMaximumNumberOfChildrenToDisplay, METH_O, "SBTarget_GetMaximumNumberOfChildrenToDisplay(SBTarget self) -> uint32_t"},
-	 { "SBTarget_SetSectionLoadAddress", _wrap_SBTarget_SetSectionLoadAddress, METH_VARARGS, "SBTarget_SetSectionLoadAddress(SBTarget self, SBSection section, lldb::addr_t section_base_addr) -> SBError"},
-	 { "SBTarget_ClearSectionLoadAddress", _wrap_SBTarget_ClearSectionLoadAddress, METH_VARARGS, "SBTarget_ClearSectionLoadAddress(SBTarget self, SBSection section) -> SBError"},
-	 { "SBTarget_SetModuleLoadAddress", _wrap_SBTarget_SetModuleLoadAddress, METH_VARARGS, "SBTarget_SetModuleLoadAddress(SBTarget self, SBModule module, uint64_t sections_offset) -> SBError"},
-	 { "SBTarget_ClearModuleLoadAddress", _wrap_SBTarget_ClearModuleLoadAddress, METH_VARARGS, "SBTarget_ClearModuleLoadAddress(SBTarget self, SBModule module) -> SBError"},
-	 { "SBTarget_FindFunctions", _wrap_SBTarget_FindFunctions, METH_VARARGS, "\n"
-		"SBTarget_FindFunctions(SBTarget self, char const * name, uint32_t name_type_mask=eFunctionNameTypeAny) -> SBSymbolContextList\n"
-		"\n"
-		"    Find functions by name.\n"
-		"\n"
-		"    :param name: The name of the function we are looking for.\n"
-		"\n"
-		"    :param name_type_mask:\n"
-		"        A logical OR of one or more FunctionNameType enum bits that\n"
-		"        indicate what kind of names should be used when doing the\n"
-		"        lookup. Bits include fully qualified names, base names,\n"
-		"        C++ methods, or ObjC selectors.\n"
-		"        See FunctionNameType for more details.\n"
-		"\n"
-		"    :return:\n"
-		"        A lldb::SBSymbolContextList that gets filled in with all of\n"
-		"        the symbol contexts for all the matches.\n"
-		""},
-	 { "SBTarget_FindFirstGlobalVariable", _wrap_SBTarget_FindFirstGlobalVariable, METH_VARARGS, "\n"
-		"SBTarget_FindFirstGlobalVariable(SBTarget self, char const * name) -> SBValue\n"
-		"\n"
-		"    Find the first global (or static) variable by name.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        The name of the global or static variable we are looking\n"
-		"        for.\n"
-		"\n"
-		"    @return\n"
-		"        An SBValue that gets filled in with the found variable (if any).\n"
-		""},
-	 { "SBTarget_FindGlobalVariables", _wrap_SBTarget_FindGlobalVariables, METH_VARARGS, "\n"
-		"SBTarget_FindGlobalVariables(SBTarget self, char const * name, uint32_t max_matches) -> SBValueList\n"
-		"SBTarget_FindGlobalVariables(SBTarget self, char const * name, uint32_t max_matches, lldb::MatchType matchtype) -> SBValueList\n"
-		"\n"
-		"    Find global and static variables by name.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        The name of the global or static variable we are looking\n"
-		"        for.\n"
-		"\n"
-		"    @param[in] max_matches\n"
-		"        Allow the number of matches to be limited to max_matches.\n"
-		"\n"
-		"    @return\n"
-		"        A list of matched variables in an SBValueList.\n"
-		""},
-	 { "SBTarget_FindGlobalFunctions", _wrap_SBTarget_FindGlobalFunctions, METH_VARARGS, "SBTarget_FindGlobalFunctions(SBTarget self, char const * name, uint32_t max_matches, lldb::MatchType matchtype) -> SBSymbolContextList"},
-	 { "SBTarget_Clear", _wrap_SBTarget_Clear, METH_O, "SBTarget_Clear(SBTarget self)"},
-	 { "SBTarget_ResolveFileAddress", _wrap_SBTarget_ResolveFileAddress, METH_VARARGS, "\n"
-		"SBTarget_ResolveFileAddress(SBTarget self, lldb::addr_t file_addr) -> SBAddress\n"
-		"\n"
-		"    Resolve a current file address into a section offset address.\n"
-		"\n"
-		"    @param[in] file_addr\n"
-		"\n"
-		"    @return\n"
-		"        An SBAddress which will be valid if...\n"
-		""},
-	 { "SBTarget_ResolveLoadAddress", _wrap_SBTarget_ResolveLoadAddress, METH_VARARGS, "SBTarget_ResolveLoadAddress(SBTarget self, lldb::addr_t vm_addr) -> SBAddress"},
-	 { "SBTarget_ResolvePastLoadAddress", _wrap_SBTarget_ResolvePastLoadAddress, METH_VARARGS, "SBTarget_ResolvePastLoadAddress(SBTarget self, uint32_t stop_id, lldb::addr_t vm_addr) -> SBAddress"},
-	 { "SBTarget_ResolveSymbolContextForAddress", _wrap_SBTarget_ResolveSymbolContextForAddress, METH_VARARGS, "SBTarget_ResolveSymbolContextForAddress(SBTarget self, SBAddress addr, uint32_t resolve_scope) -> SBSymbolContext"},
-	 { "SBTarget_ReadMemory", _wrap_SBTarget_ReadMemory, METH_VARARGS, "\n"
-		"SBTarget_ReadMemory(SBTarget self, SBAddress addr, void * buf, SBError error) -> size_t\n"
-		"\n"
-		"    Read target memory. If a target process is running then memory\n"
-		"    is read from here. Otherwise the memory is read from the object\n"
-		"    files. For a target whose bytes are sized as a multiple of host\n"
-		"    bytes, the data read back will preserve the target's byte order.\n"
-		"\n"
-		"    @param[in] addr\n"
-		"        A target address to read from.\n"
-		"\n"
-		"    @param[out] buf\n"
-		"        The buffer to read memory into.\n"
-		"\n"
-		"    @param[in] size\n"
-		"        The maximum number of host bytes to read in the buffer passed\n"
-		"        into this call\n"
-		"\n"
-		"    @param[out] error\n"
-		"        Error information is written here if the memory read fails.\n"
-		"\n"
-		"    @return\n"
-		"        The amount of data read in host bytes.\n"
-		""},
-	 { "SBTarget_BreakpointCreateByLocation", _wrap_SBTarget_BreakpointCreateByLocation, METH_VARARGS, "\n"
-		"SBTarget_BreakpointCreateByLocation(SBTarget self, char const * file, uint32_t line) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, lldb::addr_t offset) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, lldb::addr_t offset, SBFileSpecList module_list) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList module_list) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList module_list, bool move_to_nearest_code) -> SBBreakpoint\n"
-		""},
-	 { "SBTarget_BreakpointCreateByName", _wrap_SBTarget_BreakpointCreateByName, METH_VARARGS, "\n"
-		"SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, char const * module_name=None) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, uint32_t name_type_mask, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, uint32_t name_type_mask, lldb::LanguageType symbol_language, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
-		""},
-	 { "SBTarget_BreakpointCreateByNames", _wrap_SBTarget_BreakpointCreateByNames, METH_VARARGS, "\n"
-		"SBTarget_BreakpointCreateByNames(SBTarget self, char const ** symbol_name, uint32_t name_type_mask, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByNames(SBTarget self, char const ** symbol_name, uint32_t name_type_mask, lldb::LanguageType symbol_language, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByNames(SBTarget self, char const ** symbol_name, uint32_t name_type_mask, lldb::LanguageType symbol_language, lldb::addr_t offset, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
-		""},
-	 { "SBTarget_BreakpointCreateByRegex", _wrap_SBTarget_BreakpointCreateByRegex, METH_VARARGS, "\n"
-		"SBTarget_BreakpointCreateByRegex(SBTarget self, char const * symbol_name_regex, char const * module_name=None) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByRegex(SBTarget self, char const * symbol_name_regex, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateByRegex(SBTarget self, char const * symbol_name_regex, lldb::LanguageType symbol_language, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
-		""},
-	 { "SBTarget_BreakpointCreateBySourceRegex", _wrap_SBTarget_BreakpointCreateBySourceRegex, METH_VARARGS, "\n"
-		"SBTarget_BreakpointCreateBySourceRegex(SBTarget self, char const * source_regex, SBFileSpec source_file, char const * module_name=None) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateBySourceRegex(SBTarget self, char const * source_regex, SBFileSpecList module_list, SBFileSpecList source_file) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateBySourceRegex(SBTarget self, char const * source_regex, SBFileSpecList module_list, SBFileSpecList source_file, SBStringList func_names) -> SBBreakpoint\n"
-		""},
-	 { "SBTarget_BreakpointCreateForException", _wrap_SBTarget_BreakpointCreateForException, METH_VARARGS, "\n"
-		"SBTarget_BreakpointCreateForException(SBTarget self, lldb::LanguageType language, bool catch_bp, bool throw_bp) -> SBBreakpoint\n"
-		"SBTarget_BreakpointCreateForException(SBTarget self, lldb::LanguageType language, bool catch_bp, bool throw_bp, SBStringList extra_args) -> SBBreakpoint\n"
-		""},
-	 { "SBTarget_BreakpointCreateByAddress", _wrap_SBTarget_BreakpointCreateByAddress, METH_VARARGS, "SBTarget_BreakpointCreateByAddress(SBTarget self, lldb::addr_t address) -> SBBreakpoint"},
-	 { "SBTarget_BreakpointCreateBySBAddress", _wrap_SBTarget_BreakpointCreateBySBAddress, METH_VARARGS, "SBTarget_BreakpointCreateBySBAddress(SBTarget self, SBAddress address) -> SBBreakpoint"},
-	 { "SBTarget_BreakpointCreateFromScript", _wrap_SBTarget_BreakpointCreateFromScript, METH_VARARGS, "\n"
-		"SBTarget_BreakpointCreateFromScript(SBTarget self, char const * class_name, SBStructuredData extra_args, SBFileSpecList module_list, SBFileSpecList file_list, bool request_hardware=False) -> SBBreakpoint\n"
-		"\n"
-		"    Create a breakpoint using a scripted resolver.\n"
-		"\n"
-		"    @param[in] class_name\n"
-		"       This is the name of the class that implements a scripted resolver.\n"
-		"       The class should have the following signature: ::\n"
-		"\n"
-		"           class Resolver:\n"
-		"               def __init__(self, bkpt, extra_args):\n"
-		"                   # bkpt - the breakpoint for which this is the resolver.  When\n"
-		"                   # the resolver finds an interesting address, call AddLocation\n"
-		"                   # on this breakpoint to add it.\n"
-		"                   #\n"
-		"                   # extra_args - an SBStructuredData that can be used to\n"
-		"                   # parametrize this instance.  Same as the extra_args passed\n"
-		"                   # to BreakpointCreateFromScript.\n"
-		"\n"
-		"               def __get_depth__ (self):\n"
-		"                   # This is optional, but if defined, you should return the\n"
-		"                   # depth at which you want the callback to be called.  The\n"
-		"                   # available options are:\n"
-		"                   #    lldb.eSearchDepthModule\n"
-		"                   #    lldb.eSearchDepthCompUnit\n"
-		"                   # The default if you don't implement this method is\n"
-		"                   # eSearchDepthModule.\n"
-		"\n"
-		"               def __callback__(self, sym_ctx):\n"
-		"                   # sym_ctx - an SBSymbolContext that is the cursor in the\n"
-		"                   # search through the program to resolve breakpoints.\n"
-		"                   # The sym_ctx will be filled out to the depth requested in\n"
-		"                   # __get_depth__.\n"
-		"                   # Look in this sym_ctx for new breakpoint locations,\n"
-		"                   # and if found use bkpt.AddLocation to add them.\n"
-		"                   # Note, you will only get called for modules/compile_units that\n"
-		"                   # pass the SearchFilter provided by the module_list & file_list\n"
-		"                   # passed into BreakpointCreateFromScript.\n"
-		"\n"
-		"               def get_short_help(self):\n"
-		"                   # Optional, but if implemented return a short string that will\n"
-		"                   # be printed at the beginning of the break list output for the\n"
-		"                   # breakpoint.\n"
-		"\n"
-		"    @param[in] extra_args\n"
-		"       This is an SBStructuredData object that will get passed to the\n"
-		"       constructor of the class in class_name.  You can use this to\n"
-		"       reuse the same class, parametrizing it with entries from this\n"
-		"       dictionary.\n"
-		"\n"
-		"    @param module_list\n"
-		"       If this is non-empty, this will be used as the module filter in the\n"
-		"       SearchFilter created for this breakpoint.\n"
-		"\n"
-		"    @param file_list\n"
-		"       If this is non-empty, this will be used as the comp unit filter in the\n"
-		"       SearchFilter created for this breakpoint.\n"
-		"\n"
-		"    @return\n"
-		"        An SBBreakpoint that will set locations based on the logic in the\n"
-		"        resolver's search callback.\n"
-		""},
-	 { "SBTarget_BreakpointsCreateFromFile", _wrap_SBTarget_BreakpointsCreateFromFile, METH_VARARGS, "\n"
-		"SBTarget_BreakpointsCreateFromFile(SBTarget self, SBFileSpec source_file, SBBreakpointList new_bps) -> SBError\n"
-		"SBTarget_BreakpointsCreateFromFile(SBTarget self, SBFileSpec source_file, SBStringList matching_names, SBBreakpointList new_bps) -> SBError\n"
-		"\n"
-		"    Read breakpoints from source_file and return the newly created\n"
-		"    breakpoints in bkpt_list.\n"
-		"\n"
-		"    @param[in] source_file\n"
-		"       The file from which to read the breakpoints\n"
-		"\n"
-		"    @param[in] matching_names\n"
-		"       Only read in breakpoints whose names match one of the names in this\n"
-		"       list.\n"
-		"\n"
-		"    @param[out] bkpt_list\n"
-		"       A list of the newly created breakpoints.\n"
-		"\n"
-		"    @return\n"
-		"        An SBError detailing any errors in reading in the breakpoints.\n"
-		""},
-	 { "SBTarget_BreakpointsWriteToFile", _wrap_SBTarget_BreakpointsWriteToFile, METH_VARARGS, "\n"
-		"SBTarget_BreakpointsWriteToFile(SBTarget self, SBFileSpec dest_file) -> SBError\n"
-		"SBTarget_BreakpointsWriteToFile(SBTarget self, SBFileSpec dest_file, SBBreakpointList bkpt_list, bool append=False) -> SBError\n"
-		"\n"
-		"    Write breakpoints listed in bkpt_list to dest_file.\n"
-		"\n"
-		"    @param[in] dest_file\n"
-		"       The file to which to write the breakpoints.\n"
-		"\n"
-		"    @param[in] bkpt_list\n"
-		"       Only write breakpoints from this list.\n"
-		"\n"
-		"    @param[in] append\n"
-		"       If true, append the breakpoints in bkpt_list to the others\n"
-		"       serialized in dest_file.  If dest_file doesn't exist, then a new\n"
-		"       file will be created and the breakpoints in bkpt_list written to it.\n"
-		"\n"
-		"    @return\n"
-		"        An SBError detailing any errors in writing in the breakpoints.\n"
-		""},
-	 { "SBTarget_GetNumBreakpoints", _wrap_SBTarget_GetNumBreakpoints, METH_O, "SBTarget_GetNumBreakpoints(SBTarget self) -> uint32_t"},
-	 { "SBTarget_GetBreakpointAtIndex", _wrap_SBTarget_GetBreakpointAtIndex, METH_VARARGS, "SBTarget_GetBreakpointAtIndex(SBTarget self, uint32_t idx) -> SBBreakpoint"},
-	 { "SBTarget_BreakpointDelete", _wrap_SBTarget_BreakpointDelete, METH_VARARGS, "SBTarget_BreakpointDelete(SBTarget self, lldb::break_id_t break_id) -> bool"},
-	 { "SBTarget_FindBreakpointByID", _wrap_SBTarget_FindBreakpointByID, METH_VARARGS, "SBTarget_FindBreakpointByID(SBTarget self, lldb::break_id_t break_id) -> SBBreakpoint"},
-	 { "SBTarget_FindBreakpointsByName", _wrap_SBTarget_FindBreakpointsByName, METH_VARARGS, "SBTarget_FindBreakpointsByName(SBTarget self, char const * name, SBBreakpointList bkpt_list) -> bool"},
-	 { "SBTarget_GetBreakpointNames", _wrap_SBTarget_GetBreakpointNames, METH_VARARGS, "SBTarget_GetBreakpointNames(SBTarget self, SBStringList names)"},
-	 { "SBTarget_DeleteBreakpointName", _wrap_SBTarget_DeleteBreakpointName, METH_VARARGS, "SBTarget_DeleteBreakpointName(SBTarget self, char const * name)"},
-	 { "SBTarget_EnableAllBreakpoints", _wrap_SBTarget_EnableAllBreakpoints, METH_O, "SBTarget_EnableAllBreakpoints(SBTarget self) -> bool"},
-	 { "SBTarget_DisableAllBreakpoints", _wrap_SBTarget_DisableAllBreakpoints, METH_O, "SBTarget_DisableAllBreakpoints(SBTarget self) -> bool"},
-	 { "SBTarget_DeleteAllBreakpoints", _wrap_SBTarget_DeleteAllBreakpoints, METH_O, "SBTarget_DeleteAllBreakpoints(SBTarget self) -> bool"},
-	 { "SBTarget_GetNumWatchpoints", _wrap_SBTarget_GetNumWatchpoints, METH_O, "SBTarget_GetNumWatchpoints(SBTarget self) -> uint32_t"},
-	 { "SBTarget_GetWatchpointAtIndex", _wrap_SBTarget_GetWatchpointAtIndex, METH_VARARGS, "SBTarget_GetWatchpointAtIndex(SBTarget self, uint32_t idx) -> SBWatchpoint"},
-	 { "SBTarget_DeleteWatchpoint", _wrap_SBTarget_DeleteWatchpoint, METH_VARARGS, "SBTarget_DeleteWatchpoint(SBTarget self, lldb::watch_id_t watch_id) -> bool"},
-	 { "SBTarget_FindWatchpointByID", _wrap_SBTarget_FindWatchpointByID, METH_VARARGS, "SBTarget_FindWatchpointByID(SBTarget self, lldb::watch_id_t watch_id) -> SBWatchpoint"},
-	 { "SBTarget_WatchAddress", _wrap_SBTarget_WatchAddress, METH_VARARGS, "SBTarget_WatchAddress(SBTarget self, lldb::addr_t addr, size_t size, bool read, bool modify, SBError error) -> SBWatchpoint"},
-	 { "SBTarget_WatchpointCreateByAddress", _wrap_SBTarget_WatchpointCreateByAddress, METH_VARARGS, "SBTarget_WatchpointCreateByAddress(SBTarget self, lldb::addr_t addr, size_t size, SBWatchpointOptions options, SBError error) -> SBWatchpoint"},
-	 { "SBTarget_EnableAllWatchpoints", _wrap_SBTarget_EnableAllWatchpoints, METH_O, "SBTarget_EnableAllWatchpoints(SBTarget self) -> bool"},
-	 { "SBTarget_DisableAllWatchpoints", _wrap_SBTarget_DisableAllWatchpoints, METH_O, "SBTarget_DisableAllWatchpoints(SBTarget self) -> bool"},
-	 { "SBTarget_DeleteAllWatchpoints", _wrap_SBTarget_DeleteAllWatchpoints, METH_O, "SBTarget_DeleteAllWatchpoints(SBTarget self) -> bool"},
-	 { "SBTarget_GetBroadcaster", _wrap_SBTarget_GetBroadcaster, METH_O, "SBTarget_GetBroadcaster(SBTarget self) -> SBBroadcaster"},
-	 { "SBTarget_FindFirstType", _wrap_SBTarget_FindFirstType, METH_VARARGS, "SBTarget_FindFirstType(SBTarget self, char const * type) -> SBType"},
-	 { "SBTarget_FindTypes", _wrap_SBTarget_FindTypes, METH_VARARGS, "SBTarget_FindTypes(SBTarget self, char const * type) -> SBTypeList"},
-	 { "SBTarget_GetBasicType", _wrap_SBTarget_GetBasicType, METH_VARARGS, "SBTarget_GetBasicType(SBTarget self, lldb::BasicType type) -> SBType"},
-	 { "SBTarget_CreateValueFromAddress", _wrap_SBTarget_CreateValueFromAddress, METH_VARARGS, "\n"
-		"SBTarget_CreateValueFromAddress(SBTarget self, char const * name, SBAddress addr, SBType type) -> SBValue\n"
-		"\n"
-		"    Create an SBValue with the given name by treating the memory starting at addr as an entity of type.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        The name of the resultant SBValue\n"
-		"\n"
-		"    @param[in] addr\n"
-		"        The address of the start of the memory region to be used.\n"
-		"\n"
-		"    @param[in] type\n"
-		"        The type to use to interpret the memory starting at addr.\n"
-		"\n"
-		"    @return\n"
-		"        An SBValue of the given type, may be invalid if there was an error reading\n"
-		"        the underlying memory.\n"
-		""},
-	 { "SBTarget_CreateValueFromData", _wrap_SBTarget_CreateValueFromData, METH_VARARGS, "SBTarget_CreateValueFromData(SBTarget self, char const * name, SBData data, SBType type) -> SBValue"},
-	 { "SBTarget_CreateValueFromExpression", _wrap_SBTarget_CreateValueFromExpression, METH_VARARGS, "SBTarget_CreateValueFromExpression(SBTarget self, char const * name, char const * expr) -> SBValue"},
-	 { "SBTarget_GetSourceManager", _wrap_SBTarget_GetSourceManager, METH_O, "SBTarget_GetSourceManager(SBTarget self) -> SBSourceManager"},
-	 { "SBTarget_ReadInstructions", _wrap_SBTarget_ReadInstructions, METH_VARARGS, "\n"
-		"SBTarget_ReadInstructions(SBTarget self, SBAddress base_addr, uint32_t count) -> SBInstructionList\n"
-		"SBTarget_ReadInstructions(SBTarget self, SBAddress base_addr, uint32_t count, char const * flavor_string) -> SBInstructionList\n"
-		"SBTarget_ReadInstructions(SBTarget self, SBAddress start_addr, SBAddress end_addr, char const * flavor_string) -> SBInstructionList\n"
-		"\n"
-		"    Disassemble a specified number of instructions starting at an address.\n"
-		"\n"
-		"    :param base_addr: the address to start disassembly from.\n"
-		"    :param count: the number of instructions to disassemble.\n"
-		"    :param flavor_string: may be 'intel' or 'att' on x86 targets to specify that style of disassembly.\n"
-		"    :rtype: SBInstructionList\n"
-		"\n"
-		""},
-	 { "SBTarget_GetInstructions", _wrap_SBTarget_GetInstructions, METH_VARARGS, "\n"
-		"SBTarget_GetInstructions(SBTarget self, SBAddress base_addr, void const * buf) -> SBInstructionList\n"
-		"\n"
-		"    Disassemble the bytes in a buffer and return them in an SBInstructionList.\n"
-		"\n"
-		"    :param base_addr: used for symbolicating the offsets in the byte stream when disassembling.\n"
-		"    :param buf: bytes to be disassembled.\n"
-		"    :param size: (C++) size of the buffer.\n"
-		"    :rtype: SBInstructionList\n"
-		"\n"
-		""},
-	 { "SBTarget_GetInstructionsWithFlavor", _wrap_SBTarget_GetInstructionsWithFlavor, METH_VARARGS, "\n"
-		"SBTarget_GetInstructionsWithFlavor(SBTarget self, SBAddress base_addr, char const * flavor_string, void const * buf) -> SBInstructionList\n"
-		"\n"
-		"    Disassemble the bytes in a buffer and return them in an SBInstructionList, with a supplied flavor.\n"
-		"\n"
-		"    :param base_addr: used for symbolicating the offsets in the byte stream when disassembling.\n"
-		"    :param flavor:  may be 'intel' or 'att' on x86 targets to specify that style of disassembly.\n"
-		"    :param buf: bytes to be disassembled.\n"
-		"    :param size: (C++) size of the buffer.\n"
-		"    :rtype: SBInstructionList\n"
-		"\n"
-		""},
-	 { "SBTarget_FindSymbols", _wrap_SBTarget_FindSymbols, METH_VARARGS, "SBTarget_FindSymbols(SBTarget self, char const * name, lldb::SymbolType type=eSymbolTypeAny) -> SBSymbolContextList"},
-	 { "SBTarget___eq__", _wrap_SBTarget___eq__, METH_VARARGS, "SBTarget___eq__(SBTarget self, SBTarget rhs) -> bool"},
-	 { "SBTarget___ne__", _wrap_SBTarget___ne__, METH_VARARGS, "SBTarget___ne__(SBTarget self, SBTarget rhs) -> bool"},
-	 { "SBTarget_GetDescription", _wrap_SBTarget_GetDescription, METH_VARARGS, "SBTarget_GetDescription(SBTarget self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTarget_EvaluateExpression", _wrap_SBTarget_EvaluateExpression, METH_VARARGS, "\n"
-		"SBTarget_EvaluateExpression(SBTarget self, char const * expr) -> SBValue\n"
-		"SBTarget_EvaluateExpression(SBTarget self, char const * expr, SBExpressionOptions options) -> SBValue\n"
-		""},
-	 { "SBTarget_GetStackRedZoneSize", _wrap_SBTarget_GetStackRedZoneSize, METH_O, "SBTarget_GetStackRedZoneSize(SBTarget self) -> lldb::addr_t"},
-	 { "SBTarget_IsLoaded", _wrap_SBTarget_IsLoaded, METH_VARARGS, "\n"
-		"SBTarget_IsLoaded(SBTarget self, SBModule module) -> bool\n"
-		"\n"
-		"    Returns true if the module has been loaded in this `SBTarget`.\n"
-		"    A module can be loaded either by the dynamic loader or by being manually\n"
-		"    added to the target (see `SBTarget.AddModule` and the ``target module add`` command).\n"
-		"\n"
-		"    :rtype: bool\n"
-		"\n"
-		""},
-	 { "SBTarget_GetLaunchInfo", _wrap_SBTarget_GetLaunchInfo, METH_O, "SBTarget_GetLaunchInfo(SBTarget self) -> SBLaunchInfo"},
-	 { "SBTarget_SetLaunchInfo", _wrap_SBTarget_SetLaunchInfo, METH_VARARGS, "SBTarget_SetLaunchInfo(SBTarget self, SBLaunchInfo launch_info)"},
-	 { "SBTarget_GetTrace", _wrap_SBTarget_GetTrace, METH_O, "SBTarget_GetTrace(SBTarget self) -> SBTrace"},
-	 { "SBTarget_CreateTrace", _wrap_SBTarget_CreateTrace, METH_VARARGS, "SBTarget_CreateTrace(SBTarget self, SBError error) -> SBTrace"},
-	 { "SBTarget___repr__", _wrap_SBTarget___repr__, METH_O, "SBTarget___repr__(SBTarget self) -> std::string"},
-	 { "SBTarget_swigregister", SBTarget_swigregister, METH_O, NULL},
-	 { "SBTarget_swiginit", SBTarget_swiginit, METH_VARARGS, NULL},
-	 { "SBThread_GetBroadcasterClassName", _wrap_SBThread_GetBroadcasterClassName, METH_NOARGS, "SBThread_GetBroadcasterClassName() -> char const *"},
-	 { "new_SBThread", _wrap_new_SBThread, METH_VARARGS, "\n"
-		"SBThread()\n"
-		"new_SBThread(SBThread thread) -> SBThread\n"
-		""},
-	 { "delete_SBThread", _wrap_delete_SBThread, METH_O, "delete_SBThread(SBThread self)"},
-	 { "SBThread_GetQueue", _wrap_SBThread_GetQueue, METH_O, "\n"
-		"SBThread_GetQueue(SBThread self) -> SBQueue\n"
-		"\n"
-		"    Return the SBQueue for this thread.  If this thread is not currently associated\n"
-		"    with a libdispatch queue, the SBQueue object's IsValid() method will return false.\n"
-		"    If this SBThread is actually a HistoryThread, we may be able to provide QueueID\n"
-		"    and QueueName, but not provide an SBQueue.  Those individual attributes may have\n"
-		"    been saved for the HistoryThread without enough information to reconstitute the\n"
-		"    entire SBQueue at that time.\n"
-		"    This method takes no arguments, returns an SBQueue.\n"
-		""},
-	 { "SBThread___nonzero__", _wrap_SBThread___nonzero__, METH_O, "SBThread___nonzero__(SBThread self) -> bool"},
-	 { "SBThread_IsValid", _wrap_SBThread_IsValid, METH_O, "SBThread_IsValid(SBThread self) -> bool"},
-	 { "SBThread_Clear", _wrap_SBThread_Clear, METH_O, "SBThread_Clear(SBThread self)"},
-	 { "SBThread_GetStopReason", _wrap_SBThread_GetStopReason, METH_O, "SBThread_GetStopReason(SBThread self) -> lldb::StopReason"},
-	 { "SBThread_GetStopReasonDataCount", _wrap_SBThread_GetStopReasonDataCount, METH_O, "\n"
-		"SBThread_GetStopReasonDataCount(SBThread self) -> size_t\n"
-		"\n"
-		"    Get the number of words associated with the stop reason.\n"
-		"    See also GetStopReasonDataAtIndex().\n"
-		""},
-	 { "SBThread_GetStopReasonDataAtIndex", _wrap_SBThread_GetStopReasonDataAtIndex, METH_VARARGS, "\n"
-		"SBThread_GetStopReasonDataAtIndex(SBThread self, uint32_t idx) -> uint64_t\n"
-		"\n"
-		"    Get information associated with a stop reason.\n"
-		"\n"
-		"    Breakpoint stop reasons will have data that consists of pairs of\n"
-		"    breakpoint IDs followed by the breakpoint location IDs (they always come\n"
-		"    in pairs).\n"
-		"\n"
-		"    Stop Reason              Count Data Type\n"
-		"    ======================== ===== =========================================\n"
-		"    eStopReasonNone          0\n"
-		"    eStopReasonTrace         0\n"
-		"    eStopReasonBreakpoint    N     duple: {breakpoint id, location id}\n"
-		"    eStopReasonWatchpoint    1     watchpoint id\n"
-		"    eStopReasonSignal        1     unix signal number\n"
-		"    eStopReasonException     N     exception data\n"
-		"    eStopReasonExec          0\n"
-		"    eStopReasonFork          1     pid of the child process\n"
-		"    eStopReasonVFork         1     pid of the child process\n"
-		"    eStopReasonVForkDone     0\n"
-		"    eStopReasonPlanComplete  0\n"
-		""},
-	 { "SBThread_GetStopReasonExtendedInfoAsJSON", _wrap_SBThread_GetStopReasonExtendedInfoAsJSON, METH_VARARGS, "\n"
-		"SBThread_GetStopReasonExtendedInfoAsJSON(SBThread self, SBStream stream) -> bool\n"
-		"\n"
-		"    Collects a thread's stop reason extended information dictionary and prints it\n"
-		"    into the SBStream in a JSON format. The format of this JSON dictionary depends\n"
-		"    on the stop reason and is currently used only for instrumentation plugins.\n"
-		""},
-	 { "SBThread_GetStopReasonExtendedBacktraces", _wrap_SBThread_GetStopReasonExtendedBacktraces, METH_VARARGS, "\n"
-		"SBThread_GetStopReasonExtendedBacktraces(SBThread self, lldb::InstrumentationRuntimeType type) -> SBThreadCollection\n"
-		"\n"
-		"    Returns a collection of historical stack traces that are significant to the\n"
-		"    current stop reason. Used by ThreadSanitizer, where we provide various stack\n"
-		"    traces that were involved in a data race or other type of detected issue.\n"
-		""},
-	 { "SBThread_GetStopDescription", _wrap_SBThread_GetStopDescription, METH_VARARGS, "\n"
-		"SBThread_GetStopDescription(SBThread self, char * dst_or_null) -> size_t\n"
-		"\n"
-		"    Pass only an (int)length and expect to get a Python string describing the\n"
-		"    stop reason.\n"
-		""},
-	 { "SBThread_GetStopReturnValue", _wrap_SBThread_GetStopReturnValue, METH_O, "SBThread_GetStopReturnValue(SBThread self) -> SBValue"},
-	 { "SBThread_GetStopErrorValue", _wrap_SBThread_GetStopErrorValue, METH_O, "SBThread_GetStopErrorValue(SBThread self) -> SBValue"},
-	 { "SBThread_GetStopReturnOrErrorValue", _wrap_SBThread_GetStopReturnOrErrorValue, METH_VARARGS, "SBThread_GetStopReturnOrErrorValue(SBThread self, bool & is_swift_error_value) -> SBValue"},
-	 { "SBThread_GetThreadID", _wrap_SBThread_GetThreadID, METH_O, "\n"
-		"SBThread_GetThreadID(SBThread self) -> lldb::tid_t\n"
-		"\n"
-		"    Returns a unique thread identifier (type lldb::tid_t, typically a 64-bit type)\n"
-		"    for the current SBThread that will remain constant throughout the thread's\n"
-		"    lifetime in this process and will not be reused by another thread during this\n"
-		"    process lifetime.  On Mac OS X systems, this is a system-wide unique thread\n"
-		"    identifier; this identifier is also used by other tools like sample which helps\n"
-		"    to associate data from those tools with lldb.  See related GetIndexID.\n"
-		""},
-	 { "SBThread_GetIndexID", _wrap_SBThread_GetIndexID, METH_O, "\n"
-		"SBThread_GetIndexID(SBThread self) -> uint32_t\n"
-		"\n"
-		"    Return the index number for this SBThread.  The index number is the same thing\n"
-		"    that a user gives as an argument to 'thread select' in the command line lldb.\n"
-		"    These numbers start at 1 (for the first thread lldb sees in a debug session)\n"
-		"    and increments up throughout the process lifetime.  An index number will not be\n"
-		"    reused for a different thread later in a process - thread 1 will always be\n"
-		"    associated with the same thread.  See related GetThreadID.\n"
-		"    This method returns a uint32_t index number, takes no arguments.\n"
-		""},
-	 { "SBThread_GetName", _wrap_SBThread_GetName, METH_O, "SBThread_GetName(SBThread self) -> char const *"},
-	 { "SBThread_GetQueueName", _wrap_SBThread_GetQueueName, METH_O, "\n"
-		"SBThread_GetQueueName(SBThread self) -> char const *\n"
-		"\n"
-		"    Return the queue name associated with this thread, if any, as a str.\n"
-		"    For example, with a libdispatch (aka Grand Central Dispatch) queue.\n"
-		""},
-	 { "SBThread_GetQueueID", _wrap_SBThread_GetQueueID, METH_O, "\n"
-		"SBThread_GetQueueID(SBThread self) -> lldb::queue_id_t\n"
-		"\n"
-		"    Return the dispatch_queue_id for this thread, if any, as a lldb::queue_id_t.\n"
-		"    For example, with a libdispatch (aka Grand Central Dispatch) queue.\n"
-		""},
-	 { "SBThread_GetInfoItemByPathAsString", _wrap_SBThread_GetInfoItemByPathAsString, METH_VARARGS, "\n"
-		"SBThread_GetInfoItemByPathAsString(SBThread self, char const * path, SBStream strm) -> bool\n"
-		"\n"
-		"    Takes a path string and a SBStream reference as parameters, returns a bool.\n"
-		"    Collects the thread's 'info' dictionary from the remote system, uses the path\n"
-		"    argument to descend into the dictionary to an item of interest, and prints\n"
-		"    it into the SBStream in a natural format.  Return bool is to indicate if\n"
-		"    anything was printed into the stream (true) or not (false).\n"
-		""},
-	 { "SBThread_StepOver", _wrap_SBThread_StepOver, METH_VARARGS, "\n"
-		"SBThread_StepOver(SBThread self, lldb::RunMode stop_other_threads=eOnlyDuringStepping)\n"
-		"SBThread_StepOver(SBThread self, lldb::RunMode stop_other_threads, SBError error)\n"
-		"Do a source level single step over in the currently selected thread.\n"
-		""},
-	 { "SBThread_StepInto", _wrap_SBThread_StepInto, METH_VARARGS, "\n"
-		"SBThread_StepInto(SBThread self, lldb::RunMode stop_other_threads=eOnlyDuringStepping)\n"
-		"SBThread_StepInto(SBThread self, char const * target_name, lldb::RunMode stop_other_threads=eOnlyDuringStepping)\n"
-		"SBThread_StepInto(SBThread self, char const * target_name, uint32_t end_line, SBError error, lldb::RunMode stop_other_threads=eOnlyDuringStepping)\n"
-		"\n"
-		"    Step the current thread from the current source line to the line given by end_line, stopping if\n"
-		"    the thread steps into the function given by target_name.  If target_name is None, then stepping will stop\n"
-		"    in any of the places we would normally stop.\n"
-		""},
-	 { "SBThread_StepOut", _wrap_SBThread_StepOut, METH_VARARGS, "\n"
-		"SBThread_StepOut(SBThread self)\n"
-		"SBThread_StepOut(SBThread self, SBError error)\n"
-		"Step out of the currently selected thread.\n"
-		""},
-	 { "SBThread_StepOutOfFrame", _wrap_SBThread_StepOutOfFrame, METH_VARARGS, "\n"
-		"SBThread_StepOutOfFrame(SBThread self, SBFrame frame)\n"
-		"SBThread_StepOutOfFrame(SBThread self, SBFrame frame, SBError error)\n"
-		"Step out of the specified frame.\n"
-		""},
-	 { "SBThread_StepInstruction", _wrap_SBThread_StepInstruction, METH_VARARGS, "\n"
-		"SBThread_StepInstruction(SBThread self, bool step_over)\n"
-		"SBThread_StepInstruction(SBThread self, bool step_over, SBError error)\n"
-		"Do an instruction level single step in the currently selected thread.\n"
-		""},
-	 { "SBThread_StepOverUntil", _wrap_SBThread_StepOverUntil, METH_VARARGS, "SBThread_StepOverUntil(SBThread self, SBFrame frame, SBFileSpec file_spec, uint32_t line) -> SBError"},
-	 { "SBThread_StepUsingScriptedThreadPlan", _wrap_SBThread_StepUsingScriptedThreadPlan, METH_VARARGS, "\n"
-		"SBThread_StepUsingScriptedThreadPlan(SBThread self, char const * script_class_name) -> SBError\n"
-		"SBThread_StepUsingScriptedThreadPlan(SBThread self, char const * script_class_name, bool resume_immediately) -> SBError\n"
-		"SBThread_StepUsingScriptedThreadPlan(SBThread self, char const * script_class_name, SBStructuredData args_data, bool resume_immediately) -> SBError\n"
-		""},
-	 { "SBThread_JumpToLine", _wrap_SBThread_JumpToLine, METH_VARARGS, "SBThread_JumpToLine(SBThread self, SBFileSpec file_spec, uint32_t line) -> SBError"},
-	 { "SBThread_RunToAddress", _wrap_SBThread_RunToAddress, METH_VARARGS, "\n"
-		"SBThread_RunToAddress(SBThread self, lldb::addr_t addr)\n"
-		"SBThread_RunToAddress(SBThread self, lldb::addr_t addr, SBError error)\n"
-		""},
-	 { "SBThread_ReturnFromFrame", _wrap_SBThread_ReturnFromFrame, METH_VARARGS, "\n"
-		"SBThread_ReturnFromFrame(SBThread self, SBFrame frame, SBValue return_value) -> SBError\n"
-		"\n"
-		"    Force a return from the frame passed in (and any frames younger than it)\n"
-		"    without executing any more code in those frames.  If return_value contains\n"
-		"    a valid SBValue, that will be set as the return value from frame.  Note, at\n"
-		"    present only scalar return values are supported.\n"
-		""},
-	 { "SBThread_UnwindInnermostExpression", _wrap_SBThread_UnwindInnermostExpression, METH_O, "\n"
-		"SBThread_UnwindInnermostExpression(SBThread self) -> SBError\n"
-		"\n"
-		"    Unwind the stack frames from the innermost expression evaluation.\n"
-		"    This API is equivalent to 'thread return -x'.\n"
-		""},
-	 { "SBThread_Suspend", _wrap_SBThread_Suspend, METH_VARARGS, "\n"
-		"SBThread_Suspend(SBThread self) -> bool\n"
-		"SBThread_Suspend(SBThread self, SBError error) -> bool\n"
-		"\n"
-		"    LLDB currently supports process centric debugging which means when any\n"
-		"    thread in a process stops, all other threads are stopped. The Suspend()\n"
-		"    call here tells our process to suspend a thread and not let it run when\n"
-		"    the other threads in a process are allowed to run. So when\n"
-		"    SBProcess::Continue() is called, any threads that aren't suspended will\n"
-		"    be allowed to run. If any of the SBThread functions for stepping are\n"
-		"    called (StepOver, StepInto, StepOut, StepInstruction, RunToAddres), the\n"
-		"    thread will now be allowed to run and these functions will simply return.\n"
-		"\n"
-		"    Eventually we plan to add support for thread centric debugging where\n"
-		"    each thread is controlled individually and each thread would broadcast\n"
-		"    its state, but we haven't implemented this yet.\n"
-		"\n"
-		"    Likewise the SBThread::Resume() call will again allow the thread to run\n"
-		"    when the process is continued.\n"
-		"\n"
-		"    Suspend() and Resume() functions are not currently reference counted, if\n"
-		"    anyone has the need for them to be reference counted, please let us\n"
-		"    know.\n"
-		""},
-	 { "SBThread_Resume", _wrap_SBThread_Resume, METH_VARARGS, "\n"
-		"SBThread_Resume(SBThread self) -> bool\n"
-		"SBThread_Resume(SBThread self, SBError error) -> bool\n"
-		""},
-	 { "SBThread_IsSuspended", _wrap_SBThread_IsSuspended, METH_O, "SBThread_IsSuspended(SBThread self) -> bool"},
-	 { "SBThread_IsStopped", _wrap_SBThread_IsStopped, METH_O, "SBThread_IsStopped(SBThread self) -> bool"},
-	 { "SBThread_GetNumFrames", _wrap_SBThread_GetNumFrames, METH_O, "SBThread_GetNumFrames(SBThread self) -> uint32_t"},
-	 { "SBThread_GetFrameAtIndex", _wrap_SBThread_GetFrameAtIndex, METH_VARARGS, "SBThread_GetFrameAtIndex(SBThread self, uint32_t idx) -> SBFrame"},
-	 { "SBThread_GetSelectedFrame", _wrap_SBThread_GetSelectedFrame, METH_O, "SBThread_GetSelectedFrame(SBThread self) -> SBFrame"},
-	 { "SBThread_SetSelectedFrame", _wrap_SBThread_SetSelectedFrame, METH_VARARGS, "SBThread_SetSelectedFrame(SBThread self, uint32_t frame_idx) -> SBFrame"},
-	 { "SBThread_EventIsThreadEvent", _wrap_SBThread_EventIsThreadEvent, METH_O, "SBThread_EventIsThreadEvent(SBEvent event) -> bool"},
-	 { "SBThread_GetStackFrameFromEvent", _wrap_SBThread_GetStackFrameFromEvent, METH_O, "SBThread_GetStackFrameFromEvent(SBEvent event) -> SBFrame"},
-	 { "SBThread_GetThreadFromEvent", _wrap_SBThread_GetThreadFromEvent, METH_O, "SBThread_GetThreadFromEvent(SBEvent event) -> SBThread"},
-	 { "SBThread_GetProcess", _wrap_SBThread_GetProcess, METH_O, "SBThread_GetProcess(SBThread self) -> SBProcess"},
-	 { "SBThread___eq__", _wrap_SBThread___eq__, METH_VARARGS, "SBThread___eq__(SBThread self, SBThread rhs) -> bool"},
-	 { "SBThread___ne__", _wrap_SBThread___ne__, METH_VARARGS, "SBThread___ne__(SBThread self, SBThread rhs) -> bool"},
-	 { "SBThread_GetDescription", _wrap_SBThread_GetDescription, METH_VARARGS, "\n"
-		"SBThread_GetDescription(SBThread self, SBStream description) -> bool\n"
-		"SBThread_GetDescription(SBThread self, SBStream description, bool stop_format) -> bool\n"
-		"\n"
-		"    Get the description strings for this thread that match what the\n"
-		"    lldb driver will present, using the thread-format (stop_format==false)\n"
-		"    or thread-stop-format (stop_format = true).\n"
-		""},
-	 { "SBThread_GetDescriptionWithFormat", _wrap_SBThread_GetDescriptionWithFormat, METH_VARARGS, "SBThread_GetDescriptionWithFormat(SBThread self, SBFormat format, SBStream output) -> SBError"},
-	 { "SBThread_GetStatus", _wrap_SBThread_GetStatus, METH_VARARGS, "SBThread_GetStatus(SBThread self, SBStream status) -> bool"},
-	 { "SBThread_GetExtendedBacktraceThread", _wrap_SBThread_GetExtendedBacktraceThread, METH_VARARGS, "\n"
-		"SBThread_GetExtendedBacktraceThread(SBThread self, char const * type) -> SBThread\n"
-		"\n"
-		"    Given an argument of str to specify the type of thread-origin extended\n"
-		"    backtrace to retrieve, query whether the origin of this thread is\n"
-		"    available.  An SBThread is retured; SBThread.IsValid will return true\n"
-		"    if an extended backtrace was available.  The returned SBThread is not\n"
-		"    a part of the SBProcess' thread list and it cannot be manipulated like\n"
-		"    normal threads -- you cannot step or resume it, for instance -- it is\n"
-		"    intended to used primarily for generating a backtrace.  You may request\n"
-		"    the returned thread's own thread origin in turn.\n"
-		""},
-	 { "SBThread_GetExtendedBacktraceOriginatingIndexID", _wrap_SBThread_GetExtendedBacktraceOriginatingIndexID, METH_O, "\n"
-		"SBThread_GetExtendedBacktraceOriginatingIndexID(SBThread self) -> uint32_t\n"
-		"\n"
-		"    If this SBThread is an ExtendedBacktrace thread, get the IndexID of the\n"
-		"    original thread that this ExtendedBacktrace thread represents, if\n"
-		"    available.  The thread that was running this backtrace in the past may\n"
-		"    not have been registered with lldb's thread index (if it was created,\n"
-		"    did its work, and was destroyed without lldb ever stopping execution).\n"
-		"    In that case, this ExtendedBacktrace thread's IndexID will be returned.\n"
-		""},
-	 { "SBThread_GetCurrentException", _wrap_SBThread_GetCurrentException, METH_O, "\n"
-		"SBThread_GetCurrentException(SBThread self) -> SBValue\n"
-		"\n"
-		"    Returns an SBValue object represeting the current exception for the thread,\n"
-		"    if there is any. Currently, this works for Obj-C code and returns an SBValue\n"
-		"    representing the NSException object at the throw site or that's currently\n"
-		"    being processes.\n"
-		""},
-	 { "SBThread_GetCurrentExceptionBacktrace", _wrap_SBThread_GetCurrentExceptionBacktrace, METH_O, "\n"
-		"SBThread_GetCurrentExceptionBacktrace(SBThread self) -> SBThread\n"
-		"\n"
-		"    Returns a historical (fake) SBThread representing the stack trace of an\n"
-		"    exception, if there is one for the thread. Currently, this works for Obj-C\n"
-		"    code, and can retrieve the throw-site backtrace of an NSException object\n"
-		"    even when the program is no longer at the throw site.\n"
-		""},
-	 { "SBThread_SafeToCallFunctions", _wrap_SBThread_SafeToCallFunctions, METH_O, "\n"
-		"SBThread_SafeToCallFunctions(SBThread self) -> bool\n"
-		"\n"
-		"    lldb may be able to detect that function calls should not be executed\n"
-		"    on a given thread at a particular point in time.  It is recommended that\n"
-		"    this is checked before performing an inferior function call on a given\n"
-		"    thread.\n"
-		""},
-	 { "SBThread_GetSiginfo", _wrap_SBThread_GetSiginfo, METH_O, "\n"
-		"SBThread_GetSiginfo(SBThread self) -> SBValue\n"
-		"\n"
-		"    Returns a SBValue object representing the siginfo for the current signal.\n"
-		"\n"
-		""},
-	 { "SBThread___repr__", _wrap_SBThread___repr__, METH_O, "SBThread___repr__(SBThread self) -> std::string"},
-	 { "SBThread_swigregister", SBThread_swigregister, METH_O, NULL},
-	 { "SBThread_swiginit", SBThread_swiginit, METH_VARARGS, NULL},
-	 { "new_SBThreadCollection", _wrap_new_SBThreadCollection, METH_VARARGS, "\n"
-		"SBThreadCollection()\n"
-		"new_SBThreadCollection(SBThreadCollection rhs) -> SBThreadCollection\n"
-		""},
-	 { "delete_SBThreadCollection", _wrap_delete_SBThreadCollection, METH_O, "delete_SBThreadCollection(SBThreadCollection self)"},
-	 { "SBThreadCollection___nonzero__", _wrap_SBThreadCollection___nonzero__, METH_O, "SBThreadCollection___nonzero__(SBThreadCollection self) -> bool"},
-	 { "SBThreadCollection_IsValid", _wrap_SBThreadCollection_IsValid, METH_O, "SBThreadCollection_IsValid(SBThreadCollection self) -> bool"},
-	 { "SBThreadCollection_GetSize", _wrap_SBThreadCollection_GetSize, METH_O, "SBThreadCollection_GetSize(SBThreadCollection self) -> size_t"},
-	 { "SBThreadCollection_GetThreadAtIndex", _wrap_SBThreadCollection_GetThreadAtIndex, METH_VARARGS, "SBThreadCollection_GetThreadAtIndex(SBThreadCollection self, size_t idx) -> SBThread"},
-	 { "SBThreadCollection_swigregister", SBThreadCollection_swigregister, METH_O, NULL},
-	 { "SBThreadCollection_swiginit", SBThreadCollection_swiginit, METH_VARARGS, NULL},
-	 { "new_SBThreadPlan", _wrap_new_SBThreadPlan, METH_VARARGS, "\n"
-		"SBThreadPlan()\n"
-		"SBThreadPlan(SBThreadPlan threadPlan)\n"
-		"SBThreadPlan(SBThread thread, char const * class_name)\n"
-		"new_SBThreadPlan(SBThread thread, char const * class_name, SBStructuredData args_data) -> SBThreadPlan\n"
-		""},
-	 { "delete_SBThreadPlan", _wrap_delete_SBThreadPlan, METH_O, "delete_SBThreadPlan(SBThreadPlan self)"},
-	 { "SBThreadPlan___nonzero__", _wrap_SBThreadPlan___nonzero__, METH_O, "SBThreadPlan___nonzero__(SBThreadPlan self) -> bool"},
-	 { "SBThreadPlan_Clear", _wrap_SBThreadPlan_Clear, METH_O, "SBThreadPlan_Clear(SBThreadPlan self)"},
-	 { "SBThreadPlan_GetStopReason", _wrap_SBThreadPlan_GetStopReason, METH_O, "SBThreadPlan_GetStopReason(SBThreadPlan self) -> lldb::StopReason"},
-	 { "SBThreadPlan_GetStopReasonDataCount", _wrap_SBThreadPlan_GetStopReasonDataCount, METH_O, "\n"
-		"SBThreadPlan_GetStopReasonDataCount(SBThreadPlan self) -> size_t\n"
-		"\n"
-		"    Get the number of words associated with the stop reason.\n"
-		"    See also GetStopReasonDataAtIndex().\n"
-		""},
-	 { "SBThreadPlan_GetStopReasonDataAtIndex", _wrap_SBThreadPlan_GetStopReasonDataAtIndex, METH_VARARGS, "\n"
-		"SBThreadPlan_GetStopReasonDataAtIndex(SBThreadPlan self, uint32_t idx) -> uint64_t\n"
-		"\n"
-		"    Get information associated with a stop reason.\n"
-		"\n"
-		"    Breakpoint stop reasons will have data that consists of pairs of\n"
-		"    breakpoint IDs followed by the breakpoint location IDs (they always come\n"
-		"    in pairs).\n"
-		"\n"
-		"    Stop Reason              Count Data Type\n"
-		"    ======================== ===== =========================================\n"
-		"    eStopReasonNone          0\n"
-		"    eStopReasonTrace         0\n"
-		"    eStopReasonBreakpoint    N     duple: {breakpoint id, location id}\n"
-		"    eStopReasonWatchpoint    1     watchpoint id\n"
-		"    eStopReasonSignal        1     unix signal number\n"
-		"    eStopReasonException     N     exception data\n"
-		"    eStopReasonExec          0\n"
-		"    eStopReasonFork          1     pid of the child process\n"
-		"    eStopReasonVFork         1     pid of the child process\n"
-		"    eStopReasonVForkDone     0\n"
-		"    eStopReasonPlanComplete  0\n"
-		""},
-	 { "SBThreadPlan_GetThread", _wrap_SBThreadPlan_GetThread, METH_O, "SBThreadPlan_GetThread(SBThreadPlan self) -> SBThread"},
-	 { "SBThreadPlan_GetDescription", _wrap_SBThreadPlan_GetDescription, METH_VARARGS, "SBThreadPlan_GetDescription(SBThreadPlan self, SBStream description) -> bool"},
-	 { "SBThreadPlan_SetPlanComplete", _wrap_SBThreadPlan_SetPlanComplete, METH_VARARGS, "SBThreadPlan_SetPlanComplete(SBThreadPlan self, bool success)"},
-	 { "SBThreadPlan_IsPlanComplete", _wrap_SBThreadPlan_IsPlanComplete, METH_O, "SBThreadPlan_IsPlanComplete(SBThreadPlan self) -> bool"},
-	 { "SBThreadPlan_IsPlanStale", _wrap_SBThreadPlan_IsPlanStale, METH_O, "SBThreadPlan_IsPlanStale(SBThreadPlan self) -> bool"},
-	 { "SBThreadPlan_IsValid", _wrap_SBThreadPlan_IsValid, METH_VARARGS, "\n"
-		"SBThreadPlan_IsValid(SBThreadPlan self) -> bool\n"
-		"SBThreadPlan_IsValid(SBThreadPlan self) -> bool\n"
-		""},
-	 { "SBThreadPlan_GetStopOthers", _wrap_SBThreadPlan_GetStopOthers, METH_O, "\n"
-		"SBThreadPlan_GetStopOthers(SBThreadPlan self) -> bool\n"
-		"Return whether this plan will ask to stop other threads when it runs.\n"
-		""},
-	 { "SBThreadPlan_SetStopOthers", _wrap_SBThreadPlan_SetStopOthers, METH_VARARGS, "\n"
-		"SBThreadPlan_SetStopOthers(SBThreadPlan self, bool stop_others)\n"
-		"Set whether this plan will ask to stop other threads when it runs.\n"
-		""},
-	 { "SBThreadPlan_QueueThreadPlanForStepOverRange", _wrap_SBThreadPlan_QueueThreadPlanForStepOverRange, METH_VARARGS, "\n"
-		"SBThreadPlan_QueueThreadPlanForStepOverRange(SBThreadPlan self, SBAddress start_address, lldb::addr_t range_size) -> SBThreadPlan\n"
-		"SBThreadPlan_QueueThreadPlanForStepOverRange(SBThreadPlan self, SBAddress start_address, lldb::addr_t range_size, SBError error) -> SBThreadPlan\n"
-		""},
-	 { "SBThreadPlan_QueueThreadPlanForStepInRange", _wrap_SBThreadPlan_QueueThreadPlanForStepInRange, METH_VARARGS, "\n"
-		"SBThreadPlan_QueueThreadPlanForStepInRange(SBThreadPlan self, SBAddress start_address, lldb::addr_t range_size) -> SBThreadPlan\n"
-		"SBThreadPlan_QueueThreadPlanForStepInRange(SBThreadPlan self, SBAddress start_address, lldb::addr_t range_size, SBError error) -> SBThreadPlan\n"
-		""},
-	 { "SBThreadPlan_QueueThreadPlanForStepOut", _wrap_SBThreadPlan_QueueThreadPlanForStepOut, METH_VARARGS, "\n"
-		"SBThreadPlan_QueueThreadPlanForStepOut(SBThreadPlan self, uint32_t frame_idx_to_step_to, bool first_insn=False) -> SBThreadPlan\n"
-		"SBThreadPlan_QueueThreadPlanForStepOut(SBThreadPlan self, uint32_t frame_idx_to_step_to, bool first_insn, SBError error) -> SBThreadPlan\n"
-		""},
-	 { "SBThreadPlan_QueueThreadPlanForRunToAddress", _wrap_SBThreadPlan_QueueThreadPlanForRunToAddress, METH_VARARGS, "\n"
-		"SBThreadPlan_QueueThreadPlanForRunToAddress(SBThreadPlan self, SBAddress address) -> SBThreadPlan\n"
-		"SBThreadPlan_QueueThreadPlanForRunToAddress(SBThreadPlan self, SBAddress address, SBError error) -> SBThreadPlan\n"
-		""},
-	 { "SBThreadPlan_QueueThreadPlanForStepScripted", _wrap_SBThreadPlan_QueueThreadPlanForStepScripted, METH_VARARGS, "\n"
-		"SBThreadPlan_QueueThreadPlanForStepScripted(SBThreadPlan self, char const * script_class_name) -> SBThreadPlan\n"
-		"SBThreadPlan_QueueThreadPlanForStepScripted(SBThreadPlan self, char const * script_class_name, SBError error) -> SBThreadPlan\n"
-		"SBThreadPlan_QueueThreadPlanForStepScripted(SBThreadPlan self, char const * script_class_name, SBStructuredData args_data, SBError error) -> SBThreadPlan\n"
-		""},
-	 { "SBThreadPlan_swigregister", SBThreadPlan_swigregister, METH_O, NULL},
-	 { "SBThreadPlan_swiginit", SBThreadPlan_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTrace", _wrap_new_SBTrace, METH_NOARGS, "new_SBTrace() -> SBTrace"},
-	 { "SBTrace_LoadTraceFromFile", _wrap_SBTrace_LoadTraceFromFile, METH_VARARGS, "SBTrace_LoadTraceFromFile(SBError error, SBDebugger debugger, SBFileSpec trace_description_file) -> SBTrace"},
-	 { "SBTrace_CreateNewCursor", _wrap_SBTrace_CreateNewCursor, METH_VARARGS, "SBTrace_CreateNewCursor(SBTrace self, SBError error, SBThread thread) -> SBTraceCursor"},
-	 { "SBTrace_SaveToDisk", _wrap_SBTrace_SaveToDisk, METH_VARARGS, "SBTrace_SaveToDisk(SBTrace self, SBError error, SBFileSpec bundle_dir, bool compact=False) -> SBFileSpec"},
-	 { "SBTrace_GetStartConfigurationHelp", _wrap_SBTrace_GetStartConfigurationHelp, METH_O, "SBTrace_GetStartConfigurationHelp(SBTrace self) -> char const *"},
-	 { "SBTrace_Start", _wrap_SBTrace_Start, METH_VARARGS, "\n"
-		"SBTrace_Start(SBTrace self, SBStructuredData configuration) -> SBError\n"
-		"SBTrace_Start(SBTrace self, SBThread thread, SBStructuredData configuration) -> SBError\n"
-		""},
-	 { "SBTrace_Stop", _wrap_SBTrace_Stop, METH_VARARGS, "\n"
-		"SBTrace_Stop(SBTrace self) -> SBError\n"
-		"SBTrace_Stop(SBTrace self, SBThread thread) -> SBError\n"
-		""},
-	 { "SBTrace___nonzero__", _wrap_SBTrace___nonzero__, METH_O, "SBTrace___nonzero__(SBTrace self) -> bool"},
-	 { "SBTrace_IsValid", _wrap_SBTrace_IsValid, METH_O, "SBTrace_IsValid(SBTrace self) -> bool"},
-	 { "delete_SBTrace", _wrap_delete_SBTrace, METH_O, "delete_SBTrace(SBTrace self)"},
-	 { "SBTrace_swigregister", SBTrace_swigregister, METH_O, NULL},
-	 { "SBTrace_swiginit", SBTrace_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTraceCursor", _wrap_new_SBTraceCursor, METH_NOARGS, "new_SBTraceCursor() -> SBTraceCursor"},
-	 { "SBTraceCursor_SetForwards", _wrap_SBTraceCursor_SetForwards, METH_VARARGS, "SBTraceCursor_SetForwards(SBTraceCursor self, bool forwards)"},
-	 { "SBTraceCursor_IsForwards", _wrap_SBTraceCursor_IsForwards, METH_O, "SBTraceCursor_IsForwards(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_Next", _wrap_SBTraceCursor_Next, METH_O, "SBTraceCursor_Next(SBTraceCursor self)"},
-	 { "SBTraceCursor_HasValue", _wrap_SBTraceCursor_HasValue, METH_O, "SBTraceCursor_HasValue(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_GoToId", _wrap_SBTraceCursor_GoToId, METH_VARARGS, "SBTraceCursor_GoToId(SBTraceCursor self, lldb::user_id_t id) -> bool"},
-	 { "SBTraceCursor_HasId", _wrap_SBTraceCursor_HasId, METH_VARARGS, "SBTraceCursor_HasId(SBTraceCursor self, lldb::user_id_t id) -> bool"},
-	 { "SBTraceCursor_GetId", _wrap_SBTraceCursor_GetId, METH_O, "SBTraceCursor_GetId(SBTraceCursor self) -> lldb::user_id_t"},
-	 { "SBTraceCursor_Seek", _wrap_SBTraceCursor_Seek, METH_VARARGS, "SBTraceCursor_Seek(SBTraceCursor self, int64_t offset, lldb::TraceCursorSeekType origin) -> bool"},
-	 { "SBTraceCursor_GetItemKind", _wrap_SBTraceCursor_GetItemKind, METH_O, "SBTraceCursor_GetItemKind(SBTraceCursor self) -> lldb::TraceItemKind"},
-	 { "SBTraceCursor_IsError", _wrap_SBTraceCursor_IsError, METH_O, "SBTraceCursor_IsError(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_GetError", _wrap_SBTraceCursor_GetError, METH_O, "SBTraceCursor_GetError(SBTraceCursor self) -> char const *"},
-	 { "SBTraceCursor_IsEvent", _wrap_SBTraceCursor_IsEvent, METH_O, "SBTraceCursor_IsEvent(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_GetEventType", _wrap_SBTraceCursor_GetEventType, METH_O, "SBTraceCursor_GetEventType(SBTraceCursor self) -> lldb::TraceEvent"},
-	 { "SBTraceCursor_GetEventTypeAsString", _wrap_SBTraceCursor_GetEventTypeAsString, METH_O, "SBTraceCursor_GetEventTypeAsString(SBTraceCursor self) -> char const *"},
-	 { "SBTraceCursor_IsInstruction", _wrap_SBTraceCursor_IsInstruction, METH_O, "SBTraceCursor_IsInstruction(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor_GetLoadAddress", _wrap_SBTraceCursor_GetLoadAddress, METH_O, "SBTraceCursor_GetLoadAddress(SBTraceCursor self) -> lldb::addr_t"},
-	 { "SBTraceCursor_GetCPU", _wrap_SBTraceCursor_GetCPU, METH_O, "SBTraceCursor_GetCPU(SBTraceCursor self) -> lldb::cpu_id_t"},
-	 { "SBTraceCursor_IsValid", _wrap_SBTraceCursor_IsValid, METH_O, "SBTraceCursor_IsValid(SBTraceCursor self) -> bool"},
-	 { "SBTraceCursor___nonzero__", _wrap_SBTraceCursor___nonzero__, METH_O, "SBTraceCursor___nonzero__(SBTraceCursor self) -> bool"},
-	 { "delete_SBTraceCursor", _wrap_delete_SBTraceCursor, METH_O, "delete_SBTraceCursor(SBTraceCursor self)"},
-	 { "SBTraceCursor_swigregister", SBTraceCursor_swigregister, METH_O, NULL},
-	 { "SBTraceCursor_swiginit", SBTraceCursor_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeMember", _wrap_new_SBTypeMember, METH_VARARGS, "\n"
-		"SBTypeMember()\n"
-		"new_SBTypeMember(SBTypeMember rhs) -> SBTypeMember\n"
-		""},
-	 { "delete_SBTypeMember", _wrap_delete_SBTypeMember, METH_O, "delete_SBTypeMember(SBTypeMember self)"},
-	 { "SBTypeMember___nonzero__", _wrap_SBTypeMember___nonzero__, METH_O, "SBTypeMember___nonzero__(SBTypeMember self) -> bool"},
-	 { "SBTypeMember_IsValid", _wrap_SBTypeMember_IsValid, METH_O, "SBTypeMember_IsValid(SBTypeMember self) -> bool"},
-	 { "SBTypeMember_GetName", _wrap_SBTypeMember_GetName, METH_O, "SBTypeMember_GetName(SBTypeMember self) -> char const *"},
-	 { "SBTypeMember_GetType", _wrap_SBTypeMember_GetType, METH_O, "SBTypeMember_GetType(SBTypeMember self) -> SBType"},
-	 { "SBTypeMember_GetOffsetInBytes", _wrap_SBTypeMember_GetOffsetInBytes, METH_O, "SBTypeMember_GetOffsetInBytes(SBTypeMember self) -> uint64_t"},
-	 { "SBTypeMember_GetOffsetInBits", _wrap_SBTypeMember_GetOffsetInBits, METH_O, "SBTypeMember_GetOffsetInBits(SBTypeMember self) -> uint64_t"},
-	 { "SBTypeMember_IsBitfield", _wrap_SBTypeMember_IsBitfield, METH_O, "SBTypeMember_IsBitfield(SBTypeMember self) -> bool"},
-	 { "SBTypeMember_GetBitfieldSizeInBits", _wrap_SBTypeMember_GetBitfieldSizeInBits, METH_O, "SBTypeMember_GetBitfieldSizeInBits(SBTypeMember self) -> uint32_t"},
-	 { "SBTypeMember_GetDescription", _wrap_SBTypeMember_GetDescription, METH_VARARGS, "SBTypeMember_GetDescription(SBTypeMember self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeMember___repr__", _wrap_SBTypeMember___repr__, METH_O, "SBTypeMember___repr__(SBTypeMember self) -> std::string"},
-	 { "SBTypeMember_swigregister", SBTypeMember_swigregister, METH_O, NULL},
-	 { "SBTypeMember_swiginit", SBTypeMember_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeMemberFunction", _wrap_new_SBTypeMemberFunction, METH_VARARGS, "\n"
-		"SBTypeMemberFunction()\n"
-		"new_SBTypeMemberFunction(SBTypeMemberFunction rhs) -> SBTypeMemberFunction\n"
-		""},
-	 { "delete_SBTypeMemberFunction", _wrap_delete_SBTypeMemberFunction, METH_O, "delete_SBTypeMemberFunction(SBTypeMemberFunction self)"},
-	 { "SBTypeMemberFunction___nonzero__", _wrap_SBTypeMemberFunction___nonzero__, METH_O, "SBTypeMemberFunction___nonzero__(SBTypeMemberFunction self) -> bool"},
-	 { "SBTypeMemberFunction_IsValid", _wrap_SBTypeMemberFunction_IsValid, METH_O, "SBTypeMemberFunction_IsValid(SBTypeMemberFunction self) -> bool"},
-	 { "SBTypeMemberFunction_GetName", _wrap_SBTypeMemberFunction_GetName, METH_O, "SBTypeMemberFunction_GetName(SBTypeMemberFunction self) -> char const *"},
-	 { "SBTypeMemberFunction_GetDemangledName", _wrap_SBTypeMemberFunction_GetDemangledName, METH_O, "SBTypeMemberFunction_GetDemangledName(SBTypeMemberFunction self) -> char const *"},
-	 { "SBTypeMemberFunction_GetMangledName", _wrap_SBTypeMemberFunction_GetMangledName, METH_O, "SBTypeMemberFunction_GetMangledName(SBTypeMemberFunction self) -> char const *"},
-	 { "SBTypeMemberFunction_GetType", _wrap_SBTypeMemberFunction_GetType, METH_O, "SBTypeMemberFunction_GetType(SBTypeMemberFunction self) -> SBType"},
-	 { "SBTypeMemberFunction_GetReturnType", _wrap_SBTypeMemberFunction_GetReturnType, METH_O, "SBTypeMemberFunction_GetReturnType(SBTypeMemberFunction self) -> SBType"},
-	 { "SBTypeMemberFunction_GetNumberOfArguments", _wrap_SBTypeMemberFunction_GetNumberOfArguments, METH_O, "SBTypeMemberFunction_GetNumberOfArguments(SBTypeMemberFunction self) -> uint32_t"},
-	 { "SBTypeMemberFunction_GetArgumentTypeAtIndex", _wrap_SBTypeMemberFunction_GetArgumentTypeAtIndex, METH_VARARGS, "SBTypeMemberFunction_GetArgumentTypeAtIndex(SBTypeMemberFunction self, uint32_t arg2) -> SBType"},
-	 { "SBTypeMemberFunction_GetKind", _wrap_SBTypeMemberFunction_GetKind, METH_O, "SBTypeMemberFunction_GetKind(SBTypeMemberFunction self) -> lldb::MemberFunctionKind"},
-	 { "SBTypeMemberFunction_GetDescription", _wrap_SBTypeMemberFunction_GetDescription, METH_VARARGS, "SBTypeMemberFunction_GetDescription(SBTypeMemberFunction self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeMemberFunction___repr__", _wrap_SBTypeMemberFunction___repr__, METH_O, "SBTypeMemberFunction___repr__(SBTypeMemberFunction self) -> std::string"},
-	 { "SBTypeMemberFunction_swigregister", SBTypeMemberFunction_swigregister, METH_O, NULL},
-	 { "SBTypeMemberFunction_swiginit", SBTypeMemberFunction_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeStaticField", _wrap_new_SBTypeStaticField, METH_VARARGS, "\n"
-		"SBTypeStaticField()\n"
-		"new_SBTypeStaticField(SBTypeStaticField rhs) -> SBTypeStaticField\n"
-		""},
-	 { "delete_SBTypeStaticField", _wrap_delete_SBTypeStaticField, METH_O, "delete_SBTypeStaticField(SBTypeStaticField self)"},
-	 { "SBTypeStaticField___nonzero__", _wrap_SBTypeStaticField___nonzero__, METH_O, "SBTypeStaticField___nonzero__(SBTypeStaticField self) -> bool"},
-	 { "SBTypeStaticField_IsValid", _wrap_SBTypeStaticField_IsValid, METH_O, "SBTypeStaticField_IsValid(SBTypeStaticField self) -> bool"},
-	 { "SBTypeStaticField_GetName", _wrap_SBTypeStaticField_GetName, METH_O, "SBTypeStaticField_GetName(SBTypeStaticField self) -> char const *"},
-	 { "SBTypeStaticField_GetMangledName", _wrap_SBTypeStaticField_GetMangledName, METH_O, "SBTypeStaticField_GetMangledName(SBTypeStaticField self) -> char const *"},
-	 { "SBTypeStaticField_GetType", _wrap_SBTypeStaticField_GetType, METH_O, "SBTypeStaticField_GetType(SBTypeStaticField self) -> SBType"},
-	 { "SBTypeStaticField_GetConstantValue", _wrap_SBTypeStaticField_GetConstantValue, METH_VARARGS, "SBTypeStaticField_GetConstantValue(SBTypeStaticField self, SBTarget target) -> SBValue"},
-	 { "SBTypeStaticField_swigregister", SBTypeStaticField_swigregister, METH_O, NULL},
-	 { "SBTypeStaticField_swiginit", SBTypeStaticField_swiginit, METH_VARARGS, NULL},
-	 { "new_SBType", _wrap_new_SBType, METH_VARARGS, "\n"
-		"SBType()\n"
-		"new_SBType(SBType rhs) -> SBType\n"
-		""},
-	 { "delete_SBType", _wrap_delete_SBType, METH_O, "delete_SBType(SBType self)"},
-	 { "SBType___nonzero__", _wrap_SBType___nonzero__, METH_O, "SBType___nonzero__(SBType self) -> bool"},
-	 { "SBType_IsValid", _wrap_SBType_IsValid, METH_O, "SBType_IsValid(SBType self) -> bool"},
-	 { "SBType_GetByteSize", _wrap_SBType_GetByteSize, METH_O, "\n"
-		"SBType_GetByteSize(SBType self) -> uint64_t\n"
-		"Returns the number of bytes a variable with the given types occupies in memory.\n"
-		"\n"
-		"    Returns ``0`` if the size can't be determined.\n"
-		"\n"
-		"    If a type occupies ``N`` bytes + ``M`` bits in memory, this function returns\n"
-		"    the rounded up amount of bytes (i.e., if ``M`` is ``0``,\n"
-		"    this function returns ``N`` and otherwise ``N + 1``).\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: The output is expected to match the value of ``sizeof(Type)``. If\n"
-		"      ``sizeof(Type)`` is not a valid expression for the given type, the\n"
-		"      function returns ``0``.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C. For Objective-C classes this always returns\n"
-		"      ``0`` as the actual size depends on runtime information.\n"
-		"\n"
-		""},
-	 { "SBType_GetByteAlign", _wrap_SBType_GetByteAlign, METH_O, "SBType_GetByteAlign(SBType self) -> uint64_t"},
-	 { "SBType_IsPointerType", _wrap_SBType_IsPointerType, METH_O, "\n"
-		"SBType_IsPointerType(SBType self) -> bool\n"
-		"Returns true if this type is a pointer type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns true for C pointer types (or typedefs of these types).\n"
-		"    * C++: Pointer types include the C pointer types as well as pointers to data\n"
-		"      mebers or member functions.\n"
-		"    * Objective-C: Pointer types include the C pointer types. ``id``, ``Class``\n"
-		"      and pointers to blocks are also considered pointer types.\n"
-		"\n"
-		""},
-	 { "SBType_IsReferenceType", _wrap_SBType_IsReferenceType, METH_O, "\n"
-		"SBType_IsReferenceType(SBType self) -> bool\n"
-		"Returns true if this type is a reference type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns false for all types.\n"
-		"    * C++: Both l-value and r-value references are considered reference types.\n"
-		"    * Objective-C: Returns false for all types.\n"
-		"\n"
-		""},
-	 { "SBType_IsFunctionType", _wrap_SBType_IsFunctionType, METH_O, "SBType_IsFunctionType(SBType self) -> bool"},
-	 { "SBType_IsPolymorphicClass", _wrap_SBType_IsPolymorphicClass, METH_O, "\n"
-		"SBType_IsPolymorphicClass(SBType self) -> bool\n"
-		"Returns true if this type is a polymorphic type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns false for all types.\n"
-		"    * C++: Returns true if the type is a class type that contains at least one\n"
-		"      virtual member function or if at least one of its base classes is\n"
-		"      considered a polymorphic type.\n"
-		"    * Objective-C: Returns false for all types.\n"
-		"\n"
-		""},
-	 { "SBType_IsArrayType", _wrap_SBType_IsArrayType, METH_O, "\n"
-		"SBType_IsArrayType(SBType self) -> bool\n"
-		"Returns true if this type is an array type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns true if the types is an array type. This includes incomplete\n"
-		"      array types ``T[]`` and array types with integer (``T[1]``) or variable\n"
-		"      length (``T[some_variable]``). Pointer types are not considered arrays.\n"
-		"    * C++: Includes C's array types and dependent array types (i.e., array types\n"
-		"      in templates which size depends on template arguments).\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_IsVectorType", _wrap_SBType_IsVectorType, METH_O, "\n"
-		"SBType_IsVectorType(SBType self) -> bool\n"
-		"Returns true if this type is a vector type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns true if the types is a vector type created with\n"
-		"      GCC's ``vector_size`` or Clang's ``ext_vector_type`` feature.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_IsTypedefType", _wrap_SBType_IsTypedefType, METH_O, "\n"
-		"SBType_IsTypedefType(SBType self) -> bool\n"
-		"Returns true if this type is a typedef.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns true if the type is a C typedef.\n"
-		"    * C++: Same as in C. Also treats type aliases as typedefs.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_IsAnonymousType", _wrap_SBType_IsAnonymousType, METH_O, "\n"
-		"SBType_IsAnonymousType(SBType self) -> bool\n"
-		"Returns true if this type is an anonymous type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns true for anonymous unions. Also returns true for\n"
-		"      anonymous structs (which are a GNU language extension).\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_IsScopedEnumerationType", _wrap_SBType_IsScopedEnumerationType, METH_O, "\n"
-		"SBType_IsScopedEnumerationType(SBType self) -> bool\n"
-		"Returns true if this type is a scoped enum.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns false for all types.\n"
-		"    * C++: Return true only for C++11 scoped enums.\n"
-		"    * Objective-C: Returns false for all types.\n"
-		"\n"
-		""},
-	 { "SBType_IsAggregateType", _wrap_SBType_IsAggregateType, METH_O, "\n"
-		"SBType_IsAggregateType(SBType self) -> bool\n"
-		"Returns true if this type is an aggregate type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns true for struct values, arrays, and vectors.\n"
-		"    * C++: Same a C. Also includes class instances.\n"
-		"    * Objective-C: Same as C. Also includes class instances.\n"
-		"\n"
-		""},
-	 { "SBType_GetPointerType", _wrap_SBType_GetPointerType, METH_O, "\n"
-		"SBType_GetPointerType(SBType self) -> SBType\n"
-		"Returns a type that represents a pointer to this type.\n"
-		"\n"
-		"    If the type system of the current language can't represent a pointer to this\n"
-		"    type or this type is invalid, an invalid `SBType` is returned.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns the pointer type of this type.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetPointeeType", _wrap_SBType_GetPointeeType, METH_O, "\n"
-		"SBType_GetPointeeType(SBType self) -> SBType\n"
-		"Returns the underlying pointee type.\n"
-		"\n"
-		"    If this type is a pointer type as specified by `IsPointerType` then this\n"
-		"    returns the underlying type. If this is not a pointer type or an invalid\n"
-		"    `SBType` then this returns an invalid `SBType`.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns the underlying type for for C pointer types or typedefs of\n"
-		"      these types). For example, ``int *`` will return ``int``.\n"
-		"    * C++: Same as in C. Returns an `SBType` representation for data members/\n"
-		"      member functions in case the `SBType` is a pointer to data member or\n"
-		"      pointer to member function.\n"
-		"    * Objective-C: Same as in C. The pointee type of ``id`` and ``Class`` is\n"
-		"      an invalid `SBType`. The pointee type of pointers Objective-C types is an\n"
-		"      `SBType` for the non-pointer type of the respective type. For example,\n"
-		"      ``NSString *`` will return ``NSString`` as a pointee type.\n"
-		"\n"
-		""},
-	 { "SBType_GetReferenceType", _wrap_SBType_GetReferenceType, METH_O, "\n"
-		"SBType_GetReferenceType(SBType self) -> SBType\n"
-		"Returns a type that represents a reference to this type.\n"
-		"\n"
-		"    If the type system of the current language can't represent a reference to\n"
-		"    this type, an invalid `SBType` is returned.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Currently assumes the type system is C++ and returns an l-value\n"
-		"      reference type. For example, ``int`` will return ``int&``. This behavior\n"
-		"      is likely to change in the future and shouldn't be relied on.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetTypedefedType", _wrap_SBType_GetTypedefedType, METH_O, "\n"
-		"SBType_GetTypedefedType(SBType self) -> SBType\n"
-		"Returns the underlying type of a typedef.\n"
-		"\n"
-		"    If this type is a typedef as designated by `IsTypedefType`, then the\n"
-		"    underlying type is being returned. Otherwise an invalid `SBType` is\n"
-		"    returned.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns the underlying type of a typedef type.\n"
-		"    * C++: Same as in C. For type aliases, the underlying type is returned.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetDereferencedType", _wrap_SBType_GetDereferencedType, METH_O, "\n"
-		"SBType_GetDereferencedType(SBType self) -> SBType\n"
-		"Returns the underlying type of a reference type.\n"
-		"\n"
-		"    If this type is a reference as designated by `IsReferenceType`, then the\n"
-		"    underlying type is being returned. Otherwise an invalid `SBType` is\n"
-		"    returned.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Always returns an invalid type.\n"
-		"    * C++: For l-value and r-value references the underlying type is returned.\n"
-		"      For example, ``int &`` will return ``int``.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetUnqualifiedType", _wrap_SBType_GetUnqualifiedType, METH_O, "\n"
-		"SBType_GetUnqualifiedType(SBType self) -> SBType\n"
-		"Returns the unqualified version of this type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: If this type with any const or volatile specifier removed.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetArrayElementType", _wrap_SBType_GetArrayElementType, METH_O, "\n"
-		"SBType_GetArrayElementType(SBType self) -> SBType\n"
-		"Returns the array element type if this type is an array type.\n"
-		"\n"
-		"    Otherwise returns an invalid `SBType` if this type is invalid or not an\n"
-		"    array type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: If this is an array type (see `IsArrayType`) such as ``T[]``, returns\n"
-		"      the element type.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		"    See also `IsArrayType`.\n"
-		"\n"
-		""},
-	 { "SBType_GetArrayType", _wrap_SBType_GetArrayType, METH_VARARGS, "\n"
-		"SBType_GetArrayType(SBType self, uint64_t size) -> SBType\n"
-		"Returns the array type with the given constant size.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns a constant-size array ``T[size]`` for any non-void type.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		"    See also `IsArrayType` and `GetArrayElementType`.\n"
-		"\n"
-		""},
-	 { "SBType_GetVectorElementType", _wrap_SBType_GetVectorElementType, METH_O, "\n"
-		"SBType_GetVectorElementType(SBType self) -> SBType\n"
-		"Returns the vector element type if this type is a vector type.\n"
-		"\n"
-		"    Otherwise returns an invalid `SBType` if this type is invalid or not a\n"
-		"    vector type.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: If this is a vector type (see `IsVectorType`), returns the element\n"
-		"      type.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		"    See also `IsVectorType`.\n"
-		"\n"
-		""},
-	 { "SBType_GetCanonicalType", _wrap_SBType_GetCanonicalType, METH_O, "SBType_GetCanonicalType(SBType self) -> SBType"},
-	 { "SBType_GetEnumerationIntegerType", _wrap_SBType_GetEnumerationIntegerType, METH_O, "\n"
-		"SBType_GetEnumerationIntegerType(SBType self) -> SBType\n"
-		"Returns the underlying integer type if this is an enumeration type.\n"
-		"\n"
-		"    If this type is an invalid `SBType` or not an enumeration type an invalid\n"
-		"    `SBType` is returned.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns the underlying type for enums.\n"
-		"    * C++: Same as in C but also returns the underlying type for scoped enums.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetBasicType", _wrap_SBType_GetBasicType, METH_VARARGS, "\n"
-		"SBType_GetBasicType(SBType self) -> lldb::BasicType\n"
-		"SBType_GetBasicType(SBType self, lldb::BasicType type) -> SBType\n"
-		"Returns the `BasicType` value that is most appropriate to this type.\n"
-		"\n"
-		"    Returns `eBasicTypeInvalid` if no appropriate `BasicType` was found or this\n"
-		"    type is invalid. See the `BasicType` documentation for the language-specific\n"
-		"    meaning of each `BasicType` value.\n"
-		"\n"
-		"    **Overload behaviour:** When called with a `BasicType` parameter, the\n"
-		"    following behaviour applies:\n"
-		"\n"
-		"    Returns the `SBType` that represents the passed `BasicType` value. Returns\n"
-		"    an invalid `SBType` if no fitting `SBType` could be created.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns the respective builtin type. Note that some types\n"
-		"      (e.g. ``__uint128_t``) might even be successfully created even if they are\n"
-		"      not available on the target platform. C++ and Objective-C specific types\n"
-		"      might also be created even if the target program is not written in C++ or\n"
-		"      Objective-C.\n"
-		"    * C++: Same as in C.\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetNumberOfFields", _wrap_SBType_GetNumberOfFields, METH_O, "\n"
-		"SBType_GetNumberOfFields(SBType self) -> uint32_t\n"
-		"Returns the number of fields of this type.\n"
-		"\n"
-		"    Returns ``0`` if this type does not have fields.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns the number of fields if the type is a struct. If the type\n"
-		"      contains an anonymous struct/union it only counts as a single field (even\n"
-		"      if the struct/union contains several fields).\n"
-		"    * C++: Returns the number of non-static fields if the type is a\n"
-		"      struct/class. If the type contains an anonymous struct/union it only\n"
-		"      counts as a single field (even if the struct/union contains several\n"
-		"      fields). The fields of any base classes are not included in the count.\n"
-		"    * Objective-C: Same as in C for structs. For Objective-C classes the number\n"
-		"      of ivars is returned.\n"
-		"\n"
-		"    See also `GetFieldAtIndex`.\n"
-		"\n"
-		""},
-	 { "SBType_GetNumberOfDirectBaseClasses", _wrap_SBType_GetNumberOfDirectBaseClasses, METH_O, "\n"
-		"SBType_GetNumberOfDirectBaseClasses(SBType self) -> uint32_t\n"
-		"Returns the number of base/parent classes of this type.\n"
-		"\n"
-		"    Returns ``0`` if this type doesn't have any base classes.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns always ``0``.\n"
-		"    * C++: The number of direct non-virtual base classes if this type is\n"
-		"      a class.\n"
-		"    * Objective-C: The number of super classes for Objective-C classes.\n"
-		"      As Objective-C doesn't have multiple inheritance this is usually returns 1\n"
-		"      except for NSObject.\n"
-		"\n"
-		""},
-	 { "SBType_GetNumberOfVirtualBaseClasses", _wrap_SBType_GetNumberOfVirtualBaseClasses, METH_O, "\n"
-		"SBType_GetNumberOfVirtualBaseClasses(SBType self) -> uint32_t\n"
-		"Returns the number of virtual base/parent classes of this type\n"
-		"\n"
-		"    Returns ``0`` if this type doesn't have any base classes.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns always ``0``.\n"
-		"    * C++: The number of direct virtual base classes if this type is a\n"
-		"      class.\n"
-		"    * Objective-C: Returns always ``0``.\n"
-		"\n"
-		""},
-	 { "SBType_GetFieldAtIndex", _wrap_SBType_GetFieldAtIndex, METH_VARARGS, "\n"
-		"SBType_GetFieldAtIndex(SBType self, uint32_t idx) -> SBTypeMember\n"
-		"Returns the field at the given index.\n"
-		"\n"
-		"    Returns an invalid `SBType` if the index is out of range or the current\n"
-		"    type doesn't have any fields.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns the field with the given index for struct types. Fields are\n"
-		"      ordered/indexed starting from ``0`` for the first field in a struct (as\n"
-		"      declared in the definition).\n"
-		"    * C++: Returns the non-static field with the given index for struct types.\n"
-		"      Fields are ordered/indexed starting from ``0`` for the first field in a\n"
-		"      struct (as declared in the definition).\n"
-		"    * Objective-C: Same as in C for structs. For Objective-C classes the ivar\n"
-		"      with the given index is returned. ivars are indexed starting from ``0``.\n"
-		"\n"
-		""},
-	 { "SBType_GetDirectBaseClassAtIndex", _wrap_SBType_GetDirectBaseClassAtIndex, METH_VARARGS, "\n"
-		"SBType_GetDirectBaseClassAtIndex(SBType self, uint32_t idx) -> SBTypeMember\n"
-		"Returns the direct base class as indexed by `GetNumberOfDirectBaseClasses`.\n"
-		"\n"
-		"    Returns an invalid SBTypeMember if the index is invalid or this SBType is\n"
-		"    invalid.\n"
-		"\n"
-		""},
-	 { "SBType_GetVirtualBaseClassAtIndex", _wrap_SBType_GetVirtualBaseClassAtIndex, METH_VARARGS, "\n"
-		"SBType_GetVirtualBaseClassAtIndex(SBType self, uint32_t idx) -> SBTypeMember\n"
-		"Returns the virtual base class as indexed by\n"
-		"    `GetNumberOfVirtualBaseClasses`.\n"
-		"\n"
-		"    Returns an invalid SBTypeMember if the index is invalid or this SBType is\n"
-		"    invalid.\n"
-		"\n"
-		""},
-	 { "SBType_GetStaticFieldWithName", _wrap_SBType_GetStaticFieldWithName, METH_VARARGS, "SBType_GetStaticFieldWithName(SBType self, char const * name) -> SBTypeStaticField"},
-	 { "SBType_GetEnumMembers", _wrap_SBType_GetEnumMembers, METH_O, "SBType_GetEnumMembers(SBType self) -> SBTypeEnumMemberList"},
-	 { "SBType_GetNumberOfTemplateArguments", _wrap_SBType_GetNumberOfTemplateArguments, METH_O, "\n"
-		"SBType_GetNumberOfTemplateArguments(SBType self) -> uint32_t\n"
-		"Returns the number of template arguments of this type.\n"
-		"\n"
-		"    Returns ``0`` if this type is not a template.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Always returns ``0``.\n"
-		"    * C++: If this type is a class template instantiation then this returns the\n"
-		"      number of template parameters that were used in this instantiation. This\n"
-		"      includes both explicit and implicit template parameters.\n"
-		"    * Objective-C: Always returns ``0``.\n"
-		"\n"
-		""},
-	 { "SBType_GetTemplateArgumentType", _wrap_SBType_GetTemplateArgumentType, METH_VARARGS, "\n"
-		"SBType_GetTemplateArgumentType(SBType self, uint32_t idx) -> SBType\n"
-		"Returns the type of the template argument with the given index.\n"
-		"\n"
-		"    Returns an invalid `SBType` if there is no template argument with the given\n"
-		"    index or this type is not a template. The first template  argument has the\n"
-		"    index ``0``.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Always returns an invalid SBType.\n"
-		"    * C++: If this type is a class template instantiation and the template\n"
-		"      parameter with the given index is a type template parameter, then this\n"
-		"      returns the type of that parameter. Otherwise returns an invalid `SBType`.\n"
-		"    * Objective-C: Always returns an invalid SBType.\n"
-		"\n"
-		""},
-	 { "SBType_GetTemplateArgumentKind", _wrap_SBType_GetTemplateArgumentKind, METH_VARARGS, "\n"
-		"SBType_GetTemplateArgumentKind(SBType self, uint32_t idx) -> lldb::TemplateArgumentKind\n"
-		"Returns the kind of the template argument with the given index.\n"
-		"\n"
-		"    Returns `eTemplateArgumentKindNull` if there is no template argument\n"
-		"    with the given index or this type is not a template. The first template\n"
-		"    argument has the index ``0``.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Always returns `eTemplateArgumentKindNull`.\n"
-		"    * C++: If this type is a class template instantiation then this returns\n"
-		"      the appropriate `TemplateArgument` value for the parameter with the given\n"
-		"      index. See the documentation of `TemplateArgument` for how certain C++\n"
-		"      template parameter kinds are mapped to `TemplateArgument` values.\n"
-		"    * Objective-C: Always returns `eTemplateArgumentKindNull`.\n"
-		"\n"
-		""},
-	 { "SBType_GetFunctionReturnType", _wrap_SBType_GetFunctionReturnType, METH_O, "\n"
-		"SBType_GetFunctionReturnType(SBType self) -> SBType\n"
-		"Returns the return type if this type represents a function.\n"
-		"\n"
-		"    Returns an invalid `SBType` if this type is not a function type or invalid.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: For functions return the return type. Returns an invalid `SBType` if\n"
-		"      this type is a function pointer type.\n"
-		"    * C++: Same as in C for functions and instantiated template functions.\n"
-		"      Member functions are also considered functions. For functions that have\n"
-		"      their return type specified by a placeholder type specifier (``auto``)\n"
-		"      this returns the deduced return type.\n"
-		"    * Objective-C: Same as in C for functions. For Objective-C methods this\n"
-		"      returns the return type of the method.\n"
-		"\n"
-		""},
-	 { "SBType_GetFunctionArgumentTypes", _wrap_SBType_GetFunctionArgumentTypes, METH_O, "\n"
-		"SBType_GetFunctionArgumentTypes(SBType self) -> SBTypeList\n"
-		"Returns the list of argument types if this type represents a function.\n"
-		"\n"
-		"    Returns an invalid `SBType` if this type is not a function type or invalid.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: For functions return the types of each parameter. Returns an invalid\n"
-		"      `SBType` if this type is a function pointer. For variadic functions this\n"
-		"      just returns the list of parameters before the variadic arguments.\n"
-		"    * C++: Same as in C for functions and instantiated template functions.\n"
-		"      Member functions are also considered functions.\n"
-		"    * Objective-C: Always returns an invalid SBType for Objective-C methods.\n"
-		"\n"
-		""},
-	 { "SBType_GetNumberOfMemberFunctions", _wrap_SBType_GetNumberOfMemberFunctions, METH_O, "\n"
-		"SBType_GetNumberOfMemberFunctions(SBType self) -> uint32_t\n"
-		"Returns the number of member functions of this type.\n"
-		"\n"
-		"    Returns ``0`` if an error occurred or this type is invalid.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Always returns ``0``.\n"
-		"    * C++: If this type represents a struct/class, then the number of\n"
-		"      member functions (static and non-static) is returned. The count includes\n"
-		"      constructors and destructors (both explicit and implicit). Member\n"
-		"      functions of base classes are not included in the count.\n"
-		"    * Objective-C: If this type represents a struct/class, then the\n"
-		"      number of methods is returned. Methods in categories or super classes\n"
-		"      are not counted.\n"
-		"\n"
-		""},
-	 { "SBType_GetMemberFunctionAtIndex", _wrap_SBType_GetMemberFunctionAtIndex, METH_VARARGS, "\n"
-		"SBType_GetMemberFunctionAtIndex(SBType self, uint32_t idx) -> SBTypeMemberFunction\n"
-		"Returns the member function of this type with the given index.\n"
-		"\n"
-		"    Returns an invalid `SBTypeMemberFunction` if the index is invalid or this\n"
-		"    type is invalid.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Always returns an invalid `SBTypeMemberFunction`.\n"
-		"    * C++: Returns the member function or constructor/destructor with the given\n"
-		"      index.\n"
-		"    * Objective-C: Returns the method with the given index.\n"
-		"\n"
-		"    See `GetNumberOfMemberFunctions` for what functions can be queried by this\n"
-		"    function.\n"
-		"\n"
-		""},
-	 { "SBType_GetModule", _wrap_SBType_GetModule, METH_O, "\n"
-		"SBType_GetModule(SBType self) -> SBModule\n"
-		"Returns the `SBModule` this `SBType` belongs to.\n"
-		"\n"
-		"    Returns no `SBModule` if this type does not belong to any specific\n"
-		"    `SBModule` or this `SBType` is invalid. An invalid `SBModule` might also\n"
-		"    indicate that once came from an `SBModule` but LLDB could no longer\n"
-		"    determine the original module.\n"
-		"\n"
-		""},
-	 { "SBType_GetName", _wrap_SBType_GetName, METH_O, "\n"
-		"GetName() -> string\n"
-		"Returns the name of this type.\n"
-		"\n"
-		"    Returns an empty string if an error occurred or this type is invalid.\n"
-		"\n"
-		"    Use this function when trying to match a specific type by name in a script.\n"
-		"    The names returned by this function try to uniquely identify a name but\n"
-		"    conflicts can occur (for example, if a C++ program contains two different\n"
-		"    classes with the same name in different translation units. `GetName` can\n"
-		"    return the same name for both class types.)\n"
-		"\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: The name of the type. For structs the ``struct`` prefix is omitted.\n"
-		"    * C++: Returns the qualified name of the type (including anonymous/inline\n"
-		"      namespaces and all template arguments).\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetDisplayTypeName", _wrap_SBType_GetDisplayTypeName, METH_O, "\n"
-		"GetDisplayTypeName() -> string\n"
-		"Returns the name of this type in a user-friendly format.\n"
-		"\n"
-		"    Returns an empty string if an error occurred or this type is invalid.\n"
-		"\n"
-		"    Use this function when displaying a type name to the user.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns the type name. For structs the ``struct`` prefix is omitted.\n"
-		"    * C++: Returns the qualified name. Anonymous/inline namespaces are omitted.\n"
-		"      Template arguments that match their default value might also be hidden\n"
-		"      (this functionality depends on whether LLDB can determine the template's\n"
-		"      default arguments).\n"
-		"    * Objective-C: Same as in C.\n"
-		"\n"
-		""},
-	 { "SBType_GetTypeClass", _wrap_SBType_GetTypeClass, METH_O, "\n"
-		"GetTypeClass() -> TypeClass\n"
-		"Returns the `TypeClass` for this type.\n"
-		"\n"
-		"    Returns an `eTypeClassInvalid` if this `SBType` is invalid.\n"
-		"\n"
-		"    See `TypeClass` for the language-specific meaning of each `TypeClass` value.\n"
-		"\n"
-		""},
-	 { "SBType_IsTypeComplete", _wrap_SBType_IsTypeComplete, METH_O, "\n"
-		"SBType_IsTypeComplete(SBType self) -> bool\n"
-		"Returns true if the type is completely defined.\n"
-		"\n"
-		"    Language-specific behaviour:\n"
-		"\n"
-		"    * C: Returns false for struct types that were only forward declared in the\n"
-		"      type's `SBTarget`/`SBModule`. Otherwise returns true.\n"
-		"    * C++: Returns false for template/non-template struct/class types and\n"
-		"      scoped enums that were only forward declared inside the type's\n"
-		"      `SBTarget`/`SBModule`. Otherwise returns true.\n"
-		"    * Objective-C: Follows the same behavior as C for struct types. Objective-C\n"
-		"      classes are considered complete unless they were only forward declared via\n"
-		"      ``@class ClassName`` in the type's `SBTarget`/`SBModule`. Otherwise\n"
-		"      returns true.\n"
-		"\n"
-		""},
-	 { "SBType_GetTypeFlags", _wrap_SBType_GetTypeFlags, METH_O, "\n"
-		"SBType_GetTypeFlags(SBType self) -> uint32_t\n"
-		"Returns the `TypeFlags` values for this type.\n"
-		"\n"
-		"    See the respective `TypeFlags` values for what values can be set. Returns an\n"
-		"    integer in which each `TypeFlags` value is represented by a bit. Specific\n"
-		"    flags can be checked via Python's bitwise operators. For example, the\n"
-		"    `eTypeIsInteger` flag can be checked like this:\n"
-		"\n"
-		"    ``(an_sb_type.GetTypeFlags() & lldb.eTypeIsInteger) != 0``\n"
-		"\n"
-		"    If this type is invalid this returns ``0``.\n"
-		"\n"
-		"    See the different values for `TypeFlags` for the language-specific meanings\n"
-		"    of each `TypeFlags` value.\n"
-		"\n"
-		""},
-	 { "SBType_GetDescription", _wrap_SBType_GetDescription, METH_VARARGS, "SBType_GetDescription(SBType self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBType_FindDirectNestedType", _wrap_SBType_FindDirectNestedType, METH_VARARGS, "\n"
-		"SBType_FindDirectNestedType(SBType self, char const * name) -> SBType\n"
-		"Searches for a directly nested type that has the provided name.\n"
-		"\n"
-		"    Returns the type if it was found.\n"
-		"    Returns invalid type if nothing was found.\n"
-		"\n"
-		""},
-	 { "SBType___eq__", _wrap_SBType___eq__, METH_VARARGS, "SBType___eq__(SBType self, SBType rhs) -> bool"},
-	 { "SBType___ne__", _wrap_SBType___ne__, METH_VARARGS, "SBType___ne__(SBType self, SBType rhs) -> bool"},
-	 { "SBType___repr__", _wrap_SBType___repr__, METH_O, "SBType___repr__(SBType self) -> std::string"},
-	 { "SBType_swigregister", SBType_swigregister, METH_O, NULL},
-	 { "SBType_swiginit", SBType_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeList", _wrap_new_SBTypeList, METH_VARARGS, "\n"
-		"SBTypeList()\n"
-		"new_SBTypeList(SBTypeList rhs) -> SBTypeList\n"
-		""},
-	 { "delete_SBTypeList", _wrap_delete_SBTypeList, METH_O, "delete_SBTypeList(SBTypeList self)"},
-	 { "SBTypeList___nonzero__", _wrap_SBTypeList___nonzero__, METH_O, "SBTypeList___nonzero__(SBTypeList self) -> bool"},
-	 { "SBTypeList_IsValid", _wrap_SBTypeList_IsValid, METH_O, "SBTypeList_IsValid(SBTypeList self) -> bool"},
-	 { "SBTypeList_Append", _wrap_SBTypeList_Append, METH_VARARGS, "SBTypeList_Append(SBTypeList self, SBType type)"},
-	 { "SBTypeList_GetTypeAtIndex", _wrap_SBTypeList_GetTypeAtIndex, METH_VARARGS, "SBTypeList_GetTypeAtIndex(SBTypeList self, uint32_t index) -> SBType"},
-	 { "SBTypeList_GetSize", _wrap_SBTypeList_GetSize, METH_O, "SBTypeList_GetSize(SBTypeList self) -> uint32_t"},
-	 { "SBTypeList_swigregister", SBTypeList_swigregister, METH_O, NULL},
-	 { "SBTypeList_swiginit", SBTypeList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeCategory", _wrap_new_SBTypeCategory, METH_VARARGS, "\n"
-		"SBTypeCategory()\n"
-		"new_SBTypeCategory(SBTypeCategory rhs) -> SBTypeCategory\n"
-		""},
-	 { "delete_SBTypeCategory", _wrap_delete_SBTypeCategory, METH_O, "delete_SBTypeCategory(SBTypeCategory self)"},
-	 { "SBTypeCategory___nonzero__", _wrap_SBTypeCategory___nonzero__, METH_O, "SBTypeCategory___nonzero__(SBTypeCategory self) -> bool"},
-	 { "SBTypeCategory_IsValid", _wrap_SBTypeCategory_IsValid, METH_O, "SBTypeCategory_IsValid(SBTypeCategory self) -> bool"},
-	 { "SBTypeCategory_GetEnabled", _wrap_SBTypeCategory_GetEnabled, METH_O, "SBTypeCategory_GetEnabled(SBTypeCategory self) -> bool"},
-	 { "SBTypeCategory_SetEnabled", _wrap_SBTypeCategory_SetEnabled, METH_VARARGS, "SBTypeCategory_SetEnabled(SBTypeCategory self, bool arg2)"},
-	 { "SBTypeCategory_GetName", _wrap_SBTypeCategory_GetName, METH_O, "SBTypeCategory_GetName(SBTypeCategory self) -> char const *"},
-	 { "SBTypeCategory_GetLanguageAtIndex", _wrap_SBTypeCategory_GetLanguageAtIndex, METH_VARARGS, "SBTypeCategory_GetLanguageAtIndex(SBTypeCategory self, uint32_t idx) -> lldb::LanguageType"},
-	 { "SBTypeCategory_GetNumLanguages", _wrap_SBTypeCategory_GetNumLanguages, METH_O, "SBTypeCategory_GetNumLanguages(SBTypeCategory self) -> uint32_t"},
-	 { "SBTypeCategory_AddLanguage", _wrap_SBTypeCategory_AddLanguage, METH_VARARGS, "SBTypeCategory_AddLanguage(SBTypeCategory self, lldb::LanguageType language)"},
-	 { "SBTypeCategory_GetDescription", _wrap_SBTypeCategory_GetDescription, METH_VARARGS, "SBTypeCategory_GetDescription(SBTypeCategory self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeCategory_GetNumFormats", _wrap_SBTypeCategory_GetNumFormats, METH_O, "SBTypeCategory_GetNumFormats(SBTypeCategory self) -> uint32_t"},
-	 { "SBTypeCategory_GetNumSummaries", _wrap_SBTypeCategory_GetNumSummaries, METH_O, "SBTypeCategory_GetNumSummaries(SBTypeCategory self) -> uint32_t"},
-	 { "SBTypeCategory_GetNumFilters", _wrap_SBTypeCategory_GetNumFilters, METH_O, "SBTypeCategory_GetNumFilters(SBTypeCategory self) -> uint32_t"},
-	 { "SBTypeCategory_GetNumSynthetics", _wrap_SBTypeCategory_GetNumSynthetics, METH_O, "SBTypeCategory_GetNumSynthetics(SBTypeCategory self) -> uint32_t"},
-	 { "SBTypeCategory_GetTypeNameSpecifierForFilterAtIndex", _wrap_SBTypeCategory_GetTypeNameSpecifierForFilterAtIndex, METH_VARARGS, "SBTypeCategory_GetTypeNameSpecifierForFilterAtIndex(SBTypeCategory self, uint32_t arg2) -> SBTypeNameSpecifier"},
-	 { "SBTypeCategory_GetTypeNameSpecifierForFormatAtIndex", _wrap_SBTypeCategory_GetTypeNameSpecifierForFormatAtIndex, METH_VARARGS, "SBTypeCategory_GetTypeNameSpecifierForFormatAtIndex(SBTypeCategory self, uint32_t arg2) -> SBTypeNameSpecifier"},
-	 { "SBTypeCategory_GetTypeNameSpecifierForSummaryAtIndex", _wrap_SBTypeCategory_GetTypeNameSpecifierForSummaryAtIndex, METH_VARARGS, "SBTypeCategory_GetTypeNameSpecifierForSummaryAtIndex(SBTypeCategory self, uint32_t arg2) -> SBTypeNameSpecifier"},
-	 { "SBTypeCategory_GetTypeNameSpecifierForSyntheticAtIndex", _wrap_SBTypeCategory_GetTypeNameSpecifierForSyntheticAtIndex, METH_VARARGS, "SBTypeCategory_GetTypeNameSpecifierForSyntheticAtIndex(SBTypeCategory self, uint32_t arg2) -> SBTypeNameSpecifier"},
-	 { "SBTypeCategory_GetFilterForType", _wrap_SBTypeCategory_GetFilterForType, METH_VARARGS, "SBTypeCategory_GetFilterForType(SBTypeCategory self, SBTypeNameSpecifier arg2) -> SBTypeFilter"},
-	 { "SBTypeCategory_GetFormatForType", _wrap_SBTypeCategory_GetFormatForType, METH_VARARGS, "SBTypeCategory_GetFormatForType(SBTypeCategory self, SBTypeNameSpecifier arg2) -> SBTypeFormat"},
-	 { "SBTypeCategory_GetSummaryForType", _wrap_SBTypeCategory_GetSummaryForType, METH_VARARGS, "SBTypeCategory_GetSummaryForType(SBTypeCategory self, SBTypeNameSpecifier arg2) -> SBTypeSummary"},
-	 { "SBTypeCategory_GetSyntheticForType", _wrap_SBTypeCategory_GetSyntheticForType, METH_VARARGS, "SBTypeCategory_GetSyntheticForType(SBTypeCategory self, SBTypeNameSpecifier arg2) -> SBTypeSynthetic"},
-	 { "SBTypeCategory_GetFilterAtIndex", _wrap_SBTypeCategory_GetFilterAtIndex, METH_VARARGS, "SBTypeCategory_GetFilterAtIndex(SBTypeCategory self, uint32_t arg2) -> SBTypeFilter"},
-	 { "SBTypeCategory_GetFormatAtIndex", _wrap_SBTypeCategory_GetFormatAtIndex, METH_VARARGS, "SBTypeCategory_GetFormatAtIndex(SBTypeCategory self, uint32_t arg2) -> SBTypeFormat"},
-	 { "SBTypeCategory_GetSummaryAtIndex", _wrap_SBTypeCategory_GetSummaryAtIndex, METH_VARARGS, "SBTypeCategory_GetSummaryAtIndex(SBTypeCategory self, uint32_t arg2) -> SBTypeSummary"},
-	 { "SBTypeCategory_GetSyntheticAtIndex", _wrap_SBTypeCategory_GetSyntheticAtIndex, METH_VARARGS, "SBTypeCategory_GetSyntheticAtIndex(SBTypeCategory self, uint32_t arg2) -> SBTypeSynthetic"},
-	 { "SBTypeCategory_AddTypeFormat", _wrap_SBTypeCategory_AddTypeFormat, METH_VARARGS, "SBTypeCategory_AddTypeFormat(SBTypeCategory self, SBTypeNameSpecifier arg2, SBTypeFormat arg3) -> bool"},
-	 { "SBTypeCategory_DeleteTypeFormat", _wrap_SBTypeCategory_DeleteTypeFormat, METH_VARARGS, "SBTypeCategory_DeleteTypeFormat(SBTypeCategory self, SBTypeNameSpecifier arg2) -> bool"},
-	 { "SBTypeCategory_AddTypeSummary", _wrap_SBTypeCategory_AddTypeSummary, METH_VARARGS, "SBTypeCategory_AddTypeSummary(SBTypeCategory self, SBTypeNameSpecifier arg2, SBTypeSummary arg3) -> bool"},
-	 { "SBTypeCategory_DeleteTypeSummary", _wrap_SBTypeCategory_DeleteTypeSummary, METH_VARARGS, "SBTypeCategory_DeleteTypeSummary(SBTypeCategory self, SBTypeNameSpecifier arg2) -> bool"},
-	 { "SBTypeCategory_AddTypeFilter", _wrap_SBTypeCategory_AddTypeFilter, METH_VARARGS, "SBTypeCategory_AddTypeFilter(SBTypeCategory self, SBTypeNameSpecifier arg2, SBTypeFilter arg3) -> bool"},
-	 { "SBTypeCategory_DeleteTypeFilter", _wrap_SBTypeCategory_DeleteTypeFilter, METH_VARARGS, "SBTypeCategory_DeleteTypeFilter(SBTypeCategory self, SBTypeNameSpecifier arg2) -> bool"},
-	 { "SBTypeCategory_AddTypeSynthetic", _wrap_SBTypeCategory_AddTypeSynthetic, METH_VARARGS, "SBTypeCategory_AddTypeSynthetic(SBTypeCategory self, SBTypeNameSpecifier arg2, SBTypeSynthetic arg3) -> bool"},
-	 { "SBTypeCategory_DeleteTypeSynthetic", _wrap_SBTypeCategory_DeleteTypeSynthetic, METH_VARARGS, "SBTypeCategory_DeleteTypeSynthetic(SBTypeCategory self, SBTypeNameSpecifier arg2) -> bool"},
-	 { "SBTypeCategory___eq__", _wrap_SBTypeCategory___eq__, METH_VARARGS, "SBTypeCategory___eq__(SBTypeCategory self, SBTypeCategory rhs) -> bool"},
-	 { "SBTypeCategory___ne__", _wrap_SBTypeCategory___ne__, METH_VARARGS, "SBTypeCategory___ne__(SBTypeCategory self, SBTypeCategory rhs) -> bool"},
-	 { "SBTypeCategory___repr__", _wrap_SBTypeCategory___repr__, METH_O, "SBTypeCategory___repr__(SBTypeCategory self) -> std::string"},
-	 { "SBTypeCategory_swigregister", SBTypeCategory_swigregister, METH_O, NULL},
-	 { "SBTypeCategory_swiginit", SBTypeCategory_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeEnumMember", _wrap_new_SBTypeEnumMember, METH_VARARGS, "\n"
-		"SBTypeEnumMember()\n"
-		"new_SBTypeEnumMember(SBTypeEnumMember rhs) -> SBTypeEnumMember\n"
-		""},
-	 { "delete_SBTypeEnumMember", _wrap_delete_SBTypeEnumMember, METH_O, "delete_SBTypeEnumMember(SBTypeEnumMember self)"},
-	 { "SBTypeEnumMember___nonzero__", _wrap_SBTypeEnumMember___nonzero__, METH_O, "SBTypeEnumMember___nonzero__(SBTypeEnumMember self) -> bool"},
-	 { "SBTypeEnumMember_IsValid", _wrap_SBTypeEnumMember_IsValid, METH_O, "SBTypeEnumMember_IsValid(SBTypeEnumMember self) -> bool"},
-	 { "SBTypeEnumMember_GetValueAsSigned", _wrap_SBTypeEnumMember_GetValueAsSigned, METH_O, "SBTypeEnumMember_GetValueAsSigned(SBTypeEnumMember self) -> int64_t"},
-	 { "SBTypeEnumMember_GetValueAsUnsigned", _wrap_SBTypeEnumMember_GetValueAsUnsigned, METH_O, "SBTypeEnumMember_GetValueAsUnsigned(SBTypeEnumMember self) -> uint64_t"},
-	 { "SBTypeEnumMember_GetName", _wrap_SBTypeEnumMember_GetName, METH_O, "SBTypeEnumMember_GetName(SBTypeEnumMember self) -> char const *"},
-	 { "SBTypeEnumMember_GetType", _wrap_SBTypeEnumMember_GetType, METH_O, "SBTypeEnumMember_GetType(SBTypeEnumMember self) -> SBType"},
-	 { "SBTypeEnumMember_GetDescription", _wrap_SBTypeEnumMember_GetDescription, METH_VARARGS, "SBTypeEnumMember_GetDescription(SBTypeEnumMember self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeEnumMember___repr__", _wrap_SBTypeEnumMember___repr__, METH_O, "SBTypeEnumMember___repr__(SBTypeEnumMember self) -> std::string"},
-	 { "SBTypeEnumMember_swigregister", SBTypeEnumMember_swigregister, METH_O, NULL},
-	 { "SBTypeEnumMember_swiginit", SBTypeEnumMember_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeEnumMemberList", _wrap_new_SBTypeEnumMemberList, METH_VARARGS, "\n"
-		"SBTypeEnumMemberList()\n"
-		"new_SBTypeEnumMemberList(SBTypeEnumMemberList rhs) -> SBTypeEnumMemberList\n"
-		""},
-	 { "delete_SBTypeEnumMemberList", _wrap_delete_SBTypeEnumMemberList, METH_O, "delete_SBTypeEnumMemberList(SBTypeEnumMemberList self)"},
-	 { "SBTypeEnumMemberList___nonzero__", _wrap_SBTypeEnumMemberList___nonzero__, METH_O, "SBTypeEnumMemberList___nonzero__(SBTypeEnumMemberList self) -> bool"},
-	 { "SBTypeEnumMemberList_IsValid", _wrap_SBTypeEnumMemberList_IsValid, METH_O, "SBTypeEnumMemberList_IsValid(SBTypeEnumMemberList self) -> bool"},
-	 { "SBTypeEnumMemberList_Append", _wrap_SBTypeEnumMemberList_Append, METH_VARARGS, "SBTypeEnumMemberList_Append(SBTypeEnumMemberList self, SBTypeEnumMember entry)"},
-	 { "SBTypeEnumMemberList_GetTypeEnumMemberAtIndex", _wrap_SBTypeEnumMemberList_GetTypeEnumMemberAtIndex, METH_VARARGS, "SBTypeEnumMemberList_GetTypeEnumMemberAtIndex(SBTypeEnumMemberList self, uint32_t index) -> SBTypeEnumMember"},
-	 { "SBTypeEnumMemberList_GetSize", _wrap_SBTypeEnumMemberList_GetSize, METH_O, "SBTypeEnumMemberList_GetSize(SBTypeEnumMemberList self) -> uint32_t"},
-	 { "SBTypeEnumMemberList_swigregister", SBTypeEnumMemberList_swigregister, METH_O, NULL},
-	 { "SBTypeEnumMemberList_swiginit", SBTypeEnumMemberList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeFilter", _wrap_new_SBTypeFilter, METH_VARARGS, "\n"
-		"SBTypeFilter()\n"
-		"SBTypeFilter(uint32_t options)\n"
-		"new_SBTypeFilter(SBTypeFilter rhs) -> SBTypeFilter\n"
-		""},
-	 { "delete_SBTypeFilter", _wrap_delete_SBTypeFilter, METH_O, "delete_SBTypeFilter(SBTypeFilter self)"},
-	 { "SBTypeFilter___nonzero__", _wrap_SBTypeFilter___nonzero__, METH_O, "SBTypeFilter___nonzero__(SBTypeFilter self) -> bool"},
-	 { "SBTypeFilter_IsValid", _wrap_SBTypeFilter_IsValid, METH_O, "SBTypeFilter_IsValid(SBTypeFilter self) -> bool"},
-	 { "SBTypeFilter_GetNumberOfExpressionPaths", _wrap_SBTypeFilter_GetNumberOfExpressionPaths, METH_O, "SBTypeFilter_GetNumberOfExpressionPaths(SBTypeFilter self) -> uint32_t"},
-	 { "SBTypeFilter_GetExpressionPathAtIndex", _wrap_SBTypeFilter_GetExpressionPathAtIndex, METH_VARARGS, "SBTypeFilter_GetExpressionPathAtIndex(SBTypeFilter self, uint32_t i) -> char const *"},
-	 { "SBTypeFilter_ReplaceExpressionPathAtIndex", _wrap_SBTypeFilter_ReplaceExpressionPathAtIndex, METH_VARARGS, "SBTypeFilter_ReplaceExpressionPathAtIndex(SBTypeFilter self, uint32_t i, char const * item) -> bool"},
-	 { "SBTypeFilter_AppendExpressionPath", _wrap_SBTypeFilter_AppendExpressionPath, METH_VARARGS, "SBTypeFilter_AppendExpressionPath(SBTypeFilter self, char const * item)"},
-	 { "SBTypeFilter_Clear", _wrap_SBTypeFilter_Clear, METH_O, "SBTypeFilter_Clear(SBTypeFilter self)"},
-	 { "SBTypeFilter_GetOptions", _wrap_SBTypeFilter_GetOptions, METH_O, "SBTypeFilter_GetOptions(SBTypeFilter self) -> uint32_t"},
-	 { "SBTypeFilter_SetOptions", _wrap_SBTypeFilter_SetOptions, METH_VARARGS, "SBTypeFilter_SetOptions(SBTypeFilter self, uint32_t arg2)"},
-	 { "SBTypeFilter_GetDescription", _wrap_SBTypeFilter_GetDescription, METH_VARARGS, "SBTypeFilter_GetDescription(SBTypeFilter self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeFilter_IsEqualTo", _wrap_SBTypeFilter_IsEqualTo, METH_VARARGS, "SBTypeFilter_IsEqualTo(SBTypeFilter self, SBTypeFilter rhs) -> bool"},
-	 { "SBTypeFilter___eq__", _wrap_SBTypeFilter___eq__, METH_VARARGS, "SBTypeFilter___eq__(SBTypeFilter self, SBTypeFilter rhs) -> bool"},
-	 { "SBTypeFilter___ne__", _wrap_SBTypeFilter___ne__, METH_VARARGS, "SBTypeFilter___ne__(SBTypeFilter self, SBTypeFilter rhs) -> bool"},
-	 { "SBTypeFilter___repr__", _wrap_SBTypeFilter___repr__, METH_O, "SBTypeFilter___repr__(SBTypeFilter self) -> std::string"},
-	 { "SBTypeFilter_swigregister", SBTypeFilter_swigregister, METH_O, NULL},
-	 { "SBTypeFilter_swiginit", SBTypeFilter_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeFormat", _wrap_new_SBTypeFormat, METH_VARARGS, "\n"
-		"SBTypeFormat()\n"
-		"SBTypeFormat(lldb::Format format, uint32_t options=0)\n"
-		"SBTypeFormat(char const * type, uint32_t options=0)\n"
-		"new_SBTypeFormat(SBTypeFormat rhs) -> SBTypeFormat\n"
-		""},
-	 { "delete_SBTypeFormat", _wrap_delete_SBTypeFormat, METH_O, "delete_SBTypeFormat(SBTypeFormat self)"},
-	 { "SBTypeFormat___nonzero__", _wrap_SBTypeFormat___nonzero__, METH_O, "SBTypeFormat___nonzero__(SBTypeFormat self) -> bool"},
-	 { "SBTypeFormat_IsValid", _wrap_SBTypeFormat_IsValid, METH_O, "SBTypeFormat_IsValid(SBTypeFormat self) -> bool"},
-	 { "SBTypeFormat_GetFormat", _wrap_SBTypeFormat_GetFormat, METH_O, "SBTypeFormat_GetFormat(SBTypeFormat self) -> lldb::Format"},
-	 { "SBTypeFormat_GetTypeName", _wrap_SBTypeFormat_GetTypeName, METH_O, "SBTypeFormat_GetTypeName(SBTypeFormat self) -> char const *"},
-	 { "SBTypeFormat_GetOptions", _wrap_SBTypeFormat_GetOptions, METH_O, "SBTypeFormat_GetOptions(SBTypeFormat self) -> uint32_t"},
-	 { "SBTypeFormat_SetFormat", _wrap_SBTypeFormat_SetFormat, METH_VARARGS, "SBTypeFormat_SetFormat(SBTypeFormat self, lldb::Format arg2)"},
-	 { "SBTypeFormat_SetTypeName", _wrap_SBTypeFormat_SetTypeName, METH_VARARGS, "SBTypeFormat_SetTypeName(SBTypeFormat self, char const * arg2)"},
-	 { "SBTypeFormat_SetOptions", _wrap_SBTypeFormat_SetOptions, METH_VARARGS, "SBTypeFormat_SetOptions(SBTypeFormat self, uint32_t arg2)"},
-	 { "SBTypeFormat_GetDescription", _wrap_SBTypeFormat_GetDescription, METH_VARARGS, "SBTypeFormat_GetDescription(SBTypeFormat self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeFormat_IsEqualTo", _wrap_SBTypeFormat_IsEqualTo, METH_VARARGS, "SBTypeFormat_IsEqualTo(SBTypeFormat self, SBTypeFormat rhs) -> bool"},
-	 { "SBTypeFormat___eq__", _wrap_SBTypeFormat___eq__, METH_VARARGS, "SBTypeFormat___eq__(SBTypeFormat self, SBTypeFormat rhs) -> bool"},
-	 { "SBTypeFormat___ne__", _wrap_SBTypeFormat___ne__, METH_VARARGS, "SBTypeFormat___ne__(SBTypeFormat self, SBTypeFormat rhs) -> bool"},
-	 { "SBTypeFormat___repr__", _wrap_SBTypeFormat___repr__, METH_O, "SBTypeFormat___repr__(SBTypeFormat self) -> std::string"},
-	 { "SBTypeFormat_swigregister", SBTypeFormat_swigregister, METH_O, NULL},
-	 { "SBTypeFormat_swiginit", SBTypeFormat_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeNameSpecifier", _wrap_new_SBTypeNameSpecifier, METH_VARARGS, "\n"
-		"SBTypeNameSpecifier()\n"
-		"SBTypeNameSpecifier(char const * name, bool is_regex=False)\n"
-		"SBTypeNameSpecifier(char const * name, lldb::FormatterMatchType match_type)\n"
-		"SBTypeNameSpecifier(SBType type)\n"
-		"new_SBTypeNameSpecifier(SBTypeNameSpecifier rhs) -> SBTypeNameSpecifier\n"
-		""},
-	 { "delete_SBTypeNameSpecifier", _wrap_delete_SBTypeNameSpecifier, METH_O, "delete_SBTypeNameSpecifier(SBTypeNameSpecifier self)"},
-	 { "SBTypeNameSpecifier___nonzero__", _wrap_SBTypeNameSpecifier___nonzero__, METH_O, "SBTypeNameSpecifier___nonzero__(SBTypeNameSpecifier self) -> bool"},
-	 { "SBTypeNameSpecifier_IsValid", _wrap_SBTypeNameSpecifier_IsValid, METH_O, "SBTypeNameSpecifier_IsValid(SBTypeNameSpecifier self) -> bool"},
-	 { "SBTypeNameSpecifier_GetName", _wrap_SBTypeNameSpecifier_GetName, METH_O, "SBTypeNameSpecifier_GetName(SBTypeNameSpecifier self) -> char const *"},
-	 { "SBTypeNameSpecifier_GetType", _wrap_SBTypeNameSpecifier_GetType, METH_O, "SBTypeNameSpecifier_GetType(SBTypeNameSpecifier self) -> SBType"},
-	 { "SBTypeNameSpecifier_GetMatchType", _wrap_SBTypeNameSpecifier_GetMatchType, METH_O, "SBTypeNameSpecifier_GetMatchType(SBTypeNameSpecifier self) -> lldb::FormatterMatchType"},
-	 { "SBTypeNameSpecifier_IsRegex", _wrap_SBTypeNameSpecifier_IsRegex, METH_O, "SBTypeNameSpecifier_IsRegex(SBTypeNameSpecifier self) -> bool"},
-	 { "SBTypeNameSpecifier_GetDescription", _wrap_SBTypeNameSpecifier_GetDescription, METH_VARARGS, "SBTypeNameSpecifier_GetDescription(SBTypeNameSpecifier self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeNameSpecifier_IsEqualTo", _wrap_SBTypeNameSpecifier_IsEqualTo, METH_VARARGS, "SBTypeNameSpecifier_IsEqualTo(SBTypeNameSpecifier self, SBTypeNameSpecifier rhs) -> bool"},
-	 { "SBTypeNameSpecifier___eq__", _wrap_SBTypeNameSpecifier___eq__, METH_VARARGS, "SBTypeNameSpecifier___eq__(SBTypeNameSpecifier self, SBTypeNameSpecifier rhs) -> bool"},
-	 { "SBTypeNameSpecifier___ne__", _wrap_SBTypeNameSpecifier___ne__, METH_VARARGS, "SBTypeNameSpecifier___ne__(SBTypeNameSpecifier self, SBTypeNameSpecifier rhs) -> bool"},
-	 { "SBTypeNameSpecifier___repr__", _wrap_SBTypeNameSpecifier___repr__, METH_O, "SBTypeNameSpecifier___repr__(SBTypeNameSpecifier self) -> std::string"},
-	 { "SBTypeNameSpecifier_swigregister", SBTypeNameSpecifier_swigregister, METH_O, NULL},
-	 { "SBTypeNameSpecifier_swiginit", SBTypeNameSpecifier_swiginit, METH_VARARGS, NULL},
-	 { "new_SBTypeSummaryOptions", _wrap_new_SBTypeSummaryOptions, METH_VARARGS, "\n"
-		"SBTypeSummaryOptions()\n"
-		"new_SBTypeSummaryOptions(SBTypeSummaryOptions rhs) -> SBTypeSummaryOptions\n"
-		""},
-	 { "delete_SBTypeSummaryOptions", _wrap_delete_SBTypeSummaryOptions, METH_O, "delete_SBTypeSummaryOptions(SBTypeSummaryOptions self)"},
-	 { "SBTypeSummaryOptions___nonzero__", _wrap_SBTypeSummaryOptions___nonzero__, METH_O, "SBTypeSummaryOptions___nonzero__(SBTypeSummaryOptions self) -> bool"},
-	 { "SBTypeSummaryOptions_IsValid", _wrap_SBTypeSummaryOptions_IsValid, METH_O, "SBTypeSummaryOptions_IsValid(SBTypeSummaryOptions self) -> bool"},
-	 { "SBTypeSummaryOptions_GetLanguage", _wrap_SBTypeSummaryOptions_GetLanguage, METH_O, "SBTypeSummaryOptions_GetLanguage(SBTypeSummaryOptions self) -> lldb::LanguageType"},
-	 { "SBTypeSummaryOptions_GetCapping", _wrap_SBTypeSummaryOptions_GetCapping, METH_O, "SBTypeSummaryOptions_GetCapping(SBTypeSummaryOptions self) -> lldb::TypeSummaryCapping"},
-	 { "SBTypeSummaryOptions_SetLanguage", _wrap_SBTypeSummaryOptions_SetLanguage, METH_VARARGS, "SBTypeSummaryOptions_SetLanguage(SBTypeSummaryOptions self, lldb::LanguageType arg2)"},
-	 { "SBTypeSummaryOptions_SetCapping", _wrap_SBTypeSummaryOptions_SetCapping, METH_VARARGS, "SBTypeSummaryOptions_SetCapping(SBTypeSummaryOptions self, lldb::TypeSummaryCapping arg2)"},
-	 { "SBTypeSummaryOptions_swigregister", SBTypeSummaryOptions_swigregister, METH_O, NULL},
-	 { "SBTypeSummaryOptions_swiginit", SBTypeSummaryOptions_swiginit, METH_VARARGS, NULL},
-	 { "SBTypeSummary_CreateWithSummaryString", _wrap_SBTypeSummary_CreateWithSummaryString, METH_VARARGS, "SBTypeSummary_CreateWithSummaryString(char const * data, uint32_t options=0) -> SBTypeSummary"},
-	 { "SBTypeSummary_CreateWithFunctionName", _wrap_SBTypeSummary_CreateWithFunctionName, METH_VARARGS, "SBTypeSummary_CreateWithFunctionName(char const * data, uint32_t options=0) -> SBTypeSummary"},
-	 { "SBTypeSummary_CreateWithScriptCode", _wrap_SBTypeSummary_CreateWithScriptCode, METH_VARARGS, "SBTypeSummary_CreateWithScriptCode(char const * data, uint32_t options=0) -> SBTypeSummary"},
-	 { "new_SBTypeSummary", _wrap_new_SBTypeSummary, METH_VARARGS, "\n"
-		"SBTypeSummary()\n"
-		"new_SBTypeSummary(SBTypeSummary rhs) -> SBTypeSummary\n"
-		""},
-	 { "delete_SBTypeSummary", _wrap_delete_SBTypeSummary, METH_O, "delete_SBTypeSummary(SBTypeSummary self)"},
-	 { "SBTypeSummary___nonzero__", _wrap_SBTypeSummary___nonzero__, METH_O, "SBTypeSummary___nonzero__(SBTypeSummary self) -> bool"},
-	 { "SBTypeSummary_IsValid", _wrap_SBTypeSummary_IsValid, METH_O, "SBTypeSummary_IsValid(SBTypeSummary self) -> bool"},
-	 { "SBTypeSummary_IsFunctionCode", _wrap_SBTypeSummary_IsFunctionCode, METH_O, "SBTypeSummary_IsFunctionCode(SBTypeSummary self) -> bool"},
-	 { "SBTypeSummary_IsFunctionName", _wrap_SBTypeSummary_IsFunctionName, METH_O, "SBTypeSummary_IsFunctionName(SBTypeSummary self) -> bool"},
-	 { "SBTypeSummary_IsSummaryString", _wrap_SBTypeSummary_IsSummaryString, METH_O, "SBTypeSummary_IsSummaryString(SBTypeSummary self) -> bool"},
-	 { "SBTypeSummary_GetData", _wrap_SBTypeSummary_GetData, METH_O, "SBTypeSummary_GetData(SBTypeSummary self) -> char const *"},
-	 { "SBTypeSummary_SetSummaryString", _wrap_SBTypeSummary_SetSummaryString, METH_VARARGS, "SBTypeSummary_SetSummaryString(SBTypeSummary self, char const * data)"},
-	 { "SBTypeSummary_SetFunctionName", _wrap_SBTypeSummary_SetFunctionName, METH_VARARGS, "SBTypeSummary_SetFunctionName(SBTypeSummary self, char const * data)"},
-	 { "SBTypeSummary_SetFunctionCode", _wrap_SBTypeSummary_SetFunctionCode, METH_VARARGS, "SBTypeSummary_SetFunctionCode(SBTypeSummary self, char const * data)"},
-	 { "SBTypeSummary_GetOptions", _wrap_SBTypeSummary_GetOptions, METH_O, "SBTypeSummary_GetOptions(SBTypeSummary self) -> uint32_t"},
-	 { "SBTypeSummary_SetOptions", _wrap_SBTypeSummary_SetOptions, METH_VARARGS, "SBTypeSummary_SetOptions(SBTypeSummary self, uint32_t arg2)"},
-	 { "SBTypeSummary_GetDescription", _wrap_SBTypeSummary_GetDescription, METH_VARARGS, "SBTypeSummary_GetDescription(SBTypeSummary self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeSummary_DoesPrintValue", _wrap_SBTypeSummary_DoesPrintValue, METH_VARARGS, "SBTypeSummary_DoesPrintValue(SBTypeSummary self, SBValue value) -> bool"},
-	 { "SBTypeSummary_IsEqualTo", _wrap_SBTypeSummary_IsEqualTo, METH_VARARGS, "SBTypeSummary_IsEqualTo(SBTypeSummary self, SBTypeSummary rhs) -> bool"},
-	 { "SBTypeSummary___eq__", _wrap_SBTypeSummary___eq__, METH_VARARGS, "SBTypeSummary___eq__(SBTypeSummary self, SBTypeSummary rhs) -> bool"},
-	 { "SBTypeSummary___ne__", _wrap_SBTypeSummary___ne__, METH_VARARGS, "SBTypeSummary___ne__(SBTypeSummary self, SBTypeSummary rhs) -> bool"},
-	 { "SBTypeSummary___repr__", _wrap_SBTypeSummary___repr__, METH_O, "SBTypeSummary___repr__(SBTypeSummary self) -> std::string"},
-	 { "SBTypeSummary_swigregister", SBTypeSummary_swigregister, METH_O, NULL},
-	 { "SBTypeSummary_swiginit", SBTypeSummary_swiginit, METH_VARARGS, NULL},
-	 { "SBTypeSynthetic_CreateWithClassName", _wrap_SBTypeSynthetic_CreateWithClassName, METH_VARARGS, "SBTypeSynthetic_CreateWithClassName(char const * data, uint32_t options=0) -> SBTypeSynthetic"},
-	 { "SBTypeSynthetic_CreateWithScriptCode", _wrap_SBTypeSynthetic_CreateWithScriptCode, METH_VARARGS, "SBTypeSynthetic_CreateWithScriptCode(char const * data, uint32_t options=0) -> SBTypeSynthetic"},
-	 { "new_SBTypeSynthetic", _wrap_new_SBTypeSynthetic, METH_VARARGS, "\n"
-		"SBTypeSynthetic()\n"
-		"new_SBTypeSynthetic(SBTypeSynthetic rhs) -> SBTypeSynthetic\n"
-		""},
-	 { "delete_SBTypeSynthetic", _wrap_delete_SBTypeSynthetic, METH_O, "delete_SBTypeSynthetic(SBTypeSynthetic self)"},
-	 { "SBTypeSynthetic___nonzero__", _wrap_SBTypeSynthetic___nonzero__, METH_O, "SBTypeSynthetic___nonzero__(SBTypeSynthetic self) -> bool"},
-	 { "SBTypeSynthetic_IsValid", _wrap_SBTypeSynthetic_IsValid, METH_O, "SBTypeSynthetic_IsValid(SBTypeSynthetic self) -> bool"},
-	 { "SBTypeSynthetic_IsClassCode", _wrap_SBTypeSynthetic_IsClassCode, METH_O, "SBTypeSynthetic_IsClassCode(SBTypeSynthetic self) -> bool"},
-	 { "SBTypeSynthetic_IsClassName", _wrap_SBTypeSynthetic_IsClassName, METH_O, "SBTypeSynthetic_IsClassName(SBTypeSynthetic self) -> bool"},
-	 { "SBTypeSynthetic_GetData", _wrap_SBTypeSynthetic_GetData, METH_O, "SBTypeSynthetic_GetData(SBTypeSynthetic self) -> char const *"},
-	 { "SBTypeSynthetic_SetClassName", _wrap_SBTypeSynthetic_SetClassName, METH_VARARGS, "SBTypeSynthetic_SetClassName(SBTypeSynthetic self, char const * data)"},
-	 { "SBTypeSynthetic_SetClassCode", _wrap_SBTypeSynthetic_SetClassCode, METH_VARARGS, "SBTypeSynthetic_SetClassCode(SBTypeSynthetic self, char const * data)"},
-	 { "SBTypeSynthetic_GetOptions", _wrap_SBTypeSynthetic_GetOptions, METH_O, "SBTypeSynthetic_GetOptions(SBTypeSynthetic self) -> uint32_t"},
-	 { "SBTypeSynthetic_SetOptions", _wrap_SBTypeSynthetic_SetOptions, METH_VARARGS, "SBTypeSynthetic_SetOptions(SBTypeSynthetic self, uint32_t arg2)"},
-	 { "SBTypeSynthetic_GetDescription", _wrap_SBTypeSynthetic_GetDescription, METH_VARARGS, "SBTypeSynthetic_GetDescription(SBTypeSynthetic self, SBStream description, lldb::DescriptionLevel description_level) -> bool"},
-	 { "SBTypeSynthetic_IsEqualTo", _wrap_SBTypeSynthetic_IsEqualTo, METH_VARARGS, "SBTypeSynthetic_IsEqualTo(SBTypeSynthetic self, SBTypeSynthetic rhs) -> bool"},
-	 { "SBTypeSynthetic___eq__", _wrap_SBTypeSynthetic___eq__, METH_VARARGS, "SBTypeSynthetic___eq__(SBTypeSynthetic self, SBTypeSynthetic rhs) -> bool"},
-	 { "SBTypeSynthetic___ne__", _wrap_SBTypeSynthetic___ne__, METH_VARARGS, "SBTypeSynthetic___ne__(SBTypeSynthetic self, SBTypeSynthetic rhs) -> bool"},
-	 { "SBTypeSynthetic___repr__", _wrap_SBTypeSynthetic___repr__, METH_O, "SBTypeSynthetic___repr__(SBTypeSynthetic self) -> std::string"},
-	 { "SBTypeSynthetic_swigregister", SBTypeSynthetic_swigregister, METH_O, NULL},
-	 { "SBTypeSynthetic_swiginit", SBTypeSynthetic_swiginit, METH_VARARGS, NULL},
-	 { "new_SBUnixSignals", _wrap_new_SBUnixSignals, METH_VARARGS, "\n"
-		"SBUnixSignals()\n"
-		"new_SBUnixSignals(SBUnixSignals rhs) -> SBUnixSignals\n"
-		""},
-	 { "delete_SBUnixSignals", _wrap_delete_SBUnixSignals, METH_O, "delete_SBUnixSignals(SBUnixSignals self)"},
-	 { "SBUnixSignals_Clear", _wrap_SBUnixSignals_Clear, METH_O, "SBUnixSignals_Clear(SBUnixSignals self)"},
-	 { "SBUnixSignals___nonzero__", _wrap_SBUnixSignals___nonzero__, METH_O, "SBUnixSignals___nonzero__(SBUnixSignals self) -> bool"},
-	 { "SBUnixSignals_IsValid", _wrap_SBUnixSignals_IsValid, METH_O, "SBUnixSignals_IsValid(SBUnixSignals self) -> bool"},
-	 { "SBUnixSignals_GetSignalAsCString", _wrap_SBUnixSignals_GetSignalAsCString, METH_VARARGS, "SBUnixSignals_GetSignalAsCString(SBUnixSignals self, int32_t signo) -> char const *"},
-	 { "SBUnixSignals_GetSignalNumberFromName", _wrap_SBUnixSignals_GetSignalNumberFromName, METH_VARARGS, "SBUnixSignals_GetSignalNumberFromName(SBUnixSignals self, char const * name) -> int32_t"},
-	 { "SBUnixSignals_GetShouldSuppress", _wrap_SBUnixSignals_GetShouldSuppress, METH_VARARGS, "SBUnixSignals_GetShouldSuppress(SBUnixSignals self, int32_t signo) -> bool"},
-	 { "SBUnixSignals_SetShouldSuppress", _wrap_SBUnixSignals_SetShouldSuppress, METH_VARARGS, "SBUnixSignals_SetShouldSuppress(SBUnixSignals self, int32_t signo, bool value) -> bool"},
-	 { "SBUnixSignals_GetShouldStop", _wrap_SBUnixSignals_GetShouldStop, METH_VARARGS, "SBUnixSignals_GetShouldStop(SBUnixSignals self, int32_t signo) -> bool"},
-	 { "SBUnixSignals_SetShouldStop", _wrap_SBUnixSignals_SetShouldStop, METH_VARARGS, "SBUnixSignals_SetShouldStop(SBUnixSignals self, int32_t signo, bool value) -> bool"},
-	 { "SBUnixSignals_GetShouldNotify", _wrap_SBUnixSignals_GetShouldNotify, METH_VARARGS, "SBUnixSignals_GetShouldNotify(SBUnixSignals self, int32_t signo) -> bool"},
-	 { "SBUnixSignals_SetShouldNotify", _wrap_SBUnixSignals_SetShouldNotify, METH_VARARGS, "SBUnixSignals_SetShouldNotify(SBUnixSignals self, int32_t signo, bool value) -> bool"},
-	 { "SBUnixSignals_GetNumSignals", _wrap_SBUnixSignals_GetNumSignals, METH_O, "SBUnixSignals_GetNumSignals(SBUnixSignals self) -> int32_t"},
-	 { "SBUnixSignals_GetSignalAtIndex", _wrap_SBUnixSignals_GetSignalAtIndex, METH_VARARGS, "SBUnixSignals_GetSignalAtIndex(SBUnixSignals self, int32_t index) -> int32_t"},
-	 { "SBUnixSignals_swigregister", SBUnixSignals_swigregister, METH_O, NULL},
-	 { "SBUnixSignals_swiginit", SBUnixSignals_swiginit, METH_VARARGS, NULL},
-	 { "new_SBValue", _wrap_new_SBValue, METH_VARARGS, "\n"
-		"SBValue()\n"
-		"new_SBValue(SBValue rhs) -> SBValue\n"
-		""},
-	 { "delete_SBValue", _wrap_delete_SBValue, METH_O, "delete_SBValue(SBValue self)"},
-	 { "SBValue___nonzero__", _wrap_SBValue___nonzero__, METH_O, "SBValue___nonzero__(SBValue self) -> bool"},
-	 { "SBValue_IsValid", _wrap_SBValue_IsValid, METH_O, "SBValue_IsValid(SBValue self) -> bool"},
-	 { "SBValue_Clear", _wrap_SBValue_Clear, METH_O, "SBValue_Clear(SBValue self)"},
-	 { "SBValue_GetError", _wrap_SBValue_GetError, METH_O, "SBValue_GetError(SBValue self) -> SBError"},
-	 { "SBValue_GetID", _wrap_SBValue_GetID, METH_O, "SBValue_GetID(SBValue self) -> lldb::user_id_t"},
-	 { "SBValue_GetName", _wrap_SBValue_GetName, METH_O, "SBValue_GetName(SBValue self) -> char const *"},
-	 { "SBValue_GetTypeName", _wrap_SBValue_GetTypeName, METH_O, "SBValue_GetTypeName(SBValue self) -> char const *"},
-	 { "SBValue_GetDisplayTypeName", _wrap_SBValue_GetDisplayTypeName, METH_O, "SBValue_GetDisplayTypeName(SBValue self) -> char const *"},
-	 { "SBValue_GetByteSize", _wrap_SBValue_GetByteSize, METH_O, "SBValue_GetByteSize(SBValue self) -> size_t"},
-	 { "SBValue_IsInScope", _wrap_SBValue_IsInScope, METH_O, "SBValue_IsInScope(SBValue self) -> bool"},
-	 { "SBValue_GetFormat", _wrap_SBValue_GetFormat, METH_O, "SBValue_GetFormat(SBValue self) -> lldb::Format"},
-	 { "SBValue_SetFormat", _wrap_SBValue_SetFormat, METH_VARARGS, "SBValue_SetFormat(SBValue self, lldb::Format format)"},
-	 { "SBValue_GetValue", _wrap_SBValue_GetValue, METH_O, "SBValue_GetValue(SBValue self) -> char const *"},
-	 { "SBValue_GetValueAsSigned", _wrap_SBValue_GetValueAsSigned, METH_VARARGS, "\n"
-		"SBValue_GetValueAsSigned(SBValue self, SBError error, int64_t fail_value=0) -> int64_t\n"
-		"SBValue_GetValueAsSigned(SBValue self, int64_t fail_value=0) -> int64_t\n"
-		""},
-	 { "SBValue_GetValueAsUnsigned", _wrap_SBValue_GetValueAsUnsigned, METH_VARARGS, "\n"
-		"SBValue_GetValueAsUnsigned(SBValue self, SBError error, uint64_t fail_value=0) -> uint64_t\n"
-		"SBValue_GetValueAsUnsigned(SBValue self, uint64_t fail_value=0) -> uint64_t\n"
-		""},
-	 { "SBValue_GetValueAsAddress", _wrap_SBValue_GetValueAsAddress, METH_O, "\n"
-		"SBValue_GetValueAsAddress(SBValue self) -> lldb::addr_t\n"
-		"\n"
-		"      Return the value as an address.  On failure, LLDB_INVALID_ADDRESS\n"
-		"      will be returned.  On architectures like AArch64, where the\n"
-		"      top (unaddressable) bits can be used for authentication,\n"
-		"      memory tagging, or top byte ignore,  this method will return\n"
-		"      the value with those top bits cleared.\n"
-		"\n"
-		"      GetValueAsUnsigned returns the actual value, with the\n"
-		"      authentication/Top Byte Ignore/Memory Tagging Extension bits.\n"
-		"\n"
-		"      Calling this on a random value which is not a pointer is\n"
-		"      incorrect.  Call GetType().IsPointerType() if in doubt.\n"
-		"\n"
-		"      An SB API program may want to show both the literal byte value\n"
-		"      and the address it refers to in memory.  These two SBValue\n"
-		"      methods allow SB API writers to behave appropriately for their\n"
-		"      interface.\n"
-		""},
-	 { "SBValue_GetValueType", _wrap_SBValue_GetValueType, METH_O, "SBValue_GetValueType(SBValue self) -> lldb::ValueType"},
-	 { "SBValue_GetValueDidChange", _wrap_SBValue_GetValueDidChange, METH_O, "SBValue_GetValueDidChange(SBValue self) -> bool"},
-	 { "SBValue_GetSummary", _wrap_SBValue_GetSummary, METH_VARARGS, "\n"
-		"SBValue_GetSummary(SBValue self) -> char const\n"
-		"SBValue_GetSummary(SBValue self, SBStream stream, SBTypeSummaryOptions options) -> char const *\n"
-		""},
-	 { "SBValue_GetObjectDescription", _wrap_SBValue_GetObjectDescription, METH_O, "SBValue_GetObjectDescription(SBValue self) -> char const *"},
-	 { "SBValue_GetDynamicValue", _wrap_SBValue_GetDynamicValue, METH_VARARGS, "SBValue_GetDynamicValue(SBValue self, lldb::DynamicValueType use_dynamic) -> SBValue"},
-	 { "SBValue_GetStaticValue", _wrap_SBValue_GetStaticValue, METH_O, "SBValue_GetStaticValue(SBValue self) -> SBValue"},
-	 { "SBValue_GetNonSyntheticValue", _wrap_SBValue_GetNonSyntheticValue, METH_O, "SBValue_GetNonSyntheticValue(SBValue self) -> SBValue"},
-	 { "SBValue_GetSyntheticValue", _wrap_SBValue_GetSyntheticValue, METH_O, "SBValue_GetSyntheticValue(SBValue self) -> SBValue"},
-	 { "SBValue_GetPreferDynamicValue", _wrap_SBValue_GetPreferDynamicValue, METH_O, "SBValue_GetPreferDynamicValue(SBValue self) -> lldb::DynamicValueType"},
-	 { "SBValue_SetPreferDynamicValue", _wrap_SBValue_SetPreferDynamicValue, METH_VARARGS, "SBValue_SetPreferDynamicValue(SBValue self, lldb::DynamicValueType use_dynamic)"},
-	 { "SBValue_GetPreferSyntheticValue", _wrap_SBValue_GetPreferSyntheticValue, METH_O, "SBValue_GetPreferSyntheticValue(SBValue self) -> bool"},
-	 { "SBValue_SetPreferSyntheticValue", _wrap_SBValue_SetPreferSyntheticValue, METH_VARARGS, "SBValue_SetPreferSyntheticValue(SBValue self, bool use_synthetic)"},
-	 { "SBValue_IsDynamic", _wrap_SBValue_IsDynamic, METH_O, "SBValue_IsDynamic(SBValue self) -> bool"},
-	 { "SBValue_IsSynthetic", _wrap_SBValue_IsSynthetic, METH_O, "SBValue_IsSynthetic(SBValue self) -> bool"},
-	 { "SBValue_IsSyntheticChildrenGenerated", _wrap_SBValue_IsSyntheticChildrenGenerated, METH_O, "SBValue_IsSyntheticChildrenGenerated(SBValue self) -> bool"},
-	 { "SBValue_SetSyntheticChildrenGenerated", _wrap_SBValue_SetSyntheticChildrenGenerated, METH_VARARGS, "SBValue_SetSyntheticChildrenGenerated(SBValue self, bool arg2)"},
-	 { "SBValue_GetLocation", _wrap_SBValue_GetLocation, METH_O, "SBValue_GetLocation(SBValue self) -> char const *"},
-	 { "SBValue_SetValueFromCString", _wrap_SBValue_SetValueFromCString, METH_VARARGS, "\n"
-		"SBValue_SetValueFromCString(SBValue self, char const * value_str) -> bool\n"
-		"SBValue_SetValueFromCString(SBValue self, char const * value_str, SBError error) -> bool\n"
-		""},
-	 { "SBValue_GetTypeFormat", _wrap_SBValue_GetTypeFormat, METH_O, "SBValue_GetTypeFormat(SBValue self) -> SBTypeFormat"},
-	 { "SBValue_GetTypeSummary", _wrap_SBValue_GetTypeSummary, METH_O, "SBValue_GetTypeSummary(SBValue self) -> SBTypeSummary"},
-	 { "SBValue_GetTypeFilter", _wrap_SBValue_GetTypeFilter, METH_O, "SBValue_GetTypeFilter(SBValue self) -> SBTypeFilter"},
-	 { "SBValue_GetTypeSynthetic", _wrap_SBValue_GetTypeSynthetic, METH_O, "SBValue_GetTypeSynthetic(SBValue self) -> SBTypeSynthetic"},
-	 { "SBValue_CreateChildAtOffset", _wrap_SBValue_CreateChildAtOffset, METH_VARARGS, "SBValue_CreateChildAtOffset(SBValue self, char const * name, uint32_t offset, SBType type) -> SBValue"},
-	 { "SBValue_Cast", _wrap_SBValue_Cast, METH_VARARGS, "SBValue_Cast(SBValue self, SBType type) -> SBValue"},
-	 { "SBValue_CreateValueFromExpression", _wrap_SBValue_CreateValueFromExpression, METH_VARARGS, "\n"
-		"SBValue_CreateValueFromExpression(SBValue self, char const * name, char const * expression) -> SBValue\n"
-		"SBValue_CreateValueFromExpression(SBValue self, char const * name, char const * expression, SBExpressionOptions options) -> SBValue\n"
-		""},
-	 { "SBValue_CreateValueFromAddress", _wrap_SBValue_CreateValueFromAddress, METH_VARARGS, "SBValue_CreateValueFromAddress(SBValue self, char const * name, lldb::addr_t address, SBType type) -> SBValue"},
-	 { "SBValue_CreateValueFromData", _wrap_SBValue_CreateValueFromData, METH_VARARGS, "SBValue_CreateValueFromData(SBValue self, char const * name, SBData data, SBType type) -> SBValue"},
-	 { "SBValue_GetChildAtIndex", _wrap_SBValue_GetChildAtIndex, METH_VARARGS, "\n"
-		"SBValue_GetChildAtIndex(SBValue self, uint32_t idx) -> SBValue\n"
-		"SBValue_GetChildAtIndex(SBValue self, uint32_t idx, lldb::DynamicValueType use_dynamic, bool can_create_synthetic) -> SBValue\n"
-		"\n"
-		"    Get a child value by index from a value.\n"
-		"\n"
-		"    Structs, unions, classes, arrays and pointers have child\n"
-		"    values that can be access by index.\n"
-		"\n"
-		"    Structs and unions access child members using a zero based index\n"
-		"    for each child member. For\n"
-		"\n"
-		"    Classes reserve the first indexes for base classes that have\n"
-		"    members (empty base classes are omitted), and all members of the\n"
-		"    current class will then follow the base classes.\n"
-		"\n"
-		"    Pointers differ depending on what they point to. If the pointer\n"
-		"    points to a simple type, the child at index zero\n"
-		"    is the only child value available, unless synthetic_allowed\n"
-		"    is true, in which case the pointer will be used as an array\n"
-		"    and can create 'synthetic' child values using positive or\n"
-		"    negative indexes. If the pointer points to an aggregate type\n"
-		"    (an array, class, union, struct), then the pointee is\n"
-		"    transparently skipped and any children are going to be the indexes\n"
-		"    of the child values within the aggregate type. For example if\n"
-		"    we have a 'Point' type and we have a SBValue that contains a\n"
-		"    pointer to a 'Point' type, then the child at index zero will be\n"
-		"    the 'x' member, and the child at index 1 will be the 'y' member\n"
-		"    (the child at index zero won't be a 'Point' instance).\n"
-		"\n"
-		"    If you actually need an SBValue that represents the type pointed\n"
-		"    to by a SBValue for which GetType().IsPointeeType() returns true,\n"
-		"    regardless of the pointee type, you can do that with the SBValue.Dereference\n"
-		"    method (or the equivalent deref property).\n"
-		"\n"
-		"    Arrays have a preset number of children that can be accessed by\n"
-		"    index and will returns invalid child values for indexes that are\n"
-		"    out of bounds unless the synthetic_allowed is true. In this\n"
-		"    case the array can create 'synthetic' child values for indexes\n"
-		"    that aren't in the array bounds using positive or negative\n"
-		"    indexes.\n"
-		"\n"
-		"    @param[in] idx\n"
-		"        The index of the child value to get\n"
-		"\n"
-		"    @param[in] use_dynamic\n"
-		"        An enumeration that specifies whether to get dynamic values,\n"
-		"        and also if the target can be run to figure out the dynamic\n"
-		"        type of the child value.\n"
-		"\n"
-		"    @param[in] synthetic_allowed\n"
-		"        If true, then allow child values to be created by index\n"
-		"        for pointers and arrays for indexes that normally wouldn't\n"
-		"        be allowed.\n"
-		"\n"
-		"    @return\n"
-		"        A new SBValue object that represents the child member value.\n"
-		""},
-	 { "SBValue_GetIndexOfChildWithName", _wrap_SBValue_GetIndexOfChildWithName, METH_VARARGS, "\n"
-		"SBValue_GetIndexOfChildWithName(SBValue self, char const * name) -> uint32_t\n"
-		"\n"
-		"    Returns the child member index.\n"
-		"\n"
-		"    Matches children of this object only and will match base classes and\n"
-		"    member names if this is a clang typed object.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        The name of the child value to get\n"
-		"\n"
-		"    @return\n"
-		"        An index to the child member value.\n"
-		""},
-	 { "SBValue_GetChildMemberWithName", _wrap_SBValue_GetChildMemberWithName, METH_VARARGS, "\n"
-		"SBValue_GetChildMemberWithName(SBValue self, char const * name) -> SBValue\n"
-		"SBValue_GetChildMemberWithName(SBValue self, char const * name, lldb::DynamicValueType use_dynamic) -> SBValue\n"
-		"\n"
-		"    Returns the child member value.\n"
-		"\n"
-		"    Matches child members of this object and child members of any base\n"
-		"    classes.\n"
-		"\n"
-		"    @param[in] name\n"
-		"        The name of the child value to get\n"
-		"\n"
-		"    @param[in] use_dynamic\n"
-		"        An enumeration that specifies whether to get dynamic values,\n"
-		"        and also if the target can be run to figure out the dynamic\n"
-		"        type of the child value.\n"
-		"\n"
-		"    @return\n"
-		"        A new SBValue object that represents the child member value.\n"
-		""},
-	 { "SBValue_GetValueForExpressionPath", _wrap_SBValue_GetValueForExpressionPath, METH_VARARGS, "\n"
-		"SBValue_GetValueForExpressionPath(SBValue self, char const * expr_path) -> SBValue\n"
-		"Expands nested expressions like .a->b[0].c[1]->d.\n"
-		""},
-	 { "SBValue_AddressOf", _wrap_SBValue_AddressOf, METH_O, "SBValue_AddressOf(SBValue self) -> SBValue"},
-	 { "SBValue_GetLoadAddress", _wrap_SBValue_GetLoadAddress, METH_O, "SBValue_GetLoadAddress(SBValue self) -> lldb::addr_t"},
-	 { "SBValue_GetAddress", _wrap_SBValue_GetAddress, METH_O, "SBValue_GetAddress(SBValue self) -> SBAddress"},
-	 { "SBValue_GetPointeeData", _wrap_SBValue_GetPointeeData, METH_VARARGS, "\n"
-		"SBValue_GetPointeeData(SBValue self, uint32_t item_idx=0, uint32_t item_count=1) -> SBData\n"
-		"\n"
-		"    Get an SBData wrapping what this SBValue points to.\n"
-		"\n"
-		"    This method will dereference the current SBValue, if its\n"
-		"    data type is a ``T\\*`` or ``T[]``, and extract ``item_count`` elements\n"
-		"    of type ``T`` from it, copying their contents in an :py:class:`SBData`.\n"
-		"\n"
-		"    :param item_idx: The index of the first item to retrieve. For an array\n"
-		"        this is equivalent to array[item_idx], for a pointer\n"
-		"        to ``\\*(pointer + item_idx)``. In either case, the measurement\n"
-		"        unit for item_idx is the ``sizeof(T)`` rather than the byte\n"
-		"    :param item_count: How many items should be copied into the output. By default\n"
-		"        only one item is copied, but more can be asked for.\n"
-		"    :return: The contents of the copied items on success. An empty :py:class:`SBData` otherwise.\n"
-		"    :rtype: SBData\n"
-		"\n"
-		""},
-	 { "SBValue_GetData", _wrap_SBValue_GetData, METH_O, "\n"
-		"SBValue_GetData(SBValue self) -> SBData\n"
-		"\n"
-		"    Get an SBData wrapping the contents of this SBValue.\n"
-		"\n"
-		"    This method will read the contents of this object in memory\n"
-		"    and copy them into an SBData for future use.\n"
-		"\n"
-		"    @return\n"
-		"        An SBData with the contents of this SBValue, on success.\n"
-		"        An empty SBData otherwise.\n"
-		""},
-	 { "SBValue_SetData", _wrap_SBValue_SetData, METH_VARARGS, "SBValue_SetData(SBValue self, SBData data, SBError error) -> bool"},
-	 { "SBValue_Clone", _wrap_SBValue_Clone, METH_VARARGS, "SBValue_Clone(SBValue self, char const * new_name) -> SBValue"},
-	 { "SBValue_GetDeclaration", _wrap_SBValue_GetDeclaration, METH_O, "SBValue_GetDeclaration(SBValue self) -> SBDeclaration"},
-	 { "SBValue_MightHaveChildren", _wrap_SBValue_MightHaveChildren, METH_O, "SBValue_MightHaveChildren(SBValue self) -> bool"},
-	 { "SBValue_IsRuntimeSupportValue", _wrap_SBValue_IsRuntimeSupportValue, METH_O, "SBValue_IsRuntimeSupportValue(SBValue self) -> bool"},
-	 { "SBValue_GetNumChildren", _wrap_SBValue_GetNumChildren, METH_VARARGS, "\n"
-		"SBValue_GetNumChildren(SBValue self) -> uint32_t\n"
-		"SBValue_GetNumChildren(SBValue self, uint32_t max) -> uint32_t\n"
-		""},
-	 { "SBValue_GetOpaqueType", _wrap_SBValue_GetOpaqueType, METH_O, "SBValue_GetOpaqueType(SBValue self) -> void *"},
-	 { "SBValue_GetTarget", _wrap_SBValue_GetTarget, METH_O, "SBValue_GetTarget(SBValue self) -> SBTarget"},
-	 { "SBValue_GetProcess", _wrap_SBValue_GetProcess, METH_O, "SBValue_GetProcess(SBValue self) -> SBProcess"},
-	 { "SBValue_GetThread", _wrap_SBValue_GetThread, METH_O, "SBValue_GetThread(SBValue self) -> SBThread"},
-	 { "SBValue_GetFrame", _wrap_SBValue_GetFrame, METH_O, "SBValue_GetFrame(SBValue self) -> SBFrame"},
-	 { "SBValue_Dereference", _wrap_SBValue_Dereference, METH_O, "SBValue_Dereference(SBValue self) -> SBValue"},
-	 { "SBValue_TypeIsPointerType", _wrap_SBValue_TypeIsPointerType, METH_O, "SBValue_TypeIsPointerType(SBValue self) -> bool"},
-	 { "SBValue_GetType", _wrap_SBValue_GetType, METH_O, "SBValue_GetType(SBValue self) -> SBType"},
-	 { "SBValue_Persist", _wrap_SBValue_Persist, METH_O, "SBValue_Persist(SBValue self) -> SBValue"},
-	 { "SBValue_GetDescription", _wrap_SBValue_GetDescription, METH_VARARGS, "SBValue_GetDescription(SBValue self, SBStream description) -> bool"},
-	 { "SBValue_GetExpressionPath", _wrap_SBValue_GetExpressionPath, METH_VARARGS, "\n"
-		"SBValue_GetExpressionPath(SBValue self, SBStream description) -> bool\n"
-		"SBValue_GetExpressionPath(SBValue self, SBStream description, bool qualify_cxx_base_classes) -> bool\n"
-		"Returns an expression path for this value.\n"
-		""},
-	 { "SBValue_EvaluateExpression", _wrap_SBValue_EvaluateExpression, METH_VARARGS, "\n"
-		"SBValue_EvaluateExpression(SBValue self, char const * expr) -> SBValue\n"
-		"SBValue_EvaluateExpression(SBValue self, char const * expr, SBExpressionOptions options) -> SBValue\n"
-		"SBValue_EvaluateExpression(SBValue self, char const * expr, SBExpressionOptions options, char const * name) -> SBValue\n"
-		""},
-	 { "SBValue_Watch", _wrap_SBValue_Watch, METH_VARARGS, "\n"
-		"SBValue_Watch(SBValue self, bool resolve_location, bool read, bool write, SBError error) -> SBWatchpoint\n"
-		"SBValue_Watch(SBValue self, bool resolve_location, bool read, bool write) -> SBWatchpoint\n"
-		"\n"
-		"    Find and watch a variable.\n"
-		"    It returns an SBWatchpoint, which may be invalid.\n"
-		""},
-	 { "SBValue_WatchPointee", _wrap_SBValue_WatchPointee, METH_VARARGS, "\n"
-		"SBValue_WatchPointee(SBValue self, bool resolve_location, bool read, bool write, SBError error) -> SBWatchpoint\n"
-		"\n"
-		"    Find and watch the location pointed to by a variable.\n"
-		"    It returns an SBWatchpoint, which may be invalid.\n"
-		""},
-	 { "SBValue_GetVTable", _wrap_SBValue_GetVTable, METH_O, "SBValue_GetVTable(SBValue self) -> SBValue"},
-	 { "SBValue___repr__", _wrap_SBValue___repr__, METH_O, "SBValue___repr__(SBValue self) -> std::string"},
-	 { "SBValue_swigregister", SBValue_swigregister, METH_O, NULL},
-	 { "SBValue_swiginit", SBValue_swiginit, METH_VARARGS, NULL},
-	 { "new_SBValueList", _wrap_new_SBValueList, METH_VARARGS, "\n"
-		"SBValueList()\n"
-		"new_SBValueList(SBValueList rhs) -> SBValueList\n"
-		""},
-	 { "delete_SBValueList", _wrap_delete_SBValueList, METH_O, "delete_SBValueList(SBValueList self)"},
-	 { "SBValueList___nonzero__", _wrap_SBValueList___nonzero__, METH_O, "SBValueList___nonzero__(SBValueList self) -> bool"},
-	 { "SBValueList_IsValid", _wrap_SBValueList_IsValid, METH_O, "SBValueList_IsValid(SBValueList self) -> bool"},
-	 { "SBValueList_Clear", _wrap_SBValueList_Clear, METH_O, "SBValueList_Clear(SBValueList self)"},
-	 { "SBValueList_Append", _wrap_SBValueList_Append, METH_VARARGS, "\n"
-		"SBValueList_Append(SBValueList self, SBValue val_obj)\n"
-		"SBValueList_Append(SBValueList self, SBValueList value_list)\n"
-		""},
-	 { "SBValueList_GetSize", _wrap_SBValueList_GetSize, METH_O, "SBValueList_GetSize(SBValueList self) -> uint32_t"},
-	 { "SBValueList_GetValueAtIndex", _wrap_SBValueList_GetValueAtIndex, METH_VARARGS, "SBValueList_GetValueAtIndex(SBValueList self, uint32_t idx) -> SBValue"},
-	 { "SBValueList_GetFirstValueByName", _wrap_SBValueList_GetFirstValueByName, METH_VARARGS, "SBValueList_GetFirstValueByName(SBValueList self, char const * name) -> SBValue"},
-	 { "SBValueList_FindValueObjectByUID", _wrap_SBValueList_FindValueObjectByUID, METH_VARARGS, "SBValueList_FindValueObjectByUID(SBValueList self, lldb::user_id_t uid) -> SBValue"},
-	 { "SBValueList_GetError", _wrap_SBValueList_GetError, METH_O, "SBValueList_GetError(SBValueList self) -> SBError"},
-	 { "SBValueList___str__", _wrap_SBValueList___str__, METH_O, "SBValueList___str__(SBValueList self) -> std::string"},
-	 { "SBValueList_swigregister", SBValueList_swigregister, METH_O, NULL},
-	 { "SBValueList_swiginit", SBValueList_swiginit, METH_VARARGS, NULL},
-	 { "new_SBVariablesOptions", _wrap_new_SBVariablesOptions, METH_VARARGS, "\n"
-		"SBVariablesOptions()\n"
-		"new_SBVariablesOptions(SBVariablesOptions options) -> SBVariablesOptions\n"
-		""},
-	 { "delete_SBVariablesOptions", _wrap_delete_SBVariablesOptions, METH_O, "delete_SBVariablesOptions(SBVariablesOptions self)"},
-	 { "SBVariablesOptions___nonzero__", _wrap_SBVariablesOptions___nonzero__, METH_O, "SBVariablesOptions___nonzero__(SBVariablesOptions self) -> bool"},
-	 { "SBVariablesOptions_IsValid", _wrap_SBVariablesOptions_IsValid, METH_O, "SBVariablesOptions_IsValid(SBVariablesOptions self) -> bool"},
-	 { "SBVariablesOptions_GetIncludeArguments", _wrap_SBVariablesOptions_GetIncludeArguments, METH_O, "SBVariablesOptions_GetIncludeArguments(SBVariablesOptions self) -> bool"},
-	 { "SBVariablesOptions_SetIncludeArguments", _wrap_SBVariablesOptions_SetIncludeArguments, METH_VARARGS, "SBVariablesOptions_SetIncludeArguments(SBVariablesOptions self, bool arg2)"},
-	 { "SBVariablesOptions_GetIncludeRecognizedArguments", _wrap_SBVariablesOptions_GetIncludeRecognizedArguments, METH_VARARGS, "SBVariablesOptions_GetIncludeRecognizedArguments(SBVariablesOptions self, SBTarget arg2) -> bool"},
-	 { "SBVariablesOptions_SetIncludeRecognizedArguments", _wrap_SBVariablesOptions_SetIncludeRecognizedArguments, METH_VARARGS, "SBVariablesOptions_SetIncludeRecognizedArguments(SBVariablesOptions self, bool arg2)"},
-	 { "SBVariablesOptions_GetIncludeLocals", _wrap_SBVariablesOptions_GetIncludeLocals, METH_O, "SBVariablesOptions_GetIncludeLocals(SBVariablesOptions self) -> bool"},
-	 { "SBVariablesOptions_SetIncludeLocals", _wrap_SBVariablesOptions_SetIncludeLocals, METH_VARARGS, "SBVariablesOptions_SetIncludeLocals(SBVariablesOptions self, bool arg2)"},
-	 { "SBVariablesOptions_GetIncludeStatics", _wrap_SBVariablesOptions_GetIncludeStatics, METH_O, "SBVariablesOptions_GetIncludeStatics(SBVariablesOptions self) -> bool"},
-	 { "SBVariablesOptions_SetIncludeStatics", _wrap_SBVariablesOptions_SetIncludeStatics, METH_VARARGS, "SBVariablesOptions_SetIncludeStatics(SBVariablesOptions self, bool arg2)"},
-	 { "SBVariablesOptions_GetInScopeOnly", _wrap_SBVariablesOptions_GetInScopeOnly, METH_O, "SBVariablesOptions_GetInScopeOnly(SBVariablesOptions self) -> bool"},
-	 { "SBVariablesOptions_SetInScopeOnly", _wrap_SBVariablesOptions_SetInScopeOnly, METH_VARARGS, "SBVariablesOptions_SetInScopeOnly(SBVariablesOptions self, bool arg2)"},
-	 { "SBVariablesOptions_GetIncludeRuntimeSupportValues", _wrap_SBVariablesOptions_GetIncludeRuntimeSupportValues, METH_O, "SBVariablesOptions_GetIncludeRuntimeSupportValues(SBVariablesOptions self) -> bool"},
-	 { "SBVariablesOptions_SetIncludeRuntimeSupportValues", _wrap_SBVariablesOptions_SetIncludeRuntimeSupportValues, METH_VARARGS, "SBVariablesOptions_SetIncludeRuntimeSupportValues(SBVariablesOptions self, bool arg2)"},
-	 { "SBVariablesOptions_GetUseDynamic", _wrap_SBVariablesOptions_GetUseDynamic, METH_O, "SBVariablesOptions_GetUseDynamic(SBVariablesOptions self) -> lldb::DynamicValueType"},
-	 { "SBVariablesOptions_SetUseDynamic", _wrap_SBVariablesOptions_SetUseDynamic, METH_VARARGS, "SBVariablesOptions_SetUseDynamic(SBVariablesOptions self, lldb::DynamicValueType arg2)"},
-	 { "SBVariablesOptions_swigregister", SBVariablesOptions_swigregister, METH_O, NULL},
-	 { "SBVariablesOptions_swiginit", SBVariablesOptions_swiginit, METH_VARARGS, NULL},
-	 { "new_SBWatchpoint", _wrap_new_SBWatchpoint, METH_VARARGS, "\n"
-		"SBWatchpoint()\n"
-		"new_SBWatchpoint(SBWatchpoint rhs) -> SBWatchpoint\n"
-		""},
-	 { "delete_SBWatchpoint", _wrap_delete_SBWatchpoint, METH_O, "delete_SBWatchpoint(SBWatchpoint self)"},
-	 { "SBWatchpoint___nonzero__", _wrap_SBWatchpoint___nonzero__, METH_O, "SBWatchpoint___nonzero__(SBWatchpoint self) -> bool"},
-	 { "SBWatchpoint___eq__", _wrap_SBWatchpoint___eq__, METH_VARARGS, "SBWatchpoint___eq__(SBWatchpoint self, SBWatchpoint rhs) -> bool"},
-	 { "SBWatchpoint___ne__", _wrap_SBWatchpoint___ne__, METH_VARARGS, "SBWatchpoint___ne__(SBWatchpoint self, SBWatchpoint rhs) -> bool"},
-	 { "SBWatchpoint_IsValid", _wrap_SBWatchpoint_IsValid, METH_O, "SBWatchpoint_IsValid(SBWatchpoint self) -> bool"},
-	 { "SBWatchpoint_GetError", _wrap_SBWatchpoint_GetError, METH_O, "SBWatchpoint_GetError(SBWatchpoint self) -> SBError"},
-	 { "SBWatchpoint_GetID", _wrap_SBWatchpoint_GetID, METH_O, "SBWatchpoint_GetID(SBWatchpoint self) -> lldb::watch_id_t"},
-	 { "SBWatchpoint_GetHardwareIndex", _wrap_SBWatchpoint_GetHardwareIndex, METH_O, "\n"
-		"SBWatchpoint_GetHardwareIndex(SBWatchpoint self) -> int32_t\n"
-		"\n"
-		"    Deprecated.  Previously: Return the hardware index of the \n"
-		"    watchpoint register.  Now: -1 is always returned.\n"
-		""},
-	 { "SBWatchpoint_GetWatchAddress", _wrap_SBWatchpoint_GetWatchAddress, METH_O, "SBWatchpoint_GetWatchAddress(SBWatchpoint self) -> lldb::addr_t"},
-	 { "SBWatchpoint_GetWatchSize", _wrap_SBWatchpoint_GetWatchSize, METH_O, "SBWatchpoint_GetWatchSize(SBWatchpoint self) -> size_t"},
-	 { "SBWatchpoint_SetEnabled", _wrap_SBWatchpoint_SetEnabled, METH_VARARGS, "SBWatchpoint_SetEnabled(SBWatchpoint self, bool enabled)"},
-	 { "SBWatchpoint_IsEnabled", _wrap_SBWatchpoint_IsEnabled, METH_O, "SBWatchpoint_IsEnabled(SBWatchpoint self) -> bool"},
-	 { "SBWatchpoint_GetHitCount", _wrap_SBWatchpoint_GetHitCount, METH_O, "SBWatchpoint_GetHitCount(SBWatchpoint self) -> uint32_t"},
-	 { "SBWatchpoint_GetIgnoreCount", _wrap_SBWatchpoint_GetIgnoreCount, METH_O, "SBWatchpoint_GetIgnoreCount(SBWatchpoint self) -> uint32_t"},
-	 { "SBWatchpoint_SetIgnoreCount", _wrap_SBWatchpoint_SetIgnoreCount, METH_VARARGS, "SBWatchpoint_SetIgnoreCount(SBWatchpoint self, uint32_t n)"},
-	 { "SBWatchpoint_GetCondition", _wrap_SBWatchpoint_GetCondition, METH_O, "\n"
-		"SBWatchpoint_GetCondition(SBWatchpoint self) -> char const *\n"
-		"\n"
-		"    Get the condition expression for the watchpoint.\n"
-		""},
-	 { "SBWatchpoint_SetCondition", _wrap_SBWatchpoint_SetCondition, METH_VARARGS, "\n"
-		"SBWatchpoint_SetCondition(SBWatchpoint self, char const * condition)\n"
-		"\n"
-		"    The watchpoint stops only if the condition expression evaluates to true.\n"
-		""},
-	 { "SBWatchpoint_GetDescription", _wrap_SBWatchpoint_GetDescription, METH_VARARGS, "SBWatchpoint_GetDescription(SBWatchpoint self, SBStream description, lldb::DescriptionLevel level) -> bool"},
-	 { "SBWatchpoint_Clear", _wrap_SBWatchpoint_Clear, METH_O, "SBWatchpoint_Clear(SBWatchpoint self)"},
-	 { "SBWatchpoint_EventIsWatchpointEvent", _wrap_SBWatchpoint_EventIsWatchpointEvent, METH_O, "SBWatchpoint_EventIsWatchpointEvent(SBEvent event) -> bool"},
-	 { "SBWatchpoint_GetWatchpointEventTypeFromEvent", _wrap_SBWatchpoint_GetWatchpointEventTypeFromEvent, METH_O, "SBWatchpoint_GetWatchpointEventTypeFromEvent(SBEvent event) -> lldb::WatchpointEventType"},
-	 { "SBWatchpoint_GetWatchpointFromEvent", _wrap_SBWatchpoint_GetWatchpointFromEvent, METH_O, "SBWatchpoint_GetWatchpointFromEvent(SBEvent event) -> SBWatchpoint"},
-	 { "SBWatchpoint_GetType", _wrap_SBWatchpoint_GetType, METH_O, "\n"
-		"SBWatchpoint_GetType(SBWatchpoint self) -> SBType\n"
-		"\n"
-		"    Returns the type recorded when the watchpoint was created. For variable\n"
-		"    watchpoints it is the type of the watched variable. For expression\n"
-		"    watchpoints it is the type of the provided expression.\n"
-		""},
-	 { "SBWatchpoint_GetWatchValueKind", _wrap_SBWatchpoint_GetWatchValueKind, METH_O, "\n"
-		"SBWatchpoint_GetWatchValueKind(SBWatchpoint self) -> lldb::WatchpointValueKind\n"
-		"\n"
-		"    Returns the kind of value that was watched when the watchpoint was created.\n"
-		"    Returns one of the following eWatchPointValueKindVariable,\n"
-		"    eWatchPointValueKindExpression, eWatchPointValueKindInvalid.\n"
-		"\n"
-		""},
-	 { "SBWatchpoint_GetWatchSpec", _wrap_SBWatchpoint_GetWatchSpec, METH_O, "\n"
-		"SBWatchpoint_GetWatchSpec(SBWatchpoint self) -> char const *\n"
-		"\n"
-		"    Get the spec for the watchpoint. For variable watchpoints this is the name\n"
-		"    of the variable. For expression watchpoints it is empty\n"
-		"    (may change in the future).\n"
-		""},
-	 { "SBWatchpoint_IsWatchingReads", _wrap_SBWatchpoint_IsWatchingReads, METH_O, "\n"
-		"SBWatchpoint_IsWatchingReads(SBWatchpoint self) -> bool\n"
-		"\n"
-		"    Returns true if the watchpoint is watching reads. Returns false otherwise.\n"
-		""},
-	 { "SBWatchpoint_IsWatchingWrites", _wrap_SBWatchpoint_IsWatchingWrites, METH_O, "\n"
-		"SBWatchpoint_IsWatchingWrites(SBWatchpoint self) -> bool\n"
-		"\n"
-		"    Returns true if the watchpoint is watching writes. Returns false otherwise.\n"
-		""},
-	 { "SBWatchpoint___repr__", _wrap_SBWatchpoint___repr__, METH_O, "SBWatchpoint___repr__(SBWatchpoint self) -> std::string"},
-	 { "SBWatchpoint_swigregister", SBWatchpoint_swigregister, METH_O, NULL},
-	 { "SBWatchpoint_swiginit", SBWatchpoint_swiginit, METH_VARARGS, NULL},
-	 { "new_SBWatchpointOptions", _wrap_new_SBWatchpointOptions, METH_VARARGS, "\n"
-		"SBWatchpointOptions()\n"
-		"new_SBWatchpointOptions(SBWatchpointOptions rhs) -> SBWatchpointOptions\n"
-		""},
-	 { "delete_SBWatchpointOptions", _wrap_delete_SBWatchpointOptions, METH_O, "delete_SBWatchpointOptions(SBWatchpointOptions self)"},
-	 { "SBWatchpointOptions_SetWatchpointTypeRead", _wrap_SBWatchpointOptions_SetWatchpointTypeRead, METH_VARARGS, "\n"
-		"SBWatchpointOptions_SetWatchpointTypeRead(SBWatchpointOptions self, bool read)\n"
-		"Sets whether the watchpoint should stop on read accesses.\n"
-		""},
-	 { "SBWatchpointOptions_GetWatchpointTypeRead", _wrap_SBWatchpointOptions_GetWatchpointTypeRead, METH_O, "\n"
-		"SBWatchpointOptions_GetWatchpointTypeRead(SBWatchpointOptions self) -> bool\n"
-		"Gets whether the watchpoint should stop on read accesses.\n"
-		""},
-	 { "SBWatchpointOptions_SetWatchpointTypeWrite", _wrap_SBWatchpointOptions_SetWatchpointTypeWrite, METH_VARARGS, "\n"
-		"SBWatchpointOptions_SetWatchpointTypeWrite(SBWatchpointOptions self, lldb::WatchpointWriteType write_type)\n"
-		"Sets whether the watchpoint should stop on write accesses. eWatchpointWriteTypeOnModify is the most commonly useful mode, where lldb will stop when the watched value has changed. eWatchpointWriteTypeAlways will stop on any write to the watched region, even if it's the value is the same.\n"
-		""},
-	 { "SBWatchpointOptions_GetWatchpointTypeWrite", _wrap_SBWatchpointOptions_GetWatchpointTypeWrite, METH_O, "\n"
-		"SBWatchpointOptions_GetWatchpointTypeWrite(SBWatchpointOptions self) -> lldb::WatchpointWriteType\n"
-		"Gets whether the watchpoint should stop on write accesses, returning WatchpointWriteType to indicate the type of write watching that is enabled, or eWatchpointWriteTypeDisabled.\n"
-		""},
-	 { "SBWatchpointOptions_swigregister", SBWatchpointOptions_swigregister, METH_O, NULL},
-	 { "SBWatchpointOptions_swiginit", SBWatchpointOptions_swiginit, METH_VARARGS, NULL},
-	 { NULL, NULL, 0, NULL }
-};
-
+    {"new_SBAddress", _wrap_new_SBAddress, METH_VARARGS,
+     "\n"
+     "SBAddress()\n"
+     "SBAddress(SBAddress rhs)\n"
+     "SBAddress(SBSection section, lldb::addr_t offset)\n"
+     "new_SBAddress(lldb::addr_t load_addr, SBTarget target) -> SBAddress\n"
+     "\n"
+     "    Create an address by resolving a load address using the supplied "
+     "target.\n"
+     ""},
+    {"delete_SBAddress", _wrap_delete_SBAddress, METH_O,
+     "delete_SBAddress(SBAddress self)"},
+    {"SBAddress___nonzero__", _wrap_SBAddress___nonzero__, METH_O,
+     "SBAddress___nonzero__(SBAddress self) -> bool"},
+    {"SBAddress___ne__", _wrap_SBAddress___ne__, METH_VARARGS,
+     "SBAddress___ne__(SBAddress self, SBAddress rhs) -> bool"},
+    {"SBAddress_IsValid", _wrap_SBAddress_IsValid, METH_O,
+     "SBAddress_IsValid(SBAddress self) -> bool"},
+    {"SBAddress_Clear", _wrap_SBAddress_Clear, METH_O,
+     "SBAddress_Clear(SBAddress self)"},
+    {"SBAddress_GetFileAddress", _wrap_SBAddress_GetFileAddress, METH_O,
+     "SBAddress_GetFileAddress(SBAddress self) -> lldb::addr_t"},
+    {"SBAddress_GetLoadAddress", _wrap_SBAddress_GetLoadAddress, METH_VARARGS,
+     "SBAddress_GetLoadAddress(SBAddress self, SBTarget target) -> "
+     "lldb::addr_t"},
+    {"SBAddress_SetAddress", _wrap_SBAddress_SetAddress, METH_VARARGS,
+     "SBAddress_SetAddress(SBAddress self, SBSection section, lldb::addr_t "
+     "offset)"},
+    {"SBAddress_SetLoadAddress", _wrap_SBAddress_SetLoadAddress, METH_VARARGS,
+     "SBAddress_SetLoadAddress(SBAddress self, lldb::addr_t load_addr, "
+     "SBTarget target)"},
+    {"SBAddress_OffsetAddress", _wrap_SBAddress_OffsetAddress, METH_VARARGS,
+     "SBAddress_OffsetAddress(SBAddress self, lldb::addr_t offset) -> bool"},
+    {"SBAddress_GetDescription", _wrap_SBAddress_GetDescription, METH_VARARGS,
+     "SBAddress_GetDescription(SBAddress self, SBStream description) -> bool"},
+    {"SBAddress_GetSymbolContext", _wrap_SBAddress_GetSymbolContext,
+     METH_VARARGS,
+     "\n"
+     "SBAddress_GetSymbolContext(SBAddress self, uint32_t resolve_scope) -> "
+     "SBSymbolContext\n"
+     "\n"
+     "    GetSymbolContext() and the following can lookup symbol information "
+     "for a given address.\n"
+     "    An address might refer to code or data from an existing module, or "
+     "it\n"
+     "    might refer to something on the stack or heap. The following "
+     "functions\n"
+     "    will only return valid values if the address has been resolved to a "
+     "code\n"
+     "    or data address using :py:class:`SBAddress.SetLoadAddress' or\n"
+     "    :py:class:`SBTarget.ResolveLoadAddress`.\n"
+     ""},
+    {"SBAddress_GetSection", _wrap_SBAddress_GetSection, METH_O,
+     "SBAddress_GetSection(SBAddress self) -> SBSection"},
+    {"SBAddress_GetOffset", _wrap_SBAddress_GetOffset, METH_O,
+     "SBAddress_GetOffset(SBAddress self) -> lldb::addr_t"},
+    {"SBAddress_GetModule", _wrap_SBAddress_GetModule, METH_O,
+     "\n"
+     "SBAddress_GetModule(SBAddress self) -> SBModule\n"
+     "\n"
+     "    GetModule() and the following grab individual objects for a given "
+     "address and\n"
+     "    are less efficient if you want more than one symbol related "
+     "objects.\n"
+     "    Use :py:class:`SBAddress.GetSymbolContext` or\n"
+     "    :py:class:`SBTarget.ResolveSymbolContextForAddress` when you want "
+     "multiple\n"
+     "    debug symbol related objects for an address.\n"
+     "    One or more bits from the SymbolContextItem enumerations can be "
+     "logically\n"
+     "    OR'ed together to more efficiently retrieve multiple symbol "
+     "objects.\n"
+     ""},
+    {"SBAddress_GetCompileUnit", _wrap_SBAddress_GetCompileUnit, METH_O,
+     "SBAddress_GetCompileUnit(SBAddress self) -> SBCompileUnit"},
+    {"SBAddress_GetFunction", _wrap_SBAddress_GetFunction, METH_O,
+     "SBAddress_GetFunction(SBAddress self) -> SBFunction"},
+    {"SBAddress_GetBlock", _wrap_SBAddress_GetBlock, METH_O,
+     "SBAddress_GetBlock(SBAddress self) -> SBBlock"},
+    {"SBAddress_GetSymbol", _wrap_SBAddress_GetSymbol, METH_O,
+     "SBAddress_GetSymbol(SBAddress self) -> SBSymbol"},
+    {"SBAddress_GetLineEntry", _wrap_SBAddress_GetLineEntry, METH_O,
+     "SBAddress_GetLineEntry(SBAddress self) -> SBLineEntry"},
+    {"SBAddress___repr__", _wrap_SBAddress___repr__, METH_O,
+     "SBAddress___repr__(SBAddress self) -> std::string"},
+    {"SBAddress_swigregister", SBAddress_swigregister, METH_O, NULL},
+    {"SBAddress_swiginit", SBAddress_swiginit, METH_VARARGS, NULL},
+    {"new_SBAddressRange", _wrap_new_SBAddressRange, METH_VARARGS,
+     "\n"
+     "SBAddressRange()\n"
+     "SBAddressRange(SBAddressRange rhs)\n"
+     "new_SBAddressRange(SBAddress addr, lldb::addr_t byte_size) -> "
+     "SBAddressRange\n"
+     ""},
+    {"delete_SBAddressRange", _wrap_delete_SBAddressRange, METH_O,
+     "delete_SBAddressRange(SBAddressRange self)"},
+    {"SBAddressRange_Clear", _wrap_SBAddressRange_Clear, METH_O,
+     "SBAddressRange_Clear(SBAddressRange self)"},
+    {"SBAddressRange_IsValid", _wrap_SBAddressRange_IsValid, METH_O,
+     "SBAddressRange_IsValid(SBAddressRange self) -> bool"},
+    {"SBAddressRange_GetBaseAddress", _wrap_SBAddressRange_GetBaseAddress,
+     METH_O, "SBAddressRange_GetBaseAddress(SBAddressRange self) -> SBAddress"},
+    {"SBAddressRange_GetByteSize", _wrap_SBAddressRange_GetByteSize, METH_O,
+     "SBAddressRange_GetByteSize(SBAddressRange self) -> lldb::addr_t"},
+    {"SBAddressRange___eq__", _wrap_SBAddressRange___eq__, METH_VARARGS,
+     "SBAddressRange___eq__(SBAddressRange self, SBAddressRange rhs) -> bool"},
+    {"SBAddressRange___ne__", _wrap_SBAddressRange___ne__, METH_VARARGS,
+     "SBAddressRange___ne__(SBAddressRange self, SBAddressRange rhs) -> bool"},
+    {"SBAddressRange_GetDescription", _wrap_SBAddressRange_GetDescription,
+     METH_VARARGS,
+     "SBAddressRange_GetDescription(SBAddressRange self, SBStream description, "
+     "SBTarget target) -> bool"},
+    {"SBAddressRange_swigregister", SBAddressRange_swigregister, METH_O, NULL},
+    {"SBAddressRange_swiginit", SBAddressRange_swiginit, METH_VARARGS, NULL},
+    {"new_SBAddressRangeList", _wrap_new_SBAddressRangeList, METH_VARARGS,
+     "\n"
+     "SBAddressRangeList()\n"
+     "new_SBAddressRangeList(SBAddressRangeList rhs) -> SBAddressRangeList\n"
+     ""},
+    {"delete_SBAddressRangeList", _wrap_delete_SBAddressRangeList, METH_O,
+     "delete_SBAddressRangeList(SBAddressRangeList self)"},
+    {"SBAddressRangeList_GetSize", _wrap_SBAddressRangeList_GetSize, METH_O,
+     "SBAddressRangeList_GetSize(SBAddressRangeList self) -> uint32_t"},
+    {"SBAddressRangeList_Clear", _wrap_SBAddressRangeList_Clear, METH_O,
+     "SBAddressRangeList_Clear(SBAddressRangeList self)"},
+    {"SBAddressRangeList_GetAddressRangeAtIndex",
+     _wrap_SBAddressRangeList_GetAddressRangeAtIndex, METH_VARARGS,
+     "SBAddressRangeList_GetAddressRangeAtIndex(SBAddressRangeList self, "
+     "uint64_t idx) -> SBAddressRange"},
+    {"SBAddressRangeList_Append", _wrap_SBAddressRangeList_Append, METH_VARARGS,
+     "\n"
+     "SBAddressRangeList_Append(SBAddressRangeList self, SBAddressRange "
+     "addr_range)\n"
+     "SBAddressRangeList_Append(SBAddressRangeList self, SBAddressRangeList "
+     "addr_range_list)\n"
+     ""},
+    {"SBAddressRangeList_GetDescription",
+     _wrap_SBAddressRangeList_GetDescription, METH_VARARGS,
+     "SBAddressRangeList_GetDescription(SBAddressRangeList self, SBStream "
+     "description, SBTarget target) -> bool"},
+    {"SBAddressRangeList_swigregister", SBAddressRangeList_swigregister, METH_O,
+     NULL},
+    {"SBAddressRangeList_swiginit", SBAddressRangeList_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBAttachInfo", _wrap_new_SBAttachInfo, METH_VARARGS,
+     "\n"
+     "SBAttachInfo()\n"
+     "SBAttachInfo(lldb::pid_t pid)\n"
+     "SBAttachInfo(char const * path, bool wait_for)\n"
+     "SBAttachInfo(char const * path, bool wait_for, bool _async)\n"
+     "new_SBAttachInfo(SBAttachInfo rhs) -> SBAttachInfo\n"
+     ""},
+    {"delete_SBAttachInfo", _wrap_delete_SBAttachInfo, METH_O,
+     "delete_SBAttachInfo(SBAttachInfo self)"},
+    {"SBAttachInfo_GetProcessID", _wrap_SBAttachInfo_GetProcessID, METH_O,
+     "SBAttachInfo_GetProcessID(SBAttachInfo self) -> lldb::pid_t"},
+    {"SBAttachInfo_SetProcessID", _wrap_SBAttachInfo_SetProcessID, METH_VARARGS,
+     "SBAttachInfo_SetProcessID(SBAttachInfo self, lldb::pid_t pid)"},
+    {"SBAttachInfo_SetExecutable", _wrap_SBAttachInfo_SetExecutable,
+     METH_VARARGS,
+     "\n"
+     "SBAttachInfo_SetExecutable(SBAttachInfo self, char const * path)\n"
+     "SBAttachInfo_SetExecutable(SBAttachInfo self, SBFileSpec exe_file)\n"
+     ""},
+    {"SBAttachInfo_GetWaitForLaunch", _wrap_SBAttachInfo_GetWaitForLaunch,
+     METH_O, "SBAttachInfo_GetWaitForLaunch(SBAttachInfo self) -> bool"},
+    {"SBAttachInfo_SetWaitForLaunch", _wrap_SBAttachInfo_SetWaitForLaunch,
+     METH_VARARGS,
+     "\n"
+     "SBAttachInfo_SetWaitForLaunch(SBAttachInfo self, bool b)\n"
+     "SBAttachInfo_SetWaitForLaunch(SBAttachInfo self, bool b, bool _async)\n"
+     ""},
+    {"SBAttachInfo_GetIgnoreExisting", _wrap_SBAttachInfo_GetIgnoreExisting,
+     METH_O, "SBAttachInfo_GetIgnoreExisting(SBAttachInfo self) -> bool"},
+    {"SBAttachInfo_SetIgnoreExisting", _wrap_SBAttachInfo_SetIgnoreExisting,
+     METH_VARARGS, "SBAttachInfo_SetIgnoreExisting(SBAttachInfo self, bool b)"},
+    {"SBAttachInfo_GetResumeCount", _wrap_SBAttachInfo_GetResumeCount, METH_O,
+     "SBAttachInfo_GetResumeCount(SBAttachInfo self) -> uint32_t"},
+    {"SBAttachInfo_SetResumeCount", _wrap_SBAttachInfo_SetResumeCount,
+     METH_VARARGS,
+     "SBAttachInfo_SetResumeCount(SBAttachInfo self, uint32_t c)"},
+    {"SBAttachInfo_GetProcessPluginName",
+     _wrap_SBAttachInfo_GetProcessPluginName, METH_O,
+     "SBAttachInfo_GetProcessPluginName(SBAttachInfo self) -> char const *"},
+    {"SBAttachInfo_SetProcessPluginName",
+     _wrap_SBAttachInfo_SetProcessPluginName, METH_VARARGS,
+     "SBAttachInfo_SetProcessPluginName(SBAttachInfo self, char const * "
+     "plugin_name)"},
+    {"SBAttachInfo_GetUserID", _wrap_SBAttachInfo_GetUserID, METH_O,
+     "SBAttachInfo_GetUserID(SBAttachInfo self) -> uint32_t"},
+    {"SBAttachInfo_GetGroupID", _wrap_SBAttachInfo_GetGroupID, METH_O,
+     "SBAttachInfo_GetGroupID(SBAttachInfo self) -> uint32_t"},
+    {"SBAttachInfo_UserIDIsValid", _wrap_SBAttachInfo_UserIDIsValid, METH_O,
+     "SBAttachInfo_UserIDIsValid(SBAttachInfo self) -> bool"},
+    {"SBAttachInfo_GroupIDIsValid", _wrap_SBAttachInfo_GroupIDIsValid, METH_O,
+     "SBAttachInfo_GroupIDIsValid(SBAttachInfo self) -> bool"},
+    {"SBAttachInfo_SetUserID", _wrap_SBAttachInfo_SetUserID, METH_VARARGS,
+     "SBAttachInfo_SetUserID(SBAttachInfo self, uint32_t uid)"},
+    {"SBAttachInfo_SetGroupID", _wrap_SBAttachInfo_SetGroupID, METH_VARARGS,
+     "SBAttachInfo_SetGroupID(SBAttachInfo self, uint32_t gid)"},
+    {"SBAttachInfo_GetEffectiveUserID", _wrap_SBAttachInfo_GetEffectiveUserID,
+     METH_O, "SBAttachInfo_GetEffectiveUserID(SBAttachInfo self) -> uint32_t"},
+    {"SBAttachInfo_GetEffectiveGroupID", _wrap_SBAttachInfo_GetEffectiveGroupID,
+     METH_O, "SBAttachInfo_GetEffectiveGroupID(SBAttachInfo self) -> uint32_t"},
+    {"SBAttachInfo_EffectiveUserIDIsValid",
+     _wrap_SBAttachInfo_EffectiveUserIDIsValid, METH_O,
+     "SBAttachInfo_EffectiveUserIDIsValid(SBAttachInfo self) -> bool"},
+    {"SBAttachInfo_EffectiveGroupIDIsValid",
+     _wrap_SBAttachInfo_EffectiveGroupIDIsValid, METH_O,
+     "SBAttachInfo_EffectiveGroupIDIsValid(SBAttachInfo self) -> bool"},
+    {"SBAttachInfo_SetEffectiveUserID", _wrap_SBAttachInfo_SetEffectiveUserID,
+     METH_VARARGS,
+     "SBAttachInfo_SetEffectiveUserID(SBAttachInfo self, uint32_t uid)"},
+    {"SBAttachInfo_SetEffectiveGroupID", _wrap_SBAttachInfo_SetEffectiveGroupID,
+     METH_VARARGS,
+     "SBAttachInfo_SetEffectiveGroupID(SBAttachInfo self, uint32_t gid)"},
+    {"SBAttachInfo_GetParentProcessID", _wrap_SBAttachInfo_GetParentProcessID,
+     METH_O,
+     "SBAttachInfo_GetParentProcessID(SBAttachInfo self) -> lldb::pid_t"},
+    {"SBAttachInfo_SetParentProcessID", _wrap_SBAttachInfo_SetParentProcessID,
+     METH_VARARGS,
+     "SBAttachInfo_SetParentProcessID(SBAttachInfo self, lldb::pid_t pid)"},
+    {"SBAttachInfo_ParentProcessIDIsValid",
+     _wrap_SBAttachInfo_ParentProcessIDIsValid, METH_O,
+     "SBAttachInfo_ParentProcessIDIsValid(SBAttachInfo self) -> bool"},
+    {"SBAttachInfo_GetListener", _wrap_SBAttachInfo_GetListener, METH_O,
+     "SBAttachInfo_GetListener(SBAttachInfo self) -> SBListener"},
+    {"SBAttachInfo_SetListener", _wrap_SBAttachInfo_SetListener, METH_VARARGS,
+     "SBAttachInfo_SetListener(SBAttachInfo self, SBListener listener)"},
+    {"SBAttachInfo_GetShadowListener", _wrap_SBAttachInfo_GetShadowListener,
+     METH_O, "SBAttachInfo_GetShadowListener(SBAttachInfo self) -> SBListener"},
+    {"SBAttachInfo_SetShadowListener", _wrap_SBAttachInfo_SetShadowListener,
+     METH_VARARGS,
+     "SBAttachInfo_SetShadowListener(SBAttachInfo self, SBListener listener)"},
+    {"SBAttachInfo_GetScriptedProcessClassName",
+     _wrap_SBAttachInfo_GetScriptedProcessClassName, METH_O,
+     "SBAttachInfo_GetScriptedProcessClassName(SBAttachInfo self) -> char "
+     "const *"},
+    {"SBAttachInfo_SetScriptedProcessClassName",
+     _wrap_SBAttachInfo_SetScriptedProcessClassName, METH_VARARGS,
+     "SBAttachInfo_SetScriptedProcessClassName(SBAttachInfo self, char const * "
+     "class_name)"},
+    {"SBAttachInfo_GetScriptedProcessDictionary",
+     _wrap_SBAttachInfo_GetScriptedProcessDictionary, METH_O,
+     "SBAttachInfo_GetScriptedProcessDictionary(SBAttachInfo self) -> "
+     "SBStructuredData"},
+    {"SBAttachInfo_SetScriptedProcessDictionary",
+     _wrap_SBAttachInfo_SetScriptedProcessDictionary, METH_VARARGS,
+     "SBAttachInfo_SetScriptedProcessDictionary(SBAttachInfo self, "
+     "SBStructuredData dict)"},
+    {"SBAttachInfo_swigregister", SBAttachInfo_swigregister, METH_O, NULL},
+    {"SBAttachInfo_swiginit", SBAttachInfo_swiginit, METH_VARARGS, NULL},
+    {"new_SBBlock", _wrap_new_SBBlock, METH_VARARGS,
+     "\n"
+     "SBBlock()\n"
+     "new_SBBlock(SBBlock rhs) -> SBBlock\n"
+     ""},
+    {"delete_SBBlock", _wrap_delete_SBBlock, METH_O,
+     "delete_SBBlock(SBBlock self)"},
+    {"SBBlock_IsInlined", _wrap_SBBlock_IsInlined, METH_O,
+     "\n"
+     "SBBlock_IsInlined(SBBlock self) -> bool\n"
+     "Is this block contained within an inlined function?\n"
+     ""},
+    {"SBBlock___nonzero__", _wrap_SBBlock___nonzero__, METH_O,
+     "SBBlock___nonzero__(SBBlock self) -> bool"},
+    {"SBBlock_IsValid", _wrap_SBBlock_IsValid, METH_O,
+     "SBBlock_IsValid(SBBlock self) -> bool"},
+    {"SBBlock_GetInlinedName", _wrap_SBBlock_GetInlinedName, METH_O,
+     "\n"
+     "SBBlock_GetInlinedName(SBBlock self) -> char const *\n"
+     "\n"
+     "    Get the function name if this block represents an inlined function;\n"
+     "    otherwise, return None.\n"
+     ""},
+    {"SBBlock_GetInlinedCallSiteFile", _wrap_SBBlock_GetInlinedCallSiteFile,
+     METH_O,
+     "\n"
+     "SBBlock_GetInlinedCallSiteFile(SBBlock self) -> SBFileSpec\n"
+     "\n"
+     "    Get the call site file if this block represents an inlined "
+     "function;\n"
+     "    otherwise, return an invalid file spec.\n"
+     ""},
+    {"SBBlock_GetInlinedCallSiteLine", _wrap_SBBlock_GetInlinedCallSiteLine,
+     METH_O,
+     "\n"
+     "SBBlock_GetInlinedCallSiteLine(SBBlock self) -> uint32_t\n"
+     "\n"
+     "    Get the call site line if this block represents an inlined "
+     "function;\n"
+     "    otherwise, return 0.\n"
+     ""},
+    {"SBBlock_GetInlinedCallSiteColumn", _wrap_SBBlock_GetInlinedCallSiteColumn,
+     METH_O,
+     "\n"
+     "SBBlock_GetInlinedCallSiteColumn(SBBlock self) -> uint32_t\n"
+     "\n"
+     "    Get the call site column if this block represents an inlined "
+     "function;\n"
+     "    otherwise, return 0.\n"
+     ""},
+    {"SBBlock_GetParent", _wrap_SBBlock_GetParent, METH_O,
+     "\n"
+     "SBBlock_GetParent(SBBlock self) -> SBBlock\n"
+     "Get the parent block.\n"
+     ""},
+    {"SBBlock_GetSibling", _wrap_SBBlock_GetSibling, METH_O,
+     "\n"
+     "SBBlock_GetSibling(SBBlock self) -> SBBlock\n"
+     "Get the sibling block for this block.\n"
+     ""},
+    {"SBBlock_GetFirstChild", _wrap_SBBlock_GetFirstChild, METH_O,
+     "\n"
+     "SBBlock_GetFirstChild(SBBlock self) -> SBBlock\n"
+     "Get the first child block.\n"
+     ""},
+    {"SBBlock_GetNumRanges", _wrap_SBBlock_GetNumRanges, METH_O,
+     "SBBlock_GetNumRanges(SBBlock self) -> uint32_t"},
+    {"SBBlock_GetRangeStartAddress", _wrap_SBBlock_GetRangeStartAddress,
+     METH_VARARGS,
+     "SBBlock_GetRangeStartAddress(SBBlock self, uint32_t idx) -> SBAddress"},
+    {"SBBlock_GetRangeEndAddress", _wrap_SBBlock_GetRangeEndAddress,
+     METH_VARARGS,
+     "SBBlock_GetRangeEndAddress(SBBlock self, uint32_t idx) -> SBAddress"},
+    {"SBBlock_GetRanges", _wrap_SBBlock_GetRanges, METH_O,
+     "SBBlock_GetRanges(SBBlock self) -> SBAddressRangeList"},
+    {"SBBlock_GetRangeIndexForBlockAddress",
+     _wrap_SBBlock_GetRangeIndexForBlockAddress, METH_VARARGS,
+     "SBBlock_GetRangeIndexForBlockAddress(SBBlock self, SBAddress block_addr) "
+     "-> uint32_t"},
+    {"SBBlock_GetVariables", _wrap_SBBlock_GetVariables, METH_VARARGS,
+     "\n"
+     "SBBlock_GetVariables(SBBlock self, SBFrame frame, bool arguments, bool "
+     "locals, bool statics, lldb::DynamicValueType use_dynamic) -> "
+     "SBValueList\n"
+     "SBBlock_GetVariables(SBBlock self, SBTarget target, bool arguments, bool "
+     "locals, bool statics) -> SBValueList\n"
+     ""},
+    {"SBBlock_GetContainingInlinedBlock",
+     _wrap_SBBlock_GetContainingInlinedBlock, METH_O,
+     "\n"
+     "SBBlock_GetContainingInlinedBlock(SBBlock self) -> SBBlock\n"
+     "Get the inlined block that is or contains this block.\n"
+     ""},
+    {"SBBlock_GetDescription", _wrap_SBBlock_GetDescription, METH_VARARGS,
+     "SBBlock_GetDescription(SBBlock self, SBStream description) -> bool"},
+    {"SBBlock___repr__", _wrap_SBBlock___repr__, METH_O,
+     "SBBlock___repr__(SBBlock self) -> std::string"},
+    {"SBBlock_swigregister", SBBlock_swigregister, METH_O, NULL},
+    {"SBBlock_swiginit", SBBlock_swiginit, METH_VARARGS, NULL},
+    {"new_SBBreakpoint", _wrap_new_SBBreakpoint, METH_VARARGS,
+     "\n"
+     "SBBreakpoint()\n"
+     "new_SBBreakpoint(SBBreakpoint rhs) -> SBBreakpoint\n"
+     ""},
+    {"delete_SBBreakpoint", _wrap_delete_SBBreakpoint, METH_O,
+     "delete_SBBreakpoint(SBBreakpoint self)"},
+    {"SBBreakpoint___eq__", _wrap_SBBreakpoint___eq__, METH_VARARGS,
+     "SBBreakpoint___eq__(SBBreakpoint self, SBBreakpoint rhs) -> bool"},
+    {"SBBreakpoint___ne__", _wrap_SBBreakpoint___ne__, METH_VARARGS,
+     "SBBreakpoint___ne__(SBBreakpoint self, SBBreakpoint rhs) -> bool"},
+    {"SBBreakpoint_GetID", _wrap_SBBreakpoint_GetID, METH_O,
+     "SBBreakpoint_GetID(SBBreakpoint self) -> lldb::break_id_t"},
+    {"SBBreakpoint___nonzero__", _wrap_SBBreakpoint___nonzero__, METH_O,
+     "SBBreakpoint___nonzero__(SBBreakpoint self) -> bool"},
+    {"SBBreakpoint_IsValid", _wrap_SBBreakpoint_IsValid, METH_O,
+     "SBBreakpoint_IsValid(SBBreakpoint self) -> bool"},
+    {"SBBreakpoint_ClearAllBreakpointSites",
+     _wrap_SBBreakpoint_ClearAllBreakpointSites, METH_O,
+     "SBBreakpoint_ClearAllBreakpointSites(SBBreakpoint self)"},
+    {"SBBreakpoint_GetTarget", _wrap_SBBreakpoint_GetTarget, METH_O,
+     "SBBreakpoint_GetTarget(SBBreakpoint self) -> SBTarget"},
+    {"SBBreakpoint_FindLocationByAddress",
+     _wrap_SBBreakpoint_FindLocationByAddress, METH_VARARGS,
+     "SBBreakpoint_FindLocationByAddress(SBBreakpoint self, lldb::addr_t "
+     "vm_addr) -> SBBreakpointLocation"},
+    {"SBBreakpoint_FindLocationIDByAddress",
+     _wrap_SBBreakpoint_FindLocationIDByAddress, METH_VARARGS,
+     "SBBreakpoint_FindLocationIDByAddress(SBBreakpoint self, lldb::addr_t "
+     "vm_addr) -> lldb::break_id_t"},
+    {"SBBreakpoint_FindLocationByID", _wrap_SBBreakpoint_FindLocationByID,
+     METH_VARARGS,
+     "SBBreakpoint_FindLocationByID(SBBreakpoint self, lldb::break_id_t "
+     "bp_loc_id) -> SBBreakpointLocation"},
+    {"SBBreakpoint_GetLocationAtIndex", _wrap_SBBreakpoint_GetLocationAtIndex,
+     METH_VARARGS,
+     "SBBreakpoint_GetLocationAtIndex(SBBreakpoint self, uint32_t index) -> "
+     "SBBreakpointLocation"},
+    {"SBBreakpoint_SetEnabled", _wrap_SBBreakpoint_SetEnabled, METH_VARARGS,
+     "SBBreakpoint_SetEnabled(SBBreakpoint self, bool enable)"},
+    {"SBBreakpoint_IsEnabled", _wrap_SBBreakpoint_IsEnabled, METH_O,
+     "SBBreakpoint_IsEnabled(SBBreakpoint self) -> bool"},
+    {"SBBreakpoint_SetOneShot", _wrap_SBBreakpoint_SetOneShot, METH_VARARGS,
+     "SBBreakpoint_SetOneShot(SBBreakpoint self, bool one_shot)"},
+    {"SBBreakpoint_IsOneShot", _wrap_SBBreakpoint_IsOneShot, METH_O,
+     "SBBreakpoint_IsOneShot(SBBreakpoint self) -> bool"},
+    {"SBBreakpoint_IsInternal", _wrap_SBBreakpoint_IsInternal, METH_O,
+     "SBBreakpoint_IsInternal(SBBreakpoint self) -> bool"},
+    {"SBBreakpoint_GetHitCount", _wrap_SBBreakpoint_GetHitCount, METH_O,
+     "SBBreakpoint_GetHitCount(SBBreakpoint self) -> uint32_t"},
+    {"SBBreakpoint_SetIgnoreCount", _wrap_SBBreakpoint_SetIgnoreCount,
+     METH_VARARGS,
+     "SBBreakpoint_SetIgnoreCount(SBBreakpoint self, uint32_t count)"},
+    {"SBBreakpoint_GetIgnoreCount", _wrap_SBBreakpoint_GetIgnoreCount, METH_O,
+     "SBBreakpoint_GetIgnoreCount(SBBreakpoint self) -> uint32_t"},
+    {"SBBreakpoint_SetCondition", _wrap_SBBreakpoint_SetCondition, METH_VARARGS,
+     "\n"
+     "SBBreakpoint_SetCondition(SBBreakpoint self, char const * condition)\n"
+     "\n"
+     "    The breakpoint stops only if the condition expression evaluates to "
+     "true.\n"
+     ""},
+    {"SBBreakpoint_GetCondition", _wrap_SBBreakpoint_GetCondition, METH_O,
+     "\n"
+     "SBBreakpoint_GetCondition(SBBreakpoint self) -> char const *\n"
+     "\n"
+     "    Get the condition expression for the breakpoint.\n"
+     ""},
+    {"SBBreakpoint_SetAutoContinue", _wrap_SBBreakpoint_SetAutoContinue,
+     METH_VARARGS,
+     "SBBreakpoint_SetAutoContinue(SBBreakpoint self, bool auto_continue)"},
+    {"SBBreakpoint_GetAutoContinue", _wrap_SBBreakpoint_GetAutoContinue, METH_O,
+     "SBBreakpoint_GetAutoContinue(SBBreakpoint self) -> bool"},
+    {"SBBreakpoint_SetThreadID", _wrap_SBBreakpoint_SetThreadID, METH_VARARGS,
+     "SBBreakpoint_SetThreadID(SBBreakpoint self, lldb::tid_t sb_thread_id)"},
+    {"SBBreakpoint_GetThreadID", _wrap_SBBreakpoint_GetThreadID, METH_O,
+     "SBBreakpoint_GetThreadID(SBBreakpoint self) -> lldb::tid_t"},
+    {"SBBreakpoint_SetThreadIndex", _wrap_SBBreakpoint_SetThreadIndex,
+     METH_VARARGS,
+     "SBBreakpoint_SetThreadIndex(SBBreakpoint self, uint32_t index)"},
+    {"SBBreakpoint_GetThreadIndex", _wrap_SBBreakpoint_GetThreadIndex, METH_O,
+     "SBBreakpoint_GetThreadIndex(SBBreakpoint self) -> uint32_t"},
+    {"SBBreakpoint_SetThreadName", _wrap_SBBreakpoint_SetThreadName,
+     METH_VARARGS,
+     "SBBreakpoint_SetThreadName(SBBreakpoint self, char const * thread_name)"},
+    {"SBBreakpoint_GetThreadName", _wrap_SBBreakpoint_GetThreadName, METH_O,
+     "SBBreakpoint_GetThreadName(SBBreakpoint self) -> char const *"},
+    {"SBBreakpoint_SetQueueName", _wrap_SBBreakpoint_SetQueueName, METH_VARARGS,
+     "SBBreakpoint_SetQueueName(SBBreakpoint self, char const * queue_name)"},
+    {"SBBreakpoint_GetQueueName", _wrap_SBBreakpoint_GetQueueName, METH_O,
+     "SBBreakpoint_GetQueueName(SBBreakpoint self) -> char const *"},
+    {"SBBreakpoint_SetScriptCallbackFunction",
+     _wrap_SBBreakpoint_SetScriptCallbackFunction, METH_VARARGS,
+     "\n"
+     "SBBreakpoint_SetScriptCallbackFunction(SBBreakpoint self, char const * "
+     "callback_function_name)\n"
+     "SBBreakpoint_SetScriptCallbackFunction(SBBreakpoint self, char const * "
+     "callback_function_name, SBStructuredData extra_args) -> SBError\n"
+     "\n"
+     "    Set the name of the script function to be called when the breakpoint "
+     "is hit.\n"
+     "    To use this variant, the function should take (frame, bp_loc, "
+     "extra_args, internal_dict) and\n"
+     "    when the breakpoint is hit the extra_args will be passed to the "
+     "callback function.\n"
+     ""},
+    {"SBBreakpoint_SetCommandLineCommands",
+     _wrap_SBBreakpoint_SetCommandLineCommands, METH_VARARGS,
+     "SBBreakpoint_SetCommandLineCommands(SBBreakpoint self, SBStringList "
+     "commands)"},
+    {"SBBreakpoint_GetCommandLineCommands",
+     _wrap_SBBreakpoint_GetCommandLineCommands, METH_VARARGS,
+     "SBBreakpoint_GetCommandLineCommands(SBBreakpoint self, SBStringList "
+     "commands) -> bool"},
+    {"SBBreakpoint_SetScriptCallbackBody",
+     _wrap_SBBreakpoint_SetScriptCallbackBody, METH_VARARGS,
+     "\n"
+     "SBBreakpoint_SetScriptCallbackBody(SBBreakpoint self, char const * "
+     "script_body_text) -> SBError\n"
+     "\n"
+     "    Provide the body for the script function to be called when the "
+     "breakpoint is hit.\n"
+     "    The body will be wrapped in a function, which be passed two "
+     "arguments:\n"
+     "    'frame' - which holds the bottom-most SBFrame of the thread that hit "
+     "the breakpoint\n"
+     "    'bpno'  - which is the SBBreakpointLocation to which the callback "
+     "was attached.\n"
+     "\n"
+     "    The error parameter is currently ignored, but will at some point "
+     "hold the Python\n"
+     "    compilation diagnostics.\n"
+     "    Returns true if the body compiles successfully, false if not.\n"
+     ""},
+    {"SBBreakpoint_AddName", _wrap_SBBreakpoint_AddName, METH_VARARGS,
+     "SBBreakpoint_AddName(SBBreakpoint self, char const * new_name) -> bool"},
+    {"SBBreakpoint_AddNameWithErrorHandling",
+     _wrap_SBBreakpoint_AddNameWithErrorHandling, METH_VARARGS,
+     "SBBreakpoint_AddNameWithErrorHandling(SBBreakpoint self, char const * "
+     "new_name) -> SBError"},
+    {"SBBreakpoint_RemoveName", _wrap_SBBreakpoint_RemoveName, METH_VARARGS,
+     "SBBreakpoint_RemoveName(SBBreakpoint self, char const * name_to_remove)"},
+    {"SBBreakpoint_MatchesName", _wrap_SBBreakpoint_MatchesName, METH_VARARGS,
+     "SBBreakpoint_MatchesName(SBBreakpoint self, char const * name) -> bool"},
+    {"SBBreakpoint_GetNames", _wrap_SBBreakpoint_GetNames, METH_VARARGS,
+     "SBBreakpoint_GetNames(SBBreakpoint self, SBStringList names)"},
+    {"SBBreakpoint_GetNumResolvedLocations",
+     _wrap_SBBreakpoint_GetNumResolvedLocations, METH_O,
+     "SBBreakpoint_GetNumResolvedLocations(SBBreakpoint self) -> size_t"},
+    {"SBBreakpoint_GetNumLocations", _wrap_SBBreakpoint_GetNumLocations, METH_O,
+     "SBBreakpoint_GetNumLocations(SBBreakpoint self) -> size_t"},
+    {"SBBreakpoint_GetDescription", _wrap_SBBreakpoint_GetDescription,
+     METH_VARARGS,
+     "\n"
+     "SBBreakpoint_GetDescription(SBBreakpoint self, SBStream description) -> "
+     "bool\n"
+     "SBBreakpoint_GetDescription(SBBreakpoint self, SBStream description, "
+     "bool include_locations) -> bool\n"
+     ""},
+    {"SBBreakpoint_EventIsBreakpointEvent",
+     _wrap_SBBreakpoint_EventIsBreakpointEvent, METH_O,
+     "SBBreakpoint_EventIsBreakpointEvent(SBEvent event) -> bool"},
+    {"SBBreakpoint_GetBreakpointEventTypeFromEvent",
+     _wrap_SBBreakpoint_GetBreakpointEventTypeFromEvent, METH_O,
+     "SBBreakpoint_GetBreakpointEventTypeFromEvent(SBEvent event) -> "
+     "lldb::BreakpointEventType"},
+    {"SBBreakpoint_GetBreakpointFromEvent",
+     _wrap_SBBreakpoint_GetBreakpointFromEvent, METH_O,
+     "SBBreakpoint_GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"},
+    {"SBBreakpoint_GetBreakpointLocationAtIndexFromEvent",
+     _wrap_SBBreakpoint_GetBreakpointLocationAtIndexFromEvent, METH_VARARGS,
+     "SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(SBEvent event, "
+     "uint32_t loc_idx) -> SBBreakpointLocation"},
+    {"SBBreakpoint_GetNumBreakpointLocationsFromEvent",
+     _wrap_SBBreakpoint_GetNumBreakpointLocationsFromEvent, METH_O,
+     "SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> "
+     "uint32_t"},
+    {"SBBreakpoint_IsHardware", _wrap_SBBreakpoint_IsHardware, METH_O,
+     "SBBreakpoint_IsHardware(SBBreakpoint self) -> bool"},
+    {"SBBreakpoint_AddLocation", _wrap_SBBreakpoint_AddLocation, METH_VARARGS,
+     "SBBreakpoint_AddLocation(SBBreakpoint self, SBAddress address) -> "
+     "SBError"},
+    {"SBBreakpoint_SerializeToStructuredData",
+     _wrap_SBBreakpoint_SerializeToStructuredData, METH_O,
+     "SBBreakpoint_SerializeToStructuredData(SBBreakpoint self) -> "
+     "SBStructuredData"},
+    {"SBBreakpoint___repr__", _wrap_SBBreakpoint___repr__, METH_O,
+     "SBBreakpoint___repr__(SBBreakpoint self) -> std::string"},
+    {"SBBreakpoint_swigregister", SBBreakpoint_swigregister, METH_O, NULL},
+    {"SBBreakpoint_swiginit", SBBreakpoint_swiginit, METH_VARARGS, NULL},
+    {"new_SBBreakpointList", _wrap_new_SBBreakpointList, METH_O,
+     "new_SBBreakpointList(SBTarget target) -> SBBreakpointList"},
+    {"delete_SBBreakpointList", _wrap_delete_SBBreakpointList, METH_O,
+     "delete_SBBreakpointList(SBBreakpointList self)"},
+    {"SBBreakpointList_GetSize", _wrap_SBBreakpointList_GetSize, METH_O,
+     "SBBreakpointList_GetSize(SBBreakpointList self) -> size_t"},
+    {"SBBreakpointList_GetBreakpointAtIndex",
+     _wrap_SBBreakpointList_GetBreakpointAtIndex, METH_VARARGS,
+     "SBBreakpointList_GetBreakpointAtIndex(SBBreakpointList self, size_t idx) "
+     "-> SBBreakpoint"},
+    {"SBBreakpointList_FindBreakpointByID",
+     _wrap_SBBreakpointList_FindBreakpointByID, METH_VARARGS,
+     "SBBreakpointList_FindBreakpointByID(SBBreakpointList self, "
+     "lldb::break_id_t arg2) -> SBBreakpoint"},
+    {"SBBreakpointList_Append", _wrap_SBBreakpointList_Append, METH_VARARGS,
+     "SBBreakpointList_Append(SBBreakpointList self, SBBreakpoint sb_bkpt)"},
+    {"SBBreakpointList_AppendIfUnique", _wrap_SBBreakpointList_AppendIfUnique,
+     METH_VARARGS,
+     "SBBreakpointList_AppendIfUnique(SBBreakpointList self, SBBreakpoint "
+     "sb_bkpt) -> bool"},
+    {"SBBreakpointList_AppendByID", _wrap_SBBreakpointList_AppendByID,
+     METH_VARARGS,
+     "SBBreakpointList_AppendByID(SBBreakpointList self, lldb::break_id_t id)"},
+    {"SBBreakpointList_Clear", _wrap_SBBreakpointList_Clear, METH_O,
+     "SBBreakpointList_Clear(SBBreakpointList self)"},
+    {"SBBreakpointList_swigregister", SBBreakpointList_swigregister, METH_O,
+     NULL},
+    {"SBBreakpointList_swiginit", SBBreakpointList_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBBreakpointLocation", _wrap_new_SBBreakpointLocation, METH_VARARGS,
+     "\n"
+     "SBBreakpointLocation()\n"
+     "new_SBBreakpointLocation(SBBreakpointLocation rhs) -> "
+     "SBBreakpointLocation\n"
+     ""},
+    {"delete_SBBreakpointLocation", _wrap_delete_SBBreakpointLocation, METH_O,
+     "delete_SBBreakpointLocation(SBBreakpointLocation self)"},
+    {"SBBreakpointLocation_GetID", _wrap_SBBreakpointLocation_GetID, METH_O,
+     "SBBreakpointLocation_GetID(SBBreakpointLocation self) -> "
+     "lldb::break_id_t"},
+    {"SBBreakpointLocation___nonzero__", _wrap_SBBreakpointLocation___nonzero__,
+     METH_O,
+     "SBBreakpointLocation___nonzero__(SBBreakpointLocation self) -> bool"},
+    {"SBBreakpointLocation_IsValid", _wrap_SBBreakpointLocation_IsValid, METH_O,
+     "SBBreakpointLocation_IsValid(SBBreakpointLocation self) -> bool"},
+    {"SBBreakpointLocation_GetAddress", _wrap_SBBreakpointLocation_GetAddress,
+     METH_O,
+     "SBBreakpointLocation_GetAddress(SBBreakpointLocation self) -> SBAddress"},
+    {"SBBreakpointLocation_GetLoadAddress",
+     _wrap_SBBreakpointLocation_GetLoadAddress, METH_O,
+     "SBBreakpointLocation_GetLoadAddress(SBBreakpointLocation self) -> "
+     "lldb::addr_t"},
+    {"SBBreakpointLocation_SetEnabled", _wrap_SBBreakpointLocation_SetEnabled,
+     METH_VARARGS,
+     "SBBreakpointLocation_SetEnabled(SBBreakpointLocation self, bool "
+     "enabled)"},
+    {"SBBreakpointLocation_IsEnabled", _wrap_SBBreakpointLocation_IsEnabled,
+     METH_O,
+     "SBBreakpointLocation_IsEnabled(SBBreakpointLocation self) -> bool"},
+    {"SBBreakpointLocation_GetHitCount", _wrap_SBBreakpointLocation_GetHitCount,
+     METH_O,
+     "SBBreakpointLocation_GetHitCount(SBBreakpointLocation self) -> uint32_t"},
+    {"SBBreakpointLocation_GetIgnoreCount",
+     _wrap_SBBreakpointLocation_GetIgnoreCount, METH_O,
+     "SBBreakpointLocation_GetIgnoreCount(SBBreakpointLocation self) -> "
+     "uint32_t"},
+    {"SBBreakpointLocation_SetIgnoreCount",
+     _wrap_SBBreakpointLocation_SetIgnoreCount, METH_VARARGS,
+     "SBBreakpointLocation_SetIgnoreCount(SBBreakpointLocation self, uint32_t "
+     "n)"},
+    {"SBBreakpointLocation_SetCondition",
+     _wrap_SBBreakpointLocation_SetCondition, METH_VARARGS,
+     "\n"
+     "SBBreakpointLocation_SetCondition(SBBreakpointLocation self, char const "
+     "* condition)\n"
+     "\n"
+     "    The breakpoint location stops only if the condition expression "
+     "evaluates\n"
+     "    to true.\n"
+     ""},
+    {"SBBreakpointLocation_GetCondition",
+     _wrap_SBBreakpointLocation_GetCondition, METH_O,
+     "\n"
+     "SBBreakpointLocation_GetCondition(SBBreakpointLocation self) -> char "
+     "const *\n"
+     "\n"
+     "    Get the condition expression for the breakpoint location.\n"
+     ""},
+    {"SBBreakpointLocation_SetAutoContinue",
+     _wrap_SBBreakpointLocation_SetAutoContinue, METH_VARARGS,
+     "SBBreakpointLocation_SetAutoContinue(SBBreakpointLocation self, bool "
+     "auto_continue)"},
+    {"SBBreakpointLocation_GetAutoContinue",
+     _wrap_SBBreakpointLocation_GetAutoContinue, METH_O,
+     "SBBreakpointLocation_GetAutoContinue(SBBreakpointLocation self) -> bool"},
+    {"SBBreakpointLocation_SetScriptCallbackFunction",
+     _wrap_SBBreakpointLocation_SetScriptCallbackFunction, METH_VARARGS,
+     "\n"
+     "SBBreakpointLocation_SetScriptCallbackFunction(SBBreakpointLocation "
+     "self, char const * callback_function_name)\n"
+     "SBBreakpointLocation_SetScriptCallbackFunction(SBBreakpointLocation "
+     "self, char const * callback_function_name, SBStructuredData extra_args) "
+     "-> SBError\n"
+     "\n"
+     "    Set the name of the script function to be called when the breakpoint "
+     "is hit.\n"
+     "    To use this variant, the function should take (frame, bp_loc, "
+     "extra_args, internal_dict) and\n"
+     "    when the breakpoint is hit the extra_args will be passed to the "
+     "callback function.\n"
+     ""},
+    {"SBBreakpointLocation_SetScriptCallbackBody",
+     _wrap_SBBreakpointLocation_SetScriptCallbackBody, METH_VARARGS,
+     "\n"
+     "SBBreakpointLocation_SetScriptCallbackBody(SBBreakpointLocation self, "
+     "char const * script_body_text) -> SBError\n"
+     "\n"
+     "    Provide the body for the script function to be called when the "
+     "breakpoint location is hit.\n"
+     "    The body will be wrapped in a function, which be passed two "
+     "arguments:\n"
+     "    'frame' - which holds the bottom-most SBFrame of the thread that hit "
+     "the breakpoint\n"
+     "    'bpno'  - which is the SBBreakpointLocation to which the callback "
+     "was attached.\n"
+     "\n"
+     "    The error parameter is currently ignored, but will at some point "
+     "hold the Python\n"
+     "    compilation diagnostics.\n"
+     "    Returns true if the body compiles successfully, false if not.\n"
+     ""},
+    {"SBBreakpointLocation_SetCommandLineCommands",
+     _wrap_SBBreakpointLocation_SetCommandLineCommands, METH_VARARGS,
+     "SBBreakpointLocation_SetCommandLineCommands(SBBreakpointLocation self, "
+     "SBStringList commands)"},
+    {"SBBreakpointLocation_GetCommandLineCommands",
+     _wrap_SBBreakpointLocation_GetCommandLineCommands, METH_VARARGS,
+     "SBBreakpointLocation_GetCommandLineCommands(SBBreakpointLocation self, "
+     "SBStringList commands) -> bool"},
+    {"SBBreakpointLocation_SetThreadID", _wrap_SBBreakpointLocation_SetThreadID,
+     METH_VARARGS,
+     "SBBreakpointLocation_SetThreadID(SBBreakpointLocation self, lldb::tid_t "
+     "sb_thread_id)"},
+    {"SBBreakpointLocation_GetThreadID", _wrap_SBBreakpointLocation_GetThreadID,
+     METH_O,
+     "SBBreakpointLocation_GetThreadID(SBBreakpointLocation self) -> "
+     "lldb::tid_t"},
+    {"SBBreakpointLocation_SetThreadIndex",
+     _wrap_SBBreakpointLocation_SetThreadIndex, METH_VARARGS,
+     "SBBreakpointLocation_SetThreadIndex(SBBreakpointLocation self, uint32_t "
+     "index)"},
+    {"SBBreakpointLocation_GetThreadIndex",
+     _wrap_SBBreakpointLocation_GetThreadIndex, METH_O,
+     "SBBreakpointLocation_GetThreadIndex(SBBreakpointLocation self) -> "
+     "uint32_t"},
+    {"SBBreakpointLocation_SetThreadName",
+     _wrap_SBBreakpointLocation_SetThreadName, METH_VARARGS,
+     "SBBreakpointLocation_SetThreadName(SBBreakpointLocation self, char const "
+     "* thread_name)"},
+    {"SBBreakpointLocation_GetThreadName",
+     _wrap_SBBreakpointLocation_GetThreadName, METH_O,
+     "SBBreakpointLocation_GetThreadName(SBBreakpointLocation self) -> char "
+     "const *"},
+    {"SBBreakpointLocation_SetQueueName",
+     _wrap_SBBreakpointLocation_SetQueueName, METH_VARARGS,
+     "SBBreakpointLocation_SetQueueName(SBBreakpointLocation self, char const "
+     "* queue_name)"},
+    {"SBBreakpointLocation_GetQueueName",
+     _wrap_SBBreakpointLocation_GetQueueName, METH_O,
+     "SBBreakpointLocation_GetQueueName(SBBreakpointLocation self) -> char "
+     "const *"},
+    {"SBBreakpointLocation_IsResolved", _wrap_SBBreakpointLocation_IsResolved,
+     METH_O,
+     "SBBreakpointLocation_IsResolved(SBBreakpointLocation self) -> bool"},
+    {"SBBreakpointLocation_GetDescription",
+     _wrap_SBBreakpointLocation_GetDescription, METH_VARARGS,
+     "SBBreakpointLocation_GetDescription(SBBreakpointLocation self, SBStream "
+     "description, lldb::DescriptionLevel level) -> bool"},
+    {"SBBreakpointLocation_GetBreakpoint",
+     _wrap_SBBreakpointLocation_GetBreakpoint, METH_O,
+     "SBBreakpointLocation_GetBreakpoint(SBBreakpointLocation self) -> "
+     "SBBreakpoint"},
+    {"SBBreakpointLocation___repr__", _wrap_SBBreakpointLocation___repr__,
+     METH_O,
+     "SBBreakpointLocation___repr__(SBBreakpointLocation self) -> std::string"},
+    {"SBBreakpointLocation_swigregister", SBBreakpointLocation_swigregister,
+     METH_O, NULL},
+    {"SBBreakpointLocation_swiginit", SBBreakpointLocation_swiginit,
+     METH_VARARGS, NULL},
+    {"new_SBBreakpointName", _wrap_new_SBBreakpointName, METH_VARARGS,
+     "\n"
+     "SBBreakpointName()\n"
+     "SBBreakpointName(SBTarget target, char const * name)\n"
+     "SBBreakpointName(SBBreakpoint bkpt, char const * name)\n"
+     "new_SBBreakpointName(SBBreakpointName rhs) -> SBBreakpointName\n"
+     ""},
+    {"delete_SBBreakpointName", _wrap_delete_SBBreakpointName, METH_O,
+     "delete_SBBreakpointName(SBBreakpointName self)"},
+    {"SBBreakpointName___eq__", _wrap_SBBreakpointName___eq__, METH_VARARGS,
+     "SBBreakpointName___eq__(SBBreakpointName self, SBBreakpointName rhs) -> "
+     "bool"},
+    {"SBBreakpointName___ne__", _wrap_SBBreakpointName___ne__, METH_VARARGS,
+     "SBBreakpointName___ne__(SBBreakpointName self, SBBreakpointName rhs) -> "
+     "bool"},
+    {"SBBreakpointName___nonzero__", _wrap_SBBreakpointName___nonzero__, METH_O,
+     "SBBreakpointName___nonzero__(SBBreakpointName self) -> bool"},
+    {"SBBreakpointName_IsValid", _wrap_SBBreakpointName_IsValid, METH_O,
+     "SBBreakpointName_IsValid(SBBreakpointName self) -> bool"},
+    {"SBBreakpointName_GetName", _wrap_SBBreakpointName_GetName, METH_O,
+     "SBBreakpointName_GetName(SBBreakpointName self) -> char const *"},
+    {"SBBreakpointName_SetEnabled", _wrap_SBBreakpointName_SetEnabled,
+     METH_VARARGS,
+     "SBBreakpointName_SetEnabled(SBBreakpointName self, bool enable)"},
+    {"SBBreakpointName_IsEnabled", _wrap_SBBreakpointName_IsEnabled, METH_O,
+     "SBBreakpointName_IsEnabled(SBBreakpointName self) -> bool"},
+    {"SBBreakpointName_SetOneShot", _wrap_SBBreakpointName_SetOneShot,
+     METH_VARARGS,
+     "SBBreakpointName_SetOneShot(SBBreakpointName self, bool one_shot)"},
+    {"SBBreakpointName_IsOneShot", _wrap_SBBreakpointName_IsOneShot, METH_O,
+     "SBBreakpointName_IsOneShot(SBBreakpointName self) -> bool"},
+    {"SBBreakpointName_SetIgnoreCount", _wrap_SBBreakpointName_SetIgnoreCount,
+     METH_VARARGS,
+     "SBBreakpointName_SetIgnoreCount(SBBreakpointName self, uint32_t count)"},
+    {"SBBreakpointName_GetIgnoreCount", _wrap_SBBreakpointName_GetIgnoreCount,
+     METH_O,
+     "SBBreakpointName_GetIgnoreCount(SBBreakpointName self) -> uint32_t"},
+    {"SBBreakpointName_SetCondition", _wrap_SBBreakpointName_SetCondition,
+     METH_VARARGS,
+     "SBBreakpointName_SetCondition(SBBreakpointName self, char const * "
+     "condition)"},
+    {"SBBreakpointName_GetCondition", _wrap_SBBreakpointName_GetCondition,
+     METH_O,
+     "SBBreakpointName_GetCondition(SBBreakpointName self) -> char const *"},
+    {"SBBreakpointName_SetAutoContinue", _wrap_SBBreakpointName_SetAutoContinue,
+     METH_VARARGS,
+     "SBBreakpointName_SetAutoContinue(SBBreakpointName self, bool "
+     "auto_continue)"},
+    {"SBBreakpointName_GetAutoContinue", _wrap_SBBreakpointName_GetAutoContinue,
+     METH_O, "SBBreakpointName_GetAutoContinue(SBBreakpointName self) -> bool"},
+    {"SBBreakpointName_SetThreadID", _wrap_SBBreakpointName_SetThreadID,
+     METH_VARARGS,
+     "SBBreakpointName_SetThreadID(SBBreakpointName self, lldb::tid_t "
+     "sb_thread_id)"},
+    {"SBBreakpointName_GetThreadID", _wrap_SBBreakpointName_GetThreadID, METH_O,
+     "SBBreakpointName_GetThreadID(SBBreakpointName self) -> lldb::tid_t"},
+    {"SBBreakpointName_SetThreadIndex", _wrap_SBBreakpointName_SetThreadIndex,
+     METH_VARARGS,
+     "SBBreakpointName_SetThreadIndex(SBBreakpointName self, uint32_t index)"},
+    {"SBBreakpointName_GetThreadIndex", _wrap_SBBreakpointName_GetThreadIndex,
+     METH_O,
+     "SBBreakpointName_GetThreadIndex(SBBreakpointName self) -> uint32_t"},
+    {"SBBreakpointName_SetThreadName", _wrap_SBBreakpointName_SetThreadName,
+     METH_VARARGS,
+     "SBBreakpointName_SetThreadName(SBBreakpointName self, char const * "
+     "thread_name)"},
+    {"SBBreakpointName_GetThreadName", _wrap_SBBreakpointName_GetThreadName,
+     METH_O,
+     "SBBreakpointName_GetThreadName(SBBreakpointName self) -> char const *"},
+    {"SBBreakpointName_SetQueueName", _wrap_SBBreakpointName_SetQueueName,
+     METH_VARARGS,
+     "SBBreakpointName_SetQueueName(SBBreakpointName self, char const * "
+     "queue_name)"},
+    {"SBBreakpointName_GetQueueName", _wrap_SBBreakpointName_GetQueueName,
+     METH_O,
+     "SBBreakpointName_GetQueueName(SBBreakpointName self) -> char const *"},
+    {"SBBreakpointName_SetScriptCallbackFunction",
+     _wrap_SBBreakpointName_SetScriptCallbackFunction, METH_VARARGS,
+     "\n"
+     "SBBreakpointName_SetScriptCallbackFunction(SBBreakpointName self, char "
+     "const * callback_function_name)\n"
+     "SBBreakpointName_SetScriptCallbackFunction(SBBreakpointName self, char "
+     "const * callback_function_name, SBStructuredData extra_args) -> SBError\n"
+     ""},
+    {"SBBreakpointName_SetCommandLineCommands",
+     _wrap_SBBreakpointName_SetCommandLineCommands, METH_VARARGS,
+     "SBBreakpointName_SetCommandLineCommands(SBBreakpointName self, "
+     "SBStringList commands)"},
+    {"SBBreakpointName_GetCommandLineCommands",
+     _wrap_SBBreakpointName_GetCommandLineCommands, METH_VARARGS,
+     "SBBreakpointName_GetCommandLineCommands(SBBreakpointName self, "
+     "SBStringList commands) -> bool"},
+    {"SBBreakpointName_SetScriptCallbackBody",
+     _wrap_SBBreakpointName_SetScriptCallbackBody, METH_VARARGS,
+     "SBBreakpointName_SetScriptCallbackBody(SBBreakpointName self, char const "
+     "* script_body_text) -> SBError"},
+    {"SBBreakpointName_GetHelpString", _wrap_SBBreakpointName_GetHelpString,
+     METH_O,
+     "SBBreakpointName_GetHelpString(SBBreakpointName self) -> char const *"},
+    {"SBBreakpointName_SetHelpString", _wrap_SBBreakpointName_SetHelpString,
+     METH_VARARGS,
+     "SBBreakpointName_SetHelpString(SBBreakpointName self, char const * "
+     "help_string)"},
+    {"SBBreakpointName_GetAllowList", _wrap_SBBreakpointName_GetAllowList,
+     METH_O, "SBBreakpointName_GetAllowList(SBBreakpointName self) -> bool"},
+    {"SBBreakpointName_SetAllowList", _wrap_SBBreakpointName_SetAllowList,
+     METH_VARARGS,
+     "SBBreakpointName_SetAllowList(SBBreakpointName self, bool value)"},
+    {"SBBreakpointName_GetAllowDelete", _wrap_SBBreakpointName_GetAllowDelete,
+     METH_O, "SBBreakpointName_GetAllowDelete(SBBreakpointName self) -> bool"},
+    {"SBBreakpointName_SetAllowDelete", _wrap_SBBreakpointName_SetAllowDelete,
+     METH_VARARGS,
+     "SBBreakpointName_SetAllowDelete(SBBreakpointName self, bool value)"},
+    {"SBBreakpointName_GetAllowDisable", _wrap_SBBreakpointName_GetAllowDisable,
+     METH_O, "SBBreakpointName_GetAllowDisable(SBBreakpointName self) -> bool"},
+    {"SBBreakpointName_SetAllowDisable", _wrap_SBBreakpointName_SetAllowDisable,
+     METH_VARARGS,
+     "SBBreakpointName_SetAllowDisable(SBBreakpointName self, bool value)"},
+    {"SBBreakpointName_GetDescription", _wrap_SBBreakpointName_GetDescription,
+     METH_VARARGS,
+     "SBBreakpointName_GetDescription(SBBreakpointName self, SBStream "
+     "description) -> bool"},
+    {"SBBreakpointName___repr__", _wrap_SBBreakpointName___repr__, METH_O,
+     "SBBreakpointName___repr__(SBBreakpointName self) -> std::string"},
+    {"SBBreakpointName_swigregister", SBBreakpointName_swigregister, METH_O,
+     NULL},
+    {"SBBreakpointName_swiginit", SBBreakpointName_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBBroadcaster", _wrap_new_SBBroadcaster, METH_VARARGS,
+     "\n"
+     "SBBroadcaster()\n"
+     "SBBroadcaster(char const * name)\n"
+     "new_SBBroadcaster(SBBroadcaster rhs) -> SBBroadcaster\n"
+     ""},
+    {"delete_SBBroadcaster", _wrap_delete_SBBroadcaster, METH_O,
+     "delete_SBBroadcaster(SBBroadcaster self)"},
+    {"SBBroadcaster___nonzero__", _wrap_SBBroadcaster___nonzero__, METH_O,
+     "SBBroadcaster___nonzero__(SBBroadcaster self) -> bool"},
+    {"SBBroadcaster_IsValid", _wrap_SBBroadcaster_IsValid, METH_O,
+     "SBBroadcaster_IsValid(SBBroadcaster self) -> bool"},
+    {"SBBroadcaster_Clear", _wrap_SBBroadcaster_Clear, METH_O,
+     "SBBroadcaster_Clear(SBBroadcaster self)"},
+    {"SBBroadcaster_BroadcastEventByType",
+     _wrap_SBBroadcaster_BroadcastEventByType, METH_VARARGS,
+     "SBBroadcaster_BroadcastEventByType(SBBroadcaster self, uint32_t "
+     "event_type, bool unique=False)"},
+    {"SBBroadcaster_BroadcastEvent", _wrap_SBBroadcaster_BroadcastEvent,
+     METH_VARARGS,
+     "SBBroadcaster_BroadcastEvent(SBBroadcaster self, SBEvent event, bool "
+     "unique=False)"},
+    {"SBBroadcaster_AddInitialEventsToListener",
+     _wrap_SBBroadcaster_AddInitialEventsToListener, METH_VARARGS,
+     "SBBroadcaster_AddInitialEventsToListener(SBBroadcaster self, SBListener "
+     "listener, uint32_t requested_events)"},
+    {"SBBroadcaster_AddListener", _wrap_SBBroadcaster_AddListener, METH_VARARGS,
+     "SBBroadcaster_AddListener(SBBroadcaster self, SBListener listener, "
+     "uint32_t event_mask) -> uint32_t"},
+    {"SBBroadcaster_GetName", _wrap_SBBroadcaster_GetName, METH_O,
+     "SBBroadcaster_GetName(SBBroadcaster self) -> char const *"},
+    {"SBBroadcaster_EventTypeHasListeners",
+     _wrap_SBBroadcaster_EventTypeHasListeners, METH_VARARGS,
+     "SBBroadcaster_EventTypeHasListeners(SBBroadcaster self, uint32_t "
+     "event_type) -> bool"},
+    {"SBBroadcaster_RemoveListener", _wrap_SBBroadcaster_RemoveListener,
+     METH_VARARGS,
+     "SBBroadcaster_RemoveListener(SBBroadcaster self, SBListener listener, "
+     "uint32_t event_mask=4294967295U) -> bool"},
+    {"SBBroadcaster___eq__", _wrap_SBBroadcaster___eq__, METH_VARARGS,
+     "SBBroadcaster___eq__(SBBroadcaster self, SBBroadcaster rhs) -> bool"},
+    {"SBBroadcaster___ne__", _wrap_SBBroadcaster___ne__, METH_VARARGS,
+     "SBBroadcaster___ne__(SBBroadcaster self, SBBroadcaster rhs) -> bool"},
+    {"SBBroadcaster___lt__", _wrap_SBBroadcaster___lt__, METH_VARARGS,
+     "SBBroadcaster___lt__(SBBroadcaster self, SBBroadcaster rhs) -> bool"},
+    {"SBBroadcaster_swigregister", SBBroadcaster_swigregister, METH_O, NULL},
+    {"SBBroadcaster_swiginit", SBBroadcaster_swiginit, METH_VARARGS, NULL},
+    {"new_SBCommandInterpreter", _wrap_new_SBCommandInterpreter, METH_VARARGS,
+     "\n"
+     "SBCommandInterpreter()\n"
+     "new_SBCommandInterpreter(SBCommandInterpreter rhs) -> "
+     "SBCommandInterpreter\n"
+     ""},
+    {"delete_SBCommandInterpreter", _wrap_delete_SBCommandInterpreter, METH_O,
+     "delete_SBCommandInterpreter(SBCommandInterpreter self)"},
+    {"SBCommandInterpreter_GetArgumentTypeAsCString",
+     _wrap_SBCommandInterpreter_GetArgumentTypeAsCString, METH_O,
+     "SBCommandInterpreter_GetArgumentTypeAsCString(lldb::CommandArgumentType "
+     "const arg_type) -> char const *"},
+    {"SBCommandInterpreter_GetArgumentDescriptionAsCString",
+     _wrap_SBCommandInterpreter_GetArgumentDescriptionAsCString, METH_O,
+     "SBCommandInterpreter_GetArgumentDescriptionAsCString(lldb::"
+     "CommandArgumentType const arg_type) -> char const *"},
+    {"SBCommandInterpreter_EventIsCommandInterpreterEvent",
+     _wrap_SBCommandInterpreter_EventIsCommandInterpreterEvent, METH_O,
+     "SBCommandInterpreter_EventIsCommandInterpreterEvent(SBEvent event) -> "
+     "bool"},
+    {"SBCommandInterpreter___nonzero__", _wrap_SBCommandInterpreter___nonzero__,
+     METH_O,
+     "SBCommandInterpreter___nonzero__(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_IsValid", _wrap_SBCommandInterpreter_IsValid, METH_O,
+     "SBCommandInterpreter_IsValid(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_CommandExists",
+     _wrap_SBCommandInterpreter_CommandExists, METH_VARARGS,
+     "SBCommandInterpreter_CommandExists(SBCommandInterpreter self, char const "
+     "* cmd) -> bool"},
+    {"SBCommandInterpreter_UserCommandExists",
+     _wrap_SBCommandInterpreter_UserCommandExists, METH_VARARGS,
+     "SBCommandInterpreter_UserCommandExists(SBCommandInterpreter self, char "
+     "const * cmd) -> bool"},
+    {"SBCommandInterpreter_AliasExists", _wrap_SBCommandInterpreter_AliasExists,
+     METH_VARARGS,
+     "SBCommandInterpreter_AliasExists(SBCommandInterpreter self, char const * "
+     "cmd) -> bool"},
+    {"SBCommandInterpreter_GetBroadcaster",
+     _wrap_SBCommandInterpreter_GetBroadcaster, METH_O,
+     "SBCommandInterpreter_GetBroadcaster(SBCommandInterpreter self) -> "
+     "SBBroadcaster"},
+    {"SBCommandInterpreter_GetBroadcasterClass",
+     _wrap_SBCommandInterpreter_GetBroadcasterClass, METH_NOARGS,
+     "SBCommandInterpreter_GetBroadcasterClass() -> char const *"},
+    {"SBCommandInterpreter_HasCommands", _wrap_SBCommandInterpreter_HasCommands,
+     METH_O,
+     "SBCommandInterpreter_HasCommands(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_HasAliases", _wrap_SBCommandInterpreter_HasAliases,
+     METH_O,
+     "SBCommandInterpreter_HasAliases(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_HasAliasOptions",
+     _wrap_SBCommandInterpreter_HasAliasOptions, METH_O,
+     "SBCommandInterpreter_HasAliasOptions(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_IsInteractive",
+     _wrap_SBCommandInterpreter_IsInteractive, METH_O,
+     "SBCommandInterpreter_IsInteractive(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_GetProcess", _wrap_SBCommandInterpreter_GetProcess,
+     METH_O,
+     "SBCommandInterpreter_GetProcess(SBCommandInterpreter self) -> SBProcess"},
+    {"SBCommandInterpreter_GetDebugger", _wrap_SBCommandInterpreter_GetDebugger,
+     METH_O,
+     "SBCommandInterpreter_GetDebugger(SBCommandInterpreter self) -> "
+     "SBDebugger"},
+    {"SBCommandInterpreter_SourceInitFileInHomeDirectory",
+     _wrap_SBCommandInterpreter_SourceInitFileInHomeDirectory, METH_VARARGS,
+     "\n"
+     "SBCommandInterpreter_SourceInitFileInHomeDirectory(SBCommandInterpreter "
+     "self, SBCommandReturnObject result)\n"
+     "SBCommandInterpreter_SourceInitFileInHomeDirectory(SBCommandInterpreter "
+     "self, SBCommandReturnObject result, bool is_repl)\n"
+     ""},
+    {"SBCommandInterpreter_SourceInitFileInCurrentWorkingDirectory",
+     _wrap_SBCommandInterpreter_SourceInitFileInCurrentWorkingDirectory,
+     METH_VARARGS,
+     "SBCommandInterpreter_SourceInitFileInCurrentWorkingDirectory("
+     "SBCommandInterpreter self, SBCommandReturnObject result)"},
+    {"SBCommandInterpreter_HandleCommand",
+     _wrap_SBCommandInterpreter_HandleCommand, METH_VARARGS,
+     "\n"
+     "SBCommandInterpreter_HandleCommand(SBCommandInterpreter self, char const "
+     "* command_line, SBCommandReturnObject result, bool add_to_history=False) "
+     "-> lldb::ReturnStatus\n"
+     "SBCommandInterpreter_HandleCommand(SBCommandInterpreter self, char const "
+     "* command_line, SBExecutionContext exe_ctx, SBCommandReturnObject "
+     "result, bool add_to_history=False) -> lldb::ReturnStatus\n"
+     ""},
+    {"SBCommandInterpreter_HandleCommandsFromFile",
+     _wrap_SBCommandInterpreter_HandleCommandsFromFile, METH_VARARGS,
+     "SBCommandInterpreter_HandleCommandsFromFile(SBCommandInterpreter self, "
+     "SBFileSpec file, SBExecutionContext override_context, "
+     "SBCommandInterpreterRunOptions options, SBCommandReturnObject result)"},
+    {"SBCommandInterpreter_HandleCompletion",
+     _wrap_SBCommandInterpreter_HandleCompletion, METH_VARARGS,
+     "SBCommandInterpreter_HandleCompletion(SBCommandInterpreter self, char "
+     "const * current_line, uint32_t cursor_pos, int match_start_point, int "
+     "max_return_elements, SBStringList matches) -> int"},
+    {"SBCommandInterpreter_HandleCompletionWithDescriptions",
+     _wrap_SBCommandInterpreter_HandleCompletionWithDescriptions, METH_VARARGS,
+     "SBCommandInterpreter_HandleCompletionWithDescriptions("
+     "SBCommandInterpreter self, char const * current_line, uint32_t "
+     "cursor_pos, int match_start_point, int max_return_elements, SBStringList "
+     "matches, SBStringList descriptions) -> int"},
+    {"SBCommandInterpreter_WasInterrupted",
+     _wrap_SBCommandInterpreter_WasInterrupted, METH_O,
+     "SBCommandInterpreter_WasInterrupted(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_InterruptCommand",
+     _wrap_SBCommandInterpreter_InterruptCommand, METH_O,
+     "SBCommandInterpreter_InterruptCommand(SBCommandInterpreter self) -> "
+     "bool"},
+    {"SBCommandInterpreter_SetCommandOverrideCallback",
+     _wrap_SBCommandInterpreter_SetCommandOverrideCallback, METH_VARARGS,
+     "SBCommandInterpreter_SetCommandOverrideCallback(SBCommandInterpreter "
+     "self, char const * command_name, lldb::CommandOverrideCallback callback) "
+     "-> bool"},
+    {"SBCommandInterpreter_IsActive", _wrap_SBCommandInterpreter_IsActive,
+     METH_O,
+     "SBCommandInterpreter_IsActive(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_GetIOHandlerControlSequence",
+     _wrap_SBCommandInterpreter_GetIOHandlerControlSequence, METH_VARARGS,
+     "SBCommandInterpreter_GetIOHandlerControlSequence(SBCommandInterpreter "
+     "self, char ch) -> char const *"},
+    {"SBCommandInterpreter_GetPromptOnQuit",
+     _wrap_SBCommandInterpreter_GetPromptOnQuit, METH_O,
+     "SBCommandInterpreter_GetPromptOnQuit(SBCommandInterpreter self) -> bool"},
+    {"SBCommandInterpreter_SetPromptOnQuit",
+     _wrap_SBCommandInterpreter_SetPromptOnQuit, METH_VARARGS,
+     "SBCommandInterpreter_SetPromptOnQuit(SBCommandInterpreter self, bool b)"},
+    {"SBCommandInterpreter_AllowExitCodeOnQuit",
+     _wrap_SBCommandInterpreter_AllowExitCodeOnQuit, METH_VARARGS,
+     "SBCommandInterpreter_AllowExitCodeOnQuit(SBCommandInterpreter self, bool "
+     "allow)"},
+    {"SBCommandInterpreter_HasCustomQuitExitCode",
+     _wrap_SBCommandInterpreter_HasCustomQuitExitCode, METH_O,
+     "SBCommandInterpreter_HasCustomQuitExitCode(SBCommandInterpreter self) -> "
+     "bool"},
+    {"SBCommandInterpreter_GetQuitStatus",
+     _wrap_SBCommandInterpreter_GetQuitStatus, METH_O,
+     "SBCommandInterpreter_GetQuitStatus(SBCommandInterpreter self) -> int"},
+    {"SBCommandInterpreter_ResolveCommand",
+     _wrap_SBCommandInterpreter_ResolveCommand, METH_VARARGS,
+     "SBCommandInterpreter_ResolveCommand(SBCommandInterpreter self, char "
+     "const * command_line, SBCommandReturnObject result)"},
+    {"SBCommandInterpreter_GetStatistics",
+     _wrap_SBCommandInterpreter_GetStatistics, METH_O,
+     "SBCommandInterpreter_GetStatistics(SBCommandInterpreter self) -> "
+     "SBStructuredData"},
+    {"SBCommandInterpreter_GetTranscript",
+     _wrap_SBCommandInterpreter_GetTranscript, METH_O,
+     "SBCommandInterpreter_GetTranscript(SBCommandInterpreter self) -> "
+     "SBStructuredData"},
+    {"SBCommandInterpreter_swigregister", SBCommandInterpreter_swigregister,
+     METH_O, NULL},
+    {"SBCommandInterpreter_swiginit", SBCommandInterpreter_swiginit,
+     METH_VARARGS, NULL},
+    {"new_SBCommandInterpreterRunOptions",
+     _wrap_new_SBCommandInterpreterRunOptions, METH_VARARGS,
+     "\n"
+     "SBCommandInterpreterRunOptions()\n"
+     "new_SBCommandInterpreterRunOptions(SBCommandInterpreterRunOptions rhs) "
+     "-> SBCommandInterpreterRunOptions\n"
+     ""},
+    {"delete_SBCommandInterpreterRunOptions",
+     _wrap_delete_SBCommandInterpreterRunOptions, METH_O,
+     "delete_SBCommandInterpreterRunOptions(SBCommandInterpreterRunOptions "
+     "self)"},
+    {"SBCommandInterpreterRunOptions_GetStopOnContinue",
+     _wrap_SBCommandInterpreterRunOptions_GetStopOnContinue, METH_O,
+     "SBCommandInterpreterRunOptions_GetStopOnContinue("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetStopOnContinue",
+     _wrap_SBCommandInterpreterRunOptions_SetStopOnContinue, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetStopOnContinue("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetStopOnError",
+     _wrap_SBCommandInterpreterRunOptions_GetStopOnError, METH_O,
+     "SBCommandInterpreterRunOptions_GetStopOnError("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetStopOnError",
+     _wrap_SBCommandInterpreterRunOptions_SetStopOnError, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetStopOnError("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetStopOnCrash",
+     _wrap_SBCommandInterpreterRunOptions_GetStopOnCrash, METH_O,
+     "SBCommandInterpreterRunOptions_GetStopOnCrash("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetStopOnCrash",
+     _wrap_SBCommandInterpreterRunOptions_SetStopOnCrash, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetStopOnCrash("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetEchoCommands",
+     _wrap_SBCommandInterpreterRunOptions_GetEchoCommands, METH_O,
+     "SBCommandInterpreterRunOptions_GetEchoCommands("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetEchoCommands",
+     _wrap_SBCommandInterpreterRunOptions_SetEchoCommands, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetEchoCommands("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetEchoCommentCommands",
+     _wrap_SBCommandInterpreterRunOptions_GetEchoCommentCommands, METH_O,
+     "SBCommandInterpreterRunOptions_GetEchoCommentCommands("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetEchoCommentCommands",
+     _wrap_SBCommandInterpreterRunOptions_SetEchoCommentCommands, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetEchoCommentCommands("
+     "SBCommandInterpreterRunOptions self, bool echo)"},
+    {"SBCommandInterpreterRunOptions_GetPrintResults",
+     _wrap_SBCommandInterpreterRunOptions_GetPrintResults, METH_O,
+     "SBCommandInterpreterRunOptions_GetPrintResults("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetPrintResults",
+     _wrap_SBCommandInterpreterRunOptions_SetPrintResults, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetPrintResults("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetPrintErrors",
+     _wrap_SBCommandInterpreterRunOptions_GetPrintErrors, METH_O,
+     "SBCommandInterpreterRunOptions_GetPrintErrors("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetPrintErrors",
+     _wrap_SBCommandInterpreterRunOptions_SetPrintErrors, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetPrintErrors("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetAddToHistory",
+     _wrap_SBCommandInterpreterRunOptions_GetAddToHistory, METH_O,
+     "SBCommandInterpreterRunOptions_GetAddToHistory("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetAddToHistory",
+     _wrap_SBCommandInterpreterRunOptions_SetAddToHistory, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetAddToHistory("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetAutoHandleEvents",
+     _wrap_SBCommandInterpreterRunOptions_GetAutoHandleEvents, METH_O,
+     "SBCommandInterpreterRunOptions_GetAutoHandleEvents("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetAutoHandleEvents",
+     _wrap_SBCommandInterpreterRunOptions_SetAutoHandleEvents, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetAutoHandleEvents("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetSpawnThread",
+     _wrap_SBCommandInterpreterRunOptions_GetSpawnThread, METH_O,
+     "SBCommandInterpreterRunOptions_GetSpawnThread("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetSpawnThread",
+     _wrap_SBCommandInterpreterRunOptions_SetSpawnThread, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetSpawnThread("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_GetAllowRepeats",
+     _wrap_SBCommandInterpreterRunOptions_GetAllowRepeats, METH_O,
+     "SBCommandInterpreterRunOptions_GetAllowRepeats("
+     "SBCommandInterpreterRunOptions self) -> bool"},
+    {"SBCommandInterpreterRunOptions_SetAllowRepeats",
+     _wrap_SBCommandInterpreterRunOptions_SetAllowRepeats, METH_VARARGS,
+     "SBCommandInterpreterRunOptions_SetAllowRepeats("
+     "SBCommandInterpreterRunOptions self, bool arg2)"},
+    {"SBCommandInterpreterRunOptions_swigregister",
+     SBCommandInterpreterRunOptions_swigregister, METH_O, NULL},
+    {"SBCommandInterpreterRunOptions_swiginit",
+     SBCommandInterpreterRunOptions_swiginit, METH_VARARGS, NULL},
+    {"new_SBCommandReturnObject", _wrap_new_SBCommandReturnObject, METH_VARARGS,
+     "\n"
+     "SBCommandReturnObject()\n"
+     "new_SBCommandReturnObject(SBCommandReturnObject rhs) -> "
+     "SBCommandReturnObject\n"
+     ""},
+    {"delete_SBCommandReturnObject", _wrap_delete_SBCommandReturnObject, METH_O,
+     "delete_SBCommandReturnObject(SBCommandReturnObject self)"},
+    {"SBCommandReturnObject___nonzero__",
+     _wrap_SBCommandReturnObject___nonzero__, METH_O,
+     "SBCommandReturnObject___nonzero__(SBCommandReturnObject self) -> bool"},
+    {"SBCommandReturnObject_IsValid", _wrap_SBCommandReturnObject_IsValid,
+     METH_O,
+     "SBCommandReturnObject_IsValid(SBCommandReturnObject self) -> bool"},
+    {"SBCommandReturnObject_PutOutput", _wrap_SBCommandReturnObject_PutOutput,
+     METH_VARARGS,
+     "\n"
+     "SBCommandReturnObject_PutOutput(SBCommandReturnObject self, SBFile file) "
+     "-> size_t\n"
+     "SBCommandReturnObject_PutOutput(SBCommandReturnObject self, lldb::FileSP "
+     "BORROWED) -> size_t\n"
+     ""},
+    {"SBCommandReturnObject_GetOutputSize",
+     _wrap_SBCommandReturnObject_GetOutputSize, METH_O,
+     "SBCommandReturnObject_GetOutputSize(SBCommandReturnObject self) -> "
+     "size_t"},
+    {"SBCommandReturnObject_GetErrorSize",
+     _wrap_SBCommandReturnObject_GetErrorSize, METH_O,
+     "SBCommandReturnObject_GetErrorSize(SBCommandReturnObject self) -> "
+     "size_t"},
+    {"SBCommandReturnObject_PutError", _wrap_SBCommandReturnObject_PutError,
+     METH_VARARGS,
+     "\n"
+     "SBCommandReturnObject_PutError(SBCommandReturnObject self, SBFile file) "
+     "-> size_t\n"
+     "SBCommandReturnObject_PutError(SBCommandReturnObject self, lldb::FileSP "
+     "BORROWED) -> size_t\n"
+     ""},
+    {"SBCommandReturnObject_Clear", _wrap_SBCommandReturnObject_Clear, METH_O,
+     "SBCommandReturnObject_Clear(SBCommandReturnObject self)"},
+    {"SBCommandReturnObject_GetStatus", _wrap_SBCommandReturnObject_GetStatus,
+     METH_O,
+     "SBCommandReturnObject_GetStatus(SBCommandReturnObject self) -> "
+     "lldb::ReturnStatus"},
+    {"SBCommandReturnObject_SetStatus", _wrap_SBCommandReturnObject_SetStatus,
+     METH_VARARGS,
+     "SBCommandReturnObject_SetStatus(SBCommandReturnObject self, "
+     "lldb::ReturnStatus status)"},
+    {"SBCommandReturnObject_Succeeded", _wrap_SBCommandReturnObject_Succeeded,
+     METH_O,
+     "SBCommandReturnObject_Succeeded(SBCommandReturnObject self) -> bool"},
+    {"SBCommandReturnObject_HasResult", _wrap_SBCommandReturnObject_HasResult,
+     METH_O,
+     "SBCommandReturnObject_HasResult(SBCommandReturnObject self) -> bool"},
+    {"SBCommandReturnObject_AppendMessage",
+     _wrap_SBCommandReturnObject_AppendMessage, METH_VARARGS,
+     "SBCommandReturnObject_AppendMessage(SBCommandReturnObject self, char "
+     "const * message)"},
+    {"SBCommandReturnObject_AppendWarning",
+     _wrap_SBCommandReturnObject_AppendWarning, METH_VARARGS,
+     "SBCommandReturnObject_AppendWarning(SBCommandReturnObject self, char "
+     "const * message)"},
+    {"SBCommandReturnObject_GetDescription",
+     _wrap_SBCommandReturnObject_GetDescription, METH_VARARGS,
+     "SBCommandReturnObject_GetDescription(SBCommandReturnObject self, "
+     "SBStream description) -> bool"},
+    {"SBCommandReturnObject_PutCString", _wrap_SBCommandReturnObject_PutCString,
+     METH_VARARGS,
+     "SBCommandReturnObject_PutCString(SBCommandReturnObject self, char const "
+     "* string)"},
+    {"SBCommandReturnObject_GetOutput", _wrap_SBCommandReturnObject_GetOutput,
+     METH_VARARGS,
+     "\n"
+     "SBCommandReturnObject_GetOutput(SBCommandReturnObject self) -> char "
+     "const\n"
+     "SBCommandReturnObject_GetOutput(SBCommandReturnObject self, bool "
+     "only_if_no_immediate) -> char const *\n"
+     ""},
+    {"SBCommandReturnObject_GetError", _wrap_SBCommandReturnObject_GetError,
+     METH_VARARGS,
+     "\n"
+     "SBCommandReturnObject_GetError(SBCommandReturnObject self) -> char "
+     "const\n"
+     "SBCommandReturnObject_GetError(SBCommandReturnObject self, bool "
+     "only_if_no_immediate) -> char const *\n"
+     ""},
+    {"SBCommandReturnObject_SetError", _wrap_SBCommandReturnObject_SetError,
+     METH_VARARGS,
+     "\n"
+     "SBCommandReturnObject_SetError(SBCommandReturnObject self, SBError "
+     "error, char const * fallback_error_cstr=None)\n"
+     "SBCommandReturnObject_SetError(SBCommandReturnObject self, char const * "
+     "error_cstr)\n"
+     ""},
+    {"SBCommandReturnObject___repr__", _wrap_SBCommandReturnObject___repr__,
+     METH_O,
+     "SBCommandReturnObject___repr__(SBCommandReturnObject self) -> "
+     "std::string"},
+    {"SBCommandReturnObject_SetImmediateOutputFile",
+     _wrap_SBCommandReturnObject_SetImmediateOutputFile, METH_VARARGS,
+     "\n"
+     "SBCommandReturnObject_SetImmediateOutputFile(SBCommandReturnObject self, "
+     "SBFile file)\n"
+     "SBCommandReturnObject_SetImmediateOutputFile(SBCommandReturnObject self, "
+     "lldb::FileSP BORROWED)\n"
+     "SBCommandReturnObject_SetImmediateOutputFile(SBCommandReturnObject self, "
+     "lldb::FileSP BORROWED, bool transfer_ownership)\n"
+     ""},
+    {"SBCommandReturnObject_SetImmediateErrorFile",
+     _wrap_SBCommandReturnObject_SetImmediateErrorFile, METH_VARARGS,
+     "\n"
+     "SBCommandReturnObject_SetImmediateErrorFile(SBCommandReturnObject self, "
+     "SBFile file)\n"
+     "SBCommandReturnObject_SetImmediateErrorFile(SBCommandReturnObject self, "
+     "lldb::FileSP BORROWED)\n"
+     "SBCommandReturnObject_SetImmediateErrorFile(SBCommandReturnObject self, "
+     "lldb::FileSP BORROWED, bool transfer_ownership)\n"
+     ""},
+    {"SBCommandReturnObject_Print", _wrap_SBCommandReturnObject_Print,
+     METH_VARARGS,
+     "SBCommandReturnObject_Print(SBCommandReturnObject self, char const * "
+     "str)"},
+    {"SBCommandReturnObject_write", _wrap_SBCommandReturnObject_write,
+     METH_VARARGS,
+     "SBCommandReturnObject_write(SBCommandReturnObject self, char const * "
+     "str)"},
+    {"SBCommandReturnObject_flush", _wrap_SBCommandReturnObject_flush, METH_O,
+     "SBCommandReturnObject_flush(SBCommandReturnObject self)"},
+    {"SBCommandReturnObject_swigregister", SBCommandReturnObject_swigregister,
+     METH_O, NULL},
+    {"SBCommandReturnObject_swiginit", SBCommandReturnObject_swiginit,
+     METH_VARARGS, NULL},
+    {"new_SBCommunication", _wrap_new_SBCommunication, METH_VARARGS,
+     "\n"
+     "SBCommunication()\n"
+     "new_SBCommunication(char const * broadcaster_name) -> SBCommunication\n"
+     ""},
+    {"delete_SBCommunication", _wrap_delete_SBCommunication, METH_O,
+     "delete_SBCommunication(SBCommunication self)"},
+    {"SBCommunication___nonzero__", _wrap_SBCommunication___nonzero__, METH_O,
+     "SBCommunication___nonzero__(SBCommunication self) -> bool"},
+    {"SBCommunication_IsValid", _wrap_SBCommunication_IsValid, METH_O,
+     "SBCommunication_IsValid(SBCommunication self) -> bool"},
+    {"SBCommunication_GetBroadcaster", _wrap_SBCommunication_GetBroadcaster,
+     METH_O,
+     "SBCommunication_GetBroadcaster(SBCommunication self) -> SBBroadcaster"},
+    {"SBCommunication_GetBroadcasterClass",
+     _wrap_SBCommunication_GetBroadcasterClass, METH_NOARGS,
+     "SBCommunication_GetBroadcasterClass() -> char const *"},
+    {"SBCommunication_AdoptFileDesriptor",
+     _wrap_SBCommunication_AdoptFileDesriptor, METH_VARARGS,
+     "SBCommunication_AdoptFileDesriptor(SBCommunication self, int fd, bool "
+     "owns_fd) -> lldb::ConnectionStatus"},
+    {"SBCommunication_Connect", _wrap_SBCommunication_Connect, METH_VARARGS,
+     "SBCommunication_Connect(SBCommunication self, char const * url) -> "
+     "lldb::ConnectionStatus"},
+    {"SBCommunication_Disconnect", _wrap_SBCommunication_Disconnect, METH_O,
+     "SBCommunication_Disconnect(SBCommunication self) -> "
+     "lldb::ConnectionStatus"},
+    {"SBCommunication_IsConnected", _wrap_SBCommunication_IsConnected, METH_O,
+     "SBCommunication_IsConnected(SBCommunication self) -> bool"},
+    {"SBCommunication_GetCloseOnEOF", _wrap_SBCommunication_GetCloseOnEOF,
+     METH_O, "SBCommunication_GetCloseOnEOF(SBCommunication self) -> bool"},
+    {"SBCommunication_SetCloseOnEOF", _wrap_SBCommunication_SetCloseOnEOF,
+     METH_VARARGS,
+     "SBCommunication_SetCloseOnEOF(SBCommunication self, bool b)"},
+    {"SBCommunication_Read", _wrap_SBCommunication_Read, METH_VARARGS,
+     "SBCommunication_Read(SBCommunication self, void * dst, size_t dst_len, "
+     "uint32_t timeout_usec, lldb::ConnectionStatus & status) -> size_t"},
+    {"SBCommunication_Write", _wrap_SBCommunication_Write, METH_VARARGS,
+     "SBCommunication_Write(SBCommunication self, void const * src, size_t "
+     "src_len, lldb::ConnectionStatus & status) -> size_t"},
+    {"SBCommunication_ReadThreadStart", _wrap_SBCommunication_ReadThreadStart,
+     METH_O, "SBCommunication_ReadThreadStart(SBCommunication self) -> bool"},
+    {"SBCommunication_ReadThreadStop", _wrap_SBCommunication_ReadThreadStop,
+     METH_O, "SBCommunication_ReadThreadStop(SBCommunication self) -> bool"},
+    {"SBCommunication_ReadThreadIsRunning",
+     _wrap_SBCommunication_ReadThreadIsRunning, METH_O,
+     "SBCommunication_ReadThreadIsRunning(SBCommunication self) -> bool"},
+    {"SBCommunication_SetReadThreadBytesReceivedCallback",
+     _wrap_SBCommunication_SetReadThreadBytesReceivedCallback, METH_VARARGS,
+     "SBCommunication_SetReadThreadBytesReceivedCallback(SBCommunication self, "
+     "lldb::SBCommunication::ReadThreadBytesReceived callback, void * "
+     "callback_baton) -> bool"},
+    {"SBCommunication_swigregister", SBCommunication_swigregister, METH_O,
+     NULL},
+    {"SBCommunication_swiginit", SBCommunication_swiginit, METH_VARARGS, NULL},
+    {"new_SBCompileUnit", _wrap_new_SBCompileUnit, METH_VARARGS,
+     "\n"
+     "SBCompileUnit()\n"
+     "new_SBCompileUnit(SBCompileUnit rhs) -> SBCompileUnit\n"
+     ""},
+    {"delete_SBCompileUnit", _wrap_delete_SBCompileUnit, METH_O,
+     "delete_SBCompileUnit(SBCompileUnit self)"},
+    {"SBCompileUnit___nonzero__", _wrap_SBCompileUnit___nonzero__, METH_O,
+     "SBCompileUnit___nonzero__(SBCompileUnit self) -> bool"},
+    {"SBCompileUnit_IsValid", _wrap_SBCompileUnit_IsValid, METH_O,
+     "SBCompileUnit_IsValid(SBCompileUnit self) -> bool"},
+    {"SBCompileUnit_GetFileSpec", _wrap_SBCompileUnit_GetFileSpec, METH_O,
+     "SBCompileUnit_GetFileSpec(SBCompileUnit self) -> SBFileSpec"},
+    {"SBCompileUnit_GetNumLineEntries", _wrap_SBCompileUnit_GetNumLineEntries,
+     METH_O, "SBCompileUnit_GetNumLineEntries(SBCompileUnit self) -> uint32_t"},
+    {"SBCompileUnit_GetLineEntryAtIndex",
+     _wrap_SBCompileUnit_GetLineEntryAtIndex, METH_VARARGS,
+     "SBCompileUnit_GetLineEntryAtIndex(SBCompileUnit self, uint32_t idx) -> "
+     "SBLineEntry"},
+    {"SBCompileUnit_FindLineEntryIndex", _wrap_SBCompileUnit_FindLineEntryIndex,
+     METH_VARARGS,
+     "\n"
+     "SBCompileUnit_FindLineEntryIndex(SBCompileUnit self, SBLineEntry "
+     "line_entry, bool exact=False) -> uint32_t\n"
+     "SBCompileUnit_FindLineEntryIndex(SBCompileUnit self, uint32_t start_idx, "
+     "uint32_t line, SBFileSpec inline_file_spec) -> uint32_t\n"
+     "SBCompileUnit_FindLineEntryIndex(SBCompileUnit self, uint32_t start_idx, "
+     "uint32_t line, SBFileSpec inline_file_spec, bool exact) -> uint32_t\n"
+     "\n"
+     "     Get the index for a provided line entry in this compile unit.\n"
+     "\n"
+     "     @param[in] line_entry\n"
+     "        The SBLineEntry object for which we are looking for the index.\n"
+     "\n"
+     "     @param[in] exact\n"
+     "        An optional boolean defaulting to false that ensures that the "
+     "provided\n"
+     "        line entry has a perfect match in the compile unit.\n"
+     "\n"
+     "     @return\n"
+     "        The index of the user-provided line entry. UINT32_MAX if the "
+     "line entry\n"
+     "        was not found in the compile unit.\n"
+     ""},
+    {"SBCompileUnit_GetSupportFileAtIndex",
+     _wrap_SBCompileUnit_GetSupportFileAtIndex, METH_VARARGS,
+     "SBCompileUnit_GetSupportFileAtIndex(SBCompileUnit self, uint32_t idx) -> "
+     "SBFileSpec"},
+    {"SBCompileUnit_GetNumSupportFiles", _wrap_SBCompileUnit_GetNumSupportFiles,
+     METH_O,
+     "SBCompileUnit_GetNumSupportFiles(SBCompileUnit self) -> uint32_t"},
+    {"SBCompileUnit_FindSupportFileIndex",
+     _wrap_SBCompileUnit_FindSupportFileIndex, METH_VARARGS,
+     "SBCompileUnit_FindSupportFileIndex(SBCompileUnit self, uint32_t "
+     "start_idx, SBFileSpec sb_file, bool full) -> uint32_t"},
+    {"SBCompileUnit_GetTypes", _wrap_SBCompileUnit_GetTypes, METH_VARARGS,
+     "\n"
+     "SBCompileUnit_GetTypes(SBCompileUnit self, uint32_t "
+     "type_mask=eTypeClassAny) -> SBTypeList\n"
+     "\n"
+     "     Get all types matching type_mask from debug info in this\n"
+     "     compile unit.\n"
+     "\n"
+     "     @param[in] type_mask\n"
+     "        A bitfield that consists of one or more bits logically OR'ed\n"
+     "        together from the lldb::TypeClass enumeration. This allows\n"
+     "        you to request only structure types, or only class, struct\n"
+     "        and union types. Passing in lldb::eTypeClassAny will return\n"
+     "        all types found in the debug information for this compile\n"
+     "        unit.\n"
+     "\n"
+     "     @return\n"
+     "        A list of types in this compile unit that match type_mask\n"
+     ""},
+    {"SBCompileUnit_GetLanguage", _wrap_SBCompileUnit_GetLanguage, METH_O,
+     "SBCompileUnit_GetLanguage(SBCompileUnit self) -> lldb::LanguageType"},
+    {"SBCompileUnit___eq__", _wrap_SBCompileUnit___eq__, METH_VARARGS,
+     "SBCompileUnit___eq__(SBCompileUnit self, SBCompileUnit rhs) -> bool"},
+    {"SBCompileUnit___ne__", _wrap_SBCompileUnit___ne__, METH_VARARGS,
+     "SBCompileUnit___ne__(SBCompileUnit self, SBCompileUnit rhs) -> bool"},
+    {"SBCompileUnit_GetDescription", _wrap_SBCompileUnit_GetDescription,
+     METH_VARARGS,
+     "SBCompileUnit_GetDescription(SBCompileUnit self, SBStream description) "
+     "-> bool"},
+    {"SBCompileUnit___repr__", _wrap_SBCompileUnit___repr__, METH_O,
+     "SBCompileUnit___repr__(SBCompileUnit self) -> std::string"},
+    {"SBCompileUnit_swigregister", SBCompileUnit_swigregister, METH_O, NULL},
+    {"SBCompileUnit_swiginit", SBCompileUnit_swiginit, METH_VARARGS, NULL},
+    {"new_SBSaveCoreOptions", _wrap_new_SBSaveCoreOptions, METH_VARARGS,
+     "\n"
+     "SBSaveCoreOptions()\n"
+     "new_SBSaveCoreOptions(SBSaveCoreOptions rhs) -> SBSaveCoreOptions\n"
+     ""},
+    {"delete_SBSaveCoreOptions", _wrap_delete_SBSaveCoreOptions, METH_O,
+     "delete_SBSaveCoreOptions(SBSaveCoreOptions self)"},
+    {"SBSaveCoreOptions_SetPluginName", _wrap_SBSaveCoreOptions_SetPluginName,
+     METH_VARARGS,
+     "SBSaveCoreOptions_SetPluginName(SBSaveCoreOptions self, char const * "
+     "plugin) -> SBError"},
+    {"SBSaveCoreOptions_GetPluginName", _wrap_SBSaveCoreOptions_GetPluginName,
+     METH_O,
+     "SBSaveCoreOptions_GetPluginName(SBSaveCoreOptions self) -> char const *"},
+    {"SBSaveCoreOptions_SetStyle", _wrap_SBSaveCoreOptions_SetStyle,
+     METH_VARARGS,
+     "SBSaveCoreOptions_SetStyle(SBSaveCoreOptions self, lldb::SaveCoreStyle "
+     "style)"},
+    {"SBSaveCoreOptions_GetStyle", _wrap_SBSaveCoreOptions_GetStyle, METH_O,
+     "SBSaveCoreOptions_GetStyle(SBSaveCoreOptions self) -> "
+     "lldb::SaveCoreStyle"},
+    {"SBSaveCoreOptions_SetOutputFile", _wrap_SBSaveCoreOptions_SetOutputFile,
+     METH_VARARGS,
+     "SBSaveCoreOptions_SetOutputFile(SBSaveCoreOptions self, SBFileSpec "
+     "output_file)"},
+    {"SBSaveCoreOptions_GetOutputFile", _wrap_SBSaveCoreOptions_GetOutputFile,
+     METH_O,
+     "SBSaveCoreOptions_GetOutputFile(SBSaveCoreOptions self) -> SBFileSpec"},
+    {"SBSaveCoreOptions_SetProcess", _wrap_SBSaveCoreOptions_SetProcess,
+     METH_VARARGS,
+     "SBSaveCoreOptions_SetProcess(SBSaveCoreOptions self, SBProcess process) "
+     "-> SBError"},
+    {"SBSaveCoreOptions_AddThread", _wrap_SBSaveCoreOptions_AddThread,
+     METH_VARARGS,
+     "SBSaveCoreOptions_AddThread(SBSaveCoreOptions self, SBThread thread) -> "
+     "SBError"},
+    {"SBSaveCoreOptions_RemoveThread", _wrap_SBSaveCoreOptions_RemoveThread,
+     METH_VARARGS,
+     "SBSaveCoreOptions_RemoveThread(SBSaveCoreOptions self, SBThread thread) "
+     "-> bool"},
+    {"SBSaveCoreOptions_AddMemoryRegionToSave",
+     _wrap_SBSaveCoreOptions_AddMemoryRegionToSave, METH_VARARGS,
+     "SBSaveCoreOptions_AddMemoryRegionToSave(SBSaveCoreOptions self, "
+     "SBMemoryRegionInfo region) -> SBError"},
+    {"SBSaveCoreOptions_Clear", _wrap_SBSaveCoreOptions_Clear, METH_O,
+     "SBSaveCoreOptions_Clear(SBSaveCoreOptions self)"},
+    {"SBSaveCoreOptions_swigregister", SBSaveCoreOptions_swigregister, METH_O,
+     NULL},
+    {"SBSaveCoreOptions_swiginit", SBSaveCoreOptions_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBData", _wrap_new_SBData, METH_VARARGS,
+     "\n"
+     "SBData()\n"
+     "new_SBData(SBData rhs) -> SBData\n"
+     ""},
+    {"delete_SBData", _wrap_delete_SBData, METH_O,
+     "delete_SBData(SBData self)"},
+    {"SBData_GetAddressByteSize", _wrap_SBData_GetAddressByteSize, METH_O,
+     "SBData_GetAddressByteSize(SBData self) -> uint8_t"},
+    {"SBData_SetAddressByteSize", _wrap_SBData_SetAddressByteSize, METH_VARARGS,
+     "SBData_SetAddressByteSize(SBData self, uint8_t addr_byte_size)"},
+    {"SBData_Clear", _wrap_SBData_Clear, METH_O, "SBData_Clear(SBData self)"},
+    {"SBData___nonzero__", _wrap_SBData___nonzero__, METH_O,
+     "SBData___nonzero__(SBData self) -> bool"},
+    {"SBData_IsValid", _wrap_SBData_IsValid, METH_O,
+     "SBData_IsValid(SBData self) -> bool"},
+    {"SBData_GetByteSize", _wrap_SBData_GetByteSize, METH_O,
+     "SBData_GetByteSize(SBData self) -> size_t"},
+    {"SBData_GetByteOrder", _wrap_SBData_GetByteOrder, METH_O,
+     "SBData_GetByteOrder(SBData self) -> lldb::ByteOrder"},
+    {"SBData_SetByteOrder", _wrap_SBData_SetByteOrder, METH_VARARGS,
+     "SBData_SetByteOrder(SBData self, lldb::ByteOrder endian)"},
+    {"SBData_GetFloat", _wrap_SBData_GetFloat, METH_VARARGS,
+     "SBData_GetFloat(SBData self, SBError error, lldb::offset_t offset) -> "
+     "float"},
+    {"SBData_GetDouble", _wrap_SBData_GetDouble, METH_VARARGS,
+     "SBData_GetDouble(SBData self, SBError error, lldb::offset_t offset) -> "
+     "double"},
+    {"SBData_GetLongDouble", _wrap_SBData_GetLongDouble, METH_VARARGS,
+     "SBData_GetLongDouble(SBData self, SBError error, lldb::offset_t offset) "
+     "-> long double"},
+    {"SBData_GetAddress", _wrap_SBData_GetAddress, METH_VARARGS,
+     "SBData_GetAddress(SBData self, SBError error, lldb::offset_t offset) -> "
+     "lldb::addr_t"},
+    {"SBData_GetUnsignedInt8", _wrap_SBData_GetUnsignedInt8, METH_VARARGS,
+     "SBData_GetUnsignedInt8(SBData self, SBError error, lldb::offset_t "
+     "offset) -> uint8_t"},
+    {"SBData_GetUnsignedInt16", _wrap_SBData_GetUnsignedInt16, METH_VARARGS,
+     "SBData_GetUnsignedInt16(SBData self, SBError error, lldb::offset_t "
+     "offset) -> uint16_t"},
+    {"SBData_GetUnsignedInt32", _wrap_SBData_GetUnsignedInt32, METH_VARARGS,
+     "SBData_GetUnsignedInt32(SBData self, SBError error, lldb::offset_t "
+     "offset) -> uint32_t"},
+    {"SBData_GetUnsignedInt64", _wrap_SBData_GetUnsignedInt64, METH_VARARGS,
+     "SBData_GetUnsignedInt64(SBData self, SBError error, lldb::offset_t "
+     "offset) -> uint64_t"},
+    {"SBData_GetSignedInt8", _wrap_SBData_GetSignedInt8, METH_VARARGS,
+     "SBData_GetSignedInt8(SBData self, SBError error, lldb::offset_t offset) "
+     "-> int8_t"},
+    {"SBData_GetSignedInt16", _wrap_SBData_GetSignedInt16, METH_VARARGS,
+     "SBData_GetSignedInt16(SBData self, SBError error, lldb::offset_t offset) "
+     "-> int16_t"},
+    {"SBData_GetSignedInt32", _wrap_SBData_GetSignedInt32, METH_VARARGS,
+     "SBData_GetSignedInt32(SBData self, SBError error, lldb::offset_t offset) "
+     "-> int32_t"},
+    {"SBData_GetSignedInt64", _wrap_SBData_GetSignedInt64, METH_VARARGS,
+     "SBData_GetSignedInt64(SBData self, SBError error, lldb::offset_t offset) "
+     "-> int64_t"},
+    {"SBData_GetString", _wrap_SBData_GetString, METH_VARARGS,
+     "SBData_GetString(SBData self, SBError error, lldb::offset_t offset) -> "
+     "char const *"},
+    {"SBData_ReadRawData", _wrap_SBData_ReadRawData, METH_VARARGS,
+     "SBData_ReadRawData(SBData self, SBError error, lldb::offset_t offset, "
+     "void * buf) -> size_t"},
+    {"SBData_GetDescription", _wrap_SBData_GetDescription, METH_VARARGS,
+     "SBData_GetDescription(SBData self, SBStream description, lldb::addr_t "
+     "base_addr=18446744073709551615ULL) -> bool"},
+    {"SBData_SetData", _wrap_SBData_SetData, METH_VARARGS,
+     "SBData_SetData(SBData self, SBError error, void const * buf, "
+     "lldb::ByteOrder endian, uint8_t addr_size)"},
+    {"SBData_SetDataWithOwnership", _wrap_SBData_SetDataWithOwnership,
+     METH_VARARGS,
+     "SBData_SetDataWithOwnership(SBData self, SBError error, void const * "
+     "buf, lldb::ByteOrder endian, uint8_t addr_size)"},
+    {"SBData_Append", _wrap_SBData_Append, METH_VARARGS,
+     "SBData_Append(SBData self, SBData rhs) -> bool"},
+    {"SBData_CreateDataFromCString", _wrap_SBData_CreateDataFromCString,
+     METH_VARARGS,
+     "SBData_CreateDataFromCString(lldb::ByteOrder endian, uint32_t "
+     "addr_byte_size, char const * data) -> SBData"},
+    {"SBData_CreateDataFromUInt64Array", _wrap_SBData_CreateDataFromUInt64Array,
+     METH_VARARGS,
+     "SBData_CreateDataFromUInt64Array(lldb::ByteOrder endian, uint32_t "
+     "addr_byte_size, uint64_t * array) -> SBData"},
+    {"SBData_CreateDataFromUInt32Array", _wrap_SBData_CreateDataFromUInt32Array,
+     METH_VARARGS,
+     "SBData_CreateDataFromUInt32Array(lldb::ByteOrder endian, uint32_t "
+     "addr_byte_size, uint32_t * array) -> SBData"},
+    {"SBData_CreateDataFromSInt64Array", _wrap_SBData_CreateDataFromSInt64Array,
+     METH_VARARGS,
+     "SBData_CreateDataFromSInt64Array(lldb::ByteOrder endian, uint32_t "
+     "addr_byte_size, int64_t * array) -> SBData"},
+    {"SBData_CreateDataFromSInt32Array", _wrap_SBData_CreateDataFromSInt32Array,
+     METH_VARARGS,
+     "SBData_CreateDataFromSInt32Array(lldb::ByteOrder endian, uint32_t "
+     "addr_byte_size, int32_t * array) -> SBData"},
+    {"SBData_CreateDataFromDoubleArray", _wrap_SBData_CreateDataFromDoubleArray,
+     METH_VARARGS,
+     "SBData_CreateDataFromDoubleArray(lldb::ByteOrder endian, uint32_t "
+     "addr_byte_size, double * array) -> SBData"},
+    {"SBData_SetDataFromCString", _wrap_SBData_SetDataFromCString, METH_VARARGS,
+     "SBData_SetDataFromCString(SBData self, char const * data) -> bool"},
+    {"SBData_SetDataFromUInt64Array", _wrap_SBData_SetDataFromUInt64Array,
+     METH_VARARGS,
+     "SBData_SetDataFromUInt64Array(SBData self, uint64_t * array) -> bool"},
+    {"SBData_SetDataFromUInt32Array", _wrap_SBData_SetDataFromUInt32Array,
+     METH_VARARGS,
+     "SBData_SetDataFromUInt32Array(SBData self, uint32_t * array) -> bool"},
+    {"SBData_SetDataFromSInt64Array", _wrap_SBData_SetDataFromSInt64Array,
+     METH_VARARGS,
+     "SBData_SetDataFromSInt64Array(SBData self, int64_t * array) -> bool"},
+    {"SBData_SetDataFromSInt32Array", _wrap_SBData_SetDataFromSInt32Array,
+     METH_VARARGS,
+     "SBData_SetDataFromSInt32Array(SBData self, int32_t * array) -> bool"},
+    {"SBData_SetDataFromDoubleArray", _wrap_SBData_SetDataFromDoubleArray,
+     METH_VARARGS,
+     "SBData_SetDataFromDoubleArray(SBData self, double * array) -> bool"},
+    {"SBData___repr__", _wrap_SBData___repr__, METH_O,
+     "SBData___repr__(SBData self) -> std::string"},
+    {"SBData_swigregister", SBData_swigregister, METH_O, NULL},
+    {"SBData_swiginit", SBData_swiginit, METH_VARARGS, NULL},
+    {"new_SBDebugger", _wrap_new_SBDebugger, METH_VARARGS,
+     "\n"
+     "SBDebugger()\n"
+     "new_SBDebugger(SBDebugger rhs) -> SBDebugger\n"
+     ""},
+    {"delete_SBDebugger", _wrap_delete_SBDebugger, METH_O,
+     "delete_SBDebugger(SBDebugger self)"},
+    {"SBDebugger_GetBroadcasterClass", _wrap_SBDebugger_GetBroadcasterClass,
+     METH_NOARGS, "SBDebugger_GetBroadcasterClass() -> char const *"},
+    {"SBDebugger_SupportsLanguage", _wrap_SBDebugger_SupportsLanguage, METH_O,
+     "SBDebugger_SupportsLanguage(lldb::LanguageType language) -> bool"},
+    {"SBDebugger_GetBroadcaster", _wrap_SBDebugger_GetBroadcaster, METH_O,
+     "SBDebugger_GetBroadcaster(SBDebugger self) -> SBBroadcaster"},
+    {"SBDebugger_GetProgressFromEvent", _wrap_SBDebugger_GetProgressFromEvent,
+     METH_O, "SBDebugger_GetProgressFromEvent(SBEvent event) -> char const *"},
+    {"SBDebugger_GetProgressDataFromEvent",
+     _wrap_SBDebugger_GetProgressDataFromEvent, METH_O,
+     "SBDebugger_GetProgressDataFromEvent(SBEvent event) -> SBStructuredData"},
+    {"SBDebugger_GetDiagnosticFromEvent",
+     _wrap_SBDebugger_GetDiagnosticFromEvent, METH_O,
+     "SBDebugger_GetDiagnosticFromEvent(SBEvent event) -> SBStructuredData"},
+    {"SBDebugger_Initialize", _wrap_SBDebugger_Initialize, METH_NOARGS,
+     "SBDebugger_Initialize()"},
+    {"SBDebugger_InitializeWithErrorHandling",
+     _wrap_SBDebugger_InitializeWithErrorHandling, METH_NOARGS,
+     "SBDebugger_InitializeWithErrorHandling() -> SBError"},
+    {"SBDebugger_PrintStackTraceOnError",
+     _wrap_SBDebugger_PrintStackTraceOnError, METH_NOARGS,
+     "SBDebugger_PrintStackTraceOnError()"},
+    {"SBDebugger_PrintDiagnosticsOnError",
+     _wrap_SBDebugger_PrintDiagnosticsOnError, METH_NOARGS,
+     "SBDebugger_PrintDiagnosticsOnError()"},
+    {"SBDebugger_Terminate", _wrap_SBDebugger_Terminate, METH_NOARGS,
+     "SBDebugger_Terminate()"},
+    {"SBDebugger_Create", _wrap_SBDebugger_Create, METH_VARARGS,
+     "\n"
+     "SBDebugger_Create() -> SBDebugger\n"
+     "SBDebugger_Create(bool source_init_files) -> SBDebugger\n"
+     "SBDebugger_Create(bool source_init_files, lldb::LogOutputCallback "
+     "log_callback) -> SBDebugger\n"
+     ""},
+    {"SBDebugger_Destroy", _wrap_SBDebugger_Destroy, METH_O,
+     "SBDebugger_Destroy(SBDebugger debugger)"},
+    {"SBDebugger_MemoryPressureDetected",
+     _wrap_SBDebugger_MemoryPressureDetected, METH_NOARGS,
+     "SBDebugger_MemoryPressureDetected()"},
+    {"SBDebugger___nonzero__", _wrap_SBDebugger___nonzero__, METH_O,
+     "SBDebugger___nonzero__(SBDebugger self) -> bool"},
+    {"SBDebugger_IsValid", _wrap_SBDebugger_IsValid, METH_O,
+     "SBDebugger_IsValid(SBDebugger self) -> bool"},
+    {"SBDebugger_Clear", _wrap_SBDebugger_Clear, METH_O,
+     "SBDebugger_Clear(SBDebugger self)"},
+    {"SBDebugger_GetSetting", _wrap_SBDebugger_GetSetting, METH_VARARGS,
+     "SBDebugger_GetSetting(SBDebugger self, char const * setting=None) -> "
+     "SBStructuredData"},
+    {"SBDebugger_SetAsync", _wrap_SBDebugger_SetAsync, METH_VARARGS,
+     "SBDebugger_SetAsync(SBDebugger self, bool b)"},
+    {"SBDebugger_GetAsync", _wrap_SBDebugger_GetAsync, METH_O,
+     "SBDebugger_GetAsync(SBDebugger self) -> bool"},
+    {"SBDebugger_SkipLLDBInitFiles", _wrap_SBDebugger_SkipLLDBInitFiles,
+     METH_VARARGS, "SBDebugger_SkipLLDBInitFiles(SBDebugger self, bool b)"},
+    {"SBDebugger_SkipAppInitFiles", _wrap_SBDebugger_SkipAppInitFiles,
+     METH_VARARGS, "SBDebugger_SkipAppInitFiles(SBDebugger self, bool b)"},
+    {"SBDebugger_SetInputString", _wrap_SBDebugger_SetInputString, METH_VARARGS,
+     "SBDebugger_SetInputString(SBDebugger self, char const * data) -> "
+     "SBError"},
+    {"SBDebugger_SetInputFile", _wrap_SBDebugger_SetInputFile, METH_VARARGS,
+     "\n"
+     "SBDebugger_SetInputFile(SBDebugger self, SBFile file) -> SBError\n"
+     "SBDebugger_SetInputFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
+     ""},
+    {"SBDebugger_SetOutputFile", _wrap_SBDebugger_SetOutputFile, METH_VARARGS,
+     "\n"
+     "SBDebugger_SetOutputFile(SBDebugger self, SBFile file) -> SBError\n"
+     "SBDebugger_SetOutputFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
+     ""},
+    {"SBDebugger_SetErrorFile", _wrap_SBDebugger_SetErrorFile, METH_VARARGS,
+     "\n"
+     "SBDebugger_SetErrorFile(SBDebugger self, SBFile file) -> SBError\n"
+     "SBDebugger_SetErrorFile(SBDebugger self, lldb::FileSP file) -> SBError\n"
+     ""},
+    {"SBDebugger_GetInputFile", _wrap_SBDebugger_GetInputFile, METH_O,
+     "SBDebugger_GetInputFile(SBDebugger self) -> SBFile"},
+    {"SBDebugger_GetOutputFile", _wrap_SBDebugger_GetOutputFile, METH_O,
+     "SBDebugger_GetOutputFile(SBDebugger self) -> SBFile"},
+    {"SBDebugger_GetErrorFile", _wrap_SBDebugger_GetErrorFile, METH_O,
+     "SBDebugger_GetErrorFile(SBDebugger self) -> SBFile"},
+    {"SBDebugger_SaveInputTerminalState",
+     _wrap_SBDebugger_SaveInputTerminalState, METH_O,
+     "SBDebugger_SaveInputTerminalState(SBDebugger self)"},
+    {"SBDebugger_RestoreInputTerminalState",
+     _wrap_SBDebugger_RestoreInputTerminalState, METH_O,
+     "SBDebugger_RestoreInputTerminalState(SBDebugger self)"},
+    {"SBDebugger_GetCommandInterpreter", _wrap_SBDebugger_GetCommandInterpreter,
+     METH_O,
+     "SBDebugger_GetCommandInterpreter(SBDebugger self) -> "
+     "SBCommandInterpreter"},
+    {"SBDebugger_HandleCommand", _wrap_SBDebugger_HandleCommand, METH_VARARGS,
+     "SBDebugger_HandleCommand(SBDebugger self, char const * command)"},
+    {"SBDebugger_RequestInterrupt", _wrap_SBDebugger_RequestInterrupt, METH_O,
+     "SBDebugger_RequestInterrupt(SBDebugger self)"},
+    {"SBDebugger_CancelInterruptRequest",
+     _wrap_SBDebugger_CancelInterruptRequest, METH_O,
+     "SBDebugger_CancelInterruptRequest(SBDebugger self)"},
+    {"SBDebugger_InterruptRequested", _wrap_SBDebugger_InterruptRequested,
+     METH_O, "SBDebugger_InterruptRequested(SBDebugger self) -> bool"},
+    {"SBDebugger_GetListener", _wrap_SBDebugger_GetListener, METH_O,
+     "SBDebugger_GetListener(SBDebugger self) -> SBListener"},
+    {"SBDebugger_HandleProcessEvent", _wrap_SBDebugger_HandleProcessEvent,
+     METH_VARARGS,
+     "\n"
+     "SBDebugger_HandleProcessEvent(SBDebugger self, SBProcess process, "
+     "SBEvent event, SBFile out, SBFile err)\n"
+     "SBDebugger_HandleProcessEvent(SBDebugger self, SBProcess process, "
+     "SBEvent event, lldb::FileSP arg4, lldb::FileSP arg5)\n"
+     ""},
+    {"SBDebugger_CreateTargetWithFileAndTargetTriple",
+     _wrap_SBDebugger_CreateTargetWithFileAndTargetTriple, METH_VARARGS,
+     "SBDebugger_CreateTargetWithFileAndTargetTriple(SBDebugger self, char "
+     "const * filename, char const * target_triple) -> SBTarget"},
+    {"SBDebugger_CreateTargetWithFileAndArch",
+     _wrap_SBDebugger_CreateTargetWithFileAndArch, METH_VARARGS,
+     "SBDebugger_CreateTargetWithFileAndArch(SBDebugger self, char const * "
+     "filename, char const * archname) -> SBTarget"},
+    {"SBDebugger_CreateTarget", _wrap_SBDebugger_CreateTarget, METH_VARARGS,
+     "\n"
+     "SBDebugger_CreateTarget(SBDebugger self, char const * filename, char "
+     "const * target_triple, char const * platform_name, bool "
+     "add_dependent_modules, SBError error) -> SBTarget\n"
+     "SBDebugger_CreateTarget(SBDebugger self, char const * filename) -> "
+     "SBTarget\n"
+     ""},
+    {"SBDebugger_GetDummyTarget", _wrap_SBDebugger_GetDummyTarget, METH_O,
+     "\n"
+     "SBDebugger_GetDummyTarget(SBDebugger self) -> SBTarget\n"
+     "The dummy target holds breakpoints and breakpoint names that will prime "
+     "newly created targets.\n"
+     ""},
+    {"SBDebugger_DeleteTarget", _wrap_SBDebugger_DeleteTarget, METH_VARARGS,
+     "\n"
+     "SBDebugger_DeleteTarget(SBDebugger self, SBTarget target) -> bool\n"
+     "Return true if target is deleted from the target list of the debugger.\n"
+     ""},
+    {"SBDebugger_GetTargetAtIndex", _wrap_SBDebugger_GetTargetAtIndex,
+     METH_VARARGS,
+     "SBDebugger_GetTargetAtIndex(SBDebugger self, uint32_t idx) -> SBTarget"},
+    {"SBDebugger_GetIndexOfTarget", _wrap_SBDebugger_GetIndexOfTarget,
+     METH_VARARGS,
+     "SBDebugger_GetIndexOfTarget(SBDebugger self, SBTarget target) -> "
+     "uint32_t"},
+    {"SBDebugger_FindTargetWithProcessID",
+     _wrap_SBDebugger_FindTargetWithProcessID, METH_VARARGS,
+     "SBDebugger_FindTargetWithProcessID(SBDebugger self, lldb::pid_t pid) -> "
+     "SBTarget"},
+    {"SBDebugger_FindTargetWithFileAndArch",
+     _wrap_SBDebugger_FindTargetWithFileAndArch, METH_VARARGS,
+     "SBDebugger_FindTargetWithFileAndArch(SBDebugger self, char const * "
+     "filename, char const * arch) -> SBTarget"},
+    {"SBDebugger_GetNumTargets", _wrap_SBDebugger_GetNumTargets, METH_O,
+     "SBDebugger_GetNumTargets(SBDebugger self) -> uint32_t"},
+    {"SBDebugger_GetSelectedTarget", _wrap_SBDebugger_GetSelectedTarget, METH_O,
+     "SBDebugger_GetSelectedTarget(SBDebugger self) -> SBTarget"},
+    {"SBDebugger_SetSelectedTarget", _wrap_SBDebugger_SetSelectedTarget,
+     METH_VARARGS,
+     "SBDebugger_SetSelectedTarget(SBDebugger self, SBTarget target)"},
+    {"SBDebugger_GetSelectedPlatform", _wrap_SBDebugger_GetSelectedPlatform,
+     METH_O, "SBDebugger_GetSelectedPlatform(SBDebugger self) -> SBPlatform"},
+    {"SBDebugger_SetSelectedPlatform", _wrap_SBDebugger_SetSelectedPlatform,
+     METH_VARARGS,
+     "SBDebugger_SetSelectedPlatform(SBDebugger self, SBPlatform platform)"},
+    {"SBDebugger_GetNumPlatforms", _wrap_SBDebugger_GetNumPlatforms, METH_O,
+     "\n"
+     "SBDebugger_GetNumPlatforms(SBDebugger self) -> uint32_t\n"
+     "Get the number of currently active platforms.\n"
+     ""},
+    {"SBDebugger_GetPlatformAtIndex", _wrap_SBDebugger_GetPlatformAtIndex,
+     METH_VARARGS,
+     "\n"
+     "SBDebugger_GetPlatformAtIndex(SBDebugger self, uint32_t idx) -> "
+     "SBPlatform\n"
+     "Get one of the currently active platforms.\n"
+     ""},
+    {"SBDebugger_GetNumAvailablePlatforms",
+     _wrap_SBDebugger_GetNumAvailablePlatforms, METH_O,
+     "\n"
+     "SBDebugger_GetNumAvailablePlatforms(SBDebugger self) -> uint32_t\n"
+     "Get the number of available platforms.\n"
+     ""},
+    {"SBDebugger_GetAvailablePlatformInfoAtIndex",
+     _wrap_SBDebugger_GetAvailablePlatformInfoAtIndex, METH_VARARGS,
+     "\n"
+     "SBDebugger_GetAvailablePlatformInfoAtIndex(SBDebugger self, uint32_t "
+     "idx) -> SBStructuredData\n"
+     "\n"
+     "    Get the name and description of one of the available platforms.\n"
+     "\n"
+     "    @param idx Zero-based index of the platform for which info should "
+     "be\n"
+     "               retrieved, must be less than the value returned by\n"
+     "               GetNumAvailablePlatforms().\n"
+     ""},
+    {"SBDebugger_GetSourceManager", _wrap_SBDebugger_GetSourceManager, METH_O,
+     "SBDebugger_GetSourceManager(SBDebugger self) -> SBSourceManager"},
+    {"SBDebugger_SetCurrentPlatform", _wrap_SBDebugger_SetCurrentPlatform,
+     METH_VARARGS,
+     "SBDebugger_SetCurrentPlatform(SBDebugger self, char const * "
+     "platform_name) -> SBError"},
+    {"SBDebugger_SetCurrentPlatformSDKRoot",
+     _wrap_SBDebugger_SetCurrentPlatformSDKRoot, METH_VARARGS,
+     "SBDebugger_SetCurrentPlatformSDKRoot(SBDebugger self, char const * "
+     "sysroot) -> bool"},
+    {"SBDebugger_SetUseExternalEditor", _wrap_SBDebugger_SetUseExternalEditor,
+     METH_VARARGS,
+     "SBDebugger_SetUseExternalEditor(SBDebugger self, bool input) -> bool"},
+    {"SBDebugger_GetUseExternalEditor", _wrap_SBDebugger_GetUseExternalEditor,
+     METH_O, "SBDebugger_GetUseExternalEditor(SBDebugger self) -> bool"},
+    {"SBDebugger_SetUseColor", _wrap_SBDebugger_SetUseColor, METH_VARARGS,
+     "SBDebugger_SetUseColor(SBDebugger self, bool use_color) -> bool"},
+    {"SBDebugger_GetUseColor", _wrap_SBDebugger_GetUseColor, METH_O,
+     "SBDebugger_GetUseColor(SBDebugger self) -> bool"},
+    {"SBDebugger_SetUseSourceCache", _wrap_SBDebugger_SetUseSourceCache,
+     METH_VARARGS,
+     "SBDebugger_SetUseSourceCache(SBDebugger self, bool use_source_cache) -> "
+     "bool"},
+    {"SBDebugger_GetUseSourceCache", _wrap_SBDebugger_GetUseSourceCache, METH_O,
+     "SBDebugger_GetUseSourceCache(SBDebugger self) -> bool"},
+    {"SBDebugger_GetDefaultArchitecture",
+     _wrap_SBDebugger_GetDefaultArchitecture, METH_VARARGS,
+     "SBDebugger_GetDefaultArchitecture(char * arch_name, size_t "
+     "arch_name_len) -> bool"},
+    {"SBDebugger_SetDefaultArchitecture",
+     _wrap_SBDebugger_SetDefaultArchitecture, METH_O,
+     "SBDebugger_SetDefaultArchitecture(char const * arch_name) -> bool"},
+    {"SBDebugger_GetScriptingLanguage", _wrap_SBDebugger_GetScriptingLanguage,
+     METH_VARARGS,
+     "SBDebugger_GetScriptingLanguage(SBDebugger self, char const * "
+     "script_language_name) -> lldb::ScriptLanguage"},
+    {"SBDebugger_GetScriptInterpreterInfo",
+     _wrap_SBDebugger_GetScriptInterpreterInfo, METH_VARARGS,
+     "SBDebugger_GetScriptInterpreterInfo(SBDebugger self, "
+     "lldb::ScriptLanguage arg2) -> SBStructuredData"},
+    {"SBDebugger_GetVersionString", _wrap_SBDebugger_GetVersionString,
+     METH_NOARGS, "SBDebugger_GetVersionString() -> char const *"},
+    {"SBDebugger_StateAsCString", _wrap_SBDebugger_StateAsCString, METH_O,
+     "SBDebugger_StateAsCString(lldb::StateType state) -> char const *"},
+    {"SBDebugger_GetBuildConfiguration", _wrap_SBDebugger_GetBuildConfiguration,
+     METH_NOARGS, "SBDebugger_GetBuildConfiguration() -> SBStructuredData"},
+    {"SBDebugger_StateIsRunningState", _wrap_SBDebugger_StateIsRunningState,
+     METH_O, "SBDebugger_StateIsRunningState(lldb::StateType state) -> bool"},
+    {"SBDebugger_StateIsStoppedState", _wrap_SBDebugger_StateIsStoppedState,
+     METH_O, "SBDebugger_StateIsStoppedState(lldb::StateType state) -> bool"},
+    {"SBDebugger_EnableLog", _wrap_SBDebugger_EnableLog, METH_VARARGS,
+     "SBDebugger_EnableLog(SBDebugger self, char const * channel, char const "
+     "** categories) -> bool"},
+    {"SBDebugger_SetLoggingCallback", _wrap_SBDebugger_SetLoggingCallback,
+     METH_VARARGS,
+     "SBDebugger_SetLoggingCallback(SBDebugger self, lldb::LogOutputCallback "
+     "log_callback)"},
+    {"SBDebugger_SetDestroyCallback", _wrap_SBDebugger_SetDestroyCallback,
+     METH_VARARGS,
+     "SBDebugger_SetDestroyCallback(SBDebugger self, "
+     "lldb::SBDebuggerDestroyCallback destroy_callback)"},
+    {"SBDebugger_AddDestroyCallback", _wrap_SBDebugger_AddDestroyCallback,
+     METH_VARARGS,
+     "SBDebugger_AddDestroyCallback(SBDebugger self, "
+     "lldb::SBDebuggerDestroyCallback destroy_callback) -> "
+     "lldb::callback_token_t"},
+    {"SBDebugger_RemoveDestroyCallback", _wrap_SBDebugger_RemoveDestroyCallback,
+     METH_VARARGS,
+     "SBDebugger_RemoveDestroyCallback(SBDebugger self, lldb::callback_token_t "
+     "token) -> bool"},
+    {"SBDebugger_DispatchInput", _wrap_SBDebugger_DispatchInput, METH_VARARGS,
+     "SBDebugger_DispatchInput(SBDebugger self, void const * data)"},
+    {"SBDebugger_DispatchInputInterrupt",
+     _wrap_SBDebugger_DispatchInputInterrupt, METH_O,
+     "SBDebugger_DispatchInputInterrupt(SBDebugger self)"},
+    {"SBDebugger_DispatchInputEndOfFile",
+     _wrap_SBDebugger_DispatchInputEndOfFile, METH_O,
+     "SBDebugger_DispatchInputEndOfFile(SBDebugger self)"},
+    {"SBDebugger_GetInstanceName", _wrap_SBDebugger_GetInstanceName, METH_O,
+     "SBDebugger_GetInstanceName(SBDebugger self) -> char const *"},
+    {"SBDebugger_FindDebuggerWithID", _wrap_SBDebugger_FindDebuggerWithID,
+     METH_O, "SBDebugger_FindDebuggerWithID(int id) -> SBDebugger"},
+    {"SBDebugger_SetInternalVariable", _wrap_SBDebugger_SetInternalVariable,
+     METH_VARARGS,
+     "SBDebugger_SetInternalVariable(char const * var_name, char const * "
+     "value, char const * debugger_instance_name) -> SBError"},
+    {"SBDebugger_GetInternalVariableValue",
+     _wrap_SBDebugger_GetInternalVariableValue, METH_VARARGS,
+     "SBDebugger_GetInternalVariableValue(char const * var_name, char const * "
+     "debugger_instance_name) -> SBStringList"},
+    {"SBDebugger_GetDescription", _wrap_SBDebugger_GetDescription, METH_VARARGS,
+     "SBDebugger_GetDescription(SBDebugger self, SBStream description) -> "
+     "bool"},
+    {"SBDebugger_GetTerminalWidth", _wrap_SBDebugger_GetTerminalWidth, METH_O,
+     "SBDebugger_GetTerminalWidth(SBDebugger self) -> uint32_t"},
+    {"SBDebugger_SetTerminalWidth", _wrap_SBDebugger_SetTerminalWidth,
+     METH_VARARGS,
+     "SBDebugger_SetTerminalWidth(SBDebugger self, uint32_t term_width)"},
+    {"SBDebugger_GetID", _wrap_SBDebugger_GetID, METH_O,
+     "SBDebugger_GetID(SBDebugger self) -> lldb::user_id_t"},
+    {"SBDebugger_GetPrompt", _wrap_SBDebugger_GetPrompt, METH_O,
+     "SBDebugger_GetPrompt(SBDebugger self) -> char const *"},
+    {"SBDebugger_SetPrompt", _wrap_SBDebugger_SetPrompt, METH_VARARGS,
+     "SBDebugger_SetPrompt(SBDebugger self, char const * prompt)"},
+    {"SBDebugger_GetReproducerPath", _wrap_SBDebugger_GetReproducerPath, METH_O,
+     "SBDebugger_GetReproducerPath(SBDebugger self) -> char const *"},
+    {"SBDebugger_GetScriptLanguage", _wrap_SBDebugger_GetScriptLanguage, METH_O,
+     "SBDebugger_GetScriptLanguage(SBDebugger self) -> lldb::ScriptLanguage"},
+    {"SBDebugger_SetScriptLanguage", _wrap_SBDebugger_SetScriptLanguage,
+     METH_VARARGS,
+     "SBDebugger_SetScriptLanguage(SBDebugger self, lldb::ScriptLanguage "
+     "script_lang)"},
+    {"SBDebugger_GetREPLLanguage", _wrap_SBDebugger_GetREPLLanguage, METH_O,
+     "SBDebugger_GetREPLLanguage(SBDebugger self) -> lldb::LanguageType"},
+    {"SBDebugger_SetREPLLanguage", _wrap_SBDebugger_SetREPLLanguage,
+     METH_VARARGS,
+     "SBDebugger_SetREPLLanguage(SBDebugger self, lldb::LanguageType "
+     "repl_lang)"},
+    {"SBDebugger_GetCloseInputOnEOF", _wrap_SBDebugger_GetCloseInputOnEOF,
+     METH_O, "SBDebugger_GetCloseInputOnEOF(SBDebugger self) -> bool"},
+    {"SBDebugger_SetCloseInputOnEOF", _wrap_SBDebugger_SetCloseInputOnEOF,
+     METH_VARARGS, "SBDebugger_SetCloseInputOnEOF(SBDebugger self, bool b)"},
+    {"SBDebugger_GetCategory", _wrap_SBDebugger_GetCategory, METH_VARARGS,
+     "\n"
+     "SBDebugger_GetCategory(SBDebugger self, char const * category_name) -> "
+     "SBTypeCategory\n"
+     "SBDebugger_GetCategory(SBDebugger self, lldb::LanguageType lang_type) -> "
+     "SBTypeCategory\n"
+     ""},
+    {"SBDebugger_CreateCategory", _wrap_SBDebugger_CreateCategory, METH_VARARGS,
+     "SBDebugger_CreateCategory(SBDebugger self, char const * category_name) "
+     "-> SBTypeCategory"},
+    {"SBDebugger_DeleteCategory", _wrap_SBDebugger_DeleteCategory, METH_VARARGS,
+     "SBDebugger_DeleteCategory(SBDebugger self, char const * category_name) "
+     "-> bool"},
+    {"SBDebugger_GetNumCategories", _wrap_SBDebugger_GetNumCategories, METH_O,
+     "SBDebugger_GetNumCategories(SBDebugger self) -> uint32_t"},
+    {"SBDebugger_GetCategoryAtIndex", _wrap_SBDebugger_GetCategoryAtIndex,
+     METH_VARARGS,
+     "SBDebugger_GetCategoryAtIndex(SBDebugger self, uint32_t arg2) -> "
+     "SBTypeCategory"},
+    {"SBDebugger_GetDefaultCategory", _wrap_SBDebugger_GetDefaultCategory,
+     METH_O,
+     "SBDebugger_GetDefaultCategory(SBDebugger self) -> SBTypeCategory"},
+    {"SBDebugger_GetFormatForType", _wrap_SBDebugger_GetFormatForType,
+     METH_VARARGS,
+     "SBDebugger_GetFormatForType(SBDebugger self, SBTypeNameSpecifier arg2) "
+     "-> SBTypeFormat"},
+    {"SBDebugger_GetSummaryForType", _wrap_SBDebugger_GetSummaryForType,
+     METH_VARARGS,
+     "SBDebugger_GetSummaryForType(SBDebugger self, SBTypeNameSpecifier arg2) "
+     "-> SBTypeSummary"},
+    {"SBDebugger_GetFilterForType", _wrap_SBDebugger_GetFilterForType,
+     METH_VARARGS,
+     "SBDebugger_GetFilterForType(SBDebugger self, SBTypeNameSpecifier arg2) "
+     "-> SBTypeFilter"},
+    {"SBDebugger_GetSyntheticForType", _wrap_SBDebugger_GetSyntheticForType,
+     METH_VARARGS,
+     "SBDebugger_GetSyntheticForType(SBDebugger self, SBTypeNameSpecifier "
+     "arg2) -> SBTypeSynthetic"},
+    {"SBDebugger_RunCommandInterpreter", _wrap_SBDebugger_RunCommandInterpreter,
+     METH_VARARGS,
+     "\n"
+     "SBDebugger_RunCommandInterpreter(SBDebugger self, bool "
+     "auto_handle_events, bool spawn_thread, SBCommandInterpreterRunOptions "
+     "options, int & num_errors, bool & quit_requested, bool & "
+     "stopped_for_crash)\n"
+     "Launch a command interpreter session. Commands are read from standard "
+     "input or\n"
+     "from the input handle specified for the debugger object. Output/errors "
+     "are\n"
+     "similarly redirected to standard output/error or the configured "
+     "handles.\n"
+     "\n"
+     "@param[in] auto_handle_events If true, automatically handle resulting "
+     "events.\n"
+     "@param[in] spawn_thread If true, start a new thread for IO handling.\n"
+     "@param[in] options Parameter collection of type "
+     "SBCommandInterpreterRunOptions.\n"
+     "@param[in] num_errors Initial error counter.\n"
+     "@param[in] quit_requested Initial quit request flag.\n"
+     "@param[in] stopped_for_crash Initial crash flag.\n"
+     "\n"
+     "@return\n"
+     "A tuple with the number of errors encountered by the interpreter, a "
+     "boolean\n"
+     "indicating whether quitting the interpreter was requested and another "
+     "boolean\n"
+     "set to True in case of a crash.\n"
+     "\n"
+     "Example: ::\n"
+     "\n"
+     "    # Start an interactive lldb session from a script (with a valid "
+     "debugger object\n"
+     "    # created beforehand):\n"
+     "    n_errors, quit_requested, has_crashed = "
+     "debugger.RunCommandInterpreter(True,\n"
+     "        False, lldb.SBCommandInterpreterRunOptions(), 0, False, False)\n"
+     ""},
+    {"SBDebugger_RunREPL", _wrap_SBDebugger_RunREPL, METH_VARARGS,
+     "SBDebugger_RunREPL(SBDebugger self, lldb::LanguageType language, char "
+     "const * repl_options) -> SBError"},
+    {"SBDebugger_LoadTraceFromFile", _wrap_SBDebugger_LoadTraceFromFile,
+     METH_VARARGS,
+     "SBDebugger_LoadTraceFromFile(SBDebugger self, SBError error, SBFileSpec "
+     "trace_description_file) -> SBTrace"},
+    {"SBDebugger___repr__", _wrap_SBDebugger___repr__, METH_O,
+     "SBDebugger___repr__(SBDebugger self) -> std::string"},
+    {"SBDebugger_GetInputFileHandle", _wrap_SBDebugger_GetInputFileHandle,
+     METH_O, "SBDebugger_GetInputFileHandle(SBDebugger self) -> lldb::FileSP"},
+    {"SBDebugger_GetOutputFileHandle", _wrap_SBDebugger_GetOutputFileHandle,
+     METH_O, "SBDebugger_GetOutputFileHandle(SBDebugger self) -> lldb::FileSP"},
+    {"SBDebugger_GetErrorFileHandle", _wrap_SBDebugger_GetErrorFileHandle,
+     METH_O, "SBDebugger_GetErrorFileHandle(SBDebugger self) -> lldb::FileSP"},
+    {"SBDebugger_swigregister", SBDebugger_swigregister, METH_O, NULL},
+    {"SBDebugger_swiginit", SBDebugger_swiginit, METH_VARARGS, NULL},
+    {"new_SBDeclaration", _wrap_new_SBDeclaration, METH_VARARGS,
+     "\n"
+     "SBDeclaration()\n"
+     "new_SBDeclaration(SBDeclaration rhs) -> SBDeclaration\n"
+     ""},
+    {"delete_SBDeclaration", _wrap_delete_SBDeclaration, METH_O,
+     "delete_SBDeclaration(SBDeclaration self)"},
+    {"SBDeclaration___nonzero__", _wrap_SBDeclaration___nonzero__, METH_O,
+     "SBDeclaration___nonzero__(SBDeclaration self) -> bool"},
+    {"SBDeclaration_IsValid", _wrap_SBDeclaration_IsValid, METH_O,
+     "SBDeclaration_IsValid(SBDeclaration self) -> bool"},
+    {"SBDeclaration_GetFileSpec", _wrap_SBDeclaration_GetFileSpec, METH_O,
+     "SBDeclaration_GetFileSpec(SBDeclaration self) -> SBFileSpec"},
+    {"SBDeclaration_GetLine", _wrap_SBDeclaration_GetLine, METH_O,
+     "SBDeclaration_GetLine(SBDeclaration self) -> uint32_t"},
+    {"SBDeclaration_GetColumn", _wrap_SBDeclaration_GetColumn, METH_O,
+     "SBDeclaration_GetColumn(SBDeclaration self) -> uint32_t"},
+    {"SBDeclaration_SetFileSpec", _wrap_SBDeclaration_SetFileSpec, METH_VARARGS,
+     "SBDeclaration_SetFileSpec(SBDeclaration self, SBFileSpec filespec)"},
+    {"SBDeclaration_SetLine", _wrap_SBDeclaration_SetLine, METH_VARARGS,
+     "SBDeclaration_SetLine(SBDeclaration self, uint32_t line)"},
+    {"SBDeclaration_SetColumn", _wrap_SBDeclaration_SetColumn, METH_VARARGS,
+     "SBDeclaration_SetColumn(SBDeclaration self, uint32_t column)"},
+    {"SBDeclaration___eq__", _wrap_SBDeclaration___eq__, METH_VARARGS,
+     "SBDeclaration___eq__(SBDeclaration self, SBDeclaration rhs) -> bool"},
+    {"SBDeclaration___ne__", _wrap_SBDeclaration___ne__, METH_VARARGS,
+     "SBDeclaration___ne__(SBDeclaration self, SBDeclaration rhs) -> bool"},
+    {"SBDeclaration_GetDescription", _wrap_SBDeclaration_GetDescription,
+     METH_VARARGS,
+     "SBDeclaration_GetDescription(SBDeclaration self, SBStream description) "
+     "-> bool"},
+    {"SBDeclaration___repr__", _wrap_SBDeclaration___repr__, METH_O,
+     "SBDeclaration___repr__(SBDeclaration self) -> std::string"},
+    {"SBDeclaration_swigregister", SBDeclaration_swigregister, METH_O, NULL},
+    {"SBDeclaration_swiginit", SBDeclaration_swiginit, METH_VARARGS, NULL},
+    {"new_SBError", _wrap_new_SBError, METH_VARARGS,
+     "\n"
+     "SBError()\n"
+     "SBError(SBError rhs)\n"
+     "new_SBError(char const * message) -> SBError\n"
+     ""},
+    {"delete_SBError", _wrap_delete_SBError, METH_O,
+     "delete_SBError(SBError self)"},
+    {"SBError_GetCString", _wrap_SBError_GetCString, METH_O,
+     "SBError_GetCString(SBError self) -> char const *"},
+    {"SBError_Clear", _wrap_SBError_Clear, METH_O,
+     "SBError_Clear(SBError self)"},
+    {"SBError_Fail", _wrap_SBError_Fail, METH_O,
+     "SBError_Fail(SBError self) -> bool"},
+    {"SBError_Success", _wrap_SBError_Success, METH_O,
+     "SBError_Success(SBError self) -> bool"},
+    {"SBError_GetError", _wrap_SBError_GetError, METH_O,
+     "SBError_GetError(SBError self) -> uint32_t"},
+    {"SBError_GetType", _wrap_SBError_GetType, METH_O,
+     "SBError_GetType(SBError self) -> lldb::ErrorType"},
+    {"SBError_SetError", _wrap_SBError_SetError, METH_VARARGS,
+     "SBError_SetError(SBError self, uint32_t err, lldb::ErrorType type)"},
+    {"SBError_SetErrorToErrno", _wrap_SBError_SetErrorToErrno, METH_O,
+     "SBError_SetErrorToErrno(SBError self)"},
+    {"SBError_SetErrorToGenericError", _wrap_SBError_SetErrorToGenericError,
+     METH_O, "SBError_SetErrorToGenericError(SBError self)"},
+    {"SBError_SetErrorString", _wrap_SBError_SetErrorString, METH_VARARGS,
+     "SBError_SetErrorString(SBError self, char const * err_str)"},
+    {"SBError_SetErrorStringWithFormat", _wrap_SBError_SetErrorStringWithFormat,
+     METH_VARARGS,
+     "SBError_SetErrorStringWithFormat(SBError self, char const * format, char "
+     "* str1=None, char * str2=None, char * str3=None) -> int"},
+    {"SBError___nonzero__", _wrap_SBError___nonzero__, METH_O,
+     "SBError___nonzero__(SBError self) -> bool"},
+    {"SBError_IsValid", _wrap_SBError_IsValid, METH_O,
+     "SBError_IsValid(SBError self) -> bool"},
+    {"SBError_GetDescription", _wrap_SBError_GetDescription, METH_VARARGS,
+     "SBError_GetDescription(SBError self, SBStream description) -> bool"},
+    {"SBError___repr__", _wrap_SBError___repr__, METH_O,
+     "SBError___repr__(SBError self) -> std::string"},
+    {"SBError_swigregister", SBError_swigregister, METH_O, NULL},
+    {"SBError_swiginit", SBError_swiginit, METH_VARARGS, NULL},
+    {"new_SBEnvironment", _wrap_new_SBEnvironment, METH_VARARGS,
+     "\n"
+     "SBEnvironment()\n"
+     "new_SBEnvironment(SBEnvironment rhs) -> SBEnvironment\n"
+     ""},
+    {"delete_SBEnvironment", _wrap_delete_SBEnvironment, METH_O,
+     "delete_SBEnvironment(SBEnvironment self)"},
+    {"SBEnvironment_Get", _wrap_SBEnvironment_Get, METH_VARARGS,
+     "SBEnvironment_Get(SBEnvironment self, char const * name) -> char const "
+     "*"},
+    {"SBEnvironment_GetNumValues", _wrap_SBEnvironment_GetNumValues, METH_O,
+     "SBEnvironment_GetNumValues(SBEnvironment self) -> size_t"},
+    {"SBEnvironment_GetNameAtIndex", _wrap_SBEnvironment_GetNameAtIndex,
+     METH_VARARGS,
+     "SBEnvironment_GetNameAtIndex(SBEnvironment self, size_t index) -> char "
+     "const *"},
+    {"SBEnvironment_GetValueAtIndex", _wrap_SBEnvironment_GetValueAtIndex,
+     METH_VARARGS,
+     "SBEnvironment_GetValueAtIndex(SBEnvironment self, size_t index) -> char "
+     "const *"},
+    {"SBEnvironment_GetEntries", _wrap_SBEnvironment_GetEntries, METH_O,
+     "SBEnvironment_GetEntries(SBEnvironment self) -> SBStringList"},
+    {"SBEnvironment_PutEntry", _wrap_SBEnvironment_PutEntry, METH_VARARGS,
+     "SBEnvironment_PutEntry(SBEnvironment self, char const * name_and_value)"},
+    {"SBEnvironment_SetEntries", _wrap_SBEnvironment_SetEntries, METH_VARARGS,
+     "SBEnvironment_SetEntries(SBEnvironment self, SBStringList entries, bool "
+     "append)"},
+    {"SBEnvironment_Set", _wrap_SBEnvironment_Set, METH_VARARGS,
+     "SBEnvironment_Set(SBEnvironment self, char const * name, char const * "
+     "value, bool overwrite) -> bool"},
+    {"SBEnvironment_Unset", _wrap_SBEnvironment_Unset, METH_VARARGS,
+     "SBEnvironment_Unset(SBEnvironment self, char const * name) -> bool"},
+    {"SBEnvironment_Clear", _wrap_SBEnvironment_Clear, METH_O,
+     "SBEnvironment_Clear(SBEnvironment self)"},
+    {"SBEnvironment_swigregister", SBEnvironment_swigregister, METH_O, NULL},
+    {"SBEnvironment_swiginit", SBEnvironment_swiginit, METH_VARARGS, NULL},
+    {"new_SBEvent", _wrap_new_SBEvent, METH_VARARGS,
+     "__init__(self, int type, str data) -> SBEvent (make an event that "
+     "contains a C string)__init__(self, int type, str data) -> SBEvent (make "
+     "an event that contains a C string)__init__(self, int type, str data) -> "
+     "SBEvent (make an event that contains a C string)"},
+    {"delete_SBEvent", _wrap_delete_SBEvent, METH_O,
+     "delete_SBEvent(SBEvent self)"},
+    {"SBEvent___nonzero__", _wrap_SBEvent___nonzero__, METH_O,
+     "SBEvent___nonzero__(SBEvent self) -> bool"},
+    {"SBEvent_IsValid", _wrap_SBEvent_IsValid, METH_O,
+     "SBEvent_IsValid(SBEvent self) -> bool"},
+    {"SBEvent_GetDataFlavor", _wrap_SBEvent_GetDataFlavor, METH_O,
+     "SBEvent_GetDataFlavor(SBEvent self) -> char const *"},
+    {"SBEvent_GetType", _wrap_SBEvent_GetType, METH_O,
+     "SBEvent_GetType(SBEvent self) -> uint32_t"},
+    {"SBEvent_GetBroadcaster", _wrap_SBEvent_GetBroadcaster, METH_O,
+     "SBEvent_GetBroadcaster(SBEvent self) -> SBBroadcaster"},
+    {"SBEvent_GetBroadcasterClass", _wrap_SBEvent_GetBroadcasterClass, METH_O,
+     "SBEvent_GetBroadcasterClass(SBEvent self) -> char const *"},
+    {"SBEvent_BroadcasterMatchesRef", _wrap_SBEvent_BroadcasterMatchesRef,
+     METH_VARARGS,
+     "SBEvent_BroadcasterMatchesRef(SBEvent self, SBBroadcaster broadcaster) "
+     "-> bool"},
+    {"SBEvent_Clear", _wrap_SBEvent_Clear, METH_O,
+     "SBEvent_Clear(SBEvent self)"},
+    {"SBEvent_GetCStringFromEvent", _wrap_SBEvent_GetCStringFromEvent, METH_O,
+     "SBEvent_GetCStringFromEvent(SBEvent event) -> char const *"},
+    {"SBEvent_GetDescription", _wrap_SBEvent_GetDescription, METH_VARARGS,
+     "\n"
+     "SBEvent_GetDescription(SBEvent self, SBStream description) -> bool\n"
+     "SBEvent_GetDescription(SBEvent self, SBStream description) -> bool\n"
+     ""},
+    {"SBEvent_swigregister", SBEvent_swigregister, METH_O, NULL},
+    {"SBEvent_swiginit", SBEvent_swiginit, METH_VARARGS, NULL},
+    {"new_SBExecutionContext", _wrap_new_SBExecutionContext, METH_VARARGS,
+     "\n"
+     "SBExecutionContext()\n"
+     "SBExecutionContext(SBExecutionContext rhs)\n"
+     "SBExecutionContext(SBTarget target)\n"
+     "SBExecutionContext(SBProcess process)\n"
+     "SBExecutionContext(SBThread thread)\n"
+     "new_SBExecutionContext(SBFrame frame) -> SBExecutionContext\n"
+     ""},
+    {"delete_SBExecutionContext", _wrap_delete_SBExecutionContext, METH_O,
+     "delete_SBExecutionContext(SBExecutionContext self)"},
+    {"SBExecutionContext_GetTarget", _wrap_SBExecutionContext_GetTarget, METH_O,
+     "SBExecutionContext_GetTarget(SBExecutionContext self) -> SBTarget"},
+    {"SBExecutionContext_GetProcess", _wrap_SBExecutionContext_GetProcess,
+     METH_O,
+     "SBExecutionContext_GetProcess(SBExecutionContext self) -> SBProcess"},
+    {"SBExecutionContext_GetThread", _wrap_SBExecutionContext_GetThread, METH_O,
+     "SBExecutionContext_GetThread(SBExecutionContext self) -> SBThread"},
+    {"SBExecutionContext_GetFrame", _wrap_SBExecutionContext_GetFrame, METH_O,
+     "SBExecutionContext_GetFrame(SBExecutionContext self) -> SBFrame"},
+    {"SBExecutionContext_swigregister", SBExecutionContext_swigregister, METH_O,
+     NULL},
+    {"SBExecutionContext_swiginit", SBExecutionContext_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBExpressionOptions", _wrap_new_SBExpressionOptions, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions()\n"
+     "new_SBExpressionOptions(SBExpressionOptions rhs) -> SBExpressionOptions\n"
+     ""},
+    {"delete_SBExpressionOptions", _wrap_delete_SBExpressionOptions, METH_O,
+     "delete_SBExpressionOptions(SBExpressionOptions self)"},
+    {"SBExpressionOptions_GetCoerceResultToId",
+     _wrap_SBExpressionOptions_GetCoerceResultToId, METH_O,
+     "SBExpressionOptions_GetCoerceResultToId(SBExpressionOptions self) -> "
+     "bool"},
+    {"SBExpressionOptions_SetCoerceResultToId",
+     _wrap_SBExpressionOptions_SetCoerceResultToId, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetCoerceResultToId(SBExpressionOptions self, bool "
+     "coerce=True)\n"
+     "Sets whether to coerce the expression result to ObjC id type after "
+     "evaluation.\n"
+     ""},
+    {"SBExpressionOptions_GetUnwindOnError",
+     _wrap_SBExpressionOptions_GetUnwindOnError, METH_O,
+     "SBExpressionOptions_GetUnwindOnError(SBExpressionOptions self) -> bool"},
+    {"SBExpressionOptions_SetUnwindOnError",
+     _wrap_SBExpressionOptions_SetUnwindOnError, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetUnwindOnError(SBExpressionOptions self, bool "
+     "unwind=True)\n"
+     "Sets whether to unwind the expression stack on error.\n"
+     ""},
+    {"SBExpressionOptions_GetIgnoreBreakpoints",
+     _wrap_SBExpressionOptions_GetIgnoreBreakpoints, METH_O,
+     "SBExpressionOptions_GetIgnoreBreakpoints(SBExpressionOptions self) -> "
+     "bool"},
+    {"SBExpressionOptions_SetIgnoreBreakpoints",
+     _wrap_SBExpressionOptions_SetIgnoreBreakpoints, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetIgnoreBreakpoints(SBExpressionOptions self, bool "
+     "ignore=True)\n"
+     "Sets whether to ignore breakpoint hits while running expressions.\n"
+     ""},
+    {"SBExpressionOptions_GetFetchDynamicValue",
+     _wrap_SBExpressionOptions_GetFetchDynamicValue, METH_O,
+     "SBExpressionOptions_GetFetchDynamicValue(SBExpressionOptions self) -> "
+     "lldb::DynamicValueType"},
+    {"SBExpressionOptions_SetFetchDynamicValue",
+     _wrap_SBExpressionOptions_SetFetchDynamicValue, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetFetchDynamicValue(SBExpressionOptions self, "
+     "lldb::DynamicValueType dynamic=eDynamicCanRunTarget)\n"
+     "Sets whether to cast the expression result to its dynamic type.\n"
+     ""},
+    {"SBExpressionOptions_GetTimeoutInMicroSeconds",
+     _wrap_SBExpressionOptions_GetTimeoutInMicroSeconds, METH_O,
+     "SBExpressionOptions_GetTimeoutInMicroSeconds(SBExpressionOptions self) "
+     "-> uint32_t"},
+    {"SBExpressionOptions_SetTimeoutInMicroSeconds",
+     _wrap_SBExpressionOptions_SetTimeoutInMicroSeconds, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetTimeoutInMicroSeconds(SBExpressionOptions self, "
+     "uint32_t timeout=0)\n"
+     "Sets the timeout in microseconds to run the expression for. If try all "
+     "threads is set to true and the expression doesn't complete within the "
+     "specified timeout, all threads will be resumed for the same timeout to "
+     "see if the expression will finish.\n"
+     ""},
+    {"SBExpressionOptions_GetOneThreadTimeoutInMicroSeconds",
+     _wrap_SBExpressionOptions_GetOneThreadTimeoutInMicroSeconds, METH_O,
+     "SBExpressionOptions_GetOneThreadTimeoutInMicroSeconds("
+     "SBExpressionOptions self) -> uint32_t"},
+    {"SBExpressionOptions_SetOneThreadTimeoutInMicroSeconds",
+     _wrap_SBExpressionOptions_SetOneThreadTimeoutInMicroSeconds, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetOneThreadTimeoutInMicroSeconds("
+     "SBExpressionOptions self, uint32_t timeout=0)\n"
+     "Sets the timeout in microseconds to run the expression on one thread "
+     "before either timing out or trying all threads.\n"
+     ""},
+    {"SBExpressionOptions_GetTryAllThreads",
+     _wrap_SBExpressionOptions_GetTryAllThreads, METH_O,
+     "SBExpressionOptions_GetTryAllThreads(SBExpressionOptions self) -> bool"},
+    {"SBExpressionOptions_SetTryAllThreads",
+     _wrap_SBExpressionOptions_SetTryAllThreads, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetTryAllThreads(SBExpressionOptions self, bool "
+     "run_others=True)\n"
+     "Sets whether to run all threads if the expression does not complete on "
+     "one thread.\n"
+     ""},
+    {"SBExpressionOptions_GetStopOthers",
+     _wrap_SBExpressionOptions_GetStopOthers, METH_O,
+     "SBExpressionOptions_GetStopOthers(SBExpressionOptions self) -> bool"},
+    {"SBExpressionOptions_SetStopOthers",
+     _wrap_SBExpressionOptions_SetStopOthers, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetStopOthers(SBExpressionOptions self, bool "
+     "stop_others=True)\n"
+     "Sets whether to stop other threads at all while running expressions.  If "
+     "false, TryAllThreads does nothing.\n"
+     ""},
+    {"SBExpressionOptions_GetTrapExceptions",
+     _wrap_SBExpressionOptions_GetTrapExceptions, METH_O,
+     "SBExpressionOptions_GetTrapExceptions(SBExpressionOptions self) -> bool"},
+    {"SBExpressionOptions_SetTrapExceptions",
+     _wrap_SBExpressionOptions_SetTrapExceptions, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetTrapExceptions(SBExpressionOptions self, bool "
+     "trap_exceptions=True)\n"
+     "Sets whether to abort expression evaluation if an exception is thrown "
+     "while executing.  Don't set this to false unless you know the function "
+     "you are calling traps all exceptions itself.\n"
+     ""},
+    {"SBExpressionOptions_SetLanguage", _wrap_SBExpressionOptions_SetLanguage,
+     METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetLanguage(SBExpressionOptions self, "
+     "lldb::LanguageType language)\n"
+     "SBExpressionOptions_SetLanguage(SBExpressionOptions self, "
+     "lldb::SBSourceLanguageName name, uint32_t version)\n"
+     "Sets the language that LLDB should assume the expression is written in\n"
+     ""},
+    {"SBExpressionOptions_GetPlaygroundTransformEnabled",
+     _wrap_SBExpressionOptions_GetPlaygroundTransformEnabled, METH_O,
+     "SBExpressionOptions_GetPlaygroundTransformEnabled(SBExpressionOptions "
+     "self) -> bool"},
+    {"SBExpressionOptions_SetPlaygroundTransformEnabled",
+     _wrap_SBExpressionOptions_SetPlaygroundTransformEnabled, METH_VARARGS,
+     "SBExpressionOptions_SetPlaygroundTransformEnabled(SBExpressionOptions "
+     "self, bool enable_playground_transform=True)"},
+    {"SBExpressionOptions_GetPlaygroundTransformHighPerformance",
+     _wrap_SBExpressionOptions_GetPlaygroundTransformHighPerformance, METH_O,
+     "SBExpressionOptions_GetPlaygroundTransformHighPerformance("
+     "SBExpressionOptions self) -> bool"},
+    {"SBExpressionOptions_SetPlaygroundTransformHighPerformance",
+     _wrap_SBExpressionOptions_SetPlaygroundTransformHighPerformance,
+     METH_VARARGS,
+     "SBExpressionOptions_SetPlaygroundTransformHighPerformance("
+     "SBExpressionOptions self, bool playground_transforms_hp=True)"},
+    {"SBExpressionOptions_GetREPLMode", _wrap_SBExpressionOptions_GetREPLMode,
+     METH_O,
+     "SBExpressionOptions_GetREPLMode(SBExpressionOptions self) -> bool"},
+    {"SBExpressionOptions_SetREPLMode", _wrap_SBExpressionOptions_SetREPLMode,
+     METH_VARARGS,
+     "SBExpressionOptions_SetREPLMode(SBExpressionOptions self, bool "
+     "enable_repl_mode=True)"},
+    {"SBExpressionOptions_GetGenerateDebugInfo",
+     _wrap_SBExpressionOptions_GetGenerateDebugInfo, METH_O,
+     "SBExpressionOptions_GetGenerateDebugInfo(SBExpressionOptions self) -> "
+     "bool"},
+    {"SBExpressionOptions_SetGenerateDebugInfo",
+     _wrap_SBExpressionOptions_SetGenerateDebugInfo, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetGenerateDebugInfo(SBExpressionOptions self, bool "
+     "b=True)\n"
+     "Sets whether to generate debug information for the expression and also "
+     "controls if a SBModule is generated.\n"
+     ""},
+    {"SBExpressionOptions_GetSuppressPersistentResult",
+     _wrap_SBExpressionOptions_GetSuppressPersistentResult, METH_O,
+     "SBExpressionOptions_GetSuppressPersistentResult(SBExpressionOptions "
+     "self) -> bool"},
+    {"SBExpressionOptions_SetSuppressPersistentResult",
+     _wrap_SBExpressionOptions_SetSuppressPersistentResult, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetSuppressPersistentResult(SBExpressionOptions "
+     "self, bool b=False)\n"
+     "Sets whether to produce a persistent result that can be used in future "
+     "expressions.\n"
+     ""},
+    {"SBExpressionOptions_GetPrefix", _wrap_SBExpressionOptions_GetPrefix,
+     METH_O,
+     "\n"
+     "SBExpressionOptions_GetPrefix(SBExpressionOptions self) -> char const *\n"
+     "Gets the prefix to use for this expression.\n"
+     ""},
+    {"SBExpressionOptions_SetPrefix", _wrap_SBExpressionOptions_SetPrefix,
+     METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetPrefix(SBExpressionOptions self, char const * "
+     "prefix)\n"
+     "Sets the prefix to use for this expression. This prefix gets inserted "
+     "after the 'target.expr-prefix' prefix contents, but before the wrapped "
+     "expression function body.\n"
+     ""},
+    {"SBExpressionOptions_SetAutoApplyFixIts",
+     _wrap_SBExpressionOptions_SetAutoApplyFixIts, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetAutoApplyFixIts(SBExpressionOptions self, bool "
+     "b=True)\n"
+     "Sets whether to auto-apply fix-it hints to the expression being "
+     "evaluated.\n"
+     ""},
+    {"SBExpressionOptions_GetAutoApplyFixIts",
+     _wrap_SBExpressionOptions_GetAutoApplyFixIts, METH_O,
+     "\n"
+     "SBExpressionOptions_GetAutoApplyFixIts(SBExpressionOptions self) -> "
+     "bool\n"
+     "Gets whether to auto-apply fix-it hints to an expression.\n"
+     ""},
+    {"SBExpressionOptions_SetRetriesWithFixIts",
+     _wrap_SBExpressionOptions_SetRetriesWithFixIts, METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetRetriesWithFixIts(SBExpressionOptions self, "
+     "uint64_t retries)\n"
+     "Sets how often LLDB should retry applying fix-its to an expression.\n"
+     ""},
+    {"SBExpressionOptions_GetRetriesWithFixIts",
+     _wrap_SBExpressionOptions_GetRetriesWithFixIts, METH_O,
+     "\n"
+     "SBExpressionOptions_GetRetriesWithFixIts(SBExpressionOptions self) -> "
+     "uint64_t\n"
+     "Gets how often LLDB will retry applying fix-its to an expression.\n"
+     ""},
+    {"SBExpressionOptions_GetTopLevel", _wrap_SBExpressionOptions_GetTopLevel,
+     METH_O,
+     "SBExpressionOptions_GetTopLevel(SBExpressionOptions self) -> bool"},
+    {"SBExpressionOptions_SetTopLevel", _wrap_SBExpressionOptions_SetTopLevel,
+     METH_VARARGS,
+     "SBExpressionOptions_SetTopLevel(SBExpressionOptions self, bool b=True)"},
+    {"SBExpressionOptions_GetAllowJIT", _wrap_SBExpressionOptions_GetAllowJIT,
+     METH_O,
+     "\n"
+     "SBExpressionOptions_GetAllowJIT(SBExpressionOptions self) -> bool\n"
+     "Gets whether to JIT an expression if it cannot be interpreted.\n"
+     ""},
+    {"SBExpressionOptions_SetAllowJIT", _wrap_SBExpressionOptions_SetAllowJIT,
+     METH_VARARGS,
+     "\n"
+     "SBExpressionOptions_SetAllowJIT(SBExpressionOptions self, bool allow)\n"
+     "Sets whether to JIT an expression if it cannot be interpreted.\n"
+     ""},
+    {"SBExpressionOptions_swigregister", SBExpressionOptions_swigregister,
+     METH_O, NULL},
+    {"SBExpressionOptions_swiginit", SBExpressionOptions_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBFile", _wrap_new_SBFile, METH_VARARGS,
+     "\n"
+     "SBFile()\n"
+     "SBFile(lldb::FileSP file_sp)\n"
+     "new_SBFile(int fd, char const * mode, bool transfer_ownership) -> "
+     "SBFile\n"
+     "initialize a SBFile from a python file object\n"
+     ""},
+    {"delete_SBFile", _wrap_delete_SBFile, METH_O,
+     "delete_SBFile(SBFile self)"},
+    {"SBFile_Read", _wrap_SBFile_Read, METH_VARARGS,
+     "Read(buffer) -> SBError, bytes_read"},
+    {"SBFile_Write", _wrap_SBFile_Write, METH_VARARGS,
+     "Write(buffer) -> SBError, written_read"},
+    {"SBFile_Flush", _wrap_SBFile_Flush, METH_O,
+     "SBFile_Flush(SBFile self) -> SBError"},
+    {"SBFile_IsValid", _wrap_SBFile_IsValid, METH_O,
+     "SBFile_IsValid(SBFile self) -> bool"},
+    {"SBFile_Close", _wrap_SBFile_Close, METH_O,
+     "SBFile_Close(SBFile self) -> SBError"},
+    {"SBFile___nonzero__", _wrap_SBFile___nonzero__, METH_O,
+     "SBFile___nonzero__(SBFile self) -> bool"},
+    {"SBFile_GetFile", _wrap_SBFile_GetFile, METH_O,
+     "\n"
+     "SBFile_GetFile(SBFile self) -> lldb::FileSP\n"
+     "\n"
+     "    Convert this SBFile into a python io.IOBase file object.\n"
+     "\n"
+     "    If the SBFile is itself a wrapper around a python file object,\n"
+     "    this will return that original object.\n"
+     "\n"
+     "    The file returned from here should be considered borrowed,\n"
+     "    in the sense that you may read and write to it, and flush it,\n"
+     "    etc, but you should not close it.   If you want to close the\n"
+     "    SBFile, call SBFile.Close().\n"
+     "\n"
+     "    If there is no underlying python file to unwrap, GetFile will\n"
+     "    use the file descriptor, if available to create a new python\n"
+     "    file object using ``open(fd, mode=..., closefd=False)``\n"
+     "\n"
+     ""},
+    {"SBFile_MakeBorrowed", _wrap_SBFile_MakeBorrowed, METH_O,
+     "SBFile_MakeBorrowed(lldb::FileSP BORROWED) -> SBFile"},
+    {"SBFile_MakeForcingIOMethods", _wrap_SBFile_MakeForcingIOMethods, METH_O,
+     "SBFile_MakeForcingIOMethods(lldb::FileSP FORCE_IO_METHODS) -> SBFile"},
+    {"SBFile_MakeBorrowedForcingIOMethods",
+     _wrap_SBFile_MakeBorrowedForcingIOMethods, METH_O,
+     "SBFile_MakeBorrowedForcingIOMethods(lldb::FileSP "
+     "BORROWED_FORCE_IO_METHODS) -> SBFile"},
+    {"SBFile_swigregister", SBFile_swigregister, METH_O, NULL},
+    {"SBFile_swiginit", SBFile_swiginit, METH_VARARGS, NULL},
+    {"new_SBFileSpec", _wrap_new_SBFileSpec, METH_VARARGS,
+     "\n"
+     "SBFileSpec()\n"
+     "SBFileSpec(SBFileSpec rhs)\n"
+     "SBFileSpec(char const * path)\n"
+     "new_SBFileSpec(char const * path, bool resolve) -> SBFileSpec\n"
+     ""},
+    {"delete_SBFileSpec", _wrap_delete_SBFileSpec, METH_O,
+     "delete_SBFileSpec(SBFileSpec self)"},
+    {"SBFileSpec___nonzero__", _wrap_SBFileSpec___nonzero__, METH_O,
+     "SBFileSpec___nonzero__(SBFileSpec self) -> bool"},
+    {"SBFileSpec___eq__", _wrap_SBFileSpec___eq__, METH_VARARGS,
+     "SBFileSpec___eq__(SBFileSpec self, SBFileSpec rhs) -> bool"},
+    {"SBFileSpec___ne__", _wrap_SBFileSpec___ne__, METH_VARARGS,
+     "SBFileSpec___ne__(SBFileSpec self, SBFileSpec rhs) -> bool"},
+    {"SBFileSpec_IsValid", _wrap_SBFileSpec_IsValid, METH_O,
+     "SBFileSpec_IsValid(SBFileSpec self) -> bool"},
+    {"SBFileSpec_Exists", _wrap_SBFileSpec_Exists, METH_O,
+     "SBFileSpec_Exists(SBFileSpec self) -> bool"},
+    {"SBFileSpec_ResolveExecutableLocation",
+     _wrap_SBFileSpec_ResolveExecutableLocation, METH_O,
+     "SBFileSpec_ResolveExecutableLocation(SBFileSpec self) -> bool"},
+    {"SBFileSpec_GetFilename", _wrap_SBFileSpec_GetFilename, METH_O,
+     "SBFileSpec_GetFilename(SBFileSpec self) -> char const *"},
+    {"SBFileSpec_GetDirectory", _wrap_SBFileSpec_GetDirectory, METH_O,
+     "SBFileSpec_GetDirectory(SBFileSpec self) -> char const *"},
+    {"SBFileSpec_SetFilename", _wrap_SBFileSpec_SetFilename, METH_VARARGS,
+     "SBFileSpec_SetFilename(SBFileSpec self, char const * filename)"},
+    {"SBFileSpec_SetDirectory", _wrap_SBFileSpec_SetDirectory, METH_VARARGS,
+     "SBFileSpec_SetDirectory(SBFileSpec self, char const * directory)"},
+    {"SBFileSpec_GetPath", _wrap_SBFileSpec_GetPath, METH_VARARGS,
+     "SBFileSpec_GetPath(SBFileSpec self, char * dst_path, size_t dst_len) -> "
+     "uint32_t"},
+    {"SBFileSpec_ResolvePath", _wrap_SBFileSpec_ResolvePath, METH_VARARGS,
+     "SBFileSpec_ResolvePath(char const * src_path, char * dst_path, size_t "
+     "dst_len) -> int"},
+    {"SBFileSpec_GetDescription", _wrap_SBFileSpec_GetDescription, METH_VARARGS,
+     "SBFileSpec_GetDescription(SBFileSpec self, SBStream description) -> "
+     "bool"},
+    {"SBFileSpec_AppendPathComponent", _wrap_SBFileSpec_AppendPathComponent,
+     METH_VARARGS,
+     "SBFileSpec_AppendPathComponent(SBFileSpec self, char const * "
+     "file_or_directory)"},
+    {"SBFileSpec___repr__", _wrap_SBFileSpec___repr__, METH_O,
+     "SBFileSpec___repr__(SBFileSpec self) -> std::string"},
+    {"SBFileSpec_swigregister", SBFileSpec_swigregister, METH_O, NULL},
+    {"SBFileSpec_swiginit", SBFileSpec_swiginit, METH_VARARGS, NULL},
+    {"new_SBFileSpecList", _wrap_new_SBFileSpecList, METH_VARARGS,
+     "\n"
+     "SBFileSpecList()\n"
+     "new_SBFileSpecList(SBFileSpecList rhs) -> SBFileSpecList\n"
+     ""},
+    {"delete_SBFileSpecList", _wrap_delete_SBFileSpecList, METH_O,
+     "delete_SBFileSpecList(SBFileSpecList self)"},
+    {"SBFileSpecList_GetSize", _wrap_SBFileSpecList_GetSize, METH_O,
+     "SBFileSpecList_GetSize(SBFileSpecList self) -> uint32_t"},
+    {"SBFileSpecList_GetDescription", _wrap_SBFileSpecList_GetDescription,
+     METH_VARARGS,
+     "SBFileSpecList_GetDescription(SBFileSpecList self, SBStream description) "
+     "-> bool"},
+    {"SBFileSpecList_Append", _wrap_SBFileSpecList_Append, METH_VARARGS,
+     "SBFileSpecList_Append(SBFileSpecList self, SBFileSpec sb_file)"},
+    {"SBFileSpecList_AppendIfUnique", _wrap_SBFileSpecList_AppendIfUnique,
+     METH_VARARGS,
+     "SBFileSpecList_AppendIfUnique(SBFileSpecList self, SBFileSpec sb_file) "
+     "-> bool"},
+    {"SBFileSpecList_Clear", _wrap_SBFileSpecList_Clear, METH_O,
+     "SBFileSpecList_Clear(SBFileSpecList self)"},
+    {"SBFileSpecList_FindFileIndex", _wrap_SBFileSpecList_FindFileIndex,
+     METH_VARARGS,
+     "SBFileSpecList_FindFileIndex(SBFileSpecList self, uint32_t idx, "
+     "SBFileSpec sb_file, bool full) -> uint32_t"},
+    {"SBFileSpecList_GetFileSpecAtIndex",
+     _wrap_SBFileSpecList_GetFileSpecAtIndex, METH_VARARGS,
+     "SBFileSpecList_GetFileSpecAtIndex(SBFileSpecList self, uint32_t idx) -> "
+     "SBFileSpec"},
+    {"SBFileSpecList___repr__", _wrap_SBFileSpecList___repr__, METH_O,
+     "SBFileSpecList___repr__(SBFileSpecList self) -> std::string"},
+    {"SBFileSpecList_swigregister", SBFileSpecList_swigregister, METH_O, NULL},
+    {"SBFileSpecList_swiginit", SBFileSpecList_swiginit, METH_VARARGS, NULL},
+    {"new_SBFormat", _wrap_new_SBFormat, METH_VARARGS,
+     "\n"
+     "SBFormat()\n"
+     "SBFormat(char const * format, SBError error)\n"
+     "new_SBFormat(SBFormat rhs) -> SBFormat\n"
+     ""},
+    {"delete_SBFormat", _wrap_delete_SBFormat, METH_O,
+     "delete_SBFormat(SBFormat self)"},
+    {"SBFormat___nonzero__", _wrap_SBFormat___nonzero__, METH_O,
+     "SBFormat___nonzero__(SBFormat self) -> bool"},
+    {"SBFormat_swigregister", SBFormat_swigregister, METH_O, NULL},
+    {"SBFormat_swiginit", SBFormat_swiginit, METH_VARARGS, NULL},
+    {"new_SBFrame", _wrap_new_SBFrame, METH_VARARGS,
+     "\n"
+     "SBFrame()\n"
+     "new_SBFrame(SBFrame rhs) -> SBFrame\n"
+     ""},
+    {"delete_SBFrame", _wrap_delete_SBFrame, METH_O,
+     "delete_SBFrame(SBFrame self)"},
+    {"SBFrame_IsEqual", _wrap_SBFrame_IsEqual, METH_VARARGS,
+     "SBFrame_IsEqual(SBFrame self, SBFrame that) -> bool"},
+    {"SBFrame___nonzero__", _wrap_SBFrame___nonzero__, METH_O,
+     "SBFrame___nonzero__(SBFrame self) -> bool"},
+    {"SBFrame_IsValid", _wrap_SBFrame_IsValid, METH_O,
+     "SBFrame_IsValid(SBFrame self) -> bool"},
+    {"SBFrame_GetFrameID", _wrap_SBFrame_GetFrameID, METH_O,
+     "SBFrame_GetFrameID(SBFrame self) -> uint32_t"},
+    {"SBFrame_GetCFA", _wrap_SBFrame_GetCFA, METH_O,
+     "\n"
+     "SBFrame_GetCFA(SBFrame self) -> lldb::addr_t\n"
+     "\n"
+     "    Get the Canonical Frame Address for this stack frame.\n"
+     "    This is the DWARF standard's definition of a CFA, a stack address\n"
+     "    that remains constant throughout the lifetime of the function.\n"
+     "    Returns an lldb::addr_t stack address, or LLDB_INVALID_ADDRESS if\n"
+     "    the CFA cannot be determined.\n"
+     ""},
+    {"SBFrame_GetPC", _wrap_SBFrame_GetPC, METH_O,
+     "SBFrame_GetPC(SBFrame self) -> lldb::addr_t"},
+    {"SBFrame_SetPC", _wrap_SBFrame_SetPC, METH_VARARGS,
+     "SBFrame_SetPC(SBFrame self, lldb::addr_t new_pc) -> bool"},
+    {"SBFrame_GetSP", _wrap_SBFrame_GetSP, METH_O,
+     "SBFrame_GetSP(SBFrame self) -> lldb::addr_t"},
+    {"SBFrame_GetFP", _wrap_SBFrame_GetFP, METH_O,
+     "SBFrame_GetFP(SBFrame self) -> lldb::addr_t"},
+    {"SBFrame_GetPCAddress", _wrap_SBFrame_GetPCAddress, METH_O,
+     "SBFrame_GetPCAddress(SBFrame self) -> SBAddress"},
+    {"SBFrame_GetSymbolContext", _wrap_SBFrame_GetSymbolContext, METH_VARARGS,
+     "SBFrame_GetSymbolContext(SBFrame self, uint32_t resolve_scope) -> "
+     "SBSymbolContext"},
+    {"SBFrame_GetModule", _wrap_SBFrame_GetModule, METH_O,
+     "SBFrame_GetModule(SBFrame self) -> SBModule"},
+    {"SBFrame_GetCompileUnit", _wrap_SBFrame_GetCompileUnit, METH_O,
+     "SBFrame_GetCompileUnit(SBFrame self) -> SBCompileUnit"},
+    {"SBFrame_GetFunction", _wrap_SBFrame_GetFunction, METH_O,
+     "SBFrame_GetFunction(SBFrame self) -> SBFunction"},
+    {"SBFrame_GetSymbol", _wrap_SBFrame_GetSymbol, METH_O,
+     "SBFrame_GetSymbol(SBFrame self) -> SBSymbol"},
+    {"SBFrame_GetBlock", _wrap_SBFrame_GetBlock, METH_O,
+     "\n"
+     "SBFrame_GetBlock(SBFrame self) -> SBBlock\n"
+     "\n"
+     "    Gets the deepest block that contains the frame PC.\n"
+     "\n"
+     "    See also GetFrameBlock().\n"
+     ""},
+    {"SBFrame_GetDisplayFunctionName", _wrap_SBFrame_GetDisplayFunctionName,
+     METH_O, "SBFrame_GetDisplayFunctionName(SBFrame self) -> char const *"},
+    {"SBFrame_GetFunctionName", _wrap_SBFrame_GetFunctionName, METH_VARARGS,
+     "\n"
+     "SBFrame_GetFunctionName(SBFrame self) -> char const\n"
+     "SBFrame_GetFunctionName(SBFrame self) -> char const *\n"
+     "\n"
+     "    Get the appropriate function name for this frame. Inlined functions "
+     "in\n"
+     "    LLDB are represented by Blocks that have inlined function "
+     "information, so\n"
+     "    just looking at the SBFunction or SBSymbol for a frame isn't "
+     "enough.\n"
+     "    This function will return the appropriate function, symbol or "
+     "inlined\n"
+     "    function name for the frame.\n"
+     "\n"
+     "    This function returns:\n"
+     "    - the name of the inlined function (if there is one)\n"
+     "    - the name of the concrete function (if there is one)\n"
+     "    - the name of the symbol (if there is one)\n"
+     "    - NULL\n"
+     "\n"
+     "    See also IsInlined().\n"
+     ""},
+    {"SBFrame_GuessLanguage", _wrap_SBFrame_GuessLanguage, METH_O,
+     "\n"
+     "SBFrame_GuessLanguage(SBFrame self) -> lldb::LanguageType\n"
+     "\n"
+     "    Returns the language of the frame's SBFunction, or if there.\n"
+     "    is no SBFunction, guess the language from the mangled name.\n"
+     "    .\n"
+     ""},
+    {"SBFrame_IsSwiftThunk", _wrap_SBFrame_IsSwiftThunk, METH_O,
+     "SBFrame_IsSwiftThunk(SBFrame self) -> bool"},
+    {"SBFrame_GetLanguageSpecificData", _wrap_SBFrame_GetLanguageSpecificData,
+     METH_O,
+     "SBFrame_GetLanguageSpecificData(SBFrame self) -> SBStructuredData"},
+    {"SBFrame_IsInlined", _wrap_SBFrame_IsInlined, METH_VARARGS,
+     "\n"
+     "SBFrame_IsInlined(SBFrame self) -> bool\n"
+     "SBFrame_IsInlined(SBFrame self) -> bool\n"
+     "\n"
+     "    Return true if this frame represents an inlined function.\n"
+     "\n"
+     "    See also GetFunctionName().\n"
+     ""},
+    {"SBFrame_IsArtificial", _wrap_SBFrame_IsArtificial, METH_VARARGS,
+     "\n"
+     "SBFrame_IsArtificial(SBFrame self) -> bool\n"
+     "SBFrame_IsArtificial(SBFrame self) -> bool\n"
+     "\n"
+     "    Return true if this frame is artificial (e.g a frame synthesized to\n"
+     "    capture a tail call). Local variables may not be available in an "
+     "artificial\n"
+     "    frame.\n"
+     ""},
+    {"SBFrame_IsHidden", _wrap_SBFrame_IsHidden, METH_O,
+     "SBFrame_IsHidden(SBFrame self) -> bool"},
+    {"SBFrame_EvaluateExpression", _wrap_SBFrame_EvaluateExpression,
+     METH_VARARGS,
+     "\n"
+     "SBFrame_EvaluateExpression(SBFrame self, char const * expr) -> SBValue\n"
+     "SBFrame_EvaluateExpression(SBFrame self, char const * expr, "
+     "lldb::DynamicValueType use_dynamic) -> SBValue\n"
+     "SBFrame_EvaluateExpression(SBFrame self, char const * expr, "
+     "lldb::DynamicValueType use_dynamic, bool unwind_on_error) -> SBValue\n"
+     "SBFrame_EvaluateExpression(SBFrame self, char const * expr, "
+     "SBExpressionOptions options) -> SBValue\n"
+     "\n"
+     "    The version that doesn't supply a 'use_dynamic' value will use the\n"
+     "    target's default.\n"
+     ""},
+    {"SBFrame_GetFrameBlock", _wrap_SBFrame_GetFrameBlock, METH_O,
+     "\n"
+     "SBFrame_GetFrameBlock(SBFrame self) -> SBBlock\n"
+     "\n"
+     "    Gets the lexical block that defines the stack frame. Another way to "
+     "think\n"
+     "    of this is it will return the block that contains all of the "
+     "variables\n"
+     "    for a stack frame. Inlined functions are represented as SBBlock "
+     "objects\n"
+     "    that have inlined function information: the name of the inlined "
+     "function,\n"
+     "    where it was called from. The block that is returned will be the "
+     "first\n"
+     "    block at or above the block for the PC (SBFrame::GetBlock()) that "
+     "defines\n"
+     "    the scope of the frame. When a function contains no inlined "
+     "functions,\n"
+     "    this will be the top most lexical block that defines the function.\n"
+     "    When a function has inlined functions and the PC is currently\n"
+     "    in one of those inlined functions, this method will return the "
+     "inlined\n"
+     "    block that defines this frame. If the PC isn't currently in an "
+     "inlined\n"
+     "    function, the lexical block that defines the function is returned.\n"
+     ""},
+    {"SBFrame_GetLineEntry", _wrap_SBFrame_GetLineEntry, METH_O,
+     "SBFrame_GetLineEntry(SBFrame self) -> SBLineEntry"},
+    {"SBFrame_GetThread", _wrap_SBFrame_GetThread, METH_O,
+     "SBFrame_GetThread(SBFrame self) -> SBThread"},
+    {"SBFrame_Disassemble", _wrap_SBFrame_Disassemble, METH_O,
+     "SBFrame_Disassemble(SBFrame self) -> char const *"},
+    {"SBFrame_Clear", _wrap_SBFrame_Clear, METH_O,
+     "SBFrame_Clear(SBFrame self)"},
+    {"SBFrame___eq__", _wrap_SBFrame___eq__, METH_VARARGS,
+     "SBFrame___eq__(SBFrame self, SBFrame rhs) -> bool"},
+    {"SBFrame___ne__", _wrap_SBFrame___ne__, METH_VARARGS,
+     "SBFrame___ne__(SBFrame self, SBFrame rhs) -> bool"},
+    {"SBFrame_GetVariables", _wrap_SBFrame_GetVariables, METH_VARARGS,
+     "\n"
+     "SBFrame_GetVariables(SBFrame self, bool arguments, bool locals, bool "
+     "statics, bool in_scope_only) -> SBValueList\n"
+     "SBFrame_GetVariables(SBFrame self, bool arguments, bool locals, bool "
+     "statics, bool in_scope_only, lldb::DynamicValueType use_dynamic) -> "
+     "SBValueList\n"
+     "SBFrame_GetVariables(SBFrame self, SBVariablesOptions options) -> "
+     "SBValueList\n"
+     "\n"
+     "    The version that doesn't supply a 'use_dynamic' value will use the\n"
+     "    target's default.\n"
+     ""},
+    {"SBFrame_GetRegisters", _wrap_SBFrame_GetRegisters, METH_O,
+     "SBFrame_GetRegisters(SBFrame self) -> SBValueList"},
+    {"SBFrame_FindRegister", _wrap_SBFrame_FindRegister, METH_VARARGS,
+     "SBFrame_FindRegister(SBFrame self, char const * name) -> SBValue"},
+    {"SBFrame_FindVariable", _wrap_SBFrame_FindVariable, METH_VARARGS,
+     "\n"
+     "SBFrame_FindVariable(SBFrame self, char const * var_name) -> SBValue\n"
+     "SBFrame_FindVariable(SBFrame self, char const * var_name, "
+     "lldb::DynamicValueType use_dynamic) -> SBValue\n"
+     "\n"
+     "    The version that doesn't supply a 'use_dynamic' value will use the\n"
+     "    target's default.\n"
+     ""},
+    {"SBFrame_GetValueForVariablePath", _wrap_SBFrame_GetValueForVariablePath,
+     METH_VARARGS,
+     "\n"
+     "SBFrame_GetValueForVariablePath(SBFrame self, char const * "
+     "var_expr_cstr, lldb::DynamicValueType use_dynamic) -> SBValue\n"
+     "SBFrame_GetValueForVariablePath(SBFrame self, char const * var_path) -> "
+     "SBValue\n"
+     "\n"
+     "    Get a lldb.SBValue for a variable path.\n"
+     "\n"
+     "    Variable paths can include access to pointer or instance members: "
+     "::\n"
+     "\n"
+     "        rect_ptr->origin.y\n"
+     "        pt.x\n"
+     "\n"
+     "    Pointer dereferences: ::\n"
+     "\n"
+     "        *this->foo_ptr\n"
+     "        **argv\n"
+     "\n"
+     "    Address of: ::\n"
+     "\n"
+     "        &pt\n"
+     "        &my_array[3].x\n"
+     "\n"
+     "    Array accesses and treating pointers as arrays: ::\n"
+     "\n"
+     "        int_array[1]\n"
+     "        pt_ptr[22].x\n"
+     "\n"
+     "    Unlike `EvaluateExpression()` which returns :py:class:`SBValue` "
+     "objects\n"
+     "    with constant copies of the values at the time of evaluation,\n"
+     "    the result of this function is a value that will continue to\n"
+     "    track the current value of the value as execution progresses\n"
+     "    in the current frame.\n"
+     ""},
+    {"SBFrame_FindValue", _wrap_SBFrame_FindValue, METH_VARARGS,
+     "\n"
+     "SBFrame_FindValue(SBFrame self, char const * name, lldb::ValueType "
+     "value_type) -> SBValue\n"
+     "SBFrame_FindValue(SBFrame self, char const * name, lldb::ValueType "
+     "value_type, lldb::DynamicValueType use_dynamic) -> SBValue\n"
+     "\n"
+     "    Find variables, register sets, registers, or persistent variables "
+     "using\n"
+     "    the frame as the scope.\n"
+     "\n"
+     "    The version that doesn't supply a ``use_dynamic`` value will use "
+     "the\n"
+     "    target's default.\n"
+     ""},
+    {"SBFrame_GetDescription", _wrap_SBFrame_GetDescription, METH_VARARGS,
+     "SBFrame_GetDescription(SBFrame self, SBStream description) -> bool"},
+    {"SBFrame_GetDescriptionWithFormat", _wrap_SBFrame_GetDescriptionWithFormat,
+     METH_VARARGS,
+     "SBFrame_GetDescriptionWithFormat(SBFrame self, SBFormat format, SBStream "
+     "output) -> SBError"},
+    {"SBFrame___repr__", _wrap_SBFrame___repr__, METH_O,
+     "SBFrame___repr__(SBFrame self) -> std::string"},
+    {"SBFrame_swigregister", SBFrame_swigregister, METH_O, NULL},
+    {"SBFrame_swiginit", SBFrame_swiginit, METH_VARARGS, NULL},
+    {"new_SBFunction", _wrap_new_SBFunction, METH_VARARGS,
+     "\n"
+     "SBFunction()\n"
+     "new_SBFunction(SBFunction rhs) -> SBFunction\n"
+     ""},
+    {"delete_SBFunction", _wrap_delete_SBFunction, METH_O,
+     "delete_SBFunction(SBFunction self)"},
+    {"SBFunction___nonzero__", _wrap_SBFunction___nonzero__, METH_O,
+     "SBFunction___nonzero__(SBFunction self) -> bool"},
+    {"SBFunction_IsValid", _wrap_SBFunction_IsValid, METH_O,
+     "SBFunction_IsValid(SBFunction self) -> bool"},
+    {"SBFunction_GetName", _wrap_SBFunction_GetName, METH_O,
+     "SBFunction_GetName(SBFunction self) -> char const *"},
+    {"SBFunction_GetDisplayName", _wrap_SBFunction_GetDisplayName, METH_O,
+     "SBFunction_GetDisplayName(SBFunction self) -> char const *"},
+    {"SBFunction_GetMangledName", _wrap_SBFunction_GetMangledName, METH_O,
+     "SBFunction_GetMangledName(SBFunction self) -> char const *"},
+    {"SBFunction_GetInstructions", _wrap_SBFunction_GetInstructions,
+     METH_VARARGS,
+     "\n"
+     "SBFunction_GetInstructions(SBFunction self, SBTarget target) -> "
+     "SBInstructionList\n"
+     "SBFunction_GetInstructions(SBFunction self, SBTarget target, char const "
+     "* flavor) -> SBInstructionList\n"
+     ""},
+    {"SBFunction_GetStartAddress", _wrap_SBFunction_GetStartAddress, METH_O,
+     "SBFunction_GetStartAddress(SBFunction self) -> SBAddress"},
+    {"SBFunction_GetEndAddress", _wrap_SBFunction_GetEndAddress, METH_O,
+     "SBFunction_GetEndAddress(SBFunction self) -> SBAddress"},
+    {"SBFunction_GetRanges", _wrap_SBFunction_GetRanges, METH_O,
+     "SBFunction_GetRanges(SBFunction self) -> SBAddressRangeList"},
+    {"SBFunction_GetArgumentName", _wrap_SBFunction_GetArgumentName,
+     METH_VARARGS,
+     "SBFunction_GetArgumentName(SBFunction self, uint32_t arg_idx) -> char "
+     "const *"},
+    {"SBFunction_GetPrologueByteSize", _wrap_SBFunction_GetPrologueByteSize,
+     METH_O, "SBFunction_GetPrologueByteSize(SBFunction self) -> uint32_t"},
+    {"SBFunction_GetType", _wrap_SBFunction_GetType, METH_O,
+     "SBFunction_GetType(SBFunction self) -> SBType"},
+    {"SBFunction_GetBlock", _wrap_SBFunction_GetBlock, METH_O,
+     "SBFunction_GetBlock(SBFunction self) -> SBBlock"},
+    {"SBFunction_GetLanguage", _wrap_SBFunction_GetLanguage, METH_O,
+     "SBFunction_GetLanguage(SBFunction self) -> lldb::LanguageType"},
+    {"SBFunction_GetIsOptimized", _wrap_SBFunction_GetIsOptimized, METH_O,
+     "\n"
+     "SBFunction_GetIsOptimized(SBFunction self) -> bool\n"
+     "\n"
+     "    Returns true if the function was compiled with optimization.\n"
+     "    Optimization, in this case, is meant to indicate that the debugger\n"
+     "    experience may be confusing for the user -- variables optimized "
+     "away,\n"
+     "    stepping jumping between source lines -- and the driver may want to\n"
+     "    provide some guidance to the user about this.\n"
+     "    Returns false if unoptimized, or unknown.\n"
+     ""},
+    {"SBFunction_GetCanThrow", _wrap_SBFunction_GetCanThrow, METH_O,
+     "SBFunction_GetCanThrow(SBFunction self) -> bool"},
+    {"SBFunction___eq__", _wrap_SBFunction___eq__, METH_VARARGS,
+     "SBFunction___eq__(SBFunction self, SBFunction rhs) -> bool"},
+    {"SBFunction___ne__", _wrap_SBFunction___ne__, METH_VARARGS,
+     "SBFunction___ne__(SBFunction self, SBFunction rhs) -> bool"},
+    {"SBFunction_GetDescription", _wrap_SBFunction_GetDescription, METH_VARARGS,
+     "SBFunction_GetDescription(SBFunction self, SBStream description) -> "
+     "bool"},
+    {"SBFunction___repr__", _wrap_SBFunction___repr__, METH_O,
+     "SBFunction___repr__(SBFunction self) -> std::string"},
+    {"SBFunction_swigregister", SBFunction_swigregister, METH_O, NULL},
+    {"SBFunction_swiginit", SBFunction_swiginit, METH_VARARGS, NULL},
+    {"SBHostOS_GetProgramFileSpec", _wrap_SBHostOS_GetProgramFileSpec,
+     METH_NOARGS, "SBHostOS_GetProgramFileSpec() -> SBFileSpec"},
+    {"SBHostOS_GetLLDBPythonPath", _wrap_SBHostOS_GetLLDBPythonPath,
+     METH_NOARGS, "SBHostOS_GetLLDBPythonPath() -> SBFileSpec"},
+    {"SBHostOS_GetLLDBPath", _wrap_SBHostOS_GetLLDBPath, METH_O,
+     "SBHostOS_GetLLDBPath(lldb::PathType path_type) -> SBFileSpec"},
+    {"SBHostOS_GetUserHomeDirectory", _wrap_SBHostOS_GetUserHomeDirectory,
+     METH_NOARGS, "SBHostOS_GetUserHomeDirectory() -> SBFileSpec"},
+    {"SBHostOS_ThreadCreated", _wrap_SBHostOS_ThreadCreated, METH_O,
+     "SBHostOS_ThreadCreated(char const * name)"},
+    {"SBHostOS_ThreadCreate", _wrap_SBHostOS_ThreadCreate, METH_VARARGS,
+     "SBHostOS_ThreadCreate(char const * name, lldb::thread_func_t "
+     "thread_function, void * thread_arg, SBError err) -> lldb::thread_t"},
+    {"SBHostOS_ThreadCancel", _wrap_SBHostOS_ThreadCancel, METH_VARARGS,
+     "SBHostOS_ThreadCancel(lldb::thread_t thread, SBError err) -> bool"},
+    {"SBHostOS_ThreadDetach", _wrap_SBHostOS_ThreadDetach, METH_VARARGS,
+     "SBHostOS_ThreadDetach(lldb::thread_t thread, SBError err) -> bool"},
+    {"SBHostOS_ThreadJoin", _wrap_SBHostOS_ThreadJoin, METH_VARARGS,
+     "SBHostOS_ThreadJoin(lldb::thread_t thread, lldb::thread_result_t * "
+     "result, SBError err) -> bool"},
+    {"new_SBHostOS", _wrap_new_SBHostOS, METH_NOARGS,
+     "new_SBHostOS() -> SBHostOS"},
+    {"delete_SBHostOS", _wrap_delete_SBHostOS, METH_O,
+     "delete_SBHostOS(SBHostOS self)"},
+    {"SBHostOS_swigregister", SBHostOS_swigregister, METH_O, NULL},
+    {"SBHostOS_swiginit", SBHostOS_swiginit, METH_VARARGS, NULL},
+    {"new_SBInstruction", _wrap_new_SBInstruction, METH_VARARGS,
+     "\n"
+     "SBInstruction()\n"
+     "new_SBInstruction(SBInstruction rhs) -> SBInstruction\n"
+     ""},
+    {"delete_SBInstruction", _wrap_delete_SBInstruction, METH_O,
+     "delete_SBInstruction(SBInstruction self)"},
+    {"SBInstruction___nonzero__", _wrap_SBInstruction___nonzero__, METH_O,
+     "SBInstruction___nonzero__(SBInstruction self) -> bool"},
+    {"SBInstruction_IsValid", _wrap_SBInstruction_IsValid, METH_O,
+     "SBInstruction_IsValid(SBInstruction self) -> bool"},
+    {"SBInstruction_GetAddress", _wrap_SBInstruction_GetAddress, METH_O,
+     "SBInstruction_GetAddress(SBInstruction self) -> SBAddress"},
+    {"SBInstruction_GetMnemonic", _wrap_SBInstruction_GetMnemonic, METH_VARARGS,
+     "SBInstruction_GetMnemonic(SBInstruction self, SBTarget target) -> char "
+     "const *"},
+    {"SBInstruction_GetOperands", _wrap_SBInstruction_GetOperands, METH_VARARGS,
+     "SBInstruction_GetOperands(SBInstruction self, SBTarget target) -> char "
+     "const *"},
+    {"SBInstruction_GetComment", _wrap_SBInstruction_GetComment, METH_VARARGS,
+     "SBInstruction_GetComment(SBInstruction self, SBTarget target) -> char "
+     "const *"},
+    {"SBInstruction_GetControlFlowKind", _wrap_SBInstruction_GetControlFlowKind,
+     METH_VARARGS,
+     "SBInstruction_GetControlFlowKind(SBInstruction self, SBTarget target) -> "
+     "lldb::InstructionControlFlowKind"},
+    {"SBInstruction_GetData", _wrap_SBInstruction_GetData, METH_VARARGS,
+     "SBInstruction_GetData(SBInstruction self, SBTarget target) -> SBData"},
+    {"SBInstruction_GetByteSize", _wrap_SBInstruction_GetByteSize, METH_O,
+     "SBInstruction_GetByteSize(SBInstruction self) -> size_t"},
+    {"SBInstruction_DoesBranch", _wrap_SBInstruction_DoesBranch, METH_O,
+     "SBInstruction_DoesBranch(SBInstruction self) -> bool"},
+    {"SBInstruction_HasDelaySlot", _wrap_SBInstruction_HasDelaySlot, METH_O,
+     "SBInstruction_HasDelaySlot(SBInstruction self) -> bool"},
+    {"SBInstruction_CanSetBreakpoint", _wrap_SBInstruction_CanSetBreakpoint,
+     METH_O, "SBInstruction_CanSetBreakpoint(SBInstruction self) -> bool"},
+    {"SBInstruction_Print", _wrap_SBInstruction_Print, METH_VARARGS,
+     "\n"
+     "SBInstruction_Print(SBInstruction self, SBFile out)\n"
+     "SBInstruction_Print(SBInstruction self, lldb::FileSP BORROWED)\n"
+     ""},
+    {"SBInstruction_GetDescription", _wrap_SBInstruction_GetDescription,
+     METH_VARARGS,
+     "SBInstruction_GetDescription(SBInstruction self, SBStream description) "
+     "-> bool"},
+    {"SBInstruction_EmulateWithFrame", _wrap_SBInstruction_EmulateWithFrame,
+     METH_VARARGS,
+     "SBInstruction_EmulateWithFrame(SBInstruction self, SBFrame frame, "
+     "uint32_t evaluate_options) -> bool"},
+    {"SBInstruction_DumpEmulation", _wrap_SBInstruction_DumpEmulation,
+     METH_VARARGS,
+     "SBInstruction_DumpEmulation(SBInstruction self, char const * triple) -> "
+     "bool"},
+    {"SBInstruction_TestEmulation", _wrap_SBInstruction_TestEmulation,
+     METH_VARARGS,
+     "SBInstruction_TestEmulation(SBInstruction self, SBStream output_stream, "
+     "char const * test_file) -> bool"},
+    {"SBInstruction___repr__", _wrap_SBInstruction___repr__, METH_O,
+     "SBInstruction___repr__(SBInstruction self) -> std::string"},
+    {"SBInstruction_swigregister", SBInstruction_swigregister, METH_O, NULL},
+    {"SBInstruction_swiginit", SBInstruction_swiginit, METH_VARARGS, NULL},
+    {"new_SBInstructionList", _wrap_new_SBInstructionList, METH_VARARGS,
+     "\n"
+     "SBInstructionList()\n"
+     "new_SBInstructionList(SBInstructionList rhs) -> SBInstructionList\n"
+     ""},
+    {"delete_SBInstructionList", _wrap_delete_SBInstructionList, METH_O,
+     "delete_SBInstructionList(SBInstructionList self)"},
+    {"SBInstructionList___nonzero__", _wrap_SBInstructionList___nonzero__,
+     METH_O, "SBInstructionList___nonzero__(SBInstructionList self) -> bool"},
+    {"SBInstructionList_IsValid", _wrap_SBInstructionList_IsValid, METH_O,
+     "SBInstructionList_IsValid(SBInstructionList self) -> bool"},
+    {"SBInstructionList_GetSize", _wrap_SBInstructionList_GetSize, METH_O,
+     "SBInstructionList_GetSize(SBInstructionList self) -> size_t"},
+    {"SBInstructionList_GetInstructionAtIndex",
+     _wrap_SBInstructionList_GetInstructionAtIndex, METH_VARARGS,
+     "SBInstructionList_GetInstructionAtIndex(SBInstructionList self, uint32_t "
+     "idx) -> SBInstruction"},
+    {"SBInstructionList_GetInstructionsCount",
+     _wrap_SBInstructionList_GetInstructionsCount, METH_VARARGS,
+     "SBInstructionList_GetInstructionsCount(SBInstructionList self, SBAddress "
+     "start, SBAddress end, bool canSetBreakpoint=False) -> size_t"},
+    {"SBInstructionList_Clear", _wrap_SBInstructionList_Clear, METH_O,
+     "SBInstructionList_Clear(SBInstructionList self)"},
+    {"SBInstructionList_AppendInstruction",
+     _wrap_SBInstructionList_AppendInstruction, METH_VARARGS,
+     "SBInstructionList_AppendInstruction(SBInstructionList self, "
+     "SBInstruction inst)"},
+    {"SBInstructionList_Print", _wrap_SBInstructionList_Print, METH_VARARGS,
+     "\n"
+     "SBInstructionList_Print(SBInstructionList self, SBFile out)\n"
+     "SBInstructionList_Print(SBInstructionList self, lldb::FileSP BORROWED)\n"
+     ""},
+    {"SBInstructionList_GetDescription", _wrap_SBInstructionList_GetDescription,
+     METH_VARARGS,
+     "SBInstructionList_GetDescription(SBInstructionList self, SBStream "
+     "description) -> bool"},
+    {"SBInstructionList_DumpEmulationForAllInstructions",
+     _wrap_SBInstructionList_DumpEmulationForAllInstructions, METH_VARARGS,
+     "SBInstructionList_DumpEmulationForAllInstructions(SBInstructionList "
+     "self, char const * triple) -> bool"},
+    {"SBInstructionList___repr__", _wrap_SBInstructionList___repr__, METH_O,
+     "SBInstructionList___repr__(SBInstructionList self) -> std::string"},
+    {"SBInstructionList_swigregister", SBInstructionList_swigregister, METH_O,
+     NULL},
+    {"SBInstructionList_swiginit", SBInstructionList_swiginit, METH_VARARGS,
+     NULL},
+    {"SBLanguageRuntime_GetLanguageTypeFromString",
+     _wrap_SBLanguageRuntime_GetLanguageTypeFromString, METH_O,
+     "SBLanguageRuntime_GetLanguageTypeFromString(char const * string) -> "
+     "lldb::LanguageType"},
+    {"SBLanguageRuntime_GetNameForLanguageType",
+     _wrap_SBLanguageRuntime_GetNameForLanguageType, METH_O,
+     "SBLanguageRuntime_GetNameForLanguageType(lldb::LanguageType language) -> "
+     "char const *"},
+    {"SBLanguageRuntime_LanguageIsCPlusPlus",
+     _wrap_SBLanguageRuntime_LanguageIsCPlusPlus, METH_O,
+     "SBLanguageRuntime_LanguageIsCPlusPlus(lldb::LanguageType language) -> "
+     "bool"},
+    {"SBLanguageRuntime_LanguageIsObjC", _wrap_SBLanguageRuntime_LanguageIsObjC,
+     METH_O,
+     "SBLanguageRuntime_LanguageIsObjC(lldb::LanguageType language) -> bool"},
+    {"SBLanguageRuntime_LanguageIsCFamily",
+     _wrap_SBLanguageRuntime_LanguageIsCFamily, METH_O,
+     "SBLanguageRuntime_LanguageIsCFamily(lldb::LanguageType language) -> "
+     "bool"},
+    {"SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow",
+     _wrap_SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow, METH_O,
+     "SBLanguageRuntime_SupportsExceptionBreakpointsOnThrow(lldb::LanguageType "
+     "language) -> bool"},
+    {"SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch",
+     _wrap_SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch, METH_O,
+     "SBLanguageRuntime_SupportsExceptionBreakpointsOnCatch(lldb::LanguageType "
+     "language) -> bool"},
+    {"SBLanguageRuntime_GetThrowKeywordForLanguage",
+     _wrap_SBLanguageRuntime_GetThrowKeywordForLanguage, METH_O,
+     "SBLanguageRuntime_GetThrowKeywordForLanguage(lldb::LanguageType "
+     "language) -> char const *"},
+    {"SBLanguageRuntime_GetCatchKeywordForLanguage",
+     _wrap_SBLanguageRuntime_GetCatchKeywordForLanguage, METH_O,
+     "SBLanguageRuntime_GetCatchKeywordForLanguage(lldb::LanguageType "
+     "language) -> char const *"},
+    {"new_SBLanguageRuntime", _wrap_new_SBLanguageRuntime, METH_NOARGS,
+     "new_SBLanguageRuntime() -> SBLanguageRuntime"},
+    {"delete_SBLanguageRuntime", _wrap_delete_SBLanguageRuntime, METH_O,
+     "delete_SBLanguageRuntime(SBLanguageRuntime self)"},
+    {"SBLanguageRuntime_swigregister", SBLanguageRuntime_swigregister, METH_O,
+     NULL},
+    {"SBLanguageRuntime_swiginit", SBLanguageRuntime_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBLaunchInfo", _wrap_new_SBLaunchInfo, METH_O,
+     "new_SBLaunchInfo(char const ** argv) -> SBLaunchInfo"},
+    {"delete_SBLaunchInfo", _wrap_delete_SBLaunchInfo, METH_O,
+     "delete_SBLaunchInfo(SBLaunchInfo self)"},
+    {"SBLaunchInfo_GetProcessID", _wrap_SBLaunchInfo_GetProcessID, METH_O,
+     "SBLaunchInfo_GetProcessID(SBLaunchInfo self) -> lldb::pid_t"},
+    {"SBLaunchInfo_GetUserID", _wrap_SBLaunchInfo_GetUserID, METH_O,
+     "SBLaunchInfo_GetUserID(SBLaunchInfo self) -> uint32_t"},
+    {"SBLaunchInfo_GetGroupID", _wrap_SBLaunchInfo_GetGroupID, METH_O,
+     "SBLaunchInfo_GetGroupID(SBLaunchInfo self) -> uint32_t"},
+    {"SBLaunchInfo_UserIDIsValid", _wrap_SBLaunchInfo_UserIDIsValid, METH_O,
+     "SBLaunchInfo_UserIDIsValid(SBLaunchInfo self) -> bool"},
+    {"SBLaunchInfo_GroupIDIsValid", _wrap_SBLaunchInfo_GroupIDIsValid, METH_O,
+     "SBLaunchInfo_GroupIDIsValid(SBLaunchInfo self) -> bool"},
+    {"SBLaunchInfo_SetUserID", _wrap_SBLaunchInfo_SetUserID, METH_VARARGS,
+     "SBLaunchInfo_SetUserID(SBLaunchInfo self, uint32_t uid)"},
+    {"SBLaunchInfo_SetGroupID", _wrap_SBLaunchInfo_SetGroupID, METH_VARARGS,
+     "SBLaunchInfo_SetGroupID(SBLaunchInfo self, uint32_t gid)"},
+    {"SBLaunchInfo_GetExecutableFile", _wrap_SBLaunchInfo_GetExecutableFile,
+     METH_O, "SBLaunchInfo_GetExecutableFile(SBLaunchInfo self) -> SBFileSpec"},
+    {"SBLaunchInfo_SetExecutableFile", _wrap_SBLaunchInfo_SetExecutableFile,
+     METH_VARARGS,
+     "SBLaunchInfo_SetExecutableFile(SBLaunchInfo self, SBFileSpec exe_file, "
+     "bool add_as_first_arg)"},
+    {"SBLaunchInfo_GetListener", _wrap_SBLaunchInfo_GetListener, METH_O,
+     "SBLaunchInfo_GetListener(SBLaunchInfo self) -> SBListener"},
+    {"SBLaunchInfo_SetListener", _wrap_SBLaunchInfo_SetListener, METH_VARARGS,
+     "SBLaunchInfo_SetListener(SBLaunchInfo self, SBListener listener)"},
+    {"SBLaunchInfo_GetShadowListener", _wrap_SBLaunchInfo_GetShadowListener,
+     METH_O, "SBLaunchInfo_GetShadowListener(SBLaunchInfo self) -> SBListener"},
+    {"SBLaunchInfo_SetShadowListener", _wrap_SBLaunchInfo_SetShadowListener,
+     METH_VARARGS,
+     "SBLaunchInfo_SetShadowListener(SBLaunchInfo self, SBListener listener)"},
+    {"SBLaunchInfo_GetNumArguments", _wrap_SBLaunchInfo_GetNumArguments, METH_O,
+     "SBLaunchInfo_GetNumArguments(SBLaunchInfo self) -> uint32_t"},
+    {"SBLaunchInfo_GetArgumentAtIndex", _wrap_SBLaunchInfo_GetArgumentAtIndex,
+     METH_VARARGS,
+     "SBLaunchInfo_GetArgumentAtIndex(SBLaunchInfo self, uint32_t idx) -> char "
+     "const *"},
+    {"SBLaunchInfo_SetArguments", _wrap_SBLaunchInfo_SetArguments, METH_VARARGS,
+     "SBLaunchInfo_SetArguments(SBLaunchInfo self, char const ** argv, bool "
+     "append)"},
+    {"SBLaunchInfo_GetNumEnvironmentEntries",
+     _wrap_SBLaunchInfo_GetNumEnvironmentEntries, METH_O,
+     "SBLaunchInfo_GetNumEnvironmentEntries(SBLaunchInfo self) -> uint32_t"},
+    {"SBLaunchInfo_GetEnvironmentEntryAtIndex",
+     _wrap_SBLaunchInfo_GetEnvironmentEntryAtIndex, METH_VARARGS,
+     "SBLaunchInfo_GetEnvironmentEntryAtIndex(SBLaunchInfo self, uint32_t idx) "
+     "-> char const *"},
+    {"SBLaunchInfo_SetEnvironmentEntries",
+     _wrap_SBLaunchInfo_SetEnvironmentEntries, METH_VARARGS,
+     "SBLaunchInfo_SetEnvironmentEntries(SBLaunchInfo self, char const ** "
+     "envp, bool append)"},
+    {"SBLaunchInfo_SetEnvironment", _wrap_SBLaunchInfo_SetEnvironment,
+     METH_VARARGS,
+     "SBLaunchInfo_SetEnvironment(SBLaunchInfo self, SBEnvironment env, bool "
+     "append)"},
+    {"SBLaunchInfo_GetEnvironment", _wrap_SBLaunchInfo_GetEnvironment, METH_O,
+     "SBLaunchInfo_GetEnvironment(SBLaunchInfo self) -> SBEnvironment"},
+    {"SBLaunchInfo_Clear", _wrap_SBLaunchInfo_Clear, METH_O,
+     "SBLaunchInfo_Clear(SBLaunchInfo self)"},
+    {"SBLaunchInfo_GetWorkingDirectory", _wrap_SBLaunchInfo_GetWorkingDirectory,
+     METH_O,
+     "SBLaunchInfo_GetWorkingDirectory(SBLaunchInfo self) -> char const *"},
+    {"SBLaunchInfo_SetWorkingDirectory", _wrap_SBLaunchInfo_SetWorkingDirectory,
+     METH_VARARGS,
+     "SBLaunchInfo_SetWorkingDirectory(SBLaunchInfo self, char const * "
+     "working_dir)"},
+    {"SBLaunchInfo_GetLaunchFlags", _wrap_SBLaunchInfo_GetLaunchFlags, METH_O,
+     "SBLaunchInfo_GetLaunchFlags(SBLaunchInfo self) -> uint32_t"},
+    {"SBLaunchInfo_SetLaunchFlags", _wrap_SBLaunchInfo_SetLaunchFlags,
+     METH_VARARGS,
+     "SBLaunchInfo_SetLaunchFlags(SBLaunchInfo self, uint32_t flags)"},
+    {"SBLaunchInfo_GetProcessPluginName",
+     _wrap_SBLaunchInfo_GetProcessPluginName, METH_O,
+     "SBLaunchInfo_GetProcessPluginName(SBLaunchInfo self) -> char const *"},
+    {"SBLaunchInfo_SetProcessPluginName",
+     _wrap_SBLaunchInfo_SetProcessPluginName, METH_VARARGS,
+     "SBLaunchInfo_SetProcessPluginName(SBLaunchInfo self, char const * "
+     "plugin_name)"},
+    {"SBLaunchInfo_GetShell", _wrap_SBLaunchInfo_GetShell, METH_O,
+     "SBLaunchInfo_GetShell(SBLaunchInfo self) -> char const *"},
+    {"SBLaunchInfo_SetShell", _wrap_SBLaunchInfo_SetShell, METH_VARARGS,
+     "SBLaunchInfo_SetShell(SBLaunchInfo self, char const * path)"},
+    {"SBLaunchInfo_GetShellExpandArguments",
+     _wrap_SBLaunchInfo_GetShellExpandArguments, METH_O,
+     "SBLaunchInfo_GetShellExpandArguments(SBLaunchInfo self) -> bool"},
+    {"SBLaunchInfo_SetShellExpandArguments",
+     _wrap_SBLaunchInfo_SetShellExpandArguments, METH_VARARGS,
+     "SBLaunchInfo_SetShellExpandArguments(SBLaunchInfo self, bool expand)"},
+    {"SBLaunchInfo_GetResumeCount", _wrap_SBLaunchInfo_GetResumeCount, METH_O,
+     "SBLaunchInfo_GetResumeCount(SBLaunchInfo self) -> uint32_t"},
+    {"SBLaunchInfo_SetResumeCount", _wrap_SBLaunchInfo_SetResumeCount,
+     METH_VARARGS,
+     "SBLaunchInfo_SetResumeCount(SBLaunchInfo self, uint32_t c)"},
+    {"SBLaunchInfo_AddCloseFileAction", _wrap_SBLaunchInfo_AddCloseFileAction,
+     METH_VARARGS,
+     "SBLaunchInfo_AddCloseFileAction(SBLaunchInfo self, int fd) -> bool"},
+    {"SBLaunchInfo_AddDuplicateFileAction",
+     _wrap_SBLaunchInfo_AddDuplicateFileAction, METH_VARARGS,
+     "SBLaunchInfo_AddDuplicateFileAction(SBLaunchInfo self, int fd, int "
+     "dup_fd) -> bool"},
+    {"SBLaunchInfo_AddOpenFileAction", _wrap_SBLaunchInfo_AddOpenFileAction,
+     METH_VARARGS,
+     "SBLaunchInfo_AddOpenFileAction(SBLaunchInfo self, int fd, char const * "
+     "path, bool read, bool write) -> bool"},
+    {"SBLaunchInfo_AddSuppressFileAction",
+     _wrap_SBLaunchInfo_AddSuppressFileAction, METH_VARARGS,
+     "SBLaunchInfo_AddSuppressFileAction(SBLaunchInfo self, int fd, bool read, "
+     "bool write) -> bool"},
+    {"SBLaunchInfo_SetLaunchEventData", _wrap_SBLaunchInfo_SetLaunchEventData,
+     METH_VARARGS,
+     "SBLaunchInfo_SetLaunchEventData(SBLaunchInfo self, char const * data)"},
+    {"SBLaunchInfo_GetLaunchEventData", _wrap_SBLaunchInfo_GetLaunchEventData,
+     METH_O,
+     "SBLaunchInfo_GetLaunchEventData(SBLaunchInfo self) -> char const *"},
+    {"SBLaunchInfo_GetDetachOnError", _wrap_SBLaunchInfo_GetDetachOnError,
+     METH_O, "SBLaunchInfo_GetDetachOnError(SBLaunchInfo self) -> bool"},
+    {"SBLaunchInfo_SetDetachOnError", _wrap_SBLaunchInfo_SetDetachOnError,
+     METH_VARARGS,
+     "SBLaunchInfo_SetDetachOnError(SBLaunchInfo self, bool enable)"},
+    {"SBLaunchInfo_GetScriptedProcessClassName",
+     _wrap_SBLaunchInfo_GetScriptedProcessClassName, METH_O,
+     "SBLaunchInfo_GetScriptedProcessClassName(SBLaunchInfo self) -> char "
+     "const *"},
+    {"SBLaunchInfo_SetScriptedProcessClassName",
+     _wrap_SBLaunchInfo_SetScriptedProcessClassName, METH_VARARGS,
+     "SBLaunchInfo_SetScriptedProcessClassName(SBLaunchInfo self, char const * "
+     "class_name)"},
+    {"SBLaunchInfo_GetScriptedProcessDictionary",
+     _wrap_SBLaunchInfo_GetScriptedProcessDictionary, METH_O,
+     "SBLaunchInfo_GetScriptedProcessDictionary(SBLaunchInfo self) -> "
+     "SBStructuredData"},
+    {"SBLaunchInfo_SetScriptedProcessDictionary",
+     _wrap_SBLaunchInfo_SetScriptedProcessDictionary, METH_VARARGS,
+     "SBLaunchInfo_SetScriptedProcessDictionary(SBLaunchInfo self, "
+     "SBStructuredData dict)"},
+    {"SBLaunchInfo_swigregister", SBLaunchInfo_swigregister, METH_O, NULL},
+    {"SBLaunchInfo_swiginit", SBLaunchInfo_swiginit, METH_VARARGS, NULL},
+    {"new_SBLineEntry", _wrap_new_SBLineEntry, METH_VARARGS,
+     "\n"
+     "SBLineEntry()\n"
+     "new_SBLineEntry(SBLineEntry rhs) -> SBLineEntry\n"
+     ""},
+    {"delete_SBLineEntry", _wrap_delete_SBLineEntry, METH_O,
+     "delete_SBLineEntry(SBLineEntry self)"},
+    {"SBLineEntry_GetStartAddress", _wrap_SBLineEntry_GetStartAddress, METH_O,
+     "SBLineEntry_GetStartAddress(SBLineEntry self) -> SBAddress"},
+    {"SBLineEntry_GetEndAddress", _wrap_SBLineEntry_GetEndAddress, METH_O,
+     "SBLineEntry_GetEndAddress(SBLineEntry self) -> SBAddress"},
+    {"SBLineEntry_GetSameLineContiguousAddressRangeEnd",
+     _wrap_SBLineEntry_GetSameLineContiguousAddressRangeEnd, METH_VARARGS,
+     "SBLineEntry_GetSameLineContiguousAddressRangeEnd(SBLineEntry self, bool "
+     "include_inlined_functions) -> SBAddress"},
+    {"SBLineEntry___nonzero__", _wrap_SBLineEntry___nonzero__, METH_O,
+     "SBLineEntry___nonzero__(SBLineEntry self) -> bool"},
+    {"SBLineEntry_IsValid", _wrap_SBLineEntry_IsValid, METH_O,
+     "SBLineEntry_IsValid(SBLineEntry self) -> bool"},
+    {"SBLineEntry_GetFileSpec", _wrap_SBLineEntry_GetFileSpec, METH_O,
+     "SBLineEntry_GetFileSpec(SBLineEntry self) -> SBFileSpec"},
+    {"SBLineEntry_GetLine", _wrap_SBLineEntry_GetLine, METH_O,
+     "SBLineEntry_GetLine(SBLineEntry self) -> uint32_t"},
+    {"SBLineEntry_GetColumn", _wrap_SBLineEntry_GetColumn, METH_O,
+     "SBLineEntry_GetColumn(SBLineEntry self) -> uint32_t"},
+    {"SBLineEntry_SetFileSpec", _wrap_SBLineEntry_SetFileSpec, METH_VARARGS,
+     "SBLineEntry_SetFileSpec(SBLineEntry self, SBFileSpec filespec)"},
+    {"SBLineEntry_SetLine", _wrap_SBLineEntry_SetLine, METH_VARARGS,
+     "SBLineEntry_SetLine(SBLineEntry self, uint32_t line)"},
+    {"SBLineEntry_SetColumn", _wrap_SBLineEntry_SetColumn, METH_VARARGS,
+     "SBLineEntry_SetColumn(SBLineEntry self, uint32_t column)"},
+    {"SBLineEntry___eq__", _wrap_SBLineEntry___eq__, METH_VARARGS,
+     "SBLineEntry___eq__(SBLineEntry self, SBLineEntry rhs) -> bool"},
+    {"SBLineEntry___ne__", _wrap_SBLineEntry___ne__, METH_VARARGS,
+     "SBLineEntry___ne__(SBLineEntry self, SBLineEntry rhs) -> bool"},
+    {"SBLineEntry_GetDescription", _wrap_SBLineEntry_GetDescription,
+     METH_VARARGS,
+     "SBLineEntry_GetDescription(SBLineEntry self, SBStream description) -> "
+     "bool"},
+    {"SBLineEntry___repr__", _wrap_SBLineEntry___repr__, METH_O,
+     "SBLineEntry___repr__(SBLineEntry self) -> std::string"},
+    {"SBLineEntry_swigregister", SBLineEntry_swigregister, METH_O, NULL},
+    {"SBLineEntry_swiginit", SBLineEntry_swiginit, METH_VARARGS, NULL},
+    {"new_SBListener", _wrap_new_SBListener, METH_VARARGS,
+     "\n"
+     "SBListener()\n"
+     "SBListener(char const * name)\n"
+     "new_SBListener(SBListener rhs) -> SBListener\n"
+     ""},
+    {"delete_SBListener", _wrap_delete_SBListener, METH_O,
+     "delete_SBListener(SBListener self)"},
+    {"SBListener_AddEvent", _wrap_SBListener_AddEvent, METH_VARARGS,
+     "SBListener_AddEvent(SBListener self, SBEvent event)"},
+    {"SBListener_Clear", _wrap_SBListener_Clear, METH_O,
+     "SBListener_Clear(SBListener self)"},
+    {"SBListener___nonzero__", _wrap_SBListener___nonzero__, METH_O,
+     "SBListener___nonzero__(SBListener self) -> bool"},
+    {"SBListener_IsValid", _wrap_SBListener_IsValid, METH_O,
+     "SBListener_IsValid(SBListener self) -> bool"},
+    {"SBListener_StartListeningForEventClass",
+     _wrap_SBListener_StartListeningForEventClass, METH_VARARGS,
+     "SBListener_StartListeningForEventClass(SBListener self, SBDebugger "
+     "debugger, char const * broadcaster_class, uint32_t event_mask) -> "
+     "uint32_t"},
+    {"SBListener_StopListeningForEventClass",
+     _wrap_SBListener_StopListeningForEventClass, METH_VARARGS,
+     "SBListener_StopListeningForEventClass(SBListener self, SBDebugger "
+     "debugger, char const * broadcaster_class, uint32_t event_mask) -> bool"},
+    {"SBListener_StartListeningForEvents",
+     _wrap_SBListener_StartListeningForEvents, METH_VARARGS,
+     "SBListener_StartListeningForEvents(SBListener self, SBBroadcaster "
+     "broadcaster, uint32_t event_mask) -> uint32_t"},
+    {"SBListener_StopListeningForEvents",
+     _wrap_SBListener_StopListeningForEvents, METH_VARARGS,
+     "SBListener_StopListeningForEvents(SBListener self, SBBroadcaster "
+     "broadcaster, uint32_t event_mask) -> bool"},
+    {"SBListener_WaitForEvent", _wrap_SBListener_WaitForEvent, METH_VARARGS,
+     "SBListener_WaitForEvent(SBListener self, uint32_t num_seconds, SBEvent "
+     "event) -> bool"},
+    {"SBListener_WaitForEventForBroadcaster",
+     _wrap_SBListener_WaitForEventForBroadcaster, METH_VARARGS,
+     "SBListener_WaitForEventForBroadcaster(SBListener self, uint32_t "
+     "num_seconds, SBBroadcaster broadcaster, SBEvent sb_event) -> bool"},
+    {"SBListener_WaitForEventForBroadcasterWithType",
+     _wrap_SBListener_WaitForEventForBroadcasterWithType, METH_VARARGS,
+     "SBListener_WaitForEventForBroadcasterWithType(SBListener self, uint32_t "
+     "num_seconds, SBBroadcaster broadcaster, uint32_t event_type_mask, "
+     "SBEvent sb_event) -> bool"},
+    {"SBListener_PeekAtNextEvent", _wrap_SBListener_PeekAtNextEvent,
+     METH_VARARGS,
+     "SBListener_PeekAtNextEvent(SBListener self, SBEvent sb_event) -> bool"},
+    {"SBListener_PeekAtNextEventForBroadcaster",
+     _wrap_SBListener_PeekAtNextEventForBroadcaster, METH_VARARGS,
+     "SBListener_PeekAtNextEventForBroadcaster(SBListener self, SBBroadcaster "
+     "broadcaster, SBEvent sb_event) -> bool"},
+    {"SBListener_PeekAtNextEventForBroadcasterWithType",
+     _wrap_SBListener_PeekAtNextEventForBroadcasterWithType, METH_VARARGS,
+     "SBListener_PeekAtNextEventForBroadcasterWithType(SBListener self, "
+     "SBBroadcaster broadcaster, uint32_t event_type_mask, SBEvent sb_event) "
+     "-> bool"},
+    {"SBListener_GetNextEvent", _wrap_SBListener_GetNextEvent, METH_VARARGS,
+     "SBListener_GetNextEvent(SBListener self, SBEvent sb_event) -> bool"},
+    {"SBListener_GetNextEventForBroadcaster",
+     _wrap_SBListener_GetNextEventForBroadcaster, METH_VARARGS,
+     "SBListener_GetNextEventForBroadcaster(SBListener self, SBBroadcaster "
+     "broadcaster, SBEvent sb_event) -> bool"},
+    {"SBListener_GetNextEventForBroadcasterWithType",
+     _wrap_SBListener_GetNextEventForBroadcasterWithType, METH_VARARGS,
+     "SBListener_GetNextEventForBroadcasterWithType(SBListener self, "
+     "SBBroadcaster broadcaster, uint32_t event_type_mask, SBEvent sb_event) "
+     "-> bool"},
+    {"SBListener_HandleBroadcastEvent", _wrap_SBListener_HandleBroadcastEvent,
+     METH_VARARGS,
+     "SBListener_HandleBroadcastEvent(SBListener self, SBEvent event) -> bool"},
+    {"SBListener_swigregister", SBListener_swigregister, METH_O, NULL},
+    {"SBListener_swiginit", SBListener_swiginit, METH_VARARGS, NULL},
+    {"new_SBMemoryRegionInfo", _wrap_new_SBMemoryRegionInfo, METH_VARARGS,
+     "\n"
+     "SBMemoryRegionInfo()\n"
+     "SBMemoryRegionInfo(SBMemoryRegionInfo rhs)\n"
+     "SBMemoryRegionInfo(char const * name, lldb::addr_t begin, lldb::addr_t "
+     "end, uint32_t permissions, bool mapped, bool stack_memory=False)\n"
+     ""},
+    {"delete_SBMemoryRegionInfo", _wrap_delete_SBMemoryRegionInfo, METH_O,
+     "delete_SBMemoryRegionInfo(SBMemoryRegionInfo self)"},
+    {"SBMemoryRegionInfo_Clear", _wrap_SBMemoryRegionInfo_Clear, METH_O,
+     "SBMemoryRegionInfo_Clear(SBMemoryRegionInfo self)"},
+    {"SBMemoryRegionInfo_GetRegionBase", _wrap_SBMemoryRegionInfo_GetRegionBase,
+     METH_O,
+     "SBMemoryRegionInfo_GetRegionBase(SBMemoryRegionInfo self) -> "
+     "lldb::addr_t"},
+    {"SBMemoryRegionInfo_GetRegionEnd", _wrap_SBMemoryRegionInfo_GetRegionEnd,
+     METH_O,
+     "SBMemoryRegionInfo_GetRegionEnd(SBMemoryRegionInfo self) -> "
+     "lldb::addr_t"},
+    {"SBMemoryRegionInfo_IsReadable", _wrap_SBMemoryRegionInfo_IsReadable,
+     METH_O, "SBMemoryRegionInfo_IsReadable(SBMemoryRegionInfo self) -> bool"},
+    {"SBMemoryRegionInfo_IsWritable", _wrap_SBMemoryRegionInfo_IsWritable,
+     METH_O, "SBMemoryRegionInfo_IsWritable(SBMemoryRegionInfo self) -> bool"},
+    {"SBMemoryRegionInfo_IsExecutable", _wrap_SBMemoryRegionInfo_IsExecutable,
+     METH_O,
+     "SBMemoryRegionInfo_IsExecutable(SBMemoryRegionInfo self) -> bool"},
+    {"SBMemoryRegionInfo_IsMapped", _wrap_SBMemoryRegionInfo_IsMapped, METH_O,
+     "SBMemoryRegionInfo_IsMapped(SBMemoryRegionInfo self) -> bool"},
+    {"SBMemoryRegionInfo_GetName", _wrap_SBMemoryRegionInfo_GetName, METH_O,
+     "SBMemoryRegionInfo_GetName(SBMemoryRegionInfo self) -> char const *"},
+    {"SBMemoryRegionInfo_HasDirtyMemoryPageList",
+     _wrap_SBMemoryRegionInfo_HasDirtyMemoryPageList, METH_O,
+     "\n"
+     "SBMemoryRegionInfo_HasDirtyMemoryPageList(SBMemoryRegionInfo self) -> "
+     "bool\n"
+     "\n"
+     "        Returns whether this memory region has a list of modified "
+     "(dirty)\n"
+     "        pages available or not.  When calling GetNumDirtyPages(), you "
+     "will\n"
+     "        have 0 returned for both \"dirty page list is not known\" and \n"
+     "        \"empty dirty page list\" (that is, no modified pages in this\n"
+     "        memory region).  You must use this method to disambiguate.\n"
+     ""},
+    {"SBMemoryRegionInfo_GetNumDirtyPages",
+     _wrap_SBMemoryRegionInfo_GetNumDirtyPages, METH_O,
+     "\n"
+     "SBMemoryRegionInfo_GetNumDirtyPages(SBMemoryRegionInfo self) -> "
+     "uint32_t\n"
+     "\n"
+     "        Return the number of dirty (modified) memory pages in this\n"
+     "        memory region, if available.  You must use the \n"
+     "        SBMemoryRegionInfo::HasDirtyMemoryPageList() method to\n"
+     "        determine if a dirty memory list is available; it will depend\n"
+     "        on the target system can provide this information.\n"
+     ""},
+    {"SBMemoryRegionInfo_GetDirtyPageAddressAtIndex",
+     _wrap_SBMemoryRegionInfo_GetDirtyPageAddressAtIndex, METH_VARARGS,
+     "\n"
+     "SBMemoryRegionInfo_GetDirtyPageAddressAtIndex(SBMemoryRegionInfo self, "
+     "uint32_t idx) -> lldb::addr_t\n"
+     "\n"
+     "        Return the address of a modified, or dirty, page of memory.\n"
+     "        If the provided index is out of range, or this memory region \n"
+     "        does not have dirty page information, LLDB_INVALID_ADDRESS \n"
+     "        is returned.\n"
+     ""},
+    {"SBMemoryRegionInfo_GetPageSize", _wrap_SBMemoryRegionInfo_GetPageSize,
+     METH_O,
+     "\n"
+     "SBMemoryRegionInfo_GetPageSize(SBMemoryRegionInfo self) -> int\n"
+     "\n"
+     "        Return the size of pages in this memory region.  0 will be "
+     "returned\n"
+     "        if this information was unavailable.\n"
+     ""},
+    {"SBMemoryRegionInfo___eq__", _wrap_SBMemoryRegionInfo___eq__, METH_VARARGS,
+     "SBMemoryRegionInfo___eq__(SBMemoryRegionInfo self, SBMemoryRegionInfo "
+     "rhs) -> bool"},
+    {"SBMemoryRegionInfo___ne__", _wrap_SBMemoryRegionInfo___ne__, METH_VARARGS,
+     "SBMemoryRegionInfo___ne__(SBMemoryRegionInfo self, SBMemoryRegionInfo "
+     "rhs) -> bool"},
+    {"SBMemoryRegionInfo_GetDescription",
+     _wrap_SBMemoryRegionInfo_GetDescription, METH_VARARGS,
+     "SBMemoryRegionInfo_GetDescription(SBMemoryRegionInfo self, SBStream "
+     "description) -> bool"},
+    {"SBMemoryRegionInfo___repr__", _wrap_SBMemoryRegionInfo___repr__, METH_O,
+     "SBMemoryRegionInfo___repr__(SBMemoryRegionInfo self) -> std::string"},
+    {"SBMemoryRegionInfo_swigregister", SBMemoryRegionInfo_swigregister, METH_O,
+     NULL},
+    {"SBMemoryRegionInfo_swiginit", SBMemoryRegionInfo_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBMemoryRegionInfoList", _wrap_new_SBMemoryRegionInfoList,
+     METH_VARARGS,
+     "\n"
+     "SBMemoryRegionInfoList()\n"
+     "new_SBMemoryRegionInfoList(SBMemoryRegionInfoList rhs) -> "
+     "SBMemoryRegionInfoList\n"
+     ""},
+    {"delete_SBMemoryRegionInfoList", _wrap_delete_SBMemoryRegionInfoList,
+     METH_O, "delete_SBMemoryRegionInfoList(SBMemoryRegionInfoList self)"},
+    {"SBMemoryRegionInfoList_GetSize", _wrap_SBMemoryRegionInfoList_GetSize,
+     METH_O,
+     "SBMemoryRegionInfoList_GetSize(SBMemoryRegionInfoList self) -> uint32_t"},
+    {"SBMemoryRegionInfoList_GetMemoryRegionContainingAddress",
+     _wrap_SBMemoryRegionInfoList_GetMemoryRegionContainingAddress,
+     METH_VARARGS,
+     "SBMemoryRegionInfoList_GetMemoryRegionContainingAddress("
+     "SBMemoryRegionInfoList self, lldb::addr_t addr, SBMemoryRegionInfo "
+     "region_info) -> bool"},
+    {"SBMemoryRegionInfoList_GetMemoryRegionAtIndex",
+     _wrap_SBMemoryRegionInfoList_GetMemoryRegionAtIndex, METH_VARARGS,
+     "SBMemoryRegionInfoList_GetMemoryRegionAtIndex(SBMemoryRegionInfoList "
+     "self, uint32_t idx, SBMemoryRegionInfo region_info) -> bool"},
+    {"SBMemoryRegionInfoList_Append", _wrap_SBMemoryRegionInfoList_Append,
+     METH_VARARGS,
+     "\n"
+     "SBMemoryRegionInfoList_Append(SBMemoryRegionInfoList self, "
+     "SBMemoryRegionInfo region)\n"
+     "SBMemoryRegionInfoList_Append(SBMemoryRegionInfoList self, "
+     "SBMemoryRegionInfoList region_list)\n"
+     ""},
+    {"SBMemoryRegionInfoList_Clear", _wrap_SBMemoryRegionInfoList_Clear, METH_O,
+     "SBMemoryRegionInfoList_Clear(SBMemoryRegionInfoList self)"},
+    {"SBMemoryRegionInfoList_swigregister", SBMemoryRegionInfoList_swigregister,
+     METH_O, NULL},
+    {"SBMemoryRegionInfoList_swiginit", SBMemoryRegionInfoList_swiginit,
+     METH_VARARGS, NULL},
+    {"new_SBModule", _wrap_new_SBModule, METH_VARARGS,
+     "\n"
+     "SBModule()\n"
+     "SBModule(SBModule rhs)\n"
+     "SBModule(SBModuleSpec module_spec)\n"
+     "new_SBModule(SBProcess process, lldb::addr_t header_addr) -> SBModule\n"
+     ""},
+    {"delete_SBModule", _wrap_delete_SBModule, METH_O,
+     "delete_SBModule(SBModule self)"},
+    {"SBModule___nonzero__", _wrap_SBModule___nonzero__, METH_O,
+     "SBModule___nonzero__(SBModule self) -> bool"},
+    {"SBModule_IsValid", _wrap_SBModule_IsValid, METH_O,
+     "SBModule_IsValid(SBModule self) -> bool"},
+    {"SBModule_Clear", _wrap_SBModule_Clear, METH_O,
+     "SBModule_Clear(SBModule self)"},
+    {"SBModule_IsFileBacked", _wrap_SBModule_IsFileBacked, METH_O,
+     "\n"
+     "SBModule_IsFileBacked(SBModule self) -> bool\n"
+     "\n"
+     "    Check if the module is file backed.\n"
+     "\n"
+     "    @return\n"
+     "\n"
+     "        True, if the module is backed by an object file on disk.\n"
+     "        False, if the module is backed by an object file in memory.\n"
+     ""},
+    {"SBModule_GetFileSpec", _wrap_SBModule_GetFileSpec, METH_O,
+     "\n"
+     "SBModule_GetFileSpec(SBModule self) -> SBFileSpec\n"
+     "\n"
+     "    Get const accessor for the module file specification.\n"
+     "\n"
+     "    This function returns the file for the module on the host system\n"
+     "    that is running LLDB. This can differ from the path on the\n"
+     "    platform since we might be doing remote debugging.\n"
+     "\n"
+     "    @return\n"
+     "        A const reference to the file specification object.\n"
+     ""},
+    {"SBModule_GetPlatformFileSpec", _wrap_SBModule_GetPlatformFileSpec, METH_O,
+     "\n"
+     "SBModule_GetPlatformFileSpec(SBModule self) -> SBFileSpec\n"
+     "\n"
+     "    Get accessor for the module platform file specification.\n"
+     "\n"
+     "    Platform file refers to the path of the module as it is known on\n"
+     "    the remote system on which it is being debugged. For local\n"
+     "    debugging this is always the same as Module::GetFileSpec(). But\n"
+     "    remote debugging might mention a file '/usr/lib/liba.dylib'\n"
+     "    which might be locally downloaded and cached. In this case the\n"
+     "    platform file could be something like:\n"
+     "    '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'\n"
+     "    The file could also be cached in a local developer kit directory.\n"
+     "\n"
+     "    @return\n"
+     "        A const reference to the file specification object.\n"
+     ""},
+    {"SBModule_SetPlatformFileSpec", _wrap_SBModule_SetPlatformFileSpec,
+     METH_VARARGS,
+     "SBModule_SetPlatformFileSpec(SBModule self, SBFileSpec platform_file) -> "
+     "bool"},
+    {"SBModule_GetRemoteInstallFileSpec",
+     _wrap_SBModule_GetRemoteInstallFileSpec, METH_O,
+     "SBModule_GetRemoteInstallFileSpec(SBModule self) -> SBFileSpec"},
+    {"SBModule_SetRemoteInstallFileSpec",
+     _wrap_SBModule_SetRemoteInstallFileSpec, METH_VARARGS,
+     "SBModule_SetRemoteInstallFileSpec(SBModule self, SBFileSpec file) -> "
+     "bool"},
+    {"SBModule_GetByteOrder", _wrap_SBModule_GetByteOrder, METH_O,
+     "SBModule_GetByteOrder(SBModule self) -> lldb::ByteOrder"},
+    {"SBModule_GetAddressByteSize", _wrap_SBModule_GetAddressByteSize, METH_O,
+     "SBModule_GetAddressByteSize(SBModule self) -> uint32_t"},
+    {"SBModule_GetTriple", _wrap_SBModule_GetTriple, METH_O,
+     "SBModule_GetTriple(SBModule self) -> char const *"},
+    {"SBModule_GetUUIDBytes", _wrap_SBModule_GetUUIDBytes, METH_O,
+     "SBModule_GetUUIDBytes(SBModule self) -> uint8_t const *"},
+    {"SBModule_GetUUIDString", _wrap_SBModule_GetUUIDString, METH_O,
+     "\n"
+     "SBModule_GetUUIDString(SBModule self) -> char const *\n"
+     "Returns the UUID of the module as a Python string.\n"
+     ""},
+    {"SBModule___eq__", _wrap_SBModule___eq__, METH_VARARGS,
+     "SBModule___eq__(SBModule self, SBModule rhs) -> bool"},
+    {"SBModule___ne__", _wrap_SBModule___ne__, METH_VARARGS,
+     "SBModule___ne__(SBModule self, SBModule rhs) -> bool"},
+    {"SBModule_FindSection", _wrap_SBModule_FindSection, METH_VARARGS,
+     "SBModule_FindSection(SBModule self, char const * sect_name) -> "
+     "SBSection"},
+    {"SBModule_ResolveFileAddress", _wrap_SBModule_ResolveFileAddress,
+     METH_VARARGS,
+     "SBModule_ResolveFileAddress(SBModule self, lldb::addr_t vm_addr) -> "
+     "SBAddress"},
+    {"SBModule_ResolveSymbolContextForAddress",
+     _wrap_SBModule_ResolveSymbolContextForAddress, METH_VARARGS,
+     "SBModule_ResolveSymbolContextForAddress(SBModule self, SBAddress addr, "
+     "uint32_t resolve_scope) -> SBSymbolContext"},
+    {"SBModule_GetDescription", _wrap_SBModule_GetDescription, METH_VARARGS,
+     "SBModule_GetDescription(SBModule self, SBStream description) -> bool"},
+    {"SBModule_GetNumCompileUnits", _wrap_SBModule_GetNumCompileUnits, METH_O,
+     "SBModule_GetNumCompileUnits(SBModule self) -> uint32_t"},
+    {"SBModule_GetCompileUnitAtIndex", _wrap_SBModule_GetCompileUnitAtIndex,
+     METH_VARARGS,
+     "SBModule_GetCompileUnitAtIndex(SBModule self, uint32_t arg2) -> "
+     "SBCompileUnit"},
+    {"SBModule_FindCompileUnits", _wrap_SBModule_FindCompileUnits, METH_VARARGS,
+     "\n"
+     "SBModule_FindCompileUnits(SBModule self, SBFileSpec sb_file_spec) -> "
+     "SBSymbolContextList\n"
+     "\n"
+     "    Find compile units related to this module and passed source\n"
+     "    file.\n"
+     "\n"
+     "    @param[in] sb_file_spec\n"
+     "        A :py:class:`SBFileSpec` object that contains source file\n"
+     "        specification.\n"
+     "\n"
+     "    @return\n"
+     "        A :py:class:`SBSymbolContextList` that gets filled in with all "
+     "of\n"
+     "        the symbol contexts for all the matches.\n"
+     ""},
+    {"SBModule_GetNumSymbols", _wrap_SBModule_GetNumSymbols, METH_O,
+     "SBModule_GetNumSymbols(SBModule self) -> size_t"},
+    {"SBModule_GetSymbolAtIndex", _wrap_SBModule_GetSymbolAtIndex, METH_VARARGS,
+     "SBModule_GetSymbolAtIndex(SBModule self, size_t idx) -> SBSymbol"},
+    {"SBModule_FindSymbol", _wrap_SBModule_FindSymbol, METH_VARARGS,
+     "SBModule_FindSymbol(SBModule self, char const * name, lldb::SymbolType "
+     "type=eSymbolTypeAny) -> SBSymbol"},
+    {"SBModule_FindSymbols", _wrap_SBModule_FindSymbols, METH_VARARGS,
+     "SBModule_FindSymbols(SBModule self, char const * name, lldb::SymbolType "
+     "type=eSymbolTypeAny) -> SBSymbolContextList"},
+    {"SBModule_GetNumSections", _wrap_SBModule_GetNumSections, METH_O,
+     "SBModule_GetNumSections(SBModule self) -> size_t"},
+    {"SBModule_GetSectionAtIndex", _wrap_SBModule_GetSectionAtIndex,
+     METH_VARARGS,
+     "SBModule_GetSectionAtIndex(SBModule self, size_t idx) -> SBSection"},
+    {"SBModule_FindFunctions", _wrap_SBModule_FindFunctions, METH_VARARGS,
+     "\n"
+     "SBModule_FindFunctions(SBModule self, char const * name, uint32_t "
+     "name_type_mask=eFunctionNameTypeAny) -> SBSymbolContextList\n"
+     "\n"
+     "    Find functions by name.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        The name of the function we are looking for.\n"
+     "\n"
+     "    @param[in] name_type_mask\n"
+     "        A logical OR of one or more FunctionNameType enum bits that\n"
+     "        indicate what kind of names should be used when doing the\n"
+     "        lookup. Bits include fully qualified names, base names,\n"
+     "        C++ methods, or ObjC selectors.\n"
+     "        See FunctionNameType for more details.\n"
+     "\n"
+     "    @return\n"
+     "        A symbol context list that gets filled in with all of the\n"
+     "        matches.\n"
+     ""},
+    {"SBModule_FindGlobalVariables", _wrap_SBModule_FindGlobalVariables,
+     METH_VARARGS,
+     "\n"
+     "SBModule_FindGlobalVariables(SBModule self, SBTarget target, char const "
+     "* name, uint32_t max_matches) -> SBValueList\n"
+     "\n"
+     "    Find global and static variables by name.\n"
+     "\n"
+     "    @param[in] target\n"
+     "        A valid SBTarget instance representing the debuggee.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        The name of the global or static variable we are looking\n"
+     "        for.\n"
+     "\n"
+     "    @param[in] max_matches\n"
+     "        Allow the number of matches to be limited to max_matches.\n"
+     "\n"
+     "    @return\n"
+     "        A list of matched variables in an SBValueList.\n"
+     ""},
+    {"SBModule_FindFirstGlobalVariable", _wrap_SBModule_FindFirstGlobalVariable,
+     METH_VARARGS,
+     "\n"
+     "SBModule_FindFirstGlobalVariable(SBModule self, SBTarget target, char "
+     "const * name) -> SBValue\n"
+     "\n"
+     "    Find the first global (or static) variable by name.\n"
+     "\n"
+     "    @param[in] target\n"
+     "        A valid SBTarget instance representing the debuggee.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        The name of the global or static variable we are looking\n"
+     "        for.\n"
+     "\n"
+     "    @return\n"
+     "        An SBValue that gets filled in with the found variable (if "
+     "any).\n"
+     ""},
+    {"SBModule_FindFirstType", _wrap_SBModule_FindFirstType, METH_VARARGS,
+     "SBModule_FindFirstType(SBModule self, char const * name) -> SBType"},
+    {"SBModule_FindTypes", _wrap_SBModule_FindTypes, METH_VARARGS,
+     "SBModule_FindTypes(SBModule self, char const * type) -> SBTypeList"},
+    {"SBModule_GetTypeByID", _wrap_SBModule_GetTypeByID, METH_VARARGS,
+     "SBModule_GetTypeByID(SBModule self, lldb::user_id_t uid) -> SBType"},
+    {"SBModule_GetBasicType", _wrap_SBModule_GetBasicType, METH_VARARGS,
+     "SBModule_GetBasicType(SBModule self, lldb::BasicType type) -> SBType"},
+    {"SBModule_GetTypes", _wrap_SBModule_GetTypes, METH_VARARGS,
+     "\n"
+     "SBModule_GetTypes(SBModule self, uint32_t type_mask=eTypeClassAny) -> "
+     "SBTypeList\n"
+     "\n"
+     "    Get all types matching type_mask from debug info in this\n"
+     "    module.\n"
+     "\n"
+     "    @param[in] type_mask\n"
+     "        A bitfield that consists of one or more bits logically OR'ed\n"
+     "        together from the lldb::TypeClass enumeration. This allows\n"
+     "        you to request only structure types, or only class, struct\n"
+     "        and union types. Passing in lldb::eTypeClassAny will return\n"
+     "        all types found in the debug information for this module.\n"
+     "\n"
+     "    @return\n"
+     "        A list of types in this module that match type_mask\n"
+     ""},
+    {"SBModule_GetVersion", _wrap_SBModule_GetVersion, METH_O,
+     "SBModule_GetVersion(SBModule self) -> uint32_t"},
+    {"SBModule_GetSymbolFileSpec", _wrap_SBModule_GetSymbolFileSpec, METH_O,
+     "SBModule_GetSymbolFileSpec(SBModule self) -> SBFileSpec"},
+    {"SBModule_GetObjectFileHeaderAddress",
+     _wrap_SBModule_GetObjectFileHeaderAddress, METH_O,
+     "SBModule_GetObjectFileHeaderAddress(SBModule self) -> SBAddress"},
+    {"SBModule_GetObjectFileEntryPointAddress",
+     _wrap_SBModule_GetObjectFileEntryPointAddress, METH_O,
+     "SBModule_GetObjectFileEntryPointAddress(SBModule self) -> SBAddress"},
+    {"SBModule_IsTypeSystemCompatible", _wrap_SBModule_IsTypeSystemCompatible,
+     METH_VARARGS,
+     "SBModule_IsTypeSystemCompatible(SBModule self, lldb::LanguageType "
+     "language) -> SBError"},
+    {"SBModule_GetNumberAllocatedModules",
+     _wrap_SBModule_GetNumberAllocatedModules, METH_NOARGS,
+     "\n"
+     "SBModule_GetNumberAllocatedModules() -> uint32_t\n"
+     "\n"
+     "    Returns the number of modules in the module cache. This is an\n"
+     "    implementation detail exposed for testing and should not be relied "
+     "upon.\n"
+     "\n"
+     "    @return\n"
+     "        The number of modules in the module cache.\n"
+     ""},
+    {"SBModule_GarbageCollectAllocatedModules",
+     _wrap_SBModule_GarbageCollectAllocatedModules, METH_NOARGS,
+     "\n"
+     "SBModule_GarbageCollectAllocatedModules()\n"
+     "\n"
+     "    Removes all modules which are no longer needed by any part of LLDB "
+     "from\n"
+     "    the module cache.\n"
+     "\n"
+     "    This is an implementation detail exposed for testing and should not "
+     "be\n"
+     "    relied upon. Use SBDebugger::MemoryPressureDetected instead to "
+     "reduce\n"
+     "    LLDB's memory consumption during execution.\n"
+     "\n"
+     ""},
+    {"SBModule___repr__", _wrap_SBModule___repr__, METH_O,
+     "SBModule___repr__(SBModule self) -> std::string"},
+    {"SBModule_swigregister", SBModule_swigregister, METH_O, NULL},
+    {"SBModule_swiginit", SBModule_swiginit, METH_VARARGS, NULL},
+    {"new_SBModuleSpec", _wrap_new_SBModuleSpec, METH_VARARGS,
+     "\n"
+     "SBModuleSpec()\n"
+     "new_SBModuleSpec(SBModuleSpec rhs) -> SBModuleSpec\n"
+     ""},
+    {"delete_SBModuleSpec", _wrap_delete_SBModuleSpec, METH_O,
+     "delete_SBModuleSpec(SBModuleSpec self)"},
+    {"SBModuleSpec___nonzero__", _wrap_SBModuleSpec___nonzero__, METH_O,
+     "SBModuleSpec___nonzero__(SBModuleSpec self) -> bool"},
+    {"SBModuleSpec_IsValid", _wrap_SBModuleSpec_IsValid, METH_O,
+     "SBModuleSpec_IsValid(SBModuleSpec self) -> bool"},
+    {"SBModuleSpec_Clear", _wrap_SBModuleSpec_Clear, METH_O,
+     "SBModuleSpec_Clear(SBModuleSpec self)"},
+    {"SBModuleSpec_GetFileSpec", _wrap_SBModuleSpec_GetFileSpec, METH_O,
+     "\n"
+     "SBModuleSpec_GetFileSpec(SBModuleSpec self) -> SBFileSpec\n"
+     "\n"
+     "    Get const accessor for the module file.\n"
+     "\n"
+     "    This function returns the file for the module on the host system\n"
+     "    that is running LLDB. This can differ from the path on the\n"
+     "    platform since we might be doing remote debugging.\n"
+     "\n"
+     "    @return\n"
+     "        A const reference to the file specification object.\n"
+     ""},
+    {"SBModuleSpec_SetFileSpec", _wrap_SBModuleSpec_SetFileSpec, METH_VARARGS,
+     "SBModuleSpec_SetFileSpec(SBModuleSpec self, SBFileSpec fspec)"},
+    {"SBModuleSpec_GetPlatformFileSpec", _wrap_SBModuleSpec_GetPlatformFileSpec,
+     METH_O,
+     "\n"
+     "SBModuleSpec_GetPlatformFileSpec(SBModuleSpec self) -> SBFileSpec\n"
+     "\n"
+     "    Get accessor for the module platform file.\n"
+     "\n"
+     "    Platform file refers to the path of the module as it is known on\n"
+     "    the remote system on which it is being debugged. For local\n"
+     "    debugging this is always the same as Module::GetFileSpec(). But\n"
+     "    remote debugging might mention a file '/usr/lib/liba.dylib'\n"
+     "    which might be locally downloaded and cached. In this case the\n"
+     "    platform file could be something like:\n"
+     "    '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'\n"
+     "    The file could also be cached in a local developer kit directory.\n"
+     "\n"
+     "    @return\n"
+     "        A const reference to the file specification object.\n"
+     ""},
+    {"SBModuleSpec_SetPlatformFileSpec", _wrap_SBModuleSpec_SetPlatformFileSpec,
+     METH_VARARGS,
+     "SBModuleSpec_SetPlatformFileSpec(SBModuleSpec self, SBFileSpec fspec)"},
+    {"SBModuleSpec_GetSymbolFileSpec", _wrap_SBModuleSpec_GetSymbolFileSpec,
+     METH_O, "SBModuleSpec_GetSymbolFileSpec(SBModuleSpec self) -> SBFileSpec"},
+    {"SBModuleSpec_SetSymbolFileSpec", _wrap_SBModuleSpec_SetSymbolFileSpec,
+     METH_VARARGS,
+     "SBModuleSpec_SetSymbolFileSpec(SBModuleSpec self, SBFileSpec fspec)"},
+    {"SBModuleSpec_GetObjectName", _wrap_SBModuleSpec_GetObjectName, METH_O,
+     "SBModuleSpec_GetObjectName(SBModuleSpec self) -> char const *"},
+    {"SBModuleSpec_SetObjectName", _wrap_SBModuleSpec_SetObjectName,
+     METH_VARARGS,
+     "SBModuleSpec_SetObjectName(SBModuleSpec self, char const * name)"},
+    {"SBModuleSpec_GetTriple", _wrap_SBModuleSpec_GetTriple, METH_O,
+     "SBModuleSpec_GetTriple(SBModuleSpec self) -> char const *"},
+    {"SBModuleSpec_SetTriple", _wrap_SBModuleSpec_SetTriple, METH_VARARGS,
+     "SBModuleSpec_SetTriple(SBModuleSpec self, char const * triple)"},
+    {"SBModuleSpec_GetUUIDBytes", _wrap_SBModuleSpec_GetUUIDBytes, METH_O,
+     "SBModuleSpec_GetUUIDBytes(SBModuleSpec self) -> uint8_t const *"},
+    {"SBModuleSpec_GetUUIDLength", _wrap_SBModuleSpec_GetUUIDLength, METH_O,
+     "SBModuleSpec_GetUUIDLength(SBModuleSpec self) -> size_t"},
+    {"SBModuleSpec_SetUUIDBytes", _wrap_SBModuleSpec_SetUUIDBytes, METH_VARARGS,
+     "SBModuleSpec_SetUUIDBytes(SBModuleSpec self, uint8_t const * uuid, "
+     "size_t uuid_len) -> bool"},
+    {"SBModuleSpec_GetObjectOffset", _wrap_SBModuleSpec_GetObjectOffset, METH_O,
+     "SBModuleSpec_GetObjectOffset(SBModuleSpec self) -> uint64_t"},
+    {"SBModuleSpec_SetObjectOffset", _wrap_SBModuleSpec_SetObjectOffset,
+     METH_VARARGS,
+     "SBModuleSpec_SetObjectOffset(SBModuleSpec self, uint64_t object_offset)"},
+    {"SBModuleSpec_GetObjectSize", _wrap_SBModuleSpec_GetObjectSize, METH_O,
+     "SBModuleSpec_GetObjectSize(SBModuleSpec self) -> uint64_t"},
+    {"SBModuleSpec_SetObjectSize", _wrap_SBModuleSpec_SetObjectSize,
+     METH_VARARGS,
+     "SBModuleSpec_SetObjectSize(SBModuleSpec self, uint64_t object_size)"},
+    {"SBModuleSpec_GetDescription", _wrap_SBModuleSpec_GetDescription,
+     METH_VARARGS,
+     "SBModuleSpec_GetDescription(SBModuleSpec self, SBStream description) -> "
+     "bool"},
+    {"SBModuleSpec___repr__", _wrap_SBModuleSpec___repr__, METH_O,
+     "SBModuleSpec___repr__(SBModuleSpec self) -> std::string"},
+    {"SBModuleSpec_swigregister", SBModuleSpec_swigregister, METH_O, NULL},
+    {"SBModuleSpec_swiginit", SBModuleSpec_swiginit, METH_VARARGS, NULL},
+    {"new_SBModuleSpecList", _wrap_new_SBModuleSpecList, METH_VARARGS,
+     "\n"
+     "SBModuleSpecList()\n"
+     "new_SBModuleSpecList(SBModuleSpecList rhs) -> SBModuleSpecList\n"
+     ""},
+    {"delete_SBModuleSpecList", _wrap_delete_SBModuleSpecList, METH_O,
+     "delete_SBModuleSpecList(SBModuleSpecList self)"},
+    {"SBModuleSpecList_GetModuleSpecifications",
+     _wrap_SBModuleSpecList_GetModuleSpecifications, METH_O,
+     "SBModuleSpecList_GetModuleSpecifications(char const * path) -> "
+     "SBModuleSpecList"},
+    {"SBModuleSpecList_Append", _wrap_SBModuleSpecList_Append, METH_VARARGS,
+     "\n"
+     "SBModuleSpecList_Append(SBModuleSpecList self, SBModuleSpec spec)\n"
+     "SBModuleSpecList_Append(SBModuleSpecList self, SBModuleSpecList "
+     "spec_list)\n"
+     ""},
+    {"SBModuleSpecList_FindFirstMatchingSpec",
+     _wrap_SBModuleSpecList_FindFirstMatchingSpec, METH_VARARGS,
+     "SBModuleSpecList_FindFirstMatchingSpec(SBModuleSpecList self, "
+     "SBModuleSpec match_spec) -> SBModuleSpec"},
+    {"SBModuleSpecList_FindMatchingSpecs",
+     _wrap_SBModuleSpecList_FindMatchingSpecs, METH_VARARGS,
+     "SBModuleSpecList_FindMatchingSpecs(SBModuleSpecList self, SBModuleSpec "
+     "match_spec) -> SBModuleSpecList"},
+    {"SBModuleSpecList_GetSize", _wrap_SBModuleSpecList_GetSize, METH_O,
+     "SBModuleSpecList_GetSize(SBModuleSpecList self) -> size_t"},
+    {"SBModuleSpecList_GetSpecAtIndex", _wrap_SBModuleSpecList_GetSpecAtIndex,
+     METH_VARARGS,
+     "SBModuleSpecList_GetSpecAtIndex(SBModuleSpecList self, size_t i) -> "
+     "SBModuleSpec"},
+    {"SBModuleSpecList_GetDescription", _wrap_SBModuleSpecList_GetDescription,
+     METH_VARARGS,
+     "SBModuleSpecList_GetDescription(SBModuleSpecList self, SBStream "
+     "description) -> bool"},
+    {"SBModuleSpecList___repr__", _wrap_SBModuleSpecList___repr__, METH_O,
+     "SBModuleSpecList___repr__(SBModuleSpecList self) -> std::string"},
+    {"SBModuleSpecList_swigregister", SBModuleSpecList_swigregister, METH_O,
+     NULL},
+    {"SBModuleSpecList_swiginit", SBModuleSpecList_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBPlatformConnectOptions", _wrap_new_SBPlatformConnectOptions,
+     METH_VARARGS,
+     "\n"
+     "SBPlatformConnectOptions(char const * url)\n"
+     "new_SBPlatformConnectOptions(SBPlatformConnectOptions rhs) -> "
+     "SBPlatformConnectOptions\n"
+     ""},
+    {"delete_SBPlatformConnectOptions", _wrap_delete_SBPlatformConnectOptions,
+     METH_O, "delete_SBPlatformConnectOptions(SBPlatformConnectOptions self)"},
+    {"SBPlatformConnectOptions_GetURL", _wrap_SBPlatformConnectOptions_GetURL,
+     METH_O,
+     "SBPlatformConnectOptions_GetURL(SBPlatformConnectOptions self) -> char "
+     "const *"},
+    {"SBPlatformConnectOptions_SetURL", _wrap_SBPlatformConnectOptions_SetURL,
+     METH_VARARGS,
+     "SBPlatformConnectOptions_SetURL(SBPlatformConnectOptions self, char "
+     "const * url)"},
+    {"SBPlatformConnectOptions_GetRsyncEnabled",
+     _wrap_SBPlatformConnectOptions_GetRsyncEnabled, METH_O,
+     "SBPlatformConnectOptions_GetRsyncEnabled(SBPlatformConnectOptions self) "
+     "-> bool"},
+    {"SBPlatformConnectOptions_EnableRsync",
+     _wrap_SBPlatformConnectOptions_EnableRsync, METH_VARARGS,
+     "SBPlatformConnectOptions_EnableRsync(SBPlatformConnectOptions self, char "
+     "const * options, char const * remote_path_prefix, bool "
+     "omit_remote_hostname)"},
+    {"SBPlatformConnectOptions_DisableRsync",
+     _wrap_SBPlatformConnectOptions_DisableRsync, METH_O,
+     "SBPlatformConnectOptions_DisableRsync(SBPlatformConnectOptions self)"},
+    {"SBPlatformConnectOptions_GetLocalCacheDirectory",
+     _wrap_SBPlatformConnectOptions_GetLocalCacheDirectory, METH_O,
+     "SBPlatformConnectOptions_GetLocalCacheDirectory(SBPlatformConnectOptions "
+     "self) -> char const *"},
+    {"SBPlatformConnectOptions_SetLocalCacheDirectory",
+     _wrap_SBPlatformConnectOptions_SetLocalCacheDirectory, METH_VARARGS,
+     "SBPlatformConnectOptions_SetLocalCacheDirectory(SBPlatformConnectOptions "
+     "self, char const * path)"},
+    {"SBPlatformConnectOptions_swigregister",
+     SBPlatformConnectOptions_swigregister, METH_O, NULL},
+    {"SBPlatformConnectOptions_swiginit", SBPlatformConnectOptions_swiginit,
+     METH_VARARGS, NULL},
+    {"new_SBPlatformShellCommand", _wrap_new_SBPlatformShellCommand,
+     METH_VARARGS,
+     "\n"
+     "SBPlatformShellCommand(char const * shell, char const * shell_command)\n"
+     "SBPlatformShellCommand(char const * shell_command)\n"
+     "new_SBPlatformShellCommand(SBPlatformShellCommand rhs) -> "
+     "SBPlatformShellCommand\n"
+     ""},
+    {"delete_SBPlatformShellCommand", _wrap_delete_SBPlatformShellCommand,
+     METH_O, "delete_SBPlatformShellCommand(SBPlatformShellCommand self)"},
+    {"SBPlatformShellCommand_Clear", _wrap_SBPlatformShellCommand_Clear, METH_O,
+     "SBPlatformShellCommand_Clear(SBPlatformShellCommand self)"},
+    {"SBPlatformShellCommand_GetShell", _wrap_SBPlatformShellCommand_GetShell,
+     METH_O,
+     "SBPlatformShellCommand_GetShell(SBPlatformShellCommand self) -> char "
+     "const *"},
+    {"SBPlatformShellCommand_SetShell", _wrap_SBPlatformShellCommand_SetShell,
+     METH_VARARGS,
+     "SBPlatformShellCommand_SetShell(SBPlatformShellCommand self, char const "
+     "* shell)"},
+    {"SBPlatformShellCommand_GetCommand",
+     _wrap_SBPlatformShellCommand_GetCommand, METH_O,
+     "SBPlatformShellCommand_GetCommand(SBPlatformShellCommand self) -> char "
+     "const *"},
+    {"SBPlatformShellCommand_SetCommand",
+     _wrap_SBPlatformShellCommand_SetCommand, METH_VARARGS,
+     "SBPlatformShellCommand_SetCommand(SBPlatformShellCommand self, char "
+     "const * shell_command)"},
+    {"SBPlatformShellCommand_GetWorkingDirectory",
+     _wrap_SBPlatformShellCommand_GetWorkingDirectory, METH_O,
+     "SBPlatformShellCommand_GetWorkingDirectory(SBPlatformShellCommand self) "
+     "-> char const *"},
+    {"SBPlatformShellCommand_SetWorkingDirectory",
+     _wrap_SBPlatformShellCommand_SetWorkingDirectory, METH_VARARGS,
+     "SBPlatformShellCommand_SetWorkingDirectory(SBPlatformShellCommand self, "
+     "char const * path)"},
+    {"SBPlatformShellCommand_GetTimeoutSeconds",
+     _wrap_SBPlatformShellCommand_GetTimeoutSeconds, METH_O,
+     "SBPlatformShellCommand_GetTimeoutSeconds(SBPlatformShellCommand self) -> "
+     "uint32_t"},
+    {"SBPlatformShellCommand_SetTimeoutSeconds",
+     _wrap_SBPlatformShellCommand_SetTimeoutSeconds, METH_VARARGS,
+     "SBPlatformShellCommand_SetTimeoutSeconds(SBPlatformShellCommand self, "
+     "uint32_t sec)"},
+    {"SBPlatformShellCommand_GetSignal", _wrap_SBPlatformShellCommand_GetSignal,
+     METH_O,
+     "SBPlatformShellCommand_GetSignal(SBPlatformShellCommand self) -> int"},
+    {"SBPlatformShellCommand_GetStatus", _wrap_SBPlatformShellCommand_GetStatus,
+     METH_O,
+     "SBPlatformShellCommand_GetStatus(SBPlatformShellCommand self) -> int"},
+    {"SBPlatformShellCommand_GetOutput", _wrap_SBPlatformShellCommand_GetOutput,
+     METH_O,
+     "SBPlatformShellCommand_GetOutput(SBPlatformShellCommand self) -> char "
+     "const *"},
+    {"SBPlatformShellCommand_swigregister", SBPlatformShellCommand_swigregister,
+     METH_O, NULL},
+    {"SBPlatformShellCommand_swiginit", SBPlatformShellCommand_swiginit,
+     METH_VARARGS, NULL},
+    {"new_SBPlatform", _wrap_new_SBPlatform, METH_VARARGS,
+     "\n"
+     "SBPlatform()\n"
+     "SBPlatform(char const * platform_name)\n"
+     "new_SBPlatform(SBPlatform rhs) -> SBPlatform\n"
+     ""},
+    {"delete_SBPlatform", _wrap_delete_SBPlatform, METH_O,
+     "delete_SBPlatform(SBPlatform self)"},
+    {"SBPlatform_GetHostPlatform", _wrap_SBPlatform_GetHostPlatform,
+     METH_NOARGS, "SBPlatform_GetHostPlatform() -> SBPlatform"},
+    {"SBPlatform___nonzero__", _wrap_SBPlatform___nonzero__, METH_O,
+     "SBPlatform___nonzero__(SBPlatform self) -> bool"},
+    {"SBPlatform_IsValid", _wrap_SBPlatform_IsValid, METH_O,
+     "SBPlatform_IsValid(SBPlatform self) -> bool"},
+    {"SBPlatform_Clear", _wrap_SBPlatform_Clear, METH_O,
+     "SBPlatform_Clear(SBPlatform self)"},
+    {"SBPlatform_GetWorkingDirectory", _wrap_SBPlatform_GetWorkingDirectory,
+     METH_O, "SBPlatform_GetWorkingDirectory(SBPlatform self) -> char const *"},
+    {"SBPlatform_SetWorkingDirectory", _wrap_SBPlatform_SetWorkingDirectory,
+     METH_VARARGS,
+     "SBPlatform_SetWorkingDirectory(SBPlatform self, char const * path) -> "
+     "bool"},
+    {"SBPlatform_GetName", _wrap_SBPlatform_GetName, METH_O,
+     "SBPlatform_GetName(SBPlatform self) -> char const *"},
+    {"SBPlatform_ConnectRemote", _wrap_SBPlatform_ConnectRemote, METH_VARARGS,
+     "SBPlatform_ConnectRemote(SBPlatform self, SBPlatformConnectOptions "
+     "connect_options) -> SBError"},
+    {"SBPlatform_DisconnectRemote", _wrap_SBPlatform_DisconnectRemote, METH_O,
+     "SBPlatform_DisconnectRemote(SBPlatform self)"},
+    {"SBPlatform_IsConnected", _wrap_SBPlatform_IsConnected, METH_O,
+     "SBPlatform_IsConnected(SBPlatform self) -> bool"},
+    {"SBPlatform_GetTriple", _wrap_SBPlatform_GetTriple, METH_O,
+     "SBPlatform_GetTriple(SBPlatform self) -> char const *"},
+    {"SBPlatform_GetHostname", _wrap_SBPlatform_GetHostname, METH_O,
+     "SBPlatform_GetHostname(SBPlatform self) -> char const *"},
+    {"SBPlatform_GetOSBuild", _wrap_SBPlatform_GetOSBuild, METH_O,
+     "SBPlatform_GetOSBuild(SBPlatform self) -> char const *"},
+    {"SBPlatform_GetOSDescription", _wrap_SBPlatform_GetOSDescription, METH_O,
+     "SBPlatform_GetOSDescription(SBPlatform self) -> char const *"},
+    {"SBPlatform_GetOSMajorVersion", _wrap_SBPlatform_GetOSMajorVersion, METH_O,
+     "SBPlatform_GetOSMajorVersion(SBPlatform self) -> uint32_t"},
+    {"SBPlatform_GetOSMinorVersion", _wrap_SBPlatform_GetOSMinorVersion, METH_O,
+     "SBPlatform_GetOSMinorVersion(SBPlatform self) -> uint32_t"},
+    {"SBPlatform_GetOSUpdateVersion", _wrap_SBPlatform_GetOSUpdateVersion,
+     METH_O, "SBPlatform_GetOSUpdateVersion(SBPlatform self) -> uint32_t"},
+    {"SBPlatform_SetSDKRoot", _wrap_SBPlatform_SetSDKRoot, METH_VARARGS,
+     "SBPlatform_SetSDKRoot(SBPlatform self, char const * sysroot)"},
+    {"SBPlatform_Put", _wrap_SBPlatform_Put, METH_VARARGS,
+     "SBPlatform_Put(SBPlatform self, SBFileSpec src, SBFileSpec dst) -> "
+     "SBError"},
+    {"SBPlatform_Get", _wrap_SBPlatform_Get, METH_VARARGS,
+     "SBPlatform_Get(SBPlatform self, SBFileSpec src, SBFileSpec dst) -> "
+     "SBError"},
+    {"SBPlatform_Install", _wrap_SBPlatform_Install, METH_VARARGS,
+     "SBPlatform_Install(SBPlatform self, SBFileSpec src, SBFileSpec dst) -> "
+     "SBError"},
+    {"SBPlatform_Run", _wrap_SBPlatform_Run, METH_VARARGS,
+     "SBPlatform_Run(SBPlatform self, SBPlatformShellCommand shell_command) -> "
+     "SBError"},
+    {"SBPlatform_Launch", _wrap_SBPlatform_Launch, METH_VARARGS,
+     "SBPlatform_Launch(SBPlatform self, SBLaunchInfo launch_info) -> SBError"},
+    {"SBPlatform_Attach", _wrap_SBPlatform_Attach, METH_VARARGS,
+     "SBPlatform_Attach(SBPlatform self, SBAttachInfo attach_info, SBDebugger "
+     "debugger, SBTarget target, SBError error) -> SBProcess"},
+    {"SBPlatform_GetAllProcesses", _wrap_SBPlatform_GetAllProcesses,
+     METH_VARARGS,
+     "SBPlatform_GetAllProcesses(SBPlatform self, SBError error) -> "
+     "SBProcessInfoList"},
+    {"SBPlatform_Kill", _wrap_SBPlatform_Kill, METH_VARARGS,
+     "SBPlatform_Kill(SBPlatform self, lldb::pid_t const pid) -> SBError"},
+    {"SBPlatform_MakeDirectory", _wrap_SBPlatform_MakeDirectory, METH_VARARGS,
+     "SBPlatform_MakeDirectory(SBPlatform self, char const * path, uint32_t "
+     "file_permissions=eFilePermissionsDirectoryDefault) -> SBError"},
+    {"SBPlatform_GetFilePermissions", _wrap_SBPlatform_GetFilePermissions,
+     METH_VARARGS,
+     "SBPlatform_GetFilePermissions(SBPlatform self, char const * path) -> "
+     "uint32_t"},
+    {"SBPlatform_SetFilePermissions", _wrap_SBPlatform_SetFilePermissions,
+     METH_VARARGS,
+     "SBPlatform_SetFilePermissions(SBPlatform self, char const * path, "
+     "uint32_t file_permissions) -> SBError"},
+    {"SBPlatform_GetUnixSignals", _wrap_SBPlatform_GetUnixSignals, METH_O,
+     "SBPlatform_GetUnixSignals(SBPlatform self) -> SBUnixSignals"},
+    {"SBPlatform_GetEnvironment", _wrap_SBPlatform_GetEnvironment, METH_O,
+     "SBPlatform_GetEnvironment(SBPlatform self) -> SBEnvironment"},
+    {"SBPlatform_SetLocateModuleCallback",
+     _wrap_SBPlatform_SetLocateModuleCallback, METH_VARARGS,
+     "SBPlatform_SetLocateModuleCallback(SBPlatform self, "
+     "lldb::SBPlatformLocateModuleCallback callback) -> SBError"},
+    {"SBPlatform_swigregister", SBPlatform_swigregister, METH_O, NULL},
+    {"SBPlatform_swiginit", SBPlatform_swiginit, METH_VARARGS, NULL},
+    {"new_SBProcess", _wrap_new_SBProcess, METH_VARARGS,
+     "\n"
+     "SBProcess()\n"
+     "new_SBProcess(SBProcess rhs) -> SBProcess\n"
+     ""},
+    {"delete_SBProcess", _wrap_delete_SBProcess, METH_O,
+     "delete_SBProcess(SBProcess self)"},
+    {"SBProcess_GetBroadcasterClassName",
+     _wrap_SBProcess_GetBroadcasterClassName, METH_NOARGS,
+     "SBProcess_GetBroadcasterClassName() -> char const *"},
+    {"SBProcess_GetPluginName", _wrap_SBProcess_GetPluginName, METH_O,
+     "SBProcess_GetPluginName(SBProcess self) -> char const *"},
+    {"SBProcess_GetShortPluginName", _wrap_SBProcess_GetShortPluginName, METH_O,
+     "SBProcess_GetShortPluginName(SBProcess self) -> char const *"},
+    {"SBProcess_Clear", _wrap_SBProcess_Clear, METH_O,
+     "SBProcess_Clear(SBProcess self)"},
+    {"SBProcess___nonzero__", _wrap_SBProcess___nonzero__, METH_O,
+     "SBProcess___nonzero__(SBProcess self) -> bool"},
+    {"SBProcess_IsValid", _wrap_SBProcess_IsValid, METH_O,
+     "SBProcess_IsValid(SBProcess self) -> bool"},
+    {"SBProcess_GetTarget", _wrap_SBProcess_GetTarget, METH_O,
+     "SBProcess_GetTarget(SBProcess self) -> SBTarget"},
+    {"SBProcess_GetByteOrder", _wrap_SBProcess_GetByteOrder, METH_O,
+     "SBProcess_GetByteOrder(SBProcess self) -> lldb::ByteOrder"},
+    {"SBProcess_PutSTDIN", _wrap_SBProcess_PutSTDIN, METH_VARARGS,
+     "\n"
+     "SBProcess_PutSTDIN(SBProcess self, char const * src) -> size_t\n"
+     "\n"
+     "    Writes data into the current process's stdin. API client specifies a "
+     "Python\n"
+     "    string as the only argument.\n"
+     ""},
+    {"SBProcess_GetSTDOUT", _wrap_SBProcess_GetSTDOUT, METH_VARARGS,
+     "\n"
+     "SBProcess_GetSTDOUT(SBProcess self, char * dst) -> size_t\n"
+     "\n"
+     "    Reads data from the current process's stdout stream. API client "
+     "specifies\n"
+     "    the size of the buffer to read data into. It returns the byte buffer "
+     "in a\n"
+     "    Python string.\n"
+     ""},
+    {"SBProcess_GetSTDERR", _wrap_SBProcess_GetSTDERR, METH_VARARGS,
+     "\n"
+     "SBProcess_GetSTDERR(SBProcess self, char * dst) -> size_t\n"
+     "\n"
+     "    Reads data from the current process's stderr stream. API client "
+     "specifies\n"
+     "    the size of the buffer to read data into. It returns the byte buffer "
+     "in a\n"
+     "    Python string.\n"
+     ""},
+    {"SBProcess_GetAsyncProfileData", _wrap_SBProcess_GetAsyncProfileData,
+     METH_VARARGS,
+     "SBProcess_GetAsyncProfileData(SBProcess self, char * dst) -> size_t"},
+    {"SBProcess_ReportEventState", _wrap_SBProcess_ReportEventState,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_ReportEventState(SBProcess self, SBEvent event, SBFile file)\n"
+     "SBProcess_ReportEventState(SBProcess self, SBEvent event, lldb::FileSP "
+     "BORROWED)\n"
+     ""},
+    {"SBProcess_AppendEventStateReport", _wrap_SBProcess_AppendEventStateReport,
+     METH_VARARGS,
+     "SBProcess_AppendEventStateReport(SBProcess self, SBEvent event, "
+     "SBCommandReturnObject result)"},
+    {"SBProcess_RemoteAttachToProcessWithID",
+     _wrap_SBProcess_RemoteAttachToProcessWithID, METH_VARARGS,
+     "\n"
+     "SBProcess_RemoteAttachToProcessWithID(SBProcess self, lldb::pid_t pid, "
+     "SBError error) -> bool\n"
+     "\n"
+     "    Remote connection related functions. These will fail if the\n"
+     "    process is not in eStateConnected. They are intended for use\n"
+     "    when connecting to an externally managed debugserver instance.\n"
+     ""},
+    {"SBProcess_RemoteLaunch", _wrap_SBProcess_RemoteLaunch, METH_VARARGS,
+     "\n"
+     "SBProcess_RemoteLaunch(SBProcess self, char const ** argv, char const ** "
+     "envp, char const * stdin_path, char const * stdout_path, char const * "
+     "stderr_path, char const * working_directory, uint32_t launch_flags, bool "
+     "stop_at_entry, SBError error) -> bool\n"
+     "See SBTarget.Launch for argument description and usage.\n"
+     ""},
+    {"SBProcess_GetNumThreads", _wrap_SBProcess_GetNumThreads, METH_O,
+     "SBProcess_GetNumThreads(SBProcess self) -> uint32_t"},
+    {"SBProcess_GetThreadAtIndex", _wrap_SBProcess_GetThreadAtIndex,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_GetThreadAtIndex(SBProcess self, size_t index) -> SBThread\n"
+     "\n"
+     "    Returns the INDEX'th thread from the list of current threads.  The "
+     "index\n"
+     "    of a thread is only valid for the current stop.  For a persistent "
+     "thread\n"
+     "    identifier use either the thread ID or the IndexID.  See help on "
+     "SBThread\n"
+     "    for more details.\n"
+     ""},
+    {"SBProcess_GetThreadByID", _wrap_SBProcess_GetThreadByID, METH_VARARGS,
+     "\n"
+     "SBProcess_GetThreadByID(SBProcess self, lldb::tid_t sb_thread_id) -> "
+     "SBThread\n"
+     "\n"
+     "    Returns the thread with the given thread ID.\n"
+     ""},
+    {"SBProcess_GetThreadByIndexID", _wrap_SBProcess_GetThreadByIndexID,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_GetThreadByIndexID(SBProcess self, uint32_t index_id) -> "
+     "SBThread\n"
+     "\n"
+     "    Returns the thread with the given thread IndexID.\n"
+     ""},
+    {"SBProcess_GetSelectedThread", _wrap_SBProcess_GetSelectedThread, METH_O,
+     "\n"
+     "SBProcess_GetSelectedThread(SBProcess self) -> SBThread\n"
+     "\n"
+     "    Returns the currently selected thread.\n"
+     ""},
+    {"SBProcess_CreateOSPluginThread", _wrap_SBProcess_CreateOSPluginThread,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_CreateOSPluginThread(SBProcess self, lldb::tid_t tid, "
+     "lldb::addr_t context) -> SBThread\n"
+     "\n"
+     "    Lazily create a thread on demand through the current OperatingSystem "
+     "plug-in, if the current OperatingSystem plug-in supports it.\n"
+     ""},
+    {"SBProcess_SetSelectedThread", _wrap_SBProcess_SetSelectedThread,
+     METH_VARARGS,
+     "SBProcess_SetSelectedThread(SBProcess self, SBThread thread) -> bool"},
+    {"SBProcess_SetSelectedThreadByID", _wrap_SBProcess_SetSelectedThreadByID,
+     METH_VARARGS,
+     "SBProcess_SetSelectedThreadByID(SBProcess self, lldb::tid_t tid) -> "
+     "bool"},
+    {"SBProcess_SetSelectedThreadByIndexID",
+     _wrap_SBProcess_SetSelectedThreadByIndexID, METH_VARARGS,
+     "SBProcess_SetSelectedThreadByIndexID(SBProcess self, uint32_t index_id) "
+     "-> bool"},
+    {"SBProcess_GetNumQueues", _wrap_SBProcess_GetNumQueues, METH_O,
+     "SBProcess_GetNumQueues(SBProcess self) -> uint32_t"},
+    {"SBProcess_GetQueueAtIndex", _wrap_SBProcess_GetQueueAtIndex, METH_VARARGS,
+     "SBProcess_GetQueueAtIndex(SBProcess self, size_t index) -> SBQueue"},
+    {"SBProcess_GetState", _wrap_SBProcess_GetState, METH_O,
+     "SBProcess_GetState(SBProcess self) -> lldb::StateType"},
+    {"SBProcess_GetExitStatus", _wrap_SBProcess_GetExitStatus, METH_O,
+     "SBProcess_GetExitStatus(SBProcess self) -> int"},
+    {"SBProcess_GetExitDescription", _wrap_SBProcess_GetExitDescription, METH_O,
+     "SBProcess_GetExitDescription(SBProcess self) -> char const *"},
+    {"SBProcess_GetProcessID", _wrap_SBProcess_GetProcessID, METH_O,
+     "\n"
+     "SBProcess_GetProcessID(SBProcess self) -> lldb::pid_t\n"
+     "\n"
+     "    Returns the process ID of the process.\n"
+     ""},
+    {"SBProcess_GetUniqueID", _wrap_SBProcess_GetUniqueID, METH_O,
+     "\n"
+     "SBProcess_GetUniqueID(SBProcess self) -> uint32_t\n"
+     "\n"
+     "    Returns an integer ID that is guaranteed to be unique across all "
+     "process instances. This is not the process ID, just a unique integer for "
+     "comparison and caching purposes.\n"
+     ""},
+    {"SBProcess_GetAddressByteSize", _wrap_SBProcess_GetAddressByteSize, METH_O,
+     "SBProcess_GetAddressByteSize(SBProcess self) -> uint32_t"},
+    {"SBProcess_Destroy", _wrap_SBProcess_Destroy, METH_O,
+     "\n"
+     "SBProcess_Destroy(SBProcess self) -> SBError\n"
+     "\n"
+     "    Kills the process and shuts down all threads that were spawned to\n"
+     "    track and monitor process.\n"
+     ""},
+    {"SBProcess_Continue", _wrap_SBProcess_Continue, METH_O,
+     "SBProcess_Continue(SBProcess self) -> SBError"},
+    {"SBProcess_Stop", _wrap_SBProcess_Stop, METH_O,
+     "SBProcess_Stop(SBProcess self) -> SBError"},
+    {"SBProcess_Kill", _wrap_SBProcess_Kill, METH_O,
+     "\n"
+     "SBProcess_Kill(SBProcess self) -> SBError\n"
+     "Same as Destroy(self).\n"
+     ""},
+    {"SBProcess_Detach", _wrap_SBProcess_Detach, METH_VARARGS,
+     "\n"
+     "SBProcess_Detach(SBProcess self) -> SBError\n"
+     "SBProcess_Detach(SBProcess self, bool keep_stopped) -> SBError\n"
+     ""},
+    {"SBProcess_Signal", _wrap_SBProcess_Signal, METH_VARARGS,
+     "\n"
+     "SBProcess_Signal(SBProcess self, int signal) -> SBError\n"
+     "Sends the process a unix signal.\n"
+     ""},
+    {"SBProcess_GetUnixSignals", _wrap_SBProcess_GetUnixSignals, METH_O,
+     "SBProcess_GetUnixSignals(SBProcess self) -> SBUnixSignals"},
+    {"SBProcess_SendAsyncInterrupt", _wrap_SBProcess_SendAsyncInterrupt, METH_O,
+     "SBProcess_SendAsyncInterrupt(SBProcess self)"},
+    {"SBProcess_GetStopID", _wrap_SBProcess_GetStopID, METH_VARARGS,
+     "\n"
+     "SBProcess_GetStopID(SBProcess self, bool include_expression_stops=False) "
+     "-> uint32_t\n"
+     "\n"
+     "    Returns a stop id that will increase every time the process "
+     "executes.  If\n"
+     "    include_expression_stops is true, then stops caused by expression "
+     "evaluation\n"
+     "    will cause the returned value to increase, otherwise the counter "
+     "returned will\n"
+     "    only increase when execution is continued explicitly by the user.  "
+     "Note, the value\n"
+     "    will always increase, but may increase by more than one per stop.\n"
+     ""},
+    {"SBProcess_GetStopEventForStopID", _wrap_SBProcess_GetStopEventForStopID,
+     METH_VARARGS,
+     "SBProcess_GetStopEventForStopID(SBProcess self, uint32_t stop_id) -> "
+     "SBEvent"},
+    {"SBProcess_ForceScriptedState", _wrap_SBProcess_ForceScriptedState,
+     METH_VARARGS,
+     "SBProcess_ForceScriptedState(SBProcess self, lldb::StateType new_state)"},
+    {"SBProcess_ReadMemory", _wrap_SBProcess_ReadMemory, METH_VARARGS,
+     "\n"
+     "SBProcess_ReadMemory(SBProcess self, lldb::addr_t addr, void * buf, "
+     "SBError error) -> size_t\n"
+     "\n"
+     "    Reads memory from the current process's address space and removes "
+     "any\n"
+     "    traps that may have been inserted into the memory. It returns the "
+     "byte\n"
+     "    buffer in a Python string. Example: ::\n"
+     "\n"
+     "        # Read 4 bytes from address 'addr' and assume error.Success() is "
+     "True.\n"
+     "        content = process.ReadMemory(addr, 4, error)\n"
+     "        new_bytes = bytearray(content)\n"
+     ""},
+    {"SBProcess_WriteMemory", _wrap_SBProcess_WriteMemory, METH_VARARGS,
+     "\n"
+     "SBProcess_WriteMemory(SBProcess self, lldb::addr_t addr, void const * "
+     "buf, SBError error) -> size_t\n"
+     "\n"
+     "    Writes memory to the current process's address space and maintains "
+     "any\n"
+     "    traps that might be present due to software breakpoints. Example: "
+     "::\n"
+     "\n"
+     "        # Create a Python string from the byte array.\n"
+     "        new_value = str(bytes)\n"
+     "        result = process.WriteMemory(addr, new_value, error)\n"
+     "        if not error.Success() or result != len(bytes):\n"
+     "            print('SBProcess.WriteMemory() failed!')\n"
+     ""},
+    {"SBProcess_ReadCStringFromMemory", _wrap_SBProcess_ReadCStringFromMemory,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_ReadCStringFromMemory(SBProcess self, lldb::addr_t addr, void "
+     "* char_buf, SBError error) -> size_t\n"
+     "\n"
+     "    Reads a NUL terminated C string from the current process's address "
+     "space.\n"
+     "    It returns a python string of the exact length, or truncates the "
+     "string if\n"
+     "    the maximum character limit is reached. Example: ::\n"
+     "\n"
+     "        # Read a C string of at most 256 bytes from address '0x1000'\n"
+     "        error = lldb.SBError()\n"
+     "        cstring = process.ReadCStringFromMemory(0x1000, 256, error)\n"
+     "        if error.Success():\n"
+     "            print('cstring: ', cstring)\n"
+     "        else\n"
+     "            print('error: ', error)\n"
+     ""},
+    {"SBProcess_ReadUnsignedFromMemory", _wrap_SBProcess_ReadUnsignedFromMemory,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_ReadUnsignedFromMemory(SBProcess self, lldb::addr_t addr, "
+     "uint32_t byte_size, SBError error) -> uint64_t\n"
+     "\n"
+     "    Reads an unsigned integer from memory given a byte size and an "
+     "address.\n"
+     "    Returns the unsigned integer that was read. Example: ::\n"
+     "\n"
+     "        # Read a 4 byte unsigned integer from address 0x1000\n"
+     "        error = lldb.SBError()\n"
+     "        uint = ReadUnsignedFromMemory(0x1000, 4, error)\n"
+     "        if error.Success():\n"
+     "            print('integer: %u' % uint)\n"
+     "        else\n"
+     "            print('error: ', error)\n"
+     ""},
+    {"SBProcess_ReadPointerFromMemory", _wrap_SBProcess_ReadPointerFromMemory,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_ReadPointerFromMemory(SBProcess self, lldb::addr_t addr, "
+     "SBError error) -> lldb::addr_t\n"
+     "\n"
+     "    Reads a pointer from memory from an address and returns the value. "
+     "Example: ::\n"
+     "\n"
+     "        # Read a pointer from address 0x1000\n"
+     "        error = lldb.SBError()\n"
+     "        ptr = ReadPointerFromMemory(0x1000, error)\n"
+     "        if error.Success():\n"
+     "            print('pointer: 0x%x' % ptr)\n"
+     "        else\n"
+     "            print('error: ', error)\n"
+     ""},
+    {"SBProcess_FindRangesInMemory", _wrap_SBProcess_FindRangesInMemory,
+     METH_VARARGS,
+     "SBProcess_FindRangesInMemory(SBProcess self, void const * buf, "
+     "SBAddressRangeList ranges, uint32_t alignment, uint32_t max_matches, "
+     "SBError error) -> SBAddressRangeList"},
+    {"SBProcess_FindInMemory", _wrap_SBProcess_FindInMemory, METH_VARARGS,
+     "SBProcess_FindInMemory(SBProcess self, void const * buf, SBAddressRange "
+     "range, uint32_t alignment, SBError error) -> lldb::addr_t"},
+    {"SBProcess_GetStateFromEvent", _wrap_SBProcess_GetStateFromEvent, METH_O,
+     "SBProcess_GetStateFromEvent(SBEvent event) -> lldb::StateType"},
+    {"SBProcess_GetRestartedFromEvent", _wrap_SBProcess_GetRestartedFromEvent,
+     METH_O, "SBProcess_GetRestartedFromEvent(SBEvent event) -> bool"},
+    {"SBProcess_GetNumRestartedReasonsFromEvent",
+     _wrap_SBProcess_GetNumRestartedReasonsFromEvent, METH_O,
+     "SBProcess_GetNumRestartedReasonsFromEvent(SBEvent event) -> size_t"},
+    {"SBProcess_GetRestartedReasonAtIndexFromEvent",
+     _wrap_SBProcess_GetRestartedReasonAtIndexFromEvent, METH_VARARGS,
+     "SBProcess_GetRestartedReasonAtIndexFromEvent(SBEvent event, size_t idx) "
+     "-> char const *"},
+    {"SBProcess_GetProcessFromEvent", _wrap_SBProcess_GetProcessFromEvent,
+     METH_O, "SBProcess_GetProcessFromEvent(SBEvent event) -> SBProcess"},
+    {"SBProcess_GetInterruptedFromEvent",
+     _wrap_SBProcess_GetInterruptedFromEvent, METH_O,
+     "SBProcess_GetInterruptedFromEvent(SBEvent event) -> bool"},
+    {"SBProcess_GetStructuredDataFromEvent",
+     _wrap_SBProcess_GetStructuredDataFromEvent, METH_O,
+     "SBProcess_GetStructuredDataFromEvent(SBEvent event) -> SBStructuredData"},
+    {"SBProcess_EventIsProcessEvent", _wrap_SBProcess_EventIsProcessEvent,
+     METH_O, "SBProcess_EventIsProcessEvent(SBEvent event) -> bool"},
+    {"SBProcess_EventIsStructuredDataEvent",
+     _wrap_SBProcess_EventIsStructuredDataEvent, METH_O,
+     "SBProcess_EventIsStructuredDataEvent(SBEvent event) -> bool"},
+    {"SBProcess_GetBroadcaster", _wrap_SBProcess_GetBroadcaster, METH_O,
+     "SBProcess_GetBroadcaster(SBProcess self) -> SBBroadcaster"},
+    {"SBProcess_GetBroadcasterClass", _wrap_SBProcess_GetBroadcasterClass,
+     METH_NOARGS,
+     "\n"
+     "SBProcess_GetBroadcasterClass() -> char const *\n"
+     "Get default process broadcaster class name (lldb.process).\n"
+     ""},
+    {"SBProcess_GetDescription", _wrap_SBProcess_GetDescription, METH_VARARGS,
+     "SBProcess_GetDescription(SBProcess self, SBStream description) -> bool"},
+    {"SBProcess_GetExtendedCrashInformation",
+     _wrap_SBProcess_GetExtendedCrashInformation, METH_O,
+     "\n"
+     "SBProcess_GetExtendedCrashInformation(SBProcess self) -> "
+     "SBStructuredData\n"
+     "\n"
+     "    Returns the process' extended crash information.\n"
+     ""},
+    {"SBProcess_GetNumSupportedHardwareWatchpoints",
+     _wrap_SBProcess_GetNumSupportedHardwareWatchpoints, METH_VARARGS,
+     "SBProcess_GetNumSupportedHardwareWatchpoints(SBProcess self, SBError "
+     "error) -> uint32_t"},
+    {"SBProcess_LoadImage", _wrap_SBProcess_LoadImage, METH_VARARGS,
+     "\n"
+     "SBProcess_LoadImage(SBProcess self, SBFileSpec remote_image_spec, "
+     "SBError error) -> uint32_t\n"
+     "SBProcess_LoadImage(SBProcess self, SBFileSpec local_image_spec, "
+     "SBFileSpec remote_image_spec, SBError error) -> uint32_t\n"
+     ""},
+    {"SBProcess_LoadImageUsingPaths", _wrap_SBProcess_LoadImageUsingPaths,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_LoadImageUsingPaths(SBProcess self, SBFileSpec image_spec, "
+     "SBStringList paths, SBFileSpec loaded_path, SBError error) -> uint32_t\n"
+     "\n"
+     "    Load the library whose filename is given by image_spec looking in "
+     "all the\n"
+     "    paths supplied in the paths argument.  If successful, return a token "
+     "that\n"
+     "    can be passed to UnloadImage and fill loaded_path with the path that "
+     "was\n"
+     "    successfully loaded.  On failure, return\n"
+     "    lldb.LLDB_INVALID_IMAGE_TOKEN.\n"
+     ""},
+    {"SBProcess_UnloadImage", _wrap_SBProcess_UnloadImage, METH_VARARGS,
+     "SBProcess_UnloadImage(SBProcess self, uint32_t image_token) -> SBError"},
+    {"SBProcess_SendEventData", _wrap_SBProcess_SendEventData, METH_VARARGS,
+     "SBProcess_SendEventData(SBProcess self, char const * data) -> SBError"},
+    {"SBProcess_GetNumExtendedBacktraceTypes",
+     _wrap_SBProcess_GetNumExtendedBacktraceTypes, METH_O,
+     "\n"
+     "SBProcess_GetNumExtendedBacktraceTypes(SBProcess self) -> uint32_t\n"
+     "\n"
+     "    Return the number of different thread-origin extended backtraces\n"
+     "    this process can support as a uint32_t.\n"
+     "    When the process is stopped and you have an SBThread, lldb may be\n"
+     "    able to show a backtrace of when that thread was originally "
+     "created,\n"
+     "    or the work item was enqueued to it (in the case of a libdispatch\n"
+     "    queue).\n"
+     ""},
+    {"SBProcess_GetExtendedBacktraceTypeAtIndex",
+     _wrap_SBProcess_GetExtendedBacktraceTypeAtIndex, METH_VARARGS,
+     "\n"
+     "SBProcess_GetExtendedBacktraceTypeAtIndex(SBProcess self, uint32_t idx) "
+     "-> char const *\n"
+     "\n"
+     "    Takes an index argument, returns the name of one of the "
+     "thread-origin\n"
+     "    extended backtrace methods as a str.\n"
+     ""},
+    {"SBProcess_GetHistoryThreads", _wrap_SBProcess_GetHistoryThreads,
+     METH_VARARGS,
+     "SBProcess_GetHistoryThreads(SBProcess self, lldb::addr_t addr) -> "
+     "SBThreadCollection"},
+    {"SBProcess_IsInstrumentationRuntimePresent",
+     _wrap_SBProcess_IsInstrumentationRuntimePresent, METH_VARARGS,
+     "SBProcess_IsInstrumentationRuntimePresent(SBProcess self, "
+     "lldb::InstrumentationRuntimeType type) -> bool"},
+    {"SBProcess_SaveCore", _wrap_SBProcess_SaveCore, METH_VARARGS,
+     "\n"
+     "SBProcess_SaveCore(SBProcess self, char const * file_name, char const * "
+     "flavor, lldb::SaveCoreStyle core_style) -> SBError\n"
+     "SBProcess_SaveCore(SBProcess self, char const * file_name) -> SBError\n"
+     "SBProcess_SaveCore(SBProcess self, SBSaveCoreOptions options) -> "
+     "SBError\n"
+     ""},
+    {"SBProcess_GetMemoryRegionInfo", _wrap_SBProcess_GetMemoryRegionInfo,
+     METH_VARARGS,
+     "SBProcess_GetMemoryRegionInfo(SBProcess self, lldb::addr_t load_addr, "
+     "SBMemoryRegionInfo region_info) -> SBError"},
+    {"SBProcess_GetMemoryRegions", _wrap_SBProcess_GetMemoryRegions, METH_O,
+     "SBProcess_GetMemoryRegions(SBProcess self) -> SBMemoryRegionInfoList"},
+    {"SBProcess_GetProcessInfo", _wrap_SBProcess_GetProcessInfo, METH_O,
+     "\n"
+     "SBProcess_GetProcessInfo(SBProcess self) -> SBProcessInfo\n"
+     "\n"
+     "    Get information about the process.\n"
+     "    Valid process info will only be returned when the process is alive,\n"
+     "    use IsValid() to check if the info returned is valid. ::\n"
+     "\n"
+     "        process_info = process.GetProcessInfo()\n"
+     "        if process_info.IsValid():\n"
+     "            process_info.GetProcessID()\n"
+     ""},
+    {"SBProcess_GetCoreFile", _wrap_SBProcess_GetCoreFile, METH_O,
+     "SBProcess_GetCoreFile(SBProcess self) -> SBFileSpec"},
+    {"SBProcess_GetAddressMask", _wrap_SBProcess_GetAddressMask, METH_VARARGS,
+     "\n"
+     "SBProcess_GetAddressMask(SBProcess self, lldb::AddressMaskType type, "
+     "lldb::AddressMaskRange addr_range=eAddressMaskRangeLow) -> lldb::addr_t\n"
+     "\n"
+     "    Get the current address mask in this Process of a given type.\n"
+     "    There are lldb.eAddressMaskTypeCode and lldb.eAddressMaskTypeData "
+     "address\n"
+     "    masks, and on most Targets, the the Data address mask is more "
+     "general\n"
+     "    because there are no alignment restrictions, as there can be with "
+     "Code\n"
+     "    addresses.\n"
+     "    lldb.eAddressMaskTypeAny may be used to get the most general mask.\n"
+     "    The bits which are not used for addressing are set to 1 in the "
+     "returned\n"
+     "    mask.\n"
+     "    In an unusual environment with different address masks for high and "
+     "low\n"
+     "    memory, this may also be specified.  This is uncommon, default is\n"
+     "    lldb.eAddressMaskRangeLow.\n"
+     ""},
+    {"SBProcess_SetAddressMask", _wrap_SBProcess_SetAddressMask, METH_VARARGS,
+     "\n"
+     "SBProcess_SetAddressMask(SBProcess self, lldb::AddressMaskType type, "
+     "lldb::addr_t mask, lldb::AddressMaskRange "
+     "addr_range=eAddressMaskRangeLow)\n"
+     "\n"
+     "    Set the current address mask in this Process for a given type,\n"
+     "    lldb.eAddressMaskTypeCode or lldb.eAddressMaskTypeData.  Bits that "
+     "are not\n"
+     "    used for addressing should be set to 1 in the mask.\n"
+     "    When setting all masks, lldb.eAddressMaskTypeAll may be specified.\n"
+     "    In an unusual environment with different address masks for high and "
+     "low\n"
+     "    memory, this may also be specified.  This is uncommon, default is\n"
+     "    lldb.eAddressMaskRangeLow.\n"
+     ""},
+    {"SBProcess_SetAddressableBits", _wrap_SBProcess_SetAddressableBits,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_SetAddressableBits(SBProcess self, lldb::AddressMaskType type, "
+     "uint32_t num_bits, lldb::AddressMaskRange "
+     "addr_range=eAddressMaskRangeLow)\n"
+     "\n"
+     "    Set the number of low bits relevant for addressing in this Process \n"
+     "    for a given type, lldb.eAddressMaskTypeCode or "
+     "lldb.eAddressMaskTypeData.\n"
+     "    When setting all masks, lldb.eAddressMaskTypeAll may be specified.\n"
+     "    In an unusual environment with different address masks for high and "
+     "low\n"
+     "    memory, the address range  may also be specified.  This is uncommon, "
+     "\n"
+     "    default is lldb.eAddressMaskRangeLow.\n"
+     ""},
+    {"SBProcess_FixAddress", _wrap_SBProcess_FixAddress, METH_VARARGS,
+     "\n"
+     "SBProcess_FixAddress(SBProcess self, lldb::addr_t addr, "
+     "lldb::AddressMaskType type=eAddressMaskTypeAny) -> lldb::addr_t\n"
+     "\n"
+     "    Given a virtual address, clear the bits that are not used for "
+     "addressing\n"
+     "    (and may be used for metadata, memory tagging, point authentication, "
+     "etc).\n"
+     "    By default the most general mask, lldb.eAddressMaskTypeAny is used "
+     "to \n"
+     "    process the address, but lldb.eAddressMaskTypeData and \n"
+     "    lldb.eAddressMaskTypeCode may be specified if the type of address is "
+     "known.\n"
+     ""},
+    {"SBProcess_AllocateMemory", _wrap_SBProcess_AllocateMemory, METH_VARARGS,
+     "\n"
+     "SBProcess_AllocateMemory(SBProcess self, size_t size, uint32_t "
+     "permissions, SBError error) -> lldb::addr_t\n"
+     "\n"
+     "    Allocates a block of memory within the process, with size and\n"
+     "    access permissions specified in the arguments. The permissions\n"
+     "    argument is an or-combination of zero or more of\n"
+     "    lldb.ePermissionsWritable, lldb.ePermissionsReadable, and\n"
+     "    lldb.ePermissionsExecutable. Returns the address\n"
+     "    of the allocated buffer in the process, or\n"
+     "    lldb.LLDB_INVALID_ADDRESS if the allocation failed.\n"
+     ""},
+    {"SBProcess_DeallocateMemory", _wrap_SBProcess_DeallocateMemory,
+     METH_VARARGS,
+     "\n"
+     "SBProcess_DeallocateMemory(SBProcess self, lldb::addr_t ptr) -> SBError\n"
+     "\n"
+     "    Deallocates the block of memory (previously allocated using\n"
+     "    AllocateMemory) given in the argument.\n"
+     ""},
+    {"SBProcess_GetScriptedImplementation",
+     _wrap_SBProcess_GetScriptedImplementation, METH_O,
+     "\n"
+     "SBProcess_GetScriptedImplementation(SBProcess self) -> SBScriptObject\n"
+     "\n"
+     "    Returns the implementation object of the process plugin if "
+     "available. None\n"
+     "    otherwise.\n"
+     ""},
+    {"SBProcess_GetStatus", _wrap_SBProcess_GetStatus, METH_VARARGS,
+     "SBProcess_GetStatus(SBProcess self, SBStream status)"},
+    {"SBProcess___repr__", _wrap_SBProcess___repr__, METH_O,
+     "SBProcess___repr__(SBProcess self) -> std::string"},
+    {"SBProcess_swigregister", SBProcess_swigregister, METH_O, NULL},
+    {"SBProcess_swiginit", SBProcess_swiginit, METH_VARARGS, NULL},
+    {"new_SBProcessInfo", _wrap_new_SBProcessInfo, METH_VARARGS,
+     "\n"
+     "SBProcessInfo()\n"
+     "new_SBProcessInfo(SBProcessInfo rhs) -> SBProcessInfo\n"
+     ""},
+    {"delete_SBProcessInfo", _wrap_delete_SBProcessInfo, METH_O,
+     "delete_SBProcessInfo(SBProcessInfo self)"},
+    {"SBProcessInfo___nonzero__", _wrap_SBProcessInfo___nonzero__, METH_O,
+     "SBProcessInfo___nonzero__(SBProcessInfo self) -> bool"},
+    {"SBProcessInfo_IsValid", _wrap_SBProcessInfo_IsValid, METH_O,
+     "SBProcessInfo_IsValid(SBProcessInfo self) -> bool"},
+    {"SBProcessInfo_GetName", _wrap_SBProcessInfo_GetName, METH_O,
+     "SBProcessInfo_GetName(SBProcessInfo self) -> char const *"},
+    {"SBProcessInfo_GetExecutableFile", _wrap_SBProcessInfo_GetExecutableFile,
+     METH_O,
+     "SBProcessInfo_GetExecutableFile(SBProcessInfo self) -> SBFileSpec"},
+    {"SBProcessInfo_GetProcessID", _wrap_SBProcessInfo_GetProcessID, METH_O,
+     "SBProcessInfo_GetProcessID(SBProcessInfo self) -> lldb::pid_t"},
+    {"SBProcessInfo_GetUserID", _wrap_SBProcessInfo_GetUserID, METH_O,
+     "SBProcessInfo_GetUserID(SBProcessInfo self) -> uint32_t"},
+    {"SBProcessInfo_GetGroupID", _wrap_SBProcessInfo_GetGroupID, METH_O,
+     "SBProcessInfo_GetGroupID(SBProcessInfo self) -> uint32_t"},
+    {"SBProcessInfo_UserIDIsValid", _wrap_SBProcessInfo_UserIDIsValid, METH_O,
+     "SBProcessInfo_UserIDIsValid(SBProcessInfo self) -> bool"},
+    {"SBProcessInfo_GroupIDIsValid", _wrap_SBProcessInfo_GroupIDIsValid, METH_O,
+     "SBProcessInfo_GroupIDIsValid(SBProcessInfo self) -> bool"},
+    {"SBProcessInfo_GetEffectiveUserID", _wrap_SBProcessInfo_GetEffectiveUserID,
+     METH_O,
+     "SBProcessInfo_GetEffectiveUserID(SBProcessInfo self) -> uint32_t"},
+    {"SBProcessInfo_GetEffectiveGroupID",
+     _wrap_SBProcessInfo_GetEffectiveGroupID, METH_O,
+     "SBProcessInfo_GetEffectiveGroupID(SBProcessInfo self) -> uint32_t"},
+    {"SBProcessInfo_EffectiveUserIDIsValid",
+     _wrap_SBProcessInfo_EffectiveUserIDIsValid, METH_O,
+     "SBProcessInfo_EffectiveUserIDIsValid(SBProcessInfo self) -> bool"},
+    {"SBProcessInfo_EffectiveGroupIDIsValid",
+     _wrap_SBProcessInfo_EffectiveGroupIDIsValid, METH_O,
+     "SBProcessInfo_EffectiveGroupIDIsValid(SBProcessInfo self) -> bool"},
+    {"SBProcessInfo_GetParentProcessID", _wrap_SBProcessInfo_GetParentProcessID,
+     METH_O,
+     "SBProcessInfo_GetParentProcessID(SBProcessInfo self) -> lldb::pid_t"},
+    {"SBProcessInfo_GetTriple", _wrap_SBProcessInfo_GetTriple, METH_O,
+     "\n"
+     "SBProcessInfo_GetTriple(SBProcessInfo self) -> char const *\n"
+     "Return the target triple (arch-vendor-os) for the described process.\n"
+     ""},
+    {"SBProcessInfo_swigregister", SBProcessInfo_swigregister, METH_O, NULL},
+    {"SBProcessInfo_swiginit", SBProcessInfo_swiginit, METH_VARARGS, NULL},
+    {"delete_SBProcessInfoList", _wrap_delete_SBProcessInfoList, METH_O,
+     "delete_SBProcessInfoList(SBProcessInfoList self)"},
+    {"new_SBProcessInfoList", _wrap_new_SBProcessInfoList, METH_VARARGS,
+     "\n"
+     "SBProcessInfoList()\n"
+     "new_SBProcessInfoList(SBProcessInfoList rhs) -> SBProcessInfoList\n"
+     ""},
+    {"SBProcessInfoList_GetSize", _wrap_SBProcessInfoList_GetSize, METH_O,
+     "SBProcessInfoList_GetSize(SBProcessInfoList self) -> uint32_t"},
+    {"SBProcessInfoList_GetProcessInfoAtIndex",
+     _wrap_SBProcessInfoList_GetProcessInfoAtIndex, METH_VARARGS,
+     "SBProcessInfoList_GetProcessInfoAtIndex(SBProcessInfoList self, uint32_t "
+     "idx, SBProcessInfo info) -> bool"},
+    {"SBProcessInfoList_Clear", _wrap_SBProcessInfoList_Clear, METH_O,
+     "SBProcessInfoList_Clear(SBProcessInfoList self)"},
+    {"SBProcessInfoList_swigregister", SBProcessInfoList_swigregister, METH_O,
+     NULL},
+    {"SBProcessInfoList_swiginit", SBProcessInfoList_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBQueue", _wrap_new_SBQueue, METH_VARARGS,
+     "\n"
+     "SBQueue()\n"
+     "new_SBQueue(SBQueue rhs) -> SBQueue\n"
+     ""},
+    {"delete_SBQueue", _wrap_delete_SBQueue, METH_O,
+     "delete_SBQueue(SBQueue self)"},
+    {"SBQueue___nonzero__", _wrap_SBQueue___nonzero__, METH_O,
+     "SBQueue___nonzero__(SBQueue self) -> bool"},
+    {"SBQueue_IsValid", _wrap_SBQueue_IsValid, METH_O,
+     "SBQueue_IsValid(SBQueue self) -> bool"},
+    {"SBQueue_Clear", _wrap_SBQueue_Clear, METH_O,
+     "SBQueue_Clear(SBQueue self)"},
+    {"SBQueue_GetProcess", _wrap_SBQueue_GetProcess, METH_O,
+     "SBQueue_GetProcess(SBQueue self) -> SBProcess"},
+    {"SBQueue_GetQueueID", _wrap_SBQueue_GetQueueID, METH_O,
+     "\n"
+     "SBQueue_GetQueueID(SBQueue self) -> lldb::queue_id_t\n"
+     "\n"
+     "    Returns an lldb::queue_id_t type unique identifier number for this\n"
+     "    queue that will not be used by any other queue during this process'\n"
+     "    execution.  These ID numbers often start at 1 with the first\n"
+     "    system-created queues and increment from there.\n"
+     ""},
+    {"SBQueue_GetName", _wrap_SBQueue_GetName, METH_O,
+     "SBQueue_GetName(SBQueue self) -> char const *"},
+    {"SBQueue_GetIndexID", _wrap_SBQueue_GetIndexID, METH_O,
+     "SBQueue_GetIndexID(SBQueue self) -> uint32_t"},
+    {"SBQueue_GetNumThreads", _wrap_SBQueue_GetNumThreads, METH_O,
+     "SBQueue_GetNumThreads(SBQueue self) -> uint32_t"},
+    {"SBQueue_GetThreadAtIndex", _wrap_SBQueue_GetThreadAtIndex, METH_VARARGS,
+     "SBQueue_GetThreadAtIndex(SBQueue self, uint32_t arg2) -> SBThread"},
+    {"SBQueue_GetNumPendingItems", _wrap_SBQueue_GetNumPendingItems, METH_O,
+     "SBQueue_GetNumPendingItems(SBQueue self) -> uint32_t"},
+    {"SBQueue_GetPendingItemAtIndex", _wrap_SBQueue_GetPendingItemAtIndex,
+     METH_VARARGS,
+     "SBQueue_GetPendingItemAtIndex(SBQueue self, uint32_t arg2) -> "
+     "SBQueueItem"},
+    {"SBQueue_GetNumRunningItems", _wrap_SBQueue_GetNumRunningItems, METH_O,
+     "SBQueue_GetNumRunningItems(SBQueue self) -> uint32_t"},
+    {"SBQueue_GetKind", _wrap_SBQueue_GetKind, METH_O,
+     "\n"
+     "SBQueue_GetKind(SBQueue self) -> lldb::QueueKind\n"
+     "\n"
+     "    Returns an lldb::QueueKind enumerated value (e.g. "
+     "eQueueKindUnknown,\n"
+     "    eQueueKindSerial, eQueueKindConcurrent) describing the type of this\n"
+     "    queue.\n"
+     ""},
+    {"SBQueue_swigregister", SBQueue_swigregister, METH_O, NULL},
+    {"SBQueue_swiginit", SBQueue_swiginit, METH_VARARGS, NULL},
+    {"new_SBQueueItem", _wrap_new_SBQueueItem, METH_NOARGS,
+     "new_SBQueueItem() -> SBQueueItem"},
+    {"delete_SBQueueItem", _wrap_delete_SBQueueItem, METH_O,
+     "delete_SBQueueItem(SBQueueItem self)"},
+    {"SBQueueItem___nonzero__", _wrap_SBQueueItem___nonzero__, METH_O,
+     "SBQueueItem___nonzero__(SBQueueItem self) -> bool"},
+    {"SBQueueItem_IsValid", _wrap_SBQueueItem_IsValid, METH_O,
+     "SBQueueItem_IsValid(SBQueueItem self) -> bool"},
+    {"SBQueueItem_Clear", _wrap_SBQueueItem_Clear, METH_O,
+     "SBQueueItem_Clear(SBQueueItem self)"},
+    {"SBQueueItem_GetKind", _wrap_SBQueueItem_GetKind, METH_O,
+     "SBQueueItem_GetKind(SBQueueItem self) -> lldb::QueueItemKind"},
+    {"SBQueueItem_SetKind", _wrap_SBQueueItem_SetKind, METH_VARARGS,
+     "SBQueueItem_SetKind(SBQueueItem self, lldb::QueueItemKind kind)"},
+    {"SBQueueItem_GetAddress", _wrap_SBQueueItem_GetAddress, METH_O,
+     "SBQueueItem_GetAddress(SBQueueItem self) -> SBAddress"},
+    {"SBQueueItem_SetAddress", _wrap_SBQueueItem_SetAddress, METH_VARARGS,
+     "SBQueueItem_SetAddress(SBQueueItem self, SBAddress addr)"},
+    {"SBQueueItem_GetExtendedBacktraceThread",
+     _wrap_SBQueueItem_GetExtendedBacktraceThread, METH_VARARGS,
+     "SBQueueItem_GetExtendedBacktraceThread(SBQueueItem self, char const * "
+     "type) -> SBThread"},
+    {"SBQueueItem_swigregister", SBQueueItem_swigregister, METH_O, NULL},
+    {"SBQueueItem_swiginit", SBQueueItem_swiginit, METH_VARARGS, NULL},
+    {"SBReproducer_Capture", _wrap_SBReproducer_Capture, METH_O,
+     "SBReproducer_Capture(char const * path) -> char const *"},
+    {"SBReproducer_PassiveReplay", _wrap_SBReproducer_PassiveReplay, METH_O,
+     "SBReproducer_PassiveReplay(char const * path) -> char const *"},
+    {"SBReproducer_SetAutoGenerate", _wrap_SBReproducer_SetAutoGenerate, METH_O,
+     "SBReproducer_SetAutoGenerate(bool b) -> bool"},
+    {"SBReproducer_SetWorkingDirectory", _wrap_SBReproducer_SetWorkingDirectory,
+     METH_O, "SBReproducer_SetWorkingDirectory(char const * path)"},
+    {"new_SBReproducer", _wrap_new_SBReproducer, METH_NOARGS,
+     "new_SBReproducer() -> SBReproducer"},
+    {"delete_SBReproducer", _wrap_delete_SBReproducer, METH_O,
+     "delete_SBReproducer(SBReproducer self)"},
+    {"SBReproducer_swigregister", SBReproducer_swigregister, METH_O, NULL},
+    {"SBReproducer_swiginit", SBReproducer_swiginit, METH_VARARGS, NULL},
+    {"new_SBScriptObject", _wrap_new_SBScriptObject, METH_VARARGS,
+     "\n"
+     "SBScriptObject(lldb::ScriptObjectPtr const ptr, lldb::ScriptLanguage "
+     "lang)\n"
+     "new_SBScriptObject(SBScriptObject rhs) -> SBScriptObject\n"
+     ""},
+    {"delete_SBScriptObject", _wrap_delete_SBScriptObject, METH_O,
+     "delete_SBScriptObject(SBScriptObject self)"},
+    {"SBScriptObject___nonzero__", _wrap_SBScriptObject___nonzero__, METH_O,
+     "SBScriptObject___nonzero__(SBScriptObject self) -> bool"},
+    {"SBScriptObject___ne__", _wrap_SBScriptObject___ne__, METH_VARARGS,
+     "SBScriptObject___ne__(SBScriptObject self, SBScriptObject rhs) -> bool"},
+    {"SBScriptObject_IsValid", _wrap_SBScriptObject_IsValid, METH_O,
+     "SBScriptObject_IsValid(SBScriptObject self) -> bool"},
+    {"SBScriptObject_GetPointer", _wrap_SBScriptObject_GetPointer, METH_O,
+     "SBScriptObject_GetPointer(SBScriptObject self) -> lldb::ScriptObjectPtr"},
+    {"SBScriptObject_GetLanguage", _wrap_SBScriptObject_GetLanguage, METH_O,
+     "SBScriptObject_GetLanguage(SBScriptObject self) -> lldb::ScriptLanguage"},
+    {"SBScriptObject_swigregister", SBScriptObject_swigregister, METH_O, NULL},
+    {"SBScriptObject_swiginit", SBScriptObject_swiginit, METH_VARARGS, NULL},
+    {"new_SBSection", _wrap_new_SBSection, METH_VARARGS,
+     "\n"
+     "SBSection()\n"
+     "new_SBSection(SBSection rhs) -> SBSection\n"
+     ""},
+    {"delete_SBSection", _wrap_delete_SBSection, METH_O,
+     "delete_SBSection(SBSection self)"},
+    {"SBSection___nonzero__", _wrap_SBSection___nonzero__, METH_O,
+     "SBSection___nonzero__(SBSection self) -> bool"},
+    {"SBSection_IsValid", _wrap_SBSection_IsValid, METH_O,
+     "SBSection_IsValid(SBSection self) -> bool"},
+    {"SBSection_GetName", _wrap_SBSection_GetName, METH_O,
+     "SBSection_GetName(SBSection self) -> char const *"},
+    {"SBSection_GetParent", _wrap_SBSection_GetParent, METH_O,
+     "SBSection_GetParent(SBSection self) -> SBSection"},
+    {"SBSection_FindSubSection", _wrap_SBSection_FindSubSection, METH_VARARGS,
+     "SBSection_FindSubSection(SBSection self, char const * sect_name) -> "
+     "SBSection"},
+    {"SBSection_GetNumSubSections", _wrap_SBSection_GetNumSubSections, METH_O,
+     "SBSection_GetNumSubSections(SBSection self) -> size_t"},
+    {"SBSection_GetSubSectionAtIndex", _wrap_SBSection_GetSubSectionAtIndex,
+     METH_VARARGS,
+     "SBSection_GetSubSectionAtIndex(SBSection self, size_t idx) -> SBSection"},
+    {"SBSection_GetFileAddress", _wrap_SBSection_GetFileAddress, METH_O,
+     "SBSection_GetFileAddress(SBSection self) -> lldb::addr_t"},
+    {"SBSection_GetLoadAddress", _wrap_SBSection_GetLoadAddress, METH_VARARGS,
+     "SBSection_GetLoadAddress(SBSection self, SBTarget target) -> "
+     "lldb::addr_t"},
+    {"SBSection_GetByteSize", _wrap_SBSection_GetByteSize, METH_O,
+     "SBSection_GetByteSize(SBSection self) -> lldb::addr_t"},
+    {"SBSection_GetFileOffset", _wrap_SBSection_GetFileOffset, METH_O,
+     "SBSection_GetFileOffset(SBSection self) -> uint64_t"},
+    {"SBSection_GetFileByteSize", _wrap_SBSection_GetFileByteSize, METH_O,
+     "SBSection_GetFileByteSize(SBSection self) -> uint64_t"},
+    {"SBSection_GetSectionData", _wrap_SBSection_GetSectionData, METH_VARARGS,
+     "\n"
+     "SBSection_GetSectionData(SBSection self) -> SBData\n"
+     "SBSection_GetSectionData(SBSection self, uint64_t offset, uint64_t size) "
+     "-> SBData\n"
+     ""},
+    {"SBSection_GetSectionType", _wrap_SBSection_GetSectionType, METH_O,
+     "SBSection_GetSectionType(SBSection self) -> lldb::SectionType"},
+    {"SBSection_GetPermissions", _wrap_SBSection_GetPermissions, METH_O,
+     "SBSection_GetPermissions(SBSection self) -> uint32_t"},
+    {"SBSection_GetTargetByteSize", _wrap_SBSection_GetTargetByteSize, METH_O,
+     "\n"
+     "SBSection_GetTargetByteSize(SBSection self) -> uint32_t\n"
+     "\n"
+     "    Return the size of a target's byte represented by this section\n"
+     "    in numbers of host bytes. Note that certain architectures have\n"
+     "    varying minimum addressable unit (i.e. byte) size for their\n"
+     "    CODE or DATA buses.\n"
+     "\n"
+     "    @return\n"
+     "        The number of host (8-bit) bytes needed to hold a target byte\n"
+     ""},
+    {"SBSection_GetAlignment", _wrap_SBSection_GetAlignment, METH_O,
+     "SBSection_GetAlignment(SBSection self) -> uint32_t"},
+    {"SBSection___eq__", _wrap_SBSection___eq__, METH_VARARGS,
+     "SBSection___eq__(SBSection self, SBSection rhs) -> bool"},
+    {"SBSection___ne__", _wrap_SBSection___ne__, METH_VARARGS,
+     "SBSection___ne__(SBSection self, SBSection rhs) -> bool"},
+    {"SBSection_GetDescription", _wrap_SBSection_GetDescription, METH_VARARGS,
+     "SBSection_GetDescription(SBSection self, SBStream description) -> bool"},
+    {"SBSection___repr__", _wrap_SBSection___repr__, METH_O,
+     "SBSection___repr__(SBSection self) -> std::string"},
+    {"SBSection_swigregister", SBSection_swigregister, METH_O, NULL},
+    {"SBSection_swiginit", SBSection_swiginit, METH_VARARGS, NULL},
+    {"new_SBSourceManager", _wrap_new_SBSourceManager, METH_VARARGS,
+     "\n"
+     "SBSourceManager(SBDebugger debugger)\n"
+     "SBSourceManager(SBTarget target)\n"
+     "new_SBSourceManager(SBSourceManager rhs) -> SBSourceManager\n"
+     ""},
+    {"delete_SBSourceManager", _wrap_delete_SBSourceManager, METH_O,
+     "delete_SBSourceManager(SBSourceManager self)"},
+    {"SBSourceManager_DisplaySourceLinesWithLineNumbers",
+     _wrap_SBSourceManager_DisplaySourceLinesWithLineNumbers, METH_VARARGS,
+     "SBSourceManager_DisplaySourceLinesWithLineNumbers(SBSourceManager self, "
+     "SBFileSpec file, uint32_t line, uint32_t context_before, uint32_t "
+     "context_after, char const * current_line_cstr, SBStream s) -> size_t"},
+    {"SBSourceManager_DisplaySourceLinesWithLineNumbersAndColumn",
+     _wrap_SBSourceManager_DisplaySourceLinesWithLineNumbersAndColumn,
+     METH_VARARGS,
+     "SBSourceManager_DisplaySourceLinesWithLineNumbersAndColumn("
+     "SBSourceManager self, SBFileSpec file, uint32_t line, uint32_t column, "
+     "uint32_t context_before, uint32_t context_after, char const * "
+     "current_line_cstr, SBStream s) -> size_t"},
+    {"SBSourceManager_swigregister", SBSourceManager_swigregister, METH_O,
+     NULL},
+    {"SBSourceManager_swiginit", SBSourceManager_swiginit, METH_VARARGS, NULL},
+    {"new_SBStatisticsOptions", _wrap_new_SBStatisticsOptions, METH_VARARGS,
+     "\n"
+     "SBStatisticsOptions()\n"
+     "new_SBStatisticsOptions(SBStatisticsOptions rhs) -> SBStatisticsOptions\n"
+     ""},
+    {"delete_SBStatisticsOptions", _wrap_delete_SBStatisticsOptions, METH_O,
+     "delete_SBStatisticsOptions(SBStatisticsOptions self)"},
+    {"SBStatisticsOptions_SetSummaryOnly",
+     _wrap_SBStatisticsOptions_SetSummaryOnly, METH_VARARGS,
+     "\n"
+     "SBStatisticsOptions_SetSummaryOnly(SBStatisticsOptions self, bool b)\n"
+     "Sets whether the statistics should only dump a summary.\n"
+     ""},
+    {"SBStatisticsOptions_GetSummaryOnly",
+     _wrap_SBStatisticsOptions_GetSummaryOnly, METH_O,
+     "\n"
+     "SBStatisticsOptions_GetSummaryOnly(SBStatisticsOptions self) -> bool\n"
+     "Gets whether the statistics only dump a summary.\n"
+     ""},
+    {"SBStatisticsOptions_SetIncludeTargets",
+     _wrap_SBStatisticsOptions_SetIncludeTargets, METH_VARARGS,
+     "SBStatisticsOptions_SetIncludeTargets(SBStatisticsOptions self, bool b)"},
+    {"SBStatisticsOptions_GetIncludeTargets",
+     _wrap_SBStatisticsOptions_GetIncludeTargets, METH_O,
+     "SBStatisticsOptions_GetIncludeTargets(SBStatisticsOptions self) -> bool"},
+    {"SBStatisticsOptions_SetIncludeModules",
+     _wrap_SBStatisticsOptions_SetIncludeModules, METH_VARARGS,
+     "SBStatisticsOptions_SetIncludeModules(SBStatisticsOptions self, bool b)"},
+    {"SBStatisticsOptions_GetIncludeModules",
+     _wrap_SBStatisticsOptions_GetIncludeModules, METH_O,
+     "SBStatisticsOptions_GetIncludeModules(SBStatisticsOptions self) -> bool"},
+    {"SBStatisticsOptions_SetIncludeTranscript",
+     _wrap_SBStatisticsOptions_SetIncludeTranscript, METH_VARARGS,
+     "SBStatisticsOptions_SetIncludeTranscript(SBStatisticsOptions self, bool "
+     "b)"},
+    {"SBStatisticsOptions_GetIncludeTranscript",
+     _wrap_SBStatisticsOptions_GetIncludeTranscript, METH_O,
+     "SBStatisticsOptions_GetIncludeTranscript(SBStatisticsOptions self) -> "
+     "bool"},
+    {"SBStatisticsOptions_SetReportAllAvailableDebugInfo",
+     _wrap_SBStatisticsOptions_SetReportAllAvailableDebugInfo, METH_VARARGS,
+     "\n"
+     "SBStatisticsOptions_SetReportAllAvailableDebugInfo(SBStatisticsOptions "
+     "self, bool b)\n"
+     "\n"
+     "    Sets whether the statistics will force loading all possible debug "
+     "info.\n"
+     ""},
+    {"SBStatisticsOptions_GetReportAllAvailableDebugInfo",
+     _wrap_SBStatisticsOptions_GetReportAllAvailableDebugInfo, METH_O,
+     "\n"
+     "SBStatisticsOptions_GetReportAllAvailableDebugInfo(SBStatisticsOptions "
+     "self) -> bool\n"
+     "\n"
+     "    Gets whether the statistics will force loading all possible debug "
+     "info.\n"
+     ""},
+    {"SBStatisticsOptions_swigregister", SBStatisticsOptions_swigregister,
+     METH_O, NULL},
+    {"SBStatisticsOptions_swiginit", SBStatisticsOptions_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBStream", _wrap_new_SBStream, METH_NOARGS,
+     "new_SBStream() -> SBStream"},
+    {"delete_SBStream", _wrap_delete_SBStream, METH_O,
+     "delete_SBStream(SBStream self)"},
+    {"SBStream___nonzero__", _wrap_SBStream___nonzero__, METH_O,
+     "SBStream___nonzero__(SBStream self) -> bool"},
+    {"SBStream_IsValid", _wrap_SBStream_IsValid, METH_O,
+     "SBStream_IsValid(SBStream self) -> bool"},
+    {"SBStream_GetData", _wrap_SBStream_GetData, METH_O,
+     "\n"
+     "SBStream_GetData(SBStream self) -> char const *\n"
+     "\n"
+     "    If this stream is not redirected to a file, it will maintain a "
+     "local\n"
+     "    cache for the stream data which can be accessed using this "
+     "accessor.\n"
+     ""},
+    {"SBStream_GetSize", _wrap_SBStream_GetSize, METH_O,
+     "\n"
+     "SBStream_GetSize(SBStream self) -> size_t\n"
+     "\n"
+     "    If this stream is not redirected to a file, it will maintain a "
+     "local\n"
+     "    cache for the stream output whose length can be accessed using this\n"
+     "    accessor.\n"
+     ""},
+    {"SBStream_Print", _wrap_SBStream_Print, METH_VARARGS,
+     "SBStream_Print(SBStream self, char const * str)"},
+    {"SBStream_RedirectToFile", _wrap_SBStream_RedirectToFile, METH_VARARGS,
+     "\n"
+     "SBStream_RedirectToFile(SBStream self, char const * path, bool append)\n"
+     "SBStream_RedirectToFile(SBStream self, SBFile file)\n"
+     "SBStream_RedirectToFile(SBStream self, lldb::FileSP file)\n"
+     ""},
+    {"SBStream_RedirectToFileDescriptor",
+     _wrap_SBStream_RedirectToFileDescriptor, METH_VARARGS,
+     "SBStream_RedirectToFileDescriptor(SBStream self, int fd, bool "
+     "transfer_fh_ownership)"},
+    {"SBStream_Clear", _wrap_SBStream_Clear, METH_O,
+     "\n"
+     "SBStream_Clear(SBStream self)\n"
+     "\n"
+     "    If the stream is redirected to a file, forget about the file and if\n"
+     "    ownership of the file was transferred to this object, close the "
+     "file.\n"
+     "    If the stream is backed by a local cache, clear this cache.\n"
+     ""},
+    {"SBStream_RedirectToFileHandle", _wrap_SBStream_RedirectToFileHandle,
+     METH_VARARGS, "DEPRECATED, use RedirectToFile"},
+    {"SBStream_write", _wrap_SBStream_write, METH_VARARGS,
+     "SBStream_write(SBStream self, char const * str)"},
+    {"SBStream_flush", _wrap_SBStream_flush, METH_O,
+     "SBStream_flush(SBStream self)"},
+    {"SBStream_swigregister", SBStream_swigregister, METH_O, NULL},
+    {"SBStream_swiginit", SBStream_swiginit, METH_VARARGS, NULL},
+    {"new_SBStringList", _wrap_new_SBStringList, METH_VARARGS,
+     "\n"
+     "SBStringList()\n"
+     "new_SBStringList(SBStringList rhs) -> SBStringList\n"
+     ""},
+    {"delete_SBStringList", _wrap_delete_SBStringList, METH_O,
+     "delete_SBStringList(SBStringList self)"},
+    {"SBStringList___nonzero__", _wrap_SBStringList___nonzero__, METH_O,
+     "SBStringList___nonzero__(SBStringList self) -> bool"},
+    {"SBStringList_IsValid", _wrap_SBStringList_IsValid, METH_O,
+     "SBStringList_IsValid(SBStringList self) -> bool"},
+    {"SBStringList_AppendString", _wrap_SBStringList_AppendString, METH_VARARGS,
+     "SBStringList_AppendString(SBStringList self, char const * str)"},
+    {"SBStringList_AppendList", _wrap_SBStringList_AppendList, METH_VARARGS,
+     "\n"
+     "SBStringList_AppendList(SBStringList self, char const ** strv, int "
+     "strc)\n"
+     "SBStringList_AppendList(SBStringList self, SBStringList strings)\n"
+     ""},
+    {"SBStringList_GetSize", _wrap_SBStringList_GetSize, METH_O,
+     "SBStringList_GetSize(SBStringList self) -> uint32_t"},
+    {"SBStringList_GetStringAtIndex", _wrap_SBStringList_GetStringAtIndex,
+     METH_VARARGS,
+     "\n"
+     "SBStringList_GetStringAtIndex(SBStringList self, size_t idx) -> char "
+     "const\n"
+     "SBStringList_GetStringAtIndex(SBStringList self, size_t idx) -> char "
+     "const *\n"
+     ""},
+    {"SBStringList_Clear", _wrap_SBStringList_Clear, METH_O,
+     "SBStringList_Clear(SBStringList self)"},
+    {"SBStringList_swigregister", SBStringList_swigregister, METH_O, NULL},
+    {"SBStringList_swiginit", SBStringList_swiginit, METH_VARARGS, NULL},
+    {"new_SBStructuredData", _wrap_new_SBStructuredData, METH_VARARGS,
+     "\n"
+     "SBStructuredData()\n"
+     "SBStructuredData(SBStructuredData rhs)\n"
+     "new_SBStructuredData(SBScriptObject obj, SBDebugger debugger) -> "
+     "SBStructuredData\n"
+     ""},
+    {"delete_SBStructuredData", _wrap_delete_SBStructuredData, METH_O,
+     "delete_SBStructuredData(SBStructuredData self)"},
+    {"SBStructuredData___nonzero__", _wrap_SBStructuredData___nonzero__, METH_O,
+     "SBStructuredData___nonzero__(SBStructuredData self) -> bool"},
+    {"SBStructuredData_IsValid", _wrap_SBStructuredData_IsValid, METH_O,
+     "SBStructuredData_IsValid(SBStructuredData self) -> bool"},
+    {"SBStructuredData_SetFromJSON", _wrap_SBStructuredData_SetFromJSON,
+     METH_VARARGS,
+     "\n"
+     "SBStructuredData_SetFromJSON(SBStructuredData self, SBStream stream) -> "
+     "SBError\n"
+     "SBStructuredData_SetFromJSON(SBStructuredData self, char const * json) "
+     "-> SBError\n"
+     ""},
+    {"SBStructuredData_Clear", _wrap_SBStructuredData_Clear, METH_O,
+     "SBStructuredData_Clear(SBStructuredData self)"},
+    {"SBStructuredData_GetAsJSON", _wrap_SBStructuredData_GetAsJSON,
+     METH_VARARGS,
+     "SBStructuredData_GetAsJSON(SBStructuredData self, SBStream stream) -> "
+     "SBError"},
+    {"SBStructuredData_GetDescription", _wrap_SBStructuredData_GetDescription,
+     METH_VARARGS,
+     "SBStructuredData_GetDescription(SBStructuredData self, SBStream stream) "
+     "-> SBError"},
+    {"SBStructuredData_GetType", _wrap_SBStructuredData_GetType, METH_O,
+     "SBStructuredData_GetType(SBStructuredData self) -> "
+     "lldb::StructuredDataType"},
+    {"SBStructuredData_GetSize", _wrap_SBStructuredData_GetSize, METH_O,
+     "SBStructuredData_GetSize(SBStructuredData self) -> size_t"},
+    {"SBStructuredData_GetKeys", _wrap_SBStructuredData_GetKeys, METH_VARARGS,
+     "SBStructuredData_GetKeys(SBStructuredData self, SBStringList keys) -> "
+     "bool"},
+    {"SBStructuredData_GetValueForKey", _wrap_SBStructuredData_GetValueForKey,
+     METH_VARARGS,
+     "SBStructuredData_GetValueForKey(SBStructuredData self, char const * key) "
+     "-> SBStructuredData"},
+    {"SBStructuredData_GetItemAtIndex", _wrap_SBStructuredData_GetItemAtIndex,
+     METH_VARARGS,
+     "SBStructuredData_GetItemAtIndex(SBStructuredData self, size_t idx) -> "
+     "SBStructuredData"},
+    {"SBStructuredData_GetUnsignedIntegerValue",
+     _wrap_SBStructuredData_GetUnsignedIntegerValue, METH_VARARGS,
+     "SBStructuredData_GetUnsignedIntegerValue(SBStructuredData self, uint64_t "
+     "fail_value=0) -> uint64_t"},
+    {"SBStructuredData_GetSignedIntegerValue",
+     _wrap_SBStructuredData_GetSignedIntegerValue, METH_VARARGS,
+     "SBStructuredData_GetSignedIntegerValue(SBStructuredData self, int64_t "
+     "fail_value=0) -> int64_t"},
+    {"SBStructuredData_GetIntegerValue", _wrap_SBStructuredData_GetIntegerValue,
+     METH_VARARGS,
+     "SBStructuredData_GetIntegerValue(SBStructuredData self, uint64_t "
+     "fail_value=0) -> uint64_t"},
+    {"SBStructuredData_GetFloatValue", _wrap_SBStructuredData_GetFloatValue,
+     METH_VARARGS,
+     "SBStructuredData_GetFloatValue(SBStructuredData self, double "
+     "fail_value=0.0) -> double"},
+    {"SBStructuredData_GetBooleanValue", _wrap_SBStructuredData_GetBooleanValue,
+     METH_VARARGS,
+     "SBStructuredData_GetBooleanValue(SBStructuredData self, bool "
+     "fail_value=False) -> bool"},
+    {"SBStructuredData_GetStringValue", _wrap_SBStructuredData_GetStringValue,
+     METH_VARARGS,
+     "SBStructuredData_GetStringValue(SBStructuredData self, char * dst) -> "
+     "size_t"},
+    {"SBStructuredData_GetGenericValue", _wrap_SBStructuredData_GetGenericValue,
+     METH_O,
+     "SBStructuredData_GetGenericValue(SBStructuredData self) -> "
+     "SBScriptObject"},
+    {"SBStructuredData___repr__", _wrap_SBStructuredData___repr__, METH_O,
+     "SBStructuredData___repr__(SBStructuredData self) -> std::string"},
+    {"SBStructuredData_swigregister", SBStructuredData_swigregister, METH_O,
+     NULL},
+    {"SBStructuredData_swiginit", SBStructuredData_swiginit, METH_VARARGS,
+     NULL},
+    {"delete_SBSymbol", _wrap_delete_SBSymbol, METH_O,
+     "delete_SBSymbol(SBSymbol self)"},
+    {"new_SBSymbol", _wrap_new_SBSymbol, METH_VARARGS,
+     "\n"
+     "SBSymbol()\n"
+     "new_SBSymbol(SBSymbol rhs) -> SBSymbol\n"
+     ""},
+    {"SBSymbol___nonzero__", _wrap_SBSymbol___nonzero__, METH_O,
+     "SBSymbol___nonzero__(SBSymbol self) -> bool"},
+    {"SBSymbol_IsValid", _wrap_SBSymbol_IsValid, METH_O,
+     "SBSymbol_IsValid(SBSymbol self) -> bool"},
+    {"SBSymbol_GetName", _wrap_SBSymbol_GetName, METH_O,
+     "SBSymbol_GetName(SBSymbol self) -> char const *"},
+    {"SBSymbol_GetDisplayName", _wrap_SBSymbol_GetDisplayName, METH_O,
+     "SBSymbol_GetDisplayName(SBSymbol self) -> char const *"},
+    {"SBSymbol_GetMangledName", _wrap_SBSymbol_GetMangledName, METH_O,
+     "SBSymbol_GetMangledName(SBSymbol self) -> char const *"},
+    {"SBSymbol_GetInstructions", _wrap_SBSymbol_GetInstructions, METH_VARARGS,
+     "\n"
+     "SBSymbol_GetInstructions(SBSymbol self, SBTarget target) -> "
+     "SBInstructionList\n"
+     "SBSymbol_GetInstructions(SBSymbol self, SBTarget target, char const * "
+     "flavor_string) -> SBInstructionList\n"
+     ""},
+    {"SBSymbol_GetStartAddress", _wrap_SBSymbol_GetStartAddress, METH_O,
+     "SBSymbol_GetStartAddress(SBSymbol self) -> SBAddress"},
+    {"SBSymbol_GetEndAddress", _wrap_SBSymbol_GetEndAddress, METH_O,
+     "SBSymbol_GetEndAddress(SBSymbol self) -> SBAddress"},
+    {"SBSymbol_GetValue", _wrap_SBSymbol_GetValue, METH_O,
+     "SBSymbol_GetValue(SBSymbol self) -> uint64_t"},
+    {"SBSymbol_GetSize", _wrap_SBSymbol_GetSize, METH_O,
+     "SBSymbol_GetSize(SBSymbol self) -> uint64_t"},
+    {"SBSymbol_GetPrologueByteSize", _wrap_SBSymbol_GetPrologueByteSize, METH_O,
+     "SBSymbol_GetPrologueByteSize(SBSymbol self) -> uint32_t"},
+    {"SBSymbol_GetType", _wrap_SBSymbol_GetType, METH_O,
+     "SBSymbol_GetType(SBSymbol self) -> lldb::SymbolType"},
+    {"SBSymbol___eq__", _wrap_SBSymbol___eq__, METH_VARARGS,
+     "SBSymbol___eq__(SBSymbol self, SBSymbol rhs) -> bool"},
+    {"SBSymbol___ne__", _wrap_SBSymbol___ne__, METH_VARARGS,
+     "SBSymbol___ne__(SBSymbol self, SBSymbol rhs) -> bool"},
+    {"SBSymbol_GetDescription", _wrap_SBSymbol_GetDescription, METH_VARARGS,
+     "SBSymbol_GetDescription(SBSymbol self, SBStream description) -> bool"},
+    {"SBSymbol_IsExternal", _wrap_SBSymbol_IsExternal, METH_O,
+     "SBSymbol_IsExternal(SBSymbol self) -> bool"},
+    {"SBSymbol_IsSynthetic", _wrap_SBSymbol_IsSynthetic, METH_O,
+     "SBSymbol_IsSynthetic(SBSymbol self) -> bool"},
+    {"SBSymbol___repr__", _wrap_SBSymbol___repr__, METH_O,
+     "SBSymbol___repr__(SBSymbol self) -> std::string"},
+    {"SBSymbol_swigregister", SBSymbol_swigregister, METH_O, NULL},
+    {"SBSymbol_swiginit", SBSymbol_swiginit, METH_VARARGS, NULL},
+    {"new_SBSymbolContext", _wrap_new_SBSymbolContext, METH_VARARGS,
+     "\n"
+     "SBSymbolContext()\n"
+     "new_SBSymbolContext(SBSymbolContext rhs) -> SBSymbolContext\n"
+     ""},
+    {"delete_SBSymbolContext", _wrap_delete_SBSymbolContext, METH_O,
+     "delete_SBSymbolContext(SBSymbolContext self)"},
+    {"SBSymbolContext___nonzero__", _wrap_SBSymbolContext___nonzero__, METH_O,
+     "SBSymbolContext___nonzero__(SBSymbolContext self) -> bool"},
+    {"SBSymbolContext_IsValid", _wrap_SBSymbolContext_IsValid, METH_O,
+     "SBSymbolContext_IsValid(SBSymbolContext self) -> bool"},
+    {"SBSymbolContext_GetModule", _wrap_SBSymbolContext_GetModule, METH_O,
+     "SBSymbolContext_GetModule(SBSymbolContext self) -> SBModule"},
+    {"SBSymbolContext_GetCompileUnit", _wrap_SBSymbolContext_GetCompileUnit,
+     METH_O,
+     "SBSymbolContext_GetCompileUnit(SBSymbolContext self) -> SBCompileUnit"},
+    {"SBSymbolContext_GetFunction", _wrap_SBSymbolContext_GetFunction, METH_O,
+     "SBSymbolContext_GetFunction(SBSymbolContext self) -> SBFunction"},
+    {"SBSymbolContext_GetBlock", _wrap_SBSymbolContext_GetBlock, METH_O,
+     "SBSymbolContext_GetBlock(SBSymbolContext self) -> SBBlock"},
+    {"SBSymbolContext_GetLineEntry", _wrap_SBSymbolContext_GetLineEntry, METH_O,
+     "SBSymbolContext_GetLineEntry(SBSymbolContext self) -> SBLineEntry"},
+    {"SBSymbolContext_GetSymbol", _wrap_SBSymbolContext_GetSymbol, METH_O,
+     "SBSymbolContext_GetSymbol(SBSymbolContext self) -> SBSymbol"},
+    {"SBSymbolContext_SetModule", _wrap_SBSymbolContext_SetModule, METH_VARARGS,
+     "SBSymbolContext_SetModule(SBSymbolContext self, SBModule module)"},
+    {"SBSymbolContext_SetCompileUnit", _wrap_SBSymbolContext_SetCompileUnit,
+     METH_VARARGS,
+     "SBSymbolContext_SetCompileUnit(SBSymbolContext self, SBCompileUnit "
+     "compile_unit)"},
+    {"SBSymbolContext_SetFunction", _wrap_SBSymbolContext_SetFunction,
+     METH_VARARGS,
+     "SBSymbolContext_SetFunction(SBSymbolContext self, SBFunction function)"},
+    {"SBSymbolContext_SetBlock", _wrap_SBSymbolContext_SetBlock, METH_VARARGS,
+     "SBSymbolContext_SetBlock(SBSymbolContext self, SBBlock block)"},
+    {"SBSymbolContext_SetLineEntry", _wrap_SBSymbolContext_SetLineEntry,
+     METH_VARARGS,
+     "SBSymbolContext_SetLineEntry(SBSymbolContext self, SBLineEntry "
+     "line_entry)"},
+    {"SBSymbolContext_SetSymbol", _wrap_SBSymbolContext_SetSymbol, METH_VARARGS,
+     "SBSymbolContext_SetSymbol(SBSymbolContext self, SBSymbol symbol)"},
+    {"SBSymbolContext_GetParentOfInlinedScope",
+     _wrap_SBSymbolContext_GetParentOfInlinedScope, METH_VARARGS,
+     "SBSymbolContext_GetParentOfInlinedScope(SBSymbolContext self, SBAddress "
+     "curr_frame_pc, SBAddress parent_frame_addr) -> SBSymbolContext"},
+    {"SBSymbolContext_GetDescription", _wrap_SBSymbolContext_GetDescription,
+     METH_VARARGS,
+     "SBSymbolContext_GetDescription(SBSymbolContext self, SBStream "
+     "description) -> bool"},
+    {"SBSymbolContext___repr__", _wrap_SBSymbolContext___repr__, METH_O,
+     "SBSymbolContext___repr__(SBSymbolContext self) -> std::string"},
+    {"SBSymbolContext_swigregister", SBSymbolContext_swigregister, METH_O,
+     NULL},
+    {"SBSymbolContext_swiginit", SBSymbolContext_swiginit, METH_VARARGS, NULL},
+    {"new_SBSymbolContextList", _wrap_new_SBSymbolContextList, METH_VARARGS,
+     "\n"
+     "SBSymbolContextList()\n"
+     "new_SBSymbolContextList(SBSymbolContextList rhs) -> SBSymbolContextList\n"
+     ""},
+    {"delete_SBSymbolContextList", _wrap_delete_SBSymbolContextList, METH_O,
+     "delete_SBSymbolContextList(SBSymbolContextList self)"},
+    {"SBSymbolContextList___nonzero__", _wrap_SBSymbolContextList___nonzero__,
+     METH_O,
+     "SBSymbolContextList___nonzero__(SBSymbolContextList self) -> bool"},
+    {"SBSymbolContextList_IsValid", _wrap_SBSymbolContextList_IsValid, METH_O,
+     "SBSymbolContextList_IsValid(SBSymbolContextList self) -> bool"},
+    {"SBSymbolContextList_GetSize", _wrap_SBSymbolContextList_GetSize, METH_O,
+     "SBSymbolContextList_GetSize(SBSymbolContextList self) -> uint32_t"},
+    {"SBSymbolContextList_GetContextAtIndex",
+     _wrap_SBSymbolContextList_GetContextAtIndex, METH_VARARGS,
+     "SBSymbolContextList_GetContextAtIndex(SBSymbolContextList self, uint32_t "
+     "idx) -> SBSymbolContext"},
+    {"SBSymbolContextList_GetDescription",
+     _wrap_SBSymbolContextList_GetDescription, METH_VARARGS,
+     "SBSymbolContextList_GetDescription(SBSymbolContextList self, SBStream "
+     "description) -> bool"},
+    {"SBSymbolContextList_Append", _wrap_SBSymbolContextList_Append,
+     METH_VARARGS,
+     "\n"
+     "SBSymbolContextList_Append(SBSymbolContextList self, SBSymbolContext "
+     "sc)\n"
+     "SBSymbolContextList_Append(SBSymbolContextList self, SBSymbolContextList "
+     "sc_list)\n"
+     ""},
+    {"SBSymbolContextList_Clear", _wrap_SBSymbolContextList_Clear, METH_O,
+     "SBSymbolContextList_Clear(SBSymbolContextList self)"},
+    {"SBSymbolContextList___repr__", _wrap_SBSymbolContextList___repr__, METH_O,
+     "SBSymbolContextList___repr__(SBSymbolContextList self) -> std::string"},
+    {"SBSymbolContextList_swigregister", SBSymbolContextList_swigregister,
+     METH_O, NULL},
+    {"SBSymbolContextList_swiginit", SBSymbolContextList_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBTarget", _wrap_new_SBTarget, METH_VARARGS,
+     "\n"
+     "SBTarget()\n"
+     "new_SBTarget(SBTarget rhs) -> SBTarget\n"
+     ""},
+    {"delete_SBTarget", _wrap_delete_SBTarget, METH_O,
+     "delete_SBTarget(SBTarget self)"},
+    {"SBTarget___nonzero__", _wrap_SBTarget___nonzero__, METH_O,
+     "SBTarget___nonzero__(SBTarget self) -> bool"},
+    {"SBTarget_IsValid", _wrap_SBTarget_IsValid, METH_O,
+     "SBTarget_IsValid(SBTarget self) -> bool"},
+    {"SBTarget_EventIsTargetEvent", _wrap_SBTarget_EventIsTargetEvent, METH_O,
+     "SBTarget_EventIsTargetEvent(SBEvent event) -> bool"},
+    {"SBTarget_GetTargetFromEvent", _wrap_SBTarget_GetTargetFromEvent, METH_O,
+     "SBTarget_GetTargetFromEvent(SBEvent event) -> SBTarget"},
+    {"SBTarget_GetNumModulesFromEvent", _wrap_SBTarget_GetNumModulesFromEvent,
+     METH_O, "SBTarget_GetNumModulesFromEvent(SBEvent event) -> uint32_t"},
+    {"SBTarget_GetModuleAtIndexFromEvent",
+     _wrap_SBTarget_GetModuleAtIndexFromEvent, METH_VARARGS,
+     "SBTarget_GetModuleAtIndexFromEvent(uint32_t const idx, SBEvent event) -> "
+     "SBModule"},
+    {"SBTarget_GetBroadcasterClassName", _wrap_SBTarget_GetBroadcasterClassName,
+     METH_NOARGS, "SBTarget_GetBroadcasterClassName() -> char const *"},
+    {"SBTarget_GetProcess", _wrap_SBTarget_GetProcess, METH_O,
+     "SBTarget_GetProcess(SBTarget self) -> SBProcess"},
+    {"SBTarget_SetCollectingStats", _wrap_SBTarget_SetCollectingStats,
+     METH_VARARGS, "SBTarget_SetCollectingStats(SBTarget self, bool v)"},
+    {"SBTarget_GetCollectingStats", _wrap_SBTarget_GetCollectingStats, METH_O,
+     "SBTarget_GetCollectingStats(SBTarget self) -> bool"},
+    {"SBTarget_GetStatistics", _wrap_SBTarget_GetStatistics, METH_VARARGS,
+     "\n"
+     "SBTarget_GetStatistics(SBTarget self) -> SBStructuredData\n"
+     "SBTarget_GetStatistics(SBTarget self, SBStatisticsOptions options) -> "
+     "SBStructuredData\n"
+     ""},
+    {"SBTarget_GetPlatform", _wrap_SBTarget_GetPlatform, METH_O,
+     "\n"
+     "SBTarget_GetPlatform(SBTarget self) -> SBPlatform\n"
+     "\n"
+     "    Return the platform object associated with the target.\n"
+     "\n"
+     "    After return, the platform object should be checked for\n"
+     "    validity.\n"
+     "\n"
+     "    @return\n"
+     "        A platform object.\n"
+     ""},
+    {"SBTarget_GetEnvironment", _wrap_SBTarget_GetEnvironment, METH_O,
+     "SBTarget_GetEnvironment(SBTarget self) -> SBEnvironment"},
+    {"SBTarget_Install", _wrap_SBTarget_Install, METH_O,
+     "\n"
+     "SBTarget_Install(SBTarget self) -> SBError\n"
+     "\n"
+     "    Install any binaries that need to be installed.\n"
+     "\n"
+     "    This function does nothing when debugging on the host system.\n"
+     "    When connected to remote platforms, the target's main executable\n"
+     "    and any modules that have their install path set will be\n"
+     "    installed on the remote platform. If the main executable doesn't\n"
+     "    have an install location set, it will be installed in the remote\n"
+     "    platform's working directory.\n"
+     "\n"
+     "    @return\n"
+     "        An error describing anything that went wrong during\n"
+     "        installation.\n"
+     ""},
+    {"SBTarget_LoadCore", _wrap_SBTarget_LoadCore, METH_VARARGS,
+     "\n"
+     "SBTarget_LoadCore(SBTarget self, char const * core_file) -> SBProcess\n"
+     "SBTarget_LoadCore(SBTarget self, char const * core_file, SBError error) "
+     "-> SBProcess\n"
+     "\n"
+     "    Load a core file\n"
+     "\n"
+     "    @param[in] core_file\n"
+     "        File path of the core dump.\n"
+     "\n"
+     "    @param[out] error\n"
+     "        An error explaining what went wrong if the operation fails.\n"
+     "        (Optional)\n"
+     "\n"
+     "    @return\n"
+     "         A process object for the newly created core file.\n"
+     "\n"
+     "    For example,\n"
+     "\n"
+     "        process = target.LoadCore('./a.out.core')\n"
+     "\n"
+     "    loads a new core file and returns the process object.\n"
+     ""},
+    {"SBTarget_LaunchSimple", _wrap_SBTarget_LaunchSimple, METH_VARARGS,
+     "\n"
+     "SBTarget_LaunchSimple(SBTarget self, char const ** argv, char const ** "
+     "envp, char const * working_directory) -> SBProcess\n"
+     "\n"
+     "    Launch a new process with sensible defaults.\n"
+     "\n"
+     "    :param argv: The argument array.\n"
+     "    :param envp: The environment array.\n"
+     "    :param working_directory: The working directory to have the child "
+     "process run in\n"
+     "    :return: The newly created process.\n"
+     "    :rtype: SBProcess\n"
+     "\n"
+     "    A pseudo terminal will be used as stdin/stdout/stderr.\n"
+     "    No launch flags are passed and the target's debuger is used as a "
+     "listener.\n"
+     "\n"
+     "    For example, ::\n"
+     "\n"
+     "        process = target.LaunchSimple(['X', 'Y', 'Z'], None, "
+     "os.getcwd())\n"
+     "\n"
+     "    launches a new process by passing 'X', 'Y', 'Z' as the args to the\n"
+     "    executable.\n"
+     ""},
+    {"SBTarget_Launch", _wrap_SBTarget_Launch, METH_VARARGS,
+     "\n"
+     "SBTarget_Launch(SBTarget self, SBListener listener, char const ** argv, "
+     "char const ** envp, char const * stdin_path, char const * stdout_path, "
+     "char const * stderr_path, char const * working_directory, uint32_t "
+     "launch_flags, bool stop_at_entry, SBError error) -> SBProcess\n"
+     "SBTarget_Launch(SBTarget self, SBLaunchInfo launch_info, SBError error) "
+     "-> SBProcess\n"
+     "\n"
+     "    Launch a new process.\n"
+     "\n"
+     "    Launch a new process by spawning a new process using the\n"
+     "    target object's executable module's file as the file to launch.\n"
+     "    Arguments are given in argv, and the environment variables\n"
+     "    are in envp. Standard input and output files can be\n"
+     "    optionally re-directed to stdin_path, stdout_path, and\n"
+     "    stderr_path.\n"
+     "\n"
+     "    @param[in] listener\n"
+     "        An optional listener that will receive all process events.\n"
+     "        If listener is valid then listener will listen to all\n"
+     "        process events. If not valid, then this target's debugger\n"
+     "        (SBTarget::GetDebugger()) will listen to all process events.\n"
+     "\n"
+     "    @param[in] argv\n"
+     "        The argument array.\n"
+     "\n"
+     "    @param[in] envp\n"
+     "        The environment array.\n"
+     "\n"
+     "    @param[in] launch_flags\n"
+     "        Flags to modify the launch (@see lldb::LaunchFlags)\n"
+     "\n"
+     "    @param[in] stdin_path\n"
+     "        The path to use when re-directing the STDIN of the new\n"
+     "        process. If all stdXX_path arguments are NULL, a pseudo\n"
+     "        terminal will be used.\n"
+     "\n"
+     "    @param[in] stdout_path\n"
+     "        The path to use when re-directing the STDOUT of the new\n"
+     "        process. If all stdXX_path arguments are NULL, a pseudo\n"
+     "        terminal will be used.\n"
+     "\n"
+     "    @param[in] stderr_path\n"
+     "        The path to use when re-directing the STDERR of the new\n"
+     "        process. If all stdXX_path arguments are NULL, a pseudo\n"
+     "        terminal will be used.\n"
+     "\n"
+     "    @param[in] working_directory\n"
+     "        The working directory to have the child process run in\n"
+     "\n"
+     "    @param[in] launch_flags\n"
+     "        Some launch options specified by logical OR'ing\n"
+     "        lldb::LaunchFlags enumeration values together.\n"
+     "\n"
+     "    @param[in] stop_at_entry\n"
+     "        If false do not stop the inferior at the entry point.\n"
+     "\n"
+     "    @param[out]\n"
+     "        An error object. Contains the reason if there is some failure.\n"
+     "\n"
+     "    @return\n"
+     "         A process object for the newly created process.\n"
+     "\n"
+     "    For example,\n"
+     "\n"
+     "        process = target.Launch(self.dbg.GetListener(), None, None,\n"
+     "                                None, '/tmp/stdout.txt', None,\n"
+     "                                None, 0, False, error)\n"
+     "\n"
+     "    launches a new process by passing nothing for both the args and the "
+     "envs\n"
+     "    and redirect the standard output of the inferior to the "
+     "/tmp/stdout.txt\n"
+     "    file. It does not specify a working directory so that the debug "
+     "server\n"
+     "    will use its idea of what the current working directory is for the\n"
+     "    inferior. Also, we ask the debugger not to stop the inferior at the\n"
+     "    entry point. If no breakpoint is specified for the inferior, it "
+     "should\n"
+     "    run to completion if no user interaction is required.\n"
+     ""},
+    {"SBTarget_Attach", _wrap_SBTarget_Attach, METH_VARARGS,
+     "SBTarget_Attach(SBTarget self, SBAttachInfo attach_info, SBError error) "
+     "-> SBProcess"},
+    {"SBTarget_AttachToProcessWithID", _wrap_SBTarget_AttachToProcessWithID,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_AttachToProcessWithID(SBTarget self, SBListener listener, "
+     "lldb::pid_t pid, SBError error) -> SBProcess\n"
+     "\n"
+     "    Attach to process with pid.\n"
+     "\n"
+     "    @param[in] listener\n"
+     "        An optional listener that will receive all process events.\n"
+     "        If listener is valid then listener will listen to all\n"
+     "        process events. If not valid, then this target's debugger\n"
+     "        (SBTarget::GetDebugger()) will listen to all process events.\n"
+     "\n"
+     "    @param[in] pid\n"
+     "        The process ID to attach to.\n"
+     "\n"
+     "    @param[out]\n"
+     "        An error explaining what went wrong if attach fails.\n"
+     "\n"
+     "    @return\n"
+     "         A process object for the attached process.\n"
+     ""},
+    {"SBTarget_AttachToProcessWithName", _wrap_SBTarget_AttachToProcessWithName,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_AttachToProcessWithName(SBTarget self, SBListener listener, "
+     "char const * name, bool wait_for, SBError error) -> SBProcess\n"
+     "\n"
+     "    Attach to process with name.\n"
+     "\n"
+     "    @param[in] listener\n"
+     "        An optional listener that will receive all process events.\n"
+     "        If listener is valid then listener will listen to all\n"
+     "        process events. If not valid, then this target's debugger\n"
+     "        (SBTarget::GetDebugger()) will listen to all process events.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        Basename of process to attach to.\n"
+     "\n"
+     "    @param[in] wait_for\n"
+     "        If true wait for a new instance of 'name' to be launched.\n"
+     "\n"
+     "    @param[out]\n"
+     "        An error explaining what went wrong if attach fails.\n"
+     "\n"
+     "    @return\n"
+     "         A process object for the attached process.\n"
+     ""},
+    {"SBTarget_ConnectRemote", _wrap_SBTarget_ConnectRemote, METH_VARARGS,
+     "\n"
+     "SBTarget_ConnectRemote(SBTarget self, SBListener listener, char const * "
+     "url, char const * plugin_name, SBError error) -> SBProcess\n"
+     "\n"
+     "    Connect to a remote debug server with url.\n"
+     "\n"
+     "    @param[in] listener\n"
+     "        An optional listener that will receive all process events.\n"
+     "        If listener is valid then listener will listen to all\n"
+     "        process events. If not valid, then this target's debugger\n"
+     "        (SBTarget::GetDebugger()) will listen to all process events.\n"
+     "\n"
+     "    @param[in] url\n"
+     "        The url to connect to, e.g., 'connect://localhost:12345'.\n"
+     "\n"
+     "    @param[in] plugin_name\n"
+     "        The plugin name to be used; can be NULL.\n"
+     "\n"
+     "    @param[out]\n"
+     "        An error explaining what went wrong if the connect fails.\n"
+     "\n"
+     "    @return\n"
+     "         A process object for the connected process.\n"
+     ""},
+    {"SBTarget_GetExecutable", _wrap_SBTarget_GetExecutable, METH_O,
+     "SBTarget_GetExecutable(SBTarget self) -> SBFileSpec"},
+    {"SBTarget_AppendImageSearchPath", _wrap_SBTarget_AppendImageSearchPath,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_AppendImageSearchPath(SBTarget self, char const * _from, char "
+     "const * to, SBError error)\n"
+     "\n"
+     "    Append the path mapping (from -> to) to the target's paths mapping "
+     "list.\n"
+     ""},
+    {"SBTarget_AddModule", _wrap_SBTarget_AddModule, METH_VARARGS,
+     "\n"
+     "SBTarget_AddModule(SBTarget self, SBModule module) -> bool\n"
+     "SBTarget_AddModule(SBTarget self, char const * path, char const * "
+     "triple, char const * uuid) -> SBModule\n"
+     "SBTarget_AddModule(SBTarget self, char const * path, char const * "
+     "triple, char const * uuid_cstr, char const * symfile) -> SBModule\n"
+     "SBTarget_AddModule(SBTarget self, SBModuleSpec module_spec) -> SBModule\n"
+     ""},
+    {"SBTarget_GetNumModules", _wrap_SBTarget_GetNumModules, METH_O,
+     "SBTarget_GetNumModules(SBTarget self) -> uint32_t"},
+    {"SBTarget_GetModuleAtIndex", _wrap_SBTarget_GetModuleAtIndex, METH_VARARGS,
+     "SBTarget_GetModuleAtIndex(SBTarget self, uint32_t idx) -> SBModule"},
+    {"SBTarget_RemoveModule", _wrap_SBTarget_RemoveModule, METH_VARARGS,
+     "SBTarget_RemoveModule(SBTarget self, SBModule module) -> bool"},
+    {"SBTarget_GetDebugger", _wrap_SBTarget_GetDebugger, METH_O,
+     "SBTarget_GetDebugger(SBTarget self) -> SBDebugger"},
+    {"SBTarget_FindModule", _wrap_SBTarget_FindModule, METH_VARARGS,
+     "SBTarget_FindModule(SBTarget self, SBFileSpec file_spec) -> SBModule"},
+    {"SBTarget_FindCompileUnits", _wrap_SBTarget_FindCompileUnits, METH_VARARGS,
+     "\n"
+     "SBTarget_FindCompileUnits(SBTarget self, SBFileSpec sb_file_spec) -> "
+     "SBSymbolContextList\n"
+     "\n"
+     "    Find compile units related to this target and passed source\n"
+     "    file.\n"
+     "\n"
+     "    :param sb_file_spec: A :py:class:`lldb::SBFileSpec` object that "
+     "contains source file\n"
+     "        specification.\n"
+     "    :return: The symbol contexts for all the matches.\n"
+     "    :rtype: SBSymbolContextList\n"
+     ""},
+    {"SBTarget_GetByteOrder", _wrap_SBTarget_GetByteOrder, METH_O,
+     "SBTarget_GetByteOrder(SBTarget self) -> lldb::ByteOrder"},
+    {"SBTarget_GetAddressByteSize", _wrap_SBTarget_GetAddressByteSize, METH_O,
+     "SBTarget_GetAddressByteSize(SBTarget self) -> uint32_t"},
+    {"SBTarget_GetTriple", _wrap_SBTarget_GetTriple, METH_O,
+     "SBTarget_GetTriple(SBTarget self) -> char const *"},
+    {"SBTarget_GetABIName", _wrap_SBTarget_GetABIName, METH_O,
+     "SBTarget_GetABIName(SBTarget self) -> char const *"},
+    {"SBTarget_GetLabel", _wrap_SBTarget_GetLabel, METH_O,
+     "SBTarget_GetLabel(SBTarget self) -> char const *"},
+    {"SBTarget_SetLabel", _wrap_SBTarget_SetLabel, METH_VARARGS,
+     "SBTarget_SetLabel(SBTarget self, char const * label) -> SBError"},
+    {"SBTarget_GetDataByteSize", _wrap_SBTarget_GetDataByteSize, METH_O,
+     "\n"
+     "SBTarget_GetDataByteSize(SBTarget self) -> uint32_t\n"
+     "\n"
+     "    Architecture data byte width accessor\n"
+     "\n"
+     "    :return: The size in 8-bit (host) bytes of a minimum addressable "
+     "unit from the Architecture's data bus.\n"
+     "\n"
+     "\n"
+     ""},
+    {"SBTarget_GetCodeByteSize", _wrap_SBTarget_GetCodeByteSize, METH_O,
+     "\n"
+     "SBTarget_GetCodeByteSize(SBTarget self) -> uint32_t\n"
+     "\n"
+     "    Architecture code byte width accessor.\n"
+     "\n"
+     "    :return: The size in 8-bit (host) bytes of a minimum addressable "
+     "unit from the Architecture's code bus.\n"
+     "\n"
+     "\n"
+     ""},
+    {"SBTarget_GetMaximumNumberOfChildrenToDisplay",
+     _wrap_SBTarget_GetMaximumNumberOfChildrenToDisplay, METH_O,
+     "SBTarget_GetMaximumNumberOfChildrenToDisplay(SBTarget self) -> uint32_t"},
+    {"SBTarget_SetSectionLoadAddress", _wrap_SBTarget_SetSectionLoadAddress,
+     METH_VARARGS,
+     "SBTarget_SetSectionLoadAddress(SBTarget self, SBSection section, "
+     "lldb::addr_t section_base_addr) -> SBError"},
+    {"SBTarget_ClearSectionLoadAddress", _wrap_SBTarget_ClearSectionLoadAddress,
+     METH_VARARGS,
+     "SBTarget_ClearSectionLoadAddress(SBTarget self, SBSection section) -> "
+     "SBError"},
+    {"SBTarget_SetModuleLoadAddress", _wrap_SBTarget_SetModuleLoadAddress,
+     METH_VARARGS,
+     "SBTarget_SetModuleLoadAddress(SBTarget self, SBModule module, uint64_t "
+     "sections_offset) -> SBError"},
+    {"SBTarget_ClearModuleLoadAddress", _wrap_SBTarget_ClearModuleLoadAddress,
+     METH_VARARGS,
+     "SBTarget_ClearModuleLoadAddress(SBTarget self, SBModule module) -> "
+     "SBError"},
+    {"SBTarget_FindFunctions", _wrap_SBTarget_FindFunctions, METH_VARARGS,
+     "\n"
+     "SBTarget_FindFunctions(SBTarget self, char const * name, uint32_t "
+     "name_type_mask=eFunctionNameTypeAny) -> SBSymbolContextList\n"
+     "\n"
+     "    Find functions by name.\n"
+     "\n"
+     "    :param name: The name of the function we are looking for.\n"
+     "\n"
+     "    :param name_type_mask:\n"
+     "        A logical OR of one or more FunctionNameType enum bits that\n"
+     "        indicate what kind of names should be used when doing the\n"
+     "        lookup. Bits include fully qualified names, base names,\n"
+     "        C++ methods, or ObjC selectors.\n"
+     "        See FunctionNameType for more details.\n"
+     "\n"
+     "    :return:\n"
+     "        A lldb::SBSymbolContextList that gets filled in with all of\n"
+     "        the symbol contexts for all the matches.\n"
+     ""},
+    {"SBTarget_FindFirstGlobalVariable", _wrap_SBTarget_FindFirstGlobalVariable,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_FindFirstGlobalVariable(SBTarget self, char const * name) -> "
+     "SBValue\n"
+     "\n"
+     "    Find the first global (or static) variable by name.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        The name of the global or static variable we are looking\n"
+     "        for.\n"
+     "\n"
+     "    @return\n"
+     "        An SBValue that gets filled in with the found variable (if "
+     "any).\n"
+     ""},
+    {"SBTarget_FindGlobalVariables", _wrap_SBTarget_FindGlobalVariables,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_FindGlobalVariables(SBTarget self, char const * name, uint32_t "
+     "max_matches) -> SBValueList\n"
+     "SBTarget_FindGlobalVariables(SBTarget self, char const * name, uint32_t "
+     "max_matches, lldb::MatchType matchtype) -> SBValueList\n"
+     "\n"
+     "    Find global and static variables by name.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        The name of the global or static variable we are looking\n"
+     "        for.\n"
+     "\n"
+     "    @param[in] max_matches\n"
+     "        Allow the number of matches to be limited to max_matches.\n"
+     "\n"
+     "    @return\n"
+     "        A list of matched variables in an SBValueList.\n"
+     ""},
+    {"SBTarget_FindGlobalFunctions", _wrap_SBTarget_FindGlobalFunctions,
+     METH_VARARGS,
+     "SBTarget_FindGlobalFunctions(SBTarget self, char const * name, uint32_t "
+     "max_matches, lldb::MatchType matchtype) -> SBSymbolContextList"},
+    {"SBTarget_Clear", _wrap_SBTarget_Clear, METH_O,
+     "SBTarget_Clear(SBTarget self)"},
+    {"SBTarget_ResolveFileAddress", _wrap_SBTarget_ResolveFileAddress,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_ResolveFileAddress(SBTarget self, lldb::addr_t file_addr) -> "
+     "SBAddress\n"
+     "\n"
+     "    Resolve a current file address into a section offset address.\n"
+     "\n"
+     "    @param[in] file_addr\n"
+     "\n"
+     "    @return\n"
+     "        An SBAddress which will be valid if...\n"
+     ""},
+    {"SBTarget_ResolveLoadAddress", _wrap_SBTarget_ResolveLoadAddress,
+     METH_VARARGS,
+     "SBTarget_ResolveLoadAddress(SBTarget self, lldb::addr_t vm_addr) -> "
+     "SBAddress"},
+    {"SBTarget_ResolvePastLoadAddress", _wrap_SBTarget_ResolvePastLoadAddress,
+     METH_VARARGS,
+     "SBTarget_ResolvePastLoadAddress(SBTarget self, uint32_t stop_id, "
+     "lldb::addr_t vm_addr) -> SBAddress"},
+    {"SBTarget_ResolveSymbolContextForAddress",
+     _wrap_SBTarget_ResolveSymbolContextForAddress, METH_VARARGS,
+     "SBTarget_ResolveSymbolContextForAddress(SBTarget self, SBAddress addr, "
+     "uint32_t resolve_scope) -> SBSymbolContext"},
+    {"SBTarget_ReadMemory", _wrap_SBTarget_ReadMemory, METH_VARARGS,
+     "\n"
+     "SBTarget_ReadMemory(SBTarget self, SBAddress addr, void * buf, SBError "
+     "error) -> size_t\n"
+     "\n"
+     "    Read target memory. If a target process is running then memory\n"
+     "    is read from here. Otherwise the memory is read from the object\n"
+     "    files. For a target whose bytes are sized as a multiple of host\n"
+     "    bytes, the data read back will preserve the target's byte order.\n"
+     "\n"
+     "    @param[in] addr\n"
+     "        A target address to read from.\n"
+     "\n"
+     "    @param[out] buf\n"
+     "        The buffer to read memory into.\n"
+     "\n"
+     "    @param[in] size\n"
+     "        The maximum number of host bytes to read in the buffer passed\n"
+     "        into this call\n"
+     "\n"
+     "    @param[out] error\n"
+     "        Error information is written here if the memory read fails.\n"
+     "\n"
+     "    @return\n"
+     "        The amount of data read in host bytes.\n"
+     ""},
+    {"SBTarget_BreakpointCreateByLocation",
+     _wrap_SBTarget_BreakpointCreateByLocation, METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointCreateByLocation(SBTarget self, char const * file, "
+     "uint32_t line) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, "
+     "uint32_t line) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, "
+     "uint32_t line, lldb::addr_t offset) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, "
+     "uint32_t line, lldb::addr_t offset, SBFileSpecList module_list) -> "
+     "SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, "
+     "uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList "
+     "module_list) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, "
+     "uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList "
+     "module_list, bool move_to_nearest_code) -> SBBreakpoint\n"
+     ""},
+    {"SBTarget_BreakpointCreateByName", _wrap_SBTarget_BreakpointCreateByName,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, "
+     "char const * module_name=None) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, "
+     "SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> "
+     "SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, "
+     "uint32_t name_type_mask, SBFileSpecList module_list, SBFileSpecList "
+     "comp_unit_list) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, "
+     "uint32_t name_type_mask, lldb::LanguageType symbol_language, "
+     "SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> "
+     "SBBreakpoint\n"
+     ""},
+    {"SBTarget_BreakpointCreateByNames", _wrap_SBTarget_BreakpointCreateByNames,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointCreateByNames(SBTarget self, char const ** "
+     "symbol_name, uint32_t name_type_mask, SBFileSpecList module_list, "
+     "SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByNames(SBTarget self, char const ** "
+     "symbol_name, uint32_t name_type_mask, lldb::LanguageType "
+     "symbol_language, SBFileSpecList module_list, SBFileSpecList "
+     "comp_unit_list) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByNames(SBTarget self, char const ** "
+     "symbol_name, uint32_t name_type_mask, lldb::LanguageType "
+     "symbol_language, lldb::addr_t offset, SBFileSpecList module_list, "
+     "SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
+     ""},
+    {"SBTarget_BreakpointCreateByRegex", _wrap_SBTarget_BreakpointCreateByRegex,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointCreateByRegex(SBTarget self, char const * "
+     "symbol_name_regex, char const * module_name=None) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByRegex(SBTarget self, char const * "
+     "symbol_name_regex, SBFileSpecList module_list, SBFileSpecList "
+     "comp_unit_list) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateByRegex(SBTarget self, char const * "
+     "symbol_name_regex, lldb::LanguageType symbol_language, SBFileSpecList "
+     "module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint\n"
+     ""},
+    {"SBTarget_BreakpointCreateBySourceRegex",
+     _wrap_SBTarget_BreakpointCreateBySourceRegex, METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointCreateBySourceRegex(SBTarget self, char const * "
+     "source_regex, SBFileSpec source_file, char const * module_name=None) -> "
+     "SBBreakpoint\n"
+     "SBTarget_BreakpointCreateBySourceRegex(SBTarget self, char const * "
+     "source_regex, SBFileSpecList module_list, SBFileSpecList source_file) -> "
+     "SBBreakpoint\n"
+     "SBTarget_BreakpointCreateBySourceRegex(SBTarget self, char const * "
+     "source_regex, SBFileSpecList module_list, SBFileSpecList source_file, "
+     "SBStringList func_names) -> SBBreakpoint\n"
+     ""},
+    {"SBTarget_BreakpointCreateForException",
+     _wrap_SBTarget_BreakpointCreateForException, METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointCreateForException(SBTarget self, lldb::LanguageType "
+     "language, bool catch_bp, bool throw_bp) -> SBBreakpoint\n"
+     "SBTarget_BreakpointCreateForException(SBTarget self, lldb::LanguageType "
+     "language, bool catch_bp, bool throw_bp, SBStringList extra_args) -> "
+     "SBBreakpoint\n"
+     ""},
+    {"SBTarget_BreakpointCreateByAddress",
+     _wrap_SBTarget_BreakpointCreateByAddress, METH_VARARGS,
+     "SBTarget_BreakpointCreateByAddress(SBTarget self, lldb::addr_t address) "
+     "-> SBBreakpoint"},
+    {"SBTarget_BreakpointCreateBySBAddress",
+     _wrap_SBTarget_BreakpointCreateBySBAddress, METH_VARARGS,
+     "SBTarget_BreakpointCreateBySBAddress(SBTarget self, SBAddress address) "
+     "-> SBBreakpoint"},
+    {"SBTarget_BreakpointCreateFromScript",
+     _wrap_SBTarget_BreakpointCreateFromScript, METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointCreateFromScript(SBTarget self, char const * "
+     "class_name, SBStructuredData extra_args, SBFileSpecList module_list, "
+     "SBFileSpecList file_list, bool request_hardware=False) -> SBBreakpoint\n"
+     "\n"
+     "    Create a breakpoint using a scripted resolver.\n"
+     "\n"
+     "    @param[in] class_name\n"
+     "       This is the name of the class that implements a scripted "
+     "resolver.\n"
+     "       The class should have the following signature: ::\n"
+     "\n"
+     "           class Resolver:\n"
+     "               def __init__(self, bkpt, extra_args):\n"
+     "                   # bkpt - the breakpoint for which this is the "
+     "resolver.  When\n"
+     "                   # the resolver finds an interesting address, call "
+     "AddLocation\n"
+     "                   # on this breakpoint to add it.\n"
+     "                   #\n"
+     "                   # extra_args - an SBStructuredData that can be used "
+     "to\n"
+     "                   # parametrize this instance.  Same as the extra_args "
+     "passed\n"
+     "                   # to BreakpointCreateFromScript.\n"
+     "\n"
+     "               def __get_depth__ (self):\n"
+     "                   # This is optional, but if defined, you should return "
+     "the\n"
+     "                   # depth at which you want the callback to be called.  "
+     "The\n"
+     "                   # available options are:\n"
+     "                   #    lldb.eSearchDepthModule\n"
+     "                   #    lldb.eSearchDepthCompUnit\n"
+     "                   # The default if you don't implement this method is\n"
+     "                   # eSearchDepthModule.\n"
+     "\n"
+     "               def __callback__(self, sym_ctx):\n"
+     "                   # sym_ctx - an SBSymbolContext that is the cursor in "
+     "the\n"
+     "                   # search through the program to resolve breakpoints.\n"
+     "                   # The sym_ctx will be filled out to the depth "
+     "requested in\n"
+     "                   # __get_depth__.\n"
+     "                   # Look in this sym_ctx for new breakpoint locations,\n"
+     "                   # and if found use bkpt.AddLocation to add them.\n"
+     "                   # Note, you will only get called for "
+     "modules/compile_units that\n"
+     "                   # pass the SearchFilter provided by the module_list & "
+     "file_list\n"
+     "                   # passed into BreakpointCreateFromScript.\n"
+     "\n"
+     "               def get_short_help(self):\n"
+     "                   # Optional, but if implemented return a short string "
+     "that will\n"
+     "                   # be printed at the beginning of the break list "
+     "output for the\n"
+     "                   # breakpoint.\n"
+     "\n"
+     "    @param[in] extra_args\n"
+     "       This is an SBStructuredData object that will get passed to the\n"
+     "       constructor of the class in class_name.  You can use this to\n"
+     "       reuse the same class, parametrizing it with entries from this\n"
+     "       dictionary.\n"
+     "\n"
+     "    @param module_list\n"
+     "       If this is non-empty, this will be used as the module filter in "
+     "the\n"
+     "       SearchFilter created for this breakpoint.\n"
+     "\n"
+     "    @param file_list\n"
+     "       If this is non-empty, this will be used as the comp unit filter "
+     "in the\n"
+     "       SearchFilter created for this breakpoint.\n"
+     "\n"
+     "    @return\n"
+     "        An SBBreakpoint that will set locations based on the logic in "
+     "the\n"
+     "        resolver's search callback.\n"
+     ""},
+    {"SBTarget_BreakpointsCreateFromFile",
+     _wrap_SBTarget_BreakpointsCreateFromFile, METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointsCreateFromFile(SBTarget self, SBFileSpec "
+     "source_file, SBBreakpointList new_bps) -> SBError\n"
+     "SBTarget_BreakpointsCreateFromFile(SBTarget self, SBFileSpec "
+     "source_file, SBStringList matching_names, SBBreakpointList new_bps) -> "
+     "SBError\n"
+     "\n"
+     "    Read breakpoints from source_file and return the newly created\n"
+     "    breakpoints in bkpt_list.\n"
+     "\n"
+     "    @param[in] source_file\n"
+     "       The file from which to read the breakpoints\n"
+     "\n"
+     "    @param[in] matching_names\n"
+     "       Only read in breakpoints whose names match one of the names in "
+     "this\n"
+     "       list.\n"
+     "\n"
+     "    @param[out] bkpt_list\n"
+     "       A list of the newly created breakpoints.\n"
+     "\n"
+     "    @return\n"
+     "        An SBError detailing any errors in reading in the breakpoints.\n"
+     ""},
+    {"SBTarget_BreakpointsWriteToFile", _wrap_SBTarget_BreakpointsWriteToFile,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_BreakpointsWriteToFile(SBTarget self, SBFileSpec dest_file) -> "
+     "SBError\n"
+     "SBTarget_BreakpointsWriteToFile(SBTarget self, SBFileSpec dest_file, "
+     "SBBreakpointList bkpt_list, bool append=False) -> SBError\n"
+     "\n"
+     "    Write breakpoints listed in bkpt_list to dest_file.\n"
+     "\n"
+     "    @param[in] dest_file\n"
+     "       The file to which to write the breakpoints.\n"
+     "\n"
+     "    @param[in] bkpt_list\n"
+     "       Only write breakpoints from this list.\n"
+     "\n"
+     "    @param[in] append\n"
+     "       If true, append the breakpoints in bkpt_list to the others\n"
+     "       serialized in dest_file.  If dest_file doesn't exist, then a new\n"
+     "       file will be created and the breakpoints in bkpt_list written to "
+     "it.\n"
+     "\n"
+     "    @return\n"
+     "        An SBError detailing any errors in writing in the breakpoints.\n"
+     ""},
+    {"SBTarget_GetNumBreakpoints", _wrap_SBTarget_GetNumBreakpoints, METH_O,
+     "SBTarget_GetNumBreakpoints(SBTarget self) -> uint32_t"},
+    {"SBTarget_GetBreakpointAtIndex", _wrap_SBTarget_GetBreakpointAtIndex,
+     METH_VARARGS,
+     "SBTarget_GetBreakpointAtIndex(SBTarget self, uint32_t idx) -> "
+     "SBBreakpoint"},
+    {"SBTarget_BreakpointDelete", _wrap_SBTarget_BreakpointDelete, METH_VARARGS,
+     "SBTarget_BreakpointDelete(SBTarget self, lldb::break_id_t break_id) -> "
+     "bool"},
+    {"SBTarget_FindBreakpointByID", _wrap_SBTarget_FindBreakpointByID,
+     METH_VARARGS,
+     "SBTarget_FindBreakpointByID(SBTarget self, lldb::break_id_t break_id) -> "
+     "SBBreakpoint"},
+    {"SBTarget_FindBreakpointsByName", _wrap_SBTarget_FindBreakpointsByName,
+     METH_VARARGS,
+     "SBTarget_FindBreakpointsByName(SBTarget self, char const * name, "
+     "SBBreakpointList bkpt_list) -> bool"},
+    {"SBTarget_GetBreakpointNames", _wrap_SBTarget_GetBreakpointNames,
+     METH_VARARGS,
+     "SBTarget_GetBreakpointNames(SBTarget self, SBStringList names)"},
+    {"SBTarget_DeleteBreakpointName", _wrap_SBTarget_DeleteBreakpointName,
+     METH_VARARGS,
+     "SBTarget_DeleteBreakpointName(SBTarget self, char const * name)"},
+    {"SBTarget_EnableAllBreakpoints", _wrap_SBTarget_EnableAllBreakpoints,
+     METH_O, "SBTarget_EnableAllBreakpoints(SBTarget self) -> bool"},
+    {"SBTarget_DisableAllBreakpoints", _wrap_SBTarget_DisableAllBreakpoints,
+     METH_O, "SBTarget_DisableAllBreakpoints(SBTarget self) -> bool"},
+    {"SBTarget_DeleteAllBreakpoints", _wrap_SBTarget_DeleteAllBreakpoints,
+     METH_O, "SBTarget_DeleteAllBreakpoints(SBTarget self) -> bool"},
+    {"SBTarget_GetNumWatchpoints", _wrap_SBTarget_GetNumWatchpoints, METH_O,
+     "SBTarget_GetNumWatchpoints(SBTarget self) -> uint32_t"},
+    {"SBTarget_GetWatchpointAtIndex", _wrap_SBTarget_GetWatchpointAtIndex,
+     METH_VARARGS,
+     "SBTarget_GetWatchpointAtIndex(SBTarget self, uint32_t idx) -> "
+     "SBWatchpoint"},
+    {"SBTarget_DeleteWatchpoint", _wrap_SBTarget_DeleteWatchpoint, METH_VARARGS,
+     "SBTarget_DeleteWatchpoint(SBTarget self, lldb::watch_id_t watch_id) -> "
+     "bool"},
+    {"SBTarget_FindWatchpointByID", _wrap_SBTarget_FindWatchpointByID,
+     METH_VARARGS,
+     "SBTarget_FindWatchpointByID(SBTarget self, lldb::watch_id_t watch_id) -> "
+     "SBWatchpoint"},
+    {"SBTarget_WatchAddress", _wrap_SBTarget_WatchAddress, METH_VARARGS,
+     "SBTarget_WatchAddress(SBTarget self, lldb::addr_t addr, size_t size, "
+     "bool read, bool modify, SBError error) -> SBWatchpoint"},
+    {"SBTarget_WatchpointCreateByAddress",
+     _wrap_SBTarget_WatchpointCreateByAddress, METH_VARARGS,
+     "SBTarget_WatchpointCreateByAddress(SBTarget self, lldb::addr_t addr, "
+     "size_t size, SBWatchpointOptions options, SBError error) -> "
+     "SBWatchpoint"},
+    {"SBTarget_EnableAllWatchpoints", _wrap_SBTarget_EnableAllWatchpoints,
+     METH_O, "SBTarget_EnableAllWatchpoints(SBTarget self) -> bool"},
+    {"SBTarget_DisableAllWatchpoints", _wrap_SBTarget_DisableAllWatchpoints,
+     METH_O, "SBTarget_DisableAllWatchpoints(SBTarget self) -> bool"},
+    {"SBTarget_DeleteAllWatchpoints", _wrap_SBTarget_DeleteAllWatchpoints,
+     METH_O, "SBTarget_DeleteAllWatchpoints(SBTarget self) -> bool"},
+    {"SBTarget_GetBroadcaster", _wrap_SBTarget_GetBroadcaster, METH_O,
+     "SBTarget_GetBroadcaster(SBTarget self) -> SBBroadcaster"},
+    {"SBTarget_FindFirstType", _wrap_SBTarget_FindFirstType, METH_VARARGS,
+     "SBTarget_FindFirstType(SBTarget self, char const * type) -> SBType"},
+    {"SBTarget_FindTypes", _wrap_SBTarget_FindTypes, METH_VARARGS,
+     "SBTarget_FindTypes(SBTarget self, char const * type) -> SBTypeList"},
+    {"SBTarget_GetBasicType", _wrap_SBTarget_GetBasicType, METH_VARARGS,
+     "SBTarget_GetBasicType(SBTarget self, lldb::BasicType type) -> SBType"},
+    {"SBTarget_CreateValueFromAddress", _wrap_SBTarget_CreateValueFromAddress,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_CreateValueFromAddress(SBTarget self, char const * name, "
+     "SBAddress addr, SBType type) -> SBValue\n"
+     "\n"
+     "    Create an SBValue with the given name by treating the memory "
+     "starting at addr as an entity of type.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        The name of the resultant SBValue\n"
+     "\n"
+     "    @param[in] addr\n"
+     "        The address of the start of the memory region to be used.\n"
+     "\n"
+     "    @param[in] type\n"
+     "        The type to use to interpret the memory starting at addr.\n"
+     "\n"
+     "    @return\n"
+     "        An SBValue of the given type, may be invalid if there was an "
+     "error reading\n"
+     "        the underlying memory.\n"
+     ""},
+    {"SBTarget_CreateValueFromData", _wrap_SBTarget_CreateValueFromData,
+     METH_VARARGS,
+     "SBTarget_CreateValueFromData(SBTarget self, char const * name, SBData "
+     "data, SBType type) -> SBValue"},
+    {"SBTarget_CreateValueFromExpression",
+     _wrap_SBTarget_CreateValueFromExpression, METH_VARARGS,
+     "SBTarget_CreateValueFromExpression(SBTarget self, char const * name, "
+     "char const * expr) -> SBValue"},
+    {"SBTarget_GetSourceManager", _wrap_SBTarget_GetSourceManager, METH_O,
+     "SBTarget_GetSourceManager(SBTarget self) -> SBSourceManager"},
+    {"SBTarget_ReadInstructions", _wrap_SBTarget_ReadInstructions, METH_VARARGS,
+     "\n"
+     "SBTarget_ReadInstructions(SBTarget self, SBAddress base_addr, uint32_t "
+     "count) -> SBInstructionList\n"
+     "SBTarget_ReadInstructions(SBTarget self, SBAddress base_addr, uint32_t "
+     "count, char const * flavor_string) -> SBInstructionList\n"
+     "SBTarget_ReadInstructions(SBTarget self, SBAddress start_addr, SBAddress "
+     "end_addr, char const * flavor_string) -> SBInstructionList\n"
+     "\n"
+     "    Disassemble a specified number of instructions starting at an "
+     "address.\n"
+     "\n"
+     "    :param base_addr: the address to start disassembly from.\n"
+     "    :param count: the number of instructions to disassemble.\n"
+     "    :param flavor_string: may be 'intel' or 'att' on x86 targets to "
+     "specify that style of disassembly.\n"
+     "    :rtype: SBInstructionList\n"
+     "\n"
+     ""},
+    {"SBTarget_GetInstructions", _wrap_SBTarget_GetInstructions, METH_VARARGS,
+     "\n"
+     "SBTarget_GetInstructions(SBTarget self, SBAddress base_addr, void const "
+     "* buf) -> SBInstructionList\n"
+     "\n"
+     "    Disassemble the bytes in a buffer and return them in an "
+     "SBInstructionList.\n"
+     "\n"
+     "    :param base_addr: used for symbolicating the offsets in the byte "
+     "stream when disassembling.\n"
+     "    :param buf: bytes to be disassembled.\n"
+     "    :param size: (C++) size of the buffer.\n"
+     "    :rtype: SBInstructionList\n"
+     "\n"
+     ""},
+    {"SBTarget_GetInstructionsWithFlavor",
+     _wrap_SBTarget_GetInstructionsWithFlavor, METH_VARARGS,
+     "\n"
+     "SBTarget_GetInstructionsWithFlavor(SBTarget self, SBAddress base_addr, "
+     "char const * flavor_string, void const * buf) -> SBInstructionList\n"
+     "\n"
+     "    Disassemble the bytes in a buffer and return them in an "
+     "SBInstructionList, with a supplied flavor.\n"
+     "\n"
+     "    :param base_addr: used for symbolicating the offsets in the byte "
+     "stream when disassembling.\n"
+     "    :param flavor:  may be 'intel' or 'att' on x86 targets to specify "
+     "that style of disassembly.\n"
+     "    :param buf: bytes to be disassembled.\n"
+     "    :param size: (C++) size of the buffer.\n"
+     "    :rtype: SBInstructionList\n"
+     "\n"
+     ""},
+    {"SBTarget_FindSymbols", _wrap_SBTarget_FindSymbols, METH_VARARGS,
+     "SBTarget_FindSymbols(SBTarget self, char const * name, lldb::SymbolType "
+     "type=eSymbolTypeAny) -> SBSymbolContextList"},
+    {"SBTarget___eq__", _wrap_SBTarget___eq__, METH_VARARGS,
+     "SBTarget___eq__(SBTarget self, SBTarget rhs) -> bool"},
+    {"SBTarget___ne__", _wrap_SBTarget___ne__, METH_VARARGS,
+     "SBTarget___ne__(SBTarget self, SBTarget rhs) -> bool"},
+    {"SBTarget_GetDescription", _wrap_SBTarget_GetDescription, METH_VARARGS,
+     "SBTarget_GetDescription(SBTarget self, SBStream description, "
+     "lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTarget_EvaluateExpression", _wrap_SBTarget_EvaluateExpression,
+     METH_VARARGS,
+     "\n"
+     "SBTarget_EvaluateExpression(SBTarget self, char const * expr) -> "
+     "SBValue\n"
+     "SBTarget_EvaluateExpression(SBTarget self, char const * expr, "
+     "SBExpressionOptions options) -> SBValue\n"
+     ""},
+    {"SBTarget_GetStackRedZoneSize", _wrap_SBTarget_GetStackRedZoneSize, METH_O,
+     "SBTarget_GetStackRedZoneSize(SBTarget self) -> lldb::addr_t"},
+    {"SBTarget_IsLoaded", _wrap_SBTarget_IsLoaded, METH_VARARGS,
+     "\n"
+     "SBTarget_IsLoaded(SBTarget self, SBModule module) -> bool\n"
+     "\n"
+     "    Returns true if the module has been loaded in this `SBTarget`.\n"
+     "    A module can be loaded either by the dynamic loader or by being "
+     "manually\n"
+     "    added to the target (see `SBTarget.AddModule` and the ``target "
+     "module add`` command).\n"
+     "\n"
+     "    :rtype: bool\n"
+     "\n"
+     ""},
+    {"SBTarget_GetLaunchInfo", _wrap_SBTarget_GetLaunchInfo, METH_O,
+     "SBTarget_GetLaunchInfo(SBTarget self) -> SBLaunchInfo"},
+    {"SBTarget_SetLaunchInfo", _wrap_SBTarget_SetLaunchInfo, METH_VARARGS,
+     "SBTarget_SetLaunchInfo(SBTarget self, SBLaunchInfo launch_info)"},
+    {"SBTarget_GetTrace", _wrap_SBTarget_GetTrace, METH_O,
+     "SBTarget_GetTrace(SBTarget self) -> SBTrace"},
+    {"SBTarget_CreateTrace", _wrap_SBTarget_CreateTrace, METH_VARARGS,
+     "SBTarget_CreateTrace(SBTarget self, SBError error) -> SBTrace"},
+    {"SBTarget___repr__", _wrap_SBTarget___repr__, METH_O,
+     "SBTarget___repr__(SBTarget self) -> std::string"},
+    {"SBTarget_swigregister", SBTarget_swigregister, METH_O, NULL},
+    {"SBTarget_swiginit", SBTarget_swiginit, METH_VARARGS, NULL},
+    {"SBThread_GetBroadcasterClassName", _wrap_SBThread_GetBroadcasterClassName,
+     METH_NOARGS, "SBThread_GetBroadcasterClassName() -> char const *"},
+    {"new_SBThread", _wrap_new_SBThread, METH_VARARGS,
+     "\n"
+     "SBThread()\n"
+     "new_SBThread(SBThread thread) -> SBThread\n"
+     ""},
+    {"delete_SBThread", _wrap_delete_SBThread, METH_O,
+     "delete_SBThread(SBThread self)"},
+    {"SBThread_GetQueue", _wrap_SBThread_GetQueue, METH_O,
+     "\n"
+     "SBThread_GetQueue(SBThread self) -> SBQueue\n"
+     "\n"
+     "    Return the SBQueue for this thread.  If this thread is not currently "
+     "associated\n"
+     "    with a libdispatch queue, the SBQueue object's IsValid() method will "
+     "return false.\n"
+     "    If this SBThread is actually a HistoryThread, we may be able to "
+     "provide QueueID\n"
+     "    and QueueName, but not provide an SBQueue.  Those individual "
+     "attributes may have\n"
+     "    been saved for the HistoryThread without enough information to "
+     "reconstitute the\n"
+     "    entire SBQueue at that time.\n"
+     "    This method takes no arguments, returns an SBQueue.\n"
+     ""},
+    {"SBThread___nonzero__", _wrap_SBThread___nonzero__, METH_O,
+     "SBThread___nonzero__(SBThread self) -> bool"},
+    {"SBThread_IsValid", _wrap_SBThread_IsValid, METH_O,
+     "SBThread_IsValid(SBThread self) -> bool"},
+    {"SBThread_Clear", _wrap_SBThread_Clear, METH_O,
+     "SBThread_Clear(SBThread self)"},
+    {"SBThread_GetStopReason", _wrap_SBThread_GetStopReason, METH_O,
+     "SBThread_GetStopReason(SBThread self) -> lldb::StopReason"},
+    {"SBThread_GetStopReasonDataCount", _wrap_SBThread_GetStopReasonDataCount,
+     METH_O,
+     "\n"
+     "SBThread_GetStopReasonDataCount(SBThread self) -> size_t\n"
+     "\n"
+     "    Get the number of words associated with the stop reason.\n"
+     "    See also GetStopReasonDataAtIndex().\n"
+     ""},
+    {"SBThread_GetStopReasonDataAtIndex",
+     _wrap_SBThread_GetStopReasonDataAtIndex, METH_VARARGS,
+     "\n"
+     "SBThread_GetStopReasonDataAtIndex(SBThread self, uint32_t idx) -> "
+     "uint64_t\n"
+     "\n"
+     "    Get information associated with a stop reason.\n"
+     "\n"
+     "    Breakpoint stop reasons will have data that consists of pairs of\n"
+     "    breakpoint IDs followed by the breakpoint location IDs (they always "
+     "come\n"
+     "    in pairs).\n"
+     "\n"
+     "    Stop Reason              Count Data Type\n"
+     "    ======================== ===== "
+     "=========================================\n"
+     "    eStopReasonNone          0\n"
+     "    eStopReasonTrace         0\n"
+     "    eStopReasonBreakpoint    N     duple: {breakpoint id, location id}\n"
+     "    eStopReasonWatchpoint    1     watchpoint id\n"
+     "    eStopReasonSignal        1     unix signal number\n"
+     "    eStopReasonException     N     exception data\n"
+     "    eStopReasonExec          0\n"
+     "    eStopReasonFork          1     pid of the child process\n"
+     "    eStopReasonVFork         1     pid of the child process\n"
+     "    eStopReasonVForkDone     0\n"
+     "    eStopReasonPlanComplete  0\n"
+     ""},
+    {"SBThread_GetStopReasonExtendedInfoAsJSON",
+     _wrap_SBThread_GetStopReasonExtendedInfoAsJSON, METH_VARARGS,
+     "\n"
+     "SBThread_GetStopReasonExtendedInfoAsJSON(SBThread self, SBStream stream) "
+     "-> bool\n"
+     "\n"
+     "    Collects a thread's stop reason extended information dictionary and "
+     "prints it\n"
+     "    into the SBStream in a JSON format. The format of this JSON "
+     "dictionary depends\n"
+     "    on the stop reason and is currently used only for instrumentation "
+     "plugins.\n"
+     ""},
+    {"SBThread_GetStopReasonExtendedBacktraces",
+     _wrap_SBThread_GetStopReasonExtendedBacktraces, METH_VARARGS,
+     "\n"
+     "SBThread_GetStopReasonExtendedBacktraces(SBThread self, "
+     "lldb::InstrumentationRuntimeType type) -> SBThreadCollection\n"
+     "\n"
+     "    Returns a collection of historical stack traces that are significant "
+     "to the\n"
+     "    current stop reason. Used by ThreadSanitizer, where we provide "
+     "various stack\n"
+     "    traces that were involved in a data race or other type of detected "
+     "issue.\n"
+     ""},
+    {"SBThread_GetStopDescription", _wrap_SBThread_GetStopDescription,
+     METH_VARARGS,
+     "\n"
+     "SBThread_GetStopDescription(SBThread self, char * dst_or_null) -> "
+     "size_t\n"
+     "\n"
+     "    Pass only an (int)length and expect to get a Python string "
+     "describing the\n"
+     "    stop reason.\n"
+     ""},
+    {"SBThread_GetStopReturnValue", _wrap_SBThread_GetStopReturnValue, METH_O,
+     "SBThread_GetStopReturnValue(SBThread self) -> SBValue"},
+    {"SBThread_GetStopErrorValue", _wrap_SBThread_GetStopErrorValue, METH_O,
+     "SBThread_GetStopErrorValue(SBThread self) -> SBValue"},
+    {"SBThread_GetStopReturnOrErrorValue",
+     _wrap_SBThread_GetStopReturnOrErrorValue, METH_VARARGS,
+     "SBThread_GetStopReturnOrErrorValue(SBThread self, bool & "
+     "is_swift_error_value) -> SBValue"},
+    {"SBThread_GetThreadID", _wrap_SBThread_GetThreadID, METH_O,
+     "\n"
+     "SBThread_GetThreadID(SBThread self) -> lldb::tid_t\n"
+     "\n"
+     "    Returns a unique thread identifier (type lldb::tid_t, typically a "
+     "64-bit type)\n"
+     "    for the current SBThread that will remain constant throughout the "
+     "thread's\n"
+     "    lifetime in this process and will not be reused by another thread "
+     "during this\n"
+     "    process lifetime.  On Mac OS X systems, this is a system-wide unique "
+     "thread\n"
+     "    identifier; this identifier is also used by other tools like sample "
+     "which helps\n"
+     "    to associate data from those tools with lldb.  See related "
+     "GetIndexID.\n"
+     ""},
+    {"SBThread_GetIndexID", _wrap_SBThread_GetIndexID, METH_O,
+     "\n"
+     "SBThread_GetIndexID(SBThread self) -> uint32_t\n"
+     "\n"
+     "    Return the index number for this SBThread.  The index number is the "
+     "same thing\n"
+     "    that a user gives as an argument to 'thread select' in the command "
+     "line lldb.\n"
+     "    These numbers start at 1 (for the first thread lldb sees in a debug "
+     "session)\n"
+     "    and increments up throughout the process lifetime.  An index number "
+     "will not be\n"
+     "    reused for a different thread later in a process - thread 1 will "
+     "always be\n"
+     "    associated with the same thread.  See related GetThreadID.\n"
+     "    This method returns a uint32_t index number, takes no arguments.\n"
+     ""},
+    {"SBThread_GetName", _wrap_SBThread_GetName, METH_O,
+     "SBThread_GetName(SBThread self) -> char const *"},
+    {"SBThread_GetQueueName", _wrap_SBThread_GetQueueName, METH_O,
+     "\n"
+     "SBThread_GetQueueName(SBThread self) -> char const *\n"
+     "\n"
+     "    Return the queue name associated with this thread, if any, as a "
+     "str.\n"
+     "    For example, with a libdispatch (aka Grand Central Dispatch) queue.\n"
+     ""},
+    {"SBThread_GetQueueID", _wrap_SBThread_GetQueueID, METH_O,
+     "\n"
+     "SBThread_GetQueueID(SBThread self) -> lldb::queue_id_t\n"
+     "\n"
+     "    Return the dispatch_queue_id for this thread, if any, as a "
+     "lldb::queue_id_t.\n"
+     "    For example, with a libdispatch (aka Grand Central Dispatch) queue.\n"
+     ""},
+    {"SBThread_GetInfoItemByPathAsString",
+     _wrap_SBThread_GetInfoItemByPathAsString, METH_VARARGS,
+     "\n"
+     "SBThread_GetInfoItemByPathAsString(SBThread self, char const * path, "
+     "SBStream strm) -> bool\n"
+     "\n"
+     "    Takes a path string and a SBStream reference as parameters, returns "
+     "a bool.\n"
+     "    Collects the thread's 'info' dictionary from the remote system, uses "
+     "the path\n"
+     "    argument to descend into the dictionary to an item of interest, and "
+     "prints\n"
+     "    it into the SBStream in a natural format.  Return bool is to "
+     "indicate if\n"
+     "    anything was printed into the stream (true) or not (false).\n"
+     ""},
+    {"SBThread_StepOver", _wrap_SBThread_StepOver, METH_VARARGS,
+     "\n"
+     "SBThread_StepOver(SBThread self, lldb::RunMode "
+     "stop_other_threads=eOnlyDuringStepping)\n"
+     "SBThread_StepOver(SBThread self, lldb::RunMode stop_other_threads, "
+     "SBError error)\n"
+     "Do a source level single step over in the currently selected thread.\n"
+     ""},
+    {"SBThread_StepInto", _wrap_SBThread_StepInto, METH_VARARGS,
+     "\n"
+     "SBThread_StepInto(SBThread self, lldb::RunMode "
+     "stop_other_threads=eOnlyDuringStepping)\n"
+     "SBThread_StepInto(SBThread self, char const * target_name, lldb::RunMode "
+     "stop_other_threads=eOnlyDuringStepping)\n"
+     "SBThread_StepInto(SBThread self, char const * target_name, uint32_t "
+     "end_line, SBError error, lldb::RunMode "
+     "stop_other_threads=eOnlyDuringStepping)\n"
+     "\n"
+     "    Step the current thread from the current source line to the line "
+     "given by end_line, stopping if\n"
+     "    the thread steps into the function given by target_name.  If "
+     "target_name is None, then stepping will stop\n"
+     "    in any of the places we would normally stop.\n"
+     ""},
+    {"SBThread_StepOut", _wrap_SBThread_StepOut, METH_VARARGS,
+     "\n"
+     "SBThread_StepOut(SBThread self)\n"
+     "SBThread_StepOut(SBThread self, SBError error)\n"
+     "Step out of the currently selected thread.\n"
+     ""},
+    {"SBThread_StepOutOfFrame", _wrap_SBThread_StepOutOfFrame, METH_VARARGS,
+     "\n"
+     "SBThread_StepOutOfFrame(SBThread self, SBFrame frame)\n"
+     "SBThread_StepOutOfFrame(SBThread self, SBFrame frame, SBError error)\n"
+     "Step out of the specified frame.\n"
+     ""},
+    {"SBThread_StepInstruction", _wrap_SBThread_StepInstruction, METH_VARARGS,
+     "\n"
+     "SBThread_StepInstruction(SBThread self, bool step_over)\n"
+     "SBThread_StepInstruction(SBThread self, bool step_over, SBError error)\n"
+     "Do an instruction level single step in the currently selected thread.\n"
+     ""},
+    {"SBThread_StepOverUntil", _wrap_SBThread_StepOverUntil, METH_VARARGS,
+     "SBThread_StepOverUntil(SBThread self, SBFrame frame, SBFileSpec "
+     "file_spec, uint32_t line) -> SBError"},
+    {"SBThread_StepUsingScriptedThreadPlan",
+     _wrap_SBThread_StepUsingScriptedThreadPlan, METH_VARARGS,
+     "\n"
+     "SBThread_StepUsingScriptedThreadPlan(SBThread self, char const * "
+     "script_class_name) -> SBError\n"
+     "SBThread_StepUsingScriptedThreadPlan(SBThread self, char const * "
+     "script_class_name, bool resume_immediately) -> SBError\n"
+     "SBThread_StepUsingScriptedThreadPlan(SBThread self, char const * "
+     "script_class_name, SBStructuredData args_data, bool resume_immediately) "
+     "-> SBError\n"
+     ""},
+    {"SBThread_JumpToLine", _wrap_SBThread_JumpToLine, METH_VARARGS,
+     "SBThread_JumpToLine(SBThread self, SBFileSpec file_spec, uint32_t line) "
+     "-> SBError"},
+    {"SBThread_RunToAddress", _wrap_SBThread_RunToAddress, METH_VARARGS,
+     "\n"
+     "SBThread_RunToAddress(SBThread self, lldb::addr_t addr)\n"
+     "SBThread_RunToAddress(SBThread self, lldb::addr_t addr, SBError error)\n"
+     ""},
+    {"SBThread_ReturnFromFrame", _wrap_SBThread_ReturnFromFrame, METH_VARARGS,
+     "\n"
+     "SBThread_ReturnFromFrame(SBThread self, SBFrame frame, SBValue "
+     "return_value) -> SBError\n"
+     "\n"
+     "    Force a return from the frame passed in (and any frames younger than "
+     "it)\n"
+     "    without executing any more code in those frames.  If return_value "
+     "contains\n"
+     "    a valid SBValue, that will be set as the return value from frame.  "
+     "Note, at\n"
+     "    present only scalar return values are supported.\n"
+     ""},
+    {"SBThread_UnwindInnermostExpression",
+     _wrap_SBThread_UnwindInnermostExpression, METH_O,
+     "\n"
+     "SBThread_UnwindInnermostExpression(SBThread self) -> SBError\n"
+     "\n"
+     "    Unwind the stack frames from the innermost expression evaluation.\n"
+     "    This API is equivalent to 'thread return -x'.\n"
+     ""},
+    {"SBThread_Suspend", _wrap_SBThread_Suspend, METH_VARARGS,
+     "\n"
+     "SBThread_Suspend(SBThread self) -> bool\n"
+     "SBThread_Suspend(SBThread self, SBError error) -> bool\n"
+     "\n"
+     "    LLDB currently supports process centric debugging which means when "
+     "any\n"
+     "    thread in a process stops, all other threads are stopped. The "
+     "Suspend()\n"
+     "    call here tells our process to suspend a thread and not let it run "
+     "when\n"
+     "    the other threads in a process are allowed to run. So when\n"
+     "    SBProcess::Continue() is called, any threads that aren't suspended "
+     "will\n"
+     "    be allowed to run. If any of the SBThread functions for stepping "
+     "are\n"
+     "    called (StepOver, StepInto, StepOut, StepInstruction, RunToAddres), "
+     "the\n"
+     "    thread will now be allowed to run and these functions will simply "
+     "return.\n"
+     "\n"
+     "    Eventually we plan to add support for thread centric debugging "
+     "where\n"
+     "    each thread is controlled individually and each thread would "
+     "broadcast\n"
+     "    its state, but we haven't implemented this yet.\n"
+     "\n"
+     "    Likewise the SBThread::Resume() call will again allow the thread to "
+     "run\n"
+     "    when the process is continued.\n"
+     "\n"
+     "    Suspend() and Resume() functions are not currently reference "
+     "counted, if\n"
+     "    anyone has the need for them to be reference counted, please let us\n"
+     "    know.\n"
+     ""},
+    {"SBThread_Resume", _wrap_SBThread_Resume, METH_VARARGS,
+     "\n"
+     "SBThread_Resume(SBThread self) -> bool\n"
+     "SBThread_Resume(SBThread self, SBError error) -> bool\n"
+     ""},
+    {"SBThread_IsSuspended", _wrap_SBThread_IsSuspended, METH_O,
+     "SBThread_IsSuspended(SBThread self) -> bool"},
+    {"SBThread_IsStopped", _wrap_SBThread_IsStopped, METH_O,
+     "SBThread_IsStopped(SBThread self) -> bool"},
+    {"SBThread_GetNumFrames", _wrap_SBThread_GetNumFrames, METH_O,
+     "SBThread_GetNumFrames(SBThread self) -> uint32_t"},
+    {"SBThread_GetFrameAtIndex", _wrap_SBThread_GetFrameAtIndex, METH_VARARGS,
+     "SBThread_GetFrameAtIndex(SBThread self, uint32_t idx) -> SBFrame"},
+    {"SBThread_GetSelectedFrame", _wrap_SBThread_GetSelectedFrame, METH_O,
+     "SBThread_GetSelectedFrame(SBThread self) -> SBFrame"},
+    {"SBThread_SetSelectedFrame", _wrap_SBThread_SetSelectedFrame, METH_VARARGS,
+     "SBThread_SetSelectedFrame(SBThread self, uint32_t frame_idx) -> SBFrame"},
+    {"SBThread_EventIsThreadEvent", _wrap_SBThread_EventIsThreadEvent, METH_O,
+     "SBThread_EventIsThreadEvent(SBEvent event) -> bool"},
+    {"SBThread_GetStackFrameFromEvent", _wrap_SBThread_GetStackFrameFromEvent,
+     METH_O, "SBThread_GetStackFrameFromEvent(SBEvent event) -> SBFrame"},
+    {"SBThread_GetThreadFromEvent", _wrap_SBThread_GetThreadFromEvent, METH_O,
+     "SBThread_GetThreadFromEvent(SBEvent event) -> SBThread"},
+    {"SBThread_GetProcess", _wrap_SBThread_GetProcess, METH_O,
+     "SBThread_GetProcess(SBThread self) -> SBProcess"},
+    {"SBThread___eq__", _wrap_SBThread___eq__, METH_VARARGS,
+     "SBThread___eq__(SBThread self, SBThread rhs) -> bool"},
+    {"SBThread___ne__", _wrap_SBThread___ne__, METH_VARARGS,
+     "SBThread___ne__(SBThread self, SBThread rhs) -> bool"},
+    {"SBThread_GetDescription", _wrap_SBThread_GetDescription, METH_VARARGS,
+     "\n"
+     "SBThread_GetDescription(SBThread self, SBStream description) -> bool\n"
+     "SBThread_GetDescription(SBThread self, SBStream description, bool "
+     "stop_format) -> bool\n"
+     "\n"
+     "    Get the description strings for this thread that match what the\n"
+     "    lldb driver will present, using the thread-format "
+     "(stop_format==false)\n"
+     "    or thread-stop-format (stop_format = true).\n"
+     ""},
+    {"SBThread_GetDescriptionWithFormat",
+     _wrap_SBThread_GetDescriptionWithFormat, METH_VARARGS,
+     "SBThread_GetDescriptionWithFormat(SBThread self, SBFormat format, "
+     "SBStream output) -> SBError"},
+    {"SBThread_GetStatus", _wrap_SBThread_GetStatus, METH_VARARGS,
+     "SBThread_GetStatus(SBThread self, SBStream status) -> bool"},
+    {"SBThread_GetExtendedBacktraceThread",
+     _wrap_SBThread_GetExtendedBacktraceThread, METH_VARARGS,
+     "\n"
+     "SBThread_GetExtendedBacktraceThread(SBThread self, char const * type) -> "
+     "SBThread\n"
+     "\n"
+     "    Given an argument of str to specify the type of thread-origin "
+     "extended\n"
+     "    backtrace to retrieve, query whether the origin of this thread is\n"
+     "    available.  An SBThread is retured; SBThread.IsValid will return "
+     "true\n"
+     "    if an extended backtrace was available.  The returned SBThread is "
+     "not\n"
+     "    a part of the SBProcess' thread list and it cannot be manipulated "
+     "like\n"
+     "    normal threads -- you cannot step or resume it, for instance -- it "
+     "is\n"
+     "    intended to used primarily for generating a backtrace.  You may "
+     "request\n"
+     "    the returned thread's own thread origin in turn.\n"
+     ""},
+    {"SBThread_GetExtendedBacktraceOriginatingIndexID",
+     _wrap_SBThread_GetExtendedBacktraceOriginatingIndexID, METH_O,
+     "\n"
+     "SBThread_GetExtendedBacktraceOriginatingIndexID(SBThread self) -> "
+     "uint32_t\n"
+     "\n"
+     "    If this SBThread is an ExtendedBacktrace thread, get the IndexID of "
+     "the\n"
+     "    original thread that this ExtendedBacktrace thread represents, if\n"
+     "    available.  The thread that was running this backtrace in the past "
+     "may\n"
+     "    not have been registered with lldb's thread index (if it was "
+     "created,\n"
+     "    did its work, and was destroyed without lldb ever stopping "
+     "execution).\n"
+     "    In that case, this ExtendedBacktrace thread's IndexID will be "
+     "returned.\n"
+     ""},
+    {"SBThread_GetCurrentException", _wrap_SBThread_GetCurrentException, METH_O,
+     "\n"
+     "SBThread_GetCurrentException(SBThread self) -> SBValue\n"
+     "\n"
+     "    Returns an SBValue object represeting the current exception for the "
+     "thread,\n"
+     "    if there is any. Currently, this works for Obj-C code and returns an "
+     "SBValue\n"
+     "    representing the NSException object at the throw site or that's "
+     "currently\n"
+     "    being processes.\n"
+     ""},
+    {"SBThread_GetCurrentExceptionBacktrace",
+     _wrap_SBThread_GetCurrentExceptionBacktrace, METH_O,
+     "\n"
+     "SBThread_GetCurrentExceptionBacktrace(SBThread self) -> SBThread\n"
+     "\n"
+     "    Returns a historical (fake) SBThread representing the stack trace of "
+     "an\n"
+     "    exception, if there is one for the thread. Currently, this works for "
+     "Obj-C\n"
+     "    code, and can retrieve the throw-site backtrace of an NSException "
+     "object\n"
+     "    even when the program is no longer at the throw site.\n"
+     ""},
+    {"SBThread_SafeToCallFunctions", _wrap_SBThread_SafeToCallFunctions, METH_O,
+     "\n"
+     "SBThread_SafeToCallFunctions(SBThread self) -> bool\n"
+     "\n"
+     "    lldb may be able to detect that function calls should not be "
+     "executed\n"
+     "    on a given thread at a particular point in time.  It is recommended "
+     "that\n"
+     "    this is checked before performing an inferior function call on a "
+     "given\n"
+     "    thread.\n"
+     ""},
+    {"SBThread_GetSiginfo", _wrap_SBThread_GetSiginfo, METH_O,
+     "\n"
+     "SBThread_GetSiginfo(SBThread self) -> SBValue\n"
+     "\n"
+     "    Returns a SBValue object representing the siginfo for the current "
+     "signal.\n"
+     "\n"
+     ""},
+    {"SBThread___repr__", _wrap_SBThread___repr__, METH_O,
+     "SBThread___repr__(SBThread self) -> std::string"},
+    {"SBThread_swigregister", SBThread_swigregister, METH_O, NULL},
+    {"SBThread_swiginit", SBThread_swiginit, METH_VARARGS, NULL},
+    {"new_SBThreadCollection", _wrap_new_SBThreadCollection, METH_VARARGS,
+     "\n"
+     "SBThreadCollection()\n"
+     "new_SBThreadCollection(SBThreadCollection rhs) -> SBThreadCollection\n"
+     ""},
+    {"delete_SBThreadCollection", _wrap_delete_SBThreadCollection, METH_O,
+     "delete_SBThreadCollection(SBThreadCollection self)"},
+    {"SBThreadCollection___nonzero__", _wrap_SBThreadCollection___nonzero__,
+     METH_O, "SBThreadCollection___nonzero__(SBThreadCollection self) -> bool"},
+    {"SBThreadCollection_IsValid", _wrap_SBThreadCollection_IsValid, METH_O,
+     "SBThreadCollection_IsValid(SBThreadCollection self) -> bool"},
+    {"SBThreadCollection_GetSize", _wrap_SBThreadCollection_GetSize, METH_O,
+     "SBThreadCollection_GetSize(SBThreadCollection self) -> size_t"},
+    {"SBThreadCollection_GetThreadAtIndex",
+     _wrap_SBThreadCollection_GetThreadAtIndex, METH_VARARGS,
+     "SBThreadCollection_GetThreadAtIndex(SBThreadCollection self, size_t idx) "
+     "-> SBThread"},
+    {"SBThreadCollection_swigregister", SBThreadCollection_swigregister, METH_O,
+     NULL},
+    {"SBThreadCollection_swiginit", SBThreadCollection_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBThreadPlan", _wrap_new_SBThreadPlan, METH_VARARGS,
+     "\n"
+     "SBThreadPlan()\n"
+     "SBThreadPlan(SBThreadPlan threadPlan)\n"
+     "SBThreadPlan(SBThread thread, char const * class_name)\n"
+     "new_SBThreadPlan(SBThread thread, char const * class_name, "
+     "SBStructuredData args_data) -> SBThreadPlan\n"
+     ""},
+    {"delete_SBThreadPlan", _wrap_delete_SBThreadPlan, METH_O,
+     "delete_SBThreadPlan(SBThreadPlan self)"},
+    {"SBThreadPlan___nonzero__", _wrap_SBThreadPlan___nonzero__, METH_O,
+     "SBThreadPlan___nonzero__(SBThreadPlan self) -> bool"},
+    {"SBThreadPlan_Clear", _wrap_SBThreadPlan_Clear, METH_O,
+     "SBThreadPlan_Clear(SBThreadPlan self)"},
+    {"SBThreadPlan_GetStopReason", _wrap_SBThreadPlan_GetStopReason, METH_O,
+     "SBThreadPlan_GetStopReason(SBThreadPlan self) -> lldb::StopReason"},
+    {"SBThreadPlan_GetStopReasonDataCount",
+     _wrap_SBThreadPlan_GetStopReasonDataCount, METH_O,
+     "\n"
+     "SBThreadPlan_GetStopReasonDataCount(SBThreadPlan self) -> size_t\n"
+     "\n"
+     "    Get the number of words associated with the stop reason.\n"
+     "    See also GetStopReasonDataAtIndex().\n"
+     ""},
+    {"SBThreadPlan_GetStopReasonDataAtIndex",
+     _wrap_SBThreadPlan_GetStopReasonDataAtIndex, METH_VARARGS,
+     "\n"
+     "SBThreadPlan_GetStopReasonDataAtIndex(SBThreadPlan self, uint32_t idx) "
+     "-> uint64_t\n"
+     "\n"
+     "    Get information associated with a stop reason.\n"
+     "\n"
+     "    Breakpoint stop reasons will have data that consists of pairs of\n"
+     "    breakpoint IDs followed by the breakpoint location IDs (they always "
+     "come\n"
+     "    in pairs).\n"
+     "\n"
+     "    Stop Reason              Count Data Type\n"
+     "    ======================== ===== "
+     "=========================================\n"
+     "    eStopReasonNone          0\n"
+     "    eStopReasonTrace         0\n"
+     "    eStopReasonBreakpoint    N     duple: {breakpoint id, location id}\n"
+     "    eStopReasonWatchpoint    1     watchpoint id\n"
+     "    eStopReasonSignal        1     unix signal number\n"
+     "    eStopReasonException     N     exception data\n"
+     "    eStopReasonExec          0\n"
+     "    eStopReasonFork          1     pid of the child process\n"
+     "    eStopReasonVFork         1     pid of the child process\n"
+     "    eStopReasonVForkDone     0\n"
+     "    eStopReasonPlanComplete  0\n"
+     ""},
+    {"SBThreadPlan_GetThread", _wrap_SBThreadPlan_GetThread, METH_O,
+     "SBThreadPlan_GetThread(SBThreadPlan self) -> SBThread"},
+    {"SBThreadPlan_GetDescription", _wrap_SBThreadPlan_GetDescription,
+     METH_VARARGS,
+     "SBThreadPlan_GetDescription(SBThreadPlan self, SBStream description) -> "
+     "bool"},
+    {"SBThreadPlan_SetPlanComplete", _wrap_SBThreadPlan_SetPlanComplete,
+     METH_VARARGS,
+     "SBThreadPlan_SetPlanComplete(SBThreadPlan self, bool success)"},
+    {"SBThreadPlan_IsPlanComplete", _wrap_SBThreadPlan_IsPlanComplete, METH_O,
+     "SBThreadPlan_IsPlanComplete(SBThreadPlan self) -> bool"},
+    {"SBThreadPlan_IsPlanStale", _wrap_SBThreadPlan_IsPlanStale, METH_O,
+     "SBThreadPlan_IsPlanStale(SBThreadPlan self) -> bool"},
+    {"SBThreadPlan_IsValid", _wrap_SBThreadPlan_IsValid, METH_VARARGS,
+     "\n"
+     "SBThreadPlan_IsValid(SBThreadPlan self) -> bool\n"
+     "SBThreadPlan_IsValid(SBThreadPlan self) -> bool\n"
+     ""},
+    {"SBThreadPlan_GetStopOthers", _wrap_SBThreadPlan_GetStopOthers, METH_O,
+     "\n"
+     "SBThreadPlan_GetStopOthers(SBThreadPlan self) -> bool\n"
+     "Return whether this plan will ask to stop other threads when it runs.\n"
+     ""},
+    {"SBThreadPlan_SetStopOthers", _wrap_SBThreadPlan_SetStopOthers,
+     METH_VARARGS,
+     "\n"
+     "SBThreadPlan_SetStopOthers(SBThreadPlan self, bool stop_others)\n"
+     "Set whether this plan will ask to stop other threads when it runs.\n"
+     ""},
+    {"SBThreadPlan_QueueThreadPlanForStepOverRange",
+     _wrap_SBThreadPlan_QueueThreadPlanForStepOverRange, METH_VARARGS,
+     "\n"
+     "SBThreadPlan_QueueThreadPlanForStepOverRange(SBThreadPlan self, "
+     "SBAddress start_address, lldb::addr_t range_size) -> SBThreadPlan\n"
+     "SBThreadPlan_QueueThreadPlanForStepOverRange(SBThreadPlan self, "
+     "SBAddress start_address, lldb::addr_t range_size, SBError error) -> "
+     "SBThreadPlan\n"
+     ""},
+    {"SBThreadPlan_QueueThreadPlanForStepInRange",
+     _wrap_SBThreadPlan_QueueThreadPlanForStepInRange, METH_VARARGS,
+     "\n"
+     "SBThreadPlan_QueueThreadPlanForStepInRange(SBThreadPlan self, SBAddress "
+     "start_address, lldb::addr_t range_size) -> SBThreadPlan\n"
+     "SBThreadPlan_QueueThreadPlanForStepInRange(SBThreadPlan self, SBAddress "
+     "start_address, lldb::addr_t range_size, SBError error) -> SBThreadPlan\n"
+     ""},
+    {"SBThreadPlan_QueueThreadPlanForStepOut",
+     _wrap_SBThreadPlan_QueueThreadPlanForStepOut, METH_VARARGS,
+     "\n"
+     "SBThreadPlan_QueueThreadPlanForStepOut(SBThreadPlan self, uint32_t "
+     "frame_idx_to_step_to, bool first_insn=False) -> SBThreadPlan\n"
+     "SBThreadPlan_QueueThreadPlanForStepOut(SBThreadPlan self, uint32_t "
+     "frame_idx_to_step_to, bool first_insn, SBError error) -> SBThreadPlan\n"
+     ""},
+    {"SBThreadPlan_QueueThreadPlanForRunToAddress",
+     _wrap_SBThreadPlan_QueueThreadPlanForRunToAddress, METH_VARARGS,
+     "\n"
+     "SBThreadPlan_QueueThreadPlanForRunToAddress(SBThreadPlan self, SBAddress "
+     "address) -> SBThreadPlan\n"
+     "SBThreadPlan_QueueThreadPlanForRunToAddress(SBThreadPlan self, SBAddress "
+     "address, SBError error) -> SBThreadPlan\n"
+     ""},
+    {"SBThreadPlan_QueueThreadPlanForStepScripted",
+     _wrap_SBThreadPlan_QueueThreadPlanForStepScripted, METH_VARARGS,
+     "\n"
+     "SBThreadPlan_QueueThreadPlanForStepScripted(SBThreadPlan self, char "
+     "const * script_class_name) -> SBThreadPlan\n"
+     "SBThreadPlan_QueueThreadPlanForStepScripted(SBThreadPlan self, char "
+     "const * script_class_name, SBError error) -> SBThreadPlan\n"
+     "SBThreadPlan_QueueThreadPlanForStepScripted(SBThreadPlan self, char "
+     "const * script_class_name, SBStructuredData args_data, SBError error) -> "
+     "SBThreadPlan\n"
+     ""},
+    {"SBThreadPlan_swigregister", SBThreadPlan_swigregister, METH_O, NULL},
+    {"SBThreadPlan_swiginit", SBThreadPlan_swiginit, METH_VARARGS, NULL},
+    {"new_SBTrace", _wrap_new_SBTrace, METH_NOARGS, "new_SBTrace() -> SBTrace"},
+    {"SBTrace_LoadTraceFromFile", _wrap_SBTrace_LoadTraceFromFile, METH_VARARGS,
+     "SBTrace_LoadTraceFromFile(SBError error, SBDebugger debugger, SBFileSpec "
+     "trace_description_file) -> SBTrace"},
+    {"SBTrace_CreateNewCursor", _wrap_SBTrace_CreateNewCursor, METH_VARARGS,
+     "SBTrace_CreateNewCursor(SBTrace self, SBError error, SBThread thread) -> "
+     "SBTraceCursor"},
+    {"SBTrace_SaveToDisk", _wrap_SBTrace_SaveToDisk, METH_VARARGS,
+     "SBTrace_SaveToDisk(SBTrace self, SBError error, SBFileSpec bundle_dir, "
+     "bool compact=False) -> SBFileSpec"},
+    {"SBTrace_GetStartConfigurationHelp",
+     _wrap_SBTrace_GetStartConfigurationHelp, METH_O,
+     "SBTrace_GetStartConfigurationHelp(SBTrace self) -> char const *"},
+    {"SBTrace_Start", _wrap_SBTrace_Start, METH_VARARGS,
+     "\n"
+     "SBTrace_Start(SBTrace self, SBStructuredData configuration) -> SBError\n"
+     "SBTrace_Start(SBTrace self, SBThread thread, SBStructuredData "
+     "configuration) -> SBError\n"
+     ""},
+    {"SBTrace_Stop", _wrap_SBTrace_Stop, METH_VARARGS,
+     "\n"
+     "SBTrace_Stop(SBTrace self) -> SBError\n"
+     "SBTrace_Stop(SBTrace self, SBThread thread) -> SBError\n"
+     ""},
+    {"SBTrace___nonzero__", _wrap_SBTrace___nonzero__, METH_O,
+     "SBTrace___nonzero__(SBTrace self) -> bool"},
+    {"SBTrace_IsValid", _wrap_SBTrace_IsValid, METH_O,
+     "SBTrace_IsValid(SBTrace self) -> bool"},
+    {"delete_SBTrace", _wrap_delete_SBTrace, METH_O,
+     "delete_SBTrace(SBTrace self)"},
+    {"SBTrace_swigregister", SBTrace_swigregister, METH_O, NULL},
+    {"SBTrace_swiginit", SBTrace_swiginit, METH_VARARGS, NULL},
+    {"new_SBTraceCursor", _wrap_new_SBTraceCursor, METH_NOARGS,
+     "new_SBTraceCursor() -> SBTraceCursor"},
+    {"SBTraceCursor_SetForwards", _wrap_SBTraceCursor_SetForwards, METH_VARARGS,
+     "SBTraceCursor_SetForwards(SBTraceCursor self, bool forwards)"},
+    {"SBTraceCursor_IsForwards", _wrap_SBTraceCursor_IsForwards, METH_O,
+     "SBTraceCursor_IsForwards(SBTraceCursor self) -> bool"},
+    {"SBTraceCursor_Next", _wrap_SBTraceCursor_Next, METH_O,
+     "SBTraceCursor_Next(SBTraceCursor self)"},
+    {"SBTraceCursor_HasValue", _wrap_SBTraceCursor_HasValue, METH_O,
+     "SBTraceCursor_HasValue(SBTraceCursor self) -> bool"},
+    {"SBTraceCursor_GoToId", _wrap_SBTraceCursor_GoToId, METH_VARARGS,
+     "SBTraceCursor_GoToId(SBTraceCursor self, lldb::user_id_t id) -> bool"},
+    {"SBTraceCursor_HasId", _wrap_SBTraceCursor_HasId, METH_VARARGS,
+     "SBTraceCursor_HasId(SBTraceCursor self, lldb::user_id_t id) -> bool"},
+    {"SBTraceCursor_GetId", _wrap_SBTraceCursor_GetId, METH_O,
+     "SBTraceCursor_GetId(SBTraceCursor self) -> lldb::user_id_t"},
+    {"SBTraceCursor_Seek", _wrap_SBTraceCursor_Seek, METH_VARARGS,
+     "SBTraceCursor_Seek(SBTraceCursor self, int64_t offset, "
+     "lldb::TraceCursorSeekType origin) -> bool"},
+    {"SBTraceCursor_GetItemKind", _wrap_SBTraceCursor_GetItemKind, METH_O,
+     "SBTraceCursor_GetItemKind(SBTraceCursor self) -> lldb::TraceItemKind"},
+    {"SBTraceCursor_IsError", _wrap_SBTraceCursor_IsError, METH_O,
+     "SBTraceCursor_IsError(SBTraceCursor self) -> bool"},
+    {"SBTraceCursor_GetError", _wrap_SBTraceCursor_GetError, METH_O,
+     "SBTraceCursor_GetError(SBTraceCursor self) -> char const *"},
+    {"SBTraceCursor_IsEvent", _wrap_SBTraceCursor_IsEvent, METH_O,
+     "SBTraceCursor_IsEvent(SBTraceCursor self) -> bool"},
+    {"SBTraceCursor_GetEventType", _wrap_SBTraceCursor_GetEventType, METH_O,
+     "SBTraceCursor_GetEventType(SBTraceCursor self) -> lldb::TraceEvent"},
+    {"SBTraceCursor_GetEventTypeAsString",
+     _wrap_SBTraceCursor_GetEventTypeAsString, METH_O,
+     "SBTraceCursor_GetEventTypeAsString(SBTraceCursor self) -> char const *"},
+    {"SBTraceCursor_IsInstruction", _wrap_SBTraceCursor_IsInstruction, METH_O,
+     "SBTraceCursor_IsInstruction(SBTraceCursor self) -> bool"},
+    {"SBTraceCursor_GetLoadAddress", _wrap_SBTraceCursor_GetLoadAddress, METH_O,
+     "SBTraceCursor_GetLoadAddress(SBTraceCursor self) -> lldb::addr_t"},
+    {"SBTraceCursor_GetCPU", _wrap_SBTraceCursor_GetCPU, METH_O,
+     "SBTraceCursor_GetCPU(SBTraceCursor self) -> lldb::cpu_id_t"},
+    {"SBTraceCursor_IsValid", _wrap_SBTraceCursor_IsValid, METH_O,
+     "SBTraceCursor_IsValid(SBTraceCursor self) -> bool"},
+    {"SBTraceCursor___nonzero__", _wrap_SBTraceCursor___nonzero__, METH_O,
+     "SBTraceCursor___nonzero__(SBTraceCursor self) -> bool"},
+    {"delete_SBTraceCursor", _wrap_delete_SBTraceCursor, METH_O,
+     "delete_SBTraceCursor(SBTraceCursor self)"},
+    {"SBTraceCursor_swigregister", SBTraceCursor_swigregister, METH_O, NULL},
+    {"SBTraceCursor_swiginit", SBTraceCursor_swiginit, METH_VARARGS, NULL},
+    {"new_SBTypeMember", _wrap_new_SBTypeMember, METH_VARARGS,
+     "\n"
+     "SBTypeMember()\n"
+     "new_SBTypeMember(SBTypeMember rhs) -> SBTypeMember\n"
+     ""},
+    {"delete_SBTypeMember", _wrap_delete_SBTypeMember, METH_O,
+     "delete_SBTypeMember(SBTypeMember self)"},
+    {"SBTypeMember___nonzero__", _wrap_SBTypeMember___nonzero__, METH_O,
+     "SBTypeMember___nonzero__(SBTypeMember self) -> bool"},
+    {"SBTypeMember_IsValid", _wrap_SBTypeMember_IsValid, METH_O,
+     "SBTypeMember_IsValid(SBTypeMember self) -> bool"},
+    {"SBTypeMember_GetName", _wrap_SBTypeMember_GetName, METH_O,
+     "SBTypeMember_GetName(SBTypeMember self) -> char const *"},
+    {"SBTypeMember_GetType", _wrap_SBTypeMember_GetType, METH_O,
+     "SBTypeMember_GetType(SBTypeMember self) -> SBType"},
+    {"SBTypeMember_GetOffsetInBytes", _wrap_SBTypeMember_GetOffsetInBytes,
+     METH_O, "SBTypeMember_GetOffsetInBytes(SBTypeMember self) -> uint64_t"},
+    {"SBTypeMember_GetOffsetInBits", _wrap_SBTypeMember_GetOffsetInBits, METH_O,
+     "SBTypeMember_GetOffsetInBits(SBTypeMember self) -> uint64_t"},
+    {"SBTypeMember_IsBitfield", _wrap_SBTypeMember_IsBitfield, METH_O,
+     "SBTypeMember_IsBitfield(SBTypeMember self) -> bool"},
+    {"SBTypeMember_GetBitfieldSizeInBits",
+     _wrap_SBTypeMember_GetBitfieldSizeInBits, METH_O,
+     "SBTypeMember_GetBitfieldSizeInBits(SBTypeMember self) -> uint32_t"},
+    {"SBTypeMember_GetDescription", _wrap_SBTypeMember_GetDescription,
+     METH_VARARGS,
+     "SBTypeMember_GetDescription(SBTypeMember self, SBStream description, "
+     "lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeMember___repr__", _wrap_SBTypeMember___repr__, METH_O,
+     "SBTypeMember___repr__(SBTypeMember self) -> std::string"},
+    {"SBTypeMember_swigregister", SBTypeMember_swigregister, METH_O, NULL},
+    {"SBTypeMember_swiginit", SBTypeMember_swiginit, METH_VARARGS, NULL},
+    {"new_SBTypeMemberFunction", _wrap_new_SBTypeMemberFunction, METH_VARARGS,
+     "\n"
+     "SBTypeMemberFunction()\n"
+     "new_SBTypeMemberFunction(SBTypeMemberFunction rhs) -> "
+     "SBTypeMemberFunction\n"
+     ""},
+    {"delete_SBTypeMemberFunction", _wrap_delete_SBTypeMemberFunction, METH_O,
+     "delete_SBTypeMemberFunction(SBTypeMemberFunction self)"},
+    {"SBTypeMemberFunction___nonzero__", _wrap_SBTypeMemberFunction___nonzero__,
+     METH_O,
+     "SBTypeMemberFunction___nonzero__(SBTypeMemberFunction self) -> bool"},
+    {"SBTypeMemberFunction_IsValid", _wrap_SBTypeMemberFunction_IsValid, METH_O,
+     "SBTypeMemberFunction_IsValid(SBTypeMemberFunction self) -> bool"},
+    {"SBTypeMemberFunction_GetName", _wrap_SBTypeMemberFunction_GetName, METH_O,
+     "SBTypeMemberFunction_GetName(SBTypeMemberFunction self) -> char const *"},
+    {"SBTypeMemberFunction_GetDemangledName",
+     _wrap_SBTypeMemberFunction_GetDemangledName, METH_O,
+     "SBTypeMemberFunction_GetDemangledName(SBTypeMemberFunction self) -> char "
+     "const *"},
+    {"SBTypeMemberFunction_GetMangledName",
+     _wrap_SBTypeMemberFunction_GetMangledName, METH_O,
+     "SBTypeMemberFunction_GetMangledName(SBTypeMemberFunction self) -> char "
+     "const *"},
+    {"SBTypeMemberFunction_GetType", _wrap_SBTypeMemberFunction_GetType, METH_O,
+     "SBTypeMemberFunction_GetType(SBTypeMemberFunction self) -> SBType"},
+    {"SBTypeMemberFunction_GetReturnType",
+     _wrap_SBTypeMemberFunction_GetReturnType, METH_O,
+     "SBTypeMemberFunction_GetReturnType(SBTypeMemberFunction self) -> SBType"},
+    {"SBTypeMemberFunction_GetNumberOfArguments",
+     _wrap_SBTypeMemberFunction_GetNumberOfArguments, METH_O,
+     "SBTypeMemberFunction_GetNumberOfArguments(SBTypeMemberFunction self) -> "
+     "uint32_t"},
+    {"SBTypeMemberFunction_GetArgumentTypeAtIndex",
+     _wrap_SBTypeMemberFunction_GetArgumentTypeAtIndex, METH_VARARGS,
+     "SBTypeMemberFunction_GetArgumentTypeAtIndex(SBTypeMemberFunction self, "
+     "uint32_t arg2) -> SBType"},
+    {"SBTypeMemberFunction_GetKind", _wrap_SBTypeMemberFunction_GetKind, METH_O,
+     "SBTypeMemberFunction_GetKind(SBTypeMemberFunction self) -> "
+     "lldb::MemberFunctionKind"},
+    {"SBTypeMemberFunction_GetDescription",
+     _wrap_SBTypeMemberFunction_GetDescription, METH_VARARGS,
+     "SBTypeMemberFunction_GetDescription(SBTypeMemberFunction self, SBStream "
+     "description, lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeMemberFunction___repr__", _wrap_SBTypeMemberFunction___repr__,
+     METH_O,
+     "SBTypeMemberFunction___repr__(SBTypeMemberFunction self) -> std::string"},
+    {"SBTypeMemberFunction_swigregister", SBTypeMemberFunction_swigregister,
+     METH_O, NULL},
+    {"SBTypeMemberFunction_swiginit", SBTypeMemberFunction_swiginit,
+     METH_VARARGS, NULL},
+    {"new_SBTypeStaticField", _wrap_new_SBTypeStaticField, METH_VARARGS,
+     "\n"
+     "SBTypeStaticField()\n"
+     "new_SBTypeStaticField(SBTypeStaticField rhs) -> SBTypeStaticField\n"
+     ""},
+    {"delete_SBTypeStaticField", _wrap_delete_SBTypeStaticField, METH_O,
+     "delete_SBTypeStaticField(SBTypeStaticField self)"},
+    {"SBTypeStaticField___nonzero__", _wrap_SBTypeStaticField___nonzero__,
+     METH_O, "SBTypeStaticField___nonzero__(SBTypeStaticField self) -> bool"},
+    {"SBTypeStaticField_IsValid", _wrap_SBTypeStaticField_IsValid, METH_O,
+     "SBTypeStaticField_IsValid(SBTypeStaticField self) -> bool"},
+    {"SBTypeStaticField_GetName", _wrap_SBTypeStaticField_GetName, METH_O,
+     "SBTypeStaticField_GetName(SBTypeStaticField self) -> char const *"},
+    {"SBTypeStaticField_GetMangledName", _wrap_SBTypeStaticField_GetMangledName,
+     METH_O,
+     "SBTypeStaticField_GetMangledName(SBTypeStaticField self) -> char const "
+     "*"},
+    {"SBTypeStaticField_GetType", _wrap_SBTypeStaticField_GetType, METH_O,
+     "SBTypeStaticField_GetType(SBTypeStaticField self) -> SBType"},
+    {"SBTypeStaticField_GetConstantValue",
+     _wrap_SBTypeStaticField_GetConstantValue, METH_VARARGS,
+     "SBTypeStaticField_GetConstantValue(SBTypeStaticField self, SBTarget "
+     "target) -> SBValue"},
+    {"SBTypeStaticField_swigregister", SBTypeStaticField_swigregister, METH_O,
+     NULL},
+    {"SBTypeStaticField_swiginit", SBTypeStaticField_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBType", _wrap_new_SBType, METH_VARARGS,
+     "\n"
+     "SBType()\n"
+     "new_SBType(SBType rhs) -> SBType\n"
+     ""},
+    {"delete_SBType", _wrap_delete_SBType, METH_O,
+     "delete_SBType(SBType self)"},
+    {"SBType___nonzero__", _wrap_SBType___nonzero__, METH_O,
+     "SBType___nonzero__(SBType self) -> bool"},
+    {"SBType_IsValid", _wrap_SBType_IsValid, METH_O,
+     "SBType_IsValid(SBType self) -> bool"},
+    {"SBType_GetByteSize", _wrap_SBType_GetByteSize, METH_O,
+     "\n"
+     "SBType_GetByteSize(SBType self) -> uint64_t\n"
+     "Returns the number of bytes a variable with the given types occupies in "
+     "memory.\n"
+     "\n"
+     "    Returns ``0`` if the size can't be determined.\n"
+     "\n"
+     "    If a type occupies ``N`` bytes + ``M`` bits in memory, this function "
+     "returns\n"
+     "    the rounded up amount of bytes (i.e., if ``M`` is ``0``,\n"
+     "    this function returns ``N`` and otherwise ``N + 1``).\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: The output is expected to match the value of ``sizeof(Type)``. "
+     "If\n"
+     "      ``sizeof(Type)`` is not a valid expression for the given type, "
+     "the\n"
+     "      function returns ``0``.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C. For Objective-C classes this always "
+     "returns\n"
+     "      ``0`` as the actual size depends on runtime information.\n"
+     "\n"
+     ""},
+    {"SBType_GetByteAlign", _wrap_SBType_GetByteAlign, METH_O,
+     "SBType_GetByteAlign(SBType self) -> uint64_t"},
+    {"SBType_IsPointerType", _wrap_SBType_IsPointerType, METH_O,
+     "\n"
+     "SBType_IsPointerType(SBType self) -> bool\n"
+     "Returns true if this type is a pointer type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns true for C pointer types (or typedefs of these types).\n"
+     "    * C++: Pointer types include the C pointer types as well as pointers "
+     "to data\n"
+     "      mebers or member functions.\n"
+     "    * Objective-C: Pointer types include the C pointer types. ``id``, "
+     "``Class``\n"
+     "      and pointers to blocks are also considered pointer types.\n"
+     "\n"
+     ""},
+    {"SBType_IsReferenceType", _wrap_SBType_IsReferenceType, METH_O,
+     "\n"
+     "SBType_IsReferenceType(SBType self) -> bool\n"
+     "Returns true if this type is a reference type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns false for all types.\n"
+     "    * C++: Both l-value and r-value references are considered reference "
+     "types.\n"
+     "    * Objective-C: Returns false for all types.\n"
+     "\n"
+     ""},
+    {"SBType_IsFunctionType", _wrap_SBType_IsFunctionType, METH_O,
+     "SBType_IsFunctionType(SBType self) -> bool"},
+    {"SBType_IsPolymorphicClass", _wrap_SBType_IsPolymorphicClass, METH_O,
+     "\n"
+     "SBType_IsPolymorphicClass(SBType self) -> bool\n"
+     "Returns true if this type is a polymorphic type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns false for all types.\n"
+     "    * C++: Returns true if the type is a class type that contains at "
+     "least one\n"
+     "      virtual member function or if at least one of its base classes is\n"
+     "      considered a polymorphic type.\n"
+     "    * Objective-C: Returns false for all types.\n"
+     "\n"
+     ""},
+    {"SBType_IsArrayType", _wrap_SBType_IsArrayType, METH_O,
+     "\n"
+     "SBType_IsArrayType(SBType self) -> bool\n"
+     "Returns true if this type is an array type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns true if the types is an array type. This includes "
+     "incomplete\n"
+     "      array types ``T[]`` and array types with integer (``T[1]``) or "
+     "variable\n"
+     "      length (``T[some_variable]``). Pointer types are not considered "
+     "arrays.\n"
+     "    * C++: Includes C's array types and dependent array types (i.e., "
+     "array types\n"
+     "      in templates which size depends on template arguments).\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_IsVectorType", _wrap_SBType_IsVectorType, METH_O,
+     "\n"
+     "SBType_IsVectorType(SBType self) -> bool\n"
+     "Returns true if this type is a vector type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns true if the types is a vector type created with\n"
+     "      GCC's ``vector_size`` or Clang's ``ext_vector_type`` feature.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_IsTypedefType", _wrap_SBType_IsTypedefType, METH_O,
+     "\n"
+     "SBType_IsTypedefType(SBType self) -> bool\n"
+     "Returns true if this type is a typedef.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns true if the type is a C typedef.\n"
+     "    * C++: Same as in C. Also treats type aliases as typedefs.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_IsAnonymousType", _wrap_SBType_IsAnonymousType, METH_O,
+     "\n"
+     "SBType_IsAnonymousType(SBType self) -> bool\n"
+     "Returns true if this type is an anonymous type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns true for anonymous unions. Also returns true for\n"
+     "      anonymous structs (which are a GNU language extension).\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_IsScopedEnumerationType", _wrap_SBType_IsScopedEnumerationType,
+     METH_O,
+     "\n"
+     "SBType_IsScopedEnumerationType(SBType self) -> bool\n"
+     "Returns true if this type is a scoped enum.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns false for all types.\n"
+     "    * C++: Return true only for C++11 scoped enums.\n"
+     "    * Objective-C: Returns false for all types.\n"
+     "\n"
+     ""},
+    {"SBType_IsAggregateType", _wrap_SBType_IsAggregateType, METH_O,
+     "\n"
+     "SBType_IsAggregateType(SBType self) -> bool\n"
+     "Returns true if this type is an aggregate type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns true for struct values, arrays, and vectors.\n"
+     "    * C++: Same a C. Also includes class instances.\n"
+     "    * Objective-C: Same as C. Also includes class instances.\n"
+     "\n"
+     ""},
+    {"SBType_GetPointerType", _wrap_SBType_GetPointerType, METH_O,
+     "\n"
+     "SBType_GetPointerType(SBType self) -> SBType\n"
+     "Returns a type that represents a pointer to this type.\n"
+     "\n"
+     "    If the type system of the current language can't represent a pointer "
+     "to this\n"
+     "    type or this type is invalid, an invalid `SBType` is returned.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns the pointer type of this type.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetPointeeType", _wrap_SBType_GetPointeeType, METH_O,
+     "\n"
+     "SBType_GetPointeeType(SBType self) -> SBType\n"
+     "Returns the underlying pointee type.\n"
+     "\n"
+     "    If this type is a pointer type as specified by `IsPointerType` then "
+     "this\n"
+     "    returns the underlying type. If this is not a pointer type or an "
+     "invalid\n"
+     "    `SBType` then this returns an invalid `SBType`.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns the underlying type for for C pointer types or typedefs "
+     "of\n"
+     "      these types). For example, ``int *`` will return ``int``.\n"
+     "    * C++: Same as in C. Returns an `SBType` representation for data "
+     "members/\n"
+     "      member functions in case the `SBType` is a pointer to data member "
+     "or\n"
+     "      pointer to member function.\n"
+     "    * Objective-C: Same as in C. The pointee type of ``id`` and "
+     "``Class`` is\n"
+     "      an invalid `SBType`. The pointee type of pointers Objective-C "
+     "types is an\n"
+     "      `SBType` for the non-pointer type of the respective type. For "
+     "example,\n"
+     "      ``NSString *`` will return ``NSString`` as a pointee type.\n"
+     "\n"
+     ""},
+    {"SBType_GetReferenceType", _wrap_SBType_GetReferenceType, METH_O,
+     "\n"
+     "SBType_GetReferenceType(SBType self) -> SBType\n"
+     "Returns a type that represents a reference to this type.\n"
+     "\n"
+     "    If the type system of the current language can't represent a "
+     "reference to\n"
+     "    this type, an invalid `SBType` is returned.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Currently assumes the type system is C++ and returns an "
+     "l-value\n"
+     "      reference type. For example, ``int`` will return ``int&``. This "
+     "behavior\n"
+     "      is likely to change in the future and shouldn't be relied on.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetTypedefedType", _wrap_SBType_GetTypedefedType, METH_O,
+     "\n"
+     "SBType_GetTypedefedType(SBType self) -> SBType\n"
+     "Returns the underlying type of a typedef.\n"
+     "\n"
+     "    If this type is a typedef as designated by `IsTypedefType`, then "
+     "the\n"
+     "    underlying type is being returned. Otherwise an invalid `SBType` is\n"
+     "    returned.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns the underlying type of a typedef type.\n"
+     "    * C++: Same as in C. For type aliases, the underlying type is "
+     "returned.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetDereferencedType", _wrap_SBType_GetDereferencedType, METH_O,
+     "\n"
+     "SBType_GetDereferencedType(SBType self) -> SBType\n"
+     "Returns the underlying type of a reference type.\n"
+     "\n"
+     "    If this type is a reference as designated by `IsReferenceType`, then "
+     "the\n"
+     "    underlying type is being returned. Otherwise an invalid `SBType` is\n"
+     "    returned.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Always returns an invalid type.\n"
+     "    * C++: For l-value and r-value references the underlying type is "
+     "returned.\n"
+     "      For example, ``int &`` will return ``int``.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetUnqualifiedType", _wrap_SBType_GetUnqualifiedType, METH_O,
+     "\n"
+     "SBType_GetUnqualifiedType(SBType self) -> SBType\n"
+     "Returns the unqualified version of this type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: If this type with any const or volatile specifier removed.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetArrayElementType", _wrap_SBType_GetArrayElementType, METH_O,
+     "\n"
+     "SBType_GetArrayElementType(SBType self) -> SBType\n"
+     "Returns the array element type if this type is an array type.\n"
+     "\n"
+     "    Otherwise returns an invalid `SBType` if this type is invalid or not "
+     "an\n"
+     "    array type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: If this is an array type (see `IsArrayType`) such as ``T[]``, "
+     "returns\n"
+     "      the element type.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     "    See also `IsArrayType`.\n"
+     "\n"
+     ""},
+    {"SBType_GetArrayType", _wrap_SBType_GetArrayType, METH_VARARGS,
+     "\n"
+     "SBType_GetArrayType(SBType self, uint64_t size) -> SBType\n"
+     "Returns the array type with the given constant size.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns a constant-size array ``T[size]`` for any non-void "
+     "type.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     "    See also `IsArrayType` and `GetArrayElementType`.\n"
+     "\n"
+     ""},
+    {"SBType_GetVectorElementType", _wrap_SBType_GetVectorElementType, METH_O,
+     "\n"
+     "SBType_GetVectorElementType(SBType self) -> SBType\n"
+     "Returns the vector element type if this type is a vector type.\n"
+     "\n"
+     "    Otherwise returns an invalid `SBType` if this type is invalid or not "
+     "a\n"
+     "    vector type.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: If this is a vector type (see `IsVectorType`), returns the "
+     "element\n"
+     "      type.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     "    See also `IsVectorType`.\n"
+     "\n"
+     ""},
+    {"SBType_GetCanonicalType", _wrap_SBType_GetCanonicalType, METH_O,
+     "SBType_GetCanonicalType(SBType self) -> SBType"},
+    {"SBType_GetEnumerationIntegerType", _wrap_SBType_GetEnumerationIntegerType,
+     METH_O,
+     "\n"
+     "SBType_GetEnumerationIntegerType(SBType self) -> SBType\n"
+     "Returns the underlying integer type if this is an enumeration type.\n"
+     "\n"
+     "    If this type is an invalid `SBType` or not an enumeration type an "
+     "invalid\n"
+     "    `SBType` is returned.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns the underlying type for enums.\n"
+     "    * C++: Same as in C but also returns the underlying type for scoped "
+     "enums.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetBasicType", _wrap_SBType_GetBasicType, METH_VARARGS,
+     "\n"
+     "SBType_GetBasicType(SBType self) -> lldb::BasicType\n"
+     "SBType_GetBasicType(SBType self, lldb::BasicType type) -> SBType\n"
+     "Returns the `BasicType` value that is most appropriate to this type.\n"
+     "\n"
+     "    Returns `eBasicTypeInvalid` if no appropriate `BasicType` was found "
+     "or this\n"
+     "    type is invalid. See the `BasicType` documentation for the "
+     "language-specific\n"
+     "    meaning of each `BasicType` value.\n"
+     "\n"
+     "    **Overload behaviour:** When called with a `BasicType` parameter, "
+     "the\n"
+     "    following behaviour applies:\n"
+     "\n"
+     "    Returns the `SBType` that represents the passed `BasicType` value. "
+     "Returns\n"
+     "    an invalid `SBType` if no fitting `SBType` could be created.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns the respective builtin type. Note that some types\n"
+     "      (e.g. ``__uint128_t``) might even be successfully created even if "
+     "they are\n"
+     "      not available on the target platform. C++ and Objective-C specific "
+     "types\n"
+     "      might also be created even if the target program is not written in "
+     "C++ or\n"
+     "      Objective-C.\n"
+     "    * C++: Same as in C.\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetNumberOfFields", _wrap_SBType_GetNumberOfFields, METH_O,
+     "\n"
+     "SBType_GetNumberOfFields(SBType self) -> uint32_t\n"
+     "Returns the number of fields of this type.\n"
+     "\n"
+     "    Returns ``0`` if this type does not have fields.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns the number of fields if the type is a struct. If the "
+     "type\n"
+     "      contains an anonymous struct/union it only counts as a single "
+     "field (even\n"
+     "      if the struct/union contains several fields).\n"
+     "    * C++: Returns the number of non-static fields if the type is a\n"
+     "      struct/class. If the type contains an anonymous struct/union it "
+     "only\n"
+     "      counts as a single field (even if the struct/union contains "
+     "several\n"
+     "      fields). The fields of any base classes are not included in the "
+     "count.\n"
+     "    * Objective-C: Same as in C for structs. For Objective-C classes the "
+     "number\n"
+     "      of ivars is returned.\n"
+     "\n"
+     "    See also `GetFieldAtIndex`.\n"
+     "\n"
+     ""},
+    {"SBType_GetNumberOfDirectBaseClasses",
+     _wrap_SBType_GetNumberOfDirectBaseClasses, METH_O,
+     "\n"
+     "SBType_GetNumberOfDirectBaseClasses(SBType self) -> uint32_t\n"
+     "Returns the number of base/parent classes of this type.\n"
+     "\n"
+     "    Returns ``0`` if this type doesn't have any base classes.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns always ``0``.\n"
+     "    * C++: The number of direct non-virtual base classes if this type "
+     "is\n"
+     "      a class.\n"
+     "    * Objective-C: The number of super classes for Objective-C classes.\n"
+     "      As Objective-C doesn't have multiple inheritance this is usually "
+     "returns 1\n"
+     "      except for NSObject.\n"
+     "\n"
+     ""},
+    {"SBType_GetNumberOfVirtualBaseClasses",
+     _wrap_SBType_GetNumberOfVirtualBaseClasses, METH_O,
+     "\n"
+     "SBType_GetNumberOfVirtualBaseClasses(SBType self) -> uint32_t\n"
+     "Returns the number of virtual base/parent classes of this type\n"
+     "\n"
+     "    Returns ``0`` if this type doesn't have any base classes.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns always ``0``.\n"
+     "    * C++: The number of direct virtual base classes if this type is a\n"
+     "      class.\n"
+     "    * Objective-C: Returns always ``0``.\n"
+     "\n"
+     ""},
+    {"SBType_GetFieldAtIndex", _wrap_SBType_GetFieldAtIndex, METH_VARARGS,
+     "\n"
+     "SBType_GetFieldAtIndex(SBType self, uint32_t idx) -> SBTypeMember\n"
+     "Returns the field at the given index.\n"
+     "\n"
+     "    Returns an invalid `SBType` if the index is out of range or the "
+     "current\n"
+     "    type doesn't have any fields.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns the field with the given index for struct types. Fields "
+     "are\n"
+     "      ordered/indexed starting from ``0`` for the first field in a "
+     "struct (as\n"
+     "      declared in the definition).\n"
+     "    * C++: Returns the non-static field with the given index for struct "
+     "types.\n"
+     "      Fields are ordered/indexed starting from ``0`` for the first field "
+     "in a\n"
+     "      struct (as declared in the definition).\n"
+     "    * Objective-C: Same as in C for structs. For Objective-C classes the "
+     "ivar\n"
+     "      with the given index is returned. ivars are indexed starting from "
+     "``0``.\n"
+     "\n"
+     ""},
+    {"SBType_GetDirectBaseClassAtIndex", _wrap_SBType_GetDirectBaseClassAtIndex,
+     METH_VARARGS,
+     "\n"
+     "SBType_GetDirectBaseClassAtIndex(SBType self, uint32_t idx) -> "
+     "SBTypeMember\n"
+     "Returns the direct base class as indexed by "
+     "`GetNumberOfDirectBaseClasses`.\n"
+     "\n"
+     "    Returns an invalid SBTypeMember if the index is invalid or this "
+     "SBType is\n"
+     "    invalid.\n"
+     "\n"
+     ""},
+    {"SBType_GetVirtualBaseClassAtIndex",
+     _wrap_SBType_GetVirtualBaseClassAtIndex, METH_VARARGS,
+     "\n"
+     "SBType_GetVirtualBaseClassAtIndex(SBType self, uint32_t idx) -> "
+     "SBTypeMember\n"
+     "Returns the virtual base class as indexed by\n"
+     "    `GetNumberOfVirtualBaseClasses`.\n"
+     "\n"
+     "    Returns an invalid SBTypeMember if the index is invalid or this "
+     "SBType is\n"
+     "    invalid.\n"
+     "\n"
+     ""},
+    {"SBType_GetStaticFieldWithName", _wrap_SBType_GetStaticFieldWithName,
+     METH_VARARGS,
+     "SBType_GetStaticFieldWithName(SBType self, char const * name) -> "
+     "SBTypeStaticField"},
+    {"SBType_GetEnumMembers", _wrap_SBType_GetEnumMembers, METH_O,
+     "SBType_GetEnumMembers(SBType self) -> SBTypeEnumMemberList"},
+    {"SBType_GetNumberOfTemplateArguments",
+     _wrap_SBType_GetNumberOfTemplateArguments, METH_O,
+     "\n"
+     "SBType_GetNumberOfTemplateArguments(SBType self) -> uint32_t\n"
+     "Returns the number of template arguments of this type.\n"
+     "\n"
+     "    Returns ``0`` if this type is not a template.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Always returns ``0``.\n"
+     "    * C++: If this type is a class template instantiation then this "
+     "returns the\n"
+     "      number of template parameters that were used in this "
+     "instantiation. This\n"
+     "      includes both explicit and implicit template parameters.\n"
+     "    * Objective-C: Always returns ``0``.\n"
+     "\n"
+     ""},
+    {"SBType_GetTemplateArgumentType", _wrap_SBType_GetTemplateArgumentType,
+     METH_VARARGS,
+     "\n"
+     "SBType_GetTemplateArgumentType(SBType self, uint32_t idx) -> SBType\n"
+     "Returns the type of the template argument with the given index.\n"
+     "\n"
+     "    Returns an invalid `SBType` if there is no template argument with "
+     "the given\n"
+     "    index or this type is not a template. The first template  argument "
+     "has the\n"
+     "    index ``0``.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Always returns an invalid SBType.\n"
+     "    * C++: If this type is a class template instantiation and the "
+     "template\n"
+     "      parameter with the given index is a type template parameter, then "
+     "this\n"
+     "      returns the type of that parameter. Otherwise returns an invalid "
+     "`SBType`.\n"
+     "    * Objective-C: Always returns an invalid SBType.\n"
+     "\n"
+     ""},
+    {"SBType_GetTemplateArgumentKind", _wrap_SBType_GetTemplateArgumentKind,
+     METH_VARARGS,
+     "\n"
+     "SBType_GetTemplateArgumentKind(SBType self, uint32_t idx) -> "
+     "lldb::TemplateArgumentKind\n"
+     "Returns the kind of the template argument with the given index.\n"
+     "\n"
+     "    Returns `eTemplateArgumentKindNull` if there is no template "
+     "argument\n"
+     "    with the given index or this type is not a template. The first "
+     "template\n"
+     "    argument has the index ``0``.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Always returns `eTemplateArgumentKindNull`.\n"
+     "    * C++: If this type is a class template instantiation then this "
+     "returns\n"
+     "      the appropriate `TemplateArgument` value for the parameter with "
+     "the given\n"
+     "      index. See the documentation of `TemplateArgument` for how certain "
+     "C++\n"
+     "      template parameter kinds are mapped to `TemplateArgument` values.\n"
+     "    * Objective-C: Always returns `eTemplateArgumentKindNull`.\n"
+     "\n"
+     ""},
+    {"SBType_GetFunctionReturnType", _wrap_SBType_GetFunctionReturnType, METH_O,
+     "\n"
+     "SBType_GetFunctionReturnType(SBType self) -> SBType\n"
+     "Returns the return type if this type represents a function.\n"
+     "\n"
+     "    Returns an invalid `SBType` if this type is not a function type or "
+     "invalid.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: For functions return the return type. Returns an invalid "
+     "`SBType` if\n"
+     "      this type is a function pointer type.\n"
+     "    * C++: Same as in C for functions and instantiated template "
+     "functions.\n"
+     "      Member functions are also considered functions. For functions that "
+     "have\n"
+     "      their return type specified by a placeholder type specifier "
+     "(``auto``)\n"
+     "      this returns the deduced return type.\n"
+     "    * Objective-C: Same as in C for functions. For Objective-C methods "
+     "this\n"
+     "      returns the return type of the method.\n"
+     "\n"
+     ""},
+    {"SBType_GetFunctionArgumentTypes", _wrap_SBType_GetFunctionArgumentTypes,
+     METH_O,
+     "\n"
+     "SBType_GetFunctionArgumentTypes(SBType self) -> SBTypeList\n"
+     "Returns the list of argument types if this type represents a function.\n"
+     "\n"
+     "    Returns an invalid `SBType` if this type is not a function type or "
+     "invalid.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: For functions return the types of each parameter. Returns an "
+     "invalid\n"
+     "      `SBType` if this type is a function pointer. For variadic "
+     "functions this\n"
+     "      just returns the list of parameters before the variadic "
+     "arguments.\n"
+     "    * C++: Same as in C for functions and instantiated template "
+     "functions.\n"
+     "      Member functions are also considered functions.\n"
+     "    * Objective-C: Always returns an invalid SBType for Objective-C "
+     "methods.\n"
+     "\n"
+     ""},
+    {"SBType_GetNumberOfMemberFunctions",
+     _wrap_SBType_GetNumberOfMemberFunctions, METH_O,
+     "\n"
+     "SBType_GetNumberOfMemberFunctions(SBType self) -> uint32_t\n"
+     "Returns the number of member functions of this type.\n"
+     "\n"
+     "    Returns ``0`` if an error occurred or this type is invalid.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Always returns ``0``.\n"
+     "    * C++: If this type represents a struct/class, then the number of\n"
+     "      member functions (static and non-static) is returned. The count "
+     "includes\n"
+     "      constructors and destructors (both explicit and implicit). Member\n"
+     "      functions of base classes are not included in the count.\n"
+     "    * Objective-C: If this type represents a struct/class, then the\n"
+     "      number of methods is returned. Methods in categories or super "
+     "classes\n"
+     "      are not counted.\n"
+     "\n"
+     ""},
+    {"SBType_GetMemberFunctionAtIndex", _wrap_SBType_GetMemberFunctionAtIndex,
+     METH_VARARGS,
+     "\n"
+     "SBType_GetMemberFunctionAtIndex(SBType self, uint32_t idx) -> "
+     "SBTypeMemberFunction\n"
+     "Returns the member function of this type with the given index.\n"
+     "\n"
+     "    Returns an invalid `SBTypeMemberFunction` if the index is invalid or "
+     "this\n"
+     "    type is invalid.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Always returns an invalid `SBTypeMemberFunction`.\n"
+     "    * C++: Returns the member function or constructor/destructor with "
+     "the given\n"
+     "      index.\n"
+     "    * Objective-C: Returns the method with the given index.\n"
+     "\n"
+     "    See `GetNumberOfMemberFunctions` for what functions can be queried "
+     "by this\n"
+     "    function.\n"
+     "\n"
+     ""},
+    {"SBType_GetModule", _wrap_SBType_GetModule, METH_O,
+     "\n"
+     "SBType_GetModule(SBType self) -> SBModule\n"
+     "Returns the `SBModule` this `SBType` belongs to.\n"
+     "\n"
+     "    Returns no `SBModule` if this type does not belong to any specific\n"
+     "    `SBModule` or this `SBType` is invalid. An invalid `SBModule` might "
+     "also\n"
+     "    indicate that once came from an `SBModule` but LLDB could no longer\n"
+     "    determine the original module.\n"
+     "\n"
+     ""},
+    {"SBType_GetName", _wrap_SBType_GetName, METH_O,
+     "\n"
+     "GetName() -> string\n"
+     "Returns the name of this type.\n"
+     "\n"
+     "    Returns an empty string if an error occurred or this type is "
+     "invalid.\n"
+     "\n"
+     "    Use this function when trying to match a specific type by name in a "
+     "script.\n"
+     "    The names returned by this function try to uniquely identify a name "
+     "but\n"
+     "    conflicts can occur (for example, if a C++ program contains two "
+     "different\n"
+     "    classes with the same name in different translation units. `GetName` "
+     "can\n"
+     "    return the same name for both class types.)\n"
+     "\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: The name of the type. For structs the ``struct`` prefix is "
+     "omitted.\n"
+     "    * C++: Returns the qualified name of the type (including "
+     "anonymous/inline\n"
+     "      namespaces and all template arguments).\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetDisplayTypeName", _wrap_SBType_GetDisplayTypeName, METH_O,
+     "\n"
+     "GetDisplayTypeName() -> string\n"
+     "Returns the name of this type in a user-friendly format.\n"
+     "\n"
+     "    Returns an empty string if an error occurred or this type is "
+     "invalid.\n"
+     "\n"
+     "    Use this function when displaying a type name to the user.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns the type name. For structs the ``struct`` prefix is "
+     "omitted.\n"
+     "    * C++: Returns the qualified name. Anonymous/inline namespaces are "
+     "omitted.\n"
+     "      Template arguments that match their default value might also be "
+     "hidden\n"
+     "      (this functionality depends on whether LLDB can determine the "
+     "template's\n"
+     "      default arguments).\n"
+     "    * Objective-C: Same as in C.\n"
+     "\n"
+     ""},
+    {"SBType_GetTypeClass", _wrap_SBType_GetTypeClass, METH_O,
+     "\n"
+     "GetTypeClass() -> TypeClass\n"
+     "Returns the `TypeClass` for this type.\n"
+     "\n"
+     "    Returns an `eTypeClassInvalid` if this `SBType` is invalid.\n"
+     "\n"
+     "    See `TypeClass` for the language-specific meaning of each "
+     "`TypeClass` value.\n"
+     "\n"
+     ""},
+    {"SBType_IsTypeComplete", _wrap_SBType_IsTypeComplete, METH_O,
+     "\n"
+     "SBType_IsTypeComplete(SBType self) -> bool\n"
+     "Returns true if the type is completely defined.\n"
+     "\n"
+     "    Language-specific behaviour:\n"
+     "\n"
+     "    * C: Returns false for struct types that were only forward declared "
+     "in the\n"
+     "      type's `SBTarget`/`SBModule`. Otherwise returns true.\n"
+     "    * C++: Returns false for template/non-template struct/class types "
+     "and\n"
+     "      scoped enums that were only forward declared inside the type's\n"
+     "      `SBTarget`/`SBModule`. Otherwise returns true.\n"
+     "    * Objective-C: Follows the same behavior as C for struct types. "
+     "Objective-C\n"
+     "      classes are considered complete unless they were only forward "
+     "declared via\n"
+     "      ``@class ClassName`` in the type's `SBTarget`/`SBModule`. "
+     "Otherwise\n"
+     "      returns true.\n"
+     "\n"
+     ""},
+    {"SBType_GetTypeFlags", _wrap_SBType_GetTypeFlags, METH_O,
+     "\n"
+     "SBType_GetTypeFlags(SBType self) -> uint32_t\n"
+     "Returns the `TypeFlags` values for this type.\n"
+     "\n"
+     "    See the respective `TypeFlags` values for what values can be set. "
+     "Returns an\n"
+     "    integer in which each `TypeFlags` value is represented by a bit. "
+     "Specific\n"
+     "    flags can be checked via Python's bitwise operators. For example, "
+     "the\n"
+     "    `eTypeIsInteger` flag can be checked like this:\n"
+     "\n"
+     "    ``(an_sb_type.GetTypeFlags() & lldb.eTypeIsInteger) != 0``\n"
+     "\n"
+     "    If this type is invalid this returns ``0``.\n"
+     "\n"
+     "    See the different values for `TypeFlags` for the language-specific "
+     "meanings\n"
+     "    of each `TypeFlags` value.\n"
+     "\n"
+     ""},
+    {"SBType_GetDescription", _wrap_SBType_GetDescription, METH_VARARGS,
+     "SBType_GetDescription(SBType self, SBStream description, "
+     "lldb::DescriptionLevel description_level) -> bool"},
+    {"SBType_FindDirectNestedType", _wrap_SBType_FindDirectNestedType,
+     METH_VARARGS,
+     "\n"
+     "SBType_FindDirectNestedType(SBType self, char const * name) -> SBType\n"
+     "Searches for a directly nested type that has the provided name.\n"
+     "\n"
+     "    Returns the type if it was found.\n"
+     "    Returns invalid type if nothing was found.\n"
+     "\n"
+     ""},
+    {"SBType___eq__", _wrap_SBType___eq__, METH_VARARGS,
+     "SBType___eq__(SBType self, SBType rhs) -> bool"},
+    {"SBType___ne__", _wrap_SBType___ne__, METH_VARARGS,
+     "SBType___ne__(SBType self, SBType rhs) -> bool"},
+    {"SBType___repr__", _wrap_SBType___repr__, METH_O,
+     "SBType___repr__(SBType self) -> std::string"},
+    {"SBType_swigregister", SBType_swigregister, METH_O, NULL},
+    {"SBType_swiginit", SBType_swiginit, METH_VARARGS, NULL},
+    {"new_SBTypeList", _wrap_new_SBTypeList, METH_VARARGS,
+     "\n"
+     "SBTypeList()\n"
+     "new_SBTypeList(SBTypeList rhs) -> SBTypeList\n"
+     ""},
+    {"delete_SBTypeList", _wrap_delete_SBTypeList, METH_O,
+     "delete_SBTypeList(SBTypeList self)"},
+    {"SBTypeList___nonzero__", _wrap_SBTypeList___nonzero__, METH_O,
+     "SBTypeList___nonzero__(SBTypeList self) -> bool"},
+    {"SBTypeList_IsValid", _wrap_SBTypeList_IsValid, METH_O,
+     "SBTypeList_IsValid(SBTypeList self) -> bool"},
+    {"SBTypeList_Append", _wrap_SBTypeList_Append, METH_VARARGS,
+     "SBTypeList_Append(SBTypeList self, SBType type)"},
+    {"SBTypeList_GetTypeAtIndex", _wrap_SBTypeList_GetTypeAtIndex, METH_VARARGS,
+     "SBTypeList_GetTypeAtIndex(SBTypeList self, uint32_t index) -> SBType"},
+    {"SBTypeList_GetSize", _wrap_SBTypeList_GetSize, METH_O,
+     "SBTypeList_GetSize(SBTypeList self) -> uint32_t"},
+    {"SBTypeList_swigregister", SBTypeList_swigregister, METH_O, NULL},
+    {"SBTypeList_swiginit", SBTypeList_swiginit, METH_VARARGS, NULL},
+    {"new_SBTypeCategory", _wrap_new_SBTypeCategory, METH_VARARGS,
+     "\n"
+     "SBTypeCategory()\n"
+     "new_SBTypeCategory(SBTypeCategory rhs) -> SBTypeCategory\n"
+     ""},
+    {"delete_SBTypeCategory", _wrap_delete_SBTypeCategory, METH_O,
+     "delete_SBTypeCategory(SBTypeCategory self)"},
+    {"SBTypeCategory___nonzero__", _wrap_SBTypeCategory___nonzero__, METH_O,
+     "SBTypeCategory___nonzero__(SBTypeCategory self) -> bool"},
+    {"SBTypeCategory_IsValid", _wrap_SBTypeCategory_IsValid, METH_O,
+     "SBTypeCategory_IsValid(SBTypeCategory self) -> bool"},
+    {"SBTypeCategory_GetEnabled", _wrap_SBTypeCategory_GetEnabled, METH_O,
+     "SBTypeCategory_GetEnabled(SBTypeCategory self) -> bool"},
+    {"SBTypeCategory_SetEnabled", _wrap_SBTypeCategory_SetEnabled, METH_VARARGS,
+     "SBTypeCategory_SetEnabled(SBTypeCategory self, bool arg2)"},
+    {"SBTypeCategory_GetName", _wrap_SBTypeCategory_GetName, METH_O,
+     "SBTypeCategory_GetName(SBTypeCategory self) -> char const *"},
+    {"SBTypeCategory_GetLanguageAtIndex",
+     _wrap_SBTypeCategory_GetLanguageAtIndex, METH_VARARGS,
+     "SBTypeCategory_GetLanguageAtIndex(SBTypeCategory self, uint32_t idx) -> "
+     "lldb::LanguageType"},
+    {"SBTypeCategory_GetNumLanguages", _wrap_SBTypeCategory_GetNumLanguages,
+     METH_O, "SBTypeCategory_GetNumLanguages(SBTypeCategory self) -> uint32_t"},
+    {"SBTypeCategory_AddLanguage", _wrap_SBTypeCategory_AddLanguage,
+     METH_VARARGS,
+     "SBTypeCategory_AddLanguage(SBTypeCategory self, lldb::LanguageType "
+     "language)"},
+    {"SBTypeCategory_GetDescription", _wrap_SBTypeCategory_GetDescription,
+     METH_VARARGS,
+     "SBTypeCategory_GetDescription(SBTypeCategory self, SBStream description, "
+     "lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeCategory_GetNumFormats", _wrap_SBTypeCategory_GetNumFormats, METH_O,
+     "SBTypeCategory_GetNumFormats(SBTypeCategory self) -> uint32_t"},
+    {"SBTypeCategory_GetNumSummaries", _wrap_SBTypeCategory_GetNumSummaries,
+     METH_O, "SBTypeCategory_GetNumSummaries(SBTypeCategory self) -> uint32_t"},
+    {"SBTypeCategory_GetNumFilters", _wrap_SBTypeCategory_GetNumFilters, METH_O,
+     "SBTypeCategory_GetNumFilters(SBTypeCategory self) -> uint32_t"},
+    {"SBTypeCategory_GetNumSynthetics", _wrap_SBTypeCategory_GetNumSynthetics,
+     METH_O,
+     "SBTypeCategory_GetNumSynthetics(SBTypeCategory self) -> uint32_t"},
+    {"SBTypeCategory_GetTypeNameSpecifierForFilterAtIndex",
+     _wrap_SBTypeCategory_GetTypeNameSpecifierForFilterAtIndex, METH_VARARGS,
+     "SBTypeCategory_GetTypeNameSpecifierForFilterAtIndex(SBTypeCategory self, "
+     "uint32_t arg2) -> SBTypeNameSpecifier"},
+    {"SBTypeCategory_GetTypeNameSpecifierForFormatAtIndex",
+     _wrap_SBTypeCategory_GetTypeNameSpecifierForFormatAtIndex, METH_VARARGS,
+     "SBTypeCategory_GetTypeNameSpecifierForFormatAtIndex(SBTypeCategory self, "
+     "uint32_t arg2) -> SBTypeNameSpecifier"},
+    {"SBTypeCategory_GetTypeNameSpecifierForSummaryAtIndex",
+     _wrap_SBTypeCategory_GetTypeNameSpecifierForSummaryAtIndex, METH_VARARGS,
+     "SBTypeCategory_GetTypeNameSpecifierForSummaryAtIndex(SBTypeCategory "
+     "self, uint32_t arg2) -> SBTypeNameSpecifier"},
+    {"SBTypeCategory_GetTypeNameSpecifierForSyntheticAtIndex",
+     _wrap_SBTypeCategory_GetTypeNameSpecifierForSyntheticAtIndex, METH_VARARGS,
+     "SBTypeCategory_GetTypeNameSpecifierForSyntheticAtIndex(SBTypeCategory "
+     "self, uint32_t arg2) -> SBTypeNameSpecifier"},
+    {"SBTypeCategory_GetFilterForType", _wrap_SBTypeCategory_GetFilterForType,
+     METH_VARARGS,
+     "SBTypeCategory_GetFilterForType(SBTypeCategory self, SBTypeNameSpecifier "
+     "arg2) -> SBTypeFilter"},
+    {"SBTypeCategory_GetFormatForType", _wrap_SBTypeCategory_GetFormatForType,
+     METH_VARARGS,
+     "SBTypeCategory_GetFormatForType(SBTypeCategory self, SBTypeNameSpecifier "
+     "arg2) -> SBTypeFormat"},
+    {"SBTypeCategory_GetSummaryForType", _wrap_SBTypeCategory_GetSummaryForType,
+     METH_VARARGS,
+     "SBTypeCategory_GetSummaryForType(SBTypeCategory self, "
+     "SBTypeNameSpecifier arg2) -> SBTypeSummary"},
+    {"SBTypeCategory_GetSyntheticForType",
+     _wrap_SBTypeCategory_GetSyntheticForType, METH_VARARGS,
+     "SBTypeCategory_GetSyntheticForType(SBTypeCategory self, "
+     "SBTypeNameSpecifier arg2) -> SBTypeSynthetic"},
+    {"SBTypeCategory_GetFilterAtIndex", _wrap_SBTypeCategory_GetFilterAtIndex,
+     METH_VARARGS,
+     "SBTypeCategory_GetFilterAtIndex(SBTypeCategory self, uint32_t arg2) -> "
+     "SBTypeFilter"},
+    {"SBTypeCategory_GetFormatAtIndex", _wrap_SBTypeCategory_GetFormatAtIndex,
+     METH_VARARGS,
+     "SBTypeCategory_GetFormatAtIndex(SBTypeCategory self, uint32_t arg2) -> "
+     "SBTypeFormat"},
+    {"SBTypeCategory_GetSummaryAtIndex", _wrap_SBTypeCategory_GetSummaryAtIndex,
+     METH_VARARGS,
+     "SBTypeCategory_GetSummaryAtIndex(SBTypeCategory self, uint32_t arg2) -> "
+     "SBTypeSummary"},
+    {"SBTypeCategory_GetSyntheticAtIndex",
+     _wrap_SBTypeCategory_GetSyntheticAtIndex, METH_VARARGS,
+     "SBTypeCategory_GetSyntheticAtIndex(SBTypeCategory self, uint32_t arg2) "
+     "-> SBTypeSynthetic"},
+    {"SBTypeCategory_AddTypeFormat", _wrap_SBTypeCategory_AddTypeFormat,
+     METH_VARARGS,
+     "SBTypeCategory_AddTypeFormat(SBTypeCategory self, SBTypeNameSpecifier "
+     "arg2, SBTypeFormat arg3) -> bool"},
+    {"SBTypeCategory_DeleteTypeFormat", _wrap_SBTypeCategory_DeleteTypeFormat,
+     METH_VARARGS,
+     "SBTypeCategory_DeleteTypeFormat(SBTypeCategory self, SBTypeNameSpecifier "
+     "arg2) -> bool"},
+    {"SBTypeCategory_AddTypeSummary", _wrap_SBTypeCategory_AddTypeSummary,
+     METH_VARARGS,
+     "SBTypeCategory_AddTypeSummary(SBTypeCategory self, SBTypeNameSpecifier "
+     "arg2, SBTypeSummary arg3) -> bool"},
+    {"SBTypeCategory_DeleteTypeSummary", _wrap_SBTypeCategory_DeleteTypeSummary,
+     METH_VARARGS,
+     "SBTypeCategory_DeleteTypeSummary(SBTypeCategory self, "
+     "SBTypeNameSpecifier arg2) -> bool"},
+    {"SBTypeCategory_AddTypeFilter", _wrap_SBTypeCategory_AddTypeFilter,
+     METH_VARARGS,
+     "SBTypeCategory_AddTypeFilter(SBTypeCategory self, SBTypeNameSpecifier "
+     "arg2, SBTypeFilter arg3) -> bool"},
+    {"SBTypeCategory_DeleteTypeFilter", _wrap_SBTypeCategory_DeleteTypeFilter,
+     METH_VARARGS,
+     "SBTypeCategory_DeleteTypeFilter(SBTypeCategory self, SBTypeNameSpecifier "
+     "arg2) -> bool"},
+    {"SBTypeCategory_AddTypeSynthetic", _wrap_SBTypeCategory_AddTypeSynthetic,
+     METH_VARARGS,
+     "SBTypeCategory_AddTypeSynthetic(SBTypeCategory self, SBTypeNameSpecifier "
+     "arg2, SBTypeSynthetic arg3) -> bool"},
+    {"SBTypeCategory_DeleteTypeSynthetic",
+     _wrap_SBTypeCategory_DeleteTypeSynthetic, METH_VARARGS,
+     "SBTypeCategory_DeleteTypeSynthetic(SBTypeCategory self, "
+     "SBTypeNameSpecifier arg2) -> bool"},
+    {"SBTypeCategory___eq__", _wrap_SBTypeCategory___eq__, METH_VARARGS,
+     "SBTypeCategory___eq__(SBTypeCategory self, SBTypeCategory rhs) -> bool"},
+    {"SBTypeCategory___ne__", _wrap_SBTypeCategory___ne__, METH_VARARGS,
+     "SBTypeCategory___ne__(SBTypeCategory self, SBTypeCategory rhs) -> bool"},
+    {"SBTypeCategory___repr__", _wrap_SBTypeCategory___repr__, METH_O,
+     "SBTypeCategory___repr__(SBTypeCategory self) -> std::string"},
+    {"SBTypeCategory_swigregister", SBTypeCategory_swigregister, METH_O, NULL},
+    {"SBTypeCategory_swiginit", SBTypeCategory_swiginit, METH_VARARGS, NULL},
+    {"new_SBTypeEnumMember", _wrap_new_SBTypeEnumMember, METH_VARARGS,
+     "\n"
+     "SBTypeEnumMember()\n"
+     "new_SBTypeEnumMember(SBTypeEnumMember rhs) -> SBTypeEnumMember\n"
+     ""},
+    {"delete_SBTypeEnumMember", _wrap_delete_SBTypeEnumMember, METH_O,
+     "delete_SBTypeEnumMember(SBTypeEnumMember self)"},
+    {"SBTypeEnumMember___nonzero__", _wrap_SBTypeEnumMember___nonzero__, METH_O,
+     "SBTypeEnumMember___nonzero__(SBTypeEnumMember self) -> bool"},
+    {"SBTypeEnumMember_IsValid", _wrap_SBTypeEnumMember_IsValid, METH_O,
+     "SBTypeEnumMember_IsValid(SBTypeEnumMember self) -> bool"},
+    {"SBTypeEnumMember_GetValueAsSigned",
+     _wrap_SBTypeEnumMember_GetValueAsSigned, METH_O,
+     "SBTypeEnumMember_GetValueAsSigned(SBTypeEnumMember self) -> int64_t"},
+    {"SBTypeEnumMember_GetValueAsUnsigned",
+     _wrap_SBTypeEnumMember_GetValueAsUnsigned, METH_O,
+     "SBTypeEnumMember_GetValueAsUnsigned(SBTypeEnumMember self) -> uint64_t"},
+    {"SBTypeEnumMember_GetName", _wrap_SBTypeEnumMember_GetName, METH_O,
+     "SBTypeEnumMember_GetName(SBTypeEnumMember self) -> char const *"},
+    {"SBTypeEnumMember_GetType", _wrap_SBTypeEnumMember_GetType, METH_O,
+     "SBTypeEnumMember_GetType(SBTypeEnumMember self) -> SBType"},
+    {"SBTypeEnumMember_GetDescription", _wrap_SBTypeEnumMember_GetDescription,
+     METH_VARARGS,
+     "SBTypeEnumMember_GetDescription(SBTypeEnumMember self, SBStream "
+     "description, lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeEnumMember___repr__", _wrap_SBTypeEnumMember___repr__, METH_O,
+     "SBTypeEnumMember___repr__(SBTypeEnumMember self) -> std::string"},
+    {"SBTypeEnumMember_swigregister", SBTypeEnumMember_swigregister, METH_O,
+     NULL},
+    {"SBTypeEnumMember_swiginit", SBTypeEnumMember_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBTypeEnumMemberList", _wrap_new_SBTypeEnumMemberList, METH_VARARGS,
+     "\n"
+     "SBTypeEnumMemberList()\n"
+     "new_SBTypeEnumMemberList(SBTypeEnumMemberList rhs) -> "
+     "SBTypeEnumMemberList\n"
+     ""},
+    {"delete_SBTypeEnumMemberList", _wrap_delete_SBTypeEnumMemberList, METH_O,
+     "delete_SBTypeEnumMemberList(SBTypeEnumMemberList self)"},
+    {"SBTypeEnumMemberList___nonzero__", _wrap_SBTypeEnumMemberList___nonzero__,
+     METH_O,
+     "SBTypeEnumMemberList___nonzero__(SBTypeEnumMemberList self) -> bool"},
+    {"SBTypeEnumMemberList_IsValid", _wrap_SBTypeEnumMemberList_IsValid, METH_O,
+     "SBTypeEnumMemberList_IsValid(SBTypeEnumMemberList self) -> bool"},
+    {"SBTypeEnumMemberList_Append", _wrap_SBTypeEnumMemberList_Append,
+     METH_VARARGS,
+     "SBTypeEnumMemberList_Append(SBTypeEnumMemberList self, SBTypeEnumMember "
+     "entry)"},
+    {"SBTypeEnumMemberList_GetTypeEnumMemberAtIndex",
+     _wrap_SBTypeEnumMemberList_GetTypeEnumMemberAtIndex, METH_VARARGS,
+     "SBTypeEnumMemberList_GetTypeEnumMemberAtIndex(SBTypeEnumMemberList self, "
+     "uint32_t index) -> SBTypeEnumMember"},
+    {"SBTypeEnumMemberList_GetSize", _wrap_SBTypeEnumMemberList_GetSize, METH_O,
+     "SBTypeEnumMemberList_GetSize(SBTypeEnumMemberList self) -> uint32_t"},
+    {"SBTypeEnumMemberList_swigregister", SBTypeEnumMemberList_swigregister,
+     METH_O, NULL},
+    {"SBTypeEnumMemberList_swiginit", SBTypeEnumMemberList_swiginit,
+     METH_VARARGS, NULL},
+    {"new_SBTypeFilter", _wrap_new_SBTypeFilter, METH_VARARGS,
+     "\n"
+     "SBTypeFilter()\n"
+     "SBTypeFilter(uint32_t options)\n"
+     "new_SBTypeFilter(SBTypeFilter rhs) -> SBTypeFilter\n"
+     ""},
+    {"delete_SBTypeFilter", _wrap_delete_SBTypeFilter, METH_O,
+     "delete_SBTypeFilter(SBTypeFilter self)"},
+    {"SBTypeFilter___nonzero__", _wrap_SBTypeFilter___nonzero__, METH_O,
+     "SBTypeFilter___nonzero__(SBTypeFilter self) -> bool"},
+    {"SBTypeFilter_IsValid", _wrap_SBTypeFilter_IsValid, METH_O,
+     "SBTypeFilter_IsValid(SBTypeFilter self) -> bool"},
+    {"SBTypeFilter_GetNumberOfExpressionPaths",
+     _wrap_SBTypeFilter_GetNumberOfExpressionPaths, METH_O,
+     "SBTypeFilter_GetNumberOfExpressionPaths(SBTypeFilter self) -> uint32_t"},
+    {"SBTypeFilter_GetExpressionPathAtIndex",
+     _wrap_SBTypeFilter_GetExpressionPathAtIndex, METH_VARARGS,
+     "SBTypeFilter_GetExpressionPathAtIndex(SBTypeFilter self, uint32_t i) -> "
+     "char const *"},
+    {"SBTypeFilter_ReplaceExpressionPathAtIndex",
+     _wrap_SBTypeFilter_ReplaceExpressionPathAtIndex, METH_VARARGS,
+     "SBTypeFilter_ReplaceExpressionPathAtIndex(SBTypeFilter self, uint32_t i, "
+     "char const * item) -> bool"},
+    {"SBTypeFilter_AppendExpressionPath",
+     _wrap_SBTypeFilter_AppendExpressionPath, METH_VARARGS,
+     "SBTypeFilter_AppendExpressionPath(SBTypeFilter self, char const * item)"},
+    {"SBTypeFilter_Clear", _wrap_SBTypeFilter_Clear, METH_O,
+     "SBTypeFilter_Clear(SBTypeFilter self)"},
+    {"SBTypeFilter_GetOptions", _wrap_SBTypeFilter_GetOptions, METH_O,
+     "SBTypeFilter_GetOptions(SBTypeFilter self) -> uint32_t"},
+    {"SBTypeFilter_SetOptions", _wrap_SBTypeFilter_SetOptions, METH_VARARGS,
+     "SBTypeFilter_SetOptions(SBTypeFilter self, uint32_t arg2)"},
+    {"SBTypeFilter_GetDescription", _wrap_SBTypeFilter_GetDescription,
+     METH_VARARGS,
+     "SBTypeFilter_GetDescription(SBTypeFilter self, SBStream description, "
+     "lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeFilter_IsEqualTo", _wrap_SBTypeFilter_IsEqualTo, METH_VARARGS,
+     "SBTypeFilter_IsEqualTo(SBTypeFilter self, SBTypeFilter rhs) -> bool"},
+    {"SBTypeFilter___eq__", _wrap_SBTypeFilter___eq__, METH_VARARGS,
+     "SBTypeFilter___eq__(SBTypeFilter self, SBTypeFilter rhs) -> bool"},
+    {"SBTypeFilter___ne__", _wrap_SBTypeFilter___ne__, METH_VARARGS,
+     "SBTypeFilter___ne__(SBTypeFilter self, SBTypeFilter rhs) -> bool"},
+    {"SBTypeFilter___repr__", _wrap_SBTypeFilter___repr__, METH_O,
+     "SBTypeFilter___repr__(SBTypeFilter self) -> std::string"},
+    {"SBTypeFilter_swigregister", SBTypeFilter_swigregister, METH_O, NULL},
+    {"SBTypeFilter_swiginit", SBTypeFilter_swiginit, METH_VARARGS, NULL},
+    {"new_SBTypeFormat", _wrap_new_SBTypeFormat, METH_VARARGS,
+     "\n"
+     "SBTypeFormat()\n"
+     "SBTypeFormat(lldb::Format format, uint32_t options=0)\n"
+     "SBTypeFormat(char const * type, uint32_t options=0)\n"
+     "new_SBTypeFormat(SBTypeFormat rhs) -> SBTypeFormat\n"
+     ""},
+    {"delete_SBTypeFormat", _wrap_delete_SBTypeFormat, METH_O,
+     "delete_SBTypeFormat(SBTypeFormat self)"},
+    {"SBTypeFormat___nonzero__", _wrap_SBTypeFormat___nonzero__, METH_O,
+     "SBTypeFormat___nonzero__(SBTypeFormat self) -> bool"},
+    {"SBTypeFormat_IsValid", _wrap_SBTypeFormat_IsValid, METH_O,
+     "SBTypeFormat_IsValid(SBTypeFormat self) -> bool"},
+    {"SBTypeFormat_GetFormat", _wrap_SBTypeFormat_GetFormat, METH_O,
+     "SBTypeFormat_GetFormat(SBTypeFormat self) -> lldb::Format"},
+    {"SBTypeFormat_GetTypeName", _wrap_SBTypeFormat_GetTypeName, METH_O,
+     "SBTypeFormat_GetTypeName(SBTypeFormat self) -> char const *"},
+    {"SBTypeFormat_GetOptions", _wrap_SBTypeFormat_GetOptions, METH_O,
+     "SBTypeFormat_GetOptions(SBTypeFormat self) -> uint32_t"},
+    {"SBTypeFormat_SetFormat", _wrap_SBTypeFormat_SetFormat, METH_VARARGS,
+     "SBTypeFormat_SetFormat(SBTypeFormat self, lldb::Format arg2)"},
+    {"SBTypeFormat_SetTypeName", _wrap_SBTypeFormat_SetTypeName, METH_VARARGS,
+     "SBTypeFormat_SetTypeName(SBTypeFormat self, char const * arg2)"},
+    {"SBTypeFormat_SetOptions", _wrap_SBTypeFormat_SetOptions, METH_VARARGS,
+     "SBTypeFormat_SetOptions(SBTypeFormat self, uint32_t arg2)"},
+    {"SBTypeFormat_GetDescription", _wrap_SBTypeFormat_GetDescription,
+     METH_VARARGS,
+     "SBTypeFormat_GetDescription(SBTypeFormat self, SBStream description, "
+     "lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeFormat_IsEqualTo", _wrap_SBTypeFormat_IsEqualTo, METH_VARARGS,
+     "SBTypeFormat_IsEqualTo(SBTypeFormat self, SBTypeFormat rhs) -> bool"},
+    {"SBTypeFormat___eq__", _wrap_SBTypeFormat___eq__, METH_VARARGS,
+     "SBTypeFormat___eq__(SBTypeFormat self, SBTypeFormat rhs) -> bool"},
+    {"SBTypeFormat___ne__", _wrap_SBTypeFormat___ne__, METH_VARARGS,
+     "SBTypeFormat___ne__(SBTypeFormat self, SBTypeFormat rhs) -> bool"},
+    {"SBTypeFormat___repr__", _wrap_SBTypeFormat___repr__, METH_O,
+     "SBTypeFormat___repr__(SBTypeFormat self) -> std::string"},
+    {"SBTypeFormat_swigregister", SBTypeFormat_swigregister, METH_O, NULL},
+    {"SBTypeFormat_swiginit", SBTypeFormat_swiginit, METH_VARARGS, NULL},
+    {"new_SBTypeNameSpecifier", _wrap_new_SBTypeNameSpecifier, METH_VARARGS,
+     "\n"
+     "SBTypeNameSpecifier()\n"
+     "SBTypeNameSpecifier(char const * name, bool is_regex=False)\n"
+     "SBTypeNameSpecifier(char const * name, lldb::FormatterMatchType "
+     "match_type)\n"
+     "SBTypeNameSpecifier(SBType type)\n"
+     "new_SBTypeNameSpecifier(SBTypeNameSpecifier rhs) -> SBTypeNameSpecifier\n"
+     ""},
+    {"delete_SBTypeNameSpecifier", _wrap_delete_SBTypeNameSpecifier, METH_O,
+     "delete_SBTypeNameSpecifier(SBTypeNameSpecifier self)"},
+    {"SBTypeNameSpecifier___nonzero__", _wrap_SBTypeNameSpecifier___nonzero__,
+     METH_O,
+     "SBTypeNameSpecifier___nonzero__(SBTypeNameSpecifier self) -> bool"},
+    {"SBTypeNameSpecifier_IsValid", _wrap_SBTypeNameSpecifier_IsValid, METH_O,
+     "SBTypeNameSpecifier_IsValid(SBTypeNameSpecifier self) -> bool"},
+    {"SBTypeNameSpecifier_GetName", _wrap_SBTypeNameSpecifier_GetName, METH_O,
+     "SBTypeNameSpecifier_GetName(SBTypeNameSpecifier self) -> char const *"},
+    {"SBTypeNameSpecifier_GetType", _wrap_SBTypeNameSpecifier_GetType, METH_O,
+     "SBTypeNameSpecifier_GetType(SBTypeNameSpecifier self) -> SBType"},
+    {"SBTypeNameSpecifier_GetMatchType", _wrap_SBTypeNameSpecifier_GetMatchType,
+     METH_O,
+     "SBTypeNameSpecifier_GetMatchType(SBTypeNameSpecifier self) -> "
+     "lldb::FormatterMatchType"},
+    {"SBTypeNameSpecifier_IsRegex", _wrap_SBTypeNameSpecifier_IsRegex, METH_O,
+     "SBTypeNameSpecifier_IsRegex(SBTypeNameSpecifier self) -> bool"},
+    {"SBTypeNameSpecifier_GetDescription",
+     _wrap_SBTypeNameSpecifier_GetDescription, METH_VARARGS,
+     "SBTypeNameSpecifier_GetDescription(SBTypeNameSpecifier self, SBStream "
+     "description, lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeNameSpecifier_IsEqualTo", _wrap_SBTypeNameSpecifier_IsEqualTo,
+     METH_VARARGS,
+     "SBTypeNameSpecifier_IsEqualTo(SBTypeNameSpecifier self, "
+     "SBTypeNameSpecifier rhs) -> bool"},
+    {"SBTypeNameSpecifier___eq__", _wrap_SBTypeNameSpecifier___eq__,
+     METH_VARARGS,
+     "SBTypeNameSpecifier___eq__(SBTypeNameSpecifier self, SBTypeNameSpecifier "
+     "rhs) -> bool"},
+    {"SBTypeNameSpecifier___ne__", _wrap_SBTypeNameSpecifier___ne__,
+     METH_VARARGS,
+     "SBTypeNameSpecifier___ne__(SBTypeNameSpecifier self, SBTypeNameSpecifier "
+     "rhs) -> bool"},
+    {"SBTypeNameSpecifier___repr__", _wrap_SBTypeNameSpecifier___repr__, METH_O,
+     "SBTypeNameSpecifier___repr__(SBTypeNameSpecifier self) -> std::string"},
+    {"SBTypeNameSpecifier_swigregister", SBTypeNameSpecifier_swigregister,
+     METH_O, NULL},
+    {"SBTypeNameSpecifier_swiginit", SBTypeNameSpecifier_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBTypeSummaryOptions", _wrap_new_SBTypeSummaryOptions, METH_VARARGS,
+     "\n"
+     "SBTypeSummaryOptions()\n"
+     "new_SBTypeSummaryOptions(SBTypeSummaryOptions rhs) -> "
+     "SBTypeSummaryOptions\n"
+     ""},
+    {"delete_SBTypeSummaryOptions", _wrap_delete_SBTypeSummaryOptions, METH_O,
+     "delete_SBTypeSummaryOptions(SBTypeSummaryOptions self)"},
+    {"SBTypeSummaryOptions___nonzero__", _wrap_SBTypeSummaryOptions___nonzero__,
+     METH_O,
+     "SBTypeSummaryOptions___nonzero__(SBTypeSummaryOptions self) -> bool"},
+    {"SBTypeSummaryOptions_IsValid", _wrap_SBTypeSummaryOptions_IsValid, METH_O,
+     "SBTypeSummaryOptions_IsValid(SBTypeSummaryOptions self) -> bool"},
+    {"SBTypeSummaryOptions_GetLanguage", _wrap_SBTypeSummaryOptions_GetLanguage,
+     METH_O,
+     "SBTypeSummaryOptions_GetLanguage(SBTypeSummaryOptions self) -> "
+     "lldb::LanguageType"},
+    {"SBTypeSummaryOptions_GetCapping", _wrap_SBTypeSummaryOptions_GetCapping,
+     METH_O,
+     "SBTypeSummaryOptions_GetCapping(SBTypeSummaryOptions self) -> "
+     "lldb::TypeSummaryCapping"},
+    {"SBTypeSummaryOptions_SetLanguage", _wrap_SBTypeSummaryOptions_SetLanguage,
+     METH_VARARGS,
+     "SBTypeSummaryOptions_SetLanguage(SBTypeSummaryOptions self, "
+     "lldb::LanguageType arg2)"},
+    {"SBTypeSummaryOptions_SetCapping", _wrap_SBTypeSummaryOptions_SetCapping,
+     METH_VARARGS,
+     "SBTypeSummaryOptions_SetCapping(SBTypeSummaryOptions self, "
+     "lldb::TypeSummaryCapping arg2)"},
+    {"SBTypeSummaryOptions_swigregister", SBTypeSummaryOptions_swigregister,
+     METH_O, NULL},
+    {"SBTypeSummaryOptions_swiginit", SBTypeSummaryOptions_swiginit,
+     METH_VARARGS, NULL},
+    {"SBTypeSummary_CreateWithSummaryString",
+     _wrap_SBTypeSummary_CreateWithSummaryString, METH_VARARGS,
+     "SBTypeSummary_CreateWithSummaryString(char const * data, uint32_t "
+     "options=0) -> SBTypeSummary"},
+    {"SBTypeSummary_CreateWithFunctionName",
+     _wrap_SBTypeSummary_CreateWithFunctionName, METH_VARARGS,
+     "SBTypeSummary_CreateWithFunctionName(char const * data, uint32_t "
+     "options=0) -> SBTypeSummary"},
+    {"SBTypeSummary_CreateWithScriptCode",
+     _wrap_SBTypeSummary_CreateWithScriptCode, METH_VARARGS,
+     "SBTypeSummary_CreateWithScriptCode(char const * data, uint32_t "
+     "options=0) -> SBTypeSummary"},
+    {"new_SBTypeSummary", _wrap_new_SBTypeSummary, METH_VARARGS,
+     "\n"
+     "SBTypeSummary()\n"
+     "new_SBTypeSummary(SBTypeSummary rhs) -> SBTypeSummary\n"
+     ""},
+    {"delete_SBTypeSummary", _wrap_delete_SBTypeSummary, METH_O,
+     "delete_SBTypeSummary(SBTypeSummary self)"},
+    {"SBTypeSummary___nonzero__", _wrap_SBTypeSummary___nonzero__, METH_O,
+     "SBTypeSummary___nonzero__(SBTypeSummary self) -> bool"},
+    {"SBTypeSummary_IsValid", _wrap_SBTypeSummary_IsValid, METH_O,
+     "SBTypeSummary_IsValid(SBTypeSummary self) -> bool"},
+    {"SBTypeSummary_IsFunctionCode", _wrap_SBTypeSummary_IsFunctionCode, METH_O,
+     "SBTypeSummary_IsFunctionCode(SBTypeSummary self) -> bool"},
+    {"SBTypeSummary_IsFunctionName", _wrap_SBTypeSummary_IsFunctionName, METH_O,
+     "SBTypeSummary_IsFunctionName(SBTypeSummary self) -> bool"},
+    {"SBTypeSummary_IsSummaryString", _wrap_SBTypeSummary_IsSummaryString,
+     METH_O, "SBTypeSummary_IsSummaryString(SBTypeSummary self) -> bool"},
+    {"SBTypeSummary_GetData", _wrap_SBTypeSummary_GetData, METH_O,
+     "SBTypeSummary_GetData(SBTypeSummary self) -> char const *"},
+    {"SBTypeSummary_SetSummaryString", _wrap_SBTypeSummary_SetSummaryString,
+     METH_VARARGS,
+     "SBTypeSummary_SetSummaryString(SBTypeSummary self, char const * data)"},
+    {"SBTypeSummary_SetFunctionName", _wrap_SBTypeSummary_SetFunctionName,
+     METH_VARARGS,
+     "SBTypeSummary_SetFunctionName(SBTypeSummary self, char const * data)"},
+    {"SBTypeSummary_SetFunctionCode", _wrap_SBTypeSummary_SetFunctionCode,
+     METH_VARARGS,
+     "SBTypeSummary_SetFunctionCode(SBTypeSummary self, char const * data)"},
+    {"SBTypeSummary_GetOptions", _wrap_SBTypeSummary_GetOptions, METH_O,
+     "SBTypeSummary_GetOptions(SBTypeSummary self) -> uint32_t"},
+    {"SBTypeSummary_SetOptions", _wrap_SBTypeSummary_SetOptions, METH_VARARGS,
+     "SBTypeSummary_SetOptions(SBTypeSummary self, uint32_t arg2)"},
+    {"SBTypeSummary_GetDescription", _wrap_SBTypeSummary_GetDescription,
+     METH_VARARGS,
+     "SBTypeSummary_GetDescription(SBTypeSummary self, SBStream description, "
+     "lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeSummary_DoesPrintValue", _wrap_SBTypeSummary_DoesPrintValue,
+     METH_VARARGS,
+     "SBTypeSummary_DoesPrintValue(SBTypeSummary self, SBValue value) -> bool"},
+    {"SBTypeSummary_IsEqualTo", _wrap_SBTypeSummary_IsEqualTo, METH_VARARGS,
+     "SBTypeSummary_IsEqualTo(SBTypeSummary self, SBTypeSummary rhs) -> bool"},
+    {"SBTypeSummary___eq__", _wrap_SBTypeSummary___eq__, METH_VARARGS,
+     "SBTypeSummary___eq__(SBTypeSummary self, SBTypeSummary rhs) -> bool"},
+    {"SBTypeSummary___ne__", _wrap_SBTypeSummary___ne__, METH_VARARGS,
+     "SBTypeSummary___ne__(SBTypeSummary self, SBTypeSummary rhs) -> bool"},
+    {"SBTypeSummary___repr__", _wrap_SBTypeSummary___repr__, METH_O,
+     "SBTypeSummary___repr__(SBTypeSummary self) -> std::string"},
+    {"SBTypeSummary_swigregister", SBTypeSummary_swigregister, METH_O, NULL},
+    {"SBTypeSummary_swiginit", SBTypeSummary_swiginit, METH_VARARGS, NULL},
+    {"SBTypeSynthetic_CreateWithClassName",
+     _wrap_SBTypeSynthetic_CreateWithClassName, METH_VARARGS,
+     "SBTypeSynthetic_CreateWithClassName(char const * data, uint32_t "
+     "options=0) -> SBTypeSynthetic"},
+    {"SBTypeSynthetic_CreateWithScriptCode",
+     _wrap_SBTypeSynthetic_CreateWithScriptCode, METH_VARARGS,
+     "SBTypeSynthetic_CreateWithScriptCode(char const * data, uint32_t "
+     "options=0) -> SBTypeSynthetic"},
+    {"new_SBTypeSynthetic", _wrap_new_SBTypeSynthetic, METH_VARARGS,
+     "\n"
+     "SBTypeSynthetic()\n"
+     "new_SBTypeSynthetic(SBTypeSynthetic rhs) -> SBTypeSynthetic\n"
+     ""},
+    {"delete_SBTypeSynthetic", _wrap_delete_SBTypeSynthetic, METH_O,
+     "delete_SBTypeSynthetic(SBTypeSynthetic self)"},
+    {"SBTypeSynthetic___nonzero__", _wrap_SBTypeSynthetic___nonzero__, METH_O,
+     "SBTypeSynthetic___nonzero__(SBTypeSynthetic self) -> bool"},
+    {"SBTypeSynthetic_IsValid", _wrap_SBTypeSynthetic_IsValid, METH_O,
+     "SBTypeSynthetic_IsValid(SBTypeSynthetic self) -> bool"},
+    {"SBTypeSynthetic_IsClassCode", _wrap_SBTypeSynthetic_IsClassCode, METH_O,
+     "SBTypeSynthetic_IsClassCode(SBTypeSynthetic self) -> bool"},
+    {"SBTypeSynthetic_IsClassName", _wrap_SBTypeSynthetic_IsClassName, METH_O,
+     "SBTypeSynthetic_IsClassName(SBTypeSynthetic self) -> bool"},
+    {"SBTypeSynthetic_GetData", _wrap_SBTypeSynthetic_GetData, METH_O,
+     "SBTypeSynthetic_GetData(SBTypeSynthetic self) -> char const *"},
+    {"SBTypeSynthetic_SetClassName", _wrap_SBTypeSynthetic_SetClassName,
+     METH_VARARGS,
+     "SBTypeSynthetic_SetClassName(SBTypeSynthetic self, char const * data)"},
+    {"SBTypeSynthetic_SetClassCode", _wrap_SBTypeSynthetic_SetClassCode,
+     METH_VARARGS,
+     "SBTypeSynthetic_SetClassCode(SBTypeSynthetic self, char const * data)"},
+    {"SBTypeSynthetic_GetOptions", _wrap_SBTypeSynthetic_GetOptions, METH_O,
+     "SBTypeSynthetic_GetOptions(SBTypeSynthetic self) -> uint32_t"},
+    {"SBTypeSynthetic_SetOptions", _wrap_SBTypeSynthetic_SetOptions,
+     METH_VARARGS,
+     "SBTypeSynthetic_SetOptions(SBTypeSynthetic self, uint32_t arg2)"},
+    {"SBTypeSynthetic_GetDescription", _wrap_SBTypeSynthetic_GetDescription,
+     METH_VARARGS,
+     "SBTypeSynthetic_GetDescription(SBTypeSynthetic self, SBStream "
+     "description, lldb::DescriptionLevel description_level) -> bool"},
+    {"SBTypeSynthetic_IsEqualTo", _wrap_SBTypeSynthetic_IsEqualTo, METH_VARARGS,
+     "SBTypeSynthetic_IsEqualTo(SBTypeSynthetic self, SBTypeSynthetic rhs) -> "
+     "bool"},
+    {"SBTypeSynthetic___eq__", _wrap_SBTypeSynthetic___eq__, METH_VARARGS,
+     "SBTypeSynthetic___eq__(SBTypeSynthetic self, SBTypeSynthetic rhs) -> "
+     "bool"},
+    {"SBTypeSynthetic___ne__", _wrap_SBTypeSynthetic___ne__, METH_VARARGS,
+     "SBTypeSynthetic___ne__(SBTypeSynthetic self, SBTypeSynthetic rhs) -> "
+     "bool"},
+    {"SBTypeSynthetic___repr__", _wrap_SBTypeSynthetic___repr__, METH_O,
+     "SBTypeSynthetic___repr__(SBTypeSynthetic self) -> std::string"},
+    {"SBTypeSynthetic_swigregister", SBTypeSynthetic_swigregister, METH_O,
+     NULL},
+    {"SBTypeSynthetic_swiginit", SBTypeSynthetic_swiginit, METH_VARARGS, NULL},
+    {"new_SBUnixSignals", _wrap_new_SBUnixSignals, METH_VARARGS,
+     "\n"
+     "SBUnixSignals()\n"
+     "new_SBUnixSignals(SBUnixSignals rhs) -> SBUnixSignals\n"
+     ""},
+    {"delete_SBUnixSignals", _wrap_delete_SBUnixSignals, METH_O,
+     "delete_SBUnixSignals(SBUnixSignals self)"},
+    {"SBUnixSignals_Clear", _wrap_SBUnixSignals_Clear, METH_O,
+     "SBUnixSignals_Clear(SBUnixSignals self)"},
+    {"SBUnixSignals___nonzero__", _wrap_SBUnixSignals___nonzero__, METH_O,
+     "SBUnixSignals___nonzero__(SBUnixSignals self) -> bool"},
+    {"SBUnixSignals_IsValid", _wrap_SBUnixSignals_IsValid, METH_O,
+     "SBUnixSignals_IsValid(SBUnixSignals self) -> bool"},
+    {"SBUnixSignals_GetSignalAsCString", _wrap_SBUnixSignals_GetSignalAsCString,
+     METH_VARARGS,
+     "SBUnixSignals_GetSignalAsCString(SBUnixSignals self, int32_t signo) -> "
+     "char const *"},
+    {"SBUnixSignals_GetSignalNumberFromName",
+     _wrap_SBUnixSignals_GetSignalNumberFromName, METH_VARARGS,
+     "SBUnixSignals_GetSignalNumberFromName(SBUnixSignals self, char const * "
+     "name) -> int32_t"},
+    {"SBUnixSignals_GetShouldSuppress", _wrap_SBUnixSignals_GetShouldSuppress,
+     METH_VARARGS,
+     "SBUnixSignals_GetShouldSuppress(SBUnixSignals self, int32_t signo) -> "
+     "bool"},
+    {"SBUnixSignals_SetShouldSuppress", _wrap_SBUnixSignals_SetShouldSuppress,
+     METH_VARARGS,
+     "SBUnixSignals_SetShouldSuppress(SBUnixSignals self, int32_t signo, bool "
+     "value) -> bool"},
+    {"SBUnixSignals_GetShouldStop", _wrap_SBUnixSignals_GetShouldStop,
+     METH_VARARGS,
+     "SBUnixSignals_GetShouldStop(SBUnixSignals self, int32_t signo) -> bool"},
+    {"SBUnixSignals_SetShouldStop", _wrap_SBUnixSignals_SetShouldStop,
+     METH_VARARGS,
+     "SBUnixSignals_SetShouldStop(SBUnixSignals self, int32_t signo, bool "
+     "value) -> bool"},
+    {"SBUnixSignals_GetShouldNotify", _wrap_SBUnixSignals_GetShouldNotify,
+     METH_VARARGS,
+     "SBUnixSignals_GetShouldNotify(SBUnixSignals self, int32_t signo) -> "
+     "bool"},
+    {"SBUnixSignals_SetShouldNotify", _wrap_SBUnixSignals_SetShouldNotify,
+     METH_VARARGS,
+     "SBUnixSignals_SetShouldNotify(SBUnixSignals self, int32_t signo, bool "
+     "value) -> bool"},
+    {"SBUnixSignals_GetNumSignals", _wrap_SBUnixSignals_GetNumSignals, METH_O,
+     "SBUnixSignals_GetNumSignals(SBUnixSignals self) -> int32_t"},
+    {"SBUnixSignals_GetSignalAtIndex", _wrap_SBUnixSignals_GetSignalAtIndex,
+     METH_VARARGS,
+     "SBUnixSignals_GetSignalAtIndex(SBUnixSignals self, int32_t index) -> "
+     "int32_t"},
+    {"SBUnixSignals_swigregister", SBUnixSignals_swigregister, METH_O, NULL},
+    {"SBUnixSignals_swiginit", SBUnixSignals_swiginit, METH_VARARGS, NULL},
+    {"new_SBValue", _wrap_new_SBValue, METH_VARARGS,
+     "\n"
+     "SBValue()\n"
+     "new_SBValue(SBValue rhs) -> SBValue\n"
+     ""},
+    {"delete_SBValue", _wrap_delete_SBValue, METH_O,
+     "delete_SBValue(SBValue self)"},
+    {"SBValue___nonzero__", _wrap_SBValue___nonzero__, METH_O,
+     "SBValue___nonzero__(SBValue self) -> bool"},
+    {"SBValue_IsValid", _wrap_SBValue_IsValid, METH_O,
+     "SBValue_IsValid(SBValue self) -> bool"},
+    {"SBValue_Clear", _wrap_SBValue_Clear, METH_O,
+     "SBValue_Clear(SBValue self)"},
+    {"SBValue_GetError", _wrap_SBValue_GetError, METH_O,
+     "SBValue_GetError(SBValue self) -> SBError"},
+    {"SBValue_GetID", _wrap_SBValue_GetID, METH_O,
+     "SBValue_GetID(SBValue self) -> lldb::user_id_t"},
+    {"SBValue_GetName", _wrap_SBValue_GetName, METH_O,
+     "SBValue_GetName(SBValue self) -> char const *"},
+    {"SBValue_GetTypeName", _wrap_SBValue_GetTypeName, METH_O,
+     "SBValue_GetTypeName(SBValue self) -> char const *"},
+    {"SBValue_GetDisplayTypeName", _wrap_SBValue_GetDisplayTypeName, METH_O,
+     "SBValue_GetDisplayTypeName(SBValue self) -> char const *"},
+    {"SBValue_GetByteSize", _wrap_SBValue_GetByteSize, METH_O,
+     "SBValue_GetByteSize(SBValue self) -> size_t"},
+    {"SBValue_IsInScope", _wrap_SBValue_IsInScope, METH_O,
+     "SBValue_IsInScope(SBValue self) -> bool"},
+    {"SBValue_GetFormat", _wrap_SBValue_GetFormat, METH_O,
+     "SBValue_GetFormat(SBValue self) -> lldb::Format"},
+    {"SBValue_SetFormat", _wrap_SBValue_SetFormat, METH_VARARGS,
+     "SBValue_SetFormat(SBValue self, lldb::Format format)"},
+    {"SBValue_GetValue", _wrap_SBValue_GetValue, METH_O,
+     "SBValue_GetValue(SBValue self) -> char const *"},
+    {"SBValue_GetValueAsSigned", _wrap_SBValue_GetValueAsSigned, METH_VARARGS,
+     "\n"
+     "SBValue_GetValueAsSigned(SBValue self, SBError error, int64_t "
+     "fail_value=0) -> int64_t\n"
+     "SBValue_GetValueAsSigned(SBValue self, int64_t fail_value=0) -> int64_t\n"
+     ""},
+    {"SBValue_GetValueAsUnsigned", _wrap_SBValue_GetValueAsUnsigned,
+     METH_VARARGS,
+     "\n"
+     "SBValue_GetValueAsUnsigned(SBValue self, SBError error, uint64_t "
+     "fail_value=0) -> uint64_t\n"
+     "SBValue_GetValueAsUnsigned(SBValue self, uint64_t fail_value=0) -> "
+     "uint64_t\n"
+     ""},
+    {"SBValue_GetValueAsAddress", _wrap_SBValue_GetValueAsAddress, METH_O,
+     "\n"
+     "SBValue_GetValueAsAddress(SBValue self) -> lldb::addr_t\n"
+     "\n"
+     "      Return the value as an address.  On failure, LLDB_INVALID_ADDRESS\n"
+     "      will be returned.  On architectures like AArch64, where the\n"
+     "      top (unaddressable) bits can be used for authentication,\n"
+     "      memory tagging, or top byte ignore,  this method will return\n"
+     "      the value with those top bits cleared.\n"
+     "\n"
+     "      GetValueAsUnsigned returns the actual value, with the\n"
+     "      authentication/Top Byte Ignore/Memory Tagging Extension bits.\n"
+     "\n"
+     "      Calling this on a random value which is not a pointer is\n"
+     "      incorrect.  Call GetType().IsPointerType() if in doubt.\n"
+     "\n"
+     "      An SB API program may want to show both the literal byte value\n"
+     "      and the address it refers to in memory.  These two SBValue\n"
+     "      methods allow SB API writers to behave appropriately for their\n"
+     "      interface.\n"
+     ""},
+    {"SBValue_GetValueType", _wrap_SBValue_GetValueType, METH_O,
+     "SBValue_GetValueType(SBValue self) -> lldb::ValueType"},
+    {"SBValue_GetValueDidChange", _wrap_SBValue_GetValueDidChange, METH_O,
+     "SBValue_GetValueDidChange(SBValue self) -> bool"},
+    {"SBValue_GetSummary", _wrap_SBValue_GetSummary, METH_VARARGS,
+     "\n"
+     "SBValue_GetSummary(SBValue self) -> char const\n"
+     "SBValue_GetSummary(SBValue self, SBStream stream, SBTypeSummaryOptions "
+     "options) -> char const *\n"
+     ""},
+    {"SBValue_GetObjectDescription", _wrap_SBValue_GetObjectDescription, METH_O,
+     "SBValue_GetObjectDescription(SBValue self) -> char const *"},
+    {"SBValue_GetDynamicValue", _wrap_SBValue_GetDynamicValue, METH_VARARGS,
+     "SBValue_GetDynamicValue(SBValue self, lldb::DynamicValueType "
+     "use_dynamic) -> SBValue"},
+    {"SBValue_GetStaticValue", _wrap_SBValue_GetStaticValue, METH_O,
+     "SBValue_GetStaticValue(SBValue self) -> SBValue"},
+    {"SBValue_GetNonSyntheticValue", _wrap_SBValue_GetNonSyntheticValue, METH_O,
+     "SBValue_GetNonSyntheticValue(SBValue self) -> SBValue"},
+    {"SBValue_GetSyntheticValue", _wrap_SBValue_GetSyntheticValue, METH_O,
+     "SBValue_GetSyntheticValue(SBValue self) -> SBValue"},
+    {"SBValue_GetPreferDynamicValue", _wrap_SBValue_GetPreferDynamicValue,
+     METH_O,
+     "SBValue_GetPreferDynamicValue(SBValue self) -> lldb::DynamicValueType"},
+    {"SBValue_SetPreferDynamicValue", _wrap_SBValue_SetPreferDynamicValue,
+     METH_VARARGS,
+     "SBValue_SetPreferDynamicValue(SBValue self, lldb::DynamicValueType "
+     "use_dynamic)"},
+    {"SBValue_GetPreferSyntheticValue", _wrap_SBValue_GetPreferSyntheticValue,
+     METH_O, "SBValue_GetPreferSyntheticValue(SBValue self) -> bool"},
+    {"SBValue_SetPreferSyntheticValue", _wrap_SBValue_SetPreferSyntheticValue,
+     METH_VARARGS,
+     "SBValue_SetPreferSyntheticValue(SBValue self, bool use_synthetic)"},
+    {"SBValue_IsDynamic", _wrap_SBValue_IsDynamic, METH_O,
+     "SBValue_IsDynamic(SBValue self) -> bool"},
+    {"SBValue_IsSynthetic", _wrap_SBValue_IsSynthetic, METH_O,
+     "SBValue_IsSynthetic(SBValue self) -> bool"},
+    {"SBValue_IsSyntheticChildrenGenerated",
+     _wrap_SBValue_IsSyntheticChildrenGenerated, METH_O,
+     "SBValue_IsSyntheticChildrenGenerated(SBValue self) -> bool"},
+    {"SBValue_SetSyntheticChildrenGenerated",
+     _wrap_SBValue_SetSyntheticChildrenGenerated, METH_VARARGS,
+     "SBValue_SetSyntheticChildrenGenerated(SBValue self, bool arg2)"},
+    {"SBValue_GetLocation", _wrap_SBValue_GetLocation, METH_O,
+     "SBValue_GetLocation(SBValue self) -> char const *"},
+    {"SBValue_SetValueFromCString", _wrap_SBValue_SetValueFromCString,
+     METH_VARARGS,
+     "\n"
+     "SBValue_SetValueFromCString(SBValue self, char const * value_str) -> "
+     "bool\n"
+     "SBValue_SetValueFromCString(SBValue self, char const * value_str, "
+     "SBError error) -> bool\n"
+     ""},
+    {"SBValue_GetTypeFormat", _wrap_SBValue_GetTypeFormat, METH_O,
+     "SBValue_GetTypeFormat(SBValue self) -> SBTypeFormat"},
+    {"SBValue_GetTypeSummary", _wrap_SBValue_GetTypeSummary, METH_O,
+     "SBValue_GetTypeSummary(SBValue self) -> SBTypeSummary"},
+    {"SBValue_GetTypeFilter", _wrap_SBValue_GetTypeFilter, METH_O,
+     "SBValue_GetTypeFilter(SBValue self) -> SBTypeFilter"},
+    {"SBValue_GetTypeSynthetic", _wrap_SBValue_GetTypeSynthetic, METH_O,
+     "SBValue_GetTypeSynthetic(SBValue self) -> SBTypeSynthetic"},
+    {"SBValue_CreateChildAtOffset", _wrap_SBValue_CreateChildAtOffset,
+     METH_VARARGS,
+     "SBValue_CreateChildAtOffset(SBValue self, char const * name, uint32_t "
+     "offset, SBType type) -> SBValue"},
+    {"SBValue_Cast", _wrap_SBValue_Cast, METH_VARARGS,
+     "SBValue_Cast(SBValue self, SBType type) -> SBValue"},
+    {"SBValue_CreateValueFromExpression",
+     _wrap_SBValue_CreateValueFromExpression, METH_VARARGS,
+     "\n"
+     "SBValue_CreateValueFromExpression(SBValue self, char const * name, char "
+     "const * expression) -> SBValue\n"
+     "SBValue_CreateValueFromExpression(SBValue self, char const * name, char "
+     "const * expression, SBExpressionOptions options) -> SBValue\n"
+     ""},
+    {"SBValue_CreateValueFromAddress", _wrap_SBValue_CreateValueFromAddress,
+     METH_VARARGS,
+     "SBValue_CreateValueFromAddress(SBValue self, char const * name, "
+     "lldb::addr_t address, SBType type) -> SBValue"},
+    {"SBValue_CreateValueFromData", _wrap_SBValue_CreateValueFromData,
+     METH_VARARGS,
+     "SBValue_CreateValueFromData(SBValue self, char const * name, SBData "
+     "data, SBType type) -> SBValue"},
+    {"SBValue_GetChildAtIndex", _wrap_SBValue_GetChildAtIndex, METH_VARARGS,
+     "\n"
+     "SBValue_GetChildAtIndex(SBValue self, uint32_t idx) -> SBValue\n"
+     "SBValue_GetChildAtIndex(SBValue self, uint32_t idx, "
+     "lldb::DynamicValueType use_dynamic, bool can_create_synthetic) -> "
+     "SBValue\n"
+     "\n"
+     "    Get a child value by index from a value.\n"
+     "\n"
+     "    Structs, unions, classes, arrays and pointers have child\n"
+     "    values that can be access by index.\n"
+     "\n"
+     "    Structs and unions access child members using a zero based index\n"
+     "    for each child member. For\n"
+     "\n"
+     "    Classes reserve the first indexes for base classes that have\n"
+     "    members (empty base classes are omitted), and all members of the\n"
+     "    current class will then follow the base classes.\n"
+     "\n"
+     "    Pointers differ depending on what they point to. If the pointer\n"
+     "    points to a simple type, the child at index zero\n"
+     "    is the only child value available, unless synthetic_allowed\n"
+     "    is true, in which case the pointer will be used as an array\n"
+     "    and can create 'synthetic' child values using positive or\n"
+     "    negative indexes. If the pointer points to an aggregate type\n"
+     "    (an array, class, union, struct), then the pointee is\n"
+     "    transparently skipped and any children are going to be the indexes\n"
+     "    of the child values within the aggregate type. For example if\n"
+     "    we have a 'Point' type and we have a SBValue that contains a\n"
+     "    pointer to a 'Point' type, then the child at index zero will be\n"
+     "    the 'x' member, and the child at index 1 will be the 'y' member\n"
+     "    (the child at index zero won't be a 'Point' instance).\n"
+     "\n"
+     "    If you actually need an SBValue that represents the type pointed\n"
+     "    to by a SBValue for which GetType().IsPointeeType() returns true,\n"
+     "    regardless of the pointee type, you can do that with the "
+     "SBValue.Dereference\n"
+     "    method (or the equivalent deref property).\n"
+     "\n"
+     "    Arrays have a preset number of children that can be accessed by\n"
+     "    index and will returns invalid child values for indexes that are\n"
+     "    out of bounds unless the synthetic_allowed is true. In this\n"
+     "    case the array can create 'synthetic' child values for indexes\n"
+     "    that aren't in the array bounds using positive or negative\n"
+     "    indexes.\n"
+     "\n"
+     "    @param[in] idx\n"
+     "        The index of the child value to get\n"
+     "\n"
+     "    @param[in] use_dynamic\n"
+     "        An enumeration that specifies whether to get dynamic values,\n"
+     "        and also if the target can be run to figure out the dynamic\n"
+     "        type of the child value.\n"
+     "\n"
+     "    @param[in] synthetic_allowed\n"
+     "        If true, then allow child values to be created by index\n"
+     "        for pointers and arrays for indexes that normally wouldn't\n"
+     "        be allowed.\n"
+     "\n"
+     "    @return\n"
+     "        A new SBValue object that represents the child member value.\n"
+     ""},
+    {"SBValue_GetIndexOfChildWithName", _wrap_SBValue_GetIndexOfChildWithName,
+     METH_VARARGS,
+     "\n"
+     "SBValue_GetIndexOfChildWithName(SBValue self, char const * name) -> "
+     "uint32_t\n"
+     "\n"
+     "    Returns the child member index.\n"
+     "\n"
+     "    Matches children of this object only and will match base classes "
+     "and\n"
+     "    member names if this is a clang typed object.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        The name of the child value to get\n"
+     "\n"
+     "    @return\n"
+     "        An index to the child member value.\n"
+     ""},
+    {"SBValue_GetChildMemberWithName", _wrap_SBValue_GetChildMemberWithName,
+     METH_VARARGS,
+     "\n"
+     "SBValue_GetChildMemberWithName(SBValue self, char const * name) -> "
+     "SBValue\n"
+     "SBValue_GetChildMemberWithName(SBValue self, char const * name, "
+     "lldb::DynamicValueType use_dynamic) -> SBValue\n"
+     "\n"
+     "    Returns the child member value.\n"
+     "\n"
+     "    Matches child members of this object and child members of any base\n"
+     "    classes.\n"
+     "\n"
+     "    @param[in] name\n"
+     "        The name of the child value to get\n"
+     "\n"
+     "    @param[in] use_dynamic\n"
+     "        An enumeration that specifies whether to get dynamic values,\n"
+     "        and also if the target can be run to figure out the dynamic\n"
+     "        type of the child value.\n"
+     "\n"
+     "    @return\n"
+     "        A new SBValue object that represents the child member value.\n"
+     ""},
+    {"SBValue_GetValueForExpressionPath",
+     _wrap_SBValue_GetValueForExpressionPath, METH_VARARGS,
+     "\n"
+     "SBValue_GetValueForExpressionPath(SBValue self, char const * expr_path) "
+     "-> SBValue\n"
+     "Expands nested expressions like .a->b[0].c[1]->d.\n"
+     ""},
+    {"SBValue_AddressOf", _wrap_SBValue_AddressOf, METH_O,
+     "SBValue_AddressOf(SBValue self) -> SBValue"},
+    {"SBValue_GetLoadAddress", _wrap_SBValue_GetLoadAddress, METH_O,
+     "SBValue_GetLoadAddress(SBValue self) -> lldb::addr_t"},
+    {"SBValue_GetAddress", _wrap_SBValue_GetAddress, METH_O,
+     "SBValue_GetAddress(SBValue self) -> SBAddress"},
+    {"SBValue_GetPointeeData", _wrap_SBValue_GetPointeeData, METH_VARARGS,
+     "\n"
+     "SBValue_GetPointeeData(SBValue self, uint32_t item_idx=0, uint32_t "
+     "item_count=1) -> SBData\n"
+     "\n"
+     "    Get an SBData wrapping what this SBValue points to.\n"
+     "\n"
+     "    This method will dereference the current SBValue, if its\n"
+     "    data type is a ``T\\*`` or ``T[]``, and extract ``item_count`` "
+     "elements\n"
+     "    of type ``T`` from it, copying their contents in an "
+     ":py:class:`SBData`.\n"
+     "\n"
+     "    :param item_idx: The index of the first item to retrieve. For an "
+     "array\n"
+     "        this is equivalent to array[item_idx], for a pointer\n"
+     "        to ``\\*(pointer + item_idx)``. In either case, the measurement\n"
+     "        unit for item_idx is the ``sizeof(T)`` rather than the byte\n"
+     "    :param item_count: How many items should be copied into the output. "
+     "By default\n"
+     "        only one item is copied, but more can be asked for.\n"
+     "    :return: The contents of the copied items on success. An empty "
+     ":py:class:`SBData` otherwise.\n"
+     "    :rtype: SBData\n"
+     "\n"
+     ""},
+    {"SBValue_GetData", _wrap_SBValue_GetData, METH_O,
+     "\n"
+     "SBValue_GetData(SBValue self) -> SBData\n"
+     "\n"
+     "    Get an SBData wrapping the contents of this SBValue.\n"
+     "\n"
+     "    This method will read the contents of this object in memory\n"
+     "    and copy them into an SBData for future use.\n"
+     "\n"
+     "    @return\n"
+     "        An SBData with the contents of this SBValue, on success.\n"
+     "        An empty SBData otherwise.\n"
+     ""},
+    {"SBValue_SetData", _wrap_SBValue_SetData, METH_VARARGS,
+     "SBValue_SetData(SBValue self, SBData data, SBError error) -> bool"},
+    {"SBValue_Clone", _wrap_SBValue_Clone, METH_VARARGS,
+     "SBValue_Clone(SBValue self, char const * new_name) -> SBValue"},
+    {"SBValue_GetDeclaration", _wrap_SBValue_GetDeclaration, METH_O,
+     "SBValue_GetDeclaration(SBValue self) -> SBDeclaration"},
+    {"SBValue_MightHaveChildren", _wrap_SBValue_MightHaveChildren, METH_O,
+     "SBValue_MightHaveChildren(SBValue self) -> bool"},
+    {"SBValue_IsRuntimeSupportValue", _wrap_SBValue_IsRuntimeSupportValue,
+     METH_O, "SBValue_IsRuntimeSupportValue(SBValue self) -> bool"},
+    {"SBValue_GetNumChildren", _wrap_SBValue_GetNumChildren, METH_VARARGS,
+     "\n"
+     "SBValue_GetNumChildren(SBValue self) -> uint32_t\n"
+     "SBValue_GetNumChildren(SBValue self, uint32_t max) -> uint32_t\n"
+     ""},
+    {"SBValue_GetOpaqueType", _wrap_SBValue_GetOpaqueType, METH_O,
+     "SBValue_GetOpaqueType(SBValue self) -> void *"},
+    {"SBValue_GetTarget", _wrap_SBValue_GetTarget, METH_O,
+     "SBValue_GetTarget(SBValue self) -> SBTarget"},
+    {"SBValue_GetProcess", _wrap_SBValue_GetProcess, METH_O,
+     "SBValue_GetProcess(SBValue self) -> SBProcess"},
+    {"SBValue_GetThread", _wrap_SBValue_GetThread, METH_O,
+     "SBValue_GetThread(SBValue self) -> SBThread"},
+    {"SBValue_GetFrame", _wrap_SBValue_GetFrame, METH_O,
+     "SBValue_GetFrame(SBValue self) -> SBFrame"},
+    {"SBValue_Dereference", _wrap_SBValue_Dereference, METH_O,
+     "SBValue_Dereference(SBValue self) -> SBValue"},
+    {"SBValue_TypeIsPointerType", _wrap_SBValue_TypeIsPointerType, METH_O,
+     "SBValue_TypeIsPointerType(SBValue self) -> bool"},
+    {"SBValue_GetType", _wrap_SBValue_GetType, METH_O,
+     "SBValue_GetType(SBValue self) -> SBType"},
+    {"SBValue_Persist", _wrap_SBValue_Persist, METH_O,
+     "SBValue_Persist(SBValue self) -> SBValue"},
+    {"SBValue_GetDescription", _wrap_SBValue_GetDescription, METH_VARARGS,
+     "SBValue_GetDescription(SBValue self, SBStream description) -> bool"},
+    {"SBValue_GetExpressionPath", _wrap_SBValue_GetExpressionPath, METH_VARARGS,
+     "\n"
+     "SBValue_GetExpressionPath(SBValue self, SBStream description) -> bool\n"
+     "SBValue_GetExpressionPath(SBValue self, SBStream description, bool "
+     "qualify_cxx_base_classes) -> bool\n"
+     "Returns an expression path for this value.\n"
+     ""},
+    {"SBValue_EvaluateExpression", _wrap_SBValue_EvaluateExpression,
+     METH_VARARGS,
+     "\n"
+     "SBValue_EvaluateExpression(SBValue self, char const * expr) -> SBValue\n"
+     "SBValue_EvaluateExpression(SBValue self, char const * expr, "
+     "SBExpressionOptions options) -> SBValue\n"
+     "SBValue_EvaluateExpression(SBValue self, char const * expr, "
+     "SBExpressionOptions options, char const * name) -> SBValue\n"
+     ""},
+    {"SBValue_Watch", _wrap_SBValue_Watch, METH_VARARGS,
+     "\n"
+     "SBValue_Watch(SBValue self, bool resolve_location, bool read, bool "
+     "write, SBError error) -> SBWatchpoint\n"
+     "SBValue_Watch(SBValue self, bool resolve_location, bool read, bool "
+     "write) -> SBWatchpoint\n"
+     "\n"
+     "    Find and watch a variable.\n"
+     "    It returns an SBWatchpoint, which may be invalid.\n"
+     ""},
+    {"SBValue_WatchPointee", _wrap_SBValue_WatchPointee, METH_VARARGS,
+     "\n"
+     "SBValue_WatchPointee(SBValue self, bool resolve_location, bool read, "
+     "bool write, SBError error) -> SBWatchpoint\n"
+     "\n"
+     "    Find and watch the location pointed to by a variable.\n"
+     "    It returns an SBWatchpoint, which may be invalid.\n"
+     ""},
+    {"SBValue_GetVTable", _wrap_SBValue_GetVTable, METH_O,
+     "SBValue_GetVTable(SBValue self) -> SBValue"},
+    {"SBValue___repr__", _wrap_SBValue___repr__, METH_O,
+     "SBValue___repr__(SBValue self) -> std::string"},
+    {"SBValue_swigregister", SBValue_swigregister, METH_O, NULL},
+    {"SBValue_swiginit", SBValue_swiginit, METH_VARARGS, NULL},
+    {"new_SBValueList", _wrap_new_SBValueList, METH_VARARGS,
+     "\n"
+     "SBValueList()\n"
+     "new_SBValueList(SBValueList rhs) -> SBValueList\n"
+     ""},
+    {"delete_SBValueList", _wrap_delete_SBValueList, METH_O,
+     "delete_SBValueList(SBValueList self)"},
+    {"SBValueList___nonzero__", _wrap_SBValueList___nonzero__, METH_O,
+     "SBValueList___nonzero__(SBValueList self) -> bool"},
+    {"SBValueList_IsValid", _wrap_SBValueList_IsValid, METH_O,
+     "SBValueList_IsValid(SBValueList self) -> bool"},
+    {"SBValueList_Clear", _wrap_SBValueList_Clear, METH_O,
+     "SBValueList_Clear(SBValueList self)"},
+    {"SBValueList_Append", _wrap_SBValueList_Append, METH_VARARGS,
+     "\n"
+     "SBValueList_Append(SBValueList self, SBValue val_obj)\n"
+     "SBValueList_Append(SBValueList self, SBValueList value_list)\n"
+     ""},
+    {"SBValueList_GetSize", _wrap_SBValueList_GetSize, METH_O,
+     "SBValueList_GetSize(SBValueList self) -> uint32_t"},
+    {"SBValueList_GetValueAtIndex", _wrap_SBValueList_GetValueAtIndex,
+     METH_VARARGS,
+     "SBValueList_GetValueAtIndex(SBValueList self, uint32_t idx) -> SBValue"},
+    {"SBValueList_GetFirstValueByName", _wrap_SBValueList_GetFirstValueByName,
+     METH_VARARGS,
+     "SBValueList_GetFirstValueByName(SBValueList self, char const * name) -> "
+     "SBValue"},
+    {"SBValueList_FindValueObjectByUID", _wrap_SBValueList_FindValueObjectByUID,
+     METH_VARARGS,
+     "SBValueList_FindValueObjectByUID(SBValueList self, lldb::user_id_t uid) "
+     "-> SBValue"},
+    {"SBValueList_GetError", _wrap_SBValueList_GetError, METH_O,
+     "SBValueList_GetError(SBValueList self) -> SBError"},
+    {"SBValueList___str__", _wrap_SBValueList___str__, METH_O,
+     "SBValueList___str__(SBValueList self) -> std::string"},
+    {"SBValueList_swigregister", SBValueList_swigregister, METH_O, NULL},
+    {"SBValueList_swiginit", SBValueList_swiginit, METH_VARARGS, NULL},
+    {"new_SBVariablesOptions", _wrap_new_SBVariablesOptions, METH_VARARGS,
+     "\n"
+     "SBVariablesOptions()\n"
+     "new_SBVariablesOptions(SBVariablesOptions options) -> "
+     "SBVariablesOptions\n"
+     ""},
+    {"delete_SBVariablesOptions", _wrap_delete_SBVariablesOptions, METH_O,
+     "delete_SBVariablesOptions(SBVariablesOptions self)"},
+    {"SBVariablesOptions___nonzero__", _wrap_SBVariablesOptions___nonzero__,
+     METH_O, "SBVariablesOptions___nonzero__(SBVariablesOptions self) -> bool"},
+    {"SBVariablesOptions_IsValid", _wrap_SBVariablesOptions_IsValid, METH_O,
+     "SBVariablesOptions_IsValid(SBVariablesOptions self) -> bool"},
+    {"SBVariablesOptions_GetIncludeArguments",
+     _wrap_SBVariablesOptions_GetIncludeArguments, METH_O,
+     "SBVariablesOptions_GetIncludeArguments(SBVariablesOptions self) -> bool"},
+    {"SBVariablesOptions_SetIncludeArguments",
+     _wrap_SBVariablesOptions_SetIncludeArguments, METH_VARARGS,
+     "SBVariablesOptions_SetIncludeArguments(SBVariablesOptions self, bool "
+     "arg2)"},
+    {"SBVariablesOptions_GetIncludeRecognizedArguments",
+     _wrap_SBVariablesOptions_GetIncludeRecognizedArguments, METH_VARARGS,
+     "SBVariablesOptions_GetIncludeRecognizedArguments(SBVariablesOptions "
+     "self, SBTarget arg2) -> bool"},
+    {"SBVariablesOptions_SetIncludeRecognizedArguments",
+     _wrap_SBVariablesOptions_SetIncludeRecognizedArguments, METH_VARARGS,
+     "SBVariablesOptions_SetIncludeRecognizedArguments(SBVariablesOptions "
+     "self, bool arg2)"},
+    {"SBVariablesOptions_GetIncludeLocals",
+     _wrap_SBVariablesOptions_GetIncludeLocals, METH_O,
+     "SBVariablesOptions_GetIncludeLocals(SBVariablesOptions self) -> bool"},
+    {"SBVariablesOptions_SetIncludeLocals",
+     _wrap_SBVariablesOptions_SetIncludeLocals, METH_VARARGS,
+     "SBVariablesOptions_SetIncludeLocals(SBVariablesOptions self, bool arg2)"},
+    {"SBVariablesOptions_GetIncludeStatics",
+     _wrap_SBVariablesOptions_GetIncludeStatics, METH_O,
+     "SBVariablesOptions_GetIncludeStatics(SBVariablesOptions self) -> bool"},
+    {"SBVariablesOptions_SetIncludeStatics",
+     _wrap_SBVariablesOptions_SetIncludeStatics, METH_VARARGS,
+     "SBVariablesOptions_SetIncludeStatics(SBVariablesOptions self, bool "
+     "arg2)"},
+    {"SBVariablesOptions_GetInScopeOnly",
+     _wrap_SBVariablesOptions_GetInScopeOnly, METH_O,
+     "SBVariablesOptions_GetInScopeOnly(SBVariablesOptions self) -> bool"},
+    {"SBVariablesOptions_SetInScopeOnly",
+     _wrap_SBVariablesOptions_SetInScopeOnly, METH_VARARGS,
+     "SBVariablesOptions_SetInScopeOnly(SBVariablesOptions self, bool arg2)"},
+    {"SBVariablesOptions_GetIncludeRuntimeSupportValues",
+     _wrap_SBVariablesOptions_GetIncludeRuntimeSupportValues, METH_O,
+     "SBVariablesOptions_GetIncludeRuntimeSupportValues(SBVariablesOptions "
+     "self) -> bool"},
+    {"SBVariablesOptions_SetIncludeRuntimeSupportValues",
+     _wrap_SBVariablesOptions_SetIncludeRuntimeSupportValues, METH_VARARGS,
+     "SBVariablesOptions_SetIncludeRuntimeSupportValues(SBVariablesOptions "
+     "self, bool arg2)"},
+    {"SBVariablesOptions_GetUseDynamic", _wrap_SBVariablesOptions_GetUseDynamic,
+     METH_O,
+     "SBVariablesOptions_GetUseDynamic(SBVariablesOptions self) -> "
+     "lldb::DynamicValueType"},
+    {"SBVariablesOptions_SetUseDynamic", _wrap_SBVariablesOptions_SetUseDynamic,
+     METH_VARARGS,
+     "SBVariablesOptions_SetUseDynamic(SBVariablesOptions self, "
+     "lldb::DynamicValueType arg2)"},
+    {"SBVariablesOptions_swigregister", SBVariablesOptions_swigregister, METH_O,
+     NULL},
+    {"SBVariablesOptions_swiginit", SBVariablesOptions_swiginit, METH_VARARGS,
+     NULL},
+    {"new_SBWatchpoint", _wrap_new_SBWatchpoint, METH_VARARGS,
+     "\n"
+     "SBWatchpoint()\n"
+     "new_SBWatchpoint(SBWatchpoint rhs) -> SBWatchpoint\n"
+     ""},
+    {"delete_SBWatchpoint", _wrap_delete_SBWatchpoint, METH_O,
+     "delete_SBWatchpoint(SBWatchpoint self)"},
+    {"SBWatchpoint___nonzero__", _wrap_SBWatchpoint___nonzero__, METH_O,
+     "SBWatchpoint___nonzero__(SBWatchpoint self) -> bool"},
+    {"SBWatchpoint___eq__", _wrap_SBWatchpoint___eq__, METH_VARARGS,
+     "SBWatchpoint___eq__(SBWatchpoint self, SBWatchpoint rhs) -> bool"},
+    {"SBWatchpoint___ne__", _wrap_SBWatchpoint___ne__, METH_VARARGS,
+     "SBWatchpoint___ne__(SBWatchpoint self, SBWatchpoint rhs) -> bool"},
+    {"SBWatchpoint_IsValid", _wrap_SBWatchpoint_IsValid, METH_O,
+     "SBWatchpoint_IsValid(SBWatchpoint self) -> bool"},
+    {"SBWatchpoint_GetError", _wrap_SBWatchpoint_GetError, METH_O,
+     "SBWatchpoint_GetError(SBWatchpoint self) -> SBError"},
+    {"SBWatchpoint_GetID", _wrap_SBWatchpoint_GetID, METH_O,
+     "SBWatchpoint_GetID(SBWatchpoint self) -> lldb::watch_id_t"},
+    {"SBWatchpoint_GetHardwareIndex", _wrap_SBWatchpoint_GetHardwareIndex,
+     METH_O,
+     "\n"
+     "SBWatchpoint_GetHardwareIndex(SBWatchpoint self) -> int32_t\n"
+     "\n"
+     "    Deprecated.  Previously: Return the hardware index of the \n"
+     "    watchpoint register.  Now: -1 is always returned.\n"
+     ""},
+    {"SBWatchpoint_GetWatchAddress", _wrap_SBWatchpoint_GetWatchAddress, METH_O,
+     "SBWatchpoint_GetWatchAddress(SBWatchpoint self) -> lldb::addr_t"},
+    {"SBWatchpoint_GetWatchSize", _wrap_SBWatchpoint_GetWatchSize, METH_O,
+     "SBWatchpoint_GetWatchSize(SBWatchpoint self) -> size_t"},
+    {"SBWatchpoint_SetEnabled", _wrap_SBWatchpoint_SetEnabled, METH_VARARGS,
+     "SBWatchpoint_SetEnabled(SBWatchpoint self, bool enabled)"},
+    {"SBWatchpoint_IsEnabled", _wrap_SBWatchpoint_IsEnabled, METH_O,
+     "SBWatchpoint_IsEnabled(SBWatchpoint self) -> bool"},
+    {"SBWatchpoint_GetHitCount", _wrap_SBWatchpoint_GetHitCount, METH_O,
+     "SBWatchpoint_GetHitCount(SBWatchpoint self) -> uint32_t"},
+    {"SBWatchpoint_GetIgnoreCount", _wrap_SBWatchpoint_GetIgnoreCount, METH_O,
+     "SBWatchpoint_GetIgnoreCount(SBWatchpoint self) -> uint32_t"},
+    {"SBWatchpoint_SetIgnoreCount", _wrap_SBWatchpoint_SetIgnoreCount,
+     METH_VARARGS,
+     "SBWatchpoint_SetIgnoreCount(SBWatchpoint self, uint32_t n)"},
+    {"SBWatchpoint_GetCondition", _wrap_SBWatchpoint_GetCondition, METH_O,
+     "\n"
+     "SBWatchpoint_GetCondition(SBWatchpoint self) -> char const *\n"
+     "\n"
+     "    Get the condition expression for the watchpoint.\n"
+     ""},
+    {"SBWatchpoint_SetCondition", _wrap_SBWatchpoint_SetCondition, METH_VARARGS,
+     "\n"
+     "SBWatchpoint_SetCondition(SBWatchpoint self, char const * condition)\n"
+     "\n"
+     "    The watchpoint stops only if the condition expression evaluates to "
+     "true.\n"
+     ""},
+    {"SBWatchpoint_GetDescription", _wrap_SBWatchpoint_GetDescription,
+     METH_VARARGS,
+     "SBWatchpoint_GetDescription(SBWatchpoint self, SBStream description, "
+     "lldb::DescriptionLevel level) -> bool"},
+    {"SBWatchpoint_Clear", _wrap_SBWatchpoint_Clear, METH_O,
+     "SBWatchpoint_Clear(SBWatchpoint self)"},
+    {"SBWatchpoint_EventIsWatchpointEvent",
+     _wrap_SBWatchpoint_EventIsWatchpointEvent, METH_O,
+     "SBWatchpoint_EventIsWatchpointEvent(SBEvent event) -> bool"},
+    {"SBWatchpoint_GetWatchpointEventTypeFromEvent",
+     _wrap_SBWatchpoint_GetWatchpointEventTypeFromEvent, METH_O,
+     "SBWatchpoint_GetWatchpointEventTypeFromEvent(SBEvent event) -> "
+     "lldb::WatchpointEventType"},
+    {"SBWatchpoint_GetWatchpointFromEvent",
+     _wrap_SBWatchpoint_GetWatchpointFromEvent, METH_O,
+     "SBWatchpoint_GetWatchpointFromEvent(SBEvent event) -> SBWatchpoint"},
+    {"SBWatchpoint_GetType", _wrap_SBWatchpoint_GetType, METH_O,
+     "\n"
+     "SBWatchpoint_GetType(SBWatchpoint self) -> SBType\n"
+     "\n"
+     "    Returns the type recorded when the watchpoint was created. For "
+     "variable\n"
+     "    watchpoints it is the type of the watched variable. For expression\n"
+     "    watchpoints it is the type of the provided expression.\n"
+     ""},
+    {"SBWatchpoint_GetWatchValueKind", _wrap_SBWatchpoint_GetWatchValueKind,
+     METH_O,
+     "\n"
+     "SBWatchpoint_GetWatchValueKind(SBWatchpoint self) -> "
+     "lldb::WatchpointValueKind\n"
+     "\n"
+     "    Returns the kind of value that was watched when the watchpoint was "
+     "created.\n"
+     "    Returns one of the following eWatchPointValueKindVariable,\n"
+     "    eWatchPointValueKindExpression, eWatchPointValueKindInvalid.\n"
+     "\n"
+     ""},
+    {"SBWatchpoint_GetWatchSpec", _wrap_SBWatchpoint_GetWatchSpec, METH_O,
+     "\n"
+     "SBWatchpoint_GetWatchSpec(SBWatchpoint self) -> char const *\n"
+     "\n"
+     "    Get the spec for the watchpoint. For variable watchpoints this is "
+     "the name\n"
+     "    of the variable. For expression watchpoints it is empty\n"
+     "    (may change in the future).\n"
+     ""},
+    {"SBWatchpoint_IsWatchingReads", _wrap_SBWatchpoint_IsWatchingReads, METH_O,
+     "\n"
+     "SBWatchpoint_IsWatchingReads(SBWatchpoint self) -> bool\n"
+     "\n"
+     "    Returns true if the watchpoint is watching reads. Returns false "
+     "otherwise.\n"
+     ""},
+    {"SBWatchpoint_IsWatchingWrites", _wrap_SBWatchpoint_IsWatchingWrites,
+     METH_O,
+     "\n"
+     "SBWatchpoint_IsWatchingWrites(SBWatchpoint self) -> bool\n"
+     "\n"
+     "    Returns true if the watchpoint is watching writes. Returns false "
+     "otherwise.\n"
+     ""},
+    {"SBWatchpoint___repr__", _wrap_SBWatchpoint___repr__, METH_O,
+     "SBWatchpoint___repr__(SBWatchpoint self) -> std::string"},
+    {"SBWatchpoint_swigregister", SBWatchpoint_swigregister, METH_O, NULL},
+    {"SBWatchpoint_swiginit", SBWatchpoint_swiginit, METH_VARARGS, NULL},
+    {"new_SBWatchpointOptions", _wrap_new_SBWatchpointOptions, METH_VARARGS,
+     "\n"
+     "SBWatchpointOptions()\n"
+     "new_SBWatchpointOptions(SBWatchpointOptions rhs) -> SBWatchpointOptions\n"
+     ""},
+    {"delete_SBWatchpointOptions", _wrap_delete_SBWatchpointOptions, METH_O,
+     "delete_SBWatchpointOptions(SBWatchpointOptions self)"},
+    {"SBWatchpointOptions_SetWatchpointTypeRead",
+     _wrap_SBWatchpointOptions_SetWatchpointTypeRead, METH_VARARGS,
+     "\n"
+     "SBWatchpointOptions_SetWatchpointTypeRead(SBWatchpointOptions self, bool "
+     "read)\n"
+     "Sets whether the watchpoint should stop on read accesses.\n"
+     ""},
+    {"SBWatchpointOptions_GetWatchpointTypeRead",
+     _wrap_SBWatchpointOptions_GetWatchpointTypeRead, METH_O,
+     "\n"
+     "SBWatchpointOptions_GetWatchpointTypeRead(SBWatchpointOptions self) -> "
+     "bool\n"
+     "Gets whether the watchpoint should stop on read accesses.\n"
+     ""},
+    {"SBWatchpointOptions_SetWatchpointTypeWrite",
+     _wrap_SBWatchpointOptions_SetWatchpointTypeWrite, METH_VARARGS,
+     "\n"
+     "SBWatchpointOptions_SetWatchpointTypeWrite(SBWatchpointOptions self, "
+     "lldb::WatchpointWriteType write_type)\n"
+     "Sets whether the watchpoint should stop on write accesses. "
+     "eWatchpointWriteTypeOnModify is the most commonly useful mode, where "
+     "lldb will stop when the watched value has changed. "
+     "eWatchpointWriteTypeAlways will stop on any write to the watched region, "
+     "even if it's the value is the same.\n"
+     ""},
+    {"SBWatchpointOptions_GetWatchpointTypeWrite",
+     _wrap_SBWatchpointOptions_GetWatchpointTypeWrite, METH_O,
+     "\n"
+     "SBWatchpointOptions_GetWatchpointTypeWrite(SBWatchpointOptions self) -> "
+     "lldb::WatchpointWriteType\n"
+     "Gets whether the watchpoint should stop on write accesses, returning "
+     "WatchpointWriteType to indicate the type of write watching that is "
+     "enabled, or eWatchpointWriteTypeDisabled.\n"
+     ""},
+    {"SBWatchpointOptions_swigregister", SBWatchpointOptions_swigregister,
+     METH_O, NULL},
+    {"SBWatchpointOptions_swiginit", SBWatchpointOptions_swiginit, METH_VARARGS,
+     NULL},
+    {NULL, NULL, 0, NULL}};
 
 /* -------- TYPE CONVERSION AND EQUIVALENCE RULES (BEGIN) -------- */
 
@@ -102423,6 +106638,9 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eSaveCoreFull",SWIG_From_int(static_cast< int >(lldb::eSaveCoreFull)));
   SWIG_Python_SetConstant(d, "eSaveCoreDirtyOnly",SWIG_From_int(static_cast< int >(lldb::eSaveCoreDirtyOnly)));
   SWIG_Python_SetConstant(d, "eSaveCoreStackOnly",SWIG_From_int(static_cast< int >(lldb::eSaveCoreStackOnly)));
+  SWIG_Python_SetConstant(
+      d, "eSaveCoreCustomOnly",
+      SWIG_From_int(static_cast<int>(lldb::eSaveCoreCustomOnly)));
   SWIG_Python_SetConstant(d, "eTraceEventDisabledSW",SWIG_From_int(static_cast< int >(lldb::eTraceEventDisabledSW)));
   SWIG_Python_SetConstant(d, "eTraceEventDisabledHW",SWIG_From_int(static_cast< int >(lldb::eTraceEventDisabledHW)));
   SWIG_Python_SetConstant(d, "eTraceEventCPUChanged",SWIG_From_int(static_cast< int >(lldb::eTraceEventCPUChanged)));
