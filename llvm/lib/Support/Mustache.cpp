@@ -94,12 +94,14 @@ bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
     return false;
   const Token &PrevToken = Tokens[Idx - 1];
   StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v\t");
-  // Check if the token body ends with a newline
-  // or if the previous token is empty and the current token is the first token
-  // eg. "  {{#section}}A{{#section}}" would be considered as no text behind
-  // and should be render as "A" instead of "  A"
+  // We make a special exception for when previous token is empty 
+  // and the current token is the second token 
+  // ex.
+  //  " {{#section}}A{{/section}}"
+  // that's why we check if the token body is empty and the index is 1
   return TokenBody.ends_with("\n") || (TokenBody.empty() && Idx == 1);
 }
+
 // Function to check if there's no meaningful text ahead
 bool noTextAhead(size_t Idx, const SmallVector<Token, 0> &Tokens) {
   if (Idx >= Tokens.size() - 1 ||
@@ -431,6 +433,7 @@ void ASTNode::render(Value Data, SmallString<0> &Output) {
     }
 
     renderChild(Context, Output);
+    return;
   }
   case InvertSection: {
     bool IsLambda = SectionLambdas->find(Accessor[0]) != SectionLambdas->end();
