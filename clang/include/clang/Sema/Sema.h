@@ -5026,6 +5026,11 @@ public:
   /// special member function.
   void EvaluateImplicitExceptionSpec(SourceLocation Loc, FunctionDecl *FD);
 
+  bool AreExceptionSpecsEqual(const NamedDecl *Old,
+                              const Expr *OldExceptionSpec,
+                              const NamedDecl *New,
+                              const Expr *NewExceptionSpec);
+
   /// Check the given exception-specification and update the
   /// exception specification information with the results.
   void checkExceptionSpecification(bool IsTopLevel,

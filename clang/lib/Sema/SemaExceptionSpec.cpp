@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
@@ -19,6 +18,9 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
+#include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/Template.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include <optional>
@@ -314,6 +316,22 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
     return false;
   }
 
+  if (Old->getExceptionSpecType() == EST_DependentNoexcept &&
+      New->getExceptionSpecType() == EST_DependentNoexcept) {
+    const auto *OldType = Old->getType()->getAs<FunctionProtoType>();
+    const auto *NewType = New->getType()->getAs<FunctionProtoType>();
+    OldType = ResolveExceptionSpec(New->getLocation(), OldType);
+    if (!OldType)
+      return false;
+    NewType = ResolveExceptionSpec(New->getLocation(), NewType);
+    if (!NewType)
+      return false;
+
+    if (AreExceptionSpecsEqual(Old, OldType->getNoexceptExpr(), New,
+                               NewType->getNoexceptExpr()))
+      return false;
+  }
+
   // Check the types as written: they must match before any exception
   // specification adjustment is applied.
   if (!CheckEquivalentExceptionSpecImpl(
@@ -501,6 +519,89 @@ bool Sema::CheckEquivalentExceptionSpec(
   return Result;
 }
 
+static const Expr *SubstituteExceptionSpecWithoutEvaluation(
+    Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
+    const Expr *ExceptionSpec) {
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(),
+      /*Final=*/false, /*Innermost=*/std::nullopt,
+      /*RelativeToPrimary=*/true, /*ForConstraintInstantiation=*/true);
+
+  if (!MLTAL.getNumSubstitutedLevels())
+    return ExceptionSpec;
+
+  Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/false);
+
+  Sema::InstantiatingTemplate Inst(
+      S, DeclInfo.getLocation(),
+      const_cast<FunctionDecl *>(DeclInfo.getDecl()->getAsFunction()),
+      Sema::InstantiatingTemplate::ExceptionSpecification());
+  if (Inst.isInvalid())
+    return nullptr;
+
+  // Set up a dummy 'instantiation' scope in the case of reference to function
+  // parameters that the surrounding function hasn't been instantiated yet. Note
+  // this may happen while we're comparing two templates' constraint
+  // equivalence.
+  LocalInstantiationScope ScopeForParameters(S);
+  if (auto *FD = DeclInfo.getDecl()->getAsFunction())
+    for (auto *PVD : FD->parameters())
+      ScopeForParameters.InstantiatedLocal(PVD, PVD);
+
+  std::optional<Sema::CXXThisScopeRAII> ThisScope;
+
+  // See TreeTransform::RebuildTemplateSpecializationType. A context scope is
+  // essential for having an injected class as the canonical type for a template
+  // specialization type at the rebuilding stage. This guarantees that, for
+  // out-of-line definitions, injected class name types and their equivalent
+  // template specializations can be profiled to the same value, which makes it
+  // possible that e.g. constraints involving C<Class<T>> and C<Class> are
+  // perceived identical.
+  std::optional<Sema::ContextRAII> ContextScope;
+  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext())) {
+    ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
+    ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
+                         /*NewThisContext=*/false);
+  }
+
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult SubstExceptionSpec =
+      S.SubstExpr(const_cast<clang::Expr *>(ExceptionSpec), MLTAL);
+  if (SFINAE.hasErrorOccurred() || !SubstExceptionSpec.isUsable())
+    return nullptr;
+  return SubstExceptionSpec.get();
+}
+
+bool Sema::AreExceptionSpecsEqual(const NamedDecl *Old,
+                                  const Expr *OldExceptionSpec,
+                                  const NamedDecl *New,
+                                  const Expr *NewExceptionSpec) {
+  if (OldExceptionSpec == NewExceptionSpec)
+    return true;
+  if (Old && New &&
+      Old->getLexicalDeclContext() != New->getLexicalDeclContext()) {
+    if (const Expr *SubstExceptionSpec =
+            SubstituteExceptionSpecWithoutEvaluation(*this, Old,
+                                                     OldExceptionSpec))
+      OldExceptionSpec = SubstExceptionSpec;
+    else
+      return false;
+    if (const Expr *SubstExceptionSpec =
+            SubstituteExceptionSpecWithoutEvaluation(*this, New,
+                                                     NewExceptionSpec))
+      NewExceptionSpec = SubstExceptionSpec;
+    else
+      return false;
+  }
+
+  llvm::FoldingSetNodeID ID1, ID2;
+  OldExceptionSpec->Profile(ID1, Context, /*Canonical=*/true);
+  NewExceptionSpec->Profile(ID2, Context, /*Canonical=*/true);
+  return ID1 == ID2;
+}
+
 /// CheckEquivalentExceptionSpec - Check if the two types have compatible
 /// exception specifications. See C++ [except.spec]p3.
 ///
@@ -574,6 +675,7 @@ static bool CheckEquivalentExceptionSpecImpl(
     }
   }
 
+#if 0
   // C++14 [except.spec]p3:
   //   Two exception-specifications are compatible if [...] both have the form
   //   noexcept(constant-expression) and the constant-expressions are equivalent
@@ -584,6 +686,7 @@ static bool CheckEquivalentExceptionSpecImpl(
     if (OldFSN == NewFSN)
       return false;
   }
+#endif
 
   // Dynamic exception specifications with the same set of adjusted types
   // are compatible.
