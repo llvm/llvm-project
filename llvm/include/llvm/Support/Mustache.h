@@ -96,7 +96,7 @@ public:
 
   StringRef getRawBody() const { return RawBody; };
 
-  void setTokenBody(SmallString<128> NewBody) { TokenBody = NewBody; };
+  void setTokenBody(StringRef NewBody) { TokenBody = NewBody.str(); };
 
   Accessor getAccessor() const { return Accessor; };
 
@@ -112,7 +112,7 @@ private:
   size_t Indentation;
   Type TokenType;
   // RawBody is the original string that was tokenized
-  SmallString<128> RawBody;
+  SmallString<0> RawBody;
   Accessor Accessor;
   // TokenBody is the original string with the identifier removed
   SmallString<0> TokenBody;
@@ -130,16 +130,16 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), ParentContext(nullptr) {};
+  ASTNode() : T(Type::Root), ParentContext(nullptr){};
 
   ASTNode(StringRef Body, ASTNode *Parent)
       : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr),
-        Indentation(0) {};
+        Indentation(0){};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        ParentContext(nullptr), Indentation(0) {};
+        ParentContext(nullptr), Indentation(0){};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -151,14 +151,12 @@ public:
 
   void render(const llvm::json::Value &Data, SmallString<0> &Output);
 
-  void setUpNode(llvm::BumpPtrAllocator &Alloc,
-                 StringMap<ASTNode *> &Partials, 
+  void setUpNode(llvm::BumpPtrAllocator &Alloc, StringMap<ASTNode *> &Partials,
                  StringMap<Lambda> &Lambdas,
                  StringMap<SectionLambda> &SectionLambdas,
                  DenseMap<char, StringRef> &Escapes);
-  
+
 private:
-  
   void renderLambdas(const llvm::json::Value &Contexts, SmallString<0> &Output,
                      Lambda &L);
 
