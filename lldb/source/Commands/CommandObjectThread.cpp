@@ -492,11 +492,8 @@ protected:
           llvm::Error err =
               sc.GetAddressRangeFromHereToEndLine(m_options.m_end_line, range);
           if (err) {
-            result.AppendErrorWithFormatv(
-               "invalid end-line option: {0}.",
-                 llvm::toString(std::move(err)));
-                "invalid end-line option: %s.",
-                llvm::toString(std::move(err)).c_str());
+            result.AppendErrorWithFormatv("invalid end-line option: {0}.",
+                                          llvm::toString(std::move(err)));
             return;
           }
         } else if (m_options.m_end_line_is_block_end) {
