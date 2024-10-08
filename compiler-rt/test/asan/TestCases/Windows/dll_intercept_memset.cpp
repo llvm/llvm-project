@@ -1,5 +1,5 @@
 // RUN: %clang_cl_asan %Od %Oy- %p/dll_host.cpp %Fe%t
-// RUN: %clang_cl_asan %if !MSVC %{ -Wno-fortify-source %} /Oy- %LD %Od %s %Fe%t.dll
+// RUN: %clang_cl_asan %if !MSVC %{ -Wno-fortify-source %} %Oy- %LD %Od %s %Fe%t.dll
 // RUN: not %run %t %t.dll 2>&1 | FileCheck %s
 
 // Test that it works correctly even with ICF enabled.
