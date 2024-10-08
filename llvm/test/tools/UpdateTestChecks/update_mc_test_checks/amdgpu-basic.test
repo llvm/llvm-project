@@ -1,0 +1,11 @@
+# REQUIRES: amdgpu-registered-target
+## Check that basic asm/dasm process is correct
+
+# RUN: cp -f %S/Inputs/amdgpu_asm.s %t.s && %update_mc_test_checks %t.s
+# RUN: diff -u %S/Inputs/amdgpu_asm.s.expected %t.s
+# RUN: cp -f %S/Inputs/amdgpu_asm_err.s %t.s && %update_mc_test_checks %t.s
+# RUN: diff -u %S/Inputs/amdgpu_asm_err.s.expected %t.s
+# RUN: cp -f %S/Inputs/amdgpu_dasm.txt %t.txt && %update_mc_test_checks %t.txt
+# RUN: diff -u %S/Inputs/amdgpu_dasm.txt.expected %t.txt
+# RUN: cp -f %S/Inputs/amdgpu_multirun_dasm.txt %t.txt && %update_mc_test_checks %t.txt
+# RUN: diff -u %S/Inputs/amdgpu_multirun_dasm.txt.expected %t.txt

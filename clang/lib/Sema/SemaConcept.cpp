@@ -748,6 +748,7 @@ bool Sema::addInstantiatedCapturesToScope(
     ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
 
     if (!CapturedPattern->isInitCapture()) {
+      Instantiated++;
       continue;
     }
 
@@ -995,11 +996,14 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // parameters that the surrounding function hasn't been instantiated yet. Note
   // this may happen while we're comparing two templates' constraint
   // equivalence.
-  LocalInstantiationScope ScopeForParameters(S);
-  if (auto *FD = DeclInfo.getDecl()->getAsFunction())
+  std::optional<LocalInstantiationScope> ScopeForParameters;
+  if (const NamedDecl *ND = DeclInfo.getDecl();
+      ND && ND->isFunctionOrFunctionTemplate()) {
+    ScopeForParameters.emplace(S);
+    const FunctionDecl *FD = ND->getAsFunction();
     for (auto *PVD : FD->parameters()) {
       if (!PVD->isParameterPack()) {
-        ScopeForParameters.InstantiatedLocal(PVD, PVD);
+        ScopeForParameters->InstantiatedLocal(PVD, PVD);
         continue;
       }
       // This is hacky: we're mapping the parameter pack to a size-of-1 argument
@@ -1018,9 +1022,10 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
       // that we can eliminate the Scope in the cases where the declarations are
       // not necessarily instantiated. It would also benefit the noexcept
       // specifier comparison.
-      ScopeForParameters.MakeInstantiatedLocalArgPack(PVD);
-      ScopeForParameters.InstantiatedLocalPackArg(PVD, PVD);
+      ScopeForParameters->MakeInstantiatedLocalArgPack(PVD);
+      ScopeForParameters->InstantiatedLocalPackArg(PVD, PVD);
     }
+  }
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
 
@@ -1032,7 +1037,14 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // possible that e.g. constraints involving C<Class<T>> and C<Class> are
   // perceived identical.
   std::optional<Sema::ContextRAII> ContextScope;
-  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext())) {
+  const DeclContext *DC = [&] {
+    if (!DeclInfo.getDecl())
+      return DeclInfo.getDeclContext();
+    return DeclInfo.getDecl()->getFriendObjectKind()
+               ? DeclInfo.getLexicalDeclContext()
+               : DeclInfo.getDeclContext();
+  }();
+  if (auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
     ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
                          /*NewThisContext=*/false);

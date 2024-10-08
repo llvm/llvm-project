@@ -215,7 +215,8 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
                       uint64_t &NumSamples, uint32_t &LineOffset,
                       uint32_t &Discriminator, StringRef &CalleeName,
                       DenseMap<StringRef, uint64_t> &TargetCountMap,
-                      uint64_t &FunctionHash, uint32_t &Attributes) {
+                      uint64_t &FunctionHash, uint32_t &Attributes,
+                      bool &IsFlat) {
   for (Depth = 0; Input[Depth] == ' '; Depth++)
     ;
   if (Depth == 0)
@@ -223,6 +224,13 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
 
   if (Input[Depth] == '!') {
     LineTy = LineType::Metadata;
+    // This metadata is only for manual inspection only. We already created a
+    // FunctionSamples and put it in the profile map, so there is no point
+    // to skip profiles even they have no use for ThinLTO.
+    if (Input == StringRef(" !Flat")) {
+      IsFlat = true;
+      return true;
+    }
     return parseMetadata(Input.substr(Depth), FunctionHash, Attributes);
   }
 
@@ -325,6 +333,8 @@ std::error_code SampleProfileReaderText::readImpl() {
   // top-level or nested function profile.
   uint32_t DepthMetadata = 0;
 
+  std::vector<SampleContext *> FlatSamples;
+
   ProfileIsFS = ProfileIsFSDisciminator;
   FunctionSamples::ProfileIsFS = ProfileIsFS;
   for (; !LineIt.is_at_eof(); ++LineIt) {
@@ -368,9 +378,10 @@ std::error_code SampleProfileReaderText::readImpl() {
       LineType LineTy;
       uint64_t FunctionHash = 0;
       uint32_t Attributes = 0;
+      bool IsFlat = false;
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
                      Discriminator, FName, TargetCountMap, FunctionHash,
-                     Attributes)) {
+                     Attributes, IsFlat)) {
         reportError(LineIt.line_number(),
                     "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
                         *LineIt);
@@ -426,11 +437,25 @@ std::error_code SampleProfileReaderText::readImpl() {
         if (Attributes & (uint32_t)ContextShouldBeInlined)
           ProfileIsPreInlined = true;
         DepthMetadata = Depth;
+        if (IsFlat) {
+          if (Depth == 1)
+            FlatSamples.push_back(&FProfile.getContext());
+          else
+            Ctx.diagnose(DiagnosticInfoSampleProfile(
+                Buffer->getBufferIdentifier(), LineIt.line_number(),
+                "!Flat may only be used at top level function.", DS_Warning));
+        }
         break;
       }
       }
     }
   }
+
+  // Honor the option to skip flat functions. Since they are already added to
+  // the profile map, remove them all here.
+  if (SkipFlatProf)
+    for (SampleContext *FlatSample : FlatSamples)
+      Profiles.erase(*FlatSample);
 
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
@@ -1026,7 +1051,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readImpl() {
     if (!Entry.Size)
       continue;
 
-    // Skip sections without context when SkipFlatProf is true.
+    // Skip sections without inlined functions when SkipFlatProf is true.
     if (SkipFlatProf && hasSecFlag(Entry, SecCommonFlags::SecFlagFlat))
       continue;
 

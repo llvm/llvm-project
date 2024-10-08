@@ -305,15 +305,18 @@ static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
   return nullptr;
 }
 
-const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
+static const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
   Reg = Reg->getBaseRegion();
   while (const auto *SymReg = dyn_cast<SymbolicRegion>(Reg)) {
-    Reg = SymReg->getSymbol()->getOriginRegion()->getBaseRegion();
+    const auto *OriginReg = SymReg->getSymbol()->getOriginRegion();
+    if (!OriginReg)
+      break;
+    Reg = OriginReg->getBaseRegion();
   }
   return Reg;
 }
 
-std::optional<std::string> printReferrer(const MemRegion *Referrer) {
+static std::optional<std::string> printReferrer(const MemRegion *Referrer) {
   assert(Referrer);
   const StringRef ReferrerMemorySpace = [](const MemSpaceRegion *Space) {
     if (isa<StaticGlobalSpaceRegion>(Space))
@@ -334,6 +337,10 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
       // warn_bind_ref_member_to_parameter or
       // warn_init_ptr_member_to_parameter_addr
       return std::nullopt;
+    } else if (isa<AllocaRegion>(Referrer)) {
+      // Skip alloca() regions, they indicate advanced memory management
+      // and higher likelihood of CSA false positives.
+      return std::nullopt;
     } else {
       assert(false && "Unexpected referrer region type.");
       return std::nullopt;
@@ -351,7 +358,7 @@ std::optional<std::string> printReferrer(const MemRegion *Referrer) {
 
 /// Check whether \p Region refers to a freshly minted symbol after an opaque
 /// function call.
-bool isInvalidatedSymbolRegion(const MemRegion *Region) {
+static bool isInvalidatedSymbolRegion(const MemRegion *Region) {
   const auto *SymReg = Region->getAs<SymbolicRegion>();
   if (!SymReg)
     return false;
@@ -417,6 +424,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
         return true;
       }
       if (isa<StackArgumentsSpaceRegion>(ReferrerMemSpace) &&
+          // Not a simple ptr (int*) but something deeper, e.g. int**
+          isa<SymbolicRegion>(Referrer->getBaseRegion()) &&
           ReferrerStackSpace->getStackFrame() == PoppedFrame && TopFrame) {
         // Output parameter of a top-level function
         V.emplace_back(Referrer, Referred);

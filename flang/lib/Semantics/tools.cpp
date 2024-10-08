@@ -440,7 +440,7 @@ static void CheckMissingAnalysis(
     llvm::raw_string_ostream ss{buf};
     ss << "node has not been analyzed:\n";
     parser::DumpTree(ss, x);
-    common::die(ss.str().c_str());
+    common::die(buf.c_str());
   }
 }
 
@@ -688,7 +688,7 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements,
   } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && object->type()) {
+    if ((!object->isDummy() || IsIntentOut(symbol)) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         return derived->HasDefaultInitialization(
             ignoreAllocatable, ignorePointer);
@@ -705,7 +705,7 @@ bool IsDestructible(const Symbol &symbol, const Symbol *derivedTypeSymbol) {
       IsPointer(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && object->type()) {
+    if ((!object->isDummy() || IsIntentOut(symbol)) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         return &derived->typeSymbol() != derivedTypeSymbol &&
             derived->HasDestruction();
@@ -1354,7 +1354,7 @@ ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
   std::string designator;
   for (const auto &node : componentPath_) {
-    designator += "%" + DEREF(node.component()).name().ToString();
+    designator += "%"s + DEREF(node.component()).name().ToString();
   }
   return designator;
 }
@@ -1649,7 +1649,9 @@ bool HasDefinedIo(common::DefinedIo which, const DerivedTypeSpec &derived,
       }
     }
   }
-  return false;
+  // Check for inherited defined I/O
+  const auto *parentType{derived.typeSymbol().GetParentTypeSpec()};
+  return parentType && HasDefinedIo(which, *parentType, scope);
 }
 
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &context,

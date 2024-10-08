@@ -1,0 +1,25 @@
+# This testing configuration handles running the test suite against LLVM's libc++
+# using a DLL with MinGW/Clang on Windows.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', ''))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib-dir} -lc++'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --prepend_env PATH=%{install-prefix}/bin -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

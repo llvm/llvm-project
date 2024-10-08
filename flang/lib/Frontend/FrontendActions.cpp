@@ -21,6 +21,7 @@
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -77,7 +78,9 @@
 #include <memory>
 #include <system_error>
 
-#include "flang/Tools/CLOptions.inc"
+namespace llvm {
+extern cl::opt<bool> PrintPipelinePasses;
+} // namespace llvm
 
 using namespace Fortran::frontend;
 
@@ -421,7 +424,7 @@ void PrintPreprocessedAction::executeAction() {
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.isOutputStreamNull()) {
     // Send the output to the pre-defined output buffer.
-    ci.writeOutputStream(outForPP.str());
+    ci.writeOutputStream(buf);
     return;
   }
 
@@ -432,7 +435,7 @@ void PrintPreprocessedAction::executeAction() {
     return;
   }
 
-  (*os) << outForPP.str();
+  (*os) << buf;
 }
 
 void DebugDumpProvenanceAction::executeAction() {
@@ -752,7 +755,7 @@ getRISCVVScaleRange(CompilerInstance &ci) {
       outputErrMsg << errMsg.getMessage();
     });
     ci.getDiagnostics().Report(clang::diag::err_invalid_feature_combination)
-        << outputErrMsg.str();
+        << buffer;
     return std::nullopt;
   }
 
@@ -1016,6 +1019,20 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   else if (action == BackendActionTy::Backend_EmitLL)
     mpm.addPass(llvm::PrintModulePass(os));
 
+  // FIXME: This should eventually be replaced by a first-class driver option.
+  // This should be done for both flang and clang simultaneously.
+  // Print a textual, '-passes=' compatible, representation of pipeline if
+  // requested. In this case, don't run the passes. This mimics the behavior of
+  // clang.
+  if (llvm::PrintPipelinePasses) {
+    mpm.printPipeline(llvm::outs(), [&pic](llvm::StringRef className) {
+      auto passName = pic.getPassNameForClassName(className);
+      return passName.empty() ? className : passName;
+    });
+    llvm::outs() << "\n";
+    return;
+  }
+
   // Run the passes.
   mpm.run(*llvmModule, mam);
 }
@@ -1073,8 +1090,7 @@ public:
     msgStream << diagInfo.getMsg();
 
     // Emit message.
-    diags.Report(diagID) << clang::AddFlagValue(diagInfo.getPassName())
-                         << msgStream.str();
+    diags.Report(diagID) << clang::AddFlagValue(diagInfo.getPassName()) << msg;
   }
 
   void optimizationRemarkHandler(

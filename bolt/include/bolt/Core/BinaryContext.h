@@ -71,14 +71,15 @@ struct SegmentInfo {
   uint64_t FileOffset;        /// Offset in the file.
   uint64_t FileSize;          /// Size in file.
   uint64_t Alignment;         /// Alignment of the segment.
+  bool IsExecutable;          /// Is the executable bit set on the Segment?
 
   void print(raw_ostream &OS) const {
-    OS << "SegmentInfo { Address: 0x"
-       << Twine::utohexstr(Address) << ", Size: 0x"
-       << Twine::utohexstr(Size) << ", FileOffset: 0x"
+    OS << "SegmentInfo { Address: 0x" << Twine::utohexstr(Address)
+       << ", Size: 0x" << Twine::utohexstr(Size) << ", FileOffset: 0x"
        << Twine::utohexstr(FileOffset) << ", FileSize: 0x"
        << Twine::utohexstr(FileSize) << ", Alignment: 0x"
-       << Twine::utohexstr(Alignment) << "}";
+       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : " ")
+       << "}";
   };
 };
 

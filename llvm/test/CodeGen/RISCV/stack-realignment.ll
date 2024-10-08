@@ -815,8 +815,7 @@ define void @caller1024() {
 ; RV32I-NEXT:    andi sp, sp, -1024
 ; RV32I-NEXT:    addi a0, sp, 1024
 ; RV32I-NEXT:    call callee
-; RV32I-NEXT:    addi sp, s0, -2048
-; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    addi sp, s0, -2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
@@ -836,8 +835,7 @@ define void @caller1024() {
 ; RV32I-ILP32E-NEXT:    andi sp, sp, -1024
 ; RV32I-ILP32E-NEXT:    addi a0, sp, 1024
 ; RV32I-ILP32E-NEXT:    call callee
-; RV32I-ILP32E-NEXT:    addi sp, s0, -2048
-; RV32I-ILP32E-NEXT:    addi sp, sp, 4
+; RV32I-ILP32E-NEXT:    addi sp, s0, -2044
 ; RV32I-ILP32E-NEXT:    lw ra, 2040(sp) # 4-byte Folded Reload
 ; RV32I-ILP32E-NEXT:    lw s0, 2036(sp) # 4-byte Folded Reload
 ; RV32I-ILP32E-NEXT:    addi sp, sp, 2044
@@ -857,8 +855,7 @@ define void @caller1024() {
 ; RV64I-NEXT:    andi sp, sp, -1024
 ; RV64I-NEXT:    addi a0, sp, 1024
 ; RV64I-NEXT:    call callee
-; RV64I-NEXT:    addi sp, s0, -2048
-; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    addi sp, s0, -2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 2032
@@ -878,8 +875,7 @@ define void @caller1024() {
 ; RV64I-LP64E-NEXT:    andi sp, sp, -1024
 ; RV64I-LP64E-NEXT:    addi a0, sp, 1024
 ; RV64I-LP64E-NEXT:    call callee
-; RV64I-LP64E-NEXT:    addi sp, s0, -2048
-; RV64I-LP64E-NEXT:    addi sp, sp, 8
+; RV64I-LP64E-NEXT:    addi sp, s0, -2040
 ; RV64I-LP64E-NEXT:    ld ra, 2032(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-NEXT:    ld s0, 2024(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-NEXT:    addi sp, sp, 2040
@@ -959,10 +955,7 @@ define void @caller2048() {
 ; RV32I-NEXT:    addi a0, sp, 2047
 ; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    call callee
-; RV32I-NEXT:    lui a0, 1
-; RV32I-NEXT:    sub sp, s0, a0
-; RV32I-NEXT:    addi sp, sp, 2032
-; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    addi sp, s0, -2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
@@ -984,10 +977,7 @@ define void @caller2048() {
 ; RV32I-ILP32E-NEXT:    addi a0, sp, 2047
 ; RV32I-ILP32E-NEXT:    addi a0, a0, 1
 ; RV32I-ILP32E-NEXT:    call callee
-; RV32I-ILP32E-NEXT:    lui a0, 1
-; RV32I-ILP32E-NEXT:    sub sp, s0, a0
-; RV32I-ILP32E-NEXT:    addi sp, sp, 2044
-; RV32I-ILP32E-NEXT:    addi sp, sp, 8
+; RV32I-ILP32E-NEXT:    addi sp, s0, -2044
 ; RV32I-ILP32E-NEXT:    lw ra, 2040(sp) # 4-byte Folded Reload
 ; RV32I-ILP32E-NEXT:    lw s0, 2036(sp) # 4-byte Folded Reload
 ; RV32I-ILP32E-NEXT:    addi sp, sp, 2044
@@ -1009,10 +999,7 @@ define void @caller2048() {
 ; RV64I-NEXT:    addi a0, sp, 2047
 ; RV64I-NEXT:    addi a0, a0, 1
 ; RV64I-NEXT:    call callee
-; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    sub sp, s0, a0
-; RV64I-NEXT:    addi sp, sp, 2032
-; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    addi sp, s0, -2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 2032
@@ -1034,10 +1021,7 @@ define void @caller2048() {
 ; RV64I-LP64E-NEXT:    addi a0, sp, 2047
 ; RV64I-LP64E-NEXT:    addi a0, a0, 1
 ; RV64I-LP64E-NEXT:    call callee
-; RV64I-LP64E-NEXT:    lui a0, 1
-; RV64I-LP64E-NEXT:    sub sp, s0, a0
-; RV64I-LP64E-NEXT:    addi sp, sp, 2040
-; RV64I-LP64E-NEXT:    addi sp, sp, 16
+; RV64I-LP64E-NEXT:    addi sp, s0, -2040
 ; RV64I-LP64E-NEXT:    ld ra, 2032(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-NEXT:    ld s0, 2024(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-NEXT:    addi sp, sp, 2040
@@ -1119,10 +1103,7 @@ define void @caller4096() {
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    add a0, sp, a0
 ; RV32I-NEXT:    call callee
-; RV32I-NEXT:    lui a0, 2
-; RV32I-NEXT:    sub sp, s0, a0
-; RV32I-NEXT:    addi a0, a0, -2032
-; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    addi sp, s0, -2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
@@ -1146,10 +1127,7 @@ define void @caller4096() {
 ; RV32I-ILP32E-NEXT:    lui a0, 1
 ; RV32I-ILP32E-NEXT:    add a0, sp, a0
 ; RV32I-ILP32E-NEXT:    call callee
-; RV32I-ILP32E-NEXT:    lui a0, 2
-; RV32I-ILP32E-NEXT:    sub sp, s0, a0
-; RV32I-ILP32E-NEXT:    addi a0, a0, -2044
-; RV32I-ILP32E-NEXT:    add sp, sp, a0
+; RV32I-ILP32E-NEXT:    addi sp, s0, -2044
 ; RV32I-ILP32E-NEXT:    lw ra, 2040(sp) # 4-byte Folded Reload
 ; RV32I-ILP32E-NEXT:    lw s0, 2036(sp) # 4-byte Folded Reload
 ; RV32I-ILP32E-NEXT:    addi sp, sp, 2044
@@ -1173,10 +1151,7 @@ define void @caller4096() {
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    call callee
-; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    sub sp, s0, a0
-; RV64I-NEXT:    addiw a0, a0, -2032
-; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    addi sp, s0, -2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 2032
@@ -1200,10 +1175,7 @@ define void @caller4096() {
 ; RV64I-LP64E-NEXT:    lui a0, 1
 ; RV64I-LP64E-NEXT:    add a0, sp, a0
 ; RV64I-LP64E-NEXT:    call callee
-; RV64I-LP64E-NEXT:    lui a0, 2
-; RV64I-LP64E-NEXT:    sub sp, s0, a0
-; RV64I-LP64E-NEXT:    addiw a0, a0, -2040
-; RV64I-LP64E-NEXT:    add sp, sp, a0
+; RV64I-LP64E-NEXT:    addi sp, s0, -2040
 ; RV64I-LP64E-NEXT:    ld ra, 2032(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-NEXT:    ld s0, 2024(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-NEXT:    addi sp, sp, 2040

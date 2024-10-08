@@ -25,7 +25,7 @@
 //          on the runtime configuration. The middle part indicates the type of
 //          the application value, the suffix (f,d,l) indicates the type of the
 //          shadow, and depends on the instrumentation configuration.
-//        * __nsan_fcmp_fail_* emits a warning for an fcmp instruction whose
+//        * __nsan_fcmp_fail_* emits a warning for a fcmp instruction whose
 //          corresponding shadow fcmp result differs.
 //
 //===----------------------------------------------------------------------===//
@@ -200,7 +200,14 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
                                                  bool request_fast,
                                                  u32 max_depth) {
   using namespace __nsan;
-  return Unwind(max_depth, pc, bp, context, 0, 0, false);
+  NsanThread *t = GetCurrentThread();
+  if (!t || !StackTrace::WillUseFastUnwind(request_fast))
+    return Unwind(max_depth, pc, bp, context, t ? t->stack_top() : 0,
+                  t ? t->stack_bottom() : 0, false);
+  if (StackTrace::WillUseFastUnwind(request_fast))
+    Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(), true);
+  else
+    Unwind(max_depth, pc, 0, context, 0, 0, false);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_print_accumulated_stats() {
@@ -675,7 +682,7 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   if (flags().enable_warning_stats)
     nsan_stats->AddWarning(CheckTypeT::kFcmp, pc, bp, 0.0);
 
-  if (flags().disable_warnings)
+  if (flags().disable_warnings || !flags().check_cmp)
     return;
 
   // FIXME: ideally we would print the shadow value as FP128. Right now because

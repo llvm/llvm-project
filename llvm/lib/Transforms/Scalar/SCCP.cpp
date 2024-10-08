@@ -24,6 +24,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -65,6 +66,11 @@ static bool runSCCP(Function &F, const DataLayout &DL,
   SCCPSolver Solver(
       DL, [TLI](Function &F) -> const TargetLibraryInfo & { return *TLI; },
       F.getContext());
+
+  // While we don't do any actual inter-procedural analysis, still track
+  // return values so we can infer attributes.
+  if (canTrackReturnsInterprocedurally(&F))
+    Solver.addTrackedFunction(&F);
 
   // Mark the first block of the function as being executable.
   Solver.markBlockExecutable(&F.front());
@@ -114,6 +120,8 @@ static bool runSCCP(Function &F, const DataLayout &DL,
   for (BasicBlock *DeadBB : BlocksToErase)
     if (!DeadBB->hasAddressTaken())
       DTU.deleteBB(DeadBB);
+
+  Solver.inferReturnAttributes();
 
   return MadeChanges;
 }

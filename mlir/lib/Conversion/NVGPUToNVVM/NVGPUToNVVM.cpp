@@ -495,7 +495,6 @@ static std::string buildMmaSparseAsmConstraintString(unsigned matASize,
   // The final operand is for the sparsity metadata.
   // The sparsity selector appears as direct literal.
   ss << "r";
-  ss.flush();
   return str;
 }
 
@@ -535,7 +534,6 @@ static std::string buildMmaSparseAsmString(
   ss << "$" << asmArgIdx++ << ",";
   assert(metaDataSelector <= 1);
   ss << "0x" << metaDataSelector << ";";
-  ss.flush();
   return asmStr;
 }
 
@@ -1703,8 +1701,8 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
 };
 } // namespace
 
-void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
-                                                 RewritePatternSet &patterns) {
+void mlir::populateNVGPUToNVVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<
       NVGPUMBarrierCreateLowering,           // nvgpu.mbarrier.create
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init

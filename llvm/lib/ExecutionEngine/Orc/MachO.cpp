@@ -189,6 +189,7 @@ loadLinkableSliceFromMachOUniversalBinary(sys::fs::file_t FD,
     case LoadArchives::Required:
       return "an archive";
     }
+    llvm_unreachable("Unknown LoadArchives enum");
   };
 
   return make_error<StringError>(TT.getArchName() + " slice of " + UBPath +

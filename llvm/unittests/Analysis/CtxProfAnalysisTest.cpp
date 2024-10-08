@@ -64,6 +64,11 @@ no:
   ret void
 }
 
+define void @inlineasm() {
+  call void asm "nop", ""()
+  ret void
+}
+
 attributes #0 = { noinline }
 !0 = !{ i64 11872291593386833696 }
 )IR";
@@ -113,6 +118,27 @@ TEST_F(CtxProfAnalysisTest, GetCallsiteIDTest) {
       }
 
   EXPECT_THAT(InsValues, testing::ElementsAre(0, 1));
+}
+
+TEST_F(CtxProfAnalysisTest, GetCallsiteIDInlineAsmTest) {
+  ModulePassManager MPM;
+  MPM.addPass(PGOInstrumentationGen(PGOInstrumentationType::CTXPROF));
+  EXPECT_FALSE(MPM.run(*M, MAM).areAllPreserved());
+  auto *F = M->getFunction("inlineasm");
+  ASSERT_NE(F, nullptr);
+  std::vector<const Instruction *> InsValues;
+
+  for (auto &BB : *F)
+    for (auto &I : BB)
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        // Skip instrumentation inserted intrinsics.
+        if (CB->getCalledFunction() && CB->getCalledFunction()->isIntrinsic())
+          continue;
+        auto *Ins = CtxProfAnalysis::getCallsiteInstrumentation(*CB);
+        InsValues.push_back(Ins);
+      }
+
+  EXPECT_THAT(InsValues, testing::ElementsAre(nullptr));
 }
 
 TEST_F(CtxProfAnalysisTest, GetCallsiteIDNegativeTest) {

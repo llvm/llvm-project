@@ -1360,6 +1360,11 @@ void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
   ID.AddInteger(llvm::to_underlying(S->getIdentKind()));
 }
 
+void StmtProfiler::VisitOpenACCAsteriskSizeExpr(
+    const OpenACCAsteriskSizeExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   VisitExpr(S);
   S->getValue().Profile(ID);
@@ -2552,10 +2557,21 @@ void OpenACCClauseProfiler::VisitNumGangsClause(
     Profiler.VisitStmt(E);
 }
 
+void OpenACCClauseProfiler::VisitTileClause(const OpenACCTileClause &Clause) {
+  for (auto *E : Clause.getSizeExprs())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &Clause) {
   assert(Clause.hasIntExpr() && "num_workers clause requires a valid int expr");
   Profiler.VisitStmt(Clause.getIntExpr());
+}
+
+void OpenACCClauseProfiler::VisitCollapseClause(
+    const OpenACCCollapseClause &Clause) {
+  assert(Clause.getLoopCount() && "collapse clause requires a valid int expr");
+  Profiler.VisitStmt(Clause.getLoopCount());
 }
 
 void OpenACCClauseProfiler::VisitPrivateClause(
@@ -2645,6 +2661,10 @@ void StmtProfiler::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
 
   OpenACCClauseProfiler P{*this};
   P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitHLSLOutArgExpr(const HLSLOutArgExpr *S) {
+  VisitStmt(S);
 }
 
 void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,

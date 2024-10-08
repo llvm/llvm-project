@@ -8,6 +8,7 @@
 
 #include "ByteCodeEmitter.h"
 #include "Context.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "IntegralAP.h"
 #include "Opcode.h"
@@ -20,17 +21,6 @@
 
 using namespace clang;
 using namespace clang::interp;
-
-/// Unevaluated builtins don't get their arguments put on the stack
-/// automatically. They instead operate on the AST of their Call
-/// Expression.
-/// Similar information is available via ASTContext::BuiltinInfo,
-/// but that is not correct for our use cases.
-static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
-  return BuiltinID == Builtin::BI__builtin_classify_type ||
-         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
-         BuiltinID == Builtin::BI__builtin_constant_p;
-}
 
 Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
@@ -147,14 +137,11 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func) {
-    bool IsUnevaluatedBuiltin = false;
-    if (unsigned BI = FuncDecl->getBuiltinID())
-      IsUnevaluatedBuiltin = isUnevaluatedBuiltin(BI);
-
+    unsigned BuiltinID = FuncDecl->getBuiltinID();
     Func =
         P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
                          std::move(ParamDescriptors), std::move(ParamOffsets),
-                         HasThisPointer, HasRVO, IsUnevaluatedBuiltin);
+                         HasThisPointer, HasRVO, BuiltinID);
   }
 
   assert(Func);

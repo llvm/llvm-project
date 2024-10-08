@@ -8,8 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 4 x half> @insert_into_poison_nxv4f16_nxv2f16_0(<vscale x 2 x half> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv4f16_nxv2f16_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.d, z0.s
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x half> @llvm.vector.insert.nxv4f16.nxv2f16(<vscale x 4 x half> poison, <vscale x 2 x half> %a, i64 0)
   ret <vscale x 4 x half> %res
@@ -18,8 +17,7 @@ define <vscale x 4 x half> @insert_into_poison_nxv4f16_nxv2f16_0(<vscale x 2 x h
 define <vscale x 4 x half> @insert_into_poison_nxv4f16_nxv2f16_2(<vscale x 2 x half> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv4f16_nxv2f16_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z1.d, z0.s
-; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x half> @llvm.vector.insert.nxv4f16.nxv2f16(<vscale x 4 x half> poison, <vscale x 2 x half> %a, i64 2)
   ret <vscale x 4 x half> %res
@@ -28,16 +26,8 @@ define <vscale x 4 x half> @insert_into_poison_nxv4f16_nxv2f16_2(<vscale x 2 x h
 define <vscale x 8 x half> @insert_into_poison_nxv8f16_nxv2f16_0(<vscale x 2 x half> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv8f16_nxv2f16_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.nxv2f16(<vscale x 8 x half> poison, <vscale x 2 x half> %a, i64 0)
   ret <vscale x 8 x half> %res
@@ -46,16 +36,8 @@ define <vscale x 8 x half> @insert_into_poison_nxv8f16_nxv2f16_0(<vscale x 2 x h
 define <vscale x 8 x half> @insert_into_poison_nxv8f16_nxv2f16_2(<vscale x 2 x half> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv8f16_nxv2f16_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.nxv2f16(<vscale x 8 x half> poison, <vscale x 2 x half> %a, i64 2)
   ret <vscale x 8 x half> %res
@@ -64,16 +46,8 @@ define <vscale x 8 x half> @insert_into_poison_nxv8f16_nxv2f16_2(<vscale x 2 x h
 define <vscale x 8 x half> @insert_into_poison_nxv8f16_nxv2f16_4(<vscale x 2 x half> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv8f16_nxv2f16_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #2, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.nxv2f16(<vscale x 8 x half> poison, <vscale x 2 x half> %a, i64 4)
   ret <vscale x 8 x half> %res
@@ -82,16 +56,8 @@ define <vscale x 8 x half> @insert_into_poison_nxv8f16_nxv2f16_4(<vscale x 2 x h
 define <vscale x 8 x half> @insert_into_poison_nxv8f16_nxv2f16_6(<vscale x 2 x half> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv8f16_nxv2f16_6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #3, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.nxv2f16(<vscale x 8 x half> poison, <vscale x 2 x half> %a, i64 6)
   ret <vscale x 8 x half> %res
@@ -139,8 +105,7 @@ define <vscale x 4 x float> @insert_into_poison_nxv4f32_nxv2f32_2(<vscale x 2 x 
 define <vscale x 4 x bfloat> @insert_into_poison_nxv4bf16_nxv2bf16_0(<vscale x 2 x bfloat> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv4bf16_nxv2bf16_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.d, z0.s
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x bfloat> @llvm.vector.insert.nxv4bf16.nxv2bf16(<vscale x 4 x bfloat> poison, <vscale x 2 x bfloat> %a, i64 0)
   ret <vscale x 4 x bfloat> %res
@@ -149,8 +114,7 @@ define <vscale x 4 x bfloat> @insert_into_poison_nxv4bf16_nxv2bf16_0(<vscale x 2
 define <vscale x 4 x bfloat> @insert_into_poison_nxv4bf16_nxv2bf16_2(<vscale x 2 x bfloat> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv4bf16_nxv2bf16_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z1.d, z0.s
-; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x bfloat> @llvm.vector.insert.nxv4bf16.nxv2bf16(<vscale x 4 x bfloat> poison, <vscale x 2 x bfloat> %a, i64 2)
   ret <vscale x 4 x bfloat> %res
@@ -159,16 +123,8 @@ define <vscale x 4 x bfloat> @insert_into_poison_nxv4bf16_nxv2bf16_2(<vscale x 2
 define <vscale x 8 x bfloat> @insert_into_poison_nxv8bf16_nxv2bf16_0(<vscale x 2 x bfloat> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv8bf16_nxv2bf16_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.nxv2bf16(<vscale x 8 x bfloat> poison, <vscale x 2 x bfloat> %a, i64 0)
   ret <vscale x 8 x bfloat> %res
@@ -177,16 +133,8 @@ define <vscale x 8 x bfloat> @insert_into_poison_nxv8bf16_nxv2bf16_0(<vscale x 2
 define <vscale x 8 x bfloat> @insert_into_poison_nxv8bf16_nxv2bf16_2(<vscale x 2 x bfloat> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv8bf16_nxv2bf16_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #1, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.nxv2bf16(<vscale x 8 x bfloat> poison, <vscale x 2 x bfloat> %a, i64 2)
   ret <vscale x 8 x bfloat> %res
@@ -195,16 +143,8 @@ define <vscale x 8 x bfloat> @insert_into_poison_nxv8bf16_nxv2bf16_2(<vscale x 2
 define <vscale x 8 x bfloat> @insert_into_poison_nxv8bf16_nxv2bf16_4(<vscale x 2 x bfloat> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv8bf16_nxv2bf16_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #2, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.nxv2bf16(<vscale x 8 x bfloat> poison, <vscale x 2 x bfloat> %a, i64 4)
   ret <vscale x 8 x bfloat> %res
@@ -213,16 +153,8 @@ define <vscale x 8 x bfloat> @insert_into_poison_nxv8bf16_nxv2bf16_4(<vscale x 2
 define <vscale x 8 x bfloat> @insert_into_poison_nxv8bf16_nxv2bf16_6(<vscale x 2 x bfloat> %a) #0 {
 ; CHECK-LABEL: insert_into_poison_nxv8bf16_nxv2bf16_6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #3, mul vl]
-; CHECK-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.nxv2bf16(<vscale x 8 x bfloat> poison, <vscale x 2 x bfloat> %a, i64 6)
   ret <vscale x 8 x bfloat> %res
