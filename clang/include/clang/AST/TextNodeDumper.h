@@ -9,6 +9,22 @@
 // This file implements AST dumping of components of individual AST nodes.
 //
 //===----------------------------------------------------------------------===//
+//
+// Modifications to this file by SEI staff are copyright Carnegie Mellon
+// University and contributed under the Apache License v2.0 with LLVM
+// Exceptions.
+//
+// SEI Contributions are made with funding sand support from the Department of
+// Defense under Contract No. FA8702-15-D-0002 with Carnegie Mellon University
+// for the operation of the Software Engineering Institute, a federally funded
+// research and development center.
+//
+// The view, opinions, and/or findings contained in this material are those of
+// the author(s) and should not be construed as an official Government position,
+// policy, or decision, unless designated by other documentation.
+// DM24-0194
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_AST_TEXTNODEDUMPER_H
 #define LLVM_CLANG_AST_TEXTNODEDUMPER_H
@@ -182,6 +198,12 @@ public:
   void Visit(QualType T);
 
   void Visit(TypeLoc);
+
+  // SEI: added support for getting ReturnType information
+  void VisitReturnType(QualType T);
+
+  // SEI: added support for more QT details. it's a passthrough for this class
+  void VisitQualTypeDetails(QualType T) {}
 
   void Visit(const Decl *D);
 

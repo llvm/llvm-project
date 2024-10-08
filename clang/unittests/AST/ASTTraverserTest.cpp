@@ -89,6 +89,10 @@ public:
     }
   }
 
+  // SEI: added for class completeness
+  void VisitFunctionType(const FunctionType *T) {}
+  void VisitReturnType(QualType T) {}
+
   template <typename... T> void Visit(T...) {}
 };
 
