@@ -4006,43 +4006,62 @@ loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
   return Text;
 }
 
-// Resolves an explicit file: reference in a BasedOnStyle directive to a
+// Converts a path to canonical form, ensuring that it is an absolute path, with
+// all .. and . components removed, and with Posix-style path separators.
+static std::error_code makeCanonicalPath(SmallString<128> &Path,
+                                         llvm::vfs::FileSystem &FS) {
+  if (auto EC = FS.makeAbsolute(Path))
+    return EC;
+  llvm::sys::path::remove_dots(Path, /*remove_dot_dot*/ true);
+  llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
+  return {};
+}
+
+// Resolves an explicit "file:" reference in a BasedOnStyle directive to a
 // canonical, absolute path, substituting the value of the CLANG_FORMAT_DIR
 // environment variable if the path starts with $(CLANG_FORMAT_DIR), or treating
-// BasedOnFile as relative to the current ConfigFile otherwise.
+// BasedOnFile as relative to `Directory` otherwise.
 static Expected<SmallString<128>>
-resolveExplicitParentConfigFile(StringRef ConfigFile, StringRef BasedOnFile,
-                                llvm::vfs::FileSystem *FS) {
+resolveExplicitBasedOnConfigFile(StringRef Source, StringRef Directory,
+                                 StringRef BasedOnFile,
+                                 llvm::vfs::FileSystem &FS) {
   constexpr const char *EnvVar = "CLANG_FORMAT_DIR";
   constexpr const char *EnvVarExpansion = "$(CLANG_FORMAT_DIR)";
+
+  SmallString<128> FileName;
   if (BasedOnFile.starts_with(EnvVarExpansion)) {
     const char *ClangFormatDir = getenv(EnvVar);
     if (ClangFormatDir == nullptr) {
-      return make_string_error(ConfigFile + ": 'BasedOnStyle: " + BasedOnFile +
+      return make_string_error(Source + ": 'BasedOnStyle: file:" + BasedOnFile +
                                "' uses " + EnvVarExpansion + ", but the " +
                                EnvVar + " environment variable is not defined");
     } else {
-      auto Status = FS->status(ClangFormatDir);
-      if (!Status ||
-          Status->getType() != llvm::sys::fs::file_type::directory_file) {
-        return make_string_error(
-            StringRef("Environment variable ") + EnvVar + " = " +
-            ClangFormatDir + "does not refer to a valid, readable directory");
+      auto Status = FS.status(ClangFormatDir);
+      if (!Status || !Status->isDirectory()) {
+        return make_string_error(StringRef("Environment variable ") + EnvVar +
+                                 " = '" + ClangFormatDir +
+                                 "' is not a valid, readable directory");
       }
 
-      SmallString<128> FileName{ClangFormatDir};
+      FileName = ClangFormatDir;
       llvm::sys::path::append(FileName,
                               BasedOnFile.substr(strlen(EnvVarExpansion)));
-      ;
-      llvm::sys::path::remove_dots(FileName, true /*remove_dot_dot*/);
-      return FileName;
     }
   } else {
-    SmallString<128> FileName = llvm::sys::path::parent_path(ConfigFile);
+    FileName = Directory;
     llvm::sys::path::append(FileName, BasedOnFile);
-    llvm::sys::path::remove_dots(FileName, true /*remove_dot_dot*/);
-    return FileName;
   }
+
+  // Canonize the filename and ensure that it exists
+  if (auto EC = makeCanonicalPath(FileName, FS))
+    return make_string_error(EC.message());
+  auto Status = FS.status(FileName);
+  if (!Status || !Status->isRegularFile()) {
+    return make_string_error(Source + ": 'BasedOnStyle: file:" + BasedOnFile +
+                             "': '" + FileName +
+                             "' is not a valid, readable file");
+  }
+  return FileName;
 }
 
 Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
@@ -4055,6 +4074,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
     return make_string_error("Invalid fallback style: " + FallbackStyleName);
 
+  SmallString<128> ExplicitlyInheritedConfigFile;
   SmallVector<std::unique_ptr<llvm::MemoryBuffer>, 1> ChildFormatTextToApply;
 
   if (StyleName.starts_with("{")) {
@@ -4071,34 +4091,51 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
     ChildFormatTextToApply.emplace_back(
         llvm::MemoryBuffer::getMemBuffer(StyleName, Source, false));
+
+    // In a command-line style block, "BasedOnStyle: file:..." is relative to
+    // the process's current working directory
+    if (StringRef(Style.InheritsConfig).starts_with_insensitive("file:")) {
+      llvm::ErrorOr<std::string> CWD = FS->getCurrentWorkingDirectory();
+      if (auto EC = CWD.getError())
+        return make_string_error(EC.message());
+      llvm::Expected<SmallString<128>> BasedOnFile =
+          resolveExplicitBasedOnConfigFile(Source, *CWD,
+                                           Style.InheritsConfig.substr(5), *FS);
+      if (!BasedOnFile)
+        return BasedOnFile.takeError();
+
+      ExplicitlyInheritedConfigFile = *BasedOnFile;
+    }
   }
 
   if (!FS)
     FS = llvm::vfs::getRealFileSystem().get();
   assert(FS);
 
+  SmallString<128> Path;
+
   // User provided clang-format file using -style=file:path/to/format/file.
   if (Style.InheritsConfig.empty() &&
       StyleName.starts_with_insensitive("file:")) {
-    auto ConfigFile = StyleName.substr(5);
+    Path = StyleName.substr(5);
+    if (auto EC = makeCanonicalPath(Path, *FS))
+      return make_string_error(EC.message());
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-        loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
+        loadAndParseConfigFile(Path, FS, &Style, AllowUnknownOptions,
                                DiagHandler);
-    if (auto EC = Text.getError()) {
-      return make_string_error("Error reading " + ConfigFile + ": " +
-                               EC.message());
-    }
+    if (auto EC = Text.getError())
+      return make_string_error("Error reading " + Path + ": " + EC.message());
 
-    LLVM_DEBUG(llvm::dbgs()
-               << "Using configuration file " << ConfigFile << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "Using configuration file " << Path << "\n");
 
     if (Style.InheritsConfig.empty())
       return Style;
 
-    // Search for parent configs starting from the parent directory of
-    // ConfigFile.
-    FileName = ConfigFile;
     ChildFormatTextToApply.emplace_back(std::move(*Text));
+  } else {
+    Path = FileName;
+    if (auto EC = makeCanonicalPath(Path, *FS))
+      return make_string_error(EC.message());
   }
 
   // If the style inherits the parent configuration it is a command line
@@ -4110,10 +4147,6 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     if (Style.InheritsConfig.empty())
       return Style;
   }
-
-  SmallString<128> Path(FileName);
-  if (std::error_code EC = FS->makeAbsolute(Path))
-    return make_string_error(EC.message());
 
   // Reset possible inheritance
   Style.InheritsConfig.clear();
@@ -4137,7 +4170,6 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   FilesToLookFor.push_back("_clang-format");
 
   SmallString<128> UnsuitableConfigFiles;
-  SmallString<128> ExplicitlyInheritedConfigFile;
   do {
     if (!ExplicitlyInheritedConfigFile.empty()) {
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
@@ -4170,13 +4202,16 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       } else if (StringRef(Style.InheritsConfig)
                      .starts_with_insensitive("file:")) {
         // This config file also inherits its parent with an explicit path
-        llvm::Expected<SmallString<128>> Parent =
-            resolveExplicitParentConfigFile(ExplicitlyInheritedConfigFile,
-                                            Style.InheritsConfig.substr(5), FS);
-        if (!Parent)
-          return Parent.takeError();
+        SmallString<128> ParentDirectory =
+            llvm::sys::path::parent_path(ExplicitlyInheritedConfigFile);
+        llvm::Expected<SmallString<128>> BasedOnFile =
+            resolveExplicitBasedOnConfigFile(
+                ExplicitlyInheritedConfigFile, ParentDirectory,
+                Style.InheritsConfig.substr(5), *FS);
+        if (!BasedOnFile)
+          return BasedOnFile.takeError();
 
-        ExplicitlyInheritedConfigFile = *Parent;
+        ExplicitlyInheritedConfigFile = *BasedOnFile;
         continue;
       }
     }
@@ -4191,8 +4226,9 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
       for (const auto &F : FilesToLookFor) {
         SmallString<128> ConfigFile(Directory);
-
         llvm::sys::path::append(ConfigFile, F);
+        if (auto EC = makeCanonicalPath(ConfigFile, *FS))
+          return make_string_error(EC.message());
         LLVM_DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
 
         Status = FS->status(ConfigFile);
@@ -4230,13 +4266,16 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
           LLVM_DEBUG(llvm::dbgs() << "Inherits parent configuration\n");
         } else if (StringRef(Style.InheritsConfig)
                        .starts_with_insensitive("file:")) {
-          llvm::Expected<SmallString<128>> Parent =
-              resolveExplicitParentConfigFile(
-                  ConfigFile, Style.InheritsConfig.substr(5), FS);
-          if (!Parent)
-            return Parent.takeError();
+          SmallString<128> ParentDirectory =
+              llvm::sys::path::parent_path(ConfigFile);
+          llvm::Expected<SmallString<128>> BasedOnFile =
+              resolveExplicitBasedOnConfigFile(ConfigFile, ParentDirectory,
+                                               Style.InheritsConfig.substr(5),
+                                               *FS);
+          if (!BasedOnFile)
+            return BasedOnFile.takeError();
 
-          ExplicitlyInheritedConfigFile = *Parent;
+          ExplicitlyInheritedConfigFile = *BasedOnFile;
           LLVM_DEBUG(llvm::dbgs() << "Inherits configuration from "
                                   << ExplicitlyInheritedConfigFile << "\n");
         }

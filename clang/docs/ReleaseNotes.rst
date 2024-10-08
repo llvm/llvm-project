@@ -512,6 +512,7 @@ clang-format
 ------------
 
 - Adds ``BreakBinaryOperations`` option.
+- Extends ``BasedOnStyle`` option to support inheriting styles from an arbitrary file path
 
 libclang
 --------
