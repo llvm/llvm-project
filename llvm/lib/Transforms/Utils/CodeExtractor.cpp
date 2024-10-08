@@ -1171,8 +1171,8 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       params.push_back(input);
       if (input->isSwiftError())
         SwiftErrorArgs.push_back(ScalarInputArgNo);
+      ++ScalarInputArgNo;
     }
-    ++ScalarInputArgNo;
   }
 
   // Create allocas for the outputs
