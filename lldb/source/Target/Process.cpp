@@ -6539,16 +6539,24 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                 CreateCoreFileMemoryRange(region));
 }
 
-static void SaveDynamicLoaderSections(Process &process, const SaveCoreOptions &options, CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+static void SaveDynamicLoaderSections(Process &process,
+                                      const SaveCoreOptions &options,
+                                      CoreFileMemoryRanges &ranges,
+                                      std::set<addr_t> &stack_ends) {
   DynamicLoader *dyld = process.GetDynamicLoader();
   if (!dyld)
     return;
 
   std::vector<MemoryRegionInfo> dynamic_loader_mem_regions;
-  std::function<bool(const lldb_private::Thread&)> save_thread_predicate = [&](const lldb_private::Thread &t) -> bool { return options.ShouldThreadBeSaved(t.GetID()); };
-  dyld->CalculateDynamicSaveCoreRanges(process, dynamic_loader_mem_regions, save_thread_predicate);
+  std::function<bool(const lldb_private::Thread &)> save_thread_predicate =
+      [&](const lldb_private::Thread &t) -> bool {
+    return options.ShouldThreadBeSaved(t.GetID());
+  };
+  dyld->CalculateDynamicSaveCoreRanges(process, dynamic_loader_mem_regions,
+                                       save_thread_predicate);
   for (const auto &region : dynamic_loader_mem_regions) {
-    // The Dynamic Loader can give us regions that could include a truncated stack
+    // The Dynamic Loader can give us regions that could include a truncated
+    // stack
     if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0)
       AddRegion(region, true, ranges);
   }
@@ -6704,8 +6712,8 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
       options.HasSpecifiedThreads()) {
     SaveOffRegionsWithStackPointers(*this, options, regions, ranges,
                                     stack_ends);
-    // Save off the dynamic loader sections, so if we are on an architecture that supports
-    // Thread Locals, that we include those as well.
+    // Save off the dynamic loader sections, so if we are on an architecture
+    // that supports Thread Locals, that we include those as well.
     SaveDynamicLoaderSections(*this, options, ranges, stack_ends);
   }
 

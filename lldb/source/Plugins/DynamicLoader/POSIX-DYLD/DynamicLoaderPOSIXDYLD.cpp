@@ -901,7 +901,8 @@ static void AddSegmentRegisterSections(Process &process, ThreadSP &thread_sp,
 }
 
 // Save off the link map for core files.
-static void AddLinkMapSections(Process &process, std::vector<MemoryRegionInfo> &ranges) {
+static void AddLinkMapSections(Process &process,
+                               std::vector<MemoryRegionInfo> &ranges) {
   ModuleList &module_list = process.GetTarget().GetImages();
   Target *target = &process.GetTarget();
   for (size_t idx = 0; idx < module_list.GetSize(); idx++) {
@@ -926,7 +927,10 @@ static void AddLinkMapSections(Process &process, std::vector<MemoryRegionInfo> &
   }
 }
 
-void DynamicLoaderPOSIXDYLD::CalculateDynamicSaveCoreRanges(lldb_private::Process &process, std::vector<lldb_private::MemoryRegionInfo> &ranges, std::function<bool(const lldb_private::Thread&)> save_thread_predicate) {
+void DynamicLoaderPOSIXDYLD::CalculateDynamicSaveCoreRanges(
+    lldb_private::Process &process,
+    std::vector<lldb_private::MemoryRegionInfo> &ranges,
+    std::function<bool(const lldb_private::Thread &)> save_thread_predicate) {
   ThreadList &thread_list = process.GetThreadList();
   for (size_t idx = 0; idx < thread_list.GetSize(); idx++) {
     ThreadSP thread_sp = thread_list.GetThreadAtIndex(idx);
