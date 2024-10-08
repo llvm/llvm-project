@@ -27927,8 +27927,9 @@ bool AArch64TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
 bool AArch64TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                                              const MachineFunction &MF) const {
   // Avoid merging stores into fixed-length vectors when Neon is unavailable.
-  // Until we have more general SVE lowerings for BUILD_VECTOR this may
-  // introduce stack spills.
+  // In future, we could allow this when SVE is available, but currently,
+  // the SVE lowerings for BUILD_VECTOR are limited to a few specific cases (and
+  // the general lowering may introduce stack spills/reloads).
   if (MemVT.isFixedLengthVector() && !Subtarget->isNeonAvailable())
     return false;
 
