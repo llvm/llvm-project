@@ -1184,6 +1184,10 @@ static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const Function *Func,
                                       const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
   PrimType ValT = *S.Ctx.classify(Call->getArg(0));
   PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
 
@@ -1197,7 +1201,7 @@ static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
   if (Index < BitWidth)
     Val.clearHighBits(BitWidth - Index);
 
-  pushInteger(S, Val, Call->getType());
+  pushInteger(S, Val, CallType);
   return true;
 }
 
@@ -1210,7 +1214,7 @@ static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
     return false;
 
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
-  pushInteger(S, Val.countLeadingZeros(), Call->getType());
+  pushInteger(S, Val.countLeadingZeros(), CallType);
   return true;
 }
 
@@ -1223,7 +1227,7 @@ static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
     return false;
 
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
-  pushInteger(S, Val.countTrailingZeros(), Call->getType());
+  pushInteger(S, Val.countTrailingZeros(), CallType);
   return true;
 }
 
