@@ -10693,19 +10693,48 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
     return FastLowered;
 
   SDLoc SL(Op);
-  SDValue Src0 = Op.getOperand(0);
-  SDValue Src1 = Op.getOperand(1);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
 
-  SDValue CvtSrc0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src0);
-  SDValue CvtSrc1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src1);
+  // a32.u = opx(V_CVT_F32_F16, a.u); // CVT to F32
+  // b32.u = opx(V_CVT_F32_F16, b.u); // CVT to F32
+  // r32.u = opx(V_RCP_F32, b32.u); // rcp = 1 / d
+  // q32.u = opx(V_MUL_F32, a32.u, r32.u); // q = n * rcp
+  // e32.u = opx(V_MAD_F32, (b32.u^_neg32), q32.u, a32.u); // err = -d * q + n
+  // q32.u = opx(V_MAD_F32, e32.u, r32.u, q32.u); // q = n * rcp
+  // e32.u = opx(V_MAD_F32, (b32.u^_neg32), q32.u, a32.u); // err = -d * q + n
+  // tmp.u = opx(V_MUL_F32, e32.u, r32.u);
+  // tmp.u = opx(V_AND_B32, tmp.u, 0xff800000)
+  // q32.u = opx(V_ADD_F32, tmp.u, q32.u);
+  // q16.u = opx(V_CVT_F16_F32, q32.u);
+  // q16.u = opx(V_DIV_FIXUP_F16, q16.u, b.u, a.u); // q = touchup(q, d, n)
 
-  SDValue RcpSrc1 = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, CvtSrc1);
-  SDValue Quot = DAG.getNode(ISD::FMUL, SL, MVT::f32, CvtSrc0, RcpSrc1);
+  // We will use ISD::FMA on targets that don't support ISD::FMAD.
+  unsigned FMADOpCode =
+      isOperationLegal(ISD::FMAD, MVT::f32) ? ISD::FMAD : ISD::FMA;
 
-  SDValue FPRoundFlag = DAG.getTargetConstant(0, SL, MVT::i32);
-  SDValue BestQuot = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot, FPRoundFlag);
-
-  return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, BestQuot, Src1, Src0);
+  SDValue LHSExt = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, LHS);
+  SDValue RHSExt = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, RHS);
+  SDValue NegRHSExt = DAG.getNode(ISD::FNEG, SL, MVT::f32, RHSExt);
+  SDValue Rcp =
+      DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, RHSExt, Op->getFlags());
+  SDValue Quot =
+      DAG.getNode(ISD::FMUL, SL, MVT::f32, LHSExt, Rcp, Op->getFlags());
+  SDValue Err = DAG.getNode(FMADOpCode, SL, MVT::f32, NegRHSExt, Quot, LHSExt,
+                            Op->getFlags());
+  Quot = DAG.getNode(FMADOpCode, SL, MVT::f32, Err, Rcp, Quot, Op->getFlags());
+  Err = DAG.getNode(FMADOpCode, SL, MVT::f32, NegRHSExt, Quot, LHSExt,
+                    Op->getFlags());
+  SDValue Tmp = DAG.getNode(ISD::FMUL, SL, MVT::f32, Err, Rcp, Op->getFlags());
+  SDValue TmpCast = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Tmp);
+  TmpCast = DAG.getNode(ISD::AND, SL, MVT::i32, TmpCast,
+                        DAG.getConstant(0xff800000, SL, MVT::i32));
+  Tmp = DAG.getNode(ISD::BITCAST, SL, MVT::f32, TmpCast);
+  Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, Op->getFlags());
+  SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
+                             DAG.getConstant(0, SL, MVT::i32));
+  return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, RDst, RHS, LHS,
+                     Op->getFlags());
 }
 
 // Faster 2.5 ULP division that does not support denormals.

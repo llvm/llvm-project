@@ -570,6 +570,7 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_step:
     Result = expandStepIntrinsic(Orig);
+    break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
     break;

@@ -268,6 +268,7 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::FP_EXTEND_MERGE_PASSTHRU:
   case AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU:
   case AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU:
+  case AArch64ISD::FCVTX_MERGE_PASSTHRU:
   case AArch64ISD::FCVTZU_MERGE_PASSTHRU:
   case AArch64ISD::FCVTZS_MERGE_PASSTHRU:
   case AArch64ISD::FSQRT_MERGE_PASSTHRU:
@@ -2652,6 +2653,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FP_EXTEND_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::FCVTX_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FCVTZU_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FCVTZS_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FSQRT_MERGE_PASSTHRU)
@@ -4416,6 +4418,19 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
       // Set the quiet bit.
       if (!DAG.isKnownNeverSNaN(SrcVal))
         NaN = DAG.getNode(ISD::OR, DL, I32, Narrow, ImmV(0x400000));
+    } else if (SrcVT == MVT::nxv2f64 &&
+               (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+      // Round to float without introducing rounding errors and try again.
+      SDValue Pg = getPredicateForVector(DAG, DL, MVT::nxv2f32);
+      Narrow = DAG.getNode(AArch64ISD::FCVTX_MERGE_PASSTHRU, DL, MVT::nxv2f32,
+                           Pg, SrcVal, DAG.getUNDEF(MVT::nxv2f32));
+
+      SmallVector<SDValue, 3> NewOps;
+      if (IsStrict)
+        NewOps.push_back(Op.getOperand(0));
+      NewOps.push_back(Narrow);
+      NewOps.push_back(Op.getOperand(IsStrict ? 2 : 1));
+      return DAG.getNode(Op.getOpcode(), DL, VT, NewOps, Op->getFlags());
     } else
       return SDValue();
 
