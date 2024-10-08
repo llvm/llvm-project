@@ -501,6 +501,25 @@ const char *TimerGroup::printAllJSONValues(raw_ostream &OS, const char *delim) {
 
 void TimerGroup::constructForStatistics() {
   (void)getLibSupportInfoOutputFilename();
+  // Make sure initTimerOptions() is called here, and before NamedGroupTimers is
+  // initialized. Rationale:
+  //
+  // TimerGroup will print itself on destruction, and its destructor accesses
+  // one of the timer options (SortTimers) to determine how to do this:
+  // ~TimerGroup::TimerGroup()
+  //   -> TimerGroup::removeTimer()
+  //   -> TimerGroup::PrintQueuedTimers()
+  //   -> if (*SortTimers) llvm::sort(TimersToPrint);
+  //
+  // It's possible the timer options may not be initialized at this point. This
+  // could happen if a client of LLVM calls the bitcode parser before
+  // initializing command-line options, for example. Inside the parser are
+  // statistic counters, which when incremented will initialize the TimerGroup
+  // here. If NamedGroupTimers is created before timer options, it will later be
+  // destroyed AFTER the timer options (ManagedStatics are destroyed in reverse
+  // order), causing a crash when attempting to access the already-destroyed
+  // timer option.
+  initTimerOptions();
   (void)*NamedGroupedTimers;
 }
 
