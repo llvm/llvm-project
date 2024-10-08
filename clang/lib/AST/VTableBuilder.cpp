@@ -1341,14 +1341,9 @@ void ItaniumVTableBuilder::AddMethod(const CXXMethodDecl *MD,
   if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
     assert(ReturnAdjustment.isEmpty() &&
            "Destructor can't have return adjustment!");
-    if (!Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-      // Add both the complete destructor and the deleting destructor.
-      Components.push_back(VTableComponent::MakeCompleteDtor(DD));
-      Components.push_back(VTableComponent::MakeDeletingDtor(DD));
-    } else {
-      // Add the vector deleting destructor.
-      Components.push_back(VTableComponent::MakeDeletingDtor(DD));
-    }
+    // Add both the complete destructor and the deleting destructor.
+    Components.push_back(VTableComponent::MakeCompleteDtor(DD));
+    Components.push_back(VTableComponent::MakeDeletingDtor(DD));
   } else {
     // Add the return adjustment if necessary.
     if (!ReturnAdjustment.isEmpty())
@@ -1737,15 +1732,10 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
       const CXXMethodDecl *MD = I.first;
       const MethodInfo &MI = I.second;
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-	if (!Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-	  MethodVTableIndices[GlobalDecl(DD, Dtor_Complete)] =
-	      MI.VTableIndex - AddressPoint;
-	  MethodVTableIndices[GlobalDecl(DD, Dtor_Deleting)] =
-              MI.VTableIndex + 1 - AddressPoint;
-        } else {
-          MethodVTableIndices[GlobalDecl(DD, Dtor_VectorDeleting)] =
-              MI.VTableIndex + 1 - AddressPoint;
-	}
+	MethodVTableIndices[GlobalDecl(DD, Dtor_Complete)]
+            = MI.VTableIndex - AddressPoint;
+        MethodVTableIndices[GlobalDecl(DD, Dtor_Deleting)]
+            = MI.VTableIndex + 1 - AddressPoint;
       } else {
         MethodVTableIndices[MD] = MI.VTableIndex - AddressPoint;
       }
@@ -2080,8 +2070,6 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
       DD->printQualifiedName(Out);
       if (IsComplete)
         Out << "() [complete]";
-      else if (Context.getTargetInfo().getCXXABI().isMicrosoft())
-        Out << "() [vector deleting]";
       else
         Out << "() [deleting]";
 
@@ -2257,28 +2245,12 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
         PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
     if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-      if (!Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-	// For Itanium ABI, add entries for both complete and deleting
-	// destructors.
-        GlobalDecl CompleteGD(DD, Dtor_Complete);
-	assert(MethodVTableIndices.count(CompleteGD));
-        uint64_t CompleteIndex = MethodVTableIndices[CompleteGD];
-        IndicesMap[CompleteIndex] = MethodName + " [complete]";
-
-        GlobalDecl DeletingGD(DD, Dtor_Deleting);
-        assert(MethodVTableIndices.count(DeletingGD));
-        uint64_t DeletingIndex = MethodVTableIndices[DeletingGD];
-        IndicesMap[DeletingIndex] = MethodName + " [deleting]";
-      } else {
-	// For Microsoft ABI, add an entry for the vector deleting destructor.
-        // Ensure that the index calculation is correct for the Microsoft ABI.
-	GlobalDecl VectorDeletingGD(DD, Dtor_VectorDeleting);
-        assert(MethodVTableIndices.count(VectorDeletingGD));
-        uint64_t VectorDeletingIndex = MethodVTableIndices[VectorDeletingGD];
-        IndicesMap[VectorDeletingIndex] = MethodName + " [vector deleting]";
-      }
+      GlobalDecl GD(DD, Dtor_Complete);
+      assert(MethodVTableIndices.count(GD));
+      uint64_t VTableIndex = MethodVTableIndices[GD];
+      IndicesMap[VTableIndex] = MethodName + " [complete]";
+      IndicesMap[VTableIndex + 1] = MethodName + " [deleting]";
     } else {
-      // For other virtual member functions, add an entry with the method name.
       assert(MethodVTableIndices.count(MD));
       IndicesMap[MethodVTableIndices[MD]] = MethodName;
     }
@@ -3790,7 +3762,7 @@ void MicrosoftVTableContext::dumpMethodLocations(
         PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
     if (isa<CXXDestructorDecl>(MD)) {
-      IndicesMap[I.second] = MethodName + " [vector deleting]";
+      IndicesMap[I.second] = MethodName + " [deleting]";
     } else {
       IndicesMap[I.second] = MethodName;
     }
