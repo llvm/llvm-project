@@ -2680,7 +2680,8 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 
   DiagnosticManager diagnostics;
   if (!utility_fn->Install(diagnostics, exe_ctx))
-    return llvm::createStringError(diagnostics.GetString());
+    return diagnostics.GetAsError(lldb::eExpressionSetupError,
+                                  "Could not install utility function:");
 
   return std::move(utility_fn);
 }

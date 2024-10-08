@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -ast-dump %s | FileCheck %s
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-pc-linux -emit-pch -o %t %s
-// RUN: %clang_cc1 -x c++ -std=c++23 -triple x86_64-pc-linux -include-pch %t -ast-dump-all /dev/null | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-linux -emit-pch -o %t %s
+// RUN: %clang_cc1 -x c++ -std=c++23 -triple x86_64-unknown-linux -include-pch %t -ast-dump-all /dev/null | FileCheck %s
 // expected-no-diagnostics
 
 // Check that we both don't crash on transforming FunctionProtoType's

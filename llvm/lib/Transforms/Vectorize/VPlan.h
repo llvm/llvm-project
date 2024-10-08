@@ -907,6 +907,7 @@ public:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
     case VPRecipeBase::VPWidenStoreSC:
+    case VPRecipeBase::VPHistogramSC:
       // TODO: Widened stores don't define a value, but widened loads do. Split
       // the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
@@ -956,7 +957,6 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
-protected:
   struct GEPFlagsTy {
     char IsInBounds : 1;
     GEPFlagsTy(bool IsInBounds) : IsInBounds(IsInBounds) {}
@@ -1307,6 +1307,12 @@ public:
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
 
+  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags,
+                DebugLoc DL = {}, const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC,
+                            ArrayRef<VPValue *>({Ptr, Offset}), Flags, DL),
+        Opcode(VPInstruction::PtrAdd), Name(Name.str()) {}
+
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
 
@@ -1608,7 +1614,7 @@ public:
 };
 
 /// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPSingleDefRecipe {
+class VPWidenCallRecipe : public VPRecipeWithIRFlags {
   /// ID of the vector intrinsic to call when widening the call. If set the
   /// Intrinsic::not_intrinsic, a library call will be used instead.
   Intrinsic::ID VectorIntrinsicID;
@@ -1623,7 +1629,8 @@ public:
   VPWidenCallRecipe(Value *UV, iterator_range<IterT> CallArguments,
                     Intrinsic::ID VectorIntrinsicID, DebugLoc DL = {},
                     Function *Variant = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, UV, DL),
+      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
+                            *cast<Instruction>(UV)),
         VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
@@ -1659,6 +1666,51 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe representing a sequence of load -> update -> store as part of
+/// a histogram operation. This means there may be aliasing between vector
+/// lanes, which is handled by the llvm.experimental.vector.histogram family
+/// of intrinsics. The only update operations currently supported are
+/// 'add' and 'sub' where the other term is loop-invariant.
+class VPHistogramRecipe : public VPRecipeBase {
+  /// Opcode of the update operation, currently either add or sub.
+  unsigned Opcode;
+
+public:
+  template <typename IterT>
+  VPHistogramRecipe(unsigned Opcode, iterator_range<IterT> Operands,
+                    DebugLoc DL = {})
+      : VPRecipeBase(VPDef::VPHistogramSC, Operands, DL), Opcode(Opcode) {}
+
+  ~VPHistogramRecipe() override = default;
+
+  VPHistogramRecipe *clone() override {
+    return new VPHistogramRecipe(Opcode, operands(), getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPHistogramSC);
+
+  /// Produce a vectorized histogram operation.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPHistogramRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  unsigned getOpcode() const { return Opcode; }
+
+  /// Return the mask operand if one was provided, or a null pointer if all
+  /// lanes should be executed unconditionally.
+  VPValue *getMask() const {
+    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
@@ -3271,6 +3323,10 @@ public:
   static inline bool classof(const VPBlockBase *V) {
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
+
+  /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
+  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
+  static VPIRBasicBlock *fromBasicBlock(BasicBlock *IRBB);
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.

@@ -1230,9 +1230,9 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue Op2;
     VPInstruction VPInst(Instruction::Add, {&Op1, &Op2});
     VPRecipeBase &Recipe = VPInst;
-    EXPECT_TRUE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
-    EXPECT_TRUE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
   }
   {

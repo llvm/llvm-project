@@ -1043,6 +1043,25 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
   return false;
 }
 
+static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
+                             const Pointer &ThisPtr) {
+  assert(Func->isConstructor());
+
+  const Descriptor *D = ThisPtr.getFieldDesc();
+
+  // FIXME: I think this case is not 100% correct. E.g. a pointer into a
+  // subobject of a composite array.
+  if (!D->ElemRecord)
+    return true;
+
+  if (D->ElemRecord->getNumVirtualBases() == 0)
+    return true;
+
+  S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_virtual_base)
+      << Func->getParentDecl();
+  return false;
+}
+
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -1117,6 +1136,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return cleanup();
     }
+
+    if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
+      return false;
   }
 
   if (!CheckCallable(S, OpPC, Func))
@@ -1300,7 +1322,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   const auto *NewExpr = cast<CXXNewExpr>(E);
   QualType StorageType = Ptr.getType();
 
-  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr())) {
+  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) &&
+      StorageType->isPointerType()) {
     // FIXME: Are there other cases where this is a problem?
     StorageType = StorageType->getPointeeType();
   }
@@ -1370,6 +1393,23 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   return false;
 }
 
+bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
+                              const FixedPoint &FP) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.checkingForUndefinedBehavior()) {
+    S.getASTContext().getDiagnostics().Report(
+        E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
+        << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+  }
+  S.CCEDiag(E, diag::note_constexpr_overflow)
+      << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+  return S.noteUndefinedBehavior();
+}
+
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", off)
+#endif
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
@@ -1394,6 +1434,10 @@ bool Interpret(InterpState &S, APValue &Result) {
     }
   }
 }
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", on)
+#endif
 
 } // namespace interp
 } // namespace clang

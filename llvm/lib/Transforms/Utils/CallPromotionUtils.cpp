@@ -655,7 +655,7 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
     Ctx.counters()[IndirectID] = IndirectCount;
 
   };
-  CtxProf.update(ProfileUpdater, &Caller);
+  CtxProf.update(ProfileUpdater, Caller);
   return &DirectCall;
 }
 

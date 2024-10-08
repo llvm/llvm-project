@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines a set of enums which allow processing of intrinsic
-// functions.  Values of these enum types are returned by
+// functions. Values of these enum types are returned by
 // Function::getIntrinsicID.
 //
 //===----------------------------------------------------------------------===//
@@ -77,6 +77,12 @@ namespace Intrinsic {
 
   /// Returns true if the intrinsic can be overloaded.
   bool isOverloaded(ID id);
+
+  /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
+  /// certain target. If it is a generic intrinsic false is returned.
+  bool isTargetIntrinsic(ID IID);
+
+  ID lookupIntrinsicID(StringRef Name);
 
   /// Return the attributes for an intrinsic.
   AttributeList getAttributes(LLVMContext &C, ID id);
