@@ -2653,7 +2653,11 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert((!BlockInMask || !Group->isReverse()) &&
          "Reversed masked interleave-group not supported.");
 
-  Value *Index;
+  VPValue *Addr = getAddr();
+  Value *ResAddr = State.get(Addr, VPLane(0));
+  if (auto *I = dyn_cast<Instruction>(ResAddr))
+    State.setDebugLocFrom(I->getDebugLoc());
+
   // If the group is reverse, adjust the index to refer to the last vector lane
   // instead of the first. We adjust the index from the first vector lane,
   // rather than directly getting the pointer for lane VF - 1, because the
@@ -2661,24 +2665,17 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   if (Group->isReverse()) {
     Value *RuntimeVF =
         getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);
-    Index = State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
+    Value *Index =
+        State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
     Index = State.Builder.CreateMul(Index,
                                     State.Builder.getInt32(Group->getFactor()));
     Index = State.Builder.CreateNeg(Index);
-  } else {
-    // TODO: Drop redundant 0-index GEP as follow-up.
-    Index = State.Builder.getInt32(0);
+
+    bool InBounds = false;
+    if (auto *Gep = dyn_cast<GetElementPtrInst>(ResAddr->stripPointerCasts()))
+      InBounds = Gep->isInBounds();
+    ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Index, "", InBounds);
   }
-
-  VPValue *Addr = getAddr();
-  Value *ResAddr = State.get(Addr, VPLane(0));
-  if (auto *I = dyn_cast<Instruction>(ResAddr))
-    State.setDebugLocFrom(I->getDebugLoc());
-
-  bool InBounds = false;
-  if (auto *gep = dyn_cast<GetElementPtrInst>(ResAddr->stripPointerCasts()))
-    InBounds = gep->isInBounds();
-  ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Index, "", InBounds);
 
   State.setDebugLocFrom(Instr->getDebugLoc());
   Value *PoisonVec = PoisonValue::get(VecTy);
