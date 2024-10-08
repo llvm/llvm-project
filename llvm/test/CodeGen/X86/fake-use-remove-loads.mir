@@ -1,0 +1,129 @@
+# Ensure that loads into FAKE_USEs are correctly removed by the
+# remove-loads-into-fake-uses pass.
+# RUN: llc -run-pass remove-loads-into-fake-uses -mtriple=x86_64-unknown-linux -debug-only=remove-loads-into-fake-uses 2>&1 -o - %s | FileCheck %s --implicit-check-not=DELETING
+# REQUIRES: asserts
+#
+## We ensure that the load into the FAKE_USE is removed, along with the FAKE_USE
+## itself, even when the FAKE_USE is for a subregister of the move, and that we
+## correctly handle situations where FAKE_USE has additional `killed` operands
+## added by other passes.
+
+# CHECK: DELETING: FAKE_USE renamable $eax
+# CHECK: DELETING: renamable $rax = MOV64rm $rbp
+
+## Also verify that the store to the stack slot still exists.
+
+# CHECK-LABEL: bb.5:
+# CHECK: MOV64mi32 $rbp, 1, $noreg, -48, $noreg, 0 :: (store (s64) into %stack.0)
+# CHECK-LABEL: bb.6:
+
+
+--- |
+  define void @_ZN1g1jEv(ptr %this, i1 %cmp36, ptr %ref.tmp5) {
+  entry:
+    ret void
+  }
+
+...
+---
+name:            _ZN1g1jEv
+alignment:       16
+tracksRegLiveness: true
+noPhis:          true
+noVRegs:         true
+hasFakeUses:     true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+  - { reg: '$esi', virtual-reg: '' }
+  - { reg: '$rdx', virtual-reg: '' }
+frameInfo:
+  isCalleeSavedInfoValid: true
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -64, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0:
+    successors: %bb.2(0x80000000)
+    liveins: $esi, $rdi, $rdx, $r15, $r14, $r13, $r12, $rbx
+  
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_register $rbp
+    frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r13, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION offset $rbx, -56
+    CFI_INSTRUCTION offset $r12, -48
+    CFI_INSTRUCTION offset $r13, -40
+    CFI_INSTRUCTION offset $r14, -32
+    CFI_INSTRUCTION offset $r15, -24
+    $rbx = MOV64rr $rdx
+    $r14d = MOV32rr $esi
+    $r15 = MOV64rr $rdi
+    renamable $r12d = XOR32rr undef $r12d, undef $r12d, implicit-def dead $eflags, implicit-def $r12
+    renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $rax
+    JMP_1 %bb.2
+  
+  bb.1:
+    successors: %bb.2(0x783e0f0f), %bb.6(0x07c1f0f1)
+    liveins: $rbx, $r12, $r15, $r13d, $r14d
+  
+    renamable $rax = MOV64rm $rbp, 1, $noreg, -48, $noreg :: (load (s64) from %stack.0)
+    FAKE_USE renamable $eax, implicit killed $rax
+    renamable $eax = MOV32ri 1, implicit-def $rax
+    TEST32rr killed renamable $r13d, renamable $r13d, implicit-def $eflags
+    JCC_1 %bb.6, 9, implicit $eflags
+  
+  bb.2:
+    successors: %bb.3(0x80000000)
+    liveins: $rax, $rbx, $r12, $r15, $r14d
+  
+    MOV64mr $rbp, 1, $noreg, -48, $noreg, killed renamable $rax :: (store (s64) into %stack.0)
+    renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  
+  bb.3:
+    successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+    liveins: $eax, $rbx, $r12, $r15, $r14d
+  
+    $r13d = MOV32rr killed $eax
+    $rdi = MOV64rr $r15
+    CALL64r renamable $r12, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    dead renamable $eax = MOV32rm renamable $rbx, 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.ref.tmp5)
+    renamable $eax = MOV32ri 1
+    TEST8ri renamable $r14b, 1, implicit-def $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
+  
+  bb.4:
+    successors: %bb.5(0x40000000), %bb.1(0x40000000)
+    liveins: $eflags, $rbx, $r12, $r15, $r13d, $r14d
+  
+    JCC_1 %bb.1, 4, implicit $eflags
+  
+  bb.5:
+    successors: %bb.1(0x80000000)
+    liveins: $rbx, $r12, $r15, $r13d, $r14d
+  
+    renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $rax
+    MOV64mi32 $rbp, 1, $noreg, -48, $noreg, 0 :: (store (s64) into %stack.0)
+    CALL64r killed renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    JMP_1 %bb.1
+  
+  bb.6:
+    $rsp = frame-destroy ADD64ri32 $rsp, 8, implicit-def dead $eflags
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $r13 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    frame-destroy CFI_INSTRUCTION def_cfa $rsp, 8
+    RET64
+
+...

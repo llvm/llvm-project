@@ -94,11 +94,13 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
 
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
       if (MI.isFakeUse()) {
-        for (const MachineOperand &MO : MI.operands()) {
-          // Track the Fake Uses that use this register so that we can delete
-          // them if we delete the corresponding load.
-          if (MO.isReg())
-            RegFakeUses[MO.getReg()].push_back(&MI);
+        const MachineOperand &FakeUseOp = MI.getOperand(0);
+        // Track the Fake Uses that use this register so that we can delete
+        // them if we delete the corresponding load.
+        if (FakeUseOp.isReg()) {
+          assert(FakeUseOp.getReg().isPhysical() &&
+                 "VReg seen in function with NoVRegs set?");
+          RegFakeUses[FakeUseOp.getReg()].push_back(&MI);
         }
         // Do not record FAKE_USE uses in LivePhysRegs so that we can recognize
         // otherwise-unused loads.
@@ -113,27 +115,34 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
         // Don't delete live physreg defs, or any reserved register defs.
         if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
           continue;
-        // There should be an exact match between the loaded register and the
-        // FAKE_USE use. If not, this is a load that is unused by anything? It
-        // should probably be deleted, but that's outside of this pass' scope.
-        if (RegFakeUses.contains(Reg)) {
-          LLVM_DEBUG(dbgs() << "RemoveLoadsIntoFakeUses: DELETING: " << MI);
-          // It is possible that some DBG_VALUE instructions refer to this
-          // instruction. They will be deleted in the live debug variable
-          // analysis.
-          MI.eraseFromParent();
-          AnyChanges = true;
-          ++NumLoadsDeleted;
-          // Each FAKE_USE now appears to be a fake use of the previous value
-          // of the loaded register; delete them to avoid incorrectly
-          // interpreting them as such.
-          for (MachineInstr *FakeUse : RegFakeUses[Reg]) {
+        // There should typically be an exact match between the loaded register
+        // and the FAKE_USE, but sometimes regalloc will choose to load a larger
+        // value than is needed. Therefore, as long as the load isn't used by
+        // anything except at least one FAKE_USE, we will delete it. If it isn't
+        // used by any fake uses, it should still be safe to delete but we
+        // choose to ignore it so that this pass has no side effects unrelated
+        // to fake uses.
+        bool HasFakeUse = false;
+        for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
+          if (!RegFakeUses.contains(SubReg))
+            continue;
+          HasFakeUse = true;
+          for (MachineInstr *FakeUse : RegFakeUses[SubReg]) {
             LLVM_DEBUG(dbgs()
                        << "RemoveLoadsIntoFakeUses: DELETING: " << *FakeUse);
             FakeUse->eraseFromParent();
           }
-          NumFakeUsesDeleted += RegFakeUses[Reg].size();
-          RegFakeUses[Reg].clear();
+          NumFakeUsesDeleted += RegFakeUses[SubReg].size();
+          RegFakeUses[SubReg].clear();
+        }
+        if (HasFakeUse) {
+          LLVM_DEBUG(dbgs() << "RemoveLoadsIntoFakeUses: DELETING: " << MI);
+          // Since this load only exists to restore a spilled register and we
+          // haven't, run LiveDebugValues yet, there shouldn't be any DBG_VALUEs
+          // for this load; otherwise, deleting this would be incorrect.
+          MI.eraseFromParent();
+          AnyChanges = true;
+          ++NumLoadsDeleted;
         }
         continue;
       }
@@ -147,8 +156,11 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
             Register Reg = MO.getReg();
             assert(Reg.isPhysical() &&
                    "VReg seen in function with NoVRegs set?");
-            for (MCRegUnit Unit : TRI->regunits(Reg))
-              RegFakeUses.erase(Unit);
+            // We clear RegFakeUses for this register and all subregisters,
+            // because any such FAKE_USE encountered prior applies only to this
+            // instruction.
+            for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+              RegFakeUses.erase(SubReg);
           }
         }
       }
