@@ -46,7 +46,7 @@ static InitializationState GetInitializationState() {
       atomic_load(&rtsan_initialized, memory_order_acquire));
 }
 
-static auto OnViolation(const BufferedStackTrace &stack,
+static void OnViolation(const BufferedStackTrace &stack,
                         const DiagnosticsInfo &info) {
   IncrementTotalErrorCount();
 
