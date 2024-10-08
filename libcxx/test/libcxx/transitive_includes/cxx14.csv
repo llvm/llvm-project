@@ -1983,6 +1983,7 @@ spanstream cwchar
 spanstream cwctype
 spanstream deque
 spanstream exception
+spanstream execution
 spanstream format
 spanstream functional
 spanstream initializer_list
