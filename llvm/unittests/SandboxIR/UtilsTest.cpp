@@ -20,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -133,4 +134,114 @@ define void @foo(ptr %ptr) {
   EXPECT_TRUE(sandboxir::Utils::atLowerAddress(L0, L1, SE, DL));
   EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L1, L0, SE, DL));
   EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L3, V3L3, SE, DL));
+}
+
+TEST_F(UtilsTest, GetNumBits) {
+  parseIR(C, R"IR(
+define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg3, ptr %arg4) {
+bb0:
+  %ld0 = load float, ptr %arg4
+  %ld1 = load double, ptr %arg4
+  %ld2 = load i8, ptr %arg4
+  %ld3 = load i64, ptr %arg4
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&Foo);
+  const DataLayout &DL = M->getDataLayout();
+  // getNumBits for scalars via the Value overload
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(0), DL),
+            DL.getTypeSizeInBits(Type::getFloatTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(1), DL),
+            DL.getTypeSizeInBits(Type::getDoubleTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(2), DL), 8u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(3), DL), 64u);
+
+  auto &BB = *F->begin();
+  auto It = BB.begin();
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L2 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L3 = cast<sandboxir::LoadInst>(&*It++);
+  // getNumBits for scalars via the Instruction overload
+  EXPECT_EQ(sandboxir::Utils::getNumBits(L0),
+            DL.getTypeSizeInBits(Type::getFloatTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(L1),
+            DL.getTypeSizeInBits(Type::getDoubleTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(L2), 8u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(L3), 64u);
+}
+
+TEST_F(UtilsTest, Instruction_isStackSaveOrRestoreIntrinsic) {
+  parseIR(C, R"IR(
+declare void @llvm.sideeffect()
+define void @foo(i8 %v1, ptr %ptr) {
+  %add = add i8 %v1, %v1
+  %stacksave = call ptr @llvm.stacksave()
+  call void @llvm.stackrestore(ptr %stacksave)
+  call void @llvm.sideeffect()
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *StackSave = cast<sandboxir::CallInst>(&*It++);
+  auto *StackRestore = cast<sandboxir::CallInst>(&*It++);
+  auto *Other = cast<sandboxir::CallInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  EXPECT_FALSE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(Add));
+  EXPECT_TRUE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(StackSave));
+  EXPECT_TRUE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(StackRestore));
+  EXPECT_FALSE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(Other));
+  EXPECT_FALSE(sandboxir::Utils::isStackSaveOrRestoreIntrinsic(Ret));
+}
+
+TEST_F(UtilsTest, Instruction_isMemDepCandidate) {
+  parseIR(C, R"IR(
+declare void @llvm.fake.use(...)
+declare void @llvm.sideeffect()
+declare void @llvm.pseudoprobe(i64, i64, i32, i64)
+declare void @bar()
+define void @foo(i8 %v1, ptr %ptr) {
+  %add0 = add i8 %v1, %v1
+  %ld0 = load i8, ptr %ptr
+  store i8 %v1, ptr %ptr
+  call void @llvm.sideeffect()
+  call void @llvm.pseudoprobe(i64 42, i64 1, i32 0, i64 -1)
+  call void @llvm.fake.use(ptr %ptr)
+  call void @bar()
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *SideEffect0 = cast<sandboxir::CallInst>(&*It++);
+  auto *PseudoProbe0 = cast<sandboxir::CallInst>(&*It++);
+  auto *OtherIntrinsic0 = cast<sandboxir::CallInst>(&*It++);
+  auto *CallBar = cast<sandboxir::CallInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  using Utils = sandboxir::Utils;
+
+  EXPECT_FALSE(Utils::isMemDepCandidate(Add0));
+  EXPECT_TRUE(Utils::isMemDepCandidate(Ld0));
+  EXPECT_TRUE(Utils::isMemDepCandidate(St0));
+  EXPECT_FALSE(Utils::isMemDepCandidate(SideEffect0));
+  EXPECT_FALSE(Utils::isMemDepCandidate(PseudoProbe0));
+  EXPECT_TRUE(Utils::isMemDepCandidate(OtherIntrinsic0));
+  EXPECT_TRUE(Utils::isMemDepCandidate(CallBar));
+  EXPECT_FALSE(Utils::isMemDepCandidate(Ret));
 }

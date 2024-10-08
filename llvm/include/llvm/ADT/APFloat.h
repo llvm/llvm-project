@@ -1483,13 +1483,14 @@ inline APFloat maxnum(const APFloat &A, const APFloat &B) {
 }
 
 /// Implements IEEE 754-2019 minimum semantics. Returns the smaller of 2
-/// arguments, propagating NaNs and treating -0 as less than +0.
+/// arguments, returning a quiet NaN if an argument is a NaN and treating -0
+/// as less than +0.
 LLVM_READONLY
 inline APFloat minimum(const APFloat &A, const APFloat &B) {
   if (A.isNaN())
-    return A;
+    return A.makeQuiet();
   if (B.isNaN())
-    return B;
+    return B.makeQuiet();
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? A : B;
   return B < A ? B : A;
@@ -1509,13 +1510,14 @@ inline APFloat minimumnum(const APFloat &A, const APFloat &B) {
 }
 
 /// Implements IEEE 754-2019 maximum semantics. Returns the larger of 2
-/// arguments, propagating NaNs and treating -0 as less than +0.
+/// arguments, returning a quiet NaN if an argument is a NaN and treating -0
+/// as less than +0.
 LLVM_READONLY
 inline APFloat maximum(const APFloat &A, const APFloat &B) {
   if (A.isNaN())
-    return A;
+    return A.makeQuiet();
   if (B.isNaN())
-    return B;
+    return B.makeQuiet();
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? B : A;
   return A < B ? B : A;

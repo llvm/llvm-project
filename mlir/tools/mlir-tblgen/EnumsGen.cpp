@@ -476,7 +476,7 @@ static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
   StringRef attrClassName = enumAttr.getSpecializedAttrClassName();
-  llvm::Record *baseAttrDef = enumAttr.getBaseAttrClass();
+  const llvm::Record *baseAttrDef = enumAttr.getBaseAttrClass();
   Attribute baseAttr(baseAttrDef);
 
   // Emit classof method
