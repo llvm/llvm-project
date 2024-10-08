@@ -380,6 +380,10 @@ Improvements to Clang's diagnostics
 
 - Clang now omits warnings for extra parentheses in fold expressions with single expansion (#GH101863).
 
+- The warning for an unsupported type for a named register variable is now phrased ``unsupported type for named register variable``,
+  instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
+  suboptimal in some way the error fails to mention (#GH111550).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
