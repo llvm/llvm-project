@@ -401,7 +401,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       config->isStatic = true;
       break;
     case OPT_Bdynamic:
-      config->isStatic = false;
+      if (!config->relocatable)
+        config->isStatic = false;
       break;
     case OPT_whole_archive:
       inWholeArchive = true;
