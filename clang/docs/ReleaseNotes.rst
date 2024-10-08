@@ -477,6 +477,7 @@ Bug Fixes to C++ Support
   conformance of explicit instantiation behaviour with MSVC. (#GH111266)
 - Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
   in certain friend declarations. (#GH93099)
+- Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
