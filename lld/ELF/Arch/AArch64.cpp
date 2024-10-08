@@ -32,7 +32,7 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
 // Target Identification has been enabled.  As linker generated branches are
 // via x16 the BTI landing pads are defined as: BTI C, BTI J, BTI JC, PACIASP,
 // PACIBSP.
-bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
+bool elf::isAArch64BTILandingPad(Ctx &ctx, Symbol &s, int64_t a) {
   // PLT entries accessed indirectly have a BTI c.
   if (s.isInPlt(ctx))
     return true;
@@ -1208,12 +1208,10 @@ void elf::createTaggedSymbols(Ctx &ctx) {
   }
 }
 
-TargetInfo *elf::getAArch64TargetInfo(Ctx &ctx) {
+void elf::setAArch64TargetInfo(Ctx &ctx) {
   if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      ctx.arg.zPacPlt) {
-    static AArch64BtiPac t(ctx);
-    return &t;
-  }
-  static AArch64 t(ctx);
-  return &t;
+      ctx.arg.zPacPlt)
+    ctx.target.reset(new AArch64BtiPac(ctx));
+  else
+    ctx.target.reset(new AArch64(ctx));
 }

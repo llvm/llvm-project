@@ -1237,21 +1237,17 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
 }
 
-TargetInfo *elf::getX86_64TargetInfo(Ctx &ctx) {
+void elf::setX86_64TargetInfo(Ctx &ctx) {
   if (ctx.arg.zRetpolineplt) {
-    if (ctx.arg.zNow) {
-      static RetpolineZNow t(ctx);
-      return &t;
-    }
-    static Retpoline t(ctx);
-    return &t;
+    if (ctx.arg.zNow)
+      ctx.target.reset(new RetpolineZNow(ctx));
+    else
+      ctx.target.reset(new Retpoline(ctx));
+    return;
   }
 
-  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
-    static IntelIBT t(ctx);
-    return &t;
-  }
-
-  static X86_64 t(ctx);
-  return &t;
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)
+    ctx.target.reset(new IntelIBT(ctx));
+  else
+    ctx.target.reset(new X86_64(ctx));
 }
