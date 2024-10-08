@@ -18827,6 +18827,9 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
+    // Since we don't define a SPIR-V intrinsic for the SPIR-V built-in from
+    // SPIRVBuiltins.td, manually get the matching name for the DirectX
+    // intrinsic and the demangled builtin name
     switch (CGM.getTarget().getTriple().getArch()) {
     case llvm::Triple::dxil:
       return EmitRuntimeCall(Intrinsic::getDeclaration(
