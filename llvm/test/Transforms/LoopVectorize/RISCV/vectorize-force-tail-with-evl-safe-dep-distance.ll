@@ -426,20 +426,17 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
-; IF-EVL-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IV]], <i64 3001, i64 3001, i64 3001, i64 3001>
-; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP0]]
-; IF-EVL-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i32 0
-; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr [[TMP3]], i32 32, <4 x i1> [[TMP1]], <4 x i64> poison)
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], 1024
-; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP4]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
-; IF-EVL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[WIDE_MASKED_LOAD]], ptr [[TMP6]], i32 32, <4 x i1> [[TMP1]])
+; IF-EVL-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP0]], i64 3002)
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i32 0
+; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr [[TMP2]], i32 32, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i64> poison)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 1024
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP3]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
+; IF-EVL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[WIDE_MASKED_LOAD]], ptr [[TMP5]], i32 32, <4 x i1> [[ACTIVE_LANE_MASK]])
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; IF-EVL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 3004
-; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 3004
+; IF-EVL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:

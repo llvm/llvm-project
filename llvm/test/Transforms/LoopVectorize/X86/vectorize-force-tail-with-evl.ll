@@ -17,30 +17,24 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 15
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[INDEX]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <16 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
-; IF-EVL-NEXT:    [[TMP1:%.*]] = icmp ule <16 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
-; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
-; IF-EVL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
-; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr [[TMP3]], i32 4, <16 x i1> [[TMP1]], <16 x i32> poison)
-; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP0]]
-; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
-; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr [[TMP5]], i32 4, <16 x i1> [[TMP1]], <16 x i32> poison)
-; IF-EVL-NEXT:    [[TMP6:%.*]] = add nsw <16 x i32> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
-; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
-; IF-EVL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; IF-EVL-NEXT:    call void @llvm.masked.store.v16i32.p0(<16 x i32> [[TMP6]], ptr [[TMP8]], i32 4, <16 x i1> [[TMP1]])
+; IF-EVL-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[TMP0]], i64 [[N]])
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr [[TMP2]], i32 4, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> poison)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 0
+; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr [[TMP4]], i32 4, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> poison)
+; IF-EVL-NEXT:    [[TMP5:%.*]] = add nsw <16 x i32> [[WIDE_MASKED_LOAD1]], [[WIDE_MASKED_LOAD]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
+; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i32 0
+; IF-EVL-NEXT:    call void @llvm.masked.store.v16i32.p0(<16 x i32> [[TMP5]], ptr [[TMP7]], i32 4, <16 x i1> [[ACTIVE_LANE_MASK]])
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
-; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; IF-EVL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
@@ -49,10 +43,10 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL:       for.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; IF-EVL-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
-; IF-EVL-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP11]], [[TMP10]]
+; IF-EVL-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], [[TMP9]]
 ; IF-EVL-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX4]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
