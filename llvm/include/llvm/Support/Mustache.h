@@ -55,6 +55,7 @@
 //   StringRef Rendered = Template.render(Data);
 //   // Rendered == "Hello, World!"
 // \endcode
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_MUSTACHE
@@ -157,6 +158,7 @@ public:
   void setUpContext(llvm::BumpPtrAllocator *Alloc);
 
 private:
+  
   void renderLambdas(const llvm::json::Value &Contexts, SmallString<0> &Output,
                      Lambda &L);
 
