@@ -5,6 +5,7 @@ def StdC : StandardSpec<"stdc"> {
   PtrType TimeTTypePtr = PtrType<TimeTType>;
   NamedType ClockT = NamedType<"clock_t">;
   NamedType LocaleT = NamedType<"locale_t">;
+  NamedType NLItem = NamedType<"nl_item">;
 
   NamedType DivTType = NamedType<"div_t">;
   NamedType LDivTType = NamedType<"ldiv_t">;
@@ -1781,6 +1782,30 @@ def StdC : StandardSpec<"stdc"> {
       ]  // Functions
   >;
 
+  HeaderSpec LangInfo = HeaderSpec<
+      "langinfo.h",
+      [],
+      [], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "nl_langinfo",
+          RetValSpec<CharPtr>,
+          [
+            ArgSpec<NLItem>
+          ]
+        >,
+        FunctionSpec<
+          "nl_langinfo",
+          RetValSpec<CharPtr>,
+          [
+            ArgSpec<NLItem>,
+            ArgSpec<LocaleT>
+          ]
+        >
+      ] // Functions
+  >;
+
   let Headers = [
     Assert,
     CType,
@@ -1803,5 +1828,6 @@ def StdC : StandardSpec<"stdc"> {
     UChar,
     WChar,
     Locale,
+    LangInfo,
   ];
 }

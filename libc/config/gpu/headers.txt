@@ -18,6 +18,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.uchar
     libc.include.features
     libc.include.locale
+    libc.include.langinfo
 
     # Header for RPC extensions
     libc.include.gpu_rpc

@@ -309,3 +309,9 @@ add_macro_header(
   HDR
     locale-macros.h
 )
+
+add_macro_header(
+  langinfo_macros
+  HDR
+    langinfo-macros.h
+)
