@@ -357,6 +357,7 @@ def AArch64fcvtr_mt  : SDNode<"AArch64ISD::FP_ROUND_MERGE_PASSTHRU", SDT_AArch64
 def AArch64fcvte_mt  : SDNode<"AArch64ISD::FP_EXTEND_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64ucvtf_mt  : SDNode<"AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64scvtf_mt  : SDNode<"AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+def AArch64fcvtx_mt  : SDNode<"AArch64ISD::FCVTX_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64fcvtzu_mt : SDNode<"AArch64ISD::FCVTZU_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 def AArch64fcvtzs_mt : SDNode<"AArch64ISD::FCVTZS_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 
@@ -2002,9 +2003,9 @@ let Predicates = [HasSVEorSME] in {
   // extract/insert 128-bit fixed length vector from/into a scalable vector
   foreach VT = [v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64, v8bf16] in {
     def : Pat<(VT (vector_extract_subvec NEONType<VT>.SVEContainer:$Zs, (i64 0))),
-              (EXTRACT_SUBREG ZPR:$Zs, qsub)>;
+              (EXTRACT_SUBREG ZPR:$Zs, zsub)>;
     def : Pat<(NEONType<VT>.SVEContainer (vector_insert_subvec undef, (VT V128:$src), (i64 0))),
-              (INSERT_SUBREG (IMPLICIT_DEF), $src, qsub)>;
+              (INSERT_SUBREG (IMPLICIT_DEF), $src, zsub)>;
   }
 
   // Concatenate two predicates.
@@ -3357,28 +3358,28 @@ let Predicates = [HasSVEorSME] in {
   // Extract element from vector with immediate index that's within the bottom 128-bits.
   let Predicates = [HasNEON], AddedComplexity = 1 in {
   def : Pat<(i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index)),
-            (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexB:$index)>;
+            (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
   def : Pat<(i32 (vector_extract nxv8i16:$vec, VectorIndexH:$index)),
-            (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexH:$index)>;
+            (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)>;
   def : Pat<(i32 (vector_extract nxv4i32:$vec, VectorIndexS:$index)),
-            (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexS:$index)>;
+            (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
   def : Pat<(i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)),
-            (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexD:$index)>;
+            (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index)>;
   } // End HasNEON
 
   let Predicates = [HasNEON] in {
   def : Pat<(sext_inreg (vector_extract nxv16i8:$vec, VectorIndexB:$index), i8),
-            (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexB:$index)>;
+            (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
   def : Pat<(sext_inreg (anyext (i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index))), i8),
-            (SMOVvi8to64 (v16i8 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexB:$index)>;
+            (SMOVvi8to64 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
 
   def : Pat<(sext_inreg (vector_extract nxv8i16:$vec, VectorIndexH:$index), i16),
-            (SMOVvi16to32 (v8i16 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexH:$index)>;
+            (SMOVvi16to32 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)>;
   def : Pat<(sext_inreg (anyext (i32 (vector_extract nxv8i16:$vec, VectorIndexH:$index))), i16),
-            (SMOVvi16to64 (v8i16 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexH:$index)>;
+            (SMOVvi16to64 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)>;
 
   def : Pat<(sext (i32 (vector_extract nxv4i32:$vec, VectorIndexS:$index))),
-            (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, qsub)), VectorIndexS:$index)>;
+            (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
   } // End HasNEON
 
   // Extract first element from vector.
@@ -3788,7 +3789,7 @@ let Predicates = [HasSVE2orSME, UseExperimentalZeroingPseudos] in {
 let Predicates = [HasSVE2orSME] in {
   // SVE2 floating-point convert precision
   defm FCVTXNT_ZPmZ : sve2_fp_convert_down_odd_rounding_top<"fcvtxnt", "int_aarch64_sve_fcvtxnt">;
-  defm FCVTX_ZPmZ   : sve2_fp_convert_down_odd_rounding<"fcvtx",       "int_aarch64_sve_fcvtx">;
+  defm FCVTX_ZPmZ   : sve2_fp_convert_down_odd_rounding<"fcvtx",       "int_aarch64_sve_fcvtx", AArch64fcvtx_mt>;
   defm FCVTNT_ZPmZ  : sve2_fp_convert_down_narrow<"fcvtnt",            "int_aarch64_sve_fcvtnt">;
   defm FCVTLT_ZPmZ  : sve2_fp_convert_up_long<"fcvtlt",                "int_aarch64_sve_fcvtlt">;
 
