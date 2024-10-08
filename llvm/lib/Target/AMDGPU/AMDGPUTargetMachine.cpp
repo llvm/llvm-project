@@ -1719,18 +1719,16 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   }
 
   auto setRegisterFlags = [&](const VRegInfo &Info) {
-    for (const auto &Flag : Info.Flags) {
+    for (uint8_t Flag : Info.Flags) {
       MFI->setFlag(Info.VReg, Flag);
     }
   };
 
-  for (const auto &P : PFS.VRegInfosNamed) {
-    const VRegInfo &Info = *P.second;
-    setRegisterFlags(Info);
+  for (const auto &[_, Info] : PFS.VRegInfosNamed) {
+    setRegisterFlags(*Info);
   }
-  for (const auto &P : PFS.VRegInfos) {
-    const VRegInfo &Info = *P.second;
-    setRegisterFlags(Info);
+  for (const auto &[_, Info] : PFS.VRegInfos) {
+    setRegisterFlags(*Info);
   }
 
   auto parseAndCheckArgument = [&](const std::optional<yaml::SIArgument> &A,
