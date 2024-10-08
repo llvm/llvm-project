@@ -75,6 +75,9 @@ jobs:
               - 'clang/include/clang/Basic/AttrDocs.td'
               - 'clang/include/clang/Driver/ClangOptionDocs.td'
               - 'clang/include/clang/Basic/DiagnosticDocs.td'
+            clang-format_style-headers:
+              - 'clang/include/clang/Format/Format.h'
+              - 'clang/include/clang/Tooling/Inclusions/IncludeStyle.h'
             clang-tools-extra:
               - 'clang-tools-extra/docs/**'
             lldb:
@@ -122,6 +125,15 @@ jobs:
         run: |
           cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
+      - name: Confirm ClangFormatStyleOptions.rst is up-to-date
+        if: steps.docs-changed-subprojects.outputs.clang-format_style-headers_any_changed == 'true'
+        run: |
+          cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C clang-build clang-format-style-options
+          GIT_STATUS="$(git status --porcelain=v1 clang/docs/ClangFormatStyleOptions.rst)"
+          if [ ! -z "${GIT_STATUS}" ]; then
+            echo "Error: you must build the 'clang-format-style-options' target and commit any changes to 'clang/docs/ClangFormatStyleOptions.rst'"
+          fi
       - name: Build clang-tools-extra docs
         if: steps.docs-changed-subprojects.outputs.clang-tools-extra_any_changed == 'true'
         run: |
