@@ -11080,7 +11080,8 @@ SDValue SITargetLowering::lowerFSQRTF32(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getValueType().getSimpleVT();
   const SDValue X = Op.getOperand(0);
 
-  if (allowApproxFunc(DAG, Flags)) {
+  if (allowApproxFunc(DAG, Flags) ||
+      denormalModeIsFlushAllF32(DAG.getMachineFunction())) {
     // Instruction is 1ulp but ignores denormals.
     return DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, VT,

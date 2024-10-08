@@ -442,23 +442,7 @@ define float @v_fdiv_recip_sqrt_f32(float %x) {
 ; CODEGEN-DAZ-SDAG-LABEL: v_fdiv_recip_sqrt_f32:
 ; CODEGEN-DAZ-SDAG:       ; %bb.0:
 ; CODEGEN-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CODEGEN-DAZ-SDAG-NEXT:    s_mov_b32 s4, 0xf800000
-; CODEGEN-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
-; CODEGEN-DAZ-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; CODEGEN-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; CODEGEN-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v1, v0
-; CODEGEN-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, v0, v1
-; CODEGEN-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0.5, v1
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v3, -v1, v2, 0.5
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v2, v2, v3, v2
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v4, -v2, v2, v0
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v1, v1, v3, v1
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v1, v4, v1, v2
-; CODEGEN-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
-; CODEGEN-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; CODEGEN-DAZ-SDAG-NEXT:    v_mov_b32_e32 v2, 0x260
-; CODEGEN-DAZ-SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
-; CODEGEN-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CODEGEN-DAZ-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
 ; CODEGEN-DAZ-SDAG-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
 ; CODEGEN-DAZ-SDAG-NEXT:    v_rcp_f32_e32 v2, v1
 ; CODEGEN-DAZ-SDAG-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
@@ -512,23 +496,7 @@ define float @v_fdiv_recip_sqrt_f32(float %x) {
 ; IR-DAZ-SDAG-LABEL: v_fdiv_recip_sqrt_f32:
 ; IR-DAZ-SDAG:       ; %bb.0:
 ; IR-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-DAZ-SDAG-NEXT:    s_mov_b32 s4, 0xf800000
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
-; IR-DAZ-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; IR-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v1, v0
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, v0, v1
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0.5, v1
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v3, -v1, v2, 0.5
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v2, v2, v3, v2
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v4, -v2, v2, v0
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v1, v1, v3, v1
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v1, v4, v1, v2
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; IR-DAZ-SDAG-NEXT:    v_mov_b32_e32 v2, 0x260
-; IR-DAZ-SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; IR-DAZ-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
 ; IR-DAZ-SDAG-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
 ; IR-DAZ-SDAG-NEXT:    v_rcp_f32_e32 v2, v1
 ; IR-DAZ-SDAG-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
@@ -1086,23 +1054,7 @@ define float @v_fdiv_recip_sqrt_f32_afn_fdiv_only(float %x) {
 ; CODEGEN-DAZ-SDAG-LABEL: v_fdiv_recip_sqrt_f32_afn_fdiv_only:
 ; CODEGEN-DAZ-SDAG:       ; %bb.0:
 ; CODEGEN-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CODEGEN-DAZ-SDAG-NEXT:    s_mov_b32 s4, 0xf800000
-; CODEGEN-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
-; CODEGEN-DAZ-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; CODEGEN-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; CODEGEN-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v1, v0
-; CODEGEN-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, v0, v1
-; CODEGEN-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0.5, v1
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v3, -v1, v2, 0.5
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v2, v2, v3, v2
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v4, -v2, v2, v0
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v1, v1, v3, v1
-; CODEGEN-DAZ-SDAG-NEXT:    v_fma_f32 v1, v4, v1, v2
-; CODEGEN-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
-; CODEGEN-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; CODEGEN-DAZ-SDAG-NEXT:    v_mov_b32_e32 v2, 0x260
-; CODEGEN-DAZ-SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
-; CODEGEN-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; CODEGEN-DAZ-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
 ; CODEGEN-DAZ-SDAG-NEXT:    v_rcp_f32_e32 v0, v0
 ; CODEGEN-DAZ-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1132,23 +1084,7 @@ define float @v_fdiv_recip_sqrt_f32_afn_fdiv_only(float %x) {
 ; IR-DAZ-SDAG-LABEL: v_fdiv_recip_sqrt_f32_afn_fdiv_only:
 ; IR-DAZ-SDAG:       ; %bb.0:
 ; IR-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-DAZ-SDAG-NEXT:    s_mov_b32 s4, 0xf800000
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
-; IR-DAZ-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; IR-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v1, v0
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, v0, v1
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0.5, v1
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v3, -v1, v2, 0.5
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v2, v2, v3, v2
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v4, -v2, v2, v0
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v1, v1, v3, v1
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v1, v4, v1, v2
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; IR-DAZ-SDAG-NEXT:    v_mov_b32_e32 v2, 0x260
-; IR-DAZ-SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; IR-DAZ-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
 ; IR-DAZ-SDAG-NEXT:    v_rcp_f32_e32 v0, v0
 ; IR-DAZ-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1714,23 +1650,7 @@ define float @v_recip_sqrt_f32_ulp25_contract(float %x) {
 ; IR-DAZ-SDAG-LABEL: v_recip_sqrt_f32_ulp25_contract:
 ; IR-DAZ-SDAG:       ; %bb.0:
 ; IR-DAZ-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; IR-DAZ-SDAG-NEXT:    s_mov_b32 s4, 0xf800000
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0x4f800000, v0
-; IR-DAZ-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; IR-DAZ-SDAG-NEXT:    v_rsq_f32_e32 v1, v0
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, v0, v1
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v1, 0.5, v1
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v3, -v1, v2, 0.5
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v2, v2, v3, v2
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v4, -v2, v2, v0
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v1, v1, v3, v1
-; IR-DAZ-SDAG-NEXT:    v_fma_f32 v1, v4, v1, v2
-; IR-DAZ-SDAG-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; IR-DAZ-SDAG-NEXT:    v_mov_b32_e32 v2, 0x260
-; IR-DAZ-SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
-; IR-DAZ-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; IR-DAZ-SDAG-NEXT:    v_sqrt_f32_e32 v0, v0
 ; IR-DAZ-SDAG-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, 1.0
 ; IR-DAZ-SDAG-NEXT:    v_rcp_f32_e32 v2, v1
 ; IR-DAZ-SDAG-NEXT:    v_div_scale_f32 v3, vcc, 1.0, v0, 1.0
