@@ -95,8 +95,11 @@ bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
     return false;
   const Token &PrevToken = Tokens[Idx - 1];
   StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v\t");
-  return TokenBody.ends_with("\n") || TokenBody.ends_with("\r\n") ||
-         (TokenBody.empty() && Idx == 1);
+  // Check if the token body ends with a newline
+  // or if the previous token is empty and the current token is the first token
+  // eg. "  {{#section}}A{{#section}}" would be considered as no text behind
+  // and should be render as "A" instead of "  A"
+  return TokenBody.ends_with("\n") || (TokenBody.empty() && Idx == 1);
 }
 // Function to check if there's no meaningful text ahead
 bool noTextAhead(size_t Idx, const SmallVector<Token, 0> &Tokens) {
@@ -107,6 +110,13 @@ bool noTextAhead(size_t Idx, const SmallVector<Token, 0> &Tokens) {
   const Token &NextToken = Tokens[Idx + 1];
   StringRef TokenBody = NextToken.getRawBody().ltrim(" ");
   return TokenBody.starts_with("\r\n") || TokenBody.starts_with("\n");
+}
+
+bool requiresCleanUp(Token::Type T) {
+  // We must clean up all the tokens that could contain child nodes
+  return T == Token::Type::SectionOpen || T == Token::Type::InvertSectionOpen ||
+         T == Token::Type::SectionClose || T == Token::Type::Comment ||
+         T == Token::Type::Partial;
 }
 
 // Simple tokenizer that splits the template into tokens
@@ -136,13 +146,9 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
     // Extract the Interpolated variable without {{ and }}
     size_t InterpolatedStart = DelimiterStart + Open.size();
     size_t InterpolatedEnd = DelimiterEnd - DelimiterStart - Close.size();
-    SmallString<128> Interpolated =
+    SmallString<0> Interpolated =
         Template.substr(InterpolatedStart, InterpolatedEnd);
-    SmallString<128> RawBody;
-    RawBody += Open;
-    RawBody += Interpolated;
-    RawBody += Close;
-
+    SmallString<0> RawBody({Open, Interpolated, Close});
     Tokens.emplace_back(RawBody, Interpolated, Interpolated[0]);
     Start = DelimiterEnd + Close.size();
     DelimiterStart = Template.find(Open, Start);
@@ -151,11 +157,11 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
   if (Start < Template.size())
     Tokens.emplace_back(Template.substr(Start));
 
-  // fix up white spaces for
-  // open sections/inverted sections/close section/comment
+  // Fix up white spaces for:
+  //  open sections/inverted sections/close section/comment
   // This loop attempts to find standalone tokens and tries to trim out
-  // the whitespace around them
-  // for example:
+  // the surrounding whitespace.
+  // For example:
   // if you have the template string
   //  "Line 1\n {{#section}} \n Line 2 \n {{/section}} \n Line 3"
   // The output would be
@@ -165,33 +171,48 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
     Token &CurrentToken = Tokens[Idx];
     Token::Type CurrentType = CurrentToken.getType();
     // Check if token type requires cleanup
-    bool RequiresCleanUp = (CurrentType == Token::Type::SectionOpen ||
-                            CurrentType == Token::Type::InvertSectionOpen ||
-                            CurrentType == Token::Type::SectionClose ||
-                            CurrentType == Token::Type::Comment ||
-                            CurrentType == Token::Type::Partial);
+    bool RequiresCleanUp = requiresCleanUp(CurrentType);
 
     if (!RequiresCleanUp)
       continue;
-
+    
+    // We adjust the token body if there's no text behind or ahead a token is 
+    // considered surrounded by no text if the right of the previous token
+    // is a newline followed by spaces or if the left of the next token
+    // is spaces followed by a newline
+    // eg.
+    //  "Line 1\n {{#section}} \n Line 2 \n {{/section}} \n Line 3"
+    
     bool NoTextBehind = noTextBehind(Idx, Tokens);
     bool NoTextAhead = noTextAhead(Idx, Tokens);
-
-    // Adjust next token body if no text ahead
+    
+    // Adjust next token body if there is no text ahead
+    // eg. 
+    //  The template string
+    //  "{{! Comment }} \nLine 2"
+    // would be considered as no text ahead and should be render as 
+    //  " Line 2"
     if ((NoTextBehind && NoTextAhead) || (NoTextAhead && Idx == 0)) {
       Token &NextToken = Tokens[Idx + 1];
       StringRef NextTokenBody = NextToken.getTokenBody();
-      if (NextTokenBody.starts_with("\r\n")) {
+      // cut off the leading newline which could be \n or \r\n
+      if (NextTokenBody.starts_with("\r\n")) 
         NextToken.setTokenBody(NextTokenBody.substr(2));
-      } else if (NextTokenBody.starts_with("\n")) {
+      else if (NextTokenBody.starts_with("\n"))
         NextToken.setTokenBody(NextTokenBody.substr(1));
-      }
     }
-    // Adjust previous token body if no text behind
+    // Adjust previous token body if there no text behind
+    // eg.
+    //  The template string
+    //  " \t{{#section}}A{{/section}}"
+    // would be considered as no text ahead and should be render as 
+    //  "A"
+    // The exception for this is partial tag which requires us to 
+    // keep track of the indentation once it's rendered
     if (((NoTextBehind && NoTextAhead) || (NoTextBehind && Idx == LastIdx))) {
       Token &PrevToken = Tokens[Idx - 1];
       StringRef PrevTokenBody = PrevToken.getTokenBody();
-      StringRef Unindented = PrevTokenBody.rtrim(" \t\v\t");
+      StringRef Unindented = PrevTokenBody.rtrim(" \t\v");
       size_t Indentation = PrevTokenBody.size() - Unindented.size();
       if (CurrentType != Token::Type::Partial)
         PrevToken.setTokenBody(Unindented);
@@ -209,6 +230,7 @@ public:
   ASTNode *parse();
 
 private:
+  
   void parseMustache(ASTNode *Parent);
 
   BumpPtrAllocator &Allocator;
@@ -262,12 +284,12 @@ void Parser::parseMustache(ASTNode *Parent) {
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode);
       size_t End = CurrentPtr;
-      SmallString<128> RawBody;
+      SmallString<0> RawBody;
       if (Start + 1 < End - 1) {
         for (std::size_t I = Start + 1; I < End - 1; I++)
           RawBody += Tokens[I].getRawBody();
       } else if (Start + 1 == End - 1) {
-        RawBody = Tokens[Start].getRawBody();
+        RawBody = Tokens[Start + 1].getRawBody();
       }
       CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
@@ -278,12 +300,12 @@ void Parser::parseMustache(ASTNode *Parent) {
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode);
       size_t End = CurrentPtr;
-      SmallString<128> RawBody;
+      SmallString<0> RawBody;
       if (Start + 1 < End - 1) {
         for (size_t Idx = Start + 1; Idx < End - 1; Idx++)
           RawBody += Tokens[Idx].getRawBody();
       } else if (Start + 1 == End - 1) {
-        RawBody = Tokens[Start].getRawBody();
+        RawBody = Tokens[Start + 1].getRawBody();
       }
       CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
@@ -330,7 +352,7 @@ Template::Template(StringRef TemplateStr) {
   registerEscape(HtmlEntities);
 }
 
-void printJson(Value &Data, SmallString<0>& Output) {
+void toJsonString(Value &Data, SmallString<0>& Output) {
   if (Data.getAsNull())
     return;
   if (auto *Arr = Data.getAsArray())
@@ -367,46 +389,46 @@ void ASTNode::render(Value Data, SmallString<0> &Output) {
     Output = Body;
     return;
   case Partial: {
-    if (Lambdas->find(Accessor[0]) != Lambdas->end())
-      renderPartial(Context, Output);
+    auto Partial = Partials->find(Accessor[0]);
+    if (Partial != Partials->end())
+      renderPartial(Context, Output, Partial->getValue());
     return;
   }
   case Variable: {
-    if (Lambdas->find(Accessor[0]) != Lambdas->end())
-      renderLambdas(Data, Output);
+    auto Lambda = Lambdas->find(Accessor[0]);
+    if (Lambda != Lambdas->end())
+      renderLambdas(Data, Output, Lambda->getValue());
     else {
-      printJson(Context, Output);
+      toJsonString(Context, Output);
       Output = escapeString(Output, *Escapes);
     }
     return;
   }
   case UnescapeVariable: {
-    if (Lambdas->find(Accessor[0]) != Lambdas->end())
-      renderLambdas(Data, Output);
-    else {
-      printJson(Context, Output);
-    }
+    auto Lambda = Lambdas->find(Accessor[0]);
+    if (Lambda != Lambdas->end())
+      renderLambdas(Data, Output, Lambda->getValue());
+    else
+      toJsonString(Context, Output);
     return;
   }
   case Section: {
     // Sections are not rendered if the context is falsey
-    bool IsLambda = SectionLambdas->find(Accessor[0]) != 
-                    SectionLambdas->end();
-    
+    auto SectionLambda = SectionLambdas->find(Accessor[0]);
+    bool IsLambda = SectionLambda != SectionLambdas->end();
     if (isFalsey(Context) && !IsLambda)
       return;
     
     if (IsLambda) {
-        renderLambdas(Data, Output);
+        renderSectionLambdas(Data, Output, SectionLambda->getValue());
         return;
     }
     
     if (Context.getAsArray()) {
       SmallString<0> Result;
       json::Array *Arr = Context.getAsArray();
-      for (Value &V : *Arr) {
+      for (Value &V : *Arr)
         renderChild(V, Result);
-      }
       Output = Result;
       return;
     }
@@ -428,10 +450,10 @@ void ASTNode::render(Value Data, SmallString<0> &Output) {
 
 Value ASTNode::findContext() {
   // The mustache spec allows for dot notation to access nested values
-  // a single dot refers to the current context
-  // We attempt to find the JSON context in the current node if it is not found
-  // we traverse the parent nodes to find the context until we reach the root
-  // node or the context is found
+  // a single dot refers to the current context.
+  // We attempt to find the JSON context in the current node, if it is not 
+  // found, then we traverse the parent nodes to find the context until we 
+  // reach the root node or the context is found
   if (Accessor.empty())
     return nullptr;
   if (Accessor[0] == ".")
@@ -449,11 +471,11 @@ Value ASTNode::findContext() {
     return nullptr;
   }
   Value Context = nullptr;
-  for (auto E : enumerate(Accessor)) {
-    Value *CurrentValue = CurrentContext->get(E.value());
+  for (auto [Idx, Acc] : enumerate(Accessor)) {
+    Value *CurrentValue = CurrentContext->get(Acc);
     if (!CurrentValue)
       return nullptr;
-    if (E.index() < Accessor.size() - 1) {
+    if (Idx < Accessor.size() - 1) {
       CurrentContext = CurrentValue->getAsObject();
       if (!CurrentContext)
         return nullptr;
@@ -471,53 +493,50 @@ void ASTNode::renderChild(Value &Context, SmallString<0> &Output) {
   }
 }
 
-void ASTNode::renderPartial(Value &Context, SmallString<0> &Output) {
-  ASTNode *Partial = (*Partials)[Accessor[0]];
+void ASTNode::renderPartial(Value &Context, 
+                            SmallString<0> &Output,
+                            ASTNode *Partial) {
   Partial->render(Context, Output);
   addIndentation(Output, Indentation);
 }
 
-void ASTNode::renderLambdas(Value &Context, SmallString<0> &Output) {
-  
-  switch (T) {
-  case Variable:
-  case UnescapeVariable: {
-    Lambda &L = (*Lambdas)[Accessor[0]];
-    Value LambdaResult = L();
-    SmallString<0> LambdaStr;
-    printJson(LambdaResult, LambdaStr);
-    Parser P = Parser(LambdaStr, *Allocator);
-    ASTNode *LambdaNode = P.parse();
-    LambdaNode->setUpNode(*Allocator, 
-                          *Partials, 
-                          *Lambdas, 
-                          *SectionLambdas,
-                          *Escapes);
-    LambdaNode->render(Context, Output);
-    if (T == Variable)
-      Output = escapeString(Output, *Escapes);
+void ASTNode::renderLambdas(Value &Context, 
+                            SmallString<0> &Output,
+                            Lambda& L) {
+  Value LambdaResult = L();
+  SmallString<0> LambdaStr;
+  toJsonString(LambdaResult, LambdaStr);
+  Parser P = Parser(LambdaStr, *Allocator);
+  ASTNode *LambdaNode = P.parse();
+  LambdaNode->setUpNode(*Allocator, 
+                        *Partials, 
+                        *Lambdas, 
+                        *SectionLambdas,
+                        *Escapes);
+  LambdaNode->render(Context, Output);
+  if (T == Variable)
+    Output = escapeString(Output, *Escapes);
+  return;
+}
+
+
+void ASTNode::renderSectionLambdas(Value &Contexts, 
+                                   SmallString<0> &Output,
+                                   SectionLambda &L) {
+  Value Return = L(RawBody);
+  if (isFalsey(Return))
     return;
-  }
-  case Section: {
-    SectionLambda &Lambda = (*SectionLambdas)[Accessor[0]];
-    Value Return = Lambda(RawBody);
-    if (isFalsey(Return))
-      return;
-    SmallString<0> LambdaStr;
-    printJson(Return, LambdaStr);
-    Parser P = Parser(LambdaStr, *Allocator);
-    ASTNode *LambdaNode = P.parse();
-    LambdaNode->setUpNode(*Allocator, 
-                          *Partials, 
-                          *Lambdas, 
-                          *SectionLambdas,
-                          *Escapes);
-    LambdaNode->render(Context, Output);
-    return;
-  }
-  default:
-    llvm_unreachable("Invalid ASTNode type");
-  }
+  SmallString<0> LambdaStr;
+  toJsonString(Return, LambdaStr);
+  Parser P = Parser(LambdaStr, *Allocator);
+  ASTNode *LambdaNode = P.parse();
+  LambdaNode->setUpNode(*Allocator, 
+                        *Partials, 
+                        *Lambdas, 
+                        *SectionLambdas,
+                        *Escapes);
+  LambdaNode->render(Contexts, Output);
+  return;
 }
 
 void ASTNode::setUpNode(BumpPtrAllocator &Alloc,

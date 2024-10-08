@@ -95,7 +95,7 @@ public:
 
   StringRef getRawBody() const { return RawBody; };
 
-  void setTokenBody(StringRef NewBody) { TokenBody = NewBody; };
+  void setTokenBody(SmallString<128> NewBody) { TokenBody = NewBody; };
 
   Accessor getAccessor() const { return Accessor; };
 
@@ -111,7 +111,7 @@ private:
   size_t Indentation;
   Type TokenType;
   // RawBody is the original string that was tokenized
-  SmallString<0> RawBody;
+  SmallString<128> RawBody;
   Accessor Accessor;
   // TokenBody is the original string with the identifier removed
   SmallString<0> TokenBody;
@@ -141,9 +141,7 @@ public:
         LocalContext(nullptr), Indentation(0){};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
-
-  SmallString<128> getBody() const { return Body; };
-
+  
   void setBody(StringRef NewBody) { Body = NewBody; };
 
   void setRawBody(StringRef NewBody) { RawBody = NewBody; };
@@ -159,9 +157,17 @@ public:
                  DenseMap<char, StringRef> &Escapes);
 private:
   
-  void renderLambdas(llvm::json::Value& Contexts, SmallString<0> &Output);
+  void renderLambdas(llvm::json::Value& Contexts, 
+                     SmallString<0> &Output,
+                     Lambda& L);
   
-  void renderPartial(llvm::json::Value& Contexts, SmallString<0> &Output);
+  void renderSectionLambdas(llvm::json::Value& Contexts, 
+                          SmallString<0> &Output,
+                          SectionLambda& L);
+  
+  void renderPartial(llvm::json::Value& Contexts, 
+                     SmallString<0> &Output,
+                     ASTNode *Partial);
 
   void renderChild(llvm::json::Value& Context, SmallString<0> &Output);
   
@@ -172,11 +178,10 @@ private:
   StringMap<Lambda> *Lambdas;
   StringMap<SectionLambda> *SectionLambdas;
   DenseMap<char, StringRef> *Escapes;
-  
   Type T;
   size_t Indentation;
-  SmallString<128> RawBody;
-  SmallString<128> Body;
+  SmallString<0> RawBody;
+  SmallString<0> Body;
   ASTNode *Parent;
   std::vector<ASTNode *> Children;
   const Accessor Accessor;
@@ -211,7 +216,6 @@ private:
   llvm::BumpPtrAllocator Allocator;
   ASTNode *Tree;
 };
-
 } // namespace mustache
 } // end namespace llvm
 #endif // LLVM_SUPPORT_MUSTACHE
