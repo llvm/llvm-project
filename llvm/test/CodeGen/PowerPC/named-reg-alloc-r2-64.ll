@@ -3,8 +3,7 @@
 
 define i64 @get_reg() nounwind {
 entry:
-; FIXME: Include an allocatable-specific error message
-; CHECK: Invalid register name global variable
+; CHECK: Trying to obtain non-reservable register "r2".
         %reg = call i64 @llvm.read_register.i64(metadata !0)
   ret i64 %reg
 }
