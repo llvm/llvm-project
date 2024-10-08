@@ -121,10 +121,6 @@ class BSDArchivesTestCase(TestBase):
 
     @skipIfRemote
     @skipIf(compiler="clang", compiler_version=["<", "12.0"])
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows",
-    )
     def test_archive_specifications(self):
         """
         Create archives and make sure the information we get when retrieving
