@@ -185,7 +185,6 @@ private:
   std::vector<ASTNode *> Children;
   const Accessor Accessor;
   const llvm::json::Value *ParentContext;
-  const llvm::json::Value *LocalContext;
 };
 
 // A Template represents the container for the AST and the partials
