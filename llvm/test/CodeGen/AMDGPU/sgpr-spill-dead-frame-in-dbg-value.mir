@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-spill-sgpr-to-vgpr=true -verify-machineinstrs -run-pass=si-lower-sgpr-spills -o - %s | FileCheck -check-prefix=SGPR_SPILL %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-spill-sgpr-to-vgpr=true -verify-machineinstrs --start-before=si-lower-sgpr-spills --stop-after=prologepilog -o - %s | FileCheck -check-prefix=PEI %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-spill-sgpr-to-vgpr=true -passes=si-lower-sgpr-spills -o - %s | FileCheck -check-prefix=SGPR_SPILL %s
 
 # After handling the SGPR spill to VGPR in SILowerSGPRSpills pass, replace the dead frame index in the DBG_VALUE instruction with reg 0.
 # Otherwise, the test would crash during PEI while trying to replace the dead frame index.

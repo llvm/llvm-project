@@ -518,13 +518,13 @@ define <2 x half> @insertelement_v2f16(<2 x half> %op1) {
 ;
 ; NONEON-NOSVE-LABEL: insertelement_v2f16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    adrp x8, .LCPI14_0
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    ldr h0, [x8, :lo12:.LCPI14_0]
+; NONEON-NOSVE-NEXT:    adrp x8, .LCPI14_0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp]
-; NONEON-NOSVE-NEXT:    str h0, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldr h0, [x8, :lo12:.LCPI14_0]
 ; NONEON-NOSVE-NEXT:    str h1, [sp, #8]
+; NONEON-NOSVE-NEXT:    str h0, [sp, #10]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret

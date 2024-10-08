@@ -1075,9 +1075,13 @@ KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
 
   // The sign bit is the LHS's sign bit, except when the result of the
   // remainder is zero. The magnitude of the result should be less than or
-  // equal to the magnitude of the LHS. Therefore any leading zeros that exist
-  // in the left hand side must also exist in the result.
-  Known.Zero.setHighBits(LHS.countMinLeadingZeros());
+  // equal to the magnitude of either operand.
+  if (LHS.isNegative() && Known.isNonZero())
+    Known.One.setHighBits(
+        std::max(LHS.countMinLeadingOnes(), RHS.countMinSignBits()));
+  else if (LHS.isNonNegative())
+    Known.Zero.setHighBits(
+        std::max(LHS.countMinLeadingZeros(), RHS.countMinSignBits()));
   return Known;
 }
 

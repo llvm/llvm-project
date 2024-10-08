@@ -31,6 +31,7 @@ def Float : Type;
 def Ptr : Type;
 def FnPtr : Type;
 def MemberPtr : Type;
+def FixedPoint : Type;
 
 //===----------------------------------------------------------------------===//
 // Types transferred to the interpreter.
@@ -49,6 +50,7 @@ def ArgIntAP : ArgType { let Name = "IntegralAP<false>"; let AsRef = true; }
 def ArgIntAPS : ArgType { let Name = "IntegralAP<true>"; let AsRef = true; }
 def ArgFloat : ArgType { let Name = "Floating"; let AsRef = true; }
 def ArgBool : ArgType { let Name = "bool"; }
+def ArgFixedPoint : ArgType { let Name = "FixedPoint"; let AsRef = true; }
 
 def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
@@ -62,7 +64,7 @@ def ArgExpr : ArgType { let Name = "const Expr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
 def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
-def ArgDecl : ArgType { let Name = "const Decl*"; }
+def ArgValueDecl : ArgType { let Name = "const ValueDecl*"; }
 def ArgVarDecl : ArgType { let Name = "const VarDecl*"; }
 def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
@@ -104,11 +106,11 @@ def PtrTypeClass : TypeClass {
 }
 
 def NonPtrTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float]);
+  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float], [FixedPoint]);
 }
 
 def AllTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types);
+  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types, [FixedPoint]);
 }
 
 def ComparableTypeClass : TypeClass {
@@ -140,7 +142,7 @@ class AluOpcode : Opcode {
 }
 
 class FloatOpcode : Opcode {
-  let Args = [ArgRoundingMode];
+  let Args = [ArgUint32];
 }
 
 class IntegerOpcode : Opcode {
@@ -202,7 +204,7 @@ def CallVirt : Opcode {
 }
 
 def CallBI : Opcode {
-  let Args = [ArgFunction, ArgCallExpr];
+  let Args = [ArgFunction, ArgCallExpr, ArgUint32];
 }
 
 def CallPtr : Opcode {
@@ -255,6 +257,7 @@ def ConstFloat : ConstOpcode<Float, ArgFloat>;
 def constIntAP : ConstOpcode<IntAP, ArgIntAP>;
 def constIntAPS : ConstOpcode<IntAPS, ArgIntAPS>;
 def ConstBool : ConstOpcode<Bool, ArgBool>;
+def ConstFixedPoint : ConstOpcode<FixedPoint, ArgFixedPoint>;
 
 // [] -> [Integer]
 def Zero : Opcode {
@@ -597,12 +600,17 @@ def Comp: Opcode {
   let HasGroup = 1;
 }
 
+def IsNonNull : Opcode {
+  let Types = [PtrTypeClass];
+  let HasGroup = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Cast, CastFP.
 //===----------------------------------------------------------------------===//
 
 def FromCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS, FixedPoint];
 }
 
 def ToCastTypeClass : TypeClass {
@@ -637,23 +645,23 @@ def CastAPS : Opcode {
 // Cast an integer to a floating type
 def CastIntegralFloating : Opcode {
   let Types = [AluTypeClass];
-  let Args = [ArgFltSemantics, ArgRoundingMode];
+  let Args = [ArgFltSemantics, ArgUint32];
   let HasGroup = 1;
 }
 
 // Cast a floating to an integer type
 def CastFloatingIntegral : Opcode {
   let Types = [FixedSizeIntegralTypes];
-  let Args = [];
+  let Args = [ArgUint32];
   let HasGroup = 1;
 }
 
 def CastFloatingIntegralAP : Opcode {
-  let Args = [ArgUint32];
+  let Args = [ArgUint32, ArgUint32];
 }
 
 def CastFloatingIntegralAPS : Opcode {
-  let Args = [ArgUint32];
+  let Args = [ArgUint32, ArgUint32];
 }
 
 def CastPointerIntegral : Opcode {
@@ -727,6 +735,7 @@ def Flip : Opcode {
 def Invalid : Opcode {}
 def Unsupported : Opcode {}
 def Error : Opcode {}
+def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
@@ -751,7 +760,7 @@ def Memcpy : Opcode;
 def ToMemberPtr : Opcode;
 def CastMemberPtrPtr : Opcode;
 def GetMemberPtr : Opcode {
-  let Args = [ArgDecl];
+  let Args = [ArgValueDecl];
 }
 def GetMemberPtrBase : Opcode;
 def GetMemberPtrDecl : Opcode;
@@ -779,6 +788,20 @@ def AllocCN : Opcode {
 
 def Free : Opcode {
   let Args = [ArgBool];
+}
+
+def CheckNewTypeMismatch : Opcode {
+  let Args = [ArgExpr];
+}
+
+def InvalidNewDeleteExpr : Opcode {
+  let Args = [ArgExpr];
+}
+
+def CheckNewTypeMismatchArray : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgExpr];
+  let HasGroup = 1;
 }
 
 def IsConstantContext: Opcode;

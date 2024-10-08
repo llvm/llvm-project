@@ -174,7 +174,8 @@ define amdgpu_ps <3 x half> @test_fmaximum_v3f16_ss(<3 x half> inreg %a, <3 x ha
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_pk_maximum_f16 v0, s0, s2
 ; GFX12-GISEL-NEXT:    s_maximum_f16 s0, s1, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call <3 x half> @llvm.maximum.v3f16(<3 x half> %a, <3 x half> %b)

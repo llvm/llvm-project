@@ -103,8 +103,10 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   case RISCV::SB:
     return 0;
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::SH:
+  case RISCV::SH_INX:
     return 1;
   case RISCV::LW:
   case RISCV::SW:
@@ -128,8 +130,10 @@ static unsigned offsetMask(unsigned Opcode) {
   case RISCV::SB:
     return maskTrailingOnes<unsigned>(2U);
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::SH:
+  case RISCV::SH_INX:
     return maskTrailingOnes<unsigned>(1U);
   case RISCV::LW:
   case RISCV::SW:
@@ -173,6 +177,7 @@ static int64_t getBaseAdjustForCompression(int64_t Offset, unsigned Opcode) {
 // Return true if Reg is in a compressed register class.
 static bool isCompressedReg(Register Reg) {
   return RISCV::GPRCRegClass.contains(Reg) ||
+         RISCV::GPRF16CRegClass.contains(Reg) ||
          RISCV::FPR32CRegClass.contains(Reg) ||
          RISCV::FPR64CRegClass.contains(Reg);
 }
@@ -186,6 +191,7 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
     return false;
   case RISCV::LBU:
   case RISCV::LH:
+  case RISCV::LH_INX:
   case RISCV::LHU:
     return STI.hasStdExtZcb();
   case RISCV::LW:
@@ -207,6 +213,7 @@ static bool isCompressibleStore(const MachineInstr &MI) {
     return false;
   case RISCV::SB:
   case RISCV::SH:
+  case RISCV::SH_INX:
     return STI.hasStdExtZcb();
   case RISCV::SW:
   case RISCV::SD:
@@ -320,6 +327,8 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
   // Work out the compressed register class from which to scavenge.
   if (RISCV::GPRRegClass.contains(RegImm.Reg))
     RCToScavenge = &RISCV::GPRCRegClass;
+  else if (RISCV::GPRF16RegClass.contains(RegImm.Reg))
+    RCToScavenge = &RISCV::GPRF16CRegClass;
   else if (RISCV::FPR32RegClass.contains(RegImm.Reg))
     RCToScavenge = &RISCV::FPR32CRegClass;
   else if (RISCV::FPR64RegClass.contains(RegImm.Reg))
@@ -410,6 +419,11 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI), NewReg)
             .addReg(RegImm.Reg)
             .addImm(RegImm.Imm);
+      } else if (RISCV::GPRF16RegClass.contains(RegImm.Reg)) {
+        assert(RegImm.Imm == 0);
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR16INX),
+                NewReg)
+            .addReg(RegImm.Reg);
       } else {
         // If we are looking at replacing an FPR register we don't expect to
         // have any offset. The only compressible FP instructions with an offset

@@ -269,3 +269,11 @@ void test_builtin_elementwise_bitreverse() {
   static_assert(!is_const<decltype(__builtin_elementwise_bitreverse(a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_bitreverse(b))>::value);  
 }
+
+void test_builtin_elementwise_popcount() {
+  const int a = 2;
+  int b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_popcount(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_popcount(b))>::value);  
+}
+

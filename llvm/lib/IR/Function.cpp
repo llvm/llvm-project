@@ -402,7 +402,7 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                                           LinkageTypes Linkage,
                                           unsigned AddrSpace, const Twine &N,
                                           Module *M) {
-  auto *F = new Function(Ty, Linkage, AddrSpace, N, M);
+  auto *F = new (AllocMarker) Function(Ty, Linkage, AddrSpace, N, M);
   AttrBuilder B(F->getContext());
   UWTableKind UWTable = M->getUwtable();
   if (UWTable != UWTableKind::None)
@@ -501,8 +501,7 @@ static unsigned computeAddrSpace(unsigned AddrSpace, Module *M) {
 
 Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
                    const Twine &name, Module *ParentModule)
-    : GlobalObject(Ty, Value::FunctionVal,
-                   OperandTraits<Function>::op_begin(this), 0, Linkage, name,
+    : GlobalObject(Ty, Value::FunctionVal, AllocMarker, Linkage, name,
                    computeAddrSpace(AddrSpace, ParentModule)),
       NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
@@ -766,6 +765,11 @@ Attribute Function::getAttributeAtIndex(unsigned i, StringRef Kind) const {
   return AttributeSets.getAttributeAtIndex(i, Kind);
 }
 
+bool Function::hasAttributeAtIndex(unsigned Idx,
+                                   Attribute::AttrKind Kind) const {
+  return AttributeSets.hasAttributeAtIndex(Idx, Kind);
+}
+
 Attribute Function::getFnAttribute(Attribute::AttrKind Kind) const {
   return AttributeSets.getFnAttr(Kind);
 }
@@ -936,8 +940,8 @@ void Function::setOnlyAccessesInaccessibleMemOrArgMem() {
 }
 
 /// Table of string intrinsic names indexed by enum value.
-static const char * const IntrinsicNameTable[] = {
-  "not_intrinsic",
+static constexpr const char *const IntrinsicNameTable[] = {
+    "not_intrinsic",
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_NAME_TABLE
@@ -959,8 +963,9 @@ bool Function::isTargetIntrinsic() const {
 /// Find the segment of \c IntrinsicNameTable for intrinsics with the same
 /// target as \c Name, or the generic table if \c Name is not target specific.
 ///
-/// Returns the relevant slice of \c IntrinsicNameTable
-static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
+/// Returns the relevant slice of \c IntrinsicNameTable and the target name.
+static std::pair<ArrayRef<const char *>, StringRef>
+findTargetSubtable(StringRef Name) {
   assert(Name.starts_with("llvm."));
 
   ArrayRef<IntrinsicTargetInfo> Targets(TargetInfos);
@@ -972,14 +977,14 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
   // We've either found the target or just fall back to the generic set, which
   // is always first.
   const auto &TI = It != Targets.end() && It->Name == Target ? *It : Targets[0];
-  return ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
+  return {ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count), TI.Name};
 }
 
-/// This does the actual lookup of an intrinsic ID which
-/// matches the given function name.
+/// This does the actual lookup of an intrinsic ID which matches the given
+/// function name.
 Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
-  ArrayRef<const char *> NameTable = findTargetSubtable(Name);
-  int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
+  auto [NameTable, Target] = findTargetSubtable(Name);
+  int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name, Target);
   if (Idx == -1)
     return Intrinsic::not_intrinsic;
 
@@ -1381,22 +1386,24 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 
 void Intrinsic::getIntrinsicInfoTableEntries(ID id,
                                              SmallVectorImpl<IITDescriptor> &T){
+  static_assert(sizeof(IIT_Table[0]) == 2,
+                "Expect 16-bit entries in IIT_Table");
   // Check to see if the intrinsic's type was expressible by the table.
-  unsigned TableVal = IIT_Table[id-1];
+  uint16_t TableVal = IIT_Table[id - 1];
 
   // Decode the TableVal into an array of IITValues.
-  SmallVector<unsigned char, 8> IITValues;
+  SmallVector<unsigned char> IITValues;
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
-  if ((TableVal >> 31) != 0) {
+  if (TableVal >> 15) {
     // This is an offset into the IIT_LongEncodingTable.
     IITEntries = IIT_LongEncodingTable;
 
     // Strip sentinel bit.
-    NextElt = (TableVal << 1) >> 1;
+    NextElt = TableVal & 0x7fff;
   } else {
-    // Decode the TableVal into an array of IITValues.  If the entry was encoded
-    // into a single word in the table itself, decode it now.
+    // If the entry was encoded into a single word in the table itself, decode
+    // it from an array of nibbles to an array of bytes.
     do {
       IITValues.push_back(TableVal & 0xF);
       TableVal >>= 4;

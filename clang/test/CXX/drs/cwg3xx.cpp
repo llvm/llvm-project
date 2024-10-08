@@ -1369,6 +1369,78 @@ namespace cwg385 { // cwg385: 2.8
   //   expected-note@#cwg385-n {{member is declared here}}
 }
 
+namespace cwg386 { // cwg386: no
+namespace example1 {
+namespace N1 {
+// Binds name 'f' in N1. Target scope is N1.
+template<typename T> void f( T* x ) {
+  // ... other stuff ...
+  delete x;
+}
+}
+
+namespace N2 {
+// Bind name 'f' in N2. When a single search find this declaration,
+// it's replaced with N1::f declaration.
+using N1::f;
+
+// According to _N4988_.[dcl.meaning]/3.3:
+// `f<int>` is not a qualified-id, so its target scope is N2.
+// `f<int>` is a template-id, so 'f' undergoes (unqualified) lookup.
+// Search performed by unqualified lookup finds N1::f via using-declaration,
+// but this result is not considered, because it's not nominable in N2,
+// which is because its target scope is N1.
+// So unqualified lookup doesn't find anything, making this declaration ill-formed.
+template<> void f<int>( int* );
+// expected-error@-1 {{no function template matches function template specialization 'f'}}
+
+class Test {
+  ~Test() { }
+  // According to _N4988_.[dcl.meaning]/2.2:
+  // `f<>` is a template-id and not a template declaration,
+  // so its terminal name 'f' undergoes (unqualified) lookup.
+  // Search in N2 performed by unqualified lookup finds
+  // (single) N1::f declaration via using-declaration.
+  // N1::f is replaced with N1::f<> specialization after deduction,
+  // and this is the result of the unqualified lookup.
+  // This friend declaration correspond to the result of the lookup.
+  // All lookup results target the same scope, which is N1,
+  // so target scope of this friend declaration is also N1.
+  // FIXME: This is well-formed.
+  friend void f<>( Test* x );
+  // expected-error@-1 {{no function template matches function template specialization 'f'}}
+};
+}
+} // namespace example1
+
+namespace example2 {
+namespace N1 {
+// Binds name 'f' in N1. Target scope is N1.
+void f(); // #cwg386-ex2-N1-f
+}
+
+namespace N2 {
+// Bind name 'f' in N2. When a single search finds this declaration,
+// it's replaced with N1::f declaration.
+using N1::f; // #cwg386-ex2-using
+class A {
+  // According to _N4988_.[dcl.meaning]/2.2:
+  // `N2::f` is a qualified-id, so its terminal name 'f' undergoes (qualified) lookup.
+  // Search in N2 performed by qualified lookup finds N1::f via using-declaration,
+  // which is the (only) result of qualified lookup.
+  // This friend declaration corresponds to the result of the lookup.
+  // All lookup results target the same scope, which is N1,
+  // so target scope of this friend declaration is also N1.
+  // FIXME: This is well-formed.
+  friend void N2::f();
+  // expected-error@-1 {{cannot befriend target of using declaration}}
+  //   expected-note@#cwg386-ex2-N1-f {{target of using declaration}}
+  //   expected-note@#cwg386-ex2-using {{using declaration}}
+};
+}
+} // namespace example2
+} // namespace cwg386
+
 namespace cwg387 { // cwg387: 2.8
   namespace old {
     template<typename T> class number {

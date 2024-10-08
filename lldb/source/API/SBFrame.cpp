@@ -809,7 +809,7 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
         Status var_error;
         variable_list = frame->GetVariableList(true, &var_error);
         if (var_error.Fail())
-          value_list.SetError(var_error);
+          value_list.SetError(std::move(var_error));
         if (variable_list) {
           const size_t num_variables = variable_list->GetSize();
           if (num_variables) {
@@ -1031,9 +1031,10 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
     return EvaluateExpression(expr, options);
   } else {
     Status error;
-    error.SetErrorString("can't evaluate expressions when the "
-                           "process is running.");
-    ValueObjectSP error_val_sp = ValueObjectConstResult::Create(nullptr, error);
+    error = Status::FromErrorString("can't evaluate expressions when the "
+                                    "process is running.");
+    ValueObjectSP error_val_sp =
+        ValueObjectConstResult::Create(nullptr, std::move(error));
     result.SetSP(error_val_sp, false);
   }
   return result;
@@ -1127,15 +1128,15 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
       }
     } else {
       Status error;
-      error.SetErrorString("can't evaluate expressions when the "
-                           "process is running.");
-      expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+      error = Status::FromErrorString("can't evaluate expressions when the "
+                                      "process is running.");
+      expr_value_sp = ValueObjectConstResult::Create(nullptr, std::move(error));
       expr_result.SetSP(expr_value_sp, false);
     }
   } else {
       Status error;
-      error.SetErrorString("sbframe object is not valid.");
-      expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+      error = Status::FromErrorString("sbframe object is not valid.");
+      expr_value_sp = ValueObjectConstResult::Create(nullptr, std::move(error));
       expr_result.SetSP(expr_value_sp, false);
   }
 

@@ -112,9 +112,11 @@ llvm::LogicalResult cuf::DataTransferOp::verify() {
   if (fir::isa_trivial(srcTy) &&
       matchPattern(getSrc().getDefiningOp(), mlir::m_Constant()))
     return mlir::success();
+
   return emitOpError()
          << "expect src and dst to be references or descriptors or src to "
-            "be a constant";
+            "be a constant: "
+         << srcTy << " - " << dstTy;
 }
 
 //===----------------------------------------------------------------------===//

@@ -26,6 +26,15 @@ declare i16 @llvm.nvvm.min.us(i16, i16)
 declare i32 @llvm.nvvm.min.ui(i32, i32)
 declare i64 @llvm.nvvm.min.ull(i64, i64)
 
+declare i32 @llvm.nvvm.bitcast.f2i(float)
+declare float @llvm.nvvm.bitcast.i2f(i32)
+declare i64 @llvm.nvvm.bitcast.d2ll(double)
+declare double @llvm.nvvm.bitcast.ll2d(i64)
+
+declare i32 @llvm.nvvm.rotate.b32(i32, i32)
+declare i64 @llvm.nvvm.rotate.right.b64(i64, i32)
+declare i64 @llvm.nvvm.rotate.b64(i64, i32)
+
 ; CHECK-LABEL: @simple_upgrade
 define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
 ; CHECK: call i32 @llvm.bitreverse.i32(i32 %a)
@@ -118,5 +127,32 @@ define void @min_max(i16 %a1, i16 %a2, i32 %b1, i32 %b2, i64 %c1, i64 %c2) {
 ; CHECK: select i1 [[minull]], i64 %c1, i64 %c2
   %r12 = call i64 @llvm.nvvm.min.ull(i64 %c1, i64 %c2)
 
+  ret void
+}
+
+; CHECK-LABEL: @bitcast
+define void @bitcast(i32 %a, i64 %b, float %c, double %d) {
+; CHECK: bitcast float %c to i32
+; CHECK: bitcast i32 %a to float
+; CHECK: bitcast double %d to i64
+; CHECK: bitcast i64 %b to double
+;
+  %r1 = call i32 @llvm.nvvm.bitcast.f2i(float %c)
+  %r2 = call float @llvm.nvvm.bitcast.i2f(i32 %a)
+  %r3 = call i64 @llvm.nvvm.bitcast.d2ll(double %d)
+  %r4 = call double @llvm.nvvm.bitcast.ll2d(i64 %b)
+
+  ret void
+}
+
+; CHECK-LABEL: @rotate
+define void @rotate(i32 %a, i64 %b) {
+; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 6)
+; CHECK: call i64 @llvm.fshr.i64(i64 %b, i64 %b, i64 7)
+; CHECK: call i64 @llvm.fshl.i64(i64 %b, i64 %b, i64 8)
+;
+  %r1 = call i32 @llvm.nvvm.rotate.b32(i32 %a, i32 6)
+  %r2 = call i64 @llvm.nvvm.rotate.right.b64(i64 %b, i32 7)
+  %r3 = call i64 @llvm.nvvm.rotate.b64(i64 %b, i32 8)
   ret void
 }

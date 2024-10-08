@@ -1503,8 +1503,21 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
 
   O << " offset:";
 
-  if ((Imm & QUAD_PERM_ENC_MASK) == QUAD_PERM_ENC) {
+  // Rotate and FFT modes
+  if (Imm >= ROTATE_MODE_LO && AMDGPU::isGFX9Plus(STI)) {
+    if (Imm >= FFT_MODE_LO) {
+      O << "swizzle(" << IdSymbolic[ID_FFT] << ',' << (Imm & FFT_SWIZZLE_MASK)
+        << ')';
+    } else if (Imm >= ROTATE_MODE_LO) {
+      O << "swizzle(" << IdSymbolic[ID_ROTATE] << ','
+        << ((Imm >> ROTATE_DIR_SHIFT) & ROTATE_DIR_MASK) << ','
+        << ((Imm >> ROTATE_SIZE_SHIFT) & ROTATE_SIZE_MASK) << ')';
+    }
+    return;
+  }
 
+  // Basic mode
+  if ((Imm & QUAD_PERM_ENC_MASK) == QUAD_PERM_ENC) {
     O << "swizzle(" << IdSymbolic[ID_QUAD_PERM];
     for (unsigned I = 0; I < LANE_NUM; ++I) {
       O << ",";

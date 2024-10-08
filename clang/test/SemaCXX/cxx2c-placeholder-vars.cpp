@@ -50,14 +50,16 @@ void f() {
 
 void lambda() {
     (void)[_ = 0, _ = 1] { // expected-warning {{placeholder variables are incompatible with C++ standards before C++2c}} \
-                           // expected-note 4{{placeholder declared here}}
+                           // expected-note 2{{placeholder declared here}}
         (void)_++; // expected-error {{ambiguous reference to placeholder '_', which is defined multiple times}}
     };
 
     {
         int _ = 12;
-        (void)[_ = 0]{}; // no warning (different scope)
+        (void)[_ = 0]{ return _;}; // no warning (different scope)
     }
+
+    auto GH107024 = [_ = 42]() { return _; }();
 }
 
 namespace global_var {

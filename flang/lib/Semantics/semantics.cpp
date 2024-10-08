@@ -348,9 +348,10 @@ private:
 SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
+    const common::LangOptions &langOpts,
     parser::AllCookedSources &allCookedSources)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
-      allCookedSources_{allCookedSources},
+      langOpts_{langOpts}, allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
@@ -655,9 +656,11 @@ void Semantics::EmitMessages(llvm::raw_ostream &os) {
   context_.messages().Emit(os, context_.allCookedSources());
 }
 
-void Semantics::DumpSymbols(llvm::raw_ostream &os) {
-  DoDumpSymbols(os, context_.globalScope());
+void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
+  DoDumpSymbols(os, globalScope());
 }
+
+void Semantics::DumpSymbols(llvm::raw_ostream &os) { context_.DumpSymbols(os); }
 
 void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   NameToSymbolMap symbols;

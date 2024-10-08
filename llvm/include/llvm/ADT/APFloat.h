@@ -1534,6 +1534,11 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
   return A < B ? B : A;
 }
 
+inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
+  V.print(OS);
+  return OS;
+}
+
 // We want the following functions to be available in the header for inlining.
 // We cannot define them inline in the class definition of `DoubleAPFloat`
 // because doing so would instantiate `std::unique_ptr<APFloat[]>` before

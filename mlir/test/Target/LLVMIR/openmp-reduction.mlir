@@ -540,8 +540,8 @@ llvm.func @parallel_nested_workshare_reduction(%ub : i64) {
   %lb = llvm.mlir.constant(1 : i64) : i64
   %step = llvm.mlir.constant(1 : i64) : i64
   
-  omp.parallel reduction(@add_i32 %0 -> %prv : !llvm.ptr) {
-    omp.wsloop {
+  omp.parallel {
+    omp.wsloop reduction(@add_i32 %0 -> %prv : !llvm.ptr) {
       omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
         %ival = llvm.trunc %iv : i64 to i32
         %lprv = llvm.load %prv : !llvm.ptr -> i32

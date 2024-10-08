@@ -741,11 +741,11 @@ define <4 x i8> @ctpop_v4i8(<4 x i8> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v4i8:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    ldrb w11, [sp, #4]
+; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    ldrb w10, [sp, #2]
 ; NONEON-NOSVE-NEXT:    ldrb w12, [sp]
 ; NONEON-NOSVE-NEXT:    lsr w13, w9, #1
@@ -814,10 +814,10 @@ define <8 x i8> @ctpop_v8i8(<8 x i8> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v8i8:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #7]
+; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    lsr w10, w9, #1
 ; NONEON-NOSVE-NEXT:    and w10, w10, #0x55555555
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -939,10 +939,10 @@ define <16 x i8> @ctpop_v16i8(<16 x i8> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v16i8:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #-32]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #15]
+; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    lsr w10, w9, #1
 ; NONEON-NOSVE-NEXT:    and w10, w10, #0x55555555
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -1611,11 +1611,11 @@ define <2 x i16> @ctpop_v2i16(<2 x i16> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v2i16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    ldrh w10, [sp]
+; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    lsr w11, w9, #1
 ; NONEON-NOSVE-NEXT:    lsr w12, w10, #1
 ; NONEON-NOSVE-NEXT:    and w11, w11, #0x55555555
@@ -1657,10 +1657,10 @@ define <4 x i16> @ctpop_v4i16(<4 x i16> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v4i16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #6]
+; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    lsr w10, w9, #1
 ; NONEON-NOSVE-NEXT:    and w10, w10, #0x55555555
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -1730,10 +1730,10 @@ define <8 x i16> @ctpop_v8i16(<8 x i16> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v8i16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #-32]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #14]
+; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    lsr w10, w9, #1
 ; NONEON-NOSVE-NEXT:    and w10, w10, #0x55555555
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -2089,10 +2089,10 @@ define <2 x i32> @ctpop_v2i32(<2 x i32> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v2i32:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #4]
+; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    lsr w10, w9, #1
 ; NONEON-NOSVE-NEXT:    and w10, w10, #0x55555555
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -2135,10 +2135,10 @@ define <4 x i32> @ctpop_v4i32(<4 x i32> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v4i32:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #-32]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12]
+; NONEON-NOSVE-NEXT:    mov w8, #16843009 // =0x1010101
 ; NONEON-NOSVE-NEXT:    lsr w10, w9, #1
 ; NONEON-NOSVE-NEXT:    and w10, w10, #0x55555555
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -2366,10 +2366,10 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %op) {
 ;
 ; NONEON-NOSVE-LABEL: ctpop_v2i64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #-32]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
 ; NONEON-NOSVE-NEXT:    ldr x9, [sp, #8]
+; NONEON-NOSVE-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; NONEON-NOSVE-NEXT:    lsr x10, x9, #1
 ; NONEON-NOSVE-NEXT:    and x10, x10, #0x5555555555555555
 ; NONEON-NOSVE-NEXT:    sub x9, x9, x10

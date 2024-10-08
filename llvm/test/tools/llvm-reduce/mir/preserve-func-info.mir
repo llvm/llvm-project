@@ -14,6 +14,9 @@
 # RESULT-NEXT: failedISel:      true
 # RESULT-NEXT: tracksRegLiveness: true
 # RESULT-NEXT: hasWinCFI:       true
+# RESULT-NEXT: noPhis:          false
+# RESULT-NEXT: isSSA:           false
+# RESULT-NEXT: noVRegs:         false
 # RESULT-NEXT: callsEHReturn: true
 # RESULT-NEXT: callsUnwindInit: true
 # RESULT-NEXT: hasEHCatchret: true
@@ -41,6 +44,9 @@ selected:        true
 failedISel:      true
 tracksRegLiveness: true
 hasWinCFI:       true
+noPhis:          false
+isSSA:           false
+noVRegs:         false
 failsVerification: true
 tracksDebugUserValues: true
 callsEHReturn: true

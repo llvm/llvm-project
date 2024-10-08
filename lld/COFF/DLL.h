@@ -31,6 +31,8 @@ public:
   std::vector<Chunk *> addresses;
   std::vector<Chunk *> hints;
   std::vector<Chunk *> dllNames;
+  std::vector<Chunk *> auxIat;
+  std::vector<Chunk *> auxIatCopy;
 };
 
 // Windows-specific.

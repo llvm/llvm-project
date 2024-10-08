@@ -13,15 +13,15 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_MEMPROFILER_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/ProfileData/InstrProfReader.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 namespace llvm {
 class Function;
 class Module;
-class TargetLibraryInfo;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 /// Public interface to the memory profiler pass for instrumenting code to
 /// profile memory accesses.
@@ -51,17 +51,6 @@ public:
   explicit MemProfUsePass(std::string MemoryProfileFile,
                           IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  struct AllocMatchInfo {
-    uint64_t TotalSize = 0;
-    AllocationType AllocType = AllocationType::None;
-    bool Matched = false;
-  };
-
-  void
-  readMemprof(Function &F, const IndexedMemProfReader &MemProfReader,
-              const TargetLibraryInfo &TLI,
-              std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo);
 
 private:
   std::string MemoryProfileFileName;

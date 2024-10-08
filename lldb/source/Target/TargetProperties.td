@@ -102,7 +102,7 @@ let Definition = "target" in {
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;
   def MaxMemReadSize: Property<"max-memory-read-size", "UInt64">,
-    DefaultUnsignedValue<1024>,
+    DefaultUnsignedValue<0xffffffff>,
     Desc<"Maximum number of bytes that 'memory read' will fetch before --force must be specified.">;
   def BreakpointUseAvoidList: Property<"breakpoints-use-platform-avoid-list", "Boolean">,
     DefaultTrue,
@@ -235,7 +235,7 @@ let Definition = "process" in {
   def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"If true, language runtime augmented/overidden backtraces will not be used when printing a stack trace.">;
+    Desc<"If true, language runtime augmented/overridden backtraces will not be used when printing a stack trace.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,
     Global,
     DefaultFalse,

@@ -70,7 +70,7 @@ static bool isAsciiIdentifier(llvm::StringRef S) {
   return true;
 }
 
-static AttributeStyle getAttributeStyle(llvm::Record *Instance) {
+static AttributeStyle getAttributeStyle(const llvm::Record *Instance) {
   llvm::StringRef Style = Instance->getValueAsString("Style");
   return llvm::StringSwitch<AttributeStyle>(Style)
       .Case("cxx11", AttributeStyle::Cxx11)
@@ -79,7 +79,7 @@ static AttributeStyle getAttributeStyle(llvm::Record *Instance) {
       .Default(AttributeStyle::Gnu);
 }
 
-static AttributeNamespace getAttributeNamespace(llvm::Record *Instance) {
+static AttributeNamespace getAttributeNamespace(const llvm::Record *Instance) {
   llvm::StringRef Namespace = Instance->getValueAsString("Namespace");
   return llvm::StringSwitch<AttributeNamespace>(Namespace)
       .Case("clang", AttributeNamespace::Clang)
@@ -87,21 +87,20 @@ static AttributeNamespace getAttributeNamespace(llvm::Record *Instance) {
       .Default(AttributeNamespace::None);
 }
 
-using AttributeMap = llvm::DenseMap<llvm::StringRef, llvm::Record *>;
+using AttributeMap = llvm::DenseMap<llvm::StringRef, const llvm::Record *>;
 
 template <class SpecMap, class FuncList>
 static AttributeMap collectAttributeMacros(const SpecMap &Spec,
                                            const FuncList &Funcs) {
-  llvm::DenseMap<llvm::StringRef, llvm::Record *> MacroAttr;
+  llvm::DenseMap<llvm::StringRef, const llvm::Record *> MacroAttr;
   for (const auto &Name : Funcs) {
     auto Iter = Spec.find(Name);
     if (Iter == Spec.end())
       continue;
 
-    llvm::Record *FunctionSpec = Iter->second;
-    std::vector<llvm::Record *> Attributes =
-        FunctionSpec->getValueAsListOfDefs("Attributes");
-    for (llvm::Record *Attr : Attributes)
+    const llvm::Record *FunctionSpec = Iter->second;
+    for (const llvm::Record *Attr :
+         FunctionSpec->getValueAsListOfDefs("Attributes"))
       MacroAttr[Attr->getValueAsString("Macro")] = Attr;
   }
   return MacroAttr;
@@ -112,11 +111,11 @@ static void emitAttributeMacroDecls(const AttributeMap &MacroAttr,
   for (auto &[Macro, Attr] : MacroAttr) {
     std::vector<llvm::Record *> Instances =
         Attr->getValueAsListOfDefs("Instances");
-    llvm::SmallVector<std::pair<AttributeStyle, llvm::Record *>> Styles;
+    llvm::SmallVector<std::pair<AttributeStyle, const llvm::Record *>> Styles;
     std::transform(Instances.begin(), Instances.end(),
                    std::back_inserter(Styles),
-                   [&](llvm::Record *Instance)
-                       -> std::pair<AttributeStyle, llvm::Record *> {
+                   [&](const llvm::Record *Instance)
+                       -> std::pair<AttributeStyle, const llvm::Record *> {
                      auto Style = getAttributeStyle(Instance);
                      return {Style, Instance};
                    });
@@ -195,7 +194,7 @@ static void emitAttributeMacroForFunction(const llvm::Record *FunctionSpec,
       FunctionSpec->getValueAsListOfDefs("Attributes");
   llvm::interleave(
       Attributes.begin(), Attributes.end(),
-      [&](llvm::Record *Attr) { OS << Attr->getValueAsString("Macro"); },
+      [&](const llvm::Record *Attr) { OS << Attr->getValueAsString("Macro"); },
       [&]() { OS << ' '; });
   if (!Attributes.empty())
     OS << ' ';
@@ -217,7 +216,7 @@ static void writeAPIFromIndex(APIIndexer &G,
     if (!G.MacroSpecMap.count(Name))
       llvm::PrintFatalError(Name + " not found in any standard spec.\n");
 
-    llvm::Record *MacroDef = Pair.second;
+    const llvm::Record *MacroDef = Pair.second;
     dedentAndWrite(MacroDef->getValueAsString("Defn"), OS);
 
     OS << '\n';
@@ -237,7 +236,7 @@ static void writeAPIFromIndex(APIIndexer &G,
       llvm::PrintFatalError(
           Name + " is not listed as an enumeration in any standard spec.\n");
 
-    llvm::Record *EnumerationSpec = G.EnumerationSpecMap[Name];
+    const llvm::Record *EnumerationSpec = G.EnumerationSpecMap[Name];
     OS << "  " << EnumerationSpec->getValueAsString("Name");
     auto Value = EnumerationSpec->getValueAsString("Value");
     if (Value == "__default__") {
@@ -267,9 +266,9 @@ static void writeAPIFromIndex(APIIndexer &G,
     if (Iter == G.FunctionSpecMap.end())
       continue;
 
-    llvm::Record *FunctionSpec = Iter->second;
-    llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
-    llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
+    const llvm::Record *FunctionSpec = Iter->second;
+    const llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
+    const llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
 
     // TODO: https://github.com/llvm/llvm-project/issues/81208
     //   Ideally, we should group functions based on their guarding macros.
@@ -285,7 +284,7 @@ static void writeAPIFromIndex(APIIndexer &G,
 
     auto ArgsList = FunctionSpec->getValueAsListOfDefs("Args");
     for (size_t i = 0; i < ArgsList.size(); ++i) {
-      llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
+      const llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
       OS << G.getTypeAsString(ArgType);
       if (i < ArgsList.size() - 1)
         OS << ", ";
@@ -304,7 +303,7 @@ static void writeAPIFromIndex(APIIndexer &G,
     auto Iter = G.ObjectSpecMap.find(Name);
     if (Iter == G.ObjectSpecMap.end())
       continue;
-    llvm::Record *ObjectSpec = Iter->second;
+    const llvm::Record *ObjectSpec = Iter->second;
     auto Type = ObjectSpec->getValueAsString("Type");
     OS << "extern " << Type << " " << Name << ";\n";
   }
@@ -314,13 +313,13 @@ static void writeAPIFromIndex(APIIndexer &G,
   emitUndefsForAttributeMacros(MacroAttr, OS);
 }
 
-void writePublicAPI(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {}
+void writePublicAPI(llvm::raw_ostream &OS, const llvm::RecordKeeper &Records) {}
 
 const char PublicAPICommand::Name[] = "public_api";
 
 void PublicAPICommand::run(llvm::raw_ostream &OS, const ArgVector &Args,
                            llvm::StringRef StdHeader,
-                           llvm::RecordKeeper &Records,
+                           const llvm::RecordKeeper &Records,
                            const Command::ErrorReporter &Reporter) const {
   if (Args.size() != 0)
     Reporter.printFatalError("public_api command does not take any arguments.");

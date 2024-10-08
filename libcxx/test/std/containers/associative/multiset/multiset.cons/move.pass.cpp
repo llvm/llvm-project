@@ -35,7 +35,7 @@ int main(int, char**)
         assert(m.size() == 0);
         assert(std::distance(m.begin(), m.end()) == 0);
 
-        assert(mo.get_allocator() == A(test_alloc_base::moved_value));
+        assert(mo.get_allocator() == A(7));
         assert(mo.key_comp() == C(5));
         assert(mo.size() == 0);
         assert(std::distance(mo.begin(), mo.end()) == 0);
@@ -72,7 +72,7 @@ int main(int, char**)
         assert(*std::next(m.begin(), 7) == 3);
         assert(*std::next(m.begin(), 8) == 3);
 
-        assert(mo.get_allocator() == A(test_alloc_base::moved_value));
+        assert(mo.get_allocator() == A(7));
         assert(mo.key_comp() == C(5));
         assert(mo.size() == 0);
         assert(std::distance(mo.begin(), mo.end()) == 0);
