@@ -1028,7 +1028,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
          Variadic<TransformAnyParamTypeOrAnyHandle>:$pad_to_multiple_of,
          DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
                           $static_pad_to_multiple_of,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$pack_paddings,
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$nofold_flags,
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
           "{}">:$transpose_paddings,

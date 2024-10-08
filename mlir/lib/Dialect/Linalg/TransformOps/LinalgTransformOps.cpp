@@ -1727,7 +1727,7 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
 void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              ArrayRef<int64_t> paddingDimensions,
                              ArrayRef<int64_t> padToMultipleOf,
-                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<int64_t> nofoldFlags,
                              ArrayRef<Attribute> transposePaddings,
                              StringRef copyBackOp) {
   auto resultType = transform::AnyOpType::get(b.getContext());
@@ -1742,7 +1742,7 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                (padToMultipleOf.empty()
                     ? DenseI64ArrayAttr()
                     : b.getDenseI64ArrayAttr(padToMultipleOf)),
-               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
                /*transposePaddings=*/b.getArrayAttr(transposePaddings),
                /*copyBackOp=*/b.getStringAttr(copyBackOp));
 }
@@ -1750,7 +1750,7 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
 void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              ArrayRef<int64_t> paddingDimensions,
                              ArrayRef<OpFoldResult> mixedPadToMultipleOf,
-                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<int64_t> nofoldFlags,
                              ArrayRef<Attribute> transposePaddings,
                              StringRef copyBackOp) {
   auto resultType = transform::AnyOpType::get(b.getContext());
@@ -1766,7 +1766,7 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
                /*padToMultipleOf=*/dynamicPadToMultipleOf,
                /*padToMultipleOf=*/staticPadToMultipleOf,
-               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
                /*transposePaddings=*/b.getArrayAttr(transposePaddings),
                /*copyBackOp=*/b.getStringAttr(copyBackOp));
 }
@@ -1800,10 +1800,10 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     }
 
     // Convert the integer packing flags to booleans.
-    SmallVector<bool> packPaddings;
+    SmallVector<bool> nofoldFlags;
     for (int64_t packPadding :
-         extractFromIntegerArrayAttr<int64_t>(getPackPaddings()))
-      packPaddings.push_back(static_cast<bool>(packPadding));
+         extractFromIntegerArrayAttr<int64_t>(getNofoldFlags()))
+      nofoldFlags.push_back(static_cast<bool>(packPadding));
 
     // Convert the padding values to attributes.
     SmallVector<Attribute> paddingValues;
@@ -1861,7 +1861,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
 
     options.padToMultipleOf = padToMultipleOf;
     options.paddingValues = paddingValues;
-    options.packPaddings = packPaddings;
+    options.nofoldFlags = nofoldFlags;
     if (getCopyBackOp() ==
         bufferization::MaterializeInDestinationOp::getOperationName()) {
       options.copyBackOp = LinalgPaddingOptions::CopyBackOp::
@@ -1907,14 +1907,14 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
 }
 
 LogicalResult transform::PadOp::verify() {
-  SmallVector<int64_t> packPaddings =
-      extractFromIntegerArrayAttr<int64_t>(getPackPaddings());
-  if (any_of(packPaddings, [](int64_t packPadding) {
+  SmallVector<int64_t> nofoldFlags =
+      extractFromIntegerArrayAttr<int64_t>(getNofoldFlags());
+  if (any_of(nofoldFlags, [](int64_t packPadding) {
         return packPadding != 0 && packPadding != 1;
       })) {
     return emitOpError()
-           << "expects pack_paddings to contain booleans (0/1), found "
-           << getPackPaddings();
+           << "expects nofold_flags to contain booleans (0/1), found "
+           << getNofoldFlags();
   }
 
   SmallVector<int64_t> paddingDimensions =
