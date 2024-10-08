@@ -1179,8 +1179,6 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   if ((!BBKillable && !BBPhisMergeable) || introduceTooManyPhiEntries(BB, Succ))
     return false;
 
-  SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
-
   // Check to see if merging these blocks/phis would cause conflicts for any of
   // the phi nodes in BB or Succ. If not, we can safely merge.
 
@@ -1301,7 +1299,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-
+    SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
