@@ -2780,28 +2780,39 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
-    unsigned InterleaveFactor = Vals.size();
-    SmallVector<Value *> InterleavingValues;
-    unsigned InterleavingValuesCount =
-        InterleaveFactor + (InterleaveFactor - 2);
-    InterleavingValues.resize(InterleaveFactor);
-    // Place the values to be interleaved in the correct order for the
-    // interleaving
-    for (unsigned I = 0, J = InterleaveFactor / 2, K = 0; K < InterleaveFactor;
-         K++) {
-      if (K % 2 == 0) {
-        InterleavingValues[K] = Vals[I];
-        I++;
-      } else {
-        InterleavingValues[K] = Vals[J];
-        J++;
-      }
+    if (Vals.size() == 2) {
+      VectorType *WideVecTy = VectorType::getDoubleElementsVectorType(VecTy);
+      return Builder.CreateIntrinsic(WideVecTy, Intrinsic::vector_interleave2,
+                                     Vals,
+                                     /*FMFSource=*/nullptr, Name);
     }
-#ifndef NDEBUG
-    for (Value *Val : InterleavingValues)
-      assert(Val && "NULL Interleaving Value");
-#endif
-    for (unsigned I = 1; I < InterleavingValuesCount; I += 2) {
+    unsigned InterleaveFactor = Vals.size();
+    SmallVector<Value *> InterleavingValues(Vals);
+    // The total number of nodes in a balanced binary tree is calculated as 2n -
+    // 1, where `n` is the number of leaf nodes (`InterleaveFactor`). In this
+    // context, we exclude the root node because it will serve as the final
+    // interleaved value. Thus, the number of nodes to be processed/interleaved
+    // is: (2n - 1) - 1 = 2n - 2.
+
+    unsigned NumInterleavingValues = 2 * InterleaveFactor - 2;
+    for (unsigned I = 1; I < NumInterleavingValues; I += 2) {
+      // values that haven't been processed yet:
+      unsigned Remaining = InterleavingValues.size() - I + 1;
+      if (Remaining > 2 && isPowerOf2_32(Remaining)) {
+
+        // The remaining values form a new level in the interleaving tree.
+        // Arrange these values in the correct interleaving order for this
+        // level. The interleaving order places alternating elements from the
+        // first and second halves,
+        std::vector<Value *> RemainingValues(InterleavingValues.begin() + I - 1,
+                                             InterleavingValues.end());
+        unsigned Middle = Remaining / 2;
+        for (unsigned J = I - 1, K = 0; J < InterleavingValues.size();
+             J += 2, K++) {
+          InterleavingValues[J] = RemainingValues[K];
+          InterleavingValues[J + 1] = RemainingValues[Middle + K];
+        }
+      }
       VectorType *InterleaveTy =
           cast<VectorType>(InterleavingValues[I]->getType());
       VectorType *WideVecTy =
@@ -2812,7 +2823,7 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
           /*FMFSource=*/nullptr, Name);
       InterleavingValues.push_back(InterleaveRes);
     }
-    return InterleavingValues[InterleavingValuesCount];
+    return InterleavingValues[NumInterleavingValues];
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -2951,42 +2962,48 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 
         SmallVector<Value *> DeinterleavedValues;
         // If the InterleaveFactor is > 2, so we will have to do recursive
-        // deinterleaving, because the current available deinterleave intrinsice
+        // deinterleaving, because the current available deinterleave intrinsic
         // supports only Factor of 2. DeinterleaveCount represent how many times
         // we will do deinterleaving, we will do deinterleave on all nonleaf
         // nodes in the deinterleave tree.
         unsigned DeinterleaveCount = InterleaveFactor - 1;
-        std::queue<Value *> TempDeinterleavedValues;
-        TempDeinterleavedValues.push(NewLoad);
+        std::vector<Value *> TempDeinterleavedValues;
+        TempDeinterleavedValues.push_back(NewLoad);
         for (unsigned I = 0; I < DeinterleaveCount; ++I) {
-          Value *ValueToDeinterleave = TempDeinterleavedValues.front();
-          auto *DiTy = ValueToDeinterleave->getType();
-          TempDeinterleavedValues.pop();
+          auto *DiTy = TempDeinterleavedValues[I]->getType();
           Value *DI = State.Builder.CreateIntrinsic(
-              Intrinsic::vector_deinterleave2, DiTy, ValueToDeinterleave,
+              Intrinsic::vector_deinterleave2, DiTy, TempDeinterleavedValues[I],
               /*FMFSource=*/nullptr, "strided.vec");
           Value *StridedVec = State.Builder.CreateExtractValue(DI, 0);
-          TempDeinterleavedValues.push(StridedVec);
+          TempDeinterleavedValues.push_back(StridedVec);
           StridedVec = State.Builder.CreateExtractValue(DI, 1);
-          TempDeinterleavedValues.push(StridedVec);
-        }
-
-        assert(TempDeinterleavedValues.size() == InterleaveFactor &&
-               "Num of deinterleaved values must equals to InterleaveFactor");
-        // Sort deinterleaved values
-        DeinterleavedValues.resize(InterleaveFactor);
-        for (unsigned I = 0, J = InterleaveFactor / 2, K = 0;
-             K < InterleaveFactor; K++) {
-          auto *DeinterleavedValue = TempDeinterleavedValues.front();
-          TempDeinterleavedValues.pop();
-          if (K % 2 == 0) {
-            DeinterleavedValues[I] = DeinterleavedValue;
-            I++;
-          } else {
-            DeinterleavedValues[J] = DeinterleavedValue;
-            J++;
+          TempDeinterleavedValues.push_back(StridedVec);
+          // Perform sorting at the start of each new level in the tree.
+          // A new level begins when the number of remaining values is a power
+          // of 2 and greater than 2. If a level has only 2 nodes, no sorting is
+          // needed as they are already in order. Number of remaining values to
+          // be processed:
+          unsigned NumRemainingValues = TempDeinterleavedValues.size() - I - 1;
+          if (NumRemainingValues > 2 && isPowerOf2_32(NumRemainingValues)) {
+            // these remaining values represent a new level in the tree,
+            // Reorder the values to match the correct deinterleaving order.
+            std::vector<Value *> RemainingValues(
+                TempDeinterleavedValues.begin() + I + 1,
+                TempDeinterleavedValues.end());
+            unsigned Middle = NumRemainingValues / 2;
+            for (unsigned J = 0, K = I + 1; J < NumRemainingValues;
+                 J += 2, K++) {
+              TempDeinterleavedValues[K] = RemainingValues[J];
+              TempDeinterleavedValues[Middle + K] = RemainingValues[J + 1];
+            }
           }
         }
+        // Final deinterleaved values:
+        DeinterleavedValues.insert(DeinterleavedValues.begin(),
+                                   TempDeinterleavedValues.begin() +
+                                       InterleaveFactor - 1,
+                                   TempDeinterleavedValues.end());
+
 #ifndef NDEBUG
         for (Value *Val : DeinterleavedValues)
           assert(Val && "NULL Deinterleaved Value");
