@@ -459,10 +459,8 @@ public:
                                      unsigned SubReg) const;
 
   std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
-    if (Name == "WWM_REG") {
-      return AMDGPU::VirtRegFlag::WWM_REG;
-    }
-    return {};
+    return (Name == "WWM_REG") ? AMDGPU::VirtRegFlag::WWM_REG
+                               : std::optional<uint8_t>{};
   }
 
   SmallVector<SmallString<8>>
