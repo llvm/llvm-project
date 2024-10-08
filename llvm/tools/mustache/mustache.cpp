@@ -85,17 +85,20 @@ void runThroughTest(StringRef InputFile) {
     std::string ActualStr;
     llvm::raw_string_ostream OS(ActualStr);
     T.render(*Data, OS);
-    if (ExpectedStr == ActualStr)
+    if (ExpectedStr == ActualStr) {
       Success++;
-    else
+    } else {
       llvm::outs() << "Test Failed: " << Name << "\n";
+    }
     Total++;
   }
+
   llvm::outs() << "Result " << Success << "/" << Total << " succeeded\n";
 }
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
-  for (const auto &FileName : InputFiles)
+  for (const auto &FileName : InputFiles) {
     runThroughTest(FileName);
+  }
   return 0;
 }
