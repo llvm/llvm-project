@@ -3126,11 +3126,11 @@ define i8 @foo(i8 %val) {
 
   // Check create(InsertBefore) a void ReturnInst.
   auto *NewRet1 = cast<sandboxir::ReturnInst>(
-      sandboxir::ReturnInst::create(nullptr, /*InsertBefore=*/Ret, Ctx));
+      sandboxir::ReturnInst::create(nullptr, Ret->getIterator(), Ctx));
   EXPECT_EQ(NewRet1->getReturnValue(), nullptr);
   // Check create(InsertBefore) a non-void ReturnInst.
   auto *NewRet2 = cast<sandboxir::ReturnInst>(
-      sandboxir::ReturnInst::create(Val, /*InsertBefore=*/Ret, Ctx));
+      sandboxir::ReturnInst::create(Val, Ret->getIterator(), Ctx));
   EXPECT_EQ(NewRet2->getReturnValue(), Val);
 
   // Check create(InsertAtEnd) a void ReturnInst.
@@ -3318,7 +3318,7 @@ define i8 @foo(i8 %arg) {
   {
     // Check create() WhereIt.
     auto *Call = cast<sandboxir::CallInst>(sandboxir::CallInst::create(
-        FTy, &F, Args, /*WhereIt=*/Ret->getIterator(), BB, Ctx));
+        FTy, &F, Args, /*WhereIt=*/Ret->getIterator(), Ctx));
     EXPECT_EQ(Call->getNextNode(), Ret);
     EXPECT_EQ(Call->getCalledFunction(), &F);
     EXPECT_EQ(range_size(Call->args()), 1u);
@@ -3327,7 +3327,7 @@ define i8 @foo(i8 %arg) {
   {
     // Check create() InsertBefore.
     auto *Call = cast<sandboxir::CallInst>(
-        sandboxir::CallInst::create(FTy, &F, Args, /*InsertBefore=*/Ret, Ctx));
+        sandboxir::CallInst::create(FTy, &F, Args, Ret->getIterator(), Ctx));
     EXPECT_EQ(Call->getNextNode(), Ret);
     EXPECT_EQ(Call->getCalledFunction(), &F);
     EXPECT_EQ(range_size(Call->args()), 1u);
@@ -3406,7 +3406,7 @@ define void @foo(i8 %arg) {
     auto *InsertBefore = &*BB0->begin();
     auto *NewInvoke = cast<sandboxir::InvokeInst>(sandboxir::InvokeInst::create(
         F.getFunctionType(), &F, NormalBB, ExceptionBB, Args,
-        /*WhereIt=*/InsertBefore->getIterator(), /*WhereBB=*/BB0, Ctx));
+        InsertBefore->getIterator(), Ctx));
     EXPECT_EQ(NewInvoke->getNormalDest(), NormalBB);
     EXPECT_EQ(NewInvoke->getUnwindDest(), ExceptionBB);
     EXPECT_EQ(NewInvoke->getNextNode(), InsertBefore);
@@ -3415,9 +3415,9 @@ define void @foo(i8 %arg) {
     // Check create() InsertBefore.
     SmallVector<sandboxir::Value *> Args({Arg});
     auto *InsertBefore = &*BB0->begin();
-    auto *NewInvoke = cast<sandboxir::InvokeInst>(
-        sandboxir::InvokeInst::create(F.getFunctionType(), &F, NormalBB,
-                                      ExceptionBB, Args, InsertBefore, Ctx));
+    auto *NewInvoke = cast<sandboxir::InvokeInst>(sandboxir::InvokeInst::create(
+        F.getFunctionType(), &F, NormalBB, ExceptionBB, Args,
+        InsertBefore->getIterator(), Ctx));
     EXPECT_EQ(NewInvoke->getNormalDest(), NormalBB);
     EXPECT_EQ(NewInvoke->getUnwindDest(), ExceptionBB);
     EXPECT_EQ(NewInvoke->getNextNode(), InsertBefore);
@@ -3426,8 +3426,7 @@ define void @foo(i8 %arg) {
     // Check create() InsertAtEnd.
     SmallVector<sandboxir::Value *> Args({Arg});
     auto *NewInvoke = cast<sandboxir::InvokeInst>(sandboxir::InvokeInst::create(
-        F.getFunctionType(), &F, NormalBB, ExceptionBB, Args,
-        /*InsertAtEnd=*/BB0, Ctx));
+        F.getFunctionType(), &F, NormalBB, ExceptionBB, Args, BB0, Ctx));
     EXPECT_EQ(NewInvoke->getNormalDest(), NormalBB);
     EXPECT_EQ(NewInvoke->getUnwindDest(), ExceptionBB);
     EXPECT_EQ(NewInvoke->getParent(), BB0);
@@ -3516,8 +3515,7 @@ define void @foo(i8 %arg) {
     // Check create() WhereIt, WhereBB.
     SmallVector<sandboxir::Value *> Args({Arg});
     auto *NewCallBr = cast<sandboxir::CallBrInst>(sandboxir::CallBrInst::create(
-        F.getFunctionType(), &F, BB1, {BB2}, Args, /*WhereIt=*/BB0->end(),
-        /*WhereBB=*/BB0, Ctx));
+        F.getFunctionType(), &F, BB1, {BB2}, Args, BB0->end(), Ctx));
     EXPECT_EQ(NewCallBr->getDefaultDest(), BB1);
     EXPECT_EQ(NewCallBr->getIndirectDests().size(), 1u);
     EXPECT_EQ(NewCallBr->getIndirectDests()[0], BB2);
@@ -3528,8 +3526,9 @@ define void @foo(i8 %arg) {
     // Check create() InsertBefore
     SmallVector<sandboxir::Value *> Args({Arg});
     auto *InsertBefore = &*BB0->rbegin();
-    auto *NewCallBr = cast<sandboxir::CallBrInst>(sandboxir::CallBrInst::create(
-        F.getFunctionType(), &F, BB1, {BB2}, Args, InsertBefore, Ctx));
+    auto *NewCallBr = cast<sandboxir::CallBrInst>(
+        sandboxir::CallBrInst::create(F.getFunctionType(), &F, BB1, {BB2}, Args,
+                                      InsertBefore->getIterator(), Ctx));
     EXPECT_EQ(NewCallBr->getDefaultDest(), BB1);
     EXPECT_EQ(NewCallBr->getIndirectDests().size(), 1u);
     EXPECT_EQ(NewCallBr->getIndirectDests()[0], BB2);
@@ -3538,9 +3537,8 @@ define void @foo(i8 %arg) {
   {
     // Check create() InsertAtEnd.
     SmallVector<sandboxir::Value *> Args({Arg});
-    auto *NewCallBr = cast<sandboxir::CallBrInst>(
-        sandboxir::CallBrInst::create(F.getFunctionType(), &F, BB1, {BB2}, Args,
-                                      /*InsertAtEnd=*/BB0, Ctx));
+    auto *NewCallBr = cast<sandboxir::CallBrInst>(sandboxir::CallBrInst::create(
+        F.getFunctionType(), &F, BB1, {BB2}, Args, BB0, Ctx));
     EXPECT_EQ(NewCallBr->getDefaultDest(), BB1);
     EXPECT_EQ(NewCallBr->getIndirectDests().size(), 1u);
     EXPECT_EQ(NewCallBr->getIndirectDests()[0], BB2);
@@ -3599,10 +3597,9 @@ bb:
     EXPECT_EQ(LPad->isFilter(Idx), LLVMLPad->isFilter(Idx));
   // Check create().
   auto *BBRet = &*BB->begin();
-  auto *NewLPad =
-      cast<sandboxir::LandingPadInst>(sandboxir::LandingPadInst::create(
-          sandboxir::Type::getInt8Ty(Ctx), 0, BBRet->getIterator(),
-          BBRet->getParent(), Ctx, "NewLPad"));
+  auto *NewLPad = cast<sandboxir::LandingPadInst>(
+      sandboxir::LandingPadInst::create(sandboxir::Type::getInt8Ty(Ctx), 0,
+                                        BBRet->getIterator(), Ctx, "NewLPad"));
   EXPECT_EQ(NewLPad->getNextNode(), BBRet);
   EXPECT_FALSE(NewLPad->isCleanup());
 #ifndef NDEBUG
@@ -3681,7 +3678,7 @@ bb:
   }
   // Check CatchPadInst::create().
   auto *NewCPI = cast<sandboxir::CatchPadInst>(sandboxir::CatchPadInst::create(
-      CS, {}, BBRet->getIterator(), BB, Ctx, "NewCPI"));
+      CS, {}, BBRet->getIterator(), Ctx, "NewCPI"));
   EXPECT_EQ(NewCPI->getCatchSwitch(), CS);
   EXPECT_EQ(NewCPI->arg_size(), 0u);
   EXPECT_EQ(NewCPI->getNextNode(), BBRet);
@@ -3691,7 +3688,7 @@ bb:
   // Check CleanupPadInst::create().
   auto *NewCLPI =
       cast<sandboxir::CleanupPadInst>(sandboxir::CleanupPadInst::create(
-          CS, {}, BBRet->getIterator(), BB, Ctx, "NewCLPI"));
+          CS, {}, BBRet->getIterator(), Ctx, "NewCLPI"));
   EXPECT_EQ(NewCLPI->getParentPad(), CS);
   EXPECT_EQ(NewCLPI->arg_size(), 0u);
   EXPECT_EQ(NewCLPI->getNextNode(), BBRet);
@@ -3757,9 +3754,8 @@ catch2:
   EXPECT_EQ(CR->getCatchSwitchParentPad(),
             Ctx.getValue(LLVMCR->getCatchSwitchParentPad()));
   // Check create().
-  auto *CRI =
-      cast<sandboxir::CatchReturnInst>(sandboxir::CatchReturnInst::create(
-          CP, Catch, CP->getIterator(), Catch, Ctx));
+  auto *CRI = cast<sandboxir::CatchReturnInst>(
+      sandboxir::CatchReturnInst::create(CP, Catch, CP->getIterator(), Ctx));
   EXPECT_EQ(CRI->getNextNode(), CP);
   EXPECT_EQ(CRI->getCatchPad(), CP);
   EXPECT_EQ(CRI->getSuccessor(), Catch);
@@ -3829,8 +3825,8 @@ cleanup2:
   EXPECT_EQ(CRI->getUnwindDest(), OrigUnwindDest);
   // Check create().
   auto *UnwindBB = Cleanup;
-  auto *NewCRI = sandboxir::CleanupReturnInst::create(
-      CP2, UnwindBB, Ret->getIterator(), Ret->getParent(), Ctx);
+  auto *NewCRI = sandboxir::CleanupReturnInst::create(CP2, UnwindBB,
+                                                      Ret->getIterator(), Ctx);
   EXPECT_EQ(NewCRI->getCleanupPad(), CP2);
   EXPECT_EQ(NewCRI->getUnwindDest(), UnwindBB);
   EXPECT_EQ(NewCRI->getNextNode(), Ret);
@@ -3917,8 +3913,7 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   auto *NewGEP0 =
       cast<sandboxir::GetElementPtrInst>(sandboxir::GetElementPtrInst::create(
           GEP0->getType(), GEP0->getPointerOperand(), Indices,
-          /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
-          "NewGEP0"));
+          Ret->getIterator(), Ctx, "NewGEP0"));
   EXPECT_EQ(NewGEP0->getName(), "NewGEP0");
   EXPECT_EQ(NewGEP0->getType(), GEP0->getType());
   EXPECT_EQ(NewGEP0->getPointerOperand(), GEP0->getPointerOperand());
@@ -3936,7 +3931,7 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   auto *NewGEP1 =
       cast<sandboxir::GetElementPtrInst>(sandboxir::GetElementPtrInst::create(
           GEP0->getType(), GEP0->getPointerOperand(), Indices,
-          /*InsertBefore=*/Ret, Ctx, "NewGEP1"));
+          Ret->getIterator(), Ctx, "NewGEP1"));
   EXPECT_EQ(NewGEP1->getName(), "NewGEP1");
   EXPECT_EQ(NewGEP1->getType(), GEP0->getType());
   EXPECT_EQ(NewGEP1->getPointerOperand(), GEP0->getPointerOperand());
@@ -3953,8 +3948,8 @@ define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
   // Check create() InsertAtEnd.
   auto *NewGEP2 =
       cast<sandboxir::GetElementPtrInst>(sandboxir::GetElementPtrInst::create(
-          GEP0->getType(), GEP0->getPointerOperand(), Indices,
-          /*InsertAtEnd=*/BB, Ctx, "NewGEP2"));
+          GEP0->getType(), GEP0->getPointerOperand(), Indices, BB, Ctx,
+          "NewGEP2"));
   EXPECT_EQ(NewGEP2->getName(), "NewGEP2");
   EXPECT_EQ(NewGEP2->getType(), GEP0->getType());
   EXPECT_EQ(NewGEP2->getPointerOperand(), GEP0->getPointerOperand());
@@ -4128,7 +4123,7 @@ define void @foo(i32 %cond0, i32 %cond1) {
   // Check create().
   CS1->eraseFromParent();
   auto *NewCSI = sandboxir::CatchSwitchInst::create(
-      CS0, Cleanup, 2, BB1->begin(), BB1, Ctx, "NewCSI");
+      CS0, Cleanup, 2, BB1->begin(), Ctx, "NewCSI");
   EXPECT_TRUE(isa<sandboxir::CatchSwitchInst>(NewCSI));
   EXPECT_EQ(NewCSI->getParentPad(), CS0);
 }
@@ -4165,8 +4160,7 @@ unwind:
   // Check getNumSuccessors().
   EXPECT_EQ(Resume->getNumSuccessors(), LLVMResume->getNumSuccessors());
   // Check create().
-  auto *NewResume =
-      sandboxir::ResumeInst::create(LPad, UnwindBB->end(), UnwindBB, Ctx);
+  auto *NewResume = sandboxir::ResumeInst::create(LPad, UnwindBB->end(), Ctx);
   EXPECT_EQ(NewResume->getValue(), LPad);
   EXPECT_EQ(NewResume->getParent(), UnwindBB);
   EXPECT_EQ(NewResume->getNextNode(), nullptr);
@@ -4294,7 +4288,7 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->getNumCases(), 2u);
   // Check create().
   auto NewSwitch = sandboxir::SwitchInst::create(
-      Cond1, Default, 1, Default->begin(), Default, Ctx, "NewSwitch");
+      Cond1, Default, 1, Default->begin(), Ctx, "NewSwitch");
   EXPECT_TRUE(isa<sandboxir::SwitchInst>(NewSwitch));
   EXPECT_EQ(NewSwitch->getCondition(), Cond1);
   EXPECT_EQ(NewSwitch->getDefaultDest(), Default);
@@ -4325,8 +4319,7 @@ define void @foo(float %arg0) {
     // Check create() WhereIt, WhereBB.
     auto *NewI =
         cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
-            sandboxir::Instruction::Opcode::FNeg, Arg0,
-            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+            sandboxir::Instruction::Opcode::FNeg, Arg0, Ret->getIterator(), Ctx,
             "New1"));
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
@@ -4339,8 +4332,8 @@ define void @foo(float %arg0) {
     // Check create() InsertBefore.
     auto *NewI =
         cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
-            sandboxir::Instruction::Opcode::FNeg, Arg0,
-            /*InsertBefore=*/Ret, Ctx, "New2"));
+            sandboxir::Instruction::Opcode::FNeg, Arg0, Ret->getIterator(), Ctx,
+            "New2"));
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
 #ifndef NDEBUG
@@ -4352,8 +4345,7 @@ define void @foo(float %arg0) {
     // Check create() InsertAtEnd.
     auto *NewI =
         cast<sandboxir::UnaryOperator>(sandboxir::UnaryOperator::create(
-            sandboxir::Instruction::Opcode::FNeg, Arg0,
-            /*InsertAtEnd=*/BB, Ctx, "New3"));
+            sandboxir::Instruction::Opcode::FNeg, Arg0, BB, Ctx, "New3"));
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
 #ifndef NDEBUG
@@ -4366,8 +4358,7 @@ define void @foo(float %arg0) {
     // Check create() when it gets folded.
     auto *FortyTwo = CopyFrom->getOperand(1);
     auto *NewV = sandboxir::UnaryOperator::create(
-        sandboxir::Instruction::Opcode::FNeg, FortyTwo,
-        /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
+        sandboxir::Instruction::Opcode::FNeg, FortyTwo, Ret->getIterator(), Ctx,
         "Folded");
     EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
   }
@@ -4377,8 +4368,7 @@ define void @foo(float %arg0) {
     auto *NewI = cast<sandboxir::UnaryOperator>(
         sandboxir::UnaryOperator::createWithCopiedFlags(
             sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
-            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
-            "NewCopyFrom1"));
+            Ret->getIterator(), Ctx, "NewCopyFrom1"));
     EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
@@ -4392,7 +4382,7 @@ define void @foo(float %arg0) {
     auto *NewI = cast<sandboxir::UnaryOperator>(
         sandboxir::UnaryOperator::createWithCopiedFlags(
             sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
-            /*InsertBefore=*/Ret, Ctx, "NewCopyFrom2"));
+            Ret->getIterator(), Ctx, "NewCopyFrom2"));
     EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
@@ -4405,8 +4395,8 @@ define void @foo(float %arg0) {
     // Check createWithCopiedFlags() InsertAtEnd,
     auto *NewI = cast<sandboxir::UnaryOperator>(
         sandboxir::UnaryOperator::createWithCopiedFlags(
-            sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom,
-            /*InsertAtEnd=*/BB, Ctx, "NewCopyFrom3"));
+            sandboxir::Instruction::Opcode::FNeg, Arg0, CopyFrom, BB, Ctx,
+            "NewCopyFrom3"));
     EXPECT_EQ(NewI->hasAllowReassoc(), CopyFrom->hasAllowReassoc());
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::FNeg);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
@@ -4420,8 +4410,8 @@ define void @foo(float %arg0) {
     // Check createWithCopiedFlags() when it gets folded.
     auto *FortyTwo = CopyFrom->getOperand(1);
     auto *NewV = sandboxir::UnaryOperator::createWithCopiedFlags(
-        sandboxir::Instruction::Opcode::FNeg, FortyTwo, CopyFrom,
-        /*InsertAtEnd=*/BB, Ctx, "Folded");
+        sandboxir::Instruction::Opcode::FNeg, FortyTwo, CopyFrom, BB, Ctx,
+        "Folded");
     EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
   }
 }
@@ -4504,9 +4494,8 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
     // Check create() WhereIt, WhereBB.
     auto *NewI =
         cast<sandboxir::BinaryOperator>(sandboxir::BinaryOperator::create(
-            sandboxir::Instruction::Opcode::Add, Arg0, Arg1,
-            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
-            "New1"));
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1, Ret->getIterator(),
+            Ctx, "New1"));
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
     EXPECT_EQ(NewI->getOperand(1), Arg1);
@@ -4519,8 +4508,8 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
     // Check create() InsertBefore.
     auto *NewI =
         cast<sandboxir::BinaryOperator>(sandboxir::BinaryOperator::create(
-            sandboxir::Instruction::Opcode::Add, Arg0, Arg1,
-            /*InsertBefore=*/Ret, Ctx, "New2"));
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1, Ret->getIterator(),
+            Ctx, "New2"));
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
     EXPECT_EQ(NewI->getOperand(1), Arg1);
@@ -4550,7 +4539,7 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
         sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
     auto *NewV = sandboxir::BinaryOperator::create(
         sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo,
-        /*InsertBefore=*/Ret, Ctx, "Folded");
+        Ret->getIterator(), Ctx, "Folded");
     EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
   }
 
@@ -4559,8 +4548,7 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
     auto *NewI = cast<sandboxir::BinaryOperator>(
         sandboxir::BinaryOperator::createWithCopiedFlags(
             sandboxir::Instruction::Opcode::Add, Arg0, Arg1, CopyFrom,
-            /*WhereIt=*/Ret->getIterator(), /*WhereBB=*/Ret->getParent(), Ctx,
-            "NewNSW1"));
+            Ret->getIterator(), Ctx, "NewNSW1"));
     EXPECT_EQ(NewI->hasNoSignedWrap(), CopyFrom->hasNoSignedWrap());
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
@@ -4575,7 +4563,7 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
     auto *NewI = cast<sandboxir::BinaryOperator>(
         sandboxir::BinaryOperator::createWithCopiedFlags(
             sandboxir::Instruction::Opcode::Add, Arg0, Arg1, CopyFrom,
-            /*InsertBefore=*/Ret, Ctx, "NewNSW2"));
+            Ret->getIterator(), Ctx, "NewNSW2"));
     EXPECT_EQ(NewI->hasNoSignedWrap(), CopyFrom->hasNoSignedWrap());
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
@@ -4589,8 +4577,8 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
     // Check createWithCopiedFlags() InsertAtEnd.
     auto *NewI = cast<sandboxir::BinaryOperator>(
         sandboxir::BinaryOperator::createWithCopiedFlags(
-            sandboxir::Instruction::Opcode::Add, Arg0, Arg1, CopyFrom,
-            /*InsertAtEnd=*/BB, Ctx, "NewNSW3"));
+            sandboxir::Instruction::Opcode::Add, Arg0, Arg1, CopyFrom, BB, Ctx,
+            "NewNSW3"));
     EXPECT_EQ(NewI->hasNoSignedWrap(), CopyFrom->hasNoSignedWrap());
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Add);
     EXPECT_EQ(NewI->getOperand(0), Arg0);
@@ -4607,7 +4595,7 @@ define void @foo(i8 %arg0, i8 %arg1, float %farg0, float %farg1) {
         sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
     auto *NewV = sandboxir::BinaryOperator::createWithCopiedFlags(
         sandboxir::Instruction::Opcode::Add, FortyTwo, FortyTwo, CopyFrom,
-        /*InsertBefore=*/Ret, Ctx, "Folded");
+        Ret->getIterator(), Ctx, "Folded");
     EXPECT_TRUE(isa<sandboxir::Constant>(NewV));
   }
 }
@@ -4732,8 +4720,7 @@ define void @foo(ptr %ptr, i8 %arg) {
     auto *NewI =
         cast<sandboxir::AtomicRMWInst>(sandboxir::AtomicRMWInst::create(
             sandboxir::AtomicRMWInst::BinOp::Sub, Ptr, Arg, Align, Ordering,
-            /*WhereIt=*/Ret->getIterator(),
-            /*WhereBB=*/Ret->getParent(), Ctx, SSID, "NewAtomicRMW1"));
+            Ret->getIterator(), Ctx, SSID, "NewAtomicRMW1"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicRMW);
     // Check getAlign().
@@ -4756,7 +4743,7 @@ define void @foo(ptr %ptr, i8 %arg) {
     auto *NewI =
         cast<sandboxir::AtomicRMWInst>(sandboxir::AtomicRMWInst::create(
             sandboxir::AtomicRMWInst::BinOp::Sub, Ptr, Arg, Align, Ordering,
-            /*InsertBefore=*/Ret, Ctx, SSID, "NewAtomicRMW2"));
+            Ret->getIterator(), Ctx, SSID, "NewAtomicRMW2"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicRMW);
     // Check getAlign().
@@ -4778,8 +4765,8 @@ define void @foo(ptr %ptr, i8 %arg) {
     // Check create() InsertAtEnd.
     auto *NewI =
         cast<sandboxir::AtomicRMWInst>(sandboxir::AtomicRMWInst::create(
-            sandboxir::AtomicRMWInst::BinOp::Sub, Ptr, Arg, Align, Ordering,
-            /*InsertAtEnd=*/BB, Ctx, SSID, "NewAtomicRMW3"));
+            sandboxir::AtomicRMWInst::BinOp::Sub, Ptr, Arg, Align, Ordering, BB,
+            Ctx, SSID, "NewAtomicRMW3"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicRMW);
     // Check getAlign().
@@ -4912,8 +4899,7 @@ define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
     auto *NewI =
         cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
             Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
-            /*WhereIt=*/Ret->getIterator(),
-            /*WhereBB=*/Ret->getParent(), Ctx, SSID, "NewAtomicCmpXchg1"));
+            Ret->getIterator(), Ctx, SSID, "NewAtomicCmpXchg1"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
     // Check getAlign().
@@ -4940,7 +4926,7 @@ define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
     auto *NewI =
         cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
             Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
-            /*InsertBefore=*/Ret, Ctx, SSID, "NewAtomicCmpXchg2"));
+            Ret->getIterator(), Ctx, SSID, "NewAtomicCmpXchg2"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
     // Check getAlign().
@@ -4966,8 +4952,8 @@ define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
     // Check create() InsertAtEnd.
     auto *NewI =
         cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
-            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
-            /*InsertAtEnd=*/BB, Ctx, SSID, "NewAtomicCmpXchg3"));
+            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering, BB, Ctx, SSID,
+            "NewAtomicCmpXchg3"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
     // Check getAlign().
@@ -5087,8 +5073,7 @@ define void @foo() {
   {
     // Check create() WhereIt, WhereBB.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
-        Ty, AddrSpace, /*WhereIt=*/Ret->getIterator(),
-        /*WhereBB=*/Ret->getParent(), Ctx, ArraySize, "NewAlloca1"));
+        Ty, AddrSpace, Ret->getIterator(), Ctx, ArraySize, "NewAlloca1"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
     // Check getType().
@@ -5103,7 +5088,7 @@ define void @foo() {
   {
     // Check create() InsertBefore.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
-        Ty, AddrSpace, /*InsertBefore=*/Ret, Ctx, ArraySize, "NewAlloca2"));
+        Ty, AddrSpace, Ret->getIterator(), Ctx, ArraySize, "NewAlloca2"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
     // Check getType().
@@ -5118,7 +5103,7 @@ define void @foo() {
   {
     // Check create() InsertAtEnd.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
-        Ty, AddrSpace, /*InsertAtEnd=*/BB, Ctx, ArraySize, "NewAlloca3"));
+        Ty, AddrSpace, BB, Ctx, ArraySize, "NewAlloca3"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
     // Check getType().
@@ -5278,9 +5263,9 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
 
   {
     // Check create() WhereIt, WhereBB
-    auto *NewI = cast<sandboxir::CastInst>(sandboxir::CastInst::create(
-        Ti64, sandboxir::Instruction::Opcode::SExt, Arg, /*WhereIt=*/BB->end(),
-        /*WhereBB=*/BB, Ctx, "SExt"));
+    auto *NewI = cast<sandboxir::CastInst>(
+        sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::SExt,
+                                    Arg, BB->end(), Ctx, "SExt"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::SExt);
     // Check getSrcTy().
@@ -5296,7 +5281,7 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
     // Check create() InsertBefore.
     auto *NewI = cast<sandboxir::CastInst>(
         sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::ZExt,
-                                    Arg, /*InsertBefore=*/Ret, Ctx, "ZExt"));
+                                    Arg, Ret->getIterator(), Ctx, "ZExt"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
     // Check getSrcTy().
@@ -5308,9 +5293,8 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   }
   {
     // Check create() InsertAtEnd.
-    auto *NewI = cast<sandboxir::CastInst>(
-        sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::ZExt,
-                                    Arg, /*InsertAtEnd=*/BB, Ctx, "ZExt"));
+    auto *NewI = cast<sandboxir::CastInst>(sandboxir::CastInst::create(
+        Ti64, sandboxir::Instruction::Opcode::ZExt, Arg, BB, Ctx, "ZExt"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
     // Check getSrcTy().
@@ -5327,7 +5311,7 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
     // Check that passing a non-cast opcode crashes.
     EXPECT_DEATH(
         sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::Store,
-                                    Arg, /*InsertBefore=*/Ret, Ctx, "Bad"),
+                                    Arg, Ret->getIterator(), Ctx, "Bad"),
         ".*Opcode.*");
 #endif // NDEBUG
   }
@@ -5399,8 +5383,7 @@ void testCastInst(llvm::Module &M, llvm::Type *LLVMSrcTy,
   {
     // Check create() WhereIt, WhereBB
     auto *NewI =
-        cast<SubclassT>(SubclassT::create(Arg, DstTy, /*WhereIt=*/BB->end(),
-                                          /*WhereBB=*/BB, Ctx, "NewCI"));
+        cast<SubclassT>(SubclassT::create(Arg, DstTy, BB->end(), Ctx, "NewCI"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), OpcodeT);
     // Check getSrcTy().
@@ -5415,9 +5398,8 @@ void testCastInst(llvm::Module &M, llvm::Type *LLVMSrcTy,
   }
   {
     // Check create() InsertBefore.
-    auto *NewI =
-        cast<SubclassT>(SubclassT::create(Arg, DstTy,
-                                          /*InsertBefore=*/Ret, Ctx, "NewCI"));
+    auto *NewI = cast<SubclassT>(
+        SubclassT::create(Arg, DstTy, Ret->getIterator(), Ctx, "NewCI"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), OpcodeT);
     // Check getSrcTy().
@@ -5757,8 +5739,8 @@ bb5:
   EXPECT_EQ(PHI->getIncomingBlock(1), RemainBB1);
   EXPECT_EQ(PHI->getIncomingBlock(2), RemainBB2);
   // Check create().
-  auto *NewPHI = cast<sandboxir::PHINode>(
-      sandboxir::PHINode::create(PHI->getType(), 0, Br, Ctx, "NewPHI"));
+  auto *NewPHI = cast<sandboxir::PHINode>(sandboxir::PHINode::create(
+      PHI->getType(), 0, Br->getIterator(), Ctx, "NewPHI"));
   EXPECT_EQ(NewPHI->getType(), PHI->getType());
   EXPECT_EQ(NewPHI->getNextNode(), Br);
   EXPECT_EQ(NewPHI->getName(), "NewPHI");
@@ -5861,7 +5843,7 @@ define void @foo(i32 %i0, i32 %i1) {
   }
   auto *NewCmp =
       sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, F.getArg(0),
-                                 F.getArg(1), &*BB->begin(), Ctx, "NewCmp");
+                                 F.getArg(1), BB->begin(), Ctx, "NewCmp");
   EXPECT_EQ(NewCmp, &*BB->begin());
   EXPECT_EQ(NewCmp->getPredicate(), llvm::CmpInst::ICMP_ULE);
   EXPECT_EQ(NewCmp->getOperand(0), F.getArg(0));
@@ -5925,7 +5907,7 @@ bb1:
 
   // create with default flags
   auto *NewFCmp = sandboxir::CmpInst::create(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), &*It1, Ctx, "NewFCmp");
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), It1, Ctx, "NewFCmp");
   EXPECT_EQ(NewFCmp->getPredicate(), llvm::CmpInst::FCMP_ONE);
   EXPECT_EQ(NewFCmp->getOperand(0), F.getArg(0));
   EXPECT_EQ(NewFCmp->getOperand(1), F.getArg(1));
@@ -5936,7 +5918,7 @@ bb1:
   EXPECT_TRUE(CopyFrom->getFastMathFlags() != DefaultFMF);
   // create with copied flags
   auto *NewFCmpFlags = sandboxir::CmpInst::createWithCopiedFlags(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, &*It1, Ctx,
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, It1, Ctx,
       "NewFCmpFlags");
   EXPECT_FALSE(NewFCmpFlags->getFastMathFlags() !=
                CopyFrom->getFastMathFlags());
@@ -5965,7 +5947,7 @@ define void @foo() {
   EXPECT_EQ(UI->getNumOfIRInstrs(), 1u);
   // Check create(InsertBefore)
   sandboxir::UnreachableInst *NewUI =
-      sandboxir::UnreachableInst::create(/*InsertBefore=*/UI, Ctx);
+      sandboxir::UnreachableInst::create(UI->getIterator(), Ctx);
   EXPECT_EQ(NewUI->getNextNode(), UI);
   // Check create(InsertAtEnd)
   sandboxir::UnreachableInst *NewUIEnd =
