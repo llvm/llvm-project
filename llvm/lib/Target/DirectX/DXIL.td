@@ -278,6 +278,7 @@ def IsFeedback : DXILAttribute;
 def IsWave : DXILAttribute;
 def NeedsUniformInputs : DXILAttribute;
 def IsBarrier : DXILAttribute;
+def NoDuplicate : DXILAttribute;
 
 class Overloads<Version ver, list<DXILOpParamType> ols> {
   Version dxil_version = ver;
@@ -913,4 +914,11 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+
+def Barrier : DXILOp<80, barrier> {
+  let Doc = "inserts a memory barrier in the shader";
+  let arguments = [Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [compute, library]>];
+  let attributes = [Attributes<DXIL1_0, [NoDuplicate]>];
 }

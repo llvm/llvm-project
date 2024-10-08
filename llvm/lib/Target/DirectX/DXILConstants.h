@@ -30,6 +30,13 @@ enum class OpParamType : unsigned {
 #include "DXILOperation.inc"
 };
 
+enum class BarrierMode : unsigned {
+  SyncThreadGroup = 0x00000001,
+  UAVFenceGlobal = 0x00000002,
+  UAVFenceThreadGroup = 0x00000004,
+  TGSMFence = 0x00000008,
+};
+
 } // namespace dxil
 } // namespace llvm
 
