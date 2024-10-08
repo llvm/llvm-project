@@ -3,36 +3,9 @@
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=x86_64-unknown-linux -debug-counter=slp-vectorized=1 -slp-threshold=-99999 < %s | FileCheck %s --check-prefix=COUNT1
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=x86_64-unknown-linux -debug-counter=slp-vectorized=2 -slp-threshold=-99999 < %s | FileCheck %s --check-prefix=COUNT2
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=x86_64-unknown-linux -debug-counter=slp-vectorized=0-1 -slp-threshold=-99999 < %s | FileCheck %s --check-prefix=COUNT-1
+; REQUIRES: asserts
 
 define void @blam(ptr %arg, double %load2, i1 %fcmp3) {
-; CHECK-LABEL: define void @blam
-; CHECK-SAME: (ptr [[ARG:%.*]], double [[LOAD2:%.*]], i1 [[FCMP3:%.*]]) {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[GETELEMENTPTR13:%.*]] = getelementptr double, ptr [[ARG]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 [[FCMP3]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP0]], double [[LOAD2]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <2 x double> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> zeroinitializer, <2 x double> [[TMP0]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fcmp olt <2 x double> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x double> <double 0.000000e+00, double 1.000000e+00>, <2 x double> <double 1.000000e+00, double 0.000000e+00>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp olt <2 x double> [[TMP9]], [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> <double poison, double 0.000000e+00>, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> <double 0.000000e+00, double poison>, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP10]], <2 x double> [[TMP11]], <2 x double> [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <2 x double> [[TMP13]], zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = select <2 x i1> [[TMP14]], <2 x double> zeroinitializer, <2 x double> <double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[TMP16:%.*]] = fcmp ogt <2 x double> [[TMP15]], zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP16]], <2 x double> zeroinitializer, <2 x double> [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = fcmp olt <2 x double> [[TMP18]], zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = select <2 x i1> [[TMP19]], <2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x double> zeroinitializer
-; CHECK-NEXT:    store <2 x double> [[TMP20]], ptr [[GETELEMENTPTR13]], align 8
-; CHECK-NEXT:    ret void
-;
 ; COUNT0-LABEL: define void @blam
 ; COUNT0-SAME: (ptr [[ARG:%.*]], double [[LOAD2:%.*]], i1 [[FCMP3:%.*]]) {
 ; COUNT0-NEXT:  bb:

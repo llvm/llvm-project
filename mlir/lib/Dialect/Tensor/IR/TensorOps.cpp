@@ -4337,11 +4337,16 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
       dest =
           rewriter.create<tensor::CastOp>(loc, newDestType, packOp.getDest());
     }
-    Value newOp = rewriter.create<tensor::PackOp>(
-        loc, source, dest, packOp.getInnerDimsPos(), packOp.getMixedTiles(),
-        packOp.getPaddingValue(), packOp.getOuterDimsPerm());
+    auto clonedPackOp = cast<PackOp>(rewriter.clone(*packOp));
+    Value res = clonedPackOp.getResult();
+    rewriter.startOpModification(clonedPackOp);
+    clonedPackOp.getSourceMutable().assign(source);
+    clonedPackOp.getDestMutable().assign(dest);
+    res.setType(dest.getType());
+    rewriter.finalizeOpModification(clonedPackOp);
+
     rewriter.replaceOpWithNewOp<tensor::CastOp>(
-        packOp, packOp.getResult().getType(), newOp);
+        packOp, packOp.getResult().getType(), clonedPackOp);
     return success();
   }
 

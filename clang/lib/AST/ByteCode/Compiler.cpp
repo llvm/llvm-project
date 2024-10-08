@@ -2128,6 +2128,13 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     return this->emitConst(1, E);
   }
 
+  if (Kind == UETT_OpenMPRequiredSimdAlign) {
+    assert(E->isArgumentType());
+    unsigned Bits = ASTCtx.getOpenMPDefaultSimdAlign(E->getArgumentType());
+
+    return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
+  }
+
   return false;
 }
 

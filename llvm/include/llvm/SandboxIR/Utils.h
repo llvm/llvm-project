@@ -71,9 +71,9 @@ public:
   /// \Returns the gap between the memory locations accessed by \p I0 and
   /// \p I1 in bytes.
   template <typename LoadOrStoreT>
-  static std::optional<int>
-  getPointerDiffInBytes(LoadOrStoreT *I0, LoadOrStoreT *I1, ScalarEvolution &SE,
-                        const DataLayout &DL) {
+  static std::optional<int> getPointerDiffInBytes(LoadOrStoreT *I0,
+                                                  LoadOrStoreT *I1,
+                                                  ScalarEvolution &SE) {
     static_assert(std::is_same_v<LoadOrStoreT, LoadInst> ||
                       std::is_same_v<LoadOrStoreT, StoreInst>,
                   "Expected sandboxir::Load or sandboxir::Store!");
@@ -84,8 +84,8 @@ public:
     if (Ptr0 != Ptr1)
       return false;
     llvm::Type *ElemTy = llvm::Type::getInt8Ty(SE.getContext());
-    return getPointersDiff(ElemTy, Opnd0, ElemTy, Opnd1, DL, SE,
-                           /*StrictCheck=*/false, /*CheckType=*/false);
+    return getPointersDiff(ElemTy, Opnd0, ElemTy, Opnd1, I0->getDataLayout(),
+                           SE, /*StrictCheck=*/false, /*CheckType=*/false);
   }
 
   /// \Returns true if \p I0 accesses a memory location lower than \p I1.
@@ -93,34 +93,14 @@ public:
   /// locations are equal, or if I1 accesses a memory location greater than I0.
   template <typename LoadOrStoreT>
   static bool atLowerAddress(LoadOrStoreT *I0, LoadOrStoreT *I1,
-                             ScalarEvolution &SE, const DataLayout &DL) {
-    auto Diff = getPointerDiffInBytes(I0, I1, SE, DL);
+                             ScalarEvolution &SE) {
+    auto Diff = getPointerDiffInBytes(I0, I1, SE);
     if (!Diff)
       return false;
     return *Diff > 0;
   }
-
-  static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
-    auto *LLVMI = cast<llvm::Instruction>(I->Val);
-    return match(LLVMI,
-                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stackrestore>()) ||
-           match(LLVMI,
-                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stacksave>());
-  }
-
-  /// We consider \p I as a Memory Dependency Candidate instruction if it
-  /// reads/write memory or if it has side-effects. This is used by the
-  /// dependency graph.
-  static bool isMemDepCandidate(Instruction *I) {
-    auto *LLVMI = cast<llvm::Instruction>(I->Val);
-    return LLVMI->mayReadOrWriteMemory() &&
-           (!isa<llvm::IntrinsicInst>(LLVMI) ||
-            (cast<llvm::IntrinsicInst>(LLVMI)->getIntrinsicID() !=
-                 Intrinsic::sideeffect &&
-             cast<llvm::IntrinsicInst>(LLVMI)->getIntrinsicID() !=
-                 Intrinsic::pseudoprobe));
-  }
 };
+
 } // namespace llvm::sandboxir
 
 #endif // LLVM_SANDBOXIR_UTILS_H

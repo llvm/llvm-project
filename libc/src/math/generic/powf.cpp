@@ -25,8 +25,6 @@
 #include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
 #include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
-#include <errno.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;

@@ -2486,18 +2486,8 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
            (OptForSizeBasedOnProfile &&
             Cost->Hints->getForce() != LoopVectorizeHints::FK_Enabled)) &&
          "Cannot SCEV check stride or overflow when optimizing for size");
-
-
-  // Update dominator only if this is first RT check.
-  if (LoopBypassBlocks.empty()) {
-    DT->changeImmediateDominator(Bypass, SCEVCheckBlock);
-    if (!Cost->requiresScalarEpilogue(VF.isVector()))
-      // If there is an epilogue which must run, there's no edge from the
-      // middle block to exit blocks  and thus no need to update the immediate
-      // dominator of the exit blocks.
-      DT->changeImmediateDominator(LoopExitBlock, SCEVCheckBlock);
-  }
-
+  assert(!LoopBypassBlocks.empty() &&
+         "Should already be a bypass block due to iteration count check");
   LoopBypassBlocks.push_back(SCEVCheckBlock);
   AddedSafetyChecks = true;
   return SCEVCheckBlock;
@@ -6196,11 +6186,12 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
           getScalarizationOverhead(CI, VF, CostKind);
 
       ScalarCost = ScalarCallCost * VF.getKnownMinValue() + ScalarizationCost;
-      // Honor ForcedScalars decision.
+      // Honor ForcedScalars and UniformAfterVectorization decisions.
       // TODO: For calls, it might still be more profitable to widen. Use
       // VPlan-based cost model to compare different options.
-      if (VF.isVector() && ForcedScalar != ForcedScalars.end() &&
-          ForcedScalar->second.contains(CI)) {
+      if (VF.isVector() && ((ForcedScalar != ForcedScalars.end() &&
+                             ForcedScalar->second.contains(CI)) ||
+                            isUniformAfterVectorization(CI, VF))) {
         setCallWideningDecision(CI, VF, CM_Scalarize, nullptr,
                                 Intrinsic::not_intrinsic, std::nullopt,
                                 ScalarCost);
@@ -6551,14 +6542,17 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
     }
     auto Op2Info = TTI.getOperandInfo(Op2);
-    auto IsInvariant = [this](Value *Op) {
+    std::function<bool(Value *)> IsInvariant =
+        [this, &IsInvariant](Value *Op) -> bool {
       if (!Legal->isInvariant(Op))
         return false;
-      // Consider Op2 invariant, if it is not a predicated instruction in the
-      // loop. In that case, it is not trivially hoistable.
+      // Consider Op2invariant, if it or its operands aren't predicated
+      // instruction in the loop. In that case, it is not trivially hoistable.
       return !isa<Instruction>(Op) ||
              !TheLoop->contains(cast<Instruction>(Op)) ||
-             !isPredicatedInst(cast<Instruction>(Op));
+             (!isPredicatedInst(cast<Instruction>(Op)) &&
+              all_of(cast<Instruction>(Op)->operands(),
+                     [&IsInvariant](Value *Op) { return IsInvariant(Op); }));
     };
     if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue && IsInvariant(Op2))
       Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
@@ -9066,8 +9060,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  VPlanTransforms::createInterleaveGroups(InterleaveGroups, RecipeBuilder,
-                                          CM.isScalarEpilogueAllowed());
+  VPlanTransforms::createInterleaveGroups(
+      *Plan, InterleaveGroups, RecipeBuilder, CM.isScalarEpilogueAllowed());
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
