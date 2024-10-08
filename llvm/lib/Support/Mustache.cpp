@@ -19,8 +19,9 @@ SmallString<0> escapeString(StringRef Input,
 
   SmallString<0> Output;
   for (char C : Input) {
-    if (Escape.find(C) != Escape.end())
-      Output += Escape[C];
+    auto It = Escape.find(C);
+    if (It != Escape.end())
+      Output += It->getSecond();
     else
       Output += C;
   }

@@ -129,16 +129,16 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), ParentContext(nullptr), LocalContext(nullptr){};
+  ASTNode() : T(Type::Root), ParentContext(nullptr), LocalContext(nullptr) {};
 
   ASTNode(StringRef Body, ASTNode *Parent)
       : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr),
-        LocalContext(nullptr), Indentation(0){};
+        LocalContext(nullptr), Indentation(0) {};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        ParentContext(nullptr), LocalContext(nullptr), Indentation(0){};
+        ParentContext(nullptr), LocalContext(nullptr), Indentation(0) {};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
