@@ -18,6 +18,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
+#include "lldb/Target/CoreFileMemoryRanges.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -336,6 +337,13 @@ public:
   virtual std::optional<lldb_private::Address> GetStartAddress() {
     return std::nullopt;
   }
+
+  /// Returns a list of memory ranges that should be saved in the core file, 
+  /// specific for this dßynamic loader.
+  ///
+  /// By default, this returns an empty list, but for POSIX/ELF it will return
+  /// the link map, and the TLS data.
+  virtual void CalculateDynamicSaveCoreRanges(lldb_private::Process &process, std::vector<lldb_private::MemoryRegionInfo> &ranges, std::function<bool(const lldb_private::Thread&)> save_thread_predicate) {};
 
 protected:
   // Utility methods for derived classes

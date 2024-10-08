@@ -6539,72 +6539,18 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                 CreateCoreFileMemoryRange(region));
 }
 
-static void AddSegmentRegisterSections(Process &process, ThreadSP &thread_sp,
-                                       CoreFileMemoryRanges &ranges,
-                                       lldb::addr_t range_end) {
-  lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
-  if (!reg_ctx)
+static void SaveDynamicLoaderSections(Process &process, const SaveCoreOptions &options, CoreFileMemoryRanges &ranges, std::set<addr_t> &stack_ends) {
+  DynamicLoader *dyld = process.GetDynamicLoader();
+  if (!dyld)
     return;
 
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
-      lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_TP);
-  if (!reg_info)
-    return;
-
-  lldb_private::RegisterValue thread_local_register_value;
-  bool success = reg_ctx->ReadRegister(reg_info, thread_local_register_value);
-  if (!success)
-    return;
-
-  const uint64_t fail_value = UINT64_MAX;
-  bool readSuccess = false;
-  const lldb::addr_t reg_value_addr =
-      thread_local_register_value.GetAsUInt64(fail_value, &readSuccess);
-  if (!readSuccess || reg_value_addr == fail_value)
-    return;
-
-  MemoryRegionInfo thread_local_region;
-  Status err = process.GetMemoryRegionInfo(reg_value_addr, thread_local_region);
-  if (err.Fail())
-    return;
-
-  // We already saved off this truncated stack range.
-  if (thread_local_region.GetRange().GetRangeEnd() == range_end)
-    return;
-
-  // We don't need to worry about duplication because the CoreFileMemoryRanges
-  // will unique them
-  AddRegion(thread_local_region, true, ranges);
-}
-
-static void AddLinkMapSections(Process &process, CoreFileMemoryRanges &ranges,
-                               std::set<addr_t> &stack_ends) {
-  ModuleList &module_list = process.GetTarget().GetImages();
-  Target *target = &process.GetTarget();
-  for (size_t idx = 0; idx < module_list.GetSize(); idx++) {
-    ModuleSP module_sp = module_list.GetModuleAtIndex(idx);
-    if (!module_sp)
-      continue;
-
-    ObjectFile *obj = module_sp->GetObjectFile();
-    if (!obj)
-      continue;
-    Address addr = obj->GetImageInfoAddress(target);
-    addr_t load_addr = addr.GetLoadAddress(target);
-    if (load_addr == LLDB_INVALID_ADDRESS)
-      continue;
-
-    MemoryRegionInfo link_map_section;
-    Status err = process.GetMemoryRegionInfo(load_addr, link_map_section);
-    if (err.Fail())
-      continue;
-
-    // Sometimes, the link map section is included in one of the stack memory
-    // ranges. In that case, we already saved a truncated version of that range
-    if (stack_ends.count(link_map_section.GetRange().GetRangeEnd()) == 0)
-      continue;
-
-    AddRegion(link_map_section, true, ranges);
+  std::vector<MemoryRegionInfo> dynamic_loader_mem_regions;
+  std::function<bool(const lldb_private::Thread&)> save_thread_predicate = [&](const lldb_private::Thread &t) -> bool { return options.ShouldThreadBeSaved(t.GetID()); };
+  dyld->CalculateDynamicSaveCoreRanges(process, dynamic_loader_mem_regions, save_thread_predicate);
+  for (const auto &region : dynamic_loader_mem_regions) {
+    // The Dynamic Loader can give us regions that could include a truncated stack
+    if (stack_ends.count(region.GetRange().GetRangeEnd()) == 0)
+      AddRegion(region, true, ranges);
   }
 }
 
@@ -6645,7 +6591,6 @@ static void SaveOffRegionsWithStackPointers(Process &process,
       // or contains the thread id from thread_sp.
       if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
         AddRegion(sp_region, try_dirty_pages, ranges);
-        AddSegmentRegisterSections(process, thread_sp, ranges, range_end);
       }
     }
   }
@@ -6759,8 +6704,9 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
       options.HasSpecifiedThreads()) {
     SaveOffRegionsWithStackPointers(*this, options, regions, ranges,
                                     stack_ends);
-    // We need the link map for TLS data.
-    AddLinkMapSections(*this, ranges, stack_ends);
+    // Save off the dynamic loader sections, so if we are on an architecture that supports
+    // Thread Locals, that we include those as well.
+    SaveDynamicLoaderSections(*this, options, ranges, stack_ends);
   }
 
   switch (core_style) {

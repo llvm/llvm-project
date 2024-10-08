@@ -18,6 +18,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
@@ -865,4 +866,78 @@ bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(
 
 bool DynamicLoaderPOSIXDYLD::IsCoreFile() const {
   return !m_process->IsLiveDebugSession();
+}
+
+// For our ELF/POSIX builds save off the fs_base/gs_base regions
+static void AddSegmentRegisterSections(Process &process, ThreadSP &thread_sp,
+                                       std::vector<MemoryRegionInfo> &ranges) {
+  lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
+  if (!reg_ctx)
+    return;
+
+  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
+      lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_TP);
+  if (!reg_info)
+    return;
+
+  lldb_private::RegisterValue thread_local_register_value;
+  bool success = reg_ctx->ReadRegister(reg_info, thread_local_register_value);
+  if (!success)
+    return;
+
+  const uint64_t fail_value = UINT64_MAX;
+  bool readSuccess = false;
+  const lldb::addr_t reg_value_addr =
+      thread_local_register_value.GetAsUInt64(fail_value, &readSuccess);
+  if (!readSuccess || reg_value_addr == fail_value)
+    return;
+
+  MemoryRegionInfo thread_local_region;
+  Status err = process.GetMemoryRegionInfo(reg_value_addr, thread_local_region);
+  if (err.Fail())
+    return;
+
+  ranges.push_back(thread_local_region);
+}
+
+// Save off the link map for core files.
+static void AddLinkMapSections(Process &process, std::vector<MemoryRegionInfo> &ranges) {
+  ModuleList &module_list = process.GetTarget().GetImages();
+  Target *target = &process.GetTarget();
+  for (size_t idx = 0; idx < module_list.GetSize(); idx++) {
+    ModuleSP module_sp = module_list.GetModuleAtIndex(idx);
+    if (!module_sp)
+      continue;
+
+    ObjectFile *obj = module_sp->GetObjectFile();
+    if (!obj)
+      continue;
+    Address addr = obj->GetImageInfoAddress(target);
+    addr_t load_addr = addr.GetLoadAddress(target);
+    if (load_addr == LLDB_INVALID_ADDRESS)
+      continue;
+
+    MemoryRegionInfo link_map_section;
+    Status err = process.GetMemoryRegionInfo(load_addr, link_map_section);
+    if (err.Fail())
+      continue;
+
+    ranges.push_back(link_map_section);
+  }
+}
+
+void DynamicLoaderPOSIXDYLD::CalculateDynamicSaveCoreRanges(lldb_private::Process &process, std::vector<lldb_private::MemoryRegionInfo> &ranges, std::function<bool(const lldb_private::Thread&)> save_thread_predicate) {
+  ThreadList &thread_list = process.GetThreadList();
+  for (size_t idx = 0; idx < thread_list.GetSize(); idx++) {
+    ThreadSP thread_sp = thread_list.GetThreadAtIndex(idx);
+    if (!thread_sp)
+      continue;
+
+    if (!save_thread_predicate(*thread_sp.get()))
+      continue;
+
+    AddSegmentRegisterSections(process, thread_sp, ranges);
+  }
+
+  AddLinkMapSections(process, ranges);
 }
