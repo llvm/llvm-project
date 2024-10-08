@@ -801,3 +801,12 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
+
+def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
+  let Doc = "returns the index of the current lane in the wave";
+  let LLVMIntrinsic = int_dx_waveGetLaneIndex;
+  let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
