@@ -358,8 +358,11 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V,
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
   Value *Idx = expand(Offset);
-  GEPNoWrapFlags NW = (Flags & SCEV::FlagNUW) ? GEPNoWrapFlags::noUnsignedWrap()
-                                              : GEPNoWrapFlags::none();
+  GEPNoWrapFlags NW = GEPNoWrapFlags::none();
+  if (Flags & (SCEV::FlagNUW | SCEV::FlagNSW))
+    NW = GEPNoWrapFlags::noUnsignedSignedWrap();
+  else if (Flags & SCEV::FlagNUW)
+    NW = GEPNoWrapFlags::noUnsignedWrap();
 
   // Fold a GEP with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(V))

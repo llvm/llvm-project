@@ -6,7 +6,7 @@ define void @f(ptr nocapture nonnull align 4 dereferenceable(20) %0, i32 %1) loc
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP1:%.*]] to i2
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i2 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP4]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[TMP0:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nusw i8, ptr [[TMP0:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i2 -1, [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i2 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 2
