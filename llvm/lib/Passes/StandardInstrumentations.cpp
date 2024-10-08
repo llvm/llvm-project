@@ -24,6 +24,8 @@
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -137,6 +139,11 @@ static cl::opt<std::string> IRDumpDirectory(
              "-print-[before|after]{-all} options will be dumped into "
              "files in this directory rather than written to stderr"),
     cl::Hidden, cl::value_desc("filename"));
+
+static cl::opt<bool>
+    DroppedVarStats("dropped-variable-stats", cl::Hidden,
+                    cl::desc("Dump dropped debug variables stats"),
+                    cl::init(false));
 
 template <typename IRUnitT> static const IRUnitT *unwrapIR(Any IR) {
   const IRUnitT **IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
@@ -2442,11 +2449,131 @@ void DotCfgChangeReporter::registerCallbacks(
   }
 }
 
+void DroppedVariableStats::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  if (!DroppedVarStats)
+    return;
+
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this](StringRef P, Any IR) { return this->runBeforePass(P, IR); });
+  PIC.registerAfterPassCallback(
+      [this](StringRef P, Any IR, const PreservedAnalyses &PA) {
+        return this->runAfterPass(P, IR, PA);
+      });
+}
+
+void DroppedVariableStats::runBeforePass(StringRef PassID, Any IR) {
+  DebugVariablesBefore.push_back(llvm::DenseSet<VarID>());
+  DebugVariablesAfter.push_back(llvm::DenseSet<VarID>());
+  if (auto *M = unwrapIR<Module>(IR))
+    return this->runOnModule(M, true);
+  if (auto *F = unwrapIR<Function>(IR))
+    return this->runOnFunction(F, true);
+  return;
+}
+
+void DroppedVariableStats::runOnFunction(const Function *F, bool Before) {
+  auto &VarIDs = (Before ? DebugVariablesBefore : DebugVariablesAfter).back();
+  for (const auto &I : instructions(F)) {
+    for (DbgRecord &DR : I.getDbgRecordRange()) {
+      if (auto *Dbg = dyn_cast<DbgVariableRecord>(&DR)) {
+        auto *DbgVar = Dbg->getVariable();
+        auto DbgLoc = DR.getDebugLoc();
+        VarID Key{cast<DILocalScope>(DbgVar->getScope()),
+                  DbgLoc->getInlinedAtScope(), DbgVar};
+        VarIDs.insert(Key);
+      }
+    }
+  }
+}
+
+void DroppedVariableStats::runOnModule(const Module *M, bool Before) {
+  for (auto &F : *M)
+    runOnFunction(&F, Before);
+}
+
+void DroppedVariableStats::removeVarFromAllSets(VarID Var) {
+  // Do not remove Var from the last element, it will be popped from the stack
+  // anyway.
+  for (auto &Elem : llvm::drop_end(DebugVariablesBefore))
+    Elem.erase(Var);
+}
+
+void DroppedVariableStats::makeDISubprogramToFunctionMap(
+    const llvm::Module *M) {
+  for (auto &F : *M) {
+    if (auto *SP = cast_or_null<const DISubprogram>(F.getSubprogram()))
+      SubprogramToFunctionMap[SP] = &F;
+  }
+}
+
+void DroppedVariableStats::runAfterPass(StringRef PassID, Any IR,
+                                        const PreservedAnalyses &PA) {
+  unsigned DroppedCount = 0;
+  std::string PassLevel;
+  std::string FuncOrModName;
+  if (auto *M = unwrapIR<Module>(IR)) {
+    this->runOnModule(M, false);
+    PassLevel = "Module";
+    FuncOrModName = M->getName();
+    makeDISubprogramToFunctionMap(M);
+  } else if (auto *F = unwrapIR<Function>(IR)) {
+    this->runOnFunction(F, false);
+    PassLevel = "Function";
+    FuncOrModName = F->getName();
+    makeDISubprogramToFunctionMap(F->getParent());
+  } else {
+    return;
+  }
+  for (auto Var : DebugVariablesBefore.back()) {
+    if (!DebugVariablesAfter.back().contains(Var)) {
+      // Ensure that a variable that doesn't exist in the DebugVariablesAfter
+      // map is actually dropped from the pass and not removed due to the
+      // Function being removed due to code elimination. Do this by checking if
+      // the InlinedAt for a debug variable is in the SubprogramToFunctionMap,
+      // only if it exists, find a real instruction in the function obtained by
+      // the SubprogramToFunctionMap that has the same scope as the debug
+      // variable, if such an instruction exists, the debug variable has been
+      // dropped.
+      // TODO: Improve the dropped variable statistics by not just checking if
+      // the scope of an Insturction matches the scope of the debug variable but
+      // if any child scope matches it too.
+      const DISubprogram *InlinedAt = nullptr;
+      if (auto *LS = dyn_cast<const DILexicalBlock>(std::get<1>(Var)))
+        InlinedAt = LS->getSubprogram();
+      else if (auto *DSP = dyn_cast<const DISubprogram>(std::get<1>(Var)))
+        InlinedAt = DSP;
+      if (InlinedAt) {
+        auto It = SubprogramToFunctionMap.find(InlinedAt);
+        if (It != SubprogramToFunctionMap.end() && !It->second->empty()) {
+          for (const auto &I : instructions(It->second)) {
+            auto *DbgLoc = I.getDebugLoc().get();
+            if (DbgLoc) {
+              auto *Scope = cast<DILocalScope>(DbgLoc->getScope());
+              if (Scope == It->first) {
+                DroppedCount++;
+                break;
+              }
+            }
+          }
+        }
+      }
+      removeVarFromAllSets(Var);
+    }
+  }
+  if (DroppedCount > 0)
+    llvm::outs() << PassLevel << ", " << PassID << ", " << DroppedCount << ", "
+                 << FuncOrModName << "\n";
+  DebugVariablesBefore.pop_back();
+  DebugVariablesAfter.pop_back();
+  SubprogramToFunctionMap.clear();
+  return;
+}
+
 StandardInstrumentations::StandardInstrumentations(
     LLVMContext &Context, bool DebugLogging, bool VerifyEach,
     PrintPassOptions PrintPassOpts)
-    : PrintPass(DebugLogging, PrintPassOpts),
-      OptNone(DebugLogging),
+    : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
@@ -2454,7 +2581,8 @@ StandardInstrumentations::StandardInstrumentations(
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffQuiet),
       WebsiteChangeReporter(PrintChanged == ChangePrinter::DotCfgVerbose),
-      Verify(DebugLogging), VerifyEach(VerifyEach) {}
+      Verify(DebugLogging), DroppedStats(DroppedVarStats),
+      VerifyEach(VerifyEach) {}
 
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
@@ -2529,6 +2657,7 @@ void StandardInstrumentations::registerCallbacks(
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);
   PrintCrashIR.registerCallbacks(PIC);
+  DroppedStats.registerCallbacks(PIC);
   if (MAM)
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
 

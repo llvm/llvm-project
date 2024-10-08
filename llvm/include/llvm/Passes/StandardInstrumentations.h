@@ -559,6 +559,44 @@ protected:
   std::unique_ptr<raw_fd_ostream> HTML;
 };
 
+class DroppedVariableStats {
+public:
+  DroppedVariableStats(bool DroppedVarStatsEnabled) {
+    if (DroppedVarStatsEnabled)
+      llvm::outs()
+          << "Pass Level, Pass Name, Num of Dropped Variables, Func or "
+             "Module Name\n";
+  };
+  // We intend this to be unique per-compilation, thus no copies.
+  DroppedVariableStats(const DroppedVariableStats &) = delete;
+  void operator=(const DroppedVariableStats &) = delete;
+
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+private:
+  using VarID = std::tuple<const DILocalScope *, const DILocalScope *,
+                           const DILocalVariable *>;
+
+  SmallVector<llvm::DenseSet<VarID>> DebugVariablesBefore;
+  SmallVector<llvm::DenseSet<VarID>> DebugVariablesAfter;
+
+  DenseMap<const DISubprogram *, const llvm::Function *>
+      SubprogramToFunctionMap;
+
+  // Implementation of pass instrumentation callbacks.
+  void runBeforePass(StringRef PassID, Any IR);
+  void runAfterPass(StringRef PassID, Any IR, const PreservedAnalyses &PA);
+
+  void runOnFunction(const Function *F, bool Before);
+  void runOnModule(const Module *M, bool Before);
+
+  void removeVarFromAllSets(VarID Var);
+
+  // Populates a DenseMap<const DISubprogram*, const Function*>
+  // SubprogramToFunctionMap every time it is called
+  void makeDISubprogramToFunctionMap(const llvm::Module *M);
+};
+
 // Print IR on crash.
 class PrintCrashIRInstrumentation {
 public:
@@ -595,6 +633,7 @@ class StandardInstrumentations {
   PrintCrashIRInstrumentation PrintCrashIR;
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
+  DroppedVariableStats DroppedStats;
 
   bool VerifyEach;
 
