@@ -24089,16 +24089,16 @@ static SDValue performMaskedGatherScatterCombine(
     SDValue Index = HG->getIndex();
     if (!ISD::isExtOpcode(Index->getOpcode())) {
       return SDValue();
-    } else {
-      SDLoc DL(HG);
-      SDValue ExtOp = Index.getOperand(0);
-      SDValue Ops[] = {HG->getChain(),   HG->getInc(), HG->getMask(),
-                       HG->getBasePtr(), ExtOp,        HG->getScale(),
-                       HG->getIntID()};
-      return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other),
-                                    HG->getMemoryVT(), DL, Ops,
-                                    HG->getMemOperand(), HG->getIndexType());
     }
+    SDLoc DL(HG);
+    SDValue ExtOp = Index.getOperand(0);
+    SDValue Ops[] = {HG->getChain(),   HG->getInc(), HG->getMask(),
+                      HG->getBasePtr(), ExtOp,        HG->getScale(),
+                      HG->getIntID()};
+    return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other),
+                                  HG->getMemoryVT(), DL, Ops,
+                                  HG->getMemOperand(), HG->getIndexType());
+    
   }
 
   MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
