@@ -1678,9 +1678,8 @@ class VPWidenCallRecipe : public VPRecipeWithIRFlags {
   Function *Variant;
 
 public:
-  template <typename IterT>
   VPWidenCallRecipe(Value *UV, Function *Variant,
-                    iterator_range<IterT> CallArguments, DebugLoc DL = {})
+                    ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
                             *cast<Instruction>(UV)),
         Variant(Variant) {
@@ -1692,8 +1691,8 @@ public:
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
-                                 getDebugLoc());
+    return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
+                                 {op_begin(), op_end()}, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)

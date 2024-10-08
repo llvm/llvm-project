@@ -8357,8 +8357,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     }
 
     Ops.push_back(Operands.back());
-    return new VPWidenCallRecipe(
-        CI, Variant, make_range(Ops.begin(), Ops.end()), CI->getDebugLoc());
+    return new VPWidenCallRecipe(CI, Variant, Ops, CI->getDebugLoc());
   }
 
   return nullptr;
