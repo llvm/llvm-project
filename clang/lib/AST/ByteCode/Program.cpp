@@ -284,14 +284,12 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   if (!RD->isCompleteDefinition())
     return nullptr;
 
-  // Deduplicate records.
-  if (auto It = Records.find(RD); It != Records.end())
+  // Return an existing record if available.  Otherwise, we insert nullptr now
+  // and replace that later, so recursive calls to this function with the same
+  // RecordDecl don't run into infinite recursion.
+  auto [It, Inserted] = Records.try_emplace(RD);
+  if (!Inserted)
     return It->second;
-
-  // We insert nullptr now and replace that later, so recursive calls
-  // to this function with the same RecordDecl don't run into
-  // infinite recursion.
-  Records.insert({RD, nullptr});
 
   // Number of bytes required by fields and base classes.
   unsigned BaseSize = 0;
