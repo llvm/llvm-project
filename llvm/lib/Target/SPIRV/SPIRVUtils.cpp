@@ -598,4 +598,18 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   return MaybeDef;
 }
 
+bool getVacantFunctionName(Module &M, std::string &Name) {
+  // It's a bit of paranoia, but still we don't want to have even a chance that
+  // the loop will work for too long.
+  constexpr unsigned MaxIters = 1024;
+  for (unsigned I = 0; I < MaxIters; ++I) {
+    std::string OrdName = Name + Twine(I).str();
+    if (!M.getFunction(OrdName)) {
+      Name = OrdName;
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace llvm

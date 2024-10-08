@@ -149,6 +149,12 @@ void SPIRVAsmPrinter::outputOpFunctionEnd() {
 
 // Emit OpFunctionEnd at the end of MF and clear BBNumToRegMap.
 void SPIRVAsmPrinter::emitFunctionBodyEnd() {
+  // Do not emit anything if it's an internal service function.
+  if (MF->getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid())
+    return;
+
   outputOpFunctionEnd();
   MAI->BBNumToRegMap.clear();
 }
@@ -162,7 +168,9 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
 }
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
-  assert(!MBB.empty() && "MBB is empty!");
+  // Do not emit anything if it's an internal service function.
+  if (MBB.empty())
+    return;
 
   // If it's the first MBB in MF, it has OpFunction and OpFunctionParameter, so
   // OpLabel should be output after them.
