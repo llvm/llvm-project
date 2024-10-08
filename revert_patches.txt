@@ -79,10 +79,6 @@ Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpA
     This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
 contact: Selehov
 ---
-hangs ocl at -O0
-735a5f67e351 [AMDGPU] When allocating VGPRs, VGPR spills are not part of the prologue (#109439)
-Ron,MatC,Jay
----
 breaks hip_on_rocclr build
 Revert 8039886e6d  "AMDGPU: Handle folding frame indexes into s_add_i32 (#101694)"
 Ron/MatC
