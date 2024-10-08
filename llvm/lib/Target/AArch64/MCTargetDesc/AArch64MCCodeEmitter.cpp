@@ -191,10 +191,13 @@ public:
   unsigned fixOneOperandFPComparison(const MCInst &MI, unsigned EncodedValue,
                                      const MCSubtargetInfo &STI) const;
 
-  template <unsigned Multiple>
-  uint32_t EncodeRegAsMultipleOf(const MCInst &MI, unsigned OpIdx,
+  template <unsigned Multiple, unsigned Min = 0, unsigned Max = 30>
+  uint32_t EncodeRegMul_MinMax(const MCInst &MI, unsigned OpIdx,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
+  uint32_t EncodeZK(const MCInst &MI, unsigned OpIdx,
+                    SmallVectorImpl<MCFixup> &Fixups,
+                    const MCSubtargetInfo &STI) const;
   uint32_t EncodePNR_p8to15(const MCInst &MI, unsigned OpIdx,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
@@ -561,15 +564,31 @@ AArch64MCCodeEmitter::getVecShiftL8OpValue(const MCInst &MI, unsigned OpIdx,
   return MO.getImm() - 8;
 }
 
-template <unsigned Multiple>
+template <unsigned Multiple, unsigned Min, unsigned Max>
 uint32_t
-AArch64MCCodeEmitter::EncodeRegAsMultipleOf(const MCInst &MI, unsigned OpIdx,
+AArch64MCCodeEmitter::EncodeRegMul_MinMax(const MCInst &MI, unsigned OpIdx,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
   assert(llvm::isPowerOf2_32(Multiple) && "Multiple is not a power of 2");
   auto RegOpnd = MI.getOperand(OpIdx).getReg();
   unsigned RegVal = Ctx.getRegisterInfo()->getEncodingValue(RegOpnd);
-  return RegVal / Multiple;
+  assert(RegVal >= Min && RegVal <= Max && (RegVal & Multiple - 1) == 0);
+  return (RegVal - Min) / Multiple;
+}
+
+// Zk Is the name of the control vector register Z20-Z23 or Z28-Z31, encoded in
+// the "K:Zk" fields. Z20-Z23 = 000, 001,010, 011  and Z28-Z31 = 100, 101, 110,
+// 111
+uint32_t AArch64MCCodeEmitter::EncodeZK(const MCInst &MI, unsigned OpIdx,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  auto RegOpnd = MI.getOperand(OpIdx).getReg();
+  unsigned RegVal = Ctx.getRegisterInfo()->getEncodingValue(RegOpnd);
+  // Z28 => RegVal = 28 (28 - 24 = 4) Z28 = 4
+  if (RegOpnd > AArch64::Z27)
+    return (RegVal - 24);
+  // Z20 => RegVal = 20 (20 -20 = 0) Z20 = 0
+  return (RegVal - 20);
 }
 
 uint32_t
