@@ -32,6 +32,10 @@ int get_timezone_offset(char *timezone) {
       offset = -8;
     }
 
+    if (tz.ends_with("Chicago")) {
+      offset = -4;
+    }
+
     if (tz.ends_with("New_York")) {
       offset = -5;
     }
@@ -39,6 +43,10 @@ int get_timezone_offset(char *timezone) {
 
   if (tz.starts_with("Europe")) {
     offset = 1;
+
+    if (tz.ends_with("Lisbon")) {
+      offset = 0;
+    }
 
     if (tz.ends_with("Moscow")) {
       offset = 2;
