@@ -968,7 +968,7 @@ public:
     return false;
   }
 
-  bool shouldSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const {
     return false;
   }
 

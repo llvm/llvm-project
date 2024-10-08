@@ -2682,7 +2682,7 @@ static bool areExtractExts(Value *Ext1, Value *Ext2) {
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// sext/zext can be folded into vsubl.
-bool ARMTTIImpl::shouldSinkOperands(Instruction *I,
+bool ARMTTIImpl::isProfitableToSinkOperands(Instruction *I,
                                     SmallVectorImpl<Use *> &Ops) const {
   using namespace PatternMatch;
 

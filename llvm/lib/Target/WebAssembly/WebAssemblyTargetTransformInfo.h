@@ -77,7 +77,7 @@ public:
 
   bool supportsTailCalls() const;
 
-  bool shouldSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const;
+  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const;
 
   /// @}
 };

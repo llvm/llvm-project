@@ -6917,7 +6917,7 @@ static bool isVectorShiftByScalarCheap(Type *Ty, const X86Subtarget *ST) {
   return true;
 }
 
-bool X86TTIImpl::shouldSinkOperands(Instruction *I,
+bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
                                     SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
 

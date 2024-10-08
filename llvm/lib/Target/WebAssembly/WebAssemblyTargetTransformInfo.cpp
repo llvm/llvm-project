@@ -155,7 +155,7 @@ bool WebAssemblyTTIImpl::supportsTailCalls() const {
   return getST()->hasTailCall();
 }
 
-bool WebAssemblyTTIImpl::shouldSinkOperands(Instruction *I,
+bool WebAssemblyTTIImpl::isProfitableToSinkOperands(Instruction *I,
                                             SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
 

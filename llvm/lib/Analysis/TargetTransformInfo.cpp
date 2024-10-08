@@ -1354,9 +1354,9 @@ bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
   return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
 }
 
-bool TargetTransformInfo::shouldSinkOperands(
+bool TargetTransformInfo::isProfitableToSinkOperands(
     Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
-  return TTIImpl->shouldSinkOperands(I, OpsToSink);
+  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

@@ -1190,7 +1190,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 /// Whether it is profitable to sink the operands of an
 /// Instruction I to the basic block of I.
 /// This helps using several modifiers (like abs and neg) more often.
-bool GCNTTIImpl::shouldSinkOperands(Instruction *I,
+bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
                                     SmallVectorImpl<Use *> &Ops) const {
   using namespace PatternMatch;
 

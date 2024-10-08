@@ -4820,7 +4820,7 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
-bool AArch64TTIImpl::shouldSinkOperands(Instruction *I,
+bool AArch64TTIImpl::isProfitableToSinkOperands(Instruction *I,
                                         SmallVectorImpl<Use *> &Ops) const {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {

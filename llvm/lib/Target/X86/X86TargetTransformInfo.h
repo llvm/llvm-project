@@ -297,7 +297,7 @@ public:
 
   InstructionCost getBranchMispredictPenalty() const;
 
-  bool shouldSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const;
+  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const;
 
 private:
   bool supportsGather() const;
