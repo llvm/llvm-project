@@ -32,7 +32,7 @@ int get_timezone_offset(char *timezone) {
       offset = -8;
     }
 
-    if (tz.starts_with("America/New_York")) {
+    if (tz.ends_with("New_York")) {
       offset = -5;
     }
   }
