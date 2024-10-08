@@ -239,7 +239,7 @@ void writePrefixedInst(Ctx &, uint8_t *loc, uint64_t insn);
 void addPPC64SaveRestore(Ctx &);
 uint64_t getPPC64TocBase(Ctx &ctx);
 uint64_t getAArch64Page(uint64_t expr);
-bool isAArch64BTILandingPad(Symbol &s, int64_t a);
+bool isAArch64BTILandingPad(Ctx &, Symbol &s, int64_t a);
 template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
