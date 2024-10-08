@@ -594,16 +594,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     IRBuilder<> IRB(Info.AI->getNextNode());
     Function *TagP = Intrinsic::getDeclaration(
         F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
-    Instruction *TagPCall =
-        IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
+    Instruction *TagPCall = IRB.CreateCall(
+        TagP, {Info.AI, Base, ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.
     Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-      return !memtag::isLifetimeIntrinsic(U.getUser());
+      return !memtag::isLifetimeIntrinsic(U.getUser()) &&
+             U.getUser() != TagPCall;
     });
-    TagPCall->setOperand(0, Info.AI);
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
