@@ -3791,7 +3791,7 @@ struct FormatStyle {
   enum ReferenceAlignmentStyle : int8_t {
     /// Align reference like ``PointerAlignment``.
     RAS_Pointer,
-    /// Align reference to the left.
+    /// Align reference to the left FOOBAR CHANGE TO VALIDATE NEW CI CHECK.
     /// \code
     ///   int& a;
     /// \endcode
