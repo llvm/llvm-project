@@ -329,12 +329,6 @@ public:
   }
 };
 
-static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
-                                       SmallVectorImpl<int64_t> &results) {
-  for (auto attr : arrayAttr)
-    results.push_back(llvm::cast<IntegerAttr>(attr).getInt());
-}
-
 /// Pattern to rewrite simple cases of N-D extract_strided_slice, where the
 /// slice is contiguous, into extract and shape_cast.
 class ContiguousExtractStridedSliceToExtract final
@@ -348,17 +342,16 @@ public:
       return failure();
     }
     Value source = op.getOperand();
-    VectorType sourceType = cast<VectorType>(source.getType());
+    auto sourceType = cast<VectorType>(source.getType());
     if (sourceType.isScalable()) {
       return failure();
     }
-    SmallVector<int64_t> sizes;
-    populateFromInt64AttrArray(op.getSizes(), sizes);
 
     // Compute the number of offsets to pass to ExtractOp::build. That is the
     // difference between the source rank and the desired slice rank. We walk
     // the dimensions from innermost out, and stop when the next slice dimension
     // is not full-size.
+    SmallVector<int64_t> sizes = getI64SubArray(op.getSizes());
     int numOffsets;
     for (numOffsets = sourceType.getRank(); numOffsets > 0; --numOffsets) {
       if (sizes[numOffsets - 1] != sourceType.getDimSize(numOffsets - 1)) {
@@ -379,13 +372,11 @@ public:
       ++numOffsets;
     }
 
-    SmallVector<int64_t> offsets;
-    populateFromInt64AttrArray(op.getOffsets(), offsets);
+    SmallVector<int64_t> offsets = getI64SubArray(op.getOffsets());
     auto extractOffsets = ArrayRef(offsets).take_front(numOffsets);
     Value extract = rewriter.create<vector::ExtractOp>(op->getLoc(), source,
                                                        extractOffsets);
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
-        op, op->getResultTypes()[0], extract);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getType(), extract);
     return success();
   }
 };
