@@ -123,5 +123,35 @@ public:
   }
 #endif // NDEBUG
 };
+
+template <typename LoadOrStoreT> class MemSeedBundle : public SeedBundle {
+public:
+  explicit MemSeedBundle(SmallVector<Instruction *> &&SV, ScalarEvolution &SE)
+      : SeedBundle(std::move(SV)) {
+    assert(all_of(Seeds, [](auto *S) { return isa<LoadOrStoreT>(S); }) &&
+           "Expected Load or Store instructions!");
+    auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
+      return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
+                                   cast<LoadOrStoreT>(I1), SE);
+    };
+    std::sort(Seeds.begin(), Seeds.end(), Cmp);
+  }
+  explicit MemSeedBundle(LoadOrStoreT *MemI) : SeedBundle(MemI) {
+    assert(isa<LoadOrStoreT>(MemI) && "Expected Load or Store!");
+  }
+  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) {
+    assert(isa<LoadOrStoreT>(I) && "Expected a Store or a Load!");
+    auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
+      return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
+                                   cast<LoadOrStoreT>(I1), SE);
+    };
+    // Find the first element after I in mem. Then insert I before it.
+    insertAt(std::upper_bound(begin(), end(), I, Cmp), I);
+  }
+};
+
+using StoreSeedBundle = MemSeedBundle<sandboxir::StoreInst>;
+using LoadSeedBundle = MemSeedBundle<sandboxir::LoadInst>;
+
 } // namespace llvm::sandboxir
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SEEDCOLLECTOR_H
