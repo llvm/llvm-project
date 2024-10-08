@@ -565,6 +565,40 @@ TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
 }
 
 TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
+  EXPECT_EQ(ConstantFPRange::makeSatisfyingFCmpRegion(
+                FCmpInst::FCMP_OLE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                       APFloat(1.0)));
+  EXPECT_EQ(
+      ConstantFPRange::makeSatisfyingFCmpRegion(
+          FCmpInst::FCMP_OLT, ConstantFPRange::getNonNaN(
+                                  APFloat::getSmallest(Sem, /*Negative=*/false),
+                                  APFloat::getInf(Sem, /*Negative=*/false))),
+      ConstantFPRange::getNonNaN(APFloat::getInf(Sem, /*Negative=*/true),
+                                 APFloat::getZero(Sem, /*Negative=*/false)));
+  EXPECT_EQ(
+      ConstantFPRange::makeSatisfyingFCmpRegion(
+          FCmpInst::FCMP_OGT, ConstantFPRange::getNonNaN(
+                                  APFloat::getZero(Sem, /*Negative=*/true),
+                                  APFloat::getZero(Sem, /*Negative=*/false))),
+      ConstantFPRange::getNonNaN(APFloat::getSmallest(Sem, /*Negative=*/false),
+                                 APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeSatisfyingFCmpRegion(
+                FCmpInst::FCMP_OGE,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getNonNaN(
+                APFloat(2.0), APFloat::getInf(Sem, /*Negative=*/false)));
+  EXPECT_EQ(ConstantFPRange::makeSatisfyingFCmpRegion(
+                FCmpInst::FCMP_OEQ,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(2.0))),
+            ConstantFPRange::getEmpty(Sem));
+  EXPECT_EQ(ConstantFPRange::makeSatisfyingFCmpRegion(
+                FCmpInst::FCMP_OEQ,
+                ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(1.0))),
+            ConstantFPRange::getNonNaN(APFloat(1.0), APFloat(1.0)));
+
+#if defined(EXPENSIVE_CHECKS)
   for (auto Pred : FCmpInst::predicates()) {
     EnumerateConstantFPRanges(
         [Pred](const ConstantFPRange &CR) {
@@ -578,9 +612,12 @@ TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
           EnumerateValuesInConstantFPRange(
               ConstantFPRange::getFull(CR.getSemantics()),
               [&](const APFloat &V) {
-                if (AnyOfValueInConstantFPRange(CR, [&](const APFloat &U) {
-                      return !FCmpInst::compare(V, U, Pred);
-                    })) {
+                if (AnyOfValueInConstantFPRange(
+                        CR,
+                        [&](const APFloat &U) {
+                          return !FCmpInst::compare(V, U, Pred);
+                        },
+                        /*IgnoreNaNPayload=*/true)) {
                   EXPECT_FALSE(Res.contains(V))
                       << "Wrong result for makeSatisfyingFCmpRegion(" << Pred
                       << ", " << CR << "). The result " << Res
@@ -596,7 +633,8 @@ TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
                     ++NonNaNValsInOptimalSet;
                   }
                 }
-              });
+              },
+              /*IgnoreNaNPayload=*/true);
 
           // Check optimality
 
@@ -615,10 +653,13 @@ TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
           // We only care about the cases where the result is representable by
           // ConstantFPRange.
           unsigned NonNaNValsInSuperSet = 0;
-          EnumerateValuesInConstantFPRange(SuperSet, [&](const APFloat &V) {
-            if (!V.isNaN())
-              ++NonNaNValsInSuperSet;
-          });
+          EnumerateValuesInConstantFPRange(
+              SuperSet,
+              [&](const APFloat &V) {
+                if (!V.isNaN())
+                  ++NonNaNValsInSuperSet;
+              },
+              /*IgnoreNaNPayload=*/true);
 
           if (NonNaNValsInSuperSet == NonNaNValsInOptimalSet) {
             ConstantFPRange Optimal =
@@ -631,6 +672,7 @@ TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
         },
         /*Exhaustive=*/false);
   }
+#endif
 }
 
 TEST_F(ConstantFPRangeTest, fcmp) {
@@ -682,12 +724,19 @@ TEST_F(ConstantFPRangeTest, fcmp) {
     for (auto &RHS : InterestingRanges) {
       for (auto Pred : FCmpInst::predicates()) {
         if (LHS.fcmp(Pred, RHS)) {
-          EnumerateValuesInConstantFPRange(LHS, [&](const APFloat &LHSC) {
-            EnumerateValuesInConstantFPRange(RHS, [&](const APFloat &RHSC) {
-              EXPECT_TRUE(FCmpInst::compare(LHSC, RHSC, Pred))
-                  << LHS << " " << Pred << " " << RHS << " doesn't hold";
-            });
-          });
+          EnumerateValuesInConstantFPRange(
+              LHS,
+              [&](const APFloat &LHSC) {
+                EnumerateValuesInConstantFPRange(
+                    RHS,
+                    [&](const APFloat &RHSC) {
+                      EXPECT_TRUE(FCmpInst::compare(LHSC, RHSC, Pred))
+                          << LHS << " " << Pred << " " << RHS
+                          << " doesn't hold";
+                    },
+                    /*IgnoreNaNPayload=*/true);
+              },
+              /*IgnoreNaNPayload=*/true);
         }
       }
     }
