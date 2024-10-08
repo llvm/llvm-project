@@ -1638,7 +1638,7 @@ static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
   assert(allLookupResultsAreTheSame(Calls) &&
          "More than one lambda call operator!");
 
-  // If we have multiple call operators, we might be in a situation
+  // FIXME: If we have multiple call operators, we might be in a situation
   // where we merged this lambda with one from another module; in that
   // case, return our method (instead of that of the other lambda).
   //
@@ -1656,6 +1656,9 @@ static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
   //
   // Walk the call operator’s redecl chain to find the one that belongs
   // to this module.
+  //
+  // TODO: We need to fix this properly (see
+  // https://github.com/llvm/llvm-project/issues/90154).
   Module *M = RD.getOwningModule();
   for (Decl *D : Calls.front()->redecls()) {
     auto *MD = cast<NamedDecl>(D);
