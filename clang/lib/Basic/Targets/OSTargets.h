@@ -783,7 +783,11 @@ template <typename Target>
 class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {}
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__PECOFF__");
+    Builder.defineMacro("__UEFI__");
+    // Builder.defineMacro("_WIN32");
+  }
 
 public:
   UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)

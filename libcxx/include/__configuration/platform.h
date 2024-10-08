@@ -22,6 +22,8 @@
 #  define _LIBCPP_OBJECT_FORMAT_MACHO 1
 #elif defined(_WIN32)
 #  define _LIBCPP_OBJECT_FORMAT_COFF 1
+#elif defined(__UEFI__)
+#  define _LIBCPP_OBJECT_FORMAT_COFF 1
 #elif defined(__wasm__)
 #  define _LIBCPP_OBJECT_FORMAT_WASM 1
 #elif defined(_AIX)
