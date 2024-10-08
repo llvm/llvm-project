@@ -3178,6 +3178,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       StringRef Val = A->getValue();
       if (Val == "fast" || Val == "on" || Val == "off" ||
           Val == "fast-honor-pragmas") {
+        // fast-honor-pragmas is deprecated -- replace it with fast
+        if (Val == "fast-honor-pragmas") {
+          D.Diag(diag::warn_drv_deprecated_arg)
+            << A->getAsString(Args) << /*hasReplacement=*/true
+            << "-ffp-contract=fast";
+          Val = "fast";
+        }
         if (Val != FPContract && LastFpContractOverrideOption != "") {
           D.Diag(clang::diag::warn_drv_overriding_option)
               << LastFpContractOverrideOption

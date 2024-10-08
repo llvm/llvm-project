@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -ffast-math -ffp-contract=fast -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffast-math -ffp-contract=fast-honor-pragmas -emit-llvm -o - %s | FileCheck %s
 
 float test_default(float a, float b, float c) {
   float tmp = a;
@@ -52,6 +51,20 @@ float test_contract_on_pragma(float a, float b, float c) {
 // CHECK: define{{.*}} float @_Z23test_contract_on_pragmafff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c) [[NO_UNSAFE_ATTRS:#[0-9]+]]
 // CHECK: fmul fast float {{%.+}}, {{%.+}}
 // CHECK: fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, {{%.+}}
+
+float test_contract_off_pragma(float a, float b, float c) {
+  float tmp = a * b;
+  {
+    #pragma clang fp contract(off)
+    tmp += c;
+  }
+  return tmp;
+}
+
+// CHECK: define{{.*}} float @_Z24test_contract_off_pragmafff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c) [[NO_UNSAFE_ATTRS:#[0-9]+]]
+// CHECK: fmul fast float {{%.+}}, {{%.+}}
+// CHECK: fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, {{%.+}}
+
 
 // CHECK: attributes [[FAST_ATTRS]] = { {{.*}}"no-infs-fp-math"="true" {{.*}}"no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {{.*}}"unsafe-fp-math"="true"{{.*}} }
 // CHECK: attributes [[PRECISE_ATTRS]] = { {{.*}}"no-infs-fp-math"="false" {{.*}}"no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" {{.*}}"unsafe-fp-math"="false"{{.*}} }

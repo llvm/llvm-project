@@ -1919,9 +1919,7 @@ static void getTrivialDefaultFunctionAttributes(
     if (LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
         LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
         (LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_Fast ||
-         LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_FastHonorPragmas))
+             LangOptions::FPModeKind::FPM_Fast))
       FuncAttrs.addAttribute("unsafe-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
