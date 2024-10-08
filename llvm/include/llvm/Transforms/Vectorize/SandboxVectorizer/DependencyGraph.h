@@ -110,7 +110,7 @@ public:
 
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS, bool PrintDeps = true) const;
-  friend raw_ostream &operator<<(DGNode &N, raw_ostream &OS) {
+  friend raw_ostream &operator<<(raw_ostream &OS, DGNode &N) {
     N.print(OS);
     return OS;
   }
