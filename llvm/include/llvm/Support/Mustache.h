@@ -130,7 +130,7 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), ParentContext(nullptr), LocalContext(nullptr) {};
+  ASTNode() : T(Type::Root), ParentContext(nullptr) {};
 
   ASTNode(StringRef Body, ASTNode *Parent)
       : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr),
@@ -151,12 +151,12 @@ public:
 
   void render(const llvm::json::Value &Data, SmallString<0> &Output);
 
-  void setUpNode(StringMap<ASTNode *> &Partials, StringMap<Lambda> &Lambdas,
+  void setUpNode(llvm::BumpPtrAllocator &Alloc,
+                 StringMap<ASTNode *> &Partials, 
+                 StringMap<Lambda> &Lambdas,
                  StringMap<SectionLambda> &SectionLambdas,
                  DenseMap<char, StringRef> &Escapes);
-
-  void setUpContext(llvm::BumpPtrAllocator *Alloc);
-
+  
 private:
   
   void renderLambdas(const llvm::json::Value &Contexts, SmallString<0> &Output,
@@ -212,7 +212,10 @@ private:
   StringMap<Lambda> Lambdas;
   StringMap<SectionLambda> SectionLambdas;
   DenseMap<char, StringRef> Escapes;
+  // The allocator for the ASTNode Tree
   llvm::BumpPtrAllocator Allocator;
+  // Allocator for each render call resets after each render
+  llvm::BumpPtrAllocator LocalAllocator;
   ASTNode *Tree;
 };
 } // namespace mustache
