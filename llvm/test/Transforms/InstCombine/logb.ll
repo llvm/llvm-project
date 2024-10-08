@@ -55,5 +55,59 @@ define double @logb_neg_zero() {
   ret double %r
 }
 
+define float @logbf_inf() {
+; CHECK-LABEL: define float @logbf_inf() {
+; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float 0x7FF0000000000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @logbf(float 0x7FF0000000000000)
+  ret float %r
+}
+
+define double @logb_inf() {
+; CHECK-LABEL: define double @logb_inf() {
+; CHECK-NEXT:    [[R:%.*]] = call double @logb(double 0x7FF0000000000000)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @logb(double 0x7FF0000000000000)
+  ret double %r
+}
+
+define float @logbf_nan() {
+; CHECK-LABEL: define float @logbf_nan() {
+; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float 0x7FF8000000000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @logbf(float 0x7FF8000000000000)
+  ret float %r
+}
+
+define double @logb_nan() {
+; CHECK-LABEL: define double @logb_nan() {
+; CHECK-NEXT:    [[R:%.*]] = call double @logb(double 0x7FF8000000000000)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @logb(double 0x7FF8000000000000)
+  ret double %r
+}
+
+define float @logbf_poison() {
+; CHECK-LABEL: define float @logbf_poison() {
+; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float poison)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @logbf(float poison)
+  ret float %r
+}
+
+define double @logb_poison() {
+; CHECK-LABEL: define double @logb_poison() {
+; CHECK-NEXT:    [[R:%.*]] = call double @logb(double poison)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @logb(double poison)
+  ret double %r
+}
+
 declare float @logbf(float)
 declare double @logb(double)
