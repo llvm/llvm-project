@@ -53,8 +53,10 @@ class RootBlockObjCVarRewriter :
         if (ref->getDecl() == Var) {
           if (castE->getCastKind() == CK_LValueToRValue)
             return true; // Using the value of the variable.
-          if (castE->getCastKind() == CK_NoOp && castE->isLValue() &&
-              Var->getASTContext().getLangOpts().CPlusPlus)
+          if ((castE->getCastKind() == CK_NoOp ||
+               castE->getCastKind() == CK_FunctionPointerConversion ||
+               castE->getCastKind() == CK_MemberFunctionPointerConversion) &&
+              castE->isLValue() && Var->getASTContext().getLangOpts().CPlusPlus)
             return true; // Binding to const C++ reference.
         }
       }

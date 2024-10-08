@@ -500,7 +500,9 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
   if (Parents.size() != 1)
     return true;
   if (const auto *Cast = Parents[0].get<ImplicitCastExpr>()) {
-    if ((Cast->getCastKind() == CK_NoOp &&
+    if (((Cast->getCastKind() == CK_NoOp ||
+          Cast->getCastKind() == CK_FunctionPointerConversion ||
+          Cast->getCastKind() == CK_MemberFunctionPointerConversion) &&
          Context->hasSameType(Cast->getType(), E->getType().withConst())) ||
         (Cast->getCastKind() == CK_LValueToRValue &&
          !Cast->getType().isNull() && Cast->getType()->isFundamentalType()))

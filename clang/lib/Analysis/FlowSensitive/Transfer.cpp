@@ -322,7 +322,9 @@ public:
     case CK_UserDefinedConversion:
       // FIXME: Add tests that excercise CK_UncheckedDerivedToBase,
       // CK_ConstructorConversion, and CK_UserDefinedConversion.
-    case CK_NoOp: {
+    case CK_NoOp:
+    case CK_FunctionPointerConversion:
+    case CK_MemberFunctionPointerConversion: {
       // FIXME: Consider making `Environment::getStorageLocation` skip noop
       // expressions (this and other similar expressions in the file) instead
       // of assigning them storage locations.
@@ -679,7 +681,9 @@ public:
   }
 
   void VisitCXXStaticCastExpr(const CXXStaticCastExpr *S) {
-    if (S->getCastKind() == CK_NoOp) {
+    if (S->getCastKind() == CK_NoOp ||
+        S->getCastKind() == CK_FunctionPointerConversion ||
+        S->getCastKind() == CK_MemberFunctionPointerConversion) {
       const Expr *SubExpr = S->getSubExpr();
       assert(SubExpr != nullptr);
 

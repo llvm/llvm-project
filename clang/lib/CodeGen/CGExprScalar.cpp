@@ -2422,7 +2422,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_UserDefinedConversion:
     return Visit(const_cast<Expr*>(E));
 
-  case CK_NoOp: {
+  case CK_NoOp:
+  case CK_FunctionPointerConversion:
+  case CK_MemberFunctionPointerConversion: {
     return CE->changesVolatileQualification() ? EmitLoadOfLValue(CE)
                                               : Visit(const_cast<Expr *>(E));
   }
