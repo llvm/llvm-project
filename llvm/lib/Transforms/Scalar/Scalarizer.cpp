@@ -200,11 +200,17 @@ struct VectorLayout {
 static bool isStructAllVectors(Type *Ty) {
   if (!isa<StructType>(Ty))
     return false;
-
-  for(unsigned I = 0; I < Ty->getNumContainedTypes(); I++)
-    if (!isa<FixedVectorType>(Ty->getContainedType(I)))
+  if (Ty->getNumContainedTypes() < 1)
+    return false;
+  FixedVectorType *VecTy = dyn_cast<FixedVectorType>(Ty->getContainedType(0));
+  if (!VecTy)
+    return false;
+  unsigned VecSize = VecTy->getNumElements();
+  for (unsigned I = 1; I < Ty->getNumContainedTypes(); I++) {
+    VecTy = dyn_cast<FixedVectorType>(Ty->getContainedType(I));
+    if (!VecTy || VecSize != VecTy->getNumElements())
       return false;
-
+  }
   return true;
 }
 
@@ -679,8 +685,9 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
 bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
   if (isTriviallyVectorizable(ID))
     return true;
+  // TODO: investigate vectorizable frexp
   switch (ID) {
-    case Intrinsic::frexp:
+  case Intrinsic::frexp:
     return true;
   }
   return Intrinsic::isTargetIntrinsic(ID) &&
@@ -690,10 +697,10 @@ bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
 /// If a call to a vector typed intrinsic function, split into a scalar call per
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
-  Type* CallType = CI.getType();
-  bool areAllVectors = isStructAllVectors(CallType);
-   std::optional<VectorSplit> VS;
-  if (areAllVectors)
+  Type *CallType = CI.getType();
+  bool AreAllVectors = isStructAllVectors(CallType);
+  std::optional<VectorSplit> VS;
+  if (AreAllVectors)
     VS = getVectorSplit(CallType->getContainedType(0));
   else
     VS = getVectorSplit(CallType);
@@ -721,12 +728,12 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
     Tys.push_back(VS->SplitTy);
 
-  if(areAllVectors) {
-    Type* PrevType = CallType->getContainedType(0);
-    Type* CallType = CI.getType();
-    for(unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
-      Type* CurrType = cast<FixedVectorType>(CallType->getContainedType(I));
-      if(PrevType != CurrType) {
+  if (AreAllVectors) {
+    Type *PrevType = CallType->getContainedType(0);
+    Type *CallType = CI.getType();
+    for (unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
+      Type *CurrType = cast<FixedVectorType>(CallType->getContainedType(I));
+      if (PrevType != CurrType) {
         std::optional<VectorSplit> CurrVS = getVectorSplit(CurrType);
         Tys.push_back(CurrVS->SplitTy);
         PrevType = CurrType;
@@ -1070,7 +1077,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   ValueVector Res;
   if (!isStructAllVectors(OpTy))
     return false;
-  Type* VecType = cast<FixedVectorType>(OpTy->getContainedType(0));
+  Type *VecType = cast<FixedVectorType>(OpTy->getContainedType(0));
   std::optional<VectorSplit> VS = getVectorSplit(VecType);
   if (!VS)
     return false;
@@ -1084,7 +1091,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
         Op0[OpIdx], Index, EVI.getName() + ".elem" + std::to_string(Index));
     Res.push_back(ResElem);
   }
-  // replaceUses(&EVI, Res);
+
   gather(&EVI, Res, *VS);
   return true;
 }

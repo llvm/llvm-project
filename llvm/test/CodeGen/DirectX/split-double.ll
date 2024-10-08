@@ -1,10 +1,18 @@
-; RUN: opt -S -scalarizer  -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -passes='function(scalarizer<load-store>)' -S -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
-define void @test_vector_double_split_void(<3 x double> noundef %d) {
-  %hlsl.asuint = call { <3 x i32>, <3 x i32> }  @llvm.dx.splitdouble.v3i32(<3 x double> %d)
+; CHECK-LABEL: @test_vector_double_split_void
+define void @test_vector_double_split_void(<2 x double> noundef %d) {
+  ; CHECK: [[ee0:%.*]] = extractelement <2 x double> %d, i64 0
+  ; CHECK: [[ie0:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[ee0]])
+  ; CHECK: [[ee1:%.*]] = extractelement <2 x double> %d, i64 1
+  ; CHECK: [[ie1:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[ee1]])
+  ; CHECK-NOT: extractvalue { i32, i32 } {{.*}}, 0
+  ; CHECK-NOT: insertelement <2 x i32> {{.*}}, i32 {{.*}}, i64 0
+  %hlsl.asuint = call { <2 x i32>, <2 x i32> }  @llvm.dx.splitdouble.v2i32(<2 x double> %d)
   ret void
 }
 
+; CHECK-LABEL: @test_vector_double_split
 define noundef <3 x i32> @test_vector_double_split(<3 x double> noundef %d) {
   ; CHECK: [[ee0:%.*]] = extractelement <3 x double> %d, i64 0
   ; CHECK: [[ie0:%.*]] = call { i32, i32 } @llvm.dx.splitdouble.i32(double [[ee0]])

@@ -30,7 +30,7 @@ define noundef <2 x i32> @test_vector_half_frexp_int(<2 x half> noundef %h) {
   ret <2 x i32> %e1
 }
 
-
+; CHECK-LABEL: @test_vector_float_frexp_int
 define noundef <2 x float> @test_vector_float_frexp_int(<2 x float> noundef %f) {
   ; CHECK: [[ee0:%.*]] = extractelement <2 x float> %f, i64 0
   ; CHECK-NEXT: [[ie0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ee0]])
@@ -48,6 +48,7 @@ define noundef <2 x float> @test_vector_float_frexp_int(<2 x float> noundef %f) 
   ret <2 x float> %2
 }
 
+; CHECK-LABEL: @test_vector_double_frexp_int
 define noundef <2 x double> @test_vector_double_frexp_int(<2 x double> noundef %d) {
   ; CHECK: [[ee0:%.*]] = extractelement <2 x double> %d, i64 0
   ; CHECK-NEXT: [[ie0:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[ee0]])
