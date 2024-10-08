@@ -60,6 +60,7 @@ add_flang_library(FortranEvaluate
   variable.cpp
 
   LINK_LIBS
+  FortranCommon
   FortranSupport
   FortranParser
   ${LIBPGMATH}

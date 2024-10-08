@@ -17,8 +17,6 @@ if (NOT TARGET llvm_gtest)
   build_gtest()
 endif ()
 
-
-
 # Required because LLVMSupport is compiled with this option (by default).
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
 
@@ -92,6 +90,7 @@ function(add_fortranruntime_nongtest_unittest test_name)
   if(NOT ARG_SLOW_TEST)
     add_dependencies(FortranRuntimeUnitTests ${test_name}${suffix})
   endif()
+
   add_flang_unittest_offload_properties(${test_name}${suffix})
 endfunction()
 

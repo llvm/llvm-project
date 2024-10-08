@@ -90,6 +90,11 @@ file(GLOB_RECURSE private_headers
   "${FLANGRUNTIME_SOURCE_DIR}/lib/Common/*.h"
   )
 
+include(AddFlangOffloadRuntime)
+
+enable_cuda_compilation(FortranRuntime "${supported_files}")
+enable_omp_offload_compilation("${supported_files}")
+
 get_target_property(f128_sources
   FortranFloat128MathILib INTERFACE_SOURCES
   )

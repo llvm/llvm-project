@@ -68,7 +68,7 @@ function (add_fortranruntime_library name)
   target_compile_features(${name} PRIVATE cxx_std_17)
   if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
     target_compile_options(${name} PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
       )
   elseif (MSVC)
     target_compile_options(${name} PRIVATE
