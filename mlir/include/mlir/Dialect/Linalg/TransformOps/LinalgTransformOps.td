@@ -295,18 +295,23 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
   let description = [{
     Tiles the operations pointed to by the target handle and fuses their
     producers greedily using the options provided as attributes.
+
+    If `apply_cleanup` is true then slice canonicalization is applied between
+    fusion steps.
   }];
 
   let arguments =
     (ins TransformHandleTypeInterface:$target,
          DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
-         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange);
+         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange,
+         DefaultValuedAttr<BoolAttr, "false">:$apply_cleanup);
   let results = (outs TransformHandleTypeInterface:$transformed,
                       Variadic<TransformHandleTypeInterface>:$loops);
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
-    attr-dict `:` functional-type(operands, results)
+    (`apply_cleanup` `=` $apply_cleanup^)? attr-dict
+    `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
 }

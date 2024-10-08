@@ -72,7 +72,8 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     IgnoredIntrinsicFunctionType, PreviousScalarUse,
     RedeclaredInaccessibleComponent, ImplicitShared, IndexVarRedefinition,
     IncompatibleImplicitInterfaces, BadTypeForTarget,
-    VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg)
+    VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
+    MismatchingDummyProcedure)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
