@@ -53,6 +53,12 @@ int get_timezone_offset(char *timezone) {
     }
   }
 
+  if (tz.starts_with("Asia")) {
+    if (tz.ends_with("Yakutsk")) {
+      offset = 8;
+    }
+  }
+
   return offset;
 }
 
