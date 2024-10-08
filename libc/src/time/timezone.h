@@ -23,8 +23,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace timezone {
 
-#define TZ_HEADER "TZif"
-
 extern int get_timezone_offset(char *timezone);
 
 } // namespace timezone
