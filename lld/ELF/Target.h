@@ -179,21 +179,21 @@ protected:
   uint64_t defaultImageBase = 0x10000;
 };
 
-TargetInfo *getAArch64TargetInfo(Ctx &);
-TargetInfo *getAMDGPUTargetInfo(Ctx &);
-TargetInfo *getARMTargetInfo(Ctx &);
-TargetInfo *getAVRTargetInfo(Ctx &);
-TargetInfo *getHexagonTargetInfo(Ctx &);
-TargetInfo *getLoongArchTargetInfo(Ctx &);
-TargetInfo *getMSP430TargetInfo(Ctx &);
-TargetInfo *getMipsTargetInfo(Ctx &);
-TargetInfo *getPPC64TargetInfo(Ctx &);
-TargetInfo *getPPCTargetInfo(Ctx &);
-TargetInfo *getRISCVTargetInfo(Ctx &);
-TargetInfo *getSPARCV9TargetInfo(Ctx &);
-TargetInfo *getSystemZTargetInfo(Ctx &);
-TargetInfo *getX86TargetInfo(Ctx &);
-TargetInfo *getX86_64TargetInfo(Ctx &);
+void setAArch64TargetInfo(Ctx &);
+void setAMDGPUTargetInfo(Ctx &);
+void setARMTargetInfo(Ctx &);
+void setAVRTargetInfo(Ctx &);
+void setHexagonTargetInfo(Ctx &);
+void setLoongArchTargetInfo(Ctx &);
+void setMSP430TargetInfo(Ctx &);
+void setMipsTargetInfo(Ctx &);
+void setPPC64TargetInfo(Ctx &);
+void setPPCTargetInfo(Ctx &);
+void setRISCVTargetInfo(Ctx &);
+void setSPARCV9TargetInfo(Ctx &);
+void setSystemZTargetInfo(Ctx &);
+void setX86TargetInfo(Ctx &);
+void setX86_64TargetInfo(Ctx &);
 
 struct ErrorPlace {
   InputSectionBase *isec;
@@ -251,7 +251,7 @@ void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(Ctx &);
 void initSymbolAnchors(Ctx &);
 
-TargetInfo *getTarget(Ctx &);
+void setTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
