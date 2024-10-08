@@ -4332,8 +4332,8 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
           rewriter.create<tensor::CastOp>(loc, newSrcType, packOp.getSource());
     }
     Value dest = packOp.getDest();
-    Type originalResultType = dest.getType();
-    if (destShape != packOp.getDestType().getShape()) {
+    bool needUpdateDestType = (destShape != packOp.getDestType().getShape());
+    if (needUpdateDestType) {
       auto newDestType = packOp.getDestType().clone(destShape);
       dest =
           rewriter.create<tensor::CastOp>(loc, newDestType, packOp.getDest());
@@ -4344,7 +4344,7 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
       packOp.getResult().setType(cast<RankedTensorType>(dest.getType()));
     });
     // Insert a cast if needed
-    if (originalResultType != dest.getType()) {
+    if (needUpdateDestType) {
       rewriter.setInsertionPointAfter(packOp);
       auto castOp =
           rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
