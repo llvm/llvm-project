@@ -588,37 +588,39 @@ if (COMPILER_RT_HAS_AARCH64_SME)
   endif()
 endif()
 
-# Generate outline atomics helpers from lse.S base
-set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
-file(MAKE_DIRECTORY "${OA_HELPERS_DIR}")
+if(NOT "${CMAKE_ASM_COMPILER_ID}" MATCHES "MSVC")
+  # Generate outline atomics helpers from lse.S base
+  set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
+  file(MAKE_DIRECTORY "${OA_HELPERS_DIR}")
 
-if(CMAKE_HOST_UNIX)
-  set(COMPILER_RT_LINK_OR_COPY create_symlink)
-else()
-  set(COMPILER_RT_LINK_OR_COPY copy)
+  if(CMAKE_HOST_UNIX)
+    set(COMPILER_RT_LINK_OR_COPY create_symlink)
+  else()
+    set(COMPILER_RT_LINK_OR_COPY copy)
+  endif()
+
+  foreach(pat cas swp ldadd ldclr ldeor ldset)
+    foreach(size 1 2 4 8 16)
+      foreach(model 1 2 3 4 5)
+        if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
+          set(source_asm "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S")
+          set(helper_asm "${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S")
+          add_custom_command(
+            OUTPUT "${helper_asm}"
+            COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${source_asm}" "${helper_asm}"
+            DEPENDS "${source_asm}"
+          )
+          set_source_files_properties("${helper_asm}"
+            PROPERTIES
+            COMPILE_DEFINITIONS "L_${pat};SIZE=${size};MODEL=${model}"
+            INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}"
+          )
+          list(APPEND aarch64_SOURCES "${helper_asm}")
+        endif()
+      endforeach(model)
+    endforeach(size)
+  endforeach(pat)
 endif()
-
-foreach(pat cas swp ldadd ldclr ldeor ldset)
-  foreach(size 1 2 4 8 16)
-    foreach(model 1 2 3 4 5)
-      if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
-        set(source_asm "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S")
-        set(helper_asm "${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S")
-        add_custom_command(
-          OUTPUT "${helper_asm}"
-          COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${source_asm}" "${helper_asm}"
-          DEPENDS "${source_asm}"
-        )
-        set_source_files_properties("${helper_asm}"
-          PROPERTIES
-          COMPILE_DEFINITIONS "L_${pat};SIZE=${size};MODEL=${model}"
-          INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}"
-        )
-        list(APPEND aarch64_SOURCES "${helper_asm}")
-      endif()
-    endforeach(model)
-  endforeach(size)
-endforeach(pat)
 
 if (MINGW)
   set(aarch64_SOURCES
