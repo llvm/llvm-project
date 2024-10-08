@@ -129,16 +129,16 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), LocalContext(nullptr) {};
+  ASTNode() : T(Type::Root), ParentContext(nullptr), LocalContext(nullptr){};
 
   ASTNode(StringRef Body, ASTNode *Parent)
-      : T(Type::Text), Body(Body), Parent(Parent), LocalContext(nullptr),
-        Indentation(0) {};
+      : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr),
+        LocalContext(nullptr), Indentation(0){};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        LocalContext(nullptr), Indentation(0) {};
+        ParentContext(nullptr), LocalContext(nullptr), Indentation(0){};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -148,26 +148,27 @@ public:
 
   void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
 
-  void render(llvm::json::Value Data, SmallString<0> &Output);
+  void render(const llvm::json::Value &Data, SmallString<0> &Output);
 
-  void setUpNode(llvm::BumpPtrAllocator &Allocator,
-                 StringMap<ASTNode *> &Partials, StringMap<Lambda> &Lambdas,
+  void setUpNode(StringMap<ASTNode *> &Partials, StringMap<Lambda> &Lambdas,
                  StringMap<SectionLambda> &SectionLambdas,
                  DenseMap<char, StringRef> &Escapes);
 
+  void setUpContext(llvm::BumpPtrAllocator *Alloc);
+
 private:
-  void renderLambdas(llvm::json::Value &Contexts, SmallString<0> &Output,
+  void renderLambdas(const llvm::json::Value &Contexts, SmallString<0> &Output,
                      Lambda &L);
 
-  void renderSectionLambdas(llvm::json::Value &Contexts, SmallString<0> &Output,
-                            SectionLambda &L);
+  void renderSectionLambdas(const llvm::json::Value &Contexts,
+                            SmallString<0> &Output, SectionLambda &L);
 
-  void renderPartial(llvm::json::Value &Contexts, SmallString<0> &Output,
+  void renderPartial(const llvm::json::Value &Contexts, SmallString<0> &Output,
                      ASTNode *Partial);
 
-  void renderChild(llvm::json::Value &Context, SmallString<0> &Output);
+  void renderChild(const llvm::json::Value &Context, SmallString<0> &Output);
 
-  llvm::json::Value findContext();
+  const llvm::json::Value *findContext();
 
   llvm::BumpPtrAllocator *Allocator;
   StringMap<ASTNode *> *Partials;
@@ -181,7 +182,8 @@ private:
   ASTNode *Parent;
   std::vector<ASTNode *> Children;
   const Accessor Accessor;
-  llvm::json::Value LocalContext;
+  const llvm::json::Value *ParentContext;
+  const llvm::json::Value *LocalContext;
 };
 
 // A Template represents the container for the AST and the partials
@@ -190,7 +192,7 @@ class Template {
 public:
   Template(StringRef TemplateStr);
 
-  StringRef render(llvm::json::Value Data);
+  StringRef render(llvm::json::Value &Data);
 
   void registerPartial(StringRef Name, StringRef Partial);
 

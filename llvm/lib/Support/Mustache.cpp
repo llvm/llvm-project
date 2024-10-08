@@ -94,8 +94,8 @@ bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
     return false;
   const Token &PrevToken = Tokens[Idx - 1];
   StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v\t");
-  // We make a special exception for when previous token is empty 
-  // and the current token is the second token 
+  // We make a special exception for when previous token is empty
+  // and the current token is the second token
   // ex.
   //  " {{#section}}A{{/section}}"
   // that's why we check if the token body is empty and the index is 1
@@ -144,7 +144,7 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
       break;
     }
 
-    // Extract the Interpolated variable without {{ and }}
+    // Extract the Interpolated variable without delimiters {{ and }}
     size_t InterpolatedStart = DelimiterStart + Open.size();
     size_t InterpolatedEnd = DelimiterEnd - DelimiterStart - Close.size();
     SmallString<0> Interpolated =
@@ -285,12 +285,8 @@ void Parser::parseMustache(ASTNode *Parent) {
       parseMustache(CurrentNode);
       size_t End = CurrentPtr;
       SmallString<0> RawBody;
-      if (Start + 1 < End - 1) {
-        for (std::size_t I = Start + 1; I < End - 1; I++)
-          RawBody += Tokens[I].getRawBody();
-      } else if (Start + 1 == End - 1) {
-        RawBody = Tokens[Start].getRawBody();
-      }
+      for (std::size_t I = Start; I < End - 1; I++)
+        RawBody += Tokens[I].getRawBody();
       CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
       break;
@@ -301,12 +297,8 @@ void Parser::parseMustache(ASTNode *Parent) {
       parseMustache(CurrentNode);
       size_t End = CurrentPtr;
       SmallString<0> RawBody;
-      if (Start + 1 < End - 1) {
-        for (size_t Idx = Start + 1; Idx < End - 1; Idx++)
-          RawBody += Tokens[Idx].getRawBody();
-      } else if (Start + 1 == End - 1) {
-        RawBody = Tokens[Start].getRawBody();
-      }
+      for (size_t Idx = Start; Idx < End - 1; Idx++)
+        RawBody += Tokens[Idx].getRawBody();
       CurrentNode->setRawBody(RawBody);
       Parent->addChild(CurrentNode);
       break;
@@ -319,9 +311,9 @@ void Parser::parseMustache(ASTNode *Parent) {
   }
 }
 
-StringRef Template::render(Value Data) {
+StringRef Template::render(Value &Data) {
   BumpPtrAllocator LocalAllocator;
-  Tree->setUpNode(LocalAllocator, Partials, Lambdas, SectionLambdas, Escapes);
+  Tree->setUpContext(&LocalAllocator);
   Tree->render(Data, Output);
   return Output.str();
 }
@@ -329,6 +321,7 @@ StringRef Template::render(Value Data) {
 void Template::registerPartial(StringRef Name, StringRef Partial) {
   Parser P = Parser(Partial, Allocator);
   ASTNode *PartialTree = P.parse();
+  PartialTree->setUpNode(Partials, Lambdas, SectionLambdas, Escapes);
   Partials.insert(std::make_pair(Name, PartialTree));
 }
 
@@ -350,9 +343,10 @@ Template::Template(StringRef TemplateStr) {
                                             {'"', "&quot;"},
                                             {'\'', "&#39;"}};
   registerEscape(HtmlEntities);
+  Tree->setUpNode(Partials, Lambdas, SectionLambdas, Escapes);
 }
 
-void toJsonString(Value &Data, SmallString<0> &Output) {
+void toJsonString(const Value &Data, SmallString<0> &Output) {
   if (Data.getAsNull())
     return;
   if (auto *Arr = Data.getAsArray())
@@ -371,15 +365,18 @@ void toJsonString(Value &Data, SmallString<0> &Output) {
   Output = formatv("{0:2}", Data);
 }
 
-bool isFalsey(Value &V) {
+bool isFalsey(const Value &V) {
   return V.getAsNull() || (V.getAsBoolean() && !V.getAsBoolean().value()) ||
          (V.getAsArray() && V.getAsArray()->empty()) ||
          (V.getAsObject() && V.getAsObject()->empty());
 }
 
-void ASTNode::render(Value Data, SmallString<0> &Output) {
-  LocalContext = Data;
-  Value Context = T == Root ? Data : findContext();
+void ASTNode::render(const Value &Data, SmallString<0> &Output) {
+
+  ParentContext = &Data;
+  const Value *ContextPtr = T == Root ? ParentContext : findContext();
+  const Value &Context = ContextPtr ? *ContextPtr : nullptr;
+
   switch (T) {
   case Root:
     renderChild(Data, Output);
@@ -425,8 +422,8 @@ void ASTNode::render(Value Data, SmallString<0> &Output) {
 
     if (Context.getAsArray()) {
       SmallString<0> Result;
-      json::Array *Arr = Context.getAsArray();
-      for (Value &V : *Arr)
+      const json::Array *Arr = Context.getAsArray();
+      for (const Value &V : *Arr)
         renderChild(V, Result);
       Output = Result;
       return;
@@ -448,7 +445,7 @@ void ASTNode::render(Value Data, SmallString<0> &Output) {
   llvm_unreachable("Invalid ASTNode type");
 }
 
-Value ASTNode::findContext() {
+const Value *ASTNode::findContext() {
   // The mustache spec allows for dot notation to access nested values
   // a single dot refers to the current context.
   // We attempt to find the JSON context in the current node, if it is not
@@ -457,22 +454,23 @@ Value ASTNode::findContext() {
   if (Accessor.empty())
     return nullptr;
   if (Accessor[0] == ".")
-    return LocalContext;
-  json::Object *CurrentContext = LocalContext.getAsObject();
+    return ParentContext;
+
+  const json::Object *CurrentContext = ParentContext->getAsObject();
   StringRef CurrentAccessor = Accessor[0];
   ASTNode *CurrentParent = Parent;
 
   while (!CurrentContext || !CurrentContext->get(CurrentAccessor)) {
     if (CurrentParent->T != Root) {
-      CurrentContext = CurrentParent->LocalContext.getAsObject();
+      CurrentContext = CurrentParent->ParentContext->getAsObject();
       CurrentParent = CurrentParent->Parent;
       continue;
     }
     return nullptr;
   }
-  Value Context = nullptr;
+  const Value *Context = nullptr;
   for (auto [Idx, Acc] : enumerate(Accessor)) {
-    Value *CurrentValue = CurrentContext->get(Acc);
+    const Value *CurrentValue = CurrentContext->get(Acc);
     if (!CurrentValue)
       return nullptr;
     if (Idx < Accessor.size() - 1) {
@@ -480,43 +478,43 @@ Value ASTNode::findContext() {
       if (!CurrentContext)
         return nullptr;
     } else
-      Context = *CurrentValue;
+      Context = CurrentValue;
   }
   return Context;
 }
 
-void ASTNode::renderChild(Value &Context, SmallString<0> &Output) {
+void ASTNode::renderChild(const Value &Contexts, SmallString<0> &Output) {
   for (ASTNode *Child : Children) {
     SmallString<0> ChildResult;
-    Child->render(Context, ChildResult);
+    Child->render(Contexts, ChildResult);
     Output += ChildResult;
   }
 }
 
-void ASTNode::renderPartial(Value &Context, SmallString<0> &Output,
+void ASTNode::renderPartial(const Value &Contexts, SmallString<0> &Output,
                             ASTNode *Partial) {
-  Partial->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
-                     *Escapes);
-  Partial->render(Context, Output);
+  Partial->setUpContext(Allocator);
+  Partial->render(Contexts, Output);
   addIndentation(Output, Indentation);
 }
 
-void ASTNode::renderLambdas(Value &Context, SmallString<0> &Output, Lambda &L) {
+void ASTNode::renderLambdas(const Value &Contexts, SmallString<0> &Output,
+                            Lambda &L) {
   Value LambdaResult = L();
   SmallString<0> LambdaStr;
   toJsonString(LambdaResult, LambdaStr);
   Parser P = Parser(LambdaStr, *Allocator);
   ASTNode *LambdaNode = P.parse();
-  LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
-                        *Escapes);
-  LambdaNode->render(Context, Output);
+  LambdaNode->setUpNode(*Partials, *Lambdas, *SectionLambdas, *Escapes);
+  LambdaNode->setUpContext(Allocator);
+  LambdaNode->render(Contexts, Output);
   if (T == Variable)
     Output = escapeString(Output, *Escapes);
   return;
 }
 
-void ASTNode::renderSectionLambdas(Value &Contexts, SmallString<0> &Output,
-                                   SectionLambda &L) {
+void ASTNode::renderSectionLambdas(const Value &Contexts,
+                                   SmallString<0> &Output, SectionLambda &L) {
   Value Return = L(RawBody);
   if (isFalsey(Return))
     return;
@@ -524,23 +522,30 @@ void ASTNode::renderSectionLambdas(Value &Contexts, SmallString<0> &Output,
   toJsonString(Return, LambdaStr);
   Parser P = Parser(LambdaStr, *Allocator);
   ASTNode *LambdaNode = P.parse();
-  LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
-                        *Escapes);
+  LambdaNode->setUpNode(*Partials, *Lambdas, *SectionLambdas, *Escapes);
+  LambdaNode->setUpContext(Allocator);
   LambdaNode->render(Contexts, Output);
   return;
 }
 
-void ASTNode::setUpNode(BumpPtrAllocator &Alloc, StringMap<ASTNode *> &Par,
-                        StringMap<Lambda> &L, StringMap<SectionLambda> &SC,
+void ASTNode::setUpNode(StringMap<ASTNode *> &Par, StringMap<Lambda> &L,
+                        StringMap<SectionLambda> &SC,
                         DenseMap<char, StringRef> &E) {
-
   // Passed down datastructures needed for rendering to
-  // the children nodes
-  Allocator = &Alloc;
+  // the children nodes. This must be called before rendering
   Partials = &Par;
   Lambdas = &L;
   SectionLambdas = &SC;
   Escapes = &E;
   for (ASTNode *Child : Children)
-    Child->setUpNode(Alloc, Par, L, SC, E);
+    Child->setUpNode(Par, L, SC, E);
+}
+
+void ASTNode::setUpContext(llvm::BumpPtrAllocator *Alloc) {
+  // Passed down the allocator to the children nodes.
+  // Each render call requires a allocator for generating
+  // Partial/Section nodes
+  Allocator = Alloc;
+  for (ASTNode *Child : Children)
+    Child->setUpContext(Alloc);
 }
