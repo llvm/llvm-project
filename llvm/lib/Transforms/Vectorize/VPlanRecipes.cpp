@@ -971,8 +971,7 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
     Arguments.push_back(V);
   }
 
-  Type *RetTy =
-      ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+  Type *RetTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
   SmallVector<Type *> ParamTys;
   for (unsigned I = 0; I != getNumOperands(); ++I)
     ParamTys.push_back(
@@ -1279,8 +1278,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   switch (Opcode) {
   case Instruction::FNeg: {
-    Type *VectorTy =
-        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticInstrCost(
         Opcode, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
@@ -1318,8 +1316,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
         getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
-    Type *VectorTy =
-        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
 
     SmallVector<const Value *, 4> Operands;
@@ -1332,8 +1329,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Freeze: {
     // This opcode is unknown. Assume that it is the same as 'mul'.
-    Type *VectorTy =
-        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
   }
   case Instruction::ICmp:
@@ -2611,7 +2607,11 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert((!BlockInMask || !Group->isReverse()) &&
          "Reversed masked interleave-group not supported.");
 
-  Value *Index;
+  VPValue *Addr = getAddr();
+  Value *ResAddr = State.get(Addr, VPLane(0));
+  if (auto *I = dyn_cast<Instruction>(ResAddr))
+    State.setDebugLocFrom(I->getDebugLoc());
+
   // If the group is reverse, adjust the index to refer to the last vector lane
   // instead of the first. We adjust the index from the first vector lane,
   // rather than directly getting the pointer for lane VF - 1, because the
@@ -2619,24 +2619,17 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   if (Group->isReverse()) {
     Value *RuntimeVF =
         getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);
-    Index = State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
+    Value *Index =
+        State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
     Index = State.Builder.CreateMul(Index,
                                     State.Builder.getInt32(Group->getFactor()));
     Index = State.Builder.CreateNeg(Index);
-  } else {
-    // TODO: Drop redundant 0-index GEP as follow-up.
-    Index = State.Builder.getInt32(0);
+
+    bool InBounds = false;
+    if (auto *Gep = dyn_cast<GetElementPtrInst>(ResAddr->stripPointerCasts()))
+      InBounds = Gep->isInBounds();
+    ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Index, "", InBounds);
   }
-
-  VPValue *Addr = getAddr();
-  Value *ResAddr = State.get(Addr, VPLane(0));
-  if (auto *I = dyn_cast<Instruction>(ResAddr))
-    State.setDebugLocFrom(I->getDebugLoc());
-
-  bool InBounds = false;
-  if (auto *gep = dyn_cast<GetElementPtrInst>(ResAddr->stripPointerCasts()))
-    InBounds = gep->isInBounds();
-  ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Index, "", InBounds);
 
   State.setDebugLocFrom(Instr->getDebugLoc());
   Value *PoisonVec = PoisonValue::get(VecTy);
@@ -2997,7 +2990,7 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
 void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
-  getVPSingleValue()->printAsOperand(O, SlotTracker);
+  printAsOperand(O, SlotTracker);
   O << " = EXPAND SCEV " << *Expr;
 }
 #endif
