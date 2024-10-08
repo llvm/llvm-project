@@ -961,6 +961,8 @@ using InstructionVFPair = std::pair<Instruction *, ElementCount>;
 /// TargetTransformInfo to query the different backends for the cost of
 /// different operations.
 class LoopVectorizationCostModel {
+  friend class LoopVectorizationPlanner;
+
 public:
   LoopVectorizationCostModel(ScalarEpilogueLowering SEL, Loop *L,
                              PredicatedScalarEvolution &PSE, LoopInfo *LI,
@@ -7263,6 +7265,32 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     auto BranchCost = CostCtx.getLegacyCost(BB->getTerminator(), VF);
     Cost += BranchCost;
   }
+
+  // Pre-compute costs for instructions that are forced-scalar or profitable to
+  // scalarize. Their costs will be computed separately in the legacy cost
+  // model.
+  for (Instruction *ForcedScalar : CM.ForcedScalars[VF]) {
+    if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
+      continue;
+    CostCtx.SkipCostComputation.insert(ForcedScalar);
+    InstructionCost ForcedCost = CostCtx.getLegacyCost(ForcedScalar, VF);
+    LLVM_DEBUG({
+      dbgs() << "Cost of " << ForcedCost << " for VF " << VF
+             << ": forced scalar " << *ForcedScalar << "\n";
+    });
+    Cost += ForcedCost;
+  }
+  for (const auto &[Scalarized, ScalarCost] : CM.InstsToScalarize[VF]) {
+    if (CostCtx.skipCostComputation(Scalarized, VF.isVector()))
+      continue;
+    CostCtx.SkipCostComputation.insert(Scalarized);
+    LLVM_DEBUG({
+      dbgs() << "Cost of " << ScalarCost << " for VF " << VF
+             << ": profitable to scalarize " << *Scalarized << "\n";
+    });
+    Cost += ScalarCost;
+  }
+
   return Cost;
 }
 

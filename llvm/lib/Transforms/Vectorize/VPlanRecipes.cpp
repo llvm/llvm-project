@@ -971,8 +971,7 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
     Arguments.push_back(V);
   }
 
-  Type *RetTy =
-      ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+  Type *RetTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
   SmallVector<Type *> ParamTys;
   for (unsigned I = 0; I != getNumOperands(); ++I)
     ParamTys.push_back(
@@ -1279,8 +1278,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   switch (Opcode) {
   case Instruction::FNeg: {
-    Type *VectorTy =
-        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticInstrCost(
         Opcode, VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
@@ -1318,8 +1316,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
         getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
-    Type *VectorTy =
-        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
 
     SmallVector<const Value *, 4> Operands;
@@ -1332,8 +1329,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Freeze: {
     // This opcode is unknown. Assume that it is the same as 'mul'.
-    Type *VectorTy =
-        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
   }
   case Instruction::ICmp:
@@ -1898,6 +1894,22 @@ void VPBlendRecipe::execute(VPTransformState &State) {
     }
   }
   State.set(this, Result, OnlyFirstLaneUsed);
+}
+
+InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  // Handle cases where only the first lane is used the same way as the legacy
+  // cost model.
+  if (vputils::onlyFirstLaneUsed(this))
+    return Ctx.TTI.getCFInstrCost(Instruction::PHI, CostKind);
+
+  Type *ResultTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
+  Type *CmpTy = ToVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
+  return (getNumIncomingValues() - 1) *
+         Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
+                                    CmpInst::BAD_ICMP_PREDICATE, CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2994,7 +3006,7 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
 void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
-  getVPSingleValue()->printAsOperand(O, SlotTracker);
+  printAsOperand(O, SlotTracker);
   O << " = EXPAND SCEV " << *Expr;
 }
 #endif
