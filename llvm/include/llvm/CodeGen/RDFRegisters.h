@@ -106,8 +106,8 @@ struct RegisterRef {
   }
 
   size_t hash() const {
-    return std::hash<RegisterId>{}(Reg) ^
-           std::hash<LaneBitmask::Type>{}(Mask.getAsInteger());
+    return llvm::hash_value<RegisterId>(Reg) ^
+           llvm::hash_value(Mask.getAsPair());
   }
 
   static constexpr bool isRegId(unsigned Id) {
