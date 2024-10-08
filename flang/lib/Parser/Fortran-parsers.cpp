@@ -1266,12 +1266,15 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // Directives, extensions, and deprecated statements
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
+// !DIR$ IVDEP
 // !DIR$ name[=value] [, name[=value]]...
 // !DIR$ <anything else>
 constexpr auto ignore_tkr{
     "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
                         maybe(parenthesized(many(letter))), name))};
-constexpr auto loopCount{
+constexpr auto ignoreVectorDep{
+    "IVDEP" >> construct<CompilerDirective::IgnoreVectorDep>()};
+const constexpr auto loopCount{
     "LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
                         parenthesized(nonemptyList(digitString64)))};
 constexpr auto assumeAligned{"ASSUME_ALIGNED" >>
@@ -1283,6 +1286,7 @@ TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
+                construct<CompilerDirective>(ignoreVectorDep) ||
                 construct<CompilerDirective>(vectorAlways) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
