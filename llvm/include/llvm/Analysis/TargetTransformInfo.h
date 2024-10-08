@@ -1744,8 +1744,11 @@ public:
   bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                              Align Alignment) const;
 
-  /// \return True if the operands of \p I should be sunk to \p I . The sinkable
-  /// operands are cached in \p OpsToSink
+  /// Return true if sinking I's operands to the same basic block as I is
+  /// profitable, e.g. because the operands can be folded into a target
+  /// instruction during instruction selection. After calling the function
+  /// \p Ops contains the Uses to sink ordered by dominance (dominating users
+  /// come first).
   bool shouldSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const;
 
   struct VPLegalization {
