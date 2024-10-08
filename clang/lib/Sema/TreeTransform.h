@@ -722,7 +722,8 @@ public:
       const QualType *ParamTypes,
       const FunctionProtoType::ExtParameterInfo *ParamInfos,
       SmallVectorImpl<QualType> &PTypes, SmallVectorImpl<ParmVarDecl *> *PVars,
-      Sema::ExtParameterInfoBuilder &PInfos, unsigned *LastParamTransformed);
+      Sema::ExtParameterInfoBuilder &PInfos, unsigned *LastParamTransformed,
+      bool IgnoreParameterIndex = false);
 
   bool TransformFunctionTypeParams(
       SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
@@ -5997,8 +5998,8 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
     const FunctionProtoType::ExtParameterInfo *ParamInfos,
     SmallVectorImpl<QualType> &OutParamTypes,
     SmallVectorImpl<ParmVarDecl *> *PVars,
-    Sema::ExtParameterInfoBuilder &PInfos,
-    unsigned *LastParamTransformed) {
+    Sema::ExtParameterInfoBuilder &PInfos, unsigned *LastParamTransformed,
+    bool IgnoreParameterIndex) {
   int indexAdjustment = 0;
 
   unsigned NumParams = Params.size();
@@ -6006,7 +6007,7 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
     if (LastParamTransformed)
       *LastParamTransformed = i;
     if (ParmVarDecl *OldParm = Params[i]) {
-      assert(OldParm->getFunctionScopeIndex() == i);
+      assert(IgnoreParameterIndex || OldParm->getFunctionScopeIndex() == i);
 
       std::optional<unsigned> NumExpansions;
       ParmVarDecl *NewParm = nullptr;

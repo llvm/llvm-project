@@ -4039,16 +4039,18 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     Owner = FD->getLexicalDeclContext();
   }
 
-  // C++20 [temp.deduct.general]p5: [DR2369]
+  // C++20 [temp.deduct.general]p5: (CWG2369)
   // If the function template has associated constraints, those constraints are
   // checked for satisfaction. If the constraints are not satisfied, type
   // deduction fails.
-  // FIXME: We haven't implemented DR2369 for lambdas yet, because we need
-  // the captured variables to be instantiated in the scope.
+  // FIXME: We haven't implemented CWG2369 for lambdas yet, because we need
+  // to figure out how to instantiate lambda captures to the scope without
+  // first instantiating the lambda.
   bool IsLambda = isLambdaCallOperator(FD) || isLambdaConversionOperator(FD);
   if (!IsLambda && !IsIncomplete) {
-    if (CheckFunctionConstraintsWithoutInstantiation(
-            Info.getLocation(), FunctionTemplate->getCanonicalDecl(),
+    if (CheckFunctionTemplateConstraints(
+            Info.getLocation(),
+            FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
             CanonicalBuilder, Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
     if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
@@ -4104,7 +4106,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   ([temp.constr.constr]). If the constraints are not satisfied, type
   //   deduction fails.
   if (IsLambda && !IsIncomplete) {
-    if (CheckInstantiatedFunctionTemplateConstraints(
+    if (CheckFunctionTemplateConstraints(
             Info.getLocation(), Specialization, CanonicalBuilder,
             Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;

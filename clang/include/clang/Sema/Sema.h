@@ -13311,8 +13311,7 @@ public:
   // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
   SubstConstraintExpr(Expr *E,
-                      const MultiLevelTemplateArgumentList &TemplateArgs,
-                      DeclContext *InstantiatingFunctionDC = nullptr);
+                      const MultiLevelTemplateArgumentList &TemplateArgs);
 
   // Unlike the above, this does not evaluates constraints.
   ExprResult SubstConstraintExprWithoutSatisfaction(
@@ -14428,15 +14427,10 @@ public:
       const MultiLevelTemplateArgumentList &TemplateArgs,
       SourceRange TemplateIDRange);
 
-  bool CheckInstantiatedFunctionTemplateConstraints(
-      SourceLocation PointOfInstantiation, FunctionDecl *Decl,
-      ArrayRef<TemplateArgument> TemplateArgs,
-      ConstraintSatisfaction &Satisfaction);
-
-  bool CheckFunctionConstraintsWithoutInstantiation(
-      SourceLocation PointOfInstantiation, FunctionTemplateDecl *Template,
-      ArrayRef<TemplateArgument> TemplateArgs,
-      ConstraintSatisfaction &Satisfaction);
+  bool CheckFunctionTemplateConstraints(SourceLocation PointOfInstantiation,
+                                        FunctionDecl *Decl,
+                                        ArrayRef<TemplateArgument> TemplateArgs,
+                                        ConstraintSatisfaction &Satisfaction);
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
   /// unsatisfied.

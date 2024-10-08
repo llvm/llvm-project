@@ -470,30 +470,10 @@ static ExprResult calculateConstraintSatisfaction(
 
         SatisfactionStackRAII StackRAII(S, Template, ID);
 
-        // [CWG2770] Function parameters should be instantiated when they are
-        // needed by a satisfaction check of an atomic constraint or
-        // (recursively) by another function parameter.
-        DeclContext *FunctionDC = nullptr;
-        if (auto *FTD = dyn_cast_if_present<FunctionTemplateDecl>(Template)) {
-          FunctionDecl *FD = FTD->getTemplatedDecl();
-          FunctionDC = FD;
-          // The function has been instantiated. Don't bother to instantiate its
-          // parameters then.
-          if (FD->getTemplateInstantiationPattern(/*ForDefinition=*/false))
-            FunctionDC = nullptr;
-          else if (FunctionTemplateDecl *FromMemTempl =
-                       FTD->getInstantiatedFromMemberTemplate()) {
-            while (FromMemTempl->getInstantiatedFromMemberTemplate())
-              FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate();
-            FunctionDC = FromMemTempl->getTemplatedDecl();
-          }
-        }
-
         // We do not want error diagnostics escaping here.
         Sema::SFINAETrap Trap(S);
         SubstitutedExpression =
-            S.SubstConstraintExpr(const_cast<Expr *>(AtomicExpr), MLTAL,
-                                  /*InstantiatingFunctionDC=*/FunctionDC);
+            S.SubstConstraintExpr(const_cast<Expr *>(AtomicExpr), MLTAL);
 
         if (SubstitutedExpression.isInvalid() || Trap.hasErrorOccurred()) {
           // C++2a [temp.constr.atomic]p1
@@ -1133,12 +1113,53 @@ bool Sema::EnsureTemplateArgumentListConstraints(
   return false;
 }
 
-bool Sema::CheckInstantiatedFunctionTemplateConstraints(
+static bool CheckFunctionConstraintsWithoutInstantiation(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
+    FunctionTemplateDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
+    ConstraintSatisfaction &Satisfaction) {
+  SmallVector<const Expr *, 3> TemplateAC;
+  Template->getAssociatedConstraints(TemplateAC);
+  if (TemplateAC.empty()) {
+    Satisfaction.IsSatisfied = true;
+    return false;
+  }
+
+  LocalInstantiationScope Scope(SemaRef);
+
+  FunctionDecl *FD = Template->getTemplatedDecl();
+  // Collect the list of template arguments relative to the 'primary'
+  // template. We need the entire list, since the constraint is completely
+  // uninstantiated at this point.
+  DeclContext *NextDC = FD->getFriendObjectKind() ? FD->getLexicalDeclContext()
+                                                  : FD->getDeclContext();
+  MultiLevelTemplateArgumentList MLTAL =
+      SemaRef.getTemplateInstantiationArgs(FD, NextDC,
+                                           /*Final=*/false,
+                                           /*Innermost=*/TemplateArgs,
+                                           /*RelativeToPrimary=*/true,
+                                           /*Pattern=*/nullptr,
+                                           /*ForConstraintInstantiation=*/true);
+
+  std::optional<Sema::CXXThisScopeRAII> ThisScope;
+  if (auto *Method = dyn_cast<CXXMethodDecl>(FD))
+    ThisScope.emplace(SemaRef, /*Record=*/Method->getParent(),
+                      /*ThisQuals=*/Method->getMethodQualifiers());
+  return SemaRef.CheckConstraintSatisfaction(
+      Template, TemplateAC, MLTAL, PointOfInstantiation, Satisfaction);
+}
+
+bool Sema::CheckFunctionTemplateConstraints(
     SourceLocation PointOfInstantiation, FunctionDecl *Decl,
     ArrayRef<TemplateArgument> TemplateArgs,
     ConstraintSatisfaction &Satisfaction) {
   // In most cases we're not going to have constraints, so check for that first.
   FunctionTemplateDecl *Template = Decl->getPrimaryTemplate();
+
+  if (!Template)
+    return ::CheckFunctionConstraintsWithoutInstantiation(
+        *this, PointOfInstantiation, Decl->getDescribedFunctionTemplate(),
+        TemplateArgs, Satisfaction);
+
   // Note - code synthesis context for the constraints check is created
   // inside CheckConstraintsSatisfaction.
   SmallVector<const Expr *, 3> TemplateAC;
@@ -1173,46 +1194,6 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
 
   llvm::SmallVector<Expr *, 1> Converted;
   return CheckConstraintSatisfaction(Template, TemplateAC, Converted, *MLTAL,
-                                     PointOfInstantiation, Satisfaction);
-}
-
-bool Sema::CheckFunctionConstraintsWithoutInstantiation(
-    SourceLocation PointOfInstantiation, FunctionTemplateDecl *Template,
-    ArrayRef<TemplateArgument> TemplateArgs,
-    ConstraintSatisfaction &Satisfaction) {
-  FunctionDecl *FD = Template->getTemplatedDecl();
-  SmallVector<const Expr *, 3> TemplateAC;
-  Template->getAssociatedConstraints(TemplateAC);
-  if (TemplateAC.empty()) {
-    Satisfaction.IsSatisfied = true;
-    return false;
-  }
-
-  // Enter the scope of this instantiation. We don't use
-  // PushDeclContext because we don't have a scope.
-  LocalInstantiationScope Scope(*this);
-
-  // Collect the list of template arguments relative to the 'primary'
-  // template. We need the entire list, since the constraint is completely
-  // uninstantiated at this point.
-  DeclContext *NextDC = FD->getFriendObjectKind() ? FD->getLexicalDeclContext()
-                                                  : FD->getDeclContext();
-  MultiLevelTemplateArgumentList MLTAL =
-      getTemplateInstantiationArgs(FD, NextDC,
-                                   /*Final=*/false,
-                                   /*Innermost=*/TemplateArgs,
-                                   /*RelativeToPrimary=*/true,
-                                   /*Pattern=*/nullptr,
-                                   /*ForConstraintInstantiation=*/true);
-
-  Qualifiers ThisQuals;
-  CXXRecordDecl *Record = nullptr;
-  if (auto *Method = dyn_cast<CXXMethodDecl>(FD)) {
-    ThisQuals = Method->getMethodQualifiers();
-    Record = Method->getParent();
-  }
-  CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
-  return CheckConstraintSatisfaction(Template, TemplateAC, MLTAL,
                                      PointOfInstantiation, Satisfaction);
 }
 
