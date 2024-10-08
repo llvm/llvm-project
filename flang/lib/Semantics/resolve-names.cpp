@@ -10,7 +10,6 @@
 #include "definable.h"
 #include "mod-file.h"
 #include "pointer-assignment.h"
-#include "program-tree.h"
 #include "resolve-directives.h"
 #include "resolve-names-utils.h"
 #include "rewrite-parse-tree.h"
@@ -32,6 +31,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/program-tree.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -2490,6 +2490,7 @@ Symbol &ScopeHandler::CopySymbol(const SourceName &name, const Symbol &symbol) {
 }
 
 // Look for name only in scope, not in enclosing scopes.
+
 Symbol *ScopeHandler::FindInScope(
     const Scope &scope, const parser::Name &name) {
   return Resolve(name, FindInScope(scope, name.source));
@@ -9120,7 +9121,7 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     ResolveAccParts(context(), x, &topScope_);
     return false;
   }
-  auto root{ProgramTree::Build(x, context())};
+  ProgramTree &root{ProgramTree::Build(x, context())};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
