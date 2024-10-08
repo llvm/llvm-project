@@ -4246,9 +4246,9 @@ void TransferReadOp::getEffects(
 }
 
 Speculation::Speculatability TransferReadOp::getSpeculatability() {
-  if (!hasPureTensorSemantics())
-    return Speculation::NotSpeculatable;
-  return Speculation::Speculatable;
+  if (hasPureTensorSemantics())
+    return Speculation::Speculatable;
+  return Speculation::NotSpeculatable;
 }
 
 namespace {
@@ -4634,9 +4634,9 @@ void TransferWriteOp::getEffects(
 }
 
 Speculation::Speculatability TransferWriteOp::getSpeculatability() {
-  if (!hasPureTensorSemantics())
-    return Speculation::NotSpeculatable;
-  return Speculation::Speculatable;
+  if (hasPureTensorSemantics())
+    return Speculation::Speculatable;
+  return Speculation::NotSpeculatable;
 }
 
 namespace {
