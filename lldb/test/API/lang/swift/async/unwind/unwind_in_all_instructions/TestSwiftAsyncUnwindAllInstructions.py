@@ -25,6 +25,7 @@ import lldbsuite.test.lldbutil as lldbutil
 # path as the previous one. However, it is the first time an unwind plan
 # created from that path is used to create another unwind plan.
 
+
 class TestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
@@ -116,9 +117,10 @@ class TestCase(lldbtest.TestBase):
         # Reach most breakpoints and ensure we can unwind in that position.
         while True:
             process.Continue()
-            thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-            if thread is None:
+            if process.GetState() == lldb.eStateExited:
                 break
+            thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+            self.assertTrue(thread.IsValid())
             bpid = thread.GetStopReasonDataAtIndex(0)
             breakpoints.remove(bpid)
             target.FindBreakpointByID(bpid).SetEnabled(False)
