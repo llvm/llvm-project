@@ -3427,7 +3427,7 @@ def : GCNPat <
              SRCMODS.NONE,
              (V_MOV_B64_PSEUDO (i64 0x3fefffffffffffff))),
          $x,
-         (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, (i32 3 /*NaN*/))))
+         (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, SRCMODS.NONE, (i32 3 /*NaN*/))))
 >;
 
 } // End SubtargetPredicates = isGFX6

@@ -1873,15 +1873,16 @@ include "VOPDInstructions.td"
 
 class ClassPat<Instruction inst, ValueType vt> : GCNPat <
   (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
-  (inst i32:$src0_mods, vt:$src0, (V_MOV_B32_e32 timm:$mask))
+  (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (V_MOV_B32_e32 timm:$mask))
 >;
 
 def : ClassPat<V_CMP_CLASS_F16_e64, f16> {
-  let OtherPredicates = [NotHasTrue16BitInsts, Has16BitInsts];
+  let OtherPredicates = [Has16BitInsts];
+  let True16Predicate = NotHasTrue16BitInsts;
 }
 
-def : ClassPat<V_CMP_CLASS_F16_t16_e64, f16> {
-  let OtherPredicates = [HasTrue16BitInsts];
+def : ClassPat<V_CMP_CLASS_F16_fake16_e64, f16> {
+  let True16Predicate = UseFakeTrue16Insts;
 }
 
 def : ClassPat<V_CMP_CLASS_F32_e64, f32>;
@@ -1901,7 +1902,7 @@ def VOP2InfoTable : VOPInfoTable<"VOP2">;
 def VOP3InfoTable : VOPInfoTable<"VOP3">;
 
 class VOPC64Table <string Format> : GenericTable {
-  let FilterClass = "VOPC64_" # Format # "_Base";
+  let FilterClass = "VOPC64_" # Format;
   let CppTypeName = "VOPC64DPPInfo";
   let Fields = ["Opcode"];
 

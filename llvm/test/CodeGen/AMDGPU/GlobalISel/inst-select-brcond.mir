@@ -208,7 +208,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; GCN-NEXT:   [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F32_e64 0, [[COPY]], [[COPY1]], implicit $exec
+  ; GCN-NEXT:   [[V_CMP_CLASS_F32_e64_:%[0-9]+]]:sreg_64 = V_CMP_CLASS_F32_e64 0, [[COPY]], 0, [[COPY1]], implicit $exec
   ; GCN-NEXT:   $vcc = COPY [[V_CMP_CLASS_F32_e64_]]
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN-NEXT: {{  $}}
