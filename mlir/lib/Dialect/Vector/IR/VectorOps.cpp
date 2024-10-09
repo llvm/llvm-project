@@ -4245,6 +4245,12 @@ void TransferReadOp::getEffects(
                          SideEffects::DefaultResource::get());
 }
 
+Speculation::Speculatability TransferReadOp::getSpeculatability() {
+  if (hasPureTensorSemantics())
+    return Speculation::Speculatable;
+  return Speculation::NotSpeculatable;
+}
+
 namespace {
 /// Store to load forwarding for transfer operations with permuation maps.
 /// Even if the permutation maps are different we can still propagate the store
@@ -4625,6 +4631,12 @@ void TransferWriteOp::getEffects(
   if (llvm::isa<MemRefType>(getShapedType()))
     effects.emplace_back(MemoryEffects::Write::get(), &getSourceMutable(),
                          SideEffects::DefaultResource::get());
+}
+
+Speculation::Speculatability TransferWriteOp::getSpeculatability() {
+  if (hasPureTensorSemantics())
+    return Speculation::Speculatable;
+  return Speculation::NotSpeculatable;
 }
 
 namespace {
