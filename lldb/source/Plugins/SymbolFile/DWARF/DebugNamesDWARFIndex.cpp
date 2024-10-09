@@ -505,8 +505,8 @@ DebugNamesDWARFIndex::GetTypeQueryParentContexts(TypeQuery &query) {
       query.GetContextRef();
   llvm::SmallVector<CompilerContext> parent_contexts;
   if (!query_decl_context.empty()) {
-    // Skip the last entry, it is the type we are looking for.
-    // Reverse the query decl context to match parent chain.
+    // Skip the last entry as it's the type we're matching parents for.
+    // Reverse the query decl context to match parent chain order.
     llvm::ArrayRef<CompilerContext> parent_contexts_ref(
         query_decl_context.data(), query_decl_context.size() - 1);
     for (const CompilerContext &ctx : llvm::reverse(parent_contexts_ref)) {
