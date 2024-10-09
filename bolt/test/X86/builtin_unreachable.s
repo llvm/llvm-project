@@ -11,14 +11,14 @@
 .type main, @function
 main:
   call foo
-  .size main, .-main
+.size main, .-main
 
 .section .mytext.bar, "ax"
 .globl  bar
 .type	bar, @function
 bar:
   ud2
-	.size	bar, .-bar
+.size	bar, .-bar
 
 .section .mytext.foo, "ax"
 .globl	foo
@@ -29,5 +29,5 @@ foo:
   jmp .Lunreachable
   ret
   .cfi_endproc
-	.size	foo, .-foo
+.size	foo, .-foo
 .Lunreachable:
