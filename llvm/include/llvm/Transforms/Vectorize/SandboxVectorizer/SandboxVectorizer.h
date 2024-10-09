@@ -8,7 +8,10 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 
+#include <memory>
+
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 
 namespace llvm {
 
@@ -17,10 +20,13 @@ class TargetTransformInfo;
 class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
 
-public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  // The main vectorizer pass.
+  sandboxir::BottomUpVec BottomUpVecPass;
 
   bool runImpl(Function &F);
+
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm
