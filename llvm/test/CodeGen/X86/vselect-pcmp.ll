@@ -643,18 +643,18 @@ define <16 x i8> @blend_splat1_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x
 ;
 ; AVX512F-LABEL: blend_splat1_mask_cond_v16i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpbroadcastb {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512F-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX512F-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX512F-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: blend_splat1_mask_cond_v16i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512VL-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm2 ^ (xmm0 & (xmm1 ^ xmm2))
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm0 & (xmm2 ^ xmm1))
 ; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: blend_splat1_mask_cond_v16i8:
@@ -795,18 +795,18 @@ define <32 x i8> @blend_splatmax_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32
 ;
 ; AVX512F-LABEL: blend_splatmax_mask_cond_v32i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpbroadcastb {{.*#+}} ymm3 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX512F-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: blend_splatmax_mask_cond_v32i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; AVX512VL-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm2 ^ (ymm0 & (ymm1 ^ ymm2))
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm1 ^ (ymm0 & (ymm2 ^ ymm1))
 ; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: blend_splatmax_mask_cond_v32i8:
@@ -972,18 +972,18 @@ define <16 x i8> @blend_splat_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x 
 ;
 ; AVX512F-LABEL: blend_splat_mask_cond_v16i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpbroadcastb {{.*#+}} xmm3 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; AVX512F-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX512F-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX512F-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: blend_splat_mask_cond_v16i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; AVX512VL-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm2 ^ (xmm0 & (xmm1 ^ xmm2))
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm0 & (xmm2 ^ xmm1))
 ; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: blend_splat_mask_cond_v16i8:
@@ -1002,10 +1002,10 @@ define <16 x i8> @blend_splat_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x 
 define <2 x i64> @blend_mask_cond_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ; AVX1-LABEL: blend_mask_cond_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,4]
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqq %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: blend_mask_cond_v2i64:
@@ -1126,26 +1126,26 @@ define <8 x i16> @blend_mask_cond_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %z
 define <16 x i8> @blend_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %z) {
 ; AVX12-LABEL: blend_mask_cond_v16i8:
 ; AVX12:       # %bb.0:
-; AVX12-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX12-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX12-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,4,4,4,4,2,2,2,2]
+; AVX12-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX12-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX12-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_mask_cond_v16i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,4,4,4,4,2,2,2,2]
+; AVX512F-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX512F-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
+; AVX512F-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: blend_mask_cond_v16i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,4,4,4,4,2,2,2,2]
+; AVX512VL-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm2 ^ (xmm0 & (xmm1 ^ xmm2))
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm0 & (xmm2 ^ xmm1))
 ; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: blend_mask_cond_v16i8:
@@ -1326,26 +1326,26 @@ define <32 x i8> @blend_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %z
 ;
 ; AVX2-LABEL: blend_mask_cond_v32i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128,4,4,4,4,2,2,2,2,1,2,4,8,16,32,64,128,4,4,4,4,128,4,2,16]
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX2-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: blend_mask_cond_v32i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128,4,4,4,4,2,2,2,2,1,2,4,8,16,32,64,128,4,4,4,4,128,4,2,16]
+; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX512F-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: blend_mask_cond_v32i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128,4,4,4,4,2,2,2,2,1,2,4,8,16,32,64,128,4,4,4,4,128,4,2,16]
+; AVX512VL-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm2 ^ (ymm0 & (ymm1 ^ ymm2))
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm1 ^ (ymm0 & (ymm2 ^ ymm1))
 ; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: blend_mask_cond_v32i8:
@@ -1736,17 +1736,16 @@ define <64 x i8> @PR110875(<32 x i8> %a0, <32 x i8> %a1, i64 %a2) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq %rdi, %xmm2
 ; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm2
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm3 = ymm2[4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,22,22,22,22,22,22,22,22,23,23,23,23,23,23,23,23]
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm3 = ymm2[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,22,22,22,22,22,22,22,22,23,23,23,23,23,23,23,23]
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm3
-; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm3
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm5 = [20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20]
+; AVX2-NEXT:    vpblendvb %ymm3, %ymm5, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm2
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm4 = [20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20]
-; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm4, %ymm0
-; AVX2-NEXT:    vpblendvb %ymm3, %ymm1, %ymm4, %ymm1
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm5, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: PR110875:
