@@ -1694,6 +1694,7 @@ void CIRGenFunction::buildVariablyModifiedType(QualType type) {
     case clang::Type::CountAttributed:
     case clang::Type::PackIndexing:
     case clang::Type::ArrayParameter:
+    case clang::Type::HLSLAttributedResource:
       llvm_unreachable("NYI");
 
 #define TYPE(Class, Base)
