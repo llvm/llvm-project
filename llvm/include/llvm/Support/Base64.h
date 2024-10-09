@@ -56,32 +56,6 @@ template <class InputBytes> std::string encodeBase64(InputBytes const &Bytes) {
 
 llvm::Error decodeBase64(llvm::StringRef Input, std::vector<char> &Output);
 
-// General-purpose Base64 encoder/decoder class wrapper.
-class Base64 {
-public:
-  using byte = std::byte;
-
-  // Get the size of the encoded byte sequence of given size.
-  static size_t getEncodedSize(size_t SrcSize);
-
-  // Encode a byte sequence of given size into an output stream.
-  // Returns the number of bytes in the encoded result.
-  static size_t encode(const byte *Src, raw_ostream &Out, size_t SrcSize);
-
-  // Get the size of the encoded byte sequence of given size.
-  static size_t getDecodedSize(size_t SrcSize);
-
-  // Decode a sequence of given size into a pre-allocated memory.
-  // Returns the number of bytes in the decoded result or 0 in case of error.
-  static Expected<size_t> decode(const char *Src, byte *Dst, size_t SrcSize);
-
-  // Allocate minimum required amount of memory and decode a sequence of given
-  // size into it.
-  // Returns the decoded result. The size can be obtained via getDecodedSize.
-  static Expected<std::unique_ptr<byte[]>> decode(const char *Src,
-                                                  size_t SrcSize);
-};
-
 } // end namespace llvm
 
 #endif

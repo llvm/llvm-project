@@ -52,7 +52,6 @@ public:
   // value data in some cases for later reading at runtime, so size_t is not
   // suitable as its size varies.
   using SizeTy = uint64_t;
-  using byte = std::byte;
 
   // Defines supported property types
   enum Type { first = 0, NONE = first, UINT32, BYTE_ARRAY, last = BYTE_ARRAY };
@@ -67,24 +66,19 @@ public:
     return static_cast<Type>(T);
   }
 
-  ~PropertyValue() {
-    if (std::holds_alternative<byte *>(Val)) {
-      byte *ByteArrayVal = std::get<byte *>(Val);
-      delete ByteArrayVal;
-    }
-  }
+  ~PropertyValue() {}
 
   PropertyValue() = default;
   PropertyValue(Type T) : Ty(T) {}
 
   PropertyValue(uint32_t Val) : Ty(UINT32), Val({Val}) {}
-  PropertyValue(const byte *Data, SizeTy DataBitSize);
+  PropertyValue(const std::byte *Data, SizeTy DataBitSize);
   template <typename C, typename T = typename C::value_type>
   PropertyValue(const C &Data)
-      : PropertyValue(reinterpret_cast<const byte *>(Data.data()),
+      : PropertyValue(reinterpret_cast<const std::byte *>(Data.data()),
                       Data.size() * sizeof(T) * CHAR_BIT) {}
   PropertyValue(const llvm::StringRef &Str)
-      : PropertyValue(reinterpret_cast<const byte *>(Str.data()),
+      : PropertyValue(reinterpret_cast<const std::byte *>(Str.data()),
                       Str.size() * sizeof(char) * /* bits in one byte */ 8) {}
   PropertyValue(const PropertyValue &P);
   PropertyValue(PropertyValue &&P);
@@ -107,7 +101,7 @@ public:
     SizeTy Res = 0;
 
     for (size_t I = 0; I < sizeof(SizeTy); ++I) {
-      auto ByteArrayVal = std::get<byte *>(Val);
+      auto ByteArrayVal = std::get<std::byte *>(Val);
       Res |= (SizeTy)ByteArrayVal[I] << (8 * I);
     }
     return Res;
@@ -127,29 +121,49 @@ public:
   }
 
   // Get byte array data including the leading bytes encoding the size.
-  const byte *asRawByteArray() const {
+  const std::byte *asRawByteArray() const {
     if (Ty != BYTE_ARRAY)
       llvm_unreachable("must be BYTE_ARRAY value");
-    auto *ByteArrayVal = std::get<byte *>(Val);
+    auto *ByteArrayVal = std::get<std::byte *>(Val);
     return ByteArrayVal;
   }
 
   // Get byte array data excluding the leading bytes encoding the size.
-  const byte *asByteArray() const {
+  const std::byte *asByteArray() const {
     if (Ty != BYTE_ARRAY)
       llvm_unreachable("must be BYTE_ARRAY value");
 
-    auto ByteArrayVal = std::get<byte *>(Val);
+    auto ByteArrayVal = std::get<std::byte *>(Val);
     return ByteArrayVal + sizeof(SizeTy);
   }
 
   bool isValid() const { return getType() != NONE; }
 
   // Set property value; the 'T' type must be convertible to a property type tag
-  template <typename T> void set(T V) {
-    if (getTypeTag<T>() != Ty)
+  void set(uint32_t V) {
+    if (Ty != UINT32)
       llvm_unreachable("invalid type tag for this operation");
     Val = V;
+  }
+
+  // Set property value; the 'T' type must be convertible to a property type tag
+  void set(std::byte *V, int DataSize) {
+    if (Ty != BYTE_ARRAY)
+      llvm_unreachable("invalid type tag for this operation");
+    size_t DataBitSize = DataSize * CHAR_BIT;
+    constexpr size_t SizeFieldSize = sizeof(SizeTy);
+    // Allocate space for size and data.
+    Val = new std::byte[SizeFieldSize + DataSize];
+
+    // Write the size into first bytes.
+    for (size_t I = 0; I < SizeFieldSize; ++I) {
+      auto ByteArrayVal = std::get<std::byte *>(Val);
+      ByteArrayVal[I] = (std::byte)DataBitSize;
+      DataBitSize >>= CHAR_BIT;
+    }
+    // Append data.
+    auto ByteArrayVal = std::get<std::byte *>(Val);
+    std::memcpy(ByteArrayVal + SizeFieldSize, V, DataSize);
   }
 
   Type getType() const { return Ty; }
@@ -169,7 +183,7 @@ private:
   void copy(const PropertyValue &P);
 
   Type Ty = NONE;
-  std::variant<uint32_t, byte *> Val;
+  std::variant<uint32_t, std::byte *> Val;
 };
 
 /// Structure for specialization of DenseMap in PropertySetRegistry.

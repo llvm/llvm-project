@@ -22,8 +22,6 @@ using namespace llvm;
 
 namespace {
 
-using byte = std::byte;
-
 ::llvm::Error makeError(const Twine &Msg) {
   return createStringError(std::error_code{}, Msg);
 }
@@ -78,14 +76,14 @@ PropertySetRegistry::read(const MemoryBuffer *Buf) {
         return createStringError(std::error_code{},
                                  "invalid property value: ", Val.data());
       Prop.set(static_cast<uint32_t>(ValV.getZExtValue()));
+      llvm::errs() << "ARV: read int done\n";
       break;
     }
     case PropertyValue::Type::BYTE_ARRAY: {
-      Expected<std::unique_ptr<byte[]>> DecArr =
-          Base64::decode(Val.data(), Val.size());
-      if (!DecArr)
-        return DecArr.takeError();
-      Prop.set(DecArr.get().release());
+      std::vector<char> Output;
+      if (Error Err = decodeBase64(Val, Output))
+        return std::move(Err);
+      Prop.set(reinterpret_cast<std::byte *>(Output.data()), Output.size());
       break;
     }
     default:
@@ -109,8 +107,10 @@ raw_ostream &operator<<(raw_ostream &Out, const PropertyValue &Prop) {
     Out << Prop.asUint32();
     break;
   case PropertyValue::Type::BYTE_ARRAY: {
-    util::PropertyValue::SizeTy Size = Prop.getRawByteArraySize();
-    Base64::encode(Prop.asRawByteArray(), Out, (size_t)Size);
+    auto PropArr = Prop.asByteArray();
+    std::vector<std::byte> V(PropArr, PropArr + Prop.getByteArraySize() /
+                                                    sizeof(std::byte));
+    Out << encodeBase64(V);
     break;
   }
   default:
@@ -137,27 +137,27 @@ template <> PropertyValue::Type PropertyValue::getTypeTag<uint32_t>() {
   return UINT32;
 }
 
-template <> PropertyValue::Type PropertyValue::getTypeTag<byte *>() {
+template <> PropertyValue::Type PropertyValue::getTypeTag<std::byte *>() {
   return BYTE_ARRAY;
 }
 
-PropertyValue::PropertyValue(const byte *Data, SizeTy DataBitSize)
+PropertyValue::PropertyValue(const std::byte *Data, SizeTy DataBitSize)
     : Ty(BYTE_ARRAY) {
   constexpr int ByteSizeInBits = 8;
   SizeTy DataSize = (DataBitSize + (ByteSizeInBits - 1)) / ByteSizeInBits;
   constexpr size_t SizeFieldSize = sizeof(SizeTy);
 
   // Allocate space for size and data.
-  Val = new byte[SizeFieldSize + DataSize];
+  Val = new std::byte[SizeFieldSize + DataSize];
 
   // Write the size into first bytes.
   for (size_t I = 0; I < SizeFieldSize; ++I) {
-    auto ByteArrayVal = std::get<byte *>(Val);
-    ByteArrayVal[I] = (byte)DataBitSize;
+    auto ByteArrayVal = std::get<std::byte *>(Val);
+    ByteArrayVal[I] = (std::byte)DataBitSize;
     DataBitSize >>= ByteSizeInBits;
   }
   // Append data.
-  auto ByteArrayVal = std::get<byte *>(Val);
+  auto ByteArrayVal = std::get<std::byte *>(Val);
   std::memcpy(ByteArrayVal + SizeFieldSize, Data, DataSize);
 }
 
@@ -168,10 +168,8 @@ PropertyValue::PropertyValue(PropertyValue &&P) { *this = std::move(P); }
 PropertyValue &PropertyValue::operator=(PropertyValue &&P) {
   copy(P);
 
-  if (P.getType() == BYTE_ARRAY) {
-    auto &ByteArrayVal = std::get<byte *>(P.Val);
-    ByteArrayVal = nullptr;
-  }
+  if (P.getType() == BYTE_ARRAY)
+    P.Val = nullptr;
   P.Ty = NONE;
   return *this;
 }

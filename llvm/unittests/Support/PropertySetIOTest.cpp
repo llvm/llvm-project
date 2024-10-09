@@ -52,7 +52,7 @@ TEST(PropertySet, ByteArrayValuesIO) {
 
   auto Content = "[Opt/Param]\n"
                  "kernel1=2|IAAAAAAAAAQA\n"
-                 "kernel2=2|oAAAAAAAAAw///3/wB\n";
+                 "kernel2=2|oAAAAAAAAAAAw///3/wB\n";
   auto MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   auto PropSetsPtr = PropertySetRegistry::read(MemBuf.get());
