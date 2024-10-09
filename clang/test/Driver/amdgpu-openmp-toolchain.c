@@ -96,15 +96,15 @@
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID
 // CHECK-TARGET-ID: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "-sramecc" "-target-feature" "+xnack"
 
-// CHECK-TARGET-ID: clang-offload-packager{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp,feature=-sramecc,feature=+xnack
+// CHECK-TARGET-ID: clang-offload-packager{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp
 
 // RUN: %clang -### --save-temps -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:xnack+,gfx90a:xnack- \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID-MULTI
 // CHECK-TARGET-ID-MULTI: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "+xnack"
 // CHECK-TARGET-ID-MULTI: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "-xnack"
 
-// CHECK-TARGET-ID-MULTI: clang-offload-packager{{.*}}gfx90a:xnack+{{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack+,kind=openmp,feature=+xnack
-// CHECK-TARGET-ID-MULTI: clang-offload-packager{{.*}}gfx90a:xnack-{{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack-,kind=openmp,feature=-xnack
+// CHECK-TARGET-ID-MULTI: clang-offload-packager{{.*}}gfx90a:xnack+{{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack+,kind=openmp
+// CHECK-TARGET-ID-MULTI: clang-offload-packager{{.*}}gfx90a:xnack-{{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack-,kind=openmp
 
 // RUN: not %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a,gfx90a:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID-ERROR
@@ -121,3 +121,12 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp --offload-arch=gfx803 \
 // RUN:     -stdlib=libc++ -nogpulib %s 2>&1 | FileCheck %s --check-prefix=LIBCXX
 // LIBCXX-NOT: include/amdgcn-amd-amdhsa/c++/v1
+
+// RUN: %clang -### --save-temps -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:xnack+ -mamdgpu-precise-memory-op \
+// RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-FEATURES
+// CHECK-TARGET-FEATURES: clang-offload-packager{{.*}} "-o" {{.*}}.out" "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack+,kind=openmp"
+// CHECK-TARGET-FEATURES: clang-offload-packager"{{.*}}.o" "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack+,kind=openmp"
+// CHECK-TARGET-FEATURES: opt{{.*}} "-mtriple=amdgcn-amd-amdhsa" "-o" {{.*}}.bc" "-mcpu=gfx90a" "-mattr=+xnack,+precise-memory"
+// CHECK-TARGET-FEATURES: llc{{.*}} "-mtriple=amdgcn-amd-amdhsa" "-filetype=asm" "-o" {{.*}}.s" "{{.*}}.bc" "-mcpu=gfx90a" "-mattr=+xnack,+precise-memory"
+// CHECK-TARGET-FEATURES: llc{{.*}} "-mtriple=amdgcn-amd-amdhsa" "-filetype=obj" "-o" {{.*}}.o" "{{.*}}.bc" "-mcpu=gfx90a" "-mattr=+xnack,+precise-memory"
+// CHECK-TARGET-FEATURES: lld{{.*}} "-flavor" "gnu" "--no-undefined" "-shared" {{.*}}.o" "-plugin-opt=mcpu=gfx90a" "-plugin-opt=-mattr=+xnack,+precise-memory" "-o" {{.*}}.out"
