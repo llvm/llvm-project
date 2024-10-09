@@ -4325,6 +4325,15 @@ private:
   static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
 
   ///@}
+  /// \name CheckExternFunction
+  ///@{
+public:
+  void CheckExternDecl(Decl *D);
+  void CheckDeferredExternDecls();
+
+private:
+  std::vector<FunctionDecl *> ExternFuncDecls;
+  ///@}
 
   //
   //

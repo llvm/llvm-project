@@ -6066,6 +6066,10 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
       Dcl && Dcl->getDeclContext()->isFileContext())
     Dcl->setTopLevelDeclInObjCContainer();
 
+  if (Dcl) {
+    CheckExternDecl(Dcl);
+  }
+
   if (!Bases.empty())
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
                                                                         Bases);
@@ -20320,4 +20324,90 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
+}
+
+void Sema::diagnoseFunctionEffectMergeConflicts(
+    const FunctionEffectSet::Conflicts &Errs, SourceLocation NewLoc,
+    SourceLocation OldLoc) {
+  for (const FunctionEffectSet::Conflict &Conflict : Errs) {
+    Diag(NewLoc, diag::warn_conflicting_func_effects)
+        << Conflict.Kept.description() << Conflict.Rejected.description();
+    Diag(OldLoc, diag::note_previous_declaration);
+  }
+}
+
+bool Sema::diagnoseConflictingFunctionEffect(
+    const FunctionEffectsRef &FX, const FunctionEffectWithCondition &NewEC,
+    SourceLocation NewAttrLoc) {
+  // If the new effect has a condition, we can't detect conflicts until the
+  // condition is resolved.
+  if (NewEC.Cond.getCondition() != nullptr)
+    return false;
+
+  // Diagnose the new attribute as incompatible with a previous one.
+  auto Incompatible = [&](const FunctionEffectWithCondition &PrevEC) {
+    Diag(NewAttrLoc, diag::err_attributes_are_not_compatible)
+        << ("'" + NewEC.description() + "'")
+        << ("'" + PrevEC.description() + "'") << false;
+    // We don't necessarily have the location of the previous attribute,
+    // so no note.
+    return true;
+  };
+
+  // Compare against previous attributes.
+  FunctionEffect::Kind NewKind = NewEC.Effect.kind();
+
+  for (const FunctionEffectWithCondition &PrevEC : FX) {
+    // Again, can't check yet when the effect is conditional.
+    if (PrevEC.Cond.getCondition() != nullptr)
+      continue;
+
+    FunctionEffect::Kind PrevKind = PrevEC.Effect.kind();
+    // Note that we allow PrevKind == NewKind; it's redundant and ignored.
+
+    if (PrevEC.Effect.oppositeKind() == NewKind)
+      return Incompatible(PrevEC);
+
+    // A new allocating is incompatible with a previous nonblocking.
+    if (PrevKind == FunctionEffect::Kind::NonBlocking &&
+        NewKind == FunctionEffect::Kind::Allocating)
+      return Incompatible(PrevEC);
+
+    // A new nonblocking is incompatible with a previous allocating.
+    if (PrevKind == FunctionEffect::Kind::Allocating &&
+        NewKind == FunctionEffect::Kind::NonBlocking)
+      return Incompatible(PrevEC);
+  }
+
+  return false;
+}
+
+void Sema::CheckExternDecl(Decl *D) {
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    SourceLocation Loc = FD->getLocation();
+    SourceManager &SM = Context.getSourceManager();
+
+    // Only consider extern function declarations (not definitions) in the main
+    // file
+    if (FD->isExternC() && !FD->isImplicit() && !FD->getBuiltinID() &&
+        !FD->hasBody() && !FD->isThisDeclarationADefinition() &&
+        FD->isFirstDecl() && SM.isInMainFile(Loc)) {
+      // Defer the warning check until the end of the translation unit
+      ExternFuncDecls.push_back(FD);
+    }
+  }
+}
+
+void Sema::CheckDeferredExternDecls() {
+  SourceManager &SM = Context.getSourceManager();
+  for (FunctionDecl *FD : ExternFuncDecls) {
+    // Check if there's a definition in the same file
+    const FunctionDecl *Definition = FD->getDefinition();
+    if (!Definition || !SM.isInMainFile(Definition->getLocation())) {
+      SourceLocation Loc = FD->getLocation();
+      Diag(Loc, diag::warn_extern_func_not_in_header)
+          << FD->getName() << SM.getFilename(Loc);
+    }
+  }
+  ExternFuncDecls.clear();
 }
