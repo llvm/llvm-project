@@ -221,9 +221,9 @@ define void @add_i32() {
 
 define void @add_i64() {
 ; CHECK-LABEL: 'add_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a0za = zext <1 x i8> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a0za = zext <1 x i8> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a0z = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a0za)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a0sa = sext <1 x i8> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a0sa = sext <1 x i8> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a0s = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a0sa)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a1za = zext <2 x i8> undef to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %a1z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %a1za)
@@ -241,9 +241,9 @@ define void @add_i64() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 808 for instruction: %a4z = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %a4za)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1322 for instruction: %a4sa = sext <16 x i8> undef to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 808 for instruction: %a4s = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %a4sa)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a5za = zext <1 x i16> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a5za = zext <1 x i16> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a5z = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a5za)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %a5sa = sext <1 x i16> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %a5sa = sext <1 x i16> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a5s = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a5sa)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a6za = zext <2 x i16> undef to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %a6z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %a6za)
@@ -261,9 +261,9 @@ define void @add_i64() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 808 for instruction: %a9z = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %a9za)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1320 for instruction: %a9sa = sext <16 x i16> undef to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 808 for instruction: %a9s = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %a9sa)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a10za = zext <1 x i32> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a10za = zext <1 x i32> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a10z = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a10za)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a10sa = sext <1 x i32> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a10sa = sext <1 x i32> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a10s = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a10sa)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a11za = zext <2 x i32> undef to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %a11z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %a11za)
@@ -759,12 +759,12 @@ define void @mla_i32() {
 
 define void @mla_i64() {
 ; CHECK-LABEL: 'mla_i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a0za = zext <1 x i8> undef to <1 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a0zb = zext <1 x i8> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a0za = zext <1 x i8> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a0zb = zext <1 x i8> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a0zm = mul <1 x i64> %a0za, %a0zb
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a0z = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a0zm)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a0sa = sext <1 x i8> undef to <1 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a0sb = sext <1 x i8> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a0sa = sext <1 x i8> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a0sb = sext <1 x i8> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a0sm = mul <1 x i64> %a0sa, %a0sb
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a0s = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a0sm)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a1za = zext <2 x i8> undef to <2 x i64>
@@ -799,12 +799,12 @@ define void @mla_i64() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1322 for instruction: %a4sb = sext <16 x i8> undef to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 416 for instruction: %a4sm = mul <16 x i64> %a4sa, %a4sb
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 808 for instruction: %a4s = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %a4sm)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a5za = zext <1 x i16> undef to <1 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a5zb = zext <1 x i16> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a5za = zext <1 x i16> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a5zb = zext <1 x i16> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a5zm = mul <1 x i64> %a5za, %a5zb
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a5z = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a5zm)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %a5sa = sext <1 x i16> undef to <1 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %a5sb = sext <1 x i16> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %a5sa = sext <1 x i16> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %a5sb = sext <1 x i16> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a5sm = mul <1 x i64> %a5sa, %a5sb
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a5s = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a5sm)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a6za = zext <2 x i16> undef to <2 x i64>
@@ -839,12 +839,12 @@ define void @mla_i64() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1320 for instruction: %a9sb = sext <16 x i16> undef to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 416 for instruction: %a9sm = mul <16 x i64> %a9sa, %a9sb
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 808 for instruction: %a9s = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %a9sm)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a10za = zext <1 x i32> undef to <1 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a10zb = zext <1 x i32> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a10za = zext <1 x i32> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a10zb = zext <1 x i32> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a10zm = mul <1 x i64> %a10za, %a10zb
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a10z = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a10zm)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a10sa = sext <1 x i32> undef to <1 x i64>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %a10sb = sext <1 x i32> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a10sa = sext <1 x i32> undef to <1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %a10sb = sext <1 x i32> undef to <1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a10sm = mul <1 x i64> %a10sa, %a10sb
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %a10s = call i64 @llvm.vector.reduce.add.v1i64(<1 x i64> %a10sm)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %a11za = zext <2 x i32> undef to <2 x i64>

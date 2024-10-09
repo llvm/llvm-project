@@ -57,9 +57,9 @@ define i32 @fptoui_double_i32(i32 %arg) {
 define i32 @fptoui_double_i16(i32 %arg) {
 ; FAST-LABEL: 'fptoui_double_i16'
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = fptoui double undef to i16
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I16 = fptoui <2 x double> undef to <2 x i16>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I16 = fptoui <4 x double> undef to <4 x i16>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V8I16 = fptoui <8 x double> undef to <8 x i16>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I16 = fptoui <2 x double> undef to <2 x i16>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I16 = fptoui <4 x double> undef to <4 x i16>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8I16 = fptoui <8 x double> undef to <8 x i16>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SLOW-LABEL: 'fptoui_double_i16'
@@ -71,9 +71,9 @@ define i32 @fptoui_double_i16(i32 %arg) {
 ;
 ; FAST-SIZE-LABEL: 'fptoui_double_i16'
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = fptoui double undef to i16
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I16 = fptoui <2 x double> undef to <2 x i16>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I16 = fptoui <4 x double> undef to <4 x i16>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V8I16 = fptoui <8 x double> undef to <8 x i16>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I16 = fptoui <2 x double> undef to <2 x i16>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I16 = fptoui <4 x double> undef to <4 x i16>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8I16 = fptoui <8 x double> undef to <8 x i16>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SLOW-SIZE-LABEL: 'fptoui_double_i16'
@@ -93,9 +93,9 @@ define i32 @fptoui_double_i16(i32 %arg) {
 define i32 @fptoui_double_i8(i32 %arg) {
 ; FAST-LABEL: 'fptoui_double_i8'
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptoui double undef to i8
-; FAST-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I8 = fptoui <2 x double> undef to <2 x i8>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I8 = fptoui <4 x double> undef to <4 x i8>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I8 = fptoui <8 x double> undef to <8 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I8 = fptoui <2 x double> undef to <2 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I8 = fptoui <4 x double> undef to <4 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I8 = fptoui <8 x double> undef to <8 x i8>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SLOW-LABEL: 'fptoui_double_i8'
@@ -107,9 +107,9 @@ define i32 @fptoui_double_i8(i32 %arg) {
 ;
 ; FAST-SIZE-LABEL: 'fptoui_double_i8'
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptoui double undef to i8
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I8 = fptoui <2 x double> undef to <2 x i8>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I8 = fptoui <4 x double> undef to <4 x i8>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I8 = fptoui <8 x double> undef to <8 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I8 = fptoui <2 x double> undef to <2 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I8 = fptoui <4 x double> undef to <4 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I8 = fptoui <8 x double> undef to <8 x i8>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SLOW-SIZE-LABEL: 'fptoui_double_i8'
@@ -179,10 +179,10 @@ define i32 @fptoui_float_i32(i32 %arg) {
 define i32 @fptoui_float_i16(i32 %arg) {
 ; FAST-LABEL: 'fptoui_float_i16'
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = fptoui float undef to i16
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I16 = fptoui <2 x float> undef to <2 x i16>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I16 = fptoui <4 x float> undef to <4 x i16>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V8I16 = fptoui <8 x float> undef to <8 x i16>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %V16I16 = fptoui <16 x float> undef to <16 x i16>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I16 = fptoui <2 x float> undef to <2 x i16>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I16 = fptoui <4 x float> undef to <4 x i16>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8I16 = fptoui <8 x float> undef to <8 x i16>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V16I16 = fptoui <16 x float> undef to <16 x i16>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SLOW-LABEL: 'fptoui_float_i16'
@@ -195,10 +195,10 @@ define i32 @fptoui_float_i16(i32 %arg) {
 ;
 ; FAST-SIZE-LABEL: 'fptoui_float_i16'
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = fptoui float undef to i16
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I16 = fptoui <2 x float> undef to <2 x i16>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I16 = fptoui <4 x float> undef to <4 x i16>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V8I16 = fptoui <8 x float> undef to <8 x i16>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %V16I16 = fptoui <16 x float> undef to <16 x i16>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I16 = fptoui <2 x float> undef to <2 x i16>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I16 = fptoui <4 x float> undef to <4 x i16>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V8I16 = fptoui <8 x float> undef to <8 x i16>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V16I16 = fptoui <16 x float> undef to <16 x i16>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SLOW-SIZE-LABEL: 'fptoui_float_i16'
@@ -220,10 +220,10 @@ define i32 @fptoui_float_i16(i32 %arg) {
 define i32 @fptoui_float_i8(i32 %arg) {
 ; FAST-LABEL: 'fptoui_float_i8'
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptoui float undef to i8
-; FAST-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I8 = fptoui <2 x float> undef to <2 x i8>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I8 = fptoui <4 x float> undef to <4 x i8>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I8 = fptoui <8 x float> undef to <8 x i8>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I8 = fptoui <16 x float> undef to <16 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I8 = fptoui <2 x float> undef to <2 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I8 = fptoui <4 x float> undef to <4 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I8 = fptoui <8 x float> undef to <8 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I8 = fptoui <16 x float> undef to <16 x i8>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SLOW-LABEL: 'fptoui_float_i8'
@@ -236,10 +236,10 @@ define i32 @fptoui_float_i8(i32 %arg) {
 ;
 ; FAST-SIZE-LABEL: 'fptoui_float_i8'
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = fptoui float undef to i8
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I8 = fptoui <2 x float> undef to <2 x i8>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I8 = fptoui <4 x float> undef to <4 x i8>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I8 = fptoui <8 x float> undef to <8 x i8>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I8 = fptoui <16 x float> undef to <16 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I8 = fptoui <2 x float> undef to <2 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I8 = fptoui <4 x float> undef to <4 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I8 = fptoui <8 x float> undef to <8 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I8 = fptoui <16 x float> undef to <16 x i8>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SLOW-SIZE-LABEL: 'fptoui_float_i8'

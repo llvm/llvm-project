@@ -1191,8 +1191,10 @@ public:
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
-      return getScalarizationOverhead(DstVTy, /*Insert*/ true, /*Extract*/ true,
-                                      CostKind) +
+      return getScalarizationOverhead(SrcVTy, /*Insert=*/ false,
+                                      /*Extract=*/ true, CostKind) +
+             getScalarizationOverhead(DstVTy, /*Insert=*/ true,
+                                      /*Extract=*/ false, CostKind) +
              Num * Cost;
     }
 
