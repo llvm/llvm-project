@@ -219,7 +219,7 @@ function check-targets() {
       echo "check-all"
     ;;
     libclc)
-      echo "check-all"
+      # Currently there is no testing for libclc.
     ;;
     *)
       echo "check-${project}"
