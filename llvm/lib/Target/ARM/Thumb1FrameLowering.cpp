@@ -160,6 +160,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   assert(NumBytes >= ArgRegsSaveSize &&
          "ArgRegsSaveSize is included in NumBytes");
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  ARMSubtarget::PushPopSplitVariation PushPopSplit =
+      STI.getPushPopSplitVariation(MF);
 
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -221,7 +223,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R8:
     case ARM::R9:
     case ARM::R10:
-      if (STI.splitFramePushPop(MF)) {
+      if (PushPopSplit == ARMSubtarget::SplitR7) {
         GPRCS2Size += 4;
         break;
       }
@@ -365,7 +367,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R10:
       case ARM::R11:
       case ARM::R12:
-        if (STI.splitFramePushPop(MF))
+        if (PushPopSplit == ARMSubtarget::SplitR7)
           break;
         [[fallthrough]];
       case ARM::R0:
