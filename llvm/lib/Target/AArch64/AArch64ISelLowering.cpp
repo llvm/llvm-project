@@ -27933,13 +27933,10 @@ bool AArch64TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
   if (MemVT.isFixedLengthVector() && !Subtarget->isNeonAvailable())
     return false;
 
-  // Do not merge to float value size (128 bytes) if no implicit
-  // float attribute is set.
+  // Do not merge to float value size (128 bytes) if no implicit float attribute
+  // is set.
   bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
-
-  if (NoFloat)
-    return (MemVT.getSizeInBits() <= 64);
-  return true;
+  return !NoFloat || MemVT.getSizeInBits() <= 64;
 }
 
 bool AArch64TargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
