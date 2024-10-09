@@ -147,8 +147,8 @@ NativeRegisterContextWindows_arm64::NativeRegisterContextWindows_arm64(
   // Currently, there is no API to query the maximum supported hardware
   // breakpoints and watchpoints on Windows. The values set below are based
   // on tests conducted on Windows 11 with Snapdragon Elite X hardware.
-  m_max_hwp_supported = 1;
-  m_max_hbp_supported = 6;
+  m_max_hwp_supported = 2;
+  m_max_hbp_supported = 0;
 }
 
 bool NativeRegisterContextWindows_arm64::IsGPR(uint32_t reg_index) const {
@@ -726,10 +726,6 @@ llvm::Error NativeRegisterContextWindows_arm64::ReadHardwareDebugInfo() {
     m_hwp_regs[i].control = tls_context.Wcr[i];
   }
 
-  for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
-    m_hbp_regs[i].address = tls_context.Bvr[i];
-    m_hbp_regs[i].control = tls_context.Bcr[i];
-  }
   return llvm::Error::success();
 }
 
@@ -741,19 +737,11 @@ NativeRegisterContextWindows_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
   if (error.Fail())
     return error.ToError();
 
-  switch (hwbType) {
-  case eDREGTypeWATCH:
+  if (hwbType == eDREGTypeWATCH) {
     for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
       tls_context.Wvr[i] = m_hwp_regs[i].address;
       tls_context.Wcr[i] = m_hwp_regs[i].control;
     }
-    break;
-  case eDREGTypeBREAK:
-    for (uint32_t i = 0; i < m_max_hbp_supported; i++) {
-      tls_context.Bvr[i] = m_hbp_regs[i].address;
-      tls_context.Bcr[i] = m_hbp_regs[i].control;
-    }
-    break;
   }
 
   return SetThreadContextHelper(GetThreadHandle(), &tls_context).ToError();

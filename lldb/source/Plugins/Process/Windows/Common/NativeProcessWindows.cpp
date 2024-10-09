@@ -491,42 +491,32 @@ NativeProcessWindows::OnDebugException(bool first_chance,
     return ExceptionResult::MaskException;
   }
   case DWORD(STATUS_BREAKPOINT):
-  case STATUS_WX86_BREAKPOINT: {
-    bool breakpoint_hit = false;
-    NativeThreadWindows *stop_thread = GetThreadByID(record.GetThreadID());
+  case STATUS_WX86_BREAKPOINT:
 
-    if (stop_thread) {
-      uint32_t hw_id = LLDB_INVALID_INDEX32;
+    if (NativeThreadWindows *stop_thread =
+            GetThreadByID(record.GetThreadID())) {
       auto &reg_ctx = stop_thread->GetRegisterContext();
-      reg_ctx.GetHardwareBreakHitIndex(hw_id, record.GetExceptionAddress());
-      if (hw_id != LLDB_INVALID_INDEX32) {
-        breakpoint_hit = true;
-        LLDB_LOG(log, "Hit hardware breakpoint at address {0:x}.",
-                 record.GetExceptionAddress());
-      } else if (FindSoftwareBreakpoint(record.GetExceptionAddress())) {
-        breakpoint_hit = true;
-        LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
-                 record.GetExceptionAddress());
-        uint32_t breakpoint_size = GetSoftwareBreakpointPCOffset();
-        // The current PC is AFTER the BP opcode, on all architectures.
-        uint64_t pc = reg_ctx.GetPC() - breakpoint_size;
-        reg_ctx.SetPC(pc);
-      }
+      const auto exception_addr = record.GetExceptionAddress();
+      const auto thread_id = record.GetThreadID();
 
-      if (breakpoint_hit) {
-        StopThread(record.GetThreadID(), StopReason::eStopReasonBreakpoint);
+      if (FindSoftwareBreakpoint(exception_addr)) {
+        LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
+                 exception_addr);
+
+        reg_ctx.SetPC(reg_ctx.GetPC() - GetSoftwareBreakpointPCOffset());
+        StopThread(thread_id, StopReason::eStopReasonBreakpoint);
         SetState(eStateStopped, true);
         return ExceptionResult::MaskException;
       } else {
         const std::vector<ULONG_PTR> &args = record.GetExceptionArguments();
         if (args.size() >= 2) {
+          uint32_t hw_id = LLDB_INVALID_INDEX32;
           reg_ctx.GetWatchpointHitIndex(hw_id, args[1]);
+
           if (hw_id != LLDB_INVALID_INDEX32) {
-            addr_t wp_pc = record.GetExceptionAddress();
             std::string desc =
-                formatv("{0} {1} {2}", args[1], hw_id, wp_pc).str();
-            StopThread(record.GetThreadID(), StopReason::eStopReasonWatchpoint,
-                       desc);
+                formatv("{0} {1} {2}", args[1], hw_id, exception_addr).str();
+            StopThread(thread_id, StopReason::eStopReasonWatchpoint, desc);
             SetState(eStateStopped, true);
             return ExceptionResult::MaskException;
           }
@@ -554,7 +544,6 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       // Hit the initial stop. Continue the application.
       return ExceptionResult::BreakInDebugger;
     }
-  }
 
     [[fallthrough]];
   default:
