@@ -69,7 +69,7 @@ add_llvm_unittest(SupportTests
   PerThreadBumpPtrAllocatorTest.cpp
   ProcessTest.cpp
   ProgramTest.cpp
-  PropertySetIOTest.cpp
+  SYCLPropertySetIOTest.cpp
   RegexTest.cpp
   ReverseIterationTest.cpp
   ReplaceFileTest.cpp

@@ -1,4 +1,5 @@
-//=- llvm/unittest/Support/PropertySetIOTest.cpp - Property set I/O tests ---=//
+// llvm/unittest/Support/SYCLPropertySetIOTest.cpp - SYCL Property set I/O tests
+// //
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/PropertySetIO.h"
+#include "llvm/Support/SYCLPropertySetIO.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -17,7 +18,7 @@ using namespace llvm::util;
 
 namespace {
 
-TEST(PropertySet, IntValuesIO) {
+TEST(SYCLPropertySet, IntValuesIO) {
   // '1' in '1|20' means 'integer property'
   auto Content = "[Staff/Ages]\n"
                  "person1=1|20\n"
@@ -28,10 +29,10 @@ TEST(PropertySet, IntValuesIO) {
                  "person3=1|12\n";
   auto MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
-  auto PropSetsPtr = PropertySetRegistry::read(MemBuf.get());
+  auto PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
 
   if (!PropSetsPtr)
-    FAIL() << "PropertySetRegistry::read failed\n";
+    FAIL() << "SYCLPropertySetRegistry::read failed\n";
 
   std::string Serialized;
   {
@@ -43,7 +44,7 @@ TEST(PropertySet, IntValuesIO) {
   EXPECT_EQ(Serialized, Content);
 }
 
-TEST(PropertySet, ByteArrayValuesIO) {
+TEST(SYCLPropertySet, ByteArrayValuesIO) {
   // '2' in '2|...' means 'byte array property', Base64-encoded
   // encodes the following byte arrays:
   //   { 8, 0, 0, 0, 0, 0, 0, 0, 0x1 };
@@ -55,10 +56,10 @@ TEST(PropertySet, ByteArrayValuesIO) {
                  "kernel2=2|oAAAAAAAAAAAw///3/wB\n";
   auto MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
-  auto PropSetsPtr = PropertySetRegistry::read(MemBuf.get());
+  auto PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
 
   if (!PropSetsPtr)
-    FAIL() << "PropertySetRegistry::read failed\n";
+    FAIL() << "SYCLPropertySetRegistry::read failed\n";
 
   std::string Serialized;
   {

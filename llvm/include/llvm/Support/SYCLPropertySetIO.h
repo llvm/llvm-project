@@ -1,4 +1,4 @@
-//==-- PropertySetIO.h -- models a sequence of property sets and their I/O -==//
+//=- SYCLPropertySetIO.h -- models a sequence of property sets and their I/O =//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 // Models a sequence of property sets and their input and output operations.
-// PropertyValue set format:
-//   '['<PropertyValue set name>']'
+// SYCLPropertyValue set format:
+//   '['<SYCLPropertyValue set name>']'
 //   <property name>=<property type>'|'<property value>
 //   <property name>=<property type>'|'<property value>
 //   ...
-//   '['<PropertyValue set name>']'
+//   '['<SYCLPropertyValue set name>']'
 //   <property name>=<property type>'|'<property value>
 // where
-//   <PropertyValue set name>, <property name> are strings
+//   <SYCLPropertyValue set name>, <property name> are strings
 //   <property type> - string representation of the property type
 //   <property value> - string representation of the property value.
 //
@@ -29,8 +29,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_PROPERTYSETIO_H
-#define LLVM_SUPPORT_PROPERTYSETIO_H
+#ifndef LLVM_SUPPORT_SYCLPROPERTYSETIO_H
+#define LLVM_SUPPORT_SYCLPROPERTYSETIO_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -44,9 +44,9 @@
 namespace llvm {
 namespace util {
 
-// Represents a property value. PropertyValue name is stored in the encompassing
-// container.
-class PropertyValue {
+// Represents a SYCL property value. SYCLPropertyValue name is stored in the
+// encompassing container.
+class SYCLPropertyValue {
 public:
   // Type of the size of the value. Value size gets serialized along with the
   // value data in some cases for later reading at runtime, so size_t is not
@@ -66,26 +66,27 @@ public:
     return static_cast<Type>(T);
   }
 
-  ~PropertyValue() {}
+  ~SYCLPropertyValue() {}
 
-  PropertyValue() = default;
-  PropertyValue(Type T) : Ty(T) {}
+  SYCLPropertyValue() = default;
+  SYCLPropertyValue(Type T) : Ty(T) {}
 
-  PropertyValue(uint32_t Val) : Ty(UINT32), Val({Val}) {}
-  PropertyValue(const std::byte *Data, SizeTy DataBitSize);
+  SYCLPropertyValue(uint32_t Val) : Ty(UINT32), Val({Val}) {}
+  SYCLPropertyValue(const std::byte *Data, SizeTy DataBitSize);
   template <typename C, typename T = typename C::value_type>
-  PropertyValue(const C &Data)
-      : PropertyValue(reinterpret_cast<const std::byte *>(Data.data()),
-                      Data.size() * sizeof(T) * CHAR_BIT) {}
-  PropertyValue(const llvm::StringRef &Str)
-      : PropertyValue(reinterpret_cast<const std::byte *>(Str.data()),
-                      Str.size() * sizeof(char) * /* bits in one byte */ 8) {}
-  PropertyValue(const PropertyValue &P);
-  PropertyValue(PropertyValue &&P);
+  SYCLPropertyValue(const C &Data)
+      : SYCLPropertyValue(reinterpret_cast<const std::byte *>(Data.data()),
+                          Data.size() * sizeof(T) * CHAR_BIT) {}
+  SYCLPropertyValue(const llvm::StringRef &Str)
+      : SYCLPropertyValue(reinterpret_cast<const std::byte *>(Str.data()),
+                          Str.size() * sizeof(char) *
+                              /* bits in one byte */ 8) {}
+  SYCLPropertyValue(const SYCLPropertyValue &P);
+  SYCLPropertyValue(SYCLPropertyValue &&P);
 
-  PropertyValue &operator=(PropertyValue &&P);
+  SYCLPropertyValue &operator=(SYCLPropertyValue &&P);
 
-  PropertyValue &operator=(const PropertyValue &P);
+  SYCLPropertyValue &operator=(const SYCLPropertyValue &P);
 
   // Get property value as unsigned 32-bit integer
   uint32_t asUint32() const {
@@ -139,14 +140,14 @@ public:
 
   bool isValid() const { return getType() != NONE; }
 
-  // Set property value; the 'T' type must be convertible to a property type tag
+  // Set property value when data type is UINT32_T
   void set(uint32_t V) {
     if (Ty != UINT32)
       llvm_unreachable("invalid type tag for this operation");
     Val = V;
   }
 
-  // Set property value; the 'T' type must be convertible to a property type tag
+  // Set property value when data type is BYTE_ARRAY
   void set(std::byte *V, int DataSize) {
     if (Ty != BYTE_ARRAY)
       llvm_unreachable("invalid type tag for this operation");
@@ -175,19 +176,19 @@ public:
     case BYTE_ARRAY:
       return getRawByteArraySize();
     default:
-      llvm_unreachable_internal("unsupported property type");
+      llvm_unreachable_internal("unsupported SYCL property type");
     }
   }
 
 private:
-  void copy(const PropertyValue &P);
+  void copy(const SYCLPropertyValue &P);
 
   Type Ty = NONE;
   std::variant<uint32_t, std::byte *> Val;
 };
 
-/// Structure for specialization of DenseMap in PropertySetRegistry.
-struct PropertySetKeyInfo {
+/// Structure for specialization of DenseMap in SYCLPropertySetRegistry.
+struct SYCLPropertySetKeyInfo {
   static unsigned getHashValue(const SmallString<16> &K) { return xxHash64(K); }
 
   static SmallString<16> getEmptyKey() { return SmallString<16>(""); }
@@ -197,17 +198,19 @@ struct PropertySetKeyInfo {
   static bool isEqual(StringRef L, StringRef R) { return L == R; }
 };
 
-using PropertyMapTy = DenseMap<SmallString<16>, unsigned, PropertySetKeyInfo>;
+using SYCLPropertyMapTy =
+    DenseMap<SmallString<16>, unsigned, SYCLPropertySetKeyInfo>;
 /// A property set. Preserves insertion order when iterating elements.
-using PropertySet = MapVector<SmallString<16>, PropertyValue, PropertyMapTy>;
+using SYCLPropertySet =
+    MapVector<SmallString<16>, SYCLPropertyValue, SYCLPropertyMapTy>;
 
 /// A registry of property sets. Maps a property set name to its
 /// content.
 ///
 /// The order of keys is preserved and corresponds to the order of insertion.
-class PropertySetRegistry {
+class SYCLPropertySetRegistry {
 public:
-  using MapTy = MapVector<SmallString<16>, PropertySet, PropertyMapTy>;
+  using MapTy = MapVector<SmallString<16>, SYCLPropertySet, SYCLPropertyMapTy>;
 
   // Specific property category names used by tools.
   static constexpr char SYCL_SPECIALIZATION_CONSTANTS[] =
@@ -234,7 +237,7 @@ public:
     auto &PropSet = PropSetMap[Category];
 
     for (const auto &[PropName, PropVal] : Props)
-      PropSet.insert_or_assign(PropName, PropertyValue(PropVal));
+      PropSet.insert_or_assign(PropName, SYCLPropertyValue(PropVal));
   }
 
   /// Adds the given \p PropVal with the given \p PropName into the given \p
@@ -242,11 +245,11 @@ public:
   template <typename T>
   void add(StringRef Category, StringRef PropName, const T &PropVal) {
     auto &PropSet = PropSetMap[Category];
-    PropSet.insert({PropName, PropertyValue(PropVal)});
+    PropSet.insert({PropName, SYCLPropertyValue(PropVal)});
   }
 
   /// Parses from the given \p Buf a property set registry.
-  static Expected<std::unique_ptr<PropertySetRegistry>>
+  static Expected<std::unique_ptr<SYCLPropertySetRegistry>>
   read(const MemoryBuffer *Buf);
 
   /// Dumps the property set registry to the given \p Out stream.
@@ -256,7 +259,7 @@ public:
   MapTy::const_iterator end() const { return PropSetMap.end(); }
 
   /// Retrieves a property set with given \p Name .
-  PropertySet &operator[](StringRef Name) { return PropSetMap[Name]; }
+  SYCLPropertySet &operator[](StringRef Name) { return PropSetMap[Name]; }
   /// Constant access to the underlying map.
   const MapTy &getPropSets() const { return PropSetMap; }
 
@@ -268,4 +271,4 @@ private:
 
 } // namespace llvm
 
-#endif // #define LLVM_SUPPORT_PROPERTYSETIO_H
+#endif // #define LLVM_SUPPORT_SYCLPROPERTYSETIO_H
