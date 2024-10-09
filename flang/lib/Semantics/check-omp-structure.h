@@ -141,6 +141,7 @@ public:
 
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
+  bool IsVariableListItem(const Symbol &sym);
   bool IsExtendedListItem(const Symbol &sym);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,

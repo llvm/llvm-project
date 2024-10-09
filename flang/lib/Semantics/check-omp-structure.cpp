@@ -200,8 +200,12 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   return CheckAllowed(clause);
 }
 
+bool OmpStructureChecker::IsVariableListItem(const Symbol &sym) {
+  return evaluate::IsVariable(sym) || sym.attrs().test(Attr::POINTER);
+}
+
 bool OmpStructureChecker::IsExtendedListItem(const Symbol &sym) {
-  return evaluate::IsVariable(sym) || sym.IsSubprogram();
+  return IsVariableListItem(sym) || sym.IsSubprogram();
 }
 
 bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
@@ -2351,7 +2355,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[sym, source] : symbols) {
-      if (!evaluate::IsVariable(sym)) {
+      if (!IsVariableListItem(*sym)) {
         deferredNonVariables_.insert({sym, source});
       }
     }
@@ -3428,7 +3432,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
   for (const auto &[sym, source] : symbols) {
-    if (!evaluate::IsVariable(*sym)) {
+    if (!IsVariableListItem(*sym)) {
       context_.SayWithDecl(
           *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
     }
