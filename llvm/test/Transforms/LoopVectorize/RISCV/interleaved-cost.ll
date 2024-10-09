@@ -6,26 +6,26 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 entry:
   br label %for.body
 ; CHECK-LABEL: Checking a loop in 'i8_factor_2'
-; CHECK: Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 2 for VF 16: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 2 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 4 for VF 32: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 4 for VF 32: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 2 for VF vscale x 1: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 2 for VF vscale x 1: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 2 for VF vscale x 2: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 2 for VF vscale x 2: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 2 for VF vscale x 4: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 2 for VF vscale x 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 2 for VF vscale x 8: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 2 for VF vscale x 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
-; CHECK: Cost of 4 for VF vscale x 16: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
-; CHECK: Cost of 4 for VF vscale x 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 3 for VF vscale x 1: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 3 for VF vscale x 1: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 3 for VF vscale x 2: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 3 for VF vscale x 2: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 3 for VF vscale x 4: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 3 for VF vscale x 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 4 for VF vscale x 8: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 4 for VF vscale x 8: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
+; CHECK: Cost of 8 for VF vscale x 16: INTERLEAVE-GROUP with factor 2 at %l0, ir<%p0>
+; CHECK: Cost of 8 for VF vscale x 16: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.2, ptr %data, i64 %i, i32 0
@@ -49,16 +49,16 @@ define void @i8_factor_3(ptr %data, i64 %n) {
 entry:
   br label %for.body
 ; CHECK-LABEL: Checking a loop in 'i8_factor_3'
-; CHECK: Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
-; CHECK: Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
-; CHECK: Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
-; CHECK: Cost of 3 for VF 16: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 3 for VF 16: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
-; CHECK: Cost of 6 for VF 32: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
-; CHECK: Cost of 6 for VF 32: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; CHECK: Cost of 4 for VF 2: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; CHECK: Cost of 4 for VF 2: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; CHECK: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; CHECK: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; CHECK: Cost of 5 for VF 8: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; CHECK: Cost of 5 for VF 8: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; CHECK: Cost of 7 for VF 16: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; CHECK: Cost of 7 for VF 16: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
+; CHECK: Cost of 14 for VF 32: INTERLEAVE-GROUP with factor 3 at %l0, ir<%p0>
+; CHECK: Cost of 14 for VF 32: INTERLEAVE-GROUP with factor 3 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.3, ptr %data, i64 %i, i32 0
@@ -86,16 +86,16 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 entry:
   br label %for.body
 ; CHECK-LABEL: Checking a loop in 'i8_factor_4'
-; CHECK: Cost of 4 for VF 2: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 4 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
-; CHECK: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
-; CHECK: Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 4 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
-; CHECK: Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
-; CHECK: Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
-; CHECK: Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; CHECK: Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; CHECK: Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; CHECK: Cost of 5 for VF 4: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; CHECK: Cost of 5 for VF 4: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; CHECK: Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; CHECK: Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; CHECK: Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; CHECK: Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
+; CHECK: Cost of 16 for VF 32: INTERLEAVE-GROUP with factor 4 at %l0, ir<%p0>
+; CHECK: Cost of 16 for VF 32: INTERLEAVE-GROUP with factor 4 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.4, ptr %data, i64 %i, i32 0
@@ -127,14 +127,14 @@ define void @i8_factor_5(ptr %data, i64 %n) {
 entry:
   br label %for.body
 ; CHECK-LABEL: Checking a loop in 'i8_factor_5'
-; CHECK: Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 5 at %l0, ir<%p0>
-; CHECK: Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%p0>
-; CHECK: Cost of 5 for VF 4: INTERLEAVE-GROUP with factor 5 at %l0, ir<%p0>
-; CHECK: Cost of 5 for VF 4: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%p0>
-; CHECK: Cost of 5 for VF 8: INTERLEAVE-GROUP with factor 5 at %l0, ir<%p0>
-; CHECK: Cost of 5 for VF 8: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%p0>
-; CHECK: Cost of 5 for VF 16: INTERLEAVE-GROUP with factor 5 at %l0, ir<%p0>
-; CHECK: Cost of 5 for VF 16: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%p0>
+; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 5 at %l0, ir<%p0>
+; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%p0>
+; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 5 at %l0, ir<%p0>
+; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%p0>
+; CHECK: Cost of 9 for VF 8: INTERLEAVE-GROUP with factor 5 at %l0, ir<%p0>
+; CHECK: Cost of 9 for VF 8: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%p0>
+; CHECK: Cost of 13 for VF 16: INTERLEAVE-GROUP with factor 5 at %l0, ir<%p0>
+; CHECK: Cost of 13 for VF 16: INTERLEAVE-GROUP with factor 5 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.5, ptr %data, i64 %i, i32 0
@@ -170,14 +170,14 @@ define void @i8_factor_6(ptr %data, i64 %n) {
 entry:
   br label %for.body
 ; CHECK-LABEL: Checking a loop in 'i8_factor_6'
-; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 6 at %l0, ir<%p0>
-; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%p0>
-; CHECK: Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 6 at %l0, ir<%p0>
-; CHECK: Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%p0>
-; CHECK: Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 6 at %l0, ir<%p0>
-; CHECK: Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%p0>
-; CHECK: Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 6 at %l0, ir<%p0>
-; CHECK: Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%p0>
+; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 6 at %l0, ir<%p0>
+; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%p0>
+; CHECK: Cost of 8 for VF 4: INTERLEAVE-GROUP with factor 6 at %l0, ir<%p0>
+; CHECK: Cost of 8 for VF 4: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%p0>
+; CHECK: Cost of 10 for VF 8: INTERLEAVE-GROUP with factor 6 at %l0, ir<%p0>
+; CHECK: Cost of 10 for VF 8: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%p0>
+; CHECK: Cost of 14 for VF 16: INTERLEAVE-GROUP with factor 6 at %l0, ir<%p0>
+; CHECK: Cost of 14 for VF 16: INTERLEAVE-GROUP with factor 6 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.6, ptr %data, i64 %i, i32 0
@@ -217,14 +217,14 @@ define void @i8_factor_7(ptr %data, i64 %n) {
 entry:
   br label %for.body
 ; CHECK-LABEL: Checking a loop in 'i8_factor_7'
-; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 7 at %l0, ir<%p0>
-; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%p0>
-; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 7 at %l0, ir<%p0>
-; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%p0>
-; CHECK: Cost of 7 for VF 8: INTERLEAVE-GROUP with factor 7 at %l0, ir<%p0>
-; CHECK: Cost of 7 for VF 8: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%p0>
-; CHECK: Cost of 7 for VF 16: INTERLEAVE-GROUP with factor 7 at %l0, ir<%p0>
-; CHECK: Cost of 7 for VF 16: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%p0>
+; CHECK: Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 7 at %l0, ir<%p0>
+; CHECK: Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%p0>
+; CHECK: Cost of 9 for VF 4: INTERLEAVE-GROUP with factor 7 at %l0, ir<%p0>
+; CHECK: Cost of 9 for VF 4: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%p0>
+; CHECK: Cost of 11 for VF 8: INTERLEAVE-GROUP with factor 7 at %l0, ir<%p0>
+; CHECK: Cost of 11 for VF 8: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%p0>
+; CHECK: Cost of 15 for VF 16: INTERLEAVE-GROUP with factor 7 at %l0, ir<%p0>
+; CHECK: Cost of 15 for VF 16: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.7, ptr %data, i64 %i, i32 0
@@ -268,14 +268,14 @@ define void @i8_factor_8(ptr %data, i64 %n) {
 entry:
   br label %for.body
 ; CHECK-LABEL: Checking a loop in 'i8_factor_8'
-; CHECK: Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 8 at %l0, ir<%p0>
-; CHECK: Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%p0>
-; CHECK: Cost of 8 for VF 4: INTERLEAVE-GROUP with factor 8 at %l0, ir<%p0>
-; CHECK: Cost of 8 for VF 4: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%p0>
-; CHECK: Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 8 at %l0, ir<%p0>
-; CHECK: Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%p0>
-; CHECK: Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 8 at %l0, ir<%p0>
-; CHECK: Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%p0>
+; CHECK: Cost of 9 for VF 2: INTERLEAVE-GROUP with factor 8 at %l0, ir<%p0>
+; CHECK: Cost of 9 for VF 2: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%p0>
+; CHECK: Cost of 10 for VF 4: INTERLEAVE-GROUP with factor 8 at %l0, ir<%p0>
+; CHECK: Cost of 10 for VF 4: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%p0>
+; CHECK: Cost of 12 for VF 8: INTERLEAVE-GROUP with factor 8 at %l0, ir<%p0>
+; CHECK: Cost of 12 for VF 8: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%p0>
+; CHECK: Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 8 at %l0, ir<%p0>
+; CHECK: Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%p0>
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %p0 = getelementptr inbounds %i8.8, ptr %data, i64 %i, i32 0
