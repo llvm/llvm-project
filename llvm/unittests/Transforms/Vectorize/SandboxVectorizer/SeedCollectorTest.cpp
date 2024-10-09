@@ -196,3 +196,66 @@ bb:
   sandboxir::LoadSeedBundle LB(std::move(Loads), SE);
   EXPECT_THAT(LB, testing::ElementsAre(L0, L1, L2, L3));
 }
+
+TEST_F(SeedBundleTest, Container) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptrA, float %val, ptr %ptrB) {
+bb:
+  %gepA0 = getelementptr float, ptr %ptrA, i32 0
+  %gepA1 = getelementptr float, ptr %ptrA, i32 1
+  %gepB0 = getelementptr float, ptr %ptrB, i32 0
+  %gepB1 = getelementptr float, ptr %ptrB, i32 1
+  store float %val, ptr %gepA0
+  store float %val, ptr %gepA1
+  store float %val, ptr %gepB0
+  store float %val, ptr %gepB1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = std::next(BB.begin(), 4);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+  sandboxir::SeedContainer SC(SE);
+  // Check begin() end() when empty.
+  EXPECT_EQ(SC.begin(), SC.end());
+
+  SC.insert(S0);
+  SC.insert(S1);
+  SC.insert(S2);
+  SC.insert(S3);
+  unsigned Cnt = 0;
+  SmallVector<sandboxir::SeedBundle *> Bndls;
+  for (auto &SeedBndl : SC) {
+    EXPECT_EQ(SeedBndl.size(), 2u);
+    ++Cnt;
+    Bndls.push_back(&SeedBndl);
+  }
+  EXPECT_EQ(Cnt, 2u);
+
+  // Mark them "Used" to check if operator++ skips them in the next loop.
+  for (auto *SeedBndl : Bndls)
+    for (auto Lane : seq<unsigned>(SeedBndl->size()))
+      SeedBndl->setUsed(Lane);
+  // Check if iterator::operator++ skips used lanes.
+  Cnt = 0;
+  for (auto &SeedBndl : SC) {
+    (void)SeedBndl;
+    ++Cnt;
+  }
+  EXPECT_EQ(Cnt, 0u);
+}

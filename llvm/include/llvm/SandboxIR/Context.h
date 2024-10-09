@@ -66,6 +66,7 @@ protected:
   Value *getOrCreateValue(llvm::Value *LLVMV) {
     return getOrCreateValueInternal(LLVMV, 0);
   }
+  friend class Utils; // For getMemoryBase
   /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
   Constant *getOrCreateConstant(llvm::Constant *LLVMC);
   friend class Utils; // For getMemoryBase

@@ -54,6 +54,10 @@ public:
     NumUnusedBits += Utils::getNumBits(I);
   }
 
+  virtual void insert(Instruction *I, ScalarEvolution &SE) {
+    assert("Subclasses must override this function.");
+  }
+
   unsigned getFirstUnusedElementIdx() const {
     for (unsigned ElmIdx : seq<unsigned>(0, Seeds.size()))
       if (!isUsed(ElmIdx))
@@ -95,6 +99,9 @@ public:
   /// slice will have a total number of bits that is a power of 2.
   MutableArrayRef<Instruction *>
   getSlice(unsigned StartIdx, unsigned MaxVecRegBits, bool ForcePowOf2);
+
+  /// \Returns the number of seed elements in the bundle.
+  std::size_t size() const { return Seeds.size(); }
 
 protected:
   SmallVector<Instruction *> Seeds;
@@ -148,7 +155,7 @@ public:
                   "Expected LoadInst or StoreInst!");
     assert(isa<LoadOrStoreT>(MemI) && "Expected Load or Store!");
   }
-  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) {
+  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
     assert(isa<LoadOrStoreT>(I) && "Expected a Store or a Load!");
     auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
       return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
@@ -162,5 +169,108 @@ public:
 using StoreSeedBundle = MemSeedBundle<sandboxir::StoreInst>;
 using LoadSeedBundle = MemSeedBundle<sandboxir::LoadInst>;
 
+/// Class to conveniently track Seeds within Seedbundles. Saves newly collected
+/// seeds in the proper bundle. Supports constant-time removal, as seeds and
+/// entire bundles are vectorized and marked used to signify removal. Iterators
+/// skip bundles that are completely used.
+class SeedContainer {
+  // Use the same key for different seeds if they are the same type and
+  // reference the same pointer, even if at different offsets. This directs
+  // potentially vectorizable seeds into the same bundle.
+  using KeyT = std::tuple<Value *, Type *, sandboxir::Instruction::Opcode>;
+  // Trying to vectorize too many seeds at once is expensive in
+  // compilation-time. Use a vector of bundles (all with the same key) to
+  // partition the candidate set into more manageable units. Each bundle is
+  // size-limited by sbvec-seed-bundle-size-limit.  TODO: There might be a
+  // better way to divide these than by simple insertion order.
+  using ValT = SmallVector<std::unique_ptr<SeedBundle>>;
+  using BundleMapT = MapVector<KeyT, ValT>;
+  // Map from {pointer, Type, Opcode} to a vector of bundles.
+  BundleMapT Bundles;
+  // Allows finding a particular Instruction's bundle.
+  DenseMap<sandboxir::Instruction *, SeedBundle *> SeedLookupMap;
+
+  ScalarEvolution &SE;
+
+  template <typename LoadOrStoreT> KeyT getKey(LoadOrStoreT *LSI) const;
+
+public:
+  SeedContainer(ScalarEvolution &SE) : SE(SE) {}
+
+  class iterator {
+    BundleMapT *Map = nullptr;
+    BundleMapT::iterator MapIt;
+    ValT *Vec = nullptr;
+    size_t VecIdx;
+
+  public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = SeedBundle;
+    using pointer = value_type *;
+    using reference = value_type &;
+    using iterator_category = std::input_iterator_tag;
+
+    iterator(BundleMapT &Map, BundleMapT::iterator MapIt, ValT *Vec, int VecIdx)
+        : Map(&Map), MapIt(MapIt), Vec(Vec), VecIdx(VecIdx) {}
+    value_type &operator*() {
+      assert(Vec != nullptr && "Already at end!");
+      return *(*Vec)[VecIdx];
+    }
+    // Skip completely used bundles by repeatedly calling operator++().
+    void skipUsed() {
+      while (Vec && VecIdx < Vec->size() && this->operator*().allUsed())
+        ++(*this);
+    }
+    iterator &operator++() {
+      assert(VecIdx >= 0 && "Already at end!");
+      ++VecIdx;
+      if (VecIdx >= Vec->size()) {
+        assert(MapIt != Map->end() && "Already at end!");
+        VecIdx = 0;
+        ++MapIt;
+        if (MapIt != Map->end())
+          Vec = &MapIt->second;
+        else {
+          Vec = nullptr;
+        }
+      }
+      skipUsed();
+      return *this;
+    }
+    iterator operator++(int) {
+      auto Copy = *this;
+      ++(*this);
+      return Copy;
+    }
+    bool operator==(const iterator &Other) const {
+      assert(Map == Other.Map && "Iterator of different objects!");
+      return MapIt == Other.MapIt && VecIdx == Other.VecIdx;
+    }
+    bool operator!=(const iterator &Other) const { return !(*this == Other); }
+  };
+  using const_iterator = BundleMapT::const_iterator;
+  template <typename LoadOrStoreT> void insert(LoadOrStoreT *LSI);
+  // To support constant-time erase, these just mark the element used, rather
+  // than actually removing them from the bundle.
+  bool erase(sandboxir::Instruction *I);
+  bool erase(const KeyT &Key) { return Bundles.erase(Key); }
+  iterator begin() {
+    if (Bundles.empty())
+      return end();
+    auto BeginIt =
+        iterator(Bundles, Bundles.begin(), &Bundles.begin()->second, 0);
+    BeginIt.skipUsed();
+    return BeginIt;
+  }
+  iterator end() { return iterator(Bundles, Bundles.end(), nullptr, 0); }
+  unsigned size() const { return Bundles.size(); }
+
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif // NDEBUG
+};
+
 } // namespace llvm::sandboxir
+
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SEEDCOLLECTOR_H
