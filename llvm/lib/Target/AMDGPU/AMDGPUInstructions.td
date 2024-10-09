@@ -521,6 +521,27 @@ def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i64;
 }
+
+def atomic_load_zext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_zext node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
+def atomic_load_sext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_sext node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
+def atomic_load_zext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_zext node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
+
+def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
+
 } // End let AddressSpaces
 } // End foreach as
 
