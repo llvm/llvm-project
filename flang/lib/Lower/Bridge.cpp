@@ -2012,6 +2012,7 @@ private:
     IncrementLoopNestInfo incrementLoopNestInfo;
     const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
     bool infiniteLoop = !loopControl.has_value();
+    bool isConcurrent = false;
     if (infiniteLoop) {
       assert(unstructuredContext && "infinite loop must be unstructured");
       startBlock(headerBlock);
@@ -2042,6 +2043,7 @@ private:
           std::get_if<Fortran::parser::LoopControl::Concurrent>(
               &loopControl->u);
       assert(concurrent && "invalid DO loop variant");
+      isConcurrent = true;
       incrementLoopNestInfo = getConcurrentControl(
           std::get<Fortran::parser::ConcurrentHeader>(concurrent->t),
           std::get<std::list<Fortran::parser::LocalitySpec>>(concurrent->t));
@@ -2070,7 +2072,8 @@ private:
 
     // Increment loop begin code. (Infinite/while code was already generated.)
     if (!infiniteLoop && !whileCondition)
-      genFIRIncrementLoopBegin(incrementLoopNestInfo, doStmtEval.dirs);
+      genFIRIncrementLoopBegin(incrementLoopNestInfo, doStmtEval.dirs,
+                               isConcurrent);
 
     // Loop body code.
     auto iter = eval.getNestedEvaluations().begin();
@@ -2128,12 +2131,26 @@ private:
   /// Generate FIR to begin a structured or unstructured increment loop nest.
   void genFIRIncrementLoopBegin(
       IncrementLoopNestInfo &incrementLoopNestInfo,
-      llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
+      llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs,
+      bool isConcurrent) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
+    Fortran::lower::pft::Evaluation &eval = getEval();
+    Fortran::lower::pft::Evaluation *outermostEval = nullptr;
+    if (isConcurrent) {
+      outermostEval = &eval;
+      while (outermostEval->parentConstruct) {
+        outermostEval = outermostEval->parentConstruct;
+      }
+    }
+    mlir::OpBuilder::InsertPoint insertPt;
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
       info.loopVariable =
           genLoopVariableAddress(loc, *info.loopVariableSym, info.isUnordered);
+      if (outermostEval && outermostEval->op) {
+        insertPt = builder->saveInsertionPoint();
+        builder->setInsertionPoint(outermostEval->op);
+      }
       mlir::Value lowerValue = genControlValue(info.lowerExpr, info);
       mlir::Value upperValue = genControlValue(info.upperExpr, info);
       bool isConst = true;
@@ -2144,7 +2161,8 @@ private:
         info.stepVariable = builder->createTemporary(loc, stepValue.getType());
         builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
       }
-
+      if (outermostEval && outermostEval->op)
+        builder->restoreInsertionPoint(insertPt);
       // Structured loop - generate fir.do_loop.
       if (info.isStructured()) {
         mlir::Type loopVarType = info.getLoopVariableType();
@@ -2179,6 +2197,7 @@ private:
           builder->setInsertionPointToStart(info.doLoop.getBody());
           loopValue = info.doLoop.getRegionIterArgs()[0];
         }
+        eval.op = info.doLoop;
         // Update the loop variable value in case it has non-index references.
         builder->create<fir::StoreOp>(loc, loopValue, info.loopVariable);
         if (info.maskExpr) {
