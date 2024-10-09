@@ -37,9 +37,11 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/OptionParsing.h"
@@ -2542,6 +2544,8 @@ struct AsyncUnwindRegisterNumbers {
   /// frames below us as they need to react differently. There is no good way to
   /// expose this, so we set another dummy register to communicate this state.
   uint32_t dummy_regnum;
+
+  RegisterKind GetRegisterKind() const { return lldb::eRegisterKindDWARF; }
 };
 } // namespace
 
@@ -2584,37 +2588,148 @@ lldb::addr_t SwiftLanguageRuntime::GetAsyncContext(RegisterContext *regctx) {
   return LLDB_INVALID_ADDRESS;
 }
 
-/// Creates an expression accessing *(fp - 8) or **(fp - 8) if
-/// `with_double_deref` is true. This is only valid for x86_64 or aarch64.
-llvm::ArrayRef<uint8_t>
-GetAsyncRegFromFramePointerDWARFExpr(llvm::Triple::ArchType triple,
-                                     bool with_double_deref) {
-  assert(triple == llvm::Triple::x86_64 || triple == llvm::Triple::aarch64);
+/// Functional wrapper to read a register as an address.
+static llvm::Expected<addr_t> ReadRegisterAsAddress(RegisterContext &regctx,
+                                                    RegisterKind regkind,
+                                                    unsigned regnum) {
+  unsigned lldb_regnum =
+      regctx.ConvertRegisterKindToRegisterNumber(regkind, regnum);
+  auto reg = regctx.ReadRegisterAsUnsigned(lldb_regnum, LLDB_INVALID_ADDRESS);
+  if (reg != LLDB_INVALID_ADDRESS)
+    return reg;
+  return llvm::createStringError(
+      "SwiftLanguageRuntime: failed to read register from regctx");
+}
 
-  // These expressions must have static storage, due to how UnwindPlan::Row
-  // works.
-  static const uint8_t g_cfa_dwarf_expression_x86_64[] = {
-      llvm::dwarf::DW_OP_breg6, // DW_OP_breg6, register 6 == rbp
-      0x78,                     //    sleb128 -8 (ptrsize)
-      llvm::dwarf::DW_OP_deref,
-      llvm::dwarf::DW_OP_deref,
-  };
-  static const uint8_t g_cfa_dwarf_expression_arm64[] = {
-      llvm::dwarf::DW_OP_breg29, // DW_OP_breg29, register 29 == fp
-      0x78,                      //    sleb128 -8 (ptrsize)
-      llvm::dwarf::DW_OP_deref,
-      llvm::dwarf::DW_OP_deref,
-  };
+/// Functional wrapper to read a pointer from process memory at `addr +
+/// offset`.
+static llvm::Expected<addr_t> ReadPtrFromAddr(Process &process, addr_t addr,
+                                              int offset = 0) {
+  Status error;
+  addr_t ptr = process.ReadPointerFromMemory(addr + offset, error);
+  if (ptr != LLDB_INVALID_ADDRESS)
+    return ptr;
+  return llvm::createStringError("SwiftLanguageRuntime: Failed to read ptr "
+                                 "from memory address 0x%8.8" PRIx64
+                                 " Error was %s",
+                                 addr + offset, error.AsCString());
+}
 
-  const uint8_t *expr = triple == llvm::Triple::x86_64
-                            ? g_cfa_dwarf_expression_x86_64
-                            : g_cfa_dwarf_expression_arm64;
-  auto size = triple == llvm::Triple::x86_64
-                  ? sizeof(g_cfa_dwarf_expression_x86_64)
-                  : sizeof(g_cfa_dwarf_expression_arm64);
-  if (with_double_deref)
-    return llvm::ArrayRef<uint8_t>(expr, size);
-  return llvm::ArrayRef<uint8_t>(expr, size - 1);
+/// Computes the Canonical Frame Address (CFA) by converting the abstract
+/// location of UnwindPlan::Row::FAValue into a concrete address. This is a
+/// simplified version of the methods in RegisterContextUnwind, since plumbing
+/// access to those here would be challenging.
+static llvm::Expected<addr_t> GetCFA(Process &process, RegisterContext &regctx,
+                                     RegisterKind regkind,
+                                     UnwindPlan::Row::FAValue cfa_loc) {
+  using ValueType = UnwindPlan::Row::FAValue::ValueType;
+  switch (cfa_loc.GetValueType()) {
+  case ValueType::isRegisterPlusOffset: {
+    unsigned regnum = cfa_loc.GetRegisterNumber();
+    if (llvm::Expected<addr_t> regvalue =
+            ReadRegisterAsAddress(regctx, regkind, regnum))
+      return *regvalue + cfa_loc.GetOffset();
+    else
+      return regvalue;
+  }
+  case ValueType::isConstant:
+  case ValueType::isDWARFExpression:
+  case ValueType::isRaSearch:
+  case ValueType::isRegisterDereferenced:
+  case ValueType::unspecified:
+    break;
+  }
+  return llvm::createStringError(
+      "SwiftLanguageRuntime: Unsupported FA location type = %d",
+      cfa_loc.GetValueType());
+}
+
+/// Attempts to use UnwindPlans that inspect assembly to recover the entry value
+/// of the async context register. This is a simplified version of the methods
+/// in RegisterContextUnwind, since plumbing access to those here would be
+/// challenging.
+static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
+    SymbolContext &sc, Process &process, Address pc, Address func_start_addr,
+    RegisterContext &regctx, AsyncUnwindRegisterNumbers regnums) {
+  FuncUnwindersSP unwinders =
+      pc.GetModule()->GetUnwindTable().GetFuncUnwindersContainingAddress(pc,
+                                                                         sc);
+  if (!unwinders)
+    return llvm::createStringError("SwiftLanguageRuntime: Failed to find "
+                                   "function unwinder at address 0x%8.8" PRIx64,
+                                   pc.GetFileAddress());
+
+  Target &target = process.GetTarget();
+  UnwindPlanSP unwind_plan =
+      unwinders->GetUnwindPlanAtNonCallSite(target, regctx.GetThread());
+  if (!unwind_plan)
+    return llvm::createStringError(
+        "SwiftLanguageRuntime: Failed to find non call site unwind plan at "
+        "address 0x%8.8" PRIx64,
+        pc.GetFileAddress());
+
+  const RegisterKind unwind_regkind = unwind_plan->GetRegisterKind();
+  UnwindPlan::RowSP row = unwind_plan->GetRowForFunctionOffset(
+      pc.GetFileAddress() - func_start_addr.GetFileAddress());
+
+  // To request info about a register from the unwind plan, the register must
+  // be in the same domain as the unwind plan's registers.
+  uint32_t async_reg_unwind_regdomain;
+  if (!regctx.ConvertBetweenRegisterKinds(
+          regnums.GetRegisterKind(), regnums.async_ctx_regnum, unwind_regkind,
+          async_reg_unwind_regdomain)) {
+    // This should never happen.
+    // If asserts are disabled, return an error to avoid creating an invalid
+    // unwind plan.
+    auto error_msg = "SwiftLanguageRuntime: Failed to convert register domains";
+    llvm_unreachable(error_msg);
+    return llvm::createStringError(error_msg);
+  }
+
+  // If the plan doesn't have information about the async register, we can use
+  // its current value, as this is a callee saved register.
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+  if (!row->GetRegisterInfo(async_reg_unwind_regdomain, regloc))
+    return ReadRegisterAsAddress(regctx, regnums.GetRegisterKind(),
+                                 regnums.async_ctx_regnum);
+
+  // Handle the few abstract locations we are likely to encounter.
+  using RestoreType = UnwindPlan::Row::AbstractRegisterLocation::RestoreType;
+  RestoreType loctype = regloc.GetLocationType();
+  switch (loctype) {
+  case RestoreType::same:
+    return ReadRegisterAsAddress(regctx, regnums.GetRegisterKind(),
+                                 regnums.async_ctx_regnum);
+  case RestoreType::inOtherRegister: {
+    unsigned regnum = regloc.GetRegisterNumber();
+    return ReadRegisterAsAddress(regctx, unwind_regkind, regnum);
+  }
+  case RestoreType::atCFAPlusOffset: {
+    llvm::Expected<addr_t> cfa =
+        GetCFA(process, regctx, unwind_regkind, row->GetCFAValue());
+    if (!cfa)
+      return cfa.takeError();
+    return ReadPtrFromAddr(process, *cfa, regloc.GetOffset());
+  }
+  case RestoreType::isCFAPlusOffset: {
+    if (llvm::Expected<addr_t> cfa =
+            GetCFA(process, regctx, unwind_regkind, row->GetCFAValue()))
+      return *cfa + regloc.GetOffset();
+    else
+      return cfa;
+  }
+  case RestoreType::isConstant:
+    return regloc.GetConstant();
+  case RestoreType::unspecified:
+  case RestoreType::undefined:
+  case RestoreType::atAFAPlusOffset:
+  case RestoreType::isAFAPlusOffset:
+  case RestoreType::isDWARFExpression:
+  case RestoreType::atDWARFExpression:
+    break;
+  }
+  return llvm::createStringError(
+      "SwiftLanguageRuntime: Unsupported register location type = %d", loctype);
 }
 
 // Examine the register state and detect the transition from a real
@@ -2625,6 +2740,11 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
                                            RegisterContext *regctx,
                                            bool &behaves_like_zeroth_frame) {
   LLDB_SCOPED_TIMER();
+  auto log_expected = [](llvm::Error error) {
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOG_ERROR(log, std::move(error), "{0}");
+    return UnwindPlanSP();
+  };
 
   Target &target(process_sp->GetTarget());
   auto arch = target.GetArchitecture();
@@ -2644,12 +2764,6 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
     return UnwindPlanSP();
   }
 
-  // If we're in the prologue of a function, don't provide a Swift async
-  // unwind plan.  We can be tricked by unmodified caller-registers that
-  // make this look like an async frame when this is a standard ABI function
-  // call, and the parent is the async frame.
-  // This assumes that the frame pointer register will be modified in the
-  // prologue.
   Address pc;
   pc.SetLoadAddress(regctx->GetPC(), &target);
   SymbolContext sc;
@@ -2659,111 +2773,58 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
       return UnwindPlanSP();
 
   Address func_start_addr;
-  uint32_t prologue_size;
   ConstString mangled_name;
   if (sc.function) {
     func_start_addr = sc.function->GetAddressRange().GetBaseAddress();
-    prologue_size = sc.function->GetPrologueByteSize();
     mangled_name = sc.function->GetMangled().GetMangledName();
   } else if (sc.symbol) {
     func_start_addr = sc.symbol->GetAddress();
-    prologue_size = sc.symbol->GetPrologueByteSize();
     mangled_name = sc.symbol->GetMangled().GetMangledName();
   } else {
     return UnwindPlanSP();
   }
 
-  AddressRange prologue_range(func_start_addr, prologue_size);
-  bool in_prologue = (func_start_addr == pc ||
-                      prologue_range.ContainsLoadAddress(pc, &target));
+  if (!IsAnySwiftAsyncFunctionSymbol(mangled_name.GetStringRef()))
+    return UnwindPlanSP();
 
-  if (in_prologue) {
-    if (!IsAnySwiftAsyncFunctionSymbol(mangled_name.GetStringRef()))
-      return UnwindPlanSP();
-  } else {
-    addr_t saved_fp = LLDB_INVALID_ADDRESS;
-    Status error;
-    if (!process_sp->ReadMemory(fp, &saved_fp, 8, error))
-      return UnwindPlanSP();
-
-    // Get the high nibble of the dreferenced fp; if the 60th bit is set,
-    // this is the transition to a swift async AsyncContext chain.
-    if ((saved_fp & (0xfULL << 60)) >> 60 != 1)
-      return UnwindPlanSP();
-  }
-
-  // The coroutine funclets split from an async function have 2 different ABIs:
-  //  - Async suspend partial functions and the first funclet get their async
-  //    context directly in the async register.
-  //  - Async await resume partial functions take their context indirectly, it
-  //    needs to be dereferenced to get the actual function's context.
-  // The debug info for locals reflects this difference, so our unwinding of the
-  // context register needs to reflect it too.
+  // The async register contains, at the start of the funclet:
+  // 1. The async context of the async function that just finished executing,
+  // for await resume ("Q") funclets ("indirect context").
+  // 2. The async context for the currently executing async function, for all
+  // other funclets ("Y" and "Yx" funclets, where "x" is a number).
   bool indirect_context =
       IsSwiftAsyncAwaitResumePartialFunctionSymbol(mangled_name.GetStringRef());
+
+  llvm::Expected<addr_t> async_reg = ReadAsyncContextRegisterFromUnwind(
+      sc, *process_sp, pc, func_start_addr, *regctx, *regnums);
+  if (!async_reg)
+    return log_expected(async_reg.takeError());
+  llvm::Expected<addr_t> async_ctx =
+      indirect_context ? ReadPtrFromAddr(*m_process, *async_reg) : *async_reg;
+  if (!async_ctx)
+    return log_expected(async_ctx.takeError());
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
   const int32_t ptr_size = 8;
   row->SetOffset(0);
 
-  if (in_prologue) {
-    if (indirect_context)
-      row->GetCFAValue().SetIsRegisterDereferenced(regnums->async_ctx_regnum);
-    else
-      row->GetCFAValue().SetIsRegisterPlusOffset(regnums->async_ctx_regnum, 0);
-  } else {
-    // In indirect funclets, dereferencing (fp-8) once produces the CFA of the
-    // frame above. Dereferencing twice will produce the current frame's CFA.
-    bool with_double_deref = indirect_context;
-    llvm::ArrayRef<uint8_t> expr = GetAsyncRegFromFramePointerDWARFExpr(
-        arch.GetMachine(), with_double_deref);
-    row->GetCFAValue().SetIsDWARFExpression(expr.data(), expr.size());
-  }
+  // The CFA of a funclet is its own async context.
+  row->GetCFAValue().SetIsConstant(*async_ctx);
 
-  if (indirect_context) {
-    if (in_prologue) {
-      row->SetRegisterLocationToSame(regnums->async_ctx_regnum, false);
-    } else {
-      llvm::ArrayRef<uint8_t> expr = GetAsyncRegFromFramePointerDWARFExpr(
-          arch.GetMachine(), false /*with_double_deref*/);
-      row->SetRegisterLocationToIsDWARFExpression(
-          regnums->async_ctx_regnum, expr.data(), expr.size(), false);
-    }
-  } else {
-    // In the first part of a split async function, the context is passed
-    // directly, so we can use the CFA value directly.
-    row->SetRegisterLocationToIsCFAPlusOffset(regnums->async_ctx_regnum, 0,
-                                              false);
-    // The fact that we are in this case needs to be communicated to the frames
-    // below us as they need to react differently. There is no good way to
-    // expose this, so we set another dummy register to communicate this state.
-    static const uint8_t g_dummy_dwarf_expression[] = {
-        llvm::dwarf::DW_OP_const1u, 0
-    };
-    row->SetRegisterLocationToIsDWARFExpression(
-        regnums->dummy_regnum, g_dummy_dwarf_expression,
-        sizeof(g_dummy_dwarf_expression), false);
-  }
+  // The value of the async register in the parent frame is the entry value of
+  // the async register in the current frame. This mimics a function call, as
+  // if the parent funclet had called the current funclet.
+  row->SetRegisterLocationToIsConstant(regnums->async_ctx_regnum, *async_reg,
+                                       /*can_replace=*/false);
 
-  std::optional<addr_t> pc_after_prologue = [&]() -> std::optional<addr_t> {
-    // In the prologue, use the async_reg as is, it has not been clobbered.
-    if (in_prologue)
-      return TrySkipVirtualParentProlog(GetAsyncContext(regctx), *process_sp,
-                                        indirect_context);
+  // The parent frame needs to know how to interpret the value it is given for
+  // its own async register. A dummy register is used to communicate that.
+  if (!indirect_context)
+    row->SetRegisterLocationToIsConstant(regnums->dummy_regnum, 0,
+                                         /*can_replace=*/false);
 
-    // Both ABIs (x86_64 and aarch64) guarantee the async reg is saved at:
-    // *(fp - 8).
-    Status error;
-    addr_t async_reg_entry_value = LLDB_INVALID_ADDRESS;
-    process_sp->ReadMemory(fp - ptr_size, &async_reg_entry_value, ptr_size,
-                           error);
-    if (error.Fail())
-      return {};
-    return TrySkipVirtualParentProlog(async_reg_entry_value, *process_sp,
-                                      indirect_context);
-  }();
-
-  if (pc_after_prologue)
+  if (std::optional<addr_t> pc_after_prologue =
+          TrySkipVirtualParentProlog(*async_ctx, *process_sp))
     row->SetRegisterLocationToIsConstant(regnums->pc_regnum, *pc_after_prologue,
                                          false);
   else
