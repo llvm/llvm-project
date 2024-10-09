@@ -87,7 +87,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
             /*Initializer=*/nullptr,
             IsCtor ? "__init_array_start" : "__fini_array_start",
             /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
-            /*AddressSpace=*/1);
+            /*AddressSpace=*/AMDGPUAS::GLOBAL_ADDRESS);
       });
   auto *End = M.getOrInsertGlobal(
       IsCtor ? "__init_array_end" : "__fini_array_end",
@@ -98,7 +98,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
             /*Initializer=*/nullptr,
             IsCtor ? "__init_array_end" : "__fini_array_end",
             /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
-            /*AddressSpace=*/1);
+            /*AddressSpace=*/AMDGPUAS::GLOBAL_ADDRESS);
       });
 
   // The constructor type is suppoed to allow using the argument vectors, but
