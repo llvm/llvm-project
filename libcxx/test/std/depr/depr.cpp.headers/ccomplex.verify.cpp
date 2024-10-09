@@ -6,18 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <ccomplex> // deprecated in C++17, removed in C++20, but still provided by libc++ as an extension
+// <ccomplex>
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// check that <ccomplex> is deprecated in C++17 and removed in C++20
 
-#include <ccomplex>
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::complex<double> d;
-    (void)d;
-
-  return 0;
-}
+#if TEST_STD_VER >= 20
+#  include <ccomplex> // expected-warning {{'__standard_header_ccomplex' is deprecated: removed in C++20}}
+#else
+#  include <ccomplex> // expected-warning {{'__standard_header_ccomplex' is deprecated}}
+#endif
