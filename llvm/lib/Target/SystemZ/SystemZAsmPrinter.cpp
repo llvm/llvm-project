@@ -686,6 +686,10 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
         MCInstBuilder(SystemZ::EXRL).addReg(LenMinus1Reg).addExpr(Dot));
     return;
   }
+  //EH_SjLj_Setup is a dummy terminator instruction of size 0, 
+  //used to handle the clobber register for builtin sejmp
+  case SystemZ::EH_SjLj_Setup:
+    return;
 
   default:
     Lower.lower(MI, LoweredMI);

@@ -220,7 +220,8 @@ static unsigned getInstSizeInBytes(const MachineInstr &MI,
           MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::MEMBARRIER ||
           // These have a size that may be zero:
           MI.isInlineAsm() || MI.getOpcode() == SystemZ::STACKMAP ||
-          MI.getOpcode() == SystemZ::PATCHPOINT) &&
+          MI.getOpcode() == SystemZ::PATCHPOINT || 
+	  MI.getOpcode() == SystemZ::EH_SjLj_Setup) &&
          "Missing size value for instruction.");
   return Size;
 }

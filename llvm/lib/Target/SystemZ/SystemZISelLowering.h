@@ -304,6 +304,13 @@ enum NodeType : unsigned {
   // Operand 2: the offset (0 for the first and 8 for the second element in the
   // function descriptor)
   ADA_ENTRY,
+    // EH_SJLJ_SETJMP - SjLj exception handling setjmp.
+  EH_SJLJ_SETJMP,
+
+  // EH_SJLJ_LONGJMP - SjLj exception handling longjmp.
+  EH_SJLJ_LONGJMP,
+
+
 
   // Strict variants of scalar floating-point comparisons.
   // Quiet and signaling versions.
@@ -476,6 +483,12 @@ public:
     // LD, and having the full constant in memory enables reg/mem opcodes.
     return VT != MVT::f64;
   }
+  MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
+                                        MachineBasicBlock *MBB) const;
+
+  MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
+                                         MachineBasicBlock *MBB) const;
+
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
@@ -724,6 +737,9 @@ private:
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
+
 
   bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,

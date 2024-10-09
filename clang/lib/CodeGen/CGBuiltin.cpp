@@ -4552,7 +4552,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *StackAddr = Builder.CreateStackSave();
     assert(Buf.emitRawPointer(*this)->getType() == StackAddr->getType());
 
-    Address StackSaveSlot = Builder.CreateConstInBoundsGEP(Buf, 2);
+    //StackSaveSlot no is hard coded here. For compatility with gcc,
+    // we are changing slot 3 to slot 4(offset 3) for __builtin_setjmp
+    Address StackSaveSlot = Builder.CreateConstInBoundsGEP(Buf, 3);
     Builder.CreateStore(StackAddr, StackSaveSlot);
 
     // Call LLVM's EH setjmp, which is lightweight.
