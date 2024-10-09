@@ -75,6 +75,9 @@ std::string computeLTOCacheKey(
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs = {},
     const DenseSet<GlobalValue::GUID> &CfiFunctionDecls = {});
 
+/// Recomputes the LTO cache key for a given key with an extra identifier.
+std::string recomputeLTOCacheKey(const std::string &Key, StringRef ExtraID);
+
 namespace lto {
 
 StringLiteral getThinLTODefaultCPU(const Triple &TheTriple);
