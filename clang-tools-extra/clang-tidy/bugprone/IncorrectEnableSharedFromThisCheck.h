@@ -13,9 +13,9 @@
 
 namespace clang::tidy::bugprone {
 
-// Checks if a class or struct publicly inherits from
-// ``std::enable_shared_from_this``, because otherwise when ``shared_from_this``
-// is called unintended behaviour will occur
+/// Detects if a class or struct publicly inherits from
+/// ``std::enable_shared_from_this``, because otherwise when ``shared_from_this``
+/// is called unintended behaviour will occur
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/incorrect-enable-shared-from-this.html

@@ -3,7 +3,7 @@
 bugprone-incorrect-enable-shared-from-this
 ==========================================
 
-Checks if a class or struct publicly inherits from 
+Detects if a class or struct publicly inherits from 
 ``std::enable_shared_from_this``, because unintended behavior will 
 otherwise occur when calling ``shared_from_this``.
 
@@ -29,6 +29,6 @@ Consider the following code:
         b_ex->bar();
     }
 
-Using ``libstd`` implementation, ``shared_from_this`` will throw 
+Using `libstdc++` implementation, ``shared_from_this`` will throw 
 ``std::bad_weak_ptr``. When ``using_not_public()`` is called, this code will 
 crash without exception handling.
