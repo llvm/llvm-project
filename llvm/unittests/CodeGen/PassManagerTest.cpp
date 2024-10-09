@@ -264,4 +264,28 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
               std::string::npos);
 }
 
+TEST_F(PassManagerTest, RunTwice) {
+  if (!TM)
+    GTEST_SKIP();
+
+  M->setDataLayout(TM->createDataLayout());
+
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB(TM.get());
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager MPM;
+  MPM.addPass(PB.buildPerModuleDefaultPipeline(OptimizationLevel::O2));
+
+  MPM.run(*M, MAM);
+  MPM.run(*M, MAM);
+}
+
 } // namespace
