@@ -323,7 +323,7 @@ static void printRegFlags(Register Reg,
                           const TargetRegisterInfo *TRI) {
   auto FlagValues = TRI->getVRegFlagsOfReg(Reg, MF);
   for (auto &Flag : FlagValues) {
-    RegisterFlags.push_back(yaml::FlowStringValue(Flag.str().str()));
+    RegisterFlags.push_back(yaml::FlowStringValue(Flag.str()));
   }
 }
 
