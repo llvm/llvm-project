@@ -470,8 +470,11 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       ResultType = CGM.FP16Ty;
       break;
     case BuiltinType::Half:
-      // Should be the same as above?
-      assert(0 && "not implemented");
+      if (Context.getLangOpts().NativeHalfType ||
+          !Context.getTargetInfo().useFP16ConversionIntrinsics())
+        ResultType = CGM.FP16Ty;
+      else
+        llvm_unreachable("NYI");
       break;
     case BuiltinType::BFloat16:
       ResultType = CGM.BFloat16Ty;

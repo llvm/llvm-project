@@ -502,8 +502,17 @@ public:
       // TODO(cir): CGFPOptionsRAII
       assert(!MissingFeatures::CGFPOptionsRAII());
 
-      if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
-        llvm_unreachable("__fp16 type NYI");
+      if (type->isHalfType() &&
+          !CGF.getContext().getLangOpts().NativeHalfType) {
+        // Another special case: half FP increment should be done via float
+        if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
+          llvm_unreachable("cast via llvm.convert.from.fp16 is NYI");
+        } else {
+          value = Builder.createCast(CGF.getLoc(E->getExprLoc()),
+                                     mlir::cir::CastKind::floating, input,
+                                     CGF.CGM.FloatTy);
+        }
+      }
 
       if (mlir::isa<mlir::cir::SingleType, mlir::cir::DoubleType>(
               value.getType())) {
@@ -511,7 +520,7 @@ public:
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
         auto kind =
             (isInc ? mlir::cir::UnaryOpKind::Inc : mlir::cir::UnaryOpKind::Dec);
-        value = buildUnaryOp(E, kind, input);
+        value = buildUnaryOp(E, kind, value);
       } else {
         // Remaining types are Half, Bfloat16, LongDouble, __ibm128 or
         // __float128. Convert from float.
@@ -537,8 +546,16 @@ public:
         value = Builder.createBinop(value, mlir::cir::BinOpKind::Add, amt);
       }
 
-      if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
-        llvm_unreachable("NYI");
+      if (type->isHalfType() &&
+          !CGF.getContext().getLangOpts().NativeHalfType) {
+        if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
+          llvm_unreachable("cast via llvm.convert.to.fp16 is NYI");
+        } else {
+          value = Builder.createCast(CGF.getLoc(E->getExprLoc()),
+                                     mlir::cir::CastKind::floating, value,
+                                     input.getType());
+        }
+      }
 
     } else if (type->isFixedPointType()) {
       llvm_unreachable("no fixed point inc/dec yet");
@@ -1043,7 +1060,23 @@ public:
     // Cast from half through float if half isn't a native type.
     if (SrcType->isHalfType() &&
         !CGF.getContext().getLangOpts().NativeHalfType) {
-      llvm_unreachable("not implemented");
+      // Cast to FP using the intrinsic if the half type itself isn't supported.
+      if (mlir::isa<mlir::cir::CIRFPTypeInterface>(DstTy)) {
+        if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics())
+          llvm_unreachable("cast via llvm.convert.from.fp16 is NYI");
+      } else {
+        // Cast to other types through float, using either the intrinsic or
+        // FPExt, depending on whether the half type itself is supported (as
+        // opposed to operations on half, available with NativeHalfType).
+        if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
+          llvm_unreachable("cast via llvm.convert.from.fp16 is NYI");
+        } else {
+          Src = Builder.createCast(
+              CGF.getLoc(Loc), mlir::cir::CastKind::floating, Src, CGF.FloatTy);
+        }
+        SrcType = CGF.getContext().FloatTy;
+        SrcTy = CGF.FloatTy;
+      }
     }
 
     // TODO(cir): LLVM codegen ignore conversions like int -> uint,
@@ -1098,13 +1131,28 @@ public:
     // Cast to half through float if half isn't a native type.
     if (DstType->isHalfType() &&
         !CGF.getContext().getLangOpts().NativeHalfType) {
-      llvm_unreachable("NYI");
+      // Make sure we cast in a single step if from another FP type.
+      if (mlir::isa<mlir::cir::CIRFPTypeInterface>(SrcTy)) {
+        // Use the intrinsic if the half type itself isn't supported
+        // (as opposed to operations on half, available with NativeHalfType).
+        if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics())
+          llvm_unreachable("cast via llvm.convert.to.fp16 is NYI");
+        // If the half type is supported, just use an fptrunc.
+        return Builder.createCast(CGF.getLoc(Loc),
+                                  mlir::cir::CastKind::floating, Src, DstTy);
+      }
+      DstTy = CGF.FloatTy;
     }
 
     Res = buildScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
 
     if (DstTy != ResTy) {
-      llvm_unreachable("NYI");
+      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
+        llvm_unreachable("cast via llvm.convert.to.fp16 is NYI");
+      } else {
+        Res = Builder.createCast(CGF.getLoc(Loc), mlir::cir::CastKind::floating,
+                                 Res, ResTy);
+      }
     }
 
     if (Opts.EmitImplicitIntegerTruncationChecks)
