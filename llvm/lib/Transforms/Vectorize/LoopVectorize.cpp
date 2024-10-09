@@ -7548,7 +7548,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::unrollByUF(BestVPlan, BestUF,
-                              OrigLoop->getHeader()->getModule()->getContext());
+                              OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF
@@ -8378,8 +8378,8 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       if (Legal->isMaskRequired(CI))
         Mask = getBlockInMask(CI->getParent());
       else
-        Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-            IntegerType::getInt1Ty(Variant->getFunctionType()->getContext())));
+        Mask = Plan.getOrAddLiveIn(
+            ConstantInt::getTrue(IntegerType::getInt1Ty(CI->getContext())));
 
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
@@ -8753,8 +8753,6 @@ addUsersInExitBlock(VPlan &Plan,
 
   auto *MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  BasicBlock *ExitBB =
-      cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   // Introduce extract for exiting values and update the VPIRInstructions
@@ -8765,10 +8763,10 @@ addUsersInExitBlock(VPlan &Plan,
     if (V->isLiveIn())
       continue;
 
-    VPValue *Ext = B.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {V, Plan.getOrAddLiveIn(ConstantInt::get(
-                IntegerType::get(ExitBB->getContext(), 32), 1))});
+    LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
+    VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
+                                  {V, Plan.getOrAddLiveIn(ConstantInt::get(
+                                          IntegerType::get(Ctx, 32), 1))});
     ExitIRI->setOperand(0, Ext);
   }
 }
