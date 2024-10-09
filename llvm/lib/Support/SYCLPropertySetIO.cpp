@@ -76,7 +76,6 @@ SYCLPropertySetRegistry::read(const MemoryBuffer *Buf) {
         return createStringError(std::error_code{},
                                  "invalid property value: ", Val.data());
       Prop.set(static_cast<uint32_t>(ValV.getZExtValue()));
-      llvm::errs() << "ARV: read int done\n";
       break;
     }
     case SYCLPropertyValue::Type::BYTE_ARRAY: {

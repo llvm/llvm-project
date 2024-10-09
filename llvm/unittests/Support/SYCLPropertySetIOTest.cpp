@@ -18,6 +18,76 @@ using namespace llvm::util;
 
 namespace {
 
+TEST(SYCLPropertySet, IncorrectValuesIO) {
+  auto Content = "Staff/Ages]\n";
+  auto MemBuf = MemoryBuffer::getMemBuffer(Content);
+  // Parse a property set registry
+  auto PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
+  if (PropSetsPtr)
+    FAIL() << "SYCLPropertySetRegistry::Invalid line error not caught\n";
+
+  Content = "[Staff/Ages\n";
+  MemBuf = MemoryBuffer::getMemBuffer(Content);
+  // Parse a property set registry
+  PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
+  if (PropSetsPtr)
+    FAIL() << "SYCLPropertySetRegistry::Invalid line error not caught\n";
+
+  Content = "[Staff/Ages]\n"
+            "person1=\n";
+  MemBuf = MemoryBuffer::getMemBuffer(Content);
+  // Parse a property set registry
+  PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
+  if (PropSetsPtr)
+    FAIL()
+        << "SYCLPropertySetRegistry::Invalid property line error not caught\n";
+
+  Content = "[Staff/Ages]\n"
+            "person1=|10\n";
+  MemBuf = MemoryBuffer::getMemBuffer(Content);
+  // Parse a property set registry
+  PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
+  if (PropSetsPtr)
+    FAIL()
+        << "SYCLPropertySetRegistry::Invalid property value error not caught\n";
+
+  Content = "[Staff/Ages]\n"
+            "person1=abc|10\n";
+  MemBuf = MemoryBuffer::getMemBuffer(Content);
+  // Parse a property set registry
+  PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
+  if (PropSetsPtr)
+    FAIL()
+        << "SYCLPropertySetRegistry::Invalid property type error not caught\n";
+
+  Content = "[Staff/Ages]\n"
+            "person1=2|10\n";
+  MemBuf = MemoryBuffer::getMemBuffer(Content);
+  // Parse a property set registry
+  PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
+  if (PropSetsPtr)
+    FAIL()
+        << "SYCLPropertySetRegistry::Invalid property value error not caught\n";
+
+  Content = "[Staff/Ages]\n"
+            "person1=2|IAQ\n";
+  MemBuf = MemoryBuffer::getMemBuffer(Content);
+  // Parse a property set registry
+  PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
+  if (PropSetsPtr)
+    FAIL()
+        << "SYCLPropertySetRegistry::Invalid property value error not caught\n";
+
+  Content = "[Staff/Ages]\n"
+            "person1=100|10\n";
+  MemBuf = MemoryBuffer::getMemBuffer(Content);
+  // Parse a property set registry
+  PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
+  if (PropSetsPtr)
+    FAIL()
+        << "SYCLPropertySetRegistry::Invalid property type error not caught\n";
+}
+
 TEST(SYCLPropertySet, IntValuesIO) {
   // '1' in '1|20' means 'integer property'
   auto Content = "[Staff/Ages]\n"
