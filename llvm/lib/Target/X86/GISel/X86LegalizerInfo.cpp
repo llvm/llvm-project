@@ -444,7 +444,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                (HasAVX && typeInSet(0, {v8s32, v4s64})(Query)) ||
                (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query)) ||
                (UseX87 && typeInSet(0, {s80})(Query));
-      });
+      })
+      .clampNumElements(0, v4s32, HasAVX512 ? v16s32 : (HasAVX ? v8s32 : v4s32))
+      .clampNumElements(0, v2s64, HasAVX512 ? v8s64 : (HasAVX ? v4s64 : v2s64))
+      .scalarize(0);
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
