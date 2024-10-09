@@ -2543,6 +2543,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (shouldDisableTailCalls())
       FuncAttrs.addAttribute("disable-tail-calls", "true");
 
+    // Mark the function as having fake uses when -fextend-lifetimes is on.
+    if (CodeGenOpts.ExtendLifetimes || CodeGenOpts.ExtendThisPtr)
+      FuncAttrs.addAttribute(llvm::Attribute::HasFakeUses);
+
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);

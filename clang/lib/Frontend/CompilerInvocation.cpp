@@ -2245,6 +2245,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                       Args.getAllArgValues(OPT_fsanitize_trap_EQ), Diags,
                       Opts.SanitizeTrap);
 
+  Opts.ExtendThisPtr =
+      Opts.OptimizationLevel > 0 && Args.hasArg(OPT_fextend_this_ptr);
+  Opts.ExtendLifetimes =
+      Opts.OptimizationLevel > 0 && Args.hasArg(OPT_fextend_lifetimes);
+
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
   if (!LangOpts->CUDAIsDevice)
