@@ -1120,6 +1120,9 @@ public:
 
   void buildDecl(const clang::Decl &D);
 
+  /// Emit local annotations for the local variable V, declared by D.
+  void buildVarAnnotations(const VarDecl *decl, mlir::Value val);
+
   /// If the specified expression does not fold to a constant, or if it does but
   /// contains a label, return false.  If it constant folds return true and set
   /// the boolean result in Result.

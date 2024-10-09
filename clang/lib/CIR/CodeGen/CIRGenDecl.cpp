@@ -39,7 +39,6 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
   assert(
       Ty.getAddressSpace() == LangAS::Default ||
       (Ty.getAddressSpace() == LangAS::opencl_private && getLangOpts().OpenCL));
-  assert(!D.hasAttr<AnnotateAttr>() && "not implemented");
 
   auto loc = getLoc(D.getSourceRange());
   bool NRVO =
@@ -195,6 +194,16 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
 
   emission.Addr = address;
   setAddrOfLocalVar(&D, emission.Addr);
+
+  // Emit debug info for local var declaration.
+  assert(!MissingFeatures::generateDebugInfo());
+
+  if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
+    buildVarAnnotations(&D, address.emitRawPointer());
+
+  // TODO(cir): in LLVM this calls @llvm.lifetime.end.
+  assert(!MissingFeatures::shouldEmitLifetimeMarkers());
+
   return emission;
 }
 

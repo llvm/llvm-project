@@ -1889,3 +1889,10 @@ mlir::Value CIRGenFunction::buildAlignmentAssumption(
   return buildAlignmentAssumption(ptrValue, ty, loc, assumptionLoc, alignment,
                                   offsetValue);
 }
+
+void CIRGenFunction::buildVarAnnotations(const VarDecl *decl, mlir::Value val) {
+  assert(decl->hasAttr<AnnotateAttr>() && "no annotate attribute");
+  for ([[maybe_unused]] const auto *I : decl->specific_attrs<AnnotateAttr>()) {
+    llvm_unreachable("NYI");
+  }
+}
