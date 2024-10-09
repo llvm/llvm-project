@@ -150,6 +150,11 @@ static cl::opt<bool> EnableVectorFCopySignExtendRound(
     cl::desc(
         "Enable merging extends and rounds into FCOPYSIGN on vector types"));
 
+static cl::opt<bool>
+    AddLoadBack("combiner-add-load-back", cl::Hidden,
+                cl::desc("When combining a load are new nodes added back in"),
+                cl::init(true));
+
 namespace {
 
   class DAGCombiner {
@@ -19438,7 +19443,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
                                   MVT::Other, Chain, ReplLoad.getValue(1));
 
       // Replace uses with load result and token factor
-      return CombineTo(N, ReplLoad.getValue(0), Token);
+      return CombineTo(N, ReplLoad.getValue(0), Token, AddLoadBack);
     }
   }
 
