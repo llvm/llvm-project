@@ -2043,8 +2043,12 @@ static bool callInstIsMemcpy(CallInst *CI) {
 }
 
 static bool destArrayCanBeWidened(CallInst *CI) {
+  auto *GV = dyn_cast<GlobalVariable>(CI->getArgOperand(0));
   auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
   auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
+
+  if (!GV || !GV->hasInitializer())
+    return false;
 
   if (!Alloca || !IsVolatile || IsVolatile->isOne())
     return false;
@@ -2055,21 +2059,61 @@ static bool destArrayCanBeWidened(CallInst *CI) {
   return true;
 }
 
+static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
+                                           unsigned NumBytesToPad,
+                                           unsigned NumBytesToCopy) {
+  if (!OldVar->hasInitializer())
+    return nullptr;
+
+  ConstantDataArray *DataArray =
+      dyn_cast<ConstantDataArray>(OldVar->getInitializer());
+  if (!DataArray)
+    return nullptr;
+
+  // Update to be word aligned (memcpy(...,X,...))
+  // create replacement with padded null bytes.
+  StringRef Data = DataArray->getRawDataValues();
+  std::vector<uint8_t> StrData(Data.begin(), Data.end());
+  for (unsigned int p = 0; p < NumBytesToPad; p++)
+    StrData.push_back('\0');
+  auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
+  // Create new padded version of global variable.
+  Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
+  GlobalVariable *NewGV = new GlobalVariable(
+      *(F->getParent()), SourceReplace->getType(), true, OldVar->getLinkage(),
+      SourceReplace, SourceReplace->getName());
+  // Copy any other attributes from original global variable
+  // e.g. unamed_addr
+  NewGV->copyAttributesFrom(OldVar);
+  NewGV->takeName(OldVar);
+  return NewGV;
+}
+
 static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
                            const unsigned NumBytesToCopy,
                            ConstantDataArray *SourceDataArray) {
-  unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
-  unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
-  unsigned NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
-  // Update destination array to be word aligned (memcpy(X,...,...))
+
+  // Dest array can be global or local
+  auto *DestGV = dyn_cast<GlobalVariable>(CI->getArgOperand(0));
   auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
-  IRBuilder<> BuildAlloca(Alloca);
-  AllocaInst *NewAlloca = BuildAlloca.CreateAlloca(ArrayType::get(
-      Alloca->getAllocatedType()->getArrayElementType(), NumElementsToCopy));
-  NewAlloca->takeName(Alloca);
-  NewAlloca->setAlignment(Alloca->getAlign());
-  Alloca->replaceAllUsesWith(NewAlloca);
-  Alloca->eraseFromParent();
+  if (DestGV) {
+    auto *F = CI->getCalledFunction();
+    auto *NewDestGV =
+        widenGlobalVariable(DestGV, F, NumBytesToPad, NumBytesToCopy);
+    DestGV->replaceAllUsesWith(NewDestGV);
+  } else if (Alloca) {
+    unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
+    unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
+    unsigned NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
+    // Update destination array to be word aligned (memcpy(X,...,...))
+    IRBuilder<> BuildAlloca(Alloca);
+    AllocaInst *NewAlloca = BuildAlloca.CreateAlloca(ArrayType::get(
+        Alloca->getAllocatedType()->getArrayElementType(), NumElementsToCopy));
+    NewAlloca->takeName(Alloca);
+    NewAlloca->setAlignment(Alloca->getAlign());
+    Alloca->replaceAllUsesWith(NewAlloca);
+    Alloca->eraseFromParent();
+  }
 }
 
 static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
@@ -2081,25 +2125,10 @@ static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
       !SourceVar->hasLocalLinkage() || !SourceVar->hasGlobalUnnamedAddr())
     return false;
 
-  // Update source to be word aligned (memcpy(...,X,...))
-  // create replacement with padded null bytes.
-  StringRef Data = SourceDataArray->getRawDataValues();
-  std::vector<uint8_t> StrData(Data.begin(), Data.end());
-  for (unsigned int p = 0; p < NumBytesToPad; p++)
-    StrData.push_back('\0');
-  auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
-
-  // Create new padded version of global variable.
-  Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
-  GlobalVariable *NewGV = new GlobalVariable(
-      *(F->getParent()), SourceReplace->getType(), true,
-      SourceVar->getLinkage(), SourceReplace, SourceReplace->getName());
-
-  // Copy any other attributes from original global variable
-  // e.g. unamed_addr
-  NewGV->copyAttributesFrom(SourceVar);
-  NewGV->takeName(SourceVar);
-
+  auto *NewSourceGV =
+      widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
+  if (!NewSourceGV)
+    return false;
   // Update arguments of remaining uses  that
   // are memcpys.
   for (auto *User : SourceVar->users()) {
@@ -2112,7 +2141,7 @@ static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
     CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(),
                                           NumBytesToCopy + NumBytesToPad));
   }
-  SourceVar->replaceAllUsesWith(NewGV);
+  SourceVar->replaceAllUsesWith(NewSourceGV);
 
   NumGlobalArraysPadded++;
   return true;
