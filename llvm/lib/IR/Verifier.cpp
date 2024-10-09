@@ -2096,12 +2096,12 @@ void Verifier::verifyX86ABI(FunctionType *FT, AttributeList Attrs,
   StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
   // Check SSE feature.
   Check(!TT.isArch64Bit() || !TF.contains("-sse,") ||
-        !FT->getReturnType()->isFloatTy(),
+            !FT->getReturnType()->isFloatTy(),
         "SSE register return with SSE disabled", V);
   // Check SSE2 feature.
   Check(!TT.isArch64Bit() || !TF.contains("-sse2") ||
-        (!FT->getReturnType()->isDoubleTy() &&
-         !FT->getReturnType()->is16bitFPTy()),
+            (!FT->getReturnType()->isDoubleTy() &&
+             !FT->getReturnType()->is16bitFPTy()),
         "SSE2 register return with SSE2 disabled", V);
   // Check EVEX512 feature.
   if (MaxParameterWidth >= 512)
