@@ -95,16 +95,7 @@
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:sramecc-:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID
 // CHECK-TARGET-ID: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "-sramecc" "-target-feature" "+xnack"
-
 // CHECK-TARGET-ID: clang-offload-packager{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp
-
-// RUN: %clang -### --save-temps -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:xnack+,gfx90a:xnack- \
-// RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID-MULTI
-// CHECK-TARGET-ID-MULTI: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "+xnack"
-// CHECK-TARGET-ID-MULTI: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "-xnack"
-
-// CHECK-TARGET-ID-MULTI: clang-offload-packager{{.*}}gfx90a:xnack+{{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack+,kind=openmp
-// CHECK-TARGET-ID-MULTI: clang-offload-packager{{.*}}gfx90a:xnack-{{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack-,kind=openmp
 
 // RUN: not %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a,gfx90a:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID-ERROR

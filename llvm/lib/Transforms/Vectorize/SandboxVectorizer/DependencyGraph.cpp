@@ -62,8 +62,6 @@ DependencyGraph::getRoughDepType(Instruction *FromI, Instruction *ToI) {
   } else if (FromI->mayReadFromMemory()) {
     if (ToI->mayWriteToMemory())
       return DependencyType::WriteAfterRead;
-    if (ToI->mayReadFromMemory())
-      return DependencyType::ReadAfterRead;
   }
   if (isa<sandboxir::PHINode>(FromI) || isa<sandboxir::PHINode>(ToI))
     return DependencyType::Control;
@@ -103,7 +101,7 @@ bool DependencyGraph::alias(Instruction *SrcI, Instruction *DstI,
   // TODO: Check AABudget
   ModRefInfo SrcModRef =
       isOrdered(SrcI)
-          ? ModRefInfo::Mod
+          ? ModRefInfo::ModRef
           : Utils::aliasAnalysisGetModRefInfo(*BatchAA, SrcI, *DstLocOpt);
   switch (DepType) {
   case DependencyType::ReadAfterWrite:
@@ -119,8 +117,6 @@ bool DependencyGraph::alias(Instruction *SrcI, Instruction *DstI,
 bool DependencyGraph::hasDep(Instruction *SrcI, Instruction *DstI) {
   DependencyType RoughDepType = getRoughDepType(SrcI, DstI);
   switch (RoughDepType) {
-  case DependencyType::ReadAfterRead:
-    return false;
   case DependencyType::ReadAfterWrite:
   case DependencyType::WriteAfterWrite:
   case DependencyType::WriteAfterRead:
@@ -136,6 +132,7 @@ bool DependencyGraph::hasDep(Instruction *SrcI, Instruction *DstI) {
   case DependencyType::None:
     return false;
   }
+  llvm_unreachable("Unknown DependencyType enum");
 }
 
 void DependencyGraph::scanAndAddDeps(DGNode &DstN,
@@ -174,9 +171,11 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   }
   // Create the dependencies.
   auto DstRange = MemDGNodeIntervalBuilder::make(InstrInterval, *this);
-  for (MemDGNode &DstN : drop_begin(DstRange)) {
-    auto SrcRange = Interval<MemDGNode>(DstRange.top(), DstN.getPrevNode());
-    scanAndAddDeps(DstN, SrcRange);
+  if (!DstRange.empty()) {
+    for (MemDGNode &DstN : drop_begin(DstRange)) {
+      auto SrcRange = Interval<MemDGNode>(DstRange.top(), DstN.getPrevNode());
+      scanAndAddDeps(DstN, SrcRange);
+    }
   }
 
   return InstrInterval;

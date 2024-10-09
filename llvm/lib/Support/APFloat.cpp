@@ -367,6 +367,14 @@ unsigned int APFloatBase::semanticsIntSizeInBits(const fltSemantics &semantics,
   return MinBitWidth;
 }
 
+bool APFloatBase::semanticsHasZero(const fltSemantics &semantics) {
+  return semantics.hasZero;
+}
+
+bool APFloatBase::semanticsHasSignedRepr(const fltSemantics &semantics) {
+  return semantics.hasSignedRepr;
+}
+
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
                                             const fltSemantics &Dst) {
   // Exponent range must be larger.
