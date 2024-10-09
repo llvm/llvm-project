@@ -10,8 +10,8 @@ define void @test(ptr %vol_one, ptr %p_in, ptr %p_out, i32 %n) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $r1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-NEXT:   [[LDRi12_:%[0-9]+]]:gpr = LDRi12 [[COPY1]], 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.p_in)
-  ; CHECK-NEXT:   STRi12 killed [[LDRi12_]], [[COPY2]], 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.vol_one)
-  ; CHECK-NEXT:   [[LDRi12_1:%[0-9]+]]:gpr = LDRi12 [[COPY2]], 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.vol_two)
+  ; CHECK-NEXT:   STRi12 killed [[LDRi12_]], [[COPY2]], 0, 14 /* CC::al */, $noreg :: (volatile store (s32) into %ir.vol_one)
+  ; CHECK-NEXT:   [[LDRi12_1:%[0-9]+]]:gpr = LDRi12 [[COPY2]], 4, 14 /* CC::al */, $noreg :: (volatile load (s32) from %ir.vol_two)
   ; CHECK-NEXT:   STRi12 killed [[LDRi12_1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.p_out)
   ; CHECK-NEXT:   MOVPCLR 14 /* CC::al */, $noreg
 entry:
