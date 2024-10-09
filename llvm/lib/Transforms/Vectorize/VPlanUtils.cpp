@@ -91,7 +91,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
 
   auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
   // Canonical IV chain is uniform.
-  if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
+  if (V == CanonicalIV) // || V == CanonicalIV->getBackedgeValue())
     return true;
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)

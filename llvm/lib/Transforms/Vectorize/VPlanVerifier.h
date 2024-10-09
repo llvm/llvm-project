@@ -33,10 +33,7 @@ class VPlan;
 /// 2. all phi-like recipes must be at the beginning of a block, with no other
 /// recipes in between. Note that currently there is still an exception for
 /// VPBlendRecipes.
-/// If \p IsAbstract, consider the VPlan to check as abstract, which means some
-/// aspects may not be finalized yet, for example, no terminators have been
-/// added to exit loop regions.
-bool verifyVPlanIsValid(const VPlan &Plan, bool IsAbstract = false);
+bool verifyVPlanIsValid(const VPlan &Plan);
 
 } // namespace llvm
 

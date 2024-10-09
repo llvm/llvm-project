@@ -7550,14 +7550,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::unrollByUF(BestVPlan, BestUF,
                               OrigLoop->getHeader()->getContext());
 
-  TailFoldingStyle Style =
-      CM.getTailFoldingStyle(!isIndvarOverflowCheckKnownFalse(&CM, BestVF));
+  TailFoldingStyle Style = CM.getTailFoldingStyle(
+      !isIndvarOverflowCheckKnownFalse(&CM, BestVF, BestUF));
   // When not folding the tail, we know that the induction increment will not
   // overflow.
   bool HasNUW = Style == TailFoldingStyle::None;
   bool WithoutRuntimeCheck =
       Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
-  VPlanTransforms::finalizePlan(BestVPlan, HasNUW, WithoutRuntimeCheck);
+  VPlanTransforms::lowerCanonicalIV(BestVPlan, HasNUW, WithoutRuntimeCheck);
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF
@@ -8673,8 +8673,6 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       if (CM.foldTailWithEVL() &&
           !VPlanTransforms::tryAddExplicitVectorLength(*Plan))
         break;
-      assert(verifyVPlanIsValid(*Plan, /*IsAbstract*/ true) &&
-             "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
     VF = SubRange.End;
@@ -8682,15 +8680,24 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
 }
 
 // Add the required canonical IV.
-static void addCanonicalIV(VPlan &Plan, Type *IdxTy, bool HasNUW, DebugLoc DL) {
+static void addCanonicalIV(VPlan &Plan, Type *IdxTy, DebugLoc DL) {
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddLiveIn(StartIdx);
 
   // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
+  // TODO: Introduce a separate scalar phi recipe that can be used for codegen,
+  // turning VPCanonicalIVPHIRecipe into an 'abstract' recipe which cannot be
+  // executed directly.
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = TopRegion->getEntryBasicBlock();
   Header->insert(CanonicalIVPHI, Header->begin());
+
+  // Add the BranchOnCount VPInstruction to the latch.
+  VPBuilder Builder(TopRegion->getExitingBasicBlock());
+  // TODO: introduce branch-on-count during VPlan final (pre-codegen) lowering.
+  Builder.createNaryOp(VPInstruction::BranchOnCount,
+                       {CanonicalIVPHI, &Plan.getVectorTripCount()}, DL);
 }
 
 // Collect VPIRInstructions for phis in the original exit block that are modeled
@@ -8940,10 +8947,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   DebugLoc DL = getDebugLocFromInstOrOperands(Legal->getPrimaryInduction());
   TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
-  // When not folding the tail, we know that the induction increment will not
-  // overflow.
-  bool HasNUW = Style == TailFoldingStyle::None;
-  addCanonicalIV(*Plan, Legal->getWidestInductionType(), HasNUW, DL);
+  addCanonicalIV(*Plan, Legal->getWidestInductionType(), DL);
 
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, Legal, CM, PSE, Builder);
 
@@ -9176,11 +9180,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
       Plan->getVectorLoopRegion()->getExitingBasicBlock()->getTerminator();
   Term->eraseFromParent();
 
-  // Tail folding is not supported for outer loops, so the induction increment
-  // is guaranteed to not wrap.
-  bool HasNUW = true;
-  addCanonicalIV(*Plan, Legal->getWidestInductionType(), HasNUW, DebugLoc());
-  assert(verifyVPlanIsValid(*Plan, /*IsAbstract*/ true) && "VPlan is invalid");
+  addCanonicalIV(*Plan, Legal->getWidestInductionType(), DebugLoc());
+  assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
 }
 

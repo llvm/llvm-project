@@ -122,11 +122,10 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  /// Finalize \p Plan by introducing recipes needed for code-gen, like
-  /// introducing explicit increments for the canonical induction and the branch
-  /// to exit the vector loop.
-  static void finalizePlan(VPlan &Plan, bool HasNUW,
-                           bool DataAndControlFlowWithoutRuntimeCheck);
+  /// Finalize \p Plan by introducing explicit increments for the canonical
+  /// induction.
+  static void lowerCanonicalIV(VPlan &Plan, bool HasNUW,
+                               bool DataAndControlFlowWithoutRuntimeCheck);
 };
 
 } // namespace llvm
