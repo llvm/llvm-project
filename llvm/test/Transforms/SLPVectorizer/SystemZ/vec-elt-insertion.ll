@@ -1,8 +1,4 @@
-; RUN: opt < %s -mtriple=s390x-unknown-linux -mcpu=z16 -S -passes=slp-vectorizer \
-; RUN:   -pass-remarks-output=%t | FileCheck %s
-; RUN: cat %t | FileCheck -check-prefix=REMARK %s
-;
-; NB! This is a pre-commit version (for #112491) with current codegen and remarks.
+; RUN: opt -S --passes=slp-vectorizer -mtriple=s390x-unknown-linux -mcpu=z16 < %s | FileCheck %s
 ;
 ; Test functions that (at least currently) only gets vectorized if the
 ; insertion cost for an element load is counted as free.
@@ -11,19 +7,8 @@
 ; getGatherCost().
 define void @fun0(ptr nocapture %0, double %1) {
 ; CHECK-LABEL: define void @fun0(
-; CHECK:         fmul double
-; CHECK:         call double @llvm.fmuladd.f64(
-; CHECK-NEXT:    call double @llvm.fmuladd.f64(
-; CHECK-NEXT:    call double @llvm.sqrt.f64(
-; CHECK:         fmul double
-; CHECK:         call double @llvm.fmuladd.f64(
-; CHECK-NEXT:    call double @llvm.fmuladd.f64(
-; CHECK-NEXT:    call double @llvm.sqrt.f64(
-;
-; REMARK-LABEL: Function: fun0
-; REMARK: Args:
-; REMARK-NEXT: - String:          'List vectorization was possible but not beneficial with cost '
-; REMARK-NEXT: - Cost:            '0'
+; CHECK:    fmul <2 x double>
+; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
 
   %3 = fmul double %1, 2.000000e+00
   %4 = tail call double @llvm.fmuladd.f64(double %3, double %3, double 0.000000e+00)
@@ -39,36 +24,18 @@ define void @fun0(ptr nocapture %0, double %1) {
   ret void
 }
 
+
 ; This function needs the element-load to be recognized in SystemZ
 ; getVectorInstrCost().
-define void @fun1(double %0) {
+define void @fun1(double %0) local_unnamed_addr {
 ; CHECK-LABEL: define void @fun1(
-; CHECK:         phi double
-; CHECK-NEXT:    phi double
-; CHECK-NEXT:    phi double
-; CHECK-NEXT:    phi double
-; CHECK-NEXT:    phi double
-; CHECK-NEXT:    phi double
-; CHECK-NEXT:    fsub double
-; CHECK-NEXT:    fsub double
-; CHECK-NEXT:    fmul double
-; CHECK-NEXT:    fmul double
-; CHECK-NEXT:    fsub double
-; CHECK-NEXT:    fsub double
-; CHECK-NEXT:    call double @llvm.fmuladd.f64(
-; CHECK-NEXT:    call double @llvm.fmuladd.f64(
-; CHECK-NEXT:    fsub double
-; CHECK-NEXT:    fsub double
-; CHECK-NEXT:    call double @llvm.fmuladd.f64(
-; CHECK-NEXT:    call double @llvm.fmuladd.f64(
-; CHECK:         fcmp olt double
-; CHECK-NEXT:    fcmp olt double
-; CHECK-NEXT:    or i1
-;
-; REMARK-LABEL: Function: fun1
-; REMARK: Args:
-; REMARK:      - String:          'List vectorization was possible but not beneficial with cost '
-; REMARK-NEXT: - Cost:            '0'
+; CHECK:    fsub <2 x double>
+; CHECK:    fsub <2 x double>
+; CHECK:    fsub <2 x double>
+; CHECK:    fmul <2 x double>
+; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
+; CHECK:    call <2 x double> @llvm.fmuladd.v2f64(
+; CHECK:    %14 = fcmp olt <2 x double> %13, %2
 
   br label %2
 
@@ -104,14 +71,7 @@ declare double @llvm.fmuladd.f64(double, double, double)
 ; which is recognized in SystemZTTImpl::getScalarizationOverhead().
 define void @fun2(ptr %0, ptr %Dst) {
 ; CHECK-LABEL: define void @fun2(
-; CHECK: insertelement
-; CHECK: store <2 x i64>
-;
-; REMARK-LABEL: Function: fun2
-; REMARK: Args:
-; REMARK-NEXT: - String:          'Stores SLP vectorized with cost '
-; REMARK-NEXT: - Cost:            '-1'
-
+; CHECK-NOT: store <2 x i64>
   %3 = load i64, ptr %0, align 8
   %4 = icmp eq i64 %3, 0
   br i1 %4, label %5, label %6
