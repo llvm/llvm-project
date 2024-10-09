@@ -1349,8 +1349,8 @@ static SCEVUse getUnsignedOverflowLimitForStep(SCEVUse Step,
 namespace {
 
 struct ExtendOpTraitsBase {
-  typedef SCEVUse (ScalarEvolution:: *GetExtendExprTy)(SCEVUse, Type *,
-                                                       unsigned);
+  typedef SCEVUse (ScalarEvolution::*GetExtendExprTy)(SCEVUse, Type *,
+                                                      unsigned);
 };
 
 // Used to make code generic over signed and unsigned overflow.
@@ -2383,8 +2383,8 @@ static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
 bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
                                       SCEVUse LHS, SCEVUse RHS,
                                       const Instruction *CtxI) {
-  SCEVUse (ScalarEvolution:: *Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
-                                         unsigned);
+  SCEVUse (ScalarEvolution::*Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
+                                        unsigned);
   switch (BinOp) {
   default:
     llvm_unreachable("Unsupported binary op");
@@ -2399,7 +2399,7 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
     break;
   }
 
-  SCEVUse (ScalarEvolution:: *Extension)(SCEVUse, Type *, unsigned) =
+  SCEVUse (ScalarEvolution::*Extension)(SCEVUse, Type *, unsigned) =
       Signed ? &ScalarEvolution::getSignExtendExpr
              : &ScalarEvolution::getZeroExtendExpr;
 
@@ -2824,7 +2824,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   // operands multiplied by constant values.
   if (Idx < Ops.size() && isa<SCEVMulExpr>(Ops[Idx])) {
     uint64_t BitWidth = getTypeSizeInBits(Ty);
-    SmallDenseMap<SCEVUse , APInt, 16> M;
+    SmallDenseMap<SCEVUse, APInt, 16> M;
     SmallVector<SCEVUse, 8> NewOps;
     APInt AccumulatedConstant(BitWidth, 0);
     if (CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
@@ -8768,13 +8768,11 @@ bool ScalarEvolution::BackedgeTakenInfo::isConstantMaxOrZero(
   return MaxOrZero && !any_of(ExitNotTaken, PredicateNotAlwaysTrue);
 }
 
-ScalarEvolution::ExitLimit::ExitLimit(SCEVUse E)
-    : ExitLimit(E, E, E, false) {}
+ScalarEvolution::ExitLimit::ExitLimit(SCEVUse E) : ExitLimit(E, E, E, false) {}
 
 ScalarEvolution::ExitLimit::ExitLimit(
-    SCEVUse E, SCEVUse ConstantMaxNotTaken,
-    SCEVUse SymbolicMaxNotTaken, bool MaxOrZero,
-    ArrayRef<ArrayRef<const SCEVPredicate *>> PredLists)
+    SCEVUse E, SCEVUse ConstantMaxNotTaken, SCEVUse SymbolicMaxNotTaken,
+    bool MaxOrZero, ArrayRef<ArrayRef<const SCEVPredicate *>> PredLists)
     : ExactNotTaken(E), ConstantMaxNotTaken(ConstantMaxNotTaken),
       SymbolicMaxNotTaken(SymbolicMaxNotTaken), MaxOrZero(MaxOrZero) {
   // If we prove the max count is zero, so is the symbolic bound.  This happens
@@ -8813,8 +8811,7 @@ ScalarEvolution::ExitLimit::ExitLimit(
          "Max backedge count should be int");
 }
 
-ScalarEvolution::ExitLimit::ExitLimit(SCEVUse E,
-                                      SCEVUse ConstantMaxNotTaken,
+ScalarEvolution::ExitLimit::ExitLimit(SCEVUse E, SCEVUse ConstantMaxNotTaken,
                                       SCEVUse SymbolicMaxNotTaken,
                                       bool MaxOrZero,
                                       ArrayRef<const SCEVPredicate *> PredList)
@@ -12947,9 +12944,9 @@ SCEVUse ScalarEvolution::computeMaxBECountForLT(SCEVUse Start, SCEVUse Stride,
 }
 
 ScalarEvolution::ExitLimit
-ScalarEvolution::howManyLessThans(SCEVUse LHS, SCEVUse RHS,
-                                  const Loop *L, bool IsSigned,
-                                  bool ControlsOnlyExit, bool AllowPredicates) {
+ScalarEvolution::howManyLessThans(SCEVUse LHS, SCEVUse RHS, const Loop *L,
+                                  bool IsSigned, bool ControlsOnlyExit,
+                                  bool AllowPredicates) {
   SmallVector<const SCEVPredicate *> Predicates;
 
   const SCEVAddRecExpr *IV = dyn_cast<SCEVAddRecExpr>(LHS);
@@ -13386,9 +13383,10 @@ ScalarEvolution::howManyLessThans(SCEVUse LHS, SCEVUse RHS,
                    Predicates);
 }
 
-ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
-    SCEVUse LHS, SCEVUse RHS, const Loop *L, bool IsSigned,
-    bool ControlsOnlyExit, bool AllowPredicates) {
+ScalarEvolution::ExitLimit
+ScalarEvolution::howManyGreaterThans(SCEVUse LHS, SCEVUse RHS, const Loop *L,
+                                     bool IsSigned, bool ControlsOnlyExit,
+                                     bool AllowPredicates) {
   SmallVector<const SCEVPredicate *> Predicates;
   // We handle only IV > Invariant
   if (!isLoopInvariant(RHS, L))
@@ -14804,8 +14802,8 @@ public:
   /// If \p NewPreds is non-null, rewrite is free to add further predicates to
   /// \p NewPreds such that the result will be an AddRecExpr.
   static SCEVUse rewrite(SCEVUse S, const Loop *L, ScalarEvolution &SE,
-                             SmallVectorImpl<const SCEVPredicate *> *NewPreds,
-                             const SCEVPredicate *Pred) {
+                         SmallVectorImpl<const SCEVPredicate *> *NewPreds,
+                         const SCEVPredicate *Pred) {
     SCEVPredicateRewriter Rewriter(L, SE, NewPreds, Pred);
     return Rewriter.visit(S);
   }
@@ -14919,8 +14917,7 @@ SCEVUse ScalarEvolution::rewriteUsingPredicate(SCEVUse S, const Loop *L,
 }
 
 const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
-    SCEVUse S, const Loop *L,
-    SmallVectorImpl<const SCEVPredicate *> &Preds) {
+    SCEVUse S, const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   SmallVector<const SCEVPredicate *> TransformPreds;
   S = SCEVPredicateRewriter::rewrite(S, L, *this, &TransformPreds, nullptr);
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(S);

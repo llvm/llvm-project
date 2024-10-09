@@ -1251,8 +1251,8 @@ public:
     /// as arguments and asserts enforce that internally.
     /*implicit*/ ExitLimit(SCEVUse E);
 
-    ExitLimit(SCEVUse, SCEVUse ConstantMaxNotTaken,
-              SCEVUse SymbolicMaxNotTaken, bool MaxOrZero,
+    ExitLimit(SCEVUse, SCEVUse ConstantMaxNotTaken, SCEVUse SymbolicMaxNotTaken,
+              bool MaxOrZero,
               ArrayRef<ArrayRef<const SCEVPredicate *>> PredLists = {});
 
     ExitLimit(SCEVUse E, SCEVUse ConstantMaxNotTaken,
@@ -1406,8 +1406,7 @@ public:
   /// Tries to convert the \p S expression to an AddRec expression,
   /// adding additional predicates to \p Preds as required.
   const SCEVAddRecExpr *convertSCEVToAddRecWithPredicates(
-      SCEVUse S, const Loop *L,
-      SmallVectorImpl<const SCEVPredicate *> &Preds);
+      SCEVUse S, const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds);
 
   /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
   /// constant, and std::nullopt if it isn't.
