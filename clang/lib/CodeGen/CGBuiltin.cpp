@@ -18845,10 +18845,10 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         false);
 
     // Get overloaded name
-    std::string name =
+    std::string Name =
         Intrinsic::getName(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
                            ArrayRef{OpExpr->getType()}, &CGM.getModule());
-    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, name, {},
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
                                                      /*Local=*/false,
                                                      /*AssumeConvergent=*/true),
                            ArrayRef{OpExpr, OpIndex}, "hlsl.waveReadLaneAt");
