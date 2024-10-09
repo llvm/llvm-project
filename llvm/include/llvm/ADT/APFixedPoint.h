@@ -114,6 +114,15 @@ public:
   }
   bool operator!=(FixedPointSemantics Other) const { return !(*this == Other); }
 
+  /// Convert the semantics to a 32-bit unsigned integer.
+  /// The result is dependent on the host endianness and not stable across LLVM
+  /// versions. See getFromOpaqueInt() to convert it back to a
+  /// FixedPointSemantics object.
+  uint32_t toOpaqueInt() const;
+  /// Create a FixedPointSemantics object from an integer created via
+  /// toOpaqueInt().
+  static FixedPointSemantics getFromOpaqueInt(uint32_t);
+
 private:
   unsigned Width          : WidthBitWidth;
   signed int LsbWeight    : LsbWeightBitWidth;
