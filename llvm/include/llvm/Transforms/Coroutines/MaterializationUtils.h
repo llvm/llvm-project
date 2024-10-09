@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SuspendCrossingInfo.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
 
-#ifndef LIB_TRANSFORMS_COROUTINES_MATERIALIZATIONUTILS_H
-#define LIB_TRANSFORMS_COROUTINES_MATERIALIZATIONUTILS_H
+#ifndef LLVM_TRANSFORMS_COROUTINES_MATERIALIZATIONUTILS_H
+#define LLVM_TRANSFORMS_COROUTINES_MATERIALIZATIONUTILS_H
 
 namespace llvm {
 
@@ -27,4 +26,4 @@ void doRematerializations(Function &F, SuspendCrossingInfo &Checker,
 
 } // namespace llvm
 
-#endif // LIB_TRANSFORMS_COROUTINES_MATERIALIZATIONUTILS_H
+#endif // LLVM_TRANSFORMS_COROUTINES_MATERIALIZATIONUTILS_H

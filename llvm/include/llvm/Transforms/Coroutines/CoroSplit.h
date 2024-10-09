@@ -18,6 +18,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Coroutines/ABI.h"
 
 namespace llvm {
 
