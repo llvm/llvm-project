@@ -24,6 +24,7 @@ bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
 }
 bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
   return OpenACCWaitClause::classof(C) || OpenACCNumGangsClause::classof(C) ||
+         OpenACCTileClause::classof(C) ||
          OpenACCClauseWithSingleIntExpr::classof(C) ||
          OpenACCClauseWithVarList::classof(C);
 }
@@ -43,7 +44,7 @@ bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
 bool OpenACCClauseWithSingleIntExpr::classof(const OpenACCClause *C) {
   return OpenACCNumWorkersClause::classof(C) ||
          OpenACCVectorLengthClause::classof(C) ||
-         OpenACCAsyncClause::classof(C);
+         OpenACCCollapseClause::classof(C) || OpenACCAsyncClause::classof(C);
 }
 OpenACCDefaultClause *OpenACCDefaultClause::Create(const ASTContext &C,
                                                    OpenACCDefaultClauseKind K,
@@ -134,6 +135,30 @@ OpenACCNumWorkersClause::Create(const ASTContext &C, SourceLocation BeginLoc,
       OpenACCNumWorkersClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
+OpenACCCollapseClause::OpenACCCollapseClause(SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             bool HasForce, Expr *LoopCount,
+                                             SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Collapse, BeginLoc,
+                                     LParenLoc, LoopCount, EndLoc),
+      HasForce(HasForce) {
+  assert(LoopCount && "LoopCount required");
+}
+
+OpenACCCollapseClause *
+OpenACCCollapseClause::Create(const ASTContext &C, SourceLocation BeginLoc,
+                              SourceLocation LParenLoc, bool HasForce,
+                              Expr *LoopCount, SourceLocation EndLoc) {
+  assert(
+      LoopCount &&
+      (LoopCount->isInstantiationDependent() || isa<ConstantExpr>(LoopCount)) &&
+      "Loop count not constant expression");
+  void *Mem =
+      C.Allocate(sizeof(OpenACCCollapseClause), alignof(OpenACCCollapseClause));
+  return new (Mem)
+      OpenACCCollapseClause(BeginLoc, LParenLoc, HasForce, LoopCount, EndLoc);
+}
+
 OpenACCVectorLengthClause::OpenACCVectorLengthClause(SourceLocation BeginLoc,
                                                      SourceLocation LParenLoc,
                                                      Expr *IntExpr,
@@ -195,6 +220,16 @@ OpenACCNumGangsClause *OpenACCNumGangsClause::Create(const ASTContext &C,
   void *Mem = C.Allocate(
       OpenACCNumGangsClause::totalSizeToAlloc<Expr *>(IntExprs.size()));
   return new (Mem) OpenACCNumGangsClause(BeginLoc, LParenLoc, IntExprs, EndLoc);
+}
+
+OpenACCTileClause *OpenACCTileClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             ArrayRef<Expr *> SizeExprs,
+                                             SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCTileClause::totalSizeToAlloc<Expr *>(SizeExprs.size()));
+  return new (Mem) OpenACCTileClause(BeginLoc, LParenLoc, SizeExprs, EndLoc);
 }
 
 OpenACCPrivateClause *OpenACCPrivateClause::Create(const ASTContext &C,
@@ -396,6 +431,13 @@ void OpenACCClausePrinter::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
   OS << ")";
 }
 
+void OpenACCClausePrinter::VisitTileClause(const OpenACCTileClause &C) {
+  OS << "tile(";
+  llvm::interleaveComma(C.getSizeExprs(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
 void OpenACCClausePrinter::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &C) {
   OS << "num_workers(";
@@ -549,4 +591,12 @@ void OpenACCClausePrinter::VisitIndependentClause(
 
 void OpenACCClausePrinter::VisitSeqClause(const OpenACCSeqClause &C) {
   OS << "seq";
+}
+
+void OpenACCClausePrinter::VisitCollapseClause(const OpenACCCollapseClause &C) {
+  OS << "collapse(";
+  if (C.hasForce())
+    OS << "force:";
+  printExpr(C.getLoopCount());
+  OS << ")";
 }

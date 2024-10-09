@@ -38,6 +38,15 @@ static T getParam(const InterpFrame *Frame, unsigned Index) {
   return Frame->getParam<T>(Offset);
 }
 
+// static APSInt getAPSIntParam(InterpStack &Stk, size_t Offset = 0) {
+static APSInt getAPSIntParam(const InterpFrame *Frame, unsigned Index) {
+  APSInt R;
+  unsigned Offset = Frame->getFunction()->getParamOffset(Index);
+  INT_TYPE_SWITCH(Frame->getFunction()->getParamType(Index),
+                  R = Frame->getParam<T>(Offset).toAPSInt());
+  return R;
+}
+
 PrimType getIntPrimType(const InterpState &S) {
   const TargetInfo &TI = S.getASTContext().getTargetInfo();
   unsigned IntWidth = TI.getIntWidth();
@@ -1180,6 +1189,132 @@ static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val = peekToAPSInt(S.Stk, ValT,
+                            align(primSize(ValT)) + align(primSize(IndexT)));
+  APSInt Idx = peekToAPSInt(S.Stk, IndexT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  uint64_t Index = Idx.extractBitsAsZExtValue(8, 0);
+
+  if (Index < BitWidth)
+    Val.clearHighBits(BitWidth - Index);
+
+  pushInteger(S, Val, CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
+  pushInteger(S, Val.countLeadingZeros(), CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
+  pushInteger(S, Val.countTrailingZeros(), CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val =
+      peekToAPSInt(S.Stk, ValT, align(primSize(ValT)) + align(primSize(MaskT)));
+  APSInt Mask = peekToAPSInt(S.Stk, MaskT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  APInt Result = APInt::getZero(BitWidth);
+  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val =
+      peekToAPSInt(S.Stk, ValT, align(primSize(ValT)) + align(primSize(MaskT)));
+  APSInt Mask = peekToAPSInt(S.Stk, MaskT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  APInt Result = APInt::getZero(BitWidth);
+  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
+                                                    CodePtr OpPC,
+                                                    const InterpFrame *Frame,
+                                                    const Function *Func,
+                                                    const CallExpr *Call) {
+  unsigned BuiltinOp = Func->getBuiltinID();
+  APSInt CarryIn = getAPSIntParam(Frame, 0);
+  APSInt LHS = getAPSIntParam(Frame, 1);
+  APSInt RHS = getAPSIntParam(Frame, 2);
+
+  bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
+               BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
+
+  unsigned BitWidth = LHS.getBitWidth();
+  unsigned CarryInBit = CarryIn.ugt(0) ? 1 : 0;
+  APInt ExResult =
+      IsAdd ? (LHS.zext(BitWidth + 1) + (RHS.zext(BitWidth + 1) + CarryInBit))
+            : (LHS.zext(BitWidth + 1) - (RHS.zext(BitWidth + 1) + CarryInBit));
+
+  APInt Result = ExResult.extractBits(BitWidth, 0);
+  APSInt CarryOut =
+      APSInt(ExResult.extractBits(1, BitWidth), /*IsUnsigned=*/true);
+
+  Pointer &CarryOutPtr = S.Stk.peek<Pointer>();
+  QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
+  PrimType CarryOutT = *S.getContext().classify(CarryOutType);
+  assignInteger(CarryOutPtr, CarryOutT, APSInt(Result, true));
+
+  pushInteger(S, CarryOut, Call->getType());
+
+  return true;
+}
+
 static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
                                                       CodePtr OpPC,
                                                       const InterpFrame *Frame,
@@ -1770,6 +1905,46 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case clang::X86::BI__builtin_ia32_bextri_u32:
   case clang::X86::BI__builtin_ia32_bextri_u64:
     if (!interp__builtin_ia32_bextr(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_bzhi_si:
+  case clang::X86::BI__builtin_ia32_bzhi_di:
+    if (!interp__builtin_ia32_bzhi(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_lzcnt_u16:
+  case clang::X86::BI__builtin_ia32_lzcnt_u32:
+  case clang::X86::BI__builtin_ia32_lzcnt_u64:
+    if (!interp__builtin_ia32_lzcnt(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_tzcnt_u16:
+  case clang::X86::BI__builtin_ia32_tzcnt_u32:
+  case clang::X86::BI__builtin_ia32_tzcnt_u64:
+    if (!interp__builtin_ia32_tzcnt(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_pdep_si:
+  case clang::X86::BI__builtin_ia32_pdep_di:
+    if (!interp__builtin_ia32_pdep(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_pext_si:
+  case clang::X86::BI__builtin_ia32_pext_di:
+    if (!interp__builtin_ia32_pext(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_addcarryx_u32:
+  case clang::X86::BI__builtin_ia32_addcarryx_u64:
+  case clang::X86::BI__builtin_ia32_subborrow_u32:
+  case clang::X86::BI__builtin_ia32_subborrow_u64:
+    if (!interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, F, Call))
       return false;
     break;
 

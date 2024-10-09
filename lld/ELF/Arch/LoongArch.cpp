@@ -165,7 +165,7 @@ static void handleUleb128(uint8_t *loc, uint64_t val) {
   const char *error = nullptr;
   uint64_t orig = decodeULEB128(loc, &count, nullptr, &error);
   if (count > maxcount || (count == maxcount && error))
-    errorOrWarn(getErrorLocation(loc) + "extra space for uleb128");
+    errorOrWarn(getErrorLoc(ctx, loc) + "extra space for uleb128");
   uint64_t mask = count < maxcount ? (1ULL << 7 * count) - 1 : -1ULL;
   encodeULEB128((orig + val) & mask, loc, count);
 }
@@ -212,7 +212,7 @@ LoongArch::LoongArch(Ctx &ctx) : TargetInfo(ctx) {
   ipltEntrySize = 16;
 }
 
-static uint32_t getEFlags(const InputFile *f) {
+static uint32_t getEFlags(Ctx &ctx, const InputFile *f) {
   if (ctx.arg.is64)
     return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
@@ -242,7 +242,7 @@ uint32_t LoongArch::calcEFlags() const {
       continue;
 
     // Take the first non-zero e_flags as the reference.
-    uint32_t flags = getEFlags(f);
+    uint32_t flags = getEFlags(ctx, f);
     if (target == 0 && flags != 0) {
       target = flags;
       targetFile = f;
@@ -279,7 +279,7 @@ uint32_t LoongArch::calcEFlags() const {
 int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   case R_LARCH_32:
@@ -366,7 +366,7 @@ void LoongArch::writePlt(uint8_t *buf, const Symbol &sym,
   //   ld.[wd]   $t3, $t3, %pcrel_lo12(f@.got.plt)
   //   jirl      $t1, $t3, 0
   //   nop
-  uint32_t offset = sym.getGotPltVA() - pltEntryAddr;
+  uint32_t offset = sym.getGotPltVA(ctx) - pltEntryAddr;
   write32le(buf + 0, insn(PCADDU12I, R_T3, hi20(offset), 0));
   write32le(buf + 4,
             insn(ctx.arg.is64 ? LD_D : LD_W, R_T3, R_T3, lo12(offset)));
@@ -528,7 +528,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   //
   // [1]: https://web.archive.org/web/20230709064026/https://github.com/loongson/LoongArch-Documentation/issues/51
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -774,7 +774,7 @@ static bool relax(InputSection &sec) {
         remove = allBytes - curBytes;
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLocation((const uint8_t *)loc) +
+        errorOrWarn(getErrorLoc(ctx, (const uint8_t *)loc) +
                     "insufficient padding bytes for " + lld::toString(r.type) +
                     ": " + Twine(allBytes) + " bytes available for " +
                     "requested alignment of " + Twine(align) + " bytes");
@@ -825,7 +825,7 @@ bool LoongArch::relaxOnce(int pass) const {
     return false;
 
   if (pass == 0)
-    initSymbolAnchors();
+    initSymbolAnchors(ctx);
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
@@ -893,7 +893,6 @@ void LoongArch::finalizeRelax(int passes) const {
   }
 }
 
-TargetInfo *elf::getLoongArchTargetInfo(Ctx &ctx) {
-  static LoongArch target(ctx);
-  return &target;
+void elf::setLoongArchTargetInfo(Ctx &ctx) {
+  ctx.target.reset(new LoongArch(ctx));
 }

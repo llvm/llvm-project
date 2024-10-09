@@ -227,6 +227,11 @@ static void getAArch64MultilibFlags(const Driver &D,
   if (BranchProtectionArg) {
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
+
+  const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
+  if (ABIArg) {
+    Result.push_back(ABIArg->getAsString(Args));
+  }
 }
 
 static void getARMMultilibFlags(const Driver &D,

@@ -5616,6 +5616,10 @@ public:
     return true;
   }
 
+  // Expand vector operation by dividing it into smaller length operations and
+  // joining their results. SDValue() is returned when expansion did not happen.
+  SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
+
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;

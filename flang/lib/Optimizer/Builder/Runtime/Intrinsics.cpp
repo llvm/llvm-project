@@ -129,6 +129,22 @@ void fir::runtime::genFree(fir::FirOpBuilder &builder, mlir::Location loc,
                               builder.createConvert(loc, intPtrTy, ptr));
 }
 
+mlir::Value fir::runtime::genGetGID(fir::FirOpBuilder &builder,
+                                    mlir::Location loc) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(GetGID)>(loc, builder);
+
+  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
+}
+
+mlir::Value fir::runtime::genGetUID(fir::FirOpBuilder &builder,
+                                    mlir::Location loc) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(GetUID)>(loc, builder);
+
+  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
+}
+
 mlir::Value fir::runtime::genMalloc(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value size) {
   auto runtimeFunc =
