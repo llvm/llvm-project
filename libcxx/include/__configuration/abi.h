@@ -186,6 +186,8 @@
 // of types can be checked.
 //
 // ABI impact: This causes the layout of std::unique_ptr<T[]> to change and its size to increase.
+//             This also affects the representation of a few library types that use std::unique_ptr
+//             internally, such as the unordered containers.
 // #define _LIBCPP_ABI_BOUNDED_UNIQUE_PTR
 
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
