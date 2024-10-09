@@ -5391,6 +5391,7 @@ cc_library(
         ":MemorySlotInterfacesIncGen",
         ":SideEffectInterfaces",
         ":Support",
+        ":ViewLikeInterface",
         "//llvm:AsmParser",
         "//llvm:BinaryFormat",
         "//llvm:BitReader",
@@ -5434,6 +5435,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:BinaryFormat",
         "//llvm:Support",
     ],
@@ -5804,6 +5806,7 @@ td_library(
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
