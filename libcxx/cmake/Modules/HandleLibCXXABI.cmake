@@ -83,6 +83,10 @@ endfunction()
 
 # Link against a system-provided libstdc++
 if ("${LIBCXX_CXX_ABI}" STREQUAL "libstdc++")
+  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
+    message(FATAL_ERROR "LIBCXX_CXX_ABI_INCLUDE_PATHS must be set when selecting libstdc++ as an ABI library")
+  endif()
+
   add_library(libcxx-abi-headers INTERFACE)
   import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
     "cxxabi.h;bits/c++config.h;bits/os_defines.h;bits/cpu_defines.h;bits/cxxabi_tweaks.h;bits/cxxabi_forced.h")
@@ -96,6 +100,10 @@ if ("${LIBCXX_CXX_ABI}" STREQUAL "libstdc++")
 
 # Link against a system-provided libsupc++
 elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libsupc++")
+  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
+    message(FATAL_ERROR "LIBCXX_CXX_ABI_INCLUDE_PATHS must be set when selecting libsupc++ as an ABI library")
+  endif()
+
   add_library(libcxx-abi-headers INTERFACE)
   import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
     "cxxabi.h;bits/c++config.h;bits/os_defines.h;bits/cpu_defines.h;bits/cxxabi_tweaks.h;bits/cxxabi_forced.h")
@@ -114,7 +122,18 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxabi")
   target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBCXX_BUILDING_LIBCXXABI")
 
   if (TARGET cxxabi_shared)
-    add_library(libcxx-abi-shared ALIAS cxxabi_shared)
+    add_library(libcxx-abi-shared INTERFACE)
+    target_link_libraries(libcxx-abi-shared INTERFACE cxxabi_shared)
+
+    # When using the in-tree libc++abi as an ABI library, libc++ re-exports the
+    # libc++abi symbols (on platforms where it can) because libc++abi is only an
+    # implementation detail of libc++.
+    target_link_libraries(libcxx-abi-shared INTERFACE cxxabi-reexports)
+
+    # Populate the OUTPUT_NAME property of libcxx-abi-shared because that is used when
+    # generating a linker script.
+    get_target_property(_output_name cxxabi_shared OUTPUT_NAME)
+    set_target_properties(libcxx-abi-shared PROPERTIES "OUTPUT_NAME" "${_output_name}")
   endif()
 
   if (TARGET cxxabi_static)
@@ -131,6 +150,10 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxabi")
 
 # Link against a system-provided libc++abi
 elseif ("${LIBCXX_CXX_ABI}" STREQUAL "system-libcxxabi")
+  if(NOT LIBCXX_CXX_ABI_INCLUDE_PATHS)
+    message(FATAL_ERROR "LIBCXX_CXX_ABI_INCLUDE_PATHS must be set when selecting system-libcxxabi as an ABI library")
+  endif()
+
   add_library(libcxx-abi-headers INTERFACE)
   import_private_headers(libcxx-abi-headers "${LIBCXX_CXX_ABI_INCLUDE_PATHS}" "cxxabi.h;__cxxabi_config.h")
   target_compile_definitions(libcxx-abi-headers INTERFACE "-DLIBCXX_BUILDING_LIBCXXABI")

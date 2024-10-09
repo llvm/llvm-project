@@ -3595,6 +3595,9 @@ private:
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
 
+  /// Parses the 'permutation' clause of a '#pragma omp interchange' directive.
+  OMPClause *ParseOpenMPPermutationClause();
+
   /// Parses clause without any additional arguments.
   ///
   /// \param Kind Kind of current clause.

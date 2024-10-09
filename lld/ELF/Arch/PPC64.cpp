@@ -1097,7 +1097,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TLS:
     return R_TLSIE_HINT;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -1126,7 +1126,7 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC64_TPREL64:
     return read64(buf);
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -1161,14 +1161,14 @@ void PPC64::writePltHeader(uint8_t *buf) const {
 
 void PPC64::writePlt(uint8_t *buf, const Symbol &sym,
                      uint64_t /*pltEntryAddr*/) const {
-  int32_t offset = pltHeaderSize + sym.getPltIdx() * pltEntrySize;
+  int32_t offset = pltHeaderSize + sym.getPltIdx(ctx) * pltEntrySize;
   // bl __glink_PLTresolve
   write32(buf, 0x48000000 | ((-offset) & 0x03FFFFFc));
 }
 
 void PPC64::writeIplt(uint8_t *buf, const Symbol &sym,
                       uint64_t /*pltEntryAddr*/) const {
-  writePPC64LoadAndBranch(buf, sym.getGotPltVA() - getPPC64TocBase(ctx));
+  writePPC64LoadAndBranch(buf, sym.getGotPltVA(ctx) - getPPC64TocBase(ctx));
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType type, uint64_t val) {
@@ -1332,9 +1332,8 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
       uint32_t insn = readFromHalf16(ctx, loc);
       if (isInstructionUpdateForm(insn))
-        error(getErrorLocation(loc) +
-              "can't toc-optimize an update instruction: 0x" +
-              utohexstr(insn));
+        error(getErrorLoc(ctx, loc) +
+              "can't toc-optimize an update instruction: 0x" + utohexstr(insn));
       writeFromHalf16(ctx, loc, (insn & 0xffe00000) | 0x00020000 | lo(val));
     } else {
       write16(loc, lo(val));
@@ -1352,7 +1351,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       // changed into a nop. The lo part then needs to be updated to use the toc
       // pointer register r2, as the base register.
       if (isInstructionUpdateForm(insn))
-        error(getErrorLocation(loc) +
+        error(getErrorLoc(ctx, loc) +
               "Can't toc-optimize an update instruction: 0x" +
               Twine::utohexstr(insn));
       insn &= 0xffe00000 | mask;
@@ -1429,7 +1428,7 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     return false;
 
   // If a function is in the Plt it needs to be called with a call-stub.
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return true;
 
   // This check looks at the st_other bits of the callee with relocation
@@ -1569,9 +1568,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t lastPPCRelaxedRelocOff = -1;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
-    const uint64_t val =
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr);
+    const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
     switch (rel.expr) {
     case R_PPC64_RELAX_GOT_PC: {
       // The R_PPC64_PCREL_OPT relocation must appear immediately after
@@ -1614,7 +1611,7 @@ void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
              read32(loc + 4) != 0x60000000) &&
             rel.sym->file != sec.file) {
           // Use substr(6) to remove the "__plt_" prefix.
-          errorOrWarn(getErrorLocation(loc) + "call to " +
+          errorOrWarn(getErrorLoc(ctx, loc) + "call to " +
                       lld::toString(*rel.sym).substr(6) +
                       " lacks nop, can't restore toc");
           break;
@@ -1727,7 +1724,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   // Check that the adjusted size doesn't overflow what we can represent with 2
   // instructions.
   if (stackFrameSize < ctx.arg.splitStackAdjustSize + INT32_MIN) {
-    error(getErrorLocation(loc) + "split-stack prologue adjustment overflows");
+    error(getErrorLoc(ctx, loc) + "split-stack prologue adjustment overflows");
     return false;
   }
 
@@ -1750,7 +1747,4 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   return true;
 }
 
-TargetInfo *elf::getPPC64TargetInfo(Ctx &ctx) {
-  static PPC64 target(ctx);
-  return &target;
-}
+void elf::setPPC64TargetInfo(Ctx &ctx) { ctx.target.reset(new PPC64(ctx)); }

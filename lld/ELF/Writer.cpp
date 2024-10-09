@@ -290,7 +290,7 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
     }
 
     if (ctx.arg.hasDynSymTab)
-      sym->isPreemptible = computeIsPreemptible(*sym);
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
   }
 }
 
@@ -456,7 +456,7 @@ static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
   return true;
 }
 
-bool lld::elf::includeInSymtab(const Symbol &b) {
+bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
   if (auto *d = dyn_cast<Defined>(&b)) {
     // Always include absolute symbols.
     SectionBase *sec = d->section;
@@ -488,7 +488,7 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
 
       if (dr->section && !dr->section->isLive())
         demoteDefined(*dr, sectionIndexMap);
-      else if (ctx.in.symTab && includeInSymtab(*b) &&
+      else if (ctx.in.symTab && includeInSymtab(ctx, *b) &&
                shouldKeepInSymtab(ctx, *dr))
         ctx.in.symTab->addSymbol(b);
     }
@@ -837,7 +837,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   }
 
   // .rela_iplt_{start,end} mark the start and the end of .rel[a].dyn.
-  if (ctx.sym.relaIpltStart && ctx.mainPart->relaDyn->isNeeded()) {
+  if (ctx.sym.relaIpltStart && ctx.mainPart->relaDyn->isNeeded(ctx)) {
     ctx.sym.relaIpltStart->section = ctx.mainPart->relaDyn.get();
     ctx.sym.relaIpltEnd->section = ctx.mainPart->relaDyn.get();
     ctx.sym.relaIpltEnd->value = ctx.mainPart->relaDyn->getSize(ctx);
@@ -1425,7 +1425,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
 }
 
 static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
-  if (sec && sec->isNeeded() && sec->getParent()) {
+  if (sec && sec->isNeeded(ctx) && sec->getParent()) {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections", sec->name);
     sec->finalizeContents(ctx);
   }
@@ -1488,7 +1488,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
     finalizeSynthetic(ctx, ctx.in.got.get());
     if (ctx.in.mipsGot)
-      ctx.in.mipsGot->updateAllocSize();
+      ctx.in.mipsGot->updateAllocSize(ctx);
 
     for (Partition &part : ctx.partitions) {
       // The R_AARCH64_AUTH_RELATIVE has a smaller addend field as bits [63:32]
@@ -1513,13 +1513,13 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
       }
       if (part.relaDyn)
-        changed |= part.relaDyn->updateAllocSize();
+        changed |= part.relaDyn->updateAllocSize(ctx);
       if (part.relrDyn)
-        changed |= part.relrDyn->updateAllocSize();
+        changed |= part.relrDyn->updateAllocSize(ctx);
       if (part.relrAuthDyn)
-        changed |= part.relrAuthDyn->updateAllocSize();
+        changed |= part.relrAuthDyn->updateAllocSize(ctx);
       if (part.memtagGlobalDescriptors)
-        changed |= part.memtagGlobalDescriptors->updateAllocSize();
+        changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
     }
 
     std::pair<const OutputSection *, const Defined *> changes =
@@ -1679,7 +1679,7 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
   auto end =
       std::remove_if(start, ctx.inputSections.end(), [&](InputSectionBase *s) {
         auto *sec = cast<SyntheticSection>(s);
-        if (sec->getParent() && sec->isNeeded())
+        if (sec->getParent() && sec->isNeeded(ctx))
           return false;
         // .relr.auth.dyn relocations may be moved to .rela.dyn in
         // finalizeAddressDependentContent, making .rela.dyn no longer empty.
@@ -1810,9 +1810,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     reportUndefinedSymbols(ctx);
     postScanRelocations(ctx);
 
-    if (ctx.in.plt && ctx.in.plt->isNeeded())
+    if (ctx.in.plt && ctx.in.plt->isNeeded(ctx))
       ctx.in.plt->addSymbols();
-    if (ctx.in.iplt && ctx.in.iplt->isNeeded())
+    if (ctx.in.iplt && ctx.in.iplt->isNeeded(ctx))
       ctx.in.iplt->addSymbols();
 
     if (ctx.arg.unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore) {
@@ -1862,7 +1862,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // Now that we have defined all possible global symbols including linker-
     // synthesized ones. Visit all symbols to give the finishing touches.
     for (Symbol *sym : ctx.symtab->getSymbols()) {
-      if (!sym->isUsedInRegularObj || !includeInSymtab(*sym))
+      if (!sym->isUsedInRegularObj || !includeInSymtab(ctx, *sym))
         continue;
       if (!ctx.arg.relocatable)
         sym->binding = sym->computeBinding();
@@ -2312,7 +2312,7 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     ret.push_back(relRo);
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (part.ehFrame->isNeeded() && part.ehFrameHdr &&
+  if (part.ehFrame->isNeeded(ctx) && part.ehFrameHdr &&
       part.ehFrame->getParent() && part.ehFrameHdr->getParent())
     addHdr(PT_GNU_EH_FRAME, part.ehFrameHdr->getParent()->getPhdrFlags())
         ->add(part.ehFrameHdr->getParent());

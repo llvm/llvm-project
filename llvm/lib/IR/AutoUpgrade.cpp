@@ -34,9 +34,11 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -1039,14 +1041,17 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
-      if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
-          Name.starts_with("ds.fmax") ||
-          Name.starts_with("global.atomic.fadd") ||
-          Name.starts_with("flat.atomic.fadd")) {
-        // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
-        // declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
+          Name.consume_front("flat.atomic.")) {
+        if (Name.starts_with("fadd") ||
+            // FIXME: We should also remove fmin.num and fmax.num intrinsics.
+            (Name.starts_with("fmin") && !Name.starts_with("fmin.num")) ||
+            (Name.starts_with("fmax") && !Name.starts_with("fmax.num"))) {
+          // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
+          // declaration.
+          NewFn = nullptr;
+          return true;
+        }
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -4216,7 +4221,11 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
           .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
           .StartsWith("global.atomic.fadd", AtomicRMWInst::FAdd)
-          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd);
+          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("global.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("flat.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("global.atomic.fmax", AtomicRMWInst::FMax)
+          .StartsWith("flat.atomic.fmax", AtomicRMWInst::FMax);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.
@@ -4270,11 +4279,20 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   AtomicRMWInst *RMW =
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
-  if (PtrTy->getAddressSpace() != 3) {
+  unsigned AddrSpace = PtrTy->getAddressSpace();
+  if (AddrSpace != AMDGPUAS::LOCAL_ADDRESS) {
     MDNode *EmptyMD = MDNode::get(F->getContext(), {});
     RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
     if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
       RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+  }
+
+  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
+    MDBuilder MDB(F->getContext());
+    MDNode *RangeNotPrivate =
+        MDB.createRange(APInt(32, AMDGPUAS::PRIVATE_ADDRESS),
+                        APInt(32, AMDGPUAS::PRIVATE_ADDRESS + 1));
+    RMW->setMetadata(LLVMContext::MD_noalias_addrspace, RangeNotPrivate);
   }
 
   if (IsVolatile)
