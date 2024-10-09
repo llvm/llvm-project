@@ -70,8 +70,7 @@ define void @alloc_v6i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    mov z2.b, z0.b[1]
 ; CHECK-NEXT:    mov z0.b, z0.b[5]
 ; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z2.h, z0.h, z0.h
-; CHECK-NEXT:    zip1 z1.s, z1.s, z2.s
+; CHECK-NEXT:    zip1 z1.s, z1.s, z0.s
 ; CHECK-NEXT:    st1b { z1.h }, p0, [x8]
 ; CHECK-NEXT:    ld1h { z1.s }, p1/z, [x8]
 ; CHECK-NEXT:    fmov w8, s0

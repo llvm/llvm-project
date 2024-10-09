@@ -95,8 +95,6 @@ define void @bitcast_v2i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    mov z1.s, z0.s[1]
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    zip1 z1.h, z0.h, z0.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret

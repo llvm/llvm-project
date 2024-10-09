@@ -509,8 +509,6 @@ define <2 x half> @insertelement_v2f16(<2 x half> %op1) {
 ; CHECK-NEXT:    fmov h1, #5.00000000
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    zip1 z1.h, z0.h, z0.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;

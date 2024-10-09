@@ -14408,16 +14408,21 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   SDValue ZeroI64 = DAG.getConstant(0, DL, MVT::i64);
   SmallVector<SDValue, 16> Intermediates =
       llvm::map_to_vector<16>(Op->op_values(), [&](SDValue Op) {
-        return DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ZipVT,
-                           DAG.getUNDEF(ZipVT), Op, ZeroI64);
+        SDValue Undef = DAG.getUNDEF(ZipVT);
+        return Op.isUndef() ? Undef
+                            : DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ZipVT,
+                                          Undef, Op, ZeroI64);
       });
 
   while (Intermediates.size() > 1) {
     auto ToZipVT = [&](SDValue Op) { return DAG.getBitcast(ZipVT, Op); };
     for (unsigned I = 0; I < Intermediates.size(); I += 2) {
-      SDValue Op0 = ToZipVT(Intermediates[I + 0]);
-      SDValue Op1 = ToZipVT(Intermediates[I + 1]);
-      Intermediates[I / 2] = DAG.getNode(AArch64ISD::ZIP1, DL, ZipVT, Op0, Op1);
+      SDValue Op0 = Intermediates[I + 0];
+      SDValue Op1 = Intermediates[I + 1];
+      Intermediates[I / 2] = Op1.isUndef()
+                                 ? Op0
+                                 : DAG.getNode(AArch64ISD::ZIP1, DL, ZipVT,
+                                               ToZipVT(Op0), ToZipVT(Op1));
     }
 
     Intermediates.resize(Intermediates.size() / 2);

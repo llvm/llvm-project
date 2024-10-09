@@ -9,13 +9,11 @@ define <2 x half> @select_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x i1> %mask
 ; CHECK-LABEL: select_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-NEXT:    mov z4.s, z2.s[1]
-; CHECK-NEXT:    zip1 z3.h, z0.h, z0.h
+; CHECK-NEXT:    mov z3.s, z2.s[1]
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    zip1 z2.h, z2.h, z4.h
-; CHECK-NEXT:    zip1 z2.s, z2.s, z3.s
+; CHECK-NEXT:    zip1 z2.h, z2.h, z3.h
 ; CHECK-NEXT:    lsl z2.h, z2.h, #15
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
