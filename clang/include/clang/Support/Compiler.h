@@ -58,10 +58,6 @@
 #define CLANG_TEMPLATE_ABI
 #define CLANG_EXPORT_TEMPLATE
 #endif
-#else
-#define CLANG_ABI
-#define CLANG_TEMPLATE_ABI
-#define CLANG_EXPORT_TEMPLATE
 #endif
 
 #endif
