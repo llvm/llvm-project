@@ -22,6 +22,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include <limits>
@@ -1413,6 +1414,46 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
            diag::err_shufflevector_minus_one_is_undefined_behavior_constexpr)
       << Index;
   return false;
+}
+
+bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
+                                const Pointer &Ptr, unsigned BitWidth) {
+  if (Ptr.isDummy())
+    return false;
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
+  if (Ptr.isBlockPointer() && !Ptr.isZero()) {
+    // Only allow based lvalue casts if they are lossless.
+    if (S.getASTContext().getTargetInfo().getPointerWidth(LangAS::Default) !=
+        BitWidth)
+      return Invalid(S, OpPC);
+  }
+  return true;
+}
+
+bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckPointerToIntegralCast(S, OpPC, Ptr, BitWidth))
+    return false;
+
+  S.Stk.push<IntegralAP<false>>(
+      IntegralAP<false>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  return true;
+}
+
+bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckPointerToIntegralCast(S, OpPC, Ptr, BitWidth))
+    return false;
+
+  S.Stk.push<IntegralAP<true>>(
+      IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  return true;
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
