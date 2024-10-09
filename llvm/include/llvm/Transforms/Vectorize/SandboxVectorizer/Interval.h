@@ -13,7 +13,7 @@
 //
 // This is currently used for Instruction intervals.
 // It provides an API for some basic operations on the interval, including some
-// simple set operations, like union, interseciton and others.
+// simple set operations, like union, intersection and others.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,6 +21,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_INSTRINTERVAL_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <iterator>
 
 namespace llvm::sandboxir {
@@ -57,7 +58,7 @@ public:
   }
   IntervalIterator &operator--() {
     // `I` is nullptr for end() when To is the BB terminator.
-    I = I != nullptr ? I->getPrevNode() : R.To;
+    I = I != nullptr ? I->getPrevNode() : R.bottom();
     return *this;
   }
   IntervalIterator operator--(int) {
@@ -109,14 +110,16 @@ public:
   T *bottom() const { return To; }
 
   using iterator = IntervalIterator<T, Interval>;
-  using const_iterator = IntervalIterator<const T, const Interval>;
   iterator begin() { return iterator(From, *this); }
   iterator end() {
     return iterator(To != nullptr ? To->getNextNode() : nullptr, *this);
   }
-  const_iterator begin() const { return const_iterator(From, *this); }
-  const_iterator end() const {
-    return const_iterator(To != nullptr ? To->getNextNode() : nullptr, *this);
+  iterator begin() const {
+    return iterator(From, const_cast<Interval &>(*this));
+  }
+  iterator end() const {
+    return iterator(To != nullptr ? To->getNextNode() : nullptr,
+                    const_cast<Interval &>(*this));
   }
   /// Equality.
   bool operator==(const Interval &Other) const {
@@ -197,6 +200,27 @@ public:
     auto *NewTo = To->comesBefore(Other.To) ? Other.To : To;
     return {NewFrom, NewTo};
   }
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const {
+    auto *Top = top();
+    auto *Bot = bottom();
+    OS << "Top: ";
+    if (Top != nullptr)
+      OS << *Top;
+    else
+      OS << "nullptr";
+    OS << "\n";
+
+    OS << "Bot: ";
+    if (Bot != nullptr)
+      OS << *Bot;
+    else
+      OS << "nullptr";
+    OS << "\n";
+  }
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 } // namespace llvm::sandboxir

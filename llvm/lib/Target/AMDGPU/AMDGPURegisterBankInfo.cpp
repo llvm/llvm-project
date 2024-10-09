@@ -3507,7 +3507,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingMAD_64_32(B, OpdMapper);
     return;
   case AMDGPU::G_PREFETCH: {
-    if (!Subtarget.hasPrefetch() || !Subtarget.hasSafeSmemPrefetch()) {
+    if (!Subtarget.hasSafeSmemPrefetch() && !Subtarget.hasVectorPrefetch()) {
       MI.eraseFromParent();
       return;
     }
@@ -3520,8 +3520,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     unsigned AS = MRI.getType(PtrReg).getAddressSpace();
-    if (!AMDGPU::isFlatGlobalAddrSpace(AS) &&
-        AS != AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+    if ((!AMDGPU::isFlatGlobalAddrSpace(AS) &&
+         AS != AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
+        (!Subtarget.hasSafeSmemPrefetch() &&
+         (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+          !MI.getOperand(3).getImm() /* I$ prefetch */))) {
       MI.eraseFromParent();
       return;
     }
@@ -5288,12 +5291,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_global_atomic_csub:
-    case Intrinsic::amdgcn_global_atomic_fmin:
-    case Intrinsic::amdgcn_global_atomic_fmax:
     case Intrinsic::amdgcn_global_atomic_fmin_num:
     case Intrinsic::amdgcn_global_atomic_fmax_num:
-    case Intrinsic::amdgcn_flat_atomic_fmin:
-    case Intrinsic::amdgcn_flat_atomic_fmax:
     case Intrinsic::amdgcn_flat_atomic_fmin_num:
     case Intrinsic::amdgcn_flat_atomic_fmax_num:
     case Intrinsic::amdgcn_atomic_cond_sub_u32:

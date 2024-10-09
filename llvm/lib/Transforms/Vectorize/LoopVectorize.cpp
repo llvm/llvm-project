@@ -961,6 +961,8 @@ using InstructionVFPair = std::pair<Instruction *, ElementCount>;
 /// TargetTransformInfo to query the different backends for the cost of
 /// different operations.
 class LoopVectorizationCostModel {
+  friend class LoopVectorizationPlanner;
+
 public:
   LoopVectorizationCostModel(ScalarEpilogueLowering SEL, Loop *L,
                              PredicatedScalarEvolution &PSE, LoopInfo *LI,
@@ -4363,7 +4365,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
                 [](const auto *R) { return Instruction::Store; })
             .Case<VPWidenLoadRecipe>(
                 [](const auto *R) { return Instruction::Load; })
-            .Case<VPWidenCallRecipe>(
+            .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                   VPWidenCastRecipe>(
@@ -4387,12 +4389,18 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         OS << (Pair.second == Subset.front().second ? "" : ", ") << Pair.second;
       OS << "):";
       if (Opcode == Instruction::Call) {
-        auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
-        Function *CalledFn =
-            WidenCall ? WidenCall->getCalledScalarFunction()
-                      : cast<Function>(R->getOperand(R->getNumOperands() - 1)
-                                           ->getLiveInIRValue());
-        OS << " call to " << CalledFn->getName();
+        StringRef Name = "";
+        if (auto *Int = dyn_cast<VPWidenIntrinsicRecipe>(R)) {
+          Name = Int->getIntrinsicName();
+        } else {
+          auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
+          Function *CalledFn =
+              WidenCall ? WidenCall->getCalledScalarFunction()
+                        : cast<Function>(R->getOperand(R->getNumOperands() - 1)
+                                             ->getLiveInIRValue());
+          Name = CalledFn->getName();
+        }
+        OS << " call to " << Name;
       } else
         OS << " " << Instruction::getOpcodeName(Opcode);
       reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
@@ -4443,6 +4451,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenCanonicalIVSC:
       case VPDef::VPWidenCastSC:
       case VPDef::VPWidenGEPSC:
+      case VPDef::VPWidenIntrinsicSC:
       case VPDef::VPWidenSC:
       case VPDef::VPWidenSelectSC:
       case VPDef::VPBlendSC:
@@ -7263,6 +7272,32 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     auto BranchCost = CostCtx.getLegacyCost(BB->getTerminator(), VF);
     Cost += BranchCost;
   }
+
+  // Pre-compute costs for instructions that are forced-scalar or profitable to
+  // scalarize. Their costs will be computed separately in the legacy cost
+  // model.
+  for (Instruction *ForcedScalar : CM.ForcedScalars[VF]) {
+    if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
+      continue;
+    CostCtx.SkipCostComputation.insert(ForcedScalar);
+    InstructionCost ForcedCost = CostCtx.getLegacyCost(ForcedScalar, VF);
+    LLVM_DEBUG({
+      dbgs() << "Cost of " << ForcedCost << " for VF " << VF
+             << ": forced scalar " << *ForcedScalar << "\n";
+    });
+    Cost += ForcedCost;
+  }
+  for (const auto &[Scalarized, ScalarCost] : CM.InstsToScalarize[VF]) {
+    if (CostCtx.skipCostComputation(Scalarized, VF.isVector()))
+      continue;
+    CostCtx.SkipCostComputation.insert(Scalarized);
+    LLVM_DEBUG({
+      dbgs() << "Cost of " << ScalarCost << " for VF " << VF
+             << ": profitable to scalarize " << *Scalarized << "\n";
+    });
+    Cost += ScalarCost;
+  }
+
   return Cost;
 }
 
@@ -7513,7 +7548,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::unrollByUF(BestVPlan, BestUF,
-                              OrigLoop->getHeader()->getModule()->getContext());
+                              OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF
@@ -8266,7 +8301,7 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   return new VPBlendRecipe(Phi, OperandsWithMask);
 }
 
-VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
+VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                                                    ArrayRef<VPValue *> Operands,
                                                    VFRange &Range) {
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -8286,7 +8321,6 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     return nullptr;
 
   SmallVector<VPValue *, 4> Ops(Operands.take_front(CI->arg_size()));
-  Ops.push_back(Operands.back());
 
   // Is it beneficial to perform intrinsic call compared to lib call?
   bool ShouldUseVectorIntrinsic =
@@ -8297,8 +8331,8 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 },
                 Range);
   if (ShouldUseVectorIntrinsic)
-    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()), ID,
-                                 CI->getDebugLoc());
+    return new VPWidenIntrinsicRecipe(*CI, ID, Ops, CI->getType(),
+                                      CI->getDebugLoc());
 
   Function *Variant = nullptr;
   std::optional<unsigned> MaskPos;
@@ -8344,15 +8378,14 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       if (Legal->isMaskRequired(CI))
         Mask = getBlockInMask(CI->getParent());
       else
-        Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-            IntegerType::getInt1Ty(Variant->getFunctionType()->getContext())));
+        Mask = Plan.getOrAddLiveIn(
+            ConstantInt::getTrue(IntegerType::getInt1Ty(CI->getContext())));
 
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()),
-                                 Intrinsic::not_intrinsic, CI->getDebugLoc(),
-                                 Variant);
+    Ops.push_back(Operands.back());
+    return new VPWidenCallRecipe(CI, Variant, Ops, CI->getDebugLoc());
   }
 
   return nullptr;
@@ -8720,8 +8753,6 @@ addUsersInExitBlock(VPlan &Plan,
 
   auto *MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  BasicBlock *ExitBB =
-      cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->getIRBasicBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   // Introduce extract for exiting values and update the VPIRInstructions
@@ -8732,10 +8763,10 @@ addUsersInExitBlock(VPlan &Plan,
     if (V->isLiveIn())
       continue;
 
-    VPValue *Ext = B.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {V, Plan.getOrAddLiveIn(ConstantInt::get(
-                IntegerType::get(ExitBB->getContext(), 32), 1))});
+    LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
+    VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
+                                  {V, Plan.getOrAddLiveIn(ConstantInt::get(
+                                          IntegerType::get(Ctx, 32), 1))});
     ExitIRI->setOperand(0, Ext);
   }
 }
@@ -9225,7 +9256,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
             RecurrenceDescriptor::isFMulAddIntrinsic(CurrentLinkI) &&
             "Expected instruction to be a call to the llvm.fmuladd intrinsic");
         assert(((MinVF.isScalar() && isa<VPReplicateRecipe>(CurrentLink)) ||
-                isa<VPWidenCallRecipe>(CurrentLink)) &&
+                isa<VPWidenIntrinsicRecipe>(CurrentLink)) &&
                CurrentLink->getOperand(2) == PreviousLink &&
                "expected a call where the previous link is the added operand");
 

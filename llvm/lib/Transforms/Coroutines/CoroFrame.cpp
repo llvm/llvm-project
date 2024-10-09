@@ -797,8 +797,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
     AlignInBits = OffsetCache[Index].first * 8;
     OffsetInBits = OffsetCache[Index].second * 8;
 
-    if (NameCache.contains(Index)) {
-      Name = NameCache[Index].str();
+    if (auto It = NameCache.find(Index); It != NameCache.end()) {
+      Name = It->second.str();
       DITy = TyCache[Index];
     } else {
       DITy = solveDIType(DBuilder, Ty, Layout, FrameDITy, LineNum, DITypeCache);

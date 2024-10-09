@@ -7,7 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
@@ -25,6 +31,12 @@ struct SeedBundleTest : public testing::Test {
     M = parseAssemblyString(IR, Err, C);
     if (!M)
       Err.print("LegalityTest", errs());
+  }
+  BasicBlock *getBasicBlockByName(Function &F, StringRef Name) {
+    for (BasicBlock &BB : F)
+      if (BB.getName() == Name)
+        return &BB;
+    llvm_unreachable("Expected to find basic block!");
   }
 };
 
@@ -122,4 +134,65 @@ bb:
   auto Slice4 = SB1.getSlice(4, /* MaxVecRegBits */ 8,
                              /* ForcePowerOf2 */ true);
   EXPECT_EQ(Slice4.size(), 0u);
+}
+
+TEST_F(SeedBundleTest, MemSeedBundle) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptrA, float %val, ptr %ptr) {
+bb:
+  %gep0 = getelementptr float, ptr %ptr, i32 0
+  %gep1 = getelementptr float, ptr %ptr, i32 1
+  %gep2 = getelementptr float, ptr %ptr, i32 3
+  %gep3 = getelementptr float, ptr %ptr, i32 4
+  store float %val, ptr %gep0
+  store float %val, ptr %gep1
+  store float %val, ptr %gep2
+  store float %val, ptr %gep3
+
+  load float, ptr %gep0
+  load float, ptr %gep1
+  load float, ptr %gep2
+  load float, ptr %gep3
+
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = std::next(BB->begin(), 4);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+
+  // Single instruction constructor; test insert out of memory order
+  sandboxir::StoreSeedBundle SB(S3);
+  SB.insert(S1, SE);
+  SB.insert(S2, SE);
+  SB.insert(S0, SE);
+  EXPECT_THAT(SB, testing::ElementsAre(S0, S1, S2, S3));
+
+  // Instruction list constructor; test list out of order
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L2 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L3 = cast<sandboxir::LoadInst>(&*It++);
+  SmallVector<sandboxir::Instruction *> Loads;
+  Loads.push_back(L1);
+  Loads.push_back(L3);
+  Loads.push_back(L2);
+  Loads.push_back(L0);
+  sandboxir::LoadSeedBundle LB(std::move(Loads), SE);
+  EXPECT_THAT(LB, testing::ElementsAre(L0, L1, L2, L3));
 }

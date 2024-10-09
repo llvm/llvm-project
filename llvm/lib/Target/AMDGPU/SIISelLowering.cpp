@@ -957,7 +957,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
-  if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
+  if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVectorPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   if (Subtarget->hasIEEEMinMax()) {
@@ -1578,13 +1578,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MODereferenceable;
     return true;
   }
-  case Intrinsic::amdgcn_global_atomic_fmin:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_atomic_cond_sub_u32: {
@@ -1814,17 +1810,13 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
   case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_load_monitor_b128:
   case Intrinsic::amdgcn_flat_load_monitor_b32:
   case Intrinsic::amdgcn_flat_load_monitor_b64:
   case Intrinsic::amdgcn_global_atomic_csub:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
-  case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
   case Intrinsic::amdgcn_global_load_monitor_b128:
@@ -4754,11 +4746,18 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   case AMDGPUAS::FLAT_ADDRESS:
   case AMDGPUAS::GLOBAL_ADDRESS:
   case AMDGPUAS::CONSTANT_ADDRESS:
-  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
     break;
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    if (Subtarget->hasSafeSmemPrefetch())
+      break;
+    [[fallthrough]];
   default:
     return SDValue();
   }
+
+  // I$ prefetch
+  if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
+    return SDValue();
 
   return Op;
 }
@@ -10584,12 +10583,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
     return Op;
   }
-  case Intrinsic::amdgcn_global_atomic_fmin:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -10600,16 +10595,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     };
     unsigned Opcode = 0;
     switch (IntrID) {
-    case Intrinsic::amdgcn_global_atomic_fmin:
     case Intrinsic::amdgcn_global_atomic_fmin_num:
-    case Intrinsic::amdgcn_flat_atomic_fmin:
     case Intrinsic::amdgcn_flat_atomic_fmin_num: {
       Opcode = ISD::ATOMIC_LOAD_FMIN;
       break;
     }
-    case Intrinsic::amdgcn_global_atomic_fmax:
     case Intrinsic::amdgcn_global_atomic_fmax_num:
-    case Intrinsic::amdgcn_flat_atomic_fmax:
     case Intrinsic::amdgcn_flat_atomic_fmax_num: {
       Opcode = ISD::ATOMIC_LOAD_FMAX;
       break;
