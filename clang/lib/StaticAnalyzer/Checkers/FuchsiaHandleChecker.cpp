@@ -493,24 +493,23 @@ bool FuchsiaHandleChecker::evalCall(const CallEvent &Call,
   State = evalFunctionAttrs(Call, C, State, Notes);
   State = evalArgsAttrs(Call, C, State, Notes);
 
-  assert(!Notes.empty() && "Notes should be produced");
-
   const NoteTag *T =
-      C.getNoteTag([this, Notes{std::move(Notes)}](
-                       PathSensitiveBugReport &BR) -> std::string {
-        if (&BR.getBugType() != &UseAfterReleaseBugType &&
-            &BR.getBugType() != &LeakBugType &&
-            &BR.getBugType() != &DoubleReleaseBugType &&
-            &BR.getBugType() != &ReleaseUnownedBugType)
-          return "";
-        for (auto &Note : Notes) {
-          std::string Text = Note(BR);
-          if (!Text.empty())
-            return Text;
-        }
-        return "";
-      });
-  }
+      Notes.empty()
+          ? nullptr
+          : C.getNoteTag([this, Notes{std::move(Notes)}](
+                             PathSensitiveBugReport &BR) -> std::string {
+              if (&BR.getBugType() != &UseAfterReleaseBugType &&
+                  &BR.getBugType() != &LeakBugType &&
+                  &BR.getBugType() != &DoubleReleaseBugType &&
+                  &BR.getBugType() != &ReleaseUnownedBugType)
+                return "";
+              for (auto &Note : Notes) {
+                std::string Text = Note(BR);
+                if (!Text.empty())
+                  return Text;
+              }
+              return "";
+            });
 
   C.addTransition(State, T);
   return true;
