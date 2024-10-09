@@ -602,8 +602,9 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags NW,
       for (unsigned I = 0, E = PHI->getNumIncomingValues(); I < E; ++I) {
         Value *NewIncoming = PHI->getIncomingValue(I);
 
-        if (NewInsts.contains(NewIncoming))
-          NewIncoming = NewInsts[NewIncoming];
+        auto It = NewInsts.find(NewIncoming);
+        if (It != NewInsts.end())
+          NewIncoming = It->second;
 
         NewPhi->addIncoming(NewIncoming, PHI->getIncomingBlock(I));
       }
@@ -5013,18 +5014,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       Constant *C2 = ConstantExpr::getNot(C);
       return new ICmpInst(Pred, Op0, Builder.CreateSub(C2, X));
     }
-  }
-
-  // (icmp eq/ne (X, -P2), INT_MIN)
-  //	-> (icmp slt/sge X, INT_MIN + P2)
-  if (ICmpInst::isEquality(Pred) && BO0 &&
-      match(I.getOperand(1), m_SignMask()) &&
-      match(BO0, m_And(m_Value(), m_NegatedPower2OrZero()))) {
-    // Will Constant fold.
-    Value *NewC = Builder.CreateSub(I.getOperand(1), BO0->getOperand(1));
-    return new ICmpInst(Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_SLT
-                                                  : ICmpInst::ICMP_SGE,
-                        BO0->getOperand(0), NewC);
   }
 
   {
