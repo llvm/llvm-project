@@ -101,6 +101,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
 using namespace clang;
@@ -218,9 +219,7 @@ public:
                                      const InvalidatedSymbols &Escaped,
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
-  Note
-  createNote(SymbolRef RetVal,
-             std::function<void(llvm::raw_string_ostream &)> Message) const;
+  Note createNote(SymbolRef RetVal, std::string Message) const;
 
   ExplodedNode *reportLeaks(ArrayRef<SymbolRef> LeakedHandles,
                             CheckerContext &C, ExplodedNode *Pred) const;
@@ -329,17 +328,13 @@ SmallVector<SymbolRef> getFuchsiaHandleSymbols(QualType QT, SVal Arg,
   return {};
 }
 
-FuchsiaHandleChecker::Note FuchsiaHandleChecker::createNote(
-    SymbolRef Sym,
-    std::function<void(llvm::raw_string_ostream &)> Message) const {
+FuchsiaHandleChecker::Note
+FuchsiaHandleChecker::createNote(SymbolRef Sym, std::string Message) const {
   return [Sym, Message](BugReport &BR) -> std::string {
     auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
     if (!PathBR->getInterestingnessKind(Sym))
       return "";
-    std::string SBuf;
-    llvm::raw_string_ostream OS(SBuf);
-    Message(OS);
-    return SBuf;
+    return Message;
   };
 }
 
@@ -393,26 +388,24 @@ ProgramStateRef FuchsiaHandleChecker::evalArgsAttrs(const CallEvent &Call,
 
     for (SymbolRef Handle : Handles) {
       if (hasFuchsiaAttr<ReleaseHandleAttr>(PVD)) {
-        Notes.push_back(
-            createNote(Handle, [ParamDiagIdx](llvm::raw_string_ostream &OS) {
-              OS << "Handle released through " << ParamDiagIdx
-                 << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-            }));
+        Notes.push_back(createNote(
+            Handle,
+            llvm::formatv("Handle released through {0}{1} parameter",
+                          ParamDiagIdx, llvm::getOrdinalSuffix(ParamDiagIdx))));
         State = State->set<HStateMap>(Handle, HandleState::getReleased());
       } else if (hasFuchsiaAttr<AcquireHandleAttr>(PVD)) {
-        Notes.push_back(
-            createNote(Handle, [ParamDiagIdx](llvm::raw_string_ostream &OS) {
-              OS << "Handle allocated through " << ParamDiagIdx
-                 << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-            }));
+        Notes.push_back(createNote(
+            Handle,
+            llvm::formatv("Handle allocated through {0}{1} parameter",
+                          ParamDiagIdx, llvm::getOrdinalSuffix(ParamDiagIdx))));
+
         State = State->set<HStateMap>(
             Handle, HandleState::getMaybeAllocated(ResultSymbol));
       } else if (hasFuchsiaUnownedAttr<AcquireHandleAttr>(PVD)) {
-        Notes.push_back(
-            createNote(Handle, [ParamDiagIdx](llvm::raw_string_ostream &OS) {
-              OS << "Unowned handle allocated through " << ParamDiagIdx
-                 << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-            }));
+        Notes.push_back(createNote(
+            Handle,
+            llvm::formatv("Unowned handle allocated through {0}{1} parameter",
+                          ParamDiagIdx, llvm::getOrdinalSuffix(ParamDiagIdx))));
         State = State->set<HStateMap>(Handle, HandleState::getUnowned());
       }
     }
@@ -438,19 +431,15 @@ ProgramStateRef FuchsiaHandleChecker::evalFunctionAttrs(const CallEvent &Call,
   assert(RetSym && "Return symbol should be there");
 
   if (hasFuchsiaAttr<AcquireHandleAttr>(FuncDecl)) {
-    Notes.push_back(
-        createNote(RetSym, [FuncDecl](llvm::raw_string_ostream &OS) {
-          OS << "Function '" << FuncDecl->getDeclName()
-             << "' returns an open handle";
-        }));
+    Notes.push_back(createNote(
+        RetSym, llvm::formatv("Function '{0}' returns an open handle",
+                              FuncDecl->getDeclName())));
     State =
         State->set<HStateMap>(RetSym, HandleState::getMaybeAllocated(nullptr));
   } else {
-    Notes.push_back(
-        createNote(RetSym, [FuncDecl](llvm::raw_string_ostream &OS) {
-          OS << "Function '" << FuncDecl->getDeclName()
-             << "' returns an unowned handle";
-        }));
+    Notes.push_back(createNote(
+        RetSym, llvm::formatv("Function '{0}' returns an unowned handle",
+                              FuncDecl->getDeclName())));
     State = State->set<HStateMap>(RetSym, HandleState::getUnowned());
   }
 
