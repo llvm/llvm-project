@@ -342,7 +342,7 @@ DataExtractor ProcessMinidump::GetAuxvData() {
   if (!auxv)
     return DataExtractor();
 
-  return DataExtractor(auxv->data(), auxv->size(), ByteOrder::eByteOrderLittle,
+  return DataExtractor(auxv->data(), auxv->size(), GetByteOrder(),
                        GetAddressByteSize(), GetAddressByteSize());
 }
 
@@ -475,6 +475,7 @@ ModuleSP ProcessMinidump::GetOrCreateModule(UUID minidump_uuid,
 void ProcessMinidump::ReadModuleList() {
   std::vector<const minidump::Module *> filtered_modules =
       m_minidump_parser->GetFilteredModuleList();
+
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
   for (auto module : filtered_modules) {
@@ -543,6 +544,7 @@ void ProcessMinidump::ReadModuleList() {
                "Unable to locate the matching object file, creating a "
                "placeholder module for: {0}",
                name);
+
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, load_addr, load_size);
       // If we haven't loaded a main executable yet, set the first module to be
