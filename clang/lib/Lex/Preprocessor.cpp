@@ -951,9 +951,16 @@ void Preprocessor::Lex(Token &Result) {
         break;
       [[fallthrough]];
     default:
-      TrackGMFState.handleMisc();
-      StdCXXImportSeqState.handleMisc();
-      ModuleDeclState.handleMisc();
+      if (tok::isPragmaAnnotation(Result.getKind())) {
+        // For `#pragma ...` mimic ';'.
+        TrackGMFState.handleSemi();
+        StdCXXImportSeqState.handleSemi();
+        ModuleDeclState.handleSemi();
+      } else {
+        TrackGMFState.handleMisc();
+        StdCXXImportSeqState.handleMisc();
+        ModuleDeclState.handleMisc();
+      }
       break;
     }
   }
