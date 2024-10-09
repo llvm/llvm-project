@@ -3777,13 +3777,16 @@ public:
 ///
 /// Example:
 ///     Before:
-///         %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0],
-///         sizes = [1, 1, 1, 1, 8], strides = [1, 1, 1, 1, 1]} :
-///         vector<8x1x1x2x8xi8> to vector<1x1x1x1x8xi8>
+///         %1 = vector.extract_strided_slice %arg0 {
+///                offsets = [0, 0, 0, 0, 0],
+///                sizes = [1, 1, 1, 1, 8],
+///                strides = [1, 1, 1, 1, 1]
+///              } : vector<8x1x1x2x8xi8> to vector<1x1x1x1x8xi8>
 ///     After:
-///         %0 = vector.extract %arg0[0, 0, 0, 0] : vector<8xi8> from
-///         vector<8x1x1x2x8xi8> %1 = vector.shape_cast %0 : vector<8xi8> to
-///         vector<1x1x1x1x8xi8>
+///         %0 = vector.extract %arg0[0, 0, 0, 0]
+///                : vector<8xi8> from vector<8x1x1x2x8xi8>
+///         %1 = vector.shape_cast %0
+///                : vector<8xi8> to vector<1x1x1x1x8xi8>
 ///
 class ContiguousExtractStridedSliceToExtract final
     : public OpRewritePattern<ExtractStridedSliceOp> {
@@ -3792,14 +3795,12 @@ public:
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.hasNonUnitStrides()) {
+    if (op.hasNonUnitStrides())
       return failure();
-    }
     Value source = op.getOperand();
     auto sourceType = cast<VectorType>(source.getType());
-    if (sourceType.isScalable() || sourceType.getRank() == 0) {
+    if (sourceType.isScalable() || sourceType.getRank() == 0)
       return failure();
-    }
 
     // Compute the number of offsets to pass to ExtractOp::build. That is the
     // difference between the source rank and the desired slice rank. We walk
@@ -3808,30 +3809,26 @@ public:
     SmallVector<int64_t> sizes = getI64SubArray(op.getSizes());
     int numOffsets;
     for (numOffsets = sizes.size(); numOffsets > 0; --numOffsets) {
-      if (sizes[numOffsets - 1] != sourceType.getDimSize(numOffsets - 1)) {
+      if (sizes[numOffsets - 1] != sourceType.getDimSize(numOffsets - 1))
         break;
-      }
     }
 
     // If the created extract op would have no offsets, then this whole
     // extract_strided_slice is the identity and should have been handled by
     // other canonicalizations.
-    if (numOffsets == 0) {
+    if (numOffsets == 0)
       return failure();
-    }
 
     // If not even the inner-most dimension is full-size, this op can't be
     // rewritten as an ExtractOp.
     if (numOffsets == sourceType.getRank() &&
-        static_cast<int>(sizes.size()) == sourceType.getRank()) {
+        static_cast<int>(sizes.size()) == sourceType.getRank())
       return failure();
-    }
 
     // The outer dimensions must have unit size.
     for (int i = 0; i < numOffsets; ++i) {
-      if (sizes[i] != 1) {
+      if (sizes[i] != 1)
         return failure();
-      }
     }
 
     // Avoid generating slices that have leading unit dimensions. The shape_cast
@@ -3839,13 +3836,6 @@ public:
     // (ShapeCastOpRewritePattern).
     while (sizes[numOffsets] == 1 &&
            numOffsets < static_cast<int>(sizes.size()) - 1) {
-      ++numOffsets;
-    }
-    // After exhausting the list of slice sizes, we keep checking for unit
-    // dimensions in the source shape, to remove corner cases where the result
-    // would have a leading unit dimension.
-    while (sourceType.getDimSize(numOffsets) == 1 &&
-           numOffsets < sourceType.getRank() - 1) {
       ++numOffsets;
     }
 
