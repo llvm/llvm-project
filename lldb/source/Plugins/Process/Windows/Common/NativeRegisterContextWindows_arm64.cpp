@@ -147,7 +147,7 @@ NativeRegisterContextWindows_arm64::NativeRegisterContextWindows_arm64(
   // Currently, there is no API to query the maximum supported hardware
   // breakpoints and watchpoints on Windows. The values set below are based
   // on tests conducted on Windows 11 with Snapdragon Elite X hardware.
-  m_max_hwp_supported = 2;
+  m_max_hwp_supported = 1;
   m_max_hbp_supported = 0;
 }
 
