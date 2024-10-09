@@ -479,7 +479,10 @@ mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
                                         mlir::Location loc, mlir::Type toTy,
                                         mlir::Value val) {
   if (val.getType() != toTy) {
-    assert(!fir::isa_derived(toTy));
+    assert((!fir::isa_derived(toTy) ||
+            mlir::cast<fir::RecordType>(val.getType()).getTypeList() ==
+                mlir::cast<fir::RecordType>(toTy).getTypeList()) &&
+           "incompatible record types");
     return builder.create<fir::ConvertOp>(loc, toTy, val);
   }
   return val;
