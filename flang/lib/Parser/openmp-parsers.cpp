@@ -350,6 +350,8 @@ TYPE_PARSER(
                      parenthesized(scalarIntConstantExpr))) ||
     "SIZES" >> construct<OmpClause>(construct<OmpClause::Sizes>(
                    parenthesized(nonemptyList(scalarIntExpr)))) ||
+    "PERMUTATION" >> construct<OmpClause>(construct<OmpClause::Permutation>(
+                         parenthesized(nonemptyList(scalarIntExpr)))) ||
     "THREADS" >> construct<OmpClause>(construct<OmpClause::Threads>()) ||
     "THREAD_LIMIT" >> construct<OmpClause>(construct<OmpClause::ThreadLimit>(
                           parenthesized(scalarIntExpr))) ||

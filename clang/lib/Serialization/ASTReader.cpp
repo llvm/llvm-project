@@ -10605,6 +10605,11 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
+  case llvm::omp::OMPC_permutation: {
+    unsigned NumLoops = Record.readInt();
+    C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
+    break;
+  }
   case llvm::omp::OMPC_full:
     C = OMPFullClause::CreateEmpty(Context);
     break;
@@ -10989,6 +10994,12 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPPermutationClause(OMPPermutationClause *C) {
+  for (Expr *&E : C->getArgsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }

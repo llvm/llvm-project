@@ -1161,6 +1161,12 @@ Sizes make(const parser::OmpClause::Sizes &inp,
   return Sizes{/*SizeList=*/makeList(inp.v, makeExprFn(semaCtx))};
 }
 
+Permutation make(const parser::OmpClause::Permutation &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::list<parser::ScalarIntConstantExpr>
+  return Permutation{/*ArgList=*/makeList(inp.v, makeExprFn(semaCtx))};
+}
+
 TaskReduction make(const parser::OmpClause::TaskReduction &inp,
                    semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
