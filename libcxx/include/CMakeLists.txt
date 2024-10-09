@@ -747,6 +747,7 @@ set(files
   __type_traits/common_type.h
   __type_traits/conditional.h
   __type_traits/conjunction.h
+  __type_traits/container_traits.h
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
