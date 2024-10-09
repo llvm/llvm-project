@@ -931,6 +931,10 @@ def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
 
+def FeatureStdExtSmrnmi
+    : RISCVExtension<"smrnmi", 1, 0,
+                     "'Smrnmi' (Extension for Resumable Non-Maskable Interrupts)">;
+
 def FeatureStdExtSmcdeleg
     : RISCVExtension<"smcdeleg", 1, 0,
                      "'Smcdeleg' (Counter Delegation Machine Level)">;
