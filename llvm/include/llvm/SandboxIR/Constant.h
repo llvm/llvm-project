@@ -22,6 +22,7 @@
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/User.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -1226,6 +1227,15 @@ public:
   }
 #endif
 };
+
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalIFunc, llvm::GlobalIFunc, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    Function, llvm::Function, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalAlias, llvm::GlobalAlias, GlobalValue, llvm::GlobalValue>;
 
 } // namespace llvm::sandboxir
 

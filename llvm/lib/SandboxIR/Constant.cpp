@@ -11,6 +11,7 @@
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -291,15 +292,33 @@ GlobalT &GlobalWithNodeAPI<GlobalT, LLVMGlobalT, ParentT, LLVMParentT>::
   return cast<GlobalT>(*Ctx.getValue(&LLVMGV));
 }
 
+template LLVM_EXPORT_TEMPLATE GlobalIFunc &
+GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                  llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
+                                                                  &LLVMGV)
+    const;
+template LLVM_EXPORT_TEMPLATE Function &
+GlobalWithNodeAPI<Function, llvm::Function, GlobalObject, llvm::GlobalObject>::
+    LLVMGVToGV::operator()(llvm::Function &LLVMGV) const;
+
+template LLVM_EXPORT_TEMPLATE GlobalVariable &GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject,
+    llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV)
+    const;
+template LLVM_EXPORT_TEMPLATE GlobalAlias &
+GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                  llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
+                                                                 &LLVMGV) const;
+
 // Explicit instantiations.
-template class GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
-                                 llvm::GlobalObject>;
-template class GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
-                                 llvm::GlobalObject>;
-template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
-                                 GlobalObject, llvm::GlobalObject>;
-template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
-                                 llvm::GlobalValue>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalIFunc, llvm::GlobalIFunc, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    Function, llvm::Function, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalAlias, llvm::GlobalAlias, GlobalValue, llvm::GlobalValue>;
 
 void GlobalIFunc::setResolver(Constant *Resolver) {
   Ctx.getTracker()
