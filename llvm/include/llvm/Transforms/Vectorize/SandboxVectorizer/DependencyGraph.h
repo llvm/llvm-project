@@ -173,7 +173,6 @@ private:
   enum class DependencyType {
     ReadAfterWrite,  ///> Memory dependency write -> read
     WriteAfterWrite, ///> Memory dependency write -> write
-    ReadAfterRead,   ///> Memory dependency read -> read
     WriteAfterRead,  ///> Memory dependency read -> write
     Control,         ///> Control-related dependency, like with PHI/Terminator
     Other,           ///> Currently used for stack related instrs
