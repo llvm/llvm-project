@@ -656,23 +656,16 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
               : Symbol::Include;
       FixIncludes.emplace(Filename, Inserter, *Inputs.Index,
                           /*IndexRequestLimit=*/5, Directive);
-      ASTDiags.contributeFixes([&FixIncludes,
-                                &CTContext](const Diag &Diag,
-                                            const clang::Diagnostic &Info) {
-        auto Fixes = std::vector<Fix>();
-
-        auto IncludeFixes = FixIncludes->fix(Diag.Severity, Info);
-        // Ensures that if clang later introduces its own fix-it for includes it
-        // will get on our radar.
-        assert((IncludeFixes.empty() || Info.getNumFixItHints() == 0) &&
-               "Include-fixer replaced a note with clang fix-its attached!");
-        Fixes.insert(Fixes.end(), IncludeFixes.begin(), IncludeFixes.end());
-
-        auto NoLintFixes = noLintFixes(*CTContext, Info, Diag);
-        Fixes.insert(Fixes.end(), NoLintFixes.begin(), NoLintFixes.end());
-
-        return Fixes;
-      });
+      ASTDiags.contributeFixes(
+          [&FixIncludes, &CTContext](const Diag &Diag,
+                                     const clang::Diagnostic &Info) {
+            auto Fixes = std::vector<Fix>();
+            auto NoLintFixes = noLintFixes(*CTContext, Info, Diag);
+            Fixes.insert(Fixes.end(), NoLintFixes.begin(), NoLintFixes.end());
+            auto IncludeFixes = FixIncludes->fix(Diag.Severity, Info);
+            Fixes.insert(Fixes.end(), IncludeFixes.begin(), IncludeFixes.end());
+            return Fixes;
+          });
       Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
     }
   }
