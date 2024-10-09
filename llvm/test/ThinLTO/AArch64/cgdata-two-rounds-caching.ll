@@ -49,6 +49,11 @@
 ; COLD: [SecondRound] Cache Miss for {{.*}}thin-one.bc
 ; COLD: [SecondRound] Cache Miss for {{.*}}thin-two.bc
 
+; There are two input bitcode files and each one is operated with 3 caches:
+; CG/IR caches for the first round and the second round CG cache.
+; So the total number of files are 2 * 3 = 6.
+; RUN: ls %t.cache | count 6
+
 ; 2. Without any changes, simply re-running it will hit the cache.
 ; RUN: llvm-lto2 run %t/thin-one.bc %t/thin-two.bc -o %t/thinlto-warm \
 ; RUN:  -r %t/thin-one.bc,_f3,px -r %t/thin-one.bc,_g,x \
