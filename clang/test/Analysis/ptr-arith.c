@@ -39,6 +39,8 @@ domain_port (const char *domain_b, const char *domain_e,
 
 #define FIXED_VALUE (int*) 0x1111
 
+void f_ptr_param(void *);
+
 void f4(void) {
   int *p;
   p = (int*) 0x10000; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
@@ -55,6 +57,12 @@ void f4(void) {
   sigaction(SIGINT, &sa, NULL);
 
   p = FIXED_VALUE; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
+
+  int *p2 = (int*) 1; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
+  f_ptr_param((void *)-1); // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
+
+  void (*f_p)(void *) = f_ptr_param;
+  f_p((void *) -2); // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
 }
 
 void f5(void) {
@@ -104,8 +112,8 @@ start:
 }
 
 void const_locs(void) {
-  char *a = (char*)0x1000;
-  char *b = (char*)0x1100;
+  char *a = (char*)0x1000; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
+  char *b = (char*)0x1100; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
 start:
   clang_analyzer_eval(a != b); // expected-warning{{TRUE}}
   clang_analyzer_eval(a < b); // expected-warning{{TRUE}}
