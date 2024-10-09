@@ -680,8 +680,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
-  // intrinsics. In those cases then we can treat it as if it's just one (legal)
-  // memory op
+  // intrinsics.
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     auto *VTy = cast<VectorType>(VecTy);
@@ -694,8 +693,12 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       if (VTy->getElementCount().isKnownMultipleOf(Factor) &&
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
-        return Factor * getMemoryOpCost(Opcode, SubVecTy, Alignment,
-                                        AddressSpace, CostKind);
+        // Cost as one wide memory op + Factor * LMUL shuffle ops.
+        InstructionCost Cost =
+            getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
+        MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
+        Cost += Factor * TLI->getLMULCost(SubVecVT);
+        return LT.first * Cost;
       }
     }
   }
