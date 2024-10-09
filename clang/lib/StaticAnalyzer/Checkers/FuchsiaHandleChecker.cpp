@@ -99,7 +99,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/StringExtras.h"
 #include <optional>
@@ -287,8 +286,8 @@ private:
 
 /// Returns the symbols extracted from the argument or empty vector if it cannot
 /// be found. It is unlikely to have over 1024 symbols in one argument.
-SmallVector<SymbolRef, 1024> getFuchsiaHandleSymbols(QualType QT, SVal Arg,
-                                                     ProgramStateRef &State) {
+SmallVector<SymbolRef> getFuchsiaHandleSymbols(QualType QT, SVal Arg,
+                                               ProgramStateRef &State) {
   int PtrToHandleLevel = 0;
   while (QT->isAnyPointerType() || QT->isReferenceType()) {
     ++PtrToHandleLevel;
@@ -389,7 +388,7 @@ ProgramStateRef FuchsiaHandleChecker::evalArgsAttrs(const CallEvent &Call,
       break;
     const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
     unsigned ParamDiagIdx = PVD->getFunctionScopeIndex() + 1;
-    SmallVector<SymbolRef, 1024> Handles =
+    SmallVector<SymbolRef> Handles =
         getFuchsiaHandleSymbols(PVD->getType(), Call.getArgSVal(Arg), State);
 
     for (SymbolRef Handle : Handles) {
@@ -536,7 +535,7 @@ void FuchsiaHandleChecker::checkPreCall(const CallEvent &Call,
     if (Arg >= FuncDecl->getNumParams())
       break;
     const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
-    SmallVector<SymbolRef, 1024> Handles =
+    SmallVector<SymbolRef> Handles =
         getFuchsiaHandleSymbols(PVD->getType(), Call.getArgSVal(Arg), State);
 
     for (SymbolRef Handle : Handles) {
@@ -578,7 +577,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
     if (Arg >= FuncDecl->getNumParams())
       break;
     const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
-    SmallVector<SymbolRef, 1024> Handles =
+    SmallVector<SymbolRef> Handles =
         getFuchsiaHandleSymbols(PVD->getType(), Call.getArgSVal(Arg), State);
 
     for (SymbolRef Handle : Handles) {
@@ -682,7 +681,7 @@ ProgramStateRef FuchsiaHandleChecker::checkPointerEscape(
       if (Arg >= FuncDecl->getNumParams())
         break;
       const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
-      SmallVector<SymbolRef, 1024> Handles =
+      SmallVector<SymbolRef> Handles =
           getFuchsiaHandleSymbols(PVD->getType(), Call->getArgSVal(Arg), State);
       for (SymbolRef Handle : Handles) {
         if (hasFuchsiaAttr<UseHandleAttr>(PVD) ||
