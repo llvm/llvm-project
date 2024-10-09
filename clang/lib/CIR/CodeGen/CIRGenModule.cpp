@@ -449,7 +449,24 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &CGM,
     return false;
 
   if (CGOpts.DirectAccessExternalData) {
-    llvm_unreachable("-fdirect-access-external-data not supported");
+    // If -fdirect-access-external-data (default for -fno-pic), set dso_local
+    // for non-thread-local variables. If the symbol is not defined in the
+    // executable, a copy relocation will be needed at link time. dso_local is
+    // excluded for thread-local variables because they generally don't support
+    // copy relocations.
+    if (auto gv = dyn_cast<mlir::cir::GlobalOp>(GV.getOperation()))
+      if (!gv.getTlsModelAttr())
+        return true;
+
+    // -fno-pic sets dso_local on a function declaration to allow direct
+    // accesses when taking its address (similar to a data symbol). If the
+    // function is not defined in the executable, a canonical PLT entry will be
+    // needed at link time. -fno-direct-access-external-data can avoid the
+    // canonical PLT entry. We don't generalize this condition to -fpie/-fpic as
+    // it could just cause trouble without providing perceptible benefits.
+    if (isa<mlir::cir::FuncOp>(GV) && !CGOpts.NoPLT &&
+        RM == llvm::Reloc::Static)
+      return true;
   }
 
   // If we can use copy relocations we can assume it is local.
