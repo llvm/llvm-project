@@ -675,7 +675,7 @@ define void @loop_1() {
 ; CHECK:       for.cond11:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP13]]
 ; CHECK:       for.cond.cleanup13:
-; CHECK-NEXT:    [[INC27]] = add nsw i32 [[I_0]], 1
+; CHECK-NEXT:    [[INC27]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ;
 entry:
@@ -718,7 +718,7 @@ define void @loop() {
 ; CHECK-NEXT:    [[CMP12:%.*]] = icmp slt i32 [[J_0]], 2
 ; CHECK-NEXT:    br i1 [[CMP12]], label [[FOR_BODY14]], label [[FOR_COND_CLEANUP13]]
 ; CHECK:       for.cond.cleanup13:
-; CHECK-NEXT:    [[INC27]] = add nsw i32 [[I_0]], 1
+; CHECK-NEXT:    [[INC27]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.body14:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[J_0]], 1
