@@ -522,6 +522,11 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
   assert((!GetLast || (GetLast && ExprResult)) &&
          "If GetLast is true then the CompoundStmt must have a StmtExprResult");
 
+  // Optionally set up the new FP environment, if the compound statement
+  // contains a pragma that modifies it.
+  FPOptions NewFP = S.getInsideFPOptions(CurFPFeatures);
+  CGFPOptionsRAII SavedFPFeatues(*this, NewFP);
+
   Address RetAlloca = Address::invalid();
 
   for (auto *CurStmt : S.body()) {
