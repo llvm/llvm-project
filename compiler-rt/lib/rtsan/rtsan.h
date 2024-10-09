@@ -36,15 +36,15 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_enter();
 // intercepted method calls to the real methods.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_exit();
 
-// Disable all RTSan error reporting.
-// Injected into the code if "nosanitize(realtime)" is on a function.
+// See documentation in rtsan_interface.h.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_disable();
 
-// Re-enable all RTSan error reporting.
-// The counterpart to `__rtsan_disable`.
+// See documentation in rtsan_interface.h.
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable();
 
 SANITIZER_INTERFACE_ATTRIBUTE void
-__rtsan_expect_not_realtime(const char *intercepted_function_name);
+__rtsan_notify_intercepted_call(const char *intercepted_function_name);
 
+SANITIZER_INTERFACE_ATTRIBUTE void
+__rtsan_notify_blocking_call(const char *blocking_function_name);
 } // extern "C"

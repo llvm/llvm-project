@@ -69,9 +69,8 @@ The following features are currently considered experimental and are only provid
 when ``-fexperimental-library`` is passed:
 
 * The parallel algorithms library (``<execution>`` and the associated algorithms)
-* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
-* ``std::jthread``
 * ``std::chrono::tzdb`` and related time zone functionality
+* ``<syncstream>``
 
 .. note::
   Experimental libraries are experimental.
@@ -181,6 +180,9 @@ C++20 Specific Configuration Macros
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR**:
   This macro is used to re-enable `raw_storage_iterator`.
+
+**_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER**:
+  This macro is used to re-enable `get_temporary_buffer` and `return_temporary_buffer`.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS**:
   This macro is used to re-enable `is_literal_type`, `is_literal_type_v`,
@@ -314,6 +316,15 @@ Unpoisoning may not be an option, if (for example) you are not maintaining the a
 
 * You are using allocator, which does not call destructor during deallocation.
 * You are aware that memory allocated with an allocator may be accessed, even when unused by container.
+
+Support for compiler extensions
+-------------------------------
+
+Clang, GCC and other compilers all provide their own set of language extensions. These extensions
+have often been developed without particular consideration for their interaction with the library,
+and as such, libc++ does not go out of its way to support them. The library may support specific
+compiler extensions which would then be documented explicitly, but the basic expectation should be
+that no special support is provided for arbitrary compiler extensions.
 
 Platform specific behavior
 ==========================

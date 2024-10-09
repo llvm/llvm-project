@@ -3453,7 +3453,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return Name;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   case Id:                                                                     \
     return Name;
 #include "clang/Basic/AMDGPUTypes.def"
@@ -3992,12 +3992,12 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
 
 PackIndexingType::PackIndexingType(const ASTContext &Context,
                                    QualType Canonical, QualType Pattern,
-                                   Expr *IndexExpr,
+                                   Expr *IndexExpr, bool ExpandsToEmptyPack,
                                    ArrayRef<QualType> Expansions)
     : Type(PackIndexing, Canonical,
            computeDependence(Pattern, IndexExpr, Expansions)),
       Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
-      Size(Expansions.size()) {
+      Size(Expansions.size()), ExpandsToEmptyPack(ExpandsToEmptyPack) {
 
   std::uninitialized_copy(Expansions.begin(), Expansions.end(),
                           getTrailingObjects<QualType>());
@@ -4042,9 +4042,10 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
                                const ASTContext &Context, QualType Pattern,
-                               Expr *E) {
+                               Expr *E, bool ExpandsToEmptyPack) {
   Pattern.Profile(ID);
   E->Profile(ID, Context, true);
+  ID.AddBoolean(ExpandsToEmptyPack);
 }
 
 UnaryTransformType::UnaryTransformType(QualType BaseType,
@@ -4302,7 +4303,8 @@ TemplateSpecializationType::TemplateSpecializationType(
           T.getKind() == TemplateName::SubstTemplateTemplateParm ||
           T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
           T.getKind() == TemplateName::UsingTemplate ||
-          T.getKind() == TemplateName::QualifiedTemplate) &&
+          T.getKind() == TemplateName::QualifiedTemplate ||
+          T.getKind() == TemplateName::DeducedTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
   auto *TemplateArgs = reinterpret_cast<TemplateArgument *>(this + 1);
@@ -4791,7 +4793,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -5115,8 +5117,6 @@ FunctionEffect::Kind FunctionEffect::oppositeKind() const {
     return Kind::Allocating;
   case Kind::Allocating:
     return Kind::NonAllocating;
-  case Kind::None:
-    return Kind::None;
   }
   llvm_unreachable("unknown effect kind");
 }
@@ -5131,53 +5131,41 @@ StringRef FunctionEffect::name() const {
     return "blocking";
   case Kind::Allocating:
     return "allocating";
-  case Kind::None:
-    return "(none)";
   }
   llvm_unreachable("unknown effect kind");
 }
 
-bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
+std::optional<FunctionEffect> FunctionEffect::effectProhibitingInference(
+    const Decl &Callee, FunctionEffectKindSet CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
-    FunctionEffectsRef CalleeFX;
-    if (auto *FD = Callee.getAsFunction())
-      CalleeFX = FD->getFunctionEffects();
-    else if (auto *BD = dyn_cast<BlockDecl>(&Callee))
-      CalleeFX = BD->getFunctionEffects();
-    else
-      return false;
-    for (const FunctionEffectWithCondition &CalleeEC : CalleeFX) {
+    for (FunctionEffect Effect : CalleeFX) {
       // nonblocking/nonallocating cannot call allocating.
-      if (CalleeEC.Effect.kind() == Kind::Allocating)
-        return false;
+      if (Effect.kind() == Kind::Allocating)
+        return Effect;
       // nonblocking cannot call blocking.
-      if (kind() == Kind::NonBlocking &&
-          CalleeEC.Effect.kind() == Kind::Blocking)
-        return false;
+      if (kind() == Kind::NonBlocking && Effect.kind() == Kind::Blocking)
+        return Effect;
     }
-    return true;
+    return std::nullopt;
   }
 
   case Kind::Allocating:
   case Kind::Blocking:
-    return false;
-
-  case Kind::None:
-    assert(0 && "canInferOnFunction with None");
+    assert(0 && "effectProhibitingInference with non-inferable effect kind");
     break;
   }
   llvm_unreachable("unknown effect kind");
 }
 
 bool FunctionEffect::shouldDiagnoseFunctionCall(
-    bool Direct, ArrayRef<FunctionEffect> CalleeFX) const {
+    bool Direct, FunctionEffectKindSet CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
     const Kind CallerKind = kind();
-    for (const auto &Effect : CalleeFX) {
+    for (FunctionEffect Effect : CalleeFX) {
       const Kind EK = Effect.kind();
       // Does callee have same or stronger constraint?
       if (EK == CallerKind ||
@@ -5190,9 +5178,6 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
   case Kind::Allocating:
   case Kind::Blocking:
     return false;
-  case Kind::None:
-    assert(0 && "shouldDiagnoseFunctionCall with None");
-    break;
   }
   llvm_unreachable("unknown effect kind");
 }
@@ -5298,26 +5283,35 @@ FunctionEffectSet FunctionEffectSet::getUnion(FunctionEffectsRef LHS,
   return Combined;
 }
 
+namespace clang {
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const FunctionEffectWithCondition &CFE) {
+  OS << CFE.Effect.name();
+  if (Expr *E = CFE.Cond.getCondition()) {
+    OS << '(';
+    E->dump();
+    OS << ')';
+  }
+  return OS;
+}
+
+} // namespace clang
+
 LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
   OS << "Effects{";
-  bool First = true;
-  for (const auto &CFE : *this) {
-    if (!First)
-      OS << ", ";
-    else
-      First = false;
-    OS << CFE.Effect.name();
-    if (Expr *E = CFE.Cond.getCondition()) {
-      OS << '(';
-      E->dump();
-      OS << ')';
-    }
-  }
+  llvm::interleaveComma(*this, OS);
   OS << "}";
 }
 
 LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
   FunctionEffectsRef(*this).dump(OS);
+}
+
+LLVM_DUMP_METHOD void FunctionEffectKindSet::dump(llvm::raw_ostream &OS) const {
+  OS << "Effects{";
+  llvm::interleaveComma(*this, OS);
+  OS << "}";
 }
 
 FunctionEffectsRef

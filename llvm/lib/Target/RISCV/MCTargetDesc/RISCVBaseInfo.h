@@ -129,6 +129,14 @@ enum {
 
   ElementsDependOnMaskShift = ElementsDependOnVLShift + 1,
   ElementsDependOnMaskMask = 1ULL << ElementsDependOnMaskShift,
+
+  // Indicates the EEW of a vector instruction's destination operand.
+  // 0 -> 1
+  // 1 -> SEW
+  // 2 -> SEW * 2
+  // 3 -> SEW * 4
+  DestEEWShift = ElementsDependOnMaskShift + 1,
+  DestEEWMask = 3ULL << DestEEWShift,
 };
 
 // Helper functions to read TSFlags.
@@ -301,6 +309,8 @@ enum OperandType : unsigned {
   OPERAND_UIMM12,
   OPERAND_UIMM16,
   OPERAND_UIMM32,
+  OPERAND_UIMM48,
+  OPERAND_UIMM64,
   OPERAND_ZERO,
   OPERAND_SIMM5,
   OPERAND_SIMM5_PLUS1,

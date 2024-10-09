@@ -516,3 +516,42 @@ define amdgpu_gs <8 x half> @v_fptrunc_round_v8f32_to_v8f16_downward(<8 x float>
   %res = call <8 x half> @llvm.fptrunc.round.v8f16.v8f32(<8 x float> %a, metadata !"round.downward")
   ret <8 x half> %res
 }
+
+define amdgpu_gs float @v_fptrunc_round_f64_to_f32_tonearest(double %a) {
+; CHECK-LABEL: v_fptrunc_round_f64_to_f32_tonearest:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; CHECK-NEXT:    ; return to shader part epilog
+  %res = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.tonearest")
+  ret float %res
+}
+
+define amdgpu_gs float @v_fptrunc_round_f64_to_f32_upward(double %a) {
+; CHECK-LABEL: v_fptrunc_round_f64_to_f32_upward:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
+; CHECK-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; CHECK-NEXT:    ; return to shader part epilog
+  %res = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.upward")
+  ret float %res
+}
+
+define amdgpu_gs float @v_fptrunc_round_f64_to_f32_downward(double %a) {
+; CHECK-LABEL: v_fptrunc_round_f64_to_f32_downward:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
+; CHECK-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; CHECK-NEXT:    ; return to shader part epilog
+  %res = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.downward")
+  ret float %res
+}
+
+define amdgpu_gs float @v_fptrunc_round_f64_to_f32_towardzero(double %a) {
+; CHECK-LABEL: v_fptrunc_round_f64_to_f32_towardzero:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
+; CHECK-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; CHECK-NEXT:    ; return to shader part epilog
+  %res = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.towardzero")
+  ret float %res
+}

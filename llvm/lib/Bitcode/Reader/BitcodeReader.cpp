@@ -943,10 +943,8 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   // they are recorded in the summary index being built.
   // We save a GUID which refers to the same global as the ValueInfo, but
   // ignoring the linkage, i.e. for values other than local linkage they are
-  // identical (this is the second tuple member).
-  // The third tuple member is the real GUID of the ValueInfo.
-  DenseMap<unsigned,
-           std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>>
+  // identical (this is the second member). ValueInfo has the real GUID.
+  DenseMap<unsigned, std::pair<ValueInfo, GlobalValue::GUID>>
       ValueIdToValueInfoMap;
 
   /// Map populated during module path string table parsing, from the
@@ -985,11 +983,10 @@ private:
   Error parseValueSymbolTable(
       uint64_t Offset,
       DenseMap<unsigned, GlobalValue::LinkageTypes> &ValueIdToLinkageMap);
-  std::vector<ValueInfo> makeRefList(ArrayRef<uint64_t> Record);
-  std::vector<FunctionSummary::EdgeTy> makeCallList(ArrayRef<uint64_t> Record,
-                                                    bool IsOldProfileFormat,
-                                                    bool HasProfile,
-                                                    bool HasRelBF);
+  SmallVector<ValueInfo, 0> makeRefList(ArrayRef<uint64_t> Record);
+  SmallVector<FunctionSummary::EdgeTy, 0>
+  makeCallList(ArrayRef<uint64_t> Record, bool IsOldProfileFormat,
+               bool HasProfile, bool HasRelBF);
   Error parseEntireSummary(unsigned ID);
   Error parseModuleStringTable();
   void parseTypeIdCompatibleVtableSummaryRecord(ArrayRef<uint64_t> Record);
@@ -999,7 +996,7 @@ private:
   parseParamAccesses(ArrayRef<uint64_t> Record);
 
   template <bool AllowNullValueInfo = false>
-  std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>
+  std::pair<ValueInfo, GlobalValue::GUID>
   getValueInfoFromValueId(unsigned ValueId);
 
   void addThisModule();
@@ -1349,6 +1346,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:
     return AtomicRMWInst::UDecWrap;
+  case bitc::RMW_USUB_COND:
+    return AtomicRMWInst::USubCond;
+  case bitc::RMW_USUB_SAT:
+    return AtomicRMWInst::USubSat;
   }
 }
 
@@ -2143,6 +2144,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeNumericalStability;
   case bitc::ATTR_KIND_SANITIZE_REALTIME:
     return Attribute::SanitizeRealtime;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME_UNSAFE:
+    return Attribute::SanitizeRealtimeUnsafe;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -2187,6 +2190,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Range;
   case bitc::ATTR_KIND_INITIALIZES:
     return Attribute::Initializes;
+  case bitc::ATTR_KIND_CORO_ELIDE_SAFE:
+    return Attribute::CoroElideSafe;
+  case bitc::ATTR_KIND_NO_EXT:
+    return Attribute::NoExt;
   }
 }
 
@@ -2679,7 +2686,11 @@ Error BitcodeReader::parseTypeTableBody() {
           return error("Integer parameter too large");
         IntParams.push_back(Record[i]);
       }
-      ResultTy = TargetExtType::get(Context, TypeName, TypeParams, IntParams);
+      auto TTy =
+          TargetExtType::getOrError(Context, TypeName, TypeParams, IntParams);
+      if (auto E = TTy.takeError())
+        return E;
+      ResultTy = *TTy;
       TypeName.clear();
       break;
     }
@@ -7093,7 +7104,7 @@ ModuleSummaryIndexBitcodeReader::getThisModule() {
 }
 
 template <bool AllowNullValueInfo>
-std::tuple<ValueInfo, GlobalValue::GUID, GlobalValue::GUID>
+std::pair<ValueInfo, GlobalValue::GUID>
 ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
   auto VGI = ValueIdToValueInfoMap[ValueId];
   // We can have a null value info for memprof callsite info records in
@@ -7120,10 +7131,10 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   // UseStrtab is false for legacy summary formats and value names are
   // created on stack. In that case we save the name in a string saver in
   // the index so that the value name can be recorded.
-  ValueIdToValueInfoMap[ValueID] = std::make_tuple(
+  ValueIdToValueInfoMap[ValueID] = std::make_pair(
       TheIndex.getOrInsertValueInfo(
           ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
-      OriginalNameID, ValueGUID);
+      OriginalNameID);
 }
 
 // Specialized value symbol table parser used when reading module index
@@ -7211,8 +7222,8 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       GlobalValue::GUID RefGUID = Record[1];
       // The "original name", which is the second value of the pair will be
       // overriden later by a FS_COMBINED_ORIGINAL_NAME in the combined index.
-      ValueIdToValueInfoMap[ValueID] = std::make_tuple(
-          TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
+      ValueIdToValueInfoMap[ValueID] =
+          std::make_pair(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
     }
@@ -7361,20 +7372,20 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
   }
 }
 
-std::vector<ValueInfo>
+SmallVector<ValueInfo, 0>
 ModuleSummaryIndexBitcodeReader::makeRefList(ArrayRef<uint64_t> Record) {
-  std::vector<ValueInfo> Ret;
+  SmallVector<ValueInfo, 0> Ret;
   Ret.reserve(Record.size());
   for (uint64_t RefValueId : Record)
     Ret.push_back(std::get<0>(getValueInfoFromValueId(RefValueId)));
   return Ret;
 }
 
-std::vector<FunctionSummary::EdgeTy>
+SmallVector<FunctionSummary::EdgeTy, 0>
 ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
                                               bool IsOldProfileFormat,
                                               bool HasProfile, bool HasRelBF) {
-  std::vector<FunctionSummary::EdgeTy> Ret;
+  SmallVector<FunctionSummary::EdgeTy, 0> Ret;
   // In the case of new profile formats, there are two Record entries per
   // Edge. Otherwise, conservatively reserve up to Record.size.
   if (!IsOldProfileFormat && (HasProfile || HasRelBF))
@@ -7508,7 +7519,7 @@ void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableSummaryRecord(
     parseTypeIdCompatibleVtableInfo(Record, Slot, TypeId);
 }
 
-static void setSpecialRefs(std::vector<ValueInfo> &Refs, unsigned ROCnt,
+static void setSpecialRefs(SmallVectorImpl<ValueInfo> &Refs, unsigned ROCnt,
                            unsigned WOCnt) {
   // Readonly and writeonly refs are in the end of the refs list.
   assert(ROCnt + WOCnt <= Refs.size());
@@ -7612,8 +7623,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       } else {
         RefGUID = Record[1];
       }
-      ValueIdToValueInfoMap[ValueID] = std::make_tuple(
-          TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
+      ValueIdToValueInfoMap[ValueID] =
+          std::make_pair(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
     // FS_PERMODULE is legacy and does not have support for the tail call flag.
@@ -7658,11 +7669,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      std::vector<ValueInfo> Refs = makeRefList(
+      SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
       bool HasRelBF = (BitCode == bitc::FS_PERMODULE_RELBF);
-      std::vector<FunctionSummary::EdgeTy> Calls = makeCallList(
+      SmallVector<FunctionSummary::EdgeTy, 0> Calls = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, HasRelBF);
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
@@ -7671,15 +7682,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // the prevailing copy of a symbol. The linker doesn't resolve local
       // linkage values so don't check whether those are prevailing.
       auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
-      if (IsPrevailing &&
-          !GlobalValue::isLocalLinkage(LT) &&
-          !IsPrevailing(std::get<2>(VIAndOriginalGUID))) {
+      if (IsPrevailing && !GlobalValue::isLocalLinkage(LT) &&
+          !IsPrevailing(VIAndOriginalGUID.first.getGUID())) {
         PendingCallsites.clear();
         PendingAllocs.clear();
       }
       auto FS = std::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), /*EntryCount=*/0,
-          std::move(Refs), std::move(Calls), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
+          std::move(Calls), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
@@ -7733,7 +7743,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         GVF = getDecodedGVarFlags(Record[2]);
         RefArrayStart = 3;
       }
-      std::vector<ValueInfo> Refs =
+      SmallVector<ValueInfo, 0> Refs =
           makeRefList(ArrayRef<uint64_t>(Record).slice(RefArrayStart));
       auto FS =
           std::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));
@@ -7754,7 +7764,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       unsigned RefListStartIndex = 4;
       unsigned VTableListStartIndex = RefListStartIndex + NumRefs;
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::vector<ValueInfo> Refs = makeRefList(
+      SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       VTableFuncList VTableFuncs;
       for (unsigned I = VTableListStartIndex, E = Record.size(); I != E; ++I) {
@@ -7784,7 +7794,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[2];
       unsigned InstCount = Record[3];
       uint64_t RawFunFlags = 0;
-      uint64_t EntryCount = 0;
       unsigned NumRefs = Record[4];
       unsigned NumRORefs = 0, NumWORefs = 0;
       int RefListStartIndex = 5;
@@ -7798,7 +7807,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           RefListStartIndex = 7;
           if (Version >= 6) {
             NumRefsIndex = 6;
-            EntryCount = Record[5];
             RefListStartIndex = 8;
             if (Version >= 7) {
               RefListStartIndex = 9;
@@ -7815,17 +7823,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      std::vector<ValueInfo> Refs = makeRefList(
+      SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_COMBINED_PROFILE);
-      std::vector<FunctionSummary::EdgeTy> Edges = makeCallList(
+      SmallVector<FunctionSummary::EdgeTy, 0> Edges = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, false);
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
       auto FS = std::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), EntryCount,
-          std::move(Refs), std::move(Edges), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
+          std::move(Edges), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
@@ -7875,7 +7883,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         GVF = getDecodedGVarFlags(Record[3]);
         RefArrayStart = 4;
       }
-      std::vector<ValueInfo> Refs =
+      SmallVector<ValueInfo, 0> Refs =
           makeRefList(ArrayRef<uint64_t>(Record).slice(RefArrayStart));
       auto FS =
           std::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));

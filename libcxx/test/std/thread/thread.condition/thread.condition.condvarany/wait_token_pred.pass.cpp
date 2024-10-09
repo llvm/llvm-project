@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-experimental-stop_token
 // XFAIL: availability-synchronization_library-missing
 
 // <condition_variable>
@@ -18,6 +17,7 @@
 // template<class Lock, class Predicate>
 //   bool wait(Lock& lock, stop_token stoken, Predicate pred);
 
+#include <atomic>
 #include <cassert>
 #include <concepts>
 #include <condition_variable>

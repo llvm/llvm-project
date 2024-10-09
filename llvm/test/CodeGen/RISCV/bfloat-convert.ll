@@ -121,7 +121,7 @@ define i16 @fcvt_ui_bf16(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_ui_bf16:
 ; CHECK32ZFBFMIN:       # %bb.0:
 ; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK32ZFBFMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32ZFBFMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    ret
 ;
 ; RV32ID-LABEL: fcvt_ui_bf16:
@@ -135,7 +135,7 @@ define i16 @fcvt_ui_bf16(bfloat %a) nounwind {
 ; CHECK64ZFBFMIN-LABEL: fcvt_ui_bf16:
 ; CHECK64ZFBFMIN:       # %bb.0:
 ; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK64ZFBFMIN-NEXT:    fcvt.lu.s a0, fa5, rtz
+; CHECK64ZFBFMIN-NEXT:    fcvt.l.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    ret
 ;
 ; RV64ID-LABEL: fcvt_ui_bf16:
@@ -1568,7 +1568,7 @@ define zeroext i8 @fcvt_wu_s_i8(bfloat %a) nounwind {
 ; CHECK32ZFBFMIN-LABEL: fcvt_wu_s_i8:
 ; CHECK32ZFBFMIN:       # %bb.0:
 ; CHECK32ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK32ZFBFMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32ZFBFMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; CHECK32ZFBFMIN-NEXT:    ret
 ;
 ; RV32ID-LABEL: fcvt_wu_s_i8:

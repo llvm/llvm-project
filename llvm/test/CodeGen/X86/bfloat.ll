@@ -1953,3 +1953,25 @@ define void @PR92471(ptr %0, ptr %1) nounwind {
   store <7 x float> %4, ptr %1, align 4
   ret void
 }
+
+define bfloat @PR108936(x86_fp80 %0) nounwind {
+; X86-LABEL: PR108936:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpt (%esp)
+; X86-NEXT:    calll __truncxfbf2
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+;
+; CHECK-LABEL: PR108936:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fstpt (%rsp)
+; CHECK-NEXT:    callq __truncxfbf2@PLT
+; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    retq
+  %2 = fptrunc x86_fp80 %0 to bfloat
+  ret bfloat %2
+}

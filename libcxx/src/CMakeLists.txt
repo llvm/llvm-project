@@ -210,16 +210,11 @@ if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
   endif()
 
-  # Maybe re-export symbols from libc++abi
-  # In particular, we don't re-export the symbols if libc++abi is merged statically
-  # into libc++ because in that case there's no dylib to re-export from.
+  # Maybe force some symbols to be weak, not weak or not exported.
+  # TODO: This shouldn't depend on the platform, and ideally it should be done in the sources.
   if (APPLE AND LIBCXX_CXX_ABI MATCHES "libcxxabi$"
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-    target_link_libraries(cxx_shared PRIVATE cxxabi-reexports)
-
-    # TODO: These exports controls should not be tied to whether we re-export libc++abi symbols
     target_link_libraries(cxx_shared PRIVATE
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
   endif()

@@ -14,6 +14,7 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/Support/SipHash.h"
 
@@ -136,16 +137,17 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
+  unsigned Depth = S.Current->getDepth();
+  auto isStdCall = [](const FunctionDecl *F) -> bool {
+    return F && F->isInStdNamespace() && F->getIdentifier() &&
+           F->getIdentifier()->isStr("is_constant_evaluated");
+  };
+  const InterpFrame *Caller = Frame->Caller;
   // The current frame is the one for __builtin_is_constant_evaluated.
   // The one above that, potentially the one for std::is_constant_evaluated().
   if (S.inConstantContext() && !S.checkingPotentialConstantExpression() &&
-      Frame->Caller && S.getEvalStatus().Diag) {
-    auto isStdCall = [](const FunctionDecl *F) -> bool {
-      return F && F->isInStdNamespace() && F->getIdentifier() &&
-             F->getIdentifier()->isStr("is_constant_evaluated");
-    };
-    const InterpFrame *Caller = Frame->Caller;
-
+      S.getEvalStatus().Diag &&
+      (Depth == 1 || (Depth == 2 && isStdCall(Caller->getCallee())))) {
     if (Caller->Caller && isStdCall(Caller->getCallee())) {
       const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
       S.report(E->getExprLoc(),
@@ -1151,6 +1153,126 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
+  APSInt Val = peekToAPSInt(S.Stk, ValT,
+                            align(primSize(ValT)) + align(primSize(IndexT)));
+  APSInt Index = peekToAPSInt(S.Stk, IndexT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  uint64_t Shift = Index.extractBitsAsZExtValue(8, 0);
+  uint64_t Length = Index.extractBitsAsZExtValue(8, 8);
+  Length = Length > BitWidth ? BitWidth : Length;
+
+  // Handle out of bounds cases.
+  if (Length == 0 || Shift >= BitWidth) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
+
+  uint64_t Result = Val.getZExtValue() >> Shift;
+  Result &= llvm::maskTrailingOnes<uint64_t>(Length);
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val = peekToAPSInt(S.Stk, ValT,
+                            align(primSize(ValT)) + align(primSize(IndexT)));
+  APSInt Idx = peekToAPSInt(S.Stk, IndexT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  uint64_t Index = Idx.extractBitsAsZExtValue(8, 0);
+
+  if (Index < BitWidth)
+    Val.clearHighBits(BitWidth - Index);
+
+  pushInteger(S, Val, CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
+  pushInteger(S, Val.countLeadingZeros(), CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
+  pushInteger(S, Val.countTrailingZeros(), CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val =
+      peekToAPSInt(S.Stk, ValT, align(primSize(ValT)) + align(primSize(MaskT)));
+  APSInt Mask = peekToAPSInt(S.Stk, MaskT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  APInt Result = APInt::getZero(BitWidth);
+  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val =
+      peekToAPSInt(S.Stk, ValT, align(primSize(ValT)) + align(primSize(MaskT)));
+  APSInt Mask = peekToAPSInt(S.Stk, MaskT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  APInt Result = APInt::getZero(BitWidth);
+  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
                                                       CodePtr OpPC,
                                                       const InterpFrame *Frame,
@@ -1244,14 +1366,172 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
   return returnInt(false);
 }
 
+static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
+                                         const InterpFrame *Frame,
+                                         const Function *Func,
+                                         const CallExpr *Call) {
+  // A call to __operator_new is only valid within std::allocate<>::allocate.
+  // Walk up the call stack to find the appropriate caller and get the
+  // element type from it.
+  QualType ElemType;
+
+  for (const InterpFrame *F = Frame; F; F = F->Caller) {
+    const Function *Func = F->getFunction();
+    if (!Func)
+      continue;
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
+    if (!MD)
+      continue;
+    const IdentifierInfo *FnII = MD->getIdentifier();
+    if (!FnII || !FnII->isStr("allocate"))
+      continue;
+
+    const auto *CTSD =
+        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
+    if (!CTSD)
+      continue;
+
+    const IdentifierInfo *ClassII = CTSD->getIdentifier();
+    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
+    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
+        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
+      ElemType = TAL[0].getAsType();
+      break;
+    }
+  }
+
+  if (ElemType.isNull()) {
+    S.FFDiag(Call, S.getLangOpts().CPlusPlus20
+                       ? diag::note_constexpr_new_untyped
+                       : diag::note_constexpr_new);
+    return false;
+  }
+
+  if (ElemType->isIncompleteType() || ElemType->isFunctionType()) {
+    S.FFDiag(Call, diag::note_constexpr_new_not_complete_object_type)
+        << (ElemType->isIncompleteType() ? 0 : 1) << ElemType;
+    return false;
+  }
+
+  APSInt Bytes = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(0)));
+  CharUnits ElemSize = S.getASTContext().getTypeSizeInChars(ElemType);
+  assert(!ElemSize.isZero());
+  // Divide the number of bytes by sizeof(ElemType), so we get the number of
+  // elements we should allocate.
+  APInt NumElems, Remainder;
+  APInt ElemSizeAP(Bytes.getBitWidth(), ElemSize.getQuantity());
+  APInt::udivrem(Bytes, ElemSizeAP, NumElems, Remainder);
+  if (Remainder != 0) {
+    // This likely indicates a bug in the implementation of 'std::allocator'.
+    S.FFDiag(Call, diag::note_constexpr_operator_new_bad_size)
+        << Bytes << APSInt(ElemSizeAP, true) << ElemType;
+    return false;
+  }
+
+  // NB: The same check we're using in CheckArraySize()
+  if (NumElems.getActiveBits() >
+          ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
+      NumElems.ugt(Descriptor::MaxArrayElemBytes / ElemSize.getQuantity())) {
+    // FIXME: NoThrow check?
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_new_too_large)
+        << NumElems.getZExtValue();
+    return false;
+  }
+
+  std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
+  DynamicAllocator &Allocator = S.getAllocator();
+  if (ElemT) {
+    if (NumElems.ule(1)) {
+      const Descriptor *Desc =
+          S.P.createDescriptor(Call, *ElemT, Descriptor::InlineDescMD,
+                               /*IsConst=*/false, /*IsTemporary=*/false,
+                               /*IsMutable=*/false);
+      Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                    DynamicAllocator::Form::Operator);
+      assert(B);
+
+      S.Stk.push<Pointer>(B);
+      return true;
+    }
+    assert(NumElems.ugt(1));
+
+    Block *B =
+        Allocator.allocate(Call, *ElemT, NumElems.getZExtValue(),
+                           S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
+    assert(B);
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  assert(!ElemT);
+  // Structs etc.
+  const Descriptor *Desc = S.P.createDescriptor(
+      Call, ElemType.getTypePtr(), Descriptor::InlineDescMD,
+      /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
+      /*Init=*/nullptr);
+
+  if (NumElems.ule(1)) {
+    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                  DynamicAllocator::Form::Operator);
+    assert(B);
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
+  Block *B =
+      Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
+                         DynamicAllocator::Form::Operator);
+  assert(B);
+  S.Stk.push<Pointer>(B);
+  return true;
+}
+
+static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
+                                            const InterpFrame *Frame,
+                                            const Function *Func,
+                                            const CallExpr *Call) {
+  const Expr *Source = nullptr;
+  const Block *BlockToDelete = nullptr;
+
+  {
+    const Pointer &Ptr = S.Stk.peek<Pointer>();
+
+    if (Ptr.isZero()) {
+      S.CCEDiag(Call, diag::note_constexpr_deallocate_null);
+      return true;
+    }
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+  }
+  assert(BlockToDelete);
+
+  DynamicAllocator &Allocator = S.getAllocator();
+  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+  std::optional<DynamicAllocator::Form> AllocForm =
+      Allocator.getAllocationForm(Source);
+
+  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+    // Nothing has been deallocated, this must be a double-delete.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_double_delete);
+    return false;
+  }
+  assert(AllocForm);
+
+  return CheckNewDeleteForms(
+      S, OpPC, *AllocForm, DynamicAllocator::Form::Operator, BlockDesc, Source);
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *Call) {
+                      const CallExpr *Call, uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
   APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
-  switch (F->getBuiltinID()) {
+  switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
     if (!interp__builtin_is_constant_evaluated(S, OpPC, Frame, Call))
       return false;
@@ -1578,6 +1858,46 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
 
+  case clang::X86::BI__builtin_ia32_bextr_u32:
+  case clang::X86::BI__builtin_ia32_bextr_u64:
+  case clang::X86::BI__builtin_ia32_bextri_u32:
+  case clang::X86::BI__builtin_ia32_bextri_u64:
+    if (!interp__builtin_ia32_bextr(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_bzhi_si:
+  case clang::X86::BI__builtin_ia32_bzhi_di:
+    if (!interp__builtin_ia32_bzhi(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_lzcnt_u16:
+  case clang::X86::BI__builtin_ia32_lzcnt_u32:
+  case clang::X86::BI__builtin_ia32_lzcnt_u64:
+    if (!interp__builtin_ia32_lzcnt(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_tzcnt_u16:
+  case clang::X86::BI__builtin_ia32_tzcnt_u32:
+  case clang::X86::BI__builtin_ia32_tzcnt_u64:
+    if (!interp__builtin_ia32_tzcnt(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_pdep_si:
+  case clang::X86::BI__builtin_ia32_pdep_di:
+    if (!interp__builtin_ia32_pdep(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_pext_si:
+  case clang::X86::BI__builtin_ia32_pext_di:
+    if (!interp__builtin_ia32_pext(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
   case Builtin::BI__builtin_os_log_format_buffer_size:
     if (!interp__builtin_os_log_format_buffer_size(S, OpPC, Frame, F, Call))
       return false;
@@ -1595,6 +1915,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__noop:
     pushInteger(S, 0, Call->getType());
+    break;
+
+  case Builtin::BI__builtin_operator_new:
+    if (!interp__builtin_operator_new(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_operator_delete:
+    if (!interp__builtin_operator_delete(S, OpPC, Frame, F, Call))
+      return false;
     break;
 
   default:

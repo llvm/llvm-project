@@ -272,7 +272,7 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
     for (auto &I : *CGN) {
       CallGraphNode *CallerCGN = I.second;
       Function *CalledFunc = CallerCGN->getFunction();
-      if (!CalledFunc)
+      if (!CalledFunc || CalledFunc->isDeclaration())
         continue;
       if (AMDGPU::isKernelLDS(CalledFunc))
         continue;
@@ -300,7 +300,8 @@ void AMDGPUSwLowerLDS::getUsesOfLDSByNonKernels() {
     for (User *V : GV->users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (!isKernelLDS(F) && F->hasFnAttribute(Attribute::SanitizeAddress))
+        if (!isKernelLDS(F) && F->hasFnAttribute(Attribute::SanitizeAddress) &&
+            !F->isDeclaration())
           FuncLDSAccessInfo.NonKernelToLDSAccessMap[F].insert(GV);
       }
     }
@@ -367,7 +368,7 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
       LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
     return;
   // Create new global pointer variable
-  auto emptyCharArray = ArrayType::get(IRB.getInt8Ty(), 0);
+  auto *emptyCharArray = ArrayType::get(IRB.getInt8Ty(), 0);
   LDSParams.SwDynLDS = new GlobalVariable(
       M, emptyCharArray, false, GlobalValue::ExternalLinkage, nullptr,
       "llvm.amdgcn." + Func->getName() + ".dynlds", nullptr,
@@ -951,8 +952,7 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
       ArrayType::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), Variables.size());
 
   SmallVector<Constant *> Elements;
-  for (size_t i = 0; i < Variables.size(); i++) {
-    GlobalVariable *GV = Variables[i];
+  for (auto *GV : Variables) {
     if (!LDSParams.LDSToReplacementIndicesMap.contains(GV)) {
       Elements.push_back(
           PoisonValue::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS)));
@@ -1069,7 +1069,8 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
       IRB.CreateLoad(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), BaseLoad);
 
   for (GlobalVariable *GV : LDSGlobals) {
-    auto GVIt = std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
+    const auto *GVIt =
+        std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
     assert(GVIt != OrdereLDSGlobals.end());
     uint32_t GVOffset = std::distance(OrdereLDSGlobals.begin(), GVIt);
 

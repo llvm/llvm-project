@@ -102,6 +102,12 @@ DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
     return nullptr;
   SmallVector<llvm::Metadata *> llvmElements = llvm::to_vector(
       llvm::map_range(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
+        if (DIAnnotationAttr annAttr = dyn_cast<DIAnnotationAttr>(attr)) {
+          llvm::Metadata *ops[2] = {
+              llvm::MDString::get(llvmCtx, annAttr.getName()),
+              llvm::MDString::get(llvmCtx, annAttr.getValue())};
+          return llvm::MDNode::get(llvmCtx, ops);
+        }
         return translate(attr);
       }));
   return llvm::MDNode::get(llvmCtx, llvmElements);
@@ -332,7 +338,8 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       compileUnit, /*TemplateParams=*/nullptr, /*Declaration=*/nullptr,
-      getMDTupleOrNull(attr.getRetainedNodes()));
+      getMDTupleOrNull(attr.getRetainedNodes()), nullptr,
+      getMDTupleOrNull(attr.getAnnotations()));
   if (attr.getId())
     distinctAttrToNode.try_emplace(attr.getId(), node);
   return node;

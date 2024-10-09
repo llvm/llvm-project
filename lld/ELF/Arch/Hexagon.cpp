@@ -24,7 +24,7 @@ using namespace lld::elf;
 namespace {
 class Hexagon final : public TargetInfo {
 public:
-  Hexagon();
+  Hexagon(Ctx &);
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -38,7 +38,7 @@ public:
 };
 } // namespace
 
-Hexagon::Hexagon() {
+Hexagon::Hexagon(Ctx &ctx) : TargetInfo(ctx) {
   pltRel = R_HEX_JMP_SLOT;
   relativeRel = R_HEX_RELATIVE;
   gotRel = R_HEX_GLOB_DAT;
@@ -60,17 +60,15 @@ Hexagon::Hexagon() {
 }
 
 uint32_t Hexagon::calcEFlags() const {
-  assert(!ctx.objectFiles.empty());
-
   // The architecture revision must always be equal to or greater than
   // greatest revision in the list of inputs.
-  uint32_t ret = 0;
+  std::optional<uint32_t> ret;
   for (InputFile *f : ctx.objectFiles) {
     uint32_t eflags = cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
-    if (eflags > ret)
+    if (!ret || eflags > *ret)
       ret = eflags;
   }
-  return ret;
+  return ret.value_or(/* Default Arch Rev: */ 0x60);
 }
 
 static uint32_t applyMask(uint32_t mask, uint32_t data) {
@@ -155,7 +153,7 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_TPREL_LO16:
     return R_TPREL;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -361,7 +359,7 @@ void Hexagon::writePltHeader(uint8_t *buf) const {
   memcpy(buf, pltData, sizeof(pltData));
 
   // Offset from PLT0 to the GOT.
-  uint64_t off = in.gotPlt->getVA() - in.plt->getVA();
+  uint64_t off = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
   relocateNoSym(buf, R_HEX_B32_PCREL_X, off);
   relocateNoSym(buf + 4, R_HEX_6_PCREL_X, off);
 }
@@ -376,7 +374,7 @@ void Hexagon::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
   relocateNoSym(buf, R_HEX_B32_PCREL_X, gotPltEntryAddr - pltEntryAddr);
   relocateNoSym(buf + 4, R_HEX_6_PCREL_X, gotPltEntryAddr - pltEntryAddr);
 }
@@ -400,13 +398,10 @@ int64_t Hexagon::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_HEX_TPREL_32:
     return SignExtend64<32>(read32(buf));
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
 }
 
-TargetInfo *elf::getHexagonTargetInfo() {
-  static Hexagon target;
-  return &target;
-}
+void elf::setHexagonTargetInfo(Ctx &ctx) { ctx.target.reset(new Hexagon(ctx)); }

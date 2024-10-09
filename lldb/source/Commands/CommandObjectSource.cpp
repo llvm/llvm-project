@@ -1053,7 +1053,7 @@ protected:
                   ? sc.line_entry.column
                   : 0;
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              std::make_shared<SupportFile>(sc.comp_unit->GetPrimaryFile()),
+              sc.comp_unit->GetPrimarySupportFile(),
               sc.line_entry.line, column, lines_to_back_up,
               m_options.num_lines - lines_to_back_up, "->",
               &result.GetOutputStream(), GetBreakpointLocations());
@@ -1174,7 +1174,7 @@ protected:
             m_options.num_lines = 10;
           const uint32_t column = 0;
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              std::make_shared<SupportFile>(sc.comp_unit->GetPrimaryFile()),
+              sc.comp_unit->GetPrimarySupportFile(),
               m_options.start_line, column, 0, m_options.num_lines, "",
               &result.GetOutputStream(), GetBreakpointLocations());
 

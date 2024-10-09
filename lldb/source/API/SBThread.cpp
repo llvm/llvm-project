@@ -605,8 +605,11 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
     if (end_line == LLDB_INVALID_LINE_NUMBER)
       range = sc.line_entry.range;
     else {
-      if (!sc.GetAddressRangeFromHereToEndLine(end_line, range, error.ref()))
+      llvm::Error err = sc.GetAddressRangeFromHereToEndLine(end_line, range);
+      if (err) {
+        error = Status::FromErrorString(llvm::toString(std::move(err)).c_str());
         return;
+      }
     }
 
     const LazyBool step_out_avoids_code_without_debug_info =
@@ -958,7 +961,7 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
   Thread *thread = exe_ctx.GetThreadPtr();
 
   Status err = thread->JumpToLine(file_spec.ref(), line, true);
-  sb_error.SetError(err);
+  sb_error.SetError(std::move(err));
   return sb_error;
 }
 

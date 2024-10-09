@@ -89,14 +89,16 @@ public:
       if (success)
         m_bp_opts.SetAutoContinue(value);
       else
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_bool_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_bool_parsing_error_message));
     } break;
     case 'i': {
       uint32_t ignore_count;
       if (option_arg.getAsInteger(0, ignore_count))
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_int_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_int_parsing_error_message));
       else
         m_bp_opts.SetIgnoreCount(ignore_count);
     } break;
@@ -106,29 +108,31 @@ public:
       if (success) {
         m_bp_opts.SetOneShot(value);
       } else
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_bool_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_bool_parsing_error_message));
     } break;
     case 't': {
       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID;
       if (option_arg == "current") {
         if (!execution_context) {
-          error = CreateOptionParsingError(
+          error = Status::FromError(CreateOptionParsingError(
               option_arg, short_option, long_option,
-              "No context to determine current thread");
+              "No context to determine current thread"));
         } else {
           ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
           if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
-            error =
+            error = Status::FromError(
                 CreateOptionParsingError(option_arg, short_option, long_option,
-                                         "No currently selected thread");
+                                         "No currently selected thread"));
           } else {
             thread_id = ctx_thread_sp->GetID();
           }
         }
       } else if (option_arg.getAsInteger(0, thread_id)) {
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_int_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_int_parsing_error_message));
       }
       if (thread_id != LLDB_INVALID_THREAD_ID)
         m_bp_opts.SetThreadID(thread_id);
@@ -142,8 +146,9 @@ public:
     case 'x': {
       uint32_t thread_index = UINT32_MAX;
       if (option_arg.getAsInteger(0, thread_index)) {
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_int_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_int_parsing_error_message));
       } else {
         m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
       }
@@ -286,9 +291,9 @@ public:
 
       case 'u':
         if (option_arg.getAsInteger(0, m_column))
-          error =
+          error = Status::FromError(
               CreateOptionParsingError(option_arg, short_option, long_option,
-                                       g_int_parsing_error_message);
+                                       g_int_parsing_error_message));
         break;
 
       case 'E': {
@@ -326,8 +331,8 @@ public:
           error_context = "Unsupported language type for exception breakpoint";
         }
         if (!error_context.empty())
-          error = CreateOptionParsingError(option_arg, short_option,
-                                           long_option, error_context);
+          error = Status::FromError(CreateOptionParsingError(
+              option_arg, short_option, long_option, error_context));
       } break;
 
       case 'f':
@@ -343,9 +348,9 @@ public:
         bool success;
         m_catch_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
-          error =
+          error = Status::FromError(
               CreateOptionParsingError(option_arg, short_option, long_option,
-                                       g_bool_parsing_error_message);
+                                       g_bool_parsing_error_message));
       } break;
 
       case 'H':
@@ -362,24 +367,24 @@ public:
           m_skip_prologue = eLazyBoolNo;
 
         if (!success)
-          error =
+          error = Status::FromError(
               CreateOptionParsingError(option_arg, short_option, long_option,
-                                       g_bool_parsing_error_message);
+                                       g_bool_parsing_error_message));
       } break;
 
       case 'l':
         if (option_arg.getAsInteger(0, m_line_num))
-          error =
+          error = Status::FromError(
               CreateOptionParsingError(option_arg, short_option, long_option,
-                                       g_int_parsing_error_message);
+                                       g_int_parsing_error_message));
         break;
 
       case 'L':
         m_language = Language::GetLanguageTypeFromString(option_arg);
         if (m_language == eLanguageTypeUnknown)
-          error =
+          error = Status::FromError(
               CreateOptionParsingError(option_arg, short_option, long_option,
-                                       g_language_parsing_error_message);
+                                       g_language_parsing_error_message));
         break;
 
       case 'm': {
@@ -392,9 +397,9 @@ public:
           m_move_to_nearest_code = eLazyBoolNo;
 
         if (!success)
-          error =
+          error = Status::FromError(
               CreateOptionParsingError(option_arg, short_option, long_option,
-                                       g_bool_parsing_error_message);
+                                       g_bool_parsing_error_message));
         break;
       }
 
@@ -412,8 +417,9 @@ public:
         if (BreakpointID::StringIsBreakpointName(option_arg, error))
           m_breakpoint_names.push_back(std::string(option_arg));
         else
-          error = CreateOptionParsingError(
-              option_arg, short_option, long_option, "Invalid breakpoint name");
+          error = Status::FromError(
+              CreateOptionParsingError(option_arg, short_option, long_option,
+                                       "Invalid breakpoint name"));
         break;
       }
 
@@ -451,9 +457,9 @@ public:
         bool success;
         m_throw_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
         if (!success)
-          error =
+          error = Status::FromError(
               CreateOptionParsingError(option_arg, short_option, long_option,
-                                       g_bool_parsing_error_message);
+                                       g_bool_parsing_error_message));
       } break;
 
       case 'X':
@@ -465,8 +471,8 @@ public:
         OptionValueFileColonLine value;
         Status fcl_err = value.SetValueFromString(option_arg);
         if (!fcl_err.Success()) {
-          error = CreateOptionParsingError(option_arg, short_option,
-                                           long_option, fcl_err.AsCString());
+          error = Status::FromError(CreateOptionParsingError(
+              option_arg, short_option, long_option, fcl_err.AsCString()));
         } else {
           m_filenames.AppendIfUnique(value.GetFileSpec());
           m_line_num = value.GetLineNumber();
@@ -1551,13 +1557,15 @@ public:
       break;
     case 'B':
       if (m_breakpoint.SetValueFromString(option_arg).Fail())
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_int_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_int_parsing_error_message));
       break;
     case 'D':
       if (m_use_dummy.SetValueFromString(option_arg).Fail())
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_bool_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_bool_parsing_error_message));
       break;
     case 'H':
       m_help_string.SetValueFromString(option_arg);
@@ -1610,8 +1618,9 @@ public:
       if (success) {
         m_permissions.SetAllowList(value);
       } else
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_bool_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_bool_parsing_error_message));
     } break;
     case 'A': {
       bool value, success;
@@ -1619,8 +1628,9 @@ public:
       if (success) {
         m_permissions.SetAllowDisable(value);
       } else
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_bool_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_bool_parsing_error_message));
     } break;
     case 'D': {
       bool value, success;
@@ -1628,8 +1638,9 @@ public:
       if (success) {
         m_permissions.SetAllowDelete(value);
       } else
-        error = CreateOptionParsingError(option_arg, short_option, long_option,
-                                         g_bool_parsing_error_message);
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     g_bool_parsing_error_message));
     } break;
     default:
       llvm_unreachable("Unimplemented option");
@@ -2113,8 +2124,8 @@ public:
         Status name_error;
         if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(option_arg),
                                                   name_error)) {
-          error = CreateOptionParsingError(option_arg, short_option,
-                                           long_option, name_error.AsCString());
+          error = Status::FromError(CreateOptionParsingError(
+              option_arg, short_option, long_option, name_error.AsCString()));
         }
         m_names.push_back(std::string(option_arg));
         break;

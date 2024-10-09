@@ -27,8 +27,8 @@
 
 namespace llvm {
 
-inline static unsigned getWRegFromXReg(unsigned Reg) {
-  switch (Reg) {
+inline static MCRegister getWRegFromXReg(MCRegister Reg) {
+  switch (Reg.id()) {
   case AArch64::X0: return AArch64::W0;
   case AArch64::X1: return AArch64::W1;
   case AArch64::X2: return AArch64::W2;
@@ -67,8 +67,8 @@ inline static unsigned getWRegFromXReg(unsigned Reg) {
   return Reg;
 }
 
-inline static unsigned getXRegFromWReg(unsigned Reg) {
-  switch (Reg) {
+inline static MCRegister getXRegFromWReg(MCRegister Reg) {
+  switch (Reg.id()) {
   case AArch64::W0: return AArch64::X0;
   case AArch64::W1: return AArch64::X1;
   case AArch64::W2: return AArch64::X2;
@@ -107,8 +107,8 @@ inline static unsigned getXRegFromWReg(unsigned Reg) {
   return Reg;
 }
 
-inline static unsigned getXRegFromXRegTuple(unsigned RegTuple) {
-  switch (RegTuple) {
+inline static MCRegister getXRegFromXRegTuple(MCRegister RegTuple) {
+  switch (RegTuple.id()) {
   case AArch64::X0_X1_X2_X3_X4_X5_X6_X7: return AArch64::X0;
   case AArch64::X2_X3_X4_X5_X6_X7_X8_X9: return AArch64::X2;
   case AArch64::X4_X5_X6_X7_X8_X9_X10_X11: return AArch64::X4;
@@ -126,8 +126,8 @@ inline static unsigned getXRegFromXRegTuple(unsigned RegTuple) {
   return RegTuple;
 }
 
-static inline unsigned getBRegFromDReg(unsigned Reg) {
-  switch (Reg) {
+static inline MCRegister getBRegFromDReg(MCRegister Reg) {
+  switch (Reg.id()) {
   case AArch64::D0:  return AArch64::B0;
   case AArch64::D1:  return AArch64::B1;
   case AArch64::D2:  return AArch64::B2;
@@ -165,9 +165,8 @@ static inline unsigned getBRegFromDReg(unsigned Reg) {
   return Reg;
 }
 
-
-static inline unsigned getDRegFromBReg(unsigned Reg) {
-  switch (Reg) {
+static inline MCRegister getDRegFromBReg(MCRegister Reg) {
+  switch (Reg.id()) {
   case AArch64::B0:  return AArch64::D0;
   case AArch64::B1:  return AArch64::D1;
   case AArch64::B2:  return AArch64::D2;

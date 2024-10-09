@@ -191,10 +191,10 @@ static void cleanSimpleOp(Operation *op, RunLivenessAnalysis &la) {
 ///   non-live across all callers),
 ///   (5) Dropping the uses of these return values from its callers, AND
 ///   (6) Erasing these return values
-/// iff it is not public.
+/// iff it is not public or declaration.
 static void cleanFuncOp(FunctionOpInterface funcOp, Operation *module,
                         RunLivenessAnalysis &la) {
-  if (funcOp.isPublic())
+  if (funcOp.isPublic() || funcOp.isDeclaration())
     return;
 
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
@@ -576,6 +576,8 @@ void RemoveDeadValues::runOnOperation() {
   // all symbol ops present in the IR are function-like, and all symbol user ops
   // present in the IR are call-like.
   WalkResult acceptableIR = module->walk([&](Operation *op) {
+    if (op == module)
+      return WalkResult::advance();
     if (isa<BranchOpInterface>(op) ||
         (isa<SymbolOpInterface>(op) && !isa<FunctionOpInterface>(op)) ||
         (isa<SymbolUserOpInterface>(op) && !isa<CallOpInterface>(op))) {

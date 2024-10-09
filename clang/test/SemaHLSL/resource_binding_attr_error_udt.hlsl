@@ -2,23 +2,23 @@
 
 template<typename T>
 struct MyTemplatedUAV {
-  [[hlsl::resource_class(UAV)]] T x;
+  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
 };
 
 struct MySRV {
-  [[hlsl::resource_class(SRV)]] int x;
+  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
 };
 
 struct MySampler {
-  [[hlsl::resource_class(Sampler)]] int x;
+  __hlsl_resource_t [[hlsl::resource_class(Sampler)]] x;
 };
 
 struct MyUAV {
-  [[hlsl::resource_class(UAV)]] int x;
+  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
 };
 
 struct MyCBuffer {
-  [[hlsl::resource_class(CBuffer)]] int x;
+  __hlsl_resource_t [[hlsl::resource_class(CBuffer)]] x;
 };
 
 // Valid: f is skipped, SRVBuf is bound to t0, UAVBuf is bound to u0
@@ -126,3 +126,10 @@ struct Eg14{
 };
 // expected-warning@+1{{binding type 't' only applies to types containing SRV resources}}
 Eg14 e14 : register(t9);
+
+struct Eg15 {
+  float f[4];
+}; 
+// expected no error
+Eg15 e15 : register(c0);
+
