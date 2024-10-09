@@ -19,7 +19,7 @@ static bool UnsetEnv(const char *Name) noexcept {
 #ifdef _WIN32
   return _putenv_s(Name, "") == 0;
 #else
-  return setenv(Name, Value, 1 /*Overwrite*/) == 0;
+  return unsetenv(Name) == 0;
 #endif
 }
 
