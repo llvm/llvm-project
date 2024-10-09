@@ -45,6 +45,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
+    @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
         if not self.isTestSupported():
             return
@@ -90,6 +91,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         env = self.dap_server.request_evaluate("foo")["body"]["result"]
         self.assertIn("bar", env)
 
+    @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminalWithObjectEnv(self):
         if not self.isTestSupported():
             return
@@ -114,6 +116,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
+    @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
         if not self.isTestSupported():
             return
@@ -133,6 +136,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
+    @skipIf(archs=no_match(["x86_64"]))
     def test_missingArgInRunInTerminalLauncher(self):
         if not self.isTestSupported():
             return
@@ -148,6 +152,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
+    @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithInvalidProgram(self):
         if not self.isTestSupported():
             return
@@ -175,6 +180,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
+    @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
         if not self.isTestSupported():
             return
@@ -202,6 +208,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
+    @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
         if not self.isTestSupported():
             return
@@ -223,6 +230,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
     @skipIfWindows
+    @skipIf(archs=no_match(["x86_64"]))
     def test_NonAttachedRunInTerminalLauncher(self):
         if not self.isTestSupported():
             return
