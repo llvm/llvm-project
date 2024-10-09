@@ -1041,14 +1041,17 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
-      if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
-          Name.starts_with("ds.fmax") ||
-          Name.starts_with("global.atomic.fadd") ||
-          Name.starts_with("flat.atomic.fadd")) {
-        // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
-        // declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
+          Name.consume_front("flat.atomic.")) {
+        if (Name.starts_with("fadd") ||
+            // FIXME: We should also remove fmin.num and fmax.num intrinsics.
+            (Name.starts_with("fmin") && !Name.starts_with("fmin.num")) ||
+            (Name.starts_with("fmax") && !Name.starts_with("fmax.num"))) {
+          // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
+          // declaration.
+          NewFn = nullptr;
+          return true;
+        }
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -4218,7 +4221,11 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
           .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
           .StartsWith("global.atomic.fadd", AtomicRMWInst::FAdd)
-          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd);
+          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("global.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("flat.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("global.atomic.fmax", AtomicRMWInst::FMax)
+          .StartsWith("flat.atomic.fmax", AtomicRMWInst::FMax);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.

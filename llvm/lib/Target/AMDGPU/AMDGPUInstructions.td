@@ -618,10 +618,6 @@ multiclass local_addr_space_atomic_op {
     }
 }
 
-defm int_amdgcn_flat_atomic_fmin : noret_op;
-defm int_amdgcn_flat_atomic_fmax : noret_op;
-defm int_amdgcn_global_atomic_fmin : noret_op;
-defm int_amdgcn_global_atomic_fmax : noret_op;
 defm int_amdgcn_global_atomic_csub : noret_op;
 defm int_amdgcn_global_atomic_ordered_add_b64 : noret_op;
 defm int_amdgcn_flat_atomic_fmin_num : noret_op;

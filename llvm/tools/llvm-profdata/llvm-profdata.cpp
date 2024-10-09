@@ -1220,11 +1220,9 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       }
     }
 
-    if (!StaticFuncMap.contains(NewName)) {
-      StaticFuncMap[NewName] = Name;
-    } else {
-      StaticFuncMap[NewName] = DuplicateNameStr;
-    }
+    auto [It, Inserted] = StaticFuncMap.try_emplace(NewName, Name);
+    if (!Inserted)
+      It->second = DuplicateNameStr;
   };
 
   // We need to flatten the SampleFDO profile as the InstrFDO
