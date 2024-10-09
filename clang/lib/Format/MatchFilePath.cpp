@@ -49,11 +49,29 @@ bool matchFilePath(StringRef Pattern, StringRef FilePath) {
         return false;
       break;
     case '*': {
-      while (++I < EOP && Pattern[I] == '*') { // Skip consecutive stars.
+      if (I + 1 < EOP && Pattern[I + 1] == '*') {
+        // Handle '**' pattern
+        while (++I < EOP && Pattern[I] == '*') { // Skip consecutive stars.
+        }
+        if (I == EOP)
+          return true; // '**' at the end matches everything
+        if (Pattern[I] == Separator) {
+          // Try to match the rest of the pattern without consuming the
+          // separator for the case where we want to match "zero" directories
+          // e.g. "a/**/b" matches "a/b"
+          if (matchFilePath(Pattern.substr(I + 1), FilePath.substr(J)))
+            return true;
+        }
+        while (J < End) {
+          if (matchFilePath(Pattern.substr(I), FilePath.substr(J)))
+            return true;
+          ++J;
+        }
+        return false;
       }
       const auto K = FilePath.find(Separator, J); // Index of next `Separator`.
       const bool NoMoreSeparatorsInFilePath = K == StringRef::npos;
-      if (I == EOP) // `Pattern` ends with a star.
+      if (++I == EOP) // `Pattern` ends with a star.
         return NoMoreSeparatorsInFilePath;
       // `Pattern` ends with a lone backslash.
       if (Pattern[I] == '\\' && ++I == EOP)
