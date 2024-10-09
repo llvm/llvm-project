@@ -1365,8 +1365,9 @@ Error BinaryFunction::disassemble() {
           if (containsAddress(TargetAddress)) {
             TargetSymbol = getOrCreateLocalLabel(TargetAddress);
           } else {
-            if (TargetAddress == getAddress() + getSize() &&
-                TargetAddress < getAddress() + getMaxSize() &&
+            if (BC.isELF() && !BC.getBinaryDataAtAddress(TargetAddress) &&
+                TargetAddress == getAddress() + getSize() &&
+                TargetAddress <= getAddress() + getMaxSize() &&
                 !(BC.isAArch64() &&
                   BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
               // Result of __builtin_unreachable().
