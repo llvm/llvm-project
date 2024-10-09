@@ -235,7 +235,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
 #ifdef EXPENSIVE_CHECKS
     std::vector<unsigned> CheckPressure, CheckMaxPressure;
     getRegisterPressures(AtTop, RPTracker, SU, CheckPressure, CheckMaxPressure,
-                         TheTracker, UpwardTracker, DAG, SRI);
+                         DownwardTracker, UpwardTracker, DAG, SRI);
     if (Pressure[AMDGPU::RegisterPressureSets::SReg_32] !=
             CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] ||
         Pressure[AMDGPU::RegisterPressureSets::VGPR_32] !=
