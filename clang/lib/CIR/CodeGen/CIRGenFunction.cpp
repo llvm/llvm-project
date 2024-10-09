@@ -1892,7 +1892,11 @@ mlir::Value CIRGenFunction::buildAlignmentAssumption(
 
 void CIRGenFunction::buildVarAnnotations(const VarDecl *decl, mlir::Value val) {
   assert(decl->hasAttr<AnnotateAttr>() && "no annotate attribute");
-  for ([[maybe_unused]] const auto *I : decl->specific_attrs<AnnotateAttr>()) {
-    llvm_unreachable("NYI");
+  llvm::SmallVector<mlir::Attribute, 4> annotations;
+  for (const auto *annot : decl->specific_attrs<AnnotateAttr>()) {
+    annotations.push_back(CGM.buildAnnotateAttr(annot));
   }
+  auto allocaOp = dyn_cast_or_null<mlir::cir::AllocaOp>(val.getDefiningOp());
+  assert(allocaOp && "expects available alloca");
+  allocaOp.setAnnotationsAttr(builder.getArrayAttr(annotations));
 }

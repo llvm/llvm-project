@@ -493,6 +493,7 @@ def AllocaOp : CIR_Op<"alloca", [
     StrAttr:$name,
     UnitAttr:$init,
     ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
+    OptionalAttr<ArrayAttr>:$annotations,
     OptionalAttr<ASTVarDeclInterface>:$ast
   );
 
@@ -530,6 +531,7 @@ def AllocaOp : CIR_Op<"alloca", [
     `[` $name
        (`,` `init` $init^)?
     `]`
+    ($annotations^)?
     (`ast` $ast^)? attr-dict
   }];
 

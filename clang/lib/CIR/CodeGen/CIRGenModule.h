@@ -796,6 +796,12 @@ public:
   /// Emits OpenCL specific Metadata e.g. OpenCL version.
   void buildOpenCLMetadata();
 
+  /// Create cir::AnnotationAttr which contains the annotation
+  /// information for a given GlobalValue. Notice that a GlobalValue could
+  /// have multiple annotations, and this function creates attribute for
+  /// one of them.
+  mlir::cir::AnnotationAttr buildAnnotateAttr(const clang::AnnotateAttr *aa);
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;
@@ -817,13 +823,7 @@ private:
   void buildGlobalAnnotations();
 
   /// Emit additional args of the annotation.
-  mlir::ArrayAttr buildAnnotationArgs(clang::AnnotateAttr *attr);
-
-  /// Create cir::AnnotationAttr which contains the annotation
-  /// information for a given GlobalValue. Notice that a GlobalValue could
-  /// have multiple annotations, and this function creates attribute for
-  /// one of them.
-  mlir::cir::AnnotationAttr buildAnnotateAttr(clang::AnnotateAttr *aa);
+  mlir::ArrayAttr buildAnnotationArgs(const clang::AnnotateAttr *attr);
 
   /// Add global annotations for a global value.
   /// Those annotations are emitted during lowering to the LLVM code.

@@ -198,7 +198,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
   // Emit debug info for local var declaration.
   assert(!MissingFeatures::generateDebugInfo());
 
-  if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
+  if (D.hasAttr<AnnotateAttr>())
     buildVarAnnotations(&D, address.emitRawPointer());
 
   // TODO(cir): in LLVM this calls @llvm.lifetime.end.

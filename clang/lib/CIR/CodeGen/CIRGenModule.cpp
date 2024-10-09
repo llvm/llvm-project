@@ -3350,7 +3350,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *D) {
   return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, D);
 }
 
-mlir::ArrayAttr CIRGenModule::buildAnnotationArgs(AnnotateAttr *attr) {
+mlir::ArrayAttr CIRGenModule::buildAnnotationArgs(const AnnotateAttr *attr) {
   ArrayRef<Expr *> exprs = {attr->args_begin(), attr->args_size()};
   if (exprs.empty()) {
     return mlir::ArrayAttr::get(builder.getContext(), {});
@@ -3392,7 +3392,7 @@ mlir::ArrayAttr CIRGenModule::buildAnnotationArgs(AnnotateAttr *attr) {
 }
 
 mlir::cir::AnnotationAttr
-CIRGenModule::buildAnnotateAttr(clang::AnnotateAttr *aa) {
+CIRGenModule::buildAnnotateAttr(const clang::AnnotateAttr *aa) {
   mlir::StringAttr annoGV = builder.getStringAttr(aa->getAnnotation());
   mlir::ArrayAttr args = buildAnnotationArgs(aa);
   return mlir::cir::AnnotationAttr::get(builder.getContext(), annoGV, args);
