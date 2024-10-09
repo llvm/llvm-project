@@ -61,7 +61,7 @@ struct MyType {
 
 void checkUnownedHandle01() {
   zx_handle_t h0;
-  h0 = zx_process_self(); // expected-note {{Function returns an unowned handle}}
+  h0 = zx_process_self(); // expected-note {{Function 'zx_process_self' returns an unowned handle}}
   zx_handle_close(h0);    // expected-warning {{Releasing an unowned handle}}
                           // expected-note@-1 {{Releasing an unowned handle}}
 }
@@ -191,7 +191,7 @@ void checkLeakInline(int tag) {
 } // No leak warnings
 
 void checkLeakFromReturn01(int tag) {
-  zx_handle_t sa = return_handle(); // expected-note {{Function returns an open handle}}
+  zx_handle_t sa = return_handle(); // expected-note {{Function 'return_handle' returns an open handle}}
   (void)sa;
 } // expected-note {{Potential leak of handle}}
 // expected-warning@-1 {{Potential leak of handle}}
