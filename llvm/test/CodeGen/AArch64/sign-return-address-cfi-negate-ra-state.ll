@@ -10,8 +10,8 @@ define dso_local i32 @_Z3fooi(i32 %x) #0 {
 ; CHECK-V8A-LABEL: _Z3fooi:
 ; CHECK-V8A:       // %bb.0: // %entry
 ; CHECK-V8A-NEXT:    hint #25
-; CHECK-V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V8A-NEXT:    .cfi_negate_ra_state
+; CHECK-V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V8A-NEXT:    .cfi_offset w30, -16
 ; CHECK-V8A-NEXT:    str w0, [sp, #8]
@@ -28,8 +28,8 @@ define dso_local i32 @_Z3fooi(i32 %x) #0 {
 ; CHECK-V83A-LABEL: _Z3fooi:
 ; CHECK-V83A:       // %bb.0: // %entry
 ; CHECK-V83A-NEXT:    paciasp
-; CHECK-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V83A-NEXT:    .cfi_negate_ra_state
+; CHECK-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V83A-NEXT:    .cfi_offset w30, -16
 ; CHECK-V83A-NEXT:    str w0, [sp, #8]
@@ -144,8 +144,8 @@ define hidden noundef i32 @baz_sync(i32 noundef %a) #0 uwtable(sync) {
 ; CHECK-V8A-LABEL: baz_sync:
 ; CHECK-V8A:       // %bb.0: // %entry
 ; CHECK-V8A-NEXT:    hint #25
-; CHECK-V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V8A-NEXT:    .cfi_negate_ra_state
+; CHECK-V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V8A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V8A-NEXT:    .cfi_offset w30, -16
 ; CHECK-V8A-NEXT:    cbz w0, .LBB2_2
@@ -165,8 +165,8 @@ define hidden noundef i32 @baz_sync(i32 noundef %a) #0 uwtable(sync) {
 ; CHECK-V83A-LABEL: baz_sync:
 ; CHECK-V83A:       // %bb.0: // %entry
 ; CHECK-V83A-NEXT:    paciasp
-; CHECK-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V83A-NEXT:    .cfi_negate_ra_state
+; CHECK-V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-V83A-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-V83A-NEXT:    .cfi_offset w30, -16
 ; CHECK-V83A-NEXT:    cbz w0, .LBB2_2

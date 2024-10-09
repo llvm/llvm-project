@@ -114,28 +114,10 @@ static void emitPACCFI(const AArch64Subtarget &Subtarget,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   auto &MF = *MBB.getParent();
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
-  bool EmitAsyncCFI = MFnI.needsAsyncDwarfUnwindInfo(MF);
 
   auto CFIInst = MFnI.branchProtectionPAuthLR()
                      ? MCCFIInstruction::createNegateRAStateWithPC(nullptr)
                      : MCCFIInstruction::createNegateRAState(nullptr);
-
-  // Because of PAuthLR, when using NegateRAStateWithPC, the CFI instruction cannot
-  // be bundled with other CFI instructions in the prolog, as it needs to directly
-  // follow the signing instruction. This ensures the PC value is captured incase of
-  // an error in the following the following instructions.
-  if (!EmitAsyncCFI && !(MFnI.branchProtectionPAuthLR())) {
-    // Reduce the size of the generated call frame information for synchronous
-    // CFI by bundling the new CFI instruction with others in the prolog, so
-    // that no additional DW_CFA_advance_loc is needed.
-    for (auto I = MBBI; I != MBB.end(); ++I) {
-      if (I->getOpcode() == TargetOpcode::CFI_INSTRUCTION &&
-          I->getFlag(MachineInstr::FrameSetup)) {
-        MBBI = I;
-        break;
-      }
-    }
-  }
 
   unsigned CFIIndex = MF.addFrameInst(CFIInst);
   BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
