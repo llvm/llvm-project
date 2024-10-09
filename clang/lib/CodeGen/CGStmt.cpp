@@ -727,6 +727,8 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool noinline = false;
   bool alwaysinline = false;
   bool noconvergent = false;
+  AsmDialectAttr::Kind asmdialect = AsmDialectAttr::Kind::Local;
+
   const CallExpr *musttail = nullptr;
 
   for (const auto *A : S.getAttrs()) {
@@ -758,6 +760,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
         Builder.CreateAssumption(AssumptionVal);
       }
     } break;
+    case attr::AsmDialect: {
+      asmdialect = cast<AsmDialectAttr>(A)->getDialect();
+    } break;
     }
   }
   SaveAndRestore save_nomerge(InNoMergeAttributedStmt, nomerge);
@@ -765,6 +770,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
   SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt, noconvergent);
   SaveAndRestore save_musttail(MustTailCall, musttail);
+  SaveAndRestore save_asmdialect(AsmDialect, asmdialect);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
 
@@ -3035,12 +3041,47 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
   bool HasSideEffect = S.isVolatile() || S.getNumOutputs() == 0;
 
-  llvm::InlineAsm::AsmDialect GnuAsmDialect =
-      CGM.getCodeGenOpts().getInlineAsmDialect() == CodeGenOptions::IAD_ATT
-          ? llvm::InlineAsm::AD_ATT
-          : llvm::InlineAsm::AD_Intel;
-  llvm::InlineAsm::AsmDialect AsmDialect = isa<MSAsmStmt>(&S) ?
-    llvm::InlineAsm::AD_Intel : GnuAsmDialect;
+  llvm::InlineAsm::AsmDialect AsmDialect;
+  auto GlobalAsmDialect = [&] {
+    return CGM.getCodeGenOpts().getInlineAsmDialect() == CodeGenOptions::IAD_ATT
+               ? llvm::InlineAsm::AD_ATT
+               : llvm::InlineAsm::AD_Intel;
+  };
+  if (auto *GS = dyn_cast<GCCAsmStmt>(&S)) {
+    switch (this->AsmDialect) { // Fixme: rename member
+    case AsmDialectAttr::Intel:
+      AsmDialect = llvm::InlineAsm::AsmDialect::AD_Intel;
+      break;
+    case AsmDialectAttr::ATT:
+      AsmDialect = llvm::InlineAsm::AsmDialect::AD_ATT;
+      break;
+    case AsmDialectAttr::Local:
+      if (CurFuncDecl) {
+        if (auto *DialectAttr = CurFuncDecl->getAttr<AsmDialectAttr>()) {
+          switch (DialectAttr->getDialect()) {
+          case AsmDialectAttr::Intel:
+            AsmDialect = llvm::InlineAsm::AsmDialect::AD_Intel;
+            break;
+          case AsmDialectAttr::ATT:
+            AsmDialect = llvm::InlineAsm::AsmDialect::AD_ATT;
+            break;
+          case AsmDialectAttr::Global:
+          case AsmDialectAttr::Local:
+            AsmDialect = GlobalAsmDialect();
+            break;
+          }
+          break;
+        }
+      }
+      [[fallthrough]];
+    case AsmDialectAttr::Global:
+      AsmDialect = GlobalAsmDialect();
+      break;
+    }
+  } else {
+    assert(isa<MSAsmStmt>(&S));
+    AsmDialect = llvm::InlineAsm::AD_Intel;
+  }
 
   llvm::InlineAsm *IA = llvm::InlineAsm::get(
       FTy, AsmString, Constraints, HasSideEffect,
