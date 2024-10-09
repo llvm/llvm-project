@@ -588,7 +588,7 @@ void AArch64PassConfig::addIRPasses() {
 
   // Expand any SVE vector library calls that we can't code generate directly.
   if (EnableSVEIntrinsicOpts &&
-      TM->getOptLevel() != CodeGenOptLevel::None)
+      TM->getOptLevel() == CodeGenOptLevel::Aggressive)
     addPass(createSVEIntrinsicOptsPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
