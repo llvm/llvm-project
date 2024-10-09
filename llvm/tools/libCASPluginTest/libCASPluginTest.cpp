@@ -112,7 +112,7 @@ struct CASWrapper {
   /// Used for testing the \c globally parameter of action cache APIs. Simulates
   /// "uploading"/"downloading" objects from/to the primary on-disk path.
   std::unique_ptr<UnifiedOnDiskCache> UpstreamDB;
-  ThreadPool Pool{llvm::hardware_concurrency()};
+  StdThreadPool Pool{llvm::hardware_concurrency()};
 
   std::mutex Lock{};
 

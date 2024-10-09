@@ -134,7 +134,7 @@ static Error getAllDBDirs(StringRef Path,
     if (DirI->type() != sys::fs::file_type::directory_file)
       continue;
     StringRef SubDir = sys::path::filename(DirI->path());
-    if (!SubDir.startswith(DBDirPrefix))
+    if (!SubDir.starts_with(DBDirPrefix))
       continue;
     uint64_t Order;
     if (SubDir.substr(DBDirPrefix.size()).getAsInteger(10, Order))
@@ -156,7 +156,7 @@ static Error getAllDBDirs(StringRef Path,
 /// \returns Given a sub-directory named 'v<version>.<x>', it outputs the
 /// 'v<version>.<x+1>' name.
 static void getNextDBDirName(StringRef DBDir, llvm::raw_ostream &OS) {
-  assert(DBDir.startswith(DBDirPrefix));
+  assert(DBDir.starts_with(DBDirPrefix));
   uint64_t Count;
   bool Failed = DBDir.substr(DBDirPrefix.size()).getAsInteger(10, Count);
   assert(!Failed);

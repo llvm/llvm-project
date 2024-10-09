@@ -330,7 +330,7 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
     EXPECT_EQ(Node->getData(), Blobs[I]);
   };
 
-  ThreadPool Threads;
+  StdThreadPool Threads;
   for (unsigned I = 0; I < BlobCount; ++I) {
     Threads.async(Consumer, I, &Read1);
     Threads.async(Consumer, I, &Read2);
@@ -432,7 +432,7 @@ TEST(OnDiskCASTest, DiskSize) {
     std::error_code EC;
     for (sys::fs::directory_iterator I(Temp.path(), EC), E; I != E && !EC;
          I.increment(EC)) {
-      if (StringRef(I->path()).endswith(".index")) {
+      if (StringRef(I->path()).ends_with(".index")) {
         FoundIndex = true;
         ASSERT_TRUE(I->status());
         if (Mapped)
@@ -440,7 +440,7 @@ TEST(OnDiskCASTest, DiskSize) {
         else
           EXPECT_LT(I->status()->getSize(), MaxSize);
       }
-      if (StringRef(I->path()).endswith(".data")) {
+      if (StringRef(I->path()).ends_with(".data")) {
         FoundData = true;
         ASSERT_TRUE(I->status());
         if (Mapped)

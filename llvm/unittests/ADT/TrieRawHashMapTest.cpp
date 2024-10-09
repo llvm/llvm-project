@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/TrieRawHashMap.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/SHA1.h"
 #include "gtest/gtest.h"
@@ -72,7 +73,8 @@ public:
 
   // Use the number itself as hash to test the pathological case.
   static HashType hash(uint64_t Num) {
-    uint64_t HashN = llvm::support::endian::byte_swap(Num, llvm::support::big);
+    uint64_t HashN =
+        llvm::support::endian::byte_swap(Num, llvm::endianness::big);
     HashType Hash;
     memcpy(&Hash[0], &HashN, sizeof(HashType));
     return Hash;
