@@ -22,7 +22,6 @@ class AArch64_ELFTargetObjectFile : public TargetLoweringObjectFileELF {
 public:
   AArch64_ELFTargetObjectFile() {
     PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
-    SupportIndirectSymViaGOTPCRel = true;
   }
 
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
