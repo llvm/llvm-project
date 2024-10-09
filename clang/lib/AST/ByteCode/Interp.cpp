@@ -21,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include <limits>
@@ -1404,6 +1405,14 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
   S.CCEDiag(E, diag::note_constexpr_overflow)
       << FP.toDiagnosticString(S.getASTContext()) << E->getType();
   return S.noteUndefinedBehavior();
+}
+
+bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc,
+           diag::err_shufflevector_minus_one_is_undefined_behavior_constexpr)
+      << Index;
+  return false;
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
