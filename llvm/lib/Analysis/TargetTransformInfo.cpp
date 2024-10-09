@@ -1359,6 +1359,15 @@ bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
   return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
 }
 
+bool TargetTransformInfo::isProfitableToSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
+  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
+}
+
+bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
+  return TTIImpl->isVectorShiftByScalarCheap(Ty);
+}
+
 TargetTransformInfo::Concept::~Concept() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}

@@ -977,6 +977,13 @@ public:
     return false;
   }
 
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const {
+    return false;
+  }
+
+  bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
+
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     return TargetTransformInfo::VPLegalization(
