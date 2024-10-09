@@ -269,7 +269,10 @@ static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
   Address destAddr = checkAtomicAlignment(cgf, expr);
   auto &builder = cgf.getBuilder();
 
-  auto intType = builder.getSIntNTy(cgf.getContext().getTypeSize(typ));
+  auto intType =
+      expr->getArg(0)->getType()->getPointeeType()->isUnsignedIntegerType()
+          ? builder.getUIntNTy(cgf.getContext().getTypeSize(typ))
+          : builder.getSIntNTy(cgf.getContext().getTypeSize(typ));
   auto cmpVal = cgf.buildScalarExpr(expr->getArg(1));
   cmpVal = buildToInt(cgf, cmpVal, typ, intType);
   auto newVal =
