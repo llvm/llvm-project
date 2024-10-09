@@ -213,6 +213,8 @@ if (LIBCXXABI_ENABLE_SHARED)
     list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
   endif()
 
+  # TODO: Move this to libc++'s HandleLibCXXABI.cmake since this is effectively trying to control
+  #       what libc++ re-exports.
   add_library(cxxabi-reexports INTERFACE)
   function(export_symbols file)
     # -exported_symbols_list is only available on Apple platforms
