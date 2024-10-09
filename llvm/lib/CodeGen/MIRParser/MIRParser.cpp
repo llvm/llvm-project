@@ -652,10 +652,10 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
 bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                                       const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
-  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineRegisterInfo &RegInfo = MF.getRegInfo();
   assert(RegInfo.tracksLiveness());
   if (!YamlMF.TracksRegLiveness)
-    MRI.invalidateLiveness();
+    RegInfo.invalidateLiveness();
 
   SMDiagnostic Error;
   // Parse the virtual register information.
@@ -705,7 +705,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                          FlagStringValue.Value + "'");
       Info.Flags.push_back(FlagValue);
     }
-    MRI.noteNewVirtualRegister(Info.VReg);
+    RegInfo.noteNewVirtualRegister(Info.VReg);
   }
 
   // Parse the liveins.
@@ -721,7 +721,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
         return error(Error, LiveIn.VirtualRegister.SourceRange);
       VReg = Info->VReg;
     }
-    MRI.addLiveIn(Reg, VReg);
+    RegInfo.addLiveIn(Reg, VReg);
   }
 
   // Parse the callee saved registers (Registers that will
@@ -734,7 +734,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
         return error(Error, RegSource.SourceRange);
       CalleeSavedRegisters.push_back(Reg);
     }
-    MRI.setCalleeSavedRegs(CalleeSavedRegisters);
+    RegInfo.setCalleeSavedRegs(CalleeSavedRegisters);
   }
 
   return false;
