@@ -147,15 +147,18 @@ public:
                         const clang::Diagnostic &Info) override;
 
   /// When passed a main diagnostic, returns fixes to add to it.
+  using MainDiagFixer =
+      std::function<std::vector<Fix>(const Diag &, const clang::Diagnostic &)>;
   /// When passed a note diagnostic, returns fixes to replace it with.
-  using DiagFixer =
+  using NoteDiagFixer =
       std::function<std::vector<Fix>(const Diag &, const clang::Diagnostic &)>;
   using LevelAdjuster = std::function<DiagnosticsEngine::Level(
       DiagnosticsEngine::Level, const clang::Diagnostic &)>;
   using DiagCallback =
       std::function<void(const clang::Diagnostic &, clangd::Diag &)>;
   /// If set, possibly adds fixes for diagnostics using \p Fixer.
-  void contributeFixes(DiagFixer Fixer) { this->Fixer = Fixer; }
+  void contributeMainDiagFixes(MainDiagFixer Fixer) { this->MainFixer = Fixer; }
+  void contributeNoteDiagFixes(NoteDiagFixer Fixer) { this->NoteFixer = Fixer; }
   /// If set, this allows the client of this class to adjust the level of
   /// diagnostics, such as promoting warnings to errors, or ignoring
   /// diagnostics.
@@ -167,7 +170,8 @@ public:
 private:
   void flushLastDiag();
 
-  DiagFixer Fixer = nullptr;
+  MainDiagFixer MainFixer = nullptr;
+  NoteDiagFixer NoteFixer = nullptr;
   LevelAdjuster Adjuster = nullptr;
   DiagCallback DiagCB = nullptr;
   std::vector<Diag> Output;

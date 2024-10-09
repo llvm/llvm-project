@@ -656,7 +656,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
               : Symbol::Include;
       FixIncludes.emplace(Filename, Inserter, *Inputs.Index,
                           /*IndexRequestLimit=*/5, Directive);
-      ASTDiags.contributeFixes(
+      ASTDiags.contributeMainDiagFixes(
           [&FixIncludes, &CTContext](const Diag &Diag,
                                      const clang::Diagnostic &Info) {
             auto Fixes = std::vector<Fix>();
@@ -665,6 +665,11 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             auto IncludeFixes = FixIncludes->fix(Diag.Severity, Info);
             Fixes.insert(Fixes.end(), IncludeFixes.begin(), IncludeFixes.end());
             return Fixes;
+          });
+      ASTDiags.contributeNoteDiagFixes(
+          [&FixIncludes](const Diag &Diag,
+                                     const clang::Diagnostic &Info) {
+            return FixIncludes->fix(Diag.Severity, Info);
           });
       Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
     }
