@@ -603,7 +603,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   This is the correct way to build runtimes when putting together a toolchain.
   It will build the builtins separately from the other runtimes to preserve
   correct dependency ordering. If you want to build the runtimes using a system
-  compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
+  compiler, see the `libc++ documentation <https://libcxx.llvm.org/VendorDocumentation.html>`_.
 
   .. note::
     The list should not have duplicates with ``LLVM_ENABLE_PROJECTS``.
@@ -674,8 +674,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   Defaults to OFF.
 
 **LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES**:BOOL
-  When building executables, preserve symbol exports. Defaults to ON. 
-  You can use this option to disable exported symbols from all 
+  When building executables, preserve symbol exports. Defaults to ON.
+  You can use this option to disable exported symbols from all
   executables (Darwin Only).
 
 **LLVM_FORCE_USE_OLD_TOOLCHAIN**:BOOL

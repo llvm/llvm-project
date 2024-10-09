@@ -171,13 +171,13 @@ private:
   std::unique_ptr<BatchAAResults> BatchAA;
 
   enum class DependencyType {
-    RAW,   ///> Read After Write
-    WAW,   ///> Write After Write
-    RAR,   ///> Read After Read
-    WAR,   ///> Write After Read
-    CTRL,  ///> Control-related dependencies, like with PHIs/Terminators
-    OTHER, ///> Currently used for stack related instrs
-    NONE,  ///> No memory/other dependency
+    ReadAfterWrite,  ///> Memory dependency write -> read
+    WriteAfterWrite, ///> Memory dependency write -> write
+    ReadAfterRead,   ///> Memory dependency read -> read
+    WriteAfterRead,  ///> Memory dependency read -> write
+    Control,         ///> Control-related dependency, like with PHI/Terminator
+    Other,           ///> Currently used for stack related instrs
+    None,            ///> No memory/other dependency
   };
   /// \Returns the dependency type depending on whether instructions may
   /// read/write memory or whether they are some specific opcode-related
