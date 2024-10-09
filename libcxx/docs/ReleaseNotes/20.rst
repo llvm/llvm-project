@@ -78,9 +78,9 @@ Deprecations and Removals
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
   standards conforming.
 
-- ``<ccomplex>``, ``<cstdbool>``, and ``<ctgmath>`` are deprecated since C++17 as specified by the standard. They,
-  together with ``<ciso646>``, are removed in C++20, but libc++ still provides these headers as an extension and only
-  deprecates them.
+- ``<ccomplex>``, ``<cstdalign>`` (previously missing), ``<cstdbool>``, and ``<ctgmath>`` are deprecated since C++17 as
+  specified by the standard. They, together with ``<ciso646>``, are removed in C++20, but libc++ still provides these
+  headers as an extension and only deprecates them.
 
 Upcoming Deprecations and Removals
 ----------------------------------

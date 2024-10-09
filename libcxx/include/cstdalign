@@ -32,4 +32,17 @@ Macros:
 #undef __alignof_is_defined
 #define __alignof_is_defined 1
 
+#if _LIBCPP_STD_VER >= 17
+#  if _LIBCPP_STD_VER >= 20
+#    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED_("removed in C++20")
+#  else
+#    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED
+#  endif
+
+using __standard_header_cstdalign _DEPRECATION_ANNOTATION = void;
+using __use_standard_header_cstdalign                     = __standard_header_cstdalign;
+
+#  undef _DEPRECATION_ANNOTATION
+#endif
+
 #endif // _LIBCPP_CSTDALIGN
