@@ -18,6 +18,27 @@ def SCFBufferize : Pass<"scf-bufferize"> {
                            "memref::MemRefDialect"];
 }
 
+def SCFLoopBufferizationPreprocessing
+    : Pass<"scf-loop-bufferization-preprocessing"> {
+  let summary = "Preprocess loops before One-Shot Bufferize";
+
+  let description = [{
+    Preprocess `scf.for` loops before running One-Shot Bufferize to support
+    loops where a yielded tensor is not equivalent to the respective iter_arg.
+    Such IR is currently not supported by One-Shot Bufferize.
+
+    This pass inserts a `bufferization.materialize_in_destination` op for every
+    yielded tensor, such that the yielded value is guaranteed to materialize in
+    the future buffer of the iter_arg; this is done by copying the tensor
+    contents into the iter_arg buffer. Such memcpys are a no-op in case the
+    tensor contents already materialize in the iter_arg buffer.
+  }];
+
+  let constructor = "mlir::createSCFLoopBufferizationPreprocessingPass()";
+  let dependentDialects = ["bufferization::BufferizationDialect",
+                           "scf::SCFDialect"];
+}
+
 // Note: Making these canonicalization patterns would require a dependency
 // of the SCF dialect on the Affine/Tensor/MemRef dialects or vice versa.
 def SCFForLoopCanonicalization
