@@ -2357,10 +2357,10 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   };
 
+  SmallVector<Operation *> opList;
   if (isMultiwaySplit) {
 
     // Split a single target operation at multiple points.
-    SmallVector<Operation *> opList;
     TilingInterface head, tail;
     Operation *target = payload.front();
 
@@ -2400,8 +2400,6 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     // Append any leftover parts to the end of the result list.
     if (tail)
       opList.push_back(tail.getOperation());
-    results.set(cast<OpResult>(getFirst()), opList);
-    results.set(cast<OpResult>(getSecond()), {});
 
   } else {
     // Split each target operation.
@@ -2447,9 +2445,11 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
       return diag;
     }
 
-    results.set(cast<OpResult>(getFirst()), first);
-    results.set(cast<OpResult>(getSecond()), second);
+    opList.append(first);
+    if (second.size())
+      opList.append(second);
   }
+  results.set(cast<OpResult>(getSplitList()), opList);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2501,7 +2501,7 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(
       SplitOp::getStaticChunkSizesAttrName(result.name).getValue(),
       staticChunkSizes);
-  result.addTypes({targetType, targetType});
+  result.addTypes(targetType);
   return success();
 }
 
