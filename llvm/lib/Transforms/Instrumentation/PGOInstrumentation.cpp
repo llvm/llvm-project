@@ -328,7 +328,7 @@ static cl::opt<uint64_t> ColdFuncCoverageMaxEntryCount(
 static cl::opt<InstrColdFuncCovMode> InstrumentColdFunctionCoverageMode(
     "instrument-cold-function-coverage-mode",
     cl::init(InstrColdFuncCovMode::Conservative), cl::Hidden,
-    cl::desc("Control whether instrumenting unprofiled functions for cold "
+    cl::desc("Control whether to instrument unprofiled functions for cold "
              "function coverage."),
     cl::values(
         clEnumValN(InstrColdFuncCovMode::Conservative, "conservative",
@@ -1915,10 +1915,10 @@ static bool skipPGOGen(const Function &F) {
   if (F.getInstructionCount() < PGOFunctionSizeThreshold)
     return true;
   if (InstrumentColdFunctionCoverage) {
-    if (!F.getEntryCount())
-      return InstrumentColdFunctionCoverageMode ==
-             InstrColdFuncCovMode::Conservative;
-    return F.getEntryCount()->getCount() > ColdFuncCoverageMaxEntryCount;
+    if (auto EntryCount = F.getEntryCount())
+      return EntryCount->getCount() > ColdFuncCoverageMaxEntryCount;
+    return InstrumentColdFunctionCoverageMode ==
+           InstrColdFuncCovMode::Conservative;
   }
   return false;
 }
