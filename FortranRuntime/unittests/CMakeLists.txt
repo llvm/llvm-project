@@ -30,7 +30,7 @@ add_custom_target(FortranRuntimeUnitTests)
 set_target_properties(FortranRuntimeUnitTests PROPERTIES FOLDER "Fortran Runtime/Meta")
 
 
-function(add_flang_unittest_offload_properties target)
+function(add_fortranruntime_unittest_offload_properties target)
   # Set CUDA_RESOLVE_DEVICE_SYMBOLS.
   if (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
     set_target_properties(${target}
@@ -64,7 +64,7 @@ function(add_fortranruntime_unittest test_dirname)
   target_include_directories(${test_dirname} PRIVATE "${FORTRANRUNTIME_SOURCE_DIR}/include")
   target_include_directories(${test_dirname} PRIVATE "${FLANG_SOURCE_DIR}/include")
   target_link_libraries(${test_dirname} PRIVATE ${ARG_LINK_LIBS})
-  add_flang_unittest_offload_properties(${test_dirname})
+  add_fortranruntime_unittest_offload_properties(${test_dirname})
 endfunction()
 
 function(add_fortranruntime_nongtest_unittest test_name)
@@ -91,7 +91,7 @@ function(add_fortranruntime_nongtest_unittest test_name)
     add_dependencies(FortranRuntimeUnitTests ${test_name}${suffix})
   endif()
 
-  add_flang_unittest_offload_properties(${test_name}${suffix})
+  add_fortranruntime_unittest_offload_properties(${test_name}${suffix})
 endfunction()
 
 add_subdirectory(Common)

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../../runtime/terminator.h"
+#include "../../../lib/Runtime/terminator.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/allocatable.h"

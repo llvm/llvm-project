@@ -474,6 +474,7 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
+                clang-offload-packager
                 flang-new
                 count
                 lld

@@ -6,9 +6,10 @@
 #
 #===------------------------------------------------------------------------===#
 
-add_subdirectory(Float128Math)
+include(AddFortranOffloadRuntime)
 
-set(sources
+# List of files that are buildable for all devices.
+set(supported_sources
   ../Common/binary-to-decimal.cpp
   ../Common/decimal-to-binary.cpp
   ISO_Fortran_binding.cpp
@@ -18,9 +19,6 @@ set(sources
   assign.cpp
   buffer.cpp
   character.cpp
-  command.cpp
-  complex-powi.cpp
-  complex-reduction.c
   connection.cpp
   copy.cpp
   derived-api.cpp
@@ -31,9 +29,6 @@ set(sources
   edit-input.cpp
   edit-output.cpp
   environment.cpp
-  exceptions.cpp
-  execute.cpp
-  extensions.cpp
   external-unit.cpp
   extrema.cpp
   file.cpp
@@ -45,9 +40,7 @@ set(sources
   io-api-minimal.cpp
   io-error.cpp
   io-stmt.cpp
-  iso_fortran_env_impl.f90
   iostat.cpp
-  main.cpp
   matmul-transpose.cpp
   matmul.cpp
   memory.cpp
@@ -59,41 +52,49 @@ set(sources
   product.cpp
   pseudo-unit.cpp
   ragged.cpp
-  random.cpp
-  reduce.cpp
-  reduction.cpp
   stat.cpp
-  stop.cpp
   sum.cpp
   support.cpp
-  temporary-stack.cpp
   terminator.cpp
-  time-intrinsic.cpp
   tools.cpp
   transformational.cpp
   type-code.cpp
   type-info.cpp
-  unit-map.cpp
   unit.cpp
+  unit-map.cpp
   utf.cpp
 )
 
-set(public_headers "")
+# List of source not used for GPU offloading.
+set(host_sources
+  command.cpp
+  complex-powi.cpp
+  complex-reduction.c
+  exceptions.cpp
+  execute.cpp
+  extensions.cpp
+  iso_fortran_env_impl.f90
+  main.cpp
+  random.cpp
+  reduce.cpp
+  reduction.cpp
+  stop.cpp
+  temporary-stack.cpp
+  time-intrinsic.cpp
+)
+
 file(GLOB_RECURSE public_headers
   "${FLANGRUNTIME_SOURCE_DIR}/include/flang/Runtime/*.h"
   "${FLANGRUNTIME_SOURCE_DIR}/include/flang/Common/*.h"
   )
 
-set(private_headers "")
 file(GLOB_RECURSE private_headers
   "${FLANGRUNTIME_SOURCE_DIR}/lib/Runtime/*.h"
   "${FLANGRUNTIME_SOURCE_DIR}/lib/Common/*.h"
   )
 
-include(AddFlangOffloadRuntime)
 
-enable_cuda_compilation(FortranRuntime "${supported_files}")
-enable_omp_offload_compilation("${supported_files}")
+add_subdirectory(Float128Math)
 
 get_target_property(f128_sources
   FortranFloat128MathILib INTERFACE_SOURCES
@@ -108,8 +109,12 @@ if (f128_sources)
     APPEND PROPERTY COMPILE_DEFINITIONS
     ${f128_defs}
     )
-  list(APPEND sources ${f128_sources})
-endif()
+else ()
+  set(f128_sources "")
+endif ()
+
+
+set(sources ${supported_sources} ${host_sources} ${f128_sources})
 
 if (NOT WIN32)
   add_fortranruntime_library(FortranRuntime STATIC
@@ -117,6 +122,9 @@ if (NOT WIN32)
     INSTALL_WITH_TOOLCHAIN
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
+
+  enable_cuda_compilation(FortranRuntime "${supported_sources}")
+  enable_omp_offload_compilation("${supported_sources}")
 
   # For unittests that link to FortranRuntime. Should link to the static version
   # of the library.
@@ -139,6 +147,9 @@ else()
           MSVC_RUNTIME_LIBRARY ${msvc_lib}
           Fortran_MODULE_DIRECTORY "module.${suffix}"
       )
+
+    enable_cuda_compilation(FortranRuntime "${supported_sources}")
+    enable_omp_offload_compilation("${supported_sources}")
   endfunction ()
 
   add_win_fortranruntime_library(STATIC static     MultiThreaded)

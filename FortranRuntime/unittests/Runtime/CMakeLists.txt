@@ -40,3 +40,7 @@ add_fortranruntime_unittest(FlangRuntimeTests
 LINK_LIBS
   FortranRuntime.unittest
 )
+
+if (FORTRANRUNTIME_ENABLE_CUF)
+  add_subdirectory(CUDA)
+endif ()

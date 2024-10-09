@@ -1,4 +1,4 @@
-#===-- cmake/modules/AddFlangOffloadRuntime.txt ----------------------------===#
+#===-- cmake/modules/AddFortranOffloadRuntime.txt --------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -50,11 +50,11 @@ macro(enable_cuda_compilation name files)
     endif()
 
     # Add an OBJECT library consisting of CUDA PTX.
-    llvm_add_library(${name}PTX OBJECT PARTIAL_SOURCES_INTENDED ${files})
-    set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
+    add_fortranruntime_library(${name}PTX OBJECT ${files})
+    set_property(TARGET ${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
     if (FORTRANRUNTIME_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS)
-      target_compile_definitions(obj.${name}PTX
-        PRIVATE FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
+      target_compile_definitions(${name}PTX
+        PRIVATE FORTRANRUNTIME_NO_GLOBAL_VAR_DEFS
         )
     endif()
   endif()

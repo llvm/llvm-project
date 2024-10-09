@@ -5,6 +5,9 @@ a C compiler.
 
 UNSUPPORTED: system-windows
 
+FIXME: This currently fails with CUDA-enabled FortranRuntime because it needs
+       to link libcuda_rt.
+
 RUN: %if system-aix %{ export OBJECT_MODE=64 %}
 RUN: %cc -std=c99 %s -I%include %libruntime -lm \
 RUN: %if system-aix %{-lpthread %}
