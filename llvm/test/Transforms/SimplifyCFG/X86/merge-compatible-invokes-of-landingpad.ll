@@ -1013,24 +1013,19 @@ define void @t17_mismatched_attrs_okay_merge() personality ptr @__gxx_personalit
 ; CHECK-LABEL: define void @t17_mismatched_attrs_okay_merge() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN0:.*]], label %[[IF_ELSE:.*]]
-; CHECK:       [[IF_THEN0]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:            to label %[[INVOKE_CONT0:.*]] unwind label %[[LPAD:.*]]
-; CHECK:       [[INVOKE_CONT0]]:
-; CHECK-NEXT:    unreachable
-; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN1_INVOKE:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[LPAD:.*]]:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1:.*]], label %[[IF_END:.*]]
-; CHECK:       [[IF_THEN1]]:
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1_INVOKE]], label %[[IF_END:.*]]
+; CHECK:       [[IF_THEN1_INVOKE]]:
 ; CHECK-NEXT:    invoke void @simple_throw()
-; CHECK-NEXT:            to label %[[INVOKE_CONT2:.*]] unwind label %[[LPAD]]
-; CHECK:       [[INVOKE_CONT2]]:
+; CHECK-NEXT:            to label %[[IF_THEN1_CONT:.*]] unwind label %[[LPAD]]
+; CHECK:       [[IF_THEN1_CONT]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -1070,24 +1065,19 @@ define void @t17_mismatched_attrs_okay_merge_intersect() personality ptr @__gxx_
 ; CHECK-LABEL: define void @t17_mismatched_attrs_okay_merge_intersect() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN0:.*]], label %[[IF_ELSE:.*]]
-; CHECK:       [[IF_THEN0]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:            to label %[[INVOKE_CONT0:.*]] unwind label %[[LPAD:.*]]
-; CHECK:       [[INVOKE_CONT0]]:
-; CHECK-NEXT:    unreachable
-; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN1_INVOKE:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[LPAD:.*]]:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1:.*]], label %[[IF_END:.*]]
-; CHECK:       [[IF_THEN1]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
-; CHECK-NEXT:            to label %[[INVOKE_CONT2:.*]] unwind label %[[LPAD]]
-; CHECK:       [[INVOKE_CONT2]]:
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1_INVOKE]], label %[[IF_END:.*]]
+; CHECK:       [[IF_THEN1_INVOKE]]:
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:            to label %[[IF_THEN1_CONT:.*]] unwind label %[[LPAD]]
+; CHECK:       [[IF_THEN1_CONT]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -1127,24 +1117,19 @@ define void @t17_mismatched_attrs_okay_merge_intersect2() personality ptr @__gxx
 ; CHECK-LABEL: define void @t17_mismatched_attrs_okay_merge_intersect2() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN0:.*]], label %[[IF_ELSE:.*]]
-; CHECK:       [[IF_THEN0]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
-; CHECK-NEXT:            to label %[[INVOKE_CONT0:.*]] unwind label %[[LPAD:.*]]
-; CHECK:       [[INVOKE_CONT0]]:
-; CHECK-NEXT:    unreachable
-; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN1_INVOKE:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[LPAD:.*]]:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    call void @destructor()
 ; CHECK-NEXT:    resume { ptr, i32 } [[EH]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1:.*]], label %[[IF_END:.*]]
-; CHECK:       [[IF_THEN1]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR3]]
-; CHECK-NEXT:            to label %[[INVOKE_CONT2:.*]] unwind label %[[LPAD]]
-; CHECK:       [[INVOKE_CONT2]]:
+; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1_INVOKE]], label %[[IF_END:.*]]
+; CHECK:       [[IF_THEN1_INVOKE]]:
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
+; CHECK-NEXT:            to label %[[IF_THEN1_CONT:.*]] unwind label %[[LPAD]]
+; CHECK:       [[IF_THEN1_CONT]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    call void @sideeffect()
@@ -1187,7 +1172,7 @@ define void @t17_mismatched_attrs_prevent_merge() personality ptr @__gxx_persona
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN0:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN0]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:            to label %[[INVOKE_CONT0:.*]] unwind label %[[LPAD:.*]]
 ; CHECK:       [[INVOKE_CONT0]]:
 ; CHECK-NEXT:    unreachable
@@ -2693,6 +2678,5 @@ declare dso_local i32 @__gxx_personality_v0(...)
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noreturn }
 ; CHECK: attributes #[[ATTR1]] = { nomerge }
 ; CHECK: attributes #[[ATTR2]] = { memory(none) }
-; CHECK: attributes #[[ATTR3]] = { cold memory(none) }
-; CHECK: attributes #[[ATTR4]] = { strictfp }
+; CHECK: attributes #[[ATTR3]] = { strictfp }
 ;.
