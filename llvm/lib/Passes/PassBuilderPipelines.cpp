@@ -1136,6 +1136,17 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level);
 
+  // Promoting by-reference arguments to by-value exposes more constants to
+  // IPSCCP.
+  if (!isLTOPreLink(Phase)) {
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+        PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true)));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
+  }
+
   // Interprocedural constant propagation now that basic cleanup has occurred
   // and prior to optimizing globals.
   // FIXME: This position in the pipeline hasn't been carefully considered in
