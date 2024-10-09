@@ -364,7 +364,11 @@ class NonportablePath  : Warning<
   "non-portable path to file '%0'; specified path differs in case from file"
   " name on disk">;
 def pp_nonportable_path : NonportablePath,
-  InGroup<DiagGroup<"nonportable-include-path">>;
+  InGroup<NonportablePath>;
+def pp_nonportable_path_trailing_whitespace : Warning<
+  "non-portable path to file '%0'; specified path contains trailing"
+  "whitespace or dots">,
+  InGroup<NonportablePath>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
   InGroup<DiagGroup<"nonportable-system-include-path">>;
 
