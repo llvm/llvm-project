@@ -365,12 +365,6 @@ public:
   CanonicalizeSugar(swift::Demangle::Demangler &dem,
                     swift::Demangle::NodePointer node);
 
-  /// Transforms the module name in the mangled type name using module_name_map
-  /// as the mapping source.
-  static swift::Demangle::ManglingErrorOr<std::string>
-  TransformModuleName(llvm::StringRef mangled_name,
-                      const llvm::StringMap<llvm::StringRef> &module_name_map);
-
   /// Return the canonicalized Demangle tree for a Swift mangled type name.
   swift::Demangle::NodePointer
   GetCanonicalDemangleTree(swift::Demangle::Demangler &dem,
