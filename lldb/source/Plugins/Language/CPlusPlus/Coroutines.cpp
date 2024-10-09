@@ -192,7 +192,14 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   lldb::ValueObjectSP promise = CreateValueObjectFromAddress(
       "promise", frame_ptr_addr + 2 * ptr_size, exe_ctx, promise_type);
   Status error;
-  lldb::ValueObjectSP promisePtr = promise->AddressOf(error);
+  lldb::ValueObjectSP promisePtr;
+  auto address_of_valobj_sp_or_err = promise->AddressOf(error);
+  if (!address_of_valobj_sp_or_err)
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object),
+                   address_of_valobj_sp_or_err.takeError(),
+                   "unable to get the address of the value object");
+  else
+    promisePtr = *address_of_valobj_sp_or_err;
   if (error.Success())
     m_promise_ptr_sp = promisePtr->Clone(ConstString("promise"));
 

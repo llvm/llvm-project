@@ -83,7 +83,7 @@ public:
       uint32_t offset, const CompilerType &type, bool can_create,
       ConstString name_const_str = ConstString()) override;
 
-  lldb::ValueObjectSP AddressOf(Status &error) override;
+  llvm::Expected<lldb::ValueObjectSP> AddressOf(Status &error) override;
 
   lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
                             AddressType *address_type = nullptr) override;

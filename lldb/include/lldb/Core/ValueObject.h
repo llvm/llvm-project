@@ -625,7 +625,7 @@ public:
   /// (e.g. sythetic child provider).
   virtual lldb::ValueObjectSP Clone(ConstString new_name);
 
-  virtual lldb::ValueObjectSP AddressOf(Status &error);
+  virtual llvm::Expected<lldb::ValueObjectSP> AddressOf(Status &error);
 
   virtual lldb::addr_t GetLiveAddress() { return LLDB_INVALID_ADDRESS; }
 
