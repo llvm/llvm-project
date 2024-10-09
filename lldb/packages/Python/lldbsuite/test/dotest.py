@@ -272,6 +272,8 @@ def parseOptionsAndInitTestdirs():
         configuration.make_path = "gmake"
     else:
         configuration.make_path = "make"
+    if ' ' in configuration.make_path:
+        configuration.make_path = f'"{configuration.make_path}"'
 
     if args.dsymutil:
         configuration.dsymutil = args.dsymutil

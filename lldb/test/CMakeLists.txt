@@ -31,15 +31,19 @@ if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   endforeach()
 
   # On Windows make is not part of the MSYS tools that llvm-lit takes care of
-  find_program(MAKE_TOOL make)
-  if(MAKE_TOOL)
-    message(STATUS "Found make: ${MAKE_TOOL}")
+  if(LLDB_TEST_MAKE)
+    set(LLDB_DEFAULT_TEST_MAKE ${LLDB_TEST_MAKE})
   else()
-    message(STATUS "Not found: make")
-    message(SEND_ERROR
-          "LLDB tests require 'make' tool. Please install and add it to Path "
-          "(or otherwise disable strict testing requirements with "
-          "`LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=OFF`)")
+    find_program(LLDB_DEFAULT_TEST_MAKE make)
+    if(LLDB_DEFAULT_TEST_MAKE)
+      message(STATUS "Found make: ${LLDB_DEFAULT_TEST_MAKE}")
+    else()
+      message(STATUS "Not found: make")
+      message(SEND_ERROR
+            "LLDB tests require 'make' tool. Please pass via `LLDB_TEST_MAKE` "
+            "(or otherwise disable strict testing requirements with "
+            "`LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=OFF`)")
+    endif()
   endif()
 endif()
 
