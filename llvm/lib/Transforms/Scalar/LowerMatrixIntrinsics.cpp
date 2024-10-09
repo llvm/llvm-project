@@ -362,7 +362,7 @@ class LowerMatrixIntrinsics {
   public:
     MatrixTy() : IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
     MatrixTy(ArrayRef<Value *> Vectors)
-        : Vectors(Vectors.begin(), Vectors.end()),
+        : Vectors(Vectors),
           IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
     MatrixTy(unsigned NumRows, unsigned NumColumns, Type *EltTy)
         : IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {
@@ -1380,7 +1380,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost +=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 std::nullopt, TTI::TCK_RecipThroughput);
+                                 {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1402,7 +1402,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost -=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 std::nullopt, TTI::TCK_RecipThroughput);
+                                 {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -2306,7 +2306,6 @@ public:
         default:
           llvm_unreachable("Unhandled case");
         }
-        SS.flush();
         write(Tmp);
       }
     }
@@ -2361,7 +2360,6 @@ public:
         else
           TmpStream << "scalar";
       }
-      TmpStream.flush();
       Tmp = std::string(StringRef(Tmp).trim());
       LineLength += Tmp.size();
       Stream << Tmp;
@@ -2435,7 +2433,6 @@ public:
     }
 
     const std::string &getResult() {
-      Stream.flush();
       return Str;
     }
   };

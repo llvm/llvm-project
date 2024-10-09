@@ -99,7 +99,7 @@ TEST(LlvmLibcFreeListHeap, ReturnsNullWhenFull) {
   // Use aligned_allocate so we don't need to worry about ensuring the `buf`
   // being aligned to max_align_t.
   EXPECT_NE(allocator.aligned_allocate(
-                1, N - FreeListHeap<>::BlockType::BLOCK_OVERHEAD),
+                1, N - 2 * FreeListHeap<>::BlockType::BLOCK_OVERHEAD),
             static_cast<void *>(nullptr));
   EXPECT_EQ(allocator.allocate(1), static_cast<void *>(nullptr));
 }

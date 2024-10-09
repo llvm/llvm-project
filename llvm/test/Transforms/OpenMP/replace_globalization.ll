@@ -201,7 +201,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK: Function Attrs: norecurse nosync nounwind allocsize(0) memory(read)
+; CHECK: Function Attrs: nosync nounwind allocsize(0) memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_alloc_shared
 ; CHECK-SAME: (i64 [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr @offset, align 4
@@ -216,7 +216,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(write) }
-; CHECK: attributes #[[ATTR2]] = { norecurse nosync nounwind allocsize(0) memory(read) }
+; CHECK: attributes #[[ATTR2]] = { nosync nounwind allocsize(0) memory(read) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR5]] = { "llvm.assume"="omp_no_openmp" }

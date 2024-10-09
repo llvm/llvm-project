@@ -46,7 +46,10 @@ struct GCNRegPressure {
 
   void clear() { std::fill(&Value[0], &Value[TOTAL_KINDS], 0); }
 
+  /// \returns the SGPR32 pressure
   unsigned getSGPRNum() const { return Value[SGPR32]; }
+  /// \returns the aggregated ArchVGPR32, AccVGPR32 pressure dependent upon \p
+  /// UnifiedVGPRFile
   unsigned getVGPRNum(bool UnifiedVGPRFile) const {
     if (UnifiedVGPRFile) {
       return Value[AGPR32] ? alignTo(Value[VGPR32], 4) + Value[AGPR32]
@@ -54,6 +57,9 @@ struct GCNRegPressure {
     }
     return std::max(Value[VGPR32], Value[AGPR32]);
   }
+  /// \returns the ArchVGPR32 pressure
+  unsigned getArchVGPRNum() const { return Value[VGPR32]; }
+  /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR32]; }
 
   unsigned getVGPRTuplesWeight() const { return std::max(Value[VGPR_TUPLE],
@@ -259,13 +265,18 @@ public:
                const LiveRegSet *LiveRegsCopy = nullptr);
 };
 
-LaneBitmask getLiveLaneMask(unsigned Reg,
-                            SlotIndex SI,
+/// \returns the LaneMask of live lanes of \p Reg at position \p SI. Only the
+/// active lanes of \p LaneMaskFilter will be set in the return value. This is
+/// used, for example, to limit the live lanes to a specific subreg when
+/// calculating use masks.
+LaneBitmask getLiveLaneMask(unsigned Reg, SlotIndex SI,
                             const LiveIntervals &LIS,
-                            const MachineRegisterInfo &MRI);
+                            const MachineRegisterInfo &MRI,
+                            LaneBitmask LaneMaskFilter = LaneBitmask::getAll());
 
 LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
-                            const MachineRegisterInfo &MRI);
+                            const MachineRegisterInfo &MRI,
+                            LaneBitmask LaneMaskFilter = LaneBitmask::getAll());
 
 GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
                                      const MachineRegisterInfo &MRI);

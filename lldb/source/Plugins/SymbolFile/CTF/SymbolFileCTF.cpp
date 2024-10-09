@@ -28,6 +28,7 @@
 #include "lldb/Utility/StreamBuffer.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"

@@ -27,20 +27,17 @@ define  <2 x i64> @build_v2i64_extload_0(ptr nocapture noundef readonly %p) {
 ; PWR7-LE-LABEL: build_v2i64_extload_0:
 ; PWR7-LE:       # %bb.0: # %entry
 ; PWR7-LE-NEXT:    li 4, 0
-; PWR7-LE-NEXT:    lwz 3, 0(3)
 ; PWR7-LE-NEXT:    stw 4, -16(1)
 ; PWR7-LE-NEXT:    addis 4, 2, .LCPI0_0@toc@ha
+; PWR7-LE-NEXT:    lfiwzx 0, 0, 3
+; PWR7-LE-NEXT:    addi 3, 1, -16
 ; PWR7-LE-NEXT:    addi 4, 4, .LCPI0_0@toc@l
-; PWR7-LE-NEXT:    stw 3, -32(1)
-; PWR7-LE-NEXT:    addi 3, 1, -32
-; PWR7-LE-NEXT:    lxvd2x 0, 0, 4
-; PWR7-LE-NEXT:    addi 4, 1, -16
 ; PWR7-LE-NEXT:    lxvd2x 1, 0, 4
-; PWR7-LE-NEXT:    xxswapd 34, 0
+; PWR7-LE-NEXT:    xxspltw 35, 0, 1
 ; PWR7-LE-NEXT:    lxvd2x 0, 0, 3
-; PWR7-LE-NEXT:    xxswapd 35, 1
+; PWR7-LE-NEXT:    xxswapd 34, 1
 ; PWR7-LE-NEXT:    xxswapd 36, 0
-; PWR7-LE-NEXT:    vperm 2, 3, 4, 2
+; PWR7-LE-NEXT:    vperm 2, 4, 3, 2
 ; PWR7-LE-NEXT:    blr
 ;
 ; PWR8-LE-LABEL: build_v2i64_extload_0:
@@ -337,18 +334,13 @@ entry:
 define <4 x i32> @build_v4i32_load_0(ptr nocapture noundef readonly %p) {
 ; PWR7-BE-LABEL: build_v4i32_load_0:
 ; PWR7-BE:       # %bb.0: # %entry
-; PWR7-BE-NEXT:    lwz 3, 0(3)
-; PWR7-BE-NEXT:    li 4, 0
-; PWR7-BE-NEXT:    stw 4, -16(1)
-; PWR7-BE-NEXT:    stw 3, -32(1)
+; PWR7-BE-NEXT:    lfiwzx 0, 0, 3
 ; PWR7-BE-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
+; PWR7-BE-NEXT:    xxlxor 36, 36, 36
 ; PWR7-BE-NEXT:    addi 3, 3, .LCPI8_0@toc@l
-; PWR7-BE-NEXT:    lxvw4x 34, 0, 3
-; PWR7-BE-NEXT:    addi 3, 1, -16
 ; PWR7-BE-NEXT:    lxvw4x 35, 0, 3
-; PWR7-BE-NEXT:    addi 3, 1, -32
-; PWR7-BE-NEXT:    lxvw4x 36, 0, 3
-; PWR7-BE-NEXT:    vperm 2, 4, 3, 2
+; PWR7-BE-NEXT:    xxspltw 34, 0, 1
+; PWR7-BE-NEXT:    vperm 2, 2, 4, 3
 ; PWR7-BE-NEXT:    blr
 ;
 ; PWR8-BE-LABEL: build_v4i32_load_0:
@@ -366,20 +358,17 @@ define <4 x i32> @build_v4i32_load_0(ptr nocapture noundef readonly %p) {
 ; PWR7-LE-LABEL: build_v4i32_load_0:
 ; PWR7-LE:       # %bb.0: # %entry
 ; PWR7-LE-NEXT:    li 4, 0
-; PWR7-LE-NEXT:    lwz 3, 0(3)
 ; PWR7-LE-NEXT:    stw 4, -16(1)
 ; PWR7-LE-NEXT:    addis 4, 2, .LCPI8_0@toc@ha
+; PWR7-LE-NEXT:    lfiwzx 0, 0, 3
+; PWR7-LE-NEXT:    addi 3, 1, -16
 ; PWR7-LE-NEXT:    addi 4, 4, .LCPI8_0@toc@l
-; PWR7-LE-NEXT:    stw 3, -32(1)
-; PWR7-LE-NEXT:    addi 3, 1, -32
-; PWR7-LE-NEXT:    lxvd2x 0, 0, 4
-; PWR7-LE-NEXT:    addi 4, 1, -16
 ; PWR7-LE-NEXT:    lxvd2x 1, 0, 4
-; PWR7-LE-NEXT:    xxswapd 34, 0
+; PWR7-LE-NEXT:    xxspltw 35, 0, 1
 ; PWR7-LE-NEXT:    lxvd2x 0, 0, 3
-; PWR7-LE-NEXT:    xxswapd 35, 1
+; PWR7-LE-NEXT:    xxswapd 34, 1
 ; PWR7-LE-NEXT:    xxswapd 36, 0
-; PWR7-LE-NEXT:    vperm 2, 3, 4, 2
+; PWR7-LE-NEXT:    vperm 2, 4, 3, 2
 ; PWR7-LE-NEXT:    blr
 ;
 ; PWR8-LE-LABEL: build_v4i32_load_0:
@@ -401,18 +390,13 @@ entry:
 define <4 x i32> @build_v4i32_load_1(ptr nocapture noundef readonly %p) {
 ; PWR7-BE-LABEL: build_v4i32_load_1:
 ; PWR7-BE:       # %bb.0: # %entry
-; PWR7-BE-NEXT:    lwz 3, 0(3)
-; PWR7-BE-NEXT:    li 4, 0
-; PWR7-BE-NEXT:    stw 4, -32(1)
-; PWR7-BE-NEXT:    stw 3, -16(1)
+; PWR7-BE-NEXT:    lfiwzx 0, 0, 3
 ; PWR7-BE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
+; PWR7-BE-NEXT:    xxlxor 36, 36, 36
 ; PWR7-BE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
-; PWR7-BE-NEXT:    lxvw4x 34, 0, 3
-; PWR7-BE-NEXT:    addi 3, 1, -32
 ; PWR7-BE-NEXT:    lxvw4x 35, 0, 3
-; PWR7-BE-NEXT:    addi 3, 1, -16
-; PWR7-BE-NEXT:    lxvw4x 36, 0, 3
-; PWR7-BE-NEXT:    vperm 2, 3, 4, 2
+; PWR7-BE-NEXT:    xxspltw 34, 0, 1
+; PWR7-BE-NEXT:    vperm 2, 4, 2, 3
 ; PWR7-BE-NEXT:    blr
 ;
 ; PWR8-BE-LABEL: build_v4i32_load_1:
@@ -429,20 +413,17 @@ define <4 x i32> @build_v4i32_load_1(ptr nocapture noundef readonly %p) {
 ; PWR7-LE-LABEL: build_v4i32_load_1:
 ; PWR7-LE:       # %bb.0: # %entry
 ; PWR7-LE-NEXT:    li 4, 0
-; PWR7-LE-NEXT:    lwz 3, 0(3)
-; PWR7-LE-NEXT:    stw 4, -32(1)
+; PWR7-LE-NEXT:    stw 4, -16(1)
 ; PWR7-LE-NEXT:    addis 4, 2, .LCPI9_0@toc@ha
-; PWR7-LE-NEXT:    addi 4, 4, .LCPI9_0@toc@l
-; PWR7-LE-NEXT:    stw 3, -16(1)
+; PWR7-LE-NEXT:    lfiwzx 0, 0, 3
 ; PWR7-LE-NEXT:    addi 3, 1, -16
-; PWR7-LE-NEXT:    lxvd2x 0, 0, 4
-; PWR7-LE-NEXT:    addi 4, 1, -32
+; PWR7-LE-NEXT:    addi 4, 4, .LCPI9_0@toc@l
 ; PWR7-LE-NEXT:    lxvd2x 1, 0, 4
-; PWR7-LE-NEXT:    xxswapd 34, 0
+; PWR7-LE-NEXT:    xxspltw 35, 0, 1
 ; PWR7-LE-NEXT:    lxvd2x 0, 0, 3
-; PWR7-LE-NEXT:    xxswapd 35, 1
+; PWR7-LE-NEXT:    xxswapd 34, 1
 ; PWR7-LE-NEXT:    xxswapd 36, 0
-; PWR7-LE-NEXT:    vperm 2, 4, 3, 2
+; PWR7-LE-NEXT:    vperm 2, 3, 4, 2
 ; PWR7-LE-NEXT:    blr
 ;
 ; PWR8-LE-LABEL: build_v4i32_load_1:
@@ -465,18 +446,13 @@ entry:
 define <4 x i32> @build_v4i32_load_2(ptr nocapture noundef readonly %p) {
 ; PWR7-BE-LABEL: build_v4i32_load_2:
 ; PWR7-BE:       # %bb.0: # %entry
-; PWR7-BE-NEXT:    lwz 3, 0(3)
-; PWR7-BE-NEXT:    li 4, 0
-; PWR7-BE-NEXT:    stw 4, -32(1)
-; PWR7-BE-NEXT:    stw 3, -16(1)
+; PWR7-BE-NEXT:    lfiwzx 0, 0, 3
 ; PWR7-BE-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
+; PWR7-BE-NEXT:    xxlxor 36, 36, 36
 ; PWR7-BE-NEXT:    addi 3, 3, .LCPI10_0@toc@l
-; PWR7-BE-NEXT:    lxvw4x 34, 0, 3
-; PWR7-BE-NEXT:    addi 3, 1, -32
 ; PWR7-BE-NEXT:    lxvw4x 35, 0, 3
-; PWR7-BE-NEXT:    addi 3, 1, -16
-; PWR7-BE-NEXT:    lxvw4x 36, 0, 3
-; PWR7-BE-NEXT:    vperm 2, 3, 4, 2
+; PWR7-BE-NEXT:    xxspltw 34, 0, 1
+; PWR7-BE-NEXT:    vperm 2, 4, 2, 3
 ; PWR7-BE-NEXT:    blr
 ;
 ; PWR8-BE-LABEL: build_v4i32_load_2:
@@ -494,20 +470,17 @@ define <4 x i32> @build_v4i32_load_2(ptr nocapture noundef readonly %p) {
 ; PWR7-LE-LABEL: build_v4i32_load_2:
 ; PWR7-LE:       # %bb.0: # %entry
 ; PWR7-LE-NEXT:    li 4, 0
-; PWR7-LE-NEXT:    lwz 3, 0(3)
-; PWR7-LE-NEXT:    stw 4, -32(1)
+; PWR7-LE-NEXT:    stw 4, -16(1)
 ; PWR7-LE-NEXT:    addis 4, 2, .LCPI10_0@toc@ha
-; PWR7-LE-NEXT:    addi 4, 4, .LCPI10_0@toc@l
-; PWR7-LE-NEXT:    stw 3, -16(1)
+; PWR7-LE-NEXT:    lfiwzx 0, 0, 3
 ; PWR7-LE-NEXT:    addi 3, 1, -16
-; PWR7-LE-NEXT:    lxvd2x 0, 0, 4
-; PWR7-LE-NEXT:    addi 4, 1, -32
+; PWR7-LE-NEXT:    addi 4, 4, .LCPI10_0@toc@l
 ; PWR7-LE-NEXT:    lxvd2x 1, 0, 4
-; PWR7-LE-NEXT:    xxswapd 34, 0
+; PWR7-LE-NEXT:    xxspltw 35, 0, 1
 ; PWR7-LE-NEXT:    lxvd2x 0, 0, 3
-; PWR7-LE-NEXT:    xxswapd 35, 1
+; PWR7-LE-NEXT:    xxswapd 34, 1
 ; PWR7-LE-NEXT:    xxswapd 36, 0
-; PWR7-LE-NEXT:    vperm 2, 4, 3, 2
+; PWR7-LE-NEXT:    vperm 2, 3, 4, 2
 ; PWR7-LE-NEXT:    blr
 ;
 ; PWR8-LE-LABEL: build_v4i32_load_2:
@@ -529,18 +502,13 @@ entry:
 define <4 x i32> @build_v4i32_load_3(ptr nocapture noundef readonly %p) {
 ; PWR7-BE-LABEL: build_v4i32_load_3:
 ; PWR7-BE:       # %bb.0: # %entry
-; PWR7-BE-NEXT:    lwz 3, 0(3)
-; PWR7-BE-NEXT:    li 4, 0
-; PWR7-BE-NEXT:    stw 4, -32(1)
-; PWR7-BE-NEXT:    stw 3, -16(1)
+; PWR7-BE-NEXT:    lfiwzx 0, 0, 3
 ; PWR7-BE-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
+; PWR7-BE-NEXT:    xxlxor 36, 36, 36
 ; PWR7-BE-NEXT:    addi 3, 3, .LCPI11_0@toc@l
-; PWR7-BE-NEXT:    lxvw4x 34, 0, 3
-; PWR7-BE-NEXT:    addi 3, 1, -32
 ; PWR7-BE-NEXT:    lxvw4x 35, 0, 3
-; PWR7-BE-NEXT:    addi 3, 1, -16
-; PWR7-BE-NEXT:    lxvw4x 36, 0, 3
-; PWR7-BE-NEXT:    vperm 2, 3, 4, 2
+; PWR7-BE-NEXT:    xxspltw 34, 0, 1
+; PWR7-BE-NEXT:    vperm 2, 4, 2, 3
 ; PWR7-BE-NEXT:    blr
 ;
 ; PWR8-BE-LABEL: build_v4i32_load_3:
@@ -557,20 +525,17 @@ define <4 x i32> @build_v4i32_load_3(ptr nocapture noundef readonly %p) {
 ; PWR7-LE-LABEL: build_v4i32_load_3:
 ; PWR7-LE:       # %bb.0: # %entry
 ; PWR7-LE-NEXT:    li 4, 0
-; PWR7-LE-NEXT:    lwz 3, 0(3)
-; PWR7-LE-NEXT:    stw 4, -32(1)
+; PWR7-LE-NEXT:    stw 4, -16(1)
 ; PWR7-LE-NEXT:    addis 4, 2, .LCPI11_0@toc@ha
-; PWR7-LE-NEXT:    addi 4, 4, .LCPI11_0@toc@l
-; PWR7-LE-NEXT:    stw 3, -16(1)
+; PWR7-LE-NEXT:    lfiwzx 0, 0, 3
 ; PWR7-LE-NEXT:    addi 3, 1, -16
-; PWR7-LE-NEXT:    lxvd2x 0, 0, 4
-; PWR7-LE-NEXT:    addi 4, 1, -32
+; PWR7-LE-NEXT:    addi 4, 4, .LCPI11_0@toc@l
 ; PWR7-LE-NEXT:    lxvd2x 1, 0, 4
-; PWR7-LE-NEXT:    xxswapd 34, 0
+; PWR7-LE-NEXT:    xxspltw 35, 0, 1
 ; PWR7-LE-NEXT:    lxvd2x 0, 0, 3
-; PWR7-LE-NEXT:    xxswapd 35, 1
+; PWR7-LE-NEXT:    xxswapd 34, 1
 ; PWR7-LE-NEXT:    xxswapd 36, 0
-; PWR7-LE-NEXT:    vperm 2, 4, 3, 2
+; PWR7-LE-NEXT:    vperm 2, 3, 4, 2
 ; PWR7-LE-NEXT:    blr
 ;
 ; PWR8-LE-LABEL: build_v4i32_load_3:

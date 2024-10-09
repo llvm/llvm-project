@@ -155,7 +155,7 @@
 ;;     dst[4] = get_sub_group_lt_mask();
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-DAG: OpCapability GroupNonUniformBallot
 

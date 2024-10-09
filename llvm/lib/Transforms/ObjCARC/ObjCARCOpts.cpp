@@ -994,7 +994,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
       CallInst *NewCall = CallInst::Create(Decl, Call->getArgOperand(0), "",
                                            Call->getIterator());
       NewCall->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease),
-                           MDNode::get(C, std::nullopt));
+                           MDNode::get(C, {}));
 
       LLVM_DEBUG(dbgs() << "Replacing autorelease{,RV}(x) with objc_release(x) "
                            "since x is otherwise unused.\nOld: "

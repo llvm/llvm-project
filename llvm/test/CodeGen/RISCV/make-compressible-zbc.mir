@@ -126,6 +126,7 @@
     %d = load volatile i16, ptr %3, align 2
     ret void
   }
+
   define void @store_large_offset_no_opt_i8(ptr %p) #0 {
   entry:
     %0 = getelementptr inbounds i8, ptr %p, i8 100
@@ -140,13 +141,11 @@
   define void @store_large_offset_no_opt_i16(ptr %p) #0 {
   entry:
     %0 = getelementptr inbounds i16, ptr %p, i16 100
-    %a = load volatile i16, ptr %0, align 2
+    store volatile i8 1, ptr %0, align 2
     %1 = getelementptr inbounds i16, ptr %p, i16 100
-    %b = load volatile i16, ptr %1, align 2
+    store volatile i8 3, ptr %1, align 2
     %2 = getelementptr inbounds i16, ptr %p, i16 101
-    %c = load volatile i16, ptr %2, align 2
-    %3 = getelementptr inbounds i16, ptr %p, i16 102
-    %d = load volatile i16, ptr %3, align 2
+    store volatile i8 5, ptr %2, align 2
     ret void
   }
 

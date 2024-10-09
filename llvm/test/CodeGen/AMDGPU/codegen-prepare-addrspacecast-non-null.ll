@@ -96,16 +96,29 @@ define void @private_alloca_to_flat(ptr %ptr) {
 ; OPT-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
 ; OPT-NEXT:    ret void
 ;
-; ASM-LABEL: private_alloca_to_flat:
-; ASM:       ; %bb.0:
-; ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; ASM-NEXT:    s_mov_b64 s[4:5], src_private_base
-; ASM-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
-; ASM-NEXT:    v_mov_b32_e32 v1, s5
-; ASM-NEXT:    v_mov_b32_e32 v2, 7
-; ASM-NEXT:    flat_store_dword v[0:1], v2
-; ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; ASM-NEXT:    s_setpc_b64 s[30:31]
+; DAGISEL-ASM-LABEL: private_alloca_to_flat:
+; DAGISEL-ASM:       ; %bb.0:
+; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    s_mov_b64 s[4:5], src_private_base
+; DAGISEL-ASM-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
+; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, s5
+; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
+; DAGISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
+; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; DAGISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-ASM-LABEL: private_alloca_to_flat:
+; GISEL-ASM:       ; %bb.0:
+; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    s_lshr_b32 s4, s32, 6
+; GISEL-ASM-NEXT:    s_mov_b64 s[6:7], src_private_base
+; GISEL-ASM-NEXT:    s_mov_b32 s5, s7
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s5
+; GISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
+; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i8, addrspace(5)
   %x = addrspacecast ptr addrspace(5) %alloca to ptr
   store volatile i32 7, ptr %x
@@ -224,8 +237,9 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-ASM-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GISEL-ASM-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GISEL-ASM-NEXT:    s_lshr_b32 s6, s32, 6
 ; GISEL-ASM-NEXT:    s_xor_b64 s[4:5], vcc, -1
-; GISEL-ASM-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
+; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s6
 ; GISEL-ASM-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-ASM-NEXT:  ; %bb.1: ; %then
 ; GISEL-ASM-NEXT:    v_and_b32_e32 v0, 0xffff, v1

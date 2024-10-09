@@ -1,6 +1,9 @@
 !! Make sure that mixture of by-ref and by-val reductions work all the way
 !! to LLVM-IR code.
-! RUN: %flang_fc1 -emit-llvm -fopenmp -o - %s 2>&1 | FileCheck %s
+
+! RUN: %flang_fc1 -emit-llvm -fopenmp -o - %s 2>&1 \
+! RUN: | FileCheck %s
+
 subroutine proc
   implicit none
   real(8),allocatable :: F(:)
@@ -21,15 +24,19 @@ end subroutine proc
 !CHECK:  %[[TID_LOCAL:.*]] = alloca i32
 !CHECK:  %[[TID:.*]] = load i32, ptr %[[TID_ADDR]]
 !CHECK:  store i32 %[[TID]], ptr %[[TID_LOCAL]]
-!CHECK:  %[[I_priv:.*]] = alloca i32
 !CHECK:  %[[F_priv:.*]] = alloca ptr
+!CHECK:  %[[I_priv:.*]] = alloca i32
 
 !CHECK: omp.reduction.init:
-!CHECK: store ptr %{{.*}}, ptr %[[F_priv]]
-!CHECK: store i32 0, ptr %[[I_priv]]
+!CHECK:  store ptr %{{.*}}, ptr %[[F_priv]]
+!CHECK:  store i32 0, ptr %[[I_priv]]
 
-!CHECK: omp.par.region8:
-!CHECK-NEXT: call ptr @malloc
+!CHECK: omp.par.region:
+!CHECK:  br label %[[MALLOC_BB:.*]]
+
+!CHECK: [[MALLOC_BB]]:
+!CHECK-NOT: omp.par.{{.*}}:
+!CHECK: call ptr @malloc
 !CHECK-SAME: i64 10
 
 !CHECK: %[[RED_ARR_0:.*]] = getelementptr inbounds [2 x ptr], ptr %red.array, i64 0, i64 0

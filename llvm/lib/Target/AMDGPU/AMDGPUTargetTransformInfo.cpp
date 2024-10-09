@@ -689,12 +689,14 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
   case Intrinsic::copysign:
+  case Intrinsic::canonicalize:
   // There's a small benefit to using vector ops in the legalized code.
   case Intrinsic::round:
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
+  case Intrinsic::abs:
     return true;
   default:
     return false;
@@ -723,7 +725,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if (SLT == MVT::f64)
     return LT.first * NElts * get64BitInstrCost(CostKind);
 
-  if ((ST->has16BitInsts() && SLT == MVT::f16) ||
+  if ((ST->has16BitInsts() && (SLT == MVT::f16 || SLT == MVT::i16)) ||
       (ST->hasPackedFP32Ops() && SLT == MVT::f32))
     NElts = (NElts + 1) / 2;
 
@@ -742,13 +744,29 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::copysign:
     return NElts * getFullRateInstrCost();
+  case Intrinsic::canonicalize: {
+    assert(SLT != MVT::f64);
+    InstRate = getFullRateInstrCost();
+    break;
+  }
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::sadd_sat:
-  case Intrinsic::ssub_sat:
+  case Intrinsic::ssub_sat: {
+    if (SLT == MVT::i16 || SLT == MVT::i32)
+      InstRate = getFullRateInstrCost();
+
     static const auto ValidSatTys = {MVT::v2i16, MVT::v4i16};
     if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
       NElts = 1;
+    break;
+  }
+  case Intrinsic::abs:
+    // Expansion takes 2 instructions for VALU
+    if (SLT == MVT::i16 || SLT == MVT::i32)
+      InstRate = 2 * getFullRateInstrCost();
+    break;
+  default:
     break;
   }
 
@@ -766,7 +784,7 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
   switch (Opcode) {
   case Instruction::Br: {
     // Branch instruction takes about 4 slots on gfx900.
-    auto BI = dyn_cast_or_null<BranchInst>(I);
+    const auto *BI = dyn_cast_or_null<BranchInst>(I);
     if (BI && BI->isUnconditional())
       return SCost ? 1 : 4;
     // Suppose conditional branch takes additional 3 exec manipulations
@@ -774,7 +792,7 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
     return CBrCost;
   }
   case Instruction::Switch: {
-    auto SI = dyn_cast_or_null<SwitchInst>(I);
+    const auto *SI = dyn_cast_or_null<SwitchInst>(I);
     // Each case (including default) takes 1 cmp + 1 cbr instructions in
     // average.
     return (SI ? (SI->getNumCases() + 1) : 4) * (CBrCost + 1);
@@ -1027,9 +1045,6 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   switch (IID) {
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
-  case Intrinsic::amdgcn_flat_atomic_fadd:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
     OpIndexes.push_back(0);
@@ -1089,9 +1104,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
                              {NewV, MaskOp});
   }
-  case Intrinsic::amdgcn_flat_atomic_fadd:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num: {
     Type *DestTy = II->getType();

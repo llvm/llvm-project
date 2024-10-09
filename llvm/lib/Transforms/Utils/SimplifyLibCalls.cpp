@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DataLayout.h"
@@ -910,7 +911,8 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
     // Create a bigger, nul-padded array with the same length, SrcLen,
     // as the original string.
     SrcStr.resize(N, '\0');
-    Src = B.CreateGlobalString(SrcStr, "str");
+    Src = B.CreateGlobalString(SrcStr, "str", /*AddressSpace=*/0,
+                               /*M=*/nullptr, /*AddNull=*/false);
   }
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
@@ -1452,10 +1454,12 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (NonContRanges > 2)
       return nullptr;
 
+    // Slice off the character's high end bits.
+    CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
+
     SmallVector<Value *> CharCompares;
     for (unsigned char C : SortedStr)
-      CharCompares.push_back(
-          B.CreateICmpEQ(CharVal, ConstantInt::get(CharVal->getType(), C)));
+      CharCompares.push_back(B.CreateICmpEQ(CharVal, B.getInt8(C)));
 
     return B.CreateIntToPtr(B.CreateOr(CharCompares), CI->getType());
   }
@@ -1744,7 +1748,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   // if cold or hot, and leave as-is for default handling if "notcold" aka warm.
   // Note that in cases where we decide it is "notcold", it might be slightly
   // better to replace the hinted call with a non hinted call, to avoid the
-  // extra paramter and the if condition check of the hint value in the
+  // extra parameter and the if condition check of the hint value in the
   // allocator. This can be considered in the future.
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
@@ -1842,6 +1846,30 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
           HotCold);
+    break;
+  case LibFunc_size_returning_new:
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
+    break;
+  case LibFunc_size_returning_new_hot_cold:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                         LibFunc_size_returning_new_hot_cold,
+                                         HotCold);
+    break;
+  case LibFunc_size_returning_new_aligned:
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdSizeReturningNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
+    break;
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdSizeReturningNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
     break;
   default:
     return nullptr;
@@ -2250,8 +2278,8 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   // pow(-Inf, 0.5) is optionally required to have a result of +Inf (not setting
   // errno), but sqrt(-Inf) is required by various standards to set errno.
   if (!Pow->doesNotAccessMemory() && !Pow->hasNoInfs() &&
-      !isKnownNeverInfinity(Base, 0,
-                            SimplifyQuery(DL, TLI, /*DT=*/nullptr, AC, Pow)))
+      !isKnownNeverInfinity(
+          Base, 0, SimplifyQuery(DL, TLI, DT, AC, Pow, true, true, DC)))
     return nullptr;
 
   Sqrt = getSqrtCall(Base, AttributeList(), Pow->doesNotAccessMemory(), Mod, B,
@@ -2732,14 +2760,17 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
     // Note: We don't bother looking any deeper than this first level or for
     // variations of this pattern because instcombine's visitFMUL and/or the
     // reassociation pass should give us this form.
-    Value *OtherMul0, *OtherMul1;
-    if (match(Op0, m_FMul(m_Value(OtherMul0), m_Value(OtherMul1)))) {
-      // Pattern: sqrt((x * y) * z)
-      if (OtherMul0 == OtherMul1 && cast<Instruction>(Op0)->isFast()) {
-        // Matched: sqrt((x * x) * z)
-        RepeatOp = OtherMul0;
-        OtherOp = Op1;
-      }
+    Value *MulOp;
+    if (match(Op0, m_FMul(m_Value(MulOp), m_Deferred(MulOp))) &&
+        cast<Instruction>(Op0)->isFast()) {
+      // Pattern: sqrt((x * x) * z)
+      RepeatOp = MulOp;
+      OtherOp = Op1;
+    } else if (match(Op1, m_FMul(m_Value(MulOp), m_Deferred(MulOp))) &&
+               cast<Instruction>(Op1)->isFast()) {
+      // Pattern: sqrt(z * (x * x))
+      RepeatOp = MulOp;
+      OtherOp = Op0;
     }
   }
   if (!RepeatOp)
@@ -2763,6 +2794,34 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
     return copyFlags(*CI, B.CreateFMul(FabsCall, SqrtCall));
   }
   return copyFlags(*CI, FabsCall);
+}
+
+Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
+
+  // fmod(x,y) can set errno if y == 0 or x == +/-inf, and returns Nan in those
+  // case. If we know those do not happen, then we can convert the fmod into
+  // frem.
+  bool IsNoNan = CI->hasNoNaNs();
+  if (!IsNoNan) {
+    SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
+    KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf,
+                                              /*Depth=*/0, SQ);
+    if (Known0.isKnownNeverInfinity()) {
+      KnownFPClass Known1 =
+          computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
+                              /*Depth=*/0, SQ);
+      Function *F = CI->getParent()->getParent();
+      IsNoNan = Known1.isKnownNeverLogicalZero(*F, CI->getType());
+    }
+  }
+
+  if (IsNoNan) {
+    Value *FRem = B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
+    if (auto *FRemI = dyn_cast<Instruction>(FRem))
+      FRemI->setHasNoNaNs(true);
+    return FRem;
+  }
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeTrigInversionPairs(CallInst *CI,
@@ -3758,6 +3817,7 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
   Module *M = CI->getModule();
   LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+
   // Check for string/memory library functions.
   if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
     // Make sure we never change the calling convention.
@@ -3850,12 +3910,32 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
     case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
     case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
     case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    case LibFunc_size_returning_new:
+    case LibFunc_size_returning_new_hot_cold:
+    case LibFunc_size_returning_new_aligned:
+    case LibFunc_size_returning_new_aligned_hot_cold:
       return optimizeNew(CI, Builder, Func);
     default:
       break;
     }
   }
   return nullptr;
+}
+
+/// Constant folding nan/nanf/nanl.
+static Value *optimizeNaN(CallInst *CI) {
+  StringRef CharSeq;
+  if (!getConstantStringInfo(CI->getArgOperand(0), CharSeq))
+    return nullptr;
+
+  APInt Fill;
+  // Treat empty strings as if they were zero.
+  if (CharSeq.empty())
+    Fill = APInt(32, 0);
+  else if (CharSeq.getAsInteger(0, Fill))
+    return nullptr;
+
+  return ConstantFP::getQNaN(CI->getType(), /*Negative=*/false, &Fill);
 }
 
 Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
@@ -3893,6 +3973,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_sqrt:
   case LibFunc_sqrtl:
     return optimizeSqrt(CI, Builder);
+  case LibFunc_fmod:
+  case LibFunc_fmodf:
+  case LibFunc_fmodl:
+    return optimizeFMod(CI, Builder);
   case LibFunc_logf:
   case LibFunc_log:
   case LibFunc_logl:
@@ -3972,6 +4056,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_remquof:
   case LibFunc_remquol:
     return optimizeRemquo(CI, Builder);
+  case LibFunc_nan:
+  case LibFunc_nanf:
+  case LibFunc_nanl:
+    return optimizeNaN(CI);
   default:
     return nullptr;
   }
@@ -4106,13 +4194,13 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
 }
 
 LibCallSimplifier::LibCallSimplifier(
-    const DataLayout &DL, const TargetLibraryInfo *TLI, AssumptionCache *AC,
-    OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    ProfileSummaryInfo *PSI,
+    const DataLayout &DL, const TargetLibraryInfo *TLI, DominatorTree *DT,
+    DomConditionCache *DC, AssumptionCache *AC, OptimizationRemarkEmitter &ORE,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
     function_ref<void(Instruction *, Value *)> Replacer,
     function_ref<void(Instruction *)> Eraser)
-    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), AC(AC), ORE(ORE), BFI(BFI),
-      PSI(PSI), Replacer(Replacer), Eraser(Eraser) {}
+    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), DT(DT), DC(DC), AC(AC),
+      ORE(ORE), BFI(BFI), PSI(PSI), Replacer(Replacer), Eraser(Eraser) {}
 
 void LibCallSimplifier::replaceAllUsesWith(Instruction *I, Value *With) {
   // Indirect through the replacer used in this instance.

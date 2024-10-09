@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_SEMA_SEMAHEXAGON_H
 #define LLVM_CLANG_SEMA_SEMAHEXAGON_H
 
-#include "clang/AST/Expr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {

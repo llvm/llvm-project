@@ -126,4 +126,25 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
    ];
 }
 
+def TosaReduceTransposes : Pass<"tosa-reduce-transposes", "func::FuncOp"> {
+  let summary = "Reduce transposes through other operators";
+  let description = [{
+    Pass that identifies and reduces tosa.TRANSPOSE operations through chains
+    of operators.
+
+    The pass traverses dependencies of tosa.TRANSPOSE operations until they
+    terminate in either a tosa.RESHAPE that we can fold the hoisted
+    tosa.TRANSPOSE into, a tosa.TRANSPOSE that forms the identity with the
+    hoisted one, or a tosa.CONST with a dense elements attribute. It then
+    propagates the hoisted transform upward through the intervening operators
+    if the support is implemented. Finally, it observes that no duplication
+    will occur of both the chain that was hoisted through and the new chain
+    that results, and if so, it replaces the hoisted tosa.TRANSPOSE.
+
+    The pass has an important use-case in cleaning up the results of frameworks
+    that introduce a lot of data-layout transformations when legalizing to TOSA,
+    a common one being transformations between NHWC and NCHW layouts.
+  }];
+}
+
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES

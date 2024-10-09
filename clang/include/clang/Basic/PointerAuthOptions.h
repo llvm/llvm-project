@@ -23,6 +23,10 @@
 
 namespace clang {
 
+/// Constant discriminator to be used with function pointers in .init_array and
+/// .fini_array. The value is ptrauth_string_discriminator("init_fini")
+constexpr uint16_t InitFiniPointerConstantDiscriminator = 0xD9D4;
+
 constexpr unsigned PointerAuthKeyNone = -1;
 
 /// Constant discriminator for std::type_info vtable pointers: 0xB1EA/45546
@@ -159,6 +163,12 @@ public:
 };
 
 struct PointerAuthOptions {
+  /// Should return addresses be authenticated?
+  bool ReturnAddresses = false;
+
+  /// Do authentication failures cause a trap?
+  bool AuthTraps = false;
+
   /// Do indirect goto label addresses need to be authenticated?
   bool IndirectGotos = false;
 
@@ -186,6 +196,9 @@ struct PointerAuthOptions {
 
   /// The ABI for C++ member function pointers.
   PointerAuthSchema CXXMemberFunctionPointers;
+
+  /// The ABI for function addresses in .init_array and .fini_array
+  PointerAuthSchema InitFiniPointers;
 };
 
 } // end namespace clang

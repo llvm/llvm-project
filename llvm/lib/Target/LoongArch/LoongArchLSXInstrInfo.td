@@ -16,13 +16,13 @@ def SDT_LoongArchVreplve : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<0>,
 def SDT_LoongArchVecCond : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>;
 
 def SDT_LoongArchVShuf : SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                         SDTCisInt<1>, SDTCisVec<1>,
-                                         SDTCisSameAs<0, 2>,
-                                         SDTCisSameAs<2, 3>]>;
+                                       SDTCisInt<1>, SDTCisVec<1>,
+                                       SDTCisSameAs<0, 2>,
+                                       SDTCisSameAs<2, 3>]>;
 def SDT_LoongArchV2R : SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                         SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
-def SDT_loongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
-                                         SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
+                                     SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                        SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
 
 // Target nodes.
 def loongarch_vreplve : SDNode<"LoongArchISD::VREPLVE", SDT_LoongArchVreplve>;
@@ -31,9 +31,9 @@ def loongarch_vall_nonzero : SDNode<"LoongArchISD::VALL_NONZERO",
 def loongarch_vany_nonzero : SDNode<"LoongArchISD::VANY_NONZERO",
                                     SDT_LoongArchVecCond>;
 def loongarch_vall_zero : SDNode<"LoongArchISD::VALL_ZERO",
-                                SDT_LoongArchVecCond>;
+                                 SDT_LoongArchVecCond>;
 def loongarch_vany_zero : SDNode<"LoongArchISD::VANY_ZERO",
-                                SDT_LoongArchVecCond>;
+                                 SDT_LoongArchVecCond>;
 
 def loongarch_vpick_sext_elt : SDNode<"LoongArchISD::VPICK_SEXT_ELT",
                                       SDTypeProfile<1, 3, [SDTCisPtrTy<2>]>>;
@@ -48,8 +48,8 @@ def loongarch_vpackod: SDNode<"LoongArchISD::VPACKOD", SDT_LoongArchV2R>;
 def loongarch_vilvl: SDNode<"LoongArchISD::VILVL", SDT_LoongArchV2R>;
 def loongarch_vilvh: SDNode<"LoongArchISD::VILVH", SDT_LoongArchV2R>;
 
-def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_loongArchV1RUimm>;
-def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_loongArchV1RUimm>;
+def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
+def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
 
 def immZExt1 : ImmLeaf<i64, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<i64, [{return isUInt<2>(Imm);}]>;
@@ -201,6 +201,29 @@ def lsxsplatf64 : PatFrag<(ops node:$e0),
 def to_valid_timm : SDNodeXForm<timm, [{
   auto CN = cast<ConstantSDNode>(N);
   return CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(N), Subtarget->getGRLenVT());
+}]>;
+
+// FP immediate of VLDI patterns.
+def f32imm_vldi : PatLeaf<(fpimm), [{
+  const auto &TLI =
+      *static_cast<const LoongArchTargetLowering*>(getTargetLowering());
+  return TLI.isFPImmVLDILegal(N->getValueAPF(), MVT::f32);
+}]>;
+def f64imm_vldi : PatLeaf<(fpimm), [{
+  const auto &TLI =
+      *static_cast<const LoongArchTargetLowering*>(getTargetLowering());
+  return TLI.isFPImmVLDILegal(N->getValueAPF(), MVT::f64);
+}]>;
+
+def to_f32imm_vldi : SDNodeXForm<fpimm, [{
+  uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
+  x = (0b11011 << 8) | (((x >> 24) & 0xc0) ^ 0x40) | ((x >> 19) & 0x3f);
+  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+}]>;
+def to_f64imm_vldi : SDNodeXForm<fpimm, [{
+  uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
+  x = (0b11100 << 8) | (((x >> 56) & 0xc0) ^ 0x40) | ((x >> 48) & 0x3f);
+  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -663,7 +686,9 @@ def VMSKGEZ_B : LSX2R_VV<0x729c5000>;
 
 def VMSKNZ_B : LSX2R_VV<0x729c6000>;
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def VLDI : LSX1RI13_VI<0x73e00000>;
+}
 
 def VAND_V : LSX3R_VVV<0x71260000>;
 def VOR_V : LSX3R_VVV<0x71268000>;
@@ -1212,6 +1237,10 @@ def PseudoVBZ_H : VecCond<loongarch_vall_zero, v8i16>;
 def PseudoVBZ_W : VecCond<loongarch_vall_zero, v4i32>;
 def PseudoVBZ_D : VecCond<loongarch_vall_zero, v2i64>;
 def PseudoVBZ : VecCond<loongarch_vany_zero, v16i8>;
+
+let usesCustomInserter = 1 in
+def PseudoCTPOP : Pseudo<(outs GPR:$rd), (ins GPR:$rj),
+                         [(set GPR:$rd, (ctpop GPR:$rj))]>;
 
 } // Predicates = [HasExtLSX]
 
@@ -1909,6 +1938,12 @@ def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
 // VFTINTRZ_{W_SU/L_DU}
 def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_uint v2f64:$vj)), (VFTINTRZ_LU_D v2f64:$vj)>;
+
+// Vector loads floating-point constants
+def : Pat<(f32 f32imm_vldi:$in),
+          (f32 (EXTRACT_SUBREG (VLDI (to_f32imm_vldi f32imm_vldi:$in)), sub_32))>;
+def : Pat<(f64 f64imm_vldi:$in),
+          (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
 } // Predicates = [HasExtLSX]
 

@@ -1344,9 +1344,13 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
-  Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
-                           ? diag::warn_cxx98_compat_lambda
-                           : diag::ext_lambda);
+  if (getLangOpts().HLSL)
+    Diag(LambdaBeginLoc, diag::ext_hlsl_lambda) << /*HLSL*/ 1;
+  else
+    Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
+                             ? diag::warn_cxx98_compat_lambda
+                             : diag::ext_lambda)
+        << /*C++*/ 0;
 
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(), LambdaBeginLoc,
                                 "lambda expression parsing");
@@ -2455,6 +2459,11 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
                        Policy);                                                \
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case tok::kw_##Name:                                                         \
+    DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec, DiagID, Policy);   \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   case tok::annot_decltype:
   case tok::kw_decltype:

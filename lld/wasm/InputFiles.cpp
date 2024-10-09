@@ -392,7 +392,7 @@ void ObjFile::parseLazy() {
                     << wasmObj.get() << "\n");
   for (const SymbolRef &sym : wasmObj->symbols()) {
     const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());
-    if (!wasmSym.isDefined())
+    if (wasmSym.isUndefined() || wasmSym.isBindingLocal())
       continue;
     symtab->addLazy(wasmSym.Info.Name, this);
     // addLazy() may trigger this->extract() if an existing symbol is an
@@ -744,7 +744,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
   llvm_unreachable("unknown symbol kind");
 }
 
-StringRef strip(StringRef s) { return s.trim(' '); }
+static StringRef strip(StringRef s) { return s.trim(' '); }
 
 void StubFile::parse() {
   bool first = true;
@@ -761,7 +761,7 @@ void StubFile::parse() {
     }
 
     // Lines starting with # are considered comments
-    if (line.starts_with("#"))
+    if (line.starts_with("#") || !line.size())
       continue;
 
     StringRef sym;

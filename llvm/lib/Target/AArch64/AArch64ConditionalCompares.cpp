@@ -711,7 +711,6 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   Head->updateTerminator(CmpBB->getNextNode());
 
   RemovedBlocks.push_back(CmpBB);
-  CmpBB->eraseFromParent();
   LLVM_DEBUG(dbgs() << "Result:\n" << *Head);
   ++NumConverted;
 }
@@ -918,6 +917,8 @@ bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
     CmpConv.convert(RemovedBlocks);
     Changed = true;
     updateDomTree(RemovedBlocks);
+    for (MachineBasicBlock *MBB : RemovedBlocks)
+      MBB->eraseFromParent();
     updateLoops(RemovedBlocks);
   }
   return Changed;

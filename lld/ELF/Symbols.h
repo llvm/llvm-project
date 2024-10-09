@@ -200,21 +200,23 @@ public:
   // truncated by Symbol::parseSymbolVersion().
   const char *getVersionSuffix() const { return nameData + nameSize; }
 
-  uint32_t getGotIdx() const { return ctx.symAux[auxIdx].gotIdx; }
-  uint32_t getPltIdx() const { return ctx.symAux[auxIdx].pltIdx; }
-  uint32_t getTlsDescIdx() const { return ctx.symAux[auxIdx].tlsDescIdx; }
-  uint32_t getTlsGdIdx() const { return ctx.symAux[auxIdx].tlsGdIdx; }
+  uint32_t getGotIdx(Ctx &ctx) const { return ctx.symAux[auxIdx].gotIdx; }
+  uint32_t getPltIdx(Ctx &ctx) const { return ctx.symAux[auxIdx].pltIdx; }
+  uint32_t getTlsDescIdx(Ctx &ctx) const {
+    return ctx.symAux[auxIdx].tlsDescIdx;
+  }
+  uint32_t getTlsGdIdx(Ctx &ctx) const { return ctx.symAux[auxIdx].tlsGdIdx; }
 
-  bool isInGot() const { return getGotIdx() != uint32_t(-1); }
-  bool isInPlt() const { return getPltIdx() != uint32_t(-1); }
+  bool isInGot(Ctx &ctx) const { return getGotIdx(ctx) != uint32_t(-1); }
+  bool isInPlt(Ctx &ctx) const { return getPltIdx(ctx) != uint32_t(-1); }
 
   uint64_t getVA(int64_t addend = 0) const;
 
-  uint64_t getGotOffset() const;
-  uint64_t getGotVA() const;
-  uint64_t getGotPltOffset() const;
-  uint64_t getGotPltVA() const;
-  uint64_t getPltVA() const;
+  uint64_t getGotOffset(Ctx &) const;
+  uint64_t getGotVA(Ctx &) const;
+  uint64_t getGotPltOffset(Ctx &) const;
+  uint64_t getGotPltVA(Ctx &) const;
+  uint64_t getPltVA(Ctx &) const;
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
 
@@ -344,7 +346,7 @@ public:
            (NEEDS_COPY | NEEDS_GOT | NEEDS_PLT | NEEDS_TLSDESC | NEEDS_TLSGD |
             NEEDS_TLSGD_TO_IE | NEEDS_GOT_DTPREL | NEEDS_TLSIE);
   }
-  void allocateAux() {
+  void allocateAux(Ctx &ctx) {
     assert(auxIdx == 0);
     auxIdx = ctx.symAux.size();
     ctx.symAux.emplace_back();
@@ -365,7 +367,7 @@ public:
           uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {
-    exportDynamic = config->exportDynamic;
+    exportDynamic = ctx.arg.exportDynamic;
   }
   void overwrite(Symbol &sym) const;
 
@@ -403,7 +405,7 @@ public:
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {
-    exportDynamic = config->exportDynamic;
+    exportDynamic = ctx.arg.exportDynamic;
   }
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, CommonKind);
@@ -501,45 +503,6 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
 };
 
-// Some linker-generated symbols need to be created as
-// Defined symbols.
-struct ElfSym {
-  // __bss_start
-  static Defined *bss;
-
-  // etext and _etext
-  static Defined *etext1;
-  static Defined *etext2;
-
-  // edata and _edata
-  static Defined *edata1;
-  static Defined *edata2;
-
-  // end and _end
-  static Defined *end1;
-  static Defined *end2;
-
-  // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention to
-  // be at some offset from the base of the .got section, usually 0 or
-  // the end of the .got.
-  static Defined *globalOffsetTable;
-
-  // _gp, _gp_disp and __gnu_local_gp symbols. Only for MIPS.
-  static Defined *mipsGp;
-  static Defined *mipsGpDisp;
-  static Defined *mipsLocalGp;
-
-  // __global_pointer$ for RISC-V.
-  static Defined *riscvGlobalPointer;
-
-  // __rel{,a}_iplt_{start,end} symbols.
-  static Defined *relaIpltStart;
-  static Defined *relaIpltEnd;
-
-  // _TLS_MODULE_BASE_ on targets that support TLSDESC.
-  static Defined *tlsModuleBase;
-};
-
 // A buffer class that is large enough to hold any Symbol-derived
 // object. We allocate memory using this class and instantiate a symbol
 // using the placement new.
@@ -562,10 +525,10 @@ template <typename... T> Defined *makeDefined(T &&...args) {
   return &s;
 }
 
-void reportDuplicate(const Symbol &sym, const InputFile *newFile,
+void reportDuplicate(Ctx &, const Symbol &sym, const InputFile *newFile,
                      InputSectionBase *errSec, uint64_t errOffset);
 void maybeWarnUnorderableSymbol(const Symbol *sym);
-bool computeIsPreemptible(const Symbol &sym);
+bool computeIsPreemptible(Ctx &, const Symbol &sym);
 
 } // namespace elf
 } // namespace lld

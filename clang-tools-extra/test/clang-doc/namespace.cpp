@@ -272,14 +272,16 @@ namespace AnotherNamespace {
 // HTML-GLOBAL-INDEX: <h1>Global Namespace</h1>
 // HTML-GLOBAL-INDEX: <h2 id="Namespaces">Namespaces</h2>
 // HTML-GLOBAL-INDEX: <li>@nonymous_namespace</li>
-// HTML-GLOBAL-INDEX: <li>PrimaryNamespace</li>
 // HTML-GLOBAL-INDEX: <li>AnotherNamespace</li>
+// HTML-GLOBAL-INDEX: <li>PrimaryNamespace</li>
+
 
 // MD-GLOBAL-INDEX: # Global Namespace
 // MD-GLOBAL-INDEX: ## Namespaces
 // MD-GLOBAL-INDEX: * [@nonymous_namespace](..{{[\/]}}@nonymous_namespace{{[\/]}}index.md)
-// MD-GLOBAL-INDEX: * [PrimaryNamespace](..{{[\/]}}PrimaryNamespace{{[\/]}}index.md)
 // MD-GLOBAL-INDEX: * [AnotherNamespace](..{{[\/]}}AnotherNamespace{{[\/]}}index.md)
+// MD-GLOBAL-INDEX: * [PrimaryNamespace](..{{[\/]}}PrimaryNamespace{{[\/]}}index.md)
+
 
 // MD-ALL-FILES: # All Files
 // MD-ALL-FILES: ## [@nonymous_namespace](@nonymous_namespace{{[\/]}}index.md)

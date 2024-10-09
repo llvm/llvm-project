@@ -760,8 +760,11 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
 
   llrhs = lrBinOpExpr.getLHS();
   rlrhs = lrBinOpExpr.getRHS();
+  auto rlrhsConstOpExpr = dyn_cast<AffineConstantExpr>(rlrhs);
+  // We don't support modulo with a negative RHS.
+  bool isPositiveRhs = rlrhsConstOpExpr && rlrhsConstOpExpr.getValue() > 0;
 
-  if (lhs == llrhs && rlrhs == -rrhs) {
+  if (isPositiveRhs && lhs == llrhs && rlrhs == -rrhs) {
     return lhs % rlrhs;
   }
   return nullptr;
@@ -1019,8 +1022,7 @@ AffineExpr AffineExpr::operator%(AffineExpr other) const {
 }
 
 AffineExpr AffineExpr::compose(AffineMap map) const {
-  SmallVector<AffineExpr, 8> dimReplacements(map.getResults().begin(),
-                                             map.getResults().end());
+  SmallVector<AffineExpr, 8> dimReplacements(map.getResults());
   return replaceDimsAndSymbols(dimReplacements, {});
 }
 raw_ostream &mlir::operator<<(raw_ostream &os, AffineExpr expr) {

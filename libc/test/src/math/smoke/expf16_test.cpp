@@ -8,6 +8,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/expf16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -21,21 +22,20 @@ TEST_F(LlvmLibcExpf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::expf16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(sNaN, LIBC_NAMESPACE::expf16(sNaN), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::expf16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::expf16(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float16>(zero),
-                            LIBC_NAMESPACE::expf16(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::expf16(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float16>(1.0f),
+  EXPECT_FP_EQ_ALL_ROUNDING(LIBC_NAMESPACE::fputil::cast<float16>(1.0f),
                             LIBC_NAMESPACE::expf16(zero));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float16>(1.0f),
+  EXPECT_FP_EQ_ALL_ROUNDING(LIBC_NAMESPACE::fputil::cast<float16>(1.0f),
                             LIBC_NAMESPACE::expf16(neg_zero));
   EXPECT_MATH_ERRNO(0);
 }
@@ -48,7 +48,8 @@ TEST_F(LlvmLibcExpf16Test, Overflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::expf16(static_cast<float16>(12.0)), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::expf16(LIBC_NAMESPACE::fputil::cast<float16>(12.0)),
+      FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
@@ -60,7 +61,8 @@ TEST_F(LlvmLibcExpf16Test, Underflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      zero, LIBC_NAMESPACE::expf16(static_cast<float16>(-18.0)),
+      zero,
+      LIBC_NAMESPACE::expf16(LIBC_NAMESPACE::fputil::cast<float16>(-18.0)),
       FE_UNDERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
 }

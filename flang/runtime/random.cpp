@@ -42,7 +42,7 @@ void RTNAME(RandomInit)(bool repeatable, bool /*image_distinct*/) {
 #ifdef CLOCK_REALTIME
       timespec ts;
       clock_gettime(CLOCK_REALTIME, &ts);
-      generator.seed(ts.tv_sec & ts.tv_nsec);
+      generator.seed(ts.tv_sec ^ ts.tv_nsec);
 #else
       generator.seed(time(nullptr));
 #endif
@@ -66,7 +66,7 @@ void RTNAME(RandomNumber)(
     return;
   case 10:
     if constexpr (HasCppTypeFor<TypeCategory::Real, 10>) {
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
       Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
       return;
 #endif

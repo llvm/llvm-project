@@ -11,5 +11,3 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(LLJITDumpObjects
   LLJITDumpObjects.cpp
   )
-
-export_executable_symbols(LLJITDumpObjects)

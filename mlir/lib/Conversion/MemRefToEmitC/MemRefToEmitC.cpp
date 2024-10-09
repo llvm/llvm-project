@@ -137,12 +137,7 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
     auto subscript = rewriter.create<emitc::SubscriptOp>(
         op.getLoc(), arrayValue, operands.getIndices());
 
-    auto noInit = emitc::OpaqueAttr::get(getContext(), "");
-    auto var =
-        rewriter.create<emitc::VariableOp>(op.getLoc(), resultTy, noInit);
-
-    rewriter.create<emitc::AssignOp>(op.getLoc(), var, subscript);
-    rewriter.replaceOp(op, var);
+    rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
     return success();
   }
 };
@@ -184,8 +179,8 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
       });
 }
 
-void mlir::populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
-                                                   TypeConverter &converter) {
+void mlir::populateMemRefToEmitCConversionPatterns(
+    RewritePatternSet &patterns, const TypeConverter &converter) {
   patterns.add<ConvertAlloca, ConvertGlobal, ConvertGetGlobal, ConvertLoad,
                ConvertStore>(converter, patterns.getContext());
 }

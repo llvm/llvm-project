@@ -239,7 +239,7 @@ define i1 @t13_shift_of_const1(i32 %x, i32 %y, i32 %z) {
 define i1 @t14_and_with_const0(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @t14_and_with_const0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[T2]]
 ;
@@ -251,7 +251,7 @@ define i1 @t14_and_with_const0(i32 %x, i32 %y, i32 %z) {
 define i1 @t15_and_with_const1(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @t15_and_with_const1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[T2]]
 ;

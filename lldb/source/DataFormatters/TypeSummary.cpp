@@ -48,6 +48,19 @@ TypeSummaryOptions::SetCapping(lldb::TypeSummaryCapping cap) {
 TypeSummaryImpl::TypeSummaryImpl(Kind kind, const TypeSummaryImpl::Flags &flags)
     : m_flags(flags), m_kind(kind) {}
 
+std::string TypeSummaryImpl::GetSummaryKindName() {
+  switch (m_kind) {
+  case Kind::eSummaryString:
+    return "string";
+  case Kind::eCallback:
+    return "callback";
+  case Kind::eScript:
+    return "python";
+  case Kind::eInternal:
+    return "c++";
+  }
+}
+
 StringSummaryFormat::StringSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *format_cstr)
     : TypeSummaryImpl(Kind::eSummaryString, flags), m_format_str() {
@@ -116,6 +129,8 @@ std::string StringSummaryFormat::GetDescription() {
   return std::string(sstr.GetString());
 }
 
+std::string StringSummaryFormat::GetName() { return m_format_str; }
+
 CXXFunctionSummaryFormat::CXXFunctionSummaryFormat(
     const TypeSummaryImpl::Flags &flags, Callback impl, const char *description)
     : TypeSummaryImpl(Kind::eCallback, flags), m_impl(impl),
@@ -145,15 +160,27 @@ std::string CXXFunctionSummaryFormat::GetDescription() {
   return std::string(sstr.GetString());
 }
 
+std::string CXXFunctionSummaryFormat::GetName() { return m_description; }
+
 ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *function_name,
                                          const char *python_script)
     : TypeSummaryImpl(Kind::eScript, flags), m_function_name(),
       m_python_script(), m_script_function_sp() {
-  if (function_name)
+  // Take preference in the python script name over the function name.
+  if (function_name) {
     m_function_name.assign(function_name);
-  if (python_script)
+    m_script_formatter_name = function_name;
+  }
+  if (python_script) {
     m_python_script.assign(python_script);
+    m_script_formatter_name = python_script;
+  }
+
+  // Python scripts include the tabbing of the function def so we remove the
+  // leading spaces.
+  m_script_formatter_name = m_script_formatter_name.erase(
+      0, m_script_formatter_name.find_first_not_of(' '));
 }
 
 bool ScriptSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
@@ -201,3 +228,5 @@ std::string ScriptSummaryFormat::GetDescription() {
   }
   return std::string(sstr.GetString());
 }
+
+std::string ScriptSummaryFormat::GetName() { return m_script_formatter_name; }

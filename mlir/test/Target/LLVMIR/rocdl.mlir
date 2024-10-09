@@ -28,8 +28,10 @@ llvm.func @rocdl_special_regs() -> i32 {
   %12 = rocdl.grid.dim.z : i64
 
   // CHECK: call range(i32 0, 64) i32 @llvm.amdgcn.workitem.id.x()
-  %13 = rocdl.workitem.id.x {range = array<i32: 0, 64>} : i32
+  %13 = rocdl.workitem.id.x range <i32, 0, 64> : i32
 
+  // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
+  %14 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
   llvm.return %1 : i32
 }
 
@@ -59,6 +61,20 @@ llvm.func @known_block_sizes()
 llvm.func @kernel_func_no_uniform_work_groups() attributes {rocdl.kernel, rocdl.uniform_work_group_size = false} {
   // CHECK-LABEL: amdgpu_kernel void @kernel_func_no_uniform_work_groups()
   // CHECK: #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS:[0-9]+]]
+  llvm.return
+}
+
+llvm.func @kernel_func_waves_per_eu()
+    attributes {rocdl.kernel, rocdl.waves_per_eu = 2 : i32} {
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func_waves_per_eu()
+  // CHECK: #[[$KERNEL_WAVES_PER_EU_ATTR:[0-9]+]]
+  llvm.return
+}
+
+llvm.func @kernel_func_unsafe_fp_atomics()
+    attributes {rocdl.kernel, rocdl.unsafe_fp_atomics = true} {
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func_unsafe_fp_atomics()
+  // CHECK: #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR:[0-9]+]]
   llvm.return
 }
 
@@ -123,6 +139,27 @@ llvm.func @rocdl.barrier() {
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
   // CHECK-NEXT: fence syncscope("workgroup") acquire
   rocdl.barrier
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.signal() {
+  // CHECK-LABEL: rocdl.s.barrier.signal
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.signal(i32 -1)
+  rocdl.s.barrier.signal -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.wait() {
+  // CHECK-LABEL: rocdl.s.barrier.wait
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.wait(i16 -1)
+  rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.dscnt() {
+  // CHECK-LABEL: rocdl.s.wait.dscnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.dscnt(i16 0)
+  rocdl.s.wait.dscnt 0
   llvm.return
 }
 
@@ -363,6 +400,16 @@ llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
   llvm.return %rsrc : !llvm.ptr<8>
 }
 
+llvm.func @rocdl.wmma.fp8(%arg0 : vector<2 x i32>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v8f32.v2i32(<2 x i32> %{{.*}}, <2 x i32> %{{.*}}, <8 x float> %{{.*}})
+  %r0 = rocdl.wmma.f32.16x16x16.fp8_fp8 %arg0, %arg0, %arg1: (vector<2xi32>, vector<2xi32>, vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.v8f32.v2i32(<2 x i32> %{{.*}}, <2 x i32> %{{.*}}, <8 x float> %{{.*}})
+  %r1 = rocdl.wmma.f32.16x16x16.bf8_bf8 %arg0, %arg0, %arg1: (vector<2xi32>, vector<2xi32>, vector<8xf32>) -> vector<8xf32>
+
+  llvm.return %r0 : vector<8 x f32>
+}
+
 llvm.func @rocdl.raw.ptr.buffer(%rsrc : !llvm.ptr<8>,
                         %offset : i32, %soffset : i32,
                         %vdata1 : i32,
@@ -516,8 +563,16 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
   llvm.return %source5 : i32
 }
 
+llvm.func @rocdl_16bit_packed_floats(%sourceA: f32, %sourceB: f32) -> vector<2xf16> {
+  // CHECK: call <2 x half> @llvm.amdgcn.cvt.pkrtz(float {{.*}}, float {{.*}})
+  %source = rocdl.cvt.pkrtz %sourceA, %sourceB  : vector<2xf16>
+  llvm.return %source : vector<2xf16>
+}
+
 // CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="true" }
 // CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"
 // CHECK-DAG: attributes #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="false" }
 // CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}
+// CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "uniform-work-group-size"="true" }
+// CHECK-DAG: attributes #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-unsafe-fp-atomics"="true" "uniform-work-group-size"="true" }

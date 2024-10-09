@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaAsmPrinter.h"
+#include "MCTargetDesc/XtensaInstPrinter.h"
 #include "MCTargetDesc/XtensaMCExpr.h"
 #include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
@@ -155,6 +156,57 @@ void XtensaAsmPrinter::emitConstantPool() {
   }
 
   OutStreamer->popSection();
+}
+
+void XtensaAsmPrinter::printOperand(const MachineInstr *MI, int OpNo,
+                                    raw_ostream &O) {
+  const MachineOperand &MO = MI->getOperand(OpNo);
+
+  switch (MO.getType()) {
+  case MachineOperand::MO_Register:
+  case MachineOperand::MO_Immediate: {
+    MCOperand MC = lowerOperand(MI->getOperand(OpNo));
+    XtensaInstPrinter::printOperand(MC, O);
+    break;
+  }
+  default:
+    llvm_unreachable("unknown operand type");
+  }
+}
+
+bool XtensaAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                       const char *ExtraCode, raw_ostream &O) {
+  // Print the operand if there is no operand modifier.
+  if (!ExtraCode || !ExtraCode[0]) {
+    printOperand(MI, OpNo, O);
+    return false;
+  }
+
+  // Fallback to the default implementation.
+  return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+}
+
+bool XtensaAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                             unsigned OpNo,
+                                             const char *ExtraCode,
+                                             raw_ostream &OS) {
+  if (ExtraCode && ExtraCode[0])
+    return true; // Unknown modifier.
+
+  assert(OpNo + 1 < MI->getNumOperands() && "Insufficient operands");
+
+  const MachineOperand &Base = MI->getOperand(OpNo);
+  const MachineOperand &Offset = MI->getOperand(OpNo + 1);
+
+  assert(Base.isReg() &&
+         "Unexpected base pointer for inline asm memory operand.");
+  assert(Offset.isImm() && "Unexpected offset for inline asm memory operand.");
+
+  OS << XtensaInstPrinter::getRegisterName(Base.getReg());
+  OS << ", ";
+  OS << Offset.getImm();
+
+  return false;
 }
 
 MCSymbol *

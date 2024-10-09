@@ -69,7 +69,7 @@ inline void test_float_arg_inline(float a) {}
 inline void test_float_arg_inline_used(float a) {}
 // nofp-hard-opt-error@-1 {{'a' requires 'float' type support, but ABI 'aapcs' does not support it}}
 void use_inline() { test_float_arg_inline_used(1.0f); }
-// nofp-hard-error@-1 {{'use_inline' requires 'float' type support, but ABI 'aapcs' does not support it}}
+// nofp-hard-error@-1 {{'test_float_arg_inline_used' requires 'float' type support, but ABI 'aapcs' does not support it}}
 
 // The always_inline attribute causes an inline function to always be
 // code-genned, even at -O0, so we always emit the error.
@@ -77,7 +77,7 @@ __attribute((always_inline))
 inline void test_float_arg_always_inline_used(float a) {}
 // nofp-hard-error@-1 {{'a' requires 'float' type support, but ABI 'aapcs' does not support it}}
 void use_always_inline() { test_float_arg_always_inline_used(1.0f); }
-// nofp-hard-error@-1 {{'use_always_inline' requires 'float' type support, but ABI 'aapcs' does not support it}}
+// nofp-hard-error@-1 {{'test_float_arg_always_inline_used' requires 'float' type support, but ABI 'aapcs' does not support it}}
 
 // Floating-point expressions, global variables and local variables do not
 // affect the ABI, so are allowed. GCC does reject some uses of floating point
@@ -103,9 +103,9 @@ int test_var_double(int a) {
 extern void extern_float_arg(float);
 extern float extern_float_ret(void);
 void call_extern_float_arg() { extern_float_arg(1.0f); }
-// nofp-hard-error@-1 {{'call_extern_float_arg' requires 'float' type support, but ABI 'aapcs' does not support it}}
+// nofp-hard-error@-1 {{'extern_float_arg' requires 'float' type support, but ABI 'aapcs' does not support it}}
 void call_extern_float_ret() { extern_float_ret(); }
-// nofp-hard-error@-1 {{'call_extern_float_ret' requires 'float' type support, but ABI 'aapcs' does not support it}}
+// nofp-hard-error@-1 {{'extern_float_ret' requires 'float' type support, but ABI 'aapcs' does not support it}}
 
 // Definitions of variadic functions, and calls to them which only use integer
 // argument registers, are both fine.
@@ -115,7 +115,7 @@ void call_variadic_int() { variadic(0, 1); }
 // Calls to variadic functions with floating-point arguments are an error,
 // since this would require floating-point registers.
 void call_variadic_double() { variadic(0, 1.0); }
-// nofp-hard-error@-1 {{'call_variadic_double' requires 'double' type support, but ABI 'aapcs' does not support it}}
+// nofp-hard-error@-1 {{'variadic' requires 'double' type support, but ABI 'aapcs' does not support it}}
 
 // Calls through function pointers are also diagnosed.
 void (*fptr)(float);

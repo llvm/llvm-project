@@ -62,7 +62,7 @@ TEST(ScudoVectorTest, ReallocateFails) {
   scudo::MemMapT MemMap;
   if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test",
                  MAP_ALLOWNOMEM)) {
-    MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+    MemMap.unmap();
     setrlimit(RLIMIT_AS, &Limit);
     TEST_SKIP("Limiting address space does not prevent mmap.");
   }

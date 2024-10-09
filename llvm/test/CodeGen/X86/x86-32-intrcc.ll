@@ -108,8 +108,10 @@ define x86_intrcc void @test_isr_clobbers(ptr byval(%struct.interrupt_frame) %fr
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    cld
+; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    leal -12(%ebp), %esp
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    popl %ebx
@@ -127,8 +129,10 @@ define x86_intrcc void @test_isr_clobbers(ptr byval(%struct.interrupt_frame) %fr
 ; CHECK0-NEXT:    pushl %eax
 ; CHECK0-NEXT:    andl $-16, %esp
 ; CHECK0-NEXT:    cld
+; CHECK0-NEXT:    pushl %ebp
 ; CHECK0-NEXT:    #APP
 ; CHECK0-NEXT:    #NO_APP
+; CHECK0-NEXT:    popl %ebp
 ; CHECK0-NEXT:    leal -12(%ebp), %esp
 ; CHECK0-NEXT:    popl %eax
 ; CHECK0-NEXT:    popl %ebx

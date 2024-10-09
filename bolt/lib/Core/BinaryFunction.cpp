@@ -165,6 +165,12 @@ bool shouldPrint(const BinaryFunction &Function) {
     }
   }
 
+  std::optional<StringRef> Origin = Function.getOriginSectionName();
+  if (Origin && llvm::any_of(opts::PrintOnly, [&](const std::string &Name) {
+        return Name == *Origin;
+      }))
+    return true;
+
   return false;
 }
 
@@ -1339,22 +1345,10 @@ Error BinaryFunction::disassemble() {
                   BC.getBinaryFunctionContainingAddress(TargetAddress))
             TargetFunc->setIgnored();
 
-        if (IsCall && containsAddress(TargetAddress)) {
-          if (TargetAddress == getAddress()) {
-            // Recursive call.
-            TargetSymbol = getSymbol();
-          } else {
-            if (BC.isX86()) {
-              // Dangerous old-style x86 PIC code. We may need to freeze this
-              // function, so preserve the function as is for now.
-              PreserveNops = true;
-            } else {
-              BC.errs() << "BOLT-WARNING: internal call detected at 0x"
-                        << Twine::utohexstr(AbsoluteInstrAddr)
-                        << " in function " << *this << ". Skipping.\n";
-              IsSimple = false;
-            }
-          }
+        if (IsCall && TargetAddress == getAddress()) {
+          // A recursive call. Calls to internal blocks are handled by
+          // ValidateInternalCalls pass.
+          TargetSymbol = getSymbol();
         }
 
         if (!TargetSymbol) {
@@ -2502,7 +2496,10 @@ void BinaryFunction::annotateCFIState() {
     }
   }
 
-  assert(StateStack.empty() && "corrupt CFI stack");
+  if (opts::Verbosity >= 1 && !StateStack.empty()) {
+    BC.errs() << "BOLT-WARNING: non-empty CFI stack at the end of " << *this
+              << '\n';
+  }
 }
 
 namespace {

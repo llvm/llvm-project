@@ -766,8 +766,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (SinkInstsIntoCycle) {
-    SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_begin(),
-                                          CI->toplevel_end());
+    SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
     for (auto *Cycle : Cycles) {
       MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
       if (!Preheader) {
@@ -834,7 +833,7 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
     if (!ProcessedBegin)
       --I;
 
-    if (MI.isDebugOrPseudoInstr()) {
+    if (MI.isDebugOrPseudoInstr() || MI.isFakeUse()) {
       if (MI.isDebugValue())
         ProcessDbgInst(MI);
       continue;
@@ -2153,8 +2152,9 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     MachineBasicBlock::iterator InsertPos =
         SuccBB->SkipPHIsAndLabels(SuccBB->begin());
     if (blockPrologueInterferes(SuccBB, InsertPos, MI, TRI, TII, nullptr)) {
-      LLVM_DEBUG(
-          dbgs() << " *** Not sinking: prologue interference\n");
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
+      LLVM_DEBUG(dbgs() << " *** Not sinking: prologue interference\n");
       continue;
     }
 

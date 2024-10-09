@@ -1120,6 +1120,7 @@ public:
     case TemplateName::SubstTemplateTemplateParm:
     case TemplateName::SubstTemplateTemplateParmPack:
     case TemplateName::UsingTemplate:
+    case TemplateName::DeducedTemplate:
       // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }

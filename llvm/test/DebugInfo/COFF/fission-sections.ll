@@ -51,7 +51,7 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; DWO-NEXT: [ 2](sec  2)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .debug_str_offsets.dwo
 ; DWO-NEXT: AUX scnlen 0x14 nreloc 0 nlnno 0 checksum 0x9392f0f0 assoc 2 comdat 0
 ; DWO-NEXT: [ 4](sec  3)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .debug_info.dwo
-; DWO-NEXT: AUX scnlen 0x29 nreloc 0 nlnno 0 checksum 0xc8e5b275 assoc 3 comdat 0
+; DWO-NEXT: AUX scnlen 0x29 nreloc 0 nlnno 0 checksum 0x{{[0-9a-f]*}} assoc 3 comdat 0
 ; DWO-NEXT: [ 6](sec  4)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .debug_abbrev.dwo
 ; DWO-NEXT: AUX scnlen 0x33 nreloc 0 nlnno 0 checksum 0x8056e5e4 assoc 4 comdat 0
 ; DWO-EMPTY:

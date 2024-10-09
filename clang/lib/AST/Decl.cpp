@@ -350,7 +350,8 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       if (TemplateDecl *Template =
-              Arg.getAsTemplateOrTemplatePattern().getAsTemplateDecl())
+              Arg.getAsTemplateOrTemplatePattern().getAsTemplateDecl(
+                  /*IgnoreDeduced=*/true))
         LV.merge(getLVForDecl(Template, computation));
       continue;
 
@@ -583,12 +584,6 @@ static bool isSingleLineLanguageLinkage(const Decl &D) {
   return false;
 }
 
-static bool isDeclaredInModuleInterfaceOrPartition(const NamedDecl *D) {
-  if (auto *M = D->getOwningModule())
-    return M->isInterfaceOrPartition();
-  return false;
-}
-
 static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
   return LinkageInfo::external();
 }
@@ -642,7 +637,13 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // (There is no equivalent in C99.)
     if (Context.getLangOpts().CPlusPlus && Var->getType().isConstQualified() &&
         !Var->getType().isVolatileQualified() && !Var->isInline() &&
-        !isDeclaredInModuleInterfaceOrPartition(Var) &&
+        ![Var]() {
+          // Check if it is module purview except private module fragment
+          // and implementation unit.
+          if (auto *M = Var->getOwningModule())
+            return M->isInterfaceOrPartition() || M->isImplicitGlobalModule();
+          return false;
+        }() &&
         !isa<VarTemplateSpecializationDecl>(Var) &&
         !Var->getDescribedVarTemplate()) {
       const VarDecl *PrevVar = Var->getPreviousDecl();
@@ -2695,21 +2696,27 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
       if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
-        while (!VTD->isMemberSpecialization()) {
-          auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
-          if (!NewVTD)
+        while (true) {
+          VTD = VTD->getMostRecentDecl();
+          if (VTD->isMemberSpecialization())
             break;
-          VTD = NewVTD;
+          if (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate())
+            VTD = NewVTD;
+          else
+            break;
         }
         return getDefinitionOrSelf(VTD->getTemplatedDecl());
       }
       if (auto *VTPSD =
               From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-        while (!VTPSD->isMemberSpecialization()) {
-          auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
-          if (!NewVTPSD)
+        while (true) {
+          VTPSD = VTPSD->getMostRecentDecl();
+          if (VTPSD->isMemberSpecialization())
             break;
-          VTPSD = NewVTPSD;
+          if (auto *NewVTPSD = VTPSD->getInstantiatedFromMember())
+            VTPSD = NewVTPSD;
+          else
+            break;
         }
         return getDefinitionOrSelf<VarDecl>(VTPSD);
       }
@@ -2718,15 +2725,17 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
 
   // If this is the pattern of a variable template, find where it was
   // instantiated from. FIXME: Is this necessary?
-  if (VarTemplateDecl *VarTemplate = VD->getDescribedVarTemplate()) {
-    while (!VarTemplate->isMemberSpecialization()) {
-      auto *NewVT = VarTemplate->getInstantiatedFromMemberTemplate();
-      if (!NewVT)
+  if (VarTemplateDecl *VTD = VD->getDescribedVarTemplate()) {
+    while (true) {
+      VTD = VTD->getMostRecentDecl();
+      if (VTD->isMemberSpecialization())
         break;
-      VarTemplate = NewVT;
+      if (auto *NewVTD = VTD->getInstantiatedFromMemberTemplate())
+        VTD = NewVTD;
+      else
+        break;
     }
-
-    return getDefinitionOrSelf(VarTemplate->getTemplatedDecl());
+    return getDefinitionOrSelf(VTD->getTemplatedDecl());
   }
 
   if (VD == this)
@@ -2799,9 +2808,17 @@ bool VarDecl::isKnownToBeDefined() const {
 }
 
 bool VarDecl::isNoDestroy(const ASTContext &Ctx) const {
-  return hasGlobalStorage() && (hasAttr<NoDestroyAttr>() ||
-                                (!Ctx.getLangOpts().RegisterStaticDestructors &&
-                                 !hasAttr<AlwaysDestroyAttr>()));
+  if (!hasGlobalStorage())
+    return false;
+  if (hasAttr<NoDestroyAttr>())
+    return true;
+  if (hasAttr<AlwaysDestroyAttr>())
+    return false;
+
+  using RSDKind = LangOptions::RegisterStaticDestructorsKind;
+  RSDKind K = Ctx.getLangOpts().getRegisterStaticDestructors();
+  return K == RSDKind::None ||
+         (K == RSDKind::ThreadLocal && getTLSKind() == TLS_None);
 }
 
 QualType::DestructionKind
@@ -3050,6 +3067,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsIneligibleOrNotSelected = false;
   FunctionDeclBits.HasImplicitReturnZero = false;
   FunctionDeclBits.IsLateTemplateParsed = false;
+  FunctionDeclBits.IsInstantiatedFromMemberTemplate = false;
   FunctionDeclBits.ConstexprKind = static_cast<uint64_t>(ConstexprKind);
   FunctionDeclBits.BodyContainsImmediateEscalatingExpression = false;
   FunctionDeclBits.InstantiationIsPending = false;
@@ -3292,11 +3310,10 @@ bool FunctionDecl::isImmediateFunction() const {
 }
 
 bool FunctionDecl::isMain() const {
-  const TranslationUnitDecl *tunit =
-    dyn_cast<TranslationUnitDecl>(getDeclContext()->getRedeclContext());
-  return tunit &&
-         !tunit->getASTContext().getLangOpts().Freestanding &&
-         isNamed(this, "main");
+  return isNamed(this, "main") && !getLangOpts().Freestanding &&
+         !getLangOpts().HLSL &&
+         (getDeclContext()->getRedeclContext()->isTranslationUnit() ||
+          isExternC());
 }
 
 bool FunctionDecl::isMSVCRTEntryPoint() const {
@@ -4134,11 +4151,14 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
   if (FunctionTemplateDecl *Primary = getPrimaryTemplate()) {
     // If we hit a point where the user provided a specialization of this
     // template, we're done looking.
-    while (!ForDefinition || !Primary->isMemberSpecialization()) {
-      auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate();
-      if (!NewPrimary)
+    while (true) {
+      Primary = Primary->getMostRecentDecl();
+      if (ForDefinition && Primary->isMemberSpecialization())
         break;
-      Primary = NewPrimary;
+      if (auto *NewPrimary = Primary->getInstantiatedFromMemberTemplate())
+        Primary = NewPrimary;
+      else
+        break;
     }
 
     return getDefinitionOrSelf(Primary->getTemplatedDecl());
@@ -4678,6 +4698,19 @@ void FieldDecl::printName(raw_ostream &OS, const PrintingPolicy &Policy) const {
   }
   // Otherwise, do the normal printing.
   DeclaratorDecl::printName(OS, Policy);
+}
+
+const FieldDecl *FieldDecl::findCountedByField() const {
+  const auto *CAT = getType()->getAs<CountAttributedType>();
+  if (!CAT)
+    return nullptr;
+
+  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  const auto *CountDecl = CountDRE->getDecl();
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
+    CountDecl = IFD->getAnonField();
+
+  return dyn_cast<FieldDecl>(CountDecl);
 }
 
 //===----------------------------------------------------------------------===//

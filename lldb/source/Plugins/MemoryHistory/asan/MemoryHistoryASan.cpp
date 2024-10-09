@@ -107,7 +107,7 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
     return;
 
   int count = count_sp->GetValueAsUnsigned(0);
-  tid_t tid = tid_sp->GetValueAsUnsigned(0) + 1;
+  lldb::tid_t tid = tid_sp->GetValueAsUnsigned(0) + 1;
 
   if (count <= 0)
     return;

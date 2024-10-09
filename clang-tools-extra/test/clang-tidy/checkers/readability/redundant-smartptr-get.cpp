@@ -20,6 +20,23 @@ struct shared_ptr {
   explicit operator bool() const noexcept;
 };
 
+template <typename T>
+struct vector {
+  vector();
+  bool operator==(const vector<T>& other) const;
+  bool operator!=(const vector<T>& other) const;
+  unsigned long size() const;
+  bool empty() const;
+
+  using iterator = T*;
+
+  iterator begin();
+  iterator end();
+
+  T* data;
+  unsigned long sz;
+};
+
 }  // namespace std
 
 struct Bar {
@@ -234,4 +251,35 @@ void Negative() {
   std::unique_ptr<int> x;
   if (MACRO(x) == nullptr)
     ;
+}
+
+void test_redundant_get() {
+  std::vector<std::shared_ptr<int>> v;
+  auto f = [](int) {};
+  for (auto i = v.begin(); i != v.end(); ++i) {
+    f(*i->get());
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+    // CHECK-FIXES: f(**i);
+  }
+}
+
+struct Inner {
+  int a;
+  int *getValue()  { return &a; }
+};
+
+struct Example {
+  Inner inner;
+  Inner* get() { return &inner; }
+  int *getValue()  { return inner.getValue(); }
+};
+
+void test_redundant_get_with_member() {
+  std::vector<std::shared_ptr<Example>> v;
+  auto f = [](int) {};
+  for (auto i = v.begin(); i != v.end(); ++i) {
+    f(*(*i).get()->get()->getValue());
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+    // CHECK-FIXES: f(**i->get()->getValue());
+ }
 }

@@ -652,9 +652,11 @@ bool RecursiveASTVisitor<Derived>::PostVisitStmt(Stmt *S) {
 
 #undef DISPATCH_STMT
 
+// Inlining this method can lead to large code size and compile-time increases
+// without any benefit to runtime performance.
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S,
-                                                DataRecursionQueue *Queue) {
+LLVM_ATTRIBUTE_NOINLINE bool
+RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S, DataRecursionQueue *Queue) {
   if (!S)
     return true;
 
@@ -1146,6 +1148,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
+                  { TRY_TO(TraverseType(T->getWrappedType())); })
+
 DEF_TRAVERSE_TYPE(ParenType, { TRY_TO(TraverseType(T->getInnerType())); })
 
 DEF_TRAVERSE_TYPE(MacroQualifiedType,
@@ -1443,6 +1448,9 @@ DEF_TRAVERSE_TYPELOC(CountAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
+
+DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
 DEF_TRAVERSE_TYPELOC(ElaboratedType, {
@@ -2859,6 +2867,7 @@ DEF_TRAVERSE_STMT(ParenListExpr, {})
 DEF_TRAVERSE_STMT(SYCLUniqueStableNameExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
+DEF_TRAVERSE_STMT(OpenACCAsteriskSizeExpr, {})
 DEF_TRAVERSE_STMT(PredefinedExpr, {})
 DEF_TRAVERSE_STMT(ShuffleVectorExpr, {})
 DEF_TRAVERSE_STMT(ConvertVectorExpr, {})
@@ -3238,6 +3247,9 @@ DEF_TRAVERSE_STMT(OMPParallelGenericLoopDirective,
 DEF_TRAVERSE_STMT(OMPTargetParallelGenericLoopDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPAssumeDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPErrorDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3332,6 +3344,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *E : C->getSizesRefs())
+    TRY_TO(TraverseStmt(E));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPPermutationClause(
+    OMPPermutationClause *C) {
+  for (Expr *E : C->getArgsRefs())
     TRY_TO(TraverseStmt(E));
   return true;
 }
@@ -3477,6 +3497,38 @@ bool RecursiveASTVisitor<Derived>::VisitOMPSeqCstClause(OMPSeqCstClause *) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPAcqRelClause(OMPAcqRelClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPAbsentClause(OMPAbsentClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPHoldsClause(OMPHoldsClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPContainsClause(OMPContainsClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPRoutinesClause(
+    OMPNoOpenMPRoutinesClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPNoParallelismClause(
+    OMPNoParallelismClause *) {
   return true;
 }
 
@@ -3793,16 +3845,16 @@ bool RecursiveASTVisitor<Derived>::VisitOMPMapClause(OMPMapClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
     OMPNumTeamsClause *C) {
+  TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
-  TRY_TO(TraverseStmt(C->getNumTeams()));
   return true;
 }
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPThreadLimitClause(
     OMPThreadLimitClause *C) {
+  TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
-  TRY_TO(TraverseStmt(C->getThreadLimit()));
   return true;
 }
 
@@ -4013,6 +4065,9 @@ DEF_TRAVERSE_STMT(OpenACCComputeConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 DEF_TRAVERSE_STMT(OpenACCLoopConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+
+// Traverse HLSL: Out argument expression
+DEF_TRAVERSE_STMT(HLSLOutArgExpr, {})
 
 // FIXME: look at the following tricky-seeming exprs to see if we
 // need to recurse on anything.  These are ones that have methods

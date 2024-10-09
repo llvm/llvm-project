@@ -5,25 +5,25 @@ enums: []
 objects: []
 functions:
   - name: htonl
-    standards: 
+    standards:
       - POSIX
     return_type: uint32_t
     arguments:
       - type: uint32_t
   - name: htons
-    standards: 
+    standards:
       - POSIX
     return_type: uint16_t
     arguments:
       - type: uint16_t
   - name: ntohl
-    standards: 
+    standards:
       - POSIX
     return_type: uint32_t
     arguments:
       - type: uint32_t
   - name: ntohs
-    standards: 
+    standards:
       - POSIX
     return_type: uint16_t
     arguments:

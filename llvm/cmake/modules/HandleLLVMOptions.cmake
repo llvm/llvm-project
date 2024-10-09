@@ -196,6 +196,16 @@ else()
   message(FATAL_ERROR "Unknown value for LLVM_ABI_BREAKING_CHECKS: \"${LLVM_ABI_BREAKING_CHECKS}\"!")
 endif()
 
+string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
+
+if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
+  set( ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
+  # The DISABLED setting is default and requires no additional defines.
+else()
+  message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
+endif()
+
 if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
@@ -321,6 +331,12 @@ endif()
 function(append value)
   foreach(variable ${ARGN})
     set(${variable} "${${variable}} ${value}" PARENT_SCOPE)
+  endforeach(variable)
+endfunction()
+
+function(prepend value)
+  foreach(variable ${ARGN})
+    set(${variable} "${value} ${${variable}}" PARENT_SCOPE)
   endforeach(variable)
 endfunction()
 
@@ -575,7 +591,7 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
-  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     # Enable standards-conforming preprocessor.
     # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
     append("/Zc:preprocessor" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
@@ -754,6 +770,12 @@ if (MSVC)
       # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
       # avoid unwanted alignment warnings.
       -wd4324 # Suppress 'structure was padded due to __declspec(align())'
+      # This is triggered for every variable that is a template type of a class even 
+      # if there private when the class is dllexport'ed
+      -wd4251 # Suppress 'needs to have dll-interface to be used by clients'
+      # We only putting dll export on classes with out of line members so this 
+      # warning gets triggered a lot for bases we haven't exported'
+      -wd4275 # non dll-interface class used as base for dll-interface class
 
       # Promoted warnings.
       -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
@@ -1061,8 +1083,8 @@ if (LLVM_USE_SPLIT_DWARF AND
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
       CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:-gsplit-dwarf>)
-    include(LLVMCheckLinkerFlag)
-    llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
+    include(CheckLinkerFlag)
+    check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
     append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
       CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
@@ -1083,8 +1105,8 @@ endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
 if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja")
-  include(LLVMCheckLinkerFlag)
-  llvm_check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
+  include(CheckLinkerFlag)
+  check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 endif()
@@ -1190,7 +1212,7 @@ if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
   endif()
   file(TO_CMAKE_PATH "${clang_compiler_rt_file}" clang_compiler_rt_file)
   get_filename_component(clang_runtime_dir "${clang_compiler_rt_file}" DIRECTORY)
-  append("/libpath:\"${clang_runtime_dir}\""
+  prepend("/libpath:\"${clang_runtime_dir}\""
     CMAKE_EXE_LINKER_FLAGS
     CMAKE_MODULE_LINKER_FLAGS
     CMAKE_SHARED_LINKER_FLAGS)

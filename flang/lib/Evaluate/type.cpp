@@ -505,7 +505,13 @@ bool AreSameDerivedType(
   return AreSameDerivedType(x, y, false, false, inProgress);
 }
 
-bool AreSameDerivedType(
+bool AreSameDerivedTypeIgnoringTypeParameters(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, true, true, inProgress);
+}
+
+static bool AreSameDerivedType(
     const semantics::DerivedTypeSpec *x, const semantics::DerivedTypeSpec *y) {
   return x == y || (x && y && AreSameDerivedType(*x, *y));
 }
@@ -814,8 +820,8 @@ std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &type,
     return true;
   case TypeCategory::Real:
   case TypeCategory::Complex:
-    return (features && features->IsEnabled(common::LanguageFeature::CUDA)) ||
-        type.kind() >= 4; // no short or half floats
+    return type.kind() >= 4 /* not a short or half float */ || !features ||
+        features->IsEnabled(common::LanguageFeature::CUDA);
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL
   case TypeCategory::Character:

@@ -32,6 +32,7 @@ struct Object {
   llvm::wasm::WasmObjectHeader Header;
   // For now don't discriminate between kinds of sections.
   std::vector<Section> Sections;
+  bool isRelocatableObject = false;
 
   void addSectionWithOwnedContents(Section NewSection,
                                    std::unique_ptr<MemoryBuffer> &&Content);

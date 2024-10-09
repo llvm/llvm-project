@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 class TestSharedPtr(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIf(compiler="clang", compiler_version=['<', '17.0'])
     def test(self):
         self.build()
 
@@ -25,9 +26,9 @@ class TestSharedPtr(TestBase):
             result_summary="3 strong=1 weak=1",
             result_children=[ValueCheck(name="__ptr_")],
         )
-        self.expect_expr("*s", result_type="int", result_value="3")
-        self.expect_expr("*s = 5", result_type="int", result_value="5")
-        self.expect_expr("*s", result_type="int", result_value="5")
+        self.expect_expr("*s", result_type="element_type", result_value="3")
+        self.expect_expr("*s = 5", result_type="element_type", result_value="5")
+        self.expect_expr("*s", result_type="element_type", result_value="5")
         self.expect_expr("(bool)s", result_type="bool", result_value="true")
         self.expect("expr s.reset()")
         self.expect_expr("(bool)s", result_type="bool", result_value="false")

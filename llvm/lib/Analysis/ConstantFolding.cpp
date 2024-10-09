@@ -145,7 +145,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If this is a scalar -> vector cast, convert the input into a <1 x scalar>
   // vector so the code below can handle it uniformly.
-  if (isa<ConstantFP>(C) || isa<ConstantInt>(C)) {
+  if (!isa<VectorType>(C->getType()) &&
+      (isa<ConstantFP>(C) || isa<ConstantInt>(C))) {
     Constant *Ops = C; // don't take the address of C!
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }
@@ -2122,7 +2123,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       }
 
       LibFunc Fp128Func = NotLibFunc;
-      if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
+      if (TLI && TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
           Fp128Func == LibFunc_logl)
         return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
     }
@@ -3400,8 +3401,9 @@ ConstantFoldScalarFrexpCall(Constant *Op, Type *IntTy) {
 
   // The exponent is an "unspecified value" for inf/nan. We use zero to avoid
   // using undef.
-  Constant *Result1 = FrexpMant.isFinite() ? ConstantInt::get(IntTy, FrexpExp)
-                                           : ConstantInt::getNullValue(IntTy);
+  Constant *Result1 = FrexpMant.isFinite()
+                          ? ConstantInt::getSigned(IntTy, FrexpExp)
+                          : ConstantInt::getNullValue(IntTy);
   return {Result0, Result1};
 }
 

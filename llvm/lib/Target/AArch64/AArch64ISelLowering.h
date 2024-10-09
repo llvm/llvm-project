@@ -158,6 +158,7 @@ enum NodeType : unsigned {
   FP_EXTEND_MERGE_PASSTHRU,
   UINT_TO_FP_MERGE_PASSTHRU,
   SINT_TO_FP_MERGE_PASSTHRU,
+  FCVTX_MERGE_PASSTHRU,
   FCVTZU_MERGE_PASSTHRU,
   FCVTZS_MERGE_PASSTHRU,
   SIGN_EXTEND_INREG_MERGE_PASSTHRU,
@@ -280,9 +281,10 @@ enum NodeType : unsigned {
   SADDLP,
   UADDLP,
 
-  // udot/sdot instructions
+  // udot/sdot/usdot instructions
   UDOT,
   SDOT,
+  USDOT,
 
   // Vector across-lanes min/max
   // Only the lower result lane is defined.
@@ -703,11 +705,13 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                        LoadInst *LI) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(
+      IntrinsicInst *DI, LoadInst *LI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
-  bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                       StoreInst *SI) const override;
+  bool lowerInterleaveIntrinsicToStore(
+      IntrinsicInst *II, StoreInst *SI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -742,6 +746,11 @@ public:
 
   bool generateFMAsInMachineCombiner(EVT VT,
                                      CodeGenOptLevel OptLevel) const override;
+
+  /// Return true if the target has native support for
+  /// the specified value type and it is 'desirable' to use the type for the
+  /// given node type.
+  bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override;
 
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
@@ -907,7 +916,7 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
-  bool shouldExpandCmpUsingSelects() const override { return true; }
+  bool shouldExpandCmpUsingSelects(EVT VT) const override;
 
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
@@ -991,6 +1000,9 @@ public:
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
+  bool
+  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const override;
+
   bool shouldExpandCttzElements(EVT VT) const override;
 
   /// If a change in streaming mode is required on entry to/return from a
@@ -1072,6 +1084,8 @@ private:
   SDValue LowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVECTOR_COMPRESS(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;

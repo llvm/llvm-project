@@ -74,6 +74,16 @@ public:
                                     uint64_t selrefVA,
                                     Symbol *objcMsgSend) const = 0;
 
+  // Init 'thunk' so that it be a direct jump to 'branchTarget'.
+  virtual void initICFSafeThunkBody(InputSection *thunk,
+                                    InputSection *branchTarget) const {
+    llvm_unreachable("target does not support ICF safe thunks");
+  }
+
+  virtual uint32_t getICFSafeThunkSize() const {
+    llvm_unreachable("target does not support ICF safe thunks");
+  }
+
   // Symbols may be referenced via either the GOT or the stubs section,
   // depending on the relocation type. prepareSymbolRelocation() will set up the
   // GOT/stubs entries, and resolveSymbolVA() will return the addresses of those

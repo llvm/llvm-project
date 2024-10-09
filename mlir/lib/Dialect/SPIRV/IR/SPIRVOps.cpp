@@ -373,7 +373,7 @@ LogicalResult spirv::CompositeConstructOp::verify() {
 
   auto coopElementType =
       llvm::TypeSwitch<Type, Type>(getType())
-          .Case<spirv::CooperativeMatrixType, spirv::JointMatrixINTELType>(
+          .Case<spirv::CooperativeMatrixType>(
               [](auto coopType) { return coopType.getElementType(); })
           .Default([](Type) { return nullptr; });
 
@@ -1538,11 +1538,8 @@ LogicalResult spirv::ModuleOp::verifyRegions() {
 
       auto key = std::pair<spirv::FuncOp, spirv::ExecutionModel>(
           funcOp, entryPointOp.getExecutionModel());
-      auto entryPtIt = entryPoints.find(key);
-      if (entryPtIt != entryPoints.end()) {
+      if (!entryPoints.try_emplace(key, entryPointOp).second)
         return entryPointOp.emitError("duplicate of a previous EntryPointOp");
-      }
-      entryPoints[key] = entryPointOp;
     } else if (auto funcOp = dyn_cast<spirv::FuncOp>(op)) {
       // If the function is external and does not have 'Import'
       // linkage_attributes(LinkageAttributes), throw an error. 'Import'
@@ -1833,8 +1830,6 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
            << getType();
 
   if (llvm::isa<spirv::CooperativeMatrixType>(cType))
-    return emitError("unsupported composite type  ") << cType;
-  if (llvm::isa<spirv::JointMatrixINTELType>(cType))
     return emitError("unsupported composite type  ") << cType;
   if (constituents.size() != cType.getNumElements())
     return emitError("has incorrect number of operands: expected ")

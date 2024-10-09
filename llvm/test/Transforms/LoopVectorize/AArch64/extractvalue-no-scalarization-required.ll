@@ -17,22 +17,23 @@
 
 ; Check that the extractvalue operands are actually free in vector code.
 
+; FORCED:         [[E1:%.+]] = extractvalue { i64, i64 } %sv, 0
+; FORCED-NEXT:    [[E2:%.+]] = extractvalue { i64, i64 } %sv, 1
+; FORCED-NEXT:    %broadcast.splatinsert = insertelement <2 x i64> poison, i64 [[E1]], i64 0
+; FORCED-NEXT:    %broadcast.splat = shufflevector <2 x i64> %broadcast.splatinsert, <2 x i64> poison, <2 x i32> zeroinitializer
+; FORCED-NEXT:    %broadcast.splatinsert1 = insertelement <2 x i64> poison, i64 [[E2]], i64 0
+; FORCED-NEXT:    %broadcast.splat2 = shufflevector <2 x i64> %broadcast.splatinsert1, <2 x i64> poison, <2 x i32> zeroinitializer
+; FORCED-NEXT:    [[ADD:%.+]] = add <2 x i64> %broadcast.splat, %broadcast.splat2
+
 ; FORCED-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
 ; FORCED-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; FORCED-NEXT:    %0 = add i32 %index, 0
-; FORCED-NEXT:    %1 = extractvalue { i64, i64 } %sv, 0
-; FORCED-NEXT:    %broadcast.splatinsert = insertelement <2 x i64> poison, i64 %1, i64 0
-; FORCED-NEXT:    %broadcast.splat = shufflevector <2 x i64> %broadcast.splatinsert, <2 x i64> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    %2 = extractvalue { i64, i64 } %sv, 1
-; FORCED-NEXT:    %broadcast.splatinsert1 = insertelement <2 x i64> poison, i64 %2, i64 0
-; FORCED-NEXT:    %broadcast.splat2 = shufflevector <2 x i64> %broadcast.splatinsert1, <2 x i64> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    %3 = getelementptr i64, ptr %dst, i32 %0
-; FORCED-NEXT:    %4 = add <2 x i64> %broadcast.splat, %broadcast.splat2
-; FORCED-NEXT:    %5 = getelementptr i64, ptr %3, i32 0
-; FORCED-NEXT:    store <2 x i64> %4, ptr %5, align 4
+; FORCED-NEXT:    [[IV_0:%.]] = add i32 %index, 0
+; FORCED-NEXT:    [[GEP:%.+]] = getelementptr i64, ptr %dst, i32 [[IV_0]]
+; FORCED-NEXT:    [[GEP2:%.+]] = getelementptr i64, ptr [[GEP]], i32 0
+; FORCED-NEXT:    store <2 x i64> [[ADD]], ptr [[GEP2]], align 4
 ; FORCED-NEXT:    %index.next = add nuw i32 %index, 2
-; FORCED-NEXT:    %6 = icmp eq i32 %index.next, 1000
-; FORCED-NEXT:    br i1 %6, label %middle.block, label %vector.body
+; FORCED-NEXT:    [[C:%.+]] = icmp eq i32 %index.next, 1000
+; FORCED-NEXT:    br i1 [[C]], label %middle.block, label %vector.body
 
 define void @test1(ptr %dst, {i64, i64} %sv) {
 entry:
@@ -66,22 +67,23 @@ declare float @powf(float, float) readnone nounwind
 
 ; FORCED-LABEL: define void @test_getVectorCallCost
 
+; FORCED:         [[E1:%.+]] = extractvalue { float, float } %sv, 0
+; FORCED-NEXT:    [[E2:%.+]] = extractvalue { float, float } %sv, 1
+; FORCED-NEXT:    %broadcast.splatinsert = insertelement <2 x float> poison, float [[E1]], i64 0
+; FORCED-NEXT:    %broadcast.splat = shufflevector <2 x float> %broadcast.splatinsert, <2 x float> poison, <2 x i32> zeroinitializer
+; FORCED-NEXT:    %broadcast.splatinsert1 = insertelement <2 x float> poison, float [[E2]], i64 0
+; FORCED-NEXT:    %broadcast.splat2 = shufflevector <2 x float> %broadcast.splatinsert1, <2 x float> poison, <2 x i32> zeroinitializer
+
 ; FORCED-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
 ; FORCED-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; FORCED-NEXT:    %0 = add i32 %index, 0
-; FORCED-NEXT:    %1 = extractvalue { float, float } %sv, 0
-; FORCED-NEXT:    %broadcast.splatinsert = insertelement <2 x float> poison, float %1, i64 0
-; FORCED-NEXT:    %broadcast.splat = shufflevector <2 x float> %broadcast.splatinsert, <2 x float> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    %2 = extractvalue { float, float } %sv, 1
-; FORCED-NEXT:    %broadcast.splatinsert1 = insertelement <2 x float> poison, float %2, i64 0
-; FORCED-NEXT:    %broadcast.splat2 = shufflevector <2 x float> %broadcast.splatinsert1, <2 x float> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    %3 = getelementptr float, ptr %dst, i32 %0
-; FORCED-NEXT:    %4 = call <2 x float> @llvm.pow.v2f32(<2 x float> %broadcast.splat, <2 x float> %broadcast.splat2)
-; FORCED-NEXT:    %5 = getelementptr float, ptr %3, i32 0
-; FORCED-NEXT:    store <2 x float> %4, ptr %5, align 4
+; FORCED-NEXT:    [[IV0:%.+]] = add i32 %index, 0
+; FORCED-NEXT:    [[GEP1:%.+]] = getelementptr float, ptr %dst, i32 [[IV0]]
+; FORCED-NEXT:    [[POW:%.+]] = call <2 x float> @llvm.pow.v2f32(<2 x float> %broadcast.splat, <2 x float> %broadcast.splat2)
+; FORCED-NEXT:    [[GEP2:%.+]] = getelementptr float, ptr [[GEP1]], i32 0
+; FORCED-NEXT:    store <2 x float> [[POW]], ptr [[GEP2]], align 4
 ; FORCED-NEXT:    %index.next = add nuw i32 %index, 2
-; FORCED-NEXT:    %6 = icmp eq i32 %index.next, 1000
-; FORCED-NEXT:    br i1 %6, label %middle.block, label %vector.body
+; FORCED-NEXT:    [[C:%.+]] = icmp eq i32 %index.next, 1000
+; FORCED-NEXT:    br i1 [[C]], label %middle.block, label %vector.body
 
 define void @test_getVectorCallCost(ptr %dst, {float, float} %sv) {
 entry:

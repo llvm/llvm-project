@@ -26,6 +26,7 @@
 namespace llvm {
 
   class Type;
+  struct fltSemantics;
   class raw_ostream;
 
   /// Machine Value Type. Every type that is supported natively by some
@@ -33,12 +34,13 @@ namespace llvm {
   /// type can be represented by an MVT.
   class MVT {
   public:
-    enum SimpleValueType : uint8_t {
+    enum SimpleValueType : uint16_t {
       // Simple value types that aren't explicitly part of this enumeration
       // are considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = 0,
 
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, NElem, EltTy) Ty = n,
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+    Ty = n,
 #define GET_VT_RANGES
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -113,6 +115,13 @@ namespace llvm {
               SimpleTy <= MVT::LAST_SCALABLE_VECTOR_VALUETYPE);
     }
 
+    /// Return true if this is a RISCV vector tuple type where the
+    /// runtime length is machine dependent
+    bool isRISCVVectorTuple() const {
+      return (SimpleTy >= MVT::FIRST_RISCV_VECTOR_TUPLE_VALUETYPE &&
+              SimpleTy <= MVT::LAST_RISCV_VECTOR_TUPLE_VALUETYPE);
+    }
+
     /// Return true if this is a custom target type that has a scalable size.
     bool isScalableTargetExtVT() const {
       return SimpleTy == MVT::aarch64svcount;
@@ -171,7 +180,7 @@ namespace llvm {
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       switch (SimpleTy) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, NElem, EltTy)          \
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
     case Ty:                                                                   \
       return Any;
 #include "llvm/CodeGen/GenVT.inc"
@@ -254,7 +263,8 @@ namespace llvm {
     MVT getVectorElementType() const {
       assert(SimpleTy >= FIRST_VALUETYPE && SimpleTy <= LAST_VALUETYPE);
       static constexpr SimpleValueType EltTyTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy) EltTy,
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+    EltTy,
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };
@@ -267,7 +277,8 @@ namespace llvm {
     unsigned getVectorMinNumElements() const {
       assert(SimpleTy >= FIRST_VALUETYPE && SimpleTy <= LAST_VALUETYPE);
       static constexpr uint16_t NElemTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy) NElem,
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+    NElem,
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };
@@ -296,7 +307,7 @@ namespace llvm {
     /// base size.
     TypeSize getSizeInBits() const {
       static constexpr TypeSize SizeTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, NElem, EltTy)          \
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
     TypeSize(Sz, Sc || Ty == aarch64svcount /* FIXME: Not in the td. */),
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -418,7 +429,7 @@ namespace llvm {
     }
 
     static MVT getFloatingPointVT(unsigned BitWidth) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, NElem, EltTy)          \
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
     if (FP == 3 && sz == BitWidth)                                             \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -428,7 +439,7 @@ namespace llvm {
     }
 
     static MVT getIntegerVT(unsigned BitWidth) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, NElem, EltTy)          \
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
     if (Int == 3 && sz == BitWidth)                                            \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -438,8 +449,8 @@ namespace llvm {
     }
 
     static MVT getVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                  \
-    if (!Sc && VT.SimpleTy == ElTy && NumElements == nElem)                    \
+#define GET_VT_VECATTR(Ty, Sc, Tup, nElem, ElTy)                             \
+    if (!Sc && !Tup && VT.SimpleTy == ElTy && NumElements == nElem)            \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
@@ -448,13 +459,36 @@ namespace llvm {
     }
 
     static MVT getScalableVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                  \
+#define GET_VT_VECATTR(Ty, Sc, Tup, nElem, ElTy)                             \
     if (Sc && VT.SimpleTy == ElTy && NumElements == nElem)                     \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
 
       return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
+    }
+
+    static MVT getRISCVVectorTupleVT(unsigned Sz, unsigned NFields) {
+#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, nElem, EltTy) \
+    if (Tup && sz == Sz && NF == NFields)                                      \
+      return Ty;
+#include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
+
+      llvm_unreachable("Invalid RISCV vector tuple type");
+    }
+
+    /// Given a RISC-V vector tuple type, return the num_fields.
+    unsigned getRISCVVectorTupleNumFields() const {
+      assert(isRISCVVectorTuple() && SimpleTy >= FIRST_VALUETYPE &&
+             SimpleTy <= LAST_VALUETYPE);
+      static constexpr uint8_t NFTable[] = {
+#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+    NF,
+#include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
+      };
+      return NFTable[SimpleTy - FIRST_VALUETYPE];
     }
 
     static MVT getVectorVT(MVT VT, unsigned NumElements, bool IsScalable) {
@@ -475,6 +509,10 @@ namespace llvm {
     /// NB: This includes pointer types, which require a DataLayout to convert
     /// to a concrete value type.
     static MVT getVT(Type *Ty, bool HandleUnknown = false);
+
+    /// Returns an APFloat semantics tag appropriate for the value type. If this
+    /// is a vector type, the element semantics are returned.
+    const fltSemantics &getFltSemantics() const;
 
   public:
     /// SimpleValueType Iteration

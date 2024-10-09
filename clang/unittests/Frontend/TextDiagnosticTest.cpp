@@ -30,7 +30,6 @@ static std::string PrintDiag(const DiagnosticOptions &Opts, FullSourceLoc Loc) {
   // Emit a dummy diagnostic that is just 'message'.
   Diag.emitDiagnostic(Loc, DiagnosticsEngine::Level::Warning, "message",
                       /*Ranges=*/{}, /*FixItHints=*/{});
-  OS.flush();
   return Out;
 }
 

@@ -231,7 +231,7 @@ struct Thread {
   int get_name(cpp::StringStream &name) const;
 };
 
-extern LIBC_THREAD_LOCAL Thread self;
+LIBC_INLINE_VAR LIBC_THREAD_LOCAL Thread self;
 
 // Platforms should implement this function.
 [[noreturn]] void thread_exit(ThreadReturnValue retval, ThreadStyle style);

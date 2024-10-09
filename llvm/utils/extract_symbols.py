@@ -140,7 +140,7 @@ def should_keep_itanium_symbol(symbol, calling_convention_decoration):
     if not symbol.startswith("_") and not symbol.startswith("."):
         return symbol
     # Discard manglings that aren't nested names
-    match = re.match("_Z(T[VTIS])?(N.+)", symbol)
+    match = re.match("\.?_Z(T[VTIS])?(N.+)", symbol)
     if not match:
         return None
     # Demangle the name. If the name is too complex then we don't need to keep
@@ -323,7 +323,7 @@ def get_template_name(sym, mangling):
         if mangling == "microsoft":
             names = parse_microsoft_mangling(sym)
         else:
-            match = re.match("_Z(T[VTIS])?(N.+)", sym)
+            match = re.match("\.?_Z(T[VTIS])?(N.+)", sym)
             if match:
                 names, _ = parse_itanium_nested_name(match.group(2))
             else:
@@ -483,6 +483,9 @@ if __name__ == "__main__":
     else:
         outfile = sys.stdout
     for k, v in list(symbol_defs.items()):
+        # On AIX, export function descriptors instead of function entries.
+        if platform.system() == "AIX" and k.startswith("."):
+            continue
         template = get_template_name(k, args.mangling)
         if v == 1 and (not template or template in template_instantiation_refs):
             print(k, file=outfile)

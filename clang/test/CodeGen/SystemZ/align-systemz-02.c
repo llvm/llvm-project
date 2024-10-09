@@ -25,7 +25,7 @@ void fun() {
 // VECIR: @GlobVsi = global <4 x i32> zeroinitializer, align 8
 // VECIR: @GlobS = global %struct.S zeroinitializer, align 8
 // VECIR: %0 = load volatile <4 x i32>, ptr @GlobVsi, align 8
-// VECIR: store <4 x i32> %0, ptr getelementptr inbounds (%struct.S, ptr @GlobS, i32 0, i32 1), align 8
+// VECIR: store <4 x i32> %0, ptr getelementptr inbounds nuw (%struct.S, ptr @GlobS, i32 0, i32 1), align 8
 
 // VECASM:      lgrl %r1, GlobVsi@GOT
 // VECASM-NEXT: vl   %v0, 0(%r1), 3
@@ -45,7 +45,7 @@ void fun() {
 // SCALIR: @GlobVsi = global <4 x i32> zeroinitializer, align 16
 // SCALIR: @GlobS = global %struct.S zeroinitializer, align 16
 // SCALIR: %0 = load volatile <4 x i32>, ptr @GlobVsi, align 16
-// SCALIR: store <4 x i32> %0, ptr getelementptr inbounds (%struct.S, ptr @GlobS, i32 0, i32 2), align 16
+// SCALIR: store <4 x i32> %0, ptr getelementptr inbounds nuw (%struct.S, ptr @GlobS, i32 0, i32 2), align 16
 
 // SCALASM:      lgrl    %r1, GlobVsi@GOT
 // SCALASM-NEXT: l       %r0, 0(%r1)

@@ -248,6 +248,8 @@
       parameter(omp_pause_soft=1)
       integer(kind=omp_pause_resource_kind)omp_pause_hard
       parameter(omp_pause_hard=2)
+      integer(kind=omp_pause_resource_kind)omp_pause_stop_tool
+      parameter(omp_pause_stop_tool=3)
 
       integer(kind=omp_interop_fr_kind)omp_ifr_cuda
       parameter(omp_ifr_cuda=1)

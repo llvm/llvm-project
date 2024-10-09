@@ -190,9 +190,10 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
       Delimited = true;
       ThisTokBuf++;
       if (*ThisTokBuf == '}') {
-        Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-             diag::err_delimited_escape_empty);
-        return ResultChar;
+        HadError = true;
+        if (Diags)
+          Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
+               diag::err_delimited_escape_empty);
       }
     } else if (ThisTokBuf == ThisTokEnd || !isHexDigit(*ThisTokBuf)) {
       if (Diags)
@@ -283,9 +284,10 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
     Delimited = true;
     ++ThisTokBuf;
     if (*ThisTokBuf == '}') {
-      Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           diag::err_delimited_escape_empty);
-      return ResultChar;
+      HadError = true;
+      if (Diags)
+        Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
+             diag::err_delimited_escape_empty);
     }
 
     while (ThisTokBuf != ThisTokEnd) {

@@ -47,7 +47,7 @@ static void MaybePrintStackTrace(uptr pc, uptr bp) {
   if (!flags()->print_stacktrace)
     return;
 
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   ubsan_GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr,
                 common_flags()->fast_unwind_on_fatal);
   stack.Print();

@@ -6468,6 +6468,36 @@ public:
     return T->getStmtClass() == OMPErrorDirectiveClass;
   }
 };
+
+// It's not really an executable directive, but it seems convenient to use
+// that as the parent class.
+class OMPAssumeDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+private:
+  OMPAssumeDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPAssumeDirectiveClass, llvm::omp::OMPD_assume,
+                               StartLoc, EndLoc) {}
+
+  explicit OMPAssumeDirective()
+      : OMPExecutableDirective(OMPAssumeDirectiveClass, llvm::omp::OMPD_assume,
+                               SourceLocation(), SourceLocation()) {}
+
+public:
+  static OMPAssumeDirective *Create(const ASTContext &Ctx,
+                                    SourceLocation StartLoc,
+                                    SourceLocation EndLoc,
+                                    ArrayRef<OMPClause *> Clauses, Stmt *AStmt);
+
+  static OMPAssumeDirective *CreateEmpty(const ASTContext &C,
+                                         unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPAssumeDirectiveClass;
+  }
+};
+
 } // end namespace clang
 
 #endif

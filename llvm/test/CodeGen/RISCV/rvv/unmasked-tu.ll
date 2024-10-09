@@ -2576,21 +2576,21 @@ entry:
   ret <vscale x 8 x double> %a
 }
 
-declare <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
+declare <vscale x 1 x half> @llvm.riscv.vmerge.nxv1f16.nxv1f16(
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x i1>,
   iXLen);
 
-define <vscale x 1 x half> @intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
-; CHECK-LABEL: intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16:
+define <vscale x 1 x half> @intrinsic_vmerge_vvm_nxv1f16_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+; CHECK-LABEL: intrinsic_vmerge_vvm_nxv1f16_nxv1f16_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
+  %a = call <vscale x 1 x half> @llvm.riscv.vmerge.nxv1f16.nxv1f16(
     <vscale x 1 x half> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x half> %2,

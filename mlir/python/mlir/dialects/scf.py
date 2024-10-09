@@ -87,7 +87,7 @@ class IfOp(IfOp):
         operands.append(cond)
         results = []
         results.extend(results_)
-        super().__init__(results, cond)
+        super().__init__(results, cond, loc=loc, ip=ip)
         self.regions[0].blocks.append(*[])
         if hasElse:
             self.regions[1].blocks.append(*[])

@@ -22,6 +22,8 @@ class Context;
 class Value;
 class User;
 class CallBase;
+class CallBrInst;
+class PHINode;
 
 /// Represents a Def-use/Use-def edge in SandboxIR.
 /// NOTE: Unlike llvm::Use, this is not an integral part of the use-def chains.
@@ -43,6 +45,7 @@ class Use {
   friend class UserUseIterator;    // For accessing members
   friend class CallBase;           // For LLVMUse
   friend class CallBrInst;         // For constructor
+  friend class PHINode;            // For LLVMUse
 
 public:
   operator Value *() const { return get(); }
@@ -58,7 +61,7 @@ public:
   }
   bool operator!=(const Use &Other) const { return !(*this == Other); }
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const;
+  void dumpOS(raw_ostream &OS) const;
   void dump() const;
 #endif // NDEBUG
 };

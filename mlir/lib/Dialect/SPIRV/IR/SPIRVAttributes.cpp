@@ -162,7 +162,7 @@ spirv::InterfaceVarABIAttr::getStorageClass() {
   return std::nullopt;
 }
 
-LogicalResult spirv::InterfaceVarABIAttr::verify(
+LogicalResult spirv::InterfaceVarABIAttr::verifyInvariants(
     function_ref<InFlightDiagnostic()> emitError, IntegerAttr descriptorSet,
     IntegerAttr binding, IntegerAttr storageClass) {
   if (!descriptorSet.getType().isSignlessInteger(32))
@@ -257,10 +257,9 @@ ArrayAttr spirv::VerCapExtAttr::getCapabilitiesAttr() {
   return llvm::cast<ArrayAttr>(getImpl()->capabilities);
 }
 
-LogicalResult
-spirv::VerCapExtAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                             IntegerAttr version, ArrayAttr capabilities,
-                             ArrayAttr extensions) {
+LogicalResult spirv::VerCapExtAttr::verifyInvariants(
+    function_ref<InFlightDiagnostic()> emitError, IntegerAttr version,
+    ArrayAttr capabilities, ArrayAttr extensions) {
   if (!version.getType().isSignlessInteger(32))
     return emitError() << "expected 32-bit integer for version";
 

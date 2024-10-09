@@ -133,6 +133,10 @@ public:
   static TranslationUnitDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<TranslationUnitDecl *>(const_cast<DeclContext*>(DC));
   }
+
+  /// Retrieves the canonical declaration of this translation unit.
+  TranslationUnitDecl *getCanonicalDecl() override { return getFirstDecl(); }
+  const TranslationUnitDecl *getCanonicalDecl() const { return getFirstDecl(); }
 };
 
 /// Represents a `#pragma comment` line. Always a child of
@@ -2295,6 +2299,13 @@ public:
     FunctionDeclBits.IsLateTemplateParsed = ILT;
   }
 
+  bool isInstantiatedFromMemberTemplate() const {
+    return FunctionDeclBits.IsInstantiatedFromMemberTemplate;
+  }
+  void setInstantiatedFromMemberTemplate(bool Val = true) {
+    FunctionDeclBits.IsInstantiatedFromMemberTemplate = Val;
+  }
+
   /// Whether this function is "trivial" in some specialized C++ senses.
   /// Can only be true for default constructors, copy constructors,
   /// copy assignment operators, and destructors.  Not meaningful until
@@ -3206,6 +3217,10 @@ public:
   /// Set the C++11 in-class initializer for this member.
   void setInClassInitializer(Expr *NewInit);
 
+  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
+  /// \p nullptr if either the attribute or the field doesn't exist.
+  const FieldDecl *findCountedByField() const;
+
 private:
   void setLazyInClassInitializer(LazyDeclStmtPtr NewInit);
 
@@ -3362,6 +3377,7 @@ public:
 /// Represents a declaration of a type.
 class TypeDecl : public NamedDecl {
   friend class ASTContext;
+  friend class ASTReader;
 
   /// This indicates the Type object that represents
   /// this TypeDecl.  It is a cache maintained by

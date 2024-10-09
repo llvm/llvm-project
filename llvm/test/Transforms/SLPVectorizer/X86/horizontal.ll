@@ -30,7 +30,7 @@ define i32 @add_red(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP1]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP3]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
@@ -113,7 +113,7 @@ define i32 @mul_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP4]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_040]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP1]]
@@ -214,7 +214,7 @@ define i32 @long_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[ADD47]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[ARRAYIDX48]], align 4
 ; CHECK-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP1]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP4]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP6]], [[MUL49]]
 ; CHECK-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[OP_RDX]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
@@ -340,7 +340,7 @@ define i32 @chain_red(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[MUL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[OP_RDX]] = fadd fast float [[TMP4]], [[SUM_042]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP1]]
@@ -648,7 +648,7 @@ define i32 @store_red(ptr noalias %A, ptr noalias %B, ptr noalias %C, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    store float [[TMP4]], ptr [[C_ADDR_038]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[C_ADDR_038]], i64 1
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_039]], 1
@@ -711,7 +711,7 @@ define void @float_red_example4(ptr %res) {
 ; CHECK-LABEL: @float_red_example4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr @arr_float, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
 ; CHECK-NEXT:    store float [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -731,7 +731,7 @@ define void @float_red_example8(ptr %res) {
 ; CHECK-LABEL: @float_red_example8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr @arr_float, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP0]])
 ; CHECK-NEXT:    store float [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -759,7 +759,7 @@ define void @float_red_example16(ptr %res) {
 ; CHECK-LABEL: @float_red_example16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr @arr_float, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float -0.000000e+00, <16 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP0]])
 ; CHECK-NEXT:    store float [[TMP1]], ptr [[RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -1132,7 +1132,7 @@ bb.1:
 define float @fadd_v4f32_fmf(ptr %p) {
 ; CHECK-LABEL: @fadd_v4f32_fmf(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP1]])
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %p1 = getelementptr inbounds float, ptr %p, i64 1
@@ -1155,7 +1155,7 @@ define float @fadd_v4f32_fmf(ptr %p) {
 define float @fadd_v4f32_fmf_intersect(ptr %p) {
 ; CHECK-LABEL: @fadd_v4f32_fmf_intersect(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP1]])
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %p1 = getelementptr inbounds float, ptr %p, i64 1

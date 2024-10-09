@@ -105,7 +105,7 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
         return Status();
       },
       [](const ModuleSP &module_sp, const FileSpec &tmp_download_file_spec) {
-        return Status("Not supported.");
+        return Status::FromErrorString("Not supported.");
       },
       module_sp, &did_create);
   EXPECT_EQ(expect_download, download_called);

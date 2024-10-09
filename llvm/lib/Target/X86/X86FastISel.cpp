@@ -835,7 +835,7 @@ redo_gep:
     // visited them yet, so the instructions may not yet be assigned
     // virtual registers.
     if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(V)) ||
-        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+        FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
       Opcode = I->getOpcode();
       U = I;
     }
@@ -902,6 +902,8 @@ redo_gep:
     uint64_t Disp = (int32_t)AM.Disp;
     unsigned IndexReg = AM.IndexReg;
     unsigned Scale = AM.Scale;
+    MVT PtrVT = TLI.getValueType(DL, U->getType()).getSimpleVT();
+
     gep_type_iterator GTI = gep_type_begin(U);
     // Iterate through the indices, folding what we can. Constants can be
     // folded, and one dynamic index can be handled, if the scale is supported.
@@ -937,7 +939,7 @@ redo_gep:
             (S == 1 || S == 2 || S == 4 || S == 8)) {
           // Scaled-index addressing.
           Scale = S;
-          IndexReg = getRegForGEPIndex(Op);
+          IndexReg = getRegForGEPIndex(PtrVT, Op);
           if (IndexReg == 0)
             return false;
           break;
@@ -1634,8 +1636,8 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
   // Unconditional branches are selected by tablegen-generated code.
   // Handle a conditional branch.
   const BranchInst *BI = cast<BranchInst>(I);
-  MachineBasicBlock *TrueMBB = FuncInfo.MBBMap[BI->getSuccessor(0)];
-  MachineBasicBlock *FalseMBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
+  MachineBasicBlock *TrueMBB = FuncInfo.getMBB(BI->getSuccessor(0));
+  MachineBasicBlock *FalseMBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
   // Fold the common case of a conditional branch with a comparison
   // in the same block (values defined on other blocks may not have

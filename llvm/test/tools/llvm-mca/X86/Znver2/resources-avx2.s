@@ -558,8 +558,8 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.50    *                   vpcmpgtq	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      1     0.33                        vpcmpgtw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      8     0.33    *                   vpcmpgtw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      100   0.25                        vperm2i128	$1, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      100   0.25    *                   vperm2i128	$1, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      3     1.00                        vperm2i128	$1, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  1      8     1.00    *                   vperm2i128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpermd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      9     0.50    *                   vpermd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.50                        vpermpd	$1, %ymm0, %ymm2
@@ -779,7 +779,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 44.33  44.33  44.33   -      -      -      -      -     63.17  125.67 71.00  34.17   -
+# CHECK-NEXT: 44.67  44.67  44.67   -      -      -      -      -     63.17  125.67 73.00  34.17   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -881,8 +881,8 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.50    -      -     0.50    -     vpcmpgtq	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.33   0.33    -     0.33    -     vpcmpgtw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.33   0.33    -     0.33    -     vpcmpgtw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     vperm2i128	$1, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     vperm2i128	$1, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     vperm2i128	$1, %ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -     1.00    -      -     vperm2i128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpermd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -     0.50   0.50    -      -     vpermd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     vpermpd	$1, %ymm0, %ymm2

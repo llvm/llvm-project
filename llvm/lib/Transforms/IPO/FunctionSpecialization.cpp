@@ -423,13 +423,16 @@ Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
-  if (I.getCondition() != LastVisited->first)
-    return nullptr;
-
-  Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
-                                                : I.getTrueValue();
-  Constant *C = findConstantFor(V, KnownConstants);
-  return C;
+  if (I.getCondition() == LastVisited->first) {
+    Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
+                                                  : I.getTrueValue();
+    return findConstantFor(V, KnownConstants);
+  }
+  if (Constant *Condition = findConstantFor(I.getCondition(), KnownConstants))
+    if ((I.getTrueValue() == LastVisited->first && Condition->isOneValue()) ||
+        (I.getFalseValue() == LastVisited->first && Condition->isZeroValue()))
+      return LastVisited->second;
+  return nullptr;
 }
 
 Constant *InstCostVisitor::visitCastInst(CastInst &I) {
@@ -481,11 +484,6 @@ Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,
     // the usage in the CallInst, which is what we check here.
     if (User == Call)
       continue;
-    if (auto *Bitcast = dyn_cast<BitCastInst>(User)) {
-      if (!Bitcast->hasOneUse() || *Bitcast->user_begin() != Call)
-        return nullptr;
-      continue;
-    }
 
     if (auto *Store = dyn_cast<StoreInst>(User)) {
       // This is a duplicate store, bail out.

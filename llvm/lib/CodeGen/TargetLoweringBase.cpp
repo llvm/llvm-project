@@ -169,6 +169,8 @@ RTLIB::Libcall RTLIB::getFPROUND(EVT OpVT, EVT RetVT) {
       return FPROUND_F32_BF16;
     if (OpVT == MVT::f64)
       return FPROUND_F64_BF16;
+    if (OpVT == MVT::f80)
+      return FPROUND_F80_BF16;
   } else if (RetVT == MVT::f32) {
     if (OpVT == MVT::f64)
       return FPROUND_F64_F32;
@@ -396,6 +398,11 @@ RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
 RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
   return getFPLibCall(RetVT, FREXP_F32, FREXP_F64, FREXP_F80, FREXP_F128,
                       FREXP_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getFSINCOS(EVT RetVT) {
+  return getFPLibCall(RetVT, SINCOS_F32, SINCOS_F64, SINCOS_F80, SINCOS_F128,
+                      SINCOS_PPCF128);
 }
 
 RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
@@ -713,6 +720,7 @@ void TargetLoweringBase::initActions() {
                         ISD::FMINNUM,        ISD::FMAXNUM,
                         ISD::FMINNUM_IEEE,   ISD::FMAXNUM_IEEE,
                         ISD::FMINIMUM,       ISD::FMAXIMUM,
+                        ISD::FMINIMUMNUM,    ISD::FMAXIMUMNUM,
                         ISD::FMAD,           ISD::SMIN,
                         ISD::SMAX,           ISD::UMIN,
                         ISD::UMAX,           ISD::ABS,
@@ -753,6 +761,11 @@ void TargetLoweringBase::initActions() {
     // Absolute difference
     setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Expand);
 
+    // Saturated trunc
+    setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
+    setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
+    setOperationAction(ISD::TRUNCATE_USAT_U, VT, Expand);
+
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
                        Expand);
@@ -768,8 +781,9 @@ void TargetLoweringBase::initActions() {
       setOperationAction(
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN, ISD::FACOS,
-           ISD::FASIN, ISD::FATAN, ISD::FCOSH, ISD::FSINH, ISD::FTANH},
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::LROUND,
+           ISD::LLROUND, ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN,
+           ISD::FCOSH, ISD::FSINH, ISD::FTANH},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -1675,16 +1689,8 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
 
-    for (unsigned i = 0; i < NumParts; ++i) {
-      ISD::ArgFlagsTy OutFlags = Flags;
-      if (NumParts > 1 && i == 0)
-        OutFlags.setSplit();
-      else if (i == NumParts - 1 && i != 0)
-        OutFlags.setSplitEnd();
-
-      Outs.push_back(
-          ISD::OutputArg(OutFlags, PartVT, VT, /*isfixed=*/true, 0, 0));
-    }
+    for (unsigned i = 0; i < NumParts; ++i)
+      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
   }
 }
 

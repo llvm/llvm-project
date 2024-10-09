@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # ===- Generate headers for libc functions  -------------------*- python -*--==#
 #
@@ -118,7 +118,7 @@ def load_yaml_file(yaml_file, header_class, entry_points):
         HeaderFile: An instance of HeaderFile populated with the data.
     """
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
+        yaml_data = yaml.safe_load(f)
     return yaml_to_classes(yaml_data, header_class, entry_points)
 
 
@@ -173,7 +173,7 @@ def add_function_to_yaml(yaml_file, function_details):
     new_function = parse_function_details(function_details)
 
     with open(yaml_file, "r") as f:
-        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
+        yaml_data = yaml.safe_load(f)
     if "functions" not in yaml_data:
         yaml_data["functions"] = []
 
@@ -190,7 +190,15 @@ def add_function_to_yaml(yaml_file, function_details):
     if new_function.attributes:
         function_dict["attributes"] = new_function.attributes
 
-    yaml_data["functions"].append(function_dict)
+    insert_index = 0
+    for i, func in enumerate(yaml_data["functions"]):
+        if func["name"] > new_function.name:
+            insert_index = i
+            break
+    else:
+        insert_index = len(yaml_data["functions"])
+
+    yaml_data["functions"].insert(insert_index, function_dict)
 
     class IndentYamlListDumper(yaml.Dumper):
         def increase_indent(self, flow=False, indentless=False):
@@ -251,8 +259,6 @@ def main(
     else:
         with open(output_file_path, "w") as f:
             f.write(header_str)
-
-    print(f"Generated header file: {output_file_path}")
 
 
 if __name__ == "__main__":

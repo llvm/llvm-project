@@ -26,7 +26,16 @@
 
 #include "type_algorithms.h"
 
-inline constexpr unsigned g_max_n = 128;
+template <class Real>
+constexpr unsigned get_maximal_order() {
+  if constexpr (std::numeric_limits<Real>::is_iec559)
+    return 128;
+  else { // Workaround for z/OS HexFloat.
+    // Note |H_n(x)| < 10^75 for n < 39 and x in sample_points().
+    static_assert(std::numeric_limits<Real>::max_exponent10 == 75);
+    return 39;
+  }
+}
 
 template <class T>
 std::array<T, 11> sample_points() {
@@ -203,16 +212,21 @@ std::vector<T> get_roots(unsigned n) {
 
 template <class Real>
 void test() {
-  { // checks if NaNs are reported correctly (i.e. output == input for input == NaN)
+  if constexpr (
+      std::numeric_limits<Real>::has_quiet_NaN &&
+      std::numeric_limits<
+          Real>::has_signaling_NaN) { // checks if NaNs are reported correctly (i.e. output == input for input == NaN)
     using nl = std::numeric_limits<Real>;
     for (Real NaN : {nl::quiet_NaN(), nl::signaling_NaN()})
-      for (unsigned n = 0; n < g_max_n; ++n)
+      for (unsigned n = 0; n < get_maximal_order<Real>(); ++n)
         assert(std::isnan(std::hermite(n, NaN)));
   }
 
-  { // simple sample points for n=0..127 should not produce NaNs.
+  if constexpr (std::numeric_limits<Real>::has_quiet_NaN &&
+                std::numeric_limits<
+                    Real>::has_signaling_NaN) { // simple sample points for n=0..127 should not produce NaNs.
     for (Real x : sample_points<Real>())
-      for (unsigned n = 0; n < g_max_n; ++n)
+      for (unsigned n = 0; n < get_maximal_order<Real>(); ++n)
         assert(!std::isnan(std::hermite(n, x)));
   }
 
@@ -237,21 +251,21 @@ void test() {
 
   { // checks std::hermitef for bitwise equality with std::hermite(unsigned, float)
     if constexpr (std::is_same_v<Real, float>)
-      for (unsigned n = 0; n < g_max_n; ++n)
+      for (unsigned n = 0; n < get_maximal_order<Real>(); ++n)
         for (float x : sample_points<float>())
           assert(std::hermite(n, x) == std::hermitef(n, x));
   }
 
   { // checks std::hermitel for bitwise equality with std::hermite(unsigned, long double)
     if constexpr (std::is_same_v<Real, long double>)
-      for (unsigned n = 0; n < g_max_n; ++n)
+      for (unsigned n = 0; n < get_maximal_order<Real>(); ++n)
         for (long double x : sample_points<long double>())
           assert(std::hermite(n, x) == std::hermitel(n, x));
   }
 
   { // Checks if the characteristic recurrence relation holds:    H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}(x)
     for (Real x : sample_points<Real>()) {
-      for (unsigned n = 1; n < g_max_n - 1; ++n) {
+      for (unsigned n = 1; n < get_maximal_order<Real>() - 1; ++n) {
         Real H_next            = std::hermite(n + 1, x);
         Real H_next_recurrence = 2 * (x * std::hermite(n, x) - n * std::hermite(n - 1, x));
 
@@ -289,22 +303,23 @@ void test() {
     }
   }
 
-  { // check input infinity is handled correctly
+  if constexpr (std::numeric_limits<Real>::has_infinity) { // check input infinity is handled correctly
     Real inf = std::numeric_limits<Real>::infinity();
-    for (unsigned n = 1; n < g_max_n; ++n) {
+    for (unsigned n = 1; n < get_maximal_order<Real>(); ++n) {
       assert(std::hermite(n, +inf) == inf);
       assert(std::hermite(n, -inf) == ((n & 1) ? -inf : inf));
     }
   }
 
-  { // check: if overflow occurs that it is mapped to the correct infinity
+  if constexpr (std::numeric_limits<
+                    Real>::has_infinity) { // check: if overflow occurs that it is mapped to the correct infinity
     if constexpr (std::is_same_v<Real, double>) {
       // Q: Why only double?
       // A: The numeric values (e.g. overflow threshold `n`) below are different for other types.
       static_assert(sizeof(double) == 8);
-      for (unsigned n = 0; n < g_max_n; ++n) {
+      for (unsigned n = 0; n < get_maximal_order<Real>(); ++n) {
         // Q: Why n=111 and x=300?
-        // A: Both are chosen s.t. the first overlow occurs for some `n<g_max_n`.
+        // A: Both are chosen s.t. the first overlow occurs for some `n<get_maximal_order<Real>()`.
         if (n < 111) {
           assert(std::isfinite(std::hermite(n, +300.0)));
           assert(std::isfinite(std::hermite(n, -300.0)));
@@ -329,7 +344,7 @@ struct TestInt {
   template <class Integer>
   void operator()() {
     // checks that std::hermite(unsigned, Integer) actually wraps std::hermite(unsigned, double)
-    for (unsigned n = 0; n < g_max_n; ++n)
+    for (unsigned n = 0; n < get_maximal_order<double>(); ++n)
       for (Integer x : {-42, -7, -5, -1, 0, 1, 5, 7, 42})
         assert(std::hermite(n, x) == std::hermite(n, static_cast<double>(x)));
   }

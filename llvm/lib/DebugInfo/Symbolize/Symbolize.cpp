@@ -71,7 +71,9 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   DILineInfo LineInfo = Info->symbolizeCode(
-      ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+      ModuleOffset,
+      DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions,
+                          Opts.SkipLineZero),
       Opts.UseSymbolTable);
   if (Opts.Demangle)
     LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
@@ -85,7 +87,7 @@ LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
 }
 
 Expected<DILineInfo>
-LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
+LLVMSymbolizer::symbolizeCode(StringRef ModuleName,
                               object::SectionedAddress ModuleOffset) {
   return symbolizeCodeCommon(ModuleName, ModuleOffset);
 }
@@ -116,7 +118,9 @@ Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   DIInliningInfo InlinedContext = Info->symbolizeInlinedCode(
-      ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+      ModuleOffset,
+      DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions,
+                          Opts.SkipLineZero),
       Opts.UseSymbolTable);
   if (Opts.Demangle) {
     for (int i = 0, n = InlinedContext.getNumberOfFrames(); i < n; i++) {
@@ -134,7 +138,7 @@ LLVMSymbolizer::symbolizeInlinedCode(const ObjectFile &Obj,
 }
 
 Expected<DIInliningInfo>
-LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
+LLVMSymbolizer::symbolizeInlinedCode(StringRef ModuleName,
                                      object::SectionedAddress ModuleOffset) {
   return symbolizeInlinedCodeCommon(ModuleName, ModuleOffset);
 }
@@ -179,7 +183,7 @@ LLVMSymbolizer::symbolizeData(const ObjectFile &Obj,
 }
 
 Expected<DIGlobal>
-LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
+LLVMSymbolizer::symbolizeData(StringRef ModuleName,
                               object::SectionedAddress ModuleOffset) {
   return symbolizeDataCommon(ModuleName, ModuleOffset);
 }
@@ -220,7 +224,7 @@ LLVMSymbolizer::symbolizeFrame(const ObjectFile &Obj,
 }
 
 Expected<std::vector<DILocal>>
-LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
+LLVMSymbolizer::symbolizeFrame(StringRef ModuleName,
                                object::SectionedAddress ModuleOffset) {
   return symbolizeFrameCommon(ModuleName, ModuleOffset);
 }
@@ -268,7 +272,7 @@ LLVMSymbolizer::findSymbol(const ObjectFile &Obj, StringRef Symbol,
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(const std::string &ModuleName, StringRef Symbol,
+LLVMSymbolizer::findSymbol(StringRef ModuleName, StringRef Symbol,
                            uint64_t Offset) {
   return findSymbolCommon(ModuleName, Symbol, Offset);
 }
@@ -600,13 +604,13 @@ LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
 }
 
 Expected<SymbolizableModule *>
-LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
-  std::string BinaryName = ModuleName;
-  std::string ArchName = Opts.DefaultArch;
+LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
+  StringRef BinaryName = ModuleName;
+  StringRef ArchName = Opts.DefaultArch;
   size_t ColonPos = ModuleName.find_last_of(':');
   // Verify that substring after colon form a valid arch name.
   if (ColonPos != std::string::npos) {
-    std::string ArchStr = ModuleName.substr(ColonPos + 1);
+    StringRef ArchStr = ModuleName.substr(ColonPos + 1);
     if (Triple(ArchStr).getArch() != Triple::UnknownArch) {
       BinaryName = ModuleName.substr(0, ColonPos);
       ArchName = ArchStr;
@@ -619,7 +623,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     return I->second.get();
   }
 
-  auto ObjectsOrErr = getOrCreateObjectPair(BinaryName, ArchName);
+  auto ObjectsOrErr =
+      getOrCreateObjectPair(std::string{BinaryName}, std::string{ArchName});
   if (!ObjectsOrErr) {
     // Failed to find valid object file.
     Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());

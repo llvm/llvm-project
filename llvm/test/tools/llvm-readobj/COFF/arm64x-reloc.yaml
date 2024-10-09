@@ -1,0 +1,466 @@
+# Test reading ARM64X dynamic relocations.
+
+# RUN: yaml2obj %s -o %t.dll
+# RUN: llvm-readobj --coff-load-config %t.dll | FileCheck --check-prefixes=CHECK,V1 %s
+
+# CHECK: CHPEMetadataPointer: 0x180005000
+# CHECK:      CHPEMetadata [
+# CHECK-NEXT:   Version: 0x1
+# CHECK-NEXT:   CodeMap [
+# CHECK-NEXT:     0x1000 - 0x1030  ARM64EC
+# CHECK-NEXT:     0x2000 - 0x2040  ARM64
+# CHECK-NEXT:     0x3000 - 0x3050  X64
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   CodeRangesToEntryPoints [
+# CHECK-NEXT:     0x1000 - 0x1020 -> 0x1000
+# CHECK-NEXT:     0x1020 - 0x1040 -> 0x2000
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   RedirectionMetadata [
+# CHECK-NEXT:     0x1000 -> 0x2000
+# CHECK-NEXT:     0x1020 -> 0x2030
+# CHECK-NEXT:   ]
+
+# CHECK:      DynamicRelocations [
+# V1:           Version: 0x1
+# V2:           Version: 0x2
+# CHECK:        Arm64X [
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x84
+# CHECK-NEXT:       Type: VALUE
+# CHECK-NEXT:       Size: 0x2
+# CHECK-NEXT:       Value: 0x8664
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6020
+# CHECK-NEXT:       Type: VALUE
+# CHECK-NEXT:       Size: 0x2
+# CHECK-NEXT:       Value: 0x3412
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6024
+# CHECK-NEXT:       Type: VALUE
+# CHECK-NEXT:       Size: 0x4
+# CHECK-NEXT:       Value: 0x89674523
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6028
+# CHECK-NEXT:       Type: VALUE
+# CHECK-NEXT:       Size: 0x8
+# CHECK-NEXT:       Value: 0x8877665544332211
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6000
+# CHECK-NEXT:       Type: ZERO
+# CHECK-NEXT:       Size: 0x2
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6004
+# CHECK-NEXT:       Type: ZERO
+# CHECK-NEXT:       Size: 0x4
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6010
+# CHECK-NEXT:       Type: ZERO
+# CHECK-NEXT:       Size: 0x8
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6040
+# CHECK-NEXT:       Type: DELTA
+# CHECK-NEXT:       Value: 68740
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6044
+# CHECK-NEXT:       Type: DELTA
+# CHECK-NEXT:       Value: 137480
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x6048
+# CHECK-NEXT:       Type: DELTA
+# CHECK-NEXT:       Value: -16
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Entry [
+# CHECK-NEXT:       RVA: 0x604C
+# CHECK-NEXT:       Type: DELTA
+# CHECK-NEXT:       Value: -32
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   ]
+# CHECK-NEXT: ]
+
+# RUN: llvm-readobj --hex-dump=.test %t.dll | FileCheck --match-full-lines --strict-whitespace --check-prefix=HEX %s
+# HEX:Format: COFF-ARM64X
+# HEX-NEXT:Arch: aarch64
+# HEX-NEXT:AddressSize: 64bit
+# HEX-EMPTY:
+# HEX-NEXT:Hex dump of section '.test':
+# HEX-NEXT:0x180006000 11112222 33334444 55556666 77778888 ..""33DDUUffww..
+# HEX-NEXT:0x180006010 9999aaaa bbbbcccc ddddeeee ffff0000 ................
+# HEX-NEXT:0x180006020 00000000 00000000 00000000 00000000 ................
+# HEX-NEXT:0x180006030 00000000 00000000 00000000 00000000 ................
+# HEX-NEXT:0x180006040 10101010 20202020 30303030 40404040 ....    0000@@@@
+# HEX-NEXT:0x180006050 50505050 60606060 70707070 80808080 PPPP````pppp....
+# HEX-NEXT:HybridObject {
+# HEX-NEXT:  Format: COFF-ARM64EC
+# HEX-NEXT:  Arch: aarch64
+# HEX-NEXT:  AddressSize: 64bit
+# HEX-EMPTY:
+# HEX-NEXT:  Hex dump of section '.test':
+# HEX-NEXT:  0x180006000 00002222 00000000 55556666 77778888 ..""....UUffww..
+# HEX-NEXT:  0x180006010 00000000 00000000 ddddeeee ffff0000 ................
+# HEX-NEXT:  0x180006020 12340000 23456789 11223344 55667788 .4..#Eg.."3DUfw.
+# HEX-NEXT:  0x180006030 00000000 00000000 00000000 00000000 ................
+# HEX-NEXT:  0x180006040 941c1110 28392220 20303030 20404040 ....(9"  000 @@@
+# HEX-NEXT:  0x180006050 50505050 60606060 70707070 80808080 PPPP````pppp....
+# HEX-NEXT:}
+
+
+--- !COFF
+OptionalHeader:
+  ImageBase:       0x180000000
+  SectionAlignment: 4096
+  FileAlignment:   512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x4000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     0x2050
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x4000
+    VirtualSize:     328
+    StructuredData:
+      - LoadConfig:
+          CHPEMetadataPointer: 0x180005000
+          DynamicValueRelocTableOffset: 4
+          DynamicValueRelocTableSection: 5
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  0x5000
+    VirtualSize:     144
+    StructuredData:
+      - UInt32: 1       # Version
+      - UInt32: 0x5050  # CodeMap
+      - UInt32: 3       # CodeMapCount
+      - UInt32: 0x5068  # CodeRangesToEntryPoints
+      - UInt32: 0x5080  # RedirectionMetadata
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 2       # CodeRangesToEntryPointsCount
+      - UInt32: 2       # RedirectionMetadataCount
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0x1001  # CodeMap[0]
+      - UInt32: 0x30
+      - UInt32: 0x2000  # CodeMap[1]
+      - UInt32: 0x40
+      - UInt32: 0x3002  # CodeMap[2]
+      - UInt32: 0x50
+      - UInt32: 0x1000  # CodeRangesToEntryPoints[0]
+      - UInt32: 0x1020
+      - UInt32: 0x1000
+      - UInt32: 0x1020  # CodeRangesToEntryPoints[1]
+      - UInt32: 0x1040
+      - UInt32: 0x2000
+      - UInt32: 0x1000  # RedirectionMetadata[0]
+      - UInt32: 0x2000
+      - UInt32: 0x1020  # RedirectionMetadata[1]
+      - UInt32: 0x2030
+  - Name:            .test
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x6000
+    VirtualSize:     0x60
+    StructuredData:
+      - Binary: 111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000
+      - Binary: 0000000000000000000000000000000000000000000000000000000000000000
+      - Binary: 1010101020202020303030304040404050505050606060607070707080808080
+  - Name:            .reloc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_DISCARDABLE ]
+    VirtualAddress:  0x7000
+    VirtualSize:     328
+    StructuredData:
+      - UInt32: 0         # pad
+      - UInt32: 1         # coff_dynamic_reloc_table.Version
+      - UInt32: 76        # coff_dynamic_reloc_table.Size
+      - UInt32: 6         # coff_dynamic_relocation64.Symbol(low) = IMAGE_DYNAMIC_RELOCATION_ARM64X
+      - UInt32: 0         # coff_dynamic_relocation64.Symbol(high)
+      - UInt32: 64        # coff_dynamic_relocation64.BaseRelocSize
+      - UInt32: 0         # coff_base_reloc_block_header[0].PageRVA
+      - UInt32: 12        # coff_base_reloc_block_header[0].BlockSize
+      - Binary: 8450      # VALUE offset 0x84 (PE header Machine), size 2
+      - Binary: 6486      # IMAGE_FILE_MACHINE_AMD64
+      - UInt32: 0x6000    # coff_base_reloc_block_header[1].PageRVA
+      - UInt32: 52        # coff_base_reloc_block_header[1].BlockSize
+      - Binary: 2050      # VALUE offset 0x20, size 2
+      - Binary: 1234      # test value
+      - Binary: 2490      # VALUE offset 0x24, size 4
+      - Binary: 23456789  # test value
+      - Binary: 28d0      # VALUE offset 0x28, size 4
+      - Binary: 11223344  # test value
+      - Binary: 55667788  # test value
+      - Binary: 0040      # ZERO offset 0, size 2
+      - Binary: 0480      # ZERO offset 4, size 4
+      - Binary: 10c0      # ZERO offset 16, size 8
+      - Binary: 4020      # DELTA offset 0x40, mul 4
+      - Binary: 2143
+      - Binary: 44a0      # DELTA offset 0x44, mul 8
+      - Binary: 2143
+      - Binary: 4860      # DELTA offset 0x48, mul 4
+      - Binary: 0400
+      - Binary: 4ce0      # DELTA offset 0x4c, mul 8
+      - Binary: 0400
+      - Binary: 0000      # terminator
+symbols:         []
+...
+
+# RUN: yaml2obj %s --docnum=2 -o %t2.dll
+# RUN: llvm-readobj --coff-load-config %t2.dll | FileCheck  --check-prefixes=CHECK,V2 %s
+# RUN: llvm-readobj --hex-dump=.test %t2.dll | FileCheck --match-full-lines --strict-whitespace --check-prefix=HEX %s
+
+--- !COFF
+OptionalHeader:
+  ImageBase:       0x180000000
+  SectionAlignment: 4096
+  FileAlignment:   512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x4000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     0x2050
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x4000
+    VirtualSize:     328
+    StructuredData:
+      - LoadConfig:
+          CHPEMetadataPointer: 0x180005000
+          DynamicValueRelocTableOffset: 4
+          DynamicValueRelocTableSection: 5
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  0x5000
+    VirtualSize:     144
+    StructuredData:
+      - UInt32: 1       # Version
+      - UInt32: 0x5050  # CodeMap
+      - UInt32: 3       # CodeMapCount
+      - UInt32: 0x5068  # CodeRangesToEntryPoints
+      - UInt32: 0x5080  # RedirectionMetadata
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 2       # CodeRangesToEntryPointsCount
+      - UInt32: 2       # RedirectionMetadataCount
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0x1001  # CodeMap[0]
+      - UInt32: 0x30
+      - UInt32: 0x2000  # CodeMap[1]
+      - UInt32: 0x40
+      - UInt32: 0x3002  # CodeMap[2]
+      - UInt32: 0x50
+      - UInt32: 0x1000  # CodeRangesToEntryPoints[0]
+      - UInt32: 0x1020
+      - UInt32: 0x1000
+      - UInt32: 0x1020  # CodeRangesToEntryPoints[1]
+      - UInt32: 0x1040
+      - UInt32: 0x2000
+      - UInt32: 0x1000  # RedirectionMetadata[0]
+      - UInt32: 0x2000
+      - UInt32: 0x1020  # RedirectionMetadata[1]
+      - UInt32: 0x2030
+  - Name:            .test
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x6000
+    VirtualSize:     0x60
+    StructuredData:
+      - Binary: 111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000
+      - Binary: 0000000000000000000000000000000000000000000000000000000000000000
+      - Binary: 1010101020202020303030304040404050505050606060607070707080808080
+  - Name:            .reloc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_DISCARDABLE ]
+    VirtualAddress:  0x7000
+    VirtualSize:     328
+    StructuredData:
+      - UInt32: 0         # pad
+      - UInt32: 2         # coff_dynamic_reloc_table.Version
+      - UInt32: 88        # coff_dynamic_reloc_table.Size
+      - UInt32: 24        # coff_dynamic_relocation64_v2.HeaderSize
+      - UInt32: 64        # coff_dynamic_relocation64_v2.FixupInfoSize
+      - UInt32: 6         # coff_dynamic_relocation64_v2.Symbol(low) = IMAGE_DYNAMIC_RELOCATION_ARM64X
+      - UInt32: 0         # coff_dynamic_relocation64_v2.Symbol(high)
+      - UInt32: 0         # coff_dynamic_relocation64_v2.SymbolGroup
+      - UInt32: 0         # coff_dynamic_relocation64_v2.Flags
+      - UInt32: 0         # coff_base_reloc_block_header[0].PageRVA
+      - UInt32: 12        # coff_base_reloc_block_header[0].BlockSize
+      - Binary: 8450      # VALUE offset 0x84 (PE header Machine), size 2
+      - Binary: 6486      # IMAGE_FILE_MACHINE_AMD64
+      - UInt32: 0x6000    # coff_base_reloc_block_header[1].PageRVA
+      - UInt32: 52        # coff_base_reloc_block_header[1].BlockSize
+      - Binary: 2050      # VALUE offset 0x20, size 2
+      - Binary: 1234      # test value
+      - Binary: 2490      # VALUE offset 0x24, size 4
+      - Binary: 23456789  # test value
+      - Binary: 28d0      # VALUE offset 0x28, size 4
+      - Binary: 11223344  # test value
+      - Binary: 55667788  # test value
+      - Binary: 0040      # ZERO offset 0, size 2
+      - Binary: 0480      # ZERO offset 4, size 4
+      - Binary: 10c0      # ZERO offset 16, size 8
+      - Binary: 4020      # DELTA offset 0x40, mul 4
+      - Binary: 2143
+      - Binary: 44a0      # DELTA offset 0x44, mul 8
+      - Binary: 2143
+      - Binary: 4860      # DELTA offset 0x48, mul 4
+      - Binary: 0400
+      - Binary: 4ce0      # DELTA offset 0x4c, mul 8
+      - Binary: 0400
+      - Binary: 0000      # terminator
+symbols:         []
+...
+
+# RUN: yaml2obj %s --docnum=3 -o %t3.dll
+# RUN: llvm-readobj --coff-exports %t3.dll | FileCheck --match-full-lines --strict-whitespace --check-prefix=EXP %s
+
+# EXP:Format: COFF-ARM64X
+# EXP-NEXT:Arch: aarch64
+# EXP-NEXT:AddressSize: 64bit
+# EXP-NEXT:Export {
+# EXP-NEXT:  Ordinal: 1
+# EXP-NEXT:  Name: test
+# EXP-NEXT:  RVA: 0x2000
+# EXP-NEXT:}
+# EXP-NEXT:HybridObject {
+# EXP-NEXT:  Format: COFF-ARM64EC
+# EXP-NEXT:  Arch: aarch64
+# EXP-NEXT:  AddressSize: 64bit
+# EXP-NEXT:  Export {
+# EXP-NEXT:    Ordinal: 1
+# EXP-NEXT:    Name: test
+# EXP-NEXT:    RVA: 0x2004
+# EXP-NEXT:  }
+# EXP-NEXT:}
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  AddressOfEntryPoint: 0
+  ExportTable:
+    RelativeVirtualAddress: 0x1000
+    Size:                   64
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x3000
+    Size:                   320
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     64
+    StructuredData:
+      - UInt32: 0       # ExportFlags
+      - UInt32: 0       # TimeDateStamp
+      - UInt32: 0       # Version
+      - UInt32: 0x1028  # NameRVA
+      - UInt32: 1       # OrdinalBase
+      - UInt32: 1       # AddressTableEntries
+      - UInt32: 1       # NumberOfNamePointers
+      - UInt32: 0x1030  # ExportAddressTableRVA
+      - UInt32: 0x1034  # NamePointerRVA
+      - UInt32: 0x1038  # OrdinalTableRVA
+      - Binary: 7473742E646C6C00  # "tst.dll"
+      - UInt32: 0x2000  # export RVA
+      - UInt32: 0x103A  # name RVA
+      - Binary: 0000    # ordinal
+      - Binary: 7465737400 # "test"
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  0x2000
+    VirtualSize:     80
+    StructuredData:
+      - UInt32: 1       # Version
+      - UInt32: 0       # CodeMap
+      - UInt32: 0       # CodeMapCount
+      - UInt32: 0       # CodeRangesToEntryPoints
+      - UInt32: 0       # RedirectionMetadata
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0       # CodeRangesToEntryPointsCount
+      - UInt32: 0       # RedirectionMetadataCount
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+  - Name:            .cfg
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x3000
+    VirtualSize:     328
+    StructuredData:
+      - LoadConfig:
+          CHPEMetadataPointer: 0x180002000
+          DynamicValueRelocTableOffset: 0
+          DynamicValueRelocTableSection: 4
+  - Name:            .arm64x
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_DISCARDABLE ]
+    VirtualAddress:  0x4000
+    VirtualSize:     56
+    StructuredData:
+      - UInt32: 2         # coff_dynamic_reloc_table.Version
+      - UInt32: 48        # coff_dynamic_reloc_table.Size
+      - UInt32: 24        # coff_dynamic_relocation64_v2.HeaderSize
+      - UInt32: 24        # coff_dynamic_relocation64_v2.FixupInfoSize
+      - UInt32: 6         # coff_dynamic_relocation64_v2.Symbol(low) = IMAGE_DYNAMIC_RELOCATION_ARM64X
+      - UInt32: 0         # coff_dynamic_relocation64_v2.Symbol(high)
+      - UInt32: 0         # coff_dynamic_relocation64_v2.SymbolGroup
+      - UInt32: 0         # coff_dynamic_relocation64_v2.Flags
+      - UInt32: 0         # coff_base_reloc_block_header[0].PageRVA
+      - UInt32: 12        # coff_base_reloc_block_header[0].BlockSize
+      - Binary: 8450      # VALUE offset 0x84 (PE header Machine), size 2
+      - Binary: 6486      # IMAGE_FILE_MACHINE_AMD64
+      - UInt32: 0x1000    # coff_base_reloc_block_header[1].PageRVA
+      - UInt32: 12        # coff_base_reloc_block_header[1].BlockSize
+      - Binary: 3020      # DELTA offset 0x30, mul 4
+      - Binary: 0100
+symbols:         []
+...

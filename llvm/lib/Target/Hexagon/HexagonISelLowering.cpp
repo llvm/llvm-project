@@ -2274,7 +2274,7 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
 
   // Normalize the mask so that the first non-negative index comes from
   // the first operand.
-  SmallVector<int,8> Mask(AM.begin(), AM.end());
+  SmallVector<int, 8> Mask(AM);
   unsigned F = llvm::find_if(AM, [](int M) { return M >= 0; }) - AM.data();
   if (F == AM.size())
     return DAG.getUNDEF(VecTy);

@@ -81,6 +81,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.qsort
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
@@ -136,7 +138,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.cospif
+    libc.src.math.dfmal
     libc.src.math.dsqrtl
+    libc.src.math.ddivl
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.expf
@@ -152,6 +156,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
+    libc.src.math.fdiv
+    libc.src.math.fdivl
+    libc.src.math.ffma
+    libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.floorl
@@ -165,9 +173,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminl
     libc.src.math.fmod
     libc.src.math.fmodf
+    libc.src.math.fmul
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl
+    libc.src.math.fsub
+    libc.src.math.fsubl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
@@ -214,6 +225,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nexttoward
     libc.src.math.nexttowardf
     libc.src.math.nexttowardl
+    libc.src.math.pow
     libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
@@ -227,6 +239,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.scalbln
+    libc.src.math.scalblnf
+    libc.src.math.scalblnl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl

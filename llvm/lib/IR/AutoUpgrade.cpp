@@ -34,9 +34,11 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -846,6 +848,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return false; // No other 'aarch64.sve.bf*'.
       }
 
+      // 'aarch64.sve.fcvt.bf16f32' || 'aarch64.sve.fcvtnt.bf16f32'
+      if (Name == "fcvt.bf16f32" || Name == "fcvtnt.bf16f32") {
+        NewFn = nullptr;
+        return true;
+      }
+
       if (Name.consume_front("addqv")) {
         // 'aarch64.sve.addqv'.
         if (!F->getReturnType()->isFPOrFPVectorTy())
@@ -1033,12 +1041,17 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
-      if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
-          Name.starts_with("ds.fmax")) {
-        // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
-        // declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
+          Name.consume_front("flat.atomic.")) {
+        if (Name.starts_with("fadd") ||
+            // FIXME: We should also remove fmin.num and fmax.num intrinsics.
+            (Name.starts_with("fmin") && !Name.starts_with("fmin.num")) ||
+            (Name.starts_with("fmax") && !Name.starts_with("fmax.num"))) {
+          // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
+          // declaration.
+          NewFn = nullptr;
+          return true;
+        }
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -1166,6 +1179,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
       break; // No other 'experimental.vector.*'.
     }
+    if (Name.consume_front("experimental.stepvector.")) {
+      Intrinsic::ID ID = Intrinsic::stepvector;
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                        F->getFunctionType()->getReturnType());
+      return true;
+    }
     break; // No other 'e*'.
   case 'f':
     if (Name.starts_with("flt.rounds")) {
@@ -1259,6 +1279,23 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("atomic.load.add."))
         // nvvm.atomic.load.add.{f32.p,f64.p}
         Expand = Name.starts_with("f32.p") || Name.starts_with("f64.p");
+      else if (Name.consume_front("bitcast."))
+        // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
+        Expand =
+            Name == "f2i" || Name == "i2f" || Name == "ll2d" || Name == "d2ll";
+      else if (Name.consume_front("rotate."))
+        // nvvm.rotate.{b32,b64,right.b64}
+        Expand = Name == "b32" || Name == "b64" || Name == "right.b64";
+      else if (Name.consume_front("ptr.gen.to."))
+        // nvvm.ptr.gen.to.{local,shared,global,constant}
+        Expand = Name.starts_with("local") || Name.starts_with("shared") ||
+                 Name.starts_with("global") || Name.starts_with("constant");
+      else if (Name.consume_front("ptr."))
+        // nvvm.ptr.{local,shared,global,constant}.to.gen
+        Expand =
+            (Name.consume_front("local") || Name.consume_front("shared") ||
+             Name.consume_front("global") || Name.consume_front("constant")) &&
+            Name.starts_with(".to.gen");
       else
         Expand = false;
 
@@ -2243,6 +2280,117 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
       (Pos = AsmStr->find("# marker")) != std::string::npos) {
     AsmStr->replace(Pos, 1, ";");
   }
+}
+
+static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
+                                       Function *F, IRBuilder<> &Builder) {
+  Value *Rep = nullptr;
+
+  if (Name == "abs.i" || Name == "abs.ll") {
+    Value *Arg = CI->getArgOperand(0);
+    Value *Neg = Builder.CreateNeg(Arg, "neg");
+    Value *Cmp = Builder.CreateICmpSGE(
+        Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
+    Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
+  } else if (Name.starts_with("atomic.load.add.f32.p") ||
+             Name.starts_with("atomic.load.add.f64.p")) {
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Val = CI->getArgOperand(1);
+    Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
+                                  AtomicOrdering::SequentiallyConsistent);
+  } else if (Name.consume_front("max.") &&
+             (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+              Name == "ui" || Name == "ull")) {
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    Value *Cmp = Name.starts_with("u")
+                     ? Builder.CreateICmpUGE(Arg0, Arg1, "max.cond")
+                     : Builder.CreateICmpSGE(Arg0, Arg1, "max.cond");
+    Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "max");
+  } else if (Name.consume_front("min.") &&
+             (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+              Name == "ui" || Name == "ull")) {
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    Value *Cmp = Name.starts_with("u")
+                     ? Builder.CreateICmpULE(Arg0, Arg1, "min.cond")
+                     : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
+    Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");
+  } else if (Name == "clz.ll") {
+    // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
+    Value *Arg = CI->getArgOperand(0);
+    Value *Ctlz = Builder.CreateCall(
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
+                                  {Arg->getType()}),
+        {Arg, Builder.getFalse()}, "ctlz");
+    Rep = Builder.CreateTrunc(Ctlz, Builder.getInt32Ty(), "ctlz.trunc");
+  } else if (Name == "popc.ll") {
+    // llvm.nvvm.popc.ll returns an i32, but llvm.ctpop.i64 returns an
+    // i64.
+    Value *Arg = CI->getArgOperand(0);
+    Value *Popc = Builder.CreateCall(
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctpop,
+                                  {Arg->getType()}),
+        Arg, "ctpop");
+    Rep = Builder.CreateTrunc(Popc, Builder.getInt32Ty(), "ctpop.trunc");
+  } else if (Name == "h2f") {
+    Rep = Builder.CreateCall(
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::convert_from_fp16,
+                                  {Builder.getFloatTy()}),
+        CI->getArgOperand(0), "h2f");
+  } else if (Name.consume_front("bitcast.") &&
+             (Name == "f2i" || Name == "i2f" || Name == "ll2d" ||
+              Name == "d2ll")) {
+    Rep = Builder.CreateBitCast(CI->getArgOperand(0), CI->getType());
+  } else if (Name == "rotate.b32") {
+    Value *Arg = CI->getOperand(0);
+    Value *ShiftAmt = CI->getOperand(1);
+    Rep = Builder.CreateIntrinsic(Builder.getInt32Ty(), Intrinsic::fshl,
+                                  {Arg, Arg, ShiftAmt});
+  } else if (Name == "rotate.b64") {
+    Type *Int64Ty = Builder.getInt64Ty();
+    Value *Arg = CI->getOperand(0);
+    Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
+    Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshl,
+                                  {Arg, Arg, ZExtShiftAmt});
+  } else if (Name == "rotate.right.b64") {
+    Type *Int64Ty = Builder.getInt64Ty();
+    Value *Arg = CI->getOperand(0);
+    Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
+    Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshr,
+                                  {Arg, Arg, ZExtShiftAmt});
+  } else if ((Name.consume_front("ptr.gen.to.") &&
+              (Name.starts_with("local") || Name.starts_with("shared") ||
+               Name.starts_with("global") || Name.starts_with("constant"))) ||
+             (Name.consume_front("ptr.") &&
+              (Name.consume_front("local") || Name.consume_front("shared") ||
+               Name.consume_front("global") ||
+               Name.consume_front("constant")) &&
+              Name.starts_with(".to.gen"))) {
+    Rep = Builder.CreateAddrSpaceCast(CI->getArgOperand(0), CI->getType());
+  } else {
+    Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
+    if (IID != Intrinsic::not_intrinsic &&
+        !F->getReturnType()->getScalarType()->isBFloatTy()) {
+      rename(F);
+      Function *NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+      SmallVector<Value *, 2> Args;
+      for (size_t I = 0; I < NewFn->arg_size(); ++I) {
+        Value *Arg = CI->getArgOperand(I);
+        Type *OldType = Arg->getType();
+        Type *NewType = NewFn->getArg(I)->getType();
+        Args.push_back(
+            (OldType->isIntegerTy() && NewType->getScalarType()->isBFloatTy())
+                ? Builder.CreateBitCast(Arg, NewType)
+                : Arg);
+      }
+      Rep = Builder.CreateCall(NewFn, Args);
+      if (F->getReturnType()->isIntegerTy())
+        Rep = Builder.CreateBitCast(Rep, F->getReturnType());
+    }
+  }
+
+  return Rep;
 }
 
 static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
@@ -3935,6 +4083,35 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   return Rep;
 }
 
+static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
+                                          Function *F, IRBuilder<> &Builder) {
+  Intrinsic::ID NewID =
+      StringSwitch<Intrinsic::ID>(Name)
+          .Case("sve.fcvt.bf16f32", Intrinsic::aarch64_sve_fcvt_bf16f32_v2)
+          .Case("sve.fcvtnt.bf16f32", Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2)
+          .Default(Intrinsic::not_intrinsic);
+  if (NewID == Intrinsic::not_intrinsic)
+    llvm_unreachable("Unhandled Intrinsic!");
+
+  SmallVector<Value *, 3> Args(CI->args());
+
+  // The original intrinsics incorrectly used a predicate based on the smallest
+  // element type rather than the largest.
+  Type *BadPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 8);
+  Type *GoodPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
+
+  if (Args[1]->getType() != BadPredTy)
+    llvm_unreachable("Unexpected predicate type!");
+
+  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                    BadPredTy, Args[1]);
+  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
+                                    GoodPredTy, Args[1]);
+
+  Function *NewF = Intrinsic::getDeclaration(CI->getModule(), NewID);
+  return Builder.CreateCall(NewF, Args, CI->getName());
+}
+
 static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                                       IRBuilder<> &Builder) {
   if (Name == "mve.vctp64.old") {
@@ -4042,7 +4219,13 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("ds.fmin", AtomicRMWInst::FMin)
           .StartsWith("ds.fmax", AtomicRMWInst::FMax)
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
-          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap);
+          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
+          .StartsWith("global.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("global.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("flat.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("global.atomic.fmax", AtomicRMWInst::FMax)
+          .StartsWith("flat.atomic.fmax", AtomicRMWInst::FMax);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.
@@ -4096,9 +4279,20 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   AtomicRMWInst *RMW =
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
-  if (PtrTy->getAddressSpace() != 3) {
-    RMW->setMetadata("amdgpu.no.fine.grained.memory",
-                     MDNode::get(F->getContext(), {}));
+  unsigned AddrSpace = PtrTy->getAddressSpace();
+  if (AddrSpace != AMDGPUAS::LOCAL_ADDRESS) {
+    MDNode *EmptyMD = MDNode::get(F->getContext(), {});
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
+    if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
+      RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+  }
+
+  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
+    MDBuilder MDB(F->getContext());
+    MDNode *RangeNotPrivate =
+        MDB.createRange(APInt(32, AMDGPUAS::PRIVATE_ADDRESS),
+                        APInt(32, AMDGPUAS::PRIVATE_ADDRESS + 1));
+    RMW->setMetadata(LLVMContext::MD_noalias_addrspace, RangeNotPrivate);
   }
 
   if (IsVolatile)
@@ -4184,6 +4378,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     bool IsX86 = Name.consume_front("x86.");
     bool IsNVVM = Name.consume_front("nvvm.");
+    bool IsAArch64 = Name.consume_front("aarch64.");
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
@@ -4191,83 +4386,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     if (!IsX86 && Name == "stackprotectorcheck") {
       Rep = nullptr;
-    } else if (IsNVVM && (Name == "abs.i" || Name == "abs.ll")) {
-      Value *Arg = CI->getArgOperand(0);
-      Value *Neg = Builder.CreateNeg(Arg, "neg");
-      Value *Cmp = Builder.CreateICmpSGE(
-          Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
-      Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
-    } else if (IsNVVM && (Name.starts_with("atomic.load.add.f32.p") ||
-                          Name.starts_with("atomic.load.add.f64.p"))) {
-      Value *Ptr = CI->getArgOperand(0);
-      Value *Val = CI->getArgOperand(1);
-      Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
-                                    AtomicOrdering::SequentiallyConsistent);
-    } else if (IsNVVM && Name.consume_front("max.") &&
-               (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
-                Name == "ui" || Name == "ull")) {
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-      Value *Cmp = Name.starts_with("u")
-                       ? Builder.CreateICmpUGE(Arg0, Arg1, "max.cond")
-                       : Builder.CreateICmpSGE(Arg0, Arg1, "max.cond");
-      Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "max");
-    } else if (IsNVVM && Name.consume_front("min.") &&
-               (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
-                Name == "ui" || Name == "ull")) {
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-      Value *Cmp = Name.starts_with("u")
-                       ? Builder.CreateICmpULE(Arg0, Arg1, "min.cond")
-                       : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
-      Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");
-    } else if (IsNVVM && Name == "clz.ll") {
-      // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
-      Value *Arg = CI->getArgOperand(0);
-      Value *Ctlz = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                    {Arg->getType()}),
-          {Arg, Builder.getFalse()}, "ctlz");
-      Rep = Builder.CreateTrunc(Ctlz, Builder.getInt32Ty(), "ctlz.trunc");
-    } else if (IsNVVM && Name == "popc.ll") {
-      // llvm.nvvm.popc.ll returns an i32, but llvm.ctpop.i64 returns an
-      // i64.
-      Value *Arg = CI->getArgOperand(0);
-      Value *Popc = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctpop,
-                                    {Arg->getType()}),
-          Arg, "ctpop");
-      Rep = Builder.CreateTrunc(Popc, Builder.getInt32Ty(), "ctpop.trunc");
     } else if (IsNVVM) {
-      if (Name == "h2f") {
-        Rep =
-            Builder.CreateCall(Intrinsic::getDeclaration(
-                                   F->getParent(), Intrinsic::convert_from_fp16,
-                                   {Builder.getFloatTy()}),
-                               CI->getArgOperand(0), "h2f");
-      } else {
-        Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
-        if (IID != Intrinsic::not_intrinsic &&
-            !F->getReturnType()->getScalarType()->isBFloatTy()) {
-          rename(F);
-          NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
-          SmallVector<Value *, 2> Args;
-          for (size_t I = 0; I < NewFn->arg_size(); ++I) {
-            Value *Arg = CI->getArgOperand(I);
-            Type *OldType = Arg->getType();
-            Type *NewType = NewFn->getArg(I)->getType();
-            Args.push_back((OldType->isIntegerTy() &&
-                            NewType->getScalarType()->isBFloatTy())
-                               ? Builder.CreateBitCast(Arg, NewType)
-                               : Arg);
-          }
-          Rep = Builder.CreateCall(NewFn, Args);
-          if (F->getReturnType()->isIntegerTy())
-            Rep = Builder.CreateBitCast(Rep, F->getReturnType());
-        }
-      }
+      Rep = upgradeNVVMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsX86) {
       Rep = upgradeX86IntrinsicCall(Name, CI, F, Builder);
+    } else if (IsAArch64) {
+      Rep = upgradeAArch64IntrinsicCall(Name, CI, F, Builder);
     } else if (IsARM) {
       Rep = upgradeARMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsAMDGCN) {
@@ -4317,7 +4441,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
              "Must have same number of elements");
 
       SmallVector<Value *> Args(CI->args());
-      Value *NewCI = Builder.CreateCall(NewFn, Args);
+      CallInst *NewCI = Builder.CreateCall(NewFn, Args);
+      NewCI->setAttributes(CI->getAttributes());
       Value *Res = PoisonValue::get(OldST);
       for (unsigned Idx = 0; Idx < OldST->getNumElements(); ++Idx) {
         Value *Elem = Builder.CreateExtractValue(NewCI, Idx);
@@ -4886,7 +5011,25 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (DisableAutoUpgradeDebugInfo)
     return false;
 
-  unsigned Version = getDebugMetadataVersionFromModule(M);
+  // We need to get metadata before the module is verified (i.e., getModuleFlag
+  // makes assumptions that we haven't verified yet). Carefully extract the flag
+  // from the metadata.
+  unsigned Version = 0;
+  if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
+    auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
+      if (Flag->getNumOperands() < 3)
+        return false;
+      if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
+        return K->getString() == "Debug Info Version";
+      return false;
+    });
+    if (OpIt != ModFlags->op_end()) {
+      const MDOperand &ValOp = (*OpIt)->getOperand(2);
+      if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(ValOp))
+        Version = CI->getZExtValue();
+    }
+  }
+
   if (Version == DEBUG_METADATA_VERSION) {
     bool BrokenDebugInfo = false;
     if (verifyModule(M, &llvm::errs(), &BrokenDebugInfo))
@@ -5254,6 +5397,22 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
     Call.addFnAttr(Attribute::NoBuiltin);
   }
 };
+
+/// Replace "amdgpu-unsafe-fp-atomics" metadata with atomicrmw metadata
+struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
+    : public InstVisitor<AMDGPUUnsafeFPAtomicsUpgradeVisitor> {
+  AMDGPUUnsafeFPAtomicsUpgradeVisitor() = default;
+
+  void visitAtomicRMWInst(AtomicRMWInst &RMW) {
+    if (!RMW.isFloatingPointOperation())
+      return;
+
+    MDNode *Empty = MDNode::get(RMW.getContext(), {});
+    RMW.setMetadata("amdgpu.no.fine.grained.host.memory", Empty);
+    RMW.setMetadata("amdgpu.no.remote.memory.access", Empty);
+    RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
+};
 } // namespace
 
 void llvm::UpgradeFunctionAttributes(Function &F) {
@@ -5275,6 +5434,24 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
       A.isValid() && A.isStringAttribute()) {
     F.setSection(A.getValueAsString());
     F.removeFnAttr("implicit-section-name");
+  }
+
+  if (!F.empty()) {
+    // For some reason this is called twice, and the first time is before any
+    // instructions are loaded into the body.
+
+    if (Attribute A = F.getFnAttribute("amdgpu-unsafe-fp-atomics");
+        A.isValid()) {
+
+      if (A.getValueAsBool()) {
+        AMDGPUUnsafeFPAtomicsUpgradeVisitor Visitor;
+        Visitor.visit(F);
+      }
+
+      // We will leave behind dead attribute uses on external declarations, but
+      // clang never added these to declarations anyway.
+      F.removeFnAttr("amdgpu-unsafe-fp-atomics");
+    }
   }
 }
 
@@ -5393,6 +5570,18 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     // Add "-Fn32"
     if (!DL.empty() && !DL.contains("-Fn32"))
       Res.append("-Fn32");
+    return Res;
+  }
+
+  if (T.isSPARC()) {
+    // Add "-i128:128"
+    std::string I64 = "-i64:64";
+    std::string I128 = "-i128:128";
+    if (!StringRef(Res).contains(I128)) {
+      size_t Pos = Res.find(I64);
+      if (Pos != size_t(-1))
+        Res.insert(Pos + I64.size(), I128);
+    }
     return Res;
   }
 

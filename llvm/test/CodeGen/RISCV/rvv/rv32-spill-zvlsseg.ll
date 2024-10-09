@@ -11,7 +11,6 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0:       # %bb.0: # %entry
 ; SPILL-O0-NEXT:    addi sp, sp, -16
 ; SPILL-O0-NEXT:    csrr a2, vlenb
-; SPILL-O0-NEXT:    slli a2, a2, 1
 ; SPILL-O0-NEXT:    sub sp, sp, a2
 ; SPILL-O0-NEXT:    # implicit-def: $v8_v9
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, mf2, tu, ma
@@ -24,7 +23,6 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-NEXT:    addi a0, sp, 16
 ; SPILL-O0-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
-; SPILL-O0-NEXT:    slli a0, a0, 1
 ; SPILL-O0-NEXT:    add sp, sp, a0
 ; SPILL-O0-NEXT:    addi sp, sp, 16
 ; SPILL-O0-NEXT:    ret
@@ -76,10 +74,10 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlseg2.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 1 x i32>,<vscale x 1 x i32>} %0, 1
+  %1 = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) %0, i32 1)
   ret <vscale x 1 x i32> %1
 }
 
@@ -88,7 +86,6 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0:       # %bb.0: # %entry
 ; SPILL-O0-NEXT:    addi sp, sp, -16
 ; SPILL-O0-NEXT:    csrr a2, vlenb
-; SPILL-O0-NEXT:    slli a2, a2, 1
 ; SPILL-O0-NEXT:    sub sp, sp, a2
 ; SPILL-O0-NEXT:    # implicit-def: $v8_v9
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
@@ -101,7 +98,6 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-NEXT:    addi a0, sp, 16
 ; SPILL-O0-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
-; SPILL-O0-NEXT:    slli a0, a0, 1
 ; SPILL-O0-NEXT:    add sp, sp, a0
 ; SPILL-O0-NEXT:    addi sp, sp, 16
 ; SPILL-O0-NEXT:    ret
@@ -153,10 +149,10 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlseg2.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 2 x i32>,<vscale x 2 x i32>} %0, 1
+  %1 = call <vscale x 2 x i32> @llvm.riscv.tuple.extract.nxv2i32.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %0, i32 1)
   ret <vscale x 2 x i32> %1
 }
 
@@ -233,10 +229,10 @@ define <vscale x 4 x i32> @spill_zvlsseg_nxv4i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg2.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 4 x i32>,<vscale x 4 x i32>} %0, 1
+  %1 = call <vscale x 4 x i32> @llvm.riscv.tuple.extract.nxv4i32.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) %0, i32 1)
   ret <vscale x 4 x i32> %1
 }
 
@@ -313,10 +309,10 @@ define <vscale x 8 x i32> @spill_zvlsseg_nxv8i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vlseg2.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 8 x i32>,<vscale x 8 x i32>} %0, 1
+  %1 = call <vscale x 8 x i32> @llvm.riscv.tuple.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %0, i32 1)
   ret <vscale x 8 x i32> %1
 }
 
@@ -403,15 +399,15 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg3.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} %0, 1
+  %1 = call <vscale x 4 x i32> @llvm.riscv.tuple.extract.nxv4i32.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) %0, i32 1)
   ret <vscale x 4 x i32> %1
 }
 
-declare {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlseg2.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>, ptr , i32)
-declare {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlseg2.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>, ptr , i32)
-declare {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg2.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>, ptr , i32)
-declare {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vlseg2.nxv8i32(<vscale x 8 x i32>,<vscale x 8 x i32>, ptr , i32)
-declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg3.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, ptr , i32)
+declare target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2), ptr , i32, i32)
+declare target("riscv.vector.tuple", <vscale x 8 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv8i8_2t(target("riscv.vector.tuple", <vscale x 8 x i8>, 2), ptr , i32, i32)
+declare target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv16i8_2t(target("riscv.vector.tuple", <vscale x 16 x i8>, 2), ptr , i32, i32)
+declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr , i32, i32)
+declare target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.triscv.vector.tuple_nxv16i8_3t(target("riscv.vector.tuple", <vscale x 16 x i8>, 3), ptr , i32, i32)

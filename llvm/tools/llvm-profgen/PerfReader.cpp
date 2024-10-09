@@ -41,21 +41,6 @@ static cl::opt<bool>
                                 "and produce context-insensitive profile."));
 cl::opt<bool> ShowDetailedWarning("show-detailed-warning",
                                   cl::desc("Show detailed warning message."));
-cl::opt<bool>
-    LeadingIPOnly("leading-ip-only",
-                  cl::desc("Form a profile based only on sample IPs"));
-
-static cl::list<std::string> PerfEventFilter(
-    "perf-event",
-    cl::desc("Ignore samples not matching the given event names"));
-static cl::alias
-    PerfEventFilterPlural("perf-events", cl::CommaSeparated,
-                          cl::desc("Comma-delimited version of -perf-event"),
-                          cl::aliasopt(PerfEventFilter));
-
-static cl::opt<uint64_t>
-    SamplePeriod("sample-period", cl::init(1),
-                 cl::desc("The sampling period (-c) used for perf data"));
 
 extern cl::opt<std::string> PerfTraceFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
@@ -419,18 +404,13 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
     }
   }
 
-  // If filtering by events was requested, additionally request the "event"
-  // field.
-  const std::string FieldList =
-      PerfEventFilter.empty() ? "ip,brstack" : "event,ip,brstack";
-
   // Run perf script again to retrieve events for PIDs collected above
   SmallVector<StringRef, 8> ScriptSampleArgs;
   ScriptSampleArgs.push_back(PerfPath);
   ScriptSampleArgs.push_back("script");
   ScriptSampleArgs.push_back("--show-mmap-events");
   ScriptSampleArgs.push_back("-F");
-  ScriptSampleArgs.push_back(FieldList);
+  ScriptSampleArgs.push_back("ip,brstack");
   ScriptSampleArgs.push_back("-i");
   ScriptSampleArgs.push_back(PerfData);
   if (!PIDs.empty()) {
@@ -595,54 +575,14 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
 
   // Skip the leading instruction pointer.
   size_t Index = 0;
-
-  StringRef EventName;
-  // Skip a perf event name. This may or may not exist.
-  if (Records.size() > Index && Records[Index].ends_with(":")) {
-    EventName = Records[Index].ltrim().rtrim(':');
-    Index++;
-
-    if (PerfEventFilter.empty()) {
-      WithColor::warning() << "No --perf-event filter was specified, but an "
-                              "\"event\" field was found in line "
-                           << TraceIt.getLineNumber() << ": "
-                           << TraceIt.getCurrentLine() << "\n";
-    } else if (std::find(PerfEventFilter.begin(), PerfEventFilter.end(),
-                         EventName) == PerfEventFilter.end()) {
-      TraceIt.advance();
-      return false;
-    }
-
-  } else if (!PerfEventFilter.empty()) {
-    WithColor::warning() << "A --perf-event filter was specified, but no "
-                            "\"event\" field found in line "
-                         << TraceIt.getLineNumber() << ": "
-                         << TraceIt.getCurrentLine() << "\n";
-  }
-
   uint64_t LeadingAddr;
-  if (Records.size() > Index && !Records[Index].contains('/')) {
-    if (Records[Index].getAsInteger(16, LeadingAddr)) {
+  if (!Records.empty() && !Records[0].contains('/')) {
+    if (Records[0].getAsInteger(16, LeadingAddr)) {
       WarnInvalidLBR(TraceIt);
       TraceIt.advance();
       return false;
     }
-    Index++;
-  }
-
-  // We assume that if we saw an event name we also saw a leading addr.
-  // In other words, LeadingAddr is set if Index is 1 or 2.
-  if (LeadingIPOnly && Index > 0) {
-    // Form a profile only from the sample IP. Do not assume an LBR stack
-    // follows, and ignore it if it does.
-    uint64_t SampleIP = Binary->canonicalizeVirtualAddress(LeadingAddr);
-    bool SampleIPIsInternal = Binary->addressIsCode(SampleIP);
-    if (SampleIPIsInternal) {
-      // Form a half LBR entry where the sample IP is the destination.
-      LBRStack.emplace_back(LBREntry(SampleIP, SampleIP));
-    }
-    TraceIt.advance();
-    return !LBRStack.empty();
+    Index = 1;
   }
 
   // Now extract LBR samples - note that we do not reverse the
@@ -962,20 +902,6 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
                                              uint64_t Repeat) {
   SampleCounter &Counter = SampleCounters.begin()->second;
   uint64_t EndAddress = 0;
-
-  if (LeadingIPOnly) {
-    assert(Sample->LBRStack.size() == 1 &&
-           "Expected only half LBR entries for ip-only mode");
-    const LBREntry &LBR = *(Sample->LBRStack.begin());
-    uint64_t SourceAddress = LBR.Source;
-    uint64_t TargetAddress = LBR.Target;
-    if (SourceAddress == TargetAddress &&
-        Binary->addressIsCode(TargetAddress)) {
-      Counter.recordRangeCount(SourceAddress, TargetAddress, Repeat);
-    }
-    return;
-  }
-
   for (const LBREntry &LBR : Sample->LBRStack) {
     uint64_t SourceAddress = LBR.Source;
     uint64_t TargetAddress = LBR.Target;
@@ -1004,16 +930,6 @@ void LBRPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   if (extractLBRStack(TraceIt, Sample->LBRStack)) {
     warnIfMissingMMap();
     // Record LBR only samples by aggregation
-    // If a sampling period is given we can adjust the magnitude of sample
-    // counts to estimate the absolute magnitute.
-    if (SamplePeriod.getNumOccurrences()) {
-      Count *= SamplePeriod;
-      // If counts are LBR-based, as opposed to IP-based, then the magnitude is
-      // now amplified by roughly the LBR stack size. By adjusting this down, we
-      // can produce LBR-based and IP-based profiles with comparable magnitudes.
-      if (!LeadingIPOnly && Sample->LBRStack.size() > 1)
-        Count /= (Sample->LBRStack.size() - 1);
-    }
     AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
   }
 }
@@ -1146,18 +1062,6 @@ bool PerfScriptReader::isLBRSample(StringRef Line) {
   Line.trim().split(Records, " ", 2, false);
   if (Records.size() < 2)
     return false;
-  // Check if there is an event name before the leading IP.
-  // If there is, it will be in Records[0]. To skip it, we'll re-split on
-  // Records[1], which should contain the rest of the line.
-  if (Records[0].contains(":")) {
-    // If so, consume the event name and continue processing the rest of the
-    // line.
-    StringRef IPAndLBR = Records[1].ltrim();
-    Records.clear();
-    IPAndLBR.split(Records, " ", 2, false);
-    if (Records.size() < 2)
-      return false;
-  }
   if (Records[1].starts_with("0x") && Records[1].contains('/'))
     return true;
   return false;
@@ -1248,18 +1152,6 @@ void PerfScriptReader::warnInvalidRange() {
     const PerfSample *Sample = Item.first.getPtr();
     uint64_t Count = Item.second;
     uint64_t EndAddress = 0;
-
-    if (LeadingIPOnly) {
-      assert(Sample->LBRStack.size() == 1 &&
-             "Expected only half LBR entries for ip-only mode");
-      const LBREntry &LBR = *(Sample->LBRStack.begin());
-      if (LBR.Source == LBR.Target && LBR.Source != ExternalAddr) {
-        // This is an leading-addr-only profile.
-        Ranges[{LBR.Source, LBR.Source}] += Count;
-      }
-      continue;
-    }
-
     for (const LBREntry &LBR : Sample->LBRStack) {
       uint64_t SourceAddress = LBR.Source;
       uint64_t StartAddress = LBR.Target;
@@ -1307,15 +1199,11 @@ void PerfScriptReader::warnInvalidRange() {
         !Binary->addressIsCode(EndAddress))
       continue;
 
-    // IP samples can indicate activity on individual instructions rather than
-    // basic blocks/edges. In this mode, don't warn if sampled IPs aren't
-    // branches.
-    if (!LeadingIPOnly)
-      if (!Binary->addressIsCode(StartAddress) ||
-          !Binary->addressIsTransfer(EndAddress)) {
-        InstNotBoundary += I.second;
-        WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
-      }
+    if (!Binary->addressIsCode(StartAddress) ||
+        !Binary->addressIsTransfer(EndAddress)) {
+      InstNotBoundary += I.second;
+      WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
+    }
 
     auto *FRange = Binary->findFuncRange(StartAddress);
     if (!FRange) {

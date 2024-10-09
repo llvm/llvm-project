@@ -70,6 +70,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_memprof);
+      hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_callsite);
     }
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
       if (!AI->isStaticAlloca()) {
@@ -513,6 +514,12 @@ void PruningFunctionCloner::CloneBlock(
   for (BasicBlock::const_iterator II = StartingInst, IE = --BB->end(); II != IE;
        ++II) {
 
+    // Don't clone fake_use as it may suppress many optimizations
+    // due to inlining, especially SROA.
+    if (auto *IntrInst = dyn_cast<IntrinsicInst>(II))
+      if (IntrInst->getIntrinsicID() == Intrinsic::fake_use)
+        continue;
+
     Instruction *NewInst = cloneInstruction(II);
     NewInst->insertInto(NewBB, NewBB->end());
 
@@ -550,6 +557,7 @@ void PruningFunctionCloner::CloneBlock(
     if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
+      hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_callsite);
     }
 
     CloneDbgRecordsToHere(NewInst, II);

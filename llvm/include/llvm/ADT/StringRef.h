@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <iterator>
 #include <limits>
 #include <string>
 #include <string_view>
@@ -54,6 +55,9 @@ namespace llvm {
     using iterator = const char *;
     using const_iterator = const char *;
     using size_type = size_t;
+    using value_type = char;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   private:
     /// The start of the string, in an external buffer.
@@ -111,6 +115,14 @@ namespace llvm {
     iterator begin() const { return Data; }
 
     iterator end() const { return Data + Length; }
+
+    reverse_iterator rbegin() const {
+      return std::make_reverse_iterator(end());
+    }
+
+    reverse_iterator rend() const {
+      return std::make_reverse_iterator(begin());
+    }
 
     const unsigned char *bytes_begin() const {
       return reinterpret_cast<const unsigned char *>(begin());
@@ -701,7 +713,7 @@ namespace llvm {
       size_t Idx = find(Separator);
       if (Idx == npos)
         return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), slice(Idx + Separator.size(), npos));
+      return std::make_pair(slice(0, Idx), substr(Idx + Separator.size()));
     }
 
     /// Split into two substrings around the last occurrence of a separator
@@ -719,7 +731,7 @@ namespace llvm {
       size_t Idx = rfind(Separator);
       if (Idx == npos)
         return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), slice(Idx + Separator.size(), npos));
+      return std::make_pair(slice(0, Idx), substr(Idx + Separator.size()));
     }
 
     /// Split into substrings around the occurrences of a separator string.

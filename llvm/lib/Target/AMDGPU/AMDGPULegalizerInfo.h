@@ -212,7 +212,6 @@ public:
 
   bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
 
-  bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
 
@@ -227,6 +226,8 @@ public:
       const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const;
 
   bool legalizeSBufferLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
+
+  bool legalizeSBufferPrefetch(LegalizerHelper &Helper, MachineInstr &MI) const;
 
   bool legalizeTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B) const;
