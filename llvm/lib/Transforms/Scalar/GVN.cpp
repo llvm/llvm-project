@@ -1952,6 +1952,17 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
   // load, then it is fully redundant and we can use PHI insertion to compute
   // its value.  Insert PHIs and remove the fully redundant value now.
   if (UnavailableBlocks.empty()) {
+    // Excluding dead blocks, whose available values are undef. Note that we
+    // can't do this removal for partial redundancy.
+    auto AVEndIt = ValuesPerBlock.end();
+    auto AVBeginIt =
+        llvm::remove_if(ValuesPerBlock, [](const auto &AV) -> bool {
+          return AV.AV.isUndefValue();
+        });
+    ValuesPerBlock.erase(AVBeginIt, AVEndIt);
+    if (ValuesPerBlock.empty())
+      return Changed;
+
     LLVM_DEBUG(dbgs() << "GVN REMOVING NONLOCAL LOAD: " << *Load << '\n');
 
     // Perform PHI construction.
