@@ -3007,61 +3007,8 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
   return true;
 }
 
-bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B);
-static inline bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm) {
-  if (!CheckDynamicMemoryAllocation(S, OpPC))
-    return false;
-
-  const Expr *Source = nullptr;
-  const Block *BlockToDelete = nullptr;
-  {
-    // Extra scope for this so the block doesn't have this pointer
-    // pointing to it when we destroy it.
-    const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-    // Deleteing nullptr is always fine.
-    if (Ptr.isZero())
-      return true;
-
-    if (!Ptr.isRoot() || Ptr.isOnePastEnd() || Ptr.isArrayElement()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
-          << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
-      return false;
-    }
-
-    Source = Ptr.getDeclDesc()->asExpr();
-    BlockToDelete = Ptr.block();
-
-    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
-      return false;
-  }
-  assert(Source);
-  assert(BlockToDelete);
-
-  // Invoke destructors before deallocating the memory.
-  if (!RunDestructors(S, OpPC, BlockToDelete))
-    return false;
-
-  DynamicAllocator &Allocator = S.getAllocator();
-  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
-  std::optional<DynamicAllocator::Form> AllocForm =
-      Allocator.getAllocationForm(Source);
-
-  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
-    // Nothing has been deallocated, this must be a double-delete.
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_double_delete);
-    return false;
-  }
-
-  assert(AllocForm);
-  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
-                                          ? DynamicAllocator::Form::Array
-                                          : DynamicAllocator::Form::NonArray;
-  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
-                             Source);
-}
+bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
+          bool IsGlobalDelete);
 
 static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
