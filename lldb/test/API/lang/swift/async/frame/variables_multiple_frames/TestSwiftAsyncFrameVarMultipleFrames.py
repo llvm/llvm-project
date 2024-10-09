@@ -8,28 +8,28 @@ class TestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
+    def read_ptr_from_memory(self, process, addr):
+        error = lldb.SBError()
+        value = process.ReadPointerFromMemory(addr, error)
+        self.assertSuccess(error, "Failed to read memory")
+        return value
+
     # Check that the CFA chain is correctly built
     def check_cfas(self, async_frames, process):
         async_cfas = list(map(lambda frame: frame.GetCFA(), async_frames))
         expected_cfas = [async_cfas[0]]
         # The CFA chain ends in nullptr.
         while expected_cfas[-1] != 0:
-            error = lldb.SBError()
-            expected_cfas.append(
-                process.ReadPointerFromMemory(expected_cfas[-1], error)
-            )
-            self.assertSuccess(error, "Managed to read cfa memory")
+            expected_cfas.append(self.read_ptr_from_memory(process, expected_cfas[-1]))
 
         self.assertEqual(async_cfas, expected_cfas[:-1])
 
     def check_pcs(self, async_frames, process, target):
         for idx, frame in enumerate(async_frames[:-1]):
             # Read the continuation pointer from the second field of the CFA.
-            error = lldb.SBError()
-            continuation_ptr = process.ReadPointerFromMemory(
-                frame.GetCFA() + target.addr_size, error
+            continuation_ptr = self.read_ptr_from_memory(
+                process, frame.GetCFA() + target.addr_size
             )
-            self.assertSuccess(error, "Managed to read context memory")
 
             # The PC of the previous frame should be the continuation pointer
             # with the funclet's prologue skipped.
@@ -39,7 +39,7 @@ class TestCase(lldbtest.TestBase):
 
 
     def check_variables(self, async_frames, expected_values):
-        for (frame, expected_value) in zip(async_frames, expected_values):
+        for frame, expected_value in zip(async_frames, expected_values):
             myvar = frame.FindVariable("myvar")
             lldbutil.check_variable(self, myvar, False, value=expected_value)
 
