@@ -3,8 +3,8 @@
 define void @main() {
 entry:
 ; CHECK: call i32 @dx.op.waveGetLaneIndex(i32 111)
-  %0 = call i32 @llvm.dx.waveGetLaneIndex()
+  %0 = call i32 @llvm.dx.wave.getlaneindex()
   ret void
 }
 
-declare i32 @llvm.dx.waveGetLaneIndex()
+declare i32 @llvm.dx.wave.getlaneindex()
