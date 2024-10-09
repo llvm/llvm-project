@@ -34,6 +34,31 @@
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {
 # CHECK-NEXT:          "changes": {
+# CHECK-NEXT:            "file:///clangd-test/foo.c": [
+# CHECK-NEXT:              {
+# CHECK-NEXT:                "newText": "// NOLINTNEXTLINE(clang-diagnostic-parentheses)\n",
+# CHECK-NEXT:                "range": {
+# CHECK-NEXT:                  "end": {
+# CHECK-NEXT:                    "character": 0,
+# CHECK-NEXT:                    "line": 0
+# CHECK-NEXT:                  },
+# CHECK-NEXT:                  "start": {
+# CHECK-NEXT:                    "character": 0,
+# CHECK-NEXT:                    "line": 0
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              }
+# CHECK-NEXT:            ]
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "title": "Apply fix: ignore [clang-diagnostic-parentheses] for this line"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "arguments": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "changes": {
 # CHECK-NEXT:            "file://{{.*}}/foo.c": [
 # CHECK-NEXT:              {
 # CHECK-NEXT:                "newText": "(",
@@ -100,6 +125,31 @@
 #      CHECK:  "id": 3,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "arguments": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "changes": {
+# CHECK-NEXT:            "file:///clangd-test/foo.c": [
+# CHECK-NEXT:              {
+# CHECK-NEXT:                "newText": "// NOLINTNEXTLINE(clang-diagnostic-parentheses)\n",
+# CHECK-NEXT:                "range": {
+# CHECK-NEXT:                  "end": {
+# CHECK-NEXT:                    "character": 0,
+# CHECK-NEXT:                    "line": 0
+# CHECK-NEXT:                  },
+# CHECK-NEXT:                  "start": {
+# CHECK-NEXT:                    "character": 0,
+# CHECK-NEXT:                    "line": 0
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              }
+# CHECK-NEXT:            ]
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "title": "Apply fix: ignore [clang-diagnostic-parentheses] for this line"
+# CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {

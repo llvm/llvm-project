@@ -832,8 +832,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     LastDiagOriginallyError = OriginallyError;
     if (!Info.getFixItHints().empty())
       AddFix(true /* try to invent a message instead of repeating the diag */);
-    if (Fixer) {
-      auto ExtraFixes = Fixer(*LastDiag, Info);
+    if (MainFixer) {
+      auto ExtraFixes = MainFixer(*LastDiag, Info);
       LastDiag->Fixes.insert(LastDiag->Fixes.end(), ExtraFixes.begin(),
                              ExtraFixes.end());
     }
@@ -851,8 +851,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       return;
 
     // Give include-fixer a chance to replace a note with a fix.
-    if (Fixer) {
-      auto ReplacementFixes = Fixer(*LastDiag, Info);
+    if (NoteFixer) {
+      auto ReplacementFixes = NoteFixer(*LastDiag, Info);
       if (!ReplacementFixes.empty()) {
         assert(Info.getNumFixItHints() == 0 &&
                "Include-fixer replaced a note with clang fix-its attached!");

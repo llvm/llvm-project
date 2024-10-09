@@ -54,6 +54,53 @@
 # CHECK-NEXT:          {
 # CHECK-NEXT:            "edits": [
 # CHECK-NEXT:              {
+# CHECK-NEXT:                "newText": "// NOLINTNEXTLINE(clang-diagnostic-parentheses)\n",
+# CHECK-NEXT:                "range": {
+# CHECK-NEXT:                  "end": {
+# CHECK-NEXT:                    "character": 0,
+# CHECK-NEXT:                    "line": 0
+# CHECK-NEXT:                  },
+# CHECK-NEXT:                  "start": {
+# CHECK-NEXT:                    "character": 0,
+# CHECK-NEXT:                    "line": 0
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              }
+# CHECK-NEXT:            ],
+# CHECK-NEXT:            "textDocument": {
+# CHECK-NEXT:              "uri": "file:///clangd-test/foo.c",
+# CHECK-NEXT:              "version": 1
+# CHECK-NEXT:            }
+# CHECK-NEXT:          }
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "kind": "quickfix",
+# CHECK-NEXT:      "title": "ignore [clang-diagnostic-parentheses] for this line"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "diagnostics": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "code": "-Wparentheses",
+# CHECK-NEXT:          "message": "Using the result of an assignment as a condition without parentheses (fixes available)",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 37,
+# CHECK-NEXT:              "line": 0
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 32,
+# CHECK-NEXT:              "line": 0
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "severity": 2,
+# CHECK-NEXT:          "source": "clang"
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "edit": {
+# CHECK-NEXT:        "documentChanges": [
+# CHECK-NEXT:          {
+# CHECK-NEXT:            "edits": [
+# CHECK-NEXT:              {
 # CHECK-NEXT:                "newText": "(",
 # CHECK-NEXT:                "range": {
 # CHECK-NEXT:                  "end": {
