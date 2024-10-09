@@ -1,18 +1,18 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:   -DFNATTRS=noundef -DTARGET=dx
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DFNATTRS=noundef -DTARGET=dx
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:   -DFNATTRS="spir_func noundef" -DTARGET=spv
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DFNATTRS="spir_func noundef" -DTARGET=spv

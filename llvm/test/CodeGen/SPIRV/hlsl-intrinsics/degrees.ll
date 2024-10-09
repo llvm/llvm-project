@@ -11,6 +11,7 @@
 ; CHECK-DAG: %[[#vec4_float_16:]] = OpTypeVector %[[#float_16]] 4
 ; CHECK-DAG: %[[#vec4_float_64:]] = OpTypeVector %[[#float_64]] 4
 
+; CHECK-LABEL: Begin function degrees_float
 define noundef float @degrees_float(float noundef %a) {
 entry:
 ; CHECK: %[[#float_32_arg:]] = OpFunctionParameter %[[#float_32]]
@@ -19,6 +20,7 @@ entry:
   ret float %elt.degrees
 }
 
+; CHECK-LABEL: Begin function degrees_half
 define noundef half @degrees_half(half noundef %a) {
 entry:
 ; CHECK: %[[#float_16_arg:]] = OpFunctionParameter %[[#float_16]]
@@ -27,6 +29,7 @@ entry:
   ret half %elt.degrees
 }
 
+; CHECK-LABEL: Begin function degrees_double
 define noundef double @degrees_double(double noundef %a) {
 entry:
 ; CHECK: %[[#float_64_arg:]] = OpFunctionParameter %[[#float_64]]
@@ -35,6 +38,7 @@ entry:
   ret double %elt.degrees
 }
 
+; CHECK-LABEL: Begin function degrees_float_vector
 define noundef <4 x float> @degrees_float_vector(<4 x float> noundef %a) {
 entry:
 ; CHECK: %[[#vec4_float_32_arg:]] = OpFunctionParameter %[[#vec4_float_32]]
@@ -43,6 +47,7 @@ entry:
   ret <4 x float> %elt.degrees
 }
 
+; CHECK-LABEL: Begin function degrees_half_vector
 define noundef <4 x half> @degrees_half_vector(<4 x half> noundef %a) {
 entry:
 ; CHECK: %[[#vec4_float_16_arg:]] = OpFunctionParameter %[[#vec4_float_16]]
@@ -51,6 +56,7 @@ entry:
   ret <4 x half> %elt.degrees
 }
 
+; CHECK-LABEL: Begin function degrees_double_vector
 define noundef <4 x double> @degrees_double_vector(<4 x double> noundef %a) {
 entry:
 ; CHECK: %[[#vec4_float_64_arg:]] = OpFunctionParameter %[[#vec4_float_64]]
