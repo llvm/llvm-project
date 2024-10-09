@@ -29,6 +29,7 @@
 
 namespace llvm {
 
+class Function;
 class Value;
 class APInt;
 class LLVMContext;
@@ -188,6 +189,8 @@ public:
   Value *getCallee() { return Callee; }
 
   explicit operator bool() { return Callee; }
+
+  Function *getAsFunction();
 
 private:
   FunctionType *FnTy = nullptr;
