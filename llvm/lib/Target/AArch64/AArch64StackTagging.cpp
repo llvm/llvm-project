@@ -506,19 +506,8 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     Value *RecordPtr = IRB.CreateIntToPtr(ThreadLong, IRB.getPtrTy(0));
     IRB.CreateStore(PC, RecordPtr);
     IRB.CreateStore(TaggedFP, IRB.CreateConstGEP1_64(IntptrTy, RecordPtr, 1));
-    // Update the ring buffer. Top byte of ThreadLong defines the size of the
-    // buffer in pages, it must be a power of two, and the start of the buffer
-    // must be aligned by twice that much. Therefore wrap around of the ring
-    // buffer is simply Addr &= ~((ThreadLong >> 56) << 12).
-    // The use of AShr instead of LShr is due to
-    //   https://bugs.llvm.org/show_bug.cgi?id=39030
-    // Runtime library makes sure not to use the highest bit.
-    Value *WrapMask = IRB.CreateXor(
-        IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
-        ConstantInt::get(IntptrTy, (uint64_t)-1));
-    Value *ThreadLongNew = IRB.CreateAnd(
-        IRB.CreateAdd(ThreadLong, ConstantInt::get(IntptrTy, 16)), WrapMask);
-    IRB.CreateStore(ThreadLongNew, SlotPtr);
+
+    IRB.CreateStore(memtag::incrementThreadLong(IRB, ThreadLong, 16), SlotPtr);
   }
   return Base;
 }
@@ -580,14 +569,14 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   Instruction *Base =
       insertBaseTaggedPointer(*Fn.getParent(), SInfo.AllocasToInstrument, DT);
 
-  int NextTag = 0;
+  unsigned int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && SIB.getAllocaInterestingness(*Info.AI) ==
                           llvm::memtag::AllocaInterestingness::kInteresting);
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
-    int Tag = NextTag;
+    unsigned int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
@@ -642,7 +631,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         II->eraseFromParent();
     }
 
-    memtag::annotateDebugRecords(Info, static_cast<unsigned long>(Tag));
+    memtag::annotateDebugRecords(Info, Tag);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime

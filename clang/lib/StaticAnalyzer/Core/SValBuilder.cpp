@@ -600,8 +600,9 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   if (getContext().getTypeSize(castTy) >= getContext().getTypeSize(originalTy))
     return evalCast(val, castTy, originalTy);
 
-  SymbolRef se = val.getAsSymbol();
-  if (!se) // Let evalCast handle non symbolic expressions.
+  auto AsNonLoc = val.getAs<NonLoc>();
+  SymbolRef AsSymbol = val.getAsSymbol();
+  if (!AsSymbol || !AsNonLoc) // Let evalCast handle non symbolic expressions.
     return evalCast(val, castTy, originalTy);
 
   // Find the maximum value of the target type.
@@ -613,15 +614,14 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
 
   // Check the range of the symbol being casted against the maximum value of the
   // target type.
-  NonLoc FromVal = val.castAs<NonLoc>();
   QualType CmpTy = getConditionType();
-  NonLoc CompVal =
-      evalBinOpNN(state, BO_LE, FromVal, ToTypeMaxVal, CmpTy).castAs<NonLoc>();
+  NonLoc CompVal = evalBinOpNN(state, BO_LE, *AsNonLoc, ToTypeMaxVal, CmpTy)
+                       .castAs<NonLoc>();
   ProgramStateRef IsNotTruncated, IsTruncated;
   std::tie(IsNotTruncated, IsTruncated) = state->assume(CompVal);
   if (!IsNotTruncated && IsTruncated) {
     // Symbol is truncated so we evaluate it as a cast.
-    return makeNonLoc(se, originalTy, castTy);
+    return makeNonLoc(AsSymbol, originalTy, castTy);
   }
   return evalCast(val, castTy, originalTy);
 }
