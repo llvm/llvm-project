@@ -200,6 +200,10 @@ module std_core [system] {
       header "__type_traits/is_fundamental.h"
       export std_core.type_traits.integral_constant
     }
+    module is_implicit_lifetime {
+      header "__type_traits/is_implicit_lifetime.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_implicitly_default_constructible {
       header "__type_traits/is_implicitly_default_constructible.h"
       export std_core.type_traits.integral_constant
