@@ -174,6 +174,137 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   if (!valobj_sp)
     return optional_info;
 
+  // std::function has many variants, try to disambiguate
+  ValueObjectSP func_as_base_ptr;
+  {
+    ValueObjectSP outer_f = valobj_sp->GetChildMemberWithName("__f_");
+    
+    if (!outer_f)
+      return optional_info; // Unrecognized implementation
+    
+    if (outer_f->IsPointerType()) {
+      // git: 3e519524c118651123eecf60c2bbc5d65ad9bac3
+      //
+      // class function<_Rp()> {
+      //   aligned_storage<3*sizeof(void*)>::type __buf_;
+      //   __base<_Rp>* __f_;
+      // }
+      
+      func_as_base_ptr = std::move(outer_f);
+    } else if (auto inner_f = outer_f->GetChildMemberWithName("__f_")) {
+      // git: 050b064f15ee56ee0b42c9b957a3dd0f32532394
+      //
+      // class function<_Rp(_ArgTypes...)> {
+      //   __value_func<_Rp(_ArgTypes...)> __f_;
+      // }
+      //
+      // class __value_func<_Rp(_ArgTypes...)> {
+      //   aligned_storage<3 * sizeof(void*)>::type __buf_;
+      //   __base<_Rp(_ArgTypes...)>* __f_;
+      // }
+      
+      func_as_base_ptr = std::move(inner_f);
+    } else
+      return optional_info; // Unrecognized implementation
+  }
+  
+  // __base<...> is a pure virtual class with an interface to create/copy/destroy/invoke
+  // the underlying value. This interface is implemented by partial specializations of the
+  // __func<_Fp, _Alloc, ...> template where _Fp is the wrapped functor object
+  Status status;
+  ValueObjectSP func_as_base = func_as_base_ptr->Dereference(status);
+  if (status.Fail())
+    return optional_info;
+  
+  // First we'll try to extract the __func<...> template instantiation's type by looking up
+  // the declarations of the member function pointers in it's vtable
+  CompilerType func_type;
+  {
+    ValueObjectSP vtable = func_as_base->GetVTable();
+
+    llvm::Expected<uint32_t> num_entries = vtable->GetNumChildren();
+    if (num_entries.takeError())
+      return optional_info;
+    
+    // __base is pure virtual, __func is final. All member function pointers are equally
+    // good candidates to find the enclosing class.
+    //
+    // In practice the first two vtable entries point to artificial destructors which the
+    // type system refuses to elaborate as their artificial specifications are not added
+    // to the enclosing class' declaration context. This causes various warnings, and dont
+    // get us any closer to the concrete type thus we skip them.
+    for (uint32_t idx = 2; idx < *num_entries; idx++) {
+      ValueObjectSP entry = vtable->GetChildAtIndex(idx);
+      
+      // Points to a potentially interesting member function
+      addr_t mfunc_load_addr = entry->GetValueAsUnsigned(0);
+      if (!mfunc_load_addr)
+        continue;
+      
+      Address mfunc_symbol_addr;
+      if (!valobj_sp->GetTargetSP()->ResolveLoadAddress(mfunc_load_addr, mfunc_symbol_addr))
+        continue;
+      
+      Function* func = mfunc_symbol_addr.CalculateSymbolContextFunction();
+      if (!func)
+        continue;
+      
+      CompilerDeclContext mfunc_decl_ctx = func->GetDeclContext();
+      if (!mfunc_decl_ctx.IsClassMethod())
+        continue;
+      
+      // Member functions are contained in their enclosing class' decl context
+      CompilerDeclContext mfunc_parent = mfunc_decl_ctx.GetDecl().GetDeclContext();
+      if (!mfunc_parent.IsValid())
+        continue;
+      
+      func_type = mfunc_parent.GetDecl().GetType();
+      break;
+    }
+  }
+  
+  // Regardless of what std::function wraps we are looking for the load address of a function to call
+  std::optional<addr_t> target_func_load_addr;
+
+  if (CompilerType callable_type = func_type.GetTypeTemplateArgument(0)) {
+    if (callable_type.IsFunctionPointerType() || callable_type.IsMemberFunctionPointerType()) {
+      // TODO: The previous implementation just does raw pointer arithmetic and reads
+      // 'a pointer' to a function right after the vtable.
+      //
+      // What is the preferred approach? Go digging for the compressed_pair.first in __func
+      // or assume layout citing ABI compatibility requirements?
+    } else if (callable_type.IsRecordType()) {
+      // Target is a lambda, or a generic callable. Search for a single operator() overload
+      std::optional<ConstString> mangled_func_name;
+      
+      for (uint32_t idx = 0; idx < callable_type.GetNumMemberFunctions(); idx++) {
+        TypeMemberFunctionImpl mfunc = callable_type.GetMemberFunctionAtIndex(idx);
+        
+        if (mfunc.GetKind() != eMemberFunctionKindInstanceMethod)
+          continue;
+        
+        if (mfunc.GetName() != "operator()")
+          continue;
+          
+        if (mangled_func_name)
+          return optional_info; // Cannot resolve ambiguous target
+        
+        mangled_func_name = mfunc.GetMangledName();
+      }
+      
+      // TODO: The SymbolFile did a bunch of work to reconstruct `callable_type`,
+      // including it's member functions. Surely it knows there they are loaded?
+    }
+  } else {
+    // TODO: What if we don't have debug info for callable_type? Do we fallback to
+    // treating the std::function as wrapping a function/member function pointer
+    // due to lack of options, or give up to avoid guessing wrong?
+  }
+  
+  if (!target_func_load_addr)
+    return optional_info;
+    
+  
   // Member __f_ has type __base*, the contents of which will hold:
   // 1) a vtable entry which may hold type information needed to discover the
   //    lambda being called
@@ -232,7 +363,6 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     return optional_info;
 
   uint32_t address_size = process->GetAddressByteSize();
-  Status status;
 
   // First item pointed to by __f_ should be the pointer to the vtable for
   // a __base object.
