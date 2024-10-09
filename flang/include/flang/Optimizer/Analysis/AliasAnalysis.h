@@ -157,6 +157,17 @@ struct AliasAnalysis {
     bool isData() const;
     bool isBoxData() const;
 
+    /// Check conditions related to dummy argument aliasing.
+    ///
+    /// For all uses, a result of false can prevent MayAlias from being
+    /// reported, so the list of cases where false is returned is conservative.
+    /// @{
+    bool aliasesLikeDummyArg() const;
+    bool aliasesLikePtrDummyArg() const;
+    bool canBeActualArg() const;
+    bool canBeActualArgWithPtr(const mlir::Value *val) const;
+    /// @}
+
     mlir::Type getType() const;
   };
 
