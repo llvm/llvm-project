@@ -179,16 +179,6 @@ private:
     assert(!Path.empty() && "Main file path not known?");
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
-    auto Cwd = getCompilerInstance()
-                   .getFileManager()
-                   .getVirtualFileSystem()
-                   .getCurrentWorkingDirectory();
-    if (Cwd.getError()) {
-      llvm::errs() << "Failed to get current working directory: "
-                   << Cwd.getError().message() << "\n";
-      return;
-    }
-
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
                 getCompilerInstance().getPreprocessor(), HeaderFilter);
@@ -212,17 +202,8 @@ private:
       }
     }
 
-    if (!Results.Missing.empty() || !Results.Unused.empty()) {
-      auto Sept = llvm::sys::path::get_separator();
-      // Adjust the path to be absolute if it is not.
-      std::string FullPath;
-      if (llvm::sys::path::is_absolute(Path))
-        FullPath = Path.str();
-      else
-        FullPath = Cwd.get() + Sept.str() + Path.str();
-
-      EditedFiles.try_emplace(FullPath, Final);
-    }
+    if (!Results.Missing.empty() || !Results.Unused.empty())
+      EditedFiles.try_emplace(Path, Final);
   }
 
   void writeHTML() {
@@ -300,6 +281,42 @@ std::function<bool(llvm::StringRef)> headerFilter() {
   };
 }
 
+llvm::ErrorOr<std::string> getCurrentWorkingDirectory() {
+  llvm::SmallString<256> CurrentPath;
+  if (const std::error_code EC = llvm::sys::fs::current_path(CurrentPath))
+    return llvm::ErrorOr<std::string>(EC);
+  return std::string(CurrentPath.str());
+}
+
+std::optional<std::string>
+adjustCompilationPath(const std::string &Filename, const std::string &Directory,
+                      const std::string &CurrentWorkingDirectory) {
+  if (llvm::sys::path::is_absolute(Filename)) {
+    // If the file path is already absolute, use it as is.
+    return Filename;
+  }
+
+  auto Sept = llvm::sys::path::get_separator().str();
+  // First, try to find the file based on the compilation database.
+  std::string FilePath = Directory + Sept + Filename;
+  // Check if it is writable.
+  if (llvm::sys::fs::access(FilePath, llvm::sys::fs::AccessMode::Write) !=
+      std::error_code()) {
+    // If not, try to find the file based on the current working
+    // directory, as some Bazel invocations may not set the compilation
+    // invocation's filesystem as non-writable. In such cases, we can
+    // find the file based on the current working directory.
+    FilePath =
+        static_cast<std::string>(CurrentWorkingDirectory) + Sept + Filename;
+    if (llvm::sys::fs::access(FilePath, llvm::sys::fs::AccessMode::Write) !=
+        std::error_code()) {
+      llvm::errs() << "Failed to find a writable path for " << Filename << "\n";
+      return std::nullopt;
+    }
+  }
+  return FilePath;
+}
+
 } // namespace
 } // namespace include_cleaner
 } // namespace clang
@@ -325,7 +342,32 @@ int main(int argc, const char **argv) {
     }
   }
 
-  clang::tooling::ClangTool Tool(OptionsParser->getCompilations(),
+  auto &CompilationDatabase = OptionsParser->getCompilations();
+  // Mapping of edited file paths to their actual paths.
+  std::map<std::string, std::string> EditedFilesToActualFiles;
+  if (Edit) {
+    std::vector<clang::tooling::CompileCommand> Commands =
+        CompilationDatabase.getAllCompileCommands();
+    auto CurrentWorkingDirectory = getCurrentWorkingDirectory();
+    // if (CurrentWorkingDirectory.get()
+    if (auto EC = CurrentWorkingDirectory.getError()) {
+      llvm::errs() << "Failed to get current working directory: "
+                   << EC.message() << "\n";
+      return 1;
+    }
+
+    for (const auto &Command : Commands) {
+      auto AdjustedFilePath = adjustCompilationPath(
+          Command.Filename, Command.Directory, CurrentWorkingDirectory.get());
+      if (!AdjustedFilePath.has_value()) {
+        // We already printed an error message.
+        return 1;
+      }
+      EditedFilesToActualFiles[Command.Filename] = AdjustedFilePath.value();
+    }
+  }
+
+  clang::tooling::ClangTool Tool(CompilationDatabase,
                                  OptionsParser->getSourcePathList());
 
   auto HeaderFilter = headerFilter();
@@ -336,6 +378,15 @@ int main(int argc, const char **argv) {
   if (Edit) {
     for (const auto &NameAndContent : Factory.editedFiles()) {
       llvm::StringRef FileName = NameAndContent.first();
+      auto AdjustedFilePathIter = EditedFilesToActualFiles.find(FileName.str());
+      if (AdjustedFilePathIter != EditedFilesToActualFiles.end()) {
+        FileName = AdjustedFilePathIter->second;
+      } else {
+        llvm::errs() << "Failed to find the actual path for " << FileName
+                     << "\n";
+        ++Errors;
+      }
+
       const std::string &FinalCode = NameAndContent.second;
       if (auto Err = llvm::writeToOutput(
               FileName, [&](llvm::raw_ostream &OS) -> llvm::Error {
