@@ -552,7 +552,7 @@ is largely ready for everyday use but it is continuously improved to reduce
 unnecessary noise as well as cover some of the trickier unsafe operations.
 
 Fix-It Hints for ``-Wunsafe-buffer-usage``
------------------------------------------
+------------------------------------------
 
 A code transformation tool is in development that can semi-automatically
 transform large bodies of code to follow the C++ Safe Buffers programming model.
