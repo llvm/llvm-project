@@ -1504,8 +1504,8 @@ bool AMDGPUInstructionSelector::selectGroupStaticSize(MachineInstr &I) const {
     MIB.addImm(MFI->getLDSSize());
   } else {
     Module *M = MF->getFunction().getParent();
-    const GlobalValue *GV
-      = Intrinsic::getDeclaration(M, Intrinsic::amdgcn_groupstaticsize);
+    const GlobalValue *GV =
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::amdgcn_groupstaticsize);
     MIB.addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS32_LO);
   }
 

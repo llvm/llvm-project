@@ -31163,12 +31163,14 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   if (BitTested.second == ConstantBit || BitTested.second == NotConstantBit) {
     auto *C = cast<ConstantInt>(I->getOperand(I->getOperand(0) == AI ? 1 : 0));
 
-    BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_C, AI->getType());
+    BitTest = Intrinsic::getOrInsertDeclaration(AI->getModule(), IID_C,
+                                                AI->getType());
 
     unsigned Imm = llvm::countr_zero(C->getZExtValue());
     Result = Builder.CreateCall(BitTest, {Addr, Builder.getInt8(Imm)});
   } else {
-    BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_I, AI->getType());
+    BitTest = Intrinsic::getOrInsertDeclaration(AI->getModule(), IID_I,
+                                                AI->getType());
 
     assert(BitTested.second == ShiftBit || BitTested.second == NotShiftBit);
 
@@ -31328,7 +31330,7 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     break;
   }
   Function *CmpArith =
-      Intrinsic::getDeclaration(AI->getModule(), IID, AI->getType());
+      Intrinsic::getOrInsertDeclaration(AI->getModule(), IID, AI->getType());
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
                                           PointerType::getUnqual(Ctx));
   Value *Call = Builder.CreateCall(
@@ -31444,7 +31446,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
     return nullptr;
 
   Function *MFence =
-      llvm::Intrinsic::getDeclaration(M, Intrinsic::x86_sse2_mfence);
+      llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_sse2_mfence);
   Builder.CreateCall(MFence, {});
 
   // Finally we can emit the atomic load.

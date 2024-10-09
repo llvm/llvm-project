@@ -20750,7 +20750,7 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
   Value *Ordering =
       Builder.getIntN(XLen, static_cast<uint64_t>(AI->getOrdering()));
   Type *Tys[] = {AlignedAddr->getType()};
-  Function *LrwOpScwLoop = Intrinsic::getDeclaration(
+  Function *LrwOpScwLoop = Intrinsic::getOrInsertDeclaration(
       AI->getModule(),
       getIntrinsicForMaskedAtomicRMWBinOp(XLen, AI->getOperation()), Tys);
 
@@ -20814,7 +20814,7 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   }
   Type *Tys[] = {AlignedAddr->getType()};
   Function *MaskedCmpXchg =
-      Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
+      Intrinsic::getOrInsertDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
   Value *Result = Builder.CreateCall(
       MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
   if (XLen == 64)
@@ -21312,7 +21312,7 @@ bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {
 static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {
   Module *M = IRB.GetInsertBlock()->getModule();
   Function *ThreadPointerFunc =
-      Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
                                 IRB.CreateCall(ThreadPointerFunc), Offset);
 }
@@ -21429,9 +21429,9 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
 
-  Function *VlsegNFunc =
-      Intrinsic::getDeclaration(LI->getModule(), FixedVlsegIntrIds[Factor - 2],
-                                {VTy, LI->getPointerOperandType(), XLenTy});
+  Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
+      LI->getModule(), FixedVlsegIntrIds[Factor - 2],
+      {VTy, LI->getPointerOperandType(), XLenTy});
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
 
@@ -21483,9 +21483,9 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   auto *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
-  Function *VssegNFunc =
-      Intrinsic::getDeclaration(SI->getModule(), FixedVssegIntrIds[Factor - 2],
-                                {VTy, SI->getPointerOperandType(), XLenTy});
+  Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
+      SI->getModule(), FixedVssegIntrIds[Factor - 2],
+      {VTy, SI->getPointerOperandType(), XLenTy});
 
   auto Mask = SVI->getShuffleMask();
   SmallVector<Value *, 10> Ops;
@@ -21530,7 +21530,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(ResVTy)) {
-    Function *VlsegNFunc = Intrinsic::getDeclaration(
+    Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
         LI->getModule(), FixedVlsegIntrIds[Factor - 2],
         {ResVTy, LI->getPointerOperandType(), XLenTy});
     Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
@@ -21550,7 +21550,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                 NumElts * SEW / 8),
         Factor);
 
-    Function *VlsegNFunc = Intrinsic::getDeclaration(
+    Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
         LI->getModule(), IntrIds[Factor - 2], {VecTupTy, XLenTy});
     Value *VL = Constant::getAllOnesValue(XLenTy);
 
@@ -21560,7 +21560,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
     SmallVector<Type *, 2> AggrTypes{Factor, ResVTy};
     Return = PoisonValue::get(StructType::get(LI->getContext(), AggrTypes));
-    Function *VecExtractFunc = Intrinsic::getDeclaration(
+    Function *VecExtractFunc = Intrinsic::getOrInsertDeclaration(
         LI->getModule(), Intrinsic::riscv_tuple_extract, {ResVTy, VecTupTy});
     for (unsigned i = 0; i < Factor; ++i) {
       Value *VecExtract =
@@ -21596,7 +21596,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
   Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(InVTy)) {
-    Function *VssegNFunc = Intrinsic::getDeclaration(
+    Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
         SI->getModule(), FixedVssegIntrIds[Factor - 2],
         {InVTy, SI->getPointerOperandType(), XLenTy});
     Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
@@ -21617,12 +21617,12 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
                                 NumElts * SEW / 8),
         Factor);
 
-    Function *VssegNFunc = Intrinsic::getDeclaration(
+    Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
         SI->getModule(), IntrIds[Factor - 2], {VecTupTy, XLenTy});
 
     Value *VL = Constant::getAllOnesValue(XLenTy);
 
-    Function *VecInsertFunc = Intrinsic::getDeclaration(
+    Function *VecInsertFunc = Intrinsic::getOrInsertDeclaration(
         SI->getModule(), Intrinsic::riscv_tuple_insert, {VecTupTy, InVTy});
     Value *StoredVal = PoisonValue::get(VecTupTy);
     for (unsigned i = 0; i < Factor; ++i)
