@@ -272,6 +272,18 @@ std::optional<unsigned> getMaxNTID(const Function &F) {
   return std::nullopt;
 }
 
+std::optional<unsigned> getClusterDimx(const Function &F) {
+  return findOneNVVMAnnotation(&F, "cluster_dim_x");
+}
+
+std::optional<unsigned> getClusterDimy(const Function &F) {
+  return findOneNVVMAnnotation(&F, "cluster_dim_y");
+}
+
+std::optional<unsigned> getClusterDimz(const Function &F) {
+  return findOneNVVMAnnotation(&F, "cluster_dim_z");
+}
+
 std::optional<unsigned> getMaxClusterRank(const Function &F) {
   return findOneNVVMAnnotation(&F, "maxclusterrank");
 }

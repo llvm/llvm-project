@@ -9,7 +9,7 @@ define signext i16 @f(ptr %bp, ptr %ss)   {
 ; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %cond_next127
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%eax), %edx

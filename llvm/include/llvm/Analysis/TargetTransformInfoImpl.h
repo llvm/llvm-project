@@ -377,6 +377,11 @@ public:
     return false;
   }
 
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const {
+    return false;
+  }
+
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
@@ -407,9 +412,13 @@ public:
   bool enableSelectOptimize() const { return true; }
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I) {
+    // A select with two constant operands will usually be better left as a
+    // select.
+    using namespace llvm::PatternMatch;
+    if (match(I, m_Select(m_Value(), m_Constant(), m_Constant())))
+      return false;
     // If the select is a logical-and/logical-or then it is better treated as a
     // and/or by the backend.
-    using namespace llvm::PatternMatch;
     return isa<SelectInst>(I) &&
            !match(I, m_CombineOr(m_LogicalAnd(m_Value(), m_Value()),
                                  m_LogicalOr(m_Value(), m_Value())));
@@ -666,6 +675,8 @@ public:
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                      CmpInst::Predicate VecPred,
                                      TTI::TargetCostKind CostKind,
+                                     TTI::OperandValueInfo Op1Info,
+                                     TTI::OperandValueInfo Op2Info,
                                      const Instruction *I) const {
     return 1;
   }
@@ -1332,19 +1343,23 @@ public:
             match(U, m_LogicalOr()) ? Instruction::Or : Instruction::And, Ty,
             CostKind, Op1Info, Op2Info, Operands, I);
       }
+      const auto Op1Info = TTI::getOperandInfo(Operands[1]);
+      const auto Op2Info = TTI::getOperandInfo(Operands[2]);
       Type *CondTy = Operands[0]->getType();
       return TargetTTI->getCmpSelInstrCost(Opcode, U->getType(), CondTy,
                                            CmpInst::BAD_ICMP_PREDICATE,
-                                           CostKind, I);
+                                           CostKind, Op1Info, Op2Info, I);
     }
     case Instruction::ICmp:
     case Instruction::FCmp: {
+      const auto Op1Info = TTI::getOperandInfo(Operands[0]);
+      const auto Op2Info = TTI::getOperandInfo(Operands[1]);
       Type *ValTy = Operands[0]->getType();
       // TODO: Also handle ICmp/FCmp constant expressions.
       return TargetTTI->getCmpSelInstrCost(Opcode, ValTy, U->getType(),
                                            I ? cast<CmpInst>(I)->getPredicate()
                                              : CmpInst::BAD_ICMP_PREDICATE,
-                                           CostKind, I);
+                                           CostKind, Op1Info, Op2Info, I);
     }
     case Instruction::InsertElement: {
       auto *IE = dyn_cast<InsertElementInst>(U);

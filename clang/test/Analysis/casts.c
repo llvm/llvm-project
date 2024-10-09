@@ -129,7 +129,7 @@ void locAsIntegerCasts(void *p) {
 }
 
 void multiDimensionalArrayPointerCasts(void) {
-  static int x[10][10]; // expected-note2{{Array at the right-hand side of subtraction}}
+  static int x[10][10];
   int *y1 = &(x[3][5]);
   char *z = ((char *) y1) + 2;
   int *y2 = (int *)(z - 2);
@@ -138,9 +138,7 @@ void multiDimensionalArrayPointerCasts(void) {
   clang_analyzer_eval(y1 == y2); // expected-warning{{TRUE}}
 
   // FIXME: should be FALSE (i.e. equal pointers).
-  // FIXME: pointer subtraction warning might be incorrect
   clang_analyzer_eval(y1 - y2); // expected-warning{{UNKNOWN}}
-  // expected-warning@-1{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   // FIXME: should be TRUE (i.e. same symbol).
   clang_analyzer_eval(*y1 == *y2); // expected-warning{{UNKNOWN}}
 
@@ -149,9 +147,7 @@ void multiDimensionalArrayPointerCasts(void) {
   clang_analyzer_eval(y1 == y3); // expected-warning{{TRUE}}
 
   // FIXME: should be FALSE (i.e. equal pointers).
-  // FIXME: pointer subtraction warning might be incorrect
   clang_analyzer_eval(y1 - y3); // expected-warning{{UNKNOWN}}
-  // expected-warning@-1{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
   // FIXME: should be TRUE (i.e. same symbol).
   clang_analyzer_eval(*y1 == *y3); // expected-warning{{UNKNOWN}}
 

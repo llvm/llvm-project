@@ -39,8 +39,8 @@ LLVM_DUMP_METHOD
 void HwMode::dump() const { dbgs() << Name << ": " << Features << '\n'; }
 
 HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
-  std::vector<const Record *> Modes = R->getValueAsListOfConstDefs("Modes");
-  std::vector<const Record *> Objects = R->getValueAsListOfConstDefs("Objects");
+  std::vector<const Record *> Modes = R->getValueAsListOfDefs("Modes");
+  std::vector<const Record *> Objects = R->getValueAsListOfDefs("Objects");
   if (Modes.size() != Objects.size()) {
     PrintError(
         R->getLoc(),

@@ -5,7 +5,7 @@ define amdgpu_ps i32 @if_else(i32 %0) {
 ; OPT-LABEL: define amdgpu_ps i32 @if_else(
 ; OPT-SAME: i32 [[TMP0:%.*]]) {
 ; OPT-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP0]], 0
-; OPT-NEXT:    br i1 [[C]], label %[[FALSE:.*]], label %[[FLOW:.*]]
+; OPT-NEXT:    br i1 [[C]], label %[[FALSE:.*]], label %[[FLOW:.*]], !prof [[PROF0:![0-9]+]]
 ; OPT:       [[FLOW]]:
 ; OPT-NEXT:    [[TMP2:%.*]] = phi i32 [ 33, %[[FALSE]] ], [ undef, [[TMP1:%.*]] ]
 ; OPT-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[FALSE]] ], [ true, [[TMP1]] ]
@@ -40,7 +40,7 @@ define amdgpu_ps void @loop_if_break(i32 %n) {
 ; OPT:       [[LOOP]]:
 ; OPT-NEXT:    [[I:%.*]] = phi i32 [ [[N]], %[[ENTRY]] ], [ [[TMP0:%.*]], %[[FLOW:.*]] ]
 ; OPT-NEXT:    [[C:%.*]] = icmp ugt i32 [[I]], 0
-; OPT-NEXT:    br i1 [[C]], label %[[LOOP_BODY:.*]], label %[[FLOW]]
+; OPT-NEXT:    br i1 [[C]], label %[[LOOP_BODY:.*]], label %[[FLOW]], !prof [[PROF1:![0-9]+]]
 ; OPT:       [[LOOP_BODY]]:
 ; OPT-NEXT:    [[I_NEXT:%.*]] = sub i32 [[I]], 1
 ; OPT-NEXT:    br label %[[FLOW]]
@@ -70,3 +70,7 @@ exit:                                             ; preds = %loop
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !0 = !{!"branch_weights", i32 1000, i32 1}
+;.
+; OPT: [[PROF0]] = !{!"branch_weights", i32 1, i32 1000}
+; OPT: [[PROF1]] = !{!"branch_weights", i32 1000, i32 1}
+;.

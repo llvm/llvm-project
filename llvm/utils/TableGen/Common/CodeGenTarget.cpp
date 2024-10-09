@@ -133,7 +133,7 @@ bool CodeGenTarget::getAllowRegisterRenaming() const {
 ///
 const Record *CodeGenTarget::getAsmParser() const {
   std::vector<const Record *> LI =
-      TargetRec->getValueAsListOfConstDefs("AssemblyParsers");
+      TargetRec->getValueAsListOfDefs("AssemblyParsers");
   if (AsmParserNum >= LI.size())
     PrintFatalError("Target does not have an AsmParser #" +
                     Twine(AsmParserNum) + "!");
@@ -145,7 +145,7 @@ const Record *CodeGenTarget::getAsmParser() const {
 ///
 const Record *CodeGenTarget::getAsmParserVariant(unsigned Idx) const {
   std::vector<const Record *> LI =
-      TargetRec->getValueAsListOfConstDefs("AssemblyParserVariants");
+      TargetRec->getValueAsListOfDefs("AssemblyParserVariants");
   if (Idx >= LI.size())
     PrintFatalError("Target does not have an AsmParserVariant #" + Twine(Idx) +
                     "!");
@@ -163,7 +163,7 @@ unsigned CodeGenTarget::getAsmParserVariantCount() const {
 ///
 const Record *CodeGenTarget::getAsmWriter() const {
   std::vector<const Record *> LI =
-      TargetRec->getValueAsListOfConstDefs("AssemblyWriters");
+      TargetRec->getValueAsListOfDefs("AssemblyWriters");
   if (AsmWriterNum >= LI.size())
     PrintFatalError("Target does not have an AsmWriter #" +
                     Twine(AsmWriterNum) + "!");
@@ -407,7 +407,7 @@ ComplexPattern::ComplexPattern(const Record *R) {
   Ty = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
   SelectFunc = std::string(R->getValueAsString("SelectFunc"));
-  RootNodes = R->getValueAsListOfConstDefs("RootNodes");
+  RootNodes = R->getValueAsListOfDefs("RootNodes");
 
   // FIXME: This is a hack to statically increase the priority of patterns which
   // maps a sub-dag to a complex pattern. e.g. favors LEA over ADD. To get best

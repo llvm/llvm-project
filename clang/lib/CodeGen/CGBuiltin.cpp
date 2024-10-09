@@ -2878,7 +2878,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmodf:
     case Builtin::BI__builtin_fmodf16:
     case Builtin::BI__builtin_fmodl:
-    case Builtin::BI__builtin_fmodf128: {
+    case Builtin::BI__builtin_fmodf128:
+    case Builtin::BI__builtin_elementwise_fmod: {
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
       Value *Arg1 = EmitScalarExpr(E->getArg(0));
       Value *Arg2 = EmitScalarExpr(E->getArg(1));
@@ -3835,6 +3836,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_atan:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::atan, "elt.atan"));
+  case Builtin::BI__builtin_elementwise_atan2:
+    return RValue::get(emitBuiltinWithOneOverloadedType<2>(
+        *this, E, llvm::Intrinsic::atan2, "elt.atan2"));
   case Builtin::BI__builtin_elementwise_ceil:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::ceil, "elt.ceil"));
@@ -3960,6 +3964,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_elementwise_maximum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::maximum, Op0,
+                                                  Op1, nullptr, "elt.maximum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_minimum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::minimum, Op0,
+                                                  Op1, nullptr, "elt.minimum");
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_reduce_max: {
     auto GetIntrinsicID = [this](QualType QT) {
       if (auto *VecTy = QT->getAs<VectorType>())
@@ -4012,6 +4032,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_reduce_and:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::vector_reduce_and, "rdx.and"));
+  case Builtin::BI__builtin_reduce_maximum:
+    return RValue::get(emitBuiltinWithOneOverloadedType<1>(
+        *this, E, llvm::Intrinsic::vector_reduce_fmaximum, "rdx.maximum"));
+  case Builtin::BI__builtin_reduce_minimum:
+    return RValue::get(emitBuiltinWithOneOverloadedType<1>(
+        *this, E, llvm::Intrinsic::vector_reduce_fminimum, "rdx.minimum"));
 
   case Builtin::BI__builtin_matrix_transpose: {
     auto *MatrixTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
@@ -9880,6 +9906,22 @@ Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
   return C;
 }
 
+Value *CodeGenFunction::EmitSVEPredicateTupleCast(Value *PredTuple,
+                                                  llvm::StructType *Ty) {
+  if (PredTuple->getType() == Ty)
+    return PredTuple;
+
+  Value *Ret = llvm::PoisonValue::get(Ty);
+  for (unsigned I = 0; I < Ty->getNumElements(); ++I) {
+    Value *Pred = Builder.CreateExtractValue(PredTuple, I);
+    Pred = EmitSVEPredicateCast(
+        Pred, cast<llvm::ScalableVectorType>(Ty->getTypeAtIndex(I)));
+    Ret = Builder.CreateInsertValue(Ret, Pred, I);
+  }
+
+  return Ret;
+}
+
 Value *CodeGenFunction::EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
                                           SmallVectorImpl<Value *> &Ops,
                                           unsigned IntID) {
@@ -10386,41 +10428,6 @@ Value *CodeGenFunction::EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
   return Tuple;
 }
 
-Value *CodeGenFunction::FormSVEBuiltinResult(Value *Call) {
-  // Multi-vector results should be broken up into a single (wide) result
-  // vector.
-  auto *StructTy = dyn_cast<StructType>(Call->getType());
-  if (!StructTy)
-    return Call;
-
-  auto *VTy = dyn_cast<ScalableVectorType>(StructTy->getTypeAtIndex(0U));
-  if (!VTy)
-    return Call;
-  unsigned N = StructTy->getNumElements();
-
-  // We may need to emit a cast to a svbool_t
-  bool IsPredTy = VTy->getElementType()->isIntegerTy(1);
-  unsigned MinElts = IsPredTy ? 16 : VTy->getMinNumElements();
-
-  ScalableVectorType *WideVTy =
-      ScalableVectorType::get(VTy->getElementType(), MinElts * N);
-  Value *Ret = llvm::PoisonValue::get(WideVTy);
-  for (unsigned I = 0; I < N; ++I) {
-    Value *SRet = Builder.CreateExtractValue(Call, I);
-    assert(SRet->getType() == VTy && "Unexpected type for result value");
-    Value *Idx = ConstantInt::get(CGM.Int64Ty, I * MinElts);
-
-    if (IsPredTy)
-      SRet = EmitSVEPredicateCast(
-          SRet, ScalableVectorType::get(Builder.getInt1Ty(), 16));
-
-    Ret = Builder.CreateInsertVector(WideVTy, Ret, SRet, Idx);
-  }
-  Call = Ret;
-
-  return Call;
-}
-
 void CodeGenFunction::GetAArch64SVEProcessedOperands(
     unsigned BuiltinID, const CallExpr *E, SmallVectorImpl<Value *> &Ops,
     SVETypeFlags TypeFlags) {
@@ -10551,12 +10558,16 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
                                    getSVEOverloadTypes(TypeFlags, Ty, Ops));
     Value *Call = Builder.CreateCall(F, Ops);
 
-    // Predicate results must be converted to svbool_t.
-    if (auto PredTy = dyn_cast<llvm::VectorType>(Call->getType()))
-      if (PredTy->getScalarType()->isIntegerTy(1))
-        Call = EmitSVEPredicateCast(Call, cast<llvm::ScalableVectorType>(Ty));
+    if (Call->getType() == Ty)
+      return Call;
 
-    return FormSVEBuiltinResult(Call);
+    // Predicate results must be converted to svbool_t.
+    if (auto PredTy = dyn_cast<llvm::ScalableVectorType>(Ty))
+      return EmitSVEPredicateCast(Call, PredTy);
+    if (auto PredTupleTy = dyn_cast<llvm::StructType>(Ty))
+      return EmitSVEPredicateTupleCast(Call, PredTupleTy);
+
+    llvm_unreachable("unsupported element count!");
   }
 
   switch (BuiltinID) {
@@ -10888,9 +10899,8 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
       TypeFlags.isOverloadNone()
           ? CGM.getIntrinsic(Builtin->LLVMIntrinsic)
           : CGM.getIntrinsic(Builtin->LLVMIntrinsic, {getSVEType(TypeFlags)});
-  Value *Call = Builder.CreateCall(F, Ops);
 
-  return FormSVEBuiltinResult(Call);
+  return Builder.CreateCall(F, Ops);
 }
 
 Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
@@ -13588,6 +13598,14 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vamaxq_f64: {
     Int = Intrinsic::aarch64_neon_famax;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "famax");
+  }
+  case NEON::BI__builtin_neon_vscale_f16:
+  case NEON::BI__builtin_neon_vscaleq_f16:
+  case NEON::BI__builtin_neon_vscale_f32:
+  case NEON::BI__builtin_neon_vscaleq_f32:
+  case NEON::BI__builtin_neon_vscaleq_f64: {
+    Int = Intrinsic::aarch64_neon_fp8_fscale;
+    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "fscale");
   }
   }
 }
@@ -18649,6 +18667,21 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         IsUnsigned ? Intrinsic::dx_uclamp : Intrinsic::dx_clamp,
         ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "dx.clamp");
   }
+  case Builtin::BI__builtin_hlsl_cross: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           "cross operands must have a float representation");
+    // make sure each vector has exactly 3 elements
+    assert(
+        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
+        E->getArg(1)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
+        "input vectors must have 3 elements each");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getCrossIntrinsic(),
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.cross");
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
@@ -18858,6 +18891,15 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getSignIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.sign");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_radians: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "radians operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(),
+        CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
+        nullptr, "hlsl.radians");
   }
   }
   return nullptr;
@@ -22347,10 +22389,60 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     return Store;
   }
+  // XCValu
+  case RISCV::BI__builtin_riscv_cv_alu_addN:
+    ID = Intrinsic::riscv_cv_alu_addN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_addRN:
+    ID = Intrinsic::riscv_cv_alu_addRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_adduN:
+    ID = Intrinsic::riscv_cv_alu_adduN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_adduRN:
+    ID = Intrinsic::riscv_cv_alu_adduRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_clip:
+    ID = Intrinsic::riscv_cv_alu_clip;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_clipu:
+    ID = Intrinsic::riscv_cv_alu_clipu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_extbs:
+    return Builder.CreateSExt(Builder.CreateTrunc(Ops[0], Int8Ty), Int32Ty,
+                              "extbs");
+  case RISCV::BI__builtin_riscv_cv_alu_extbz:
+    return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int8Ty), Int32Ty,
+                              "extbz");
+  case RISCV::BI__builtin_riscv_cv_alu_exths:
+    return Builder.CreateSExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
+                              "exths");
+  case RISCV::BI__builtin_riscv_cv_alu_exthz:
+    return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
+                              "exthz");
+  case RISCV::BI__builtin_riscv_cv_alu_slet:
+    return Builder.CreateZExt(Builder.CreateICmpSLE(Ops[0], Ops[1]), Int32Ty,
+                              "sle");
+  case RISCV::BI__builtin_riscv_cv_alu_sletu:
+    return Builder.CreateZExt(Builder.CreateICmpULE(Ops[0], Ops[1]), Int32Ty,
+                              "sleu");
+  case RISCV::BI__builtin_riscv_cv_alu_subN:
+    ID = Intrinsic::riscv_cv_alu_subN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subRN:
+    ID = Intrinsic::riscv_cv_alu_subRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subuN:
+    ID = Intrinsic::riscv_cv_alu_subuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subuRN:
+    ID = Intrinsic::riscv_cv_alu_subuRN;
+    break;
 
-  // Vector builtins are handled from here.
+    // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
-  // SiFive Vector builtins are handled from here.
+
+    // SiFive Vector builtins are handled from here.
 #include "clang/Basic/riscv_sifive_vector_builtin_cg.inc"
   }
 
