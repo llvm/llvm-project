@@ -1,7 +1,6 @@
 #extend lldb::SBSaveCoreOptions {
 #ifdef SWIGPYTHON
     %pythoncode% {
-        '''Add a thread to the SaveCoreOptions thread list, and follow it's children N pointers deep, adding each memory region to the SaveCoreOptions Memory region list.'''
         def save_thread_with_heaps(self, thread, num_pointers_deep = 3):
             self.AddThread(thread)
             frame = thread.GetFrameAtIndex(0)
@@ -27,5 +26,6 @@
                             queue.append(x.Dereference())
 
                 num_pointers_deep -= 1
-}
+    %}
 #endif SWIGPYTHON
+}

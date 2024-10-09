@@ -471,8 +471,18 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
 
-    def save_core_one_thread_one_heap(self, process, region_index):
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_save_core_one_thread_one_heap(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        custom_file = self.getBuildArtifact("core.custom.dmp")
         try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
             custom_file = self.getBuildArtifact("core.one_thread_one_heap.dmp")
             options = lldb.SBSaveCoreOptions()
             options.SetOutputFile(lldb.SBFileSpec(custom_file))
