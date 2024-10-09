@@ -19,6 +19,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/StorageUniquer.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Config/abi-breaking.h" // for LLVM_ENABLE_ABI_BREAKING_CHECKS
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <queue>
