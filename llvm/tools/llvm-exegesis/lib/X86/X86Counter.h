@@ -16,6 +16,7 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_LIB_X86_X86COUNTER_H
 
 #include "../PerfHelper.h"
+#include "llvm/Config/config.h" // for HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES
 #include "llvm/Support/Error.h"
 
 // FIXME: Use appropriate wrappers for poll.h and mman.h
