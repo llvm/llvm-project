@@ -61,7 +61,8 @@ public:
     static constexpr const char EndToken = '\0';
     static constexpr const char PassDelimToken = ',';
 
-    Passes.clear();
+    assert(Passes.empty() &&
+           "setPassPipeline called on a non-empty sandboxir::PassManager");
     // Add EndToken to the end to ease parsing.
     std::string PipelineStr = std::string(Pipeline) + EndToken;
     int FlagBeginIdx = 0;

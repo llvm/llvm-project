@@ -299,14 +299,17 @@ define void @f() {
   FPM.runOnFunction(*F);
   EXPECT_EQ(Str, "foobarfoo");
 
-  // Check that a second call to setPassPipeline clears the previous pipeline.
-  Str.clear();
-  FPM.setPassPipeline("bar,bar,foo", CreatePass);
-  FPM.runOnFunction(*F);
-  EXPECT_EQ(Str, "barbarfoo");
+  // A second call to setPassPipeline will trigger an assertion in debug mode.
+#ifndef NDEBUG
+  EXPECT_DEATH(FPM.setPassPipeline("bar,bar,foo", CreatePass),
+               "setPassPipeline called on a non-empty sandboxir::PassManager");
+#endif
 
-  EXPECT_DEATH(FPM.setPassPipeline("bad-pass-name", CreatePass),
+  // Fresh PM for the death tests so they die from bad pipeline strings, rather
+  // than from multiple setPassPipeline calls.
+  FunctionPassManager FPM2("test-fpm");
+  EXPECT_DEATH(FPM2.setPassPipeline("bad-pass-name", CreatePass),
                ".*not registered.*");
-  EXPECT_DEATH(FPM.setPassPipeline("", CreatePass), ".*not registered.*");
-  EXPECT_DEATH(FPM.setPassPipeline(",", CreatePass), ".*not registered.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("", CreatePass), ".*not registered.*");
+  EXPECT_DEATH(FPM2.setPassPipeline(",", CreatePass), ".*not registered.*");
 }
