@@ -305,6 +305,20 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S0N = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
   auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
 
+  // Check getTopMemDGNode().
+  using B = sandboxir::MemDGNodeIntervalBuilder;
+  using InstrInterval = sandboxir::Interval<sandboxir::Instruction>;
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(S0, S0), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(S0, Ret), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(Add0, Add1), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(Add0, Add0), DAG), nullptr);
+
+  // Check getBotMemDGNode().
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(S1, S1), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Add0, S1), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Add0, Ret), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Ret, Ret), DAG), nullptr);
+
   // Check empty range.
   EXPECT_THAT(sandboxir::MemDGNodeIntervalBuilder::makeEmpty(),
               testing::ElementsAre());
