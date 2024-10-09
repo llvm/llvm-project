@@ -37,9 +37,7 @@ class TargetRegisterClass;
 class TargetSubtargetInfo;
 
 struct VRegInfo {
-  enum : uint8_t {
-    UNKNOWN, NORMAL, GENERIC, REGBANK
-  } Kind = UNKNOWN;
+  enum : uint8_t { UNKNOWN, NORMAL, GENERIC, REGBANK } Kind = UNKNOWN;
   bool Explicit = false; ///< VReg was explicitly specified in the .mir file.
   union {
     const TargetRegisterClass *RC;
