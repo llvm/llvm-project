@@ -12,6 +12,7 @@
 #ifndef LLVM_SANDBOXIR_UTILS_H
 #define LLVM_SANDBOXIR_UTILS_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -98,6 +99,13 @@ public:
     if (!Diff)
       return false;
     return *Diff > 0;
+  }
+
+  /// Equivalent to BatchAA::getModRefInfo().
+  static ModRefInfo
+  aliasAnalysisGetModRefInfo(BatchAAResults &BatchAA, const Instruction *I,
+                             const std::optional<MemoryLocation> &OptLoc) {
+    return BatchAA.getModRefInfo(cast<llvm::Instruction>(I->Val), OptLoc);
   }
 };
 

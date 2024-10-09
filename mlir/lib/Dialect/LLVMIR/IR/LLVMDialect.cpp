@@ -3226,6 +3226,8 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
   return foldChainableCast(*this, adaptor);
 }
 
+Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
+
 //===----------------------------------------------------------------------===//
 // Folder for LLVM::GEPOp
 //===----------------------------------------------------------------------===//
@@ -3275,6 +3277,8 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+
+Value LLVM::GEPOp::getViewSource() { return getBase(); }
 
 //===----------------------------------------------------------------------===//
 // ShlOp
