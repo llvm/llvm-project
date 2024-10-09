@@ -612,7 +612,8 @@ static mlir::Block *genEntryBlock(lower::AbstractConverter &converter,
   unsigned numVars = args.inReduction.vars.size() + args.map.vars.size() +
                      args.priv.vars.size() + args.reduction.vars.size() +
                      args.taskReduction.vars.size() +
-                     args.useDeviceAddr.vars.size();
+                     args.useDeviceAddr.vars.size() +
+                     args.useDevicePtr.vars.size();
   types.reserve(numVars);
   locs.reserve(numVars);
 
