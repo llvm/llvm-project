@@ -24,7 +24,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/IntrinsicInst.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 
 namespace llvm::sandboxir {
@@ -46,6 +48,7 @@ protected:
   // TODO: Use a PointerIntPair for SubclassID and I.
   /// For isa/dyn_cast etc.
   DGNodeID SubclassID;
+  // TODO: Move MemPreds to MemDGNode.
   /// Memory predecessors.
   DenseSet<MemDGNode *> MemPreds;
 
@@ -54,19 +57,51 @@ protected:
 
 public:
   DGNode(Instruction *I) : I(I), SubclassID(DGNodeID::DGNode) {
-    assert(!isMemDepCandidate(I) && "Expected Non-Mem instruction, ");
+    assert(!isMemDepNodeCandidate(I) && "Expected Non-Mem instruction, ");
   }
   DGNode(const DGNode &Other) = delete;
   virtual ~DGNode() = default;
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
-  /// \Returns true if \p I is a memory dependency candidate instruction.
+
+  static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      auto IID = II->getIntrinsicID();
+      return IID == Intrinsic::stackrestore || IID == Intrinsic::stacksave;
+    }
+    return false;
+  }
+
+  /// \Returns true if intrinsic \p I touches memory. This is used by the
+  /// dependency graph.
+  static bool isMemIntrinsic(IntrinsicInst *I) {
+    auto IID = I->getIntrinsicID();
+    return IID != Intrinsic::sideeffect && IID != Intrinsic::pseudoprobe;
+  }
+
+  /// We consider \p I as a Memory Dependency Candidate instruction if it
+  /// reads/write memory or if it has side-effects. This is used by the
+  /// dependency graph.
   static bool isMemDepCandidate(Instruction *I) {
+    IntrinsicInst *II;
+    return I->mayReadOrWriteMemory() &&
+           (!(II = dyn_cast<IntrinsicInst>(I)) || isMemIntrinsic(II));
+  }
+
+  /// \Returns true if \p I is fence like. It excludes non-mem intrinsics.
+  static bool isFenceLike(Instruction *I) {
+    IntrinsicInst *II;
+    return I->isFenceLike() &&
+           (!(II = dyn_cast<IntrinsicInst>(I)) || isMemIntrinsic(II));
+  }
+
+  /// \Returns true if \p I is a memory dependency candidate instruction.
+  static bool isMemDepNodeCandidate(Instruction *I) {
     AllocaInst *Alloca;
-    return I->isMemDepCandidate() ||
+    return isMemDepCandidate(I) ||
            ((Alloca = dyn_cast<AllocaInst>(I)) &&
             Alloca->isUsedWithInAlloca()) ||
-           I->isStackSaveOrRestoreIntrinsic();
+           isStackSaveOrRestoreIntrinsic(I) || isFenceLike(I);
   }
 
   Instruction *getInstruction() const { return I; }
@@ -84,7 +119,7 @@ public:
 
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS, bool PrintDeps = true) const;
-  friend raw_ostream &operator<<(DGNode &N, raw_ostream &OS) {
+  friend raw_ostream &operator<<(raw_ostream &OS, DGNode &N) {
     N.print(OS);
     return OS;
   }
@@ -105,7 +140,7 @@ class MemDGNode final : public DGNode {
 
 public:
   MemDGNode(Instruction *I) : DGNode(I, DGNodeID::MemDGNode) {
-    assert(isMemDepCandidate(I) && "Expected Mem instruction!");
+    assert(isMemDepNodeCandidate(I) && "Expected Mem instruction!");
   }
   static bool classof(const DGNode *Other) {
     return Other->SubclassID == DGNodeID::MemDGNode;
@@ -133,8 +168,37 @@ private:
   /// The DAG spans across all instructions in this interval.
   Interval<Instruction> DAGInterval;
 
+  std::unique_ptr<BatchAAResults> BatchAA;
+
+  enum class DependencyType {
+    ReadAfterWrite,  ///> Memory dependency write -> read
+    WriteAfterWrite, ///> Memory dependency write -> write
+    ReadAfterRead,   ///> Memory dependency read -> read
+    WriteAfterRead,  ///> Memory dependency read -> write
+    Control,         ///> Control-related dependency, like with PHI/Terminator
+    Other,           ///> Currently used for stack related instrs
+    None,            ///> No memory/other dependency
+  };
+  /// \Returns the dependency type depending on whether instructions may
+  /// read/write memory or whether they are some specific opcode-related
+  /// restrictions.
+  /// Note: It does not check whether a memory dependency is actually correct,
+  /// as it won't call AA. Therefore it returns the worst-case dep type.
+  static DependencyType getRoughDepType(Instruction *FromI, Instruction *ToI);
+
+  // TODO: Implement AABudget.
+  /// \Returns true if there is a memory/other dependency \p SrcI->DstI.
+  bool alias(Instruction *SrcI, Instruction *DstI, DependencyType DepType);
+
+  bool hasDep(sandboxir::Instruction *SrcI, sandboxir::Instruction *DstI);
+
+  /// Go through all mem nodes in \p SrcScanRange and try to add dependencies to
+  /// \p DstN.
+  void scanAndAddDeps(DGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
+
 public:
-  DependencyGraph() {}
+  DependencyGraph(AAResults &AA)
+      : BatchAA(std::make_unique<BatchAAResults>(AA)) {}
 
   DGNode *getNode(Instruction *I) const {
     auto It = InstrToNodeMap.find(I);
@@ -149,7 +213,7 @@ public:
   DGNode *getOrCreateNode(Instruction *I) {
     auto [It, NotInMap] = InstrToNodeMap.try_emplace(I);
     if (NotInMap) {
-      if (DGNode::isMemDepCandidate(I))
+      if (DGNode::isMemDepNodeCandidate(I))
         It->second = std::make_unique<MemDGNode>(I);
       else
         It->second = std::make_unique<DGNode>(I);

@@ -837,6 +837,12 @@ def StdC : StandardSpec<"stdc"> {
           GuardedFunctionSpec<"canonicalizef16", RetValSpec<IntType>, [ArgSpec<Float16Type>, ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"canonicalizef128", RetValSpec<IntType>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
 
+          FunctionSpec<"iscanonical", RetValSpec<IntType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"iscanonicalf", RetValSpec<IntType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"iscanonicall", RetValSpec<IntType>, [ArgSpec<LongDoubleType>]>,
+          GuardedFunctionSpec<"iscanonicalf16", RetValSpec<IntType>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"iscanonicalf128", RetValSpec<IntType>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT128">,
+
           FunctionSpec<"dsqrtl", RetValSpec<DoubleType>, [ArgSpec<LongDoubleType>]>,
 
           FunctionSpec<"totalorder", RetValSpec<IntType>, [ArgSpec<ConstDoublePtr>, ArgSpec<ConstDoublePtr>]>,

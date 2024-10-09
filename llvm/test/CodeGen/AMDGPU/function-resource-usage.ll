@@ -358,7 +358,7 @@ declare void @external() #0
 ; GCN:	.set multi_call_with_external.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; GCN:	.set multi_call_with_external.num_agpr, max(0, amdgpu.max_num_agpr)
 ; GCN:	.set multi_call_with_external.numbered_sgpr, max(42, amdgpu.max_num_sgpr)
-; GCN:	.set multi_call_with_external.private_seg_size, 0
+; GCN:	.set multi_call_with_external.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size))
 ; GCN:	.set multi_call_with_external.uses_vcc, 1
 ; GCN:	.set multi_call_with_external.uses_flat_scratch, 1
 ; GCN:	.set multi_call_with_external.has_dyn_sized_stack, 1
@@ -366,10 +366,33 @@ declare void @external() #0
 ; GCN:	.set multi_call_with_external.has_indirect_call, 1
 ; GCN: TotalNumSgprs: multi_call_with_external.numbered_sgpr+6
 ; GCN: NumVgprs: multi_call_with_external.num_vgpr
-; GCN: ScratchSize: 0
+; GCN: ScratchSize: 2052
 define amdgpu_kernel void @multi_call_with_external() #0 {
   call void @use_stack0()
   call void @use_stack1()
+  call void @external()
+  ret void
+}
+
+; GCN-LABEL: {{^}}multi_call_with_external_and_duplicates:
+; GCN:	.set multi_call_with_external_and_duplicates.num_vgpr, max(41, amdgpu.max_num_vgpr)
+; GCN:	.set multi_call_with_external_and_duplicates.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:	.set multi_call_with_external_and_duplicates.numbered_sgpr, max(44, amdgpu.max_num_sgpr)
+; GCN:	.set multi_call_with_external_and_duplicates.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size))
+; GCN:	.set multi_call_with_external_and_duplicates.uses_vcc, 1
+; GCN:	.set multi_call_with_external_and_duplicates.uses_flat_scratch, 1
+; GCN:	.set multi_call_with_external_and_duplicates.has_dyn_sized_stack, 1
+; GCN:	.set multi_call_with_external_and_duplicates.has_recursion, 0
+; GCN:	.set multi_call_with_external_and_duplicates.has_indirect_call, 1
+; GCN: TotalNumSgprs: multi_call_with_external_and_duplicates.numbered_sgpr+6
+; GCN: NumVgprs: multi_call_with_external_and_duplicates.num_vgpr
+; GCN: ScratchSize: 2052
+define amdgpu_kernel void @multi_call_with_external_and_duplicates() #0 {
+  call void @use_stack0()
+  call void @use_stack0()
+  call void @use_stack1()
+  call void @use_stack1()
+  call void @external()
   call void @external()
   ret void
 }

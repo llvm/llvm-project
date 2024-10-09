@@ -21,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include <limits>
@@ -1406,6 +1407,18 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
   return S.noteUndefinedBehavior();
 }
 
+bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc,
+           diag::err_shufflevector_minus_one_is_undefined_behavior_constexpr)
+      << Index;
+  return false;
+}
+
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", off)
+#endif
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
@@ -1430,6 +1443,10 @@ bool Interpret(InterpState &S, APValue &Result) {
     }
   }
 }
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", on)
+#endif
 
 } // namespace interp
 } // namespace clang

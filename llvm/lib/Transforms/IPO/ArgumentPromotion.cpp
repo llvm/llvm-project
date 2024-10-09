@@ -491,10 +491,7 @@ static bool isArgUnmodifiedByAllCalls(Argument *Arg,
                                       FunctionAnalysisManager &FAM) {
   for (User *U : Arg->getParent()->users()) {
 
-    // Bail if we find an unexpected (non CallInst) use of the function.
-    auto *Call = dyn_cast<CallInst>(U);
-    if (!Call)
-      return false;
+    auto *Call = cast<CallBase>(U);
 
     MemoryLocation Loc =
         MemoryLocation::getForArgument(Call, Arg->getArgNo(), nullptr);

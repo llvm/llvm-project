@@ -145,23 +145,12 @@ private:
 
   bool selectCmp(Register ResVReg, const SPIRVType *ResType,
                  unsigned comparisonOpcode, MachineInstr &I) const;
-
+  bool selectCross(Register ResVReg, const SPIRVType *ResType,
+                   MachineInstr &I) const;
   bool selectICmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
   bool selectFCmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
-
-  bool selectFmix(Register ResVReg, const SPIRVType *ResType,
-                  MachineInstr &I) const;
-
-  bool selectLength(Register ResVReg, const SPIRVType *ResType,
-                    MachineInstr &I) const;
-
-  bool selectFrac(Register ResVReg, const SPIRVType *ResType,
-                  MachineInstr &I) const;
-
-  bool selectRsqrt(Register ResVReg, const SPIRVType *ResType,
-                   MachineInstr &I) const;
 
   bool selectSign(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
@@ -235,19 +224,16 @@ private:
   bool selectLog10(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
-  bool selectNormalize(Register ResVReg, const SPIRVType *ResType,
-                       MachineInstr &I) const;
-
   bool selectSaturate(Register ResVReg, const SPIRVType *ResType,
                       MachineInstr &I) const;
 
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
-  bool selectStep(Register ResVReg, const SPIRVType *ResType,
-                  MachineInstr &I) const;
-
   bool selectUnmergeValues(MachineInstr &I) const;
+
+  void selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
+                               MachineInstr &I) const;
 
   // Utilities
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -269,6 +255,9 @@ private:
                                           uint32_t Opcode) const;
   MachineInstrBuilder buildConstGenericPtr(MachineInstr &I, Register SrcPtr,
                                            SPIRVType *SrcPtrTy) const;
+  Register buildPointerToResource(const SPIRVType *ResType, uint32_t Set,
+                                  uint32_t Binding, uint32_t ArraySize,
+                                  MachineIRBuilder MIRBuilder) const;
 };
 
 } // end anonymous namespace
@@ -802,8 +791,13 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                      .addImm(static_cast<uint32_t>(Set))
                      .addImm(Opcode);
       const unsigned NumOps = I.getNumOperands();
-      for (unsigned i = 1; i < NumOps; ++i)
-        MIB.add(I.getOperand(i));
+      unsigned Index = 1;
+      if (Index < NumOps &&
+          I.getOperand(Index).getType() ==
+              MachineOperand::MachineOperandType::MO_IntrinsicID)
+        Index = 2;
+      for (; Index < NumOps; ++Index)
+        MIB.add(I.getOperand(Index));
       return MIB.constrainAllUses(TII, TRI, RBI);
     }
   }
@@ -1605,95 +1599,6 @@ bool SPIRVInstructionSelector::selectAny(Register ResVReg,
   return selectAnyOrAll(ResVReg, ResType, I, SPIRV::OpAny);
 }
 
-bool SPIRVInstructionSelector::selectFmix(Register ResVReg,
-                                          const SPIRVType *ResType,
-                                          MachineInstr &I) const {
-
-  assert(I.getNumOperands() == 5);
-  assert(I.getOperand(2).isReg());
-  assert(I.getOperand(3).isReg());
-  assert(I.getOperand(4).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-      .addImm(GL::FMix)
-      .addUse(I.getOperand(2).getReg())
-      .addUse(I.getOperand(3).getReg())
-      .addUse(I.getOperand(4).getReg())
-      .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::selectLength(Register ResVReg,
-                                            const SPIRVType *ResType,
-                                            MachineInstr &I) const {
-
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-      .addImm(GL::Length)
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::selectFrac(Register ResVReg,
-                                           const SPIRVType *ResType,
-                                           MachineInstr &I) const {
-
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-      .addImm(GL::Fract)
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::selectNormalize(Register ResVReg,
-                                               const SPIRVType *ResType,
-                                               MachineInstr &I) const {
-
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-      .addImm(GL::Normalize)
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::selectRsqrt(Register ResVReg,
-                                           const SPIRVType *ResType,
-                                           MachineInstr &I) const {
-
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-      .addImm(GL::InverseSqrt)
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
-}
-
 // Select the OpDot instruction for the given float dot
 bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
                                               const SPIRVType *ResType,
@@ -1851,25 +1756,6 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   }
 
   return Result;
-}
-
-bool SPIRVInstructionSelector::selectStep(Register ResVReg,
-                                          const SPIRVType *ResType,
-                                          MachineInstr &I) const {
-
-  assert(I.getNumOperands() == 4);
-  assert(I.getOperand(2).isReg());
-  assert(I.getOperand(3).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-      .addImm(GL::Step)
-      .addUse(I.getOperand(2).getReg())
-      .addUse(I.getOperand(3).getReg())
-      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
@@ -2621,16 +2507,18 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:
     return selectAny(ResVReg, ResType, I);
+  case Intrinsic::spv_cross:
+    return selectExtInst(ResVReg, ResType, I, CL::cross, GL::Cross);
   case Intrinsic::spv_lerp:
-    return selectFmix(ResVReg, ResType, I);
+    return selectExtInst(ResVReg, ResType, I, CL::mix, GL::FMix);
   case Intrinsic::spv_length:
-    return selectLength(ResVReg, ResType, I);
+    return selectExtInst(ResVReg, ResType, I, CL::length, GL::Length);
   case Intrinsic::spv_frac:
-    return selectFrac(ResVReg, ResType, I);
+    return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
-    return selectNormalize(ResVReg, ResType, I);
+    return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
   case Intrinsic::spv_rsqrt:
-    return selectRsqrt(ResVReg, ResType, I);
+    return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
     return selectSign(ResVReg, ResType, I);
   case Intrinsic::spv_lifetime_start:
@@ -2654,7 +2542,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
   case Intrinsic::spv_step:
-    return selectStep(ResVReg, ResType, I);
+    return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
+  case Intrinsic::spv_radians:
+    return selectExtInst(ResVReg, ResType, I, CL::radians, GL::Radians);
   // Discard intrinsics which we do not expect to actually represent code after
   // lowering or intrinsics which are not implemented but should not crash when
   // found in a customer's LLVM IR input.
@@ -2665,6 +2555,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
+  case Intrinsic::spv_handle_fromBinding: {
+    selectHandleFromBinding(ResVReg, ResType, I);
+    return true;
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -2674,6 +2568,34 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   }
   return true;
+}
+
+void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
+                                                       const SPIRVType *ResType,
+                                                       MachineInstr &I) const {
+
+  uint32_t Set = foldImm(I.getOperand(2), MRI);
+  uint32_t Binding = foldImm(I.getOperand(3), MRI);
+  uint32_t ArraySize = foldImm(I.getOperand(4), MRI);
+
+  MachineIRBuilder MIRBuilder(I);
+  Register VarReg =
+      buildPointerToResource(ResType, Set, Binding, ArraySize, MIRBuilder);
+
+  // TODO: For now we assume the resource is an image, which needs to be
+  // loaded to get the handle. That will not be true for storage buffers.
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(VarReg);
+}
+
+Register SPIRVInstructionSelector::buildPointerToResource(
+    const SPIRVType *ResType, uint32_t Set, uint32_t Binding,
+    uint32_t ArraySize, MachineIRBuilder MIRBuilder) const {
+  assert(ArraySize == 1 && "Resource arrays are not implemented yet.");
+  return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
+                                                 MIRBuilder);
 }
 
 bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
@@ -2979,15 +2901,7 @@ bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
   // Get Thread ID index. Expecting operand is a constant immediate value,
   // wrapped in a type assignment.
   assert(I.getOperand(2).isReg());
-  Register ThreadIdReg = I.getOperand(2).getReg();
-  SPIRVType *ConstTy = this->MRI->getVRegDef(ThreadIdReg);
-  assert(ConstTy && ConstTy->getOpcode() == SPIRV::ASSIGN_TYPE &&
-         ConstTy->getOperand(1).isReg());
-  Register ConstReg = ConstTy->getOperand(1).getReg();
-  const MachineInstr *Const = this->MRI->getVRegDef(ConstReg);
-  assert(Const && Const->getOpcode() == TargetOpcode::G_CONSTANT);
-  const llvm::APInt &Val = Const->getOperand(1).getCImm()->getValue();
-  const uint32_t ThreadId = Val.getZExtValue();
+  const uint32_t ThreadId = foldImm(I.getOperand(2), MRI);
 
   // Extract the thread ID from the loaded vector value.
   MachineBasicBlock &BB = *I.getParent();

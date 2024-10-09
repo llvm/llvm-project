@@ -328,6 +328,66 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  iscanonical_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonical_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonical
+)
+
+add_fp_unittest(
+  iscanonicalf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonicalf_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonicalf
+)
+
+add_fp_unittest(
+  iscanonicall_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonicall_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonicall
+)
+
+add_fp_unittest(
+  iscanonicalf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonicalf16_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonicalf16
+)
+
+add_fp_unittest(
+  iscanonicalf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonicalf128_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonicalf128
+)
+
+add_fp_unittest(
   ceil_test
   SUITE
     libc-math-smoke-tests

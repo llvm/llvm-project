@@ -200,6 +200,10 @@ module std_core [system] {
       header "__type_traits/is_fundamental.h"
       export std_core.type_traits.integral_constant
     }
+    module is_implicit_lifetime {
+      header "__type_traits/is_implicit_lifetime.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_implicitly_default_constructible {
       header "__type_traits/is_implicitly_default_constructible.h"
       export std_core.type_traits.integral_constant
@@ -1528,7 +1532,6 @@ module std [system] {
     }
     module uses_allocator                     { header "__memory/uses_allocator.h" }
     module uses_allocator_construction        { header "__memory/uses_allocator_construction.h" }
-    module voidify                            { header "__memory/voidify.h" }
 
     header "memory"
     export *

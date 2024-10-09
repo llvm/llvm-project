@@ -1531,6 +1531,11 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     Opcodes = {RISCV::VMV_S_X, RISCV::VREDAND_VS, RISCV::VMV_X_S};
     break;
   case ISD::FADD:
+    // We can't promote f16/bf16 fadd reductions.
+    if ((LT.second.getVectorElementType() == MVT::f16 &&
+         !ST->hasVInstructionsF16()) ||
+        LT.second.getVectorElementType() == MVT::bf16)
+      return InstructionCost::getInvalid();
     SplitOp = RISCV::VFADD_VV;
     Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDUSUM_VS, RISCV::VFMV_F_S};
     break;
