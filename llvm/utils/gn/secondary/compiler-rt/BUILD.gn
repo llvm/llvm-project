@@ -12,7 +12,6 @@ if (current_os == "win" || win_sysroot != "") {
 }
 if (current_os != "win") {
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
-  supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix_x86" ]
 }
 supported_toolchains += supported_android_toolchains
 if (llvm_build_AArch64) {
