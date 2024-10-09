@@ -3828,10 +3828,9 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
     break;
 
   default:
-    GetObjectFile()->GetModule()->ReportError(
-        "didn't find appropriate parent DIE for variable list for {0:x8} "
-        "{1} ({2}).\n",
-        die.GetID(), DW_TAG_value_to_name(die.Tag()), die.Tag());
+    LLDB_LOG(GetLog(DWARFLog::Lookups),
+             "{0} '{1}' ({2:x8}) is not a global variable - ignoring", tag,
+             die.GetName(), die.GetID());
     return;
   }
 

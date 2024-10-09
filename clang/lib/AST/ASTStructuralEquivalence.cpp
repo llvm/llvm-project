@@ -808,8 +808,8 @@ static bool
 IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                          const HLSLAttributedResourceType::Attributes &Attrs1,
                          const HLSLAttributedResourceType::Attributes &Attrs2) {
-  return std::tie(Attrs1.ResourceClass, Attrs1.IsROV) ==
-         std::tie(Attrs2.ResourceClass, Attrs2.IsROV);
+  return std::tie(Attrs1.ResourceClass, Attrs1.IsROV, Attrs1.RawBuffer) ==
+         std::tie(Attrs2.ResourceClass, Attrs2.IsROV, Attrs2.RawBuffer);
 }
 
 /// Determine structural equivalence of two types.

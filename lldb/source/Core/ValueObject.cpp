@@ -615,7 +615,17 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
       m_synthetic_value->UpdateValueIfNeeded(); // the summary might depend on
                                                 // the synthetic children being
                                                 // up-to-date (e.g. ${svar%#})
-    summary_ptr->FormatObject(this, destination, actual_options);
+
+    if (TargetSP target_sp = GetExecutionContextRef().GetTargetSP()) {
+      SummaryStatisticsSP stats_sp =
+          target_sp->GetSummaryStatisticsCache()
+              .GetSummaryStatisticsForProvider(*summary_ptr);
+
+      // Construct RAII types to time and collect data on summary creation.
+      SummaryStatistics::SummaryInvocation invocation(stats_sp);
+      summary_ptr->FormatObject(this, destination, actual_options);
+    } else
+      summary_ptr->FormatObject(this, destination, actual_options);
   }
   m_flags.m_is_getting_summary = false;
   return !destination.empty();

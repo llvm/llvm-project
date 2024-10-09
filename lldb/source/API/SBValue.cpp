@@ -645,6 +645,22 @@ lldb::SBValue SBValue::CreateValueFromData(const char *name, SBData data,
   return sb_value;
 }
 
+lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
+  LLDB_INSTRUMENT_VA(this, name);
+
+  lldb::SBValue sb_value;
+  lldb::ValueObjectSP new_value_sp;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  lldb::TargetSP target_sp = m_opaque_sp->GetTargetSP();
+  if (value_sp && target_sp) {
+    new_value_sp =
+        ValueObject::CreateValueObjectFromBool(target_sp, value, name);
+  }
+  sb_value.SetSP(new_value_sp);
+  return sb_value;
+}
+
 SBValue SBValue::GetChildAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 

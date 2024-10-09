@@ -127,7 +127,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST void __throw_bad_any_cast() {
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST void __throw_bad_any_cast() {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_any_cast();
 #  else

@@ -1779,17 +1779,17 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV32-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV32-NEXT:    slli a1, a1, 24
 ; CHECK-ALIGNED-RV32-NEXT:    or a1, a1, a4
-; CHECK-ALIGNED-RV32-NEXT:    or a1, a1, a2
-; CHECK-ALIGNED-RV32-NEXT:    lbu a2, 1(a0)
 ; CHECK-ALIGNED-RV32-NEXT:    lbu a3, 0(a0)
-; CHECK-ALIGNED-RV32-NEXT:    lbu a4, 2(a0)
+; CHECK-ALIGNED-RV32-NEXT:    lbu a4, 1(a0)
+; CHECK-ALIGNED-RV32-NEXT:    or a1, a1, a2
+; CHECK-ALIGNED-RV32-NEXT:    lbu a2, 2(a0)
 ; CHECK-ALIGNED-RV32-NEXT:    lbu a0, 3(a0)
-; CHECK-ALIGNED-RV32-NEXT:    slli a2, a2, 8
-; CHECK-ALIGNED-RV32-NEXT:    or a2, a2, a3
-; CHECK-ALIGNED-RV32-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV32-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV32-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV32-NEXT:    slli a2, a2, 16
 ; CHECK-ALIGNED-RV32-NEXT:    slli a0, a0, 24
-; CHECK-ALIGNED-RV32-NEXT:    or a0, a0, a4
 ; CHECK-ALIGNED-RV32-NEXT:    or a0, a0, a2
+; CHECK-ALIGNED-RV32-NEXT:    or a0, a0, a3
 ; CHECK-ALIGNED-RV32-NEXT:    xor a0, a0, a1
 ; CHECK-ALIGNED-RV32-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV32-NEXT:    ret
@@ -1805,17 +1805,17 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-NEXT:    slli a4, a4, 16
 ; CHECK-ALIGNED-RV64-NEXT:    slli a1, a1, 24
 ; CHECK-ALIGNED-RV64-NEXT:    or a1, a1, a4
-; CHECK-ALIGNED-RV64-NEXT:    or a1, a1, a2
-; CHECK-ALIGNED-RV64-NEXT:    lbu a2, 1(a0)
 ; CHECK-ALIGNED-RV64-NEXT:    lbu a3, 0(a0)
-; CHECK-ALIGNED-RV64-NEXT:    lbu a4, 2(a0)
+; CHECK-ALIGNED-RV64-NEXT:    lbu a4, 1(a0)
+; CHECK-ALIGNED-RV64-NEXT:    or a1, a1, a2
+; CHECK-ALIGNED-RV64-NEXT:    lbu a2, 2(a0)
 ; CHECK-ALIGNED-RV64-NEXT:    lb a0, 3(a0)
-; CHECK-ALIGNED-RV64-NEXT:    slli a2, a2, 8
-; CHECK-ALIGNED-RV64-NEXT:    or a2, a2, a3
-; CHECK-ALIGNED-RV64-NEXT:    slli a4, a4, 16
+; CHECK-ALIGNED-RV64-NEXT:    slli a4, a4, 8
+; CHECK-ALIGNED-RV64-NEXT:    or a3, a4, a3
+; CHECK-ALIGNED-RV64-NEXT:    slli a2, a2, 16
 ; CHECK-ALIGNED-RV64-NEXT:    slli a0, a0, 24
-; CHECK-ALIGNED-RV64-NEXT:    or a0, a0, a4
 ; CHECK-ALIGNED-RV64-NEXT:    or a0, a0, a2
+; CHECK-ALIGNED-RV64-NEXT:    or a0, a0, a3
 ; CHECK-ALIGNED-RV64-NEXT:    xor a0, a0, a1
 ; CHECK-ALIGNED-RV64-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    ret

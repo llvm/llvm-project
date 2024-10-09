@@ -46,6 +46,7 @@ struct IntPointer {
   uint64_t Value;
 
   IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
+  IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
 enum class Storage { Block, Int, Fn };
@@ -419,8 +420,18 @@ public:
   }
   /// Checks if the pointer points to an array.
   bool isArrayElement() const {
-    if (isBlockPointer())
-      return inArray() && asBlockPointer().Base != Offset;
+    if (!isBlockPointer())
+      return false;
+
+    const BlockPointer &BP = asBlockPointer();
+    if (inArray() && BP.Base != Offset)
+      return true;
+
+    // Might be a narrow()'ed element in a composite array.
+    // Check the inline descriptor.
+    if (BP.Base >= sizeof(InlineDescriptor) && getInlineDesc()->IsArrayElement)
+      return true;
+
     return false;
   }
   /// Pointer points directly to a block.
@@ -513,9 +524,7 @@ public:
       return false;
 
     assert(isBlockPointer());
-    if (const ValueDecl *VD = getDeclDesc()->asValueDecl())
-      return VD->isWeak();
-    return false;
+    return asBlockPointer().Pointee->isWeak();
   }
   /// Checks if an object was initialized.
   bool isInitialized() const;

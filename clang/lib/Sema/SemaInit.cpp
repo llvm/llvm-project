@@ -758,10 +758,11 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         // CWG1815 (https://wg21.link/CWG1815).
         EnterExpressionEvaluationContext RebuildDefaultInit(
             SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-        // Just copy previous record, make sure we haven't forget anything.
-        SemaRef.currentEvaluationContext() = SemaRef.parentEvaluationContext();
         SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
             true;
+        SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
+            SemaRef.parentEvaluationContext()
+                .DelayedDefaultInitializationContext;
         DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       }
       if (DIE.isInvalid()) {
@@ -1975,8 +1976,9 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
   if (numEltsInit != maxElements) {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
-                   diag::err_vector_incorrect_num_initializers)
-          << (numEltsInit < maxElements) << maxElements << numEltsInit;
+                   diag::err_vector_incorrect_num_elements)
+          << (numEltsInit < maxElements) << maxElements << numEltsInit
+          << /*initialization*/ 0;
     hadError = true;
   }
 }
@@ -9547,7 +9549,7 @@ static void DiagnoseNarrowingInInitList(Sema &S,
                       unsigned ConstRefDiagID, unsigned WarnDiagID) {
     unsigned DiagID;
     auto &L = S.getLangOpts();
-    if (L.CPlusPlus11 &&
+    if (L.CPlusPlus11 && !L.HLSL &&
         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015)))
       DiagID = IsConstRef ? ConstRefDiagID : DefaultDiagID;
     else

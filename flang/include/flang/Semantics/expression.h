@@ -123,6 +123,16 @@ public:
   template <typename... A> parser::Message *Say(A &&...args) {
     return GetContextualMessages().Say(std::forward<A>(args)...);
   }
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(
+      FeatureOrUsageWarning warning, parser::CharBlock at, A &&...args) {
+    return context_.Warn(warning, at, std::forward<A>(args)...);
+  }
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(FeatureOrUsageWarning warning, A &&...args) {
+    return Warn(
+        warning, GetContextualMessages().at(), std::forward<A>(args)...);
+  }
 
   template <typename T, typename... A>
   parser::Message *SayAt(const T &parsed, A &&...args) {
@@ -331,7 +341,7 @@ private:
       const semantics::Scope &, bool C919bAlreadyEnforced = false);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);
-  void CheckConstantSubscripts(ArrayRef &);
+  void CheckSubscripts(ArrayRef &);
   bool CheckRanks(const DataRef &); // Return false if error exists.
   bool CheckPolymorphic(const DataRef &); // ditto
   bool CheckDataRef(const DataRef &); // ditto

@@ -223,3 +223,54 @@ subroutine simdloop_aligned_allocatable()
     A(i) = i
   end do
 end subroutine
+
+!CHECK-LABEL: func @_QPsimd_with_nontemporal_clause
+subroutine simd_with_nontemporal_clause(n)
+  !CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsimd_with_nontemporal_clauseEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsimd_with_nontemporal_clauseEc"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  integer :: i, n
+  integer :: A, B, C
+  !CHECK: %[[LB:.*]] = arith.constant 1 : i32
+  !CHECK: %[[UB:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
+  !CHECK: %[[STEP:.*]] = arith.constant 1 : i32
+  !CHECK: omp.simd nontemporal(%[[A_DECL]]#1, %[[C_DECL]]#1 : !fir.ref<i32>, !fir.ref<i32>) {
+  !CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
+  !$OMP SIMD NONTEMPORAL(A, C)
+  do i = 1, n
+    C = A + B
+  end do
+  !$OMP END SIMD
+end subroutine
+
+!CHECK-LABEL: func.func @_QPlastprivate_with_simd() {
+subroutine lastprivate_with_simd
+
+!CHECK: %[[VAR_SUM:.*]] = fir.alloca f32 {bindc_name = "sum", uniq_name = "_QFlastprivate_with_simdEsum"}
+!CHECK: %[[VAR_SUM_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM]] {{.*}}
+!CHECK: %[[VAR_SUM_PINNED:.*]] = fir.alloca f32 {bindc_name = "sum", pinned, uniq_name = "_QFlastprivate_with_simdEsum"}
+!CHECK: %[[VAR_SUM_PINNED_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM_PINNED]] {{.*}}
+
+  implicit none
+  integer :: i
+  real :: sum
+
+  
+!CHECK: omp.simd {
+!CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = ({{.*}} to ({{.*}}) inclusive step ({{.*}}) {
+!CHECK: %[[ADD_RESULT:.*]] = arith.addi {{.*}}
+!CHECK: %[[ADD_RESULT_CONVERT:.*]] = fir.convert %[[ADD_RESULT]] : (i32) -> f32
+!CHECK: hlfir.assign %[[ADD_RESULT_CONVERT]] to %[[VAR_SUM_PINNED_DECLARE]]#0 : f32, !fir.ref<f32>
+!CHECK: %[[SELECT_RESULT:.*]] = arith.select {{.*}}, {{.*}}, {{.*}} : i1
+!CHECK: fir.if %[[SELECT_RESULT]] {
+!CHECK: %[[LOADED_SUM:.*]] = fir.load %[[VAR_SUM_PINNED_DECLARE]]#0 : !fir.ref<f32>
+!CHECK: hlfir.assign %[[LOADED_SUM]] to %[[VAR_SUM_DECLARE]]#0 : f32, !fir.ref<f32>
+!CHECK: }
+!CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+  !$omp simd lastprivate(sum)
+  do i = 1, 100
+    sum = i + 1
+  end do
+end subroutine

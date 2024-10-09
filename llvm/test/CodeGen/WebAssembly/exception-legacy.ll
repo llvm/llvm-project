@@ -109,7 +109,7 @@ ehcleanup:                                        ; preds = %entry
 }
 
 ; Calling a function that may throw within a 'catch (...)' generates a
-; temrinatepad, because __cxa_end_catch() also can throw within 'catch (...)'.
+; terminatepad, because __cxa_end_catch() also can throw within 'catch (...)'.
 ;
 ; void foo();
 ; void terminatepad() {

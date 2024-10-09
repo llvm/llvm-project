@@ -138,7 +138,7 @@ class DINode : public MDNode {
 
 protected:
   DINode(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = std::nullopt)
+         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {})
       : MDNode(C, ID, Storage, Ops1, Ops2) {
     assert(Tag < 1u << 16);
     SubclassData16 = Tag;
@@ -311,7 +311,7 @@ class DIAssignID : public MDNode {
   friend class MDNode;
 
   DIAssignID(LLVMContext &C, StorageType Storage)
-      : MDNode(C, DIAssignIDKind, Storage, std::nullopt) {}
+      : MDNode(C, DIAssignIDKind, Storage, {}) {}
 
   ~DIAssignID() { dropAllReferences(); }
 
@@ -2730,7 +2730,7 @@ class DIExpression : public MDNode {
   std::vector<uint64_t> Elements;
 
   DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
-      : MDNode(C, DIExpressionKind, Storage, std::nullopt),
+      : MDNode(C, DIExpressionKind, Storage, {}),
         Elements(Elements.begin(), Elements.end()) {}
   ~DIExpression() = default;
 
@@ -3776,8 +3776,7 @@ class DIMacroNode : public MDNode {
 
 protected:
   DIMacroNode(LLVMContext &C, unsigned ID, StorageType Storage, unsigned MIType,
-              ArrayRef<Metadata *> Ops1,
-              ArrayRef<Metadata *> Ops2 = std::nullopt)
+              ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {})
       : MDNode(C, ID, Storage, Ops1, Ops2) {
     assert(MIType < 1u << 16);
     SubclassData16 = MIType;

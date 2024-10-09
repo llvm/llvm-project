@@ -24,6 +24,13 @@
 using namespace llvm;
 using namespace cgdata;
 
+cl::opt<bool>
+    CodeGenDataGenerate("codegen-data-generate", cl::init(false), cl::Hidden,
+                        cl::desc("Emit CodeGen Data into custom sections"));
+cl::opt<std::string>
+    CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
+                       cl::desc("File path to where .cgdata file is read"));
+
 static std::string getCGDataErrString(cgdata_error Err,
                                       const std::string &ErrMsg = "") {
   std::string Msg;
@@ -132,7 +139,24 @@ CodeGenData &CodeGenData::getInstance() {
   std::call_once(CodeGenData::OnceFlag, []() {
     Instance = std::unique_ptr<CodeGenData>(new CodeGenData());
 
-    // TODO: Initialize writer or reader mode for the client optimization.
+    if (CodeGenDataGenerate)
+      Instance->EmitCGData = true;
+    else if (!CodeGenDataUsePath.empty()) {
+      // Initialize the global CGData if the input file name is given.
+      // We do not error-out when failing to parse the input file.
+      // Instead, just emit an warning message and fall back as if no CGData
+      // were available.
+      auto FS = vfs::getRealFileSystem();
+      auto ReaderOrErr = CodeGenDataReader::create(CodeGenDataUsePath, *FS);
+      if (Error E = ReaderOrErr.takeError()) {
+        warn(std::move(E), CodeGenDataUsePath);
+        return;
+      }
+      // Publish each CGData based on the data type in the header.
+      auto Reader = ReaderOrErr->get();
+      if (Reader->hasOutlinedHashTree())
+        Instance->publishOutlinedHashTree(Reader->releaseOutlinedHashTree());
+    }
   });
   return *(Instance.get());
 }

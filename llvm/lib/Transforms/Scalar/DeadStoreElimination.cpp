@@ -505,8 +505,8 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
     // Failed to create a fragment expression for this so discard the value,
     // making this a kill location.
     auto *Expr = *DIExpression::createFragmentExpression(
-        DIExpression::get(Assign->getContext(), std::nullopt),
-        DeadFragment.OffsetInBits, DeadFragment.SizeInBits);
+        DIExpression::get(Assign->getContext(), {}), DeadFragment.OffsetInBits,
+        DeadFragment.SizeInBits);
     Assign->setExpression(Expr);
     Assign->setKillLocation();
   };
@@ -1944,8 +1944,9 @@ struct DSEState {
       return false;
     IRBuilder<> IRB(Malloc);
     Type *SizeTTy = Malloc->getArgOperand(0)->getType();
-    auto *Calloc = emitCalloc(ConstantInt::get(SizeTTy, 1),
-                              Malloc->getArgOperand(0), IRB, TLI);
+    auto *Calloc =
+        emitCalloc(ConstantInt::get(SizeTTy, 1), Malloc->getArgOperand(0), IRB,
+                   TLI, Malloc->getType()->getPointerAddressSpace());
     if (!Calloc)
       return false;
 

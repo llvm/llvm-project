@@ -2121,3 +2121,14 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
                               [ImmCheck<3, ImmCheck0_3>]>;
   }
 }
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon,faminmax" in {
+  def FAMIN : WInst<"vamin", "...", "fhQdQfQh">;
+  def FAMAX : WInst<"vamax", "...", "fhQdQfQh">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
+  // fscale
+  def FSCALE_V128 : WInst<"vscale", "..(.S)", "QdQfQh">;
+  def FSCALE_V64 : WInst<"vscale", "(.q)(.q)(.qS)", "fh">;
+}

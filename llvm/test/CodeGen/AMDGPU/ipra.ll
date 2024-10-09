@@ -30,7 +30,7 @@ define hidden void @func() #1 {
 ; GCN-NOT: writelane
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 
-; GCN: ; NumSgprs: 37
+; GCN: ; TotalNumSgprs: 37
 ; GCN: ; NumVgprs: 9
 define amdgpu_kernel void @kernel_call() #0 {
   %vgpr = load volatile i32, ptr addrspace(1) undef
@@ -48,7 +48,7 @@ define amdgpu_kernel void @kernel_call() #0 {
 ; GCN-NOT: readlane
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 
-; GCN: ; NumSgprs: 34
+; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10
 define void @func_regular_call() #1 {
   %vgpr = load volatile i32, ptr addrspace(1) undef
@@ -64,7 +64,7 @@ define void @func_regular_call() #1 {
 ; GCN-NEXT: s_addc_u32 s17,
 ; GCN-NEXT: s_setpc_b64 s[16:17]
 
-; GCN: ; NumSgprs: 32
+; GCN: ; TotalNumSgprs: 32
 ; GCN: ; NumVgprs: 8
 define void @func_tail_call() #1 {
   tail call void @func()
@@ -77,7 +77,7 @@ define void @func_tail_call() #1 {
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
 ; GCN: s_setpc_b64
 
-; GCN: ; NumSgprs: 34
+; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10
 define void @func_call_tail_call() #1 {
   %vgpr = load volatile i32, ptr addrspace(1) undef
@@ -105,13 +105,6 @@ define void @test_funcx2() #0 {
   ret void
 }
 
-; GCN-LABEL: {{^}}wombat:
-define weak amdgpu_kernel void @wombat(ptr %arg, ptr %arg2) {
-bb:
-  call void @hoge() #0
-  ret void
-}
-
 ; Make sure we save/restore the return address around the call.
 ; Function Attrs: norecurse
 define internal void @hoge() #2 {
@@ -125,6 +118,13 @@ bb:
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: s_setpc_b64 s[30:31]
   call void @eggs()
+  ret void
+}
+
+; GCN-LABEL: {{^}}wombat:
+define weak amdgpu_kernel void @wombat(ptr %arg, ptr %arg2) {
+bb:
+  call void @hoge() #0
   ret void
 }
 

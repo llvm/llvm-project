@@ -83,7 +83,7 @@ static void updateAssignmentLevel(
       memberExpr(hasObjectExpression(cxxThisExpr()),
                  member(fieldDecl(indexNotLessThan(Field->getFieldIndex()))));
   auto DeclMatcher = declRefExpr(
-      to(varDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Ctor)))));
+      to(valueDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Ctor)))));
   const bool HasDependence = !match(expr(anyOf(MemberMatcher, DeclMatcher,
                                                hasDescendant(MemberMatcher),
                                                hasDescendant(DeclMatcher))),

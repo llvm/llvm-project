@@ -42,7 +42,6 @@ void OutputSection::createHeader(size_t bodySize) {
   debugWrite(os.tell(), "section type [" + getSectionName() + "]");
   encodeULEB128(type, os);
   writeUleb128(os, bodySize, "section size");
-  os.flush();
   log("createHeader: " + toString(*this) + " body=" + Twine(bodySize) +
       " total=" + Twine(getSize()));
 }
@@ -50,7 +49,6 @@ void OutputSection::createHeader(size_t bodySize) {
 void CodeSection::finalizeContents() {
   raw_string_ostream os(codeSectionHeader);
   writeUleb128(os, functions.size(), "function count");
-  os.flush();
   bodySize = codeSectionHeader.size();
 
   for (InputFunction *func : functions) {
@@ -112,7 +110,6 @@ void DataSection::finalizeContents() {
          "output segments should have been combined by now");
 
   writeUleb128(os, segmentCount, "data segment count");
-  os.flush();
   bodySize = dataSectionHeader.size();
   bool is64 = config->is64.value_or(false);
 
@@ -147,7 +144,6 @@ void DataSection::finalizeContents() {
       }
     }
     writeUleb128(os, segment->size, "segment size");
-    os.flush();
 
     segment->sectionOffset = bodySize;
     bodySize += segment->header.size() + segment->size;
@@ -245,7 +241,6 @@ void CustomSection::finalizeContents() {
   raw_string_ostream os(nameData);
   encodeULEB128(name.size(), os);
   os << name;
-  os.flush();
 
   for (InputChunk *section : inputSections) {
     assert(!section->discarded);
