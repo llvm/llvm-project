@@ -7137,14 +7137,6 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          SkipCostComputation.contains(UI);
 }
 
-bool VPCostContext::isInLoopReduction(const Instruction *UI, ElementCount VF,
-                                      Type *VectorTy) const {
-  return CM
-      .getReductionPatternCost(const_cast<Instruction *>(UI), VF, VectorTy,
-                               TTI::TCK_RecipThroughput)
-      .has_value();
-}
-
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {

@@ -2079,13 +2079,14 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
 
-  // TODO: Support any-of reduction and in-loop reductions.
+  // TODO: Support any-of and in-loop reductions.
   assert(
       (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
+  auto *ReductionPHIRecipe = dyn_cast<VPReductionPHIRecipe>(getOperand(0));
   assert(
-      (!Ctx.isInLoopReduction(getUnderlyingInstr(), VF, VectorTy) ||
+      (ReductionPHIRecipe && !ReductionPHIRecipe->isInLoop() ||
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "In-loop reduction not implemented in VPlan-based cost model currently.");
 
