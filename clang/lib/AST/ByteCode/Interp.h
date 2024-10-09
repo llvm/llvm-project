@@ -161,6 +161,7 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
+bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
