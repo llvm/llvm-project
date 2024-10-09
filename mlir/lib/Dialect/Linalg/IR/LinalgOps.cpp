@@ -1316,11 +1316,12 @@ LogicalResult GenericOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
 static ParseResult parseDstStyleOp(
     OpAsmParser &parser, OperationState &result,
     function_ref<ParseResult(OpAsmParser &, NamedAttrList &)> parseAttrsFn =
-        nullptr) {
+        nullptr,
+    bool addOperandSegmentSizes = false) {
   // Parse `ins` and `outs`.
   SmallVector<Type, 4> inputTypes, outputTypes;
   if (parseCommonStructuredOpParts(parser, result, inputTypes, outputTypes,
-                                   /*addOperandSegmentSizes=*/false))
+                                   addOperandSegmentSizes))
     return failure();
 
   // Add result types.
@@ -1669,9 +1670,12 @@ ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   if (parseDstStyleOp(
-          parser, result, [&](OpAsmParser &parser, NamedAttrList &attributes) {
+          parser, result,
+          [&](OpAsmParser &parser, NamedAttrList &attributes) {
             return parseDenseI64ArrayAttr(parser, attributes, "dimensions");
-          }))
+          },
+          /*addOperandSegmentSizes=*/true))
+
     return failure();
 
   if (payloadOpName.has_value()) {
@@ -1706,7 +1710,9 @@ void ReduceOp::print(OpAsmPrinter &p) {
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
-  p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      {getDimensionsAttrName(), getOperandSegmentSizesAttrName()});
   if (!payloadOp) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
