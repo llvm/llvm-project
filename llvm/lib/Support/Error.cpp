@@ -82,6 +82,14 @@ std::string toString(Error E) {
   return join(Errors.begin(), Errors.end(), "\n");
 }
 
+std::string toStringWithoutConsuming(const Error &E) {
+  SmallVector<std::string, 2> Errors;
+  visitErrors(E, [&Errors](const ErrorInfoBase &EI) {
+    Errors.push_back(EI.message());
+  });
+  return join(Errors.begin(), Errors.end(), "\n");
+}
+
 std::error_code ErrorList::convertToErrorCode() const {
   return std::error_code(static_cast<int>(ErrorErrorCode::MultipleErrors),
                          getErrorErrorCat());
@@ -173,6 +181,12 @@ LLVMErrorTypeId LLVMGetErrorTypeId(LLVMErrorRef Err) {
 }
 
 void LLVMConsumeError(LLVMErrorRef Err) { consumeError(unwrap(Err)); }
+
+
+
+void LLVMCantFail(LLVMErrorRef Err) {
+  cantFail(unwrap(Err));
+}
 
 char *LLVMGetErrorMessage(LLVMErrorRef Err) {
   std::string Tmp = toString(unwrap(Err));

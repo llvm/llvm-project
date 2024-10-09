@@ -217,6 +217,7 @@ bool ThreadSuspender::SuspendAllThreads() {
     switch (thread_lister.ListThreads(&threads)) {
       case ThreadLister::Error:
         ResumeAllThreads();
+        VReport(1, "Failed to list threads\n");
         return false;
       case ThreadLister::Incomplete:
         retry = true;
@@ -228,6 +229,8 @@ bool ThreadSuspender::SuspendAllThreads() {
       if (SuspendThread(tid))
         retry = true;
     }
+    if (retry)
+      VReport(1, "SuspendAllThreads retry: %d\n", i);
   }
   return suspended_threads_list_.ThreadCount();
 }
@@ -257,8 +260,8 @@ static void TracerThreadDieCallback() {
 static void TracerThreadSignalHandler(int signum, __sanitizer_siginfo *siginfo,
                                       void *uctx) {
   SignalContext ctx(siginfo, uctx);
-  Printf("Tracer caught signal %d: addr=0x%zx pc=0x%zx sp=0x%zx\n", signum,
-         ctx.addr, ctx.pc, ctx.sp);
+  Printf("Tracer caught signal %d: addr=%p pc=%p sp=%p\n", signum,
+         (void *)ctx.addr, (void *)ctx.pc, (void *)ctx.sp);
   ThreadSuspender *inst = thread_suspender_instance;
   if (inst) {
     if (signum == SIGABRT)

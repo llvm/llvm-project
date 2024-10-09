@@ -204,7 +204,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs" &&
+      Name != "pauthtest")
     return false;
 
   ABI = Name;
@@ -218,7 +219,25 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
     return false;
   }
+  if (getTriple().getEnvironment() == llvm::Triple::PAuthTest &&
+      getTriple().getOS() != llvm::Triple::Linux) {
+    Diags.Report(diag::err_target_unsupported_abi_for_triple)
+        << getTriple().getEnvironmentName() << getTriple().getTriple();
+    return false;
+  }
   return true;
+}
+
+bool AArch64TargetInfo::validateGlobalRegisterVariable(
+    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
+  if ((RegName == "sp") || RegName.starts_with("x")) {
+    HasSizeMismatch = RegSize != 64;
+    return true;
+  } else if (RegName.starts_with("w")) {
+    HasSizeMismatch = RegSize != 32;
+    return true;
+  }
+  return false;
 }
 
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
@@ -246,7 +265,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
-  return Name == "generic" || llvm::AArch64::parseCpu(Name);
+  return llvm::AArch64::parseCpu(Name).has_value();
 }
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {
@@ -354,6 +373,12 @@ void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
   getTargetDefinesARMV94A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV96A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.6-A does not have a v8.* equivalent, but is a superset of v9.5-A.
+  getTargetDefinesARMV95A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -380,7 +405,13 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AARCH64_CMODEL_" + CodeModel + "__");
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
-  Builder.defineMacro("__ARM_ACLE", "200");
+  Builder.defineMacro("__ARM_ACLE_VERSION(year, quarter, patch)",
+                      "(100 * (year) + 10 * (quarter) + (patch))");
+#define ARM_ACLE_VERSION(Y, Q, P) (100 * (Y) + 10 * (Q) + (P))
+  Builder.defineMacro("__ARM_ACLE", Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+  Builder.defineMacro("__FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL",
+                      Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+#undef ARM_ACLE_VERSION
   Builder.defineMacro("__ARM_ARCH",
                       std::to_string(ArchInfo->Version.getMajor()));
   Builder.defineMacro("__ARM_ARCH_PROFILE",
@@ -437,6 +468,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
 
+  if (HasSVE2p1)
+    Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
+
   if (HasSVE2 && HasSVE2AES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
@@ -449,16 +483,25 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2 && HasSVE2SM4)
     Builder.defineMacro("__ARM_FEATURE_SVE2_SM4", "1");
 
+  if (HasSVEB16B16)
+    Builder.defineMacro("__ARM_FEATURE_SVE_B16B16", "1");
+
   if (HasSME) {
     Builder.defineMacro("__ARM_FEATURE_SME");
     Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
   }
 
-  if (HasSME2) {
-    Builder.defineMacro("__ARM_FEATURE_SME");
-    Builder.defineMacro("__ARM_FEATURE_SME2");
-    Builder.defineMacro("__ARM_FEATURE_LOCALLY_STREAMING", "1");
-  }
+  if (HasSME2)
+    Builder.defineMacro("__ARM_FEATURE_SME2", "1");
+
+  if (HasSME2p1)
+    Builder.defineMacro("__ARM_FEATURE_SME2p1", "1");
+
+  if (HasSMEF16F16)
+    Builder.defineMacro("__ARM_FEATURE_SME_F16F16", "1");
+
+  if (HasSMEB16B16)
+    Builder.defineMacro("__ARM_FEATURE_SME_B16B16", "1");
 
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
@@ -620,6 +663,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV94A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
     getTargetDefinesARMV95A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_6A)
+    getTargetDefinesARMV96A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -661,26 +706,22 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->FmvPriority;
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return Ext->Priority;
   return 0;
 }
 
 unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
   // Take the maximum priority as per feature cost, so more features win.
-  return llvm::AArch64::ExtensionInfo::MaxFMVPriority;
+  constexpr unsigned MaxFMVPriority = 1000;
+  return MaxFMVPriority;
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return !Ext->DependentFeatures.empty();
+  // FMV extensions which imply no backend features do not affect codegen.
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return !Ext->Features.empty();
   return false;
-}
-
-StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->DependentFeatures;
-  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
@@ -688,7 +729,7 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   llvm::SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, "+");
   for (auto &Feature : Features)
-    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+    if (!llvm::AArch64::parseFMVExtension(Feature.trim()).has_value())
       return false;
   return true;
 }
@@ -724,6 +765,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve", FPU & SveMode)
       .Case("sve-bf16", FPU & SveMode && HasBFloat16)
       .Case("sve-i8mm", FPU & SveMode && HasMatMul)
+      .Case("sve-b16b16", HasSVEB16B16)
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
@@ -731,11 +773,15 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
+      .Case("sve2p1", FPU & SveMode && HasSVE2p1)
       .Case("sme", HasSME)
       .Case("sme2", HasSME2)
+      .Case("sme2p1", HasSME2p1)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
       .Case("sme-fa64", HasSMEFA64)
+      .Case("sme-f16f16", HasSMEF16F16)
+      .Case("sme-b16b16", HasSMEB16B16)
       .Cases("memtag", "memtag2", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
@@ -808,6 +854,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFullFP16 = true;
       HasSVE2 = true;
     }
+    if (Feature == "+sve2p1") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasSVE2 = true;
+      HasSVE2p1 = true;
+    }
     if (Feature == "+sve2-aes") {
       FPU |= NeonMode;
       FPU |= SveMode;
@@ -829,6 +882,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2SM4 = true;
     }
+    if (Feature == "+sve-b16b16")
+      HasSVEB16B16 = true;
     if (Feature == "+sve2-bitperm") {
       FPU |= NeonMode;
       FPU |= SveMode;
@@ -859,6 +914,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
+    if (Feature == "+sme2p1") {
+      HasSME = true;
+      HasSME2 = true;
+      HasSME2p1 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
     if (Feature == "+sme-f64f64") {
       HasSME = true;
       HasSMEF64F64 = true;
@@ -877,6 +939,21 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSME = true;
       HasSVE2 = true;
       HasSMEFA64 = true;
+    }
+    if (Feature == "+sme-f16f16") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+      HasSMEF16F16 = true;
+    }
+    if (Feature == "+sme-b16b16") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+      HasSVEB16B16 = true;
+      HasSMEB16B16 = true;
     }
     if (Feature == "+sb")
       HasSB = true;
@@ -975,6 +1052,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.5a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_5A;
+    if (Feature == "+v9.6a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_6A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_6A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1061,9 +1141,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 //
 // A feature may correspond to an Extension (anything with a corresponding
 // AEK_), in which case an ExtensionSet is used to parse it and expand its
-// dependencies. Otherwise the feature is passed through (e.g. +v8.1a,
-// +outline-atomics, -fmv, etc). Features coming from the command line are
-// already parsed, therefore their dependencies do not need expansion.
+// dependencies. If the feature does not yield a successful parse then it
+// is passed through.
 ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   ParsedTargetAttr Ret;
   if (Features == "default")
@@ -1078,10 +1157,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     SmallVector<StringRef, 8> SplitFeatures;
     FeatString.split(SplitFeatures, StringRef("+"), -1, false);
     for (StringRef Feature : SplitFeatures) {
-      if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
+      if (FeatureBits.parseModifier(Feature))
         continue;
-      // Pass through features that are not extensions, e.g. +v8.1a,
-      // +outline-atomics, -fmv, etc.
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
       if (Feature.starts_with("no"))
         Features.push_back("-" + Feature.drop_front(2).str());
       else
@@ -1091,7 +1174,8 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
   llvm::AArch64::ExtensionSet FeatureBits;
   // Reconstruct the bitset from the command line option features.
-  FeatureBits.reconstructFromParsedFeatures(getTargetOpts().FeaturesAsWritten);
+  FeatureBits.reconstructFromParsedFeatures(getTargetOpts().FeaturesAsWritten,
+                                            Ret.Features);
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
@@ -1142,8 +1226,12 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     } else {
       if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
         continue;
-      // Pass through features that are not extensions, e.g. +v8.1a,
-      // +outline-atomics, -fmv, etc.
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
       if (Feature.starts_with("no-"))
         Ret.Features.push_back("-" + Feature.drop_front(3).str());
       else
@@ -1520,6 +1608,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_PreserveNone:
   case CC_Swift:
   case CC_SwiftAsync:
   case CC_Win64:

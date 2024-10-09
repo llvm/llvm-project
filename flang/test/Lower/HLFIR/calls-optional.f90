@@ -16,19 +16,18 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPoptional_copy_in_out(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_copy_in_outEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:  %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
-! CHECK:  %[[VAL_3:.*]]:4 = fir.if %[[VAL_2]] -> (!fir.ref<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>) {
-! CHECK:    %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, i1)
+! CHECK:  %[[VAL_3:.*]]:3 = fir.if %[[VAL_2]] -> (!fir.ref<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>) {
+! CHECK:    %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.array<?xf32>>, i1)
 ! CHECK:    %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-! CHECK:    fir.result %[[VAL_5]], %[[VAL_4]]#0, %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.ref<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>
+! CHECK:    fir.result %[[VAL_5]], %[[VAL_4]]#1, %[[VAL_1]]#0 : !fir.ref<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>
 ! CHECK:  } else {
-! CHECK:    %[[VAL_6:.*]] = fir.absent !fir.ref<!fir.array<?xf32>>
-! CHECK:    %[[VAL_7:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
+! CHECK:    %[[VAL_7:.*]] = fir.absent !fir.ref<!fir.array<?xf32>>
 ! CHECK:    %[[VAL_8:.*]] = arith.constant false
 ! CHECK:    %[[VAL_9:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
-! CHECK:    fir.result %[[VAL_6]], %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] : !fir.ref<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>
+! CHECK:    fir.result %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] : !fir.ref<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>
 ! CHECK:  }
 ! CHECK:  fir.call @_QPtakes_optional_explicit(%[[VAL_3]]#0) {{.*}} : (!fir.ref<!fir.array<?xf32>>) -> ()
-! CHECK:  hlfir.copy_out %[[VAL_3]]#1, %[[VAL_3]]#2 to %[[VAL_3]]#3 : (!fir.box<!fir.array<?xf32>>, i1, !fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:  hlfir.copy_out %[[TMP_BOX]], %[[VAL_3]]#1 to %[[VAL_3]]#2 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1, !fir.box<!fir.array<?xf32>>) -> ()
 
 subroutine optional_value_copy(x)
   interface

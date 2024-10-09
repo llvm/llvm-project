@@ -38,12 +38,12 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[I_NEXT:%.*]], [[DOTOUTER:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[I]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 256
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 128
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP7]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 132
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[OBJ]], i64 0, i32 1, i64 [[I]]
@@ -67,16 +67,16 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 0, i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP12]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope !3
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP12]], align 4, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4, !alias.scope !5, !noalias !7
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[TMP14]], [[WIDE_LOAD8]]
-; CHECK-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP16]], align 4, !alias.scope !5, !noalias !7
+; CHECK-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP16]], align 4, !alias.scope [[META5]], !noalias [[META7]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -107,12 +107,12 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], !llvm.loop [[LOOP11:![0-9]+]]
 ;
 ; CHECK-HOIST-LABEL: @Test(
-; CHECK-HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OBJ:%.*]], i64 256
+; CHECK-HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ:%.*]], i64 256
 ; CHECK-HOIST-NEXT:    [[TMP1:%.*]] = shl i64 [[Z:%.*]], 2
 ; CHECK-HOIST-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4224
 ; CHECK-HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP2]]
 ; CHECK-HOIST-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP1]]
-; CHECK-HOIST-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[OBJ]], i64 128
+; CHECK-HOIST-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 128
 ; CHECK-HOIST-NEXT:    br label [[DOTOUTER_PREHEADER:%.*]]
 ; CHECK-HOIST:       .outer.preheader:
 ; CHECK-HOIST-NEXT:    [[I:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[I_NEXT:%.*]], [[DOTOUTER:%.*]] ]
@@ -134,16 +134,16 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-HOIST-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-HOIST-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 0, i64 [[TMP4]]
 ; CHECK-HOIST-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
-; CHECK-HOIST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4, !alias.scope !0
-; CHECK-HOIST-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 4, !alias.scope !3
+; CHECK-HOIST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4, !alias.scope [[META0:![0-9]+]]
+; CHECK-HOIST-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 4, !alias.scope [[META3:![0-9]+]]
 ; CHECK-HOIST-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-HOIST-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-HOIST-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; CHECK-HOIST-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[TMP4]]
 ; CHECK-HOIST-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
-; CHECK-HOIST-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4, !alias.scope !5, !noalias !7
+; CHECK-HOIST-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-HOIST-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[TMP8]], [[WIDE_LOAD5]]
-; CHECK-HOIST-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP10]], align 4, !alias.scope !5, !noalias !7
+; CHECK-HOIST-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP10]], align 4, !alias.scope [[META5]], !noalias [[META7]]
 ; CHECK-HOIST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-HOIST-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-HOIST-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]

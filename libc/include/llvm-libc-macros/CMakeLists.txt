@@ -104,11 +104,31 @@ add_macro_header(
 )
 
 add_macro_header(
+  link_macros
+  HDR
+    link-macros.h
+)
+
+add_macro_header(
+  malloc_macros
+  HDR
+    malloc-macros.h
+)
+
+add_macro_header(
   math_macros
   HDR
     math-macros.h
   DEPENDS
     .limits_macros
+)
+
+add_macro_header(
+  math_function_macros
+  HDR
+    math-function-macros.h
+  DEPENDS
+    .math_macros
 )
 
 add_macro_header(
@@ -270,4 +290,22 @@ add_macro_header(
   stdckdint_macros
   HDR
     stdckdint-macros.h
+)
+
+add_macro_header(
+  dlfcn_macros
+  HDR
+    dlfcn-macros.h
+)
+
+add_macro_header(
+  elf_macros
+  HDR
+    elf-macros.h
+)
+
+add_macro_header(
+  locale_macros
+  HDR
+    locale-macros.h
 )

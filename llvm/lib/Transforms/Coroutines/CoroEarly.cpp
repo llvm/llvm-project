@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
+#include "CoroShape.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -33,9 +34,7 @@ class Lowerer : public coro::LowererBase {
 public:
   Lowerer(Module &M)
       : LowererBase(M), Builder(Context),
-        AnyResumeFnPtrTy(FunctionType::get(Type::getVoidTy(Context), Int8Ptr,
-                                           /*isVarArg=*/false)
-                             ->getPointerTo()) {}
+        AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
   void lowerEarlyIntrinsics(Function &F);
 };
 }
@@ -90,11 +89,9 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   static_assert(coro::Shape::SwitchFieldIndex::Resume == 0,
                 "resume function not at offset zero");
   auto *FrameTy = Int8Ptr;
-  PointerType *FramePtrTy = FrameTy->getPointerTo();
 
   Builder.SetInsertPoint(II);
-  auto *BCI = Builder.CreateBitCast(Operand, FramePtrTy);
-  auto *Load = Builder.CreateLoad(FrameTy, BCI);
+  auto *Load = Builder.CreateLoad(FrameTy, Operand);
   auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
 
   II->replaceAllUsesWith(Cond);
@@ -127,10 +124,9 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
 
     // Create a noop.frame struct type.
     StructType *FrameTy = StructType::create(C, "NoopCoro.Frame");
-    auto *FramePtrTy = FrameTy->getPointerTo();
-    auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
+    auto *FnTy = FunctionType::get(Type::getVoidTy(C), Builder.getPtrTy(0),
                                    /*isVarArg=*/false);
-    auto *FnPtrTy = FnTy->getPointerTo();
+    auto *FnPtrTy = Builder.getPtrTy(0);
     FrameTy->setBody({FnPtrTy, FnPtrTy});
 
     // Create a Noop function that does nothing.
@@ -148,6 +144,7 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     NoopCoro = new GlobalVariable(M, NoopCoroConst->getType(), /*isConstant=*/true,
                                 GlobalVariable::PrivateLinkage, NoopCoroConst,
                                 "NoopCoro.Frame.Const");
+    cast<GlobalVariable>(NoopCoro)->setNoSanitizeMetadata();
   }
 
   Builder.SetInsertPoint(II);
@@ -202,7 +199,7 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         if (auto *CII = cast<CoroIdInst>(&I)) {
           if (CII->getInfo().isPreSplit()) {
             assert(F.isPresplitCoroutine() &&
-                   "The frontend uses Swtich-Resumed ABI should emit "
+                   "The frontend uses Switch-Resumed ABI should emit "
                    "\"presplitcoroutine\" attribute for the coroutine.");
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();

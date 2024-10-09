@@ -458,9 +458,6 @@ public:
 private:
   bool PositionIndependent = false;
   MCContext *Ctx = nullptr;
-  VersionTuple SDKVersion;
-  std::optional<Triple> DarwinTargetVariantTriple;
-  VersionTuple DarwinTargetVariantSDKVersion;
 
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
@@ -471,29 +468,6 @@ private:
   void initXCOFFMCObjectFileInfo(const Triple &T);
   void initDXContainerObjectFileInfo(const Triple &T);
   MCSection *getDwarfComdatSection(const char *Name, uint64_t Hash) const;
-
-public:
-  void setSDKVersion(const VersionTuple &TheSDKVersion) {
-    SDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getSDKVersion() const { return SDKVersion; }
-
-  void setDarwinTargetVariantTriple(const Triple &T) {
-    DarwinTargetVariantTriple = T;
-  }
-
-  const Triple *getDarwinTargetVariantTriple() const {
-    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
-  }
-
-  void setDarwinTargetVariantSDKVersion(const VersionTuple &TheSDKVersion) {
-    DarwinTargetVariantSDKVersion = TheSDKVersion;
-  }
-
-  const VersionTuple &getDarwinTargetVariantSDKVersion() const {
-    return DarwinTargetVariantSDKVersion;
-  }
 };
 
 } // end namespace llvm

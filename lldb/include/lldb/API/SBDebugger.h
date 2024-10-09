@@ -57,6 +57,8 @@ public:
 
   static const char *GetBroadcasterClass();
 
+  static bool SupportsLanguage(lldb::LanguageType language);
+
   lldb::SBBroadcaster GetBroadcaster();
 
   /// Get progress data from a SBEvent whose type is eBroadcastBitProgress.
@@ -301,6 +303,8 @@ public:
   bool SetUseColor(bool use_color);
 
   bool GetUseColor() const;
+
+  bool SetShowInlineDiagnostics(bool);
 
   bool SetUseSourceCache(bool use_source_cache);
 

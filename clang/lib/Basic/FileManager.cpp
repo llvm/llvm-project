@@ -530,13 +530,18 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
-                              bool RequiresNullTerminator) {
+                              bool RequiresNullTerminator,
+                              std::optional<int64_t> MaybeLimit) {
   const FileEntry *Entry = &FE.getFileEntry();
   // If the content is living on the file entry, return a reference to it.
   if (Entry->Content)
     return llvm::MemoryBuffer::getMemBuffer(Entry->Content->getMemBufferRef());
 
   uint64_t FileSize = Entry->getSize();
+
+  if (MaybeLimit)
+    FileSize = *MaybeLimit;
+
   // If there's a high enough chance that the file have changed since we
   // got its size, force a stat before opening it.
   if (isVolatile || Entry->isNamedPipe())
@@ -686,6 +691,17 @@ void FileManager::PrintStats() const {
                << NumDirCacheMisses << " dir cache misses.\n";
   llvm::errs() << NumFileLookups << " file lookups, "
                << NumFileCacheMisses << " file cache misses.\n";
+
+  getVirtualFileSystem().visit([](llvm::vfs::FileSystem &VFS) {
+    if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS))
+      llvm::errs() << "\n*** Virtual File System Stats:\n"
+                   << T->NumStatusCalls << " status() calls\n"
+                   << T->NumOpenFileForReadCalls << " openFileForRead() calls\n"
+                   << T->NumDirBeginCalls << " dir_begin() calls\n"
+                   << T->NumGetRealPathCalls << " getRealPath() calls\n"
+                   << T->NumExistsCalls << " exists() calls\n"
+                   << T->NumIsLocalCalls << " isLocal() calls\n";
+  });
 
   //llvm::errs() << PagesMapped << BytesOfPagesMapped << FSLookups;
 }

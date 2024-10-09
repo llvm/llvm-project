@@ -29,7 +29,7 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi float [ [[TMP11:%.*]], [[DOTBB12]] ], [ [[CONV_I]], [[DOTBB2]] ]
 ; CHECK-NEXT:    [[I12_06:%.*]] = phi i32 [ [[SUB:%.*]], [[DOTBB12]] ], [ [[INUMSTEPS]], [[DOTBB2]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[I12_06]], [[BASE:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I12_06]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[I12_06]], 1
 ; CHECK-NEXT:    [[CONV_I9:%.*]] = sext i32 [[ADD]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLA]], i64 0, i64 [[CONV_I9]]
 ; CHECK-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds [258 x float], ptr [[CALLB]], i64 0, i64 [[CONV_I9]]
@@ -70,8 +70,8 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    store float [[TMP10]], ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    br label [[DOTBB12]]
 ; CHECK:       .bb12:
-; CHECK-NEXT:    [[SUB]] = add i32 [[I12_06]], -4
-; CHECK-NEXT:    [[CMP13:%.*]] = icmp sgt i32 [[SUB]], 0
+; CHECK-NEXT:    [[SUB]] = add nsw i32 [[I12_06]], -4
+; CHECK-NEXT:    [[CMP13:%.*]] = icmp sgt i32 [[I12_06]], 4
 ; CHECK-NEXT:    br i1 [[CMP13]], label [[DOTBB3]], label [[DOTBB8]]
 ;
   %callA = alloca [258 x float], align 4
@@ -350,7 +350,7 @@ define i32 @zext_in_loop_and_exit_block(i8 %step, i32 %end) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_EXT:%.*]] = zext i8 [[IV]] to i32
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[IV_EXT]], [[END:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[END:%.*]], [[IV_EXT]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], [[STEP:%.*]]

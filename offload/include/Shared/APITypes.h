@@ -102,8 +102,9 @@ struct KernelArgsTy {
       0; // Tripcount for the teams / distribute loop, 0 otherwise.
   struct {
     uint64_t NoWait : 1; // Was this kernel spawned with a `nowait` clause.
-    uint64_t Unused : 63;
-  } Flags = {0, 0};
+    uint64_t IsCUDA : 1; // Was this kernel spawned via CUDA.
+    uint64_t Unused : 62;
+  } Flags = {0, 0, 0};
   // The number of teams (for x,y,z dimension).
   uint32_t NumTeams[3] = {0, 0, 0};
    // The number of threads (for x,y,z dimension).
@@ -116,6 +117,16 @@ static_assert(sizeof(KernelArgsTy) ==
                   (8 * sizeof(int32_t) + 3 * sizeof(int64_t) +
                    4 * sizeof(void **) + 2 * sizeof(int64_t *)),
               "Invalid struct size");
+
+/// Flat array of kernel launch parameters and their total size.
+struct KernelLaunchParamsTy {
+  /// Size of the Data array.
+  size_t Size = 0;
+  /// Flat array of kernel parameters.
+  void *Data = nullptr;
+  /// Ptrs to the Data entries. Only strictly required for the host plugin.
+  void **Ptrs = nullptr;
+};
 }
 
 #endif // OMPTARGET_SHARED_API_TYPES_H

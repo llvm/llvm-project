@@ -329,6 +329,9 @@ private:
   /// metadata nodes for them.
   LogicalResult createTBAAMetadata();
 
+  /// Process the ident LLVM Metadata, if it exists.
+  LogicalResult createIdentMetadata();
+
   /// Translates dialect attributes attached to the given operation.
   LogicalResult
   convertDialectAttributes(Operation *op,

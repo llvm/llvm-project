@@ -514,7 +514,7 @@ Modern CPUs and GPUs are architecturally quite different, so code that's fast
 on a CPU isn't necessarily fast on a GPU.  We've made a number of changes to
 LLVM to make it generate good GPU code.  Among these changes are:
 
-* `Straight-line scalar optimizations <https://goo.gl/4Rb9As>`_ -- These
+* `Straight-line scalar optimizations <https://docs.google.com/document/d/1momWzKFf4D6h8H3YlfgKQ3qeZy5ayvMRh6yR-Xn2hUE>`_ -- These
   reduce redundancy within straight-line code.
 
 * `Aggressive speculative execution

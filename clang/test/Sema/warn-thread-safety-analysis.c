@@ -33,11 +33,19 @@ struct Foo {
   int  a_value GUARDED_BY(mu_);
 
   struct Bar {
-    struct Mutex *other_mu ACQUIRED_AFTER(mu_);
+    struct Mutex *other_mu ACQUIRED_AFTER(mu_); // Note: referencing the parent structure is convenient here, but this should probably be disallowed if the child structure is re-used outside of the parent.
     struct Mutex *third_mu ACQUIRED_BEFORE(other_mu);
   } bar;
 
   int* a_ptr PT_GUARDED_BY(bar.other_mu);
+};
+
+struct LOCKABLE Lock {};
+struct A {
+        struct Lock lock;
+        union {
+                int b __attribute__((guarded_by(lock))); // Note: referencing the parent structure is convenient here, but this should probably be disallowed if the child is re-used outside of the parent.
+        };
 };
 
 // Declare mutex lock/unlock functions.

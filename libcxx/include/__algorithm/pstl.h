@@ -10,17 +10,6 @@
 #define _LIBCPP___ALGORITHM_PSTL_H
 
 #include <__config>
-#include <__functional/operations.h>
-#include <__iterator/cpp17_iterator_concepts.h>
-#include <__iterator/iterator_traits.h>
-#include <__pstl/backend.h>
-#include <__pstl/dispatch.h>
-#include <__pstl/handle_exception.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_execution_policy.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,6 +19,18 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
+#  include <__functional/operations.h>
+#  include <__iterator/cpp17_iterator_concepts.h>
+#  include <__iterator/iterator_traits.h>
+#  include <__pstl/backend.h>
+#  include <__pstl/dispatch.h>
+#  include <__pstl/handle_exception.h>
+#  include <__type_traits/enable_if.h>
+#  include <__type_traits/is_execution_policy.h>
+#  include <__type_traits/remove_cvref.h>
+#  include <__utility/forward.h>
+#  include <__utility/move.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -351,7 +352,7 @@ template <class _ExecutionPolicy,
           class _Predicate,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
 is_partitioned(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "is_partitioned requires ForwardIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__is_partitioned, __pstl::__current_configuration, _RawPolicy>;

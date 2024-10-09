@@ -33,7 +33,7 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
@@ -165,7 +165,7 @@ struct __is_partitioned<__default_backend_tag, _ExecutionPolicy> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _FindIfNot   = __dispatch<__find_if_not, __current_configuration, _ExecutionPolicy>;
-    auto __maybe_first = _FindIfNot()(__policy, std::move(__first), std::move(__last), __pred);
+    auto __maybe_first = _FindIfNot()(__policy, std::move(__first), __last, __pred);
     if (__maybe_first == nullopt)
       return nullopt;
 
@@ -500,7 +500,7 @@ struct __rotate_copy<__default_backend_tag, _ExecutionPolicy> {
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

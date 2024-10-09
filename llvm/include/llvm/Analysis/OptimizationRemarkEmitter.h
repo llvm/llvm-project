@@ -16,13 +16,12 @@
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <optional>
 
 namespace llvm {
-class Function;
-class Value;
 
 /// The optimization diagnostic interface.
 ///
@@ -173,5 +172,5 @@ public:
   /// Run the analysis pass over a function and produce BFI.
   Result run(Function &F, FunctionAnalysisManager &AM);
 };
-}
+} // namespace llvm
 #endif // LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H

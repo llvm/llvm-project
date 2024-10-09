@@ -233,7 +233,7 @@ public:
     auto num_children_or_err = CalculateNumChildren();
     if (!num_children_or_err)
       return ValueObjectConstResult::Create(
-          nullptr, Status(num_children_or_err.takeError()));
+          nullptr, Status::FromError(num_children_or_err.takeError()));
     if (idx >= *num_children_or_err)
       return {};
     std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);

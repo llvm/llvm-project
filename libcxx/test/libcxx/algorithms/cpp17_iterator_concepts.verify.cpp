@@ -143,7 +143,7 @@ void check_forward_iterator_requirements() {
   // expected-note@*:* {{because 'not_default_constructible' does not satisfy '__cpp17_default_constructible'}}
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(postincrement_not_ref, ""); // expected-error {{static assertion failed}}
 #ifndef _AIX
-  // expected-note@*:* {{because type constraint 'convertible_to<valid_iterator<postincrement_not_ref>::Proxy, const postincrement_not_ref &>' was not satisfied}}
+  // expected-note-re@*:* {{because type constraint 'convertible_to<{{(valid_iterator<postincrement_not_ref>::)?}}Proxy, const postincrement_not_ref &>' was not satisfied}}
 #endif
 }
 

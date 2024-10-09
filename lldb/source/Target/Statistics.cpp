@@ -107,7 +107,8 @@ TargetStats::ToJSON(Target &target,
                     const lldb_private::StatisticsOptions &options) {
   json::Object target_metrics_json;
   ProcessSP process_sp = target.GetProcessSP();
-  const bool summary_only = options.summary_only;
+  const bool summary_only = options.GetSummaryOnly();
+  const bool include_modules = options.GetIncludeModules();
   if (!summary_only) {
     CollectStats(target);
 
@@ -117,8 +118,9 @@ TargetStats::ToJSON(Target &target,
 
     target_metrics_json.try_emplace(m_expr_eval.name, m_expr_eval.ToJSON());
     target_metrics_json.try_emplace(m_frame_var.name, m_frame_var.ToJSON());
-    target_metrics_json.try_emplace("moduleIdentifiers",
-                                    std::move(json_module_uuid_array));
+    if (include_modules)
+      target_metrics_json.try_emplace("moduleIdentifiers",
+                                      std::move(json_module_uuid_array));
 
     if (m_launch_or_attach_time && m_first_private_stop_time) {
       double elapsed_time =
@@ -190,6 +192,12 @@ TargetStats::ToJSON(Target &target,
   }
   target_metrics_json.try_emplace("sourceMapDeduceCount",
                                   m_source_map_deduce_count);
+  target_metrics_json.try_emplace("sourceRealpathAttemptCount",
+                                  m_source_realpath_attempt_count);
+  target_metrics_json.try_emplace("sourceRealpathCompatibleCount",
+                                  m_source_realpath_compatible_count);
+  target_metrics_json.try_emplace("summaryProviderStatistics",
+                                  target.GetSummaryStatisticsCache().ToJSON());
   return target_metrics_json;
 }
 
@@ -218,15 +226,25 @@ void TargetStats::IncreaseSourceMapDeduceCount() {
   ++m_source_map_deduce_count;
 }
 
+void TargetStats::IncreaseSourceRealpathAttemptCount(uint32_t count) {
+  m_source_realpath_attempt_count += count;
+}
+
+void TargetStats::IncreaseSourceRealpathCompatibleCount(uint32_t count) {
+  m_source_realpath_compatible_count += count;
+}
+
 bool DebuggerStats::g_collecting_stats = false;
 
 llvm::json::Value DebuggerStats::ReportStatistics(
     Debugger &debugger, Target *target,
     const lldb_private::StatisticsOptions &options) {
 
-  const bool summary_only = options.summary_only;
-  const bool load_all_debug_info = options.load_all_debug_info;
-  const bool include_transcript = options.include_transcript;
+  const bool summary_only = options.GetSummaryOnly();
+  const bool load_all_debug_info = options.GetLoadAllDebugInfo();
+  const bool include_targets = options.GetIncludeTargets();
+  const bool include_modules = options.GetIncludeModules();
+  const bool include_transcript = options.GetIncludeTranscript();
 
   json::Array json_targets;
   json::Array json_modules;
@@ -314,7 +332,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     if (module_stat.debug_info_had_incomplete_types)
       ++num_modules_with_incomplete_types;
 
-    if (!summary_only) {
+    if (include_modules) {
       module_stat.identifier = (intptr_t)module;
       module_stat.path = module->GetFileSpec().GetPath();
       if (ConstString object_name = module->GetObjectName()) {
@@ -347,13 +365,15 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalSymbolTableStripped", num_stripped_modules},
   };
 
-  if (target) {
-    json_targets.emplace_back(target->ReportStatistics(options));
-  } else {
-    for (const auto &target : debugger.GetTargetList().Targets())
+  if (include_targets) {
+    if (target) {
       json_targets.emplace_back(target->ReportStatistics(options));
+    } else {
+      for (const auto &target : debugger.GetTargetList().Targets())
+        json_targets.emplace_back(target->ReportStatistics(options));
+    }
+    global_stats.try_emplace("targets", std::move(json_targets));
   }
-  global_stats.try_emplace("targets", std::move(json_targets));
 
   ConstStringStats const_string_stats;
   json::Object json_memory{
@@ -362,8 +382,11 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   global_stats.try_emplace("memory", std::move(json_memory));
   if (!summary_only) {
     json::Value cmd_stats = debugger.GetCommandInterpreter().GetStatistics();
-    global_stats.try_emplace("modules", std::move(json_modules));
     global_stats.try_emplace("commands", std::move(cmd_stats));
+  }
+
+  if (include_modules) {
+    global_stats.try_emplace("modules", std::move(json_modules));
   }
 
   if (include_transcript) {
@@ -391,11 +414,29 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       llvm::raw_string_ostream ss(buffer);
       json::OStream json_os(ss);
       transcript.Serialize(json_os);
-      if (auto json_transcript = llvm::json::parse(ss.str()))
+      if (auto json_transcript = llvm::json::parse(buffer))
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
     }
   }
 
   return std::move(global_stats);
+}
+
+llvm::json::Value SummaryStatistics::ToJSON() const {
+  return json::Object{{
+      {"name", GetName()},
+      {"type", GetSummaryKindName()},
+      {"count", GetSummaryCount()},
+      {"totalTime", GetTotalTime()},
+  }};
+}
+
+json::Value SummaryStatisticsCache::ToJSON() {
+  std::lock_guard<std::mutex> guard(m_map_mutex);
+  json::Array json_summary_stats;
+  for (const auto &summary_stat : m_summary_stats_map)
+    json_summary_stats.emplace_back(summary_stat.second->ToJSON());
+
+  return json_summary_stats;
 }

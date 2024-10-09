@@ -34,7 +34,10 @@ class SMTConstraintManager : public clang::ento::SimpleConstraintManager {
 public:
   SMTConstraintManager(clang::ento::ExprEngine *EE,
                        clang::ento::SValBuilder &SB)
-      : SimpleConstraintManager(EE, SB) {}
+      : SimpleConstraintManager(EE, SB) {
+    Solver->setBoolParam("model", true); // Enable model finding
+    Solver->setUnsignedParam("timeout", 15000 /*milliseconds*/);
+  }
   virtual ~SMTConstraintManager() = default;
 
   //===------------------------------------------------------------------===//
@@ -274,6 +277,11 @@ public:
 
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
       return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
+
+    // UnarySymExpr support is not yet implemented in the Z3 wrapper.
+    if (isa<UnarySymExpr>(Sym)) {
+      return false;
+    }
 
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))

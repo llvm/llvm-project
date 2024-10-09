@@ -247,6 +247,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::BitInt:
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
+    case Type::HLSLAttributedResource:
       CanPrefixQualifiers = true;
       break;
 
@@ -644,16 +645,25 @@ void TypePrinter::printDependentAddressSpaceAfter(
 void TypePrinter::printDependentSizedExtVectorBefore(
                                           const DependentSizedExtVectorType *T,
                                           raw_ostream &OS) {
+  if (Policy.UseHLSLTypes)
+    OS << "vector<";
   printBefore(T->getElementType(), OS);
 }
 
 void TypePrinter::printDependentSizedExtVectorAfter(
                                           const DependentSizedExtVectorType *T,
                                           raw_ostream &OS) {
-  OS << " __attribute__((ext_vector_type(";
-  if (T->getSizeExpr())
-    T->getSizeExpr()->printPretty(OS, nullptr, Policy);
-  OS << ")))";
+  if (Policy.UseHLSLTypes) {
+    OS << ", ";
+    if (T->getSizeExpr())
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+    OS << ">";
+  } else {
+    OS << " __attribute__((ext_vector_type(";
+    if (T->getSizeExpr())
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+    OS << ")))";
+  }
   printAfter(T->getElementType(), OS);
 }
 
@@ -712,6 +722,9 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     break;
   case VectorKind::RVVFixedLengthData:
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -792,6 +805,9 @@ void TypePrinter::printDependentVectorBefore(
     break;
   case VectorKind::RVVFixedLengthData:
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -815,14 +831,23 @@ void TypePrinter::printDependentVectorAfter(
 
 void TypePrinter::printExtVectorBefore(const ExtVectorType *T,
                                        raw_ostream &OS) {
+  if (Policy.UseHLSLTypes)
+    OS << "vector<";
   printBefore(T->getElementType(), OS);
 }
 
 void TypePrinter::printExtVectorAfter(const ExtVectorType *T, raw_ostream &OS) {
   printAfter(T->getElementType(), OS);
-  OS << " __attribute__((ext_vector_type(";
-  OS << T->getNumElements();
-  OS << ")))";
+
+  if (Policy.UseHLSLTypes) {
+    OS << ", ";
+    OS << T->getNumElements();
+    OS << ">";
+  } else {
+    OS << " __attribute__((ext_vector_type(";
+    OS << T->getNumElements();
+    OS << ")))";
+  }
 }
 
 void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,
@@ -915,6 +940,10 @@ StringRef clang::getParameterABISpelling(ParameterABI ABI) {
     return "swift_error_result";
   case ParameterABI::SwiftIndirectResult:
     return "swift_indirect_result";
+  case ParameterABI::HLSLOut:
+    return "out";
+  case ParameterABI::HLSLInOut:
+    return "inout";
   }
   llvm_unreachable("bad parameter ABI kind");
 }
@@ -937,7 +966,17 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
       if (EPI.isNoEscape())
         OS << "__attribute__((noescape)) ";
       auto ABI = EPI.getABI();
-      if (ABI != ParameterABI::Ordinary)
+      if (ABI == ParameterABI::HLSLInOut || ABI == ParameterABI::HLSLOut) {
+        OS << getParameterABISpelling(ABI) << " ";
+        if (Policy.UseHLSLTypes) {
+          // This is a bit of a hack because we _do_ use reference types in the
+          // AST for representing inout and out parameters so that code
+          // generation is sane, but when re-printing these for HLSL we need to
+          // skip the reference.
+          print(T->getParamType(i).getNonReferenceType(), OS, StringRef());
+          continue;
+        }
+      } else if (ABI != ParameterABI::Ordinary)
         OS << "__attribute__((" << getParameterABISpelling(ABI) << ")) ";
 
       print(T->getParamType(i), OS, StringRef());
@@ -997,6 +1036,17 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     break;
   }
   T->printExceptionSpecification(OS, Policy);
+
+  const FunctionEffectsRef FX = T->getFunctionEffects();
+  for (const auto &CFE : FX) {
+    OS << " __attribute__((" << CFE.Effect.name();
+    if (const Expr *E = CFE.Cond.getCondition()) {
+      OS << '(';
+      E->printPretty(OS, nullptr, Policy);
+      OS << ')';
+    }
+    OS << "))";
+  }
 
   if (T->hasTrailingReturn()) {
     OS << " -> ";
@@ -1585,7 +1635,8 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
                                   raw_ostream &OS, bool FullyQualify) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl();
+  TemplateDecl *TD =
+      T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true);
   // FIXME: Null TD never exercised in test suite.
   if (FullyQualify && TD) {
     if (!Policy.SuppressScope)
@@ -1892,6 +1943,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::BTFTypeTag:
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
+  case attr::HLSLResourceClass:
+  case attr::HLSLROV:
+  case attr::HLSLRawBuffer:
+  case attr::HLSLContainedType:
+    llvm_unreachable("HLSL resource type attributes handled separately");
+
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
@@ -1905,6 +1962,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
 
   case attr::CountedBy:
+  case attr::CountedByOrNull:
+  case attr::SizedBy:
+  case attr::SizedByOrNull:
   case attr::LifetimeBound:
   case attr::TypeNonNull:
   case attr::TypeNullable:
@@ -1928,6 +1988,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmOut:
   case attr::ArmInOut:
   case attr::ArmPreserves:
+  case attr::NonBlocking:
+  case attr::NonAllocating:
+  case attr::Blocking:
+  case attr::Allocating:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -1987,10 +2051,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
     break;
-
-  // Nothing to print for this attribute.
-  case attr::HLSLParamModifier:
-    break;
   }
   OS << "))";
 }
@@ -2004,6 +2064,32 @@ void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
                                              raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printHLSLAttributedResourceBefore(
+    const HLSLAttributedResourceType *T, raw_ostream &OS) {
+  printBefore(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printHLSLAttributedResourceAfter(
+    const HLSLAttributedResourceType *T, raw_ostream &OS) {
+  printAfter(T->getWrappedType(), OS);
+  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  OS << " [[hlsl::resource_class("
+     << HLSLResourceClassAttr::ConvertResourceClassToStr(Attrs.ResourceClass)
+     << ")]]";
+  if (Attrs.IsROV)
+    OS << " [[hlsl::is_rov]]";
+  if (Attrs.RawBuffer)
+    OS << " [[hlsl::raw_buffer]]";
+
+  QualType ContainedTy = T->getContainedType();
+  if (!ContainedTy.isNull()) {
+    OS << " [[hlsl::contained_type(";
+    printBefore(ContainedTy, OS);
+    printAfter(ContainedTy, OS);
+    OS << ")]]";
+  }
 }
 
 void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,

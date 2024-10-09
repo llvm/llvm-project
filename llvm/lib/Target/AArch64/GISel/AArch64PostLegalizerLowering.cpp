@@ -288,10 +288,16 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
                              MachineRegisterInfo &MRI,
                              ShuffleVectorPseudo &MatchInfo) {
   assert(Lane >= 0 && "Expected positive lane?");
+  int NumElements = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
   // Test if the LHS is a BUILD_VECTOR. If it is, then we can just reference the
   // lane's definition directly.
-  auto *BuildVecMI = getOpcodeDef(TargetOpcode::G_BUILD_VECTOR,
-                                  MI.getOperand(1).getReg(), MRI);
+  auto *BuildVecMI =
+      getOpcodeDef(TargetOpcode::G_BUILD_VECTOR,
+                   MI.getOperand(Lane < NumElements ? 1 : 2).getReg(), MRI);
+  // If Lane >= NumElements then it is point to RHS, just check from RHS
+  if (NumElements <= Lane)
+    Lane -= NumElements;
+
   if (!BuildVecMI)
     return false;
   Register Reg = BuildVecMI->getOperand(Lane + 1).getReg();
@@ -1048,6 +1054,40 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+// Matches G_BUILD_VECTOR where at least one source operand is not a constant
+bool matchLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto *GBuildVec = cast<GBuildVector>(&MI);
+
+  // Check if the values are all constants
+  for (unsigned I = 0; I < GBuildVec->getNumSources(); ++I) {
+    auto ConstVal =
+        getAnyConstantVRegValWithLookThrough(GBuildVec->getSourceReg(I), MRI);
+
+    if (!ConstVal.has_value())
+      return true;
+  }
+
+  return false;
+}
+
+void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B) {
+  auto *GBuildVec = cast<GBuildVector>(&MI);
+  LLT DstTy = MRI.getType(GBuildVec->getReg(0));
+  Register DstReg = B.buildUndef(DstTy).getReg(0);
+
+  for (unsigned I = 0; I < GBuildVec->getNumSources(); ++I) {
+    Register SrcReg = GBuildVec->getSourceReg(I);
+    if (mi_match(SrcReg, MRI, m_GImplicitDef()))
+      continue;
+    auto IdxReg = B.buildConstant(LLT::scalar(64), I);
+    DstReg =
+        B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
+  }
+  B.buildCopy(GBuildVec->getReg(0), DstReg);
+  GBuildVec->eraseFromParent();
+}
+
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);
@@ -1290,6 +1330,11 @@ bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, /*OptEnabled=*/true,
                      F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // PostLegalizerCombiner performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
   AArch64PostLegalizerLoweringImpl Impl(MF, CInfo, TPC, /*CSEInfo*/ nullptr,
                                         RuleConfig, ST);
   return Impl.combineMachineInstrs();

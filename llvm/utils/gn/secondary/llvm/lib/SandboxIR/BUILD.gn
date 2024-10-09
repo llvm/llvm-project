@@ -1,0 +1,25 @@
+static_library("SandboxIR") {
+  output_name = "LLVMSandboxIR"
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "Argument.cpp",
+    "BasicBlock.cpp",
+    "Constant.cpp",
+    "Context.cpp",
+    "Function.cpp",
+    "Instruction.cpp",
+    "Module.cpp",
+    "Pass.cpp",
+    "PassManager.cpp",
+    "Region.cpp",
+    "Tracker.cpp",
+    "Type.cpp",
+    "Use.cpp",
+    "User.cpp",
+    "Value.cpp",
+  ]
+}

@@ -140,6 +140,9 @@ public:
   typedef typename QuarantineT::CacheT QuarantineCacheT;
 
   void init() {
+    // Make sure that the page size is initialized if it's not a constant.
+    CHECK_NE(getPageSizeCached(), 0U);
+
     performSanityChecks();
 
     // Check if hardware CRC32 is supported in the binary and by the platform,
@@ -549,6 +552,19 @@ public:
     // header to reflect the size change.
     if (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize <= BlockEnd) {
       if (NewSize > OldSize || (OldSize - NewSize) < getPageSizeCached()) {
+        // If we have reduced the size, set the extra bytes to the fill value
+        // so that we are ready to grow it again in the future.
+        if (NewSize < OldSize) {
+          const FillContentsMode FillContents =
+              TSDRegistry.getDisableMemInit() ? NoFill
+                                              : Options.getFillContentsMode();
+          if (FillContents != NoFill) {
+            memset(reinterpret_cast<char *>(OldTaggedPtr) + NewSize,
+                   FillContents == ZeroFill ? 0 : PatternFillByte,
+                   OldSize - NewSize);
+          }
+        }
+
         Header.SizeOrUnusedBytes =
             (ClassId ? NewSize
                      : BlockEnd -
@@ -769,6 +785,9 @@ public:
   // A corrupted chunk will not be reported as owned, which is WAI.
   bool isOwned(const void *Ptr) {
     initThreadMaybe();
+    // If the allocation is not owned, the tags could be wrong.
+    ScopedDisableMemoryTagChecks x(
+        useMemoryTagging<AllocatorConfig>(Primary.Options.load()));
 #ifdef GWP_ASAN_HOOKS
     if (GuardedAlloc.pointerIsMine(Ptr))
       return true;
@@ -1693,14 +1712,12 @@ private:
       return;
     // N.B. because RawStackDepotMap is part of RawRingBufferMap, the order
     // is very important.
-    RB->RawStackDepotMap.unmap(RB->RawStackDepotMap.getBase(),
-                               RB->RawStackDepotMap.getCapacity());
+    RB->RawStackDepotMap.unmap();
     // Note that the `RB->RawRingBufferMap` is stored on the pages managed by
     // itself. Take over the ownership before calling unmap() so that any
     // operation along with unmap() won't touch inaccessible pages.
     MemMapT RawRingBufferMap = RB->RawRingBufferMap;
-    RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
-                           RawRingBufferMap.getCapacity());
+    RawRingBufferMap.unmap();
     atomic_store(&RingBufferAddress, 0, memory_order_release);
   }
 

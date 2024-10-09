@@ -14,6 +14,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
@@ -422,11 +423,11 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
   // is an empty cast path for the method stored in the context (signalling that
   // we've already diagnosed it) and then just not building the call, but that
   // doesn't really seem any simpler than diagnosing it at the call site...
-  if (auto It = Context.LambdaCastPaths.find(Method);
-      It != Context.LambdaCastPaths.end())
+  auto [It, Inserted] = Context.LambdaCastPaths.try_emplace(Method);
+  if (!Inserted)
     return It->second.empty();
 
-  CXXCastPath &Path = Context.LambdaCastPaths[Method];
+  CXXCastPath &Path = It->second;
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/false);
   if (!IsDerivedFrom(RD->getLocation(), ExplicitObjectParameterType, LambdaType,
@@ -1021,6 +1022,8 @@ void Sema::CompleteLambdaCallOperator(
       getGenericLambdaTemplateParameterList(LSI, *this);
 
   DeclContext *DC = Method->getLexicalDeclContext();
+  // DeclContext::addDecl() assumes that the DeclContext we're adding to is the
+  // lexical context of the Method. Do so.
   Method->setLexicalDeclContext(LSI->Lambda);
   if (TemplateParams) {
     FunctionTemplateDecl *TemplateMethod =
@@ -1105,6 +1108,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   CXXMethodDecl *Method = CreateLambdaCallOperator(Intro.Range, Class);
   LSI->CallOperator = Method;
+  // Temporarily set the lexical declaration context to the current
+  // context, so that the Scope stack matches the lexical nesting.
   Method->setLexicalDeclContext(CurContext);
 
   PushDeclContext(CurScope, Method);
@@ -1246,7 +1251,11 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
       if (auto *BD = R.getAsSingle<BindingDecl>())
         Var = BD;
-      else
+      else if (R.getAsSingle<FieldDecl>()) {
+        Diag(C->Loc, diag::err_capture_class_member_does_not_name_variable)
+            << C->Id;
+        continue;
+      } else
         Var = R.getAsSingle<VarDecl>();
       if (Var && DiagnoseUseOfDecl(Var, C->Loc))
         continue;
@@ -1314,7 +1323,6 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     if (C->Init.isUsable()) {
       addInitCapture(LSI, cast<VarDecl>(Var), C->Kind == LCK_ByRef);
-      PushOnScopeChains(Var, CurScope, false);
     } else {
       TryCaptureKind Kind = C->Kind == LCK_ByRef ? TryCapture_ExplicitByRef
                                                  : TryCapture_ExplicitByVal;
@@ -1376,6 +1384,8 @@ void Sema::ActOnLambdaClosureParameters(
     AddTemplateParametersToLambdaCallOperator(LSI->CallOperator, LSI->Lambda,
                                               TemplateParams);
     LSI->Lambda->setLambdaIsGeneric(true);
+    LSI->ContainsUnexpandedParameterPack |=
+        TemplateParams->containsUnexpandedParameterPack();
   }
   LSI->AfterParameterList = true;
 }
@@ -1941,6 +1951,9 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
+
+  maybeAddDeclWithEffects(LSI.CallOperator);
+
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
 }
 
@@ -2379,23 +2392,42 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
 
   SemaRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
 
-  FunctionDecl *Pattern = getPatternFunctionDecl(FD);
-  if (Pattern) {
-    SemaRef.addInstantiatedCapturesToScope(FD, Pattern, Scope, MLTAL);
+  FunctionDecl *FDPattern = getPatternFunctionDecl(FD);
+  if (!FDPattern)
+    return;
 
-    FunctionDecl *ParentFD = FD;
-    while (ShouldAddDeclsFromParentScope) {
+  if (!ShouldAddDeclsFromParentScope)
+    return;
 
-      ParentFD =
-          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(ParentFD));
-      Pattern =
-          dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(Pattern));
+  FunctionDecl *InnermostFD = FD, *InnermostFDPattern = FDPattern;
+  llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
+      ParentInstantiations;
+  while (true) {
+    FDPattern =
+        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
+    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
 
-      if (!FD || !Pattern)
-        break;
+    if (!FDPattern || !FD)
+      break;
 
-      SemaRef.addInstantiatedParametersToScope(ParentFD, Pattern, Scope, MLTAL);
-      SemaRef.addInstantiatedLocalVarsToScope(ParentFD, Pattern, Scope);
-    }
+    ParentInstantiations.emplace_back(FDPattern, FD);
   }
+
+  // Add instantiated parameters and local vars to scopes, starting from the
+  // outermost lambda to the innermost lambda. This ordering ensures that
+  // parameters in inner lambdas can correctly depend on those defined
+  // in outer lambdas, e.g. auto L = [](auto... x) {
+  //   return [](decltype(x)... y) { }; // `y` depends on `x`
+  // };
+
+  for (const auto &[FDPattern, FD] : llvm::reverse(ParentInstantiations)) {
+    SemaRef.addInstantiatedParametersToScope(FD, FDPattern, Scope, MLTAL);
+    SemaRef.addInstantiatedLocalVarsToScope(FD, FDPattern, Scope);
+
+    if (isLambdaCallOperator(FD))
+      SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
+  }
+
+  SemaRef.addInstantiatedCapturesToScope(InnermostFD, InnermostFDPattern, Scope,
+                                         MLTAL);
 }

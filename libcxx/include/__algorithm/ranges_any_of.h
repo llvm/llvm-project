@@ -30,8 +30,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __any_of {
-struct __fn {
+struct __any_of {
   template <class _Iter, class _Sent, class _Proj, class _Pred>
   _LIBCPP_HIDE_FROM_ABI constexpr static bool __any_of_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
     for (; __first != __last; ++__first) {
@@ -58,10 +57,9 @@ struct __fn {
     return __any_of_impl(ranges::begin(__range), ranges::end(__range), __pred, __proj);
   }
 };
-} // namespace __any_of
 
 inline namespace __cpo {
-inline constexpr auto any_of = __any_of::__fn{};
+inline constexpr auto any_of = __any_of{};
 } // namespace __cpo
 } // namespace ranges
 

@@ -25,9 +25,9 @@ using namespace lldb_private::plugin::dwarf;
 namespace {
 
 /// Iterate through all DIEs elaborating (i.e. reachable by a chain of
-/// DW_AT_specification and DW_AT_abstract_origin attributes) a given DIE. For
-/// convenience, the starting die is included in the sequence as the first
-/// item.
+/// DW_AT_specification, DW_AT_abstract_origin and/or DW_AT_signature
+/// attributes) a given DIE. For convenience, the starting die is included in
+/// the sequence as the first item.
 class ElaboratingDIEIterator
     : public llvm::iterator_facade_base<
           ElaboratingDIEIterator, std::input_iterator_tag, DWARFDIE,
@@ -50,7 +50,8 @@ class ElaboratingDIEIterator
     m_worklist.pop_back();
 
     // And add back any items that elaborate it.
-    for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
+    for (dw_attr_t attr :
+         {DW_AT_specification, DW_AT_abstract_origin, DW_AT_signature}) {
       if (DWARFDIE d = die.GetReferencedDIE(attr))
         if (m_seen.insert(die.GetDIE()).second)
           m_worklist.push_back(d);
@@ -129,10 +130,10 @@ DWARFDIE
 DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
   if (IsValid()) {
     DWARFUnit *cu = GetCU();
-    const bool check_specification_or_abstract_origin = true;
+    const bool check_elaborating_dies = true;
     DWARFFormValue form_value;
     if (m_die->GetAttributeValue(cu, attr, form_value, nullptr,
-                                 check_specification_or_abstract_origin))
+                                 check_elaborating_dies))
       return form_value.Reference();
   }
   return DWARFDIE();
@@ -377,11 +378,6 @@ static void GetDeclContextImpl(DWARFDIE die,
       die = spec;
       continue;
     }
-    // To find the name of a type in a type unit, we must follow the signature.
-    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
-      die = spec;
-      continue;
-    }
 
     // Add this DIE's contribution at the end of the chain.
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
@@ -394,14 +390,12 @@ static void GetDeclContextImpl(DWARFDIE die,
     case DW_TAG_namespace:
       push_ctx(CompilerContextKind::Namespace, die.GetName());
       break;
+    case DW_TAG_class_type:
     case DW_TAG_structure_type:
-      push_ctx(CompilerContextKind::Struct, die.GetName());
+      push_ctx(CompilerContextKind::ClassOrStruct, die.GetName());
       break;
     case DW_TAG_union_type:
       push_ctx(CompilerContextKind::Union, die.GetName());
-      break;
-    case DW_TAG_class_type:
-      push_ctx(CompilerContextKind::Class, die.GetName());
       break;
     case DW_TAG_enumeration_type:
       push_ctx(CompilerContextKind::Enum, die.GetName());
@@ -436,18 +430,6 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
                                      std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
   while (die && seen.insert(die.GetID()).second) {
-    // To find the name of a type in a type unit, we must follow the signature.
-    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
-      die = spec;
-      continue;
-    }
-
-    // If there is no name, then there is no need to look anything up for this
-    // DIE.
-    const char *name = die.GetName();
-    if (!name || !name[0])
-      return;
-
     // Add this DIE's contribution at the end of the chain.
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
       context.push_back({kind, ConstString(name)});
@@ -456,14 +438,12 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
     case DW_TAG_namespace:
       push_ctx(CompilerContextKind::Namespace, die.GetName());
       break;
+    case DW_TAG_class_type:
     case DW_TAG_structure_type:
-      push_ctx(CompilerContextKind::Struct, die.GetName());
+      push_ctx(CompilerContextKind::ClassOrStruct, die.GetName());
       break;
     case DW_TAG_union_type:
       push_ctx(CompilerContextKind::Union, die.GetName());
-      break;
-    case DW_TAG_class_type:
-      push_ctx(CompilerContextKind::Class, die.GetName());
       break;
     case DW_TAG_enumeration_type:
       push_ctx(CompilerContextKind::Enum, die.GetName());
@@ -475,7 +455,7 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
       push_ctx(CompilerContextKind::Typedef, die.GetName());
       break;
     case DW_TAG_base_type:
-      push_ctx(CompilerContextKind::Builtin, name);
+      push_ctx(CompilerContextKind::Builtin, die.GetName());
       break;
     // If any of the tags below appear in the parent chain, stop the decl
     // context and return. Prior to these being in here, if a type existed in a
@@ -505,12 +485,64 @@ std::vector<CompilerContext> DWARFDIE::GetTypeLookupContext() const {
   return context;
 }
 
+static DWARFDeclContext GetDWARFDeclContextImpl(DWARFDIE die) {
+  DWARFDeclContext dwarf_decl_ctx;
+  while (die) {
+    const dw_tag_t tag = die.Tag();
+    if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
+      break;
+    dwarf_decl_ctx.AppendDeclContext(tag, die.GetName());
+    DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
+    if (parent_decl_ctx_die == die)
+      break;
+    die = parent_decl_ctx_die;
+  }
+  return dwarf_decl_ctx;
+}
+
+DWARFDeclContext DWARFDIE::GetDWARFDeclContext() const {
+  return GetDWARFDeclContextImpl(*this);
+}
+
+static DWARFDIE GetParentDeclContextDIEImpl(DWARFDIE die) {
+  DWARFDIE orig_die = die;
+  while (die) {
+    // If this is the original DIE that we are searching for a declaration for,
+    // then don't look in the cache as we don't want our own decl context to be
+    // our decl context...
+    if (die != orig_die) {
+      switch (die.Tag()) {
+      case DW_TAG_compile_unit:
+      case DW_TAG_partial_unit:
+      case DW_TAG_namespace:
+      case DW_TAG_structure_type:
+      case DW_TAG_union_type:
+      case DW_TAG_class_type:
+        return die;
+
+      default:
+        break;
+      }
+    }
+
+    if (DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification)) {
+      if (DWARFDIE decl_ctx_die = spec_die.GetParentDeclContextDIE())
+        return decl_ctx_die;
+    }
+
+    if (DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin)) {
+      if (DWARFDIE decl_ctx_die = abs_die.GetParentDeclContextDIE())
+        return decl_ctx_die;
+    }
+
+    die = die.GetParent();
+  }
+  return DWARFDIE();
+}
+
 DWARFDIE
 DWARFDIE::GetParentDeclContextDIE() const {
-  if (IsValid())
-    return m_die->GetParentDeclContextDIE(m_cu);
-  else
-    return DWARFDIE();
+  return GetParentDeclContextDIEImpl(*this);
 }
 
 bool DWARFDIE::IsStructUnionOrClass() const {

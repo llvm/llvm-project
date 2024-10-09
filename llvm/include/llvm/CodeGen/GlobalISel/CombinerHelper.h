@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
@@ -128,6 +129,12 @@ public:
   }
 
   const TargetLowering &getTargetLowering() const;
+
+  const MachineFunction &getMachineFunction() const;
+
+  const DataLayout &getDataLayout() const;
+
+  LLVMContext &getContext() const;
 
   /// \returns true if the combiner is running pre-legalization.
   bool isPreLegalize() const;
@@ -384,18 +391,6 @@ public:
   /// Transform zext(trunc(x)) to x.
   bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
 
-  /// Transform [asz]ext([asz]ext(x)) to [asz]ext x.
-  bool matchCombineExtOfExt(MachineInstr &MI,
-                            std::tuple<Register, unsigned> &MatchInfo);
-  void applyCombineExtOfExt(MachineInstr &MI,
-                            std::tuple<Register, unsigned> &MatchInfo);
-
-  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
-  bool matchCombineTruncOfExt(MachineInstr &MI,
-                              std::pair<Register, unsigned> &MatchInfo);
-  void applyCombineTruncOfExt(MachineInstr &MI,
-                              std::pair<Register, unsigned> &MatchInfo);
-
   /// Transform trunc (shl x, K) to shl (trunc x), K
   ///    if K < VT.getScalarSizeInBits().
   ///
@@ -604,6 +599,9 @@ public:
   void applyFunnelShiftToRotate(MachineInstr &MI);
   bool matchRotateOutOfRange(MachineInstr &MI);
   void applyRotateOutOfRange(MachineInstr &MI);
+
+  bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+  void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
 
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
@@ -837,6 +835,12 @@ public:
   /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// trunc (binop X, C) --> binop (trunc X, trunc C).
+  bool matchNarrowBinop(const MachineInstr &TruncMI,
+                        const MachineInstr &BinopMI, BuildFnTy &MatchInfo);
+
+  bool matchCastOfInteger(const MachineInstr &CastMI, APInt &MatchInfo);
+
   /// Combine addos.
   bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
 
@@ -844,7 +848,8 @@ public:
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector on the vector register.
-  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithBuildVector(const MachineInstr &MI,
+                                                const MachineInstr &MI2,
                                                 BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector trunc on the vector
@@ -854,7 +859,8 @@ public:
 
   /// Combine extract vector element with a shuffle vector on the vector
   /// register.
-  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithShuffleVector(const MachineInstr &MI,
+                                                  const MachineInstr &MI2,
                                                   BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a insert vector element on the vector
@@ -864,6 +870,13 @@ public:
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.
   void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Match FPOWI if it's safe to extend it into a series of multiplications.
+  bool matchFPowIExpansion(MachineInstr &MI, int64_t Exponent);
+
+  /// Expands FPOWI into a series of multiplications and a division if the
+  /// exponent is negative.
+  void applyExpandFPowI(MachineInstr &MI, int64_t Exponent);
 
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
@@ -878,6 +891,32 @@ public:
   bool matchSubOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
   bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
+  bool matchTruncateOfExt(const MachineInstr &Root, const MachineInstr &ExtMI,
+                          BuildFnTy &MatchInfo);
+
+  bool matchCastOfSelect(const MachineInstr &Cast, const MachineInstr &SelectMI,
+                         BuildFnTy &MatchInfo);
+  bool matchFoldAPlusC1MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldC2MinusAPlusC1(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldAMinusC1MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFoldC1Minus2MinusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  // fold ((A-C1)+C2) -> (A+(C2-C1))
+  bool matchFoldAMinusC1PlusC2(const MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchExtOfExt(const MachineInstr &FirstMI, const MachineInstr &SecondMI,
+                     BuildFnTy &MatchInfo);
+
+  bool matchCastOfBuildVector(const MachineInstr &CastMI,
+                              const MachineInstr &BVMI, BuildFnTy &MatchInfo);
+
+  bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
+  bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -991,6 +1030,13 @@ private:
 
   // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
+
+  bool isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const;
+
+  bool constantFoldICmp(const GICmp &ICmp, const GIConstant &LHSCst,
+                        const GIConstant &RHSCst, BuildFnTy &MatchInfo);
+  bool constantFoldFCmp(const GFCmp &FCmp, const GFConstant &LHSCst,
+                        const GFConstant &RHSCst, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

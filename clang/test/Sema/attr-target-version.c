@@ -36,7 +36,7 @@ void __attribute__((target_version("bti+flagm2"))) one(void) {}
 //expected-error@+1 {{multiversioned function redeclarations require identical target attributes}}
 void __attribute__((target_version("flagm2+bti"))) one(void) {}
 
-void __attribute__((target_version("ssbs+sha1"))) two(void) {}
+void __attribute__((target_version("ssbs+sha2"))) two(void) {}
 void __attribute__((target_version("ssbs+fp16fml"))) two(void) {}
 
 //expected-error@+1 {{'main' cannot be a multiversioned function}}
@@ -89,7 +89,7 @@ int bar() {
   return def();
 }
 // expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}
-int __attribute__((target_version("sha1"))) def(void) { return 1; }
+int __attribute__((target_version("sha2"))) def(void) { return 1; }
 
 int __attribute__((target_version("sve"))) prot();
 // expected-error@-1 {{multiversioned function must have a prototype}}
@@ -104,6 +104,11 @@ int __attribute__((aarch64_vector_pcs, target_version("sha3"))) combine(void) { 
 
 int __attribute__((target_version("fp+aes+pmull+rcpc"))) unspec_args() { return -1; }
 // expected-error@-1 {{multiversioned function must have a prototype}}
-// expected-error@+1 {{multiversioned function must have a prototype}}
 int __attribute__((target_version("default"))) unspec_args() { return 0; }
 int cargs() { return unspec_args(); }
+
+int unspec_args_implicit_default_first();
+// expected-error@-1 {{multiversioned function must have a prototype}}
+// expected-note@+1 {{function multiversioning caused by this declaration}}
+int __attribute__((target_version("aes"))) unspec_args_implicit_default_first() { return -1; }
+int __attribute__((target_version("default"))) unspec_args_implicit_default_first() { return 0; }

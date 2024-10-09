@@ -84,7 +84,7 @@ bool Symbol::isLive() const {
   if (auto *imp = dyn_cast<DefinedImportData>(this))
     return imp->file->live;
   if (auto *imp = dyn_cast<DefinedImportThunk>(this))
-    return imp->wrappedSym->file->thunkLive;
+    return imp->getChunk()->live;
   // Assume any other kind of symbol is live.
   return true;
 }
@@ -107,29 +107,44 @@ COFFSymbolRef DefinedCOFF::getCOFFSymbol() {
 
 uint64_t DefinedAbsolute::getRVA() { return va - ctx.config.imageBase; }
 
-static Chunk *makeImportThunk(COFFLinkerContext &ctx, DefinedImportData *s,
-                              uint16_t machine) {
-  if (machine == AMD64)
-    return make<ImportThunkChunkX64>(ctx, s);
-  if (machine == I386)
-    return make<ImportThunkChunkX86>(ctx, s);
-  if (machine == ARM64)
-    return make<ImportThunkChunkARM64>(ctx, s);
-  assert(machine == ARMNT);
-  return make<ImportThunkChunkARM>(ctx, s);
-}
-
 DefinedImportThunk::DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
-                                       DefinedImportData *s, uint16_t machine)
-    : Defined(DefinedImportThunkKind, name), wrappedSym(s),
-      data(makeImportThunk(ctx, s, machine)) {}
+                                       DefinedImportData *s,
+                                       ImportThunkChunk *chunk)
+    : Defined(DefinedImportThunkKind, name), wrappedSym(s), data(chunk) {}
 
 Defined *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.
-  for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias)
+  DenseSet<Symbol *> weakChain;
+  for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias) {
     if (auto *d = dyn_cast<Defined>(a))
       return d;
+    if (!weakChain.insert(a).second)
+      break; // We have a cycle.
+  }
   return nullptr;
+}
+
+bool Undefined::resolveWeakAlias() {
+  Defined *d = getWeakAlias();
+  if (!d)
+    return false;
+
+  // We want to replace Sym with D. However, we can't just blindly
+  // copy sizeof(SymbolUnion) bytes from D to Sym because D may be an
+  // internal symbol, and internal symbols are stored as "unparented"
+  // Symbols. For that reason we need to check which type of symbol we
+  // are dealing with and copy the correct number of bytes.
+  StringRef name = getName();
+  if (isa<DefinedRegular>(d))
+    memcpy(this, d, sizeof(DefinedRegular));
+  else if (isa<DefinedAbsolute>(d))
+    memcpy(this, d, sizeof(DefinedAbsolute));
+  else
+    memcpy(this, d, sizeof(SymbolUnion));
+
+  nameData = name.data();
+  nameSize = name.size();
+  return true;
 }
 
 MemoryBufferRef LazyArchive::getMemberBuffer() {

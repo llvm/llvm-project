@@ -19,6 +19,7 @@
 #include "bolt/Core/MCPlus.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorOr.h"
@@ -841,15 +842,6 @@ public:
   /// initialized with the original fall-through for this BB.
   bool analyzeBranch(const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch, MCInst *&UncondBranch);
-
-  /// Return true if iterator \p I is pointing to the first instruction in
-  /// a pair that could be macro-fused.
-  bool isMacroOpFusionPair(const_iterator I) const;
-
-  /// If the basic block has a pair of instructions suitable for macro-fusion,
-  /// return iterator to the first instruction of the pair.
-  /// Otherwise return end().
-  const_iterator getMacroOpFusionPair() const;
 
   /// Printer required for printing dominator trees.
   void printAsOperand(raw_ostream &OS, bool PrintType = true) {

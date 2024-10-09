@@ -148,6 +148,24 @@ std::size_t ExternalFileUnit::GetNextInputBytes(
   return p ? length : 0;
 }
 
+std::size_t ExternalFileUnit::ViewBytesInRecord(
+    const char *&p, bool forward) const {
+  p = nullptr;
+  auto recl{recordLength.value_or(positionInRecord)};
+  if (forward) {
+    if (positionInRecord < recl) {
+      p = Frame() + recordOffsetInFrame_ + positionInRecord;
+      return recl - positionInRecord;
+    }
+  } else {
+    if (positionInRecord <= recl) {
+      p = Frame() + recordOffsetInFrame_ + positionInRecord;
+    }
+    return positionInRecord - leftTabLimit.value_or(0);
+  }
+  return 0;
+}
+
 const char *ExternalFileUnit::FrameNextInput(
     IoErrorHandler &handler, std::size_t bytes) {
   RUNTIME_CHECK(handler, isUnformatted.has_value() && !*isUnformatted);
@@ -268,6 +286,7 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
     recordOffsetInFrame_ = 0;
   }
   BeginRecord();
+  leftTabLimit.reset();
 }
 
 bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {

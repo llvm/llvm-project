@@ -42,7 +42,7 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   // If the integer range can be narrowed to a constant, update the constant
   // value of the SSA value.
   std::optional<APInt> constant = getValue().getValue().getConstantValue();
-  auto value = point.get<Value>();
+  auto value = anchor.get<Value>();
   auto *cv = solver->getOrCreateState<Lattice<ConstantValue>>(value);
   if (!constant)
     return solver->propagateIfChanged(
@@ -58,12 +58,14 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
                                  dialect)));
 }
 
-void IntegerRangeAnalysis::visitOperation(
+LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
     ArrayRef<IntegerValueRangeLattice *> results) {
   auto inferrable = dyn_cast<InferIntRangeInterface>(op);
-  if (!inferrable)
-    return setAllToEntryStates(results);
+  if (!inferrable) {
+    setAllToEntryStates(results);
+    return success();
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
   auto argRanges = llvm::map_to_vector(
@@ -99,6 +101,7 @@ void IntegerRangeAnalysis::visitOperation(
   };
 
   inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
+  return success();
 }
 
 void IntegerRangeAnalysis::visitNonControlFlowArguments(
@@ -195,9 +198,14 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       max -= 1;
     }
 
-    IntegerValueRangeLattice *ivEntry = getLatticeElement(*iv);
-    auto ivRange = ConstantIntRanges::fromSigned(min, max);
-    propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
+    // If we infer the lower bound to be larger than the upper bound, the
+    // resulting range is meaningless and should not be used in further
+    // inferences.
+    if (max.sge(min)) {
+      IntegerValueRangeLattice *ivEntry = getLatticeElement(*iv);
+      auto ivRange = ConstantIntRanges::fromSigned(min, max);
+      propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
+    }
     return;
   }
 

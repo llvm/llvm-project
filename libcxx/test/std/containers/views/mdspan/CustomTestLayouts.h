@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <limits>
 #include <mdspan>
+#include <span> // dynamic_extent
 #include <type_traits>
 #include <utility>
 

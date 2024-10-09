@@ -1151,7 +1151,7 @@ define void @test61(i128 %arg, i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br i1 [[C3:%.*]], label [[BB8]], label [[BB2]]
 ; CHECK:       bb8:
-; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB12]]
+; CHECK-NEXT:    br i1 poison, label [[BB11:%.*]], label [[BB12]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    br i1 [[C4:%.*]], label [[BB1]], label [[BB12]]
 ; CHECK:       bb12:
@@ -1692,7 +1692,7 @@ define i177 @lshr_out_of_range(i177 %Y, ptr %A2, ptr %ptr) {
 ; CHECK-LABEL: @lshr_out_of_range(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i177 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[B4:%.*]] = sext i1 [[TMP1]] to i177
-; CHECK-NEXT:    [[C8:%.*]] = icmp ult i177 [[B4]], [[Y]]
+; CHECK-NEXT:    [[C8:%.*]] = icmp ugt i177 [[Y]], [[B4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i1 [[C8]] to i64
 ; CHECK-NEXT:    [[G18:%.*]] = getelementptr ptr, ptr [[A2:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store ptr [[G18]], ptr [[PTR:%.*]], align 8
@@ -1810,7 +1810,7 @@ define void @ossfuzz_38078(i32 %arg, i32 %arg1, ptr %ptr, ptr %ptr2, ptr %ptr3, 
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 -4
 ; CHECK-NEXT:    [[I2:%.*]] = sub i32 0, [[ARG1:%.*]]
-; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[I2]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[ARG:%.*]], [[I2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I5]])
 ; CHECK-NEXT:    store volatile i32 2147483647, ptr [[G1]], align 4
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -2047,7 +2047,7 @@ define i32 @ashr_sdiv_extra_use(i32 %x) {
 define i32 @shl1_cttz(i32 %x) {
 ; CHECK-LABEL: @shl1_cttz(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;
   %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
@@ -2058,7 +2058,7 @@ define i32 @shl1_cttz(i32 %x) {
 define <2 x i8> @shl1_cttz_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @shl1_cttz_vec(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = and <2 x i8> [[NEG]], [[X]]
+; CHECK-NEXT:    [[SHL:%.*]] = and <2 x i8> [[X]], [[NEG]]
 ; CHECK-NEXT:    ret <2 x i8> [[SHL]]
 ;
   %tz = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 false)
@@ -2069,7 +2069,7 @@ define <2 x i8> @shl1_cttz_vec(<2 x i8> %x) {
 define <2 x i8> @shl1_cttz_vec_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @shl1_cttz_vec_poison(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = and <2 x i8> [[NEG]], [[X]]
+; CHECK-NEXT:    [[SHL:%.*]] = and <2 x i8> [[X]], [[NEG]]
 ; CHECK-NEXT:    ret <2 x i8> [[SHL]]
 ;
   %tz = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 false)

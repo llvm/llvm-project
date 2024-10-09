@@ -475,7 +475,7 @@ protected:
 
     // Function DI
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(std::nullopt);
+    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
@@ -844,8 +844,9 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
   EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
 
   // Check that DILexicalBlock of inlined function was not cloned.
-  auto DbgDeclareI = Func->begin()->begin();
-  auto ClonedDbgDeclareI = ClonedFunc->begin()->begin();
+  auto DbgDeclareI = Func->begin()->begin()->getDbgRecordRange().begin();
+  auto ClonedDbgDeclareI =
+      ClonedFunc->begin()->begin()->getDbgRecordRange().begin();
   const DebugLoc &DbgLoc = DbgDeclareI->getDebugLoc();
   const DebugLoc &ClonedDbgLoc = ClonedDbgDeclareI->getDebugLoc();
   EXPECT_NE(DbgLoc.get(), ClonedDbgLoc.get());
@@ -964,7 +965,7 @@ protected:
 
     // Create debug info
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(std::nullopt);
+    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
                                           DBuilder.createFile("filename.c",

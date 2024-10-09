@@ -1,8 +1,13 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify=expected,cxx98-14,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify=expected,cxx98,cxx98-14,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -verify=expected,cxx98-14,cxx98-11,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -verify=expected,cxx98-14,since-cxx14,since-cxx11,cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2a %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
 
 namespace cwg705 { // cwg705: yes
   namespace N {
@@ -71,6 +76,28 @@ namespace cwg712 { // cwg712: partial
 #endif
 }
 
+namespace cwg713 { // cwg713: 3.0
+template<typename T>
+struct is_const {
+    static const bool value = __is_const(T);
+};
+template<typename T>
+struct is_volatile {
+    static const bool value = __is_volatile(T);
+};
+
+static_assert(!is_const<void()const>::value, "");
+static_assert(!is_const<void()const volatile>::value, "");
+static_assert(!is_volatile<void()volatile>::value, "");
+static_assert(!is_volatile<void()const volatile>::value, "");
+#if __cplusplus >= 201103L
+static_assert(!is_const<void()const&>::value, "");
+static_assert(!is_volatile<void()volatile&>::value, "");
+#endif
+} // namespace cwg713
+
+// cwg722 is in cwg722.cpp
+
 namespace cwg727 { // cwg727: partial
   struct A {
     template<typename T> struct C; // #cwg727-C
@@ -80,7 +107,7 @@ namespace cwg727 { // cwg727: partial
 
     template<> struct C<int>;
     template<> void f<int>();
-    template<> static int N<int>;
+    template<> int N<int>;
 
     template<typename T> struct C<T*>;
     template<typename T> static int N<T*>;
@@ -91,7 +118,7 @@ namespace cwg727 { // cwg727: partial
       //   expected-note@#cwg727-C {{explicitly specialized declaration is here}}
       template<> void f<float>();
       // expected-error@-1 {{no function template matches function template specialization 'f'}}
-      template<> static int N<float>;
+      template<> int N<float>;
       // expected-error@-1 {{variable template specialization of 'N' not in class 'A' or an enclosing namespace}}
       //   expected-note@#cwg727-N {{explicitly specialized declaration is here}}
 
@@ -109,7 +136,7 @@ namespace cwg727 { // cwg727: partial
       template<> void A::f<double>();
       // expected-error@-1 {{o function template matches function template specialization 'f'}}
       // expected-error@-2 {{non-friend class member 'f' cannot have a qualified name}}
-      template<> static int A::N<double>;
+      template<> int A::N<double>;
       // expected-error@-1 {{non-friend class member 'N' cannot have a qualified name}}
       // expected-error@-2 {{variable template specialization of 'N' not in class 'A' or an enclosing namespace}}
       //   expected-note@#cwg727-N {{explicitly specialized declaration is here}}
@@ -166,7 +193,7 @@ namespace cwg727 { // cwg727: partial
 
     template<> struct C<int> {};
     template<> void f<int>() {}
-    template<> static const int N<int>;
+    template<> const int N<int>;
 
     template<typename T> struct C<T*> {};
     template<typename T> static const int N<T*>;
@@ -208,18 +235,18 @@ namespace cwg727 { // cwg727: partial
 #if __cplusplus >= 201402L
     template<int> struct B {
       template<int> static const int u = 1;
-      template<> static const int u<0> = 2; // #cwg727-u0
+      template<> const int u<0> = 2; // #cwg727-u0
 
       // Note that in C++17 onwards, these are implicitly inline, and so the
       // initializer of v<0> is not instantiated with the declaration. In
       // C++14, v<0> is a non-defining declaration and its initializer is
       // instantiated with the class.
       template<int> static constexpr int v = 1;
-      template<> static constexpr int v<0> = 2; // #cwg727-v0
+      template<> constexpr int v<0> = 2; // #cwg727-v0
 
       template<int> static const inline int w = 1;
       // cxx14-error@-1 {{inline variables are a C++17 extension}}
-      template<> static const inline int w<0> = 2;
+      template<> const inline int w<0> = 2;
       // cxx14-error@-1 {{inline variables are a C++17 extension}}
     };
 
@@ -267,8 +294,8 @@ namespace cwg727 { // cwg727: partial
 
     template<typename> static int v1;
     // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
-    template<> static int v1<T>; // #cwg727-v1-T
-    template<> static int v1<U>;
+    template<> int v1<T>; // #cwg727-v1-T
+    template<> int v1<U>;
     // expected-error@-1 {{duplicate member 'v1'}}
     //   expected-note@#cwg727-Collision-int-int {{in instantiation of template class 'cwg727::Collision<int, int>' requested here}}
     //   expected-note@#cwg727-v1-T {{previous}}
@@ -276,9 +303,9 @@ namespace cwg727 { // cwg727: partial
     template<typename> static inline int v2;
     // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
     // cxx98-14-error@-2 {{inline variables are a C++17 extension}}
-    template<> static inline int v2<T>; // #cwg727-v2-T
-    // cxx98-14-error@-1 {{inline variables are a C++17 extension}} 
-    template<> static inline int v2<U>;
+    template<> inline int v2<T>; // #cwg727-v2-T
+    // cxx98-14-error@-1 {{inline variables are a C++17 extension}}
+    template<> inline int v2<U>;
     // cxx98-14-error@-1 {{inline variables are a C++17 extension}}
     // expected-error@-2 {{duplicate member 'v2'}}
     //   expected-note@#cwg727-v2-T {{previous declaration is here}}

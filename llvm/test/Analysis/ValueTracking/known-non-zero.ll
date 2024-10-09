@@ -1497,4 +1497,53 @@ define i1 @trunc_nsw_nuw_non_zero_fail(i8 %xx) {
   ret i1 %r
 }
 
+define <4 x i1> @vec_reverse_non_zero(<4 x i8> %xx) {
+; CHECK-LABEL: @vec_reverse_non_zero(
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
+  %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
+  %r = icmp eq <4 x i8> %rev, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @vec_reverse_non_zero_fail(<4 x i8> %xx) {
+; CHECK-LABEL: @vec_reverse_non_zero_fail(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 0, i8 1, i8 1>
+; CHECK-NEXT:    [[REV:%.*]] = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[REV]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 0, i8 1, i8 1>
+  %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
+  %r = icmp eq <4 x i8> %rev, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define i1 @vec_reverse_non_zero_demanded(<4 x i8> %xx) {
+; CHECK-LABEL: @vec_reverse_non_zero_demanded(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 0, i8 0, i8 0>
+  %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
+  %ele = extractelement <4 x i8> %rev, i64 3
+  %r = icmp eq i8 %ele, 0
+  ret i1 %r
+}
+
+define i1 @vec_reverse_non_zero_demanded_fail(<4 x i8> %xx) {
+; CHECK-LABEL: @vec_reverse_non_zero_demanded_fail(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 0, i8 0, i8 0>
+; CHECK-NEXT:    [[REV:%.*]] = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> [[X]])
+; CHECK-NEXT:    [[ELE:%.*]] = extractelement <4 x i8> [[REV]], i64 2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ELE]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 0, i8 0, i8 0>
+  %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
+  %ele = extractelement <4 x i8> %rev, i64 2
+  %r = icmp eq i8 %ele, 0
+  ret i1 %r
+}
+
 declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)

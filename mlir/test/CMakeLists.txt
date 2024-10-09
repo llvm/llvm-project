@@ -105,6 +105,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-quant-test
+  mlir-capi-rewrite-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
   mlir-capi-transform-interpreter-test
@@ -147,6 +148,10 @@ endif()
 
 if(MLIR_ENABLE_CUDA_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
+endif()
+
+if(MLIR_ENABLE_EXECUTION_ENGINE)
+  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)

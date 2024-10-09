@@ -266,6 +266,19 @@ func.func @remui_base(%arg0 : index, %arg1 : index ) -> i1 {
     func.return %3 : i1
 }
 
+// CHECK-LABEL: func @remui_base_maybe_zero
+// CHECK: %[[true:.*]] = arith.constant true
+// CHECK: return %[[true]]
+func.func @remui_base_maybe_zero(%arg0 : index, %arg1 : index ) -> i1 {
+    %c4 = arith.constant 4 : index
+    %c5 = arith.constant 5 : index    
+
+    %0 = arith.minui %arg1, %c4 : index
+    %1 = arith.remui %arg0, %0 : index
+    %2 = arith.cmpi ult, %1, %c5 : index
+    func.return %2 : i1
+}    
+
 // CHECK-LABEL: func @remsi_base
 // CHECK: %[[ret:.*]] = arith.cmpi sge
 // CHECK: return %[[ret]]
@@ -918,3 +931,21 @@ func.func @test_cmpf_propagates(%a: f32, %b: f32) -> index {
   func.return %2 : index
 }
 
+// CHECK-LABEL: func @zero_trip_loop
+func.func @zero_trip_loop() {
+  %idx1 = arith.constant 1 : index
+  scf.for %arg0 = %idx1 to %idx1 step %idx1 {
+    %138 = index.floordivs %arg0, %arg0
+  }
+  return
+}
+
+// CHECK-LABEL: func @zero_trip_loop2
+func.func @zero_trip_loop2() {
+  %idx1 = arith.constant 1 : index
+  %idxm1 = arith.constant -1 : index
+  scf.for %arg0 = %idx1 to %idx1 step %idxm1 {
+    %138 = index.floordivs %arg0, %arg0
+  }
+  return
+}

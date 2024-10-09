@@ -21,12 +21,18 @@ def LLVM_Dialect : Dialect {
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
 
+  let discardableAttrs = (ins
+    /// Attribute encoding size and type of GPU workgroup attributions.
+    "WorkgroupAttributionAttr":$workgroup_attribution
+  );
+
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
+    static StringRef getIdentAttrName() { return "llvm.ident"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }

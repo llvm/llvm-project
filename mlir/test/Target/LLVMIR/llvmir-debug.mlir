@@ -1,4 +1,5 @@
-// RUN: mlir-translate -mlir-to-llvmir --split-input-file %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir --write-experimental-debuginfo=false --split-input-file %s | FileCheck %s --check-prefixes=CHECK,INTRINSICS
+// RUN: mlir-translate -mlir-to-llvmir --write-experimental-debuginfo=true --split-input-file %s | FileCheck %s --check-prefixes=CHECK,RECORDS
 
 // CHECK-LABEL: define void @func_with_empty_named_info()
 // Check that translation doens't crash in the presence of an inlineble call
@@ -88,7 +89,8 @@ llvm.func @func_no_debug() {
 #spType1 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 #sp1 = #llvm.di_subprogram<
   compileUnit = #cu, scope = #module, name = "empty_types",
-  file = #file, subprogramFlags = "Definition", type = #spType1
+  file = #file, subprogramFlags = "Definition", type = #spType1,
+  annotations = #llvm.di_annotation<name = "foo", value = "bar">
 >
 
 // CHECK-LABEL: define void @func_with_debug(
@@ -98,13 +100,16 @@ llvm.func @func_with_debug(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
-  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 1))
+  // INTRINSICS: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 1))
+  // RECORDS: #dbg_value(i64 %[[ARG]], ![[VAR_LOC:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 1), !{{.*}})
   llvm.intr.dbg.value #variable #llvm.di_expression<[DW_OP_LLVM_fragment(0, 1)]> = %arg : i64
 
-  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed))
+  // INTRINSICS: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed))
+  // RECORDS: #dbg_declare(ptr %[[ALLOC]], ![[ADDR_LOC:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed), !{{.*}})
   llvm.intr.dbg.declare #variableAddr #llvm.di_expression<[DW_OP_deref, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %alloc : !llvm.ptr
 
-  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
+  // INTRINSICS: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
+  // RECORDS: #dbg_value(i64 %[[ARG]], ![[NO_NAME_VAR:[0-9]+]], !DIExpression(), !{{.*}})
   llvm.intr.dbg.value #noNameVariable = %arg : i64
 
   // CHECK: call void @func_no_debug(), !dbg ![[FILE_LOC:[0-9]+]]
@@ -173,10 +178,13 @@ llvm.func @empty_types() {
 // CHECK: ![[CALLEE_ARGS]] = !{![[ARG_TYPE:.*]], ![[ARG_TYPE:.*]]}
 // CHECK: ![[INLINE_LOC]] = !DILocation(line: 28, column: 5,
 
-// CHECK: ![[EMPTY_TYPES_LOC]] = distinct !DISubprogram(name: "empty_types", scope: ![[MODULE:.*]], file: ![[CU_FILE_LOC]], type: ![[EMPTY_TYPES_TYPE:.*]], spFlags: DISPFlagDefinition
+// CHECK: ![[EMPTY_TYPES_LOC]] = distinct !DISubprogram(name: "empty_types", scope: ![[MODULE:.*]], file: ![[CU_FILE_LOC]], type: ![[EMPTY_TYPES_TYPE:.*]], spFlags: DISPFlagDefinition, unit: ![[CU_LOC]], annotations: ![[ANNOTATIONS:.*]])
 // CHECK: ![[MODULE]] = !DIModule(scope: ![[CU_FILE_LOC]], name: "module", configMacros: "bar", includePath: "/", apinotes: "/", file: ![[CU_FILE_LOC]], line: 42, isDecl: true)
 // CHECK: ![[EMPTY_TYPES_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[EMPTY_TYPES_ARGS:.*]])
 // CHECK: ![[EMPTY_TYPES_ARGS]] = !{}
+
+// CHECK: ![[ANNOTATIONS]] = !{![[ANNOTATION:.*]]}
+// CHECK: ![[ANNOTATION]] = !{!"foo", !"bar"}
 
 // -----
 
@@ -219,11 +227,14 @@ llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.m
 // CHECK-LABEL: define i32 @func_with_inlined_dbg_value(
 // CHECK-SAME: i32 %[[ARG:.*]]) !dbg ![[OUTER_FUNC:[0-9]+]]
 llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
-  // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC0:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
+  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC0:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
+  // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC0:[0-9]+]], !DIExpression(), ![[DBG_LOC0:.*]])
   llvm.intr.dbg.value #di_local_variable0 = %arg0 : i32 loc(fused<#di_subprogram>[#loc0])
-  // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC1:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC1:.*]]
+  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC1:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC1:.*]]
+  // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC1:[0-9]+]], !DIExpression(), ![[DBG_LOC1:.*]])
   llvm.intr.dbg.value #di_local_variable1 = %arg0 : i32 loc(#loc1)
-  // CHECK: call void @llvm.dbg.label(metadata ![[LABEL:[0-9]+]]), !dbg ![[DBG_LOC1:.*]]
+  // INTRINSICS: call void @llvm.dbg.label(metadata ![[LABEL:[0-9]+]]), !dbg ![[DBG_LOC1:.*]]
+  // RECORDS: #dbg_label(![[LABEL:[0-9]+]], ![[DBG_LOC1:.*]])
   llvm.intr.dbg.label #di_label loc(#loc1)
   llvm.return %arg0 : i32
 } loc(fused<#di_subprogram>["caller"])
@@ -254,7 +265,8 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-LABEL: define void @func_without_subprogram(
 // CHECK-SAME: i32 %[[ARG:.*]])
 llvm.func @func_without_subprogram(%0 : i32) {
-  // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
+  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
+  // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC:[0-9]+]], !DIExpression(), ![[DBG_LOC0:.*]])
   llvm.intr.dbg.value #di_local_variable = %0 : i32 loc(fused<#di_subprogram>[#loc])
   llvm.return
 }
@@ -285,11 +297,14 @@ llvm.func @func_without_subprogram(%0 : i32) {
 llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
-  // CHECK-NOT: @llvm.dbg.value
+  // INTRINSICS-NOT: @llvm.dbg.value
+  // RECORDS-NOT: #dbg_value
   llvm.intr.dbg.value #di_local_variable = %arg0 : i32
-  // CHECK-NOT: @llvm.dbg.declare
+  // INTRINSICS-NOT: @llvm.dbg.declare
+  // RECORDS-NOT: #dbg_declare
   llvm.intr.dbg.declare #declared_var = %alloc : !llvm.ptr
-  // CHECK-NOT: @llvm.dbg.label
+  // INTRINSICS-NOT: @llvm.dbg.label
+  // RECORDS-NOT: #dbg_label
   llvm.intr.dbg.label #di_label
   llvm.return %arg0 : i32
 }
@@ -333,6 +348,60 @@ llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr 
 #di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
 #di_module = #llvm.di_module<file = #di_file, scope = #di_compile_unit, name = "module2", configMacros = "", includePath = "", apinotes = "", line = 120, isDecl = false >
 llvm.mlir.global external @module_global() {dbg_expr = #llvm.di_global_variable_expression<var = <scope = #di_module, name = "module_global", linkageName = "module_global", file = #di_file, line = 121, type = #di_basic_type, isLocalToUnit = false, isDefined = true>, expr = <>>} : i64
+
+// -----
+
+// CHECK: @func_global = external global i64, !dbg {{.*}}
+// CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}globals: ![[GVALS:.*]])
+// CHECK-DAG: ![[SP:.*]] = distinct !DISubprogram(name: "fn_with_gl"{{.*}}unit: ![[CU]])
+// CHECK-DAG: ![[GVAR:.*]] = distinct !DIGlobalVariable(name: "func_global"{{.*}}, scope: ![[SP]]{{.*}})
+// CHECK-DAG: ![[GEXPR:.*]] = !DIGlobalVariableExpression(var: ![[GVAR]], expr: !DIExpression())
+// CHECK-DAG: ![[GVALS]] = !{![[GEXPR]]}
+
+#file = #llvm.di_file<"test.f90" in "existence">
+#cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_Fortran95, file = #file, producer = "MLIR", isOptimized = true, emissionKind = Full>
+#ty1 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
+#sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "fn_with_gl", file = #file, subprogramFlags = "Definition|Optimized">
+llvm.mlir.global @func_global() {dbg_expr = #llvm.di_global_variable_expression<var = <scope = #sp, name = "func_global", linkageName = "func_global", file = #file, line = 121, type = #ty1, isLocalToUnit = true, isDefined = true>, expr = <>>} : i64
+
+llvm.func @fn_with_gl() {
+  llvm.return
+} loc(fused<#sp>["foo1.mlir":0:0])
+
+// -----
+
+// Test that imported entries correctly generates 'retainedNodes' in the
+// subprogram.
+
+llvm.func @imp_fn() {
+  llvm.return
+} loc(#loc2)
+
+#di_file = #llvm.di_file<"test.f90" in "">
+#di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_program>
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>,
+  sourceLanguage = DW_LANG_Fortran95, file = #di_file, isOptimized = false,
+  emissionKind = Full>
+#di_module_1 = #llvm.di_module<file = #di_file, scope = #di_compile_unit, name = "mod1">
+#di_module_2 = #llvm.di_module<file = #di_file, scope = #di_compile_unit, name = "mod2">
+#di_subprogram_self_rec = #llvm.di_subprogram<recId = distinct[1]<>>
+#di_imported_entity_1 = #llvm.di_imported_entity<tag = DW_TAG_imported_module,
+  scope = #di_subprogram_self_rec, entity = #di_module_1, file = #di_file, line = 1>
+#di_imported_entity_2 = #llvm.di_imported_entity<tag = DW_TAG_imported_module,
+  scope = #di_subprogram_self_rec, entity = #di_module_2, file = #di_file, line = 1>
+#di_subprogram = #llvm.di_subprogram<id = distinct[2]<>, recId = distinct[1]<>,
+  compileUnit = #di_compile_unit, scope = #di_file, name = "imp_fn",
+  file = #di_file, subprogramFlags = Definition, type = #di_subroutine_type,
+  retainedNodes = #di_imported_entity_1, #di_imported_entity_2>
+#loc1 = loc("test.f90":12:14)
+#loc2 = loc(fused<#di_subprogram>[#loc1])
+
+// CHECK-DAG: ![[SP:[0-9]+]] = {{.*}}!DISubprogram(name: "imp_fn"{{.*}}retainedNodes: ![[NODES:[0-9]+]])
+// CHECK-DAG: ![[NODES]] = !{![[NODE1:[0-9]+]], ![[NODE2:[0-9]+]]}
+// CHECK-DAG: ![[NODE1]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[SP]], entity: ![[MOD1:[0-9]+]]{{.*}})
+// CHECK-DAG: ![[NODE2]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: ![[SP]], entity: ![[MOD2:[0-9]+]]{{.*}})
+// CHECK-DAG: ![[MOD1]] = !DIModule({{.*}}name: "mod1"{{.*}})
+// CHECK-DAG: ![[MOD2]] = !DIModule({{.*}}name: "mod2"{{.*}})
 
 // -----
 
@@ -383,7 +452,7 @@ llvm.func @func_debug_directives() {
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[1]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
 
 // Recursive type itself.
-#di_struct_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+#di_struct_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 #di_ptr_inner = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #di_struct_self, sizeInBits = 64>
 #di_subroutine_inner = #llvm.di_subroutine_type<types = #di_null_type, #di_ptr_inner>
 #di_subprogram_inner = #llvm.di_subprogram<
@@ -437,7 +506,7 @@ llvm.func @class_method() {
 
 // Ensures composite types with a recursive scope work.
 
-#di_composite_type_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+#di_composite_type_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 #di_file = #llvm.di_file<"test.mlir" in "/">
 #di_subroutine_type = #llvm.di_subroutine_type<types = #di_composite_type_self>
 #di_subprogram = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type>
@@ -448,7 +517,7 @@ llvm.func @class_method() {
 llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
 
 // CHECK: distinct !DIGlobalVariable({{.*}}type: ![[COMP:[0-9]+]],
-// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
+// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]]
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
@@ -460,7 +529,7 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // replaced with the recursive self reference.
 
 #di_file = #llvm.di_file<"test.mlir" in "/">
-#di_composite_type_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+#di_composite_type_self = #llvm.di_composite_type<recId = distinct[0]<>, isRecSelf = true>
 
 #di_subroutine_type_inner = #llvm.di_subroutine_type<types = #di_composite_type_self>
 #di_subprogram_inner = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type_inner>
@@ -480,7 +549,7 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // CHECK: distinct !DIGlobalVariable({{.*}}type: ![[VAR:[0-9]+]],
 // CHECK: ![[VAR]] = !DISubroutineType(types: ![[COMPS:[0-9]+]])
 // CHECK: ![[COMPS]] = !{![[COMP:[0-9]+]],
-// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
+// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]]
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
@@ -573,7 +642,7 @@ llvm.func @subranges(%arg: !llvm.ptr) {
  file = #file, isOptimized = false, emissionKind = Full>
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
  file = #file, subprogramFlags = Definition>
-#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt>
+#var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt, flags = Artificial>
 #ty = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
@@ -590,4 +659,4 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 #loc2 = loc(fused<#sp>[#loc1])
 
 // CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
-// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}})
+// CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)

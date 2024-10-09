@@ -123,9 +123,7 @@ bool PPCGenScalarMASSEntries::runOnModule(Module &M) {
     // The call to createScalarMASSCall() invalidates the iterator over users
     // upon replacing the users. Precomputing the current list of users allows
     // us to replace all the call sites.
-    SmallVector<User *, 4> TheUsers;
-    for (auto *User : Func.users())
-      TheUsers.push_back(User);
+    SmallVector<User *, 4> TheUsers(Func.users());
 
     for (auto *User : TheUsers)
       if (auto *CI = dyn_cast_or_null<CallInst>(User)) {

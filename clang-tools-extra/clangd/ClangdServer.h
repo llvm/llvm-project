@@ -16,6 +16,7 @@
 #include "FeatureModule.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
+#include "ModulesBuilder.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "TUScheduler.h"
@@ -111,6 +112,9 @@ public:
 
     /// This throttler controls which preambles may be built at a given time.
     clangd::PreambleThrottler *PreambleThrottler = nullptr;
+
+    /// Manages to build module files.
+    ModulesBuilder *ModulesManager = nullptr;
 
     /// If true, ClangdServer builds a dynamic in-memory index for symbols in
     /// opened files and uses the index to augment code completion results.
@@ -477,6 +481,8 @@ private:
   std::unique_ptr<BackgroundIndex> BackgroundIdx;
   // Storage for merged views of the various indexes.
   std::vector<std::unique_ptr<SymbolIndex>> MergedIdx;
+  // Manage module files.
+  ModulesBuilder *ModulesManager = nullptr;
 
   // When set, provides clang-tidy options for a specific file.
   TidyProviderRef ClangTidyProvider;

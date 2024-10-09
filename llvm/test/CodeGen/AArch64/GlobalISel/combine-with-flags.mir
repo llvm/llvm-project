@@ -60,8 +60,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: %bv0:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK-NEXT: $q0 = COPY %bv0(<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: %trunc:_(<4 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; CHECK-NEXT: %zext:_(<4 x s32>) = G_ZEXT %trunc(<4 x s16>)
+    ; CHECK-NEXT: $q0 = COPY %zext(<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
@@ -165,8 +168,13 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK-NEXT: %bv0:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK-NEXT: $q0 = COPY %bv0(<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
+    ; CHECK-NEXT: %t:_(<4 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16), [[TRUNC3]](s16)
+    ; CHECK-NEXT: %s:_(<4 x s32>) = G_SEXT %t(<4 x s16>)
+    ; CHECK-NEXT: $q0 = COPY %s(<4 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
@@ -188,8 +196,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK-NEXT: %bv0:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK-NEXT: %t:_(<4 x s16>) = G_TRUNC %bv0(<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
+    ; CHECK-NEXT: %t:_(<4 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16), [[TRUNC3]](s16)
     ; CHECK-NEXT: %z:_(<4 x s32>) = G_ZEXT %t(<4 x s16>)
     ; CHECK-NEXT: $q0 = COPY %z(<4 x s32>)
     %0:_(s32) = COPY $w0
@@ -213,8 +224,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK-NEXT: %bv0:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK-NEXT: %t:_(<4 x s16>) = nsw G_TRUNC %bv0(<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
+    ; CHECK-NEXT: %t:_(<4 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16), [[TRUNC3]](s16)
     ; CHECK-NEXT: %z:_(<4 x s32>) = G_ZEXT %t(<4 x s16>)
     ; CHECK-NEXT: $q0 = COPY %z(<4 x s32>)
     %0:_(s32) = COPY $w0
@@ -238,8 +252,13 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK-NEXT: %bv0:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK-NEXT: $q0 = COPY %bv0(<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
+    ; CHECK-NEXT: %t:_(<4 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16), [[TRUNC3]](s16)
+    ; CHECK-NEXT: %z:_(<4 x s32>) = G_ZEXT %t(<4 x s16>)
+    ; CHECK-NEXT: $q0 = COPY %z(<4 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
@@ -259,8 +278,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK-NEXT: %bv0:_(<2 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64)
-    ; CHECK-NEXT: %z:_(<2 x s32>) = nuw G_TRUNC %bv0(<2 x s64>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: %t:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; CHECK-NEXT: %z:_(<2 x s32>) = G_ZEXT %t(<2 x s16>)
     ; CHECK-NEXT: $d0 = COPY %z(<2 x s32>)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1

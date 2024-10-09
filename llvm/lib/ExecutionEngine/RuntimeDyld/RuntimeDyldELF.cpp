@@ -220,8 +220,7 @@ RuntimeDyldELF::RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
 RuntimeDyldELF::~RuntimeDyldELF() = default;
 
 void RuntimeDyldELF::registerEHFrames() {
-  for (int i = 0, e = UnregisteredEHFrameSections.size(); i != e; ++i) {
-    SID EHFrameSID = UnregisteredEHFrameSections[i];
+  for (SID EHFrameSID : UnregisteredEHFrameSections) {
     uint8_t *EHFrameAddr = Sections[EHFrameSID].getAddress();
     uint64_t EHFrameLoadAddr = Sections[EHFrameSID].getLoadAddress();
     size_t EHFrameSize = Sections[EHFrameSID].getSize();
@@ -1012,6 +1011,135 @@ void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
   }
 }
 
+static void applyUTypeImmRISCV(uint8_t *InstrAddr, uint32_t Imm) {
+  uint32_t UpperImm = (Imm + 0x800) & 0xfffff000;
+  auto Instr = support::ulittle32_t::ref(InstrAddr);
+  Instr = (Instr & 0xfff) | UpperImm;
+}
+
+static void applyITypeImmRISCV(uint8_t *InstrAddr, uint32_t Imm) {
+  uint32_t LowerImm = Imm & 0xfff;
+  auto Instr = support::ulittle32_t::ref(InstrAddr);
+  Instr = (Instr & 0xfffff) | (LowerImm << 20);
+}
+
+void RuntimeDyldELF::resolveRISCVRelocation(const SectionEntry &Section,
+                                            uint64_t Offset, uint64_t Value,
+                                            uint32_t Type, int64_t Addend,
+                                            SID SectionID) {
+  switch (Type) {
+  default: {
+    std::string Err = "Unimplemented reloc type: " + std::to_string(Type);
+    llvm::report_fatal_error(Err.c_str());
+  }
+    // 32-bit PC-relative function call, macros call, tail (PIC)
+    // Write first 20 bits of 32 bit value to the auipc instruction
+    // Last 12 bits to the jalr instruction
+  case ELF::R_RISCV_CALL:
+  case ELF::R_RISCV_CALL_PLT: {
+    uint64_t P = Section.getLoadAddressWithOffset(Offset);
+    uint64_t PCOffset = Value + Addend - P;
+    applyUTypeImmRISCV(Section.getAddressWithOffset(Offset), PCOffset);
+    applyITypeImmRISCV(Section.getAddressWithOffset(Offset + 4), PCOffset);
+    break;
+  }
+    // High 20 bits of 32-bit absolute address, %hi(symbol)
+  case ELF::R_RISCV_HI20: {
+    uint64_t PCOffset = Value + Addend;
+    applyUTypeImmRISCV(Section.getAddressWithOffset(Offset), PCOffset);
+    break;
+  }
+    // Low 12 bits of 32-bit absolute address, %lo(symbol)
+  case ELF::R_RISCV_LO12_I: {
+    uint64_t PCOffset = Value + Addend;
+    applyITypeImmRISCV(Section.getAddressWithOffset(Offset), PCOffset);
+    break;
+  }
+    // High 20 bits of 32-bit PC-relative reference, %pcrel_hi(symbol)
+  case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_PCREL_HI20: {
+    uint64_t P = Section.getLoadAddressWithOffset(Offset);
+    uint64_t PCOffset = Value + Addend - P;
+    applyUTypeImmRISCV(Section.getAddressWithOffset(Offset), PCOffset);
+    break;
+  }
+
+    // label:
+    //    auipc      a0, %pcrel_hi(symbol)    // R_RISCV_PCREL_HI20
+    //    addi       a0, a0, %pcrel_lo(label) // R_RISCV_PCREL_LO12_I
+    //
+    // The low 12 bits of relative address between pc and symbol.
+    // The symbol is related to the high part instruction which is marked by
+    // label.
+  case ELF::R_RISCV_PCREL_LO12_I: {
+    for (auto &&PendingReloc : PendingRelocs) {
+      const RelocationValueRef &MatchingValue = PendingReloc.first;
+      RelocationEntry &Reloc = PendingReloc.second;
+      uint64_t HIRelocPC =
+          getSectionLoadAddress(Reloc.SectionID) + Reloc.Offset;
+      if (Value + Addend == HIRelocPC) {
+        uint64_t Symbol = getSectionLoadAddress(MatchingValue.SectionID) +
+                          MatchingValue.Addend;
+        auto PCOffset = Symbol - HIRelocPC;
+        applyITypeImmRISCV(Section.getAddressWithOffset(Offset), PCOffset);
+        return;
+      }
+    }
+
+    llvm::report_fatal_error(
+        "R_RISCV_PCREL_LO12_I without matching R_RISCV_PCREL_HI20");
+  }
+  case ELF::R_RISCV_32_PCREL: {
+    uint64_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
+    int64_t RealOffset = Value + Addend - FinalAddress;
+    int32_t TruncOffset = Lo_32(RealOffset);
+    support::ulittle32_t::ref(Section.getAddressWithOffset(Offset)) =
+        TruncOffset;
+    break;
+  }
+  case ELF::R_RISCV_32: {
+    auto Ref = support::ulittle32_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Value + Addend;
+    break;
+  }
+  case ELF::R_RISCV_64: {
+    auto Ref = support::ulittle64_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Value + Addend;
+    break;
+  }
+  case ELF::R_RISCV_ADD16: {
+    auto Ref = support::ulittle16_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Ref + Value + Addend;
+    break;
+  }
+  case ELF::R_RISCV_ADD32: {
+    auto Ref = support::ulittle32_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Ref + Value + Addend;
+    break;
+  }
+  case ELF::R_RISCV_ADD64: {
+    auto Ref = support::ulittle64_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Ref + Value + Addend;
+    break;
+  }
+  case ELF::R_RISCV_SUB16: {
+    auto Ref = support::ulittle16_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Ref - Value - Addend;
+    break;
+  }
+  case ELF::R_RISCV_SUB32: {
+    auto Ref = support::ulittle32_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Ref - Value - Addend;
+    break;
+  }
+  case ELF::R_RISCV_SUB64: {
+    auto Ref = support::ulittle64_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Ref - Value - Addend;
+    break;
+  }
+  }
+}
+
 // The target location for the relocation is described by RE.SectionID and
 // RE.Offset.  RE.SectionID can be used to find the SectionEntry.  Each
 // SectionEntry has three members describing its location.
@@ -1077,12 +1205,17 @@ void RuntimeDyldELF::resolveRelocation(const SectionEntry &Section,
   case Triple::bpfeb:
     resolveBPFRelocation(Section, Offset, Value, Type, Addend);
     break;
+  case Triple::riscv32: // Fall through.
+  case Triple::riscv64:
+    resolveRISCVRelocation(Section, Offset, Value, Type, Addend, SectionID);
+    break;
   default:
     llvm_unreachable("Unsupported CPU type!");
   }
 }
 
-void *RuntimeDyldELF::computePlaceholderAddress(unsigned SectionID, uint64_t Offset) const {
+void *RuntimeDyldELF::computePlaceholderAddress(unsigned SectionID,
+                                                uint64_t Offset) const {
   return (void *)(Sections[SectionID].getObjAddress() + Offset);
 }
 
@@ -1258,7 +1391,7 @@ RuntimeDyldELF::processRelocationRef(
       std::string Buf;
       raw_string_ostream OS(Buf);
       logAllUnhandledErrors(SymTypeOrErr.takeError(), OS);
-      report_fatal_error(Twine(OS.str()));
+      report_fatal_error(Twine(Buf));
     }
     SymType = *SymTypeOrErr;
   }
@@ -1278,7 +1411,7 @@ RuntimeDyldELF::processRelocationRef(
         std::string Buf;
         raw_string_ostream OS(Buf);
         logAllUnhandledErrors(SectionOrErr.takeError(), OS);
-        report_fatal_error(Twine(OS.str()));
+        report_fatal_error(Twine(Buf));
       }
       section_iterator si = *SectionOrErr;
       if (si == Obj.section_end())
@@ -1477,13 +1610,10 @@ RuntimeDyldELF::processRelocationRef(
     RelocationEntry RE(SectionID, Offset, RelType, Value.Addend);
     if (r_type == ELF::R_MIPS_CALL16 || r_type == ELF::R_MIPS_GOT_PAGE
         || r_type == ELF::R_MIPS_GOT_DISP) {
-      StringMap<uint64_t>::iterator i = GOTSymbolOffsets.find(TargetName);
-      if (i != GOTSymbolOffsets.end())
-        RE.SymOffset = i->second;
-      else {
-        RE.SymOffset = allocateGOTEntries(1);
-        GOTSymbolOffsets[TargetName] = RE.SymOffset;
-      }
+      auto [I, Inserted] = GOTSymbolOffsets.try_emplace(TargetName);
+      if (Inserted)
+        I->second = allocateGOTEntries(1);
+      RE.SymOffset = I->second;
       if (Value.SymbolName)
         addRelocationForSymbol(RE, Value.SymbolName);
       else
@@ -1871,7 +2001,8 @@ RuntimeDyldELF::processRelocationRef(
       Value.Addend += support::ulittle32_t::ref(computePlaceholderAddress(SectionID, Offset));
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     } else if (RelType == ELF::R_X86_64_PC64) {
-      Value.Addend += support::ulittle64_t::ref(computePlaceholderAddress(SectionID, Offset));
+      Value.Addend += support::ulittle64_t::ref(
+          computePlaceholderAddress(SectionID, Offset));
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     } else if (RelType == ELF::R_X86_64_GOTTPOFF) {
       processX86_64GOTTPOFFRelocation(SectionID, Offset, Value, Addend);
@@ -1885,9 +2016,23 @@ RuntimeDyldELF::processRelocationRef(
     } else {
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
+  } else if (Arch == Triple::riscv32 || Arch == Triple::riscv64) {
+    // *_LO12 relocation receive information about a symbol from the
+    // corresponding *_HI20 relocation, so we have to collect this information
+    // before resolving
+    if (RelType == ELF::R_RISCV_GOT_HI20 ||
+        RelType == ELF::R_RISCV_PCREL_HI20 ||
+        RelType == ELF::R_RISCV_TPREL_HI20 ||
+        RelType == ELF::R_RISCV_TLS_GD_HI20 ||
+        RelType == ELF::R_RISCV_TLS_GOT_HI20) {
+      RelocationEntry RE(SectionID, Offset, RelType, Addend);
+      PendingRelocs.push_back({Value, RE});
+    }
+    processSimpleRelocation(SectionID, Offset, RelType, Value);
   } else {
     if (Arch == Triple::x86) {
-      Value.Addend += support::ulittle32_t::ref(computePlaceholderAddress(SectionID, Offset));
+      Value.Addend += support::ulittle32_t::ref(
+          computePlaceholderAddress(SectionID, Offset));
     }
     processSimpleRelocation(SectionID, Offset, RelType, Value);
   }

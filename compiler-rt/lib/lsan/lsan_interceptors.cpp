@@ -26,7 +26,6 @@
 #if SANITIZER_POSIX
 #include "sanitizer_common/sanitizer_posix.h"
 #endif
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "lsan.h"
 #include "lsan_allocator.h"
 #include "lsan_common.h"
@@ -77,6 +76,8 @@ INTERCEPTOR(void*, malloc, uptr size) {
 }
 
 INTERCEPTOR(void, free, void *p) {
+  if (UNLIKELY(!p))
+    return;
   if (DlsymAlloc::PointerIsMine(p))
     return DlsymAlloc::Free(p);
   ENSURE_LSAN_INITED;
@@ -133,9 +134,7 @@ INTERCEPTOR(void*, memalign, uptr alignment, uptr size) {
 INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
-  void *res = lsan_memalign(alignment, size, stack);
-  DTLS_on_libc_memalign(res, size);
-  return res;
+  return lsan_memalign(alignment, size, stack);
 }
 #define LSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN INTERCEPT_FUNCTION(__libc_memalign)
 #else
@@ -389,7 +388,7 @@ INTERCEPTOR(int, atexit, void (*f)()) {
 extern "C" {
 extern int _pthread_atfork(void (*prepare)(), void (*parent)(),
                            void (*child)());
-};
+}
 
 INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
             void (*child)()) {
@@ -525,7 +524,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 #    define LSAN_MAYBE_INTERCEPT_TIMEDJOIN
 #  endif  // SANITIZER_INTERCEPT_TIMEDJOIN
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 INTERCEPTOR(void, _exit, int status) {
   if (status == 0 && HasReportedLeaks()) status = common_flags()->exitcode;

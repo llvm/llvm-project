@@ -119,13 +119,18 @@ public:
   getFunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context,
                                   ExprMutationAnalyzer::Memoized &Memorized) {
     auto it = Memorized.FuncParmAnalyzer.find(&Func);
-    if (it == Memorized.FuncParmAnalyzer.end())
+    if (it == Memorized.FuncParmAnalyzer.end()) {
+      // Creating a new instance of FunctionParmMutationAnalyzer below may add
+      // additional elements to FuncParmAnalyzer. If we did try_emplace before
+      // creating a new instance, the returned iterator of try_emplace could be
+      // invalidated.
       it =
           Memorized.FuncParmAnalyzer
               .try_emplace(&Func, std::unique_ptr<FunctionParmMutationAnalyzer>(
                                       new FunctionParmMutationAnalyzer(
                                           Func, Context, Memorized)))
               .first;
+    }
     return it->getSecond().get();
   }
 

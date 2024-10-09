@@ -12,6 +12,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-public.h"
 
+#include <cstdint>
+
 namespace lldb_private {
 
 /// \class AddressableBits AddressableBits.h "lldb/Core/AddressableBits.h"

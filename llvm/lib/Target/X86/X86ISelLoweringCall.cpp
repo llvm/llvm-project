@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "x86-isel"
 
@@ -123,12 +124,14 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       !Subtarget.hasX87())
     return MVT::i32;
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
-    return getRegisterTypeForCallingConv(Context, CC,
-                                         VT.changeVectorElementType(MVT::f16));
+  if (isTypeLegal(MVT::f16)) {
+    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+      return getRegisterTypeForCallingConv(
+          Context, CC, VT.changeVectorElementType(MVT::f16));
 
-  if (VT == MVT::bf16)
-    return MVT::f16;
+    if (VT == MVT::bf16)
+      return MVT::f16;
+  }
 
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
@@ -161,7 +164,8 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
+      isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(Context, CC,
                                          VT.changeVectorElementType(MVT::f16));
 
@@ -193,7 +197,8 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
+      isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -417,7 +422,8 @@ unsigned X86TargetLowering::getJumpTableEncoding() const {
   if (isPositionIndependent() && Subtarget.isPICStyleGOT())
     return MachineJumpTableInfo::EK_Custom32;
   if (isPositionIndependent() &&
-      getTargetMachine().getCodeModel() == CodeModel::Large)
+      getTargetMachine().getCodeModel() == CodeModel::Large &&
+      !Subtarget.isTargetCOFF())
     return MachineJumpTableInfo::EK_LabelDifference64;
 
   // Otherwise, use the normal jump table encoding heuristics.
@@ -522,8 +528,9 @@ X86TargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
 unsigned X86TargetLowering::getAddressSpace() const {
   if (Subtarget.is64Bit())
-    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? 256 : 257;
-  return 256;
+    return (getTargetMachine().getCodeModel() == CodeModel::Kernel) ? X86AS::GS
+                                                                    : X86AS::FS;
+  return X86AS::GS;
 }
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
@@ -1238,7 +1245,7 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
   return DAG.getMemcpy(
       Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
       /*isVolatile*/ false, /*AlwaysInline=*/true,
-      /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
+      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -1433,14 +1440,14 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     // in their paired GPR.  So we only need to save the GPR to their home
     // slots.
     // TODO: __vectorcall will change this.
-    return std::nullopt;
+    return {};
   }
 
   bool isSoftFloat = Subtarget.useSoftFloat();
   if (isSoftFloat || !Subtarget.hasSSE1())
     // Kernel mode asks for SSE to be disabled, so there are no XMM argument
     // registers.
-    return std::nullopt;
+    return {};
 
   static const MCPhysReg XMMArgRegs64Bit[] = {
     X86::XMM0, X86::XMM1, X86::XMM2, X86::XMM3,
@@ -1901,7 +1908,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   if (shouldDisableArgRegFromCSR(CallConv) ||
       F.hasFnAttribute("no_caller_saved_registers")) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    for (std::pair<Register, Register> Pair : MRI.liveins())
+    for (std::pair<MCRegister, Register> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
@@ -2014,7 +2021,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool HasNoCfCheck = (CB && CB->doesNoCfCheck());
   bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
   bool IsCFICall = IsIndirectCall && CLI.CFIType;
-  const Module *M = MF.getMMI().getModule();
+  const Module *M = MF.getFunction().getParent();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
 
   MachineFunction::CallSiteInfo CSInfo;
@@ -2424,7 +2431,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall)
-    Ops.push_back(DAG.getTargetConstant(FPDiff, dl, MVT::i32));
+    Ops.push_back(
+        DAG.getSignedConstant(FPDiff, dl, MVT::i32, /*isTarget=*/true));
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
@@ -2447,6 +2455,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return RegInfo->getCallPreservedMask(MF, AdaptedCC);
   }();
   assert(Mask && "Missing call preserved mask for calling convention");
+
+  if (MachineOperand::clobbersPhysReg(Mask, RegInfo->getFramePtr())) {
+    X86Info->setFPClobberedByCall(true);
+    if (CLI.CB && isa<InvokeInst>(CLI.CB))
+      X86Info->setFPClobberedByInvoke(true);
+  }
+  if (MachineOperand::clobbersPhysReg(Mask, RegInfo->getBaseRegister())) {
+    X86Info->setBPClobberedByCall(true);
+    if (CLI.CB && isa<InvokeInst>(CLI.CB))
+      X86Info->setBPClobberedByInvoke(true);
+  }
 
   // If this is an invoke in a 32-bit function using a funclet-based
   // personality, assume the function clobbers all registers. If an exception

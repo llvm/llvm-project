@@ -814,7 +814,8 @@ RegionInfoBase<Tr>::getMaxRegionExit(BlockT *BB) const {
     // Get the single exit of BB.
     if (R && R->getEntry() == BB)
       Exit = R->getExit();
-    else if (++BlockTraits::child_begin(BB) == BlockTraits::child_end(BB))
+    else if (std::next(BlockTraits::child_begin(BB)) ==
+             BlockTraits::child_end(BB))
       Exit = *BlockTraits::child_begin(BB);
     else // No single exit exists.
       return Exit;

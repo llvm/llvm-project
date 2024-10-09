@@ -162,6 +162,8 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::SubstTemplateTemplateParmPack:
   case TemplateName::UsingTemplate:
     break;
+  case TemplateName::DeducedTemplate:
+    llvm_unreachable("Unexpected DeducedTemplate");
   }
 }
 
@@ -251,7 +253,7 @@ unsigned ODRHash::CalculateHash() {
 
   assert(I == Bools.rend());
   Bools.clear();
-  return ID.ComputeHash();
+  return ID.computeStableHash();
 }
 
 namespace {
@@ -461,6 +463,7 @@ public:
     } else {
       AddDecl(D->getFriendDecl());
     }
+    Hash.AddBoolean(D->isPackExpansion());
   }
 
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {

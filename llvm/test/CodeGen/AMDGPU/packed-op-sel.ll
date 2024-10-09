@@ -4,17 +4,17 @@
 define amdgpu_kernel void @fma_vector_vector_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: fma_vector_vector_scalar_lo:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
 ; GCN-NEXT:    ds_read_u16 v1, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v1 op_sel_hi:[1,1,0]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -35,17 +35,17 @@ bb:
 define amdgpu_kernel void @fma_vector_vector_neg_broadcast_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: fma_vector_vector_neg_broadcast_scalar_lo:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
 ; GCN-NEXT:    ds_read_u16 v1, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v1 op_sel_hi:[1,1,0] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -67,17 +67,17 @@ bb:
 define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: fma_vector_vector_neg_scalar_lo:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
 ; GCN-NEXT:    ds_read_u16 v1, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v1 op_sel_hi:[1,1,0] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -99,17 +99,17 @@ bb:
 define amdgpu_kernel void @fma_vector_vector_neg_broadcast_neg_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: fma_vector_vector_neg_broadcast_neg_scalar_lo:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
 ; GCN-NEXT:    ds_read_u16 v1, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v1 op_sel_hi:[1,1,0]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -132,17 +132,17 @@ bb:
 define amdgpu_kernel void @fma_vector_vector_scalar_neg_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: fma_vector_vector_scalar_neg_lo:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
 ; GCN-NEXT:    ds_read_u16 v1, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v1 op_sel_hi:[1,1,0] neg_lo:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -163,17 +163,17 @@ bb:
 define amdgpu_kernel void @fma_vector_vector_scalar_neg_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: fma_vector_vector_scalar_neg_hi:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
 ; GCN-NEXT:    ds_read_u16 v1, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v1 op_sel_hi:[1,1,0] neg_hi:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -194,16 +194,16 @@ bb:
 define amdgpu_kernel void @add_vector_neg_bitcast_scalar_lo(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: add_vector_neg_bitcast_scalar_lo:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v0, v0
 ; GCN-NEXT:    ds_read_u16 v1, v1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_add_u16 v0, v0, v1 op_sel_hi:[1,0] neg_lo:[0,1] neg_hi:[0,1]
-; GCN-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %vec0 = load volatile <2 x i16>, ptr addrspace(3) %lds, align 4
@@ -222,11 +222,11 @@ bb:
 define amdgpu_kernel void @fma_vector_vector_scalar_lo_neg_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: fma_vector_vector_scalar_lo_neg_scalar_hi:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
 ; GCN-NEXT:    ds_read_u16 v3, v1
@@ -237,7 +237,7 @@ define amdgpu_kernel void @fma_vector_vector_scalar_lo_neg_scalar_hi(ptr addrspa
 ; GCN-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
 ; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v1
-; GCN-NEXT:    global_store_dword v4, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v4, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -261,10 +261,10 @@ bb:
 define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspace(1) %out, ptr addrspace(3) %lds, ptr addrspace(3) %arg2) #0 {
 ; GCN-LABEL: fma_vector_vector_neg_scalar_lo_scalar_hi:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
 ; GCN-NEXT:    ds_read_u16 v3, v1
@@ -273,7 +273,7 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v3 neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GCN-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -299,15 +299,15 @@ define amdgpu_kernel void @fma_vector_vector_neg_vector_hi(ptr addrspace(1) %out
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -330,15 +330,15 @@ define amdgpu_kernel void @fma_vector_vector_vector_neg_hi(ptr addrspace(1) %out
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 neg_hi:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -362,14 +362,14 @@ define amdgpu_kernel void @add_vector_scalar_hi(ptr addrspace(1) %out, ptr addrs
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:4
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_add_u16 v0, v1, v0 op_sel:[0,1]
-; GCN-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x i16>, ptr addrspace(3) %lds, i32 1
@@ -389,15 +389,15 @@ define amdgpu_kernel void @fma_vector_vector_scalar_hi(ptr addrspace(1) %out, pt
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -420,15 +420,15 @@ define amdgpu_kernel void @fma_vector_vector_neg_vector_lo_neg_hi(ptr addrspace(
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -453,15 +453,15 @@ define amdgpu_kernel void @fma_vector_vector_swap_vector(ptr addrspace(1) %out, 
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1] op_sel_hi:[1,1,0]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -483,15 +483,15 @@ define amdgpu_kernel void @fma_vector_vector_swap_neg_vector(ptr addrspace(1) %o
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1] op_sel_hi:[1,1,0] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -514,15 +514,15 @@ define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_0(ptr addrs
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1] op_sel_hi:[1,1,0] neg_lo:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -544,15 +544,15 @@ define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_1(ptr addrs
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 neg_lo:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -574,15 +574,15 @@ define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_2(ptr addrs
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 neg_hi:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -604,15 +604,15 @@ define amdgpu_kernel void @fma_vector_vector_blend_vector_neg_vector_3(ptr addrs
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1] neg_lo:[0,0,1]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -634,16 +634,16 @@ define amdgpu_kernel void @bitcast_fneg_f32(ptr addrspace(1) %out, ptr addrspace
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v0, v0
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GCN-NEXT:    v_pk_add_f16 v0, v0, v1
-; GCN-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %vec0 = load volatile <2 x half>, ptr addrspace(3) %lds, align 4
@@ -661,16 +661,16 @@ define amdgpu_kernel void @shuffle_bitcast_fneg_f32(ptr addrspace(1) %out, ptr a
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v0, v0
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GCN-NEXT:    v_pk_add_f16 v0, v0, v1 op_sel:[0,1] op_sel_hi:[1,0]
-; GCN-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %vec0 = load volatile <2 x half>, ptr addrspace(3) %lds, align 4
@@ -689,18 +689,18 @@ define amdgpu_kernel void @extract_from_i64(ptr addrspace(1) %out, ptr addrspace
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0xffff
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    ds_read_b32 v2, v0
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_and_b32_sdwa v3, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GCN-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_pk_add_u16 v0, v2, v0
-; GCN-NEXT:    global_store_dword v1, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %vec0 = load volatile <2 x i16>, ptr addrspace(3) %lds, align 4
@@ -726,14 +726,14 @@ define amdgpu_kernel void @bitcast_lo_elt_op_sel(ptr addrspace(1) %out, ptr addr
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v3, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_pk_add_f16 v0, v0, 2.0 op_sel_hi:[1,0]
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1] op_sel_hi:[1,1,0]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -764,7 +764,7 @@ define amdgpu_kernel void @mix_elt_types_op_sel(ptr addrspace(1) %out, ptr addrs
 ; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    ds_read_b32 v2, v0 offset:4
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    ; kill: killed $vgpr0_vgpr1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v3, v[0:1], off glc
@@ -776,7 +776,7 @@ define amdgpu_kernel void @mix_elt_types_op_sel(ptr addrspace(1) %out, ptr addrs
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1] op_sel_hi:[1,1,0]
-; GCN-NEXT:    global_store_dword v3, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 bb:
   %lds.gep1 = getelementptr inbounds <2 x half>, ptr addrspace(3) %lds, i32 1
@@ -803,5 +803,5 @@ bb:
 
 declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) #1
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #1 = { nounwind readnone }

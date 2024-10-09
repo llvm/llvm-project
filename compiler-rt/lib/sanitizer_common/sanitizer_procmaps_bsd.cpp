@@ -47,7 +47,8 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats) {
   struct kinfo_proc2 *InfoProc;
   uptr Len = sizeof(*InfoProc);
   uptr Size = Len;
-  const int Mib[] = {CTL_KERN, KERN_PROC2, KERN_PROC_PID, getpid(), Size, 1};
+  const int Mib[] = {CTL_KERN, KERN_PROC2, KERN_PROC_PID,
+                     getpid(), (int)Size,  1};
   InfoProc = (struct kinfo_proc2 *)MmapOrDie(Size, "GetMemoryProfile()");
   CHECK_EQ(
       internal_sysctl(Mib, ARRAY_SIZE(Mib), nullptr, (uptr *)InfoProc, &Len, 0),

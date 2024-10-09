@@ -12,6 +12,7 @@
 #include "FPBits.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
+#include "cast.h"
 #include "dyadic_float.h"
 #include "rounding_mode.h"
 
@@ -21,9 +22,10 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -142,8 +144,10 @@ LIBC_INLINE constexpr T logb(T x) {
   return static_cast<T>(normal.get_unbiased_exponent());
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE constexpr T ldexp(T x, int exp) {
+template <typename T, typename U>
+LIBC_INLINE constexpr cpp::enable_if_t<
+    cpp::is_floating_point_v<T> && cpp::is_integral_v<U>, T>
+ldexp(T x, U exp) {
   FPBits<T> bits(x);
   if (LIBC_UNLIKELY((exp == 0) || bits.is_zero() || bits.is_inf_or_nan()))
     return x;
@@ -156,6 +160,8 @@ LIBC_INLINE constexpr T ldexp(T x, int exp) {
   // calculating the limit.
   constexpr int EXP_LIMIT =
       FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
+  // Make sure that we can safely cast exp to int when not returning early.
+  static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
     int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
@@ -186,8 +192,9 @@ LIBC_INLINE constexpr T ldexp(T x, int exp) {
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
-  normal.exponent += exp;
-  return static_cast<T>(normal);
+  normal.exponent += static_cast<int>(exp);
+  // TODO: Add tests for exceptions.
+  return normal.template as<T, /*ShouldRaiseExceptions=*/true>();
 }
 
 template <typename T, typename U,
@@ -202,17 +209,17 @@ LIBC_INLINE T nextafter(T from, U to) {
 
   FPBits<U> to_bits(to);
   if (to_bits.is_nan())
-    return static_cast<T>(to);
+    return cast<T>(to);
 
   // NOTE: This would work only if `U` has a greater or equal precision than
   // `T`. Otherwise `from` could loose its precision and the following statement
   // could incorrectly evaluate to `true`.
-  if (static_cast<U>(from) == to)
-    return static_cast<T>(to);
+  if (cast<U>(from) == to)
+    return cast<T>(to);
 
   using StorageType = typename FPBits<T>::StorageType;
   if (from != T(0)) {
-    if ((static_cast<U>(from) < to) == (from > T(0))) {
+    if ((cast<U>(from) < to) == (from > T(0))) {
       from_bits = FPBits<T>(StorageType(from_bits.uintval() + 1));
     } else {
       from_bits = FPBits<T>(StorageType(from_bits.uintval() - 1));
@@ -254,7 +261,7 @@ LIBC_INLINE constexpr T nextupdown(T x) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"

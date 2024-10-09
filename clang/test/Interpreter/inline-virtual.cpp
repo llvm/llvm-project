@@ -3,8 +3,10 @@
 //
 // We disable RTTI to avoid problems on Windows for non-RTTI builds of LLVM
 // where the JIT cannot find ??_7type_info@@6B@.
-// RUN: cat %s | clang-repl -Xcc -fno-rtti | FileCheck %s
-// RUN: cat %s | clang-repl -Xcc -fno-rtti -Xcc -O2 | FileCheck %s
+// RUN: cat %s | clang-repl -Xcc -fno-rtti -Xcc -fno-sized-deallocation \
+// RUN:     | FileCheck %s
+// RUN: cat %s | clang-repl -Xcc -fno-rtti -Xcc -fno-sized-deallocation \
+// RUN:     -Xcc -O2 | FileCheck %s
 
 extern "C" int printf(const char *, ...);
 

@@ -96,7 +96,7 @@ struct StoreToLoadForwardingCandidate {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
     Type *LoadType = getLoadStoreType(Load);
-    auto &DL = Load->getParent()->getModule()->getDataLayout();
+    auto &DL = Load->getDataLayout();
 
     assert(LoadPtr->getType()->getPointerAddressSpace() ==
                StorePtr->getType()->getPointerAddressSpace() &&
@@ -192,7 +192,7 @@ public:
     // forward and backward dependences qualify.  Disqualify loads that have
     // other unknown dependences.
 
-    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDepedence;
+    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDependence;
 
     for (const auto &Dep : *Deps) {
       Instruction *Source = Dep.getSource(DepChecker);
@@ -201,9 +201,9 @@ public:
       if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
           Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
         if (isa<LoadInst>(Source))
-          LoadsWithUnknownDepedence.insert(Source);
+          LoadsWithUnknownDependence.insert(Source);
         if (isa<LoadInst>(Destination))
-          LoadsWithUnknownDepedence.insert(Destination);
+          LoadsWithUnknownDependence.insert(Destination);
         continue;
       }
 
@@ -225,15 +225,15 @@ public:
       // Only propagate if the stored values are bit/pointer castable.
       if (!CastInst::isBitOrNoopPointerCastable(
               getLoadStoreType(Store), getLoadStoreType(Load),
-              Store->getParent()->getModule()->getDataLayout()))
+              Store->getDataLayout()))
         continue;
 
       Candidates.emplace_front(Load, Store);
     }
 
-    if (!LoadsWithUnknownDepedence.empty())
+    if (!LoadsWithUnknownDependence.empty())
       Candidates.remove_if([&](const StoreToLoadForwardingCandidate &C) {
-        return LoadsWithUnknownDepedence.count(C.Load);
+        return LoadsWithUnknownDependence.count(C.Load);
       });
 
     return Candidates;
@@ -459,7 +459,7 @@ public:
 
     Type *LoadType = Initial->getType();
     Type *StoreType = Cand.Store->getValueOperand()->getType();
-    auto &DL = Cand.Load->getParent()->getModule()->getDataLayout();
+    auto &DL = Cand.Load->getDataLayout();
     (void)DL;
 
     assert(DL.getTypeSizeInBits(LoadType) == DL.getTypeSizeInBits(StoreType) &&
@@ -617,7 +617,7 @@ public:
 
     // Next, propagate the value stored by the store to the users of the load.
     // Also for the first iteration, generate the initial value of the load.
-    SCEVExpander SEE(*PSE.getSE(), L->getHeader()->getModule()->getDataLayout(),
+    SCEVExpander SEE(*PSE.getSE(), L->getHeader()->getDataLayout(),
                      "storeforward");
     for (const auto &Cand : Candidates)
       propagateStoredValueToLoadUsers(Cand, SEE);

@@ -72,7 +72,7 @@ static void large_file() {
   // the data at the end of the source file.
   std::string out_data(additional_size, 'z');
   {
-    std::FILE* dest_file = std::fopen(dest.string().c_str(), "rb");
+    std::FILE* dest_file = std::fopen(dest.string().c_str(), "r");
     assert(dest_file != nullptr);
     assert(std::fseek(dest_file, sendfile_size_limit, SEEK_SET) == 0);
     assert(std::fread(&out_data[0], sizeof(out_data[0]), additional_size, dest_file) == additional_size);

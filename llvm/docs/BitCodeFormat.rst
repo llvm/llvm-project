@@ -477,7 +477,7 @@ that has gone through a pre-link LTO pipeline).  The ``.llvmbc`` section
 predates FatLTO support in LLVM, and may not always contain bitcode that is
 suitable for LTO (i.e. from ``-fembed-bitcode``).  The wrapper format is useful
 for accommodating LTO in compilation pipelines where intermediate objects must
-be native object files which contain metadata in other sections. 
+be native object files which contain metadata in other sections.
 
 Not all tools support this format.  For example, lld and the gold plugin will
 ignore the ``.llvmbc`` section when linking object files, but can use
@@ -1006,93 +1006,29 @@ number of values representing the bytes of a null-terminated string. For
 attributes with a string argument (code 4), the *value* value is similarly a
 variable number of values representing the bytes of a null-terminated string.
 
-The integer codes are mapped to well-known attributes as follows.
+The integer codes are mapped to attributes as described in the
+``AttributeKindCodes`` enumeration in the file `LLVMBitCodes.h
+<https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Bitcode/LLVMBitCodes.h>`_.
+
+For example:
+
+::
+
+  enum AttributeKindCodes {
+    // = 0 is unused
+    ATTR_KIND_ALIGNMENT = 1,
+    ATTR_KIND_ALWAYS_INLINE = 2,
+    ...
+    }
+
+Correspond to:
 
 * code 1: ``align(<n>)``
 * code 2: ``alwaysinline``
-* code 3: ``byval``
-* code 4: ``inlinehint``
-* code 5: ``inreg``
-* code 6: ``minsize``
-* code 7: ``naked``
-* code 8: ``nest``
-* code 9: ``noalias``
-* code 10: ``nobuiltin``
-* code 11: ``nocapture``
-* code 12: ``nodeduplicate``
-* code 13: ``noimplicitfloat``
-* code 14: ``noinline``
-* code 15: ``nonlazybind``
-* code 16: ``noredzone``
-* code 17: ``noreturn``
-* code 18: ``nounwind``
-* code 19: ``optsize``
-* code 20: ``readnone``
-* code 21: ``readonly``
-* code 22: ``returned``
-* code 23: ``returns_twice``
-* code 24: ``signext``
-* code 25: ``alignstack(<n>)``
-* code 26: ``ssp``
-* code 27: ``sspreq``
-* code 28: ``sspstrong``
-* code 29: ``sret``
-* code 30: ``sanitize_address``
-* code 31: ``sanitize_thread``
-* code 32: ``sanitize_memory``
-* code 33: ``uwtable``
-* code 34: ``zeroext``
-* code 35: ``builtin``
-* code 36: ``cold``
-* code 37: ``optnone``
-* code 38: ``inalloca``
-* code 39: ``nonnull``
-* code 40: ``jumptable``
-* code 41: ``dereferenceable(<n>)``
-* code 42: ``dereferenceable_or_null(<n>)``
-* code 43: ``convergent``
-* code 44: ``safestack``
-* code 45: ``argmemonly``
-* code 46: ``swiftself``
-* code 47: ``swifterror``
-* code 48: ``norecurse``
-* code 49: ``inaccessiblememonly``
-* code 50: ``inaccessiblememonly_or_argmemonly``
-* code 51: ``allocsize(<EltSizeParam>[, <NumEltsParam>])``
-* code 52: ``writeonly``
-* code 53: ``speculatable``
-* code 54: ``strictfp``
-* code 55: ``sanitize_hwaddress``
-* code 56: ``nocf_check``
-* code 57: ``optforfuzzing``
-* code 58: ``shadowcallstack``
-* code 59: ``speculative_load_hardening``
-* code 60: ``immarg``
-* code 61: ``willreturn``
-* code 62: ``nofree``
-* code 63: ``nosync``
-* code 64: ``sanitize_memtag``
-* code 65: ``preallocated``
-* code 66: ``no_merge``
-* code 67: ``null_pointer_is_valid``
-* code 68: ``noundef``
-* code 69: ``byref``
-* code 70: ``mustprogress``
-* code 74: ``vscale_range(<Min>[, <Max>])``
-* code 75: ``swiftasync``
-* code 76: ``nosanitize_coverage``
-* code 77: ``elementtype``
-* code 78: ``disable_sanitizer_instrumentation``
-* code 79: ``nosanitize_bounds``
-* code 80: ``allocalign``
-* code 81: ``allocptr``
-* code 82: ``allockind``
-* code 83: ``presplitcoroutine``
-* code 84: ``fn_ret_thunk_extern``
-* code 85: ``skipprofile``
-* code 86: ``memory``
-* code 87: ``nofpclass``
-* code 88: ``optdebug``
+
+The mappings between the enumeration and the attribute name string may be found
+in the file `Attributes.td
+<https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/Attributes.td>`_.
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
@@ -1291,7 +1227,7 @@ TYPE_CODE_X86_MMX Record
 
 ``[X86_MMX]``
 
-The ``X86_MMX`` record (code 17) adds an ``x86_mmx`` type to the type table.
+The ``X86_MMX`` record (code 17) is deprecated, and imported as a <1 x i64> vector.
 
 TYPE_CODE_STRUCT_ANON Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

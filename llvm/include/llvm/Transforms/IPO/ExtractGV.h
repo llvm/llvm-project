@@ -13,6 +13,7 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class GlobalValue;
 
 class ExtractGVPass : public PassInfoMixin<ExtractGVPass> {
 private:

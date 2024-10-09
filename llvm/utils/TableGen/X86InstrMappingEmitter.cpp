@@ -25,18 +25,9 @@ using namespace X86Disassembler;
 
 namespace {
 
-const std::map<StringRef, StringRef> ManualMap = {
-#define ENTRY(OLD, NEW) {#OLD, #NEW},
-#include "X86ManualCompressEVEXTables.def"
-};
-const std::set<StringRef> NoCompressSet = {
-#define NOCOMP(INSN) #INSN,
-#include "X86ManualCompressEVEXTables.def"
-};
-
 class X86InstrMappingEmitter {
-  RecordKeeper &Records;
-  CodeGenTarget Target;
+  const RecordKeeper &Records;
+  const CodeGenTarget Target;
 
   // Hold all pontentially compressible EVEX instructions
   std::vector<const CodeGenInstruction *> PreCompressionInsts;
@@ -53,7 +44,7 @@ class X86InstrMappingEmitter {
   PredicateInstMap PredicateInsts;
 
 public:
-  X86InstrMappingEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  X86InstrMappingEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Output X86 EVEX compression tables.
   void run(raw_ostream &OS);
@@ -65,13 +56,15 @@ private:
                             raw_ostream &OS);
   void emitND2NonNDTable(ArrayRef<const CodeGenInstruction *> Insts,
                          raw_ostream &OS);
+  void emitSSE2AVXTable(ArrayRef<const CodeGenInstruction *> Insts,
+                        raw_ostream &OS);
 
   // Prints the definition of class X86TableEntry.
   void printClassDef(raw_ostream &OS);
   // Prints the given table as a C++ array of type X86TableEntry under the guard
   // \p Macro.
-  void printTable(const std::vector<Entry> &Table, StringRef Name,
-                  StringRef Macro, raw_ostream &OS);
+  void printTable(ArrayRef<Entry> Table, StringRef Name, StringRef Macro,
+                  raw_ostream &OS);
 };
 
 void X86InstrMappingEmitter::printClassDef(raw_ostream &OS) {
@@ -97,9 +90,8 @@ static void printMacroEnd(StringRef Macro, raw_ostream &OS) {
   OS << "#endif // " << Macro << "\n\n";
 }
 
-void X86InstrMappingEmitter::printTable(const std::vector<Entry> &Table,
-                                        StringRef Name, StringRef Macro,
-                                        raw_ostream &OS) {
+void X86InstrMappingEmitter::printTable(ArrayRef<Entry> Table, StringRef Name,
+                                        StringRef Macro, raw_ostream &OS) {
   printMacroBegin(Macro, OS);
 
   OS << "static const X86TableEntry " << Name << "[] = {\n";
@@ -145,8 +137,8 @@ public:
       return false;
 
     for (unsigned I = 0, E = OldInst->Operands.size(); I < E; ++I) {
-      Record *OldOpRec = OldInst->Operands[I].Rec;
-      Record *NewOpRec = NewInst->Operands[I].Rec;
+      const Record *OldOpRec = OldInst->Operands[I].Rec;
+      const Record *NewOpRec = NewInst->Operands[I].Rec;
 
       if (OldOpRec == NewOpRec)
         continue;
@@ -176,6 +168,16 @@ static bool isInteresting(const Record *Rec) {
 
 void X86InstrMappingEmitter::emitCompressEVEXTable(
     ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+
+  const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualInstrMapping.def"
+  };
+  const std::set<StringRef> NoCompressSet = {
+#define NOCOMP(INSN) #INSN,
+#include "X86ManualInstrMapping.def"
+  };
+
   for (const CodeGenInstruction *Inst : Insts) {
     const Record *Rec = Inst->TheDef;
     StringRef Name = Rec->getName();
@@ -213,19 +215,16 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
     StringRef Name = Rec->getName();
     const CodeGenInstruction *NewInst = nullptr;
     if (ManualMap.find(Name) != ManualMap.end()) {
-      Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      const Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
       assert(NewRec && "Instruction not found!");
       NewInst = &Target.getInstruction(NewRec);
     } else if (Name.ends_with("_EVEX")) {
-      if (auto *NewRec = Records.getDef(Name.drop_back(5)))
+      if (const auto *NewRec = Records.getDef(Name.drop_back(5)))
         NewInst = &Target.getInstruction(NewRec);
-    } else if (Name.ends_with("_ND")) {
-      if (auto *NewRec = Records.getDef(Name.drop_back(3))) {
-        auto &TempInst = Target.getInstruction(NewRec);
-        if (isRegisterOperand(TempInst.Operands[0].Rec))
-          NewInst = &TempInst;
-      }
-    } else {
+    } else if (Name.ends_with("_ND"))
+      // Leave it to ND2NONND table.
+      continue;
+    else {
       // For each pre-compression instruction look for a match in the
       // appropriate vector (instructions with the same opcode) using function
       // object IsMatch.
@@ -242,7 +241,8 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
     auto It = llvm::find_if(Predicates, [](const Record *R) {
       StringRef Name = R->getName();
       return Name == "HasAVXNECONVERT" || Name == "HasAVXVNNI" ||
-             Name == "HasAVXIFMA";
+             Name == "HasAVXIFMA" || Name == "HasAVXVNNIINT8" ||
+             Name == "HasAVXVNNIINT16";
     });
     if (It != Predicates.end())
       PredicateInsts[(*It)->getValueAsString("CondString")].push_back(NewInst);
@@ -301,20 +301,72 @@ void X86InstrMappingEmitter::emitNFTransformTable(
 
 void X86InstrMappingEmitter::emitND2NonNDTable(
     ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+
+  const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY_ND(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualInstrMapping.def"
+  };
+  const std::set<StringRef> NoCompressSet = {
+#define NOCOMP_ND(INSN) #INSN,
+#include "X86ManualInstrMapping.def"
+  };
+
   std::vector<Entry> Table;
   for (const CodeGenInstruction *Inst : Insts) {
     const Record *Rec = Inst->TheDef;
     StringRef Name = Rec->getName();
-    if (!isInteresting(Rec) || !Name.ends_with("_ND"))
+    if (!isInteresting(Rec) || NoCompressSet.find(Name) != NoCompressSet.end())
       continue;
-    auto *NewRec = Records.getDef(Name.drop_back(3));
+    if (ManualMap.find(Name) != ManualMap.end()) {
+      const auto *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      assert(NewRec && "Instruction not found!");
+      auto &NewInst = Target.getInstruction(NewRec);
+      Table.push_back(std::pair(Inst, &NewInst));
+      continue;
+    }
+
+    if (!Name.ends_with("_ND"))
+      continue;
+    const auto *NewRec = Records.getDef(Name.drop_back(3));
     if (!NewRec)
       continue;
-    auto &NewInst = Target.getInstruction(NewRec);
+    const auto &NewInst = Target.getInstruction(NewRec);
     if (isRegisterOperand(NewInst.Operands[0].Rec))
       Table.push_back(std::pair(Inst, &NewInst));
   }
   printTable(Table, "X86ND2NonNDTable", "GET_X86_ND2NONND_TABLE", OS);
+}
+
+void X86InstrMappingEmitter::emitSSE2AVXTable(
+    ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+
+  const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY_SSE2AVX(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualInstrMapping.def"
+  };
+
+  std::vector<Entry> Table;
+  for (const CodeGenInstruction *Inst : Insts) {
+    const Record *Rec = Inst->TheDef;
+    StringRef Name = Rec->getName();
+    if (!isInteresting(Rec))
+      continue;
+    if (ManualMap.find(Name) != ManualMap.end()) {
+      const auto *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      assert(NewRec && "Instruction not found!");
+      const auto &NewInst = Target.getInstruction(NewRec);
+      Table.push_back(std::pair(Inst, &NewInst));
+      continue;
+    }
+
+    std::string NewName = ("V" + Name).str();
+    const auto *AVXRec = Records.getDef(NewName);
+    if (!AVXRec)
+      continue;
+    auto &AVXInst = Target.getInstruction(AVXRec);
+    Table.push_back(std::pair(Inst, &AVXInst));
+  }
+  printTable(Table, "X86SSE2AVXTable", "GET_X86_SSE2AVX_TABLE", OS);
 }
 
 void X86InstrMappingEmitter::run(raw_ostream &OS) {
@@ -326,6 +378,7 @@ void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitCompressEVEXTable(Insts, OS);
   emitNFTransformTable(Insts, OS);
   emitND2NonNDTable(Insts, OS);
+  emitSSE2AVXTable(Insts, OS);
 }
 } // namespace
 

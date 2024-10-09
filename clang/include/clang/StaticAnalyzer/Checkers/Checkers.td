@@ -74,7 +74,6 @@ def Performance : Package<"performance">, ParentPackage<OptIn>;
 def Security : Package <"security">;
 def InsecureAPI : Package<"insecureAPI">, ParentPackage<Security>;
 def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
-def Taint : Package<"taint">, ParentPackage<SecurityAlpha>;
 
 def CERT : Package<"cert">, ParentPackage<Security>;
 def ENV : Package<"env">, ParentPackage<CERT>;
@@ -289,11 +288,6 @@ def FixedAddressChecker : Checker<"FixedAddr">,
 def PointerArithChecker : Checker<"PointerArithm">,
   HelpText<"Check for pointer arithmetic on locations other than array "
            "elements">,
-  Documentation<HasDocumentation>;
-
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
   Documentation<HasDocumentation>;
 
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
@@ -686,22 +680,11 @@ def MoveChecker: Checker<"Move">,
   CheckerOptions<[
     CmdLineOption<String,
                   "WarnOn",
-                  "In non-aggressive mode, only warn on use-after-move of "
-                  "local variables (or local rvalue references) and of STL "
-                  "objects. The former is possible because local variables (or "
-                  "local rvalue references) are not tempting their user to "
-                  "re-use the storage. The latter is possible because STL "
-                  "objects are known to end up in a valid but unspecified "
-                  "state after the move and their state-reset methods are also "
-                  "known, which allows us to predict precisely when "
-                  "use-after-move is invalid. Some STL objects are known to "
-                  "conform to additional contracts after move, so they are not "
-                  "tracked. However, smart pointers specifically are tracked "
-                  "because we can perform extra checking over them. In "
-                  "aggressive mode, warn on any use-after-move because the "
-                  "user has intentionally asked us to completely eliminate "
-                  "use-after-move in his code. Values: \"KnownsOnly\", "
-                  "\"KnownsAndLocals\", \"All\".",
+                  "With setting \"KnownsOnly\" warn only on objects with known "
+                  "move semantics like smart pointers and other STL objects. "
+                  "With setting \"KnownsAndLocals\" warn additionally on local "
+                  "variables (or rvalue references). With setting \"All\" warn "
+                  "on all variables (excluding global variables).",
                   "KnownsAndLocals",
                   Released>
   ]>,
@@ -1011,6 +994,15 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def MmapWriteExecChecker : Checker<"MmapWriteExec">,
+  HelpText<"Warn on mmap() calls with both writable and executable access">,
+  Documentation<HasDocumentation>;
+
+def PointerSubChecker : Checker<"PointerSub">,
+  HelpText<"Check for pointer subtractions on two pointers pointing to "
+           "different memory chunks">,
+  Documentation<HasDocumentation>;
+
 def PutenvStackArray : Checker<"PutenvStackArray">,
   HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
            "an automatic (stack-allocated) array as the argument.">,
@@ -1050,50 +1042,12 @@ def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
   Documentation<HasDocumentation>;
 
-def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
-  HelpText<"Check for overflows in the arguments to malloc()">,
-  Documentation<HasDocumentation>;
-
-def MmapWriteExecChecker : Checker<"MmapWriteExec">,
-  HelpText<"Warn on mmap() calls that are both writable and executable">,
-  CheckerOptions<[
-    CmdLineOption<Integer,
-                  "MmapProtExec",
-                  "Specifies the value of PROT_EXEC",
-                  "0x04",
-                  Released>,
-    CmdLineOption<Integer,
-                  "MmapProtRead",
-                  "Specifies the value of PROT_READ",
-                  "0x01",
-                  Released>
-  ]>,
-  Documentation<HasDocumentation>;
-
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
   HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security"
 
-//===----------------------------------------------------------------------===//
-// Taint checkers.
-//===----------------------------------------------------------------------===//
-
-let ParentPackage = Taint in {
-
-def GenericTaintChecker : Checker<"TaintPropagation">,
-  HelpText<"Generate taint information used by other checkers">,
-  CheckerOptions<[
-    CmdLineOption<String,
-                  "Config",
-                  "Specifies the name of the configuration file.",
-                  "",
-                  InAlpha>,
-  ]>,
-  Documentation<HasDocumentation>;
-
-} // end "alpha.security.taint"
 
 //===----------------------------------------------------------------------===//
 // Mac OS X, Cocoa, and Core Foundation checkers.
@@ -1725,12 +1679,34 @@ def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
 
 let ParentPackage = TaintOptIn in {
 
+def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
+  HelpText<"Generate taint information used by other checkers">,
+  CheckerOptions<[
+    CmdLineOption<String,
+                  "Config",
+                  "Specifies the name of the configuration file.",
+                  "",
+                  Released>
+  ]>,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def GenericTaintChecker : Checker<"GenericTaint">,
+  HelpText<"Reports potential injection vulnerabilities">,
+  Dependencies<[TaintPropagationChecker]>,
+  Documentation<HasDocumentation>;
+
+
 def TaintedAllocChecker: Checker<"TaintedAlloc">,
   HelpText<"Check for memory allocations, where the size parameter "
            "might be a tainted (attacker controlled) value.">,
-  Dependencies<[DynamicMemoryModeling]>,
-  //FIXME: GenericTaintChecker should be a dependency, but only after it
-  //is transformed into a modeling checker
+  Dependencies<[DynamicMemoryModeling, TaintPropagationChecker]>,
+  Documentation<HasDocumentation>;
+
+def TaintedDivChecker: Checker<"TaintedDiv">,
+  HelpText<"Check for divisions where the denominator is tainted "
+           "(attacker controlled) and might be 0.">,
+  Dependencies<[TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "optin.taint"
@@ -1793,6 +1769,10 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 } // end webkit
 
 let ParentPackage = WebKitAlpha in {
+
+def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
+  HelpText<"Check for no unchecked member variables.">,
+  Documentation<HasDocumentation>;
 
 def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
   HelpText<"Check uncounted call arguments.">,

@@ -140,33 +140,34 @@ Any tests downstream of the main LLVM repo that test the IR output of LLVM may b
 Some new functions that have been added are temporary and will be deprecated in the future. The intention is that they'll help downstream projects adapt during the transition period.
 
 ```
-New functions (all to be deprecated)
-------------------------------------
-LLVMIsNewDbgInfoFormat                      # Returns true if the module is in the new non-instruction mode.
-LLVMSetIsNewDbgInfoFormat                   # Convert to the requested debug info format.
-
-LLVMDIBuilderInsertDeclareIntrinsicBefore   # Insert a debug intrinsic (old debug info format).
-LLVMDIBuilderInsertDeclareIntrinsicAtEnd    # Same as above.
-LLVMDIBuilderInsertDbgValueIntrinsicBefore  # Same as above.
-LLVMDIBuilderInsertDbgValueIntrinsicAtEnd   # Same as above.
-
-LLVMDIBuilderInsertDeclareRecordBefore      # Insert a debug record (new debug info format).
-LLVMDIBuilderInsertDeclareRecordAtEnd       # Same as above.
-LLVMDIBuilderInsertDbgValueRecordBefore     # Same as above.
-LLVMDIBuilderInsertDbgValueRecordAtEnd      # Same as above.
-
-Existing functions (behaviour change)
--------------------------------------
+Deleted functions
+-----------------
 LLVMDIBuilderInsertDeclareBefore   # Insert a debug record (new debug info format) instead of a debug intrinsic (old debug info format).
 LLVMDIBuilderInsertDeclareAtEnd    # Same as above.
 LLVMDIBuilderInsertDbgValueBefore  # Same as above.
 LLVMDIBuilderInsertDbgValueAtEnd   # Same as above.
 
+New functions (to be deprecated)
+--------------------------------
+LLVMIsNewDbgInfoFormat     # Returns true if the module is in the new non-instruction mode.
+LLVMSetIsNewDbgInfoFormat  # Convert to the requested debug info format.
+
 New functions (no plans to deprecate)
-----------------------------------
+-------------------------------------
+LLVMGetFirstDbgRecord                    # Obtain the first debug record attached to an instruction.
+LLVMGetLastDbgRecord                     # Obtain the last debug record attached to an instruction.
+LLVMGetNextDbgRecord                     # Get next debug record or NULL.
+LLVMGetPreviousDbgRecord                 # Get previous debug record or NULL.
+LLVMDIBuilderInsertDeclareRecordBefore   # Insert a debug record (new debug info format).
+LLVMDIBuilderInsertDeclareRecordAtEnd    # Same as above. See info below.
+LLVMDIBuilderInsertDbgValueRecordBefore  # Same as above. See info below.
+LLVMDIBuilderInsertDbgValueRecordAtEnd   # Same as above. See info below.
+
 LLVMPositionBuilderBeforeDbgRecords          # See info below.
 LLVMPositionBuilderBeforeInstrAndDbgRecords  # See info below.
 ```
+
+`LLVMDIBuilderInsertDeclareRecordBefore`, `LLVMDIBuilderInsertDeclareRecordAtEnd`, `LLVMDIBuilderInsertDbgValueRecordBefore` and `LLVMDIBuilderInsertDbgValueRecordAtEnd` are replacing the deleted `LLVMDIBuilderInsertDeclareBefore-style` functions.
 
 `LLVMPositionBuilderBeforeDbgRecords` and `LLVMPositionBuilderBeforeInstrAndDbgRecords` behave the same as `LLVMPositionBuilder` and `LLVMPositionBuilderBefore` except the insertion position is set before the debug records that precede the target instruction. Note that this doesn't mean that debug intrinsics before the chosen instruction are skipped, only debug records (which unlike debug records are not themselves instructions).
 
@@ -174,6 +175,24 @@ If you don't know which function to call then follow this rule:
 If you are trying to insert at the start of a block, or purposfully skip debug intrinsics to determine the insertion point for any other reason, then call the new functions.
 
 `LLVMPositionBuilder` and `LLVMPositionBuilderBefore` are unchanged. They insert before the indicated instruction but after any attached debug records.
+
+`LLVMGetFirstDbgRecord`, `LLVMGetLastDbgRecord`, `LLVMGetNextDbgRecord` and `LLVMGetPreviousDbgRecord` can be used for iterating over debug records attached to instructions (provided as `LLVMValueRef`).
+
+```c
+LLVMDbgRecordRef DbgRec;
+for (DbgRec = LLVMGetFirstDbgRecord(Inst); DbgRec;
+     DbgRec = LLVMGetNextDbgRecord(DbgRec)) {
+  // do something with DbgRec
+}
+```
+
+```c
+LLVMDbgRecordRef DbgRec;
+for (DbgRec = LLVMGetLastDbgRecord(Inst); DbgRec;
+     DbgRec = LLVMGetPreviousDbgRecord(DbgRec)) {
+  // do something with DbgRec
+}
+````
 
 # The new "Debug Record" model
 

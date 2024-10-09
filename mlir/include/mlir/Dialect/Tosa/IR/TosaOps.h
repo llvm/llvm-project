@@ -78,9 +78,17 @@ public:
       return success();
     }
 
-    return failure();
+    // In cases of all other types, op requires the same element
+    // type for all operands and result.
+    return impl::verifySameOperandsAndResultElementType(op);
   }
 };
+
+/// This class indicates that an op is tosa-elementwise (permits broadcasting,
+/// unlike Elementwise trait).
+template <typename ConcreteType>
+class TosaElementwiseOperator
+    : public TraitBase<ConcreteType, TosaElementwiseOperator> {};
 
 } // namespace tosa
 } // namespace OpTrait

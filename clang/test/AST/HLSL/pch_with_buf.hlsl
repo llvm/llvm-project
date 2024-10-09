@@ -11,7 +11,7 @@
 hlsl::RWBuffer<float> Buf2;
 
 float2 bar(float2 a, float2 b) {
-// CHECK:CallExpr 0x{{[0-9a-f]+}} <col:10, col:18> 'float2':'float __attribute__((ext_vector_type(2)))'
+// CHECK:CallExpr 0x{{[0-9a-f]+}} <col:10, col:18> 'float2':'vector<float, 2>'
 // CHECK-NEXT:ImplicitCastExpr 0x{{[0-9a-f]+}} <col:10> 'float2 (*)(float2, float2)' <FunctionToPointerDecay>
 // CHECK-NEXT:`-DeclRefExpr 0x{{[0-9a-f]+}} <col:10> 'float2 (float2, float2)' lvalue Function 0x[[FOO]] 'foo' 'float2 (float2, float2)'
   return foo(a, b);

@@ -252,7 +252,7 @@ define i1 @scalar_i32_lshr_and_negC_eq_nonzero(i32 %x, i32 %y) {
 define i1 @scalar_i8_lshr_and_negC_eq_not_negatedPowerOf2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @scalar_i8_lshr_and_negC_eq_not_negatedPowerOf2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 -3, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

@@ -3337,6 +3337,7 @@ struct CompilerDirective {
     TUPLE_CLASS_BOILERPLATE(AssumeAligned);
     std::tuple<common::Indirection<Designator>, uint64_t> t;
   };
+  EMPTY_CLASS(VectorAlways);
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
@@ -3344,7 +3345,7 @@ struct CompilerDirective {
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      std::list<NameValue>, Unrecognized>
+      VectorAlways, std::list<NameValue>, Unrecognized>
       u;
 };
 
@@ -3645,6 +3646,15 @@ struct OmpDependClause {
 struct OmpAtomicDefaultMemOrderClause {
   WRAPPER_CLASS_BOILERPLATE(
       OmpAtomicDefaultMemOrderClause, common::OmpAtomicDefaultMemOrderType);
+};
+
+// OMP 5.0 2.19.4.5 lastprivate-clause ->
+//                    LASTPRIVATE ([lastprivate-modifier :] list)
+//                  lastprivate-modifier -> CONDITIONAL
+struct OmpLastprivateClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLastprivateClause);
+  ENUM_CLASS(LastprivateModifier, Conditional);
+  std::tuple<std::optional<LastprivateModifier>, OmpObjectList> t;
 };
 
 // OpenMP Clauses

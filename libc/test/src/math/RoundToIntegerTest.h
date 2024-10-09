@@ -12,15 +12,16 @@
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 #include "hdr/math_macros.h"
-#include <errno.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::Sign;
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
@@ -166,7 +167,9 @@ public:
   }
 
   void do_fractions_test(RoundToIntegerFunc func, int mode) {
-    constexpr F FRACTIONS[] = {0.5, -0.5, 0.115, -0.115, 0.715, -0.715};
+    constexpr F FRACTIONS[] = {
+        F(0.5), F(-0.5), F(0.115), F(-0.115), F(0.715), F(-0.715),
+    };
     for (F x : FRACTIONS) {
       long mpfr_long_result;
       bool erangeflag;

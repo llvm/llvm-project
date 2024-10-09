@@ -220,7 +220,7 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     // Don't walk into other basic blocks unless the object is an alloca from
     // another block, otherwise it may not have a virtual register assigned.
     if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(Obj)) ||
-        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+        FuncInfo.getMBB(I->getParent()) == FuncInfo.MBB) {
       Opcode = I->getOpcode();
       U = I;
     }
@@ -886,7 +886,7 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
-        MF->getMMI().getContext(), Subtarget);
+        MF->getContext(), Subtarget);
     if (Subtarget->hasReferenceTypes()) {
       MIB.addSym(Table);
     } else {
@@ -1309,13 +1309,13 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
 bool WebAssemblyFastISel::selectBr(const Instruction *I) {
   const auto *Br = cast<BranchInst>(I);
   if (Br->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.MBBMap[Br->getSuccessor(0)];
+    MachineBasicBlock *MSucc = FuncInfo.getMBB(Br->getSuccessor(0));
     fastEmitBranch(MSucc, Br->getDebugLoc());
     return true;
   }
 
-  MachineBasicBlock *TBB = FuncInfo.MBBMap[Br->getSuccessor(0)];
-  MachineBasicBlock *FBB = FuncInfo.MBBMap[Br->getSuccessor(1)];
+  MachineBasicBlock *TBB = FuncInfo.getMBB(Br->getSuccessor(0));
+  MachineBasicBlock *FBB = FuncInfo.getMBB(Br->getSuccessor(1));
 
   bool Not;
   unsigned CondReg = getRegForI1Value(Br->getCondition(), Br->getParent(), Not);

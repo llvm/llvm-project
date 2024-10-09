@@ -33,6 +33,7 @@
 //  q -> Scalable vector, followed by the number of elements and the base type.
 //  Q -> target builtin type, followed by a character to distinguish the builtin type
 //    Qa -> AArch64 svcount_t builtin type.
+//    Qb -> AMDGPU __amdgpu_buffer_rsrc_t builtin type.
 //  E -> ext_vector, followed by the number of elements and the base type.
 //  X -> _Complex, followed by the base type.
 //  Y -> ptrdiff_t
@@ -100,3 +101,4 @@
 //                      M_0, ..., M_k as payload
 //  z -> this is a function in (possibly-versioned) namespace std
 //  E -> this function can be constant evaluated by Clang frontend
+//  G -> this is a C++20 consteval function

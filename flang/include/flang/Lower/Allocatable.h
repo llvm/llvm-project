@@ -15,6 +15,7 @@
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Runtime/allocator-registry.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
@@ -70,7 +71,8 @@ void genDeallocateIfAllocated(AbstractConverter &converter,
 fir::MutableBoxValue
 createMutableBox(AbstractConverter &converter, mlir::Location loc,
                  const pft::Variable &var, mlir::Value boxAddr,
-                 mlir::ValueRange nonDeferredParams, bool alwaysUseBox);
+                 mlir::ValueRange nonDeferredParams, bool alwaysUseBox,
+                 unsigned allocator = kDefaultAllocator);
 
 /// Assign a boxed value to a boxed variable, \p box (known as a
 /// MutableBoxValue). Expression \p source will be lowered to build the

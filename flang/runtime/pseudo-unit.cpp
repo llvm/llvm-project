@@ -65,7 +65,7 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-void ExternalFileUnit::OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
+bool ExternalFileUnit::OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
     Fortran::common::optional<Action>, Position, Convert convert,
     IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);

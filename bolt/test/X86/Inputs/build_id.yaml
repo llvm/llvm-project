@@ -1,0 +1,326 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x4010A0
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x400040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x400444
+    Offset:          0x444
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .init
+    LastSec:         .fini
+    VAddr:           0x401000
+    Align:           0x1000
+    Offset:          0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .rodata
+    LastSec:         .rodata
+    VAddr:           0x402000
+    Align:           0x1000
+    Offset:          0x2000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .bss
+    VAddr:           0x403DD8
+    Align:           0x1000
+    Offset:          0x2DD8
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x403DE8
+    Align:           0x8
+    Offset:          0x2DE8
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.build-id
+    LastSec:         .note.ABI-tag
+    VAddr:           0x400400
+    Align:           0x4
+    Offset:          0x400
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400400
+    AddressAlign:    0x4
+    Offset:          0x400
+    Notes:
+      - Name:            GNU
+        Desc:            3C34F7D1612996940C48F98DC272543BC3C9C956
+        Type:            NT_PRPSINFO
+  - Name:            .note.ABI-tag
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400424
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            '00000000030000000200000000000000'
+        Type:            NT_VERSION
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400444
+    AddressAlign:    0x1
+    Content:         2F6C696236342F6C642D6C696E75782D7838362D36342E736F2E3200
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400460
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0x7
+      Shift2:          0x6
+    BloomFilter:     [ 0x810000 ]
+    HashBuckets:     [ 0x7, 0x0 ]
+    HashValues:      [ 0x6DCE65D1 ]
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400488
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400548
+    AddressAlign:    0x1
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4005F2
+    Link:            .dynsym
+    AddressAlign:    0x2
+    Entries:         [ 0, 2, 3, 1, 1, 4, 1, 2 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400608
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Dependencies:
+      - Version:         1
+        File:            libc.so.6
+        Entries:
+          - Name:            GLIBC_2.3.4
+            Hash:            157882740
+            Flags:           0
+            Other:           4
+          - Name:            GLIBC_2.34
+            Hash:            110530996
+            Flags:           0
+            Other:           3
+          - Name:            GLIBC_2.2.5
+            Hash:            157882997
+            Flags:           0
+            Other:           2
+  - Name:            .init
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401000
+    AddressAlign:    0x4
+    Offset:          0x1000
+    Content:         F30F1EFA4883EC08488B05D92F00004885C07402FFD04883C408C3
+  - Name:            .plt.sec
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401060
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         F30F1EFAF2FF25AD2F00000F1F440000F30F1EFAF2FF25A52F00000F1F440000
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401080
+    AddressAlign:    0x10
+    Content:         F30F1EFA4883EC0831C0E80101000031C04883C408C3662E0F1F840000000000F30F1EFA31ED4989D15E4889E24883E4F050544531C031C9488D3DC1FFFFFFFF15132F0000F4662E0F1F840000000000488D3D612F0000488D055A2F00004839F87415488B05F62E00004885C07409FFE00F1F8000000000C30F1F8000000000488D3D312F0000488D352A2F00004829FE4889F048C1EE3F48C1F8034801C648D1FE7414488B05C52E00004885C07408FFE0660F1F440000C30F1F8000000000F30F1EFA803DED2E000000752B5548833DA22E0000004889E5740C488B3DCE2E0000E8E9FEFFFFE864FFFFFFC605C52E0000015DC30F1F00C30F1F8000000000F30F1EFAE977FFFFFF0F1F8000000000F30F1EFA415455488D2D660E000053488D1D6AF2FFFF4C8D6314660F1F4400000FB6134889EEBF0100000031C04883C301E8AAFEFFFF4C39E375E55BBF0A0000005D415CE987FEFFFF
+  - Name:            .fini
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x4011DC
+    AddressAlign:    0x4
+    Content:         F30F1EFA4883EC084883C408C3
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x402000
+    AddressAlign:    0x4
+    Offset:          0x2000
+    Content:         '0100020025303268687800'
+  - Name:            .init_array
+    Type:            SHT_INIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403DD8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Offset:          0x2DD8
+    Content:         '8011400000000000'
+  - Name:            .fini_array
+    Type:            SHT_FINI_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403DE0
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '4011400000000000'
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403DE8
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x37
+      - Tag:             DT_INIT
+        Value:           0x401000
+      - Tag:             DT_FINI
+        Value:           0x4011DC
+      - Tag:             DT_INIT_ARRAY
+        Value:           0x403DD8
+      - Tag:             DT_INIT_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_FINI_ARRAY
+        Value:           0x403DE0
+      - Tag:             DT_FINI_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_GNU_HASH
+        Value:           0x400460
+      - Tag:             DT_STRTAB
+        Value:           0x400548
+      - Tag:             DT_SYMTAB
+        Value:           0x400488
+      - Tag:             DT_STRSZ
+        Value:           0xA9
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_PLTGOT
+        Value:           0x404000
+      - Tag:             DT_PLTRELSZ
+        Value:           0x30
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_FLAGS
+        Value:           0x8
+      - Tag:             DT_FLAGS_1
+        Value:           0x8000001
+      - Tag:             DT_VERNEED
+        Value:           0x400608
+      - Tag:             DT_VERNEEDNUM
+        Value:           0x1
+      - Tag:             DT_VERSYM
+        Value:           0x4005F2
+      - Tag:             DT_RELACOUNT
+        Value:           0x3
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404028
+    AddressAlign:    0x8
+    Content:         '00000000000000003040400000000000'
+  - Name:            .tm_clone_table
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404038
+    AddressAlign:    0x8
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404038
+    AddressAlign:    0x1
+    Size:            0x8
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x40108B
+        Symbol:          print_build_id
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4010BB
+        Symbol:          main
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4011A2
+        Symbol:          build_id_note
+        Type:            R_X86_64_PC32
+        Addend:          12
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .note.gnu.build-id
+      - Name:            .note.ABI-tag
+      - Name:            .interp
+      - Name:            .gnu.hash
+      - Name:            .dynsym
+      - Name:            .dynstr
+      - Name:            .gnu.version
+      - Name:            .gnu.version_r
+      - Name:            .init
+      - Name:            .plt.sec
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .fini
+      - Name:            .rodata
+      - Name:            .init_array
+      - Name:            .fini_array
+      - Name:            .dynamic
+      - Name:            .data
+      - Name:            .tm_clone_table
+      - Name:            .bss
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+Symbols:
+  - Name:            print_build_id
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401190
+    Size:            0x49
+  - Name:            _end
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x404040
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4010A0
+    Size:            0x26
+  - Name:            __bss_start
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x404038
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401080
+    Size:            0x16
+  - Name:            build_id_note
+    Index:           SHN_ABS
+    Binding:         STB_GLOBAL
+    Value:           0x400400
+...

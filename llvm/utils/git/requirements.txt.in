@@ -4,5 +4,6 @@
 # pip-compile -o requirements.txt  requirements.txt.in
 
 certifi>=2023.7.22  # https://security.snyk.io/vuln/SNYK-PYTHON-CERTIFI-5805047
-PyGithub==1.59.1 # For WorkflowRun.name
+PyGithub==2.2.0 # >=1.59.1 For WorkflowRun.name
+                # >= 2.2.0 for permission arg to Repository.get_collaborators
 GitPython>=3.1.32  # https://security.snyk.io/vuln/SNYK-PYTHON-GITPYTHON-5840584

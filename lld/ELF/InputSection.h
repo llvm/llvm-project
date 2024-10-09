@@ -33,14 +33,25 @@ class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
 
-LLVM_LIBRARY_VISIBILITY extern std::vector<Partition> partitions;
-
-// Returned by InputSectionBase::relsOrRelas. At least one member is empty.
+// Returned by InputSectionBase::relsOrRelas. At most one member is empty.
 template <class ELFT> struct RelsOrRelas {
-  ArrayRef<typename ELFT::Rel> rels;
-  ArrayRef<typename ELFT::Rela> relas;
+  Relocs<typename ELFT::Rel> rels;
+  Relocs<typename ELFT::Rela> relas;
+  Relocs<typename ELFT::Crel> crels;
   bool areRelocsRel() const { return rels.size(); }
+  bool areRelocsCrel() const { return crels.size(); }
 };
+
+#define invokeOnRelocs(sec, f, ...)                                            \
+  {                                                                            \
+    const RelsOrRelas<ELFT> rs = (sec).template relsOrRelas<ELFT>();           \
+    if (rs.areRelocsCrel())                                                    \
+      f(__VA_ARGS__, rs.crels);                                                \
+    else if (rs.areRelocsRel())                                                \
+      f(__VA_ARGS__, rs.rels);                                                 \
+    else                                                                       \
+      f(__VA_ARGS__, rs.relas);                                                \
+  }
 
 // This is the base class of all sections that lld handles. Some are sections in
 // input files, some are sections in the produced output file and some exist
@@ -48,18 +59,21 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output };
+  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output, Class };
 
   Kind kind() const { return (Kind)sectionKind; }
 
+  LLVM_PREFERRED_TYPE(Kind)
   uint8_t sectionKind : 3;
 
   // The next two bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
 
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t bss : 1;
 
   // Set for sections that should not be folded by ICF.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t keepUnique : 1;
 
   uint8_t partition = 1;
@@ -132,7 +146,9 @@ public:
                    uint32_t addralign, ArrayRef<uint8_t> data, StringRef name,
                    Kind sectionKind);
 
-  static bool classof(const SectionBase *s) { return s->kind() != Output; }
+  static bool classof(const SectionBase *s) {
+    return s->kind() != Output && s->kind() != Class;
+  }
 
   // The file which contains this section. Its dynamic type is usually
   // ObjFile<ELFT>, but may be an InputFile of InternalKind (for a synthetic
@@ -159,6 +175,10 @@ public:
   uint32_t bytesDropped = 0;
 
   mutable bool compressed = false;
+
+  // Whether this section is SHT_CREL and has been decoded to RELA by
+  // relsOrRelas.
+  bool decodedCrel = false;
 
   // Whether the section needs to be padded with a NOP filler due to
   // deleteFallThruJmpInsn.
@@ -197,7 +217,8 @@ public:
   // used by --gc-sections.
   InputSectionBase *nextInSectionGroup = nullptr;
 
-  template <class ELFT> RelsOrRelas<ELFT> relsOrRelas() const;
+  template <class ELFT>
+  RelsOrRelas<ELFT> relsOrRelas(bool supportsCrel = true) const;
 
   // InputSections that are dependent on us (reverse dependency for GC)
   llvm::TinyPtrVector<InputSection *> dependentSections;
@@ -223,9 +244,7 @@ public:
   // relocations, assuming that Buf points to this section's copy in
   // the mmap'ed output buffer.
   template <class ELFT> void relocate(uint8_t *buf, uint8_t *bufEnd);
-  static uint64_t getRelocTargetVA(const InputFile *File, RelType Type,
-                                   int64_t A, uint64_t P, const Symbol &Sym,
-                                   RelExpr Expr);
+  uint64_t getRelocTargetVA(Ctx &, const Relocation &r, uint64_t p) const;
 
   // The native ELF reloc data type is not very convenient to handle.
   // So we convert ELF reloc records to our own records in Relocations.cpp.
@@ -282,6 +301,7 @@ struct SectionPiece {
       : inputOff(off), live(live), hash(hash >> 1) {}
 
   uint32_t inputOff;
+  LLVM_PREFERRED_TYPE(bool)
   uint32_t live : 1;
   uint32_t hash : 31;
   uint64_t outputOff = 0;
@@ -403,7 +423,7 @@ public:
   InputSectionBase *getRelocatedSection() const;
 
   template <class ELFT, class RelTy>
-  void relocateNonAlloc(uint8_t *buf, llvm::ArrayRef<RelTy> rels);
+  void relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels);
 
   // Points to the canonical section. If ICF folds two sections, repl pointer of
   // one section points to the other.
@@ -456,13 +476,13 @@ public:
                      InputSectionBase::Synthetic) {}
 
   virtual ~SyntheticSection() = default;
-  virtual size_t getSize() const = 0;
-  virtual bool updateAllocSize() { return false; }
+  virtual size_t getSize(Ctx &) const = 0;
+  virtual bool updateAllocSize(Ctx &) { return false; }
   // If the section has the SHF_ALLOC flag and the size may be changed if
   // thunks are added, update the section size.
-  virtual bool isNeeded() const { return true; }
-  virtual void finalizeContents() {}
-  virtual void writeTo(uint8_t *buf) = 0;
+  virtual bool isNeeded(Ctx &) const { return true; }
+  virtual void finalizeContents(Ctx &) {}
+  virtual void writeTo(Ctx &, uint8_t *buf) = 0;
 
   static bool classof(const SectionBase *sec) {
     return sec->kind() == InputSectionBase::Synthetic;
@@ -470,19 +490,14 @@ public:
 };
 
 inline bool isStaticRelSecType(uint32_t type) {
-  return type == llvm::ELF::SHT_RELA || type == llvm::ELF::SHT_REL;
+  return type == llvm::ELF::SHT_RELA || type == llvm::ELF::SHT_CREL ||
+         type == llvm::ELF::SHT_REL;
 }
 
 inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
          sec.name.starts_with(".debug");
 }
-
-// The set of TOC entries (.toc + addend) for which we should not apply
-// toc-indirect to toc-relative relaxation. const Symbol * refers to the
-// STT_SECTION symbol associated to the .toc input section.
-extern llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
-
 } // namespace elf
 
 std::string toString(const elf::InputSectionBase *);

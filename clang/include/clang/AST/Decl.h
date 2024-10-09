@@ -133,6 +133,10 @@ public:
   static TranslationUnitDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<TranslationUnitDecl *>(const_cast<DeclContext*>(DC));
   }
+
+  /// Retrieves the canonical declaration of this translation unit.
+  TranslationUnitDecl *getCanonicalDecl() override { return getFirstDecl(); }
+  const TranslationUnitDecl *getCanonicalDecl() const { return getFirstDecl(); }
 };
 
 /// Represents a `#pragma comment` line. Always a child of
@@ -542,12 +546,9 @@ public:
 };
 
 /// Represent a C++ namespace.
-class NamespaceDecl : public NamedDecl, public DeclContext,
-                      public Redeclarable<NamespaceDecl>
-{
-
-  enum Flags : unsigned { F_Inline = 1 << 0, F_Nested = 1 << 1 };
-
+class NamespaceDecl : public NamedDecl,
+                      public DeclContext,
+                      public Redeclarable<NamespaceDecl> {
   /// The starting location of the source range, pointing
   /// to either the namespace or the inline keyword.
   SourceLocation LocStart;
@@ -555,12 +556,8 @@ class NamespaceDecl : public NamedDecl, public DeclContext,
   /// The ending location of the source range.
   SourceLocation RBraceLoc;
 
-  /// A pointer to either the anonymous namespace that lives just inside
-  /// this namespace or to the first namespace in the chain (the latter case
-  /// only when this is not the first in the chain), along with a
-  /// boolean value indicating whether this is an inline namespace.
-  llvm::PointerIntPair<NamespaceDecl *, 2, unsigned>
-      AnonOrFirstNamespaceAndFlags;
+  /// The unnamed namespace that inhabits this namespace, if any.
+  NamespaceDecl *AnonymousNamespace = nullptr;
 
   NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                 SourceLocation StartLoc, SourceLocation IdLoc,
@@ -607,35 +604,19 @@ public:
   }
 
   /// Returns true if this is an inline namespace declaration.
-  bool isInline() const {
-    return AnonOrFirstNamespaceAndFlags.getInt() & F_Inline;
-  }
+  bool isInline() const { return NamespaceDeclBits.IsInline; }
 
   /// Set whether this is an inline namespace declaration.
-  void setInline(bool Inline) {
-    unsigned F = AnonOrFirstNamespaceAndFlags.getInt();
-    if (Inline)
-      AnonOrFirstNamespaceAndFlags.setInt(F | F_Inline);
-    else
-      AnonOrFirstNamespaceAndFlags.setInt(F & ~F_Inline);
-  }
+  void setInline(bool Inline) { NamespaceDeclBits.IsInline = Inline; }
 
   /// Returns true if this is a nested namespace declaration.
   /// \code
   /// namespace outer::nested { }
   /// \endcode
-  bool isNested() const {
-    return AnonOrFirstNamespaceAndFlags.getInt() & F_Nested;
-  }
+  bool isNested() const { return NamespaceDeclBits.IsNested; }
 
   /// Set whether this is a nested namespace declaration.
-  void setNested(bool Nested) {
-    unsigned F = AnonOrFirstNamespaceAndFlags.getInt();
-    if (Nested)
-      AnonOrFirstNamespaceAndFlags.setInt(F | F_Nested);
-    else
-      AnonOrFirstNamespaceAndFlags.setInt(F & ~F_Nested);
-  }
+  void setNested(bool Nested) { NamespaceDeclBits.IsNested = Nested; }
 
   /// Returns true if the inline qualifier for \c Name is redundant.
   bool isRedundantInlineQualifierFor(DeclarationName Name) const {
@@ -649,34 +630,18 @@ public:
       std::distance(Y.begin(), Y.end());
   }
 
-  /// Get the original (first) namespace declaration.
-  NamespaceDecl *getOriginalNamespace();
-
-  /// Get the original (first) namespace declaration.
-  const NamespaceDecl *getOriginalNamespace() const;
-
-  /// Return true if this declaration is an original (first) declaration
-  /// of the namespace. This is false for non-original (subsequent) namespace
-  /// declarations and anonymous namespaces.
-  bool isOriginalNamespace() const;
-
-  /// Retrieve the anonymous namespace nested inside this namespace,
-  /// if any.
+  /// Retrieve the anonymous namespace that inhabits this namespace, if any.
   NamespaceDecl *getAnonymousNamespace() const {
-    return getOriginalNamespace()->AnonOrFirstNamespaceAndFlags.getPointer();
+    return getFirstDecl()->AnonymousNamespace;
   }
 
   void setAnonymousNamespace(NamespaceDecl *D) {
-    getOriginalNamespace()->AnonOrFirstNamespaceAndFlags.setPointer(D);
+    getFirstDecl()->AnonymousNamespace = D;
   }
 
   /// Retrieves the canonical declaration of this namespace.
-  NamespaceDecl *getCanonicalDecl() override {
-    return getOriginalNamespace();
-  }
-  const NamespaceDecl *getCanonicalDecl() const {
-    return getOriginalNamespace();
-  }
+  NamespaceDecl *getCanonicalDecl() override { return getFirstDecl(); }
+  const NamespaceDecl *getCanonicalDecl() const { return getFirstDecl(); }
 
   SourceRange getSourceRange() const override LLVM_READONLY {
     return SourceRange(LocStart, RBraceLoc);
@@ -2334,6 +2299,13 @@ public:
     FunctionDeclBits.IsLateTemplateParsed = ILT;
   }
 
+  bool isInstantiatedFromMemberTemplate() const {
+    return FunctionDeclBits.IsInstantiatedFromMemberTemplate;
+  }
+  void setInstantiatedFromMemberTemplate(bool Val = true) {
+    FunctionDeclBits.IsInstantiatedFromMemberTemplate = Val;
+  }
+
   /// Whether this function is "trivial" in some specialized C++ senses.
   /// Can only be true for default constructors, copy constructors,
   /// copy assignment operators, and destructors.  Not meaningful until
@@ -3042,6 +3014,16 @@ public:
   /// computed and stored.
   unsigned getODRHash() const;
 
+  FunctionEffectsRef getFunctionEffects() const {
+    // Effects may differ between declarations, but they should be propagated
+    // from old to new on any redeclaration, so it suffices to look at
+    // getMostRecentDecl().
+    if (const auto *FPT =
+            getMostRecentDecl()->getType()->getAs<FunctionProtoType>())
+      return FPT->getFunctionEffects();
+    return {};
+  }
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) {
@@ -3235,6 +3217,10 @@ public:
   /// Set the C++11 in-class initializer for this member.
   void setInClassInitializer(Expr *NewInit);
 
+  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
+  /// \p nullptr if either the attribute or the field doesn't exist.
+  const FieldDecl *findCountedByField() const;
+
 private:
   void setLazyInClassInitializer(LazyDeclStmtPtr NewInit);
 
@@ -3391,6 +3377,7 @@ public:
 /// Represents a declaration of a type.
 class TypeDecl : public NamedDecl {
   friend class ASTContext;
+  friend class ASTReader;
 
   /// This indicates the Type object that represents
   /// this TypeDecl.  It is a cache maintained by
@@ -4669,6 +4656,13 @@ public:
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
+
+  FunctionEffectsRef getFunctionEffects() const {
+    if (const TypeSourceInfo *TSI = getSignatureAsWritten())
+      if (const auto *FPT = TSI->getType()->getAs<FunctionProtoType>())
+        return FPT->getFunctionEffects();
+    return {};
+  }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

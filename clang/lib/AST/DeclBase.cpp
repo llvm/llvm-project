@@ -80,7 +80,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
 
   uint64_t *PrefixPtr = (uint64_t *)Result - 1;
 
-  *PrefixPtr = ID.get();
+  *PrefixPtr = ID.getRawValue();
 
   // We leave the upper 16 bits to store the module IDs. 48 bits should be
   // sufficient to store a declaration ID.
@@ -691,7 +691,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
     IdentifierInfo *IIEnv = A->getEnvironment();
     StringRef TargetEnv =
         Context.getTargetInfo().getTriple().getEnvironmentName();
-    StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(
+    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
         Context.getTargetInfo().getTriple().getEnvironment());
     // Matching environment or no environment on attribute
     if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
@@ -879,8 +879,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_Ordinary;
     case Label:
       return IDNS_Label;
-    case IndirectField:
-      return IDNS_Ordinary | IDNS_Member;
 
     case Binding:
     case NonTypeTemplateParm:
@@ -918,6 +916,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
       return IDNS_ObjCProtocol;
 
     case Field:
+    case IndirectField:
     case ObjCAtDefsField:
     case ObjCIvar:
       return IDNS_Member;
@@ -1122,10 +1121,31 @@ bool Decl::isInExportDeclContext() const {
 bool Decl::isInAnotherModuleUnit() const {
   auto *M = getOwningModule();
 
-  if (!M || !M->isNamedModule())
+  if (!M)
+    return false;
+
+  // FIXME or NOTE: maybe we need to be clear about the semantics
+  // of clang header modules. e.g., if this lives in a clang header
+  // module included by the current unit, should we return false
+  // here?
+  //
+  // This is clear for header units as the specification says the
+  // header units live in a synthesised translation unit. So we
+  // can return false here.
+  M = M->getTopLevelModule();
+  if (!M->isNamedModule())
     return false;
 
   return M != getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::isInCurrentModuleUnit() const {
+  auto *M = getOwningModule();
+
+  if (!M || !M->isNamedModule())
+    return false;
+
+  return M == getASTContext().getCurrentNamedModule();
 }
 
 bool Decl::shouldEmitInExternalSource() const {
@@ -1136,12 +1156,16 @@ bool Decl::shouldEmitInExternalSource() const {
   return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
 }
 
-bool Decl::isInNamedModule() const {
-  return getOwningModule() && getOwningModule()->isNamedModule();
-}
-
 bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
+}
+
+bool Decl::isFromGlobalModule() const {
+  return getOwningModule() && getOwningModule()->isGlobalModule();
+}
+
+bool Decl::isInNamedModule() const {
+  return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
@@ -1153,14 +1177,19 @@ int64_t Decl::getID() const {
 
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
-  if (isa<BindingDecl>(this))
-    return nullptr;
-  else if (const auto *D = dyn_cast<ValueDecl>(this))
+  if (const auto *D = dyn_cast<ValueDecl>(this))
     Ty = D->getType();
   else if (const auto *D = dyn_cast<TypedefNameDecl>(this))
     Ty = D->getUnderlyingType();
   else
     return nullptr;
+
+  if (Ty.isNull()) {
+    // BindingDecls do not have types during parsing, so return nullptr. This is
+    // the only known case where `Ty` is null.
+    assert(isa<BindingDecl>(this));
+    return nullptr;
+  }
 
   if (Ty->isFunctionPointerType())
     Ty = Ty->castAs<PointerType>()->getPointeeType();
@@ -1417,8 +1446,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::TranslationUnit:
     return static_cast<TranslationUnitDecl *>(this)->getFirstDecl();
   case Decl::Namespace:
-    // The original namespace is our primary context.
-    return static_cast<NamespaceDecl *>(this)->getOriginalNamespace();
+    return static_cast<NamespaceDecl *>(this)->getFirstDecl();
 
   case Decl::ObjCMethod:
     return this;

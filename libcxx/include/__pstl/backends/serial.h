@@ -27,10 +27,10 @@
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
-
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
@@ -178,8 +178,8 @@ struct __transform_reduce_binary<__serial_backend_tag, _ExecutionPolicy> {
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-_LIBCPP_POP_MACROS
+#endif // _LIBCPP_STD_VER >= 17
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && && _LIBCPP_STD_VER >= 17
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___PSTL_BACKENDS_SERIAL_H

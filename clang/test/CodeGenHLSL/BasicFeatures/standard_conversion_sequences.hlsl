@@ -30,8 +30,8 @@ void f3_to_f2() {
 // CHECK: [[f2:%.*]] = alloca <2 x float>
 // CHECK: store <4 x double> <double 3.000000e+00, double 3.000000e+00, double 3.000000e+00, double 3.000000e+00>, ptr [[d4]]
 // CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
-// CHECK: [[vecd2:%.*]] = shufflevector <4 x double> [[vecd4]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
-// CHECK: [[vecf2:%.*]] = fptrunc <2 x double> [[vecd2]] to <2 x float>
+// CHECK: [[vecf4:%.*]] = fptrunc <4 x double> [[vecd4]] to <4 x float>
+// CHECK: [[vecf2:%.*]] = shufflevector <4 x float> [[vecf4]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 // CHECK: store <2 x float> [[vecf2]], ptr [[f2]]
 void d4_to_f2() {
   vector<double,4> d4 = 3.0;
@@ -55,8 +55,8 @@ void f2_to_i2() {
 // CHECK: [[i2:%.*]] = alloca <2 x i32>
 // CHECK: store <4 x double> <double 5.000000e+00, double 5.000000e+00, double 5.000000e+00, double 5.000000e+00>, ptr [[d4]]
 // CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
-// CHECK: [[vecd2:%.*]] = shufflevector <4 x double> [[vecd4]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
-// CHECK: [[veci2]] = fptosi <2 x double> [[vecd2]] to <2 x i32>
+// CHECK: [[veci4:%.*]] = fptosi <4 x double> [[vecd4]] to <4 x i32>
+// CHECK: [[veci2:%.*]] = shufflevector <4 x i32> [[veci4]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 // CHECK: store <2 x i32> [[veci2]], ptr [[i2]]
 void d4_to_i2() {
   vector<double,4> d4 = 5.0;
@@ -81,8 +81,8 @@ void d4_to_l4() {
 // CHECK: [[i2:%.*]] = alloca <2 x i32>
 // CHECK: store <4 x i64> <i64 7, i64 7, i64 7, i64 7>, ptr [[l4]]
 // CHECK: [[vecl4:%.*]] = load <4 x i64>, ptr [[l4]]
-// CHECK: [[vecl2:%.*]] = shufflevector <4 x i64> [[vecl4]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
-// CHECK: [[veci2:%.*]] = trunc <2 x i64> [[vecl2]] to <2 x i32>
+// CHECK: [[veci4:%.*]] = trunc <4 x i64> [[vecl4]] to <4 x i32>
+// CHECK: [[veci2:%.*]] = shufflevector <4 x i32> [[veci4]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 // CHECK: store <2 x i32> [[veci2]], ptr [[i2]]
 void l4_to_i2() {
   vector<long, 4> l4 = 7;
@@ -108,12 +108,36 @@ void i2_to_b2() {
 // CHECK: [[b2:%.*]] = alloca i8
 // CHECK: store <4 x double> <double 9.000000e+00, double 9.000000e+00, double 9.000000e+00, double 9.000000e+00>, ptr [[d4]]
 // CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
-// CHECK: [[vecd2:%.*]] = shufflevector <4 x double> [[vecd4]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
-// CHECK: [[vecb2:%.*]] = fcmp une <2 x double> [[vecd2]], zeroinitializer
-// CHECK: [[vecb8:%.*]] = shufflevector <2 x i1> [[vecb2]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+// CHECK: [[vecb4:%.*]] = fcmp une <4 x double> [[vecd4]], zeroinitializer
+// CHECK: [[vecd2:%.*]] = shufflevector <4 x i1> [[vecb4]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
+// CHECK: [[vecb8:%.*]] = shufflevector <2 x i1> [[vecd2]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 // CHECK: [[i8:%.*]] = bitcast <8 x i1> [[vecb8]] to i8
 // CHECK: store i8 [[i8]], ptr [[b2]]
 void d4_to_b2() {
   vector<double,4> d4 = 9.0;
   vector<bool, 2> b2 = d4;
+}
+
+// CHECK-LABEL: d4_to_d1
+// CHECK: [[d4:%.*]] = alloca <4 x double>
+// CHECK: [[d1:%.*]] = alloca <1 x double>
+// CHECK: store <4 x double> <double 9.000000e+00, double 9.000000e+00, double 9.000000e+00, double 9.000000e+00>, ptr [[d4]]
+// CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
+// CHECK: [[vecd1:%.*]] = shufflevector <4 x double> [[vecd4]], <4 x double> poison, <1 x i32> zeroinitializer
+// CHECK: store <1 x double> [[vecd1]], ptr [[d1:%.*]], align 8
+void d4_to_d1() {
+  vector<double,4> d4 = 9.0;
+  vector<double,1> d1 = d4;
+}
+
+// CHECK-LABEL: d4_to_dScalar
+// CHECK: [[d4:%.*]] = alloca <4 x double>
+// CHECK: [[d:%.*]] = alloca double
+// CHECK: store <4 x double> <double 9.000000e+00, double 9.000000e+00, double 9.000000e+00, double 9.000000e+00>, ptr [[d4]]
+// CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
+// CHECK: [[d4x:%.*]] = extractelement <4 x double> [[vecd4]], i32 0
+// CHECK: store double [[d4x]], ptr [[d]]
+void d4_to_dScalar() {
+  vector<double,4> d4 = 9.0;
+  double d = d4;
 }

@@ -9,6 +9,7 @@
 #include "TestingSupport.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -79,7 +80,7 @@ protected:
 
   /// Returns the `CFGBlock` containing `S` (and asserts that it exists).
   const CFGBlock *blockForStmt(const Stmt &S) {
-    const CFGBlock *Block = ACFG->getStmtToBlock().lookup(&S);
+    const CFGBlock *Block = ACFG->blockForStmt(S);
     assert(Block != nullptr);
     return Block;
   }
@@ -368,6 +369,42 @@ TEST_F(DiscardExprStateTest, ConditionalOperator) {
   // value.
   const auto &CallGState = blockStateForStmt(BlockStates, CallG);
   EXPECT_EQ(CallGState.Env.get<PointerValue>(AddrOfI), nullptr);
+}
+
+TEST_F(DiscardExprStateTest, CallWithParenExprTreatedCorrectly) {
+  // This is a regression test.
+  // In the CFG for `target()` below, the expression that evaluates the function
+  // pointer for `expect` and the actual call are separated into different
+  // baseic blocks (because of the control flow introduced by the `||`
+  // operator).
+  // The value for the `expect` function pointer was erroneously discarded
+  // from the environment between these two blocks because the code that
+  // determines whether the expression values for a block need to be preserved
+  // did not ignore the `ParenExpr` around `(i == 1)` (which is not represented
+  // in the CFG).
+  std::string Code = R"(
+    bool expect(bool, bool);
+    void target(int i) {
+      expect(false || (i == 1), false);
+    }
+  )";
+  auto BlockStates = llvm::cantFail(runAnalysis<NoopAnalysis>(
+      Code, [](ASTContext &C) { return NoopAnalysis(C); }));
+
+  const auto &FnToPtrDecay = matchNode<ImplicitCastExpr>(
+      implicitCastExpr(hasCastKind(CK_FunctionToPointerDecay)));
+  const auto &CallExpect =
+      matchNode<CallExpr>(callExpr(callee(functionDecl(hasName("expect")))));
+
+  // In the block that evaluates the implicit cast of `expect` to a pointer,
+  // this expression is associated with a value.
+  const auto &FnToPtrDecayState = blockStateForStmt(BlockStates, FnToPtrDecay);
+  EXPECT_NE(FnToPtrDecayState.Env.getValue(FnToPtrDecay), nullptr);
+
+  // In the block that calls `expect()`, the implicit cast of `expect` to a
+  // pointer is still associated with a value.
+  const auto &CallExpectState = blockStateForStmt(BlockStates, CallExpect);
+  EXPECT_NE(CallExpectState.Env.getValue(FnToPtrDecay), nullptr);
 }
 
 struct NonConvergingLattice {

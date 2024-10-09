@@ -142,7 +142,7 @@ std::string ToString(std::array<DeathCause, N> const& causes) {
   return ss.str();
 }
 
-TEST_NORETURN void StopChildProcess(DeathCause cause) { std::exit(static_cast<int>(cause)); }
+[[noreturn]] void StopChildProcess(DeathCause cause) { std::exit(static_cast<int>(cause)); }
 
 DeathCause ConvertToDeathCause(int val) {
   if (val < static_cast<int>(DeathCause::VerboseAbort) || val > static_cast<int>(DeathCause::Unknown)) {
@@ -260,7 +260,7 @@ private:
   }
 
   template <class Func>
-  TEST_NORETURN void RunForChild(Func&& f) {
+  [[noreturn]] void RunForChild(Func&& f) {
     close(GetStdOutReadFD()); // don't need to read from the pipe in the child.
     close(GetStdErrReadFD());
     auto DupFD = [](int DestFD, int TargetFD) {
@@ -392,7 +392,7 @@ bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func) {
 #define EXPECT_STD_TERMINATE(...)                 \
     assert(  ExpectDeath(DeathCause::StdTerminate, #__VA_ARGS__, __VA_ARGS__)  )
 
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#if defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 #define TEST_LIBCPP_ASSERT_FAILURE(expr, message) \
     assert(( ExpectDeath(DeathCause::VerboseAbort, #expr, [&]() { (void)(expr); }, MakeAssertionMessageMatcher(message)) ))
 #else

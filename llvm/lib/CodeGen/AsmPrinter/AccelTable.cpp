@@ -49,9 +49,7 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
                       [](const AccelTableData *A, const AccelTableData *B) {
                         return *A < *B;
                       });
-    E.second.Values.erase(
-        std::unique(E.second.Values.begin(), E.second.Values.end()),
-        E.second.Values.end());
+    E.second.Values.erase(llvm::unique(E.second.Values), E.second.Values.end());
   }
 
   // Figure out how many buckets we need, then compute the bucket contents and
@@ -138,7 +136,7 @@ class AppleAccelTableWriter : public AccelTableWriter {
     const SmallVector<Atom, 4> Atoms;
 
     HeaderData(ArrayRef<Atom> AtomList, uint32_t Offset = 0)
-        : DieOffsetBase(Offset), Atoms(AtomList.begin(), AtomList.end()) {}
+        : DieOffsetBase(Offset), Atoms(AtomList) {}
 
     void emit(AsmPrinter *Asm) const;
 #ifndef NDEBUG

@@ -18,6 +18,7 @@ using namespace clang;
 using namespace ento;
 using OwnerSet = NoOwnershipChangeVisitor::OwnerSet;
 
+namespace {
 // Collect which entities point to the allocated memory, and could be
 // responsible for deallocating it.
 class OwnershipBindingsHandler : public StoreManager::BindingsHandler {
@@ -46,6 +47,7 @@ public:
     out << "}\n";
   }
 };
+} // namespace
 
 OwnerSet NoOwnershipChangeVisitor::getOwnersAtNode(const ExplodedNode *N) {
   OwnerSet Ret;
@@ -70,16 +72,6 @@ bool NoOwnershipChangeVisitor::wasModifiedInFunction(
     const ExplodedNode *CallEnterN, const ExplodedNode *CallExitEndN) {
   const Decl *Callee =
       CallExitEndN->getFirstPred()->getLocationContext()->getDecl();
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
-
-  // Given that the stack frame was entered, the body should always be
-  // theoretically obtainable. In case of body farms, the synthesized body
-  // is not attached to declaration, thus triggering the '!FD->hasBody()'
-  // branch. That said, would a synthesized body ever intend to handle
-  // ownership? As of today they don't. And if they did, how would we
-  // put notes inside it, given that it doesn't match any source locations?
-  if (!FD || !FD->hasBody())
-    return false;
   if (!doesFnIntendToHandleOwnership(
           Callee,
           CallExitEndN->getState()->getAnalysisManager().getASTContext()))

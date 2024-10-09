@@ -125,7 +125,6 @@ interesting areas to contribute to lldb.
    use/symbolication
    use/symbols
    use/remote
-   use/qemu-testing
    use/intel_pt
    use/ondemand
    use/aarch64-linux
@@ -141,6 +140,7 @@ interesting areas to contribute to lldb.
    use/python
    use/python-reference
    Python API <python_api>
+   Python Extensions <python_extensions>
 
 
 .. toctree::
@@ -152,6 +152,7 @@ interesting areas to contribute to lldb.
    resources/contributing
    resources/build
    resources/test
+   resources/qemu-testing
    resources/debugging
    resources/fuzzing
    resources/sbapi
@@ -162,6 +163,7 @@ interesting areas to contribute to lldb.
    resources/caveats
    resources/projects
    resources/lldbdap
+   resources/addinglanguagesupport
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
 

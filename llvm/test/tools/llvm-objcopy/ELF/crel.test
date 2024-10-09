@@ -1,0 +1,140 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --remove-section=.foo --strip-symbol=unused %t %t.out
+# RUN: llvm-readelf -Sr %t.out | FileCheck %s
+
+# CHECK:      [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT: [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+# CHECK-NEXT: [ 1] .text             PROGBITS        0000000000000000 {{.*}} 000008 00   A  0   0  0
+# CHECK-NEXT: [ 2] .crel.text        CREL            0000000000000000 {{.*}} 000022 00      5   1  0
+# CHECK-NEXT: [ 3] nonalloc          PROGBITS        0000000000000000 {{.*}} 000030 00      0   0  0
+# CHECK-NEXT: [ 4] .crelnonalloc     CREL            0000000000000000 {{.*}} 00000b 00      5   3  0
+
+# CHECK:      Relocation section '.crel.text' at offset {{.*}} contains 4 entries:
+# CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# CHECK-NEXT: 0000000000000001  {{.*}}           R_X86_64_32            0000000000000000 g1 + 1
+# CHECK-NEXT: 0000000000000002  {{.*}}           R_X86_64_64            0000000000000000 l1 + 2
+# CHECK-NEXT: 0000000000000000  {{.*}}           R_X86_64_32S           0000000000000000 g1 - 1
+# CHECK-NEXT: 0000000000000004  {{.*}}           R_X86_64_32S           0000000000000000 .text - 8000000000000000
+# CHECK-EMPTY:
+# CHECK-NEXT: Relocation section '.crelnonalloc' at offset {{.*}} contains 3 entries:
+# CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# CHECK-NEXT: 0000000000000010  {{.*}}           R_X86_64_64            0000000000000000 g1 + 1
+# CHECK-NEXT: 0000000000000020  {{.*}}           R_X86_64_64            0000000000000000 g2 + 2
+# CHECK-NEXT: 0000000000000030  {{.*}}           R_X86_64_64                       0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+
+Sections:
+- Name: .foo
+  Type: SHT_PROGBITS
+  Flags: [SHF_ALLOC]
+- Name: .text
+  Type: SHT_PROGBITS
+  Content: "0000000000000000"
+  Flags: [SHF_ALLOC]
+- Name: .crel.text
+  Type: SHT_CREL
+  Info: .text
+  Link: .symtab
+  Relocations:
+    - Offset: 0x1
+      Symbol: g1
+      Type:   R_X86_64_32
+      Addend: 1
+    - Offset: 0x2
+      Symbol: l1
+      Type:   R_X86_64_64
+      Addend: 2
+    - Offset: 0x0
+      Symbol: g1
+      Type:   R_X86_64_32S
+      Addend: 0xffffffffffffffff
+    - Offset: 0x4
+      Symbol: .text
+      Type:   R_X86_64_32S
+      Addend: 0x8000000000000000
+- Name: nonalloc
+  Type: SHT_PROGBITS
+  Size: 0x30
+- Name: .crelnonalloc
+  Type: SHT_CREL
+  Info: nonalloc
+  Link: .symtab
+  Relocations:
+    - Offset: 0x10
+      Symbol: g1
+      Type:   R_X86_64_64
+      Addend: 1
+    - Offset: 0x20
+      Symbol: g2
+      Type:   R_X86_64_64
+      Addend: 2
+    - Offset: 0x30
+      Symbol: 0
+      Type:   R_X86_64_64
+
+Symbols:
+  - Name: unused
+    Section: .text
+  - Name: .text
+    Type: STT_SECTION
+    Section: .text
+  - Name:    l1
+  - Name:    g1
+    Section: .text
+    Value:   0x0
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    g2
+    Binding: STB_GLOBAL
+
+# RUN: yaml2obj --docnum=2 %s -o %t.32
+# RUN: llvm-objcopy %t.32 %t.32.out
+# RUN: llvm-readobj -r %t.32.out | FileCheck %s --check-prefix=CHECK2
+
+# CHECK2:      Relocations [
+# CHECK2-NEXT:   Section (2) .crel.text {
+# CHECK2-NEXT:     0x0 R_X86_64_32S g1 0xFFFFFFFF
+# CHECK2-NEXT:     0x4 R_X86_64_32S .text 0x80000000
+# CHECK2-NEXT:   }
+# CHECK2-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+
+Sections:
+- Name: .text
+  Type: SHT_PROGBITS
+  Content: "0000000000000000"
+  Flags: [SHF_ALLOC]
+- Name: .crel.text
+  Type: SHT_CREL
+  Info: .text
+  Link: .symtab
+  Relocations:
+    - Offset: 0x0
+      Symbol: g1
+      Type:   R_X86_64_32S
+      Addend: 0xffffffff
+    - Offset: 0x4
+      Symbol: .text
+      Type:   R_X86_64_32S
+      Addend: 0x80000000
+
+Symbols:
+  - Name: .text
+    Type: STT_SECTION
+    Section: .text
+  - Name:    g1
+    Section: .text
+    Size:    4
+    Binding: STB_GLOBAL

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <vector>
@@ -17,7 +18,7 @@ namespace {
 
 class Attributes {
 public:
-  Attributes(RecordKeeper &R) : Records(R) {}
+  Attributes(const RecordKeeper &R) : Records(R) {}
   void run(raw_ostream &OS);
 
 private:
@@ -25,7 +26,7 @@ private:
   void emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr);
   void emitAttributeProperties(raw_ostream &OF);
 
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 };
 
 } // End anonymous namespace.
@@ -53,7 +54,8 @@ void Attributes::emitTargetIndependentNames(raw_ostream &OS) {
   };
 
   // Emit attribute enums in the same order llvm::Attribute::operator< expects.
-  Emit({"EnumAttr", "TypeAttr", "IntAttr", "ConstantRangeAttr"},
+  Emit({"EnumAttr", "TypeAttr", "IntAttr", "ConstantRangeAttr",
+        "ConstantRangeListAttr"},
        "ATTRIBUTE_ENUM");
   Emit({"StrBoolAttr"}, "ATTRIBUTE_STRBOOL");
   Emit({"ComplexStrAttr"}, "ATTRIBUTE_COMPLEXSTR");
@@ -64,8 +66,8 @@ void Attributes::emitTargetIndependentNames(raw_ostream &OS) {
   OS << "#ifdef GET_ATTR_ENUM\n";
   OS << "#undef GET_ATTR_ENUM\n";
   unsigned Value = 1; // Leave zero for AttrKind::None.
-  for (StringRef KindName :
-       {"EnumAttr", "TypeAttr", "IntAttr", "ConstantRangeAttr"}) {
+  for (StringRef KindName : {"EnumAttr", "TypeAttr", "IntAttr",
+                             "ConstantRangeAttr", "ConstantRangeListAttr"}) {
     OS << "First" << KindName << " = " << Value << ",\n";
     for (auto *A : Records.getAllDerivedDefinitions(KindName)) {
       OS << A->getName() << " = " << Value << ",\n";
@@ -84,10 +86,7 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
      << "                                        const Function &Callee) {\n";
   OS << "  bool Ret = true;\n\n";
 
-  std::vector<Record *> CompatRules =
-      Records.getAllDerivedDefinitions("CompatRule");
-
-  for (auto *Rule : CompatRules) {
+  for (const Record *Rule : Records.getAllDerivedDefinitions("CompatRule")) {
     StringRef FuncName = Rule->getValueAsString("CompatFunc");
     OS << "  Ret &= " << FuncName << "(Caller, Callee";
     StringRef AttrName = Rule->getValueAsString("AttrName");
@@ -100,12 +99,10 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
   OS << "  return Ret;\n";
   OS << "}\n\n";
 
-  std::vector<Record *> MergeRules =
-      Records.getAllDerivedDefinitions("MergeRule");
   OS << "static inline void mergeFnAttrs(Function &Caller,\n"
      << "                                const Function &Callee) {\n";
 
-  for (auto *Rule : MergeRules) {
+  for (const Record *Rule : Records.getAllDerivedDefinitions("MergeRule")) {
     StringRef FuncName = Rule->getValueAsString("MergeFunc");
     OS << "  " << FuncName << "(Caller, Callee);\n";
   }
@@ -119,12 +116,22 @@ void Attributes::emitAttributeProperties(raw_ostream &OS) {
   OS << "#ifdef GET_ATTR_PROP_TABLE\n";
   OS << "#undef GET_ATTR_PROP_TABLE\n";
   OS << "static const uint8_t AttrPropTable[] = {\n";
-  for (StringRef KindName :
-       {"EnumAttr", "TypeAttr", "IntAttr", "ConstantRangeAttr"}) {
+  for (StringRef KindName : {"EnumAttr", "TypeAttr", "IntAttr",
+                             "ConstantRangeAttr", "ConstantRangeListAttr"}) {
+    bool AllowIntersectAnd = KindName == "EnumAttr";
+    bool AllowIntersectMin = KindName == "IntAttr";
     for (auto *A : Records.getAllDerivedDefinitions(KindName)) {
       OS << "0";
-      for (Init *P : *A->getValueAsListInit("Properties"))
+      for (Init *P : *A->getValueAsListInit("Properties")) {
+        if (!AllowIntersectAnd &&
+            cast<DefInit>(P)->getDef()->getName() == "IntersectAnd")
+          PrintFatalError("'IntersectAnd' only compatible with 'EnumAttr'");
+        if (!AllowIntersectMin &&
+            cast<DefInit>(P)->getDef()->getName() == "IntersectMin")
+          PrintFatalError("'IntersectMin' only compatible with 'IntAttr'");
+
         OS << " | AttributeProperty::" << cast<DefInit>(P)->getDef()->getName();
+      }
       OS << ",\n";
     }
   }

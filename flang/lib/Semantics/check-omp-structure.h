@@ -69,6 +69,7 @@ public:
   using llvmOmpClause = const llvm::omp::Clause;
 
   void Enter(const parser::OpenMPConstruct &);
+  void Leave(const parser::OpenMPConstruct &);
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
   void Enter(const parser::OmpEndLoopDirective &);
@@ -139,6 +140,8 @@ public:
   }
 
 private:
+  bool CheckAllowedClause(llvmOmpClause clause);
+  bool IsExtendedListItem(const Symbol &sym);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -186,13 +189,14 @@ private:
 
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
-  void CheckCycleConstraints(const parser::OpenMPLoopConstruct &x);
+  void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   template <typename T, typename D> bool IsOperatorValid(const T &, const D &);
   void CheckAtomicMemoryOrderClause(
       const parser::OmpAtomicClauseList *, const parser::OmpAtomicClauseList *);
   void CheckAtomicUpdateStmt(const parser::AssignmentStmt &);
   void CheckAtomicCaptureStmt(const parser::AssignmentStmt &);
   void CheckAtomicWriteStmt(const parser::AssignmentStmt &);
+  void CheckAtomicCaptureConstruct(const parser::OmpAtomicCapture &);
   void CheckAtomicConstructStructure(const parser::OpenMPAtomicConstruct &);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
@@ -244,6 +248,8 @@ private:
     LastType
   };
   int directiveNest_[LastType + 1] = {0};
+
+  SymbolSourceMap deferredNonVariables_;
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

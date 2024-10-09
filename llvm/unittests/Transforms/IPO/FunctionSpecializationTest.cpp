@@ -15,6 +15,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/IPO/FunctionSpecialization.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -256,6 +257,34 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
         getInstCost(BrBB2, /*SizeOnly =*/ true) +
         getInstCost(BrLoop, /*SizeOnly =*/ true);
   Test = Visitor.getSpecializationBonus(F->getArg(2), False);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+}
+
+TEST_F(FunctionSpecializationTest, SelectInst) {
+  const char *ModuleString = R"(
+    define i32 @foo(i1 %cond, i32 %a, i32 %b) {
+      %sel = select i1 %cond, i32 %a, i32 %b
+      ret i32 %sel
+    }
+  )";
+
+  Module &M = parseModule(ModuleString);
+  Function *F = M.getFunction("foo");
+  FunctionSpecializer Specializer = getSpecializerFor(F);
+  InstCostVisitor Visitor = Specializer.getInstCostVisitorFor(F);
+
+  Constant *One = ConstantInt::get(IntegerType::getInt32Ty(M.getContext()), 1);
+  Constant *Zero = ConstantInt::get(IntegerType::getInt32Ty(M.getContext()), 0);
+  Constant *False = ConstantInt::getFalse(M.getContext());
+  Instruction &Select = *F->front().begin();
+
+  Bonus Ref = getInstCost(Select);
+  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), False);
+  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
+  Test = Visitor.getSpecializationBonus(F->getArg(1), One);
+  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
+  Test = Visitor.getSpecializationBonus(F->getArg(2), Zero);
   EXPECT_EQ(Test, Ref);
   EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 }

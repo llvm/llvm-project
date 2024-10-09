@@ -87,7 +87,7 @@ Function *getBasePtrIntrinsic(Module &M, bool IsV5OrAbove) {
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Function *F = CI->getParent()->getParent();
 
-  auto MD = F->getMetadata("reqd_work_group_size");
+  auto *MD = F->getMetadata("reqd_work_group_size");
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
@@ -101,7 +101,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Value *Remainders[3]  = {nullptr, nullptr, nullptr};
   Value *GridSizes[3]   = {nullptr, nullptr, nullptr};
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -225,10 +225,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
                            : m_Intrinsic<Intrinsic::amdgcn_workgroup_id_z>());
 
       for (User *ICmp : BlockCount->users()) {
-        ICmpInst::Predicate Pred;
-        if (match(ICmp, m_ICmp(Pred, GroupIDIntrin, m_Specific(BlockCount)))) {
-          if (Pred != ICmpInst::ICMP_ULT)
-            continue;
+        if (match(ICmp, m_SpecificICmp(ICmpInst::ICMP_ULT, GroupIDIntrin,
+                                       m_Specific(BlockCount)))) {
           ICmp->replaceAllUsesWith(llvm::ConstantInt::getTrue(ICmp->getType()));
           MadeChange = true;
         }

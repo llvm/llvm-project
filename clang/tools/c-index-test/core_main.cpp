@@ -8,7 +8,6 @@
 
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -19,6 +18,7 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -274,12 +274,12 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
-  std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      std::string(modulePath), *pchRdr, ASTUnit::LoadASTOnly, Diags,
-      FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
-      /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
-      /*AllowASTWithCompilerErrors=*/true,
-      /*UserFilesAreVolatile=*/false);
+  std::unique_ptr<ASTUnit> AU =
+      ASTUnit::LoadFromASTFile(modulePath, *pchRdr, ASTUnit::LoadASTOnly, Diags,
+                               FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
+                               /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
+                               /*AllowASTWithCompilerErrors=*/true,
+                               /*UserFilesAreVolatile=*/false);
   if (!AU) {
     errs() << "failed to create TU for: " << modulePath << '\n';
     return true;

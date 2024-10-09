@@ -126,7 +126,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                            PreHeader);
       } else {
         // Succ is LatchExit.
-        NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
+        NewPN->addIncoming(PoisonValue::get(PN.getType()), PreHeader);
       }
 
       Value *V = PN.getIncomingValueForBlock(Latch);
@@ -146,7 +146,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         PN.setIncomingValueForBlock(NewPreHeader, NewPN);
       else
         PN.addIncoming(NewPN, PrologExit);
-      SE.forgetValue(&PN);
+      SE.forgetLcssaPhiWithNewPredecessor(L, &PN);
     }
   }
 
@@ -253,7 +253,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     assert(EpilogPN->getParent() == Exit && "EpilogPN should be in Exit block");
 
     // Add incoming PreHeader from branch around the Loop
-    PN.addIncoming(UndefValue::get(PN.getType()), PreHeader);
+    PN.addIncoming(PoisonValue::get(PN.getType()), PreHeader);
     SE.forgetValue(&PN);
 
     Value *V = PN.getIncomingValueForBlock(Latch);
@@ -272,7 +272,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                                NewExit);
     // Now PHIs should look like:
     // NewExit:
-    //   PN = PHI [I, Latch], [undef, PreHeader]
+    //   PN = PHI [I, Latch], [poison, PreHeader]
     // ...
     // Exit:
     //   EpilogPN = PHI [PN, NewExit], [VMap[I], EpilogLatch]
@@ -670,7 +670,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
 
   BasicBlock *PreHeader = L->getLoopPreheader();
   BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
-  const DataLayout &DL = Header->getModule()->getDataLayout();
+  const DataLayout &DL = Header->getDataLayout();
   SCEVExpander Expander(*SE, DL, "loop-unroll");
   if (!AllowExpensiveTripCount &&
       Expander.isHighCostExpansion(TripCountSC, L, SCEVCheapExpansionBudget,
@@ -849,7 +849,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
      for (unsigned i = 0; i < oldNumOperands; i++){
        auto *PredBB =PN.getIncomingBlock(i);
        if (PredBB == Latch)
-         // The latch exit is handled seperately, see connectX
+         // The latch exit is handled separately, see connectX
          continue;
        if (!L->contains(PredBB))
          // Even if we had dedicated exits, the code above inserted an
@@ -971,13 +971,12 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // (e.g. breakLoopBackedgeAndSimplify) and reused in loop-deletion.
     BasicBlock *RemainderLatch = remainderLoop->getLoopLatch();
     assert(RemainderLatch);
-    SmallVector<BasicBlock*> RemainderBlocks(remainderLoop->getBlocks().begin(),
-                                             remainderLoop->getBlocks().end());
+    SmallVector<BasicBlock *> RemainderBlocks(remainderLoop->getBlocks());
     breakLoopBackedge(remainderLoop, *DT, *SE, *LI, nullptr);
     remainderLoop = nullptr;
 
     // Simplify loop values after breaking the backedge
-    const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+    const DataLayout &DL = L->getHeader()->getDataLayout();
     SmallVector<WeakTrackingVH, 16> DeadInsts;
     for (BasicBlock *BB : RemainderBlocks) {
       for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {

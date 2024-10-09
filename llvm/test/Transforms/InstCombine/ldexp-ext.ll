@@ -4,7 +4,7 @@
 define float @ldexp_zext_float(float %x, i1 %bool) {
 ; CHECK-LABEL: @ldexp_zext_float(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[BOOL:%.*]], float 2.000000e+00, float 1.000000e+00
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul float [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul float [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %zext = zext i1 %bool to i32
@@ -26,7 +26,7 @@ define float @ldexp_zext_float_negative(float %x, i8 %y) {
 define double @ldexp_zext_double(double %x, i1 %bool) {
 ; CHECK-LABEL: @ldexp_zext_double(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[BOOL:%.*]], double 2.000000e+00, double 1.000000e+00
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul double [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[LDEXP]]
 ;
   %zext = zext i1 %bool to i32
@@ -37,7 +37,7 @@ define double @ldexp_zext_double(double %x, i1 %bool) {
 define double @ldexp_zext_double_fast_math(double %x, i1 %bool) {
 ; CHECK-LABEL: @ldexp_zext_double_fast_math(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[BOOL:%.*]], double 2.000000e+00, double 1.000000e+00
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul reassoc double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul reassoc double [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[LDEXP]]
 ;
   %zext = zext i1 %bool to i32
@@ -48,7 +48,7 @@ define double @ldexp_zext_double_fast_math(double %x, i1 %bool) {
 define <2 x float> @ldexp_zext_float_vector(<2 x float> %x, <2 x i1> %bool) {
 ; CHECK-LABEL: @ldexp_zext_float_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[BOOL:%.*]], <2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul <2 x float> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul <2 x float> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
 ;
   %zext = zext <2 x i1> %bool to <2 x i32>
@@ -59,7 +59,7 @@ define <2 x float> @ldexp_zext_float_vector(<2 x float> %x, <2 x i1> %bool) {
 define float @ldexp_sext_float(float %x, i1 %bool) {
 ; CHECK-LABEL: @ldexp_sext_float(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[BOOL:%.*]], float 5.000000e-01, float 1.000000e+00
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul float [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul float [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %sext = sext i1 %bool to i32
@@ -81,7 +81,7 @@ define float @ldexp_sext_float_negative(float %x, i8 %y) {
 define double @ldexp_sext_double(double %x, i1 %bool) {
 ; CHECK-LABEL: @ldexp_sext_double(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[BOOL:%.*]], double 5.000000e-01, double 1.000000e+00
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul double [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[LDEXP]]
 ;
   %sext = sext i1 %bool to i32
@@ -92,7 +92,7 @@ define double @ldexp_sext_double(double %x, i1 %bool) {
 define double @ldexp_sext_double_fast_math(double %x, i1 %bool) {
 ; CHECK-LABEL: @ldexp_sext_double_fast_math(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[BOOL:%.*]], double 5.000000e-01, double 1.000000e+00
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul reassoc double [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul reassoc double [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[LDEXP]]
 ;
   %sext = sext i1 %bool to i32
@@ -103,7 +103,7 @@ define double @ldexp_sext_double_fast_math(double %x, i1 %bool) {
 define <2 x float> @ldexp_sext_float_vector(<2 x float> %x, <2 x i1> %bool) {
 ; CHECK-LABEL: @ldexp_sext_float_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[BOOL:%.*]], <2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[LDEXP:%.*]] = fmul <2 x float> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = fmul <2 x float> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
 ;
   %sext = sext <2 x i1> %bool to <2 x i32>

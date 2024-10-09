@@ -57,7 +57,7 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
 
   auto scheduleAsBlockingUse = [&](OpOperand &use) {
     SmallPtrSetImpl<OpOperand *> &blockingUses =
-        info.userToBlockingUses.getOrInsertDefault(use.getOwner());
+        info.userToBlockingUses[use.getOwner()];
     blockingUses.insert(&use);
   };
 
@@ -122,7 +122,7 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
       SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
-          info.userToBlockingUses.getOrInsertDefault(blockingUse->getOwner());
+          info.userToBlockingUses[blockingUse->getOwner()];
       newUserBlockingUseSet.insert(blockingUse);
     }
   }
@@ -146,11 +146,11 @@ static void destructureSlot(
       allocator.destructure(slot, info.usedIndices, builder, newAllocators);
 
   if (statistics.slotsWithMemoryBenefit &&
-      slot.elementPtrs.size() != info.usedIndices.size())
+      slot.subelementTypes.size() != info.usedIndices.size())
     (*statistics.slotsWithMemoryBenefit)++;
 
   if (statistics.maxSubelementAmount)
-    statistics.maxSubelementAmount->updateMax(slot.elementPtrs.size());
+    statistics.maxSubelementAmount->updateMax(slot.subelementTypes.size());
 
   SetVector<Operation *> usersToRewire;
   for (Operation *user : llvm::make_first_range(info.userToBlockingUses))
@@ -200,8 +200,7 @@ LogicalResult mlir::tryToDestructureMemorySlots(
     SROAStatistics statistics) {
   bool destructuredAny = false;
 
-  SmallVector<DestructurableAllocationOpInterface> workList(allocators.begin(),
-                                                            allocators.end());
+  SmallVector<DestructurableAllocationOpInterface> workList(allocators);
   SmallVector<DestructurableAllocationOpInterface> newWorkList;
   newWorkList.reserve(allocators.size());
   // Destructuring a slot can allow for further destructuring of other

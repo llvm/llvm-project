@@ -74,8 +74,7 @@ protected:
 
 public:
   /// Return the underlying Value attached to this VPValue.
-  Value *getUnderlyingValue() { return UnderlyingVal; }
-  const Value *getUnderlyingValue() const { return UnderlyingVal; }
+  Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
@@ -181,10 +180,8 @@ public:
     return getUnderlyingValue();
   }
 
-  /// Returns true if the VPValue is defined outside any vector regions, i.e. it
-  /// is a live-in value.
-  /// TODO: Also handle recipes defined in pre-header blocks.
-  bool isDefinedOutsideVectorRegions() const { return !hasDefiningRecipe(); }
+  /// Returns true if the VPValue is defined outside any loop region.
+  bool isDefinedOutsideLoopRegions() const;
 
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {
@@ -340,8 +337,10 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPIRInstructionSC,
     VPInstructionSC,
     VPInterleaveSC,
+    VPReductionEVLSC,
     VPReductionSC,
     VPReplicateSC,
     VPScalarCastSC,
@@ -351,13 +350,16 @@ public:
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
+    VPWidenIntrinsicSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
+    VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
+    VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,

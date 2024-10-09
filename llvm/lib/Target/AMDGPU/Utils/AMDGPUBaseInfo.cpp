@@ -153,11 +153,17 @@ inline unsigned getSaSdstBitWidth() { return 1; }
 /// \returns SaSdst bit shift
 inline unsigned getSaSdstBitShift() { return 0; }
 
-} // end namespace anonymous
+} // end anonymous namespace
 
 namespace llvm {
 
 namespace AMDGPU {
+
+/// \returns true if the target supports signed immediate offset for SMRD
+/// instructions.
+bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
+  return isGFX9Plus(ST);
+}
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI) {
@@ -165,7 +171,7 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
 }
 
 unsigned getAMDHSACodeObjectVersion(const Module &M) {
-  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+  if (auto *Ver = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("amdhsa_code_object_version"))) {
     return (unsigned)Ver->getZExtValue() / 100;
   }
@@ -373,18 +379,17 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
-struct SingleUseExceptionInfo {
+struct FP8DstByteSelInfo {
   uint16_t Opcode;
-  bool IsInvalidSingleUseConsumer;
-  bool IsInvalidSingleUseProducer;
+  bool HasFP8DstByteSel;
 };
 
+#define GET_FP8DstByteSelTable_DECL
+#define GET_FP8DstByteSelTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
-#define GET_SingleUseExceptionTable_DECL
-#define GET_SingleUseExceptionTable_IMPL
 #define GET_SMInfoTable_DECL
 #define GET_SMInfoTable_IMPL
 #define GET_VOP1InfoTable_DECL
@@ -490,17 +495,17 @@ bool getSMEMIsBuffer(unsigned Opc) {
 
 bool getVOP1IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : false;
+  return Info ? Info->IsSingle : true;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -531,8 +536,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info)
     return {Info->CanBeVOPDX, true};
-  else
-    return {false, false};
+  return {false, false};
 }
 
 unsigned getVOPDOpcode(unsigned Opc) {
@@ -590,9 +594,7 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
 }
 
 bool isGenericAtomic(unsigned Opc) {
-  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
-         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
-         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+  return Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
@@ -616,14 +618,9 @@ bool isTrue16Inst(unsigned Opc) {
   return Info ? Info->IsTrue16 : false;
 }
 
-bool isInvalidSingleUseConsumerInst(unsigned Opc) {
-  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
-  return Info && Info->IsInvalidSingleUseConsumer;
-}
-
-bool isInvalidSingleUseProducerInst(unsigned Opc) {
-  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
-  return Info && Info->IsInvalidSingleUseProducer;
+bool isFP8DstSelInst(unsigned Opc) {
+  const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
+  return Info ? Info->HasFP8DstByteSel : false;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -652,8 +649,8 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
 std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
   const VOPDInfo *Info = getVOPDOpcodeHelper(VOPDOpcode);
   assert(Info);
-  auto OpX = getVOPDBaseFromComponent(Info->OpX);
-  auto OpY = getVOPDBaseFromComponent(Info->OpY);
+  const auto *OpX = getVOPDBaseFromComponent(Info->OpX);
+  const auto *OpY = getVOPDBaseFromComponent(Info->OpY);
   assert(OpX && OpY);
   return {OpX->BaseVOP, OpY->BaseVOP};
 }
@@ -889,7 +886,6 @@ std::string AMDGPUTargetID::toString() const {
 
   StreamRep << Processor << Features;
 
-  StreamRep.flush();
   return StringRep;
 }
 
@@ -903,11 +899,7 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
-  unsigned BytesPerCU = 0;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
-    BytesPerCU = 32768;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
-    BytesPerCU = 65536;
+  unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
 
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". So the effective local memory size is doubled in
@@ -919,9 +911,9 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
   return 0;
 }
@@ -1475,11 +1467,10 @@ static unsigned getCombinedCountBitMask(const IsaVersion &Version,
     unsigned Storecnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
                                    getStorecntBitWidth(Version.Major));
     return Dscnt | Storecnt;
-  } else {
-    unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
-                                  getLoadcntBitWidth(Version.Major));
-    return Dscnt | Loadcnt;
   }
+  unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
+                                getLoadcntBitWidth(Version.Major));
+  return Dscnt | Loadcnt;
 }
 
 Waitcnt decodeLoadcntDscnt(const IsaVersion &Version, unsigned LoadcntDscnt) {
@@ -1798,7 +1789,7 @@ static StringLiteral const *getNfmtLookupTable(const MCSubtargetInfo &STI) {
 }
 
 int64_t getNfmt(const StringRef Name, const MCSubtargetInfo &STI) {
-  auto lookupTable = getNfmtLookupTable(STI);
+  const auto *lookupTable = getNfmtLookupTable(STI);
   for (int Id = NFMT_MIN; Id <= NFMT_MAX; ++Id) {
     if (Name == lookupTable[Id])
       return Id;
@@ -2228,20 +2219,20 @@ int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
   return std::max(ArgNumVGPR, ArgNumAGPR);
 }
 
-bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
+bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
-  const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
+  const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
     Reg == AMDGPU::SCC;
 }
 
-bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
-  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI;
+bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI16;
 }
 
 #define MAP_REG2REG \
   using namespace AMDGPU; \
-  switch(Reg) { \
+  switch(Reg.id()) { \
   default: return Reg; \
   CASE_CI_VI(FLAT_SCR) \
   CASE_CI_VI(FLAT_SCR_LO) \
@@ -2296,7 +2287,7 @@ bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
 #define CASE_GFXPRE11_GFX11PLUS_TO(node, result) \
   case node: return isGFX11Plus(STI) ? result##_gfx11plus : result##_gfxpre11;
 
-unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
+MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI) {
   if (STI.getTargetTriple().getArch() == Triple::r600)
     return Reg;
   MAP_REG2REG
@@ -2312,9 +2303,7 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 #define CASE_GFXPRE11_GFX11PLUS(node) case node##_gfx11plus: case node##_gfxpre11: return node;
 #define CASE_GFXPRE11_GFX11PLUS_TO(node, result)
 
-unsigned mc2PseudoReg(unsigned Reg) {
-  MAP_REG2REG
-}
+MCRegister mc2PseudoReg(MCRegister Reg) { MAP_REG2REG }
 
 bool isInlineValue(unsigned Reg) {
   switch (Reg) {
@@ -2821,10 +2810,6 @@ static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
   return isGCN3Encoding(ST) || isGFX10Plus(ST);
 }
 
-static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
-  return isGFX9Plus(ST);
-}
-
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
   if (isGFX12Plus(ST))
@@ -2859,7 +2844,14 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 }
 
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                            int64_t ByteOffset, bool IsBuffer) {
+                                            int64_t ByteOffset, bool IsBuffer,
+                                            bool HasSOffset) {
+  // For unbuffered smem loads, it is illegal for the Immediate Offset to be
+  // negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
+  // Handle case where SOffset is not present.
+  if (!IsBuffer && !HasSOffset && ByteOffset < 0 && hasSMRDSignedImmOffset(ST))
+    return std::nullopt;
+
   if (isGFX12Plus(ST)) // 24 bit signed offsets
     return isInt<24>(ByteOffset) ? std::optional<int64_t>(ByteOffset)
                                  : std::nullopt;
