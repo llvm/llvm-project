@@ -106,15 +106,17 @@ class MachineModuleInfo {
   const Function *LastRequest = nullptr; ///< Used for shortcut/cache.
   MachineFunction *LastResult = nullptr; ///< Used for shortcut/cache.
 
-  MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
+  /// Deleted copy constructor
+  MachineModuleInfo(MachineModuleInfo &MMI) = delete;
+
+  /// Deleted copy assignment operator
+  MachineModuleInfo &operator=(MachineModuleInfo &MMI) = delete;
 
 public:
   explicit MachineModuleInfo(const LLVMTargetMachine *TM = nullptr);
 
   explicit MachineModuleInfo(const LLVMTargetMachine *TM,
                              MCContext *ExtContext);
-
-  MachineModuleInfo(MachineModuleInfo &&MMII);
 
   ~MachineModuleInfo();
 
@@ -169,14 +171,11 @@ public:
 }; // End class MachineModuleInfo
 
 class MachineModuleInfoWrapperPass : public ImmutablePass {
-  MachineModuleInfo MMI;
+  MachineModuleInfo &MMI;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM = nullptr);
-
-  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM,
-                                        MCContext *ExtContext);
+  explicit MachineModuleInfoWrapperPass(MachineModuleInfo &MMI);
 
   // Initialization and Finalization
   bool doInitialization(Module &) override;

@@ -63,6 +63,7 @@ add_llvm_component_library(LLVMOrcJIT
 
   LINK_COMPONENTS
   BinaryFormat
+  CodeGen
   Core
   ExecutionEngine
   JITLink

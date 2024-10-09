@@ -52,6 +52,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -932,6 +933,7 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   // Currently only the legacy pass manager is supported.
   // TODO: Switch to the new PM once it's available in the backend.
   llvm::legacy::PassManager codeGenPasses;
+  llvm::MachineModuleInfo mmi(static_cast<llvm::LLVMTargetMachine *>(&tm));
   codeGenPasses.add(
       createTargetTransformInfoWrapperPass(tm.getTargetIRAnalysis()));
 
@@ -943,7 +945,7 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
-  if (tm.addPassesToEmitFile(codeGenPasses, os, nullptr, cgft)) {
+  if (tm.addPassesToEmitFile(codeGenPasses, mmi, os, nullptr, cgft)) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");

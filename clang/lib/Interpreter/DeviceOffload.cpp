@@ -17,6 +17,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -82,16 +83,18 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
     return llvm::make_error<llvm::StringError>(std::move(Error),
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
-  llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
-      llvm::Reloc::Model::PIC_);
+  auto *TargetMachine =
+      static_cast<llvm::LLVMTargetMachine *>(Target->createTargetMachine(
+          PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
+          llvm::Reloc::Model::PIC_));
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
 
   PTXCode.clear();
   llvm::raw_svector_ostream dest(PTXCode);
 
   llvm::legacy::PassManager PM;
-  if (TargetMachine->addPassesToEmitFile(PM, dest, nullptr,
+  llvm::MachineModuleInfo MMI(TargetMachine);
+  if (TargetMachine->addPassesToEmitFile(PM, MMI, dest, nullptr,
                                          llvm::CodeGenFileType::AssemblyFile)) {
     return llvm::make_error<llvm::StringError>(
         "NVPTX backend cannot produce PTX code.",

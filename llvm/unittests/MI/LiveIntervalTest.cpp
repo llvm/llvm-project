@@ -54,8 +54,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
                              std::nullopt, CodeGenOptLevel::Aggressive)));
 }
 
-std::unique_ptr<Module> parseMIR(LLVMContext &Context,
-                                 legacy::PassManagerBase &PM,
+std::unique_ptr<Module> parseMIR(LLVMContext &Context, MachineModuleInfo &MMI,
                                  std::unique_ptr<MIRParser> &MIR,
                                  const LLVMTargetMachine &TM,
                                  StringRef MIRCode) {
@@ -71,10 +70,8 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
 
   M->setDataLayout(TM.createDataLayout());
 
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(&TM);
-  if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
+  if (MIR->parseMachineFunctions(*M, MMI))
     return nullptr;
-  PM.add(MMIWP);
 
   return M;
 }
@@ -212,9 +209,12 @@ static void doTest(StringRef MIRFunc,
     return;
 
   legacy::PassManager PM;
+  MachineModuleInfo MMI(TM.get());
   std::unique_ptr<MIRParser> MIR;
-  std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRFunc);
+  std::unique_ptr<Module> M = parseMIR(Context, MMI, MIR, *TM, MIRFunc);
   ASSERT_TRUE(M);
+
+  PM.add(new MachineModuleInfoWrapperPass(MMI));
 
   PM.add(new TestPassT<AnalysisType>(T, ShouldPass));
 

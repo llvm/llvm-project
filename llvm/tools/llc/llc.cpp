@@ -687,12 +687,12 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     const char *argv0 = argv[0];
     LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
-    MachineModuleInfoWrapperPass *MMIWP =
-        new MachineModuleInfoWrapperPass(&LLVMTM);
+    MachineModuleInfo MMI(&LLVMTM);
 
     // Construct a custom pass pipeline that starts after instruction
     // selection.
     if (!getRunPassNames().empty()) {
+      auto *MMIWP = new MachineModuleInfoWrapperPass(MMI);
       if (!MIR) {
         WithColor::warning(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
@@ -721,17 +721,16 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TPC.setInitialized();
       PM.add(createPrintMIRPass(*OS));
       PM.add(createFreeMachineFunctionPass());
-    } else if (Target->addPassesToEmitFile(
-                   PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                   codegen::getFileType(), NoVerify, MMIWP)) {
+    } else if (Target->addPassesToEmitFile(PM, MMI, *OS,
+                                           DwoOut ? &DwoOut->os() : nullptr,
+                                           codegen::getFileType(), NoVerify)) {
       reportError("target does not support generation of this file type");
     }
 
     const_cast<TargetLoweringObjectFile *>(LLVMTM.getObjFileLowering())
-        ->Initialize(MMIWP->getMMI().getContext(), *Target);
+        ->Initialize(MMI.getContext(), *Target);
     if (MIR) {
-      assert(MMIWP && "Forgot to create MMIWP?");
-      if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
+      if (MIR->parseMachineFunctions(*M, MMI))
         return 1;
     }
 

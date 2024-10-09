@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -46,8 +47,8 @@ Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
     raw_svector_ostream ObjStream(ObjBufferSV);
 
     legacy::PassManager PM;
-    MCContext *Ctx;
-    if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
+    MachineModuleInfo MMI(static_cast<LLVMTargetMachine *>(&TM));
+    if (TM.addPassesToEmitMC(PM, MMI, ObjStream))
       return make_error<StringError>("Target does not support MC emission",
                                      inconvertibleErrorCode());
     PM.run(M);

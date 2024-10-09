@@ -100,6 +100,7 @@ add_llvm_component_library(LLVMCodeGen
   LiveStacks.cpp
   LiveVariables.cpp
   LLVMTargetMachine.cpp
+  LLVMTargetMachineC.cpp
   LocalStackSlotAllocation.cpp
   LoopTraversal.cpp
   LowLevelTypeUtils.cpp

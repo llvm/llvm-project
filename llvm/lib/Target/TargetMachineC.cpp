@@ -18,7 +18,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CBindingWrapping.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/CodeGenCWrappers.h"
 #include "llvm/Target/TargetMachine.h"
@@ -285,68 +284,6 @@ void LLVMSetTargetMachineMachineOutliner(LLVMTargetMachineRef T,
 
 LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T) {
   return wrap(new DataLayout(unwrap(T)->createDataLayout()));
-}
-
-static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
-                                      raw_pwrite_stream &OS,
-                                      LLVMCodeGenFileType codegen,
-                                      char **ErrorMessage) {
-  TargetMachine* TM = unwrap(T);
-  Module* Mod = unwrap(M);
-
-  legacy::PassManager pass;
-
-  std::string error;
-
-  Mod->setDataLayout(TM->createDataLayout());
-
-  CodeGenFileType ft;
-  switch (codegen) {
-    case LLVMAssemblyFile:
-      ft = CodeGenFileType::AssemblyFile;
-      break;
-    default:
-      ft = CodeGenFileType::ObjectFile;
-      break;
-  }
-  if (TM->addPassesToEmitFile(pass, OS, nullptr, ft)) {
-    error = "TargetMachine can't emit a file of this type";
-    *ErrorMessage = strdup(error.c_str());
-    return true;
-  }
-
-  pass.run(*Mod);
-
-  OS.flush();
-  return false;
-}
-
-LLVMBool LLVMTargetMachineEmitToFile(LLVMTargetMachineRef T, LLVMModuleRef M,
-                                     const char *Filename,
-                                     LLVMCodeGenFileType codegen,
-                                     char **ErrorMessage) {
-  std::error_code EC;
-  raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
-  if (EC) {
-    *ErrorMessage = strdup(EC.message().c_str());
-    return true;
-  }
-  bool Result = LLVMTargetMachineEmit(T, M, dest, codegen, ErrorMessage);
-  dest.flush();
-  return Result;
-}
-
-LLVMBool LLVMTargetMachineEmitToMemoryBuffer(LLVMTargetMachineRef T,
-  LLVMModuleRef M, LLVMCodeGenFileType codegen, char** ErrorMessage,
-  LLVMMemoryBufferRef *OutMemBuf) {
-  SmallString<0> CodeString;
-  raw_svector_ostream OStream(CodeString);
-  bool Result = LLVMTargetMachineEmit(T, M, OStream, codegen, ErrorMessage);
-
-  StringRef Data = OStream.str();
-  *OutMemBuf =
-      LLVMCreateMemoryBufferWithMemoryRangeCopy(Data.data(), Data.size(), "");
-  return Result;
 }
 
 char *LLVMGetDefaultTargetTriple(void) {

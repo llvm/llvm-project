@@ -15,6 +15,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/FuzzMutate/Operations.h"
@@ -96,10 +97,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   // Build up a PM to do instruction selection.
   legacy::PassManager PM;
+  MachineModuleInfo MMI(static_cast<LLVMTargetMachine *>(TM.get()));
   TargetLibraryInfoImpl TLII(TM->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   raw_null_ostream OS;
-  TM->addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::Null);
+  TM->addPassesToEmitFile(PM, MMI, OS, nullptr, CodeGenFileType::Null);
   PM.run(*M);
 
   return 0;

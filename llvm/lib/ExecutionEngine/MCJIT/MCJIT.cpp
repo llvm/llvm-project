@@ -8,6 +8,7 @@
 
 #include "MCJIT.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
@@ -157,6 +158,9 @@ std::unique_ptr<MemoryBuffer> MCJIT::emitObject(Module *M) {
   // generateCodeForModule.
 
   legacy::PassManager PM;
+  auto *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
+  MachineModuleInfo MMI(LLVMTM);
+  Ctx = &MMI.getContext();
 
   // The RuntimeDyld will take ownership of this shortly
   SmallVector<char, 4096> ObjBufferSV;
@@ -164,7 +168,7 @@ std::unique_ptr<MemoryBuffer> MCJIT::emitObject(Module *M) {
 
   // Turn the machine code intermediate representation into bytes in memory
   // that may be executed.
-  if (TM->addPassesToEmitMC(PM, Ctx, ObjStream, !getVerifyModules()))
+  if (LLVMTM->addPassesToEmitMC(PM, MMI, ObjStream, !getVerifyModules()))
     report_fatal_error("Target does not support MC emission!");
 
   // Initialize passes.

@@ -234,9 +234,9 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
   // TODO: This only works for targets implementing LLVMTargetMachine.
   const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
-  MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), &MMIWP->getMMI());
+  MachineModuleInfo MMI(&LLVMTM);
+  MachineFunction &MF =
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), &MMI);
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
@@ -249,9 +249,9 @@ Error assembleToStream(const ExegesisTarget &ET,
   auto Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module =
       createModule(Context, TM->createDataLayout());
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(TM.get());
-  MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), &MMIWP.get()->getMMI());
+  MachineModuleInfo MMI(TM.get());
+  MachineFunction &MF =
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), &MMI);
   MF.ensureAlignment(kFunctionAlignment);
 
   // We need to instruct the passes that we're done with SSA and virtual
@@ -308,7 +308,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   MF.getRegInfo().freezeReservedRegs();
 
   // We create the pass manager, run the passes to populate AsmBuffer.
-  MCContext &MCContext = MMIWP->getMMI().getContext();
+  MCContext &MCContext = MMI.getContext();
   legacy::PassManager PM;
 
   TargetLibraryInfoImpl TLII(Triple(Module->getTargetTriple()));
@@ -316,7 +316,7 @@ Error assembleToStream(const ExegesisTarget &ET,
 
   TargetPassConfig *TPC = TM->createPassConfig(PM);
   PM.add(TPC);
-  PM.add(MMIWP.release());
+  PM.add(new llvm::MachineModuleInfoWrapperPass(MMI));
   TPC->printAndVerify("MachineFunctionGenerator::assemble");
   // Add target-specific passes.
   ET.addTargetSpecificPasses(PM);

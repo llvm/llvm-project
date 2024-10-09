@@ -26,6 +26,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -167,8 +168,9 @@ class EmitAssemblyHelper {
   /// Add passes necessary to emit assembly or LLVM IR.
   ///
   /// \return True on success.
-  bool AddEmitPasses(legacy::PassManager &CodeGenPasses, BackendAction Action,
-                     raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS);
+  bool AddEmitPasses(legacy::PassManager &CodeGenPasses, MachineModuleInfo &MMI,
+                     BackendAction Action, raw_pwrite_stream &OS,
+                     raw_pwrite_stream *DwoOS);
 
   std::unique_ptr<llvm::ToolOutputFile> openOutputFile(StringRef Path) {
     std::error_code EC;
@@ -613,6 +615,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
 }
 
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
+                                       MachineModuleInfo &MMI,
                                        BackendAction Action,
                                        raw_pwrite_stream &OS,
                                        raw_pwrite_stream *DwoOS) {
@@ -625,7 +628,7 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
   // this also adds codegenerator level optimization passes.
   CodeGenFileType CGFT = getCodeGenFileType(Action);
 
-  if (TM->addPassesToEmitFile(CodeGenPasses, OS, DwoOS, CGFT,
+  if (TM->addPassesToEmitFile(CodeGenPasses, MMI, OS, DwoOS, CGFT,
                               /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
     Diags.Report(diag::err_fe_unable_to_interface_with_target);
     return false;
@@ -1162,6 +1165,7 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
   legacy::PassManager CodeGenPasses;
+  std::unique_ptr<MachineModuleInfo> MMI;
 
   // Append any output we need to the pass manager.
   switch (Action) {
@@ -1175,7 +1179,9 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       if (!DwoOS)
         return;
     }
-    if (!AddEmitPasses(CodeGenPasses, Action, *OS,
+    MMI = std::make_unique<MachineModuleInfo>(
+        static_cast<LLVMTargetMachine *>(TM.get()));
+    if (!AddEmitPasses(CodeGenPasses, *MMI, Action, *OS,
                        DwoOS ? &DwoOS->os() : nullptr))
       // FIXME: Should we handle this error differently?
       return;
