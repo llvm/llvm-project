@@ -15,7 +15,13 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 20
-#  include <ctgmath> // expected-warning {{'__standard_header_ctgmath' is deprecated: removed in C++20}}
+// expected-warning {{'__standard_header_ccomplex' is deprecated: removed in C++20}}
+// expected-warning {{'__standard_header_ctgmath' is deprecated: removed in C++20}}
+
+#  include <ctgmath>
 #else
-#  include <ctgmath> // expected-warning {{'__standard_header_ctgmath' is deprecated}}
+// expected-warning {{'__standard_header_ccomplex' is deprecated}}
+// expected-warning {{'__standard_header_ctgmath' is deprecated}}
+
+#  include <ctgmath>
 #endif

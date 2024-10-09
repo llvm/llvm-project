@@ -14,4 +14,6 @@
 
 #include "test_macros.h"
 
-#include <ciso646> // expected-warning {{'__standard_header_ciso646' is deprecated: removed in C++20}}
+// expected-warning {{'__standard_header_ciso646' is deprecated: removed in C++20}}
+
+#include <ciso646>
