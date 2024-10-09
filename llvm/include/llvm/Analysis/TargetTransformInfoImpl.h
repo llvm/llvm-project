@@ -973,6 +973,8 @@ public:
     return false;
   }
 
+  bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
+
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     return TargetTransformInfo::VPLegalization(

@@ -34662,29 +34662,6 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
-bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
-  unsigned Bits = Ty->getScalarSizeInBits();
-
-  // XOP has v16i8/v8i16/v4i32/v2i64 variable vector shifts.
-  // Splitting for v32i8/v16i16 on XOP+AVX2 targets is still preferred.
-  if (Subtarget.hasXOP() &&
-      (Bits == 8 || Bits == 16 || Bits == 32 || Bits == 64))
-    return false;
-
-  // AVX2 has vpsllv[dq] instructions (and other shifts) that make variable
-  // shifts just as cheap as scalar ones.
-  if (Subtarget.hasAVX2() && (Bits == 32 || Bits == 64))
-    return false;
-
-  // AVX512BW has shifts such as vpsllvw.
-  if (Subtarget.hasBWI() && Bits == 16)
-    return false;
-
-  // Otherwise, it's significantly cheaper to shift by a scalar amount than by a
-  // fully general vector.
-  return true;
-}
-
 bool X86TargetLowering::isBinOp(unsigned Opcode) const {
   switch (Opcode) {
   // These are non-commutative binops.

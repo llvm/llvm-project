@@ -6895,7 +6895,7 @@ InstructionCost X86TTIImpl::getBranchMispredictPenalty() const {
   return 14;
 }
 
-static bool isVectorShiftByScalarCheap(Type *Ty, const X86Subtarget *ST) {
+bool X86TTIImpl::isVectorShiftByScalarCheap(Type *Ty) const {
   unsigned Bits = Ty->getScalarSizeInBits();
 
   // XOP has v16i8/v8i16/v4i32/v2i64 variable vector shifts.
@@ -6966,7 +6966,7 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
 
   auto *Shuf = dyn_cast<ShuffleVectorInst>(I->getOperand(ShiftAmountOpNum));
   if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0 &&
-      isVectorShiftByScalarCheap(I->getType(), ST)) {
+      isVectorShiftByScalarCheap(I->getType())) {
     Ops.push_back(&I->getOperandUse(ShiftAmountOpNum));
     return true;
   }

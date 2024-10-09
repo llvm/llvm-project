@@ -1752,6 +1752,13 @@ public:
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;
 
+  /// Return true if it's significantly cheaper to shift a vector by a uniform
+  /// scalar than by an amount which will vary across each lane. On x86 before
+  /// AVX2 for example, there is a "psllw" instruction for the former case, but
+  /// no simple instruction for a general "a << b" operation on vectors.
+  /// This should also apply to lowering for vector funnel shifts (rotates).
+  bool isVectorShiftByScalarCheap(Type *Ty) const;
+
   struct VPLegalization {
     enum VPTransform {
       // keep the predicating parameter
@@ -2193,6 +2200,8 @@ public:
   virtual bool
   isProfitableToSinkOperands(Instruction *I,
                              SmallVectorImpl<Use *> &OpsToSink) const = 0;
+
+  virtual bool isVectorShiftByScalarCheap(Type *Ty) const = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
@@ -2967,6 +2976,10 @@ public:
                                   SmallVectorImpl<Use *> &Ops) const override {
     return Impl.isProfitableToSinkOperands(I, Ops);
   };
+
+  bool isVectorShiftByScalarCheap(Type *Ty) const override {
+    return Impl.isVectorShiftByScalarCheap(Ty);
+  }
 
   VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override {

@@ -2860,15 +2860,6 @@ public:
     return Value == 0;
   }
 
-  /// Return true if it's significantly cheaper to shift a vector by a uniform
-  /// scalar than by an amount which will vary across each lane. On x86 before
-  /// AVX2 for example, there is a "psllw" instruction for the former case, but
-  /// no simple instruction for a general "a << b" operation on vectors.
-  /// This should also apply to lowering for vector funnel shifts (rotates).
-  virtual bool isVectorShiftByScalarCheap(Type *Ty) const {
-    return false;
-  }
-
   /// Given a shuffle vector SVI representing a vector splat, return a new
   /// scalar type of size equal to SVI's scalar type if the new type is more
   /// profitable. Returns nullptr otherwise. For example under MVE float splats

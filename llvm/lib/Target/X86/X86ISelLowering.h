@@ -1404,10 +1404,6 @@ namespace llvm {
 
     bool isLegalStoreImmediate(int64_t Imm) const override;
 
-    /// This is used to enable splatted operand transforms for vector shifts
-    /// and vector funnel shifts.
-    bool isVectorShiftByScalarCheap(Type *Ty) const override;
-
     /// Add x86-specific opcodes to the default list.
     bool isBinOp(unsigned Opcode) const override;
 

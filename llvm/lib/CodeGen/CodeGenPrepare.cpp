@@ -7274,7 +7274,7 @@ bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
   // We can't do this effectively in SDAG because we may not be able to
   // determine if the select operands are splats from within a basic block.
   Type *Ty = Shift->getType();
-  if (!Ty->isVectorTy() || !TLI->isVectorShiftByScalarCheap(Ty))
+  if (!Ty->isVectorTy() || !TTI->isVectorShiftByScalarCheap(Ty))
     return false;
   Value *Cond, *TVal, *FVal;
   if (!match(Shift->getOperand(1),
@@ -7309,7 +7309,7 @@ bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
   // We can't do this effectively in SDAG because we may not be able to
   // determine if the select operands are splats from within a basic block.
   Type *Ty = Fsh->getType();
-  if (!Ty->isVectorTy() || !TLI->isVectorShiftByScalarCheap(Ty))
+  if (!Ty->isVectorTy() || !TTI->isVectorShiftByScalarCheap(Ty))
     return false;
   Value *Cond, *TVal, *FVal;
   if (!match(Fsh->getOperand(2),
