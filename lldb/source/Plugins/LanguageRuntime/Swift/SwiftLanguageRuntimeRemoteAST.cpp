@@ -220,8 +220,8 @@ ConstString SwiftLanguageRuntimeImpl::GetDynamicTypeName_ClassRemoteAST(
 }
 
 std::optional<std::pair<CompilerType, Address>>
-SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ProtocolRemoteAST(
-    ValueObject &in_value, CompilerType protocol_type, bool use_local_buffer,
+SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ExistentialRemoteAST(
+    ValueObject &in_value, CompilerType existential_type, bool use_local_buffer,
     lldb::addr_t existential_address) {
   // Dynamic type resolution in RemoteAST might pull in other Swift
   // modules, so use the scratch context where such operations are
@@ -245,7 +245,7 @@ SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ProtocolRemoteAST(
   swift::remote::RemoteAddress remote_existential(existential_address);
   auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
   auto swift_type =
-      llvm::expectedToStdOptional(swift_ast_ctx->GetSwiftType(protocol_type))
+      llvm::expectedToStdOptional(swift_ast_ctx->GetSwiftType(existential_type))
           .value_or(swift::Type());
   if (!swift_type)
     return {};

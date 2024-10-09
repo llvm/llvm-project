@@ -1945,24 +1945,24 @@ bool SwiftLanguageRuntimeImpl::IsValidErrorValue(ValueObject &in_value) {
   return true;
 }
 
-bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
-    ValueObject &in_value, CompilerType protocol_type,
+bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Existential(
+    ValueObject &in_value, CompilerType existential_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
   Log *log(GetLog(LLDBLog::Types));
   auto tss =
-      protocol_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+      existential_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!tss) {
     if (log)
       log->Printf("Could not get type system swift");
     return false;
   }
 
-  const swift::reflection::TypeRef *protocol_typeref =
-      GetTypeRef(protocol_type, &tss->GetTypeSystemSwiftTypeRef());
-  if (!protocol_typeref) {
+  const swift::reflection::TypeRef *existential_typeref =
+      GetTypeRef(existential_type, &tss->GetTypeSystemSwiftTypeRef());
+  if (!existential_typeref) {
     if (log)
-      log->Printf("Could not get protocol typeref");
+      log->Printf("Could not get existential typeref");
     return false;
   }
 
@@ -2006,7 +2006,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
     return false;
 
   auto pair = reflection_ctx->ProjectExistentialAndUnwrapClass(
-      remote_existential, *protocol_typeref,
+      remote_existential, *existential_typeref,
       tss->GetTypeSystemSwiftTypeRef().GetDescriptorFinder());
   if (use_local_buffer)
     PopLocalBuffer();
@@ -2029,8 +2029,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
 #ifndef NDEBUG
   if (ModuleList::GetGlobalModuleListProperties()
           .GetSwiftValidateTypeSystem()) {
-    auto reference_pair = GetDynamicTypeAndAddress_ProtocolRemoteAST(
-        in_value, protocol_type, use_local_buffer, existential_address);
+    auto reference_pair = GetDynamicTypeAndAddress_ExistentialRemoteAST(
+        in_value, existential_type, use_local_buffer, existential_address);
     assert(pair.has_value() >= reference_pair.has_value() &&
            "RemoteAST and runtime diverge");
 
@@ -2755,7 +2755,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
     success = GetDynamicTypeAndAddress_ExistentialMetatype(
         in_value, val_type, use_dynamic, class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsProtocol))
-    success = GetDynamicTypeAndAddress_Protocol(in_value, val_type, use_dynamic,
+    success = GetDynamicTypeAndAddress_Existential(in_value, val_type, use_dynamic,
                                                 class_type_or_name, address);
   else {
     CompilerType bound_type;
@@ -2778,7 +2778,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
                                                use_dynamic, class_type_or_name,
                                                address, static_value_type);
     } else if (subst_type_info.AnySet(eTypeIsProtocol)) {
-      success = GetDynamicTypeAndAddress_Protocol(
+      success = GetDynamicTypeAndAddress_Existential(
           in_value, bound_type, use_dynamic, class_type_or_name, address);
     } else {
       success = GetDynamicTypeAndAddress_Value(in_value, bound_type,
