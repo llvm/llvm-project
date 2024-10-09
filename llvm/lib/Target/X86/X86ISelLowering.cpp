@@ -46915,6 +46915,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
 
+    // select(pcmpeq(and(X,Pow2),0),A,B) -> select(pcmpeq(and(X,Pow2),Pow2),B,A)
+    if (Cond.getOpcode() == X86ISD::PCMPEQ &&
+        Cond.getOperand(0).getOpcode() == ISD::AND &&
+        ISD::isBuildVectorAllZeros(Cond.getOperand(1).getNode()) &&
+        isConstantPowerOf2(Cond.getOperand(0).getOperand(1),
+                           Cond.getScalarValueSizeInBits(),
+                           /*AllowUndefs=*/true) &&
+        Cond.hasOneUse()) {
+      Cond = DAG.getNode(X86ISD::PCMPEQ, DL, CondVT, Cond.getOperand(0),
+                         Cond.getOperand(0).getOperand(1));
+      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
+    }
+
     // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
     // signbit.
     if (Cond.getOpcode() == X86ISD::PCMPGT &&
