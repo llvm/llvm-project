@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___RANGES_ENUMERATE_VIEW_H
 #define _LIBCPP___RANGES_ENUMERATE_VIEW_H
 
+#include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
 #include <__iterator/concepts.h>
