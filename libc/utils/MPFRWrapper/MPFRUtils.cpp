@@ -498,6 +498,12 @@ public:
     return result;
   }
 
+  MPFRNumber sinpif16() const {
+    MPFRNumber result(*this);
+    mpfr_sinpif16(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber sinh() const {
     MPFRNumber result(*this);
     mpfr_sinh(result.value, value, mpfr_rounding);
