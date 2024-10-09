@@ -1698,6 +1698,131 @@ define void @PR46531(ptr %x, ptr %y, ptr %z) {
   ret void
 }
 
+define <64 x i8> @PR110875(<32 x i8> %a0, <32 x i8> %a1, i64 %a2) {
+; AVX1-LABEL: PR110875:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq %rdi, %xmm2
+; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; AVX1-NEXT:    vpshufhw {{.*#+}} xmm3 = xmm2[0,1,2,3,4,4,5,5]
+; AVX1-NEXT:    vpshufhw {{.*#+}} xmm4 = xmm2[0,1,2,3,6,6,7,7]
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; AVX1-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[2,2,3,3,6,6,7,7]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[0,0,1,1,4,5,6,7]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[2,2,3,3,4,5,6,7]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
+; AVX1-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[0,0,1,1,4,4,5,5]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm4 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX1-NEXT:    vandps %ymm4, %ymm2, %ymm2
+; AVX1-NEXT:    vandps %ymm4, %ymm3, %ymm3
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; AVX1-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX1-NEXT:    vpcmpeqb %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqb %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vpcmpeqb %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqb %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm4 = [20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20]
+; AVX1-NEXT:    vandnps %ymm4, %ymm2, %ymm5
+; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm5, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm4, %ymm3, %ymm2
+; AVX1-NEXT:    vandps %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR110875:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %rdi, %xmm2
+; AVX2-NEXT:    vpbroadcastq %xmm2, %ymm2
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm3 = ymm2[4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,22,22,22,22,22,22,22,22,23,23,23,23,23,23,23,23]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm3
+; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX2-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm3
+; AVX2-NEXT:    vpcmpeqb %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm4 = [20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20]
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vpblendvb %ymm3, %ymm1, %ymm4, %ymm1
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: PR110875:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm1
+; AVX512F-NEXT:    vmovq %rdi, %xmm0
+; AVX512F-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm2 = ymm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19]
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,22,22,22,22,22,22,22,22,23,23,23,23,23,23,23,23]
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
+; AVX512F-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
+; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: PR110875:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpbroadcastq %rdi, %ymm0
+; AVX512VL-NEXT:    vpshufb {{.*#+}} ymm2 = ymm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19]
+; AVX512VL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,22,22,22,22,22,22,22,22,23,23,23,23,23,23,23,23]
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
+; AVX512VL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: PR110875:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovq %rdi, %xmm2
+; XOP-NEXT:    vpunpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; XOP-NEXT:    vpshufhw {{.*#+}} xmm3 = xmm2[0,1,2,3,4,4,5,5]
+; XOP-NEXT:    vpshufhw {{.*#+}} xmm4 = xmm2[0,1,2,3,6,6,7,7]
+; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; XOP-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[2,2,3,3,6,6,7,7]
+; XOP-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm2[0,0,1,1,4,5,6,7]
+; XOP-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[2,2,3,3,4,5,6,7]
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
+; XOP-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[0,0,1,1,4,4,5,5]
+; XOP-NEXT:    vbroadcastsd {{.*#+}} ymm4 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; XOP-NEXT:    vandps %ymm4, %ymm2, %ymm2
+; XOP-NEXT:    vandps %ymm4, %ymm3, %ymm3
+; XOP-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; XOP-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; XOP-NEXT:    vpcomeqb %xmm5, %xmm4, %xmm4
+; XOP-NEXT:    vpcomeqb %xmm5, %xmm3, %xmm3
+; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; XOP-NEXT:    vpcomeqb %xmm5, %xmm4, %xmm4
+; XOP-NEXT:    vpcomeqb %xmm5, %xmm2, %xmm2
+; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; XOP-NEXT:    vbroadcastss {{.*#+}} ymm4 = [20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20]
+; XOP-NEXT:    vpcmov %ymm2, %ymm4, %ymm0, %ymm0
+; XOP-NEXT:    vpcmov %ymm3, %ymm4, %ymm1, %ymm1
+; XOP-NEXT:    retq
+  %concat = shufflevector <32 x i8> %a0, <32 x i8> %a1, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  %scl = insertelement <1 x i64> poison, i64 %a2, i64 0
+  %splat = shufflevector <1 x i64> %scl, <1 x i64> poison, <8 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison>
+  %ref = bitcast <8 x i64> %splat to <64 x i8>
+  %shuf = shufflevector <64 x i8> %ref, <64 x i8> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 19, i32 19, i32 19, i32 19, i32 19, i32 19, i32 19, i32 19, i32 36, i32 36, i32 36, i32 36, i32 36, i32 36, i32 36, i32 36, i32 37, i32 37, i32 37, i32 37, i32 37, i32 37, i32 37, i32 37, i32 54, i32 54, i32 54, i32 54, i32 54, i32 54, i32 54, i32 54, i32 55, i32 55, i32 55, i32 55, i32 55, i32 55, i32 55, i32 55>
+  %mask = and <64 x i8> %shuf, <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 -128>
+  %cmp = icmp eq <64 x i8> %mask, zeroinitializer
+  %res = select <64 x i1> %cmp, <64 x i8> %concat, <64 x i8> <i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20>
+  ret <64 x i8> %res
+}
+
 attributes #0 = { "no-nans-fp-math"="true" }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; AVX: {{.*}}
