@@ -136,6 +136,7 @@ bool DependencyGraph::hasDep(Instruction *SrcI, Instruction *DstI) {
   case DependencyType::None:
     return false;
   }
+  llvm_unreachable("Unknown DependencyType enum");
 }
 
 void DependencyGraph::scanAndAddDeps(DGNode &DstN,
