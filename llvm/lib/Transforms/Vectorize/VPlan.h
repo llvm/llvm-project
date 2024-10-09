@@ -1670,7 +1670,7 @@ public:
   Type *getResultType() const { return ResultTy; }
 
   /// Return to name of the intrinsic as string.
-  StringRef getIntrinsicName() const;
+  std::string getIntrinsicName() const;
 
   /// Returns true if the intrinsic may read from memory.
   bool mayReadFromMemory() const { return MayReadFromMemory; }

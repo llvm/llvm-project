@@ -4389,18 +4389,17 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         OS << (Pair.second == Subset.front().second ? "" : ", ") << Pair.second;
       OS << "):";
       if (Opcode == Instruction::Call) {
-        StringRef Name = "";
+        OS << " call to ";
         if (auto *Int = dyn_cast<VPWidenIntrinsicRecipe>(R)) {
-          Name = Int->getIntrinsicName();
+          OS << Int->getIntrinsicName();
         } else {
           auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
           Function *CalledFn =
               WidenCall ? WidenCall->getCalledScalarFunction()
                         : cast<Function>(R->getOperand(R->getNumOperands() - 1)
                                              ->getLiveInIRValue());
-          Name = CalledFn->getName();
+          OS << CalledFn->getName();
         }
-        OS << " call to " << Name;
       } else
         OS << " " << Instruction::getOpcodeName(Opcode);
       reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,

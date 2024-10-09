@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Intrinsics.h"
+#include "llvm-c/Core.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Parallel.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -125,6 +127,87 @@ TEST(IntrinsicNameLookup, MSBuiltinLookup) {
   };
   for (const auto &[Builtin, Target, ID] : MSTests)
     EXPECT_EQ(ID, getIntrinsicForMSBuiltin(Target, Builtin));
+}
+
+// Test C API to get/copy LLVM intrinsic name.
+TEST(IntrinsicNameLookup, LLVMIntrinsicGetCopyNameSimple) {
+  static constexpr struct {
+    Intrinsic::ID ID;
+    const char *Name;
+  } Tests[] = {{Intrinsic::not_intrinsic, "not_intrinsic"},
+               {Intrinsic::assume, "llvm.assume"},
+               {Intrinsic::coro_free, "llvm.coro.free"},
+               {Intrinsic::aarch64_break, "llvm.aarch64.break"},
+               {Intrinsic::x86_int, "llvm.x86.int"}};
+
+  for (auto [ID, ExpectedName] : Tests) {
+    size_t NameSize = 0;
+    const char *CName = LLVMIntrinsicGetName(ID, &NameSize);
+    StringRef Name(CName, NameSize);
+
+    // Verify we get correct name.
+    EXPECT_EQ(Name, ExpectedName);
+    const char *CName1 = LLVMIntrinsicGetName(ID, &NameSize);
+
+    // Verify we get the same pointer and length the second time.
+    EXPECT_EQ(CName, CName1);
+    EXPECT_EQ(NameSize, Name.size());
+  }
+
+  for (auto [ID, ExpectedName] : Tests) {
+    size_t NameSize = 0;
+    // Now test the copy API.
+    char *CName = LLVMIntrinsicCopyName(ID, &NameSize);
+    StringRef Name(CName, NameSize);
+
+    // Verify we get correct name.
+    EXPECT_EQ(Name, ExpectedName);
+
+    // Verify we get the different pointer and same length the second time.
+    char *CName1 = LLVMIntrinsicCopyName(ID, &NameSize);
+    EXPECT_NE(CName, CName1);
+    EXPECT_EQ(NameSize, Name.size());
+
+    free(CName);
+    free(CName1);
+  }
+}
+
+// Test correctness of `LLVMIntrinsicGetName` when exercised in a multi-threaded
+// manner.
+TEST(IntrinsicNameLookup, LLVMIntrinsicGetNameMultiThreaded) {
+  constexpr unsigned NUM_TASKS = 16;
+  constexpr unsigned STEP = 40;
+  std::map<unsigned, StringRef> LookupResults[NUM_TASKS];
+
+  parallelFor(0, NUM_TASKS, [&](size_t Idx) {
+    for (unsigned ID = 0; ID < Intrinsic::num_intrinsics; ID += STEP) {
+      if (LLVMIntrinsicIsOverloaded(ID))
+        continue;
+      size_t NameSize;
+      const char *Name = LLVMIntrinsicGetName(ID, &NameSize);
+      LookupResults[Idx].insert({ID, StringRef(Name, NameSize)});
+    }
+  });
+
+  // Make sure we have atleast a few intrinsics to test.
+  for (const auto &Map : LookupResults)
+    EXPECT_GE(Map.size(), 10U);
+
+  // Validate data.
+  for (unsigned ID = 0; ID < Intrinsic::num_intrinsics; ID += STEP) {
+    if (LLVMIntrinsicIsOverloaded(ID))
+      continue;
+    size_t NameSize;
+    const char *CName = LLVMIntrinsicGetName(ID, &NameSize);
+    StringRef Name(CName, NameSize);
+    for (const auto &Map : LookupResults) {
+      auto Iter = Map.find(ID);
+      ASSERT_NE(Iter, Map.end());
+      EXPECT_EQ(Iter->second.size(), Name.size());
+      EXPECT_EQ(Iter->second.data(), Name.data());
+    }
+  }
 }
 
 TEST_F(IntrinsicsTest, InstrProfInheritance) {
