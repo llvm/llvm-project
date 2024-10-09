@@ -1571,14 +1571,11 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MI,
                                     ArrayRef<CalleeSavedInfo> CSI,
                                     unsigned StmOpc, unsigned StrOpc,
-                                    bool NoGap, bool (*Func)(unsigned, bool),
-                                    unsigned NumAlignedDPRCS2Regs,
-                                    unsigned MIFlags) const {
+                                    bool NoGap,
+                                    function_ref<bool(unsigned)> Func) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-  ARMSubtarget::PushPopSplitVariation PushPopSplit =
-      STI.getPushPopSplitVariation(MF);
 
   DebugLoc DL;
 
@@ -1590,11 +1587,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
     unsigned LastReg = 0;
     for (; i != 0; --i) {
       Register Reg = CSI[i-1].getReg();
-      if (!(Func)(Reg, PushPopSplit == ARMSubtarget::SplitR7))
-        continue;
-
-      // D-registers in the aligned area DPRCS2 are NOT spilled here.
-      if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
+      if (!Func(Reg))
         continue;
 
       const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1625,7 +1618,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
     if (Regs.size() > 1 || StrOpc== 0) {
       MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StmOpc), ARM::SP)
                                     .addReg(ARM::SP)
-                                    .setMIFlags(MIFlags)
+                                    .setMIFlags(MachineInstr::FrameSetup)
                                     .add(predOps(ARMCC::AL));
       for (unsigned i = 0, e = Regs.size(); i < e; ++i)
         MIB.addReg(Regs[i].first, getKillRegState(Regs[i].second));
@@ -1633,7 +1626,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
       BuildMI(MBB, MI, DL, TII.get(StrOpc), ARM::SP)
           .addReg(Regs[0].first, getKillRegState(Regs[0].second))
           .addReg(ARM::SP)
-          .setMIFlags(MIFlags)
+          .setMIFlags(MachineInstr::FrameSetup)
           .addImm(-4)
           .add(predOps(ARMCC::AL));
     }
@@ -1652,8 +1645,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
                                    MutableArrayRef<CalleeSavedInfo> CSI,
                                    unsigned LdmOpc, unsigned LdrOpc,
                                    bool isVarArg, bool NoGap,
-                                   bool (*Func)(unsigned, bool),
-                                   unsigned NumAlignedDPRCS2Regs) const {
+                                   function_ref<bool(unsigned)> Func) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -1688,12 +1680,9 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     for (; i != 0; --i) {
       CalleeSavedInfo &Info = CSI[i-1];
       Register Reg = Info.getReg();
-      if (!(Func)(Reg, PushPopSplit == ARMSubtarget::SplitR7))
+      if (!Func(Reg))
         continue;
 
-      // The aligned reloads from area DPRCS2 are not inserted here.
-      if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
-        continue;
       if (Reg == ARM::LR && !isTailCall && !isVarArg && !isInterrupt &&
           !isCmseEntry && !isTrap && AFI->getArgumentStackToRestore() == 0 &&
           STI.hasV5TOps() && MBB.succ_empty() && !hasPAC &&
@@ -2039,6 +2028,7 @@ bool ARMFrameLowering::spillCalleeSavedRegisters(
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
+  const ARMBaseRegisterInfo *RegInfo = STI.getRegisterInfo();
 
   unsigned PushOpc = AFI->isThumbFunction() ? ARM::t2STMDB_UPD : ARM::STMDB_UPD;
   unsigned PushOneOpc = AFI->isThumbFunction() ?
@@ -2060,20 +2050,33 @@ bool ARMFrameLowering::spillCalleeSavedRegisters(
         .addImm(-4)
         .add(predOps(ARMCC::AL));
   }
+
+  auto CheckRegArea = [PushPopSplit, NumAlignedDPRCS2Regs,
+                       RegInfo](unsigned Reg, SpillArea TestArea) {
+    return getSpillArea(Reg, PushPopSplit, NumAlignedDPRCS2Regs, RegInfo) ==
+           TestArea;
+  };
+  auto IsGPRCS1 = [&CheckRegArea](unsigned Reg) {
+    return CheckRegArea(Reg, SpillArea::GPRCS1);
+  };
+  auto IsGPRCS2 = [&CheckRegArea](unsigned Reg) {
+    return CheckRegArea(Reg, SpillArea::GPRCS2);
+  };
+  auto IsDPRCS1 = [&CheckRegArea](unsigned Reg) {
+    return CheckRegArea(Reg, SpillArea::DPRCS1);
+  };
+
+  // Windows SEH requires the floating-point registers to be pushed between the
+  // two blocks of GPRs in some situations. In all other cases, they are pushed
+  // below the GPRs.
   if (PushPopSplit == ARMSubtarget::SplitR11WindowsSEH) {
-    emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false,
-                 &isSplitFPArea1Register, 0, MachineInstr::FrameSetup);
-    emitPushInst(MBB, MI, CSI, FltOpc, 0, true, &isARMArea3Register,
-                 NumAlignedDPRCS2Regs, MachineInstr::FrameSetup);
-    emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false,
-                 &isSplitFPArea2Register, 0, MachineInstr::FrameSetup);
+    emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false, IsGPRCS1);
+    emitPushInst(MBB, MI, CSI, FltOpc, 0, true, IsDPRCS1);
+    emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false, IsGPRCS2);
   } else {
-    emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false, &isARMArea1Register,
-                 0, MachineInstr::FrameSetup);
-    emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false, &isARMArea2Register,
-                 0, MachineInstr::FrameSetup);
-    emitPushInst(MBB, MI, CSI, FltOpc, 0, true, &isARMArea3Register,
-                 NumAlignedDPRCS2Regs, MachineInstr::FrameSetup);
+    emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false, IsGPRCS1);
+    emitPushInst(MBB, MI, CSI, PushOpc, PushOneOpc, false, IsGPRCS2);
+    emitPushInst(MBB, MI, CSI, FltOpc, 0, true, IsDPRCS1);
   }
 
   // The code above does not insert spill code for the aligned DPRCS2 registers.
@@ -2093,6 +2096,8 @@ bool ARMFrameLowering::restoreCalleeSavedRegisters(
 
   MachineFunction &MF = *MBB.getParent();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+  const ARMBaseRegisterInfo *RegInfo = STI.getRegisterInfo();
+
   bool isVarArg = AFI->getArgRegsSaveSize() > 0;
   unsigned NumAlignedDPRCS2Regs = AFI->getNumAlignedDPRCS2Regs();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
@@ -2107,20 +2112,30 @@ bool ARMFrameLowering::restoreCalleeSavedRegisters(
   unsigned LdrOpc =
       AFI->isThumbFunction() ? ARM::t2LDR_POST : ARM::LDR_POST_IMM;
   unsigned FltOpc = ARM::VLDMDIA_UPD;
+
+  auto CheckRegArea = [PushPopSplit, NumAlignedDPRCS2Regs,
+                       RegInfo](unsigned Reg, SpillArea TestArea) {
+    return getSpillArea(Reg, PushPopSplit, NumAlignedDPRCS2Regs, RegInfo) ==
+           TestArea;
+  };
+  auto IsGPRCS1 = [&CheckRegArea](unsigned Reg) {
+    return CheckRegArea(Reg, SpillArea::GPRCS1);
+  };
+  auto IsGPRCS2 = [&CheckRegArea](unsigned Reg) {
+    return CheckRegArea(Reg, SpillArea::GPRCS2);
+  };
+  auto IsDPRCS1 = [&CheckRegArea](unsigned Reg) {
+    return CheckRegArea(Reg, SpillArea::DPRCS1);
+  };
+
   if (PushPopSplit == ARMSubtarget::SplitR11WindowsSEH) {
-    emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false,
-                &isSplitFPArea2Register, 0);
-    emitPopInst(MBB, MI, CSI, FltOpc, 0, isVarArg, true, &isARMArea3Register,
-                NumAlignedDPRCS2Regs);
-    emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false,
-                &isSplitFPArea1Register, 0);
+    emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false, IsGPRCS2);
+    emitPopInst(MBB, MI, CSI, FltOpc, 0, isVarArg, true, IsDPRCS1);
+    emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false, IsGPRCS1);
   } else {
-    emitPopInst(MBB, MI, CSI, FltOpc, 0, isVarArg, true, &isARMArea3Register,
-                NumAlignedDPRCS2Regs);
-    emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false,
-                &isARMArea2Register, 0);
-    emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false,
-                &isARMArea1Register, 0);
+    emitPopInst(MBB, MI, CSI, FltOpc, 0, isVarArg, true, IsDPRCS1);
+    emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false, IsGPRCS2);
+    emitPopInst(MBB, MI, CSI, PopOpc, LdrOpc, isVarArg, false, IsGPRCS1);
   }
 
   return true;
