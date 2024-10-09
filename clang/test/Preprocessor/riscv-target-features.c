@@ -1450,13 +1450,13 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMEPMP-EXT %s
 // CHECK-SMEPMP-EXT: __riscv_smepmp  1000000{{$}}
 
-// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32ismrnmi1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMRNMI-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64ismrnmi1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMRNMI-EXT %s
-// CHECK-SMRNMI-EXT: __riscv_smrnmi 1000000{{$}}
+// CHECK-SMRNMI-EXT: __riscv_smrnmi  1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32izfa -E -dM %s \
