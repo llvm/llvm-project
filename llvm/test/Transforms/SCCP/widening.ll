@@ -406,7 +406,7 @@ define void @loop_with_header_2(i32 %x) {
 ; IPSCCP-NEXT:    br i1 [[C_1]], label [[LOOP_BODY]], label [[EXIT:%.*]]
 ; IPSCCP:       loop.body:
 ; IPSCCP-NEXT:    call void @use(i1 true)
-; IPSCCP-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; IPSCCP-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; IPSCCP-NEXT:    br label [[LOOP_HEADER]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    ret void
@@ -706,7 +706,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[TMP27]], [[TMP3]]
 ; IPSCCP-NEXT:    br i1 [[TMP28]], label [[BB31]], label [[BB29]]
 ; IPSCCP:       bb29:
-; IPSCCP-NEXT:    [[TMP30]] = add nuw nsw i32 [[TMP11]], 1
+; IPSCCP-NEXT:    [[TMP30]] = add nsw i32 [[TMP11]], 1
 ; IPSCCP-NEXT:    br label [[BB8]]
 ; IPSCCP:       bb31:
 ; IPSCCP-NEXT:    [[TMP32:%.*]] = phi ptr [ [[TMP17]], [[BB23]] ], [ [[TMP17]], [[BB25]] ], [ [[TMP9]], [[BB8]] ]

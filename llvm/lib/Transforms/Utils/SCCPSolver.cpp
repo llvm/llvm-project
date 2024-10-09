@@ -455,53 +455,6 @@ public:
       const SmallVector<Value *, 8> &IncomingValuesFromActiveBranches);
 };
 
-// The MonotonicityTracker class evaluates whether a variable x, which is
-// subject to various functional transformations within a loop, maintains a
-// consistent pattern of monotonicity. Monotonicity, in this context, refers
-// to the property of a sequence where its elements consistently increase
-// or decrease. When a variable x enters a loop and is transformed by a series
-// of operations before it merges back at a PHI node, this class checks if all
-// transformations applied to x preserve the same type of monotonicity
-// (either increasing or decreasing). If the monotonicity is consistent and
-// increasing, for instance, it can be inferred that the value of x at the end
-// of the loop will always be greater than its initial value at the start
-// of the loop.
-class MonotonicityTracker {
-public:
-  enum class Monotonicity {
-    UNKNOWN,
-    CONSTANT,
-    INCREASING,
-    DECREASING,
-  };
-
-  Monotonicity getMonotonicity(Value *V) const {
-    if (isa<Constant>(V))
-      return Monotonicity::CONSTANT;
-    auto It = MonotonicityMap.find(V);
-    if (It == MonotonicityMap.end())
-      return Monotonicity::UNKNOWN;
-    return It->second;
-  }
-
-  void processSSACopyIntrinsic(CallBase &CB) {
-    Value *Op = CB.getOperand(0);
-    Monotonicity OpMonotonicity = getMonotonicity(Op);
-    if (OpMonotonicity == Monotonicity::UNKNOWN)
-      return;
-    MonotonicityMap[&CB] = OpMonotonicity;
-  }
-
-  void processPhiNode(
-      PHINode &PN,
-      const SmallVector<Value *, 8> &IncomingValuesFromActiveBranches);
-
-  void processBinaryOp(Instruction &I);
-
-private:
-  DenseMap<Value *, Monotonicity> MonotonicityMap;
-};
-
 /// Helper class for SCCPSolver. This implements the instruction visitor and
 /// holds all the state.
 class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
@@ -570,8 +523,6 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   DenseMap<Value *, SmallSetVector<User *, 2>> AdditionalUsers;
 
   GuaranteedBoundsPropagator BoundsPropagator;
-
-  MonotonicityTracker MonotonicityTrackerObj;
 
   LLVMContext &Ctx;
 
@@ -1038,11 +989,6 @@ public:
     }
     Invalidated.clear();
   }
-
-  bool mergeInWithBoundsOverrideForPhi(
-      PHINode &PN,
-      const SmallVector<Value *, 8> &IncomingValuesFromActiveBranches,
-      ValueLatticeElement &PhiState);
 };
 
 } // namespace llvm
@@ -1351,65 +1297,6 @@ bool SCCPInstVisitor::isEdgeFeasible(BasicBlock *From, BasicBlock *To) const {
   return KnownFeasibleEdges.count(Edge(From, To));
 }
 
-bool SCCPInstVisitor::mergeInWithBoundsOverrideForPhi(
-    PHINode &PN,
-    const SmallVector<Value *, 8> &IncomingValuesFromActiveBranches,
-    ValueLatticeElement &PhiState) {
-  if (!PhiState.isConstantRange(false))
-    return false;
-  auto &OldState = getValueState(&PN);
-  if (!OldState.isConstantRange(false))
-    return false;
-  ConstantRange OldStateRange = OldState.getConstantRange();
-  ConstantRange NewStateRange = PhiState.getConstantRange();
-  unsigned NumActiveIncoming = IncomingValuesFromActiveBranches.size();
-  if (OldStateRange == NewStateRange ||
-      OldState.getNumRangeExtensions() <= NumActiveIncoming)
-    return false;
-
-  // At this point we visited Phi node too many times and need
-  // to extend the range
-  MonotonicityTracker::Monotonicity Monotonicity =
-      MonotonicityTrackerObj.getMonotonicity(&PN);
-
-  // Monotonicity cannot be CONSTANT, otherwise the range should not
-  // have changed
-  if (Monotonicity == MonotonicityTracker::Monotonicity::INCREASING &&
-      OldStateRange.getUpper() == NewStateRange.getUpper()) {
-    mergeInValue(&PN, PhiState);
-    return true;
-  }
-
-  if (Monotonicity == MonotonicityTracker::Monotonicity::DECREASING &&
-      OldStateRange.getLower() == NewStateRange.getLower()) {
-    mergeInValue(&PN, PhiState);
-    return true;
-  }
-
-  auto OptionalBestBounds =
-      BoundsPropagator.processPhiNode(&PN, IncomingValuesFromActiveBranches);
-  if (!OptionalBestBounds)
-    return false;
-  if (Monotonicity == MonotonicityTracker::Monotonicity::INCREASING) {
-    mergeInValue(
-        &PN, ValueLatticeElement::getRange(ConstantRange(
-                 NewStateRange.getLower(), OptionalBestBounds->getUpper())));
-    return true;
-  }
-
-  if (Monotonicity == MonotonicityTracker::Monotonicity::DECREASING &&
-      OptionalBestBounds) {
-    mergeInValue(
-        &PN, ValueLatticeElement::getRange(ConstantRange(
-                 OptionalBestBounds->getLower(), NewStateRange.getUpper())));
-    return true;
-  }
-
-  PhiState = ValueLatticeElement::getRange(*OptionalBestBounds);
-  mergeInValue(&PN, PhiState);
-  return true;
-}
-
 // visit Implementations - Something changed in this instruction, either an
 // operand made a transition, or the instruction is newly executable.  Change
 // the value type of I to reflect these changes if appropriate.  This method
@@ -1461,14 +1348,26 @@ void SCCPInstVisitor::visitPHINode(PHINode &PN) {
       break;
   }
 
-  MonotonicityTrackerObj.processPhiNode(PN, IncomingValuesFromActiveBranches);
-
   // If we have visited this PHI node too many times, we first check
   // if there is a known bounds we could use. If not, the state will
   // be maked as overdefined.
-  if (mergeInWithBoundsOverrideForPhi(PN, IncomingValuesFromActiveBranches,
-                                      PhiState))
-    return;
+  auto OptionalBestBounds =
+      BoundsPropagator.processPhiNode(&PN, IncomingValuesFromActiveBranches);
+  auto &OldState = getValueState(&PN);
+  if (OptionalBestBounds && PhiState.isConstantRange() &&
+      OldState.isConstantRange()) {
+    ConstantRange OldStateRange = OldState.getConstantRange();
+    ConstantRange NewStateRange = PhiState.getConstantRange();
+    if (OldStateRange != NewStateRange &&
+        OldState.getNumRangeExtensions() > NumActiveIncoming) {
+      PhiState = ValueLatticeElement::getRange(*OptionalBestBounds);
+      mergeInValue(&PN, PhiState);
+      ValueLatticeElement &PhiStateRef = getValueState(&PN);
+      PhiStateRef.setNumRangeExtensions(
+          std::max(NumActiveIncoming, PhiStateRef.getNumRangeExtensions()));
+      return;
+    }
+  }
 
   // We allow up to 1 range extension per active incoming value and one
   // additional extension. Note that we manually adjust the number of range
@@ -1742,8 +1641,6 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
 
   if (V1State.isOverdefined() && V2State.isOverdefined())
     return (void)markOverdefined(&I);
-
-  MonotonicityTrackerObj.processBinaryOp(I);
 
   // If either of the operands is a constant, try to fold it to a constant.
   // TODO: Use information from notconstant better.
@@ -2050,7 +1947,6 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
   if (auto *II = dyn_cast<IntrinsicInst>(&CB)) {
     if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
-      MonotonicityTrackerObj.processSSACopyIntrinsic(CB);
       if (ValueState[&CB].isOverdefined())
         return;
 
@@ -2507,89 +2403,4 @@ std::optional<ConstantRange> GuaranteedBoundsPropagator::processPhiNode(
   if (PN->getNumIncomingValues() == IncomingValuesFromActiveBranches.size())
     insertOrUpdate(PN, R);
   return R;
-}
-
-void MonotonicityTracker::processPhiNode(
-    PHINode &PN,
-    const SmallVector<Value *, 8> &IncomingValuesFromActiveBranches) {
-  Monotonicity MI = Monotonicity::UNKNOWN;
-  // If all incoming values have the same monotonicity, then the phi
-  // node will be assinged the same monotonicity as well. However, if
-  // there are different monotonicities or unknown for some incoming values,
-  // then the phi node will be assigned UNKNOWN.
-  for (Value *IncomingValue : IncomingValuesFromActiveBranches) {
-    auto IncomingMonotonicity = getMonotonicity(IncomingValue);
-    if (IncomingMonotonicity == Monotonicity::UNKNOWN) {
-      MI = IncomingMonotonicity;
-      break;
-    }
-    if (IncomingMonotonicity == Monotonicity::CONSTANT &&
-        MI != Monotonicity::UNKNOWN)
-      continue;
-    if (MI != IncomingMonotonicity && MI != Monotonicity::UNKNOWN &&
-        MI != Monotonicity::CONSTANT) {
-      MI = Monotonicity::UNKNOWN;
-      break;
-    }
-    if (MI == Monotonicity::UNKNOWN || MI == Monotonicity::CONSTANT)
-      MI = IncomingMonotonicity;
-  }
-  MonotonicityMap[&PN] = MI;
-}
-
-static bool increasingOrConst(MonotonicityTracker::Monotonicity M) {
-  return M == MonotonicityTracker::Monotonicity::INCREASING ||
-         M == MonotonicityTracker::Monotonicity::CONSTANT;
-}
-
-static bool decreasingOrConst(MonotonicityTracker::Monotonicity M) {
-  return M == MonotonicityTracker::Monotonicity::DECREASING ||
-         M == MonotonicityTracker::Monotonicity::CONSTANT;
-}
-
-void MonotonicityTracker::processBinaryOp(Instruction &I) {
-  auto *BO = dyn_cast<OverflowingBinaryOperator>(&I);
-  if (!I.getType()->isIntegerTy())
-    return;
-  if (!BO || !(BO->hasNoSignedWrap() || BO->hasNoUnsignedWrap()))
-    return;
-  if (isa<Constant>(BO->getOperand(0)) && isa<Constant>(BO->getOperand(1))) {
-    MonotonicityMap[&I] = Monotonicity::CONSTANT;
-    return;
-  }
-  if (!isa<Constant>(BO->getOperand(0)) && !isa<Constant>(BO->getOperand(1))) {
-    MonotonicityMap[&I] = Monotonicity::UNKNOWN;
-    return;
-  }
-  // Here one operand must be a constant and the other must be a variable.
-  ConstantInt *C;
-  Value *NonConstOp;
-  if (isa<Constant>(BO->getOperand(0))) {
-    C = cast<ConstantInt>(BO->getOperand(0));
-    NonConstOp = BO->getOperand(1);
-  } else {
-    C = cast<ConstantInt>(BO->getOperand(1));
-    NonConstOp = BO->getOperand(0);
-  }
-  Monotonicity NonConstOpMonotonicity = getMonotonicity(NonConstOp);
-  if (BO->getOpcode() == Instruction::Add) {
-    if (increasingOrConst(NonConstOpMonotonicity) && !C->isNegative()) {
-      MonotonicityMap[&I] = Monotonicity::INCREASING;
-      return;
-    } else if (decreasingOrConst(NonConstOpMonotonicity) && C->isNegative()) {
-      MonotonicityMap[&I] = Monotonicity::DECREASING;
-      return;
-    }
-  }
-  // Handle subtraction only if it is in the form of "x - constant".
-  if (BO->getOpcode() == Instruction::Sub &&
-      !isa<Constant>(BO->getOperand(0))) {
-    if (decreasingOrConst(NonConstOpMonotonicity) && !C->isNegative()) {
-      MonotonicityMap[&I] = Monotonicity::DECREASING;
-      return;
-    } else if (increasingOrConst(NonConstOpMonotonicity) && C->isNegative()) {
-      MonotonicityMap[&I] = Monotonicity::INCREASING;
-      return;
-    }
-  }
 }
