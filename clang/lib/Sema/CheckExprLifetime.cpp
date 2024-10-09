@@ -404,7 +404,7 @@ shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
   if (LHSRecordDecl->hasAttr<PointerAttr>())
     return true;
 
-  if (Ctor->getConstructor()->getNumParams() != 1 ||
+  if (Ctor->getConstructor()->getNumParams() < 1 ||
       !isContainerOfPointer(LHSRecordDecl))
     return false;
 
