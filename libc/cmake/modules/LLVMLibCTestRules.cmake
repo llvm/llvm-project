@@ -68,6 +68,7 @@ function(get_object_files_for_test result skipped_entrypoints_list)
         endif()
         get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
         if(object_file_raw)
+          # TODO: Remove this once we stop suffixing the target with ".__internal__"
           if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test.__unit__" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test.__unit__")
             string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
           endif()
