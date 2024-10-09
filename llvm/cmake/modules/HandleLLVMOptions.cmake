@@ -196,6 +196,16 @@ else()
   message(FATAL_ERROR "Unknown value for LLVM_ABI_BREAKING_CHECKS: \"${LLVM_ABI_BREAKING_CHECKS}\"!")
 endif()
 
+string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
+
+if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
+  set( ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
+  # The DISABLED setting is default and requires no additional defines.
+else()
+  message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
+endif()
+
 if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
@@ -581,7 +591,7 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
-  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     # Enable standards-conforming preprocessor.
     # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
     append("/Zc:preprocessor" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

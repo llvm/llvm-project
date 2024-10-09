@@ -953,9 +953,20 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
                      SVEEmitter &Emitter, StringRef SVEGuard,
                      StringRef SMEGuard)
     : Name(Name.str()), LLVMName(LLVMName), Proto(Proto.str()),
-      BaseTypeSpec(BT), Class(Class), SVEGuard(SVEGuard.str()),
-      SMEGuard(SMEGuard.str()), MergeSuffix(MergeSuffix.str()),
+      BaseTypeSpec(BT), Class(Class), MergeSuffix(MergeSuffix.str()),
       BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks) {
+
+  auto FormatGuard = [](StringRef Guard, StringRef Base) -> std::string {
+    if (Guard.contains('|'))
+      return Base.str() + ",(" + Guard.str() + ")";
+    if (Guard.empty() || Guard == Base || Guard.starts_with(Base.str() + ","))
+      return Guard.str();
+    return Base.str() + "," + Guard.str();
+  };
+
+  this->SVEGuard = FormatGuard(SVEGuard, "sve");
+  this->SMEGuard = FormatGuard(SMEGuard, "sme");
+
   // Types[0] is the return value.
   for (unsigned I = 0; I < (getNumParams() + 1); ++I) {
     char Mod;
