@@ -250,8 +250,8 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
 /// and we generate code outside/in front of that region. Hence, we generate the
 /// code for the SDiv/SRem operands in front of the analyzed region and then
 /// create a new SDiv/SRem operation there too.
-struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
-  friend struct SCEVVisitor<ScopExpander, const SCEV *>;
+struct ScopExpander final : SCEVVisitor<ScopExpander, SCEVUse> {
+  friend struct SCEVVisitor<ScopExpander, SCEVUse>;
 
   explicit ScopExpander(const Region &R, ScalarEvolution &SE, Function *GenFn,
                         ScalarEvolution &GenSE, const DataLayout &DL,
@@ -261,20 +261,20 @@ struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
         VMap(VMap), LoopMap(LoopMap), RTCBB(RTCBB), GenSE(GenSE), GenFn(GenFn) {
   }
 
-  Value *expandCodeFor(const SCEV *E, Type *Ty, Instruction *IP) {
+  Value *expandCodeFor(SCEVUse E, Type *Ty, Instruction *IP) {
     assert(isInGenRegion(IP) &&
            "ScopExpander assumes to be applied to generated code region");
-    const SCEV *GenE = visit(E);
+    SCEVUse GenE = visit(E);
     return Expander.expandCodeFor(GenE, Ty, IP);
   }
 
-  const SCEV *visit(const SCEV *E) {
+  SCEVUse visit(SCEVUse E) {
     // Cache the expansion results for intermediate SCEV expressions. A SCEV
     // expression can refer to an operand multiple times (e.g. "x*x), so
     // a naive visitor takes exponential time.
     if (SCEVCache.count(E))
       return SCEVCache[E];
-    const SCEV *Result = SCEVVisitor::visit(E);
+    SCEVUse Result = SCEVVisitor::visit(E);
     SCEVCache[E] = Result;
     return Result;
   }
@@ -286,7 +286,7 @@ private:
   ValueMapT *VMap;
   LoopToScevMapT *LoopMap;
   BasicBlock *RTCBB;
-  DenseMap<const SCEV *, const SCEV *> SCEVCache;
+  DenseMap<SCEVUse, SCEVUse> SCEVCache;
 
   ScalarEvolution &GenSE;
   Function *GenFn;
@@ -304,8 +304,8 @@ private:
 
   bool isInGenRegion(Instruction *Inst) { return !isInOrigRegion(Inst); }
 
-  const SCEV *visitGenericInst(const SCEVUnknown *E, Instruction *Inst,
-                               Instruction *IP) {
+  SCEVUse visitGenericInst(const SCEVUnknown *E, Instruction *Inst,
+                           Instruction *IP) {
     if (!Inst || isInGenRegion(Inst))
       return E;
 
@@ -315,7 +315,7 @@ private:
     auto *InstClone = Inst->clone();
     for (auto &Op : Inst->operands()) {
       assert(GenSE.isSCEVable(Op->getType()));
-      auto *OpSCEV = GenSE.getSCEV(Op);
+      SCEVUse OpSCEV = GenSE.getSCEV(Op);
       auto *OpClone = expandCodeFor(OpSCEV, Op->getType(), IP);
       InstClone->replaceUsesOfWith(Op, OpClone);
     }
@@ -325,12 +325,12 @@ private:
     return GenSE.getSCEV(InstClone);
   }
 
-  const SCEV *visitUnknown(const SCEVUnknown *E) {
+  SCEVUse visitUnknown(const SCEVUnknown *E) {
 
     // If a value mapping was given try if the underlying value is remapped.
     Value *NewVal = VMap ? VMap->lookup(E->getValue()) : nullptr;
     if (NewVal) {
-      auto *NewE = GenSE.getSCEV(NewVal);
+      SCEVUse NewE = GenSE.getSCEV(NewVal);
 
       // While the mapped value might be different the SCEV representation might
       // not be. To this end we will check before we go into recursion here.
@@ -359,8 +359,8 @@ private:
                   Inst->getOpcode() != Instruction::SDiv))
       return visitGenericInst(E, Inst, IP);
 
-    const SCEV *LHSScev = GenSE.getSCEV(Inst->getOperand(0));
-    const SCEV *RHSScev = GenSE.getSCEV(Inst->getOperand(1));
+    SCEVUse LHSScev = GenSE.getSCEV(Inst->getOperand(0));
+    SCEVUse RHSScev = GenSE.getSCEV(Inst->getOperand(1));
 
     if (!GenSE.isKnownNonZero(RHSScev))
       RHSScev = GenSE.getUMaxExpr(RHSScev, GenSE.getConstant(E->getType(), 1));
@@ -378,80 +378,80 @@ private:
   /// GenSE and the new operands returned by the traversal.
   ///
   ///{
-  const SCEV *visitConstant(const SCEVConstant *E) { return E; }
-  const SCEV *visitVScale(const SCEVVScale *E) { return E; }
-  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
+  SCEVUse visitConstant(const SCEVConstant *E) { return E; }
+  SCEVUse visitVScale(const SCEVVScale *E) { return E; }
+  SCEVUse visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
     return GenSE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
   }
-  const SCEV *visitTruncateExpr(const SCEVTruncateExpr *E) {
+  SCEVUse visitTruncateExpr(const SCEVTruncateExpr *E) {
     return GenSE.getTruncateExpr(visit(E->getOperand()), E->getType());
   }
-  const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *E) {
+  SCEVUse visitZeroExtendExpr(const SCEVZeroExtendExpr *E) {
     return GenSE.getZeroExtendExpr(visit(E->getOperand()), E->getType());
   }
-  const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *E) {
+  SCEVUse visitSignExtendExpr(const SCEVSignExtendExpr *E) {
     return GenSE.getSignExtendExpr(visit(E->getOperand()), E->getType());
   }
-  const SCEV *visitUDivExpr(const SCEVUDivExpr *E) {
-    auto *RHSScev = visit(E->getRHS());
+  SCEVUse visitUDivExpr(const SCEVUDivExpr *E) {
+    SCEVUse RHSScev = visit(E->getRHS());
     if (!GenSE.isKnownNonZero(RHSScev))
       RHSScev = GenSE.getUMaxExpr(RHSScev, GenSE.getConstant(E->getType(), 1));
     return GenSE.getUDivExpr(visit(E->getLHS()), RHSScev);
   }
-  const SCEV *visitAddExpr(const SCEVAddExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+  SCEVUse visitAddExpr(const SCEVAddExpr *E) {
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getAddExpr(NewOps);
   }
-  const SCEV *visitMulExpr(const SCEVMulExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+  SCEVUse visitMulExpr(const SCEVMulExpr *E) {
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getMulExpr(NewOps);
   }
-  const SCEV *visitUMaxExpr(const SCEVUMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+  SCEVUse visitUMaxExpr(const SCEVUMaxExpr *E) {
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMaxExpr(NewOps);
   }
-  const SCEV *visitSMaxExpr(const SCEVSMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+  SCEVUse visitSMaxExpr(const SCEVSMaxExpr *E) {
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMaxExpr(NewOps);
   }
-  const SCEV *visitUMinExpr(const SCEVUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+  SCEVUse visitUMinExpr(const SCEVUMinExpr *E) {
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps);
   }
-  const SCEV *visitSMinExpr(const SCEVSMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+  SCEVUse visitSMinExpr(const SCEVSMinExpr *E) {
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMinExpr(NewOps);
   }
-  const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+  SCEVUse visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps, /*Sequential=*/true);
   }
-  const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+  SCEVUse visitAddRecExpr(const SCEVAddRecExpr *E) {
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
 
     const Loop *L = E->getLoop();
-    const SCEV *GenLRepl = LoopMap ? LoopMap->lookup(L) : nullptr;
+    SCEVUse GenLRepl = LoopMap ? LoopMap->lookup(L) : nullptr;
     if (!GenLRepl)
       return GenSE.getAddRecExpr(NewOps, L, E->getNoWrapFlags());
 
     // evaluateAtIteration replaces the SCEVAddrExpr with a direct calculation.
-    const SCEV *Evaluated =
+    SCEVUse Evaluated =
         SCEVAddRecExpr::evaluateAtIteration(NewOps, GenLRepl, GenSE);
 
     // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
@@ -464,10 +464,9 @@ private:
 
 Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                             llvm::Function *GenFn, ScalarEvolution &GenSE,
-                            const DataLayout &DL, const char *Name,
-                            const SCEV *E, Type *Ty, Instruction *IP,
-                            ValueMapT *VMap, LoopToScevMapT *LoopMap,
-                            BasicBlock *RTCBB) {
+                            const DataLayout &DL, const char *Name, SCEVUse E,
+                            Type *Ty, Instruction *IP, ValueMapT *VMap,
+                            LoopToScevMapT *LoopMap, BasicBlock *RTCBB) {
   ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, DL, Name, VMap,
                         LoopMap, RTCBB);
   return Expander.expandCodeFor(E, Ty, IP);
@@ -564,7 +563,7 @@ Loop *polly::getRegionNodeLoop(RegionNode *RN, LoopInfo &LI) {
 static bool hasVariantIndex(GetElementPtrInst *Gep, Loop *L, Region &R,
                             ScalarEvolution &SE) {
   for (const Use &Val : llvm::drop_begin(Gep->operands(), 1)) {
-    const SCEV *PtrSCEV = SE.getSCEVAtScope(Val, L);
+    SCEVUse PtrSCEV = SE.getSCEVAtScope(Val, L);
     Loop *OuterLoop = R.outermostLoopInRegion(L);
     if (!SE.isLoopInvariant(PtrSCEV, OuterLoop))
       return true;
@@ -595,7 +594,7 @@ bool polly::isHoistableLoad(LoadInst *LInst, Region &R, LoopInfo &LI,
     }
   }
 
-  const SCEV *PtrSCEV = SE.getSCEVAtScope(Ptr, L);
+  SCEVUse PtrSCEV = SE.getSCEVAtScope(Ptr, L);
   while (L && R.contains(L)) {
     if (!SE.isLoopInvariant(PtrSCEV, L))
       return false;
@@ -665,7 +664,7 @@ bool polly::canSynthesize(const Value *V, const Scop &S, ScalarEvolution *SE,
     return false;
 
   const InvariantLoadsSetTy &ILS = S.getRequiredInvariantLoads();
-  if (const SCEV *Scev = SE->getSCEVAtScope(const_cast<Value *>(V), Scope))
+  if (SCEVUse Scev = SE->getSCEVAtScope(const_cast<Value *>(V), Scope))
     if (!isa<SCEVCouldNotCompute>(Scev))
       if (!hasScalarDepsInsideRegion(Scev, &S.getRegion(), Scope, false, ILS))
         return true;
