@@ -332,7 +332,7 @@ handleMakeDependencyToolResult(const std::string &Input,
 
 template <typename Container>
 static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
-  return [&JOS, Strings = std::forward<Container>(Strings)]() {
+  return [&JOS, Strings = std::forward<Container>(Strings)] {
     for (StringRef Str : Strings)
       JOS.value(Str);
   };
@@ -349,9 +349,9 @@ static auto toJSONSorted(llvm::json::OStream &JOS,
 // Leaving these be will simply preserve the import order.
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
   llvm::sort(V);
-  return [&JOS, V = std::move(V)]() {
+  return [&JOS, V = std::move(V)] {
     for (const ModuleID &MID : V)
-      JOS.object([&]() {
+      JOS.object([&] {
         JOS.attribute("context-hash", StringRef(MID.ContextHash));
         JOS.attribute("module-name", StringRef(MID.ModuleName));
       });
@@ -363,9 +363,9 @@ static auto toJSONSorted(llvm::json::OStream &JOS,
   llvm::sort(LinkLibs, [](const auto &LHS, const auto &RHS) {
     return LHS.Library < RHS.Library;
   });
-  return [&JOS, LinkLibs = std::move(LinkLibs)]() {
+  return [&JOS, LinkLibs = std::move(LinkLibs)] {
     for (const auto &LL : LinkLibs)
-      JOS.object([&]() {
+      JOS.object([&] {
         JOS.attribute("isFramework", LL.IsFramework);
         JOS.attribute("link-name", StringRef(LL.Library));
       });
@@ -460,11 +460,11 @@ public:
 
     llvm::json::OStream JOS(OS, /*IndentSize=*/2);
 
-    JOS.object([&]() {
-      JOS.attributeArray("modules", [&]() {
+    JOS.object([&] {
+      JOS.attributeArray("modules", [&] {
         for (auto &&ModID : ModuleIDs) {
           auto &MD = Modules[ModID];
-          JOS.object([&]() {
+          JOS.object([&] {
             JOS.attributeArray("clang-module-deps",
                                toJSONSorted(JOS, MD.ClangModuleDeps));
             JOS.attribute("clang-modulemap-file",
@@ -480,13 +480,13 @@ public:
         }
       });
 
-      JOS.attributeArray("translation-units", [&]() {
+      JOS.attributeArray("translation-units", [&] {
         for (auto &&I : Inputs) {
-          JOS.object([&]() {
-            JOS.attributeArray("commands", [&]() {
+          JOS.object([&] {
+            JOS.attributeArray("commands", [&] {
               if (I.DriverCommandLine.empty()) {
                 for (const auto &Cmd : I.Commands) {
-                  JOS.object([&]() {
+                  JOS.object([&] {
                     JOS.attribute("clang-context-hash",
                                   StringRef(I.ContextHash));
                     JOS.attributeArray("clang-module-deps",
@@ -500,7 +500,7 @@ public:
                   });
                 }
               } else {
-                JOS.object([&]() {
+                JOS.object([&] {
                   JOS.attribute("clang-context-hash", StringRef(I.ContextHash));
                   JOS.attributeArray("clang-module-deps",
                                      toJSONSorted(JOS, I.ModuleDeps));
