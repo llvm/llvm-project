@@ -1268,13 +1268,38 @@ func.func @hoist_vector_transfer_ops(
 
 // -----
 
-// CHECK-LABEL: func @hoist_vector_transfer_ops
+// CHECK-LABEL: func @do_not_hoist_vector_transfer_ops_loop_dep
 // CHECK-NOT: vector.transfer_read
 // CHECK: scf.for
 // CHECK: vector.transfer_read
 // CHECK: arith.addf
 // CHECK: scf.yield
-func.func @hoist_vector_transfer_ops_memref(
+func.func @do_not_hoist_vector_transfer_ops_loop_dep(
+                            %a : tensor<128x128xf32>, 
+                            %lb : index,
+                            %ub : index,
+                            %step : index,
+                            %ida : index) -> vector<4x4xf32> {
+  %cst_0 = arith.constant 0.0 : f32
+  %cst = arith.constant dense<0.0> : vector<4x4xf32>
+  %final = 
+  scf.for %i = %lb to %ub step %step iter_args(%acc = %cst) -> vector<4x4xf32> {
+    %read = vector.transfer_read %a[%ida, %i], %cst_0 : tensor<128x128xf32>, vector<4x4xf32>
+    %out = arith.addf %read, %acc : vector<4x4xf32>
+    scf.yield %out : vector<4x4xf32>
+  }
+  func.return %final : vector<4x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @do_not_hoist_vector_transfer_ops_memref
+// CHECK-NOT: vector.transfer_read
+// CHECK: scf.for
+// CHECK: vector.transfer_read
+// CHECK: arith.addf
+// CHECK: scf.yield
+func.func @do_not_hoist_vector_transfer_ops_memref(
                             %a : memref<128x128xf32>, 
                             %lb : index,
                             %ub : index,
