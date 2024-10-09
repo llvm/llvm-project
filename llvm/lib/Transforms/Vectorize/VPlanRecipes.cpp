@@ -2074,17 +2074,23 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
 InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   RecurKind RdxKind = RdxDesc.getRecurrenceKind();
-  // TODO: Support any-of reduction and in-loop reduction
-  assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) &&
-         "Not support any-of reduction in VPlan-based cost model currently.");
-
-  Type *ElementTy = Ctx.Types.inferScalarType(this->getVPSingleValue());
-  assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
-         "Infered type and recurrence type mismatch.");
-
+  Type *ElementTy = Ctx.Types.inferScalarType(this);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
+
+  // TODO: Support any-of reduction and in-loop reductions.
+  assert(
+      (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
+       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+      "Any-of reduction not implemented in VPlan-based cost model currently.");
+  assert(
+      (!Ctx.isInLoopReduction(getUnderlyingInstr(), VF, VectorTy) ||
+       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+      "In-loop reduction not implemented in VPlan-based cost model currently.");
+
+  assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
+         "Infered type and recurrence type mismatch.");
 
   // Cost = Reduction cost + BinOp cost
   InstructionCost Cost =

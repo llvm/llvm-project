@@ -718,6 +718,10 @@ struct VPCostContext {
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
+
+  /// Return true if the \p UI is part of the in-loop reduction.
+  bool isInLoopReduction(const Instruction *UI, ElementCount VF,
+                         Type *VectorTy) const;
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
