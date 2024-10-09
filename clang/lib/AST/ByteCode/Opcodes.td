@@ -773,6 +773,9 @@ def InvalidDeclRef : Opcode {
 }
 
 def SizelessVectorElementSize : Opcode;
+def InvalidShuffleVectorIndex : Opcode {
+  let Args = [ArgUint32];
+}
 
 def Assume : Opcode;
 
