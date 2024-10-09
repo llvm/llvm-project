@@ -4,7 +4,7 @@ struct foo {
   int a;
 };
 
-//CHECK: {{.*}}: error: bad type for named register variable
+//CHECK: {{.*}}: error: unsupported type for named register variable
 //CHECK-NEXT: {{^}}register struct foo bar asm("esp");
 //CHECK-NEXT: {{^}}         ^~~~~~~~~~{{$}}
 register struct foo bar asm("esp");
