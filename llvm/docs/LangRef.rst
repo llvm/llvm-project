@@ -17027,11 +17027,11 @@ floating-point type. Not all targets support all types however.
 
 ::
 
-      declare i64 @llvm.lround.i64.f32(float %Val)
-      declare i64 @llvm.lround.i64.f64(double %Val)
-      declare i64 @llvm.lround.i64.f80(float %Val)
-      declare i64 @llvm.lround.i64.f128(double %Val)
-      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+      declare i64 @llvm.llround.i64.f32(float %Val)
+      declare i64 @llvm.llround.i64.f64(double %Val)
+      declare i64 @llvm.llround.i64.f80(float %Val)
+      declare i64 @llvm.llround.i64.f128(double %Val)
+      declare i64 @llvm.llround.i64.ppcf128(double %Val)
 
 Overview:
 """""""""

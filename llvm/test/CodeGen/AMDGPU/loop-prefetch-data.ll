@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-loop-prefetch < %s | FileCheck --check-prefix=GFX12 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-loop-prefetch -mattr=+safe-smem-prefetch < %s | FileCheck --check-prefix=GFX12-SPREFETCH %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-loop-prefetch -mattr=+safe-smem-prefetch -amdgpu-software-hazard-mode < %s | FileCheck --check-prefix=GFX12ES2-SPREFETCH %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1210 -amdgpu-loop-prefetch -mattr=+safe-smem-prefetch < %s | FileCheck --check-prefix=GFX1210 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1210 -amdgpu-loop-prefetch < %s | FileCheck --check-prefix=GFX1210 %s
 
 define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s, i32 %n) {
 ; GFX12-LABEL: copy_flat:
@@ -103,7 +103,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX1210-NEXT:  .LBB0_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    flat_load_b128 v[2:5], v0, s[2:3] offset:-176
-; GFX1210-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
+; GFX1210-NEXT:    flat_prefetch_b8 v0, s[2:3]
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
@@ -231,7 +231,7 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX1210-NEXT:  .LBB1_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    global_load_b128 v[2:5], v0, s[2:3] offset:-176
-; GFX1210-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
+; GFX1210-NEXT:    global_prefetch_b8 v0, s[2:3]
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
@@ -362,8 +362,8 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX1210-NEXT:  .LBB2_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    global_prefetch_b8 v0, s[2:3] offset:176
 ; GFX1210-NEXT:    s_load_b128 s[8:11], s[2:3], 0x0
-; GFX1210-NEXT:    s_prefetch_data s[2:3], 0xb0, null, 0
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
