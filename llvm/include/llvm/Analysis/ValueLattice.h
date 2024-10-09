@@ -202,7 +202,7 @@ public:
       break;
     case constantfprange:
     case constantfprange_including_undef:
-      new (&FPRange) ConstantFPRange(Other.FPRange);
+      new (&FPRange) ConstantFPRange(std::move(Other.FPRange));
       NumRangeExtensions = Other.NumRangeExtensions;
       break;
     case constant:
