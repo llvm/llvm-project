@@ -268,10 +268,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.make:
         configuration.make_path = args.make
-    elif platform_system == "FreeBSD" or platform_system == "NetBSD":
-        configuration.make_path = "gmake"
-    else:
-        configuration.make_path = "make"
     if " " in configuration.make_path:
         configuration.make_path = f'"{configuration.make_path}"'
 
