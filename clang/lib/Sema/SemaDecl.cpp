@@ -7877,7 +7877,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   ProcessDeclAttributes(S, NewVD, D);
 
   if (getLangOpts().HLSL)
-    HLSL().ProcessResourceBindingOnDecl(NewVD);
+    HLSL().ActOnVariableDeclarator(NewVD);
 
   // FIXME: This is probably the wrong location to be doing this and we should
   // probably be doing this for more attributes (especially for function

@@ -30,11 +30,59 @@ class ParsedAttr;
 class Scope;
 class VarDecl;
 
+using llvm::dxil::ResourceClass;
+
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
 bool CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
     QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
+
+enum class BindingType : uint8_t { NotAssigned, Explicit, Implicit };
+
+// DeclBindingInfo struct stores information about required/assigned resource
+// binding onon a declaration for specific resource class.
+struct DeclBindingInfo {
+  const VarDecl *Decl;
+  ResourceClass ResClass;
+  int Size; // -1 == unbounded array
+  const HLSLResourceBindingAttr *Attr;
+  BindingType BindType;
+
+  DeclBindingInfo(const VarDecl *Decl, ResourceClass ResClass, int Size = 0,
+                  BindingType BindType = BindingType::NotAssigned,
+                  const HLSLResourceBindingAttr *Attr = nullptr)
+      : Decl(Decl), ResClass(ResClass), Size(Size), Attr(Attr),
+        BindType(BindType) {}
+
+  void setBindingAttribute(HLSLResourceBindingAttr *A, BindingType BT) {
+    assert(Attr == nullptr && BindType == BindingType::NotAssigned &&
+           "binding attribute already assigned");
+    Attr = A;
+    BindType = BT;
+  }
+};
+
+// ResourceBindings class stores information about all resource bindings
+// in a shader. It is used for binding diagnostics and implicit binding
+// assigments.
+class ResourceBindings {
+public:
+  DeclBindingInfo *addDeclBindingInfo(const VarDecl *VD, ResourceClass ResClass,
+                                      int Size);
+  DeclBindingInfo *getDeclBindingInfo(const VarDecl *VD,
+                                      ResourceClass ResClass);
+  bool hasBindingInfoForDecl(const VarDecl *VD);
+
+private:
+  // List of all resource bindings required by the shader.
+  // A global declaration can have multiple bindings for different
+  // resource classes. They are all stored sequentially in this list.
+  // The DeclToBindingListIndex hashtable maps a declaration to the
+  // index of the first binding info in the list.
+  llvm::SmallVector<DeclBindingInfo> BindingsList;
+  llvm::DenseMap<const VarDecl *, unsigned> DeclToBindingListIndex;
+};
 
 class SemaHLSL : public SemaBase {
 public:
@@ -56,6 +104,7 @@ public:
   mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
+  void ActOnVariableDeclarator(VarDecl *VD);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
@@ -63,7 +112,6 @@ public:
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
-  void ProcessResourceBindingOnDecl(VarDecl *D);
 
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
@@ -104,6 +152,15 @@ private:
   llvm::DenseMap<const HLSLAttributedResourceType *,
                  HLSLAttributedResourceLocInfo>
       LocsForHLSLAttributedResources;
+
+  // List of all resource bindings
+  ResourceBindings Bindings;
+
+private:
+  void FindResourcesOnVarDecl(VarDecl *D);
+  void FindResourcesOnUserRecordDecl(const VarDecl *VD, const RecordType *RT,
+                                     int Size);
+  void ProcessExplicitBindingsOnDecl(VarDecl *D);
 };
 
 } // namespace clang
