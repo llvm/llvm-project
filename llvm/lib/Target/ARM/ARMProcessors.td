@@ -362,6 +362,16 @@ def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
                                                          FeatureHasNoBranchPredictor,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
+def : ProcessorModel<"star-mc1", CortexM4Model,         [ARMv8mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16_SP,
+                                                         FeaturePrefLoopAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureHasSlowFPVFMx,
+                                                         FeatureUseMISched,
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeatureFixCMSE_CVE_2021_35465]>;
+
 def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16_SP,
