@@ -10,6 +10,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -30,6 +31,10 @@ public:
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
+  bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
+  bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void writePltHeader(uint8_t *buf) const override;
@@ -57,6 +62,8 @@ Hexagon::Hexagon(Ctx &ctx) : TargetInfo(ctx) {
   tlsGotRel = R_HEX_TPREL_32;
   tlsModuleIndexRel = R_HEX_DTPMOD_32;
   tlsOffsetRel = R_HEX_DTPREL_32;
+
+  needsThunks = true;
 }
 
 uint32_t Hexagon::calcEFlags() const {
@@ -238,6 +245,37 @@ static uint32_t findMaskR16(uint32_t insn) {
 }
 
 static void or32le(uint8_t *p, int32_t v) { write32le(p, read32le(p) | v); }
+
+bool Hexagon::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
+  int64_t offset = dst - src;
+  switch (type) {
+  case llvm::ELF::R_HEX_B22_PCREL:
+  case llvm::ELF::R_HEX_PLT_B22_PCREL:
+  case llvm::ELF::R_HEX_GD_PLT_B22_PCREL:
+  case llvm::ELF::R_HEX_LD_PLT_B22_PCREL:
+    return llvm::isInt<22>(offset >> 2);
+  case llvm::ELF::R_HEX_B15_PCREL:
+    return llvm::isInt<15>(offset >> 2);
+    break;
+  case llvm::ELF::R_HEX_B13_PCREL:
+    return llvm::isInt<13>(offset >> 2);
+    break;
+  case llvm::ELF::R_HEX_B9_PCREL:
+    return llvm::isInt<9>(offset >> 2);
+  default:
+    return true;
+  }
+  llvm::report_fatal_error(StringRef(
+      "unsupported relocation type used in isInRange: " + toString(type)));
+}
+
+bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                         uint64_t branchAddr, const Symbol &s,
+                         int64_t a) const {
+  // FIXME: needsThunk() should return false for !inRange() &&
+  // !enoughSpaceForThunk() ?
+  return !ctx.target->inBranchRange(type, branchAddr, s.getVA(a));
+}
 
 void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
                        uint64_t val) const {
