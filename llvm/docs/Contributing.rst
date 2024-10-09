@@ -105,9 +105,16 @@ get the attention of potential reviewers by CC'ing them in a comment -- just
 A reviewer may request changes or ask questions during the review. If you are
 uncertain on how to provide test cases, documentation, etc., feel free to ask
 for guidance during the review. Please address the feedback and re-post an
-updated version of your patch. This cycle continues until all requests and comments
-have been addressed and a reviewer accepts the patch with a `Looks good to me` or `LGTM`.
-Once that is done the change can be committed. If you do not have commit
+updated version of your patch. This cycle continues until all requests and
+comments have been addressed and the reviewer accepts the patch with a `Looks
+good to me` or `LGTM`. With multiple active reviewers (i.e. reviewers who left
+comments), it is good practice to seek `LGTM` from all of them. Alternatively, 
+when e.g. some reviewers go radio silent and you are blocked:
+* any reviewer can confirm that all comments from other reviewers have been
+  addressed and the change is ready to land, or
+* if you decide not to wait for explicit `LGTM` from other reviewers, please
+  leave a short justification.
+Once a change has been approved, it can be committed. If you do not have commit
 access, please let people know during the review and someone should commit it
 on your behalf.
 
