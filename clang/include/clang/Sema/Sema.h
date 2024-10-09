@@ -13008,13 +13008,10 @@ public:
   ///
   /// \param DC In the event we don't HAVE a declaration yet, we instead provide
   ///  the decl context where it will be created.  In this case, the \p
-  ///  Innermost should likely be provided.  If \p ND is non-null and \p
-  ///  Innermost is NULL, this is ignored.
+  ///  Innermost should likely be provided.  If \p ND is non-null, this is ignored.
   ///
   /// \param Innermost if non-NULL, specifies a template argument list for the
-  /// template declaration passed as \p ND. The next declaration context would
-  /// be switched to \p DC if present; otherwise, it would be the semantic
-  /// declaration context of \p ND.
+  /// template declaration passed as \p ND.
   ///
   /// \param RelativeToPrimary true if we should get the template
   /// arguments relative to the primary template, even when we're
