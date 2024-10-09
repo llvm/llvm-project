@@ -13,6 +13,8 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -296,6 +298,15 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             defOp = v.getDefiningOp();
             return;
           }
+          // If load is inside target and it points to mapped item,
+          // continue tracking.
+          Operation *loadMemrefOp = op.getMemref().getDefiningOp();
+          if (llvm::isa<fir::DeclareOp>(loadMemrefOp) &&
+              llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
+            v = op.getMemref();
+            defOp = v.getDefiningOp();
+            return;
+          }
           // No further tracking for addresses loaded from memory for now.
           type = SourceKind::Indirect;
           breakFromLoop = true;
@@ -319,6 +330,32 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          // If declare operation is inside omp target region,
+          // continue alias analysis outside the target region
+          if (llvm::isa<omp::TargetOp>(op->getParentOp())) {
+            omp::TargetOp targetOp =
+                llvm::cast<omp::TargetOp>(op->getParentOp());
+            auto mapClauseOwner =
+                llvm::dyn_cast<omp::MapClauseOwningOpInterface>(
+                    targetOp.getOperation());
+            if (!mapClauseOwner) {
+              defOp = nullptr;
+              breakFromLoop = true;
+              return;
+            }
+            Block *targetEntryBlock = &targetOp->getRegion(0).front();
+            OperandRange mapVarsArr = mapClauseOwner.getMapVars();
+            assert(mapVarsArr.size() == targetEntryBlock->getNumArguments());
+            for (size_t i = 0; i < targetEntryBlock->getNumArguments(); i++) {
+              if (targetEntryBlock->getArgument(i) == op.getMemref()) {
+                omp::MapInfoOp mapInfo =
+                    llvm::cast<omp::MapInfoOp>(mapVarsArr[i].getDefiningOp());
+                defOp = mapInfo.getVarPtr().getDefiningOp();
+                v = mapInfo.getVarPtr();
+                return;
+              }
+            }
+          }
           auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
           // While going through a declare operation collect
           // the variable attributes from it. Right now, some
