@@ -900,6 +900,10 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     unsigned IntrID = N->getConstantOperandVal(0);
     return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
   }
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntrID = N->getConstantOperandVal(1);
+    return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
+  }
   case ISD::LOAD:
     if (cast<LoadSDNode>(N)->getMemOperand()->getAddrSpace() ==
         AMDGPUAS::CONSTANT_ADDRESS_32BIT)
@@ -4198,7 +4202,7 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
   // integer operation.
   // trunc (srl (bitcast (build_vector x, y))), 16 -> trunc (bitcast y)
   if (Src.getOpcode() == ISD::SRL && !VT.isVector()) {
-    if (auto K = isConstOrConstSplat(Src.getOperand(1))) {
+    if (auto *K = isConstOrConstSplat(Src.getOperand(1))) {
       if (2 * K->getZExtValue() == Src.getValueType().getScalarSizeInBits()) {
         SDValue BV = stripBitcast(Src.getOperand(0));
         if (BV.getOpcode() == ISD::BUILD_VECTOR &&
@@ -5775,7 +5779,7 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     break;
   }
   case AMDGPUISD::LDS: {
-    auto GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
+    auto *GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
     Align Alignment = GA->getGlobal()->getPointerAlignment(DAG.getDataLayout());
 
     Known.Zero.setHighBits(16);

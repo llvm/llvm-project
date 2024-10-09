@@ -95,7 +95,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(
       {G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
       .legalFor({p0, s8, s16, s32, s64})
-      .legalFor(PackedVectorAllTypeList)
+      .legalFor({v16s8, v8s16, v4s32, v2s64, v2p0, v8s8, v4s16, v2s32, v4s8,
+                 v2s16, v2s8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s8, s64)
       .moreElementsToNextPow2(0)
@@ -267,14 +268,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .lowerIf(scalarOrEltWiderThan(0, 64))
-      .minScalarOrElt(0, MinFPScalar)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
-      .moreElementsToNextPow2(0);
+      .moreElementsToNextPow2(0)
+      .lowerFor({s16, v4s16, v8s16});
 
   getActionDefinitionsBuilder(G_FREM)
-      .libcallFor({s32, s64})
+      .libcallFor({s32, s64, s128})
       .minScalar(0, s32)
       .scalarize(0);
 
@@ -290,11 +291,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
       .minScalar(0, s32)
-      .libcallFor({s32, s64});
+      .libcallFor({s32, s64, s128});
   getActionDefinitionsBuilder(G_FPOWI)
       .scalarize(0)
       .minScalar(0, s32)
-      .libcallFor({{s32, s32}, {s64, s32}});
+      .libcallFor({{s32, s32}, {s64, s32}, {s128, s32}});
 
   getActionDefinitionsBuilder(G_INSERT)
       .legalIf(all(typeInSet(0, {s32, s64, p0}),
