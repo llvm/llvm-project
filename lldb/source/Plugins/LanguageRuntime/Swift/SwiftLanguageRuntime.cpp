@@ -2677,9 +2677,14 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
   uint32_t async_reg_unwind_regdomain;
   if (!regctx.ConvertBetweenRegisterKinds(
           regnums.GetRegisterKind(), regnums.async_ctx_regnum, unwind_regkind,
-          async_reg_unwind_regdomain))
-    return llvm::createStringError(
-        "SwiftLanguageRuntime: Failed to convert register domains");
+          async_reg_unwind_regdomain)) {
+    // This should never happen.
+    // If asserts are disabled, return an error to avoid creating an invalid
+    // unwind plan.
+    auto error_msg = "SwiftLanguageRuntime: Failed to convert register domains";
+    llvm_unreachable(error_msg);
+    return llvm::createStringError(error_msg);
+  }
 
   // If the plan doesn't have information about the async register, we can use
   // its current value, as this is a callee saved register.
