@@ -193,8 +193,8 @@ public:
 
   template <unsigned Multiple, unsigned Min = 0, unsigned Max = 30>
   uint32_t EncodeRegMul_MinMax(const MCInst &MI, unsigned OpIdx,
-                                 SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const;
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
   uint32_t EncodeZK(const MCInst &MI, unsigned OpIdx,
                     SmallVectorImpl<MCFixup> &Fixups,
                     const MCSubtargetInfo &STI) const;
@@ -567,8 +567,8 @@ AArch64MCCodeEmitter::getVecShiftL8OpValue(const MCInst &MI, unsigned OpIdx,
 template <unsigned Multiple, unsigned Min, unsigned Max>
 uint32_t
 AArch64MCCodeEmitter::EncodeRegMul_MinMax(const MCInst &MI, unsigned OpIdx,
-                                            SmallVectorImpl<MCFixup> &Fixups,
-                                            const MCSubtargetInfo &STI) const {
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
   assert(llvm::isPowerOf2_32(Multiple) && "Multiple is not a power of 2");
   auto RegOpnd = MI.getOperand(OpIdx).getReg();
   unsigned RegVal = Ctx.getRegisterInfo()->getEncodingValue(RegOpnd);
