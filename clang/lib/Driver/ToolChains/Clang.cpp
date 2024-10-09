@@ -9340,13 +9340,6 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                   [](StringRef Arg) { return !Arg.starts_with("-target"); });
 
-    if (TC->getTriple().isAMDGPU()) {
-      for (StringRef Feature : llvm::split(Arch.split(':').second, ':')) {
-        FeatureArgs.emplace_back(
-            Args.MakeArgString(Feature.take_back() + Feature.drop_back()));
-      }
-    }
-
     // TODO: We need to pass in the full target-id and handle it properly in the
     // linker wrapper.
     SmallVector<std::string> Parts{
@@ -9356,7 +9349,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
-    if (TC->getDriver().isUsingOffloadLTO() || TC->getTriple().isAMDGPU())
+    if (TC->getDriver().isUsingOffloadLTO())
       for (StringRef Feature : FeatureArgs)
         Parts.emplace_back("feature=" + Feature.str());
 
