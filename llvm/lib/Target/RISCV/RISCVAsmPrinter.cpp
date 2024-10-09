@@ -247,7 +247,7 @@ bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   bool Res = RISCVRVC::compress(CInst, Inst, *STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
-  AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
+  AsmPrinter::EmitToStreamer(S, Res ? CInst : Inst);
   return Res;
 }
 

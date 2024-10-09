@@ -5499,7 +5499,8 @@ bool Sema::CheckTemplateArgumentList(
         DefaultArgs && ParamIdx >= DefaultArgs.StartPos) {
       // All written arguments should have been consumed by this point.
       assert(ArgIdx == NumArgs && "bad default argument deduction");
-      if (ParamIdx == DefaultArgs.StartPos) {
+      // FIXME: Don't ignore parameter packs.
+      if (ParamIdx == DefaultArgs.StartPos && !(*Param)->isParameterPack()) {
         assert(Param + DefaultArgs.Args.size() <= ParamEnd);
         // Default arguments from a DeducedTemplateName are already converted.
         for (const TemplateArgument &DefArg : DefaultArgs.Args) {
@@ -5576,6 +5577,9 @@ bool Sema::CheckTemplateArgumentList(
         return true;
       }
 
+      // We're now done with this argument.
+      ++ArgIdx;
+
       if ((*Param)->isTemplateParameterPack()) {
         // The template parameter was a template parameter pack, so take the
         // deduced argument and place it on the argument pack. Note that we
@@ -5586,18 +5590,7 @@ bool Sema::CheckTemplateArgumentList(
       } else {
         // Move to the next template parameter.
         ++Param;
-        if (PartialOrderingTTP && PackExpansionIntoNonPack) {
-          // Keep converting the pattern in the argument against
-          // subsequent parameters. The argument is converted
-          // in place and will be added back when we are done.
-          SugaredConverted.pop_back();
-          CanonicalConverted.pop_back();
-          continue;
-        }
       }
-
-      // We're now done with this argument.
-      ++ArgIdx;
 
       // If we just saw a pack expansion into a non-pack, then directly convert
       // the remaining arguments, because we don't know what parameters they'll
@@ -5732,10 +5725,14 @@ bool Sema::CheckTemplateArgumentList(
   // pack expansions; they might be empty. This can happen even if
   // PartialTemplateArgs is false (the list of arguments is complete but
   // still dependent).
-  while (ArgIdx < NumArgs && NewArgs[ArgIdx].getArgument().isPackExpansion()) {
-    const TemplateArgument &Arg = NewArgs[ArgIdx++].getArgument();
-    SugaredConverted.push_back(Arg);
-    CanonicalConverted.push_back(Context.getCanonicalTemplateArgument(Arg));
+  if (ArgIdx < NumArgs && CurrentInstantiationScope &&
+      CurrentInstantiationScope->getPartiallySubstitutedPack()) {
+    while (ArgIdx < NumArgs &&
+           NewArgs[ArgIdx].getArgument().isPackExpansion()) {
+      const TemplateArgument &Arg = NewArgs[ArgIdx++].getArgument();
+      SugaredConverted.push_back(Arg);
+      CanonicalConverted.push_back(Context.getCanonicalTemplateArgument(Arg));
+    }
   }
 
   // If we have any leftover arguments, then there were too many arguments.
@@ -7325,46 +7322,64 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
       << Template;
   }
 
-  if (!getLangOpts().RelaxedTemplateTemplateArgs)
-    return !TemplateParameterListsAreEqual(
-        Template->getTemplateParameters(), Params, /*Complain=*/true,
-        TPL_TemplateTemplateArgumentMatch, Arg.getLocation());
-
   // C++1z [temp.arg.template]p3: (DR 150)
   //   A template-argument matches a template template-parameter P when P
   //   is at least as specialized as the template-argument A.
-  if (!isTemplateTemplateParameterAtLeastAsSpecializedAs(
-          Params, Param, Template, DefaultArgs, Arg.getLocation(), IsDeduced))
-    return true;
-  // P2113
-  // C++20[temp.func.order]p2
-  //   [...] If both deductions succeed, the partial ordering selects the
-  // more constrained template (if one exists) as determined below.
-  SmallVector<const Expr *, 3> ParamsAC, TemplateAC;
-  Params->getAssociatedConstraints(ParamsAC);
-  // C++20[temp.arg.template]p3
-  //   [...] In this comparison, if P is unconstrained, the constraints on A
-  //   are not considered.
-  if (ParamsAC.empty())
-    return false;
+  if (getLangOpts().RelaxedTemplateTemplateArgs) {
+    // Quick check for the common case:
+    //   If P contains a parameter pack, then A [...] matches P if each of A's
+    //   template parameters matches the corresponding template parameter in
+    //   the template-parameter-list of P.
+    if (TemplateParameterListsAreEqual(
+            Template->getTemplateParameters(), Params, false,
+            TPL_TemplateTemplateArgumentMatch, Arg.getLocation()) &&
+        // If the argument has no associated constraints, then the parameter is
+        // definitely at least as specialized as the argument.
+        // Otherwise - we need a more thorough check.
+        !Template->hasAssociatedConstraints())
+      return false;
 
-  Template->getAssociatedConstraints(TemplateAC);
+    if (isTemplateTemplateParameterAtLeastAsSpecializedAs(
+            Params, Template, DefaultArgs, Arg.getLocation(), IsDeduced)) {
+      // P2113
+      // C++20[temp.func.order]p2
+      //   [...] If both deductions succeed, the partial ordering selects the
+      // more constrained template (if one exists) as determined below.
+      SmallVector<const Expr *, 3> ParamsAC, TemplateAC;
+      Params->getAssociatedConstraints(ParamsAC);
+      // C++2a[temp.arg.template]p3
+      //   [...] In this comparison, if P is unconstrained, the constraints on A
+      //   are not considered.
+      if (ParamsAC.empty())
+        return false;
 
-  bool IsParamAtLeastAsConstrained;
-  if (IsAtLeastAsConstrained(Param, ParamsAC, Template, TemplateAC,
-                             IsParamAtLeastAsConstrained))
-    return true;
-  if (!IsParamAtLeastAsConstrained) {
-    Diag(Arg.getLocation(),
-         diag::err_template_template_parameter_not_at_least_as_constrained)
-        << Template << Param << Arg.getSourceRange();
-    Diag(Param->getLocation(), diag::note_entity_declared_at) << Param;
-    Diag(Template->getLocation(), diag::note_entity_declared_at) << Template;
-    MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Param, ParamsAC, Template,
-                                                  TemplateAC);
-    return true;
+      Template->getAssociatedConstraints(TemplateAC);
+
+      bool IsParamAtLeastAsConstrained;
+      if (IsAtLeastAsConstrained(Param, ParamsAC, Template, TemplateAC,
+                                 IsParamAtLeastAsConstrained))
+        return true;
+      if (!IsParamAtLeastAsConstrained) {
+        Diag(Arg.getLocation(),
+             diag::err_template_template_parameter_not_at_least_as_constrained)
+            << Template << Param << Arg.getSourceRange();
+        Diag(Param->getLocation(), diag::note_entity_declared_at) << Param;
+        Diag(Template->getLocation(), diag::note_entity_declared_at)
+            << Template;
+        MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Param, ParamsAC, Template,
+                                                      TemplateAC);
+        return true;
+      }
+      return false;
+    }
+    // FIXME: Produce better diagnostics for deduction failures.
   }
-  return false;
+
+  return !TemplateParameterListsAreEqual(Template->getTemplateParameters(),
+                                         Params,
+                                         true,
+                                         TPL_TemplateTemplateArgumentMatch,
+                                         Arg.getLocation());
 }
 
 static Sema::SemaDiagnosticBuilder noteLocation(Sema &S, const NamedDecl &Decl,
