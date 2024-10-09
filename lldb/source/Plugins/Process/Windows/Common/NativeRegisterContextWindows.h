@@ -20,7 +20,6 @@ class NativeThreadWindows;
 class NativeRegisterContextWindows
     : public virtual NativeRegisterContextRegisterInfo {
 public:
-
   static std::unique_ptr<NativeRegisterContextWindows>
   CreateHostNativeRegisterContextWindows(const ArchSpec &target_arch,
                                          NativeThreadProtocol &native_thread);

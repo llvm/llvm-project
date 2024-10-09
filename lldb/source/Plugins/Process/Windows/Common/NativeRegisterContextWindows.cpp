@@ -18,7 +18,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-
 lldb::thread_t NativeRegisterContextWindows::GetThreadHandle() const {
   auto wthread = static_cast<NativeThreadWindows *>(&m_thread);
   return wthread->GetHostThread().GetNativeThread().GetSystemHandle();
