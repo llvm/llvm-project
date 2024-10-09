@@ -30,10 +30,11 @@ void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
           .bind("func");
 
   Finder->addMatcher(returnStmt(hasReturnValue(DRef), hasAncestor(Func)), this);
-  Finder->addMatcher(conditionalOperator(eachOf(hasTrueExpression(DRef),
-                                                hasFalseExpression(DRef)),
-                                         hasAncestor(Func)),
-                     this);
+  Finder->addMatcher(
+      returnStmt(hasReturnValue(ignoringParens(conditionalOperator(
+          eachOf(hasTrueExpression(DRef), hasFalseExpression(DRef)),
+          hasAncestor(Func))))),
+      this);
 }
 
 static bool isSameTypeIgnoringConst(QualType A, QualType B) {
