@@ -602,8 +602,9 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags NW,
       for (unsigned I = 0, E = PHI->getNumIncomingValues(); I < E; ++I) {
         Value *NewIncoming = PHI->getIncomingValue(I);
 
-        if (NewInsts.contains(NewIncoming))
-          NewIncoming = NewInsts[NewIncoming];
+        auto It = NewInsts.find(NewIncoming);
+        if (It != NewInsts.end())
+          NewIncoming = It->second;
 
         NewPhi->addIncoming(NewIncoming, PHI->getIncomingBlock(I));
       }
