@@ -867,6 +867,36 @@ bool ClauseProcessor::processIsDevicePtr(
       });
 }
 
+bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
+  lower::StatementContext stmtCtx;
+  return findRepeatableClause<omp::clause::Linear>(
+      [&](const omp::clause::Linear &clause, const parser::CharBlock &) {
+        auto &objects = std::get<omp::ObjectList>(clause.t);
+        for (const omp::Object &object : objects) {
+          semantics::Symbol *sym = object.sym();
+          const mlir::Value variable = converter.getSymbolAddress(*sym);
+          result.linearVars.push_back(variable);
+        }
+        if (objects.size()) {
+          if (auto &mod = std::get<0>(clause.t)) {
+            mlir::Value operand =
+                fir::getBase(converter.genExprValue(*mod, stmtCtx));
+            result.linearStepVars.append(objects.size(), operand);
+          } else if (auto &mod = std::get<1>(clause.t)) {
+            mlir::Value operand =
+                fir::getBase(converter.genExprValue(*mod, stmtCtx));
+            result.linearStepVars.append(objects.size(), operand);
+          } else {
+            fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+            mlir::Location currentLocation = converter.getCurrentLocation();
+            mlir::Value operand = firOpBuilder.createIntegerConstant(
+                currentLocation, firOpBuilder.getI32Type(), 1);
+            result.linearStepVars.append(objects.size(), operand);
+          }
+        }
+      });
+}
+
 bool ClauseProcessor::processLink(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
   return findRepeatableClause<omp::clause::Link>(
