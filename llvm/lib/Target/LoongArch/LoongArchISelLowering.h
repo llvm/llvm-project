@@ -141,6 +141,22 @@ enum NodeType : unsigned {
   VALL_NONZERO,
   VANY_NONZERO,
 
+  // Floating point approximate reciprocal operation
+  FRECIPE_S,
+  FRECIPE_D,
+  FRSQRTE_S,
+  FRSQRTE_D,
+
+  VFRECIPE_S,
+  VFRECIPE_D,
+  VFRSQRTE_S,
+  VFRSQRTE_D,
+
+  XVFRECIPE_S,
+  XVFRECIPE_D,
+  XVFRSQRTE_S,
+  XVFRSQRTE_D,
+
   // Intrinsic operations end =============================================
 };
 } // end namespace LoongArchISD
@@ -215,6 +231,17 @@ public:
 
   Register
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+
+  bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
+    return true;
+  }
+
+  SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+                          int &RefinementSteps, bool &UseOneConstNR,
+                          bool Reciprocal) const override;
+
+  SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+                           int &RefinementSteps) const override;
 
   ISD::NodeType getExtendForAtomicOps() const override {
     return ISD::SIGN_EXTEND;
