@@ -75,8 +75,6 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
-extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
-
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
 }

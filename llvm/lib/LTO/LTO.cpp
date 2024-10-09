@@ -103,7 +103,7 @@ std::string llvm::computeLTOCacheKey(
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
-    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls, StringRef ExtraID) {
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
   // This is based on the current compiler version, the module itself, the
   // export list, the hash for every single module in the import list, the
@@ -343,8 +343,19 @@ std::string llvm::computeLTOCacheKey(
     }
   }
 
-  if (!ExtraID.empty())
-    AddString(ExtraID);
+  return toHex(Hasher.result());
+}
+
+std::string llvm::recomputeLTOCacheKey(const std::string &Key,
+                                       StringRef ExtraID) {
+  SHA1 Hasher;
+
+  auto AddString = [&](StringRef Str) {
+    Hasher.update(Str);
+    Hasher.update(ArrayRef<uint8_t>{0});
+  };
+  AddString(Key);
+  AddString(ExtraID);
 
   return toHex(Hasher.result());
 }
@@ -1595,21 +1606,22 @@ public:
     AddStreamFn &CacheCGAddStream = *CacheCGAddStreamOrErr;
 
     // Get IRKey for caching (optimized) IR in IRCache with an extra ID.
-    std::string IRKey = computeLTOCacheKey(
-        Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls, /*ExtraID=*/"IR");
+    std::string IRKey = recomputeLTOCacheKey(CGKey, /*ExtraID=*/"IR");
     Expected<AddStreamFn> CacheIRAddStreamOrErr =
         IRCache(Task, IRKey, ModuleID);
     if (Error Err = CacheIRAddStreamOrErr.takeError())
       return Err;
     AddStreamFn &CacheIRAddStream = *CacheIRAddStreamOrErr;
 
-    assert((CacheCGAddStream == nullptr) == (CacheIRAddStream == nullptr) &&
-           "Both CG and IR caching should be matched");
-    if (CacheIRAddStream) {
+    // Ideally, both CG and IR caching should be synchronized. However, in
+    // practice, their availability may differ due to different expiration
+    // times. Therefore, if either cache is missing, the backend process is
+    // triggered.
+    if (CacheCGAddStream || CacheIRAddStream) {
       LLVM_DEBUG(dbgs() << "[FirstRound] Cache Miss for "
                         << BM.getModuleIdentifier() << "\n");
-      return RunThinBackend(CacheCGAddStream, CacheIRAddStream);
+      return RunThinBackend(CacheCGAddStream ? CacheCGAddStream : CGAddStream,
+                            CacheIRAddStream ? CacheIRAddStream : IRAddStream);
     }
 
     return Error::success();
@@ -1671,8 +1683,9 @@ public:
     // CGData hash.
     std::string Key = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls,
-        /*ExtraID=*/std::to_string(CombinedCGDataHash));
+        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+    Key = recomputeLTOCacheKey(Key,
+                               /*ExtraID=*/std::to_string(CombinedCGDataHash));
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
