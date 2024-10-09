@@ -25,7 +25,7 @@ for header in public_headers:
     header_guard = lambda h: f"_LIBCPP_{h.upper().replace('.', '_').replace('/', '_')}"
 
     # <cassert> has no header guards
-    if header == 'cassert':
+    if header == "cassert":
         checks = ""
     else:
         checks = f"""
