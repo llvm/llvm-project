@@ -324,6 +324,12 @@ function(append value)
   endforeach(variable)
 endfunction()
 
+function(prepend value)
+  foreach(variable ${ARGN})
+    set(${variable} "${value} ${${variable}}" PARENT_SCOPE)
+  endforeach(variable)
+endfunction()
+
 function(append_if condition value)
   if (${condition})
     foreach(variable ${ARGN})
@@ -1196,7 +1202,7 @@ if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
   endif()
   file(TO_CMAKE_PATH "${clang_compiler_rt_file}" clang_compiler_rt_file)
   get_filename_component(clang_runtime_dir "${clang_compiler_rt_file}" DIRECTORY)
-  append("/libpath:\"${clang_runtime_dir}\""
+  prepend("/libpath:\"${clang_runtime_dir}\""
     CMAKE_EXE_LINKER_FLAGS
     CMAKE_MODULE_LINKER_FLAGS
     CMAKE_SHARED_LINKER_FLAGS)

@@ -174,7 +174,7 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *SymbolTag,
 }
 
 DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
-                                                   const Expr *expr,
+                                                   const Stmt *St,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned count) {
@@ -184,7 +184,7 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.conjureSymbol(expr, LCtx, type, count, symbolTag);
+  SymbolRef sym = SymMgr.conjureSymbol(St, LCtx, type, count, symbolTag);
 
   if (Loc::isLocType(type))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));

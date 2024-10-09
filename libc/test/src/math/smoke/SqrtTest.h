@@ -15,15 +15,21 @@ class SqrtTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(OutType)
 
+  struct InConstants {
+    DECLARE_SPECIAL_CONSTANTS(InType)
+  };
+
+  InConstants in;
+
 public:
   typedef OutType (*SqrtFunc)(InType);
 
   void test_special_numbers(SqrtFunc func) {
-    ASSERT_FP_EQ(aNaN, func(aNaN));
-    ASSERT_FP_EQ(inf, func(inf));
-    ASSERT_FP_EQ(aNaN, func(neg_inf));
-    ASSERT_FP_EQ(zero, func(zero));
-    ASSERT_FP_EQ(neg_zero, func(neg_zero));
+    ASSERT_FP_EQ(aNaN, func(in.aNaN));
+    ASSERT_FP_EQ(inf, func(in.inf));
+    ASSERT_FP_EQ(aNaN, func(in.neg_inf));
+    ASSERT_FP_EQ(zero, func(in.zero));
+    ASSERT_FP_EQ(neg_zero, func(in.neg_zero));
     ASSERT_FP_EQ(aNaN, func(InType(-1.0)));
     ASSERT_FP_EQ(OutType(1.0), func(InType(1.0)));
     ASSERT_FP_EQ(OutType(2.0), func(InType(4.0)));

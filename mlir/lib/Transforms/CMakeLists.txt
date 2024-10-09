@@ -29,7 +29,6 @@ add_mlir_library(MLIRTransforms
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
-  MLIRCopyOpInterface
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface
   MLIRMemorySlotInterfaces

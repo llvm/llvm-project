@@ -1483,8 +1483,8 @@ public:
     if (!isGPRMem())
       return false;
     // No offset of any kind.
-    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
-     (alignOK || Memory.Alignment == Alignment);
+    return !Memory.OffsetRegNum && Memory.OffsetImm == nullptr &&
+           (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemNoOffsetT2(bool alignOK = false, unsigned Alignment = 0) const {
     if (!isGPRMem())
@@ -1495,8 +1495,8 @@ public:
       return false;
 
     // No offset of any kind.
-    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
-     (alignOK || Memory.Alignment == Alignment);
+    return !Memory.OffsetRegNum && Memory.OffsetImm == nullptr &&
+           (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemNoOffsetT2NoSp(bool alignOK = false, unsigned Alignment = 0) const {
     if (!isGPRMem())
@@ -1507,8 +1507,8 @@ public:
       return false;
 
     // No offset of any kind.
-    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
-     (alignOK || Memory.Alignment == Alignment);
+    return !Memory.OffsetRegNum && Memory.OffsetImm == nullptr &&
+           (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemNoOffsetT(bool alignOK = false, unsigned Alignment = 0) const {
     if (!isGPRMem())
@@ -1519,11 +1519,11 @@ public:
       return false;
 
     // No offset of any kind.
-    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
-     (alignOK || Memory.Alignment == Alignment);
+    return !Memory.OffsetRegNum && Memory.OffsetImm == nullptr &&
+           (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemPCRelImm12() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Base register must be PC.
     if (Memory.BaseRegNum != ARM::PC)
@@ -1754,7 +1754,7 @@ public:
   }
 
   bool isMemThumbRIs4() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 124].
@@ -1767,7 +1767,7 @@ public:
   }
 
   bool isMemThumbRIs2() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 62].
@@ -1780,7 +1780,7 @@ public:
   }
 
   bool isMemThumbRIs1() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 31].
@@ -1793,8 +1793,8 @@ public:
   }
 
   bool isMemThumbSPI() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
-        Memory.BaseRegNum != ARM::SP || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.BaseRegNum != ARM::SP ||
+        Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 1020].
     if (!Memory.OffsetImm) return true;
@@ -1811,7 +1811,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset a multiple of 4 in range [-1020, 1020].
     if (!Memory.OffsetImm) return true;
@@ -1830,7 +1830,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0 ||
         !ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(
             Memory.BaseRegNum))
       return false;
@@ -1845,7 +1845,7 @@ public:
   }
 
   bool isMemImm0_1020s4Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset a multiple of 4 in range [0, 1020].
     if (!Memory.OffsetImm) return true;
@@ -1857,7 +1857,7 @@ public:
   }
 
   bool isMemImm8Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Base reg of PC isn't allowed for these encodings.
     if (Memory.BaseRegNum == ARM::PC) return false;
@@ -1873,7 +1873,7 @@ public:
 
   template<unsigned Bits, unsigned RegClassID>
   bool isMemImm7ShiftedOffset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0 ||
         !ARMMCRegisterClasses[RegClassID].contains(Memory.BaseRegNum))
       return false;
 
@@ -1924,7 +1924,7 @@ public:
   }
 
   template <int shift> bool isMemRegQOffset() const {
-    if (!isMVEMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isMVEMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
 
     if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
@@ -1952,7 +1952,7 @@ public:
   }
 
   bool isMemPosImm8Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 255].
     if (!Memory.OffsetImm) return true;
@@ -1964,7 +1964,7 @@ public:
   }
 
   bool isMemNegImm8Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Base reg of PC isn't allowed for these encodings.
     if (Memory.BaseRegNum == ARM::PC) return false;
@@ -1979,7 +1979,7 @@ public:
   }
 
   bool isMemUImm12Offset() const {
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 4095].
     if (!Memory.OffsetImm) return true;
@@ -1998,7 +1998,7 @@ public:
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
 
-    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [-4095, 4095].
     if (!Memory.OffsetImm) return true;
@@ -8982,8 +8982,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   }
   // Alias for alternate form of 'ADR Rd, #imm' instruction.
   case ARM::ADDri: {
-    if (Inst.getOperand(1).getReg() != ARM::PC ||
-        Inst.getOperand(5).getReg() != 0 ||
+    if (Inst.getOperand(1).getReg() != ARM::PC || Inst.getOperand(5).getReg() ||
         !(Inst.getOperand(2).isExpr() || Inst.getOperand(2).isImm()))
       return false;
     MCInst TmpInst;
@@ -10703,7 +10702,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   case ARM::t2ADDspImm:
   case ARM::t2SUBspImm: {
     // Prefer T1 encoding if possible
-    if (Inst.getOperand(5).getReg() != 0 || HasWideQualifier)
+    if (Inst.getOperand(5).getReg() || HasWideQualifier)
       break;
     unsigned V = Inst.getOperand(2).getImm();
     if (V & 3 || V > ((1 << 7) - 1) << 2)
@@ -10732,9 +10731,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       Transform = true;
       Swap = true;
     }
-    if (!Transform ||
-        Inst.getOperand(5).getReg() != 0 ||
-        HasWideQualifier)
+    if (!Transform || Inst.getOperand(5).getReg() || HasWideQualifier)
       break;
     MCInst TmpInst;
     TmpInst.setOpcode(ARM::tADDhirr);

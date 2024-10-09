@@ -79,7 +79,6 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX1]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX1]], 16
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP1]], i32 16

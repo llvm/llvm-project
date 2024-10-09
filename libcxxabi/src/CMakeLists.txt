@@ -214,14 +214,22 @@ if (LIBCXXABI_ENABLE_SHARED)
   endif()
 
   add_library(cxxabi-reexports INTERFACE)
-  function(reexport_symbols file)
+  function(export_symbols file)
     # -exported_symbols_list is only available on Apple platforms
     if (APPLE)
       target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${file}")
+    endif()
+  endfunction()
+
+  function(reexport_symbols file)
+    export_symbols("${file}")
+    # -reexported_symbols_list is only available on Apple platforms
+    if (APPLE)
       target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
     endif()
   endfunction()
 
+  export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/symbols-not-reexported.exp")
   reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxxabiv1.exp")
   reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/fundamental-types.exp")
   reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
@@ -306,7 +314,6 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
-add_dependencies(cxxabi-test-depends cxxabi cxx)
 
 if (LIBCXXABI_INSTALL_LIBRARY)
   install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}

@@ -18,39 +18,38 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
-class raw_ostream;
 class Record;
 
 class PredicateExpander {
   bool EmitCallsByRef;
   bool NegatePredicate;
   bool ExpandForMC;
-  unsigned IndentLevel;
   StringRef TargetName;
 
   PredicateExpander(const PredicateExpander &) = delete;
   PredicateExpander &operator=(const PredicateExpander &) = delete;
 
+protected:
+  indent Indent;
+
 public:
-  PredicateExpander(StringRef Target)
+  explicit PredicateExpander(StringRef Target, unsigned Indent = 1)
       : EmitCallsByRef(true), NegatePredicate(false), ExpandForMC(false),
-        IndentLevel(1U), TargetName(Target) {}
+        TargetName(Target), Indent(Indent, 2) {}
   bool isByRef() const { return EmitCallsByRef; }
   bool shouldNegate() const { return NegatePredicate; }
   bool shouldExpandForMC() const { return ExpandForMC; }
-  unsigned getIndentLevel() const { return IndentLevel; }
+  indent &getIndent() { return Indent; }
   StringRef getTargetName() const { return TargetName; }
 
   void setByRef(bool Value) { EmitCallsByRef = Value; }
   void flipNegatePredicate() { NegatePredicate = !NegatePredicate; }
   void setNegatePredicate(bool Value) { NegatePredicate = Value; }
   void setExpandForMC(bool Value) { ExpandForMC = Value; }
-  void setIndentLevel(unsigned Level) { IndentLevel = Level; }
-  void increaseIndentLevel() { ++IndentLevel; }
-  void decreaseIndentLevel() { --IndentLevel; }
 
   void expandTrue(raw_ostream &OS);
   void expandFalse(raw_ostream &OS);
@@ -116,8 +115,8 @@ class STIPredicateExpander : public PredicateExpander {
   void expandEpilogue(raw_ostream &OS, const STIPredicateFunction &Fn);
 
 public:
-  STIPredicateExpander(StringRef Target)
-      : PredicateExpander(Target), ExpandDefinition(false) {}
+  explicit STIPredicateExpander(StringRef Target, unsigned Indent = 1)
+      : PredicateExpander(Target, Indent), ExpandDefinition(false) {}
 
   bool shouldExpandDefinition() const { return ExpandDefinition; }
   StringRef getClassPrefix() const { return ClassPrefix; }

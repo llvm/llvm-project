@@ -1505,6 +1505,13 @@ def insert_vector_elt_oob : GICombineRule<
          [{ return Helper.matchInsertVectorElementOOB(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// Combine v8i8 (buildvector i8 (trunc(unmerge)), i8 (trunc), i8 (trunc), i8 (trunc), undef, undef, undef, undef)
+def combine_use_vector_truncate : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+         [{ return Helper.matchUseVectorTruncate(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyUseVectorTruncate(*${root}, ${matchinfo}); }])>;
+
 def add_of_vscale : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
    (match (G_VSCALE $left, $imm1),
@@ -1912,7 +1919,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     sub_add_reg, select_to_minmax, 
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector, match_addos,
-    sext_trunc, zext_trunc, prefer_sign_combines, combine_shuffle_concat]>;
+    sext_trunc, zext_trunc, prefer_sign_combines, combine_shuffle_concat,
+    combine_use_vector_truncate]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

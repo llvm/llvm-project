@@ -73,6 +73,22 @@ enum BaseTypeAttributeEncoding {
   UnsignedChar = 7
 };
 
+enum SourceLanguage {
+  Unknown = 0,
+  ESSL = 1,
+  GLSL = 2,
+  OpenCL_C = 3,
+  OpenCL_CPP = 4,
+  HLSL = 5,
+  CPP_for_OpenCL = 6,
+  SYCL = 7,
+  HERO_C = 8,
+  NZSL = 9,
+  WGSL = 10,
+  Slang = 11,
+  Zig = 12
+};
+
 bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   // If this MachineFunction doesn't have any BB repeat procedure
   // for the next
@@ -83,8 +99,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
 
   // Required variables to get from metadata search
   LLVMContext *Context;
-  SmallString<128> FilePath;
-  unsigned SourceLanguage = 0;
+  SmallVector<SmallString<128>> FilePaths;
+  SmallVector<int64_t> LLVMSourceLanguages;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
   SmallPtrSet<DIBasicType *, 12> BasicTypes;
@@ -101,9 +117,10 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     for (const auto *Op : DbgCu->operands()) {
       if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
         DIFile *File = CompileUnit->getFile();
-        sys::path::append(FilePath, File->getDirectory(), File->getFilename());
-        SourceLanguage = CompileUnit->getSourceLanguage();
-        break;
+        FilePaths.emplace_back();
+        sys::path::append(FilePaths.back(), File->getDirectory(),
+                          File->getFilename());
+        LLVMSourceLanguages.push_back(CompileUnit->getSourceLanguage());
       }
     }
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
@@ -160,9 +177,6 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       return StrReg;
     };
 
-    // Emit OpString with FilePath which is required by DebugSource
-    const Register FilePathStrReg = EmitOpString(FilePath);
-
     const SPIRVType *VoidTy =
         GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder);
 
@@ -187,27 +201,54 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           return InstReg;
         };
 
-    // Emit DebugSource which is required by DebugCompilationUnit
-    const Register DebugSourceResIdReg = EmitDIInstruction(
-        SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
-
     const SPIRVType *I32Ty =
         GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder);
 
-    // Convert DwarfVersion, DebugInfo and SourceLanguage integers to OpConstant
-    // instructions required by DebugCompilationUnit
     const Register DwarfVersionReg =
         GR->buildConstantInt(DwarfVersion, MIRBuilder, I32Ty, false);
     const Register DebugInfoVersionReg =
         GR->buildConstantInt(DebugInfoVersion, MIRBuilder, I32Ty, false);
-    const Register SourceLanguageReg =
-        GR->buildConstantInt(SourceLanguage, MIRBuilder, I32Ty, false);
 
-    [[maybe_unused]]
-    const Register DebugCompUnitResIdReg =
-        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
-                          {DebugInfoVersionReg, DwarfVersionReg,
-                           DebugSourceResIdReg, SourceLanguageReg});
+    for (unsigned Idx = 0; Idx < LLVMSourceLanguages.size(); ++Idx) {
+      const Register FilePathStrReg = EmitOpString(FilePaths[Idx]);
+
+      const Register DebugSourceResIdReg = EmitDIInstruction(
+          SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
+
+      SourceLanguage SpirvSourceLanguage = SourceLanguage::Unknown;
+      switch (LLVMSourceLanguages[Idx]) {
+      case dwarf::DW_LANG_OpenCL:
+        SpirvSourceLanguage = SourceLanguage::OpenCL_C;
+        break;
+      case dwarf::DW_LANG_OpenCL_CPP:
+        SpirvSourceLanguage = SourceLanguage::OpenCL_CPP;
+        break;
+      case dwarf::DW_LANG_CPP_for_OpenCL:
+        SpirvSourceLanguage = SourceLanguage::CPP_for_OpenCL;
+        break;
+      case dwarf::DW_LANG_GLSL:
+        SpirvSourceLanguage = SourceLanguage::GLSL;
+        break;
+      case dwarf::DW_LANG_HLSL:
+        SpirvSourceLanguage = SourceLanguage::HLSL;
+        break;
+      case dwarf::DW_LANG_SYCL:
+        SpirvSourceLanguage = SourceLanguage::SYCL;
+        break;
+      case dwarf::DW_LANG_Zig:
+        SpirvSourceLanguage = SourceLanguage::Zig;
+        break;
+      }
+
+      const Register SourceLanguageReg =
+          GR->buildConstantInt(SpirvSourceLanguage, MIRBuilder, I32Ty, false);
+
+      [[maybe_unused]]
+      const Register DebugCompUnitResIdReg =
+          EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
+                            {DebugInfoVersionReg, DwarfVersionReg,
+                             DebugSourceResIdReg, SourceLanguageReg});
+    }
 
     // We aren't extracting any DebugInfoFlags now so we
     // emitting zero to use as <id>Flags argument for DebugBasicType

@@ -28,7 +28,7 @@ using namespace llvm::object;
 namespace {
 class ARM final : public TargetInfo {
 public:
-  ARM();
+  ARM(Ctx &);
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -54,7 +54,7 @@ enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 
 static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
 
-ARM::ARM() {
+ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_ARM_COPY;
   relativeRel = R_ARM_RELATIVE;
   iRelativeRel = R_ARM_IRELATIVE;
@@ -191,7 +191,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // not ARMv4 output, we can just ignore it.
     return R_NONE;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -214,7 +214,7 @@ void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 
 // Long form PLT Header that does not have any restrictions on the displacement
 // of the .plt from the .got.plt.
-static void writePltHeaderLong(uint8_t *buf) {
+static void writePltHeaderLong(Ctx &ctx, uint8_t *buf) {
   write32(buf + 0, 0xe52de004);   //     str lr, [sp,#-4]!
   write32(buf + 4, 0xe59fe004);   //     ldr lr, L2
   write32(buf + 8, 0xe08fe00e);   // L1: add lr, pc, lr
@@ -230,14 +230,14 @@ static void writePltHeaderLong(uint8_t *buf) {
 
 // True if we should use Thumb PLTs, which currently require Thumb2, and are
 // only used if the target does not have the ARM ISA.
-static bool useThumbPLTs() {
+static bool useThumbPLTs(Ctx &ctx) {
   return ctx.arg.armHasThumb2ISA && !ctx.arg.armHasArmISA;
 }
 
 // The default PLT header requires the .got.plt to be within 128 Mb of the
 // .plt in the positive direction.
 void ARM::writePltHeader(uint8_t *buf) const {
-  if (useThumbPLTs()) {
+  if (useThumbPLTs(ctx)) {
     // The instruction sequence for thumb:
     //
     // 0: b500          push    {lr}
@@ -280,7 +280,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
     uint64_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA() - 4;
     if (!llvm::isUInt<27>(offset)) {
       // We cannot encode the Offset, use the long form.
-      writePltHeaderLong(buf);
+      writePltHeaderLong(ctx, buf);
       return;
     }
     write32(buf + 0, pltData[0]);
@@ -295,7 +295,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
 }
 
 void ARM::addPltHeaderSymbols(InputSection &isec) const {
-  if (useThumbPLTs()) {
+  if (useThumbPLTs(ctx)) {
     addSyntheticLocal("$t", STT_NOTYPE, 0, 0, isec);
     addSyntheticLocal("$d", STT_NOTYPE, 12, 0, isec);
   } else {
@@ -320,9 +320,8 @@ static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
 // .plt in the positive direction.
 void ARM::writePlt(uint8_t *buf, const Symbol &sym,
                    uint64_t pltEntryAddr) const {
-
-  if (!useThumbPLTs()) {
-    uint64_t offset = sym.getGotPltVA() - pltEntryAddr - 8;
+  if (!useThumbPLTs(ctx)) {
+    uint64_t offset = sym.getGotPltVA(ctx) - pltEntryAddr - 8;
 
     // The PLT entry is similar to the example given in Appendix A of ELF for
     // the Arm Architecture. Instead of using the Group Relocations to find the
@@ -336,7 +335,7 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
     };
     if (!llvm::isUInt<27>(offset)) {
       // We cannot encode the Offset, use the long form.
-      writePltLong(buf, sym.getGotPltVA(), pltEntryAddr);
+      writePltLong(buf, sym.getGotPltVA(ctx), pltEntryAddr);
       return;
     }
     write32(buf + 0, pltData[0] | ((offset >> 20) & 0xff));
@@ -344,7 +343,7 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
     write32(buf + 8, pltData[2] | (offset & 0xfff));
     memcpy(buf + 12, trapInstr.data(), 4); // Pad to 16-byte boundary
   } else {
-    uint64_t offset = sym.getGotPltVA() - pltEntryAddr - 12;
+    uint64_t offset = sym.getGotPltVA(ctx) - pltEntryAddr - 12;
     assert(llvm::isUInt<32>(offset) && "This should always fit into a 32-bit offset");
 
     // A PLT entry will be:
@@ -373,7 +372,7 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
-  if (useThumbPLTs()) {
+  if (useThumbPLTs(ctx)) {
     addSyntheticLocal("$t", STT_NOTYPE, off, 0, isec);
   } else {
     addSyntheticLocal("$a", STT_NOTYPE, off, 0, isec);
@@ -388,7 +387,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // be resolved as a branch to the next instruction. If it is hidden, its
   // binding has been converted to local, so we just check isUndefined() here. A
   // undefined non-weak symbol will have been errored.
-  if (s.isUndefined() && !s.isInPlt())
+  if (s.isUndefined() && !s.isInPlt(ctx))
     return false;
   // A state change from ARM to Thumb and vice versa must go through an
   // interworking thunk if the relocation type is not R_ARM_CALL or
@@ -399,13 +398,13 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_JUMP24:
     // Source is ARM, all PLT entries are ARM so no interworking required.
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 set (Thumb).
-    assert(!useThumbPLTs() &&
+    assert(!useThumbPLTs(ctx) &&
            "If the source is ARM, we should not need Thumb PLTs");
     if (s.isFunc() && expr == R_PC && (s.getVA() & 1))
       return true;
     [[fallthrough]];
   case R_ARM_CALL: {
-    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
+    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
         (!ctx.arg.armHasBlx && (s.getVA() & 1));
   }
@@ -413,12 +412,12 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_THM_JUMP24:
     // Source is Thumb, when all PLT entries are ARM interworking is required.
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 clear (ARM).
-    if ((expr == R_PLT_PC && !useThumbPLTs()) ||
+    if ((expr == R_PLT_PC && !useThumbPLTs(ctx)) ||
         (s.isFunc() && (s.getVA() & 1) == 0))
       return true;
     [[fallthrough]];
   case R_ARM_THM_CALL: {
-    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
+    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
         (!ctx.arg.armHasBlx && (s.getVA() & 1) == 0);;
   }
@@ -491,9 +490,10 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 // Helper to produce message text when LLD detects that a CALL relocation to
 // a non STT_FUNC symbol that may result in incorrect interworking between ARM
 // or Thumb.
-static void stateChangeWarning(uint8_t *loc, RelType relt, const Symbol &s) {
+static void stateChangeWarning(Ctx &ctx, uint8_t *loc, RelType relt,
+                               const Symbol &s) {
   assert(!s.isFunc());
-  const ErrorPlace place = getErrorPlace(loc);
+  const ErrorPlace place = getErrorPlace(ctx, loc);
   std::string hint;
   if (!place.srcLoc.empty())
     hint = "; " + place.srcLoc;
@@ -505,7 +505,7 @@ static void stateChangeWarning(uint8_t *loc, RelType relt, const Symbol &s) {
          " ; interworking not performed" + hint);
   } else {
     // Warn with hint on how to alter the symbol type.
-    warn(getErrorLocation(loc) + "branch and link relocation: " +
+    warn(getErrorLoc(ctx, loc) + "branch and link relocation: " +
          toString(relt) + " to non STT_FUNC symbol: " + s.getName() +
          " interworking not performed; consider using directive '.type " +
          s.getName() +
@@ -552,7 +552,7 @@ static void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
     rot = (lz + 8) << 7;
   }
   if (check && imm > 0xff)
-    error(getErrorLocation(loc) + "unencodeable immediate " + Twine(val).str() +
+    error(getErrorLoc(ctx, loc) + "unencodeable immediate " + Twine(val).str() +
           " for relocation " + toString(rel.type));
   write32(loc, (read32(loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
@@ -630,7 +630,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && isBlx != bit0Thumb)
-      stateChangeWarning(loc, rel.type, *rel.sym);
+      stateChangeWarning(ctx, loc, rel.type, *rel.sym);
     if (rel.sym->isFunc() ? bit0Thumb : isBlx) {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
@@ -682,13 +682,13 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // PLT entries are always ARM state so we know we need to interwork.
     assert(rel.sym); // R_ARM_THM_CALL is always reached via relocate().
     bool bit0Thumb = val & 1;
-    bool useThumb = bit0Thumb || useThumbPLTs();
+    bool useThumb = bit0Thumb || useThumbPLTs(ctx);
     bool isBlx = (read16(loc + 2) & 0x1000) == 0;
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
-    if (!rel.sym->isFunc() && !rel.sym->isInPlt() && isBlx == useThumb)
-      stateChangeWarning(loc, rel.type, *rel.sym);
-    if ((rel.sym->isFunc() || rel.sym->isInPlt()) ? !useThumb : isBlx) {
+    if (!rel.sym->isFunc() && !rel.sym->isInPlt(ctx) && isBlx == useThumb)
+      stateChangeWarning(ctx, loc, rel.type, *rel.sym);
+    if ((rel.sym->isFunc() || rel.sym->isInPlt(ctx)) ? !useThumb : isBlx) {
       // We are writing a BLX. Ensure BLX destination is 4-byte aligned. As
       // the BLX instruction may only be two byte aligned. This must be done
       // before overflow check.
@@ -863,7 +863,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   case R_ARM_ABS32:
@@ -1047,7 +1047,7 @@ void elf::sortArmMappingSymbols() {
   }
 }
 
-void elf::addArmInputSectionMappingSymbols() {
+void elf::addArmInputSectionMappingSymbols(Ctx &ctx) {
   // Collect mapping symbols for every executable input sections.
   // The linker generated mapping symbols for all the synthetic
   // sections are adding into the sectionmap through the function
@@ -1215,7 +1215,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
       continue;
     }
 
-    if (symtab.cmseImportLib.count(sym->getName())) {
+    if (ctx.symtab->cmseImportLib.count(sym->getName())) {
       error("CMSE symbol '" + sym->getName() +
             "' is multiply defined in import library '" + toString(this) + "'");
       continue;
@@ -1227,7 +1227,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
            Twine(ACLESESYM_SIZE) + " bytes");
     }
 
-    symtab.cmseImportLib[sym->getName()] = sym;
+    ctx.symtab->cmseImportLib[sym->getName()] = sym;
   }
 }
 
@@ -1260,12 +1260,12 @@ static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
 // name with __acle_se_.
 // Both these symbols are Thumb function symbols with external linkage.
 // <sym> may be redefined in .gnu.sgstubs.
-void elf::processArmCmseSymbols() {
+void elf::processArmCmseSymbols(Ctx &ctx) {
   if (!ctx.arg.cmseImplib)
     return;
-  // Only symbols with external linkage end up in symtab, so no need to do
+  // Only symbols with external linkage end up in ctx.symtab, so no need to do
   // linkage checks. Only check symbol type.
-  for (Symbol *acleSeSym : symtab.getSymbols()) {
+  for (Symbol *acleSeSym : ctx.symtab->getSymbols()) {
     if (!acleSeSym->getName().starts_with(ACLESESYM_PREFIX))
       continue;
     // If input object build attributes do not support CMSE, error and disable
@@ -1279,7 +1279,7 @@ void elf::processArmCmseSymbols() {
     // Try to find the associated symbol definition.
     // Symbol must have external linkage.
     StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
-    Symbol *sym = symtab.find(name);
+    Symbol *sym = ctx.symtab->find(name);
     if (!sym) {
       error(toString(acleSeSym->file) + ": cmse special symbol '" +
             acleSeSym->getName() +
@@ -1295,7 +1295,7 @@ void elf::processArmCmseSymbols() {
     }
 
     // <sym> may be redefined later in the link in .gnu.sgstubs
-    symtab.cmseSymMap[name] = {acleSeSym, sym};
+    ctx.symtab->cmseSymMap[name] = {acleSeSym, sym};
   }
 
   // If this is an Arm CMSE secure app, replace references to entry symbol <sym>
@@ -1304,8 +1304,8 @@ void elf::processArmCmseSymbols() {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (size_t i = 0, e = syms.size(); i != e; ++i) {
       StringRef symName = syms[i]->getName();
-      if (symtab.cmseSymMap.count(symName))
-        syms[i] = symtab.cmseSymMap[symName].acleSeSym;
+      if (ctx.symtab->cmseSymMap.count(symName))
+        syms[i] = ctx.symtab->cmseSymMap[symName].acleSeSym;
     }
   });
 }
@@ -1326,32 +1326,33 @@ private:
   const std::optional<uint64_t> entAddr;
 };
 
-ArmCmseSGSection::ArmCmseSGSection()
+ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs") {
+                       /*alignment=*/32, ".gnu.sgstubs"),
+      ctx(ctx) {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
-  for (auto &[_, sym] : symtab.cmseImportLib) {
+  for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
     if (impLibMaxAddr <= sym->value)
       impLibMaxAddr = sym->value + sym->size;
   }
-  if (symtab.cmseSymMap.empty())
+  if (ctx.symtab->cmseSymMap.empty())
     return;
   addMappingSymbol();
-  for (auto &[_, entryFunc] : symtab.cmseSymMap)
+  for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap)
     addSGVeneer(cast<Defined>(entryFunc.acleSeSym),
                 cast<Defined>(entryFunc.sym));
-  for (auto &[_, sym] : symtab.cmseImportLib) {
-    if (!symtab.inCMSEOutImpLib.count(sym->getName()))
+  for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
+    if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
       warn("entry function '" + sym->getName() +
            "' from CMSE import library is not present in secure application");
   }
 
-  if (!symtab.cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
-    for (auto &[_, entryFunc] : symtab.cmseSymMap) {
+  if (!ctx.symtab->cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
+    for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap) {
       Symbol *sym = entryFunc.sym;
-      if (!symtab.inCMSEOutImpLib.count(sym->getName()))
+      if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
         warn("new entry function '" + sym->getName() +
              "' introduced but no output import library specified");
     }
@@ -1360,8 +1361,8 @@ ArmCmseSGSection::ArmCmseSGSection()
 
 void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   entries.emplace_back(acleSeSym, sym);
-  if (symtab.cmseImportLib.count(sym->getName()))
-    symtab.inCMSEOutImpLib[sym->getName()] = true;
+  if (ctx.symtab->cmseImportLib.count(sym->getName()))
+    ctx.symtab->inCMSEOutImpLib[sym->getName()] = true;
   // Symbol addresses different, nothing to do.
   if (acleSeSym->file != sym->file ||
       cast<Defined>(*acleSeSym).value != cast<Defined>(*sym).value)
@@ -1369,8 +1370,8 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   // Only secure symbols with values equal to that of it's non-secure
   // counterpart needs to be in the .gnu.sgstubs section.
   ArmCmseSGVeneer *ss = nullptr;
-  if (symtab.cmseImportLib.count(sym->getName())) {
-    Defined *impSym = symtab.cmseImportLib[sym->getName()];
+  if (ctx.symtab->cmseImportLib.count(sym->getName())) {
+    Defined *impSym = ctx.symtab->cmseImportLib[sym->getName()];
     ss = make<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
   } else {
     ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
@@ -1379,7 +1380,7 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   sgVeneers.emplace_back(ss);
 }
 
-void ArmCmseSGSection::writeTo(uint8_t *buf) {
+void ArmCmseSGSection::writeTo(Ctx &ctx, uint8_t *buf) {
   for (ArmCmseSGVeneer *s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(p + 0, 0xe97f); // SG
@@ -1396,14 +1397,14 @@ void ArmCmseSGSection::addMappingSymbol() {
   addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
-size_t ArmCmseSGSection::getSize() const {
+size_t ArmCmseSGSection::getSize(Ctx &) const {
   if (sgVeneers.empty())
     return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
 
   return entries.size() * entsize;
 }
 
-void ArmCmseSGSection::finalizeContents() {
+void ArmCmseSGSection::finalizeContents(Ctx &) {
   if (sgVeneers.empty())
     return;
 
@@ -1439,7 +1440,7 @@ void ArmCmseSGSection::finalizeContents() {
 // in the executable output by this link.
 // See Arm® v8-M Security Extensions: Requirements on Development Tools
 // https://developer.arm.com/documentation/ecm0359818/latest
-template <typename ELFT> void elf::writeARMCmseImportLib() {
+template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   StringTableSection *shstrtab =
       make<StringTableSection>(".shstrtab", /*dynamic=*/false);
   StringTableSection *strtab =
@@ -1451,12 +1452,12 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   osIsPairs.emplace_back(make<OutputSection>(impSymTab->name, 0, 0), impSymTab);
   osIsPairs.emplace_back(make<OutputSection>(shstrtab->name, 0, 0), shstrtab);
 
-  std::sort(symtab.cmseSymMap.begin(), symtab.cmseSymMap.end(),
+  std::sort(ctx.symtab->cmseSymMap.begin(), ctx.symtab->cmseSymMap.end(),
             [](const auto &a, const auto &b) -> bool {
               return a.second.sym->getVA() < b.second.sym->getVA();
             });
   // Copy the secure gateway entry symbols to the import library symbol table.
-  for (auto &p : symtab.cmseSymMap) {
+  for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
         ctx.internalFile, d->getName(), d->computeBinding(),
@@ -1468,10 +1469,10 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   for (auto &[osec, isec] : osIsPairs) {
     osec->sectionIndex = ++idx;
     osec->recordSection(isec);
-    osec->finalizeInputSections();
+    osec->finalizeInputSections(ctx);
     osec->shName = shstrtab->addString(osec->name);
-    osec->size = isec->getSize();
-    isec->finalizeContents();
+    osec->size = isec->getSize(ctx);
+    isec->finalizeContents(ctx);
     osec->offset = alignToPowerOf2(off, osec->addralign);
     off = osec->offset + osec->size;
   }
@@ -1524,7 +1525,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   {
     parallel::TaskGroup tg;
     for (auto &[osec, _] : osIsPairs)
-      osec->template writeTo<ELFT>(buf + osec->offset, tg);
+      osec->template writeTo<ELFT>(ctx, buf + osec->offset, tg);
   }
 
   if (auto e = buffer->commit())
@@ -1532,15 +1533,12 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
           "': " + toString(std::move(e)));
 }
 
-TargetInfo *elf::getARMTargetInfo() {
-  static ARM target;
-  return &target;
-}
+void elf::setARMTargetInfo(Ctx &ctx) { ctx.target.reset(new ARM(ctx)); }
 
-template void elf::writeARMCmseImportLib<ELF32LE>();
-template void elf::writeARMCmseImportLib<ELF32BE>();
-template void elf::writeARMCmseImportLib<ELF64LE>();
-template void elf::writeARMCmseImportLib<ELF64BE>();
+template void elf::writeARMCmseImportLib<ELF32LE>(Ctx &);
+template void elf::writeARMCmseImportLib<ELF32BE>(Ctx &);
+template void elf::writeARMCmseImportLib<ELF64LE>(Ctx &);
+template void elf::writeARMCmseImportLib<ELF64BE>(Ctx &);
 
 template void ObjFile<ELF32LE>::importCmseSymbols();
 template void ObjFile<ELF32BE>::importCmseSymbols();

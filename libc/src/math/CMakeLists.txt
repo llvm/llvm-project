@@ -66,6 +66,12 @@ add_math_entrypoint_object(canonicalizel)
 add_math_entrypoint_object(canonicalizef16)
 add_math_entrypoint_object(canonicalizef128)
 
+add_math_entrypoint_object(iscanonical)
+add_math_entrypoint_object(iscanonicalf)
+add_math_entrypoint_object(iscanonicall)
+add_math_entrypoint_object(iscanonicalf16)
+add_math_entrypoint_object(iscanonicalf128)
+
 add_math_entrypoint_object(cbrt)
 add_math_entrypoint_object(cbrtf)
 
@@ -301,6 +307,12 @@ add_math_entrypoint_object(ilogbf128)
 add_math_entrypoint_object(isnan)
 add_math_entrypoint_object(isnanf)
 add_math_entrypoint_object(isnanl)
+
+add_math_entrypoint_object(issignaling)
+add_math_entrypoint_object(issignalingf)
+add_math_entrypoint_object(issignalingl)
+add_math_entrypoint_object(issignalingf16)
+add_math_entrypoint_object(issignalingf128)
 
 add_math_entrypoint_object(llogb)
 add_math_entrypoint_object(llogbf)

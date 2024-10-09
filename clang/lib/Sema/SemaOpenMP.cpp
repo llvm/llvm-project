@@ -1405,10 +1405,9 @@ const Expr *DSAStackTy::addUniqueAligned(const ValueDecl *D,
   assert(!isStackEmpty() && "Data sharing attributes stack is empty");
   D = getCanonicalDecl(D);
   SharingMapTy &StackElem = getTopOfStack();
-  auto It = StackElem.AlignedMap.find(D);
-  if (It == StackElem.AlignedMap.end()) {
+  auto [It, Inserted] = StackElem.AlignedMap.try_emplace(D, NewDE);
+  if (Inserted) {
     assert(NewDE && "Unexpected nullptr expr to be added into aligned map");
-    StackElem.AlignedMap[D] = NewDE;
     return nullptr;
   }
   assert(It->second && "Unexpected nullptr expr in the aligned map");
@@ -1420,10 +1419,9 @@ const Expr *DSAStackTy::addUniqueNontemporal(const ValueDecl *D,
   assert(!isStackEmpty() && "Data sharing attributes stack is empty");
   D = getCanonicalDecl(D);
   SharingMapTy &StackElem = getTopOfStack();
-  auto It = StackElem.NontemporalMap.find(D);
-  if (It == StackElem.NontemporalMap.end()) {
+  auto [It, Inserted] = StackElem.NontemporalMap.try_emplace(D, NewDE);
+  if (Inserted) {
     assert(NewDE && "Unexpected nullptr expr to be added into aligned map");
-    StackElem.NontemporalMap[D] = NewDE;
     return nullptr;
   }
   assert(It->second && "Unexpected nullptr expr in the aligned map");
@@ -9195,7 +9193,7 @@ static bool checkOpenMPIterationSpace(
         SemaRef.Diag(CollapseLoopCountExpr->getExprLoc(),
                      diag::note_omp_collapse_ordered_expr)
             << 0 << CollapseLoopCountExpr->getSourceRange();
-      else
+      else if (OrderedLoopCountExpr)
         SemaRef.Diag(OrderedLoopCountExpr->getExprLoc(),
                      diag::note_omp_collapse_ordered_expr)
             << 1 << OrderedLoopCountExpr->getSourceRange();
@@ -21650,9 +21648,7 @@ SemaOpenMP::ActOnOpenMPDeclareReductionDirectiveStart(
     while (Filter.hasNext()) {
       auto *PrevDecl = cast<OMPDeclareReductionDecl>(Filter.next());
       if (InCompoundScope) {
-        auto I = UsedAsPrevious.find(PrevDecl);
-        if (I == UsedAsPrevious.end())
-          UsedAsPrevious[PrevDecl] = false;
+        UsedAsPrevious.try_emplace(PrevDecl, false);
         if (OMPDeclareReductionDecl *D = PrevDecl->getPrevDeclInScope())
           UsedAsPrevious[D] = true;
       }
@@ -21906,9 +21902,7 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareMapperDirective(
     while (Filter.hasNext()) {
       auto *PrevDecl = cast<OMPDeclareMapperDecl>(Filter.next());
       if (InCompoundScope) {
-        auto I = UsedAsPrevious.find(PrevDecl);
-        if (I == UsedAsPrevious.end())
-          UsedAsPrevious[PrevDecl] = false;
+        UsedAsPrevious.try_emplace(PrevDecl, false);
         if (OMPDeclareMapperDecl *D = PrevDecl->getPrevDeclInScope())
           UsedAsPrevious[D] = true;
       }

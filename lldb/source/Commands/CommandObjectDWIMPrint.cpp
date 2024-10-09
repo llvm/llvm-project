@@ -202,7 +202,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     // If the expression failed, return an error.
     if (expr_result != eExpressionCompleted) {
       if (valobj_sp)
-        result.SetError(valobj_sp->GetError());
+        result.SetError(valobj_sp->GetError().Clone());
       else
         result.AppendErrorWithFormatv(
             "unknown error evaluating expression `{0}`", expr);

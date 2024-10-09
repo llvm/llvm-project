@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+exception-handling --no-type-check < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors, but don't check any output:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+exception-handling --no-type-check -o %t.o < %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+exception-handling -o %t.o < %s
 
   .tagtype  __cpp_exception i32
   .tagtype  __c_longjmp i32
@@ -24,7 +24,6 @@ eh_test:
         return
       end_block
       throw_ref
-      drop
     end_block
     return
   end_block
@@ -101,7 +100,6 @@ eh_test:
 # CHECK-NEXT:    return
 # CHECK-NEXT:    end_block
 # CHECK-NEXT:    throw_ref
-# CHECK-NEXT:    drop
 # CHECK-NEXT:    end_block
 # CHECK-NEXT:    return
 # CHECK-NEXT:    end_block

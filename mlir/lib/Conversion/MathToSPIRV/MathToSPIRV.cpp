@@ -462,7 +462,7 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
-void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns) {
   // Core patterns
   patterns.add<CopySignPattern>(typeConverter, patterns.getContext());

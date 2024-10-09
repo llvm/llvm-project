@@ -29,10 +29,14 @@ namespace PackExpansionNotAtEnd {
                                                 >::value? 1 : -1];
 
   template<typename ... Types> struct UselessPartialSpec;
+  // expected-note@-1 {{template is declared here}}
 
+  // FIXME: We should simply disallow a pack expansion which is not at
+  // the end of the partial spec template argument list.
   template<typename ... Types, // expected-note{{non-deducible template parameter 'Types'}}
            typename Tail> // expected-note{{non-deducible template parameter 'Tail'}}
   struct UselessPartialSpec<Types..., Tail>; // expected-error{{class template partial specialization contains template parameters that cannot be deduced; this partial specialization will never be used}}
+  // expected-error@-1 {{is not more specialized than the primary template}}
 }
 
 // When a pack expansion occurs within a template argument list, the entire
