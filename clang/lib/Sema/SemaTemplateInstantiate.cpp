@@ -512,13 +512,13 @@ struct TemplateInstantiationArgumentCollecter
 
 } // namespace
 
-MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
-    const NamedDecl *ND, const DeclContext *DC, bool Final,
+void Sema::getTemplateInstantiationArgs(
+    MultiLevelTemplateArgumentList &Result, const NamedDecl *ND,
+    const DeclContext *DC, bool Final,
     std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
     bool ForConstraintInstantiation) {
   assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
   // Accumulate the set of template argument lists in this structure.
-  MultiLevelTemplateArgumentList Result;
   const Decl *CurDecl = ND;
 
   if (!CurDecl)
@@ -529,6 +529,17 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   do {
     CurDecl = Collecter.Visit(const_cast<Decl *>(CurDecl));
   } while (CurDecl);
+}
+
+MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
+    const NamedDecl *ND, const DeclContext *DC, bool Final,
+    std::optional<ArrayRef<TemplateArgument>> Innermost, bool RelativeToPrimary,
+    bool ForConstraintInstantiation) {
+  assert((ND || DC) && "Can't find arguments for a decl if one isn't provided");
+  // Accumulate the set of template argument lists in this structure.
+  MultiLevelTemplateArgumentList Result;
+  getTemplateInstantiationArgs(Result, ND, DC, Final, Innermost,
+                               RelativeToPrimary, ForConstraintInstantiation);
   return Result;
 }
 
