@@ -114,7 +114,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   SmallVector<Type *, 8> ScalarArgTypes;
   auto *VTy = dyn_cast<VectorType>(RetTy);
   ElementCount EC(!RetIsScalar && VTy ? VTy->getElementCount()
-                                    : ElementCount::getFixed(0));
+                                      : ElementCount::getFixed(0));
 
   // OloadTys collects types used in scalar intrinsic overload name.
   SmallVector<Type *, 3> OloadTys;
