@@ -4681,7 +4681,9 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
 
     // If there are two attempts to define the same mangled name, issue an
     // error.
-    if (IsForDefinition && !Entry->isDeclaration()) {
+    auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
+    bool IsLambda = MD && MD->getParent()->isLambda();
+    if (IsForDefinition && (!Entry->isDeclaration() || IsLambda)) {
       GlobalDecl OtherGD;
       // Check that GD is not yet in DiagnosedConflictingDefinitions is required
       // to make sure that we issue an error only once.
