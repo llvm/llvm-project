@@ -580,14 +580,14 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   Instruction *Base =
       insertBaseTaggedPointer(*Fn.getParent(), SInfo.AllocasToInstrument, DT);
 
-  int NextTag = 0;
+  unsigned int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && SIB.getAllocaInterestingness(*Info.AI) ==
                           llvm::memtag::AllocaInterestingness::kInteresting);
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
-    int Tag = NextTag;
+    unsigned int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
@@ -642,7 +642,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         II->eraseFromParent();
     }
 
-    memtag::annotateDebugRecords(Info, static_cast<unsigned long>(Tag));
+    memtag::annotateDebugRecords(Info, Tag);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime
