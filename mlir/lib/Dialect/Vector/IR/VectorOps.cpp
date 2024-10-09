@@ -3772,6 +3772,92 @@ public:
   }
 };
 
+/// Pattern to rewrite simple cases of N-D extract_strided_slice, where the
+/// slice is contiguous, into extract and shape_cast.
+///
+/// Example:
+///     Before:
+///         %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0],
+///         sizes = [1, 1, 1, 1, 8], strides = [1, 1, 1, 1, 1]} :
+///         vector<8x1x1x2x8xi8> to vector<1x1x1x1x8xi8>
+///     After:
+///         %0 = vector.extract %arg0[0, 0, 0, 0] : vector<8xi8> from
+///         vector<8x1x1x2x8xi8> %1 = vector.shape_cast %0 : vector<8xi8> to
+///         vector<1x1x1x1x8xi8>
+///
+class ContiguousExtractStridedSliceToExtract final
+    : public OpRewritePattern<ExtractStridedSliceOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.hasNonUnitStrides()) {
+      return failure();
+    }
+    Value source = op.getOperand();
+    auto sourceType = cast<VectorType>(source.getType());
+    if (sourceType.isScalable() || sourceType.getRank() == 0) {
+      return failure();
+    }
+
+    // Compute the number of offsets to pass to ExtractOp::build. That is the
+    // difference between the source rank and the desired slice rank. We walk
+    // the dimensions from innermost out, and stop when the next slice dimension
+    // is not full-size.
+    SmallVector<int64_t> sizes = getI64SubArray(op.getSizes());
+    int numOffsets;
+    for (numOffsets = sizes.size(); numOffsets > 0; --numOffsets) {
+      if (sizes[numOffsets - 1] != sourceType.getDimSize(numOffsets - 1)) {
+        break;
+      }
+    }
+
+    // If the created extract op would have no offsets, then this whole
+    // extract_strided_slice is the identity and should have been handled by
+    // other canonicalizations.
+    if (numOffsets == 0) {
+      return failure();
+    }
+
+    // If not even the inner-most dimension is full-size, this op can't be
+    // rewritten as an ExtractOp.
+    if (numOffsets == sourceType.getRank() &&
+        static_cast<int>(sizes.size()) == sourceType.getRank()) {
+      return failure();
+    }
+
+    // The outer dimensions must have unit size.
+    for (int i = 0; i < numOffsets; ++i) {
+      if (sizes[i] != 1) {
+        return failure();
+      }
+    }
+
+    // Avoid generating slices that have leading unit dimensions. The shape_cast
+    // op that we create below would take bad generic fallback patterns
+    // (ShapeCastOpRewritePattern).
+    while (sizes[numOffsets] == 1 &&
+           numOffsets < static_cast<int>(sizes.size()) - 1) {
+      ++numOffsets;
+    }
+    // After exhausting the list of slice sizes, we keep checking for unit
+    // dimensions in the source shape, to remove corner cases where the result
+    // would have a leading unit dimension.
+    while (sourceType.getDimSize(numOffsets) == 1 &&
+           numOffsets < sourceType.getRank() - 1) {
+      ++numOffsets;
+    }
+
+    SmallVector<int64_t> offsets = getI64SubArray(op.getOffsets());
+    auto extractOffsets = ArrayRef(offsets).take_front(numOffsets);
+    Value extract = rewriter.create<vector::ExtractOp>(op->getLoc(), source,
+                                                       extractOffsets);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getType(), extract);
+    return success();
+  }
+};
+
 } // namespace
 
 void ExtractStridedSliceOp::getCanonicalizationPatterns(
@@ -3780,7 +3866,8 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
   // ConstantMaskOp and ExtractStridedSliceOp(ConstantOp) -> ConstantOp.
   results.add<StridedSliceConstantMaskFolder, StridedSliceSplatConstantFolder,
               StridedSliceNonSplatConstantFolder, StridedSliceBroadcast,
-              StridedSliceSplat>(context);
+              StridedSliceSplat, ContiguousExtractStridedSliceToExtract>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
