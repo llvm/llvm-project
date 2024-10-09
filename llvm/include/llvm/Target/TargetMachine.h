@@ -50,7 +50,6 @@ struct PerFunctionMIParsingState;
 class SMDiagnostic;
 class SMRange;
 class Target;
-class TargetIntrinsicInfo;
 class TargetIRAnalysis;
 class TargetTransformInfo;
 class TargetLoweringObjectFile;
@@ -214,11 +213,6 @@ public:
   const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
   const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
-
-  /// If intrinsic information is available, return it.  If not, return null.
-  virtual const TargetIntrinsicInfo *getIntrinsicInfo() const {
-    return nullptr;
-  }
 
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }

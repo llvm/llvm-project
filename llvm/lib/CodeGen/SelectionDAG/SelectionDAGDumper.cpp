@@ -43,7 +43,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdint>
 #include <iterator>
@@ -164,8 +163,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
       return Intrinsic::getBaseName((Intrinsic::ID)IID).str();
     if (!G)
       return "Unknown intrinsic";
-    if (const TargetIntrinsicInfo *TII = G->getTarget().getIntrinsicInfo())
-      return TII->getName(IID);
     llvm_unreachable("Invalid intrinsic ID");
   }
 
