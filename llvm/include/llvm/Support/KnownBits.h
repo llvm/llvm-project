@@ -117,6 +117,20 @@ public:
     Zero.setSignBit();
   }
 
+  /// Force this value to be negative. Unlike `makeNegative`, this will clear
+  /// any existing signbit.
+  void forceNegative() {
+    Zero.clearSignBit();
+    One.setSignBit();
+  }
+
+  /// Force this value to be non-negative. Unlike `makeNonNegative`, this will
+  /// clear any existing signbit.
+  void forceNonNegative() {
+    One.clearSignBit();
+    Zero.setSignBit();
+  }
+
   /// Return the minimal unsigned value possible given these KnownBits.
   APInt getMinValue() const {
     // Assume that all bits that aren't known-ones are zeros.
