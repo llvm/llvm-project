@@ -34,6 +34,12 @@ ConstString CompilerDeclContext::GetScopeQualifiedName() const {
   return ConstString();
 }
 
+CompilerDecl CompilerDeclContext::GetDecl() const {
+  if (IsValid())
+    return m_type_system->DeclContextGetDecl(m_opaque_decl_ctx);
+  return CompilerDecl();
+}
+
 bool CompilerDeclContext::IsClassMethod() {
   if (IsValid())
     return m_type_system->DeclContextIsClassMethod(m_opaque_decl_ctx);

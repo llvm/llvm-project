@@ -110,6 +110,8 @@ public:
 
   ConstString GetScopeQualifiedName() const;
 
+  CompilerDecl GetDecl() const;
+
 private:
   TypeSystem *m_type_system = nullptr;
   void *m_opaque_decl_ctx = nullptr;
