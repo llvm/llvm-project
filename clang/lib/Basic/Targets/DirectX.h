@@ -62,7 +62,7 @@ public:
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
     resetDataLayout("e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:"
                     "32-f64:64-n8:16:32:64");
-    TheCXXABI.set(TargetCXXABI::Microsoft);
+    TheCXXABI.set(TargetCXXABI::GenericItanium);
   }
   bool useFP16ConversionIntrinsics() const override { return false; }
   void getTargetDefines(const LangOptions &Opts,
