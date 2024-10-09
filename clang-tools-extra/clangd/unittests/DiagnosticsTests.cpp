@@ -1984,6 +1984,30 @@ TEST(Diagnostics, Tags) {
                 withTag(DiagnosticTag::Deprecated)))));
 }
 
+TEST(Diagnostics, TidyDiagsArentAffectedFromWerror) {
+  TestTU TU;
+  TU.ExtraArgs = {"-Werror"};
+  Annotations Test(R"cpp($typedef[[typedef int INT]]; // error-ok)cpp");
+  TU.Code = Test.code().str();
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Make sure severity for clang-tidy finding isn't bumped to
+                // error due to Werror in compile flags.
+                diagSeverity(DiagnosticsEngine::Warning)))));
+
+  TU.ClangTidyProvider =
+      addTidyChecks("modernize-use-using", /*WarningsAsErrors=*/"modernize-*");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Unless bumped explicitly with WarnAsError.
+                diagSeverity(DiagnosticsEngine::Error)))));
+}
+
 TEST(Diagnostics, DeprecatedDiagsAreHints) {
   ClangdDiagnosticOptions Opts;
   std::optional<clangd::Diagnostic> Diag;

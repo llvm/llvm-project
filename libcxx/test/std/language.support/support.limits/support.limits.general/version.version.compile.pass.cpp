@@ -125,6 +125,7 @@
     __cpp_lib_is_aggregate                                  201703L [C++17]
     __cpp_lib_is_constant_evaluated                         201811L [C++20]
     __cpp_lib_is_final                                      201402L [C++14]
+    __cpp_lib_is_implicit_lifetime                          202302L [C++23]
     __cpp_lib_is_invocable                                  201703L [C++17]
     __cpp_lib_is_layout_compatible                          201907L [C++20]
     __cpp_lib_is_nothrow_convertible                        201806L [C++20]
@@ -669,6 +670,10 @@
 
 # ifdef __cpp_lib_is_final
 #   error "__cpp_lib_is_final should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_is_invocable
@@ -1548,6 +1553,10 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++14"
+# endif
+
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_is_invocable
@@ -2562,6 +2571,10 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++17"
+# endif
+
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_is_invocable
@@ -3840,6 +3853,10 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++20"
+# endif
+
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_is_invocable
@@ -5304,6 +5321,19 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++23"
+# endif
+
+# if __has_builtin(__builtin_is_implicit_lifetime)
+#   ifndef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should be defined in c++23"
+#   endif
+#   if __cpp_lib_is_implicit_lifetime != 202302L
+#     error "__cpp_lib_is_implicit_lifetime should have the value 202302L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should not be defined when the requirement '__has_builtin(__builtin_is_implicit_lifetime)' is not met!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_is_invocable
@@ -7110,6 +7140,19 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++26"
+# endif
+
+# if __has_builtin(__builtin_is_implicit_lifetime)
+#   ifndef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should be defined in c++26"
+#   endif
+#   if __cpp_lib_is_implicit_lifetime != 202302L
+#     error "__cpp_lib_is_implicit_lifetime should have the value 202302L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should not be defined when the requirement '__has_builtin(__builtin_is_implicit_lifetime)' is not met!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_is_invocable

@@ -75,6 +75,7 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
   Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
 
   CheckDuplicateIntrinsics();
+  CheckTargetIndependentIntrinsics();
 }
 
 // Check for duplicate intrinsic names.
@@ -101,7 +102,29 @@ void CodeGenIntrinsicTable::CheckDuplicateIntrinsics() const {
   PrintFatalNote(First.TheDef, "Previous definition here");
 }
 
-CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
+// For target independent intrinsics, check that their second dotted component
+// does not match any target name.
+void CodeGenIntrinsicTable::CheckTargetIndependentIntrinsics() const {
+  SmallDenseSet<StringRef> TargetNames;
+  for (const auto &Target : ArrayRef(Targets).drop_front())
+    TargetNames.insert(Target.Name);
+
+  // Set of target independent intrinsics.
+  const auto &Set = Targets[0];
+  for (const auto &Int : ArrayRef(&Intrinsics[Set.Offset], Set.Count)) {
+    StringRef Name = Int.Name;
+    StringRef Prefix = Name.drop_front(5).split('.').first;
+    if (!TargetNames.contains(Prefix))
+      continue;
+    PrintFatalError(Int.TheDef,
+                    "target independent intrinsic `" + Name +
+                        "' has prefix `llvm." + Prefix +
+                        "` that conflicts with intrinsics for target `" +
+                        Prefix + "`");
+  }
+}
+
+const CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
   if (!Record->isSubClassOf("Intrinsic"))
     PrintFatalError("Intrinsic defs should be subclass of 'Intrinsic' class");
 

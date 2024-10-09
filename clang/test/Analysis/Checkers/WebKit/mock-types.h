@@ -108,4 +108,52 @@ struct RefCountable {
 
 template <typename T> T *downcast(T *t) { return t; }
 
+template <typename T> struct CheckedRef {
+private:
+  T *t;
+
+public:
+  CheckedRef() : t{} {};
+  CheckedRef(T &t) : t(t) { t->incrementPtrCount(); }
+  CheckedRef(const CheckedRef& o) : t(o.t) { if (t) t->incrementPtrCount(); }
+  ~CheckedRef() { if (t) t->decrementPtrCount(); }
+  T &get() { return *t; }
+  T *ptr() { return t; }
+  T *operator->() { return t; }
+  operator const T &() const { return *t; }
+  operator T &() { return *t; }
+};
+
+template <typename T> struct CheckedPtr {
+private:
+  T *t;
+
+public:
+  CheckedPtr() : t(nullptr) {}
+  CheckedPtr(T *t)
+    : t(t) {
+    if (t)
+      t->incrementPtrCount();
+  }
+  CheckedPtr(Ref<T>&& o)
+    : t(o.leakRef())
+  { }
+  ~CheckedPtr() {
+    if (t)
+      t->decrementPtrCount();
+  }
+  T *get() { return t; }
+  T *operator->() { return t; }
+  const T *operator->() const { return t; }
+  T &operator*() { return *t; }
+  CheckedPtr &operator=(T *) { return *this; }
+  operator bool() const { return t; }
+};
+
+class CheckedObj {
+public:
+  void incrementPtrCount();
+  void decrementPtrCount();
+};
+
 #endif

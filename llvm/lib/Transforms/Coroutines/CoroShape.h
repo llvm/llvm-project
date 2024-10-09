@@ -112,9 +112,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   Value *FramePtr = nullptr;
   BasicBlock *AllocaSpillBlock = nullptr;
 
-  /// This would only be true if optimization are enabled.
-  bool OptimizeFrame;
-
   struct SwitchLoweringStorage {
     SwitchInst *ResumeSwitch;
     AllocaInst *PromiseAlloca;
@@ -265,8 +262,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   void emitDealloc(IRBuilder<> &Builder, Value *Ptr, CallGraph *CG) const;
 
   Shape() = default;
-  explicit Shape(Function &F, bool OptimizeFrame = false)
-      : OptimizeFrame(OptimizeFrame) {
+  explicit Shape(Function &F) {
     SmallVector<CoroFrameInst *, 8> CoroFrames;
     SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
 
@@ -275,7 +271,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
       invalidateCoroutine(F, CoroFrames);
       return;
     }
-    initABI();
     cleanCoroutine(CoroFrames, UnusedCoroSaves);
   }
 };

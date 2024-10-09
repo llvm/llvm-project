@@ -21,5 +21,5 @@ define i32 @foo() {
 
 ; Try to save statistics to an invalid file.
 ; RUN: not %gold -plugin %llvmshlibdir/LLVMgold%shlibext -plugin-opt=stats-file=%t2/foo.stats \
-; RUN:    -m elf_x86_64 -r -o %t.o %t.bc 2>&1 | FileCheck --check-prefix=ERROR %s
-; ERROR: LLVM gold plugin: No such file or directory
+; RUN:    -m elf_x86_64 -r -o %t.o %t.bc 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ERROR %s
+; ERROR: LLVM gold plugin: [[MSG]]
