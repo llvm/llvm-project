@@ -99,9 +99,30 @@ add_entrypoint_object(
   HDRS
     mktime.h
   DEPENDS
-    .time_utils
     libc.include.time
     libc.src.errno.errno
+)
+
+
+add_entrypoint_object(
+  strftime
+  SRCS
+    strftime.cpp
+  HDRS
+    strftime.h
+  DEPENDS
+    libc.include.time
+)
+
+add_entrypoint_object(
+  strftime_l
+  SRCS
+    strftime_l.cpp
+  HDRS
+    strftime_l.h
+  DEPENDS
+    libc.include.time
+    libc.include.locale
 )
 
 add_entrypoint_object(

@@ -1598,6 +1598,7 @@ def StdC : StandardSpec<"stdc"> {
          StructTimeSpec,
          TimeTType,
          SizeTType,
+         LocaleT,
       ],
       [], // Enumerations
       [
@@ -1662,6 +1663,26 @@ def StdC : StandardSpec<"stdc"> {
               "time",
               RetValSpec<TimeTType>,
               [ArgSpec<TimeTTypePtr>]
+          >,
+          FunctionSpec<
+              "strftime",
+              RetValSpec<SizeTType>,
+              [
+                  ArgSpec<CharRestrictedPtr>,
+                  ArgSpec<SizeTType>,
+                  ArgSpec<ConstCharRestrictedPtr>,
+                  ArgSpec<StructTmPtr>
+              ]
+          FunctionSpec<
+              "strftime_l",
+              RetValSpec<SizeTType>,
+              [
+                  ArgSpec<CharRestrictedPtr>,
+                  ArgSpec<SizeTType>,
+                  ArgSpec<ConstCharRestrictedPtr>,
+                  ArgSpec<StructTmPtr>,
+                  ArgSpec<LocaleT>
+              ]
           >,
       ]
   >;
