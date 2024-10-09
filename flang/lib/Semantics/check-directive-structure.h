@@ -74,6 +74,9 @@ public:
         case llvm::omp::Directive::OMPD_distribute_parallel_for:
         case llvm::omp::Directive::OMPD_distribute_simd:
         case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
+        case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do:
+        case llvm::omp::Directive::
+            OMPD_target_teams_distribute_parallel_do_simd:
           return;
         default:
           break;

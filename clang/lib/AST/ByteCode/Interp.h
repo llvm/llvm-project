@@ -161,6 +161,7 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
+bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -2288,50 +2289,19 @@ static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
   return CheckFloatResult(S, OpPC, F, Status, FPO);
 }
 
+bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
+                                const Pointer &Ptr, unsigned BitWidth);
+bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
+bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isDummy())
+  if (!CheckPointerToIntegralCast(S, OpPC, Ptr, T::bitWidth()))
     return false;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
   S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
-  return true;
-}
-
-static inline bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC,
-                                         uint32_t BitWidth) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-
-  S.Stk.push<IntegralAP<false>>(
-      IntegralAP<false>::from(Ptr.getIntegerRepresentation(), BitWidth));
-  return true;
-}
-
-static inline bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC,
-                                          uint32_t BitWidth) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isDummy())
-    return false;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-
-  S.Stk.push<IntegralAP<true>>(
-      IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
   return true;
 }
 

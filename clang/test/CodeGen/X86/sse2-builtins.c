@@ -1778,3 +1778,16 @@ __m128i test_mm_xor_si128(__m128i A, __m128i B) {
   // CHECK: xor <2 x i64> %{{.*}}, %{{.*}}
   return _mm_xor_si128(A, B);
 }
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+
+void test_constexpr() {
+  constexpr __m128d v_mm_setzero_pd = _mm_setzero_pd();
+  static_assert(v_mm_setzero_pd[0] == +0.0 && v_mm_setzero_pd[1] == +0.0);
+
+  constexpr __m128i v_mm_setzero_si128 = _mm_setzero_si128();
+  static_assert(v_mm_setzero_si128[0] == 0x0000000000000000ULL && v_mm_setzero_si128[1] == 0x0000000000000000ULL);
+}
+
+#endif

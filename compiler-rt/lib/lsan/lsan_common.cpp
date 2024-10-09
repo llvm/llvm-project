@@ -698,7 +698,9 @@ void LeakSuppressionContext::PrintMatchedSuppressions() {
 
 // Fuchsia provides a libc interface that guarantees all threads are
 // covered, and SuspendedThreadList is never really used.
-static void ReportUnsuspendedThreads(const SuspendedThreadsList &) {}
+static bool ReportUnsuspendedThreads(const SuspendedThreadsList &) {
+  return true;
+}
 
 #  else  // !SANITIZER_FUCHSIA
 
