@@ -191,14 +191,6 @@ llvm::Error ItaniumABILanguageRuntime::TypeHasVTable(CompilerType type) {
       type = pointee_type;
   }
 
-  // Make sure this is a class or a struct first by checking the type class
-  // bitfield that gets returned.
-  if ((type.GetTypeClass() & (eTypeClassStruct | eTypeClassClass)) == 0) {
-    return llvm::createStringError(std::errc::invalid_argument,
-        "type \"%s\" is not a class or struct or a pointer to one",
-        original_type.GetTypeName().AsCString("<invalid>"));
-  }
-
   // Check if the type has virtual functions by asking it if it is polymorphic.
   if (!type.IsPolymorphicClass()) {
     return llvm::createStringError(std::errc::invalid_argument,
