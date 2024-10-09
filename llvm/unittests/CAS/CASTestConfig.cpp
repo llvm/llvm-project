@@ -34,7 +34,6 @@ std::string llvm::unittest::cas::getCASPluginPath() {
   return std::string(PathBuf);
 }
 
-
 TestingAndDir createInMemory(int I) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   std::unique_ptr<ActionCache> Cache = createInMemoryActionCache();
@@ -70,7 +69,6 @@ TestingAndDir createOnDisk(int I) {
   return TestingAndDir{std::move(CAS), std::move(Cache), std::move(Temp)};
 }
 INSTANTIATE_TEST_SUITE_P(OnDiskCAS, CASTest, ::testing::Values(createOnDisk));
-
 
 TestingAndDir createPluginCASImpl(int I) {
   using namespace llvm::unittest::cas;

@@ -155,7 +155,7 @@ struct ThreadSafeTrieRawHashMapBase::ImplType {
   static std::unique_ptr<ImplType> create(size_t StartBit, size_t NumBits) {
     size_t Size = sizeof(ImplType) + getTrieTailSize(StartBit, NumBits);
     void *Memory = ::malloc(Size);
-    ImplType* Impl = ::new (Memory) ImplType(StartBit, NumBits);
+    ImplType *Impl = ::new (Memory) ImplType(StartBit, NumBits);
     return std::unique_ptr<ImplType>(Impl);
   }
 

@@ -85,7 +85,6 @@ public:
     return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result, Globally);
   }
 
-
 #ifndef _MSC_VER
   /// FIXME: MSVC doesn't compile Error within Promise/Future correctly and will
   /// result in unchecked error. Disable AsyncAPIs when using MSVC for now.

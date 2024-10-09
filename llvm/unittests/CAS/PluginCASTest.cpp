@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CAS/PluginCAS.h"
 #include "CASTestConfig.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/CAS/PluginCAS.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
