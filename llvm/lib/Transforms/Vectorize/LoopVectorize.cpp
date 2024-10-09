@@ -2444,8 +2444,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     Value *Step = CreateStep();
     ScalarEvolution &SE = *PSE.getSE();
     // Check if we can prove that the trip count is >= the step.
-    const SCEV *TripCountSCEV = SE.getTripCountFromExitCount(
-        PSE.getBackedgeTakenCount(), CountTy, OrigLoop);
+    const SCEV *TripCountSCEV = SE.getSCEV(Count);
     if (SE.isKnownPredicate(CmpInst::getInversePredicate(P),
                             SE.applyLoopGuards(TripCountSCEV, OrigLoop),
                             SE.getSCEV(Step)))
