@@ -119,6 +119,11 @@ static cl::opt<bool> GlobalMergeGroupByUse(
     "global-merge-group-by-use", cl::Hidden,
     cl::desc("Improve global merge pass to look at uses"), cl::init(true));
 
+static cl::opt<bool> GlobalMergeAllConst(
+    "global-merge-all-const", cl::Hidden,
+    cl::desc("Merge all const globals without looking at uses"),
+    cl::init(false));
+
 static cl::opt<bool> GlobalMergeIgnoreSingleUse(
     "global-merge-ignore-single-use", cl::Hidden,
     cl::desc("Improve global merge pass to ignore globals only used alone"),
@@ -263,7 +268,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
       });
 
   // If we want to just blindly group all globals together, do so.
-  if (!GlobalMergeGroupByUse) {
+  if (!GlobalMergeGroupByUse || (GlobalMergeAllConst && isConst)) {
     BitVector AllGlobals(Globals.size());
     AllGlobals.set();
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
