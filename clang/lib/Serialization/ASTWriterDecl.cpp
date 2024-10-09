@@ -1146,6 +1146,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     VarDeclBits.addBit(D->isPreviousDeclInSameBlockScope());
 
     VarDeclBits.addBit(D->isEscapingByref());
+    VarDeclBits.addBit(D->isCapturedByOwnInit());
     HasDeducedType = D->getType()->getContainedDeducedType();
     VarDeclBits.addBit(HasDeducedType);
 
@@ -2527,13 +2528,14 @@ void ASTWriter::WriteDeclAbbrevs() {
   // VarDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      21)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
+      22)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
             // SClass, TSCSpec, InitStyle,
             // isARCPseudoStrong, IsThisDeclarationADemotedDefinition,
             // isExceptionVariable, isNRVOVariable, isCXXForRangeDecl,
             // isInline, isInlineSpecified, isConstexpr,
             // isInitCapture, isPrevDeclInSameScope,
-            // EscapingByref, HasDeducedType, ImplicitParamKind, isObjCForDecl
+            // EscapingByref, CapturedByOwnInit, HasDeducedType,
+            // ImplicitParamKind, isObjCForDecl
   Abv->Add(BitCodeAbbrevOp(0));                         // VarKind (local enum)
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));

@@ -136,9 +136,14 @@ inline BlockFieldFlags operator|(BlockFieldFlag_t l, BlockFieldFlag_t r) {
 class BlockByrefInfo {
 public:
   llvm::StructType *Type;
+  /// Index of the field for the variable itself.
   unsigned FieldIndex;
   CharUnits ByrefAlignment;
   CharUnits FieldOffset;
+  /// Whether this will be initialized directly on the heap.
+  bool ForInitOnHeap;
+  /// If ForInitOnHeap is true, index of the 'initialized' field.
+  unsigned IndexOfInitializedFlag;
 };
 
 /// Represents a type of copy/destroy operation that should be performed for an
