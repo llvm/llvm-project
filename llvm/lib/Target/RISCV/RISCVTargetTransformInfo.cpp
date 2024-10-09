@@ -2381,8 +2381,8 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// splats of scalars can fold into vector instructions.
-bool RISCVTTIImpl::isProfitableToSinkOperands(Instruction *I,
-                                      SmallVectorImpl<Use *> &Ops) const {
+bool RISCVTTIImpl::isProfitableToSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
 
   if (!I->getType()->isVectorTy() || !ST->hasVInstructions())

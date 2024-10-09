@@ -1749,7 +1749,8 @@ public:
   /// instruction during instruction selection. After calling the function
   /// \p Ops contains the Uses to sink ordered by dominance (dominating users
   /// come first).
-  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const;
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
 
   struct VPLegalization {
     enum VPTransform {
@@ -2189,8 +2190,9 @@ public:
   virtual bool supportsScalableVectors() const = 0;
   virtual bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
                                      Align Alignment) const = 0;
-  virtual bool isProfitableToSinkOperands(Instruction *I,
-                                  SmallVectorImpl<Use *> &OpsToSink) const = 0;
+  virtual bool
+  isProfitableToSinkOperands(Instruction *I,
+                             SmallVectorImpl<Use *> &OpsToSink) const = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
@@ -2962,7 +2964,7 @@ public:
   }
 
   bool isProfitableToSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override {
+                                  SmallVectorImpl<Use *> &Ops) const override {
     return Impl.isProfitableToSinkOperands(I, Ops);
   };
 

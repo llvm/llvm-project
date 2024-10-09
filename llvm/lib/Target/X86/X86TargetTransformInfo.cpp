@@ -6918,7 +6918,7 @@ static bool isVectorShiftByScalarCheap(Type *Ty, const X86Subtarget *ST) {
 }
 
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
-                                    SmallVectorImpl<Use *> &Ops) const {
+                                            SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
 
   FixedVectorType *VTy = dyn_cast<FixedVectorType>(I->getType());

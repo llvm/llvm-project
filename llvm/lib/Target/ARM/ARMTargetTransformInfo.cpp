@@ -2683,7 +2683,7 @@ static bool areExtractExts(Value *Ext1, Value *Ext2) {
 /// the operands can be folded into a target instruction, e.g.
 /// sext/zext can be folded into vsubl.
 bool ARMTTIImpl::isProfitableToSinkOperands(Instruction *I,
-                                    SmallVectorImpl<Use *> &Ops) const {
+                                            SmallVectorImpl<Use *> &Ops) const {
   using namespace PatternMatch;
 
   if (!I->getType()->isVectorTy())

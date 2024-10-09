@@ -435,7 +435,8 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
 
-  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops) const;
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
   /// @}
 };
 
