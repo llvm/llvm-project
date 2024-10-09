@@ -1797,6 +1797,11 @@ public:
 
   /// @}
 
+  /// Collect launch bounds for \p F into \p LB.
+  void
+  collectLaunchBounds(const Function &F,
+                      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+
 private:
   /// The abstract base class used to type erase specific TTI
   /// implementations.
@@ -2191,6 +2196,9 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual void collectLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const = 0;
 };
 
 template <typename T>
@@ -2974,6 +2982,12 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  void collectLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override {
+    Impl.collectLaunchBounds(F, LB);
   }
 };
 

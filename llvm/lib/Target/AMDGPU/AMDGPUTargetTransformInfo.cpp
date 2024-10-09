@@ -1386,3 +1386,19 @@ unsigned GCNTTIImpl::getPrefetchDistance() const {
 bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
   return AMDGPU::isFlatGlobalAddrSpace(AS);
 }
+
+void GCNTTIImpl::collectLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  auto AmdgpuMaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
+  LB.push_back({"AmdgpuMaxNumWorkgroupsX", AmdgpuMaxNumWorkgroups[0]});
+  LB.push_back({"AmdgpuMaxNumWorkgroupsY", AmdgpuMaxNumWorkgroups[1]});
+  LB.push_back({"AmdgpuMaxNumWorkgroupsZ", AmdgpuMaxNumWorkgroups[2]});
+  auto AmdgpuFlatWorkGroupSize = ST->getFlatWorkGroupSizes(F);
+  LB.push_back({"AmdgpuFlatWorkGroupSizeMin", AmdgpuFlatWorkGroupSize.first});
+  LB.push_back({"AmdgpuFlatWorkGroupSizeMax", AmdgpuFlatWorkGroupSize.second});
+  auto AmdgpuWavesPerEU = ST->getWavesPerEU(F);
+  LB.push_back({"AmdgpuWavesPerEUMin", AmdgpuWavesPerEU.first});
+  LB.push_back({"AmdgpuWavesPerEUMax", AmdgpuWavesPerEU.second});
+  // TODO: Any others we should add?
+}

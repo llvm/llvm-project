@@ -1359,6 +1359,12 @@ bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
   return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
 }
 
+void TargetTransformInfo::collectLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  return TTIImpl->collectLaunchBounds(F, LB);
+}
+
 TargetTransformInfo::Concept::~Concept() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
