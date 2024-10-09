@@ -57,6 +57,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_CURL
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -1480,6 +1481,12 @@ bool SBDebugger::GetUseColor() const {
   LLDB_INSTRUMENT_VA(this);
 
   return (m_opaque_sp ? m_opaque_sp->GetUseColor() : false);
+}
+
+bool SBDebugger::SetShowInlineDiagnostics(bool value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  return (m_opaque_sp ? m_opaque_sp->SetShowInlineDiagnostics(value) : false);
 }
 
 bool SBDebugger::SetUseSourceCache(bool value) {

@@ -1432,7 +1432,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->AddComment("BB id");
       // Emit the BB ID for this basic block.
       // We only emit BaseID since CloneID is unset for
-      // basic-block-sections=labels.
+      // -basic-block-adress-map.
       // TODO: Emit the full BBID when labels and sections can be mixed
       // together.
       OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
@@ -1703,6 +1703,20 @@ static bool needFuncLabels(const MachineFunction &MF, const AsmPrinter &Asm) {
       classifyEHPersonality(MF.getFunction().getPersonalityFn()));
 }
 
+// Return the mnemonic of a MachineInstr if available, or the MachineInstr
+// opcode name otherwise.
+static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
+  const TargetInstrInfo *TII =
+      MI.getParent()->getParent()->getSubtarget().getInstrInfo();
+  MCInst MCI;
+  MCI.setOpcode(MI.getOpcode());
+  if (StringRef Name = Streamer.getMnemonic(MCI); !Name.empty())
+    return Name;
+  StringRef Name = TII->getName(MI.getOpcode());
+  assert(!Name.empty() && "Missing mnemonic and name for opcode");
+  return Name;
+}
+
 /// EmitFunctionBody - This method emits the body and trailer for a
 /// function.
 void AsmPrinter::emitFunctionBody() {
@@ -1746,7 +1760,6 @@ void AsmPrinter::emitFunctionBody() {
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
-        ++NumInstsInFunction;
       }
 
       // If there is a pre-instruction symbol, emit a label for it here.
@@ -1845,12 +1858,25 @@ void AsmPrinter::emitFunctionBody() {
         break;
       default:
         emitInstruction(&MI);
-        if (CanDoExtraAnalysis) {
-          MCInst MCI;
-          MCI.setOpcode(MI.getOpcode());
-          auto Name = OutStreamer->getMnemonic(MCI);
-          auto I = MnemonicCounts.insert({Name, 0u});
-          I.first->second++;
+
+        auto CountInstruction = [&](const MachineInstr &MI) {
+          // Skip Meta instructions inside bundles.
+          if (MI.isMetaInstruction())
+            return;
+          ++NumInstsInFunction;
+          if (CanDoExtraAnalysis) {
+            StringRef Name = getMIMnemonic(MI, *OutStreamer);
+            ++MnemonicCounts[Name];
+          }
+        };
+        if (!MI.isBundle()) {
+          CountInstruction(MI);
+          break;
+        }
+        // Separately count all the instructions in a bundle.
+        for (auto It = std::next(MI.getIterator());
+             It != MBB.end() && It->isInsideBundle(); ++It) {
+          CountInstruction(*It);
         }
         break;
       }
@@ -1866,7 +1892,7 @@ void AsmPrinter::emitFunctionBody() {
     // We must emit temporary symbol for the end of this basic block, if either
     // we have BBLabels enabled or if this basic blocks marks the end of a
     // section.
-    if (MF->hasBBLabels() || MF->getTarget().Options.BBAddrMap ||
+    if (MF->getTarget().Options.BBAddrMap ||
         (MAI->hasDotTypeDotSizeDirective() && MBB.isEndSection()))
       OutStreamer->emitLabel(MBB.getEndSymbol());
 
@@ -1971,7 +1997,10 @@ void AsmPrinter::emitFunctionBody() {
   // are automatically sized.
   bool EmitFunctionSize = MAI->hasDotTypeDotSizeDirective() && !TT.isWasm();
 
-  if (EmitFunctionSize || needFuncLabels(*MF, *this)) {
+  // SPIR-V supports label instructions only inside a block, not after the
+  // function body.
+  if (TT.getObjectFormat() != Triple::SPIRV &&
+      (EmitFunctionSize || needFuncLabels(*MF, *this))) {
     // Create a symbol for the end of function.
     CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
@@ -2018,7 +2047,7 @@ void AsmPrinter::emitFunctionBody() {
   // Emit section containing BB address offsets and their metadata, when
   // BB labels are requested for this function. Skip empty functions.
   if (HasAnyRealCode) {
-    if (MF->hasBBLabels() || MF->getTarget().Options.BBAddrMap)
+    if (MF->getTarget().Options.BBAddrMap)
       emitBBAddrMapSection(*MF);
     else if (PgoAnalysisMapFeatures.getBits() != 0)
       MF->getContext().reportWarning(
@@ -2617,7 +2646,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection ||
-      MF.getTarget().Options.BBAddrMap || MF.hasBBLabels()) {
+      MF.getTarget().Options.BBAddrMap) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
       CurrentFnSymForSize = CurrentFnBegin;
@@ -4152,8 +4181,7 @@ bool AsmPrinter::shouldEmitLabelForBasicBlock(
   // With `-fbasic-block-sections=`, a label is needed for every non-entry block
   // in the labels mode (option `=labels`) and every section beginning in the
   // sections mode (`=all` and `=list=`).
-  if ((MF->hasBBLabels() || MF->getTarget().Options.BBAddrMap ||
-       MBB.isBeginSection()) &&
+  if ((MF->getTarget().Options.BBAddrMap || MBB.isBeginSection()) &&
       !MBB.isEntryBlock())
     return true;
   // A label is needed for any block with at least one predecessor (when that

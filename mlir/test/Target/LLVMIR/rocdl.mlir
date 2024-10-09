@@ -28,8 +28,10 @@ llvm.func @rocdl_special_regs() -> i32 {
   %12 = rocdl.grid.dim.z : i64
 
   // CHECK: call range(i32 0, 64) i32 @llvm.amdgcn.workitem.id.x()
-  %13 = rocdl.workitem.id.x {range = array<i32: 0, 64>} : i32
+  %13 = rocdl.workitem.id.x range <i32, 0, 64> : i32
 
+  // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
+  %14 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
   llvm.return %1 : i32
 }
 
@@ -137,6 +139,27 @@ llvm.func @rocdl.barrier() {
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
   // CHECK-NEXT: fence syncscope("workgroup") acquire
   rocdl.barrier
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.signal() {
+  // CHECK-LABEL: rocdl.s.barrier.signal
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.signal(i32 -1)
+  rocdl.s.barrier.signal -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.wait() {
+  // CHECK-LABEL: rocdl.s.barrier.wait
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.wait(i16 -1)
+  rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.dscnt() {
+  // CHECK-LABEL: rocdl.s.wait.dscnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.dscnt(i16 0)
+  rocdl.s.wait.dscnt 0
   llvm.return
 }
 

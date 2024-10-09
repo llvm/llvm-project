@@ -297,7 +297,7 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
 }
 
 void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
-  Operation *callableOp = call.resolveCallable(&symbolTable);
+  Operation *callableOp = call.resolveCallableInTable(&symbolTable);
 
   // A call to a externally-defined callable has unknown predecessors.
   const auto isExternalCallable = [this](Operation *op) {

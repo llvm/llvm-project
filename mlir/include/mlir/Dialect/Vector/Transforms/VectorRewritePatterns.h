@@ -235,6 +235,11 @@ void populateVectorExtractStridedSliceToExtractInsertChainPatterns(
     std::function<bool(ExtractStridedSliceOp)> controlFn = nullptr,
     PatternBenefit benefit = 1);
 
+/// Pattern to rewrite simple cases of N-D extract_strided_slice, where the
+/// slice is contiguous, into extract and shape_cast.
+void populateVectorContiguousExtractStridedSliceToExtractPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
 /// Populate `patterns` with a pattern to break down 1-D vector.bitcast ops
 /// based on the destination vector shape. Bitcasts from a lower bitwidth
 /// element type to a higher bitwidth one are extracted from the lower bitwidth
@@ -366,7 +371,7 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating vector operations over narrow types with ops
 /// over wider types.
 void populateVectorNarrowTypeEmulationPatterns(
-    arith::NarrowTypeEmulationConverter &typeConverter,
+    const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns);
 
 /// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
@@ -403,10 +408,9 @@ void populateVectorLinearizeTypeConversionsAndLegality(
 
 /// Populates patterns for linearizing ND (N >= 2) vector operations to 1D
 /// vector shuffle operations.
-void populateVectorLinearizeShuffleLikeOpsPatterns(TypeConverter &typeConverter,
-                                                   RewritePatternSet &patterns,
-                                                   ConversionTarget &target,
-                                                   unsigned targetBitWidth);
+void populateVectorLinearizeShuffleLikeOpsPatterns(
+    const TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target, unsigned targetBitWidth);
 
 } // namespace vector
 } // namespace mlir

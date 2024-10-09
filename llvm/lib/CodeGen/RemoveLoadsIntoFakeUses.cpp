@@ -74,10 +74,8 @@ INITIALIZE_PASS_END(RemoveLoadsIntoFakeUses, DEBUG_TYPE,
                     "Remove Loads Into Fake Uses", false, false)
 
 bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
-  // Only `optdebug` functions should contain FAKE_USEs, so don't try to run
-  // this for other functions.
-  if (!MF.getFunction().hasFnAttribute(Attribute::OptimizeForDebugging) ||
-      skipFunction(MF.getFunction()))
+  // Only run this for functions that have fake uses.
+  if (!MF.hasFakeUses() || skipFunction(MF.getFunction()))
     return false;
 
   bool AnyChanges = false;

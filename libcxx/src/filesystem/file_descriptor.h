@@ -97,11 +97,18 @@ inline uintmax_t get_file_size(const WIN32_FIND_DATAW& data) {
   return (static_cast<uint64_t>(data.nFileSizeHigh) << 32) + data.nFileSizeLow;
 }
 inline file_time_type get_write_time(const WIN32_FIND_DATAW& data) {
-  ULARGE_INTEGER tmp;
+  using detail::fs_time;
   const FILETIME& time = data.ftLastWriteTime;
-  tmp.u.LowPart        = time.dwLowDateTime;
-  tmp.u.HighPart       = time.dwHighDateTime;
-  return file_time_type(file_time_type::duration(tmp.QuadPart));
+  auto ts              = filetime_to_timespec(time);
+  if (!fs_time::is_representable(ts))
+    return file_time_type::min();
+  return fs_time::convert_from_timespec(ts);
+}
+inline perms get_file_perm(const WIN32_FIND_DATAW& data) {
+  unsigned st_mode = 0555; // Read-only
+  if (!(data.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
+    st_mode |= 0222; // Write
+  return static_cast<perms>(st_mode) & perms::mask;
 }
 
 #endif // !_LIBCPP_WIN32API

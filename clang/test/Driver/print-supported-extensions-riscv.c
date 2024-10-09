@@ -35,6 +35,7 @@
 // CHECK-NEXT:     za64rs               1.0       'Za64rs' (Reservation Set Size of at Most 64 Bytes)
 // CHECK-NEXT:     zaamo                1.0       'Zaamo' (Atomic Memory Operations)
 // CHECK-NEXT:     zabha                1.0       'Zabha' (Byte and Halfword Atomic Memory Operations)
+// CHECK-NEXT:     zacas                1.0       'Zacas' (Atomic Compare-And-Swap Instructions)
 // CHECK-NEXT:     zalrsc               1.0       'Zalrsc' (Load-Reserved/Store-Conditional)
 // CHECK-NEXT:     zama16b              1.0       'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)
 // CHECK-NEXT:     zawrs                1.0       'Zawrs' (Wait on Reservation Set)
@@ -171,7 +172,6 @@
 // CHECK-NEXT: Experimental extensions
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
-// CHECK-NEXT:     zacas                1.0       'Zacas' (Atomic Compare-And-Swap Instructions)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)

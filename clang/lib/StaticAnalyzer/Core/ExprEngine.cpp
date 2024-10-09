@@ -1938,6 +1938,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXRewrittenBinaryOperatorClass:
     case Stmt::RequiresExprClass:
     case Expr::CXXParenListInitExprClass:
+    case Stmt::EmbedExprClass:
       // Fall through.
 
     // Cases we intentionally don't evaluate, since they don't need
@@ -1965,6 +1966,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPArrayShapingExprClass:
     case Stmt::OMPIteratorExprClass:
     case Stmt::SYCLUniqueStableNameExprClass:
+    case Stmt::OpenACCAsteriskSizeExprClass:
     case Stmt::TypeTraitExprClass: {
       Bldr.takeNodes(Pred);
       ExplodedNodeSet preVisit;
@@ -2440,10 +2442,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
     }
-
-    case Stmt::EmbedExprClass:
-      llvm::report_fatal_error("Support for EmbedExpr is not implemented.");
-      break;
   }
 }
 
@@ -3813,7 +3811,9 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     assert(!isa<NonLoc>(X)); // Should be an Lval, or unknown, undef.
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());
+      state = state->invalidateRegions(*LV, A, currBldrCtx->blockCount(),
+                                       Pred->getLocationContext(),
+                                       /*CausedByPointerEscape=*/true);
   }
 
   // Do not reason about locations passed inside inline assembly.
@@ -3821,7 +3821,9 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     SVal X = state->getSVal(I, Pred->getLocationContext());
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());
+      state = state->invalidateRegions(*LV, A, currBldrCtx->blockCount(),
+                                       Pred->getLocationContext(),
+                                       /*CausedByPointerEscape=*/true);
   }
 
   Bldr.generateNode(A, Pred, state);

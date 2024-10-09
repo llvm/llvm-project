@@ -38,12 +38,8 @@ module;
 #include <cstring>
 #include <ctime>
 #include <cuchar>
-#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#  include <cwchar>
-#endif
-#if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-#  include <cwctype>
-#endif
+#include <cwchar>
+#include <cwctype>
 
 // *** Headers not yet available ***
 //

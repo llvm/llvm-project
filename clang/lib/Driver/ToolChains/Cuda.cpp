@@ -635,8 +635,6 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (StringRef Feature : Features)
     CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
 
-  addGPULibraries(getToolChain(), Args, CmdArgs);
-
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
