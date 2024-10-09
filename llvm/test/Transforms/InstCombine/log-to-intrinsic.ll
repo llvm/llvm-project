@@ -8,7 +8,7 @@ define float @test_logf_pos(float %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt float [[F]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call float @logf(float [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @llvm.log.f32(float [[F]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
@@ -32,7 +32,7 @@ define double @test_log_pos(double %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt double [[F]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call double @log(double [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call double @llvm.log.f64(double [[F]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret double 0.000000e+00
@@ -56,7 +56,7 @@ define fp128 @test_logl_pos(fp128 %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt fp128 [[F]], 0xL00000000000000000000000000000000
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call fp128 @logl(fp128 [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call fp128 @llvm.log.f128(fp128 [[F]])
 ; CHECK-NEXT:    ret fp128 [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret fp128 0xL00000000000000000000000000000000
@@ -80,7 +80,7 @@ define float @test_log10f_pos(float %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt float [[F]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call float @log10f(float [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @llvm.log10.f32(float [[F]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
@@ -104,7 +104,7 @@ define double @test_log10_pos(double %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt double [[F]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call double @log10(double [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call double @llvm.log10.f64(double [[F]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret double 0.000000e+00
@@ -128,7 +128,7 @@ define fp128 @test_log10l_pos(fp128 %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt fp128 [[F]], 0xL00000000000000000000000000000000
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call fp128 @log10l(fp128 [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call fp128 @llvm.log10.f128(fp128 [[F]])
 ; CHECK-NEXT:    ret fp128 [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret fp128 0xL00000000000000000000000000000000
@@ -152,7 +152,7 @@ define float @test_log2f_pos(float %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt float [[F]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call float @log2f(float [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @llvm.log2.f32(float [[F]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret float 0.000000e+00
@@ -176,7 +176,7 @@ define double @test_log2_pos(double %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt double [[F]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call double @log2(double [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call double @llvm.log2.f64(double [[F]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret double 0.000000e+00
@@ -200,7 +200,7 @@ define fp128 @test_log2l_pos(fp128 %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt fp128 [[F]], 0xL00000000000000000000000000000000
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call fp128 @log2l(fp128 [[F]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call fp128 @llvm.log2.f128(fp128 [[F]])
 ; CHECK-NEXT:    ret fp128 [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret fp128 0xL00000000000000000000000000000000
@@ -273,7 +273,7 @@ define float @metadata(float %f) {
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp ugt float [[F]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[ISINF]], label %[[IF_END:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call float @logf(float [[F]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @llvm.log.f32(float [[F]]), !fpmath [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret float 0.000000e+00

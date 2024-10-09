@@ -2510,20 +2510,15 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Intrinsic::ID LogID = LogFn->getIntrinsicID();
   Module *Mod = Log->getModule();
   Type *Ty = Log->getType();
-  Value *Ret = nullptr;
 
   if (UnsafeFPShrink && hasFloatVersion(Mod, LogNm))
-    Ret = optimizeUnaryDoubleFP(Log, B, TLI, true);
-
-  // The earlier call must also be 'fast' in order to do these transforms.
-  CallInst *Arg = dyn_cast<CallInst>(Log->getArgOperand(0));
-  if (!Log->isFast() || !Arg || !Arg->isFast() || !Arg->hasOneUse())
-    return Ret;
+    if (Value *Ret = optimizeUnaryDoubleFP(Log, B, TLI, true))
+      return Ret;
 
   LibFunc LogLb, ExpLb, Exp2Lb, Exp10Lb, PowLb;
 
   // This is only applicable to log(), log2(), log10().
-  if (TLI->getLibFunc(LogNm, LogLb))
+  if (TLI->getLibFunc(LogNm, LogLb)) {
     switch (LogLb) {
     case LibFunc_logf:
       LogID = Intrinsic::log;
@@ -2589,10 +2584,28 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
       PowLb = LibFunc_powl;
       break;
     default:
-      return Ret;
+      return nullptr;
     }
-  else if (LogID == Intrinsic::log || LogID == Intrinsic::log2 ||
-           LogID == Intrinsic::log10) {
+
+    // Convert libcall to intrinsic if the value is known > 0.
+    bool IsKnownNoErrno = Log->hasNoNaNs() && Log->hasNoInfs();
+    if (!IsKnownNoErrno) {
+      SimplifyQuery SQ(DL, TLI, DT, AC, Log, true, true, DC);
+      KnownFPClass Known = computeKnownFPClass(
+          Log->getOperand(0),
+          KnownFPClass::OrderedLessThanZeroMask | fcSubnormal,
+          /*Depth=*/0, SQ);
+      Function *F = Log->getParent()->getParent();
+      IsKnownNoErrno = Known.cannotBeOrderedLessThanZero() &&
+                       Known.isKnownNeverLogicalZero(*F, Ty);
+    }
+    if (IsKnownNoErrno) {
+      auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
+      NewLog->copyMetadata(*Log);
+      return copyFlags(*Log, NewLog);
+    }
+  } else if (LogID == Intrinsic::log || LogID == Intrinsic::log2 ||
+             LogID == Intrinsic::log10) {
     if (Ty->getScalarType()->isFloatTy()) {
       ExpLb = LibFunc_expf;
       Exp2Lb = LibFunc_exp2f;
@@ -2604,9 +2617,14 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
       Exp10Lb = LibFunc_exp10;
       PowLb = LibFunc_pow;
     } else
-      return Ret;
+      return nullptr;
   } else
-    return Ret;
+    return nullptr;
+
+  // The earlier call must also be 'fast' in order to do these transforms.
+  CallInst *Arg = dyn_cast<CallInst>(Log->getArgOperand(0));
+  if (!Log->isFast() || !Arg || !Arg->isFast() || !Arg->hasOneUse())
+    return nullptr;
 
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(FastMathFlags::getFast());
@@ -2655,7 +2673,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
     return MulY;
   }
 
-  return Ret;
+  return nullptr;
 }
 
 // sqrt(exp(X)) -> exp(X * 0.5)
