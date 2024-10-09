@@ -49,6 +49,24 @@ set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXEC
 
 set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_TOOLS_BINARY_DIR}/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
 
+if(LLDB_TEST_MAKE)
+  set(LLDB_DEFAULT_TEST_MAKE ${LLDB_TEST_MAKE})
+else()
+  if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+    find_program(LLDB_DEFAULT_TEST_MAKE gmake)
+  else()
+    find_program(LLDB_DEFAULT_TEST_MAKE make)
+  endif()
+  if(LLDB_DEFAULT_TEST_MAKE)
+    message(STATUS "Found make: ${LLDB_DEFAULT_TEST_MAKE}")
+  else()
+    message(STATUS "Not found: make")
+    message(SEND_ERROR
+          "LLDB tests require 'make' tool. Please pass via `LLDB_TEST_MAKE` "
+          "(or otherwise disable tests with `LLDB_INCLUDE_TESTS=OFF`)")
+  endif()
+endif()
+
 if (TARGET clang)
   set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 else()
