@@ -3295,6 +3295,7 @@ static const AttrClassDescriptor AttrClassDescriptors[] = {
   { "INHERITABLE_ATTR", "InheritableAttr" },
   { "DECL_OR_TYPE_ATTR", "DeclOrTypeAttr" },
   { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" },
+  { "INHERITABLE_PARAM_OR_STMT_ATTR", "InheritableParamOrStmtAttr" },
   { "PARAMETER_ABI_ATTR", "ParameterABIAttr" },
   { "HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"}
 };
@@ -4328,10 +4329,12 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
 
   // This means the attribute is either a statement attribute, a decl
   // attribute, or both; find out which.
-  bool CurAttrIsStmtAttr =
-      Attr.isSubClassOf("StmtAttr") || Attr.isSubClassOf("DeclOrStmtAttr");
-  bool CurAttrIsDeclAttr =
-      !CurAttrIsStmtAttr || Attr.isSubClassOf("DeclOrStmtAttr");
+  bool CurAttrIsStmtAttr = Attr.isSubClassOf("StmtAttr") ||
+                           Attr.isSubClassOf("DeclOrStmtAttr") ||
+                           Attr.isSubClassOf("InheritableParamOrStmtAttr");
+  bool CurAttrIsDeclAttr = !CurAttrIsStmtAttr ||
+                           Attr.isSubClassOf("DeclOrStmtAttr") ||
+                           Attr.isSubClassOf("InheritableParamOrStmtAttr");
 
   std::vector<std::string> DeclAttrs, StmtAttrs;
 
