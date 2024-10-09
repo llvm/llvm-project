@@ -2084,7 +2084,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "[TwoRounds] Running the second round of codegen\n");
   auto SecondRoundLTO = std::make_unique<SecondRoundThinBackend>(
       Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-      AddStream, Cache, std::move(IR.getResult()), CombinedHash);
+      AddStream, Cache, IR.getResult(), CombinedHash);
   return RunBackends(SecondRoundLTO.get());
 }
 
