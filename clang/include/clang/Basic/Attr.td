@@ -876,6 +876,13 @@ def Artificial : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def DebugTransparent: InheritableAttr {
+  let Spellings = [Clang<"debug_transparent">];
+  let Subjects = SubjectList<[Function, ObjCMethod]>;
+  let Documentation = [DebugTransparentDocs];
+  let SimpleHandler = 1;
+}
+
 def XRayInstrument : InheritableAttr {
   let Spellings = [Clang<"xray_always_instrument">,
                    Clang<"xray_never_instrument">];

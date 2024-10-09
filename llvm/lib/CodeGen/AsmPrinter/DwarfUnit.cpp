@@ -1260,6 +1260,9 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
       (DD->useAllLinkageNames() || DU->getAbstractScopeDIEs().lookup(SP)))
     addLinkageName(SPDie, LinkageName);
 
+  if (SP->isDebugTransparent())
+    addFlag(SPDie, dwarf::DW_AT_trampoline);
+
   if (!DeclDie)
     return false;
 
@@ -1378,6 +1381,8 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   if (!SP->getTargetFuncName().empty())
     addString(SPDie, dwarf::DW_AT_trampoline, SP->getTargetFuncName());
+  else if (SP->isDebugTransparent())
+    addFlag(SPDie, dwarf::DW_AT_trampoline);
 
   if (DD->getDwarfVersion() >= 5 && SP->isDeleted())
     addFlag(SPDie, dwarf::DW_AT_deleted);

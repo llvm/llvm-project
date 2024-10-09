@@ -68,6 +68,7 @@
 // CHECK-NEXT: CoroWrapper (SubjectMatchRule_function)
 // CHECK-NEXT: DLLExport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
 // CHECK-NEXT: DLLImport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
+// CHECK-NEXT: DebugTransparent (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: Destructor (SubjectMatchRule_function)
 // CHECK-NEXT: DiagnoseAsBuiltin (SubjectMatchRule_function)
 // CHECK-NEXT: DisableSanitizerInstrumentation (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_variable_is_global)
