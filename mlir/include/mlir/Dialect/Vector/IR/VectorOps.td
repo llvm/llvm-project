@@ -1290,12 +1290,12 @@ def Vector_TransferReadOp :
     specifies if the transfer is guaranteed to be within the source bounds. If
     set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Non-vector and broadcast dimensions *must* always be in-bounds. The
-    `in_bounds` array length has to be equal to the vector rank. This attribute
-    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
-    textual IR, the default value is assumed. Similarly, the OP printer will
-    omit this attribute when all dimensions are out-of-bounds (i.e. the default
-    value is used).
+    Non-vector dimensions *must* always be in-bounds. The `in_bounds` array
+    length has to be equal to the vector rank. This attribute has a default
+    value: `false` (i.e. "out-of-bounds"). When skipped in the textual IR, the
+    default value is assumed. Similarly, the OP printer will omit this
+    attribute when all dimensions are out-of-bounds (i.e. the default value is
+    used).
 
     A `vector.transfer_read` can be lowered to a simple load if all dimensions
     are specified to be within bounds and no `mask` was specified.
@@ -1535,12 +1535,12 @@ def Vector_TransferWriteOp :
     specifies if the transfer is guaranteed to be within the source bounds. If
     set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Non-vector and broadcast dimensions *must* always be in-bounds. The
-    `in_bounds` array length has to be equal to the vector rank. This attribute
-    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
-    textual IR, the default value is assumed. Similarly, the OP printer will
-    omit this attribute when all dimensions are out-of-bounds (i.e. the default
-    value is used).
+    Non-vector dimensions *must* always be in-bounds. The `in_bounds` array
+    length has to be equal to the vector rank. This attribute has a default
+    value: `false` (i.e. "out-of-bounds"). When skipped in the textual IR, the
+    default value is assumed. Similarly, the OP printer will omit this
+    attribute when all dimensions are out-of-bounds (i.e. the default value is
+    used).
 
      A `vector.transfer_write` can be lowered to a simple store if all
      dimensions are specified to be within bounds and no `mask` was specified.
@@ -1652,9 +1652,10 @@ def Vector_LoadOp : Vector_Op<"load"> {
     based on the element type of the memref. The shape of the result vector
     type determines the shape of the slice read from the start memory address.
     The elements along each dimension of the slice are strided by the memref
-    strides. Only unit strides are allowed along the most minor memref
-    dimension. These constraints guarantee that elements read along the first
-    dimension of the slice are contiguous in memory.
+    strides. When loading more than 1 element, only unit strides are allowed
+    along the most minor memref dimension. These constraints guarantee that
+    elements read along the first dimension of the slice are contiguous in
+    memory.
 
     The memref element type can be a scalar or a vector type. If the memref
     element type is a scalar, it should match the element type of the result
@@ -1736,9 +1737,10 @@ def Vector_StoreOp : Vector_Op<"store"> {
     memref dimension based on the element type of the memref. The shape of the
     vector value to store determines the shape of the slice written from the
     start memory address. The elements along each dimension of the slice are
-    strided by the memref strides. Only unit strides are allowed along the most
-    minor memref dimension. These constraints guarantee that elements written
-    along the first dimension of the slice are contiguous in memory.
+    strided by the memref strides. When storing more than 1 element, only unit
+    strides are allowed along the most minor memref dimension. These constraints
+    guarantee that elements written along the first dimension of the slice are
+    contiguous in memory.
 
     The memref element type can be a scalar or a vector type. If the memref
     element type is a scalar, it should match the element type of the value

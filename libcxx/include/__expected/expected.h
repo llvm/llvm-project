@@ -17,9 +17,11 @@
 #include <__functional/invoke.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
@@ -1490,8 +1492,6 @@ public:
     }
     return *this;
   }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(expected&&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected&
   operator=(expected&& __rhs) noexcept(is_nothrow_move_assignable_v<_Err> && is_nothrow_move_constructible_v<_Err>)

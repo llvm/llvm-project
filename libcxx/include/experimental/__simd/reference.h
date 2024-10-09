@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
 
+#include <__config>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_same.h>
@@ -17,7 +18,6 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <cstddef>
-#include <experimental/__config>
 #include <experimental/__simd/utility.h>
 
 _LIBCPP_PUSH_MACROS

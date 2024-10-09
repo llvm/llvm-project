@@ -204,7 +204,7 @@ protected:
         channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
         m_options.buffer_size.GetCurrentValue(), m_options.handler,
         error_stream);
-    result.GetErrorStream() << error_stream.str();
+    result.GetErrorStream() << error;
 
     if (success)
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -273,7 +273,7 @@ protected:
       if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
                                  error_stream))
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      result.GetErrorStream() << error_stream.str();
+      result.GetErrorStream() << error;
     }
   }
 };
@@ -313,7 +313,7 @@ protected:
       if (success)
         result.SetStatus(eReturnStatusSuccessFinishResult);
     }
-    result.GetOutputStream() << output_stream.str();
+    result.GetOutputStream() << output;
   }
 };
 class CommandObjectLogDump : public CommandObjectParsed {
@@ -404,7 +404,7 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.SetStatus(eReturnStatusFailed);
-      result.GetErrorStream() << error_stream.str();
+      result.GetErrorStream() << error;
     }
   }
 

@@ -4,8 +4,8 @@
 ; RUN: opt < %s -passes=hwasan -S | FileCheck %s
 ; RUN: opt < %s -passes=hwasan -hwasan-inline-fast-path-checks=0 -S | FileCheck %s --check-prefixes=NOFASTPATH
 ; RUN: opt < %s -passes=hwasan -hwasan-inline-fast-path-checks=1 -S | FileCheck %s --check-prefixes=FASTPATH
-; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=ABORT-DYNAMIC-SHADOW
-; RUN: opt < %s -passes=hwasan -hwasan-recover=1 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=RECOVER-DYNAMIC-SHADOW
+; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-mapping-offset-dynamic=ifunc -S | FileCheck %s --check-prefixes=ABORT-DYNAMIC-SHADOW
+; RUN: opt < %s -passes=hwasan -hwasan-recover=1 -hwasan-mapping-offset-dynamic=ifunc -S | FileCheck %s --check-prefixes=RECOVER-DYNAMIC-SHADOW
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=ABORT-ZERO-BASED-SHADOW
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=1 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=RECOVER-ZERO-BASED-SHADOW
 

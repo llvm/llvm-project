@@ -3,8 +3,8 @@ static_library("Vectorize") {
   deps = [
     "//llvm/lib/Analysis",
     "//llvm/lib/IR",
-    "//llvm/lib/Support",
     "//llvm/lib/SandboxIR",
+    "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
@@ -13,13 +13,18 @@ static_library("Vectorize") {
     "LoopVectorizationLegality.cpp",
     "LoopVectorize.cpp",
     "SLPVectorizer.cpp",
+    "SandboxVectorizer/DependencyGraph.cpp",
+    "SandboxVectorizer/Interval.cpp",
+    "SandboxVectorizer/Passes/BottomUpVec.cpp",
     "SandboxVectorizer/SandboxVectorizer.cpp",
+    "SandboxVectorizer/SeedCollector.cpp",
     "VPlan.cpp",
     "VPlanAnalysis.cpp",
     "VPlanHCFGBuilder.cpp",
     "VPlanRecipes.cpp",
     "VPlanSLP.cpp",
     "VPlanTransforms.cpp",
+    "VPlanUnroll.cpp",
     "VPlanUtils.cpp",
     "VPlanVerifier.cpp",
     "VectorCombine.cpp",

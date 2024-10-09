@@ -47,10 +47,10 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
-  VPInstruction *tryInsertInstruction(VPInstruction *VPI) {
+  template <typename T> T *tryInsertInstruction(T *R) {
     if (BB)
-      BB->insert(VPI, InsertPt);
-    return VPI;
+      BB->insert(R, InsertPt);
+    return R;
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
@@ -69,6 +69,9 @@ public:
   VPBuilder() = default;
   VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
   VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
+  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
+    setInsertPoint(TheBB, IP);
+  }
 
   /// Clear the insertion point: created instructions will not be inserted into
   /// a block.
@@ -153,6 +156,15 @@ public:
                               DebugLoc DL, const Twine &Name = "") {
     return createInstruction(Opcode, Operands, DL, Name);
   }
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              std::optional<FastMathFlags> FMFs = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    if (FMFs)
+      return tryInsertInstruction(
+          new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
+    return createInstruction(Opcode, Operands, DL, Name);
+  }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
@@ -161,6 +173,7 @@ public:
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
+
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
                      const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
@@ -200,7 +213,49 @@ public:
   /// and \p B.
   /// TODO: add createFCmp when needed.
   VPValue *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
-                      DebugLoc DL = {}, const Twine &Name = "");
+                      DebugLoc DL = {}, const Twine &Name = "") {
+    assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
+           Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
+  }
+
+  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                              const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(false), DL, Name));
+  }
+  VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                                const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+  }
+
+  VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
+                                     FPMathOperator *FPBinOp, VPValue *Start,
+                                     VPCanonicalIVPHIRecipe *CanonicalIV,
+                                     VPValue *Step) {
+    return tryInsertInstruction(
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step));
+  }
+
+  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                       Type *ResultTy) {
+    return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+  }
+
+  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
+                                     Type *ResultTy) {
+    return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
+  }
+
+  VPScalarIVStepsRecipe *
+  createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
+                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {
+    return tryInsertInstruction(new VPScalarIVStepsRecipe(
+        IV, Step, InductionOpcode,
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
+  }
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.
@@ -386,11 +441,10 @@ public:
   /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
   /// to re-use expansion results generated during main plan execution.
   ///
-  /// Returns a mapping of SCEVs to their expanded IR values and a mapping for
-  /// the reduction resume values. Note that this is a temporary workaround
-  /// needed due to the current epilogue handling.
-  std::pair<DenseMap<const SCEV *, Value *>,
-            DenseMap<const RecurrenceDescriptor *, Value *>>
+  /// Returns a mapping of SCEVs to their expanded IR values.
+  /// Note that this is a temporary workaround needed due to the current
+  /// epilogue handling.
+  DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
               bool IsEpilogueVectorization,

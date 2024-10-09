@@ -262,6 +262,22 @@ TEST_F(LSPTest, ClangTidyRename) {
   EXPECT_EQ(Params, std::vector{llvm::json::Value(std::move(ExpectedEdit))});
 }
 
+TEST_F(LSPTest, ClangTidyCrash_Issue109367) {
+  // This test requires clang-tidy checks to be linked in.
+  if (!CLANGD_TIDY_CHECKS)
+    return;
+  Opts.ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                              llvm::StringRef) {
+    ClangTidyOpts.Checks = {"-*,boost-use-ranges"};
+  };
+  // Check that registering the boost-use-ranges checker's matchers
+  // on two different threads does not cause a crash.
+  auto &Client = start();
+  Client.didOpen("a.cpp", "");
+  Client.didOpen("b.cpp", "");
+  Client.sync();
+}
+
 TEST_F(LSPTest, IncomingCalls) {
   Annotations Code(R"cpp(
     void calle^e(int);
