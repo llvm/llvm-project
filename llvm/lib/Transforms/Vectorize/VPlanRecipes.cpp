@@ -645,8 +645,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::PtrAdd: {
     assert(vputils::onlyFirstLaneUsed(this) &&
            "can only generate first lane for PtrAdd");
-    Value *Ptr = State.get(getOperand(0), /* IsScalar */ true);
-    Value *Addend = State.get(getOperand(1), /* IsScalar */ true);
+    Value *Ptr = State.get(getOperand(0), VPLane(0));
+    Value *Addend = State.get(getOperand(1), VPLane(0));
     return isInBounds() ? Builder.CreateInBoundsPtrAdd(Ptr, Addend, Name)
                         : Builder.CreatePtrAdd(Ptr, Addend, Name);
   }
