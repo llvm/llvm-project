@@ -664,6 +664,8 @@ merged into a single step. Canonicalization removes the clone operation and
 func.func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
   %temp = memref.alloc() : memref<2xf32>
   test.generic {
+    args_in = 1 : i64,
+    args_out = 1 : i64,
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel"]} %arg0, %temp {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
@@ -681,6 +683,8 @@ Will be transformed to:
 ```mlir
 func.func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
   test.generic {
+    args_in = 1 : i64,
+    args_out = 1 : i64,
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel"]} %arg0, %result {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
