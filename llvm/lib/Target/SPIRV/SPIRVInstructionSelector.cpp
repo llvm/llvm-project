@@ -2677,7 +2677,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
-  case Intrinsic::spv_waveReadLaneAt:
+  case Intrinsic::spv_wave_readlaneat:
     return selectWaveReadLaneAt(ResVReg, ResType, I);
   case Intrinsic::spv_step:
     return selectStep(ResVReg, ResType, I);
