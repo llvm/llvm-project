@@ -3358,18 +3358,17 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 //===----------------------------------------------------------------------===//
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
-                            mlir::TypeRange results, mlir::StringAttr intrin,
-                            mlir::ValueRange args,
+                            mlir::TypeRange resultTypes,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
-
-  build(builder, state, results, intrin, args, fastMathFlags,
-        llvm::ArrayRef<mlir::ValueRange>{});
+  build(builder, state, resultTypes, intrin, args, fastMathFlags,
+        /*op_bundle_operands=*/{});
 }
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
-                            mlir::Type results, mlir::StringAttr intrin,
+                            mlir::Type resultType, mlir::StringAttr intrin,
                             mlir::ValueRange args) {
-  build(builder, state, {results}, intrin, args, FastmathFlagsAttr{},
-        llvm::ArrayRef<mlir::ValueRange>{});
+  build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{});
 }
 
 //===----------------------------------------------------------------------===//

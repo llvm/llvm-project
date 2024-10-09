@@ -1944,9 +1944,9 @@ def LLVM_CallIntrinsicOp
   }];
 
   let builders = [
-    OpBuilder<(ins "Type": $results, "StringAttr":$intrin, "ValueRange":$args)>,
-    OpBuilder<(ins "TypeRange": $results, "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>
-    ];
+    OpBuilder<(ins "Type": $resultType, "StringAttr":$intrin, "ValueRange":$args)>,
+    OpBuilder<(ins "TypeRange": $resultTypes, "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>
+  ];
 
   let hasVerifier = 1;
 }
