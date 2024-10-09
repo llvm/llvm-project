@@ -5190,6 +5190,21 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
   return true;
 }
 
+static bool isConstantPowerOf2(SDValue V, unsigned EltSizeInBIts,
+                               bool AllowUndefs) {
+  APInt UndefElts;
+  SmallVector<APInt, 64> EltBits;
+  if (!getTargetConstantBitsFromNode(V, EltSizeInBIts, UndefElts, EltBits,
+                                     /*AllowWholeUndefs*/ AllowUndefs,
+                                     /*AllowPartialUndefs*/ false))
+    return false;
+
+  bool IsPow2OrUndef = true;
+  for (unsigned I = 0, E = EltBits.size(); I != E; ++I)
+    IsPow2OrUndef &= UndefElts[I] || EltBits[I].isPowerOf2();
+  return IsPow2OrUndef;
+}
+
 // Match not(xor X, -1) -> X.
 // Match not(pcmpgt(C, X)) -> pcmpgt(X, C - 1).
 // Match not(extract_subvector(xor X, -1)) -> extract_subvector(X).
@@ -23600,17 +23615,11 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   // Revert part of the simplifySetCCWithAnd combine, to avoid an invert.
   if (Cond == ISD::SETNE && ISD::isBuildVectorAllZeros(Op1.getNode())) {
     SDValue BC0 = peekThroughBitcasts(Op0);
-    if (BC0.getOpcode() == ISD::AND) {
-      APInt UndefElts;
-      SmallVector<APInt, 64> EltBits;
-      if (getTargetConstantBitsFromNode(
-              BC0.getOperand(1), VT.getScalarSizeInBits(), UndefElts, EltBits,
-              /*AllowWholeUndefs*/ false, /*AllowPartialUndefs*/ false)) {
-        if (llvm::all_of(EltBits, [](APInt &V) { return V.isPowerOf2(); })) {
-          Cond = ISD::SETEQ;
-          Op1 = DAG.getBitcast(VT, BC0.getOperand(1));
-        }
-      }
+    if (BC0.getOpcode() == ISD::AND &&
+        isConstantPowerOf2(BC0.getOperand(1), VT.getScalarSizeInBits(),
+                           /*AllowUndefs=*/false)) {
+      Cond = ISD::SETEQ;
+      Op1 = DAG.getBitcast(VT, BC0.getOperand(1));
     }
   }
 
@@ -51224,20 +51233,11 @@ static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
   if (Opc == ISD::XOR && N0.getOpcode() == X86ISD::PCMPEQ &&
       N0.getOperand(0).getOpcode() == ISD::AND &&
       ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode()) &&
-      ISD::isBuildVectorAllOnes(N1.getNode())) {
-    APInt UndefElts;
-    SmallVector<APInt> EltBits;
-    if (getTargetConstantBitsFromNode(N0.getOperand(0).getOperand(1),
-                                      VT.getScalarSizeInBits(), UndefElts,
-                                      EltBits)) {
-      bool IsPow2OrUndef = true;
-      for (unsigned I = 0, E = EltBits.size(); I != E; ++I)
-        IsPow2OrUndef &= UndefElts[I] || EltBits[I].isPowerOf2();
-
-      if (IsPow2OrUndef)
-        return DAG.getNode(X86ISD::PCMPEQ, DL, VT, N0.getOperand(0),
-                           N0.getOperand(0).getOperand(1));
-    }
+      ISD::isBuildVectorAllOnes(N1.getNode()) &&
+      isConstantPowerOf2(N0.getOperand(0).getOperand(1),
+                         VT.getScalarSizeInBits(), /*AllowUndefs=*/true)) {
+    return DAG.getNode(X86ISD::PCMPEQ, DL, VT, N0.getOperand(0),
+                       N0.getOperand(0).getOperand(1));
   }
 
   return SDValue();
