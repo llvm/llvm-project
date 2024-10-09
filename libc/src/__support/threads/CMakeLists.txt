@@ -105,3 +105,19 @@ add_header_library(
     libc.hdr.types.pid_t
     ${identifier_dependency_on_thread}
 )
+
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
+  add_header_library(
+    lambda_lock
+    HDRS
+      lambda_lock
+    DEPENDS
+      .sleep
+      .spin_lock
+      libc.src.__support.CPP.atomic
+      libc.src.__support.CPP.optional
+      libc.src.__support.CPP.limits
+      libc.src.__support.libc_assert
+      libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils
+  )
+endif()
