@@ -1334,31 +1334,31 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL1:       pred.store.continue:
 ; VEC4_INTERL1-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
 ; VEC4_INTERL1-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; VEC4_INTERL1:       pred.store.if3:
+; VEC4_INTERL1:       pred.store.if2:
 ; VEC4_INTERL1-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDEX]], 1
 ; VEC4_INTERL1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP5]]
 ; VEC4_INTERL1-NEXT:    [[TMP7:%.*]] = fadd fast float [[DOTCAST2]], 1.000000e+00
 ; VEC4_INTERL1-NEXT:    store float [[TMP7]], ptr [[TMP6]], align 4
 ; VEC4_INTERL1-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; VEC4_INTERL1:       pred.store.continue4:
+; VEC4_INTERL1:       pred.store.continue3:
 ; VEC4_INTERL1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP1]], i64 2
 ; VEC4_INTERL1-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
-; VEC4_INTERL1:       pred.store.if5:
+; VEC4_INTERL1:       pred.store.if4:
 ; VEC4_INTERL1-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[INDEX]], 2
 ; VEC4_INTERL1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP9]]
 ; VEC4_INTERL1-NEXT:    [[TMP11:%.*]] = fadd fast float [[DOTCAST2]], 2.000000e+00
 ; VEC4_INTERL1-NEXT:    store float [[TMP11]], ptr [[TMP10]], align 4
 ; VEC4_INTERL1-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; VEC4_INTERL1:       pred.store.continue6:
+; VEC4_INTERL1:       pred.store.continue5:
 ; VEC4_INTERL1-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP1]], i64 3
 ; VEC4_INTERL1-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8]]
-; VEC4_INTERL1:       pred.store.if7:
+; VEC4_INTERL1:       pred.store.if6:
 ; VEC4_INTERL1-NEXT:    [[TMP13:%.*]] = or disjoint i64 [[INDEX]], 3
 ; VEC4_INTERL1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; VEC4_INTERL1-NEXT:    [[TMP15:%.*]] = fadd fast float [[DOTCAST2]], 3.000000e+00
 ; VEC4_INTERL1-NEXT:    store float [[TMP15]], ptr [[TMP14]], align 4
 ; VEC4_INTERL1-NEXT:    br label [[PRED_STORE_CONTINUE8]]
-; VEC4_INTERL1:       pred.store.continue8:
+; VEC4_INTERL1:       pred.store.continue7:
 ; VEC4_INTERL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VEC4_INTERL1-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC4_INTERL1-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -1414,67 +1414,67 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL2:       pred.store.continue:
 ; VEC4_INTERL2-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; VEC4_INTERL2:       pred.store.if4:
+; VEC4_INTERL2:       pred.store.if3:
 ; VEC4_INTERL2-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[INDEX]], 1
 ; VEC4_INTERL2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP8]]
 ; VEC4_INTERL2-NEXT:    [[TMP10:%.*]] = fadd fast float [[DOTCAST2]], 1.000000e+00
 ; VEC4_INTERL2-NEXT:    store float [[TMP10]], ptr [[TMP9]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; VEC4_INTERL2:       pred.store.continue5:
+; VEC4_INTERL2:       pred.store.continue4:
 ; VEC4_INTERL2-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP3]], i64 2
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
-; VEC4_INTERL2:       pred.store.if6:
+; VEC4_INTERL2:       pred.store.if5:
 ; VEC4_INTERL2-NEXT:    [[TMP12:%.*]] = or disjoint i64 [[INDEX]], 2
 ; VEC4_INTERL2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP12]]
 ; VEC4_INTERL2-NEXT:    [[TMP14:%.*]] = fadd fast float [[DOTCAST2]], 2.000000e+00
 ; VEC4_INTERL2-NEXT:    store float [[TMP14]], ptr [[TMP13]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; VEC4_INTERL2:       pred.store.continue7:
+; VEC4_INTERL2:       pred.store.continue6:
 ; VEC4_INTERL2-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP15]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
-; VEC4_INTERL2:       pred.store.if8:
+; VEC4_INTERL2:       pred.store.if7:
 ; VEC4_INTERL2-NEXT:    [[TMP16:%.*]] = or disjoint i64 [[INDEX]], 3
 ; VEC4_INTERL2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP16]]
 ; VEC4_INTERL2-NEXT:    [[TMP18:%.*]] = fadd fast float [[DOTCAST2]], 3.000000e+00
 ; VEC4_INTERL2-NEXT:    store float [[TMP18]], ptr [[TMP17]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; VEC4_INTERL2:       pred.store.continue9:
+; VEC4_INTERL2:       pred.store.continue8:
 ; VEC4_INTERL2-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP4]], i64 0
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11:%.*]]
-; VEC4_INTERL2:       pred.store.if10:
+; VEC4_INTERL2:       pred.store.if9:
 ; VEC4_INTERL2-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 4
 ; VEC4_INTERL2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
 ; VEC4_INTERL2-NEXT:    [[TMP21:%.*]] = fadd fast float [[DOTCAST2]], 4.000000e+00
 ; VEC4_INTERL2-NEXT:    store float [[TMP21]], ptr [[TMP20]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE11]]
-; VEC4_INTERL2:       pred.store.continue11:
+; VEC4_INTERL2:       pred.store.continue10:
 ; VEC4_INTERL2-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[TMP4]], i64 1
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP22]], label [[PRED_STORE_IF12:%.*]], label [[PRED_STORE_CONTINUE13:%.*]]
-; VEC4_INTERL2:       pred.store.if12:
+; VEC4_INTERL2:       pred.store.if11:
 ; VEC4_INTERL2-NEXT:    [[TMP23:%.*]] = or disjoint i64 [[INDEX]], 5
 ; VEC4_INTERL2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP23]]
 ; VEC4_INTERL2-NEXT:    [[TMP25:%.*]] = fadd fast float [[DOTCAST2]], 5.000000e+00
 ; VEC4_INTERL2-NEXT:    store float [[TMP25]], ptr [[TMP24]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE13]]
-; VEC4_INTERL2:       pred.store.continue13:
+; VEC4_INTERL2:       pred.store.continue12:
 ; VEC4_INTERL2-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP4]], i64 2
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP26]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15:%.*]]
-; VEC4_INTERL2:       pred.store.if14:
+; VEC4_INTERL2:       pred.store.if13:
 ; VEC4_INTERL2-NEXT:    [[TMP27:%.*]] = or disjoint i64 [[INDEX]], 6
 ; VEC4_INTERL2-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP27]]
 ; VEC4_INTERL2-NEXT:    [[TMP29:%.*]] = fadd fast float [[DOTCAST2]], 6.000000e+00
 ; VEC4_INTERL2-NEXT:    store float [[TMP29]], ptr [[TMP28]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE15]]
-; VEC4_INTERL2:       pred.store.continue15:
+; VEC4_INTERL2:       pred.store.continue14:
 ; VEC4_INTERL2-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP4]], i64 3
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP30]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17]]
-; VEC4_INTERL2:       pred.store.if16:
+; VEC4_INTERL2:       pred.store.if15:
 ; VEC4_INTERL2-NEXT:    [[TMP31:%.*]] = or disjoint i64 [[INDEX]], 7
 ; VEC4_INTERL2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP31]]
 ; VEC4_INTERL2-NEXT:    [[TMP33:%.*]] = fadd fast float [[DOTCAST2]], 7.000000e+00
 ; VEC4_INTERL2-NEXT:    store float [[TMP33]], ptr [[TMP32]], align 4
 ; VEC4_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE17]]
-; VEC4_INTERL2:       pred.store.continue17:
+; VEC4_INTERL2:       pred.store.continue16:
 ; VEC4_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VEC4_INTERL2-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC4_INTERL2-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -1528,11 +1528,11 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC1_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC1_INTERL2:       pred.store.continue:
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4]]
-; VEC1_INTERL2:       pred.store.if3:
+; VEC1_INTERL2:       pred.store.if2:
 ; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = fadd fast float [[DOTCAST2]], 1.000000e+00
 ; VEC1_INTERL2-NEXT:    store float [[TMP7]], ptr [[TMP2]], align 4
 ; VEC1_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; VEC1_INTERL2:       pred.store.continue4:
+; VEC1_INTERL2:       pred.store.continue3:
 ; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -1585,13 +1585,13 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC2_INTERL1_PRED_STORE:       pred.store.continue:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4]]
-; VEC2_INTERL1_PRED_STORE:       pred.store.if3:
+; VEC2_INTERL1_PRED_STORE:       pred.store.if2:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDEX]], 1
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP5]]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP7:%.*]] = fadd fast float [[DOTCAST2]], 1.000000e+00
 ; VEC2_INTERL1_PRED_STORE-NEXT:    store float [[TMP7]], ptr [[TMP6]], align 4
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; VEC2_INTERL1_PRED_STORE:       pred.store.continue4:
+; VEC2_INTERL1_PRED_STORE:       pred.store.continue3:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]

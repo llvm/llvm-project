@@ -114,7 +114,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[CMP_N7:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC6]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N7]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; DEFAULT:       vec.epilog.scalar.ph:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; DEFAULT-NEXT:    br label [[LOOP:%.*]]
 ; DEFAULT:       loop:
 ; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -522,31 +522,31 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; PRED:       pred.store.continue:
 ; PRED-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 1
 ; PRED-NEXT:    br i1 [[TMP23]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; PRED:       pred.store.if3:
+; PRED:       pred.store.if2:
 ; PRED-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP18]], i32 1
 ; PRED-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP24]]
 ; PRED-NEXT:    [[TMP26:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; PRED-NEXT:    store i32 [[TMP26]], ptr [[TMP25]], align 4
 ; PRED-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; PRED:       pred.store.continue4:
+; PRED:       pred.store.continue3:
 ; PRED-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 2
 ; PRED-NEXT:    br i1 [[TMP27]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
-; PRED:       pred.store.if5:
+; PRED:       pred.store.if4:
 ; PRED-NEXT:    [[TMP28:%.*]] = extractelement <4 x i64> [[TMP18]], i32 2
 ; PRED-NEXT:    [[TMP29:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP28]]
 ; PRED-NEXT:    [[TMP30:%.*]] = add i32 [[OFFSET_IDX]], 2
 ; PRED-NEXT:    store i32 [[TMP30]], ptr [[TMP29]], align 4
 ; PRED-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; PRED:       pred.store.continue6:
+; PRED:       pred.store.continue5:
 ; PRED-NEXT:    [[TMP31:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 3
 ; PRED-NEXT:    br i1 [[TMP31]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8]]
-; PRED:       pred.store.if7:
+; PRED:       pred.store.if6:
 ; PRED-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP18]], i32 3
 ; PRED-NEXT:    [[TMP33:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP32]]
 ; PRED-NEXT:    [[TMP34:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; PRED-NEXT:    store i32 [[TMP34]], ptr [[TMP33]], align 4
 ; PRED-NEXT:    br label [[PRED_STORE_CONTINUE8]]
-; PRED:       pred.store.continue8:
+; PRED:       pred.store.continue7:
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX]], i64 [[TMP16]])
 ; PRED-NEXT:    [[TMP35:%.*]] = xor <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true, i1 true, i1 true>
@@ -719,31 +719,31 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; PRED:       pred.store.continue:
 ; PRED-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 1
 ; PRED-NEXT:    br i1 [[TMP22]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3:%.*]]
-; PRED:       pred.store.if2:
+; PRED:       pred.store.if1:
 ; PRED-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP17]], i32 1
 ; PRED-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP23]]
 ; PRED-NEXT:    [[TMP25:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; PRED-NEXT:    store i32 [[TMP25]], ptr [[TMP24]], align 4
 ; PRED-NEXT:    br label [[PRED_STORE_CONTINUE3]]
-; PRED:       pred.store.continue3:
+; PRED:       pred.store.continue2:
 ; PRED-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 2
 ; PRED-NEXT:    br i1 [[TMP26]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; PRED:       pred.store.if4:
+; PRED:       pred.store.if3:
 ; PRED-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP17]], i32 2
 ; PRED-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP27]]
 ; PRED-NEXT:    [[TMP29:%.*]] = add i32 [[OFFSET_IDX]], 2
 ; PRED-NEXT:    store i32 [[TMP29]], ptr [[TMP28]], align 4
 ; PRED-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; PRED:       pred.store.continue5:
+; PRED:       pred.store.continue4:
 ; PRED-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 3
 ; PRED-NEXT:    br i1 [[TMP30]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7]]
-; PRED:       pred.store.if6:
+; PRED:       pred.store.if5:
 ; PRED-NEXT:    [[TMP31:%.*]] = extractelement <4 x i64> [[TMP17]], i32 3
 ; PRED-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP31]]
 ; PRED-NEXT:    [[TMP33:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; PRED-NEXT:    store i32 [[TMP33]], ptr [[TMP32]], align 4
 ; PRED-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; PRED:       pred.store.continue7:
+; PRED:       pred.store.continue6:
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX]], i64 [[TMP15]])
 ; PRED-NEXT:    [[TMP34:%.*]] = xor <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], <i1 true, i1 true, i1 true, i1 true>
@@ -884,12 +884,12 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED:       pred.store.continue:
 ; PRED-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
 ; PRED-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
-; PRED:       pred.store.if5:
+; PRED:       pred.store.if4:
 ; PRED-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 1
 ; PRED-NEXT:    [[TMP13:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[TMP12]], i32 2
 ; PRED-NEXT:    store i32 0, ptr [[TMP13]], align 8
 ; PRED-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; PRED:       pred.store.continue6:
+; PRED:       pred.store.continue5:
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; PRED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; PRED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]

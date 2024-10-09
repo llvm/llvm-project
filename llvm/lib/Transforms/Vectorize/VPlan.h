@@ -655,48 +655,6 @@ public:
   virtual VPBlockBase *clone() = 0;
 };
 
-/// A value that is used outside the VPlan. The operand of the user needs to be
-/// added to the associated phi node. The incoming block from VPlan is
-/// determined by where the VPValue is defined: if it is defined by a recipe
-/// outside a region, its parent block is used, otherwise the middle block is
-/// used.
-class VPLiveOut : public VPUser {
-  PHINode *Phi;
-
-public:
-  VPLiveOut(PHINode *Phi, VPValue *Op)
-      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
-
-  static inline bool classof(const VPUser *U) {
-    return U->getVPUserID() == VPUser::VPUserID::LiveOut;
-  }
-
-  /// Fix the wrapped phi node. This means adding an incoming value to exit
-  /// block phi's from the vector loop via middle block (values from scalar loop
-  /// already reach these phi's), and updating the value to scalar header phi's
-  /// from the scalar preheader.
-  void fixPhi(VPlan &Plan, VPTransformState &State);
-
-  /// Returns true if the VPLiveOut uses scalars of operand \p Op.
-  bool usesScalars(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
-
-  PHINode *getPhi() const { return Phi; }
-
-  /// Live-outs are marked as only using the first part during the transition
-  /// to unrolling directly on VPlan.
-  /// TODO: Remove after unroller transition.
-  bool onlyFirstPartUsed(const VPValue *Op) const override { return true; }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the VPLiveOut to \p O.
-  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
-#endif
-};
-
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
   const TargetTransformInfo &TTI;
@@ -3583,11 +3541,6 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveInsToFree;
 
-  /// Values used outside the plan. It contains live-outs that need fixing. Any
-  /// live-out that is fixed outside VPlan needs to be removed. The remaining
-  /// live-outs are fixed via VPLiveOut::fixPhi.
-  MapVector<PHINode *, VPLiveOut *> LiveOuts;
-
   /// Mapping from SCEVs to the VPValues representing their expansions.
   /// NOTE: This mapping is temporary and will be removed once all users have
   /// been modeled in VPlan directly.
@@ -3765,12 +3718,6 @@ public:
       EntryVPBB = cast<VPBasicBlock>(EntryVPBB->getSingleSuccessor());
     }
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
-  }
-
-  void addLiveOut(PHINode *PN, VPValue *V);
-
-  const MapVector<PHINode *, VPLiveOut *> &getLiveOuts() const {
-    return LiveOuts;
   }
 
   VPValue *getSCEVExpansion(const SCEV *S) const {
