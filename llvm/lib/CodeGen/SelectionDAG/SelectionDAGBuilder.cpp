@@ -4389,13 +4389,11 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       SDNodeFlags ScaleFlags;
       // The multiplication of an index by the type size does not wrap the
       // pointer index type in a signed sense (mul nsw).
-      if (NW.hasNoUnsignedSignedWrap())
-        ScaleFlags.setNoSignedWrap(true);
+      ScaleFlags.setNoSignedWrap(NW.hasNoUnsignedSignedWrap());
 
       // The multiplication of an index by the type size does not wrap the
       // pointer index type in an unsigned sense (mul nuw).
-      if (NW.hasNoUnsignedWrap())
-        ScaleFlags.setNoUnsignedWrap(true);
+      ScaleFlags.setNoUnsignedWrap(NW.hasNoUnsignedWrap());
 
       if (ElementScalable) {
         EVT VScaleTy = N.getValueType().getScalarType();
@@ -4424,14 +4422,12 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         }
       }
 
-      SDNodeFlags AddFlags;
-
       // The successive addition of the current address, truncated to the
       // pointer index type and interpreted as an unsigned number, and each
       // offset, also interpreted as an unsigned number, does not wrap the
       // pointer index type (add nuw).
-      if (NW.hasNoUnsignedWrap())
-        AddFlags.setNoUnsignedWrap(true);
+      SDNodeFlags AddFlags;
+      AddFlags.setNoUnsignedWrap(NW.hasNoUnsignedWrap());
 
       N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, IdxN, AddFlags);
     }
