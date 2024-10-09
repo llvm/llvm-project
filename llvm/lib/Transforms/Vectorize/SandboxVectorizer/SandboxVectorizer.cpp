@@ -16,6 +16,13 @@ using namespace llvm;
 #define SV_NAME "sandbox-vectorizer"
 #define DEBUG_TYPE SV_NAME
 
+SandboxVectorizerPass::SandboxVectorizerPass() = default;
+
+SandboxVectorizerPass::SandboxVectorizerPass(SandboxVectorizerPass &&) =
+    default;
+
+SandboxVectorizerPass::~SandboxVectorizerPass() = default;
+
 PreservedAnalyses SandboxVectorizerPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   TTI = &AM.getResult<TargetIRAnalysis>(F);

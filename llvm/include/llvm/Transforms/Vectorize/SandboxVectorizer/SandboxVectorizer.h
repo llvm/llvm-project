@@ -26,6 +26,15 @@ class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   bool runImpl(Function &F);
 
 public:
+  // Make sure the constructors/destructors are out-of-line. This works around a
+  // problem with -DBUILD_SHARED_LIBS=on where components that depend on the
+  // Vectorizer component can't find the vtable for classes like
+  // sandboxir::Pass. This way we don't have to make LLVMPasses add a direct
+  // dependency on SandboxIR.
+  SandboxVectorizerPass();
+  SandboxVectorizerPass(SandboxVectorizerPass &&);
+  ~SandboxVectorizerPass();
+
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
