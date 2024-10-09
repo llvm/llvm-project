@@ -22,12 +22,31 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
+#include <numeric>
 
 using namespace mlir;
 using namespace mlir::linalg;
 
 /// Include the definitions of the copy operation interface.
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.cpp.inc"
+
+namespace {
+/// Check linalg generic with single input output has
+/// body that is just a yield op yielding input value.
+static bool bodyIsJustYieldOp(GenericOp genericOp) {
+  assert(genericOp.getNumDpsInputs() == 1 && genericOp.getNumDpsInits() == 1 &&
+         "expected single input output to linalg.generic");
+  Block *body = genericOp.getBody();
+  if (body->getOperations().size() != 1)
+    return false;
+
+  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
+  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
+      yieldOp->getOperand(0) != body->getArgument(0))
+    return false;
+  return true;
+}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Interface utility functions
@@ -52,7 +71,6 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
 //===----------------------------------------------------------------------===//
 // CopyOpInterface implementation
 //===----------------------------------------------------------------------===//
-
 bool linalg::isaCopyOpInterface(LinalgOp linalgOp) {
   // Structural.
   if (linalgOp.getNumParallelLoops() != linalgOp.getNumLoops())
@@ -85,18 +103,57 @@ std::optional<Value> linalg::isaFillOpInterface(GenericOp genericOp) {
     return std::nullopt;
 
   OpOperand *value = genericOp.getDpsInputOperand(0);
-  if (!genericOp.isScalar(value))
-    return std::nullopt;
-
-  Block *body = genericOp.getBody();
-  if (body->getOperations().size() != 1)
-    return std::nullopt;
-
-  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
-  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
-      yieldOp->getOperand(0) != body->getArgument(0))
+  if (!genericOp.isScalar(value) || !bodyIsJustYieldOp(genericOp))
     return std::nullopt;
   return value->get();
+}
+
+//===----------------------------------------------------------------------===//
+// BroadcastOpInterface implementation
+//===----------------------------------------------------------------------===//
+std::optional<SmallVector<int64_t>>
+linalg::isaBroadcastOpInterface(GenericOp genericOp) {
+
+  // Structural.
+  if ((genericOp.getNumParallelLoops() != genericOp.getNumLoops()) ||
+      genericOp.getNumDpsInputs() != 1 || genericOp.getNumDpsInits() != 1 ||
+      !bodyIsJustYieldOp(genericOp))
+    return std::nullopt;
+
+  auto t0 = genericOp.getDpsInputOperand(0)->get().getType();
+  auto t1 = genericOp.getDpsInitOperand(0)->get().getType();
+  if (!isa<MemRefType, RankedTensorType>(t0) ||
+      !isa<MemRefType, RankedTensorType>(t1))
+    return std::nullopt;
+
+  // Check output is identity map. Injective function could also be
+  // a permutation of indices and expressible in linalg.generic but
+  // is not expressible for named broadcast op.
+  auto dstMap = genericOp.getIndexingMapsArray()[1];
+  if (!dstMap.isIdentity())
+    return std::nullopt;
+
+  SmallVector<int64_t> position;
+  auto srcMap = genericOp.getIndexingMapsArray()[0];
+
+  // Check input map is monotonically increasing DimIds.
+  for (unsigned i = 0; i < srcMap.getNumResults(); ++i) {
+    auto expr = llvm::dyn_cast<AffineDimExpr>(srcMap.getResults()[i]);
+    if (!expr)
+      return std::nullopt;
+    int64_t pos = expr.getPosition();
+    if (i > 0 && pos <= position[i - 1])
+      return std::nullopt;
+    position.push_back(expr.getPosition());
+  }
+
+  SmallVector<int64_t> broadcastedDims;
+  auto numDims = srcMap.getNumDims();
+  for (auto dim : llvm::seq<int64_t>(0, numDims)) {
+    if (!llvm::is_contained(position, dim))
+      broadcastedDims.push_back(dim);
+  }
+  return broadcastedDims;
 }
 
 //===----------------------------------------------------------------------===//

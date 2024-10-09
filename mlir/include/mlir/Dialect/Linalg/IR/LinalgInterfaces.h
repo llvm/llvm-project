@@ -135,6 +135,11 @@ bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
 /// Returns the scalar fill value if true.
 std::optional<Value> isaFillOpInterface(GenericOp genericOp);
 
+/// Checks whether `genericOp` is semantically equivalent to a
+///  `linalg.broadcast`. Returns broadcast dimension if true.
+std::optional<SmallVector<int64_t>>
+isaBroadcastOpInterface(GenericOp genericOp);
+
 namespace detail {
 
 /// Returns true if the block contains a contraction of the following form:
