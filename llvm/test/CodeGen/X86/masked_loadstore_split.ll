@@ -7,10 +7,10 @@ define void @split_masked_store(ptr %0) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+  ; CHECK-NEXT:   [[V_SET0_:%[0-9]+]]:vr128 = V_SET0
+  ; CHECK-NEXT:   VMOVUPDmr [[COPY]], 1, $noreg, 32, $noreg, killed [[V_SET0_]] :: (store (s128) into %ir.0 + 32, align 8)
   ; CHECK-NEXT:   [[AVX_SET0_:%[0-9]+]]:vr256 = AVX_SET0
-  ; CHECK-NEXT:   [[VMOVAPSYrm:%[0-9]+]]:vr256 = VMOVAPSYrm $rip, 1, $noreg, %const.0, $noreg :: (load (s256) from constant-pool)
-  ; CHECK-NEXT:   VMASKMOVPDYmr [[COPY]], 1, $noreg, 32, $noreg, killed [[VMOVAPSYrm]], [[AVX_SET0_]] :: (store unknown-size into %ir.0 + 32, align 8)
-  ; CHECK-NEXT:   VMOVUPDYmr [[COPY]], 1, $noreg, 0, $noreg, [[AVX_SET0_]] :: (store (s256) into %ir.0, align 8)
+  ; CHECK-NEXT:   VMOVUPDYmr [[COPY]], 1, $noreg, 0, $noreg, killed [[AVX_SET0_]] :: (store (s256) into %ir.0, align 8)
   ; CHECK-NEXT:   RET 0
 entry:
   call void @llvm.masked.store.v8f64.p0(<8 x double> zeroinitializer, ptr %0, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>)

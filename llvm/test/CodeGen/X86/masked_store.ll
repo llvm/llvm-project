@@ -5010,10 +5010,10 @@ define void @top_bits_unset_stack() nounwind {
 ;
 ; AVX1OR2-LABEL: top_bits_unset_stack:
 ; AVX1OR2:       ## %bb.0: ## %entry
-; AVX1OR2-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovapd {{.*#+}} ymm1 = [18446744073709551615,18446744073709551615,0,0]
-; AVX1OR2-NEXT:    vmaskmovpd %ymm0, %ymm1, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    vmovupd %ymm0, -{{[0-9]+}}(%rsp)
+; AVX1OR2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX1OR2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq
 ;
