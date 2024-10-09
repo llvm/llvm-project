@@ -96,6 +96,7 @@ function(builtin_default_target compiler_rt_path)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
+                                      -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${BUILTINS_CMAKE_ARGS}
@@ -136,6 +137,7 @@ function(builtin_register_target compiler_rt_path name)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
+                                      -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                       ${COMMON_CMAKE_ARGS}
@@ -261,6 +263,7 @@ function(runtime_default_target)
   llvm_ExternalProject_Add(runtimes
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${ARG_DEPENDS}
+                           ${enable_fortran}
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -270,6 +273,7 @@ function(runtime_default_target)
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
+                                      -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${RUNTIMES_CMAKE_ARGS}
@@ -277,6 +281,7 @@ function(runtime_default_target)
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 CUDA # For runtimes that may look for the CUDA SDK (libc, offload)
+                                                FLANG_RUNTIME # Shared between Flang and FortranRuntime
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
@@ -396,6 +401,7 @@ function(runtime_register_target name)
   llvm_ExternalProject_Add(runtimes-${name}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${ARG_DEPENDS}
+                           ${enable_fortran}
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=OFF
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -403,6 +409,7 @@ function(runtime_register_target name)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
+                                      -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                       -DLLVM_RUNTIMES_TARGET=${name}
@@ -462,10 +469,13 @@ if(build_runtimes)
   # together in a single CMake invocation.
   set(extra_deps "")
   set(extra_cmake_args "")
+  set(enable_fortran "")
 
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
+                clang-offload-packager
+                flang-new
                 count
                 lld
                 lli
@@ -503,17 +513,9 @@ if(build_runtimes)
   endif()
 
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-    if (${LLVM_TOOL_FLANG_BUILD})
-      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang-new")
-      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang-new")
-      set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
-      # TODO: This is a workaround until flang becomes a first-class project
-      # in llvm/CMakeList.txt.  Until then, this line ensures that flang-new is
-      # built before "openmp" is built as a runtime project.  Besides "flang-new"
-      # to build the compiler, we also need to add "module_files" to make sure
-      # that all .mod files are also properly build.
-      list(APPEND extra_deps "flang-new" "module_files")
-    endif()
+    if (LLVM_TOOL_FLANG_BUILD AND "FortranRuntime" IN_LIST LLVM_ENABLE_PROJECTS)
+      set(enable_fortran ENABLE_FORTRAN)
+    endif ()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
@@ -563,6 +565,9 @@ if(build_runtimes)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
+  if("FortranRuntime" IN_LIST LLVM_ENABLE_RUNTIMES)
+    set(enable_fortran ENABLE_FORTRAN)
+  endif ()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(

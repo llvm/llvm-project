@@ -6,7 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-add_flang_unittest(FlangRuntimeTests
+add_fortranruntime_unittest(FlangRuntimeTests
   AccessTest.cpp
   Allocatable.cpp
   ArrayConstructor.cpp
@@ -37,11 +37,10 @@ add_flang_unittest(FlangRuntimeTests
   Time.cpp
   TemporaryStack.cpp
   Transformational.cpp
+LINK_LIBS
+  FortranRuntime.unittest
 )
 
-target_link_libraries(FlangRuntimeTests
-  PRIVATE
-  FortranRuntime
-)
-
-add_subdirectory(CUDA)
+if (FORTRANRUNTIME_ENABLE_CUF)
+  add_subdirectory(CUDA)
+endif ()

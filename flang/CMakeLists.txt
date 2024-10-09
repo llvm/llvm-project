@@ -23,6 +23,7 @@ if (LLVM_ENABLE_EH)
 endif()
 
 set(FLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(FORTRANRUNTIME_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../FortranRuntime")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
   message(FATAL_ERROR "In-source builds are not allowed. \
@@ -33,17 +34,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
 endif()
 
 option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." OFF)
-
-# The out of tree builds of the compiler and the Fortran runtime
-# must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
-# to be composable. Failure to synchronize this setting may result
-# in linking errors or fatal failures in F128 runtime functions.
-set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
-  "Specifies the target library used for implementing IEEE-754 128-bit float \
-  math in F18 runtime, e.g. it might be libquadmath for targets where \
-  REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
-  is mapped to long double, etc."
-  )
 
 # Check for a standalone build and configure as appropriate from
 # there.
@@ -258,11 +248,12 @@ set(LLVM_BUILD_TOOLS ON)
 include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
   ${FLANG_SOURCE_DIR}/include
-  ${FLANG_SOURCE_DIR}/../FortranRuntime/include)
+  ${FORTRANRUNTIME_SOURCE_DIR}/include)
 
 # Add Flang-centric modules to cmake path.
 list(INSERT CMAKE_MODULE_PATH 0
   "${FLANG_SOURCE_DIR}/cmake/modules"
+  "${FORTRANRUNTIME_SOURCE_DIR}/cmake/modules"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 include(AddFlang)
@@ -335,20 +326,6 @@ set(FLANG_REPOSITORY_STRING "" CACHE STRING
 if (FLANG_REPOSITORY_STRING)
   add_definitions(-DFLANG_REPOSITORY_STRING="${FLANG_REPOSITORY_STRING}")
 endif()
-
-if (FLANG_RUNTIME_F128_MATH_LIB)
-  add_compile_definitions(
-    FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
-    )
-endif()
-
-include(TestBigEndian)
-test_big_endian(IS_BIGENDIAN)
-if (IS_BIGENDIAN)
-  add_compile_definitions(FLANG_BIG_ENDIAN=1)
-else ()
-  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
-endif ()
 
 # Configure Flang's Version.inc file.
 configure_file(
@@ -448,6 +425,7 @@ endif()
 
 include(CMakeParseArguments)
 include(AddFlang)
+include(FlangCommon)
 
 if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
@@ -462,14 +440,6 @@ option(FLANG_BUILD_TOOLS
 if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
-
-option(FLANG_CUF_RUNTIME
-  "Compile CUDA Fortran runtime sources" OFF)
-if (FLANG_CUF_RUNTIME)
-  find_package(CUDAToolkit REQUIRED)
-endif()
-
-add_subdirectory(../FortranRuntime/lib/Runtime runtime)
 
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)

@@ -1,7 +1,7 @@
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 add_library(FortranEvaluateTesting
-  ../../../FortranRuntime/lib/Testing/testing.cpp
-  ../../../FortranRuntime/lib/Testing/fp-testing.cpp
+  ${FORTRANRUNTIME_SOURCE_DIR}/lib/Testing/testing.cpp
+  ${FORTRANRUNTIME_SOURCE_DIR}/lib/Testing/fp-testing.cpp
 )
 set_target_properties(FortranEvaluateTesting PROPERTIES FOLDER "Flang/Tests")
 if (LLVM_LINK_LLVM_DYLIB)
@@ -43,10 +43,9 @@ add_flang_nongtest_unittest(intrinsics
   FortranCommon
   FortranEvaluateTesting
   FortranEvaluate
-  FortranDecimal
   FortranSemantics
+  FortranSupport
   FortranParser
-  FortranRuntime
 )
 
 add_flang_nongtest_unittest(logical
@@ -64,7 +63,7 @@ set(LLVM_REQUIRES_RTTI ON)
 add_flang_nongtest_unittest(real
   FortranEvaluateTesting
   FortranEvaluate
-  FortranDecimal
+  FortranSupport
   FortranSemantics
 )
 llvm_update_compile_flags(real.test)
@@ -75,5 +74,3 @@ add_flang_nongtest_unittest(folding
   FortranEvaluate
   FortranSemantics
 )
-
-add_subdirectory(../../../FortranRuntime/unittests/Evaluate runtime)

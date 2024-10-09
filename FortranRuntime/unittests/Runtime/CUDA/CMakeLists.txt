@@ -6,9 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-if (FLANG_CUF_RUNTIME)
-
-add_flang_unittest(FlangCufRuntimeTests
+add_fortranruntime_unittest(FlangCufRuntimeTests
   AllocatorCUF.cpp
 )
 
@@ -19,5 +17,3 @@ target_link_libraries(FlangCufRuntimeTests
 )
 
 target_include_directories(FlangCufRuntimeTests PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
-
-endif()
