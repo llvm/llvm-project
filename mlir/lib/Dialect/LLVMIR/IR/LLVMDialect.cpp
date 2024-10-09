@@ -3354,6 +3354,25 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// CallIntrinsicOp
+//===----------------------------------------------------------------------===//
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::TypeRange results, mlir::StringAttr intrin,
+                            mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+
+  build(builder, state, results, intrin, args, fastMathFlags,
+        llvm::ArrayRef<mlir::ValueRange>{});
+}
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::Type results, mlir::StringAttr intrin,
+                            mlir::ValueRange args) {
+  build(builder, state, {results}, intrin, args, FastmathFlagsAttr{},
+        llvm::ArrayRef<mlir::ValueRange>{});
+}
+
+//===----------------------------------------------------------------------===//
 // LinkerOptionsOp
 //===----------------------------------------------------------------------===//
 
