@@ -43,6 +43,12 @@ config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
 # false positive in std::vector. We also want to support testing a sanitized
 # lldb using unsanitized llvm, clang, and swift libraries.
 config.environment['ASAN_OPTIONS'] += ':' + 'detect_container_overflow=0'
+
+# FIXME: This is the wrong place to disable this. This is working
+# around the fact that the ci.swift.org scripts build only LLDB with
+# asan and this creates an ODR violation in Allocator.h that breaks
+# poisoning.
+config.environment['ASAN_OPTIONS'] += ':' + 'allow_user_poisoning=0'
 # End Swift mod.
 
 
