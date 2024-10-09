@@ -854,6 +854,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (Fixer) {
       auto ReplacementFixes = Fixer(*LastDiag, Info);
       if (!ReplacementFixes.empty()) {
+        assert(Info.getNumFixItHints() == 0 &&
+               "Include-fixer replaced a note with clang fix-its attached!");
         LastDiag->Fixes.insert(LastDiag->Fixes.end(), ReplacementFixes.begin(),
                                ReplacementFixes.end());
         return;
