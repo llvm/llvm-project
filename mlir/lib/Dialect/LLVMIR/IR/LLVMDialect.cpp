@@ -3326,14 +3326,16 @@ LogicalResult CallIntrinsicOp::verify() {
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args) {
-  build(builder, state, /*results=*/Type{}, intrin, args, FastmathFlagsAttr{},
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        FastmathFlagsAttr{},
         /*op_bundle_operands=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
-  build(builder, state, /*results=*/Type{}, intrin, args, fastMathFlags,
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        fastMathFlags,
         /*op_bundle_operands=*/{});
 }
 
