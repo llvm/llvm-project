@@ -1033,8 +1033,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     PlatformJD->addToLinkOrder(*ProcessSymsJD);
 
     if (TT.isOSBinFormatMachO()) {
-      if (auto P = MachOPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                         OrcRuntime.c_str()))
+      if (auto P =
+              MachOPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();
