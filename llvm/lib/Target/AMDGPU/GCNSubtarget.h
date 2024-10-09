@@ -1775,6 +1775,10 @@ public:
   }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
+
+  unsigned getBarrierMemberCountShift() const {
+    return getGeneration() >= GFX13 ? 12 : 16;
+  }
 };
 
 class GCNUserSGPRUsageInfo {

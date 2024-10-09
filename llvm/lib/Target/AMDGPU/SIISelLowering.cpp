@@ -11290,8 +11290,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IntrinsicID == Intrinsic::amdgcn_s_barrier_init) {
       SDValue M0Val;
       // Member count will be read from M0[16:22]
+      unsigned ShAmt = Subtarget->getBarrierMemberCountShift();
       M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, Op.getOperand(3),
-                          DAG.getShiftAmountConstant(16, MVT::i32, DL));
+                          DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
       if (!IsInlinableBarID) {
         // If reference to barrier id is not an inline constant then it must be
