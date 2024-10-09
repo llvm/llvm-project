@@ -18,7 +18,12 @@
 
 */
 
-#include <ccomplex>
+#if _LIBCPP_STD_VER >= 17
+#  include <complex>
+#else
+#  include <ccomplex>
+#endif
+
 #include <cmath>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
