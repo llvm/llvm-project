@@ -32,7 +32,14 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
 
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
   for (auto &I : instructions(F)) {
-    if (TTI->isSourceOfDivergence(&I))
+    bool NoDivergenceSource = false;
+    if (auto Call = dyn_cast<CallInst>(&I)) {
+      if (Function *Callee = Call->getCalledFunction()) {
+        if (Callee->hasFnAttribute(Attribute::NoDivergenceSource))
+          NoDivergenceSource = true;
+      }
+    }
+    if (!NoDivergenceSource && TTI->isSourceOfDivergence(&I))
       markDivergent(I);
     else if (TTI->isAlwaysUniform(&I))
       addUniformOverride(I);
