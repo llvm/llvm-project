@@ -2069,22 +2069,24 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
 
 #define DEF_TRAVERSE_TMPL_SPEC_DECL(TMPLDECLKIND, DECLKIND)                    \
   DEF_TRAVERSE_DECL(TMPLDECLKIND##TemplateSpecializationDecl, {                \
+    auto TSK = D->getTemplateSpecializationKind();                             \
     /* For implicit instantiations ("set<int> x;"), we don't want to           \
        recurse at all, since the instatiated template isn't written in         \
        the source code anywhere.  (Note the instatiated *type* --              \
        set<int> -- is written, and will still get a callback of                \
        TemplateSpecializationType).  For explicit instantiations               \
        ("template set<int>;"), we do need a callback, since this               \
-       is the only callback that's made for this instantiation.                \
-       We use getTemplateArgsAsWritten() to distinguish. */                    \
-    if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
-      /* The args that remains unspecialized. */                               \
-      TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
-          ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
+       is the only callback that's made for this instantiation. */             \
+    if (TSK != TSK_Undeclared && TSK != TSK_ImplicitInstantiation) {           \
+      if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {           \
+        /* The args that remains unspecialized. */                             \
+        TRY_TO(TraverseTemplateArgumentLocsHelper(                             \
+            ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));    \
+      }                                                                        \
     }                                                                          \
                                                                                \
     if (getDerived().shouldVisitTemplateInstantiations() ||                    \
-        D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
+        TSK == TSK_ExplicitSpecialization) {                                   \
       /* Traverse base definition for explicit specializations */              \
       TRY_TO(Traverse##DECLKIND##Helper(D));                                   \
     } else {                                                                   \
