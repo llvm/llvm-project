@@ -18,7 +18,8 @@ sys.path.append(sys.argv[1])
 from libcxx.header_information import lit_header_restrictions, public_headers
 
 for header in public_headers:
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.sh.cpp
 
 // REQUIRES: has-clang-tidy
@@ -36,4 +37,5 @@ for header in public_headers:
 // RUN: %{{clang-tidy}} %s --warnings-as-errors=* -header-filter=.* --config-file=%{{libcxx-dir}}/.clang-tidy -- -Wweak-vtables %{{compile_flags}} -fno-modules
 
 #include <{header}>
-""")
+"""
+    )
