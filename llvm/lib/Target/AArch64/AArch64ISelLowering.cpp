@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -2102,7 +2103,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::BITCAST, VT, PreferNEON ? Legal : Default);
   setOperationAction(ISD::BITREVERSE, VT, Default);
   setOperationAction(ISD::BSWAP, VT, Default);
-  setOperationAction(ISD::BUILD_VECTOR, VT, Default);
+  setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::CONCAT_VECTORS, VT, Default);
   setOperationAction(ISD::CTLZ, VT, Default);
   setOperationAction(ISD::CTPOP, VT, Default);
@@ -14384,23 +14385,61 @@ static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
+    SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  auto *BVN = cast<BuildVectorSDNode>(Op);
+
+  if (auto SeqInfo = BVN->isConstantSequence()) {
+    SDValue Start = DAG.getConstant(SeqInfo->first, DL, ContainerVT);
+    SDValue Steps = DAG.getStepVector(DL, ContainerVT, SeqInfo->second);
+    SDValue Seq = DAG.getNode(ISD::ADD, DL, ContainerVT, Start, Steps);
+    return convertFromScalableVector(DAG, VT, Seq);
+  }
+
+  if (!VT.isPow2VectorType() || VT.getFixedSizeInBits() > 128 ||
+      VT.getVectorNumElements() <= 1 || BVN->isConstant())
+    return SDValue();
+
+  // Lower (pow2) BUILD_VECTORS that are <= 128-bit to a sequence of ZIP1s.
+  EVT ZipVT = ContainerVT;
+  SDValue ZeroI64 = DAG.getConstant(0, DL, MVT::i64);
+  SmallVector<SDValue, 16> Intermediates =
+      llvm::map_to_vector<16>(Op->op_values(), [&](SDValue Op) {
+        return DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ZipVT,
+                           DAG.getUNDEF(ZipVT), Op, ZeroI64);
+      });
+
+  while (Intermediates.size() > 1) {
+    auto ToZipVT = [&](SDValue Op) { return DAG.getBitcast(ZipVT, Op); };
+    for (unsigned I = 0; I < Intermediates.size(); I += 2) {
+      SDValue Op0 = ToZipVT(Intermediates[I + 0]);
+      SDValue Op1 = ToZipVT(Intermediates[I + 1]);
+      Intermediates[I / 2] = DAG.getNode(AArch64ISD::ZIP1, DL, ZipVT, Op0, Op1);
+    }
+
+    Intermediates.resize(Intermediates.size() / 2);
+    if (Intermediates.size() > 1) {
+      // Prefer FP values to keep elements within vector registers (and also as
+      // f16 is conveniently a legal type).
+      ZipVT = getPackedSVEVectorVT(EVT::getFloatingPointVT(
+          ZipVT.getVectorElementType().getSizeInBits() * 2));
+    }
+  }
+
+  assert(Intermediates.size() == 1);
+  SDValue Vec = DAG.getBitcast(ContainerVT, Intermediates[0]);
+  return convertFromScalableVector(DAG, VT, Vec);
+}
+
 SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())) {
-    if (auto SeqInfo = cast<BuildVectorSDNode>(Op)->isConstantSequence()) {
-      SDLoc DL(Op);
-      EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
-      SDValue Start = DAG.getConstant(SeqInfo->first, DL, ContainerVT);
-      SDValue Steps = DAG.getStepVector(DL, ContainerVT, SeqInfo->second);
-      SDValue Seq = DAG.getNode(ISD::ADD, DL, ContainerVT, Start, Steps);
-      return convertFromScalableVector(DAG, Op.getValueType(), Seq);
-    }
-
-    // Revert to common legalisation for all other variants.
-    return SDValue();
-  }
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+    return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
   // Try to build a simple constant vector.
   Op = NormalizeBuildVector(Op, DAG);

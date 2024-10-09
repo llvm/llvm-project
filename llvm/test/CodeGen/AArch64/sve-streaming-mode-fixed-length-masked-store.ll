@@ -293,78 +293,104 @@ define void @masked_store_v16i8(ptr %dst, <16 x i1> %mask) {
 define void @masked_store_v32i8(ptr %dst, <32 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldr w8, [sp, #96]
-; CHECK-NEXT:    ldr w9, [sp, #88]
-; CHECK-NEXT:    ptrue p0.b, vl16
-; CHECK-NEXT:    ldr w10, [sp, #120]
-; CHECK-NEXT:    strb w7, [sp, #6]
-; CHECK-NEXT:    strb w8, [sp, #15]
-; CHECK-NEXT:    ldr w8, [sp, #80]
-; CHECK-NEXT:    strb w9, [sp, #14]
-; CHECK-NEXT:    ldr w9, [sp, #72]
-; CHECK-NEXT:    strb w8, [sp, #13]
 ; CHECK-NEXT:    ldr w8, [sp, #64]
-; CHECK-NEXT:    strb w9, [sp, #12]
 ; CHECK-NEXT:    ldr w9, [sp, #56]
-; CHECK-NEXT:    strb w8, [sp, #11]
+; CHECK-NEXT:    fmov s26, w2
+; CHECK-NEXT:    ldr w10, [sp, #32]
+; CHECK-NEXT:    ldr w11, [sp, #16]
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ldr w8, [sp, #48]
-; CHECK-NEXT:    strb w9, [sp, #10]
+; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    ldr w9, [sp, #40]
-; CHECK-NEXT:    strb w8, [sp, #9]
-; CHECK-NEXT:    ldr w8, [sp, #32]
-; CHECK-NEXT:    strb w9, [sp, #8]
-; CHECK-NEXT:    ldr w9, [sp, #216]
-; CHECK-NEXT:    strb w8, [sp, #7]
-; CHECK-NEXT:    ldr w8, [sp, #224]
-; CHECK-NEXT:    strb w9, [sp, #30]
-; CHECK-NEXT:    ldr w9, [sp, #200]
-; CHECK-NEXT:    strb w8, [sp, #31]
-; CHECK-NEXT:    ldr w8, [sp, #208]
-; CHECK-NEXT:    strb w9, [sp, #28]
+; CHECK-NEXT:    fmov s5, w10
+; CHECK-NEXT:    fmov s7, w11
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    ldr w8, [sp, #24]
+; CHECK-NEXT:    ldr w10, [sp, #176]
+; CHECK-NEXT:    fmov s3, w9
+; CHECK-NEXT:    ldr w9, [sp, #8]
+; CHECK-NEXT:    ldr w11, [sp, #168]
+; CHECK-NEXT:    fmov s6, w8
+; CHECK-NEXT:    ldr w8, [sp]
+; CHECK-NEXT:    fmov s19, w10
+; CHECK-NEXT:    fmov s16, w9
 ; CHECK-NEXT:    ldr w9, [sp, #184]
-; CHECK-NEXT:    strb w8, [sp, #29]
+; CHECK-NEXT:    fmov s20, w11
+; CHECK-NEXT:    zip1 z4.b, z3.b, z2.b
+; CHECK-NEXT:    fmov s3, w8
 ; CHECK-NEXT:    ldr w8, [sp, #192]
-; CHECK-NEXT:    strb w9, [sp, #26]
-; CHECK-NEXT:    ldr w9, [sp, #168]
-; CHECK-NEXT:    strb w8, [sp, #27]
-; CHECK-NEXT:    ldr w8, [sp, #176]
-; CHECK-NEXT:    strb w9, [sp, #24]
+; CHECK-NEXT:    fmov s18, w9
 ; CHECK-NEXT:    ldr w9, [sp, #152]
-; CHECK-NEXT:    strb w8, [sp, #25]
+; CHECK-NEXT:    ldr w10, [sp, #136]
+; CHECK-NEXT:    fmov s17, w8
 ; CHECK-NEXT:    ldr w8, [sp, #160]
-; CHECK-NEXT:    strb w9, [sp, #22]
-; CHECK-NEXT:    ldr w9, [sp, #136]
-; CHECK-NEXT:    strb w8, [sp, #23]
+; CHECK-NEXT:    ldr w11, [sp, #120]
+; CHECK-NEXT:    fmov s21, w10
+; CHECK-NEXT:    ldr w10, [sp, #88]
+; CHECK-NEXT:    zip1 z1.b, z1.b, z0.b
+; CHECK-NEXT:    fmov s23, w11
+; CHECK-NEXT:    ldr w11, [sp, #72]
+; CHECK-NEXT:    zip1 z0.b, z6.b, z5.b
+; CHECK-NEXT:    zip1 z17.b, z18.b, z17.b
+; CHECK-NEXT:    zip1 z18.b, z20.b, z19.b
+; CHECK-NEXT:    fmov s19, w8
+; CHECK-NEXT:    fmov s20, w9
 ; CHECK-NEXT:    ldr w8, [sp, #144]
-; CHECK-NEXT:    strb w9, [sp, #20]
-; CHECK-NEXT:    ldr w9, [sp, #112]
-; CHECK-NEXT:    strb w8, [sp, #21]
-; CHECK-NEXT:    ldr w8, [sp, #128]
-; CHECK-NEXT:    strb w6, [sp, #5]
-; CHECK-NEXT:    strb w8, [sp, #19]
-; CHECK-NEXT:    ldr w8, [sp, #104]
-; CHECK-NEXT:    strb w5, [sp, #4]
-; CHECK-NEXT:    strb w4, [sp, #3]
-; CHECK-NEXT:    strb w3, [sp, #2]
-; CHECK-NEXT:    strb w2, [sp, #1]
-; CHECK-NEXT:    strb w1, [sp]
-; CHECK-NEXT:    strb w10, [sp, #18]
-; CHECK-NEXT:    strb w9, [sp, #17]
-; CHECK-NEXT:    strb w8, [sp, #16]
+; CHECK-NEXT:    ldr w9, [sp, #128]
+; CHECK-NEXT:    fmov s24, w10
+; CHECK-NEXT:    fmov s5, w7
+; CHECK-NEXT:    fmov s25, w11
+; CHECK-NEXT:    fmov s22, w9
+; CHECK-NEXT:    ldr w9, [sp, #104]
+; CHECK-NEXT:    zip1 z2.b, z16.b, z7.b
+; CHECK-NEXT:    zip1 z19.b, z20.b, z19.b
+; CHECK-NEXT:    fmov s20, w8
+; CHECK-NEXT:    ldr w8, [sp, #112]
+; CHECK-NEXT:    zip1 z3.b, z5.b, z3.b
+; CHECK-NEXT:    fmov s5, w6
+; CHECK-NEXT:    fmov s6, w5
+; CHECK-NEXT:    fmov s7, w4
+; CHECK-NEXT:    fmov s16, w3
+; CHECK-NEXT:    zip1 z1.h, z4.h, z1.h
+; CHECK-NEXT:    zip1 z20.b, z21.b, z20.b
+; CHECK-NEXT:    zip1 z21.b, z23.b, z22.b
+; CHECK-NEXT:    fmov s22, w8
+; CHECK-NEXT:    fmov s23, w9
+; CHECK-NEXT:    ldr w8, [sp, #96]
+; CHECK-NEXT:    ldr w9, [sp, #80]
+; CHECK-NEXT:    zip1 z5.b, z6.b, z5.b
+; CHECK-NEXT:    zip1 z6.b, z16.b, z7.b
+; CHECK-NEXT:    zip1 z4.h, z18.h, z17.h
+; CHECK-NEXT:    zip1 z16.h, z20.h, z19.h
+; CHECK-NEXT:    zip1 z0.h, z2.h, z0.h
+; CHECK-NEXT:    zip1 z22.b, z23.b, z22.b
+; CHECK-NEXT:    fmov s23, w8
 ; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    ldp q1, q0, [sp]
+; CHECK-NEXT:    zip1 z2.h, z5.h, z3.h
+; CHECK-NEXT:    zip1 z4.s, z16.s, z4.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    zip1 z23.b, z24.b, z23.b
+; CHECK-NEXT:    fmov s24, w9
+; CHECK-NEXT:    zip1 z17.h, z22.h, z21.h
+; CHECK-NEXT:    zip1 z24.b, z25.b, z24.b
+; CHECK-NEXT:    fmov s25, w1
+; CHECK-NEXT:    zip1 z7.b, z25.b, z26.b
+; CHECK-NEXT:    zip1 z18.h, z24.h, z23.h
+; CHECK-NEXT:    zip1 z3.h, z7.h, z6.h
+; CHECK-NEXT:    zip1 z5.s, z18.s, z17.s
+; CHECK-NEXT:    zip1 z1.s, z3.s, z2.s
+; CHECK-NEXT:    zip1 z2.d, z5.d, z4.d
+; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
+; CHECK-NEXT:    lsl z1.b, z2.b, #7
 ; CHECK-NEXT:    lsl z0.b, z0.b, #7
-; CHECK-NEXT:    lsl z1.b, z1.b, #7
-; CHECK-NEXT:    asr z0.b, z0.b, #7
 ; CHECK-NEXT:    asr z1.b, z1.b, #7
-; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    cmpne p0.b, p0/z, z1.b, #0
+; CHECK-NEXT:    asr z0.b, z0.b, #7
+; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, #0
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    st1b { z0.b }, p1, [x0, x8]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
-; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v32i8:
@@ -589,23 +615,18 @@ define void @masked_store_v32i8(ptr %dst, <32 x i1> %mask) {
 define void @masked_store_v2f16(ptr %dst, <2 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    str wzr, [sp, #12]
+; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    mov z2.s, z0.s[1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    zip1 z0.h, z0.h, z2.h
+; CHECK-NEXT:    zip1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v2f16:
@@ -1014,48 +1035,33 @@ define void @masked_store_v4f32(ptr %dst, <4 x i1> %mask) {
 define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.b, z0.b[7]
 ; CHECK-NEXT:    mov z2.b, z0.b[6]
+; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    mov z3.b, z0.b[5]
 ; CHECK-NEXT:    mov z4.b, z0.b[4]
+; CHECK-NEXT:    mov z5.b, z0.b[3]
+; CHECK-NEXT:    mov z6.b, z0.b[2]
+; CHECK-NEXT:    mov z7.b, z0.b[1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.b, z0.b[3]
-; CHECK-NEXT:    strh w8, [sp, #14]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    mov z3.b, z0.b[2]
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov z4.b, z0.b[1]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    mov x8, #4 // =0x4
-; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    ldr d1, [sp, #8]
+; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
+; CHECK-NEXT:    zip1 z2.h, z4.h, z3.h
+; CHECK-NEXT:    zip1 z3.h, z6.h, z5.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z7.h
+; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    lsl z1.s, z1.s, #31
+; CHECK-NEXT:    lsl z0.s, z0.s, #31
 ; CHECK-NEXT:    asr z1.s, z1.s, #31
+; CHECK-NEXT:    asr z0.s, z0.s, #31
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    mov z1.s, #0 // =0x0
-; CHECK-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    strh w9, [sp]
-; CHECK-NEXT:    strh w8, [sp, #6]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strh w8, [sp, #4]
-; CHECK-NEXT:    fmov w8, s4
-; CHECK-NEXT:    strh w8, [sp, #2]
-; CHECK-NEXT:    ldr d0, [sp]
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    lsl z0.s, z0.s, #31
-; CHECK-NEXT:    asr z0.s, z0.s, #31
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v8f32:
