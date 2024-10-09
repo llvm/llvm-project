@@ -13,6 +13,7 @@ add_clang_library(MLIRCIRTransforms
   GotoSolver.cpp
   SCFPrepare.cpp
   CallConvLowering.cpp
+  HoistAllocas.cpp
 
   DEPENDS
   MLIRCIRPassIncGen

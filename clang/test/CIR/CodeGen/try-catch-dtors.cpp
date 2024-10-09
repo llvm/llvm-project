@@ -40,7 +40,6 @@ void yo() {
 
 // LLVM-LABEL: @_Z2yov()
 
-// LLVM: 2:
 // LLVM:   %[[Vec:.*]] = alloca %struct.Vec
 // LLVM:   br label %[[INVOKE_BB:.*]],
 
@@ -101,7 +100,7 @@ void yo2() {
 // CIR: }
 
 // CIR_FLAT-LABEL: @_Z3yo2v
-// CIR_FLAT:    cir.try_call @_ZN3VecC1Ev(%2) ^[[NEXT_CALL_PREP:.*]], ^[[PAD_NODTOR:.*]] : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.try_call @_ZN3VecC1Ev(%[[vec:.+]]) ^[[NEXT_CALL_PREP:.*]], ^[[PAD_NODTOR:.*]] : (!cir.ptr<![[VecTy]]>) -> ()
 // CIR_FLAT:  ^[[NEXT_CALL_PREP]]:
 // CIR_FLAT:    cir.br ^[[NEXT_CALL:.*]] loc
 // CIR_FLAT:  ^[[NEXT_CALL]]:
@@ -117,7 +116,7 @@ void yo2() {
 // CIR_FLAT:    cir.br ^[[CATCH_BEGIN:.*]](%exception_ptr : !cir.ptr<!void>)
 // CIR_FLAT:  ^[[PAD_DTOR]]:
 // CIR_FLAT:    %exception_ptr_0, %type_id_1 = cir.eh.inflight_exception
-// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%2) : (!cir.ptr<![[VecTy]]>) -> ()
+// CIR_FLAT:    cir.call @_ZN3VecD1Ev(%[[vec]]) : (!cir.ptr<![[VecTy]]>) -> ()
 // CIR_FLAT:    cir.br ^[[CATCH_BEGIN]](%exception_ptr_0 : !cir.ptr<!void>)
 // CIR_FLAT:  ^[[CATCH_BEGIN]](
 // CIR_FLAT:    cir.catch_param begin
@@ -169,7 +168,6 @@ void yo3(bool x) {
 // CIR: cir.return
 
 // CIR_FLAT-LABEL: @_Z3yo3b
-// CIR_FLAT:  ^bb1:
 // CIR_FLAT:   %[[V1:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v1"
 // CIR_FLAT:   %[[V2:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v2"
 // CIR_FLAT:   %[[V3:.*]] = cir.alloca ![[VecTy]], !cir.ptr<![[VecTy]]>, ["v3"

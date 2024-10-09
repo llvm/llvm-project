@@ -47,10 +47,10 @@ void test() {
 // LLVM:  store %"class.std::initializer_list<int>" [[ARG]], ptr [[LOCAL]], align 8,
 
 // LLVM: define dso_local void @_ZSt4testv()
-// LLVM: br label %[[SCOPE_START:.*]],
-// LLVM: [[SCOPE_START]]: ; preds = %0
 // LLVM:  [[INIT_STRUCT:%.*]] = alloca %"class.std::initializer_list<int>", i64 1, align 8,
 // LLVM:  [[ELEM_ARRAY:%.*]] = alloca [1 x i32], i64 1, align 4,
+// LLVM: br label %[[SCOPE_START:.*]],
+// LLVM: [[SCOPE_START]]: ; preds = %0
 // LLVM:  [[PTR_FIRST_ELEM:%.*]] = getelementptr i32, ptr [[ELEM_ARRAY]], i32 0,
 // LLVM:  store i32 7, ptr [[PTR_FIRST_ELEM]], align 4,
 // LLVM:  [[ELEM_ARRAY_PTR:%.*]] = getelementptr %"class.std::initializer_list<int>", ptr [[INIT_STRUCT]], i32 0, i32 0,

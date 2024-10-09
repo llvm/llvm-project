@@ -130,7 +130,7 @@ two_ints test_rvalue_aggregate() {
 //       CIR: }
 
 // LLVM-LABEL: define dso_local %struct.two_ints @_Z21test_rvalue_aggregatev
-//       LLVM:   %[[#SRC_SLOT:]] = alloca i64, i64 1, align 8
-//  LLVM-NEXT:   store i64 42, ptr %[[#SRC_SLOT]], align 8
+//  LLVM:   %[[#SRC_SLOT:]] = alloca i64, i64 1, align 8
+//  LLVM:   store i64 42, ptr %[[#SRC_SLOT]], align 8
 //  LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr %{{.+}}, ptr %[[#SRC_SLOT]], i64 8, i1 false)
 //       LLVM: }

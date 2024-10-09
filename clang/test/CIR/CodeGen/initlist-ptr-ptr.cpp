@@ -63,10 +63,10 @@ void test() {
 // LLVM: }
 
 // LLVM: define dso_local void @_ZSt4testv()
-// LLVM: br label %[[SCOPE_START:.*]],  
-// LLVM: [[SCOPE_START]]: ; preds = %0
 // LLVM:  [[INIT_STRUCT:%.*]] = alloca %"class.std::initializer_list<const char *>", i64 1, align 8,
 // LLVM:  [[ELEM_ARRAY_PTR:%.*]] = alloca [2 x ptr], i64 1, align 8,
+// LLVM: br label %[[SCOPE_START:.*]],  
+// LLVM: [[SCOPE_START]]: ; preds = %0
 // LLVM:  [[PTR_FIRST_ELEM:%.*]] = getelementptr ptr, ptr [[ELEM_ARRAY_PTR]], i32 0,
 // LLVM:  store ptr @.str, ptr [[PTR_FIRST_ELEM]], align 8,
 // LLVM:  [[PTR_SECOND_ELEM:%.*]] = getelementptr ptr, ptr [[PTR_FIRST_ELEM]], i64 1,

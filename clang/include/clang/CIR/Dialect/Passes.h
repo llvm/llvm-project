@@ -37,6 +37,7 @@ std::unique_ptr<Pass> createIdiomRecognizerPass(clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createLibOptPass();
 std::unique_ptr<Pass> createLibOptPass(clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createFlattenCFGPass();
+std::unique_ptr<Pass> createHoistAllocasPass();
 std::unique_ptr<Pass> createGotoSolverPass();
 
 /// Create a pass to lower ABI-independent function definitions/calls.

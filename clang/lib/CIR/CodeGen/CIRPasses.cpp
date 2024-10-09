@@ -102,6 +102,7 @@ mlir::LogicalResult runCIRToCIRPasses(
 namespace mlir {
 
 void populateCIRPreLoweringPasses(OpPassManager &pm) {
+  pm.addPass(createHoistAllocasPass());
   pm.addPass(createFlattenCFGPass());
   pm.addPass(createGotoSolverPass());
 }

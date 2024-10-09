@@ -6008,9 +6008,7 @@ uint8x8_t test_vqrshrun_n_s16(int16x8_t a) {
   // LLVM:   [[TMP0:%.*]] = bitcast <8 x i16> {{%.*}} to <16 x i8>
   // LLVM:   [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
   // LLVM:   [[VQRSHRUN_N1:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> [[VQRSHRUN_N]], i32 3)
-  // LLVM:   store <8 x i8> [[VQRSHRUN_N1]], ptr [[RET:%.*]], align 8
-  // LLVM:   [[RETVAL:%.*]] = load <8 x i8>, ptr [[RET]], align 8
-  // LLVM:   ret <8 x i8> [[RETVAL]]
+  // LLVM:   ret <8 x i8> [[VQRSHRUN_N1]]
 }
 
 uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
@@ -6025,9 +6023,7 @@ uint16x4_t test_vqrshrun_n_s32(int32x4_t a) {
   // LLVM:   [[TMP0:%.*]] = bitcast <4 x i32> {{%.*}} to <16 x i8>
   // LLVM:   [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
   // LLVM:   [[VQRSHRUN_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[VQRSHRUN_N]], i32 9)
-  // LLVM:   store <4 x i16> [[VQRSHRUN_N1]], ptr [[RET:%.*]], align 8
-  // LLVM:   [[RETVAL:%.*]] = load <4 x i16>, ptr [[RET]], align 8
-  // LLVM:   ret <4 x i16> [[RETVAL]]
+  // LLVM:   ret <4 x i16> [[VQRSHRUN_N1]]
 }
 
 uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
@@ -6042,9 +6038,7 @@ uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
   // LLVM:   [[TMP0:%.*]] = bitcast <2 x i64> {{%.*}} to <16 x i8>
   // LLVM:   [[VQRSHRUN_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
   // LLVM:   [[VQRSHRUN_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqrshrun.v2i32(<2 x i64> [[VQRSHRUN_N]], i32 19)
-  // LLVM:   store <2 x i32> [[VQRSHRUN_N1]], ptr [[RET:%.*]], align 8
-  // LLVM:   [[RETVAL:%.*]] = load <2 x i32>, ptr [[RET]], align 8
-  // LLVM:   ret <2 x i32> [[RETVAL]]
+  // LLVM:   ret <2 x i32> [[VQRSHRUN_N1]]
 }
 
 // NYI-LABEL: @test_vqrshrun_high_n_s16(

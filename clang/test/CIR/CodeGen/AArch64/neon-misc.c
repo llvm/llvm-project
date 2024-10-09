@@ -20,6 +20,8 @@ uint8x8_t test_vset_lane_u8(uint8_t a, uint8x8_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!s8i x 8>
 
 // LLVM: define dso_local <8 x i8> @test_vset_lane_u8(i8 [[A:%.*]], <8 x i8> [[B:%.*]])
+// LLVM: alloca <8 x i8>
+// LLVM: alloca i8
 // LLVM: [[A_ADR:%.*]] = alloca i8, i64 1, align 1
 // LLVM: [[B_ADR:%.*]] = alloca <8 x i8>, i64 1, align 8
 // LLVM: store i8 [[A]], ptr [[A_ADR]], align 1
@@ -42,6 +44,8 @@ uint16x4_t test_vset_lane_u16(uint16_t a, uint16x4_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!s16i x 4>
 
 // LLVM: define dso_local <4 x i16> @test_vset_lane_u16(i16 [[A:%.*]], <4 x i16> [[B:%.*]])
+// LLVM: alloca <4 x i16>
+// LLVM: alloca i16
 // LLVM: [[A_ADR:%.*]] = alloca i16, i64 1, align 2
 // LLVM: [[B_ADR:%.*]] = alloca <4 x i16>, i64 1, align 8
 // LLVM: store i16 [[A]], ptr [[A_ADR]], align 2
@@ -64,6 +68,8 @@ uint32x2_t test_vset_lane_u32(uint32_t a, uint32x2_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!s32i x 2>
 
 // LLVM: define dso_local <2 x i32> @test_vset_lane_u32(i32 [[A:%.*]], <2 x i32> [[B:%.*]])
+// LLVM: alloca <2 x i32>
+// LLVM: alloca i32
 // LLVM: [[A_ADR:%.*]] = alloca i32, i64 1, align 4
 // LLVM: [[B_ADR:%.*]] = alloca <2 x i32>, i64 1, align 8
 // LLVM: store i32 [[A]], ptr [[A_ADR]], align 4
@@ -87,6 +93,8 @@ int64x1_t test_vset_lane_u64(int64_t a, int64x1_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!s64i x 1>
 
 // LLVM: define dso_local <1 x i64> @test_vset_lane_u64(i64 [[A:%.*]], <1 x i64> [[B:%.*]])
+// LLVM: alloca <1 x i64>
+// LLVM: alloca i64
 // LLVM: [[A_ADR:%.*]] = alloca i64, i64 1, align 8
 // LLVM: [[B_ADR:%.*]] = alloca <1 x i64>, i64 1, align 8
 // LLVM: store i64 [[A]], ptr [[A_ADR]], align 8
@@ -109,6 +117,8 @@ float32x2_t test_vset_lane_f32(float32_t a, float32x2_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!cir.float x 2>
 
 // LLVM: define dso_local <2 x float> @test_vset_lane_f32(float [[A:%.*]], <2 x float> [[B:%.*]])
+// LLVM: alloca <2 x float>
+// LLVM: alloca float
 // LLVM: [[A_ADR:%.*]] = alloca float, i64 1, align 4
 // LLVM: [[B_ADR:%.*]] = alloca <2 x float>, i64 1, align 8
 // LLVM: store float [[A]], ptr [[A_ADR]], align 4
@@ -131,6 +141,8 @@ uint8x16_t test_vsetq_lane_u8(uint8_t a, uint8x16_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!s8i x 16>
 
 // LLVM: define dso_local <16 x i8> @test_vsetq_lane_u8(i8 [[A:%.*]], <16 x i8> [[B:%.*]])
+// LLVM: alloca <16 x i8>
+// LLVM: alloca i8
 // LLVM: [[A_ADR:%.*]] = alloca i8, i64 1, align 1
 // LLVM: [[B_ADR:%.*]] = alloca <16 x i8>, i64 1, align 16
 // LLVM: store i8 [[A]], ptr [[A_ADR]], align 1
@@ -153,6 +165,8 @@ uint16x8_t test_vsetq_lane_u16(uint16_t a, uint16x8_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!s16i x 8>
 
 // LLVM: define dso_local <8 x i16> @test_vsetq_lane_u16(i16 [[A:%.*]], <8 x i16> [[B:%.*]])
+// LLVM: alloca <8 x i16>
+// LLVM: alloca i16
 // LLVM: [[A_ADR:%.*]] = alloca i16, i64 1, align 2
 // LLVM: [[B_ADR:%.*]] = alloca <8 x i16>, i64 1, align 16
 // LLVM: store i16 [[A]], ptr [[A_ADR]], align 2
@@ -175,6 +189,8 @@ uint32x4_t test_vsetq_lane_u32(uint32_t a, uint32x4_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!s32i x 4>
 
 // LLVM: define dso_local <4 x i32> @test_vsetq_lane_u32(i32 [[A:%.*]], <4 x i32> [[B:%.*]])
+// LLVM: alloca <4 x i32>
+// LLVM: alloca i32
 // LLVM: [[A_ADR:%.*]] = alloca i32, i64 1, align 4
 // LLVM: [[B_ADR:%.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: store i32 [[A]], ptr [[A_ADR]], align 4
@@ -197,6 +213,8 @@ int64x2_t test_vsetq_lane_s64(int64_t a, int64x2_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!s64i x 2>
 
 // LLVM: define dso_local <2 x i64> @test_vsetq_lane_s64(i64 [[A:%.*]], <2 x i64> [[B:%.*]])
+// LLVM: alloca <2 x i64>
+// LLVM: alloca i64
 // LLVM: [[A_ADR:%.*]] = alloca i64, i64 1, align 8
 // LLVM: [[B_ADR:%.*]] = alloca <2 x i64>, i64 1, align 16
 // LLVM: store i64 [[A]], ptr [[A_ADR]], align 8
@@ -219,6 +237,8 @@ float32x4_t test_vsetq_lane_f32(float32_t a, float32x4_t b) {
 // CIR: {{%.*}} = cir.vec.insert {{%.*}}, {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!cir.float x 4>
 
 // LLVM: define dso_local <4 x float> @test_vsetq_lane_f32(float [[A:%.*]], <4 x float> [[B:%.*]])
+// LLVM: alloca <4 x float>
+// LLVM: alloca float
 // LLVM: [[A_ADR:%.*]] = alloca float, i64 1, align 4
 // LLVM: [[B_ADR:%.*]] = alloca <4 x float>, i64 1, align 16
 // LLVM: store float [[A]], ptr [[A_ADR]], align 4
@@ -241,6 +261,7 @@ uint8_t test_vget_lane_u8(uint8x8_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!u8i x 8>
 
 // LLVM: define dso_local i8 @test_vget_lane_u8(<8 x i8> [[ARG:%.*]])
+// LLVM: alloca <8 x i8>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <8 x i8>, i64 1, align 8
 // LLVM: store <8 x i8> [[ARG]], ptr [[ARG_SAVE]], align 8
 // LLVM: [[TMP:%.*]] = load <8 x i8>, ptr [[ARG_SAVE:%.*]], align 8
@@ -258,6 +279,7 @@ uint8_t test_vgetq_lane_u8(uint8x16_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!u8i x 16>
 
 // LLVM: define dso_local i8 @test_vgetq_lane_u8(<16 x i8> [[ARG:%.*]])
+// LLVM: alloca <16 x i8>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <16 x i8>, i64 1, align 16
 // LLVM: store <16 x i8> [[ARG]], ptr [[ARG_SAVE]], align 16
 // LLVM: [[TMP:%.*]] = load <16 x i8>, ptr [[ARG_SAVE:%.*]], align 16
@@ -275,6 +297,7 @@ uint16_t test_vget_lane_u16(uint16x4_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!u16i x 4>
 
 // LLVM: define dso_local i16 @test_vget_lane_u16(<4 x i16> [[ARG:%.*]])
+// LLVM: alloca <4 x i16>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <4 x i16>, i64 1, align 8
 // LLVM: store <4 x i16> [[ARG]], ptr [[ARG_SAVE]], align 8
 // LLVM: [[TMP:%.*]] = load <4 x i16>, ptr [[ARG_SAVE:%.*]], align 8
@@ -292,6 +315,7 @@ uint16_t test_vgetq_lane_u16(uint16x8_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!u16i x 8>
 
 // LLVM: define dso_local i16 @test_vgetq_lane_u16(<8 x i16> [[ARG:%.*]])
+// LLVM: alloca <8 x i16>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <8 x i16>, i64 1, align 16
 // LLVM: store <8 x i16> [[ARG]], ptr [[ARG_SAVE]], align 16
 // LLVM: [[TMP:%.*]] = load <8 x i16>, ptr [[ARG_SAVE:%.*]], align 16
@@ -309,6 +333,7 @@ uint32_t test_vget_lane_u32(uint32x2_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!u32i x 2>
 
 // LLVM: define dso_local i32 @test_vget_lane_u32(<2 x i32> [[ARG:%.*]])
+// LLVM: alloca <2 x i32>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <2 x i32>, i64 1, align 8
 // LLVM: store <2 x i32> [[ARG]], ptr [[ARG_SAVE]], align 8
 // LLVM: [[TMP:%.*]] = load <2 x i32>, ptr [[ARG_SAVE:%.*]], align 8
@@ -326,6 +351,7 @@ uint32_t test_vgetq_lane_u32(uint32x4_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!u32i x 4>
 
 // LLVM: define dso_local i32 @test_vgetq_lane_u32(<4 x i32> [[ARG:%.*]])
+// LLVM: alloca <4 x i32>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <4 x i32>, i64 1, align 16
 // LLVM: store <4 x i32> [[ARG]], ptr [[ARG_SAVE]], align 16
 // LLVM: [[TMP:%.*]] = load <4 x i32>, ptr [[ARG_SAVE:%.*]], align 16
@@ -343,6 +369,7 @@ uint64_t test_vget_lane_u64(uint64x1_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!u64i x 1>
 
 // LLVM: define dso_local i64 @test_vget_lane_u64(<1 x i64> [[ARG:%.*]])
+// LLVM: alloca <1 x i64>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <1 x i64>, i64 1, align 8
 // LLVM: store <1 x i64> [[ARG]], ptr [[ARG_SAVE]], align 8
 // LLVM: [[TMP:%.*]] = load <1 x i64>, ptr [[ARG_SAVE:%.*]], align 8
@@ -360,6 +387,7 @@ uint64_t test_vgetq_lane_u64(uint64x2_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!u64i x 2>
 
 // LLVM: define dso_local i64 @test_vgetq_lane_u64(<2 x i64> [[ARG:%.*]])
+// LLVM: alloca <2 x i64>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <2 x i64>, i64 1, align 16
 // LLVM: store <2 x i64> [[ARG]], ptr [[ARG_SAVE]], align 16
 // LLVM: [[TMP:%.*]] = load <2 x i64>, ptr [[ARG_SAVE:%.*]], align 16
@@ -377,6 +405,7 @@ float32_t test_vget_lane_f32(float32x2_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!cir.float x 2>
 
 // LLVM: define dso_local float @test_vget_lane_f32(<2 x float> [[ARG:%.*]])
+// LLVM: alloca <2 x float>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <2 x float>, i64 1, align 8
 // LLVM: store <2 x float> [[ARG]], ptr [[ARG_SAVE]], align 8
 // LLVM: [[TMP:%.*]] = load <2 x float>, ptr [[ARG_SAVE:%.*]], align 8
@@ -394,6 +423,7 @@ float64_t test_vget_lane_f64(float64x1_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!cir.double x 1>
 
 // LLVM: define dso_local double @test_vget_lane_f64(<1 x double> [[ARG:%.*]])
+// LLVM: alloca <1 x double>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <1 x double>, i64 1, align 8
 // LLVM: store <1 x double> [[ARG]], ptr [[ARG_SAVE]], align 8
 // LLVM: [[TMP:%.*]] = load <1 x double>, ptr [[ARG_SAVE:%.*]], align 8
@@ -411,6 +441,7 @@ float32_t test_vgetq_lane_f32(float32x4_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!cir.float x 4>
 
 // LLVM: define dso_local float @test_vgetq_lane_f32(<4 x float> [[ARG:%.*]])
+// LLVM: alloca <4 x float>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <4 x float>, i64 1, align 16
 // LLVM: store <4 x float> [[ARG]], ptr [[ARG_SAVE]], align 16
 // LLVM: [[TMP:%.*]] = load <4 x float>, ptr [[ARG_SAVE:%.*]], align 16
@@ -428,6 +459,7 @@ float64_t test_vgetq_lane_f64(float64x2_t a) {
 // CIR: {{%.*}} = cir.vec.extract {{%.*}}[[[IDX]] : !s32i] : !cir.vector<!cir.double x 2>
 
 // LLVM: define dso_local double @test_vgetq_lane_f64(<2 x double> [[ARG:%.*]])
+// LLVM: alloca <2 x double>
 // LLVM: [[ARG_SAVE:%.*]] = alloca <2 x double>, i64 1, align 16
 // LLVM: store <2 x double> [[ARG]], ptr [[ARG_SAVE]], align 16
 // LLVM: [[TMP:%.*]] = load <2 x double>, ptr [[ARG_SAVE:%.*]], align 16

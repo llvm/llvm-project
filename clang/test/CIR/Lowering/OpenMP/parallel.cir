@@ -26,8 +26,8 @@ module {
 // CHECK: ret void
 // CHECK-NEXT: }
 // CHECK: define{{.*}} void @omp_parallel..omp_par(ptr
+// CHECK: %[[XVar:.*]] = load ptr, ptr %{{.*}}, align 8
 // CHECK: %[[YVar:.*]] = load ptr, ptr %{{.*}}, align 8
-// CHECK: %[[XVar:.*]] = alloca i32, i64 1, align 4
 // CHECK: store i32 1, ptr %[[XVar]], align 4
 // CHECK: %[[XVal:.*]] = load i32, ptr %[[XVar]], align 4
 // CHECK: %[[BinOp:.*]] = add i32 %[[XVal]], 1
