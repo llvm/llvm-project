@@ -24,6 +24,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
@@ -246,7 +247,9 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     DeclareOpInterfaceMethods<PromotableOpInterface>,
     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
-    DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+    DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>
+    ]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
@@ -495,7 +498,8 @@ def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "BitCast", LLVM_AnyNonAggregate,
 def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
     LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
     LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
-    [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+    [DeclareOpInterfaceMethods<PromotableOpInterface>,
+     DeclareOpInterfaceMethods<ViewLikeOpInterface>]> {
   let hasFolder = 1;
 }
 def LLVM_IntToPtrOp : LLVM_CastOp<"inttoptr", "IntToPtr",
@@ -551,7 +555,15 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
                    OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
-                   DefaultValuedAttr<CConv, "CConv::C">:$CConv);
+                   DefaultValuedAttr<CConv, "CConv::C">:$CConv,
+                   VariadicOfVariadic<LLVM_Type,
+                                      "op_bundle_sizes">:$op_bundle_operands,
+                   DenseI32ArrayAttr:$op_bundle_sizes,
+                   DefaultValuedProperty<
+                     ArrayProperty<StringProperty, "operand bundle tags">,
+                     "ArrayRef<std::string>{}",
+                     "SmallVector<std::string>{}"
+                   >:$op_bundle_tags);
   let results = (outs Optional<LLVM_Type>:$result);
   let successors = (successor AnySuccessor:$normalDest,
                               AnySuccessor:$unwindDest);
@@ -607,7 +619,8 @@ def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
 //===----------------------------------------------------------------------===//
 
 def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
-                    [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+                    [AttrSizedOperandSegments,
+                     DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                      DeclareOpInterfaceMethods<CallOpInterface>,
                      DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                      DeclareOpInterfaceMethods<BranchWeightOpInterface>]> {
@@ -661,8 +674,15 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
                   OptionalAttr<UnitAttr>:$convergent,
                   OptionalAttr<UnitAttr>:$no_unwind,
-                  OptionalAttr<UnitAttr>:$will_return
-                  );
+                  OptionalAttr<UnitAttr>:$will_return,
+                  VariadicOfVariadic<LLVM_Type,
+                                     "op_bundle_sizes">:$op_bundle_operands,
+                  DenseI32ArrayAttr:$op_bundle_sizes,
+                  DefaultValuedProperty<
+                    ArrayProperty<StringProperty, "operand bundle tags">,
+                    "ArrayRef<std::string>{}",
+                    "SmallVector<std::string>{}"
+                  >:$op_bundle_tags);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -682,6 +702,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     OpBuilder<(ins "LLVMFunctionType":$calleeType, "StringRef":$callee,
                    CArg<"ValueRange", "{}">:$args)>
   ];
+  let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
     /// Returns the callee function type.
@@ -1720,7 +1741,8 @@ def LLVM_ConstantOp
 // Atomic operations.
 //
 
-def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnySignlessInteger]>;
+def LLVM_AtomicRMWType
+    : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnySignlessInteger, LLVM_AnyFixedVector]>;
 
 def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",
@@ -1895,7 +1917,8 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
 
 def LLVM_CallIntrinsicOp
     : LLVM_Op<"call_intrinsic",
-              [DeclareOpInterfaceMethods<FastmathFlagsInterface>]> {
+              [AttrSizedOperandSegments,
+               DeclareOpInterfaceMethods<FastmathFlagsInterface>]> {
   let summary = "Call to an LLVM intrinsic function.";
   let description = [{
     Call the specified llvm intrinsic. If the intrinsic is overloaded, use
@@ -1903,13 +1926,25 @@ def LLVM_CallIntrinsicOp
   }];
   let arguments = (ins StrAttr:$intrin, Variadic<LLVM_Type>:$args,
                        DefaultValuedAttr<LLVM_FastmathFlagsAttr,
-                                         "{}">:$fastmathFlags);
+                                         "{}">:$fastmathFlags,
+                       VariadicOfVariadic<LLVM_Type,
+                                          "op_bundle_sizes">:$op_bundle_operands,
+                       DenseI32ArrayAttr:$op_bundle_sizes,
+                       DefaultValuedProperty<
+                         ArrayProperty<StringProperty, "operand bundle tags">,
+                         "ArrayRef<std::string>{}",
+                         "SmallVector<std::string>{}"
+                       >:$op_bundle_tags);
   let results = (outs Optional<LLVM_Type>:$results);
   let llvmBuilder = [{
     return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);
   }];
   let assemblyFormat = [{
-    $intrin `(` $args `)` `:` functional-type($args, $results) attr-dict
+    $intrin `(` $args `)`
+    ( custom<OpBundles>($op_bundle_operands, type($op_bundle_operands),
+                        $op_bundle_tags)^ )?
+    `:` functional-type($args, $results)
+    attr-dict
   }];
 
   let hasVerifier = 1;

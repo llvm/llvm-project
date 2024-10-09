@@ -63,24 +63,24 @@ func.func @scalar_real_2(%arg0: !fir.ref<f32>) {
 // CHECK:  %[[VAL_1:.*]] = arith.constant 3.140000e+00 : f32
 // CHECK:  fir.store %[[VAL_1]] to %[[VAL_0]] : !fir.ref<f32>
 
-func.func @scalar_complex(%arg0: !fir.ref<!fir.complex<4>>, %arg1: !fir.ref<!fir.complex<4>>) {
-  hlfir.assign %arg0 to %arg0 : !fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>
+func.func @scalar_complex(%arg0: !fir.ref<complex<f32>>, %arg1: !fir.ref<complex<f32>>) {
+  hlfir.assign %arg0 to %arg0 : !fir.ref<complex<f32>>, !fir.ref<complex<f32>>
   return
 }
 // CHECK-LABEL:   func.func @scalar_complex(
-// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.complex<4>>,
-// CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<!fir.complex<4>>) {
-// CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.complex<4>>
-// CHECK:  fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.complex<4>>
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<complex<f32>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<complex<f32>>) {
+// CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<complex<f32>>
+// CHECK:  fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<complex<f32>>
 
-func.func @scalar_complex_2(%arg0: !fir.ref<!fir.complex<4>>, %arg1: !fir.complex<4>) {
-  hlfir.assign %arg1 to %arg0 : !fir.complex<4>, !fir.ref<!fir.complex<4>>
+func.func @scalar_complex_2(%arg0: !fir.ref<complex<f32>>, %arg1: complex<f32>) {
+  hlfir.assign %arg1 to %arg0 : complex<f32>, !fir.ref<complex<f32>>
   return
 }
 // CHECK-LABEL:   func.func @scalar_complex_2(
-// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.complex<4>>,
-// CHECK-SAME:    %[[VAL_1:.*]]: !fir.complex<4>) {
-// CHECK:  fir.store %[[VAL_1]] to %[[VAL_0]] : !fir.ref<!fir.complex<4>>
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<complex<f32>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: complex<f32>) {
+// CHECK:  fir.store %[[VAL_1]] to %[[VAL_0]] : !fir.ref<complex<f32>>
 
 func.func @scalar_character(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>) {
   %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)

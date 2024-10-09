@@ -563,3 +563,36 @@ gpu.module @kernels {
     gpu.return
   }
 }
+
+// -----
+
+// Lowering of subgroup query operations
+
+// CHECK-DAG: llvm.func spir_funccc @_Z18get_sub_group_size() -> i32 attributes {no_unwind, will_return}
+// CHECK-DAG: llvm.func spir_funccc @_Z18get_num_sub_groups() -> i32 attributes {no_unwind, will_return}
+// CHECK-DAG: llvm.func spir_funccc @_Z22get_sub_group_local_id() -> i32 attributes {no_unwind, will_return}
+// CHECK-DAG: llvm.func spir_funccc @_Z16get_sub_group_id() -> i32 attributes {no_unwind, will_return}
+
+
+gpu.module @subgroup_operations {
+// CHECK-LABEL: @gpu_subgroup
+  func.func @gpu_subgroup() {
+    // CHECK:       %[[SG_ID:.*]] = llvm.call spir_funccc @_Z16get_sub_group_id() {no_unwind, will_return} : () -> i32
+    // CHECK-32-NOT:                llvm.zext
+    // CHECK-64           %{{.*}} = llvm.zext %[[SG_ID]] : i32 to i64
+    %0 = gpu.subgroup_id : index
+    // CHECK: %[[SG_LOCAL_ID:.*]] = llvm.call spir_funccc @_Z22get_sub_group_local_id() {no_unwind, will_return}  : () -> i32
+    // CHECK-32-NOT:                llvm.zext
+    // CHECK-64:          %{{.*}} = llvm.zext %[[SG_LOCAL_ID]] : i32 to i64
+    %1 = gpu.lane_id
+    // CHECK:     %[[NUM_SGS:.*]] = llvm.call spir_funccc @_Z18get_num_sub_groups() {no_unwind, will_return} : () -> i32
+    // CHECK-32-NOT:                llvm.zext
+    // CHECK-64:          %{{.*}} = llvm.zext %[[NUM_SGS]] : i32 to i64
+    %2 = gpu.num_subgroups : index
+    // CHECK:     %[[SG_SIZE:.*]] = llvm.call spir_funccc @_Z18get_sub_group_size() {no_unwind, will_return} : () -> i32
+    // CHECK-32-NOT:                llvm.zext
+    // CHECK-64:          %{{.*}} = llvm.zext %[[SG_SIZE]] : i32 to i64
+    %3 = gpu.subgroup_size : index
+    return
+  }
+}

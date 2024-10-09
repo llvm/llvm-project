@@ -411,9 +411,12 @@ enum NodeType : unsigned {
   CZERO_EQZ, // vt.maskc for XVentanaCondOps.
   CZERO_NEZ, // vt.maskcn for XVentanaCondOps.
 
-  /// Software guarded BRIND node. Operand 0 is the chain operand and
-  /// operand 1 is the target address.
+  // Software guarded BRIND node. Operand 0 is the chain operand and
+  // operand 1 is the target address.
   SW_GUARDED_BRIND,
+  // Software guarded calls for large code model
+  SW_GUARDED_CALL,
+  SW_GUARDED_TAIL,
 
   SF_VC_XV_SE,
   SF_VC_IV_SE,

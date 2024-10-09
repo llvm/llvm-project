@@ -925,7 +925,7 @@ CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ,
 }
 
 using PredBlockVector = SmallVector<BasicBlock *, 16>;
-using IncomingValueMap = DenseMap<BasicBlock *, Value *>;
+using IncomingValueMap = SmallDenseMap<BasicBlock *, Value *, 16>;
 
 /// Determines the value to use as the phi node input for a block.
 ///
@@ -2467,7 +2467,7 @@ Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
                            SmallVectorImpl<Value *> &AdditionalValues) {
   unsigned BitWidth = DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
   // Rewrite a GEP into a DIExpression.
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
     return nullptr;

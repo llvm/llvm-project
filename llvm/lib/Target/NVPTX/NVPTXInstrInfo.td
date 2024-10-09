@@ -3126,11 +3126,12 @@ foreach ta = [v2f16, v2bf16, v2i16, v4i8, i32] in {
 
 // NOTE: pred->fp are currently sub-optimal due to an issue in TableGen where
 // we cannot specify floating-point literals in isel patterns.  Therefore, we
-// use an integer selp to select either 1 or 0 and then cvt to floating-point.
+// use an integer selp to select either 1 (or -1 in case of signed) or 0
+// and then cvt to floating-point.
 
 // sint -> f16
 def : Pat<(f16 (sint_to_fp Int1Regs:$a)),
-          (CVT_f16_s32 (SELP_u32ii 1, 0, Int1Regs:$a), CvtRN)>;
+          (CVT_f16_s32 (SELP_s32ii -1, 0, Int1Regs:$a), CvtRN)>;
 def : Pat<(f16 (sint_to_fp Int16Regs:$a)),
           (CVT_f16_s16 Int16Regs:$a, CvtRN)>;
 def : Pat<(f16 (sint_to_fp Int32Regs:$a)),
@@ -3170,7 +3171,7 @@ def : Pat<(bf16 (uint_to_fp Int64Regs:$a)),
 
 // sint -> f32
 def : Pat<(f32 (sint_to_fp Int1Regs:$a)),
-          (CVT_f32_s32 (SELP_u32ii 1, 0, Int1Regs:$a), CvtRN)>;
+          (CVT_f32_s32 (SELP_s32ii -1, 0, Int1Regs:$a), CvtRN)>;
 def : Pat<(f32 (sint_to_fp Int16Regs:$a)),
           (CVT_f32_s16 Int16Regs:$a, CvtRN)>;
 def : Pat<(f32 (sint_to_fp Int32Regs:$a)),
@@ -3190,7 +3191,7 @@ def : Pat<(f32 (uint_to_fp Int64Regs:$a)),
 
 // sint -> f64
 def : Pat<(f64 (sint_to_fp Int1Regs:$a)),
-          (CVT_f64_s32 (SELP_u32ii 1, 0, Int1Regs:$a), CvtRN)>;
+          (CVT_f64_s32 (SELP_s32ii -1, 0, Int1Regs:$a), CvtRN)>;
 def : Pat<(f64 (sint_to_fp Int16Regs:$a)),
           (CVT_f64_s16 Int16Regs:$a, CvtRN)>;
 def : Pat<(f64 (sint_to_fp Int32Regs:$a)),
@@ -3498,8 +3499,8 @@ def: Pat<(v2i16 (scalar_to_vector (i16 Int16Regs:$a))),
 
 // Create SDNodes so they can be used in the DAG code, e.g.
 // NVPTXISelLowering (LowerShiftLeftParts and LowerShiftRightParts)
-def fshl_clamp : SDNode<"NVPTXISD::FUN_SHFL_CLAMP", SDTIntShiftDOp, []>;
-def fshr_clamp : SDNode<"NVPTXISD::FUN_SHFR_CLAMP", SDTIntShiftDOp, []>;
+def fshl_clamp : SDNode<"NVPTXISD::FSHL_CLAMP", SDTIntShiftDOp, []>;
+def fshr_clamp : SDNode<"NVPTXISD::FSHR_CLAMP", SDTIntShiftDOp, []>;
 
 // Funnel shift, requires >= sm_32.  Does not trap if amt is out of range, so
 // no side effects.
@@ -3510,7 +3511,7 @@ let hasSideEffects = false in {
                   (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
                   "shf." # mode # ".b32 \t$dst, $lo, $hi, $amt;",
                   [(set Int32Regs:$dst,
-                      (op (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 imm:$amt)))]>,
+                      (op (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 imm:$amt)))]>,
         Requires<[hasHWROT32]>;
 
     def _r
@@ -3518,7 +3519,7 @@ let hasSideEffects = false in {
                   (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
                   "shf." # mode # ".b32 \t$dst, $lo, $hi, $amt;",
                   [(set Int32Regs:$dst,
-                      (op (i32 Int32Regs:$lo), (i32 Int32Regs:$hi), (i32 Int32Regs:$amt)))]>,
+                      (op (i32 Int32Regs:$hi), (i32 Int32Regs:$lo), (i32 Int32Regs:$amt)))]>,
         Requires<[hasHWROT32]>;
   }
 

@@ -73,6 +73,12 @@ public:
   bool runOnFunction(Function &F) final;
 };
 
+class RegionPassManager final : public PassManager<RegionPass, RegionPass> {
+public:
+  RegionPassManager(StringRef Name) : PassManager(Name) {}
+  bool runOnRegion(Region &R) final;
+};
+
 /// Owns the passes and provides an API to get a pass by its name.
 class PassRegistry {
   SmallVector<std::unique_ptr<Pass>, 8> Passes;

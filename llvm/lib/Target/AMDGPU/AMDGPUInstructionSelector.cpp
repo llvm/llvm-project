@@ -1474,8 +1474,8 @@ bool AMDGPUInstructionSelector::selectRelocConstant(MachineInstr &I) const {
   Module *M = MF->getFunction().getParent();
   const MDNode *Metadata = I.getOperand(2).getMetadata();
   auto SymbolName = cast<MDString>(Metadata->getOperand(0))->getString();
-  auto RelocSymbol = cast<GlobalVariable>(
-    M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
+  auto *RelocSymbol = cast<GlobalVariable>(
+      M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
 
   MachineBasicBlock *BB = I.getParent();
   BuildMI(*BB, &I, I.getDebugLoc(),
@@ -5312,26 +5312,20 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
     // Only change Src if src modifier could be gained. In such cases new Src
     // could be sgpr but this does not violate constant bus restriction for
     // instruction that is being selected.
-    // Note: Src is not changed when there is only a simple sgpr to vgpr copy
-    // since this could violate constant bus restriction.
-    Register PeekSrc = stripCopy(Src, *MRI);
+    Src = stripBitCast(Src, *MRI);
 
     const auto CheckAbsNeg = [&]() {
       // Be careful about folding modifiers if we already have an abs. fneg is
       // applied last, so we don't want to apply an earlier fneg.
       if ((Mods & SISrcMods::ABS) == 0) {
         unsigned ModsTmp;
-        std::tie(PeekSrc, ModsTmp) = selectVOP3ModsImpl(PeekSrc);
+        std::tie(Src, ModsTmp) = selectVOP3ModsImpl(Src);
 
-        if ((ModsTmp & SISrcMods::NEG) != 0) {
+        if ((ModsTmp & SISrcMods::NEG) != 0)
           Mods ^= SISrcMods::NEG;
-          Src = PeekSrc;
-        }
 
-        if ((ModsTmp & SISrcMods::ABS) != 0) {
+        if ((ModsTmp & SISrcMods::ABS) != 0)
           Mods |= SISrcMods::ABS;
-          Src = PeekSrc;
-        }
       }
     };
 
@@ -5344,8 +5338,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
 
     Mods |= SISrcMods::OP_SEL_1;
 
-    if (isExtractHiElt(*MRI, PeekSrc, PeekSrc)) {
-      Src = PeekSrc;
+    if (isExtractHiElt(*MRI, Src, Src)) {
       Mods |= SISrcMods::OP_SEL_0;
       CheckAbsNeg();
     }

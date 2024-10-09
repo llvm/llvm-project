@@ -25,11 +25,11 @@
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: ; NumSgprs: 8
-; VI-NOXNACK: ; NumSgprs: 8
-; VI-XNACK: ; NumSgprs: 12
-; GFX9-ARCH-FLAT: ; NumSgprs: 14
-; GFX10-ARCH-FLAT: ; NumSgprs: 8
+; CI: ; TotalNumSgprs: 8
+; VI-NOXNACK: ; TotalNumSgprs: 8
+; VI-XNACK: ; TotalNumSgprs: 12
+; GFX9-ARCH-FLAT: ; TotalNumSgprs: 14
+; GFX10-ARCH-FLAT: ; TotalNumSgprs: 8
 define amdgpu_kernel void @no_vcc_no_flat() {
 entry:
   call void asm sideeffect "", "~{s7}"()
@@ -42,11 +42,11 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: ; NumSgprs: 10
-; VI-NOXNACK: ; NumSgprs: 10
-; VI-XNACK: ; NumSgprs: 12
-; GFX9-ARCH-FLAT: ; NumSgprs: 14
-; GFX10-ARCH-FLAT: ; NumSgprs: 10
+; CI: ; TotalNumSgprs: 10
+; VI-NOXNACK: ; TotalNumSgprs: 10
+; VI-XNACK: ; TotalNumSgprs: 12
+; GFX9-ARCH-FLAT: ; TotalNumSgprs: 14
+; GFX10-ARCH-FLAT: ; TotalNumSgprs: 10
 define amdgpu_kernel void @vcc_no_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{vcc}"()
@@ -59,11 +59,11 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: ; NumSgprs: 12
-; VI-NOXNACK: ; NumSgprs: 14
-; VI-XNACK: ; NumSgprs: 14
-; GFX9-ARCH-FLAT: ; NumSgprs: 14
-; GFX10-ARCH-FLAT: ; NumSgprs: 8
+; CI: ; TotalNumSgprs: 12
+; VI-NOXNACK: ; TotalNumSgprs: 14
+; VI-XNACK: ; TotalNumSgprs: 14
+; GFX9-ARCH-FLAT: ; TotalNumSgprs: 14
+; GFX10-ARCH-FLAT: ; TotalNumSgprs: 8
 define amdgpu_kernel void @no_vcc_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{flat_scratch}"()
@@ -76,11 +76,11 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: ; NumSgprs: 12
-; VI-NOXNACK: ; NumSgprs: 14
-; VI-XNACK: ; NumSgprs: 14
-; GFX9-ARCH-FLAT: ; NumSgprs: 14
-; GFX10-ARCH-FLAT: ; NumSgprs: 10
+; CI: ; TotalNumSgprs: 12
+; VI-NOXNACK: ; TotalNumSgprs: 14
+; VI-XNACK: ; TotalNumSgprs: 14
+; GFX9-ARCH-FLAT: ; TotalNumSgprs: 14
+; GFX10-ARCH-FLAT: ; TotalNumSgprs: 10
 define amdgpu_kernel void @vcc_flat() {
 entry:
   call void asm sideeffect "", "~{s7},~{vcc},~{flat_scratch}"()
@@ -96,11 +96,11 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: NumSgprs: 4
-; VI-NOXNACK: NumSgprs: 6
-; VI-XNACK: NumSgprs: 6
-; GFX9-ARCH-FLAT: ; NumSgprs: 6
-; GFX10-ARCH-FLAT: ; NumSgprs: 0
+; CI: TotalNumSgprs: 4
+; VI-NOXNACK: TotalNumSgprs: 6
+; VI-XNACK: TotalNumSgprs: 6
+; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
+; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch}"()
@@ -113,11 +113,11 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: NumSgprs: 4
-; VI-NOXNACK: NumSgprs: 6
-; VI-XNACK: NumSgprs: 6
-; GFX9-ARCH-FLAT: ; NumSgprs: 6
-; GFX10-ARCH-FLAT: ; NumSgprs: 0
+; CI: TotalNumSgprs: 4
+; VI-NOXNACK: TotalNumSgprs: 6
+; VI-XNACK: TotalNumSgprs: 6
+; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
+; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_lo() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch_lo}"()
@@ -130,11 +130,11 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: NumSgprs: 4
-; VI-NOXNACK: NumSgprs: 6
-; VI-XNACK: NumSgprs: 6
-; GFX9-ARCH-FLAT: ; NumSgprs: 6
-; GFX10-ARCH-FLAT: ; NumSgprs: 0
+; CI: TotalNumSgprs: 4
+; VI-NOXNACK: TotalNumSgprs: 6
+; VI-XNACK: TotalNumSgprs: 6
+; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
+; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_hi() #0 {
 entry:
   call void asm sideeffect "; clobber ", "~{flat_scratch_hi}"()

@@ -481,6 +481,35 @@ public:
   }
 };
 
+class OpenACCTileClause final
+    : public OpenACCClauseWithExprs,
+      public llvm::TrailingObjects<OpenACCTileClause, Expr *> {
+  OpenACCTileClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> SizeExprs, SourceLocation EndLoc)
+      : OpenACCClauseWithExprs(OpenACCClauseKind::Tile, BeginLoc, LParenLoc,
+                               EndLoc) {
+    std::uninitialized_copy(SizeExprs.begin(), SizeExprs.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), SizeExprs.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Tile;
+  }
+  static OpenACCTileClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> SizeExprs,
+                                   SourceLocation EndLoc);
+  llvm::ArrayRef<Expr *> getSizeExprs() {
+    return OpenACCClauseWithExprs::getExprs();
+  }
+
+  llvm::ArrayRef<Expr *> getSizeExprs() const {
+    return OpenACCClauseWithExprs::getExprs();
+  }
+};
+
 /// Represents one of a handful of clauses that have a single integer
 /// expression.
 class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithExprs {
@@ -545,6 +574,32 @@ public:
                                     SourceLocation BeginLoc,
                                     SourceLocation LParenLoc, Expr *IntExpr,
                                     SourceLocation EndLoc);
+};
+
+/// Represents a 'collapse' clause on a 'loop' construct. This clause takes an
+/// integer constant expression 'N' that represents how deep to collapse the
+/// construct. It also takes an optional 'force' tag that permits intervening
+/// code in the loops.
+class OpenACCCollapseClause : public OpenACCClauseWithSingleIntExpr {
+  bool HasForce = false;
+
+  OpenACCCollapseClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                        bool HasForce, Expr *LoopCount, SourceLocation EndLoc);
+
+public:
+  const Expr *getLoopCount() const { return getIntExpr(); }
+  Expr *getLoopCount() { return getIntExpr(); }
+
+  bool hasForce() const { return HasForce; }
+
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Collapse;
+  }
+
+  static OpenACCCollapseClause *Create(const ASTContext &C,
+                                       SourceLocation BeginLoc,
+                                       SourceLocation LParenLoc, bool HasForce,
+                                       Expr *LoopCount, SourceLocation EndLoc);
 };
 
 /// Represents a clause with one or more 'var' objects, represented as an expr,
