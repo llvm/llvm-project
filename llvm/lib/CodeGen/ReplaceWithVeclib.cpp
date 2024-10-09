@@ -103,35 +103,43 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   Intrinsic::ID IID = II->getIntrinsicID();
   if (IID == Intrinsic::not_intrinsic)
     return false;
-  // At the moment VFABI assumes the return type is always widened unless it is
-  // a void type.
-  auto *VTy = dyn_cast<VectorType>(II->getType());
-  ElementCount EC(VTy ? VTy->getElementCount() : ElementCount::getFixed(0));
-  Type *ScalarRetTy = II->getType()->getScalarType();
+
+  // RetIsScalar: Return type is not widened.
+  bool RetIsScalar = isVectorIntrinsicWithScalarOpAtArg(IID, -1);
+  Type *RetTy = II->getType();
+  Type *ScalarRetTy = RetTy->getScalarType();
+
   // Compute the argument types of the corresponding scalar call and check that
   // all vector operands match the previously found EC.
   SmallVector<Type *, 8> ScalarArgTypes;
+  auto *VTy = dyn_cast<VectorType>(RetTy);
+  ElementCount EC(!RetIsScalar && VTy ? VTy->getElementCount()
+                                    : ElementCount::getFixed(0));
 
   // OloadTys collects types used in scalar intrinsic overload name.
   SmallVector<Type *, 3> OloadTys;
-  if (!ScalarRetTy->isVoidTy() &&
-      isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
-    OloadTys.push_back(ScalarRetTy);
+  if (!RetTy->isVoidTy() && isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
+    OloadTys.push_back(RetIsScalar ? RetTy : ScalarRetTy);
 
   for (auto Arg : enumerate(II->args())) {
     auto *ArgTy = Arg.value()->getType();
-    auto *ScalarArgTy = ArgTy->getScalarType();
-    ScalarArgTypes.push_back(ScalarArgTy);
-    if (isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index()))
+    bool IsOloadTy = isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index());
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
+      ScalarArgTypes.push_back(ArgTy);
+      if (IsOloadTy)
+        OloadTys.push_back(ArgTy);
+    } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
+      auto *ScalarArgTy = VectorArgTy->getElementType();
+      ScalarArgTypes.push_back(ScalarArgTy);
+      if (IsOloadTy)
         OloadTys.push_back(ScalarArgTy);
-    if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
       // When return type is void, set EC to the first vector argument, and
       // disallow vector arguments with different ECs.
       if (EC.isZero())
         EC = VectorArgTy->getElementCount();
       else if (EC != VectorArgTy->getElementCount())
         return false;
-    } else if (!isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index()))
+    } else
       // Exit when it is supposed to be a vector argument but it isn't.
       return false;
   }
