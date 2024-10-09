@@ -108,6 +108,12 @@ public:
     : RegisterRegAllocBase(N, D, C) {}
 };
 
+class WWMRegisterRegAlloc : public RegisterRegAllocBase<WWMRegisterRegAlloc> {
+public:
+  WWMRegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)
+      : RegisterRegAllocBase(N, D, C) {}
+};
+
 static bool onlyAllocateSGPRs(const TargetRegisterInfo &TRI,
                               const MachineRegisterInfo &MRI,
                               const Register Reg) {
@@ -122,13 +128,24 @@ static bool onlyAllocateVGPRs(const TargetRegisterInfo &TRI,
   return !static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(RC);
 }
 
-/// -{sgpr|vgpr}-regalloc=... command line option.
+static bool onlyAllocateWWMRegs(const TargetRegisterInfo &TRI,
+                                const MachineRegisterInfo &MRI,
+                                const Register Reg) {
+  const SIMachineFunctionInfo *MFI =
+      MRI.getMF().getInfo<SIMachineFunctionInfo>();
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return !static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(RC) &&
+         MFI->checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG);
+}
+
+/// -{sgpr|wwm|vgpr}-regalloc=... command line option.
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
 
 /// A dummy default pass factory indicates whether the register allocator is
 /// overridden on the command line.
 static llvm::once_flag InitializeDefaultSGPRRegisterAllocatorFlag;
 static llvm::once_flag InitializeDefaultVGPRRegisterAllocatorFlag;
+static llvm::once_flag InitializeDefaultWWMRegisterAllocatorFlag;
 
 static SGPRRegisterRegAlloc
 defaultSGPRRegAlloc("default",
@@ -145,6 +162,11 @@ static cl::opt<VGPRRegisterRegAlloc::FunctionPassCtor, false,
 VGPRRegAlloc("vgpr-regalloc", cl::Hidden, cl::init(&useDefaultRegisterAllocator),
              cl::desc("Register allocator to use for VGPRs"));
 
+static cl::opt<WWMRegisterRegAlloc::FunctionPassCtor, false,
+               RegisterPassParser<WWMRegisterRegAlloc>>
+    WWMRegAlloc("wwm-regalloc", cl::Hidden,
+                cl::init(&useDefaultRegisterAllocator),
+                cl::desc("Register allocator to use for WWM registers"));
 
 static void initializeDefaultSGPRRegisterAllocatorOnce() {
   RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
@@ -161,6 +183,15 @@ static void initializeDefaultVGPRRegisterAllocatorOnce() {
   if (!Ctor) {
     Ctor = VGPRRegAlloc;
     VGPRRegisterRegAlloc::setDefault(VGPRRegAlloc);
+  }
+}
+
+static void initializeDefaultWWMRegisterAllocatorOnce() {
+  RegisterRegAlloc::FunctionPassCtor Ctor = WWMRegisterRegAlloc::getDefault();
+
+  if (!Ctor) {
+    Ctor = WWMRegAlloc;
+    WWMRegisterRegAlloc::setDefault(WWMRegAlloc);
   }
 }
 
@@ -188,6 +219,18 @@ static FunctionPass *createFastVGPRRegisterAllocator() {
   return createFastRegisterAllocator(onlyAllocateVGPRs, true);
 }
 
+static FunctionPass *createBasicWWMRegisterAllocator() {
+  return createBasicRegisterAllocator(onlyAllocateWWMRegs);
+}
+
+static FunctionPass *createGreedyWWMRegisterAllocator() {
+  return createGreedyRegisterAllocator(onlyAllocateWWMRegs);
+}
+
+static FunctionPass *createFastWWMRegisterAllocator() {
+  return createFastRegisterAllocator(onlyAllocateWWMRegs, false);
+}
+
 static SGPRRegisterRegAlloc basicRegAllocSGPR(
   "basic", "basic register allocator", createBasicSGPRRegisterAllocator);
 static SGPRRegisterRegAlloc greedyRegAllocSGPR(
@@ -204,6 +247,14 @@ static VGPRRegisterRegAlloc greedyRegAllocVGPR(
 
 static VGPRRegisterRegAlloc fastRegAllocVGPR(
   "fast", "fast register allocator", createFastVGPRRegisterAllocator);
+static WWMRegisterRegAlloc basicRegAllocWWMReg("basic",
+                                               "basic register allocator",
+                                               createBasicWWMRegisterAllocator);
+static WWMRegisterRegAlloc
+    greedyRegAllocWWMReg("greedy", "greedy register allocator",
+                         createGreedyWWMRegisterAllocator);
+static WWMRegisterRegAlloc fastRegAllocWWMReg("fast", "fast register allocator",
+                                              createFastWWMRegisterAllocator);
 } // anonymous namespace
 
 static cl::opt<bool>
@@ -440,6 +491,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
+  initializeAMDGPUReserveWWMRegsPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
@@ -504,8 +556,8 @@ createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
 static ScheduleDAGInstrs *
 createIterativeGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  auto DAG = new GCNIterativeScheduler(C,
-    GCNIterativeScheduler::SCHEDULE_LEGACYMAXOCCUPANCY);
+  auto *DAG = new GCNIterativeScheduler(
+      C, GCNIterativeScheduler::SCHEDULE_LEGACYMAXOCCUPANCY);
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
@@ -520,8 +572,7 @@ static ScheduleDAGInstrs *createMinRegScheduler(MachineSchedContext *C) {
 static ScheduleDAGInstrs *
 createIterativeILPMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
-  auto DAG = new GCNIterativeScheduler(C,
-    GCNIterativeScheduler::SCHEDULE_ILP);
+  auto *DAG = new GCNIterativeScheduler(C, GCNIterativeScheduler::SCHEDULE_ILP);
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
@@ -989,6 +1040,7 @@ public:
 
   FunctionPass *createSGPRAllocPass(bool Optimized);
   FunctionPass *createVGPRAllocPass(bool Optimized);
+  FunctionPass *createWWMRegAllocPass(bool Optimized);
   FunctionPass *createRegAllocPass(bool Optimized) override;
 
   bool addRegAssignAndRewriteFast() override;
@@ -1382,7 +1434,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 }
 
 bool GCNPassConfig::addPreRewrite() {
-  addPass(&SILowerWWMCopiesID);
   if (EnableRegReassign)
     addPass(&GCNNSAReassignID);
   return true;
@@ -1418,12 +1469,28 @@ FunctionPass *GCNPassConfig::createVGPRAllocPass(bool Optimized) {
   return createFastVGPRRegisterAllocator();
 }
 
+FunctionPass *GCNPassConfig::createWWMRegAllocPass(bool Optimized) {
+  // Initialize the global default.
+  llvm::call_once(InitializeDefaultWWMRegisterAllocatorFlag,
+                  initializeDefaultWWMRegisterAllocatorOnce);
+
+  RegisterRegAlloc::FunctionPassCtor Ctor = WWMRegisterRegAlloc::getDefault();
+  if (Ctor != useDefaultRegisterAllocator)
+    return Ctor();
+
+  if (Optimized)
+    return createGreedyWWMRegisterAllocator();
+
+  return createFastWWMRegisterAllocator();
+}
+
 FunctionPass *GCNPassConfig::createRegAllocPass(bool Optimized) {
   llvm_unreachable("should not be used");
 }
 
 static const char RegAllocOptNotSupportedMessage[] =
-  "-regalloc not supported with amdgcn. Use -sgpr-regalloc and -vgpr-regalloc";
+    "-regalloc not supported with amdgcn. Use -sgpr-regalloc, -wwm-regalloc, "
+    "and -vgpr-regalloc";
 
 bool GCNPassConfig::addRegAssignAndRewriteFast() {
   if (!usingDefaultRegAlloc())
@@ -1435,11 +1502,19 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsLegacyID);
+
+  // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addPass(&SIPreAllocateWWMRegsID);
 
-  addPass(createVGPRAllocPass(false));
+  // For allocating other wwm register operands.
+  addPass(createWWMRegAllocPass(false));
 
   addPass(&SILowerWWMCopiesID);
+  addPass(&AMDGPUReserveWWMRegsID);
+
+  // For allocating per-thread VGPRs.
+  addPass(createVGPRAllocPass(false));
+
   return true;
 }
 
@@ -1457,10 +1532,24 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // since FastRegAlloc does the replacements itself.
   addPass(createVirtRegRewriter(false));
 
+  // At this point, the sgpr-regalloc has been done and it is good to have the
+  // stack slot coloring to try to optimize the SGPR spill stack indices before
+  // attempting the custom SGPR spill lowering.
+  addPass(&StackSlotColoringID);
+
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsLegacyID);
+
+  // To Allocate wwm registers used in whole quad mode operations (for shaders).
   addPass(&SIPreAllocateWWMRegsID);
 
+  // For allocating other whole wave mode registers.
+  addPass(createWWMRegAllocPass(true));
+  addPass(&SILowerWWMCopiesID);
+  addPass(createVirtRegRewriter(false));
+  addPass(&AMDGPUReserveWWMRegsID);
+
+  // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
 
   addPreRewrite();

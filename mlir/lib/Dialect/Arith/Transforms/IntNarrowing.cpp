@@ -44,7 +44,8 @@ struct NarrowingPattern : OpRewritePattern<SourceOp> {
   NarrowingPattern(MLIRContext *ctx, const ArithIntNarrowingOptions &options,
                    PatternBenefit benefit = 1)
       : OpRewritePattern<SourceOp>(ctx, benefit),
-        supportedBitwidths(options.bitwidthsSupported) {
+        supportedBitwidths(options.bitwidthsSupported.begin(),
+                           options.bitwidthsSupported.end()) {
     assert(!supportedBitwidths.empty() && "Invalid options");
     assert(!llvm::is_contained(supportedBitwidths, 0) && "Invalid bitwidth");
     llvm::sort(supportedBitwidths);
@@ -757,7 +758,8 @@ struct ArithIntNarrowingPass final
     MLIRContext *ctx = op->getContext();
     RewritePatternSet patterns(ctx);
     populateArithIntNarrowingPatterns(
-        patterns, ArithIntNarrowingOptions{bitwidthsSupported});
+        patterns, ArithIntNarrowingOptions{
+                      llvm::to_vector_of<unsigned>(bitwidthsSupported)});
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
       signalPassFailure();
   }

@@ -130,7 +130,7 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   llvm::Intrinsic::ID id =
-      llvm::Function::lookupIntrinsicID(op.getIntrinAttr());
+      llvm::Intrinsic::lookupIntrinsicID(op.getIntrinAttr());
   if (!id)
     return mlir::emitError(op.getLoc(), "could not find LLVM intrinsic: ")
            << op.getIntrinAttr();

@@ -392,7 +392,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
       SmallVector<MachineBasicBlock*, 4> Blocks({&MBB});
 
       while (!Blocks.empty()) {
-        auto CurBB = Blocks.pop_back_val();
+        auto *CurBB = Blocks.pop_back_val();
         auto I = CurBB->rbegin(), E = CurBB->rend();
         if (I != E) {
           if (I->isUnconditionalBranch() || I->getOpcode() == AMDGPU::S_ENDPGM)

@@ -8440,14 +8440,17 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
 
 SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
                                               SelectionDAG &DAG) const {
-  SDLoc dl(Node);
-  unsigned NewOp = Node->getOpcode() == ISD::FMINNUM ?
-    ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
-  EVT VT = Node->getValueType(0);
+  if (SDValue Expanded = expandVectorNaryOpBySplitting(Node, DAG))
+    return Expanded;
 
+  EVT VT = Node->getValueType(0);
   if (VT.isScalableVector())
     report_fatal_error(
         "Expanding fminnum/fmaxnum for scalable vectors is undefined.");
+
+  SDLoc dl(Node);
+  unsigned NewOp =
+      Node->getOpcode() == ISD::FMINNUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
 
   if (isOperationLegalOrCustom(NewOp, VT)) {
     SDValue Quiet0 = Node->getOperand(0);
@@ -8493,6 +8496,9 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
 
 SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
                                                 SelectionDAG &DAG) const {
+  if (SDValue Expanded = expandVectorNaryOpBySplitting(N, DAG))
+    return Expanded;
+
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -11919,4 +11925,36 @@ bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,
   }
   }
   return false;
+}
+
+SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
+                                                      SelectionDAG &DAG) const {
+  EVT VT = Node->getValueType(0);
+  // Despite its documentation, GetSplitDestVTs will assert if VT cannot be
+  // split into two equal parts.
+  if (!VT.isVector() || !VT.getVectorElementCount().isKnownMultipleOf(2))
+    return SDValue();
+
+  // Restrict expansion to cases where both parts can be concatenated.
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+  if (LoVT != HiVT || !isTypeLegal(LoVT))
+    return SDValue();
+
+  SDLoc DL(Node);
+  unsigned Opcode = Node->getOpcode();
+
+  // Don't expand if the result is likely to be unrolled anyway.
+  if (!isOperationLegalOrCustomOrPromote(Opcode, LoVT))
+    return SDValue();
+
+  SmallVector<SDValue, 4> LoOps, HiOps;
+  for (const SDValue &V : Node->op_values()) {
+    auto [Lo, Hi] = DAG.SplitVector(V, DL, LoVT, HiVT);
+    LoOps.push_back(Lo);
+    HiOps.push_back(Hi);
+  }
+
+  SDValue SplitOpLo = DAG.getNode(Opcode, DL, LoVT, LoOps);
+  SDValue SplitOpHi = DAG.getNode(Opcode, DL, HiVT, HiOps);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SplitOpLo, SplitOpHi);
 }

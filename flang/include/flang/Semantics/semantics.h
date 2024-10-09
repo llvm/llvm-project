@@ -188,6 +188,24 @@ public:
     return message;
   }
 
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(
+      FeatureOrUsageWarning warning, parser::CharBlock at, A &&...args) {
+    if (languageFeatures_.ShouldWarn(warning) && !IsInModuleFile(at)) {
+      parser::Message &msg{
+          messages_.Say(warning, at, std::forward<A>(args)...)};
+      return &msg;
+    } else {
+      return nullptr;
+    }
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(FeatureOrUsageWarning warning, A &&...args) {
+    CHECK(location_);
+    return Warn(warning, *location_, std::forward<A>(args)...);
+  }
+
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
   void UpdateScopeIndex(Scope &, parser::CharBlock);
@@ -270,7 +288,7 @@ private:
       std::multimap<parser::CharBlock, Scope &, ScopeIndexComparator>;
   ScopeIndex::iterator SearchScopeIndex(parser::CharBlock);
 
-  void CheckIndexVarRedefine(
+  parser::Message *CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   void CheckError(const Symbol &);
 

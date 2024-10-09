@@ -1828,6 +1828,41 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_cross: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    // ensure both args have 3 elements
+    int NumElementsArg1 =
+        TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    int NumElementsArg2 =
+        TheCall->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+
+    if (NumElementsArg1 != 3) {
+      int LessOrMore = NumElementsArg1 > 3 ? 1 : 0;
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vector_incorrect_num_elements)
+          << LessOrMore << 3 << NumElementsArg1 << /*operand*/ 1;
+      return true;
+    }
+    if (NumElementsArg2 != 3) {
+      int LessOrMore = NumElementsArg2 > 3 ? 1 : 0;
+
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vector_incorrect_num_elements)
+          << LessOrMore << 3 << NumElementsArg2 << /*operand*/ 1;
+      return true;
+    }
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as the input type
+    TheCall->setType(ArgTyA);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
@@ -1861,6 +1896,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_radians:
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
@@ -1959,6 +1995,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_elementwise_acos:
   case Builtin::BI__builtin_elementwise_asin:
   case Builtin::BI__builtin_elementwise_atan:
+  case Builtin::BI__builtin_elementwise_atan2:
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
   case Builtin::BI__builtin_elementwise_cosh:
