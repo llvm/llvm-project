@@ -217,7 +217,7 @@ bool ThreadSuspender::SuspendAllThreads() {
     switch (thread_lister.ListThreads(&threads)) {
       case ThreadLister::Error:
         ResumeAllThreads();
-        Report("Failed to list threads\n");
+        VReport(1, "Failed to list threads\n");
         return false;
       case ThreadLister::Incomplete:
         retry = true;
