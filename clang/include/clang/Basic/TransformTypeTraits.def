@@ -26,4 +26,6 @@ TRANSFORM_TYPE_TRAIT_DEF(RemoveReference, remove_reference_t)
 TRANSFORM_TYPE_TRAIT_DEF(RemoveRestrict, remove_restrict)
 TRANSFORM_TYPE_TRAIT_DEF(RemoveVolatile, remove_volatile)
 TRANSFORM_TYPE_TRAIT_DEF(EnumUnderlyingType, underlying_type)
+TRANSFORM_TYPE_TRAIT_DEF(DedupTemplateArgs, dedup_template_args)
+
 #undef TRANSFORM_TYPE_TRAIT_DEF
