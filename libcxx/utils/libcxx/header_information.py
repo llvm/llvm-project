@@ -202,7 +202,7 @@ module_headers = [
     for header in toplevel_headers
     if not header.endswith(".h") and is_public_header(header)
     # These headers have been removed in C++20 so are never part of a module.
-    and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+    and not header in ["ccomplex", "ciso646", "cstdalign", "cstdbool", "ctgmath"]
 ]
 
 # The C headers used in the std and std.compat modules.

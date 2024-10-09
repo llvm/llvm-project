@@ -909,6 +909,7 @@ set(files
   coroutine
   csetjmp
   csignal
+  cstdalign
   cstdarg
   cstdbool
   cstddef
@@ -992,6 +993,7 @@ set(files
   span
   sstream
   stack
+  stdalign.h
   stdatomic.h
   stdbool.h
   stddef.h

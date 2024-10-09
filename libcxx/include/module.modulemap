@@ -1103,6 +1103,11 @@ module std [system] {
     export *
   }
 
+  module cstdalign {
+    header "cstdalign"
+    export *
+  }
+
   module cstdarg {
     header "cstdarg"
     export *
@@ -2186,6 +2191,10 @@ module std_locale_h [system] {
 module std_math_h [system] {
   header "math.h"
   export *
+}
+module std_stdalign_h [system] {
+  // <stdalign.h>'s __alignas_is_defined and __alignof_is_defined macros require textual inclusion.
+  textual header "stdalign.h"
 }
 module std_stdatomic_h [system] {
   header "stdatomic.h"
