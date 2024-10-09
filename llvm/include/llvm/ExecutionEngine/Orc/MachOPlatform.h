@@ -292,8 +292,7 @@ private:
 
   static MachOExecutorSymbolFlags flagsForSymbol(jitlink::Symbol &Sym);
 
-  MachOPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-                JITDylib &PlatformJD,
+  MachOPlatform(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                 std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
                 HeaderOptions PlatformJDOpts,
                 MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err);
