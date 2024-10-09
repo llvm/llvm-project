@@ -93,7 +93,7 @@ RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
   case R_AVR_13_PCREL:
     return R_PC;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -267,10 +267,7 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *elf::getAVRTargetInfo(Ctx &ctx) {
-  static AVR target(ctx);
-  return &target;
-}
+void elf::setAVRTargetInfo(Ctx &ctx) { ctx.target.reset(new AVR(ctx)); }
 
 static uint32_t getEFlags(InputFile *file) {
   return cast<ObjFile<ELF32LE>>(file)->getObj().getHeader().e_flags;

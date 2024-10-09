@@ -78,7 +78,7 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
   auto subprogramAttr = LLVM::DISubprogramAttr::get(
       context, id, compileUnitAttr, fileAttr, funcName, funcName, fileAttr,
       /*line=*/line, /*scopeline=*/col, subprogramFlags, subroutineTypeAttr,
-      /*retainedNodes=*/{});
+      /*retainedNodes=*/{}, /*annotations=*/{});
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
 }
 

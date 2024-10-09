@@ -53,6 +53,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -610,25 +611,32 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
   std::string sourceMapCommand;
   llvm::raw_string_ostream strm(sourceMapCommand);
   strm << "settings set target.source-map ";
-  auto sourcePath = GetString(arguments, "sourcePath");
+  const auto sourcePath = GetString(arguments, "sourcePath");
 
   // sourceMap is the new, more general form of sourcePath and overrides it.
-  auto sourceMap = arguments.getArray("sourceMap");
-  if (sourceMap) {
-    for (const auto &value : *sourceMap) {
-      auto mapping = value.getAsArray();
+  constexpr llvm::StringRef sourceMapKey = "sourceMap";
+
+  if (const auto *sourceMapArray = arguments.getArray(sourceMapKey)) {
+    for (const auto &value : *sourceMapArray) {
+      const auto *mapping = value.getAsArray();
       if (mapping == nullptr || mapping->size() != 2 ||
           (*mapping)[0].kind() != llvm::json::Value::String ||
           (*mapping)[1].kind() != llvm::json::Value::String) {
         g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
         return;
       }
-      auto mapFrom = GetAsString((*mapping)[0]);
-      auto mapTo = GetAsString((*mapping)[1]);
+      const auto mapFrom = GetAsString((*mapping)[0]);
+      const auto mapTo = GetAsString((*mapping)[1]);
       strm << "\"" << mapFrom << "\" \"" << mapTo << "\" ";
     }
+  } else if (const auto *sourceMapObj = arguments.getObject(sourceMapKey)) {
+    for (const auto &[key, value] : *sourceMapObj) {
+      if (value.kind() == llvm::json::Value::String) {
+        strm << "\"" << key.str() << "\" \"" << GetAsString(value) << "\" ";
+      }
+    }
   } else {
-    if (ObjectContainsKey(arguments, "sourceMap")) {
+    if (ObjectContainsKey(arguments, sourceMapKey)) {
       g_dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
       return;
     }
@@ -2069,9 +2077,8 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     launch_info.SetArguments(MakeArgv(args).data(), true);
 
   // Pass any environment variables along that the user specified.
-  auto envs = GetStrings(arguments, "env");
-  if (!envs.empty())
-    launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
+  const auto envs = GetEnvironmentFromArguments(*arguments);
+  launch_info.SetEnvironment(envs, true);
 
   auto flags = launch_info.GetLaunchFlags();
 
