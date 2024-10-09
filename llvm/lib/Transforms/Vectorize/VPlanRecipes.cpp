@@ -281,10 +281,10 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
 }
 
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
-  // Get the underlying instruction for the recipe, if there is one. Is is used
+  // Get the underlying instruction for the recipe, if there is one. It is used
   // to
-  //   * decide if cost computation should be skipped for this recipe
-  //   * apply forced target instr
+  //   * decide if cost computation should be skipped for this recipe,
+  //   * apply forced target instruction cost.
   Instruction *UI = nullptr;
   if (auto *S = dyn_cast<VPSingleDefRecipe>(this))
     UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
@@ -318,7 +318,8 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
 InstructionCost VPSingleDefRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   Instruction *UI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
-  if (UI && isa<VPReplicateRecipe>(this)) {
+  if (isa<VPReplicateRecipe>(this)) {
+    assert(UI && "VPReplicateRecipe must have an underlying instruction");
     // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
     // transform, avoid computing their cost multiple times for now.
     Ctx.SkipCostComputation.insert(UI);
@@ -869,6 +870,8 @@ void VPIRInstruction::execute(VPTransformState &State) {
 
 InstructionCost VPIRInstruction::computeCost(ElementCount VF,
                                              VPCostContext &Ctx) const {
+  // The recipe wraps an existing IR instruction on the border of VPlan's scope,
+  // hence it does not contribute to the cost-modeling for the VPlan.
   return 0;
 }
 
@@ -2214,6 +2217,9 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
                                                   VPCostContext &Ctx) const {
+  // The legacy cost model doesn't assign costs to branches for individual
+  // replicate regions. Match the current behavior in the VPlan cost model for
+  // now.
   return 0;
 }
 

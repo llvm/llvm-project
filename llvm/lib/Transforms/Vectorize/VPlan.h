@@ -916,9 +916,6 @@ public:
     llvm_unreachable("Unhandled VPDefID");
   }
 
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
   static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
@@ -933,6 +930,10 @@ public:
   const Instruction *getUnderlyingInstr() const {
     return cast<Instruction>(getUnderlyingValue());
   }
+
+  /// Return the cost of this VPSingleDefRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 };
 
 /// Class to record LLVM IR flag for a recipe along with it.
@@ -1414,6 +1415,7 @@ public:
 
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPIRInstruction.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
@@ -2397,6 +2399,7 @@ public:
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPInterleaveRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
@@ -2633,6 +2636,7 @@ public:
   /// conditional branch.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPBranchOnMaskRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
