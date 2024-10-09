@@ -3416,7 +3416,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
     return false;
 
   // We currently only know how to emit interleave/deinterleave with
-  // Factor=2 for scalable vectors.  This is purely an implementation
+  // Factor=2 for scalable vectors. This is purely an implementation
   // limit.
   if (VF.isScalable() && InterleaveFactor != 2)
     return false;
