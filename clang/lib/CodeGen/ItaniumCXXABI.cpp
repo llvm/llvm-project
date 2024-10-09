@@ -3945,7 +3945,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     break;
 
   case Type::HLSLAttributedResource:
-    llvm_unreachable("not yet implemented");
+    llvm_unreachable("HLSL doesn't support virtual functions");
   }
 
   llvm::Constant *VTable = nullptr;
@@ -4210,7 +4210,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     break;
 
   case Type::HLSLAttributedResource:
-    llvm_unreachable("not yet implemented");
+    llvm_unreachable("HLSL doesn't support RTTI");
   }
 
   llvm::Constant *Init = llvm::ConstantStruct::getAnon(Fields);

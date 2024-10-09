@@ -3438,7 +3438,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     return;
   }
   case Type::HLSLAttributedResource:
-    llvm_unreachable("not yet implemented");
+    llvm_unreachable("should never get here");
     break;
   case Type::DeducedTemplateSpecialization:
   case Type::Auto:
@@ -13386,6 +13386,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(Record)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
+    SUGAR_FREE_TYPE(HLSLAttributedResource)
 #undef SUGAR_FREE_TYPE
 #define NON_UNIQUE_TYPE(Class) UNEXPECTED_TYPE(Class, "non-unique")
     NON_UNIQUE_TYPE(TypeOfExpr)
@@ -13689,9 +13690,6 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     return Ctx.getTemplateTypeParmType(
         TX->getDepth(), TX->getIndex(), TX->isParameterPack(),
         getCommonDecl(TX->getDecl(), TY->getDecl()));
-  }
-  case Type::HLSLAttributedResource: {
-    llvm_unreachable("not yet implemented");
   }
   }
   llvm_unreachable("Unknown Type Class");
