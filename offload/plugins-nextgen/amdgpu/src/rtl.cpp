@@ -746,7 +746,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
       : GenericKernelTy(Name),
         OMPX_DisableHostExec("LIBOMPTARGET_DISABLE_HOST_EXEC", false),
         ServiceThreadDeviceBufferGlobal("service_thread_buf", sizeof(uint64_t)),
-        HostServiceBufferHandler(Handler) {}
+        HostServiceBufferHandler(Handler),
+        OMPX_SPMDOccupancyBasedOpt("OMPX_SPMD_OCCUPANCY_BASED_OPT", false) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -872,6 +873,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Envar to disable host-exec thread creation.
   BoolEnvar OMPX_DisableHostExec;
+
+  /// Envar to enable occupancy-based optimization.
+  BoolEnvar OMPX_SPMDOccupancyBasedOpt;
 
 private:
   /// The kernel object to execute.
@@ -1159,6 +1163,22 @@ private:
       // block limit. For this we might need to start multiple kernels or let
       // the blocks start again until the requested number has been started.
       return std::min(NumTeamsClause[0], GenericDevice.getBlockLimit());
+    }
+
+    // If envar OMPX_SPMD_OCCUPANCY_BASED_OPT is set and no OMP_NUM_TEAMS is
+    // specified, optimize the num of teams based on occupancy value.
+    int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
+    if (isSPMDMode() && OMPX_SPMDOccupancyBasedOpt && NumTeamsEnvVar == 0) {
+      unsigned NumWavesPerTeam =
+          divideCeil(NumThreads, llvm::omp::amdgpu_arch::WaveFrontSize64);
+      unsigned TotalWavesPerCU =
+          MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU;
+      // Per device
+      unsigned TotalWavesPerDevice =
+          TotalWavesPerCU * GenericDevice.getNumComputeUnits();
+      unsigned NumTeams = divideCeil(TotalWavesPerDevice, NumWavesPerTeam);
+
+      return static_cast<uint64_t>(NumTeams);
     }
 
     uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
