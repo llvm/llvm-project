@@ -18759,11 +18759,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *X = EmitScalarExpr(E->getArg(0));
 
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-        "degree operand must have a float representation");
+           "degree operand must have a float representation");
 
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(),
-        CGM.getHLSLRuntime().getDegreesIntrinsic(),
+        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getDegreesIntrinsic(),
         ArrayRef<Value *>{X}, nullptr, "hlsl.degrees");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
