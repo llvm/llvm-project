@@ -1328,6 +1328,11 @@ unsigned TargetTransformInfo::getMaxNumArgs() const {
   return TTIImpl->getMaxNumArgs();
 }
 
+unsigned
+TargetTransformInfo::getJumpThreadingDupThreshold(bool OptForSize) const {
+  return TTIImpl->getJumpThreadingDupThreshold(OptForSize);
+}
+
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
 }

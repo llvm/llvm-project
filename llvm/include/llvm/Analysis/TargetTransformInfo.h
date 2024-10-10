@@ -1810,6 +1810,10 @@ public:
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
 
+  /// \return The maximum number of duplicate threshold when doing
+  /// JumpThreading.
+  unsigned getJumpThreadingDupThreshold(bool OptForSize) const;
+
   /// @}
 
 private:
@@ -2211,6 +2215,7 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual unsigned getJumpThreadingDupThreshold(bool OptForSize) const = 0;
 };
 
 template <typename T>
@@ -3003,6 +3008,10 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  unsigned getJumpThreadingDupThreshold(bool OptForSize) const override {
+    return Impl.getJumpThreadingDupThreshold(OptForSize);
   }
 };
 

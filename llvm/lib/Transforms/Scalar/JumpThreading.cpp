@@ -107,10 +107,6 @@ static cl::opt<bool> ThreadAcrossLoopHeaders(
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
     cl::init(false), cl::Hidden);
 
-JumpThreadingPass::JumpThreadingPass(int T) {
-  DefaultBBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
-}
-
 // Update branch probability information according to conditional
 // branch probability. This is usually made possible for cloned branches
 // in inline instances by the context specific profile in the caller.
@@ -304,10 +300,9 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   // size.
   if (BBDuplicateThreshold.getNumOccurrences())
     BBDupThreshold = BBDuplicateThreshold;
-  else if (F->hasFnAttribute(Attribute::MinSize))
-    BBDupThreshold = 3;
   else
-    BBDupThreshold = DefaultBBDupThreshold;
+    BBDupThreshold = TTI->getJumpThreadingDupThreshold(
+        F->hasFnAttribute(Attribute::MinSize));
 
   // JumpThreading must not processes blocks unreachable from entry. It's a
   // waste of compute time and can potentially lead to hangs.
