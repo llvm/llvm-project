@@ -49986,6 +49986,28 @@ static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
          (VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit()));
 }
 
+/// Folds (and X, (or Y, ~Z)) --> (and X, ~(and ~Y, Z))
+/// This undoes the inverse fold performed in InstCombine
+static SDValue combineAndNotOrIntoAndNotAnd(SDNode *N, SelectionDAG &DAG) {
+
+  using namespace llvm::SDPatternMatch;
+  MVT VT = N->getSimpleValueType(0);
+  SDLoc DL(N);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.hasAndNot(SDValue(N, 0)))
+    return SDValue();
+
+  SDValue X, Y, Z;
+  if (sd_match(
+          N, m_And(m_Value(X), m_OneUse(m_Or(m_Value(Y), m_Not(m_Value(Z)))))))
+    return DAG.getNode(
+        ISD::AND, DL, VT, X,
+        DAG.getNOT(DL, DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, Y, VT), Z),
+                   VT));
+
+  return SDValue();
+}
+
 // This function recognizes cases where X86 bzhi instruction can replace and
 // 'and-load' sequence.
 // In case of loading integer value from an array of constants which is defined
@@ -50475,6 +50497,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     return ShiftRight;
 
   if (SDValue R = combineAndLoadToBZHI(N, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineAndNotOrIntoAndNotAnd(N, DAG))
     return R;
 
   // fold (and (mul x, c1), c2) -> (mul x, (and c1, c2))
