@@ -70,10 +70,10 @@ private:
   bool isStateStoreNeeded(EHPersonality Personality, CallBase &Call);
   void rewriteSetJmpCall(IRBuilder<> &Builder, Function &F, CallBase &Call,
                          Value *State);
-  int getBaseStateForBB(BlockColorMapT &BlockColors,
-                        WinEHFuncInfo &FuncInfo, BasicBlock *BB);
-  int getStateForCall(BlockColorMapT &BlockColors,
-                      WinEHFuncInfo &FuncInfo, CallBase &Call);
+  int getBaseStateForBB(BlockColorMapT &BlockColors, WinEHFuncInfo &FuncInfo,
+                        BasicBlock *BB);
+  int getStateForCall(BlockColorMapT &BlockColors, WinEHFuncInfo &FuncInfo,
+                      CallBase &Call);
 
   // Module-level type getters.
   Type *getEHLinkRegistrationType();
@@ -500,9 +500,8 @@ void WinEHStatePass::rewriteSetJmpCall(IRBuilder<> &Builder, Function &F,
 }
 
 // Figure out what state we should assign calls in this block.
-int WinEHStatePass::getBaseStateForBB(
-    BlockColorMapT &BlockColors, WinEHFuncInfo &FuncInfo,
-    BasicBlock *BB) {
+int WinEHStatePass::getBaseStateForBB(BlockColorMapT &BlockColors,
+                                      WinEHFuncInfo &FuncInfo, BasicBlock *BB) {
   int BaseState = ParentBaseState;
   auto &BBColors = BlockColors[BB];
 
@@ -519,9 +518,8 @@ int WinEHStatePass::getBaseStateForBB(
 }
 
 // Calculate the state a call-site is in.
-int WinEHStatePass::getStateForCall(
-    BlockColorMapT &BlockColors, WinEHFuncInfo &FuncInfo,
-    CallBase &Call) {
+int WinEHStatePass::getStateForCall(BlockColorMapT &BlockColors,
+                                    WinEHFuncInfo &FuncInfo, CallBase &Call) {
   if (auto *II = dyn_cast<InvokeInst>(&Call)) {
     // Look up the state number of the EH pad this unwinds to.
     assert(FuncInfo.InvokeStateMap.count(II) && "invoke has no state!");
