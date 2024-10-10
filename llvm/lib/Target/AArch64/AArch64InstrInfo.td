@@ -5050,6 +5050,19 @@ def : Pat<(v1f64 (fmaxnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
 def : Pat<(v1f64 (fminnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMINNMDrr FPR64:$Rn, FPR64:$Rm)>;
 
+def : Pat<(fminnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
+          (FMINNMDrr FPR64:$a, FPR64:$b)>;
+def : Pat<(fminnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
+          (FMINNMSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(fminnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
+          (FMINNMHrr FPR16:$a, FPR16:$b)>;
+def : Pat<(fmaxnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
+          (FMAXNMDrr FPR64:$a, FPR64:$b)>;
+def : Pat<(fmaxnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
+          (FMAXNMSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(fmaxnum_ieee (f16 FPR16:$a), (f16 FPR16:$b)),
+          (FMAXNMHrr FPR16:$a, FPR16:$b)>;
+
 //===----------------------------------------------------------------------===//
 // Floating point three operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5553,6 +5566,27 @@ defm FMINNMP : SIMDThreeSameVectorFP<1,1,0b000,"fminnmp", int_aarch64_neon_fminn
 defm FMINNM  : SIMDThreeSameVectorFP<0,1,0b000,"fminnm", any_fminnum>;
 defm FMINP   : SIMDThreeSameVectorFP<1,1,0b110,"fminp", int_aarch64_neon_fminp>;
 defm FMIN    : SIMDThreeSameVectorFP<0,1,0b110,"fmin", any_fminimum>;
+
+def : Pat<(v2f64 (fminnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
+          (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
+def : Pat<(v4f32 (fminnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+          (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
+def : Pat<(v8f16 (fminnum_ieee (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+          (v8f16 (FMINNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rm)))>;
+def : Pat<(v2f32 (fminnum_ieee (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
+          (v2f32 (FMINNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rm)))>;
+def : Pat<(v4f16 (fminnum_ieee (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+          (v4f16 (FMINNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rm)))>;
+def : Pat<(v2f64 (fmaxnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
+          (v2f64 (FMAXNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
+def : Pat<(v4f32 (fmaxnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+          (v4f32 (FMAXNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
+def : Pat<(v8f16 (fmaxnum_ieee (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+          (v8f16 (FMAXNMv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rm)))>;
+def : Pat<(v2f32 (fmaxnum_ieee (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
+          (v2f32 (FMAXNMv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rm)))>;
+def : Pat<(v4f16 (fmaxnum_ieee (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+          (v4f16 (FMAXNMv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rm)))>;
 
 // NOTE: The operands of the PatFrag are reordered on FMLA/FMLS because the
 // instruction expects the addend first, while the fma intrinsic puts it last.
