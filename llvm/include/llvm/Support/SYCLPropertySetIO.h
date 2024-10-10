@@ -90,15 +90,13 @@ public:
 
   // Get property value as unsigned 32-bit integer
   uint32_t asUint32() const {
-    if (Ty != UINT32)
-      llvm_unreachable("must be UINT32 value");
+    assert((Ty == UINT32) && "must be UINT32 value");
     return std::get<uint32_t>(Val);
   }
 
   // Get raw data size in bits.
   SizeTy getByteArraySizeInBits() const {
-    if (Ty != BYTE_ARRAY)
-      llvm_unreachable("must be BYTE_ARRAY value");
+    assert((Ty == BYTE_ARRAY) && "must be BYTE_ARRAY value");
     SizeTy Res = 0;
 
     for (size_t I = 0; I < sizeof(SizeTy); ++I) {
@@ -123,16 +121,14 @@ public:
 
   // Get byte array data including the leading bytes encoding the size.
   const std::byte *asRawByteArray() const {
-    if (Ty != BYTE_ARRAY)
-      llvm_unreachable("must be BYTE_ARRAY value");
+    assert((Ty == BYTE_ARRAY) && "must be BYTE_ARRAY value");
     auto *ByteArrayVal = std::get<std::byte *>(Val);
     return ByteArrayVal;
   }
 
   // Get byte array data excluding the leading bytes encoding the size.
   const std::byte *asByteArray() const {
-    if (Ty != BYTE_ARRAY)
-      llvm_unreachable("must be BYTE_ARRAY value");
+    assert((Ty == BYTE_ARRAY) && "must be BYTE_ARRAY value");
 
     auto ByteArrayVal = std::get<std::byte *>(Val);
     return ByteArrayVal + sizeof(SizeTy);
@@ -142,15 +138,13 @@ public:
 
   // Set property value when data type is UINT32_T
   void set(uint32_t V) {
-    if (Ty != UINT32)
-      llvm_unreachable("invalid type tag for this operation");
+    assert((Ty == UINT32) && "must be UINT32 value");
     Val = V;
   }
 
   // Set property value when data type is BYTE_ARRAY
   void set(std::byte *V, int DataSize) {
-    if (Ty != BYTE_ARRAY)
-      llvm_unreachable("invalid type tag for this operation");
+    assert((Ty == BYTE_ARRAY) && "must be BYTE_ARRAY value");
     size_t DataBitSize = DataSize * CHAR_BIT;
     constexpr size_t SizeFieldSize = sizeof(SizeTy);
     // Allocate space for size and data.
