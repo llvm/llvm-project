@@ -9103,7 +9103,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());
 
-  // TODO This is a workaround to enable using -save-temps with flang-new
+  // TODO This is a workaround to enable using -save-temps with flang
   // const char *Exec = getToolChain().getDriver().getClangProgramPath();
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("clang"));
   if (D.CC1Main && !D.CCGenDiagnostics) {

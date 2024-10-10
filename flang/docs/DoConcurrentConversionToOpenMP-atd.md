@@ -17,7 +17,7 @@ local:
 This document seeks to describe the effort to parallelize `do concurrent` loops
 by mapping them to OpenMP worksharing constructs. The goals of this document
 are:
-* Describing how to instruct `flang-new` to map `DO CONCURENT` loops to OpenMP
+* Describing how to instruct `flang` to map `DO CONCURENT` loops to OpenMP
   constructs.
 * Tracking the current status of such mapping.
 * Describing the limitations of the current implmenentation.
@@ -25,7 +25,7 @@ are:
 
 ## Usage
 
-In order to enable `do concurrent` to OpenMP mapping, `flang-new` adds a new
+In order to enable `do concurrent` to OpenMP mapping, `flang` adds a new
 compiler flag: `-fdo-concurrent-parallel`. This flags has 3 possible values:
 1. `host`: this maps `do concurent` loops to run in parallel on the host CPU.
    This maps such loops to the equivalent of `omp parallel do`.
@@ -39,7 +39,7 @@ The above compiler switch is currently avaialble only when OpenMP is also
 enabled. So you need to provide the following options to flang in order to
 enable it:
 ```
-flang-new ... -fopenmp -fdo-concurrent-parallel=[host|device|none] ...
+flang ... -fopenmp -fdo-concurrent-parallel=[host|device|none] ...
 ```
 
 ## Current status

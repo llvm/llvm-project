@@ -66,8 +66,8 @@ struct AliasAnalysis {
   //    a(1) = 1
   //  end subroutine
   //  -------------------------------------------------
-  //
-  //  flang-new -fc1 -emit-fir test.f90 -o test.fir
+  // 
+  //  flang -fc1 -emit-fir test.f90 -o test.fir
   //
   //  ------------------- test.fir --------------------
   //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>>
