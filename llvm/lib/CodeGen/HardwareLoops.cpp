@@ -512,7 +512,7 @@ Value* HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
                                    : Intrinsic::test_set_loop_iterations)
                          : (UsePhi ? Intrinsic::start_loop_iterations
                                    : Intrinsic::set_loop_iterations);
-  Function *LoopIter = Intrinsic::getDeclaration(M, ID, Ty);
+  Function *LoopIter = Intrinsic::getOrInsertDeclaration(M, ID, Ty);
   Value *LoopSetup = Builder.CreateCall(LoopIter, LoopCountInit);
 
   // Use the return value of the intrinsic to control the entry of the loop.
@@ -541,9 +541,8 @@ void HardwareLoop::InsertLoopDec() {
           Attribute::StrictFP))
     CondBuilder.setIsFPConstrained(true);
 
-  Function *DecFunc =
-    Intrinsic::getDeclaration(M, Intrinsic::loop_decrement,
-                              LoopDecrement->getType());
+  Function *DecFunc = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::loop_decrement, LoopDecrement->getType());
   Value *Ops[] = { LoopDecrement };
   Value *NewCond = CondBuilder.CreateCall(DecFunc, Ops);
   Value *OldCond = ExitBranch->getCondition();
@@ -566,9 +565,8 @@ Instruction* HardwareLoop::InsertLoopRegDec(Value *EltsRem) {
           Attribute::StrictFP))
     CondBuilder.setIsFPConstrained(true);
 
-  Function *DecFunc =
-      Intrinsic::getDeclaration(M, Intrinsic::loop_decrement_reg,
-                                { EltsRem->getType() });
+  Function *DecFunc = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::loop_decrement_reg, {EltsRem->getType()});
   Value *Ops[] = { EltsRem, LoopDecrement };
   Value *Call = CondBuilder.CreateCall(DecFunc, Ops);
 

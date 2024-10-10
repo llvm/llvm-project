@@ -430,7 +430,8 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   BB->insertInto(F);
   Instruction *Ret = ReturnInst::Create(C);
   Ret->insertInto(BB, BB->begin());
-  Function *FnAssume = Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume);
+  Function *FnAssume =
+      Intrinsic::getOrInsertDeclaration(Mod.get(), Intrinsic::assume);
 
   std::vector<Argument *> ShuffledArgs;
   BitVector HasArg;

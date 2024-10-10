@@ -2390,8 +2390,8 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
     Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
     Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
-    Function *FI = Intrinsic::getDeclaration(F.getParent(),
-                                             Intrinsic::hexagon_S2_valignrb);
+    Function *FI = Intrinsic::getOrInsertDeclaration(
+        F.getParent(), Intrinsic::hexagon_S2_valignrb);
     Value *Call = Builder.CreateCall(FI, {Hi64, Lo64, Amt}, "cup");
     return Builder.CreateBitCast(Call, Lo->getType(), "cst");
   }
@@ -2587,12 +2587,13 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilderBase &Builder,
     unsigned HwLen = HST.getVectorLength();
     Intrinsic::ID TC = HwLen == 64 ? Intrinsic::hexagon_V6_pred_typecast
                                    : Intrinsic::hexagon_V6_pred_typecast_128B;
-    Function *FI =
-        Intrinsic::getDeclaration(F.getParent(), TC, {DestTy, Val->getType()});
+    Function *FI = Intrinsic::getOrInsertDeclaration(F.getParent(), TC,
+                                                     {DestTy, Val->getType()});
     return Builder.CreateCall(FI, {Val}, "cup");
   };
 
-  Function *IntrFn = Intrinsic::getDeclaration(F.getParent(), IntID, ArgTys);
+  Function *IntrFn =
+      Intrinsic::getOrInsertDeclaration(F.getParent(), IntID, ArgTys);
   FunctionType *IntrTy = IntrFn->getFunctionType();
 
   SmallVector<Value *, 4> IntrArgs;

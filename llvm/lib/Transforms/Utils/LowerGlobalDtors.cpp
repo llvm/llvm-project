@@ -215,8 +215,8 @@ static bool runImpl(Module &M) {
       // If `__cxa_atexit` hits out-of-memory, trap, so that we don't misbehave.
       // This should be very rare, because if the process is running out of
       // memory before main has even started, something is wrong.
-      CallInst::Create(Intrinsic::getDeclaration(&M, Intrinsic::trap), "",
-                       FailBB);
+      CallInst::Create(Intrinsic::getOrInsertDeclaration(&M, Intrinsic::trap),
+                       "", FailBB);
       new UnreachableInst(C, FailBB);
 
       ReturnInst::Create(C, RetBB);

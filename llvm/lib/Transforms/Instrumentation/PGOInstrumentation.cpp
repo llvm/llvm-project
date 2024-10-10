@@ -919,7 +919,7 @@ void FunctionInstrumenter::instrument() {
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
     Builder.CreateCall(
-        Intrinsic::getDeclaration(&M, Intrinsic::instrprof_cover),
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_cover),
         {NormalizedNamePtr, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
     return;
   }
@@ -931,7 +931,7 @@ void FunctionInstrumenter::instrument() {
 
   if (IsCtxProf) {
     auto *CSIntrinsic =
-        Intrinsic::getDeclaration(&M, Intrinsic::instrprof_callsite);
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_callsite);
     // We want to count the instrumentable callsites, then instrument them. This
     // is because the llvm.instrprof.callsite intrinsic has an argument (like
     // the other instrprof intrinsics) capturing the total number of
@@ -972,7 +972,7 @@ void FunctionInstrumenter::instrument() {
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
     Builder.CreateCall(
-        Intrinsic::getDeclaration(&M, Intrinsic::instrprof_timestamp),
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_timestamp),
         {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
          Builder.getInt32(I)});
     I += PGOBlockCoverage ? 8 : 1;
@@ -984,12 +984,12 @@ void FunctionInstrumenter::instrument() {
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
-    Builder.CreateCall(
-        Intrinsic::getDeclaration(&M, PGOBlockCoverage
-                                          ? Intrinsic::instrprof_cover
-                                          : Intrinsic::instrprof_increment),
-        {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
-         Builder.getInt32(I++)});
+    Builder.CreateCall(Intrinsic::getOrInsertDeclaration(
+                           &M, PGOBlockCoverage
+                                   ? Intrinsic::instrprof_cover
+                                   : Intrinsic::instrprof_increment),
+                       {NormalizedNamePtr, CFGHash,
+                        Builder.getInt32(NumCounters), Builder.getInt32(I++)});
   }
 
   // Now instrument select instructions:
@@ -1038,7 +1038,8 @@ void FunctionInstrumenter::instrument() {
       SmallVector<OperandBundleDef, 1> OpBundles;
       populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
-          Intrinsic::getDeclaration(&M, Intrinsic::instrprof_value_profile),
+          Intrinsic::getOrInsertDeclaration(&M,
+                                            Intrinsic::instrprof_value_profile),
           {NormalizedNamePtr, Builder.getInt64(FuncInfo.FunctionHash),
            ToProfile, Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
           OpBundles);
@@ -1726,7 +1727,7 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(
           FuncNameVar, PointerType::get(M->getContext(), 0));
   Builder.CreateCall(
-      Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::instrprof_increment_step),
       {NormalizedFuncNameVarPtr, Builder.getInt64(FuncHash),
        Builder.getInt32(TotalNumCtrs), Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);

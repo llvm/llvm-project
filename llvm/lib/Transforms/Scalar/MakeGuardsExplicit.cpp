@@ -69,7 +69,7 @@ static bool explicifyGuards(Function &F) {
   if (GuardIntrinsics.empty())
     return false;
 
-  auto *DeoptIntrinsic = Intrinsic::getDeclaration(
+  auto *DeoptIntrinsic = Intrinsic::getOrInsertDeclaration(
       F.getParent(), Intrinsic::experimental_deoptimize, {F.getReturnType()});
   DeoptIntrinsic->setCallingConv(GuardDecl->getCallingConv());
 

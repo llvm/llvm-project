@@ -1016,7 +1016,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
       // wasm.catch() will be lowered down to wasm 'catch' instruction in
       // instruction selection.
-      CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
+      CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
       // Type for struct __WasmLongjmpArgs
       LongjmpArgsTy = StructType::get(Int8PtrTy, // env
                                       Int32Ty    // val

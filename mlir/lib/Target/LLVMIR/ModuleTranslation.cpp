@@ -839,7 +839,8 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
     ArrayRef<llvm::Value *> args, ArrayRef<llvm::Type *> tys) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::Function *fn = llvm::Intrinsic::getDeclaration(module, intrinsic, tys);
+  llvm::Function *fn =
+      llvm::Intrinsic::getOrInsertDeclaration(module, intrinsic, tys);
   return builder.CreateCall(fn, args);
 }
 
@@ -886,8 +887,8 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   for (unsigned overloadedOperandIdx : overloadedOperands)
     overloadedTypes.push_back(args[overloadedOperandIdx]->getType());
   llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::Function *llvmIntr =
-      llvm::Intrinsic::getDeclaration(module, intrinsic, overloadedTypes);
+  llvm::Function *llvmIntr = llvm::Intrinsic::getOrInsertDeclaration(
+      module, intrinsic, overloadedTypes);
 
   return builder.CreateCall(llvmIntr, args);
 }

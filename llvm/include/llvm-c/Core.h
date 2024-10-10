@@ -2807,10 +2807,10 @@ unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 unsigned LLVMGetIntrinsicID(LLVMValueRef Fn);
 
 /**
- * Create or insert the declaration of an intrinsic.  For overloaded intrinsics,
+ * Get or insert the declaration of an intrinsic.  For overloaded intrinsics,
  * parameter types must be provided to uniquely identify an overload.
  *
- * @see llvm::Intrinsic::getDeclaration()
+ * @see llvm::Intrinsic::getOrInsertDeclaration()
  */
 LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
                                          unsigned ID,

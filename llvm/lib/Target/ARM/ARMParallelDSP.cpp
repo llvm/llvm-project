@@ -630,13 +630,14 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     Value* Args[] = { WideLd0, WideLd1, Acc };
     Function *SMLAD = nullptr;
     if (Exchange)
-      SMLAD = Acc->getType()->isIntegerTy(32) ?
-        Intrinsic::getDeclaration(M, Intrinsic::arm_smladx) :
-        Intrinsic::getDeclaration(M, Intrinsic::arm_smlaldx);
+      SMLAD =
+          Acc->getType()->isIntegerTy(32)
+              ? Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smladx)
+              : Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlaldx);
     else
-      SMLAD = Acc->getType()->isIntegerTy(32) ?
-        Intrinsic::getDeclaration(M, Intrinsic::arm_smlad) :
-        Intrinsic::getDeclaration(M, Intrinsic::arm_smlald);
+      SMLAD = Acc->getType()->isIntegerTy(32)
+                  ? Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlad)
+                  : Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlald);
 
     IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
                                 BasicBlock::iterator(InsertAfter));

@@ -360,7 +360,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                                               OverloadTys))
           return error(Info.second, "invalid intrinsic signature");
 
-        U.set(Intrinsic::getDeclaration(M, IID, OverloadTys));
+        U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
       }
 
       Info.first->eraseFromParent();

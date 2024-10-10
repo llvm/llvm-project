@@ -360,7 +360,8 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};
     return CallInst::Create(
-        Intrinsic::getDeclaration(II->getModule(), *Action.IID, Tys), Args);
+        Intrinsic::getOrInsertDeclaration(II->getModule(), *Action.IID, Tys),
+        Args);
   }
 
   // Simplify to target-generic binary op.

@@ -368,7 +368,8 @@ Value *SafeStack::getStackGuard(IRBuilder<> &IRB, Function &F) {
 
   if (!StackGuardVar) {
     TL.insertSSPDeclarations(*M);
-    return IRB.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackguard));
+    return IRB.CreateCall(
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::stackguard));
   }
 
   return IRB.CreateLoad(StackPtrTy, StackGuardVar, "StackGuard");

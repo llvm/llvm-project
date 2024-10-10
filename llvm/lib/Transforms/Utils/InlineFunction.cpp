@@ -2090,7 +2090,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
           Function *IFn =
-              Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
+              Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::objc_release);
           Builder.CreateCall(IFn, RetOpnd, "");
         }
         II->eraseFromParent();
@@ -2125,7 +2125,8 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Function *IFn = Intrinsic::getDeclaration(Mod, Intrinsic::objc_retain);
+      Function *IFn =
+          Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::objc_retain);
       Builder.CreateCall(IFn, RetOpnd, "");
     }
   }
@@ -3021,7 +3022,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       });
     } else {
       SmallVector<ReturnInst *, 8> NormalReturns;
-      Function *NewDeoptIntrinsic = Intrinsic::getDeclaration(
+      Function *NewDeoptIntrinsic = Intrinsic::getOrInsertDeclaration(
           Caller->getParent(), Intrinsic::experimental_deoptimize,
           {Caller->getReturnType()});
 

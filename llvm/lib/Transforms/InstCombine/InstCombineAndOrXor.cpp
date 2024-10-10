@@ -2261,7 +2261,8 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
         Builder.CreateBinOp(I.getOpcode(), X->getOperand(0), Y->getOperand(0));
     Value *NewOp1 =
         Builder.CreateBinOp(I.getOpcode(), X->getOperand(1), Y->getOperand(1));
-    Function *F = Intrinsic::getDeclaration(I.getModule(), IID, I.getType());
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(I.getModule(), IID, I.getType());
     return CallInst::Create(F, {NewOp0, NewOp1, X->getOperand(2)});
   }
   case Intrinsic::bswap:
@@ -2272,7 +2273,8 @@ foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
           : ConstantInt::get(I.getType(), IID == Intrinsic::bswap
                                               ? RHSC->byteSwap()
                                               : RHSC->reverseBits()));
-    Function *F = Intrinsic::getDeclaration(I.getModule(), IID, I.getType());
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(I.getModule(), IID, I.getType());
     return CallInst::Create(F, {NewOp0});
   }
   default:
@@ -3048,7 +3050,8 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
 static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
   if (auto Opt = IC.convertOrOfShiftsToFunnelShift(Or)) {
     auto [IID, FShiftArgs] = *Opt;
-    Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(Or.getModule(), IID, Or.getType());
     return CallInst::Create(F, FShiftArgs);
   }
 
@@ -3087,7 +3090,7 @@ static Instruction *matchOrConcat(Instruction &Or,
     Value *NewUpper = Builder.CreateZExt(Hi, Ty);
     NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
     Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
-    Function *F = Intrinsic::getDeclaration(Or.getModule(), id, Ty);
+    Function *F = Intrinsic::getOrInsertDeclaration(Or.getModule(), id, Ty);
     return Builder.CreateCall(F, BinOp);
   };
 
@@ -4795,7 +4798,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
             match(II->getArgOperand(1), m_One()) &&
             isKnownToBeAPowerOfTwo(II->getArgOperand(0), /*OrZero */ true)) {
           IID = (IID == Intrinsic::ctlz) ? Intrinsic::cttz : Intrinsic::ctlz;
-          Function *F = Intrinsic::getDeclaration(II->getModule(), IID, Ty);
+          Function *F =
+              Intrinsic::getOrInsertDeclaration(II->getModule(), IID, Ty);
           return CallInst::Create(F, {II->getArgOperand(0), Builder.getTrue()});
         }
       }

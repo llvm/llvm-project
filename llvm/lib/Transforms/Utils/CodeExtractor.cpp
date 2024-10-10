@@ -1124,7 +1124,8 @@ static void insertLifetimeMarkersSurroundingCall(
                                             TheCall->getFunction()) &&
              "Input memory not defined in original function");
 
-      Function *Func = Intrinsic::getDeclaration(M, MarkerFunc, Mem->getType());
+      Function *Func =
+          Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
       auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
         Marker->insertBefore(TheCall);
