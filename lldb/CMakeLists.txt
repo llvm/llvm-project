@@ -39,7 +39,7 @@ include(LLDBConfig)
 include(AddLLDB)
 
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  add_definitions("-D__AIX__")
+  add_definitions("-D_AIX")
 endif()
 
 # Define the LLDB_CONFIGURATION_xxx matching the build type.

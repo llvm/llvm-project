@@ -194,7 +194,7 @@ void JITLoaderGDB::SetJITBreakpoint(lldb_private::ModuleList &module_list) {
   if (jit_addr == LLDB_INVALID_ADDRESS)
     return;
 
-#if defined(__AIX__)
+#if defined(_AIX)
   return;
 #endif
 

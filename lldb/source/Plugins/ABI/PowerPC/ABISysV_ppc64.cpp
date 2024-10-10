@@ -156,7 +156,7 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx->WriteRegisterFromUnsigned(r12_reg_info, func_addr))
     return false;
 
-#if defined(__AIX__)
+#if defined(_AIX)
   assert(0);
 #else
   // Read TOC pointer value.
@@ -279,7 +279,7 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx->WriteRegisterFromUnsigned(r12_reg_info, func_addr))
     return false;
 
-#if defined(__AIX__)
+#if defined(_AIX)
   LLDB_LOGF(log, "Writing R2: 0x%" PRIx64, (uint64_t)toc_addr);
   if (!reg_ctx->WriteRegisterFromUnsigned(r2_reg_info, toc_addr))
     return false;

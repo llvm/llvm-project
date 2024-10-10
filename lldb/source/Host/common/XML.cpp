@@ -10,7 +10,7 @@
 #include "lldb/Host/XML.h"
 
 #include "llvm/ADT/StringExtras.h"
-#if defined(__AIX__)
+#if defined(_AIX)
 #undef LLDB_ENABLE_LIBXML2
 #endif
 

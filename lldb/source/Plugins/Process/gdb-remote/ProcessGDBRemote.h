@@ -37,7 +37,7 @@
 #include "GDBRemoteCommunicationClient.h"
 #include "GDBRemoteRegisterContext.h"
 
-#if defined(__AIX__)
+#if defined(_AIX)
 struct ld_xinfo;
 #endif
 
@@ -427,7 +427,7 @@ protected:
   Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                MemoryRegionInfo &region_info) override;
 
-#if defined(__AIX__)
+#if defined(_AIX)
   Status DoGetLDXINFO(struct ld_xinfo *info_ptr) override;
 #endif
 

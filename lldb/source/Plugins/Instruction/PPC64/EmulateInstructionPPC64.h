@@ -39,7 +39,7 @@ public:
       return true;
 
     case eInstructionTypePCModifying:
-#if defined(__AIX__)
+#if defined(_AIX)
       return true;
 #else
       return false;

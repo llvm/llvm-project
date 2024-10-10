@@ -358,7 +358,7 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) { return false; }
 
 #ifndef _WIN32
 
-#if defined(__AIX__)
+#if defined(_AIX)
 
 #include <stdio.h>
 extern char **p_xargv;
@@ -525,7 +525,7 @@ static int dladdr(const void *ptr, Dl_info *dl)
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
 #if !defined(__ANDROID__)
-#ifdef __AIX__
+#ifdef _AIX
   if (host_addr == reinterpret_cast<void *>(HostInfoBase::ComputeSharedLibraryDirectory)) {
     // FIXME: AIX dladdr return "lldb" for this case
     if (p_xargv[0]) {

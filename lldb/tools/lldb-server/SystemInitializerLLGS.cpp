@@ -14,7 +14,7 @@ using HostObjectFile = ObjectFileMachO;
 #elif defined(_WIN32)
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 using HostObjectFile = ObjectFilePECOFF;
-#elif defined(__AIX__)
+#elif defined(_AIX)
 #include "Plugins/ObjectFile/XCOFF/ObjectFileXCOFF.h"
 using HostObjectFile = ObjectFileXCOFF;
 #else
@@ -49,7 +49,7 @@ using HostObjectFile = ObjectFileELF;
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #endif
 
-#if defined(__AIX__)
+#if defined(_AIX)
 #include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
 #endif
 
@@ -82,7 +82,7 @@ llvm::Error SystemInitializerLLGS::Initialize() {
   EmulateInstructionRISCV::Initialize();
 #endif
 
-#if defined(__AIX__)
+#if defined(_AIX)
   EmulateInstructionPPC64::Initialize();
 #endif
 
@@ -108,7 +108,7 @@ void SystemInitializerLLGS::Terminate() {
   EmulateInstructionRISCV::Terminate();
 #endif
 
-#if defined(__AIX__)
+#if defined(_AIX)
   EmulateInstructionPPC64::Terminate();
 #endif
 

@@ -75,7 +75,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
 
-#if defined(__AIX__)
+#if defined(_AIX)
 #include <sys/ldr.h>
 #endif
 
@@ -6188,7 +6188,7 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return DoGetMemoryRegionInfo(load_addr, range_info);
 }
 
-#if defined(__AIX__)
+#if defined(_AIX)
 Status Process::GetLDXINFO(struct ld_xinfo *info_ptr) {
   return DoGetLDXINFO(info_ptr);
 }
