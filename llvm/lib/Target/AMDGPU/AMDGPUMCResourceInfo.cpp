@@ -98,9 +98,8 @@ static bool findSymbolInExpr(MCSymbol *Sym, const MCExpr *Expr,
                              SmallPtrSetImpl<const MCExpr *> &Visited) {
   // Assert if any of the expressions is already visited (i.e., there is
   // existing recursion).
-  assert(!Visited.contains(Expr) &&
-         "Expr should not exist in Visited as we're avoiding recursion");
-  Visited.insert(Expr);
+  if (!Visited.insert(Expr).second)
+    llvm_unreachable("already visited expression");
 
   switch (Expr->getKind()) {
   default:
@@ -116,19 +115,19 @@ static bool findSymbolInExpr(MCSymbol *Sym, const MCExpr *Expr,
   }
   case MCExpr::ExprKind::Binary: {
     const MCBinaryExpr *BExpr = cast<MCBinaryExpr>(Expr);
-    return findSymbolInExpr(Sym, BExpr->getLHS(), Exprs, Visited) ||
-           findSymbolInExpr(Sym, BExpr->getRHS(), Exprs, Visited);
+    Exprs.push_back(BExpr->getLHS());
+    Exprs.push_back(BExpr->getRHS());
+    return false;
   }
   case MCExpr::ExprKind::Unary: {
     const MCUnaryExpr *UExpr = cast<MCUnaryExpr>(Expr);
-    return findSymbolInExpr(Sym, UExpr->getSubExpr(), Exprs, Visited);
+    Exprs.push_back(UExpr->getSubExpr());
+    return false;
   }
   case MCExpr::ExprKind::Target: {
     const AMDGPUMCExpr *AGVK = cast<AMDGPUMCExpr>(Expr);
-    for (const MCExpr *E : AGVK->getArgs()) {
-      if (findSymbolInExpr(Sym, E, Exprs, Visited))
-        return true;
-    }
+    for (const MCExpr *E : AGVK->getArgs())
+      Exprs.push_back(E);
     return false;
   }
   }
