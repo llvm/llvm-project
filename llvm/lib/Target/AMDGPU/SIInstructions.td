@@ -1094,7 +1094,7 @@ def : Pat <
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
 
-multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16_inst_e64> {
+multiclass f16_to_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16_inst_e64> {
   // f16_to_fp patterns
   def : GCNPat <
     (f32 (any_f16_to_fp i32:$src0)),
@@ -1121,35 +1121,10 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
     (cvt_f32_f16_inst_e64 SRCMODS.NEG, $src0)
   >;
 
-  def : GCNPat <
-    (f64 (any_fpextend f16:$src)),
-    (V_CVT_F64_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src))
-  >;
-
   // fp_to_fp16 patterns
   def : GCNPat <
     (i32 (AMDGPUfp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
     (cvt_f16_f32_inst_e64 $src0_modifiers, f32:$src0)
-  >;
-
-  def : GCNPat <
-    (i32 (fp_to_sint f16:$src)),
-    (V_CVT_I32_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, VSrc_b32:$src))
-  >;
-
-  def : GCNPat <
-    (i32 (fp_to_uint f16:$src)),
-    (V_CVT_U32_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, VSrc_b32:$src))
-  >;
-
-  def : GCNPat <
-    (f16 (sint_to_fp i32:$src)),
-    (cvt_f16_f32_inst_e64 SRCMODS.NONE, (V_CVT_F32_I32_e32 VSrc_b32:$src))
-  >;
-
-  def : GCNPat <
-    (f16 (uint_to_fp i32:$src)),
-    (cvt_f16_f32_inst_e64 SRCMODS.NONE, (V_CVT_F32_U32_e32 VSrc_b32:$src))
   >;
 
   // This is only used on targets without half support
@@ -1161,10 +1136,48 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
 }
 
 let True16Predicate = NotHasTrue16BitInsts in
-defm : f16_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64>;
+defm : f16_to_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64>;
 
 let True16Predicate = UseFakeTrue16Insts in
-defm : f16_fp_Pats<V_CVT_F16_F32_fake16_e64, V_CVT_F32_F16_fake16_e64>;
+defm : f16_to_fp_Pats<V_CVT_F16_F32_fake16_e64, V_CVT_F32_F16_fake16_e64>;
+
+multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64,
+                       Instruction cvt_f32_f16_inst_e64,
+                       RegOrImmOperand VSrc> {
+  def : GCNPat <
+    (f64 (any_fpextend f16:$src)),
+    (V_CVT_F64_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src))
+  >;
+
+  def : GCNPat <
+    (i32 (fp_to_sint f16:$src)),
+    (V_CVT_I32_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, VSrc:$src))
+  >;
+
+  def : GCNPat <
+    (i32 (fp_to_uint f16:$src)),
+    (V_CVT_U32_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, VSrc:$src))
+  >;
+
+  def : GCNPat <
+    (f16 (sint_to_fp i32:$src)),
+    (cvt_f16_f32_inst_e64 SRCMODS.NONE, (V_CVT_F32_I32_e32 VSrc_b32:$src))
+  >;
+
+  def : GCNPat <
+    (f16 (uint_to_fp i32:$src)),
+    (cvt_f16_f32_inst_e64 SRCMODS.NONE, (V_CVT_F32_U32_e32 VSrc_b32:$src))
+  >;
+}
+
+let True16Predicate = NotHasTrue16BitInsts in
+defm : f16_fp_Pats<V_CVT_F16_F32_e64, V_CVT_F32_F16_e64, VSrc_b32>;
+
+let True16Predicate = UseRealTrue16Insts in
+defm : f16_fp_Pats<V_CVT_F16_F32_t16_e64, V_CVT_F32_F16_t16_e64, VSrcT_b16>;
+
+let True16Predicate = UseFakeTrue16Insts in
+defm : f16_fp_Pats<V_CVT_F16_F32_fake16_e64, V_CVT_F32_F16_fake16_e64, VSrc_b16>;
 
 //===----------------------------------------------------------------------===//
 // VOP2 Patterns
@@ -2774,16 +2787,27 @@ def : GCNPat <
                         SSrc_i1:$src))
 >;
 
-let SubtargetPredicate = HasTrue16BitInsts in
+let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
   (f16 (sint_to_fp i1:$src)),
-  (V_CVT_F16_F32_fake16_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                         /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
-                        SSrc_i1:$src))
+                        SSrc_i1:$src),
+      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
 >;
 
-let SubtargetPredicate = NotHasTrue16BitInsts in
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (f16 (sint_to_fp i1:$src)),
+  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_NEG_ONE),
+                        SSrc_i1:$src),
+      /*clamp*/ 0, /*omod*/ 0)
+>;
+
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (f16 (uint_to_fp i1:$src)),
   (V_CVT_F16_F32_e32 (
@@ -2791,13 +2815,25 @@ def : GCNPat <
                         /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
                         SSrc_i1:$src))
 >;
-let SubtargetPredicate = HasTrue16BitInsts in
+
+let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
   (f16 (uint_to_fp i1:$src)),
-  (V_CVT_F16_F32_fake16_e32 (
-      V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+  (V_CVT_F16_F32_t16_e64 /*src0_modifiers*/ 0,
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                         /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
-                        SSrc_i1:$src))
+                        SSrc_i1:$src),
+      /*clamp*/ 0, /*omod*/ 0, /*op_sel*/ 0)
+>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+  (f16 (uint_to_fp i1:$src)),
+  (V_CVT_F16_F32_fake16_e64 /*src0_modifiers*/ 0,
+      (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
+                        /*src1mod*/(i32 0), /*src1*/(i32 CONST.FP32_ONE),
+                        SSrc_i1:$src),
+      /*clamp*/ 0, /*omod*/ 0)
 >;
 
 def : GCNPat <
