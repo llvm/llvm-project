@@ -142,7 +142,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("interleave_count", LoopHintAttr::InterleaveCount)
                  .Case("unroll", LoopHintAttr::Unroll)
                  .Case("unroll_count", LoopHintAttr::UnrollCount)
-                 .Case("pipeline", LoopHintAttr::PipelineDisabled)
+                 .Case("pipeline", LoopHintAttr::Pipeline)
                  .Case("pipeline_initiation_interval",
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
@@ -170,7 +170,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::VectorizePredicate ||
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
-               Option == LoopHintAttr::PipelineDisabled) {
+               Option == LoopHintAttr::Pipeline) {
       assert(StateLoc && StateLoc->Ident && "Loop hint must have an argument");
       if (StateLoc->Ident->isStr("disable"))
         State = LoopHintAttr::Disable;
@@ -516,7 +516,7 @@ CheckForIncompatibleAttributes(Sema &S,
       // Perform the check for duplicated 'distribute' hints.
       Category = Distribute;
       break;
-    case LoopHintAttr::PipelineDisabled:
+    case LoopHintAttr::Pipeline:
     case LoopHintAttr::PipelineInitiationInterval:
       Category = Pipeline;
       break;
@@ -532,7 +532,7 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::Interleave || Option == LoopHintAttr::Unroll ||
         Option == LoopHintAttr::UnrollAndJam ||
         Option == LoopHintAttr::VectorizePredicate ||
-        Option == LoopHintAttr::PipelineDisabled ||
+        Option == LoopHintAttr::Pipeline ||
         Option == LoopHintAttr::Distribute) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;
