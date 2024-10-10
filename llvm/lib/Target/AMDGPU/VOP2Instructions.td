@@ -1664,8 +1664,8 @@ multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
 
 multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> :
-  VOP3Only_Realtriple_t16<GFX11Gen, op, asmName, OpName>,
-  VOP3Only_Realtriple_t16<GFX12Gen, op, asmName, OpName>;
+  VOP3_Realtriple_t16_gfx11<op, asmName, OpName, "", /*IsSingle*/1>,
+  VOP3_Realtriple_t16_gfx12<op, asmName, OpName, "", /*IsSingle*/1>;
 
 multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> {
   defm OpName#"_t16": VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_t16">;
