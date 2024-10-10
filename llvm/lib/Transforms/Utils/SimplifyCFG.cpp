@@ -81,6 +81,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <optional>
 #include <set>
@@ -7162,6 +7163,71 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
+/// Try to reduce the range of cases with an unreachable default.
+static bool
+ReduceSwitchRangeWithUnreachableDefault(SwitchInst *SI,
+                                        const SmallVectorImpl<int64_t> &Values,
+                                        uint64_t Base, IRBuilder<> &Builder) {
+  bool HasDefault =
+      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
+  if (HasDefault)
+    return false;
+
+  // Try reducing the range to (idx + offset) & mask
+  // Mask out common high bits
+  uint64_t CommonOnes = std::numeric_limits<uint64_t>::max();
+  uint64_t CommonZeros = std::numeric_limits<uint64_t>::max();
+  for (auto &V : Values) {
+    CommonOnes &= (uint64_t)V;
+    CommonZeros &= ~(uint64_t)V;
+  }
+  uint64_t CommonBits = countl_one(CommonOnes | CommonZeros);
+  unsigned LowBits = 64 - CommonBits;
+  uint64_t Mask = (1ULL << LowBits) - 1;
+  if (Mask == std::numeric_limits<uint64_t>::max())
+    return false;
+  // Now we have some case values in the additive group Z/(2**k)Z.
+  // Find the largest hole in the group and move it to back.
+  uint64_t MaxHole = 0;
+  uint64_t BestOffset = 0;
+  for (unsigned I = 0; I < Values.size(); ++I) {
+    uint64_t Hole = ((uint64_t)Values[I] -
+                     (uint64_t)(I == 0 ? Values.back() : Values[I - 1])) &
+                    Mask;
+    if (Hole > MaxHole) {
+      MaxHole = Hole;
+      BestOffset = Mask - (uint64_t)Values[I] + 1;
+    }
+  }
+
+  SmallVector<int64_t, 4> NewValues;
+  for (auto &V : Values)
+    NewValues.push_back(
+        (((int64_t)(((uint64_t)V + BestOffset) & Mask)) << CommonBits) >>
+        CommonBits);
+
+  llvm::sort(NewValues);
+  if (!isSwitchDense(NewValues))
+    // Transform didn't create a dense switch.
+    return false;
+
+  auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
+  APInt Offset(Ty->getBitWidth(), BestOffset - Base);
+  auto *Index = Builder.CreateAnd(
+      Builder.CreateAdd(SI->getCondition(), ConstantInt::get(Ty, Offset)),
+      Mask);
+  SI->replaceUsesOfWith(SI->getCondition(), Index);
+
+  for (auto Case : SI->cases()) {
+    auto *Orig = Case.getCaseValue();
+    auto CaseVal =
+        (Orig->getValue() + Offset).trunc(LowBits).sext(Ty->getBitWidth());
+    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, CaseVal)));
+  }
+
+  return true;
+}
+
 /// Try to transform a switch that has "holes" in it to a contiguous sequence
 /// of cases.
 ///
@@ -7177,9 +7243,8 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   if (CondTy->getIntegerBitWidth() > 64 ||
       !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
     return false;
-  // Only bother with this optimization if there are more than 3 switch cases;
-  // SDAG will only bother creating jump tables for 4 or more cases.
-  if (SI->getNumCases() < 4)
+  // Ignore switches with less than three cases.
+  if (SI->getNumCases() < 3)
     return false;
 
   // This transform is agnostic to the signedness of the input or case values. We
@@ -7199,6 +7264,9 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   int64_t Base = Values[0];
   for (auto &V : Values)
     V -= (uint64_t)(Base);
+
+  if (ReduceSwitchRangeWithUnreachableDefault(SI, Values, Base, Builder))
+    return true;
 
   // Now we have signed numbers that have been shifted so that, given enough
   // precision, there are no negative values. Since the rest of the transform
