@@ -489,7 +489,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             options.SetPluginName("minidump")
             options.SetStyle(lldb.eSaveCoreCustomOnly)
             thread = process.GetThreadAtIndex(0)
-            options.save_thread_with_heaps(thread)
+            options.save_thread_with_heaps(thread, 1)
 
             error = process.SaveCore(options)
             self.assertTrue(error.Success())
@@ -498,6 +498,24 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # proc/pid maps prevent us from checking the number of regions, but
             # this is mostly a smoke test for the extension.
             self.assertEqual(core_proc.GetNumThreads(), 1)
+            addr = (
+                process.GetThreadAtIndex(0)
+                .GetFrameAtIndex(0)
+                .FindVariable("str")
+                .Dereference()
+                .GetAddress()
+                .GetOffset()
+            )
+            core_addr = (
+                core_proc.GetThreadAtIndex(0)
+                .GetFrameAtIndex(0)
+                .FindVariable("str")
+                .Dereference()
+                .GetAddress()
+                .GetOffset()
+            )
+            self.assertEqual(addr, core_addr)
+
         finally:
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
