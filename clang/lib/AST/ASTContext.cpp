@@ -831,6 +831,28 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
   return CanonTTP;
 }
 
+/// Check if a type can have its sanitizer instrumentation elided.
+/// Determine this by its presence in a SCL alongside its specified categories.
+/// For example:
+/// ignorelist.txt>
+/// [{unsigned-integer-overflow,signed-integer-overflow}]
+/// type:*=no_sanitize
+/// type:size_t=sanitize
+/// <ignorelist.txt
+/// Supplying the above ignorelist.txt will disable overflow sanitizer
+/// instrumentation for all types except "size_t".
+bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
+                                          const QualType &Ty) const {
+  bool sanitizeType =
+      NoSanitizeL->containsType(Mask, Ty.getAsString(), "sanitize");
+
+  bool noSanitizeType =
+      NoSanitizeL->containsType(Mask, Ty.getAsString(), "no_sanitize") ||
+      NoSanitizeL->containsType(Mask, Ty.getAsString());
+
+  return noSanitizeType && !sanitizeType;
+}
+
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
   auto Kind = getTargetInfo().getCXXABI().getKind();
   return getLangOpts().CXXABI.value_or(Kind);
