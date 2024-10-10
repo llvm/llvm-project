@@ -132,7 +132,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_value(ptr addrspace(1) %ptr) #
 ; IR-ITERATIVE-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP6]], 0
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP14:%.*]]
 ; IR-ITERATIVE:       12:
-; IR-ITERATIVE-NEXT:    [[TMP13:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[TMP10]] seq_cst, align 4
+; IR-ITERATIVE-NEXT:    [[TMP13:%.*]] = atomicrmw fsub ptr addrspace(1) [[PTR:%.*]], float [[TMP10]] seq_cst, align 4
 ; IR-ITERATIVE-NEXT:    br label [[TMP14]]
 ; IR-ITERATIVE:       14:
 ; IR-ITERATIVE-NEXT:    ret void
@@ -151,12 +151,12 @@ define amdgpu_kernel void @global_atomic_fsub_uni_value(ptr addrspace(1) %ptr) #
 ; IR-DPP-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP6]], 0
 ; IR-DPP-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP14:%.*]]
 ; IR-DPP:       12:
-; IR-DPP-NEXT:    [[TMP13:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[TMP10]] seq_cst, align 4
+; IR-DPP-NEXT:    [[TMP13:%.*]] = atomicrmw fsub ptr addrspace(1) [[PTR:%.*]], float [[TMP10]] seq_cst, align 4
 ; IR-DPP-NEXT:    br label [[TMP14]]
 ; IR-DPP:       14:
 ; IR-DPP-NEXT:    ret void
 ;
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 seq_cst
+  %result = atomicrmw fsub ptr addrspace(1) %ptr, float 4.0 seq_cst
   ret void
 }
 

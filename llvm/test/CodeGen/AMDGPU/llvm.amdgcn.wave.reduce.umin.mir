@@ -26,7 +26,7 @@ body:             |
     %4:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %5:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM %1(p4), 36, 0
     %6:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1(p4), 44, 0
-    %7:sgpr_32 = WAVE_REDUCE_UMIN_PSEUDO_U32 killed %6, 1, implicit $exec
+    %7:sgpr_32 = WAVE_REDUCE_MIN_PSEUDO_U32 killed %6, 1, implicit $exec
     %8:vgpr_32 = COPY %7
     GLOBAL_STORE_DWORD_SADDR killed %4, killed %8, killed %5, 0, 0, implicit $exec
     S_ENDPGM 0
@@ -79,7 +79,7 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %4:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM %1(p4), 36, 0
     %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %6:sgpr_32 = WAVE_REDUCE_UMIN_PSEUDO_U32 %0, 1, implicit $exec
+    %6:sgpr_32 = WAVE_REDUCE_MIN_PSEUDO_U32 %0, 1, implicit $exec
     %7:vgpr_32 = COPY %6
     GLOBAL_STORE_DWORD_SADDR killed %5, killed %7, killed %4, 0, 0, implicit $exec
   bb.1:
