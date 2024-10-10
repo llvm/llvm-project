@@ -1,5 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=security.PointerSub -analyzer-output=text-minimal -verify %s
 
+typedef int * Ptr;
+
 void f1(void) {
   int x, y, z[10];
   int d = &y - &x; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
@@ -13,6 +15,9 @@ void f1(void) {
   d = (unsigned long)&y - (unsigned long)&x; // no-warning
   unsigned long l = 1;
   d = l - (unsigned long)&y; // no-warning
+  Ptr p1 = &x;
+  Ptr p2 = &y;
+  d = p1 - p2; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
 }
 
 void f2(void) {
