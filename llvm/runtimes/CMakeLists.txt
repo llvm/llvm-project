@@ -513,9 +513,17 @@ if(build_runtimes)
   endif()
 
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-    if (LLVM_TOOL_FLANG_BUILD AND "FortranRuntime" IN_LIST LLVM_ENABLE_PROJECTS)
-      set(enable_fortran ENABLE_FORTRAN)
-    endif ()
+    if (${LLVM_TOOL_FLANG_BUILD})
+      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang-new")
+      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang-new")
+      set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+      # TODO: This is a workaround until flang becomes a first-class project
+      # in llvm/CMakeList.txt.  Until then, this line ensures that flang-new is
+      # built before "openmp" is built as a runtime project.  Besides "flang-new"
+      # to build the compiler, we also need to add "module_files" to make sure
+      # that all .mod files are also properly build.
+      list(APPEND extra_deps "flang-new" "module_files")
+    endif()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
