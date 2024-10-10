@@ -1095,7 +1095,8 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
                                 ShufMask);
   NewCost += TTI.getArithmeticInstrCost(I.getOpcode(), CmpTy);
   NewCost += TTI.getVectorInstrCost(*Ext0, CmpTy, CostKind, CheapIndex);
-  NewCost += !Ext0->hasOneUse() * Ext0Cost + !Ext1->hasOneUse() * Ext1Cost;
+  NewCost += Ext0->hasOneUse() ? 0 : Ext0Cost;
+  NewCost += Ext1->hasOneUse() ? 0 : Ext1Cost;
 
   // Aggressively form vector ops if the cost is equal because the transform
   // may enable further optimization.
