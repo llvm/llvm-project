@@ -537,6 +537,10 @@ enum GetElementPtrOptionalFlags {
   GEP_NUW = 2,
 };
 
+/// PossiblySameSignOptionalFlags - Flags for serializing
+/// PossiblySameSignInst's SubclassOptionalData contents.
+enum PossiblySameSignInstOptionalFlags { PSSI_SAME_SIGN = 0 };
+
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {
   ORDERING_NOTATOMIC = 0,

@@ -1714,6 +1714,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= 1 << bitc::GEP_NUSW;
     if (GEP->hasNoUnsignedWrap())
       Flags |= 1 << bitc::GEP_NUW;
+  } else if (const auto *PSSI = dyn_cast<PossiblySameSignInst>(V)) {
+    if (PSSI->hasSameSign())
+      Flags |= 1 << bitc::PSSI_SAME_SIGN;
   }
 
   return Flags;

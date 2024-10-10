@@ -1433,6 +1433,9 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
       Out << " nuw";
     if (TI->hasNoSignedWrap())
       Out << " nsw";
+  } else if (const auto *PSSI = dyn_cast<PossiblySameSignInst>(U)) {
+    if (PSSI->hasSameSign())
+      Out << " samesign";
   }
 }
 

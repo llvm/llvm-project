@@ -1033,6 +1033,28 @@ private:
   }
 };
 
+/// An icmp instruction, which can be marked as "samesign", indicating that the
+/// two operands have the same sign. This means that we can convert "slt/ult"
+/// to "ult", which enables more optimizations.
+class PossiblySameSignInst : public CmpInst {
+public:
+  enum { SameSign = (1 << 0) };
+
+  void setSameSign(bool B) {
+    SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);
+  }
+
+  bool hasSameSign() const { return SubclassOptionalData & SameSign; }
+
+  static bool classof(const Instruction *I) {
+    return I->getOpcode() == Instruction::ICmp;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
 // FIXME: these are redundant if CmpInst < BinaryOperator
 template <>
 struct OperandTraits<CmpInst> : public FixedNumOperandTraits<CmpInst, 2> {

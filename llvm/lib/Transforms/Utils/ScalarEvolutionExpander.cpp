@@ -49,6 +49,7 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
   Exact = false;
   Disjoint = false;
   NNeg = false;
+  SameSign = false;
   GEPNW = GEPNoWrapFlags::none();
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I)) {
     NUW = OBO->hasNoUnsignedWrap();
@@ -66,6 +67,8 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
   }
   if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
     GEPNW = GEP->getNoWrapFlags();
+  if (auto *PSSI = dyn_cast<PossiblySameSignInst>(I))
+    SameSign = PSSI->hasSameSign();
 }
 
 void PoisonFlags::apply(Instruction *I) {
@@ -85,6 +88,8 @@ void PoisonFlags::apply(Instruction *I) {
   }
   if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
     GEP->setNoWrapFlags(GEPNW);
+  if (auto *PSSI = dyn_cast<PossiblySameSignInst>(I))
+    PSSI->setSameSign(SameSign);
 }
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
