@@ -2124,20 +2124,13 @@ static bool adjustIsPower2Test(CmpInst *Cmp, const TargetLowering &TLI,
     return false;
   auto *II = cast<IntrinsicInst>(Cmp->getOperand(0));
 
-  // Check if it is profitable for the target
-  ICmpInst::Predicate NewPred =
-      Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGT;
-  if (TLI.isCtpopFast(TLI.getValueType(DL, II->getType())) &&
-      TTI.getCmpSelInstrCost(Instruction::ICmp, II->getType(), Cmp->getType(),
-                             Pred) <
-          TTI.getCmpSelInstrCost(Instruction::ICmp, II->getType(),
-                                 Cmp->getType(), NewPred))
-    return false;
-
   if (isKnownNonZero(II, DL)) {
-    if (Pred == ICmpInst::ICMP_EQ)
+    if (Pred == ICmpInst::ICMP_EQ) {
       Cmp->setOperand(1, ConstantInt::get(II->getType(), 2));
-    Cmp->setPredicate(NewPred);
+      Cmp->setPredicate(ICmpInst::ICMP_ULT);
+    } else {
+      Cmp->setPredicate(ICmpInst::ICMP_UGT);
+    }
     return true;
   }
   return false;
