@@ -290,23 +290,28 @@ public:
 
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
+  /// The IsText parameter controls whether the file should be opened as a text
+  /// or binary file, and should be set to false if the file contents should be
+  /// treated as binary.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(FileEntryRef Entry, bool isVolatile = false,
                    bool RequiresNullTerminator = true,
-                   std::optional<int64_t> MaybeLimit = std::nullopt);
+                   std::optional<int64_t> MaybeLimit = std::nullopt,
+                   bool IsText = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
                    bool RequiresNullTerminator = true,
-                   std::optional<int64_t> MaybeLimit = std::nullopt) const {
+                   std::optional<int64_t> MaybeLimit = std::nullopt,
+                   bool IsText = true) const {
     return getBufferForFileImpl(Filename,
                                 /*FileSize=*/MaybeLimit.value_or(-1),
-                                isVolatile, RequiresNullTerminator);
+                                isVolatile, RequiresNullTerminator, IsText);
   }
 
 private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
-                       bool RequiresNullTerminator) const;
+                       bool RequiresNullTerminator, bool IsText) const;
 
   DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);
 
