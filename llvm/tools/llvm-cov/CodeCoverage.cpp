@@ -773,6 +773,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
                             cl::desc("Show MCDC statistics in summary table"),
                             cl::init(false));
 
+  cl::list<std::string> MCDCExcludeStates(
+      "mcdc-exclude", cl::Optional,
+      cl::desc(
+          "Set which abnormal kinds of conditions are excluded from MC/DC"),
+      cl::CommaSeparated, cl::list_init<std::string>({"constant"}));
+
   cl::opt<bool> InstantiationSummary(
       "show-instantiation-summary", cl::Optional,
       cl::desc("Show instantiation statistics in summary table"));
@@ -942,6 +948,24 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       for (const std::string &SF : SourceFiles)
         outs() << SF << '\n';
       ::exit(0);
+    }
+
+    ViewOpts.MCDCCountedStates =
+        MCDCRecord::MCDC_Normal | MCDCRecord::MCDC_Uncoverable |
+        MCDCRecord::MCDC_Constant | MCDCRecord::MCDC_Unreachable;
+    for (const auto &State : MCDCExcludeStates) {
+      if (State == "uncoverable") {
+        ViewOpts.MCDCCountedStates &= ~MCDCRecord::MCDC_Uncoverable;
+      } else if (State == "constant") {
+        ViewOpts.MCDCCountedStates &= ~MCDCRecord::MCDC_Constant;
+      } else if (State == "unreachable") {
+        ViewOpts.MCDCCountedStates &= ~MCDCRecord::MCDC_Unreachable;
+      } else if (State != "none") {
+        error("invalid argument '" + State +
+                  "', must be in one of 'uncoverable, constant, unreachable'",
+              "--mcdc-exclude");
+        return 1;
+      }
     }
 
     ViewOpts.ShowMCDCSummary = MCDCSummary;

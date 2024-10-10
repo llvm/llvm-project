@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoverageSummaryInfo.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 
 using namespace llvm;
 using namespace coverage;
@@ -44,13 +45,13 @@ static void sumBranchExpansions(size_t &NumBranches, size_t &CoveredBranches,
   }
 }
 
-static std::pair<size_t, size_t>
-sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
+static std::tuple<size_t, size_t>
+sumMCDCPairs(const ArrayRef<MCDCRecord> &Records, const int32_t CountFlags) {
   size_t NumPairs = 0, CoveredPairs = 0;
   for (const auto &Record : Records) {
     const auto NumConditions = Record.getNumConditions();
     for (unsigned C = 0; C < NumConditions; C++) {
-      if (!Record.isCondFolded(C))
+      if (Record.getCondResult(C) & CountFlags)
         ++NumPairs;
       if (Record.isConditionIndependencePairCovered(C))
         ++CoveredPairs;
@@ -61,7 +62,8 @@ sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
 
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
-                             const coverage::FunctionRecord &Function) {
+                             const coverage::FunctionRecord &Function,
+                             const int32_t MCDCCountedFlags) {
   // Compute the region coverage.
   size_t NumCodeRegions = 0, CoveredRegions = 0;
   for (auto &CR : Function.CountedRegions) {
@@ -89,7 +91,8 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
   sumBranchExpansions(NumBranches, CoveredBranches, CM, CD.getExpansions());
 
   size_t NumPairs = 0, CoveredPairs = 0;
-  std::tie(NumPairs, CoveredPairs) = sumMCDCPairs(CD.getMCDCRecords());
+  std::tie(NumPairs, CoveredPairs) =
+      sumMCDCPairs(CD.getMCDCRecords(), MCDCCountedFlags);
 
   return FunctionCoverageSummary(
       Function.Name, Function.ExecutionCount,

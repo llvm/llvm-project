@@ -16,6 +16,7 @@
 
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 namespace llvm {
 
@@ -247,7 +248,8 @@ struct FunctionCoverageSummary {
   /// Compute the code coverage summary for the given function coverage
   /// mapping record.
   static FunctionCoverageSummary get(const coverage::CoverageMapping &CM,
-                                     const coverage::FunctionRecord &Function);
+                                     const coverage::FunctionRecord &Function,
+                                     int32_t MCDCCountedFlags = 0);
 
   /// Compute the code coverage summary for an instantiation group \p Group,
   /// given a list of summaries for each instantiation in \p Summaries.

@@ -517,6 +517,17 @@ starts a new boolean expression that is separated from the other conditions by
 the operator ``func()``.  When this is encountered, a warning will be generated
 and the boolean expression will not be instrumented.
 
+Besides, MC/DC may report conditions with three states: ``uncoverable``, ``constant`` and ``unreachable``. 
+``uncoverable`` means the condition could be evaluated but it cannot affect outcome of the decision.
+``constant`` means the condition is always evaluated to the same value.
+While ``unreachable`` means the condition is never evaluated.
+For instance, in ``a || true || b``, value of the decision is always ``true``.
+``a`` can not make the decision be ``false`` as it varies. And the second condition, ``true`` can not be evaluated to ``false``. 
+While ``b`` is always short-circuited. Hence ``a`` is ``uncoverable``, ``true`` is ``constant`` and ``b`` is ``unreachable``. 
+By default statistics of MCDC counts uncoverable and unreachable conditions but excludes constants. Users can pass option
+``--mcdc-exclude`` to control this behavior. 
+If a decision is proved to no branch theoretically, it shows ``Folded`` rather than coverage percent.
+
 Switch statements
 -----------------
 
