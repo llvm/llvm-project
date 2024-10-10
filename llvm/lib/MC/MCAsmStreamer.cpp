@@ -391,6 +391,8 @@ public:
                          SMLoc Loc) override;
   void emitWinCFIPushFrame(bool Code, SMLoc Loc) override;
   void emitWinCFIEndProlog(SMLoc Loc) override;
+  void emitWinCFIBeginEpilogue(SMLoc Loc) override;
+  void emitWinCFIEndEpilogue(SMLoc Loc) override;
 
   void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                         SMLoc Loc) override;
@@ -2303,6 +2305,20 @@ void MCAsmStreamer::emitWinCFIEndProlog(SMLoc Loc) {
   MCStreamer::emitWinCFIEndProlog(Loc);
 
   OS << "\t.seh_endprologue";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIBeginEpilogue(SMLoc Loc) {
+  MCStreamer::emitWinCFIBeginEpilogue(Loc);
+
+  OS << "\t.seh_startepilogue";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
+  MCStreamer::emitWinCFIEndEpilogue(Loc);
+
+  OS << "\t.seh_endepilogue";
   EmitEOL();
 }
 
