@@ -12,45 +12,11 @@
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Region.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/NullPass.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PrintInstructionCountPass.h"
 
 namespace llvm::sandboxir {
 
-static cl::opt<bool>
-    PrintPassPipeline("sbvec-print-pass-pipeline", cl::init(false), cl::Hidden,
-                      cl::desc("Prints the pass pipeline and returns."));
-
-static cl::opt<bool> UseRegionsFromMetadata(
-    "sbvec-use-regions-from-metadata", cl::init(false), cl::Hidden,
-    cl::desc("Skips bottom-up vectorization, builds regions from metadata "
-             "already present in the IR and runs the region pass pipeline."));
-
-/// A magic string for the default pass pipeline.
-static const char *DefaultPipelineMagicStr = "*";
-
-static cl::opt<std::string> UserDefinedPassPipeline(
-    "sbvec-passes", cl::init(DefaultPipelineMagicStr), cl::Hidden,
-    cl::desc("Comma-separated list of vectorizer passes. If not set "
-             "we run the predefined pipeline."));
-
-static std::unique_ptr<RegionPass> createRegionPass(StringRef Name) {
-#define REGION_PASS(NAME, CREATE_PASS)                                         \
-  if (Name == NAME)                                                            \
-    return std::make_unique<decltype(CREATE_PASS)>(CREATE_PASS);
-#include "PassRegistry.def"
-  return nullptr;
-}
-
-BottomUpVec::BottomUpVec() : FunctionPass("bottom-up-vec"), RPM("rpm") {
-  // Create a pipeline to be run on each Region created by BottomUpVec.
-  if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {
-    // TODO: Add default passes to RPM.
-  } else {
-    // Create the user-defined pipeline.
-    RPM.setPassPipeline(UserDefinedPassPipeline, createRegionPass);
-  }
-}
+BottomUpVec::BottomUpVec(RegionPassManager *RPM)
+    : FunctionPass("bottom-up-vec"), RPM(RPM) {}
 
 // TODO: This is a temporary function that returns some seeds.
 //       Replace this with SeedCollector's function when it lands.
@@ -89,19 +55,6 @@ void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
 void BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) { vectorizeRec(Bndl); }
 
 bool BottomUpVec::runOnFunction(Function &F) {
-  if (PrintPassPipeline) {
-    RPM.printPipeline(outs());
-    return false;
-  }
-  if (UseRegionsFromMetadata) {
-    SmallVector<std::unique_ptr<Region>> Regions =
-        Region::createRegionsFromMD(F);
-    for (auto &R : Regions) {
-      RPM.runOnRegion(*R);
-    }
-    return false;
-  }
-
   Change = false;
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {

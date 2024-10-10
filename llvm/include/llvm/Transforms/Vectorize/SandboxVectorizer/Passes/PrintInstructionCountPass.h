@@ -2,10 +2,9 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_PRINTINSTRUCTIONCOUNTPASS_H
 
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/SandboxIR/Region.h"
 
 namespace llvm::sandboxir {
-
-class Region;
 
 /// A Region pass that prints the instruction count for the region to stdout.
 /// Used to test -sbvec-passes while we don't have any actual optimization

@@ -29,10 +29,11 @@ class BottomUpVec final : public FunctionPass {
   void tryVectorize(ArrayRef<Value *> Seeds);
 
   // The PM containing the pipeline of region passes.
-  RegionPassManager RPM;
+  // TODO: Remove maybe_unused once we build regions to run passes on.
+  [[maybe_unused]] RegionPassManager *RPM;
 
 public:
-  BottomUpVec();
+  BottomUpVec(RegionPassManager *RPM);
   bool runOnFunction(Function &F) final;
 };
 

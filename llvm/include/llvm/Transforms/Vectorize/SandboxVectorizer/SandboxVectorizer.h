@@ -20,6 +20,11 @@ class TargetTransformInfo;
 class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
 
+  // A pipeline of region passes. Typically, this will be run by BottomUpVec on
+  // each region it creates, but it can also be run on regions created from
+  // IR metadata in tests.
+  sandboxir::RegionPassManager RPM;
+
   // The main vectorizer pass.
   sandboxir::BottomUpVec BottomUpVecPass;
 
