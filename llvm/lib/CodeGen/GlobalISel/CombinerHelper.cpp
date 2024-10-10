@@ -1110,6 +1110,8 @@ void CombinerHelper::applySextInRegOfLoad(
   Builder.buildLoadInstr(TargetOpcode::G_SEXTLOAD, MI.getOperand(0).getReg(),
                          LoadDef->getPointerReg(), *NewMMO);
   MI.eraseFromParent();
+
+  // Not all loads can be deleted, so make sure the old one is removed.
   LoadDef->eraseFromParent();
 }
 
