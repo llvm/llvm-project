@@ -17416,8 +17416,8 @@ DeclResult Sema::ActOnTemplatedFriendTag(
       return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
                                 Name, NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
-                                FriendLoc, TempParamLists.size() - 1,
-                                TempParamLists.data())
+                                FriendLoc, TempParamLists.drop_back(),
+                                IsMemberSpecialization)
           .get();
     } else {
       // The "template<>" header is extraneous.
