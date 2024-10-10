@@ -789,9 +789,44 @@ void RewriteInstance::discoverFileObjects() {
     BinarySection Section(*BC, *cantFail(Sym.getSection()));
     return Section.isAllocatable();
   };
+  auto checkSymbolInSection = [this](const SymbolInfo &S) {
+    // Sometimes, we encounter symbols with addresses outside their section. If
+    // such symbols happen to fall into another section, they can interfere with
+    // disassembly. Notably, this occurs with AArch64 marker symbols ($d and $t)
+    // that belong to .eh_frame, but end up pointing into .text.
+    // As a workaround, we ignore all symbols that lie outside their sections.
+    auto Section = cantFail(S.Symbol.getSection());
+
+    // Accept all absolute symbols.
+    if (Section == InputFile->section_end())
+      return true;
+
+    uint64_t SecStart = Section->getAddress();
+    uint64_t SecEnd = SecStart + Section->getSize();
+    uint64_t SymEnd = S.Address + ELFSymbolRef(S.Symbol).getSize();
+    if (S.Address >= SecStart && SymEnd <= SecEnd)
+      return true;
+
+    auto SymType = cantFail(S.Symbol.getType());
+    // Skip warnings for common benign cases.
+    if (opts::Verbosity < 1 && SymType == SymbolRef::ST_Other)
+      return false; // E.g. ELF::STT_TLS.
+
+    auto SymName = S.Symbol.getName();
+    auto SecName = cantFail(S.Symbol.getSection())->getName();
+    BC->errs() << "BOLT-WARNING: ignoring symbol "
+               << (SymName ? *SymName : "[unnamed]") << " at 0x"
+               << Twine::utohexstr(S.Address) << ", which lies outside "
+               << (SecName ? *SecName : "[unnamed]") << "\n";
+
+    return false;
+  };
   for (const SymbolRef &Symbol : InputFile->symbols())
-    if (isSymbolInMemory(Symbol))
-      SortedSymbols.push_back({cantFail(Symbol.getAddress()), Symbol});
+    if (isSymbolInMemory(Symbol)) {
+      SymbolInfo SymInfo{cantFail(Symbol.getAddress()), Symbol};
+      if (checkSymbolInSection(SymInfo))
+        SortedSymbols.push_back(SymInfo);
+    }
 
   auto CompareSymbols = [this](const SymbolInfo &A, const SymbolInfo &B) {
     if (A.Address != B.Address)
