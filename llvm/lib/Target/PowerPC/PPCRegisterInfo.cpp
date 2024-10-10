@@ -240,7 +240,7 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (Subtarget.pairedVectorMemops()) {
       if (Subtarget.isAIXABI()) {
         if (!TM.getAIXExtendedAltivecABI())
-          return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
+          return SaveR2 ? CSR_AIX64_R2_SaveList : CSR_PPC64_SaveList;
         return SaveR2 ? CSR_AIX64_R2_VSRP_SaveList : CSR_AIX64_VSRP_SaveList;
       }
       return SaveR2 ? CSR_SVR464_R2_VSRP_SaveList : CSR_SVR464_VSRP_SaveList;
@@ -250,7 +250,9 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
                     : CSR_PPC64_Altivec_SaveList;
     }
-    return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
+    return SaveR2 ? (Subtarget.isAIXABI() ? CSR_AIX64_R2_SaveList
+                                          : CSR_PPC64_R2_SaveList)
+                  : CSR_PPC64_SaveList;
   }
   // 32-bit targets.
   if (Subtarget.isAIXABI()) {
@@ -380,6 +382,8 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   markSuperRegs(Reserved, PPC::VRSAVE);
 
+  const PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
+  bool UsesTOCBasePtr = FuncInfo->usesTOCBasePtr();
   // The SVR4 ABI reserves r2 and r13
   if (Subtarget.isSVR4ABI()) {
     // We only reserve r2 if we need to use the TOC pointer. If we have no
@@ -387,16 +391,15 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     // no constant-pool loads, etc.) and we have no potential uses inside an
     // inline asm block, then we can treat r2 has an ordinary callee-saved
     // register.
-    const PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-    if (!TM.isPPC64() || FuncInfo->usesTOCBasePtr() || MF.hasInlineAsm())
-      markSuperRegs(Reserved, PPC::R2);  // System-reserved register
-    markSuperRegs(Reserved, PPC::R13); // Small Data Area pointer register
+    if (!TM.isPPC64() || UsesTOCBasePtr || MF.hasInlineAsm())
+      markSuperRegs(Reserved, PPC::R2); // System-reserved register.
+    markSuperRegs(Reserved, PPC::R13);  // Small Data Area pointer register.
   }
 
-  // Always reserve r2 on AIX for now.
-  // TODO: Make r2 allocatable on AIX/XCOFF for some leaf functions.
   if (Subtarget.isAIXABI())
-    markSuperRegs(Reserved, PPC::R2);  // System-reserved register
+    // We only reserve r2 if we need to use the TOC pointer on AIX.
+    if (!TM.isPPC64() || UsesTOCBasePtr || MF.hasInlineAsm())
+      markSuperRegs(Reserved, PPC::R2); // System-reserved register.
 
   // On PPC64, r13 is the thread pointer. Never allocate this register.
   if (TM.isPPC64())
@@ -441,14 +444,12 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 bool PPCRegisterInfo::isAsmClobberable(const MachineFunction &MF,
                                        MCRegister PhysReg) const {
-  // We cannot use getReservedRegs() to find the registers that are not asm
-  // clobberable because there are some reserved registers which can be
-  // clobbered by inline asm. For example, when LR is clobbered, the register is
-  // saved and restored. We will hardcode the registers that are not asm
-  // cloberable in this function.
+  // CTR and LR registers are always reserved, but they are asm clobberable.
+  if (PhysReg == PPC::CTR || PhysReg == PPC::CTR8 || PhysReg == PPC::LR ||
+      PhysReg == PPC::LR)
+    return true;
 
-  // The stack pointer (R1/X1) is not clobberable by inline asm
-  return PhysReg != PPC::R1 && PhysReg != PPC::X1;
+  return !getReservedRegs(MF).test(PhysReg);
 }
 
 bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) const {
