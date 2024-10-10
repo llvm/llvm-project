@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TYPES__Imaginary_H
 #define LLVM_LIBC_TYPES__Imaginary_H
 
-typedef /* TODO */ _Imaginary;
+// TODO: Define the _Imaginary type once clang or gcc supports it. 
+// typedef _Imaginary;
 
 #endif // LLVM_LIBC_TYPES__Imaginary_H
