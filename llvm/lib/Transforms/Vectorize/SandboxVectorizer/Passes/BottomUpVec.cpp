@@ -10,14 +10,21 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/NullPass.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PrintInstructionCountPass.h"
 
 namespace llvm::sandboxir {
 
 static cl::opt<bool>
     PrintPassPipeline("sbvec-print-pass-pipeline", cl::init(false), cl::Hidden,
                       cl::desc("Prints the pass pipeline and returns."));
+
+static cl::opt<bool> UseRegionsFromMetadata(
+    "sbvec-use-regions-from-metadata", cl::init(false), cl::Hidden,
+    cl::desc("Skips bottom-up vectorization, builds regions from metadata "
+             "already present in the IR and runs the region pass pipeline."));
 
 /// A magic string for the default pass pipeline.
 static const char *DefaultPipelineMagicStr = "*";
@@ -84,6 +91,14 @@ void BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) { vectorizeRec(Bndl); }
 bool BottomUpVec::runOnFunction(Function &F) {
   if (PrintPassPipeline) {
     RPM.printPipeline(outs());
+    return false;
+  }
+  if (UseRegionsFromMetadata) {
+    SmallVector<std::unique_ptr<Region>> Regions =
+        Region::createRegionsFromMD(F);
+    for (auto &R : Regions) {
+      RPM.runOnRegion(*R);
+    }
     return false;
   }
 
