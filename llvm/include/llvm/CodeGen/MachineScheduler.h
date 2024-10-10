@@ -1349,14 +1349,6 @@ protected:
   void pickNodeFromQueue(SchedBoundary &Zone, SchedCandidate &Cand);
 };
 
-/// Create the standard converging machine scheduler. This will be used as the
-/// default scheduler if the target does not set a default.
-/// Adds default DAG mutations.
-ScheduleDAGMILive *createGenericSchedLive(MachineSchedContext *C);
-
-/// Create a generic scheduler with no vreg liveness or DAG mutation passes.
-ScheduleDAGMI *createGenericSchedPostRA(MachineSchedContext *C);
-
 /// If ReorderWhileClustering is set to true, no attempt will be made to
 /// reduce reordering due to store clustering.
 std::unique_ptr<ScheduleDAGMutation>
@@ -1374,6 +1366,41 @@ createStoreClusterDAGMutation(const TargetInstrInfo *TII,
 std::unique_ptr<ScheduleDAGMutation>
 createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
                                const TargetRegisterInfo *TRI);
+
+/// Create the standard converging machine scheduler. This will be used as the
+/// default scheduler if the target does not set a default.
+/// Adds default DAG mutations.
+template <typename Strategy = GenericScheduler>
+ScheduleDAGMILive *createGenericSchedLive(MachineSchedContext *C) {
+  ScheduleDAGMILive *DAG =
+      new ScheduleDAGMILive(C, std::make_unique<Strategy>(C));
+  // Register DAG post-processors.
+  //
+  // FIXME: extend the mutation API to allow earlier mutations to instantiate
+  // data and pass it to later mutations. Have a single mutation that gathers
+  // the interesting nodes in one pass.
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+
+  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
+  // Add MacroFusion mutation if fusions are not empty.
+  const auto &MacroFusions = STI.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
+  return DAG;
+}
+
+/// Create a generic scheduler with no vreg liveness or DAG mutation passes.
+template <typename Strategy = PostGenericScheduler>
+ScheduleDAGMI *createGenericSchedPostRA(MachineSchedContext *C) {
+  ScheduleDAGMI *DAG = new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
+                                         /*RemoveKillFlags=*/true);
+  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
+  // Add MacroFusion mutation if fusions are not empty.
+  const auto &MacroFusions = STI.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
+  return DAG;
+}
 
 } // end namespace llvm
 

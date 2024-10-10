@@ -47,6 +47,7 @@ add_llvm_target(RISCVCodeGen
   RISCVISelLowering.cpp
   RISCVLandingPadSetup.cpp
   RISCVMachineFunctionInfo.cpp
+  RISCVMachineScheduler.cpp
   RISCVMergeBaseOffset.cpp
   RISCVOptWInstrs.cpp
   RISCVPostRAExpandPseudoInsts.cpp
