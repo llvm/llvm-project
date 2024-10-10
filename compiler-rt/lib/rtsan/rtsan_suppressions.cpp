@@ -56,7 +56,7 @@ void __rtsan::InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
 
   // We will use suppression_ctx == nullptr as an early out
-  if (flags().suppressions[0] == 0)
+  if (flags().suppressions[0] == '\0')
     return;
 
   suppression_ctx = new (suppression_placeholder)
@@ -72,12 +72,10 @@ bool __rtsan::IsStackTraceSuppressed(const StackTrace &stack) {
   if (!suppression_ctx->HasSuppressionType(call_stack_flag))
     return false;
 
-  Symbolizer *symbolizer = Symbolizer::GetOrInit();
-  Suppression *s;
-
   for (uptr i = 0; i < stack.size && stack.trace[i]; i++) {
     const uptr addr = stack.trace[i];
 
+    Symbolizer *symbolizer = Symbolizer::GetOrInit();
     SymbolizedStackHolder symbolized_stack(symbolizer->SymbolizePC(addr));
     const SymbolizedStack *frames = symbolized_stack.get();
     CHECK(frames);
@@ -86,6 +84,7 @@ bool __rtsan::IsStackTraceSuppressed(const StackTrace &stack) {
       if (!function_name)
         continue;
 
+      Suppression *s;
       if (suppression_ctx->Match(function_name, call_stack_flag, &s))
         return true;
     }
