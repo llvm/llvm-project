@@ -2016,7 +2016,7 @@ void SimdOp::build(OpBuilder &builder, OperationState &state,
   // privateSyms, reductionVars, reductionByref, reductionSyms.
   SimdOp::build(builder, state, clauses.alignedVars,
                 makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
-                /*linear_vars=*/{}, /*linear_step_vars=*/{},
+                clauses.linearVars, clauses.linearStepVars,
                 clauses.nontemporalVars, clauses.order, clauses.orderMod,
                 /*private_vars=*/{}, /*private_syms=*/nullptr,
                 /*reduction_vars=*/{}, /*reduction_byref=*/nullptr,
