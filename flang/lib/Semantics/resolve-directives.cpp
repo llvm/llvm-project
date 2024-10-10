@@ -591,26 +591,25 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
-    if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.t)}) {
-      using Type = parser::OmpMapType::Type;
-      const Type &type{std::get<Type>(maptype->t)};
-      switch (type) {
-      case Type::To:
+    if (const auto &mapType{
+            std::get<std::optional<parser::OmpMapClause::Type>>(x.t)}) {
+      switch (*mapType) {
+      case parser::OmpMapClause::Type::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case Type::From:
+      case parser::OmpMapClause::Type::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case Type::Tofrom:
+      case parser::OmpMapClause::Type::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case Type::Alloc:
+      case parser::OmpMapClause::Type::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case Type::Release:
+      case parser::OmpMapClause::Type::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case Type::Delete:
+      case parser::OmpMapClause::Type::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       }

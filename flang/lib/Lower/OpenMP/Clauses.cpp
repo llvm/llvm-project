@@ -846,41 +846,49 @@ Link make(const parser::OmpClause::Link &inp,
 Map make(const parser::OmpClause::Map &inp,
          semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpMapClause
+  using wrapped = parser::OmpMapClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert1, parser::OmpMapType::Type, Map::MapType,
+      convert1, parser::OmpMapClause::Type, Map::MapType,
       // clang-format off
-      MS(To,       To)
-      MS(From,     From)
-      MS(Tofrom,   Tofrom)
       MS(Alloc,    Alloc)
-      MS(Release,  Release)
       MS(Delete,   Delete)
+      MS(From,     From)
+      MS(Release,  Release)
+      MS(To,       To)
+      MS(Tofrom,   Tofrom)
       // clang-format on
   );
 
-  // No convert2: MapTypeModifier is not an enum in parser.
+  CLAUSET_ENUM_CONVERT( //
+      convert2, parser::OmpMapClause::TypeModifier, Map::MapTypeModifier,
+      // clang-format off
+      MS(Always,   Always)
+      MS(Close,    Close)
+      MS(OmpxHold, OmpxHold)
+      MS(Present,  Present)
+      // clang-format on
+  );
 
-  auto &t0 = std::get<std::optional<parser::OmpMapType>>(inp.v.t);
-  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  auto &t0 = std::get<std::optional<std::list<wrapped::TypeModifier>>>(inp.v.t);
+  auto &t1 = std::get<std::optional<wrapped::Type>>(inp.v.t);
+  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  if (!t0) {
-    return Map{{/*MapType=*/std::nullopt, /*MapTypeModifiers=*/std::nullopt,
-                /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-                /*LocatorList=*/makeObjects(t1, semaCtx)}};
-  }
+  std::optional<Map::MapType> maybeType = maybeApply(convert1, t1);
 
-  auto &s0 = std::get<std::optional<parser::OmpMapType::Always>>(t0->t);
-  auto &s1 = std::get<parser::OmpMapType::Type>(t0->t);
+  std::optional<Map::MapTypeModifiers> maybeTypeMods = maybeApply(
+      [&](const std::list<wrapped::TypeModifier> &typeMods) {
+        Map::MapTypeModifiers mods;
+        for (wrapped::TypeModifier mod : typeMods)
+          mods.push_back(convert2(mod));
+        return mods;
+      },
+      t0);
 
-  std::optional<Map::MapTypeModifiers> maybeList;
-  if (s0)
-    maybeList = Map::MapTypeModifiers{Map::MapTypeModifier::Always};
-
-  return Map{{/*MapType=*/convert1(s1),
-              /*MapTypeModifiers=*/maybeList,
+  return Map{{/*MapType=*/maybeType,
+              /*MapTypeModifiers=*/maybeTypeMods,
               /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-              /*LocatorList=*/makeObjects(t1, semaCtx)}};
+              /*LocatorList=*/makeObjects(t2, semaCtx)}};
 }
 
 // Match: incomplete
