@@ -135,6 +135,7 @@ RISCV::RISCV(Ctx &ctx) : TargetInfo(ctx) {
   pltHeaderSize = 32;
   pltEntrySize = 16;
   ipltEntrySize = 16;
+  defaultMaxPageSize = 65536;
 }
 
 static uint32_t getEFlags(Ctx &ctx, InputFile *f) {
