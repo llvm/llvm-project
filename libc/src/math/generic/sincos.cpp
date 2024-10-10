@@ -129,12 +129,12 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
   // So k is an integer and -pi / 256 <= y <= pi / 256.
   // Then sin(x) = sin((k * pi/128 + y)
   //             = sin(y) * cos(k*pi/128) + cos(y) * sin(k*pi/128)
-  DoubleDouble sin_k_cos_y = fputil::quick_mult<NO_FMA>(cos_y, sin_k);
-  DoubleDouble cos_k_sin_y = fputil::quick_mult<NO_FMA>(sin_y, cos_k);
+  DoubleDouble sin_k_cos_y = fputil::quick_mult(cos_y, sin_k);
+  DoubleDouble cos_k_sin_y = fputil::quick_mult(sin_y, cos_k);
   //      cos(x) = cos((k * pi/128 + y)
   //             = cos(y) * cos(k*pi/128) - sin(y) * sin(k*pi/128)
-  DoubleDouble cos_k_cos_y = fputil::quick_mult<NO_FMA>(cos_y, cos_k);
-  DoubleDouble msin_k_sin_y = fputil::quick_mult<NO_FMA>(sin_y, msin_k);
+  DoubleDouble cos_k_cos_y = fputil::quick_mult(cos_y, cos_k);
+  DoubleDouble msin_k_sin_y = fputil::quick_mult(sin_y, msin_k);
 
   DoubleDouble sin_dd =
       fputil::exact_add<false>(sin_k_cos_y.hi, cos_k_sin_y.hi);

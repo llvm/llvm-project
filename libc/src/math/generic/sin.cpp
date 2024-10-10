@@ -118,8 +118,8 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   // So k is an integer and -pi / 256 <= y <= pi / 256.
   // Then sin(x) = sin((k * pi/128 + y)
   //             = sin(y) * cos(k*pi/128) + cos(y) * sin(k*pi/128)
-  DoubleDouble sin_k_cos_y = fputil::quick_mult<NO_FMA>(cos_y, sin_k);
-  DoubleDouble cos_k_sin_y = fputil::quick_mult<NO_FMA>(sin_y, cos_k);
+  DoubleDouble sin_k_cos_y = fputil::quick_mult(cos_y, sin_k);
+  DoubleDouble cos_k_sin_y = fputil::quick_mult(sin_y, cos_k);
 
   DoubleDouble rr = fputil::exact_add<false>(sin_k_cos_y.hi, cos_k_sin_y.hi);
   rr.lo += sin_k_cos_y.lo + cos_k_sin_y.lo;

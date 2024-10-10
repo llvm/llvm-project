@@ -208,8 +208,8 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
   //               / (cos(y) * cos(k*pi/128) - sin(y) * sin(k*pi/128))
   //             = (sin(k*pi/128) + tan(y) * cos(k*pi/128)) /
   //               / (cos(k*pi/128) - tan(y) * sin(k*pi/128))
-  DoubleDouble cos_k_tan_y = fputil::quick_mult<NO_FMA>(tan_y, cos_k);
-  DoubleDouble msin_k_tan_y = fputil::quick_mult<NO_FMA>(tan_y, msin_k);
+  DoubleDouble cos_k_tan_y = fputil::quick_mult(tan_y, cos_k);
+  DoubleDouble msin_k_tan_y = fputil::quick_mult(tan_y, msin_k);
 
   // num_dd = sin(k*pi/128) + tan(y) * cos(k*pi/128)
   DoubleDouble num_dd = fputil::exact_add<false>(cos_k_tan_y.hi, -msin_k.hi);
