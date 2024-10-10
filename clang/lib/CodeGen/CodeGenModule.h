@@ -1559,6 +1559,14 @@ public:
   /// Emit KCFI type identifier constants and remove unused identifiers.
   void finalizeKCFITypes();
 
+  /// Calculate RISC-V Zicfilp func-sig scheme CFI label
+  uint32_t calcRISCVZicfilpFuncSigLabel(const FunctionType &FT,
+                                        const bool IsCXXInstanceMethod,
+                                        const bool IsCXXVirtualMethod);
+
+  /// Calculate RISC-V Zicfilp func-sig scheme CFI label
+  uint32_t calcRISCVZicfilpFuncSigLabel(const FunctionDecl &FD);
+
   /// Whether this function's return type has no side effects, and thus may
   /// be trivially discarded if it is unused.
   bool MayDropFunctionReturn(const ASTContext &Context,

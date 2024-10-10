@@ -1876,6 +1876,9 @@ public:
   /// (struct/union/class/enum) decl.
   QualType getTagDeclType(const TagDecl *Decl) const;
 
+  /// Return the type for "void *"
+  QualType getVoidPtrType() const { return VoidPtrTy; }
+
   /// Return the unique type for "size_t" (C99 7.17), defined in
   /// <stddef.h>.
   ///
@@ -1902,6 +1905,10 @@ public:
   /// unique wchar_t type. In C99, this returns a type compatible with the type
   /// defined in <stddef.h> as defined by the target.
   QualType getWideCharType() const { return WideCharTy; }
+
+  /// Return the type of wide characters in C context, no matter whether it's C
+  /// or C++ being compiled.
+  QualType getWCharTypeInC() const;
 
   /// Return the type of "signed wchar_t".
   ///
