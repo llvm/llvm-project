@@ -68,13 +68,25 @@ template <uintptr_t Mask> struct bitmask_tag {
     using tag_type = Tag;
 
     [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+#if __has_builtin(__builtin_tag_pointer_mask_or)
       return static_cast<dirty_pointer>(__builtin_tag_pointer_mask_or((void *)(_ptr), static_cast<uintptr_t>(_value), _mask));
+#else
+      return reinterpret_cast<dirty_pointer>((reinterpret_cast<uintptr_t>(_ptr) & static_cast<uintptr_t>(_mask)) | (static_cast<uintptr_t>(_value) & ~static_cast<uintptr_t>(_mask)));
+#endif
     }
     [[clang::always_inline]] static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
+#if __has_builtin(__builtin_tag_pointer_mask)
       return static_cast<clean_pointer>(__builtin_tag_pointer_mask((void *)_ptr, ~_mask));
+#else
+      return reinterpret_cast<clean_pointer>(reinterpret_cast<uintptr_t>(_ptr) & ~static_cast<uintptr_t>(_mask));
+#endif
     }
     [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer _ptr) noexcept {
+#if __has_builtin(__builtin_tag_pointer_mask_as_int)
       return static_cast<tag_type>(__builtin_tag_pointer_mask_as_int((void *)_ptr, _mask));
+#else
+      return static_cast<tag_type>(reinterpret_cast<uintptr_t>(_ptr) & static_cast<uintptr_t>(_mask));
+#endif
     }
   };
 };
@@ -99,13 +111,25 @@ template <unsigned Bits> struct shift_tag {
     using tag_type = Tag;
 
     [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+#if __has_builtin(__builtin_tag_pointer_shift_or)
       return static_cast<dirty_pointer>(__builtin_tag_pointer_shift_or((void *)(_ptr), (uintptr_t)_value, _shift));
+#else
+      return reinterpret_cast<dirty_pointer>((reinterpret_cast<uintptr_t>(_ptr) << _shift) | (static_cast<uintptr_t>(_value) & ((1ull << static_cast<uintptr_t>(_shift)) - 1ull)));
+#endif
     }
     [[clang::always_inline]] static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
+#if __has_builtin(__builtin_tag_pointer_unshift)
       return static_cast<clean_pointer>(__builtin_tag_pointer_unshift((void *)_ptr, _shift));
+#else
+      return reinterpret_cast<clean_pointer>(reinterpret_cast<uintptr_t>(_ptr) >> _shift);
+#endif
     }
     [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer _ptr) noexcept {
+#if __has_builtin(__builtin_tag_pointer_mask_as_int)
       return static_cast<tag_type>(__builtin_tag_pointer_mask_as_int((void *)_ptr, _mask));
+#else
+      return static_cast<tag_type>(reinterpret_cast<uintptr_t>(_ptr) & static_cast<uintptr_t>(_mask));
+#endif      
     }
   };
 };
