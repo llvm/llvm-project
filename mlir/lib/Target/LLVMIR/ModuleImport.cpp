@@ -875,11 +875,11 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
 }
 
 FlatSymbolRefAttr
-ModuleImport::getOrCreateFakeSymbolName(llvm::GlobalVariable *globalVar) {
+ModuleImport::getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar) {
   assert(globalVar->getName().empty() &&
          "expected to work with a nameless global");
-  auto it = namelessGlobals.find(globalVar);
-  if (it != namelessGlobals.end())
+  auto [it, success] = namelessGlobals.try_emplace(globalVar);
+  if (!success)
     return it->second;
 
   // Make sure the symbol name does not clash with an existing symbol.
@@ -888,7 +888,7 @@ ModuleImport::getOrCreateFakeSymbolName(llvm::GlobalVariable *globalVar) {
       [this](StringRef newName) { return llvmModule->getNamedValue(newName); },
       namelessGlobalId);
   auto symbolRef = FlatSymbolRefAttr::get(context, globalName);
-  namelessGlobals[globalVar] = symbolRef;
+  it->getSecond() = symbolRef;
   return symbolRef;
 }
 
@@ -927,7 +927,7 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // always requires a symbol name.
   StringRef globalName = globalVar->getName();
   if (globalName.empty())
-    globalName = getOrCreateFakeSymbolName(globalVar).getValue();
+    globalName = getOrCreateNamelessSymbolName(globalVar).getValue();
 
   GlobalOp globalOp = builder.create<GlobalOp>(
       mlirModule.getLoc(), type, globalVar->isConstant(),
@@ -1118,7 +1118,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // Empty names are only allowed for global variables.
     if (globalName.empty())
       symbolRef =
-          getOrCreateFakeSymbolName(cast<llvm::GlobalVariable>(globalObj));
+          getOrCreateNamelessSymbolName(cast<llvm::GlobalVariable>(globalObj));
     else
       symbolRef = FlatSymbolRefAttr::get(context, globalName);
     return builder.create<AddressOfOp>(loc, type, symbolRef).getResult();

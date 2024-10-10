@@ -357,7 +357,8 @@ private:
   void processComdat(const llvm::Comdat *comdat);
   /// Returns a symbol name for a nameless global. MLIR, in contrast to LLVM,
   /// always requires a symbol name.
-  FlatSymbolRefAttr getOrCreateFakeSymbolName(llvm::GlobalVariable *globalVar);
+  FlatSymbolRefAttr
+  getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
