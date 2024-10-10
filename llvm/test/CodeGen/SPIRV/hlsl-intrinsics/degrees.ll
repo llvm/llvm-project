@@ -5,11 +5,9 @@
 
 ; CHECK-DAG: %[[#float_32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#float_16:]] = OpTypeFloat 16
-; CHECK-DAG: %[[#float_64:]] = OpTypeFloat 64
 
 ; CHECK-DAG: %[[#vec4_float_32:]] = OpTypeVector %[[#float_32]] 4
 ; CHECK-DAG: %[[#vec4_float_16:]] = OpTypeVector %[[#float_16]] 4
-; CHECK-DAG: %[[#vec4_float_64:]] = OpTypeVector %[[#float_64]] 4
 
 ; CHECK-LABEL: Begin function degrees_float
 define noundef float @degrees_float(float noundef %a) {
@@ -27,15 +25,6 @@ entry:
 ; CHECK: %[[#]] = OpExtInst %[[#float_16]] %[[#op_ext_glsl]] Degrees %[[#float_16_arg]]
   %elt.degrees = call half @llvm.spv.degrees.f16(half %a)
   ret half %elt.degrees
-}
-
-; CHECK-LABEL: Begin function degrees_double
-define noundef double @degrees_double(double noundef %a) {
-entry:
-; CHECK: %[[#float_64_arg:]] = OpFunctionParameter %[[#float_64]]
-; CHECK: %[[#]] = OpExtInst %[[#float_64]] %[[#op_ext_glsl]] Degrees %[[#float_64_arg]]
-  %elt.degrees = call double @llvm.spv.degrees.f64(double %a)
-  ret double %elt.degrees
 }
 
 ; CHECK-LABEL: Begin function degrees_float_vector
@@ -56,19 +45,8 @@ entry:
   ret <4 x half> %elt.degrees
 }
 
-; CHECK-LABEL: Begin function degrees_double_vector
-define noundef <4 x double> @degrees_double_vector(<4 x double> noundef %a) {
-entry:
-; CHECK: %[[#vec4_float_64_arg:]] = OpFunctionParameter %[[#vec4_float_64]]
-; CHECK: %[[#]] = OpExtInst %[[#vec4_float_64]] %[[#op_ext_glsl]] Degrees %[[#vec4_float_64_arg]]
-  %elt.degrees = call <4 x double> @llvm.spv.degrees.v4f64(<4 x double> %a)
-  ret <4 x double> %elt.degrees
-}
-
 declare half @llvm.spv.degrees.f16(half)
 declare float @llvm.spv.degrees.f32(float)
-declare double @llvm.spv.degrees.f64(double)
 
 declare <4 x float> @llvm.spv.degrees.v4f32(<4 x float>)
 declare <4 x half> @llvm.spv.degrees.v4f16(<4 x half>)
-declare <4 x double> @llvm.spv.degrees.v4f64(<4 x double>)
