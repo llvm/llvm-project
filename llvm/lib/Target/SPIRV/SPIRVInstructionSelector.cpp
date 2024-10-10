@@ -229,7 +229,7 @@ private:
 
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
-  
+
   bool selectWaveReadLaneAt(Register ResVReg, const SPIRVType *ResType,
                             MachineInstr &I) const;
 
