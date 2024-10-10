@@ -422,10 +422,6 @@ public:
   /// native LLVM support.
   virtual bool HasNativeLLVMSupport() const;
 
-  /// LookupTypeForExtension - Return the default language type to use for the
-  /// given extension.
-  virtual types::ID LookupTypeForExtension(StringRef Ext) const;
-
   /// IsBlocksDefault - Does this tool chain enable -fblocks by default.
   virtual bool IsBlocksDefault() const { return false; }
 

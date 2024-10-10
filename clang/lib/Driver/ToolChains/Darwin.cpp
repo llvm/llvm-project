@@ -967,16 +967,6 @@ Darwin::Darwin(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : MachO(D, Triple, Args), TargetInitialized(false),
       CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args) {}
 
-types::ID MachO::LookupTypeForExtension(StringRef Ext) const {
-  types::ID Ty = ToolChain::LookupTypeForExtension(Ext);
-
-  // Darwin always preprocesses assembly files (unless -x is used explicitly).
-  if (Ty == types::TY_PP_Asm)
-    return types::TY_Asm;
-
-  return Ty;
-}
-
 bool MachO::HasNativeLLVMSupport() const { return true; }
 
 ToolChain::CXXStdlibType Darwin::GetDefaultCXXStdlibType() const {

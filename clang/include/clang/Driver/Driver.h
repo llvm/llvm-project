@@ -468,11 +468,11 @@ public:
   /// BuildInputs - Construct the list of inputs and their types from
   /// the given arguments.
   ///
-  /// \param TC - The default host tool chain.
+  /// \param TT - The target triple.
   /// \param Args - The input arguments.
   /// \param Inputs - The list to store the resulting compilation
   /// inputs onto.
-  void BuildInputs(const ToolChain &TC, llvm::opt::DerivedArgList &Args,
+  void BuildInputs(const llvm::Triple &TT, llvm::opt::DerivedArgList &Args,
                    InputList &Inputs) const;
 
   /// BuildActions - Construct the list of actions to perform for the
@@ -758,7 +758,8 @@ private:
   /// Will cache ToolChains for the life of the driver object, and create them
   /// on-demand.
   const ToolChain &getToolChain(const llvm::opt::ArgList &Args,
-                                const llvm::Triple &Target) const;
+                                const llvm::Triple &Target,
+                                const InputList &Inputs) const;
 
   /// @}
 

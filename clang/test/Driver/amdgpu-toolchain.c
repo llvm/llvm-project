@@ -29,6 +29,9 @@
 // RUN:   -fuse-ld=ld %s 2>&1 | FileCheck -check-prefixes=LD %s
 // LD: ld.lld
 
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 %s 2>&1 | FileCheck -check-prefix=ROCM %s
+// ROCM-NOT: -mlink-builtin-bitcode
+
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
 // RUN:   -r %s 2>&1 | FileCheck -check-prefixes=RELO %s
 // RELO-NOT: -shared
