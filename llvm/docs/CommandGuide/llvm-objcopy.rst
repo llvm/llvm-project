@@ -120,7 +120,8 @@ multiple file formats.
 .. option:: --remove-symbol-prefix <prefix>
 
  Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
- not start with ``<prefix>``.
+ not start with ``<prefix>``. Can be specified multiple times to remove multiple
+ prefixes.
 
 .. option:: --remove-section <section>, -R
 
@@ -210,7 +211,8 @@ multiple file formats.
 .. option:: --strip-unneeded-symbol <symbol>
 
  Remove from the output all symbols named ``<symbol>`` that are local or
- undefined and are not required by any relocation.
+ undefined and are not required by any relocation. Can be specified multiple
+ times to remove multiple symbols.
 
 .. option:: --strip-unneeded-symbols <filename>
 
@@ -229,7 +231,8 @@ multiple file formats.
 
  Replace the contents of the section ``<name>`` with contents from the file
  ``<file>``. If the section ``<name>`` is part of a segment, the new contents
- cannot be larger than the existing section.
+ cannot be larger than the existing section. Can be specified multiple times
+ to replace the contents of multiple sections.
 
 .. option:: --version, -V
 
@@ -483,16 +486,20 @@ them.
 .. option:: --set-symbol-visibility <symbol>=<visibility>
 
  Change the visibility of a symbol to the specified value.
+ Visibility values: default, internal, hidden, protected. Can be specified
+ multiple times to change the visibility of multiple symbols.
 
 .. option:: --set-symbols-visibility <filename>=<visibility>
 
  Read a list of symbols from <filename> and change their visibility to the
  specified value. Visibility values: default, internal, hidden, protected.
+ Can be specified multiple times to read symbols from multiple files.
 
 .. option:: --skip-symbol <symbol>
 
  Do not change the parameters of symbol ``<symbol>`` when executing other
- options that can change the symbol's name, binding or visibility.
+ options that can change the symbol's name, binding or visibility. Can be
+ specified multiple times to skip multiple symbols.
 
 .. option:: --skip-symbols <filename>
 
@@ -600,7 +607,7 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf64-loongarch`
 - `elf64-s390`
 
-The following formats are suppoprted by :program:`llvm-objcopy` for the
+The following formats are supported by :program:`llvm-objcopy` for the
 :option:`--output-target` only:
 
 - `srec`
