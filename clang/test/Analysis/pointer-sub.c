@@ -10,6 +10,9 @@ void f1(void) {
   d = &x - (&x + 1); // no-warning
   d = (&x + 0) - &x; // no-warning
   d = (z + 10) - z; // no-warning
+  d = (unsigned long)&y - (unsigned long)&x; // no-warning
+  unsigned long l = 1;
+  d = l - (unsigned long)&y; // no-warning
 }
 
 void f2(void) {
@@ -28,6 +31,10 @@ void f2(void) {
 
   d = (int *)((char *)(&a[4]) + sizeof(int)) - &a[4]; // no-warning (pointers into the same array data)
   d = (int *)((char *)(&a[4]) + 1) - &a[4]; // expected-warning{{Subtraction of two pointers that}}
+
+  long a1 = (long)&a[1];
+  long b1 = (long)&b[1];
+  d = a1 - b1;
 }
 
 void f3(void) {
