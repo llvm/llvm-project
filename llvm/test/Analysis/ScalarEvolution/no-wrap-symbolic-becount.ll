@@ -96,7 +96,7 @@ define void @pointer_iv_nowrap(ptr %startptr, ptr %endptr) local_unnamed_addr {
 ; CHECK-LABEL: 'pointer_iv_nowrap'
 ; CHECK-NEXT:  Classifying expressions for: @pointer_iv_nowrap
 ; CHECK-NEXT:    %init = getelementptr inbounds i8, ptr %startptr, i64 2000
-; CHECK-NEXT:    --> (2000 + %startptr) U: full-set S: full-set
+; CHECK-NEXT:    --> (2000 + %startptr)(u nuw) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi ptr [ %init, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {(2000 + %startptr),+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i8, ptr %iv, i64 1

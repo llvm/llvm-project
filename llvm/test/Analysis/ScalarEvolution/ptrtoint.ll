@@ -192,7 +192,7 @@ define void @ptrtoint_of_gep(ptr %in, ptr %out0) {
 ; X64-LABEL: 'ptrtoint_of_gep'
 ; X64-NEXT:  Classifying expressions for: @ptrtoint_of_gep
 ; X64-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
-; X64-NEXT:    --> (42 + %in) U: full-set S: full-set
+; X64-NEXT:    --> (42 + %in)(u nuw) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %in_adj to i64
 ; X64-NEXT:    --> (42 + (ptrtoint ptr %in to i64)) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_gep
@@ -200,7 +200,7 @@ define void @ptrtoint_of_gep(ptr %in, ptr %out0) {
 ; X32-LABEL: 'ptrtoint_of_gep'
 ; X32-NEXT:  Classifying expressions for: @ptrtoint_of_gep
 ; X32-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
-; X32-NEXT:    --> (42 + %in) U: full-set S: full-set
+; X32-NEXT:    --> (42 + %in)(u nuw) U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoint ptr %in_adj to i64
 ; X32-NEXT:    --> (zext i32 (42 + (ptrtoint ptr %in to i32)) to i64) U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_gep
