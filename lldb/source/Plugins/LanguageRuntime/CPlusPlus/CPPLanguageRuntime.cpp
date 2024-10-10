@@ -219,6 +219,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   // First we'll try to extract the __func<...> template instantiation's type by looking up
   // the declarations of the member function pointers in it's vtable
   CompilerType func_type;
+  Address func_method_addr;
   {
     ValueObjectSP vtable = func_as_base->GetVTable();
 
@@ -241,11 +242,10 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
       if (!mfunc_load_addr)
         continue;
       
-      Address mfunc_symbol_addr;
-      if (!valobj_sp->GetTargetSP()->ResolveLoadAddress(mfunc_load_addr, mfunc_symbol_addr))
+      if (!valobj_sp->GetTargetSP()->ResolveLoadAddress(mfunc_load_addr, func_method_addr))
         continue;
       
-      Function* func = mfunc_symbol_addr.CalculateSymbolContextFunction();
+      Function* func = func_method_addr.CalculateSymbolContextFunction();
       if (!func)
         continue;
       
@@ -263,47 +263,86 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     }
   }
   
-  // Regardless of what std::function wraps we are looking for the load address of a function to call
-  std::optional<addr_t> target_func_load_addr;
-
-  if (CompilerType callable_type = func_type.GetTypeTemplateArgument(0)) {
-    if (callable_type.IsFunctionPointerType() || callable_type.IsMemberFunctionPointerType()) {
-      // TODO: The previous implementation just does raw pointer arithmetic and reads
-      // 'a pointer' to a function right after the vtable.
-      //
-      // What is the preferred approach? Go digging for the compressed_pair.first in __func
-      // or assume layout citing ABI compatibility requirements?
-    } else if (callable_type.IsRecordType()) {
-      // Target is a lambda, or a generic callable. Search for a single operator() overload
-      std::optional<ConstString> mangled_func_name;
+  CompilerType callable_type = func_type.GetTypeTemplateArgument(0);
+  if (!callable_type)
+    return optional_info;
+  
+  if (callable_type.IsFunctionPointerType() || callable_type.IsMemberFunctionPointerType()) {
+    // TODO: The previous implementation just does raw pointer arithmetic and reads
+    // 'a pointer' to a function right after the vtable.
+    //
+    // What is the preferred approach? Go digging for the compressed_pair.first in __func
+    // or assume layout citing ABI compatibility requirements?
+  } else if (callable_type.IsRecordType()) {
+    // Target is a lambda, or a generic callable. Search for a single operator() overload
+    std::optional<ConstString> mangled_func_name;
+    
+    // TODO: I am still not sure whether it is a good idea to reconstruct the full type
+    // here.. it seems there are handy FindFunctions that could perhaps to a good job
+    // at locating candidates. However even when limiting the search to the decl_ctx of
+    // the class the code seems to iterate over way more DIEs than I expected. What to do?
+    
+    // TODO: Because we have access to the type we know a _lot_ about callable_type, we
+    // could even extract a ValueObjectSP to it if we wanted. It would be cool to make
+    // std::function have a synt children provider showing the wrapped lambda/callable!
+    
+    for (uint32_t idx = 0; idx < callable_type.GetNumMemberFunctions(); idx++) {
+      TypeMemberFunctionImpl mfunc = callable_type.GetMemberFunctionAtIndex(idx);
       
-      for (uint32_t idx = 0; idx < callable_type.GetNumMemberFunctions(); idx++) {
-        TypeMemberFunctionImpl mfunc = callable_type.GetMemberFunctionAtIndex(idx);
-        
-        if (mfunc.GetKind() != eMemberFunctionKindInstanceMethod)
-          continue;
-        
-        if (mfunc.GetName() != "operator()")
-          continue;
-          
-        if (mangled_func_name)
-          return optional_info; // Cannot resolve ambiguous target
-        
-        mangled_func_name = mfunc.GetMangledName();
-      }
+      if (mfunc.GetKind() != eMemberFunctionKindInstanceMethod)
+        continue;
       
-      // TODO: The SymbolFile did a bunch of work to reconstruct `callable_type`,
-      // including it's member functions. Surely it knows there they are loaded?
+      if (mfunc.GetName() != "operator()")
+        continue;
+        
+      if (mangled_func_name)
+        return optional_info; // Cannot resolve ambiguous target
+      
+      mangled_func_name = mfunc.GetMangledName();
     }
-  } else {
-    // TODO: What if we don't have debug info for callable_type? Do we fallback to
-    // treating the std::function as wrapping a function/member function pointer
-    // due to lack of options, or give up to avoid guessing wrong?
+    
+    // Locate the symbol context corresponding to the target function
+    SymbolContext sc;
+    {
+      // We'll assume that callable_type is in the same module as the vtable
+      ModuleSP mod = func_method_addr.CalculateSymbolContextModule();
+    
+      // Limit our lookup to callable_type
+      CompilerDeclContext decl_ctx = callable_type.GetTypeSystem()->GetCompilerDeclContextForType(callable_type);
+      
+      SymbolContextList list;
+      mod->FindFunctions(*mangled_func_name, decl_ctx, eFunctionNameTypeFull, {}, list);
+      
+      if (list.GetSize() != 1)
+        return optional_info;
+      
+      list.GetContextAtIndex(0, sc);
+    }
+    
+    // TODO: This feels a bit clunky, I am probably misusing the API? FindFunctions returns me
+    // SymbolContexts with the .function set but not .symbol ... At first glance it seemed like
+    // if we know the function there must be a symbol too!
+    if (!sc.function)
+      return optional_info;
+    
+    Symbol* symbol = sc.function->GetAddressRange().GetBaseAddress().CalculateSymbolContextSymbol();
+    if (!symbol)
+      return optional_info;
+    
+    return LibCppStdFunctionCallableInfo {
+      .callable_symbol = *symbol,
+      .callable_address = symbol->GetAddress(),
+      .callable_line_entry = sc.GetFunctionStartLineEntry(),
+      
+      // TODO: Can't tell lambdas apart from generic callables.. do we really need to?
+      // Is it important to have the correct qualification in the summary?
+      .callable_case = LibCppStdFunctionCallableCase::Lambda
+    };
   }
   
-  if (!target_func_load_addr)
+  // Unrecognized callable type - skip the original implementation for now
+  if (!callable_type.IsVoidType())
     return optional_info;
-    
   
   // Member __f_ has type __base*, the contents of which will hold:
   // 1) a vtable entry which may hold type information needed to discover the
