@@ -346,8 +346,8 @@ public:
   virtual void CalculateDynamicSaveCoreRanges(
       lldb_private::Process &process,
       std::vector<lldb_private::MemoryRegionInfo> &ranges,
-      llvm::function_ref<bool(const lldb_private::Thread &)> save_thread_predicate) {
-  };
+      llvm::function_ref<bool(const lldb_private::Thread &)>
+          save_thread_predicate) {};
 
 protected:
   // Utility methods for derived classes
