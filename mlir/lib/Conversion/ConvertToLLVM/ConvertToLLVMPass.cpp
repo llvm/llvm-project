@@ -63,6 +63,8 @@ public:
 /// the injection of conversion patterns.
 class ConvertToLLVMPass
     : public impl::ConvertToLLVMPassBase<ConvertToLLVMPass> {
+  std::shared_ptr<const SmallVector<ConvertToLLVMPatternInterface *>>
+      interfaces;
   std::shared_ptr<const FrozenRewritePatternSet> patterns;
   std::shared_ptr<const ConversionTarget> target;
   std::shared_ptr<const LLVMTypeConverter> typeConverter;
@@ -75,10 +77,21 @@ public:
   }
 
   LogicalResult initialize(MLIRContext *context) final {
+    std::shared_ptr<SmallVector<ConvertToLLVMPatternInterface *>> interfaces;
+    std::shared_ptr<ConversionTarget> target;
+    std::shared_ptr<LLVMTypeConverter> typeConverter;
     RewritePatternSet tempPatterns(context);
-    auto target = std::make_shared<ConversionTarget>(*context);
-    target->addLegalDialect<LLVM::LLVMDialect>();
-    auto typeConverter = std::make_shared<LLVMTypeConverter>(context);
+
+    // Only collect the interfaces if `useConversionAttrs=true` as everything
+    // else must be initialized in `runOnOperation`.
+    if (useConversionAttrs) {
+      interfaces =
+          std::make_shared<SmallVector<ConvertToLLVMPatternInterface *>>();
+    } else {
+      target = std::make_shared<ConversionTarget>(*context);
+      target->addLegalDialect<LLVM::LLVMDialect>();
+      typeConverter = std::make_shared<LLVMTypeConverter>(context);
+    }
 
     if (!filterDialects.empty()) {
       // Test mode: Populate only patterns from the specified dialects. Produce
@@ -94,6 +107,10 @@ public:
           return emitError(UnknownLoc::get(context))
                  << "dialect does not implement ConvertToLLVMPatternInterface: "
                  << dialectName << "\n";
+        if (useConversionAttrs) {
+          interfaces->push_back(iface);
+          continue;
+        }
         iface->populateConvertToLLVMConversionPatterns(*target, *typeConverter,
                                                        tempPatterns);
       }
@@ -106,20 +123,52 @@ public:
         auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
         if (!iface)
           continue;
+        if (useConversionAttrs) {
+          interfaces->push_back(iface);
+          continue;
+        }
         iface->populateConvertToLLVMConversionPatterns(*target, *typeConverter,
                                                        tempPatterns);
       }
     }
 
-    this->patterns =
-        std::make_unique<FrozenRewritePatternSet>(std::move(tempPatterns));
-    this->target = target;
-    this->typeConverter = typeConverter;
+    if (useConversionAttrs) {
+      this->interfaces = interfaces;
+    } else {
+      this->patterns =
+          std::make_unique<FrozenRewritePatternSet>(std::move(tempPatterns));
+      this->target = target;
+      this->typeConverter = typeConverter;
+    }
     return success();
   }
 
   void runOnOperation() final {
-    if (failed(applyPartialConversion(getOperation(), *target, *patterns)))
+    // Fast path:
+    if (!useConversionAttrs) {
+      if (failed(applyPartialConversion(getOperation(), *target, *patterns)))
+        signalPassFailure();
+      return;
+    }
+    // Slow path with conversion attributes.
+    MLIRContext *context = &getContext();
+    RewritePatternSet patterns(context);
+    ConversionTarget target(*context);
+    target.addLegalDialect<LLVM::LLVMDialect>();
+    LLVMTypeConverter typeConverter(context);
+
+    // Configure the conversion with dialect level interfaces.
+    for (ConvertToLLVMPatternInterface *iface : *interfaces)
+      iface->populateConvertToLLVMConversionPatterns(target, typeConverter,
+                                                     patterns);
+
+    // Configure the conversion attribute interfaces.
+    populateOpConvertToLLVMConversionPatterns(getOperation(), target,
+                                              typeConverter, patterns);
+
+    // Apply the conversion.
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

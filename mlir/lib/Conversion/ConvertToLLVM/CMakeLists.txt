@@ -7,6 +7,7 @@ add_mlir_conversion_library(MLIRConvertToLLVMInterface
   ToLLVMInterface.cpp
 
   DEPENDS
+  MLIRConvertToLLVMInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
