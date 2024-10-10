@@ -8422,6 +8422,10 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
           Opcode == ISD::STRICT_FMINNUM || Opcode == ISD::STRICT_FMAXNUM) &&
          "Wrong opcode");
 
+  EVT VT = Node->getValueType(0);
+  if (VT.isVector() && isOperationLegal(Opcode, VT.getScalarType()))
+    return SDValue();
+
   if (Node->getFlags().hasNoNaNs()) {
     ISD::CondCode Pred = Opcode == ISD::FMINNUM ? ISD::SETLT : ISD::SETGT;
     EVT VT = Node->getValueType(0);
