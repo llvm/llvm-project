@@ -775,6 +775,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
              ISD::FMAXNUM,
              ISD::FMINIMUM,
              ISD::FMAXIMUM,
+             ISD::FCANONICALIZE,
              ISD::STRICT_FADD,
              ISD::STRICT_FSUB,
              ISD::STRICT_FMUL,
@@ -818,6 +819,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationPromotedToType(ISD::FROUNDEVEN, V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FRINT,      V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FNEARBYINT, V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FCANONICALIZE, V4Narrow, MVT::v4f32);
 
     setOperationAction(ISD::FABS,        V4Narrow, Legal);
     setOperationAction(ISD::FNEG, 	 V4Narrow, Legal);
@@ -851,6 +853,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V8Narrow, Expand);
     setOperationAction(ISD::FP_EXTEND,   V8Narrow, Expand);
+    setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
   };
 
   if (!Subtarget->hasFullFP16()) {
@@ -880,8 +883,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(Op, MVT::f16, Legal);
   }
   // clang-format on
-  if (!Subtarget->hasFullFP16())
-    setOperationPromotedToType(ISD::FCANONICALIZE, MVT::f16, MVT::f32);
 
   // Basic strict FP operations are legal
   for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
@@ -1363,10 +1364,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       if (Subtarget->hasFullFP16())
         for (MVT Ty : {MVT::v4f16, MVT::v8f16})
           setOperationAction(Op, Ty, Legal);
-    }
-    if (!Subtarget->hasFullFP16()) {
-      setOperationPromotedToType(ISD::FCANONICALIZE, MVT::v4f16, MVT::v4f32);
-      setOperationPromotedToType(ISD::FCANONICALIZE, MVT::v8f16, MVT::v8f32);
     }
 
     // LRINT and LLRINT.
