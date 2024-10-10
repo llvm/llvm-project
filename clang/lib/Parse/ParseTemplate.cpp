@@ -1432,6 +1432,10 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
       UnqualifiedId Name;
       Name.setIdentifier(Tok.getIdentifierInfo(), Tok.getLocation());
       ConsumeToken(); // the identifier
+      if (Tok.isNot(tok::less)) {
+        Diag(Tok.getLocation(),
+             diag::warn_missing_template_arg_list_after_template_kw_deprecated);
+      }
 
       TryConsumeToken(tok::ellipsis, EllipsisLoc);
 
