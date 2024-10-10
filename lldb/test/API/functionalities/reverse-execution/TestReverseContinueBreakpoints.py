@@ -11,11 +11,9 @@ from lldbsuite.test import lldbutil
 class TestReverseContinueBreakpoints(ReverseTestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfDarwin # No Darwin ProcessNative impl for lldb-server
     def test_reverse_continue(self):
         self.reverse_continue_internal(async_mode=False)
 
-    @skipIfDarwin # No Darwin ProcessNative impl for lldb-server
     def test_reverse_continue_async(self):
         self.reverse_continue_internal(async_mode=True)
 
@@ -39,11 +37,9 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
-    @skipIfDarwin # No Darwin ProcessNative impl for lldb-server
     def test_reverse_continue_breakpoint(self):
         self.reverse_continue_breakpoint_internal(async_mode=False)
 
-    @skipIfDarwin # No Darwin ProcessNative impl for lldb-server
     def test_reverse_continue_breakpoint_async(self):
         self.reverse_continue_breakpoint_internal(async_mode=True)
 
@@ -58,11 +54,9 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         threads_now = lldbutil.get_threads_stopped_at_breakpoint(process, trigger_bkpt)
         self.assertEqual(threads_now, initial_threads)
 
-    @skipIfDarwin # No Darwin ProcessNative impl for lldb-server
     def test_reverse_continue_skip_breakpoint(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=False)
 
-    @skipIfDarwin # No Darwin ProcessNative impl for lldb-server
     def test_reverse_continue_skip_breakpoint_async(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=True)
 
