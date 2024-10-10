@@ -48,12 +48,14 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/CallingConv.h"
@@ -75,6 +77,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include <cassert>
 #include <optional>
 
 using namespace clang;
@@ -2043,6 +2046,11 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
                  *this,
                  GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel),
                  ND));
+
+  if (getCodeGenOpts().NoDemanglingFailures)
+    assert((!llvm::isMangledName(MangledName) ||
+            llvm::demangle(MangledName) != MangledName) &&
+           "clang must demangle a mangled name it generates!");
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();

@@ -462,6 +462,9 @@ ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
 /// non-deleting destructors. (No effect on Microsoft ABI.)
 CODEGENOPT(CtorDtorReturnThis, 1, 0)
 
+/// Whether to validate if a produced mangled name can be demangled with LLVM demangler.
+CODEGENOPT(NoDemanglingFailures, 1, 0)
+
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 
