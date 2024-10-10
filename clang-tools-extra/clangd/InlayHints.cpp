@@ -11,9 +11,11 @@
 #include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -23,15 +25,22 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <iterator>
 #include <optional>
 #include <string>
 
@@ -372,6 +381,25 @@ maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   return Params;
 }
 
+template <typename R, typename P>
+std::string joinAndTruncate(R &&Range, size_t MaxLength,
+                            P &&GetAsStringFunction) {
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  llvm::ListSeparator Sep(", ");
+  for (auto &&Element : Range) {
+    OS << Sep;
+    auto AsString = GetAsStringFunction(Element);
+    if (Out.size() + AsString.size() >= MaxLength) {
+      OS << "...";
+      break;
+    }
+    OS << AsString;
+  }
+  OS.flush();
+  return Out;
+}
+
 struct Callee {
   // Only one of Decl or Loc is set.
   // Loc is for calls through function pointers.
@@ -422,7 +450,8 @@ public:
     Callee.Decl = E->getConstructor();
     if (!Callee.Decl)
       return true;
-    processCall(Callee, {E->getArgs(), E->getNumArgs()});
+    processCall(Callee, E->getParenOrBraceRange().getEnd(),
+                {E->getArgs(), E->getNumArgs()});
     return true;
   }
 
@@ -495,7 +524,7 @@ public:
             dyn_cast_or_null<CXXMethodDecl>(Callee.Decl))
       if (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter())
         Args = Args.drop_front(1);
-    processCall(Callee, Args);
+    processCall(Callee, E->getRParenLoc(), Args);
     return true;
   }
 
@@ -709,7 +738,8 @@ public:
 private:
   using NameVec = SmallVector<StringRef, 8>;
 
-  void processCall(Callee Callee, llvm::ArrayRef<const Expr *> Args) {
+  void processCall(Callee Callee, SourceRange RParenOrBraceRange,
+                   llvm::ArrayRef<const Expr *> Args) {
     assert(Callee.Decl || Callee.Loc);
 
     if (!Cfg.InlayHints.Parameters || Args.size() == 0)
@@ -720,6 +750,9 @@ private:
       if (auto *Ctor = dyn_cast<CXXConstructorDecl>(Callee.Decl))
         if (Ctor->isCopyOrMoveConstructor())
           return;
+
+    SmallVector<std::string> FormattedDefaultArgs;
+    bool HasNonDefaultArgs = false;
 
     ArrayRef<const ParmVarDecl *> Params, ForwardedParams;
     // Resolve parameter packs to their forwarded parameter
@@ -752,14 +785,40 @@ private:
       }
 
       StringRef Name = ParameterNames[I];
-      bool NameHint = shouldHintName(Args[I], Name);
-      bool ReferenceHint = shouldHintReference(Params[I], ForwardedParams[I]);
+      const bool NameHint = shouldHintName(Args[I], Name);
+      const bool ReferenceHint =
+          shouldHintReference(Params[I], ForwardedParams[I]);
 
-      if (NameHint || ReferenceHint) {
+      const bool IsDefault = isa<CXXDefaultArgExpr>(Args[I]);
+      HasNonDefaultArgs |= !IsDefault;
+      if (IsDefault) {
+        if (Cfg.InlayHints.DefaultArguments) {
+          const auto SourceText = Lexer::getSourceText(
+              CharSourceRange::getTokenRange(Params[I]->getDefaultArgRange()),
+              AST.getSourceManager(), AST.getLangOpts());
+          const auto Abbrev = SourceText.size() > Cfg.InlayHints.TypeNameLimit
+                                  ? "..."
+                                  : SourceText;
+          if (NameHint)
+            FormattedDefaultArgs.emplace_back(
+                llvm::formatv("{0}: {1}", Name, Abbrev));
+          else
+            FormattedDefaultArgs.emplace_back(llvm::formatv("{0}", Abbrev));
+        }
+      } else if (NameHint || ReferenceHint) {
         addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
                      InlayHintKind::Parameter, ReferenceHint ? "&" : "",
                      NameHint ? Name : "", ": ");
       }
+    }
+
+    if (!FormattedDefaultArgs.empty()) {
+      std::string Hint =
+          joinAndTruncate(FormattedDefaultArgs, Cfg.InlayHints.TypeNameLimit,
+                          [](const auto &E) { return E; });
+      addInlayHint(RParenOrBraceRange, HintSide::Left,
+                   InlayHintKind::DefaultArgument,
+                   HasNonDefaultArgs ? ", " : "", Hint, "");
     }
   }
 
@@ -968,6 +1027,7 @@ private:
       CHECK_KIND(Type, DeducedTypes);
       CHECK_KIND(Designator, Designators);
       CHECK_KIND(BlockEnd, BlockEnd);
+      CHECK_KIND(DefaultArgument, DefaultArguments);
 #undef CHECK_KIND
     }
 
