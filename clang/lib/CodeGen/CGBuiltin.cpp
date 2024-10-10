@@ -19446,8 +19446,9 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
            "clip operands types mismatch");
     return handleHlslClip(E, this);
-  case Builtin::BI__builtin_group_memory_barrier_with_group_sync: {
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();
+  case Builtin::BI__builtin_hlsl_group_memory_barrier_with_group_sync: {
+    Intrinsic::ID ID =
+        CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();
     return EmitRuntimeCall(Intrinsic::getDeclaration(&CGM.getModule(), ID));
   }
   }

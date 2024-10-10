@@ -2490,7 +2490,7 @@ float4 radians(float4);
 /// accesses have been completed and all threads in the group have reached this
 /// call.
 
-_HLSL_BUILTIN_ALIAS(__builtin_group_memory_barrier_with_group_sync)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
 void GroupMemoryBarrierWithGroupSync(void);
 
 } // namespace hlsl

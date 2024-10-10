@@ -10,10 +10,10 @@
 // CHECK-DXIL: define void @
 // CHECK-SPIRV: define spir_func void @
 void test_GroupMemoryBarrierWithGroupSync() {
-// CHECK: call void @llvm.[[TARGET]].groupMemoryBarrierWithGroupSync()
+// CHECK: call void @llvm.[[TARGET]].group.memory.barrier.with.group.sync()
   GroupMemoryBarrierWithGroupSync();
 }
 
-// CHECK: declare void @llvm.[[TARGET]].groupMemoryBarrierWithGroupSync() #[[ATTRS:[0-9]+]]
+// CHECK: declare void @llvm.[[TARGET]].group.memory.barrier.with.group.sync() #[[ATTRS:[0-9]+]]
 // CHECK-NOT: attributes #[[ATTRS]] = {{.+}}memory(none){{.+}}
 // CHECK: attributes #[[ATTRS]] = {
