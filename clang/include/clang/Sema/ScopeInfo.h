@@ -732,7 +732,7 @@ public:
   QualType ReturnType;
 
   /// Packs introduced by this, if any.
-  SmallVector<NamedDecl*, 4> LocalPacks;
+  SmallVector<NamedDecl *, 4> LocalPacks;
 
   void addCapture(ValueDecl *Var, bool isBlock, bool isByref, bool isNested,
                   SourceLocation Loc, SourceLocation EllipsisLoc,

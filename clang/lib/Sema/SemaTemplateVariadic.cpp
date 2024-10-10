@@ -149,7 +149,8 @@ namespace {
     /// Suppress traversal into types that do not contain
     /// unexpanded parameter packs.
     bool TraverseType(QualType T) {
-      if ((!T.isNull() && T->containsUnexpandedParameterPack()) || InLambdaOrBlock)
+      if ((!T.isNull() && T->containsUnexpandedParameterPack()) ||
+          InLambdaOrBlock)
         return inherited::TraverseType(T);
 
       return true;
@@ -277,7 +278,7 @@ namespace {
     }
 
     /// Analogously for blocks.
-    bool TraverseBlockExpr(BlockExpr* Block) {
+    bool TraverseBlockExpr(BlockExpr *Block) {
       if (!Block->containsUnexpandedParameterPack())
         return true;
 
