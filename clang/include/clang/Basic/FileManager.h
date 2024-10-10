@@ -290,14 +290,19 @@ public:
 
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
+  /// The IsText parameter controls whether the file should be opened as a text
+  /// or binary file, and should be set to false if the file contents should be
+  /// treated as binary.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(FileEntryRef Entry, bool isVolatile = false,
-                   bool RequiresNullTerminator = true, bool IsText = true,
-                   std::optional<int64_t> MaybeLimit = std::nullopt);
+                   bool RequiresNullTerminator = true,
+                   std::optional<int64_t> MaybeLimit = std::nullopt,
+                   bool IsText = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
-                   bool RequiresNullTerminator = true, bool IsText = true,
-                   std::optional<int64_t> MaybeLimit = std::nullopt) const {
+                   bool RequiresNullTerminator = true,
+                   std::optional<int64_t> MaybeLimit = std::nullopt,
+                   bool IsText = true) const {
     return getBufferForFileImpl(Filename,
                                 /*FileSize=*/MaybeLimit.value_or(-1),
                                 isVolatile, RequiresNullTerminator, IsText);
