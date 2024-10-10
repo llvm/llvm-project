@@ -158,6 +158,7 @@ Changes to the RISC-V Backend
 * Added `Smctr` and `Ssctr` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* Added Smdbltrp, Ssdbltrp extensions to -march.
 
 Changes to the WebAssembly Backend
 ----------------------------------
