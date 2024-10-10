@@ -4,43 +4,8 @@ module attributes {omp.is_target_device = false} {
   ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>):
     %0 = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "simple_var", pinned, uniq_name = "_QFtarget_simpleEsimple_var"}
     %1 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-    %2 = fir.box_addr %1 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-    %3 = fir.convert %2 : (!fir.heap<i32>) -> i64
-    %c0_i64 = arith.constant 0 : i64
-    %4 = arith.cmpi ne, %3, %c0_i64 : i64
-    fir.if %4 {
-      %6 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-      %7 = fir.box_addr %6 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-      %8 = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFtarget_simpleEsimple_var.alloc"}
-      %9 = fir.embox %8 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-      fir.store %9 to %0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-    } else {
-      %6 = fir.zero_bits !fir.heap<i32>
-      %7 = fir.embox %6 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-      fir.store %7 to %0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-    }
     %5:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_simpleEsimple_var"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
     omp.yield(%5#0 : !fir.ref<!fir.box<!fir.heap<i32>>>)
-  } dealloc {
-  ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>):
-    %0 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-    %1 = fir.box_addr %0 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-    %2 = fir.convert %1 : (!fir.heap<i32>) -> i64
-    %c0_i64 = arith.constant 0 : i64
-    %3 = arith.cmpi ne, %2, %c0_i64 : i64
-    fir.if %3 {
-      %false = arith.constant false
-      %4 = fir.absent !fir.box<none>
-      %c70 = arith.constant 70 : index
-      %c10_i32 = arith.constant 10 : i32
-      %6 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-      %7 = fir.box_addr %6 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-      fir.freemem %7 : !fir.heap<i32>
-      %8 = fir.zero_bits !fir.heap<i32>
-      %9 = fir.embox %8 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-      fir.store %9 to %arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-    }
-    omp.yield
   }
   func.func @_QPtarget_simple() {
     %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFtarget_simpleEa"}
