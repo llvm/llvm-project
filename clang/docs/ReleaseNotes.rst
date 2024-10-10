@@ -493,7 +493,6 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in debug mode, and potential crashes in release mode, when
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
 - Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
-- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Fixed an issue deducing non-type template arguments of reference type. (#GH73460)
 - Fixed an issue in constraint evaluation, where type constraints on the lambda expression
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
@@ -503,9 +502,6 @@ Bug Fixes to C++ Support
   in certain friend declarations. (#GH93099)
 - Clang now instantiates the correct lambda call operator when a lambda's class type is
   merged across modules. (#GH110401)
-- Clang now uses the correct set of template argument lists when comparing the constraints of
-  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
-  a class template. (#GH102320)
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 
 Bug Fixes to AST Handling
