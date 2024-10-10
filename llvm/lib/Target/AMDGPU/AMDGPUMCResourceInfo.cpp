@@ -92,7 +92,8 @@ MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
 }
 
 // The (partially complete) expression should have no recursion in it. After
-// all, we're trying to avoid recursion using this codepath.
+// all, we're trying to avoid recursion using this codepath. Returns true if
+// Sym is found within Expr without recursing on Expr, false otherwise.
 static bool findSymbolInExpr(MCSymbol *Sym, const MCExpr *Expr,
                              SmallVectorImpl<const MCExpr *> &Exprs,
                              SmallPtrSetImpl<const MCExpr *> &Visited) {
@@ -137,7 +138,8 @@ static bool findSymbolInExpr(MCSymbol *Sym, const MCExpr *Expr,
 // recursive) must be avoided. Do a walk over Expr to see if Sym will occur in
 // it. The Expr is an MCExpr given through a callee's equivalent MCSymbol so if
 // no recursion is found Sym can be safely assigned to a (sub-)expr which
-// contains the symbol Expr is associated with.
+// contains the symbol Expr is associated with. Returns true if Sym exists
+// in Expr or its sub-expressions, false otherwise.
 static bool foundRecursiveSymbolDef(MCSymbol *Sym, const MCExpr *Expr) {
   SmallVector<const MCExpr *, 8> WorkList;
   SmallPtrSet<const MCExpr *, 8> Visited;
@@ -172,12 +174,8 @@ void MCResourceInfo::assignResourceInfoExpr(
       if (!Seen.insert(Callee).second)
         continue;
       MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
-      if (CalleeValSym->isVariable()) {
-        if (!foundRecursiveSymbolDef(
-                Sym, CalleeValSym->getVariableValue(/*isUsed=*/false))) {
-          ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
-        }
-      } else {
+      bool CalleeIsVar = CalleeValSym->isVariable();
+      if (!CalleeIsVar || (CalleeIsVar && !foundRecursiveSymbolDef(Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
       }
     }
@@ -235,16 +233,11 @@ void MCResourceInfo::gatherResourceInfo(
       if (!Seen.insert(Callee).second)
         continue;
       if (!Callee->isDeclaration()) {
-        MCSymbol *calleeValSym =
+        MCSymbol *CalleeValSym =
             getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
-        if (calleeValSym->isVariable()) {
-          if (!foundRecursiveSymbolDef(
-                  Sym, calleeValSym->getVariableValue(/*isUsed=*/false))) {
-            ArgExprs.push_back(
-                MCSymbolRefExpr::create(calleeValSym, OutContext));
-          }
-        } else {
-          ArgExprs.push_back(MCSymbolRefExpr::create(calleeValSym, OutContext));
+        bool CalleeIsVar = CalleeValSym->isVariable();
+        if (!CalleeIsVar || (CalleeIsVar && !foundRecursiveSymbolDef(Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
+          ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
         }
       }
     }
