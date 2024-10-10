@@ -3470,10 +3470,10 @@ bool UnwrappedLineParser::parseRequires() {
   case tok::r_paren:
   case tok::kw_noexcept:
   case tok::kw_const:
+  case tok::amp:
     // This is a requires clause.
     parseRequiresClause(RequiresToken);
     return true;
-  case tok::amp:
   case tok::ampamp: {
     // This can be either:
     // if (... && requires (T t) ...)
@@ -3526,17 +3526,6 @@ bool UnwrappedLineParser::parseRequires() {
         FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
-      }
-      break;
-    case tok::equalequal:
-    case tok::greaterequal:
-    case tok::lessequal:
-    case tok::r_paren:
-    case tok::pipepipe:
-      if (OpenAngles == 0) {
-        FormatTok = Tokens->setPosition(StoredPosition);
-        parseRequiresClause(RequiresToken);
-        return true;
       }
       break;
     case tok::eof:
