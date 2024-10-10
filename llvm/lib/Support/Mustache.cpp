@@ -12,7 +12,119 @@
 
 using namespace llvm;
 using namespace llvm::json;
-using namespace llvm::mustache;
+
+namespace llvm {
+namespace mustache {
+
+class Token {
+public:
+  enum class Type {
+    Text,
+    Variable,
+    Partial,
+    SectionOpen,
+    SectionClose,
+    InvertSectionOpen,
+    UnescapeVariable,
+    Comment,
+  };
+  
+  Token(StringRef Str);
+
+  Token(StringRef RawBody, StringRef Str, char Identifier);
+
+  StringRef getTokenBody() const { return TokenBody; };
+
+  StringRef getRawBody() const { return RawBody; };
+
+  void setTokenBody(StringRef NewBody) { TokenBody = NewBody.str(); };
+
+  Accessor getAccessor() const { return Accessor; };
+
+  Type getType() const { return TokenType; };
+
+  void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
+
+  size_t getIndentation() const { return Indentation; };
+
+  static Type getTokenType(char Identifier);
+
+private:
+  size_t Indentation;
+  Type TokenType;
+  // RawBody is the original string that was tokenized
+  SmallString<0> RawBody;
+  Accessor Accessor;
+  // TokenBody is the original string with the identifier removed
+  SmallString<0> TokenBody;
+};
+
+class ASTNode {
+public:
+  enum Type {
+    Root,
+    Text,
+    Partial,
+    Variable,
+    UnescapeVariable,
+    Section,
+    InvertSection,
+  };
+
+  ASTNode() : T(Type::Root), ParentContext(nullptr) {};
+
+  ASTNode(StringRef Body, ASTNode *Parent)
+      : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr),
+        Indentation(0) {};
+
+  // Constructor for Section/InvertSection/Variable/UnescapeVariable
+  ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
+      : T(T), Parent(Parent), Children({}), Accessor(Accessor),
+        ParentContext(nullptr), Indentation(0) {};
+
+  void addChild(ASTNode *Child) { Children.emplace_back(Child); };
+
+  void setBody(StringRef NewBody) { Body = NewBody; };
+
+  void setRawBody(StringRef NewBody) { RawBody = NewBody; };
+
+  void setIndentation(size_t NewIndentation) { Indentation = NewIndentation; };
+
+  void render(const llvm::json::Value &Data, SmallString<0> &Output);
+
+  void setUpNode(llvm::BumpPtrAllocator &Alloc, StringMap<ASTNode *> &Partials,
+                 StringMap<Lambda> &Lambdas,
+                 StringMap<SectionLambda> &SectionLambdas,
+                 DenseMap<char, StringRef> &Escapes);
+
+private:
+  void renderLambdas(const llvm::json::Value &Contexts, SmallString<0> &Output,
+                     Lambda &L);
+
+  void renderSectionLambdas(const llvm::json::Value &Contexts,
+                            SmallString<0> &Output, SectionLambda &L);
+
+  void renderPartial(const llvm::json::Value &Contexts, SmallString<0> &Output,
+                     ASTNode *Partial);
+
+  void renderChild(const llvm::json::Value &Context, SmallString<0> &Output);
+
+  const llvm::json::Value *findContext();
+
+  llvm::BumpPtrAllocator *Allocator;
+  StringMap<ASTNode *> *Partials;
+  StringMap<Lambda> *Lambdas;
+  StringMap<SectionLambda> *SectionLambdas;
+  DenseMap<char, StringRef> *Escapes;
+  Type T;
+  size_t Indentation;
+  SmallString<0> RawBody;
+  SmallString<0> Body;
+  ASTNode *Parent;
+  std::vector<ASTNode *> Children;
+  const Accessor Accessor;
+  const llvm::json::Value *ParentContext;
+};
 
 SmallString<0> escapeString(StringRef Input,
                             DenseMap<char, StringRef> &Escape) {
@@ -565,3 +677,5 @@ void ASTNode::setUpNode(llvm::BumpPtrAllocator &Alloc,
   for (ASTNode *Child : Children)
     Child->setUpNode(Alloc, Par, L, SC, E);
 }
+} // namespace mustache
+} // namespace llvm
