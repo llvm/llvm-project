@@ -136,7 +136,8 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
     // given triple.
     Triple::ArchType Type = Triple::getArchTypeForLLVMName(ArchName);
     if (Type != Triple::UnknownArch)
-      TheTriple.setArch(Type);
+      // Set the type of Arch while preserving SubArch, if any.
+      TheTriple.setArch(Type, TheTriple.getSubArch());
   } else {
     // Get the target specific parser.
     std::string TempError;
