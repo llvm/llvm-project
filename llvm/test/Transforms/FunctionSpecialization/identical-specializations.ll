@@ -51,7 +51,7 @@ entry:
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[FLAG]], label %[[PLUS:.*]], label %[[MINUS:.*]]
 ; CHECK:       [[PLUS]]:
-; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @compute.specialized.2(i64 [[X]], i64 [[Y]], ptr @plus, ptr @minus)
+; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @compute.specialized.1(i64 [[X]], i64 [[Y]], ptr @plus, ptr @minus)
 ; CHECK-NEXT:    br label %[[MERGE:.*]]
 ; CHECK:       [[MINUS]]:
 ; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @compute.specialized.3(i64 [[X]], i64 [[Y]], ptr @minus, ptr @plus)
@@ -79,10 +79,10 @@ entry:
 ; CHECK-LABEL: define internal i64 @compute.specialized.1(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[BINOP1:%.*]], ptr [[BINOP2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[OP1:%.*]] = call i64 [[BINOP1]](i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[OP0:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[OP2:%.*]] = call i64 @compute.specialized.1(i64 [[X]], i64 [[Y]], ptr [[BINOP1]], ptr @plus)
-; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[OP1]], [[OP0]]
+; CHECK-NEXT:    [[OP1:%.*]] = call i64 @minus(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[OP2:%.*]] = call i64 @compute.specialized.5(i64 [[X]], i64 [[Y]], ptr @plus, ptr @plus)
+; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[OP0]], [[OP1]]
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[OP2]]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[ADD1]], [[X]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[DIV]], [[Y]]
@@ -93,13 +93,13 @@ entry:
 ; CHECK-LABEL: define internal i64 @compute.specialized.2(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[BINOP1:%.*]], ptr [[BINOP2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[OP0:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[OP1:%.*]] = call i64 @minus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[OP2:%.*]] = call i64 @compute.specialized.1(i64 [[X]], i64 [[Y]], ptr @plus, ptr @plus)
+; CHECK-NEXT:    [[OP0:%.*]] = call i64 @plus(i64 [[X]], i64 42)
+; CHECK-NEXT:    [[OP1:%.*]] = call i64 @minus(i64 [[X]], i64 42)
+; CHECK-NEXT:    [[OP2:%.*]] = call i64 @compute.specialized.4(i64 [[X]], i64 42, ptr @plus, ptr @plus)
 ; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[OP0]], [[OP1]]
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[OP2]]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[ADD1]], [[X]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[DIV]], [[Y]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[DIV]], 42
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SUB]], 2
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
@@ -110,6 +110,48 @@ entry:
 ; CHECK-NEXT:    [[OP0:%.*]] = call i64 @minus(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[OP1:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[OP2:%.*]] = call i64 @compute.specialized.3(i64 [[X]], i64 [[Y]], ptr @minus, ptr @plus)
+; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[OP0]], [[OP1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[OP2]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[ADD1]], [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[DIV]], [[Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SUB]], 2
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+;
+; CHECK-LABEL: define internal i64 @compute.specialized.4(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[BINOP1:%.*]], ptr [[BINOP2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[OP0:%.*]] = call i64 @plus(i64 [[X]], i64 42)
+; CHECK-NEXT:    [[OP1:%.*]] = call i64 @plus(i64 [[X]], i64 42)
+; CHECK-NEXT:    [[OP2:%.*]] = call i64 @compute.specialized.4(i64 [[X]], i64 42, ptr @plus, ptr @plus)
+; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[OP0]], [[OP1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[OP2]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[ADD1]], [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[DIV]], 42
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SUB]], 2
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+;
+; CHECK-LABEL: define internal i64 @compute.specialized.5(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[BINOP1:%.*]], ptr [[BINOP2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[OP0:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[OP1:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[OP2:%.*]] = call i64 @compute.specialized.5(i64 [[X]], i64 [[Y]], ptr @plus, ptr @plus)
+; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[OP0]], [[OP1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[OP2]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[ADD1]], [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[DIV]], [[Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SUB]], 2
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+;
+; CHECK-LABEL: define internal i64 @compute.specialized.6(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[BINOP1:%.*]], ptr [[BINOP2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[OP0:%.*]] = call i64 [[BINOP1]](i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[OP1:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[OP2:%.*]] = call i64 @compute.specialized.6(i64 [[X]], i64 [[Y]], ptr [[BINOP1]], ptr @plus)
 ; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[OP0]], [[OP1]]
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD0]], [[OP2]]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[ADD1]], [[X]]
