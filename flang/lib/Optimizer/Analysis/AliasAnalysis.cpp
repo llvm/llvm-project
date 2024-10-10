@@ -332,24 +332,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
           // If declare operation is inside omp target region,
           // continue alias analysis outside the target region
-          if (llvm::isa<omp::TargetOp>(op->getParentOp())) {
-            omp::TargetOp targetOp =
-                llvm::cast<omp::TargetOp>(op->getParentOp());
-            auto mapClauseOwner =
-                llvm::dyn_cast<omp::MapClauseOwningOpInterface>(
-                    targetOp.getOperation());
-            if (!mapClauseOwner) {
-              defOp = nullptr;
-              breakFromLoop = true;
-              return;
-            }
-            Block *targetEntryBlock = &targetOp->getRegion(0).front();
-            OperandRange mapVarsArr = mapClauseOwner.getMapVars();
-            assert(mapVarsArr.size() == targetEntryBlock->getNumArguments());
-            for (size_t i = 0; i < targetEntryBlock->getNumArguments(); i++) {
-              if (targetEntryBlock->getArgument(i) == op.getMemref()) {
+          if (auto targetOp =
+                  llvm::dyn_cast<omp::TargetOp>(op->getParentOp())) {
+            auto argIface = cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
+            for (auto [opArg, blockArg] : llvm::zip_equal(
+                     targetOp.getMapVars(), argIface.getMapBlockArgs())) {
+              if (opArg == op.getMemref()) {
                 omp::MapInfoOp mapInfo =
-                    llvm::cast<omp::MapInfoOp>(mapVarsArr[i].getDefiningOp());
+                    llvm::cast<omp::MapInfoOp>(blockArg.getDefiningOp());
                 defOp = mapInfo.getVarPtr().getDefiningOp();
                 v = mapInfo.getVarPtr();
                 return;
