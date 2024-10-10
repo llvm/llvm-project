@@ -4485,7 +4485,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         // (similar to what is done in the ICP pass).
         Function *TargetFunction = Symtab.getFunction(Candidate.Value);
         if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
-          ORE.emit([&, CB = CB]() {
+          ORE.emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget",
                                             CB)
                    << "Cannot promote indirect call: target with md5sum "
@@ -4500,7 +4500,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         // Check if legal to promote
         const char *Reason = nullptr;
         if (!isLegalToPromote(*CB, TargetFunction, &Reason)) {
-          ORE.emit([&, CB = CB]() {
+          ORE.emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", CB)
                    << "Cannot promote indirect call to "
                    << ore::NV("TargetFunction", TargetFunction)
