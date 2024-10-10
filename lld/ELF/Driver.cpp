@@ -1613,6 +1613,35 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     }
   }
 
+  for (opt::Arg *arg : args.filtered(OPT_override_section_flags)) {
+    SmallVector<StringRef, 0> fields;
+    StringRef(arg->getValue()).split(fields, '=');
+    if (fields.size() != 2) {
+      error(arg->getSpelling() +
+            ": parse error, no '=' found in --override-section-flags arg");
+      continue;
+    }
+
+    uint32_t flags = 0;
+    for (char c : fields[1]) {
+      if (c == 'a')
+        flags |= SHF_ALLOC;
+      else if (c == 'w')
+        flags |= SHF_WRITE;
+      else if (c == 'x')
+        flags |= SHF_EXECINSTR;
+      else
+        error(arg->getSpelling() + ": flags do not match [awx]+");
+    }
+
+    if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
+      config->overrideSectionFlags.emplace_back(std::move(*pat), flags);
+    } else {
+      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+      continue;
+    }
+  }
+
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
