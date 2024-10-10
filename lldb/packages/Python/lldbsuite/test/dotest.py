@@ -219,6 +219,10 @@ def parseOptionsAndInitTestdirs():
     except:
         raise
 
+    if args.dll_directory:
+        for dir in args.dll_directory:
+            os.add_dll_directory(dir)
+
     if args.unset_env_varnames:
         for env_var in args.unset_env_varnames:
             if env_var in os.environ:
