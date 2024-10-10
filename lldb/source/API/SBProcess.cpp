@@ -564,10 +564,6 @@ uint32_t SBProcess::GetAddressByteSize() const {
 }
 
 SBError SBProcess::Continue() {
-  return Continue(RunDirection::eRunForward);
-}
-
-SBError SBProcess::Continue(RunDirection direction) {
   LLDB_INSTRUMENT_VA(this);
 
   SBError sb_error;
@@ -578,9 +574,9 @@ SBError SBProcess::Continue(RunDirection direction) {
         process_sp->GetTarget().GetAPIMutex());
 
     if (process_sp->GetTarget().GetDebugger().GetAsyncExecution())
-      sb_error.ref() = process_sp->Resume(direction);
+      sb_error.ref() = process_sp->Resume();
     else
-      sb_error.ref() = process_sp->ResumeSynchronous(nullptr, direction);
+      sb_error.ref() = process_sp->ResumeSynchronous(nullptr);
   } else
     sb_error = Status::FromErrorString("SBProcess is invalid");
 
