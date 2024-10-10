@@ -16,12 +16,12 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetObjectFile.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include <optional>
 
 namespace llvm {
 
-class HexagonTargetMachine : public LLVMTargetMachine {
+class HexagonTargetMachine : public CodeGenCommonTMImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   HexagonSubtarget Subtarget;
   mutable StringMap<std::unique_ptr<HexagonSubtarget>> SubtargetMap;

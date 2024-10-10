@@ -130,9 +130,9 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : LLVMTargetMachine(T, computeDataLayout(is64bit, UseShortPointersOpt), TT,
-                        CPU, FS, Options, Reloc::PIC_,
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenCommonTMImpl(T, computeDataLayout(is64bit, UseShortPointersOpt),
+                          TT, CPU, FS, Options, Reloc::PIC_,
+                          getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {

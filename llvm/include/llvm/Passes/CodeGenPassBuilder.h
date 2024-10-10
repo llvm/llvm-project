@@ -438,7 +438,7 @@ protected:
   Error addFastRegAlloc(AddMachinePass &) const;
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
-  /// LLVMTargetMachine provides standard regalloc passes for most targets.
+  /// CodeGenCommonTMImpl provides standard regalloc passes for most targets.
   void addOptimizedRegAlloc(AddMachinePass &) const;
 
   /// Add passes that optimize machine instructions after register allocation.
