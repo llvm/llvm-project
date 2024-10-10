@@ -32,33 +32,6 @@ using namespace mlir;
 namespace fir {
 namespace {
 
-// Helper to only build the symbol table if needed because its build time is
-// linear on the number of symbols in the module.
-struct LazySymbolTable {
-  LazySymbolTable(mlir::Operation *op)
-      : module{op->getParentOfType<mlir::ModuleOp>()} {}
-  void build() {
-    if (table)
-      return;
-    table = std::make_unique<mlir::SymbolTable>(module);
-  }
-
-  template <typename T>
-  T lookup(llvm::StringRef name) {
-    build();
-    return table->lookup<T>(name);
-  }
-
-private:
-  std::unique_ptr<mlir::SymbolTable> table;
-  mlir::ModuleOp module;
-};
-
-bool hasScalarDerivedResult(mlir::FunctionType funTy) {
-  return funTy.getNumResults() == 1 &&
-         mlir::isa<fir::RecordType>(funTy.getResult(0));
-}
-
 static mlir::Type getResultArgumentType(mlir::Type resultType,
                                         bool shouldBoxResult) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(resultType)
@@ -217,14 +190,7 @@ public:
   llvm::LogicalResult
   matchAndRewrite(fir::SaveResultOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    mlir::Operation *call = op.getValue().getDefiningOp();
-    if (mlir::isa<fir::RecordType>(op.getValue().getType()) && call &&
-        fir::hasBindcAttr(call)) {
-      rewriter.replaceOpWithNewOp<fir::StoreOp>(op, op.getValue(),
-                                                op.getMemref());
-    } else {
-      rewriter.eraseOp(op);
-    }
+    rewriter.eraseOp(op);
     return mlir::success();
   }
 };
@@ -334,12 +300,6 @@ public:
     auto *context = &getContext();
     // Convert function type itself if it has an abstract result.
     auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
-    // Scalar derived result of BIND(C) function must be returned according
-    // to the C struct return ABI which is target dependent and implemented in
-    // the target-rewrite pass.
-    if (hasScalarDerivedResult(funcTy) &&
-        fir::hasBindcAttr(func.getOperation()))
-      return;
     if (hasAbstractResult(funcTy)) {
       if (fir::isa_builtin_cptr_type(funcTy.getResult(0))) {
         func.setType(getCPtrFunctionType(funcTy));
@@ -435,8 +395,6 @@ public:
       return;
     }
 
-    LazySymbolTable symbolTable(op);
-
     mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target = *context;
     const bool shouldBoxResult = this->passResultAsBox.getValue();
@@ -451,29 +409,14 @@ public:
                            mlir::func::FuncDialect>();
     target.addIllegalOp<fir::SaveResultOp>();
     target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp call) {
-      mlir::FunctionType funTy = call.getFunctionType();
-      if (hasScalarDerivedResult(funTy) &&
-          fir::hasBindcAttr(call.getOperation()))
-        return true;
-      return !hasAbstractResult(funTy);
+      return !hasAbstractResult(call.getFunctionType());
     });
-    target.addDynamicallyLegalOp<fir::AddrOfOp>([&symbolTable](
-                                                    fir::AddrOfOp addrOf) {
-      if (auto funTy = mlir::dyn_cast<mlir::FunctionType>(addrOf.getType())) {
-        if (hasScalarDerivedResult(funTy)) {
-          auto func = symbolTable.lookup<mlir::func::FuncOp>(
-              addrOf.getSymbol().getRootReference().getValue());
-          return func && fir::hasBindcAttr(func.getOperation());
-        }
+    target.addDynamicallyLegalOp<fir::AddrOfOp>([](fir::AddrOfOp addrOf) {
+      if (auto funTy = mlir::dyn_cast<mlir::FunctionType>(addrOf.getType()))
         return !hasAbstractResult(funTy);
-      }
       return true;
     });
     target.addDynamicallyLegalOp<fir::DispatchOp>([](fir::DispatchOp dispatch) {
-      mlir::FunctionType funTy = dispatch.getFunctionType();
-      if (hasScalarDerivedResult(funTy) &&
-          fir::hasBindcAttr(dispatch.getOperation()))
-        return true;
       return !hasAbstractResult(dispatch.getFunctionType());
     });
 
