@@ -268,8 +268,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.make:
         configuration.make_path = args.make
-    if " " in configuration.make_path:
-        configuration.make_path = f'"{configuration.make_path}"'
 
     if args.dsymutil:
         configuration.dsymutil = args.dsymutil
