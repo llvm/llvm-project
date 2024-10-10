@@ -3038,7 +3038,7 @@ void format_test_buffer_optimizations(TestFunction check) {
   // Used to validate our test sets are the proper size.
   // To test the chunked operations it needs to be larger than the internal
   // buffer. Picked a nice looking number.
-  constexpr int minimum = 3 * std::__format::__internal_storage<CharT>::__buffer_size;
+  constexpr int minimum = 3 * 256;
 #else
   constexpr int minimum = 1;
 #endif
