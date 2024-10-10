@@ -422,6 +422,8 @@
 ; GCN-O1-NEXT:        Insert required mode register values
 ; GCN-O1-NEXT:        SI Insert Hard Clauses
 ; GCN-O1-NEXT:        SI Final Branch Preparation
+; GCN-O1-NEXT:        Machine Natural Loop Construction
+; GCN-O1-NEXT:        Machine Trace Metrics
 ; GCN-O1-NEXT:        SI peephole optimizations
 ; GCN-O1-NEXT:        Post RA hazard recognizer
 ; GCN-O1-NEXT:        AMDGPU Insert Delay ALU
@@ -732,6 +734,8 @@
 ; GCN-O1-OPTS-NEXT:        Insert required mode register values
 ; GCN-O1-OPTS-NEXT:        SI Insert Hard Clauses
 ; GCN-O1-OPTS-NEXT:        SI Final Branch Preparation
+; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
+; GCN-O1-OPTS-NEXT:        Machine Trace Metrics
 ; GCN-O1-OPTS-NEXT:        SI peephole optimizations
 ; GCN-O1-OPTS-NEXT:        Post RA hazard recognizer
 ; GCN-O1-OPTS-NEXT:        AMDGPU Insert Delay ALU
@@ -1048,6 +1052,8 @@
 ; GCN-O2-NEXT:        Insert required mode register values
 ; GCN-O2-NEXT:        SI Insert Hard Clauses
 ; GCN-O2-NEXT:        SI Final Branch Preparation
+; GCN-O2-NEXT:        Machine Natural Loop Construction
+; GCN-O2-NEXT:        Machine Trace Metrics
 ; GCN-O2-NEXT:        SI peephole optimizations
 ; GCN-O2-NEXT:        Post RA hazard recognizer
 ; GCN-O2-NEXT:        AMDGPU Insert Delay ALU
@@ -1376,6 +1382,8 @@
 ; GCN-O3-NEXT:        Insert required mode register values
 ; GCN-O3-NEXT:        SI Insert Hard Clauses
 ; GCN-O3-NEXT:        SI Final Branch Preparation
+; GCN-O3-NEXT:        Machine Natural Loop Construction
+; GCN-O3-NEXT:        Machine Trace Metrics
 ; GCN-O3-NEXT:        SI peephole optimizations
 ; GCN-O3-NEXT:        Post RA hazard recognizer
 ; GCN-O3-NEXT:        AMDGPU Insert Delay ALU

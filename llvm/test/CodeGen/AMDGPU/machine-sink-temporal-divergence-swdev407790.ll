@@ -451,7 +451,6 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    v_cmpx_gt_u32_e32 12, v0
 ; CHECK-NEXT:    s_xor_b32 s4, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_execz .LBB0_31
 ; CHECK-NEXT:  ; %bb.30: ; in Loop: Header=BB0_28 Depth=1
 ; CHECK-NEXT:    v_xor_b32_e32 v4, v60, v58
 ; CHECK-NEXT:    v_lshrrev_b64 v[2:3], 16, v[56:57]
@@ -475,7 +474,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    global_store_dword v[6:7], v8, off offset:4
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[0:3], off offset:8
 ; CHECK-NEXT:    global_store_dwordx2 v[6:7], v[4:5], off offset:24
-; CHECK-NEXT:  .LBB0_31: ; %Flow
+; CHECK-NEXT:  ; %bb.31: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_28 Depth=1
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s4, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_27
