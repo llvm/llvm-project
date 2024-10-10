@@ -2728,7 +2728,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
     if (std::optional<unsigned> LocalIndex =
-            allocateLocal(Inner, E->getExtendingDecl())) {
+            allocateLocal(E, Inner->getType(), E->getExtendingDecl())) {
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
@@ -3406,7 +3406,7 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   if (!this->visit(Arg))
     return false;
 
-  return this->emitFree(E->isArrayForm(), E);
+  return this->emitFree(E->isArrayForm(), E->isGlobalDelete(), E);
 }
 
 template <class Emitter>
@@ -3586,8 +3586,9 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   }
   for (unsigned I = 0; I != NumOutputElems; ++I) {
     APSInt ShuffleIndex = E->getShuffleMaskIdx(Ctx.getASTContext(), I);
+    assert(ShuffleIndex >= -1);
     if (ShuffleIndex == -1)
-      return this->emitInvalid(E); // FIXME: Better diagnostic.
+      return this->emitInvalidShuffleVectorIndex(I, E);
 
     assert(ShuffleIndex < (NumInputElems * 2));
     if (!this->emitGetLocal(PT_Ptr,
@@ -4028,7 +4029,8 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
 
 template <class Emitter>
 std::optional<unsigned>
-Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
+Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
+                                 const ValueDecl *ExtendingDecl) {
   // Make sure we don't accidentally register the same decl twice.
   if ([[maybe_unused]] const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
@@ -4036,7 +4038,6 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
     assert(!Locals.contains(VD));
   }
 
-  QualType Ty;
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
@@ -4049,7 +4050,8 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
   }
   if (auto *E = Src.dyn_cast<const Expr *>()) {
     IsTemporary = true;
-    Ty = E->getType();
+    if (Ty.isNull())
+      Ty = E->getType();
   }
 
   Descriptor *D = P.createDescriptor(

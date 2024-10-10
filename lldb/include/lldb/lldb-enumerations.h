@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include <lldb/API/SBLanguages.h>
+
 #ifndef SWIG
 // Macro to enable bitmask operations on an enum.  Without this, Enum | Enum
 // gets promoted to an int, so you have to say Enum a = Enum(eFoo | eBar).  If
@@ -135,6 +137,9 @@ FLAGS_ENUM(LaunchFlags){
 /// Thread Run Modes.
 enum RunMode { eOnlyThisThread, eAllThreads, eOnlyDuringStepping };
 
+/// Execution directions
+enum RunDirection { eRunForward, eRunReverse };
+
 /// Byte ordering definitions.
 enum ByteOrder {
   eByteOrderInvalid = 0,
@@ -254,6 +259,9 @@ enum StopReason {
   eStopReasonVFork,
   eStopReasonVForkDone,
   eStopReasonInterrupt, ///< Thread requested interrupt
+  // Indicates that execution stopped because the debugger backend relies
+  // on recorded data and we reached the end of that data.
+  eStopReasonHistoryBoundary,
 };
 
 /// Command Return Status Types.

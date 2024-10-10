@@ -1025,21 +1025,19 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
 
 #  if !SANITIZER_NETBSD
 // ThreadLister implementation.
-ThreadLister::ThreadLister(pid_t pid) : pid_(pid), buffer_(4096) {
-  char task_directory_path[80];
-  internal_snprintf(task_directory_path, sizeof(task_directory_path),
-                    "/proc/%d/task/", pid);
-  descriptor_ = internal_open(task_directory_path, O_RDONLY | O_DIRECTORY);
-  if (internal_iserror(descriptor_)) {
-    Report("Can't open /proc/%d/task for reading.\n", pid);
-  }
+ThreadLister::ThreadLister(pid_t pid) : buffer_(4096) {
+  task_path_.AppendF("/proc/%d/task", pid);
+  status_path_.AppendF("%s/status", task_path_.data());
 }
 
 ThreadLister::Result ThreadLister::ListThreads(
     InternalMmapVector<tid_t> *threads) {
-  if (internal_iserror(descriptor_))
+  int descriptor = internal_open(task_path_.data(), O_RDONLY | O_DIRECTORY);
+  if (internal_iserror(descriptor)) {
+    Report("Can't open %s for reading.\n", task_path_.data());
     return Error;
-  internal_lseek(descriptor_, 0, SEEK_SET);
+  }
+  auto cleanup = at_scope_exit([&] { internal_close(descriptor); });
   threads->clear();
 
   Result result = Ok;
@@ -1048,11 +1046,11 @@ ThreadLister::Result ThreadLister::ListThreads(
     buffer_.resize(buffer_.capacity());
     CHECK_GE(buffer_.size(), 4096);
     uptr read = internal_getdents(
-        descriptor_, (struct linux_dirent *)buffer_.data(), buffer_.size());
+        descriptor, (struct linux_dirent *)buffer_.data(), buffer_.size());
     if (!read)
       return result;
     if (internal_iserror(read)) {
-      Report("Can't read directory entries from /proc/%d/task.\n", pid_);
+      Report("Can't read directory entries from %s.\n", task_path_.data());
       return Error;
     }
 
@@ -1093,9 +1091,7 @@ ThreadLister::Result ThreadLister::ListThreads(
 bool ThreadLister::IsAlive(int tid) {
   // /proc/%d/task/%d/status uses same call to detect alive threads as
   // proc_task_readdir. See task_state implementation in Linux.
-  char path[80];
-  internal_snprintf(path, sizeof(path), "/proc/%d/task/%d/status", pid_, tid);
-  if (!ReadFileToVector(path, &buffer_) || buffer_.empty())
+  if (!ReadFileToVector(status_path_.data(), &buffer_) || buffer_.empty())
     return false;
   buffer_.push_back(0);
   static const char kPrefix[] = "\nPPid:";
@@ -1106,10 +1102,6 @@ bool ThreadLister::IsAlive(int tid) {
   return (int)internal_atoll(field) != 0;
 }
 
-ThreadLister::~ThreadLister() {
-  if (!internal_iserror(descriptor_))
-    internal_close(descriptor_);
-}
 #  endif
 
 #  if SANITIZER_WORDSIZE == 32

@@ -317,6 +317,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
              /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     CHECK_PARSE(                                                               \
+        #FIELD ": AcrossComments", FIELD,                                      \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
+             /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
+             /*AlignFunctionDeclarations=*/true,                               \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(                                                               \
         #FIELD ": AcrossEmptyLinesAndComments", FIELD,                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
@@ -339,6 +346,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossComments);                            \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignCompound);                             \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionDeclarations);                 \
+    CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionPointers);                     \
     CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
   } while (false)
 
