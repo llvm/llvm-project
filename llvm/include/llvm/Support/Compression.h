@@ -71,6 +71,8 @@ Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
 Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
                  size_t UncompressedSize);
 
+// Get the size of the decompressed data.
+Error getDecompressedSize(ArrayRef<uint8_t> Input, size_t &UncompressedSize);
 } // End of namespace zstd
 
 enum class Format {
