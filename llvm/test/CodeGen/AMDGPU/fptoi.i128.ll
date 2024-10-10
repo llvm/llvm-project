@@ -1578,6 +1578,7 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; SDAG-NEXT:  .LBB6_4: ; %Flow
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[6:7], s[12:13]
+; SDAG-NEXT:    s_cbranch_execz .LBB6_6
 ; SDAG-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 0x86, v5
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], v2, v[6:7]
@@ -1589,7 +1590,7 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; SDAG-NEXT:    v_mul_i32_i24_e32 v0, v0, v8
 ; SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; SDAG-NEXT:  ; %bb.6: ; %Flow1
+; SDAG-NEXT:  .LBB6_6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SDAG-NEXT:  .LBB6_7: ; %Flow2
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -1929,6 +1930,7 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; SDAG-NEXT:  .LBB7_4: ; %Flow
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[6:7], s[12:13]
+; SDAG-NEXT:    s_cbranch_execz .LBB7_6
 ; SDAG-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 0x86, v5
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], v2, v[6:7]
@@ -1940,7 +1942,7 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; SDAG-NEXT:    v_mul_i32_i24_e32 v0, v0, v8
 ; SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; SDAG-NEXT:  ; %bb.6: ; %Flow1
+; SDAG-NEXT:  .LBB7_6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SDAG-NEXT:  .LBB7_7: ; %Flow2
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]

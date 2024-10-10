@@ -15,18 +15,11 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
-
-static unsigned SkipThreshold;
-
-static cl::opt<unsigned, true> SkipThresholdFlag(
-    "amdgpu-skip-threshold", cl::Hidden,
-    cl::desc(
-        "Number of instructions before jumping over divergent control flow"),
-    cl::location(SkipThreshold), cl::init(12));
 
 namespace {
 
@@ -41,8 +34,6 @@ private:
                             MachineBasicBlock *&TrueMBB,
                             MachineBasicBlock *&FalseMBB,
                             SmallVectorImpl<MachineOperand> &Cond);
-  bool mustRetainExeczBranch(const MachineBasicBlock &From,
-                             const MachineBasicBlock &To) const;
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
 
 public:
@@ -304,45 +295,13 @@ bool SIPreEmitPeephole::getBlockDestinations(
   return true;
 }
 
-bool SIPreEmitPeephole::mustRetainExeczBranch(
-    const MachineBasicBlock &From, const MachineBasicBlock &To) const {
-  unsigned NumInstr = 0;
-  const MachineFunction *MF = From.getParent();
-
-  for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
-       MBBI != End && MBBI != ToI; ++MBBI) {
-    const MachineBasicBlock &MBB = *MBBI;
-
-    for (const MachineInstr &MI : MBB) {
-      // When a uniform loop is inside non-uniform control flow, the branch
-      // leaving the loop might never be taken when EXEC = 0.
-      // Hence we should retain cbranch out of the loop lest it become infinite.
-      if (MI.isConditionalBranch())
-        return true;
-
-      if (MI.isMetaInstruction())
-        continue;
-
-      if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
-        return true;
-
-      // These instructions are potentially expensive even if EXEC = 0.
-      if (TII->isSMRD(MI) || TII->isVMEM(MI) || TII->isFLAT(MI) ||
-          TII->isDS(MI) || TII->isWaitcnt(MI.getOpcode()))
-        return true;
-
-      ++NumInstr;
-      if (NumInstr >= SkipThreshold)
-        return true;
-    }
-  }
-
-  return false;
-}
-
 // Returns true if the skip branch instruction is removed.
 bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
                                           MachineBasicBlock &SrcMBB) {
+
+  if (!TII->getSchedModel().hasInstrSchedModelOrItineraries())
+    return false;
+
   MachineBasicBlock *TrueMBB = nullptr;
   MachineBasicBlock *FalseMBB = nullptr;
   SmallVector<MachineOperand, 1> Cond;
@@ -351,8 +310,11 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
     return false;
 
   // Consider only the forward branches.
-  if ((SrcMBB.getNumber() >= TrueMBB->getNumber()) ||
-      mustRetainExeczBranch(*FalseMBB, *TrueMBB))
+  if (SrcMBB.getNumber() >= TrueMBB->getNumber())
+    return false;
+
+  // Consider only when it is legal and profitable
+  if (TII->mustRetainExeczBranch(MI, *FalseMBB, *TrueMBB))
     return false;
 
   LLVM_DEBUG(dbgs() << "Removing the execz branch: " << MI);

@@ -315,6 +315,7 @@
 ; GCN-O1-NEXT:        Merge disjoint stack slots
 ; GCN-O1-NEXT:        Local Stack Slot Allocation
 ; GCN-O1-NEXT:        Remove dead machine instructions
+; GCN-O1-NEXT:        AMDGPU s_cbranch_scc to s_cbranch_execz conversion
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        Machine Block Frequency Analysis
@@ -617,6 +618,7 @@
 ; GCN-O1-OPTS-NEXT:        Merge disjoint stack slots
 ; GCN-O1-OPTS-NEXT:        Local Stack Slot Allocation
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
+; GCN-O1-OPTS-NEXT:        AMDGPU s_cbranch_scc to s_cbranch_execz conversion
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
@@ -932,6 +934,7 @@
 ; GCN-O2-NEXT:        Merge disjoint stack slots
 ; GCN-O2-NEXT:        Local Stack Slot Allocation
 ; GCN-O2-NEXT:        Remove dead machine instructions
+; GCN-O2-NEXT:        AMDGPU s_cbranch_scc to s_cbranch_execz conversion
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
@@ -1260,6 +1263,7 @@
 ; GCN-O3-NEXT:        Merge disjoint stack slots
 ; GCN-O3-NEXT:        Local Stack Slot Allocation
 ; GCN-O3-NEXT:        Remove dead machine instructions
+; GCN-O3-NEXT:        AMDGPU s_cbranch_scc to s_cbranch_execz conversion
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
