@@ -122,6 +122,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::FNeg:
   case Instruction::Freeze:
     return inferScalarType(R->getOperand(0));
+  case Instruction::ExtractValue:
+    return R->getUnderlyingInstr()->getType();
   default:
     break;
   }
