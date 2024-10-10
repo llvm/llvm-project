@@ -442,18 +442,16 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   // 3) Thunks that retain captured objects in closure invocations.
   // 4) Task switches for async functions.
 
-  ThreadPlanSP new_thread_plan_sp;
-
   Log *log(GetLog(LLDBLog::Step));
   StackFrameSP stack_sp = thread.GetStackFrameAtIndex(0);
   if (!stack_sp)
-    return new_thread_plan_sp;
+    return nullptr;
 
   SymbolContext sc = stack_sp->GetSymbolContext(eSymbolContextEverything);
   Symbol *symbol = sc.symbol;
 
   if (!symbol)
-    return new_thread_plan_sp;
+    return nullptr;
 
   // Only do this if you are at the beginning of the thunk function:
   lldb::addr_t cur_addr = thread.GetRegisterContext()->GetPC();
@@ -461,9 +459,8 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
       symbol->GetAddress().GetLoadAddress(&thread.GetProcess()->GetTarget());
 
   if (symbol_addr != cur_addr)
-    return new_thread_plan_sp;
+    return nullptr;
 
-  Address target_address;
   const char *symbol_name = symbol->GetMangled().GetMangledName().AsCString();
 
   ThunkKind thunk_kind = GetThunkKind(symbol);
@@ -471,13 +468,11 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
 
   switch (thunk_action) {
   case ThunkAction::Unknown:
-    return new_thread_plan_sp;
-  case ThunkAction::AsyncStepIn: {
-    if (ThreadPlanStepInAsync::NeedsStep(sc)) {
-      new_thread_plan_sp.reset(new ThreadPlanStepInAsync(thread, sc));
-    }
-    return new_thread_plan_sp;
-  }
+    return nullptr;
+  case ThunkAction::AsyncStepIn:
+    if (ThreadPlanStepInAsync::NeedsStep(sc))
+      return std::make_shared<ThreadPlanStepInAsync>(thread, sc);
+    return nullptr;
   case ThunkAction::GetThunkTarget: {
     swift::Demangle::Context demangle_ctx;
     std::string thunk_target = demangle_ctx.getThunkTarget(symbol_name);
@@ -486,7 +481,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
         log->Printf("Stepped to thunk \"%s\" (kind: %s) but could not "
                     "find the thunk target. ",
                     symbol_name, GetThunkKindName(thunk_kind));
-      return new_thread_plan_sp;
+      return nullptr;
     }
     if (log)
       log->Printf(
@@ -497,14 +492,15 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
     SymbolContextList sc_list;
     modules.FindFunctionSymbols(ConstString(thunk_target),
                                 eFunctionNameTypeFull, sc_list);
-    if (sc_list.GetSize() == 1) {
-      SymbolContext sc;
-      sc_list.GetContextAtIndex(0, sc);
-
-      if (sc.symbol)
-        target_address = sc.symbol->GetAddress();
+    if (sc_list.GetSize() == 1 && sc_list[0].symbol) {
+      Symbol &thunk_symbol = *sc_list[0].symbol;
+      Address target_address = thunk_symbol.GetAddress();
+      if (target_address.IsValid())
+        return std::make_shared<ThreadPlanRunToAddress>(thread, target_address,
+                                                        stop_others);
     }
-  } break;
+    return nullptr;
+  }
   case ThunkAction::StepIntoConformance: {
     // The TTW symbols encode the protocol conformance requirements
     // and it is possible to go to the AST and get it to replay the
@@ -538,7 +534,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                     "find the ProtocolWitness node in the demangled "
                     "nodes.",
                     symbol_name);
-      return new_thread_plan_sp;
+      return nullptr;
     }
 
     size_t num_children = witness_node->getNumChildren();
@@ -547,7 +543,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
         log->Printf("Stepped into witness thunk \"%s\" but the "
                     "ProtocolWitness node doesn't have enough nodes.",
                     symbol_name);
-      return new_thread_plan_sp;
+      return nullptr;
     }
 
     swift::Demangle::NodePointer function_node = witness_node->getChild(1);
@@ -557,7 +553,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
         log->Printf("Stepped into witness thunk \"%s\" but could not "
                     "find the function in the ProtocolWitness node.",
                     symbol_name);
-      return new_thread_plan_sp;
+      return nullptr;
     }
 
     // Okay, now find the name of this function.
@@ -576,7 +572,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
         log->Printf("Stepped into witness thunk \"%s\" but could not "
                     "find the Function name in the function node.",
                     symbol_name);
-      return new_thread_plan_sp;
+      return nullptr;
     }
 
     std::string function_name(name_node->getText());
@@ -585,38 +581,30 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
         log->Printf("Stepped into witness thunk \"%s\" but the Function "
                     "name was empty.",
                     symbol_name);
-      return new_thread_plan_sp;
+      return nullptr;
     }
 
     // We have to get the address range of the thunk symbol, and make a
     // "step through range stepping in"
     AddressRange sym_addr_range(sc.symbol->GetAddress(),
                                 sc.symbol->GetByteSize());
-    new_thread_plan_sp.reset(new ThreadPlanStepInRange(
+    return std::make_shared<ThreadPlanStepInRange>(
         thread, sym_addr_range, sc, function_name.c_str(), eOnlyDuringStepping,
-        eLazyBoolNo, eLazyBoolNo));
-    return new_thread_plan_sp;
-
-  } break;
+        eLazyBoolNo, eLazyBoolNo);
+  }
   case ThunkAction::StepThrough: {
     if (log)
       log->Printf("Stepping through thunk: %s kind: %s", symbol_name,
                   GetThunkKindName(thunk_kind));
     AddressRange sym_addr_range(sc.symbol->GetAddress(),
                                 sc.symbol->GetByteSize());
-    new_thread_plan_sp.reset(new ThreadPlanStepInRange(
-        thread, sym_addr_range, sc, nullptr, eOnlyDuringStepping, eLazyBoolNo,
-        eLazyBoolNo));
-    return new_thread_plan_sp;
-  } break;
+    return std::make_shared<ThreadPlanStepInRange>(thread, sym_addr_range, sc,
+                                                   nullptr, eOnlyDuringStepping,
+                                                   eLazyBoolNo, eLazyBoolNo);
+  }
   }
 
-  if (target_address.IsValid()) {
-    new_thread_plan_sp.reset(
-        new ThreadPlanRunToAddress(thread, target_address, stop_others));
-  }
-
-  return new_thread_plan_sp;
+  return nullptr;
 }
 
 bool SwiftLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
