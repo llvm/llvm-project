@@ -63,7 +63,7 @@ LIBC_INLINE unsigned range_reduction_small(double x, DoubleDouble &u) {
   double y_hi = fputil::multiply_add(kd, MPI_OVER_128[0], x); // Exact
   // |u.hi| < 1.6*2^-7
   u.hi = fputil::multiply_add(kd, MPI_OVER_128[1], y_hi);
-  double u0 = y_hi - u.hi; // Exact;
+  double u0 = y_hi - u.hi; // Exact
   // |u.lo| <= max(ulp(u.hi), |kd * MPI_OVER_128[2]|)
   double u1 = fputil::multiply_add(kd, MPI_OVER_128[1], u0); // Exact
   u.lo = fputil::multiply_add(kd, MPI_OVER_128[2], u1);
