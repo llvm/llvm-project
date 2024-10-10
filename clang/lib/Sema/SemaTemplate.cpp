@@ -9091,8 +9091,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
       TemplateDeductionInfo Info(FailedCandidates.getLocation());
       FunctionDecl *Specialization = nullptr;
       if (TemplateDeductionResult TDK = DeduceTemplateArguments(
-              cast<FunctionTemplateDecl>(FunTmpl->getFirstDecl()),
-              ExplicitTemplateArgs ? &Args : nullptr, FT, Specialization, Info);
+              FunTmpl, ExplicitTemplateArgs ? &Args : nullptr, FT,
+              Specialization, Info);
           TDK != TemplateDeductionResult::Success) {
         // Template argument deduction failed; record why it failed, so
         // that we can provide nifty diagnostics.
