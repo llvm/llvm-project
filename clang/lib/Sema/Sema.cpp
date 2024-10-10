@@ -2777,3 +2777,31 @@ bool Sema::isDeclaratorFunctionLike(Declarator &D) {
   });
   return Result;
 }
+
+Attr *Sema::CreateAnnotationAttr(const AttributeCommonInfo &CI, StringRef Annot,
+                                 MutableArrayRef<Expr *> Args) {
+
+  auto *A = AnnotateAttr::Create(Context, Annot, Args.data(), Args.size(), CI);
+  if (!ConstantFoldAttrArgs(
+          CI, MutableArrayRef<Expr *>(A->args_begin(), A->args_end()))) {
+    return nullptr;
+  }
+  return A;
+}
+
+Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
+  // Make sure that there is a string literal as the annotation's first
+  // argument.
+  StringRef Str;
+  if (!checkStringLiteralArgumentAttr(AL, 0, Str))
+    return nullptr;
+
+  llvm::SmallVector<Expr *, 4> Args;
+  Args.reserve(AL.getNumArgs() - 1);
+  for (unsigned Idx = 1; Idx < AL.getNumArgs(); Idx++) {
+    assert(!AL.isArgIdent(Idx));
+    Args.push_back(AL.getArgAsExpr(Idx));
+  }
+
+  return CreateAnnotationAttr(AL, Str, Args);
+}
