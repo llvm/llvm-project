@@ -70,6 +70,10 @@ static std::unique_ptr<llvm::MemoryBuffer>
     LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
+  if (const char *cpuinfoIntercept = std::getenv("LLVM_CPUINFO")) {
+    Text = llvm::MemoryBuffer::getFileAsStream(cpuinfoIntercept);
+  }
+
   if (std::error_code EC = Text.getError()) {
     llvm::errs() << "Can't read "
                  << "/proc/cpuinfo: " << EC.message() << "\n";
