@@ -302,7 +302,7 @@ void MsanTSDDtor(void *tsd) {
 #  endif
 
 static void BeforeFork() {
-  VReport(2, "BeforeFork tid: %d\n", GetTid());
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   // Usually we lock ThreadRegistry, but msan does not have one.
   LockAllocator();
   StackDepotLockBeforeFork();
@@ -314,7 +314,7 @@ static void AfterFork(bool fork_child) {
   StackDepotUnlockAfterFork(fork_child);
   UnlockAllocator();
   // Usually we unlock ThreadRegistry, but msan does not have one.
-  VReport(2, "AfterFork tid: %d\n", GetTid());
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void InstallAtForkHandler() {

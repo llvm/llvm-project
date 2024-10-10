@@ -149,7 +149,7 @@ void PlatformTSDDtor(void *tsd) {
 #  endif
 
 static void BeforeFork() {
-  VReport(2, "BeforeFork tid: %d\n", GetTid());
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   if (CAN_SANITIZE_LEAKS) {
     __lsan::LockGlobal();
   }
@@ -169,7 +169,7 @@ static void AfterFork(bool fork_child) {
   if (CAN_SANITIZE_LEAKS) {
     __lsan::UnlockGlobal();
   }
-  VReport(2, "AfterFork tid: %d\n", GetTid());
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void InstallAtForkHandler() {
