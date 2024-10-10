@@ -683,25 +683,45 @@ inline BinaryOpc_match<LHS, RHS, true> m_Xor(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline auto m_SMin(const LHS &L, const RHS &R) {
+inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_SMinLike(const LHS &L, const RHS &R) {
   return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R),
                  MaxMin_match<LHS, RHS, smin_pred_ty, true>(L, R));
 }
 
 template <typename LHS, typename RHS>
-inline auto m_SMax(const LHS &L, const RHS &R) {
+inline BinaryOpc_match<LHS, RHS, true> m_SMax(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::SMAX, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_SMaxLike(const LHS &L, const RHS &R) {
   return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::SMAX, L, R),
                  MaxMin_match<LHS, RHS, smax_pred_ty, true>(L, R));
 }
 
 template <typename LHS, typename RHS>
-inline auto m_UMin(const LHS &L, const RHS &R) {
+inline BinaryOpc_match<LHS, RHS, true> m_UMin(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::UMIN, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_UMinLike(const LHS &L, const RHS &R) {
   return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::UMIN, L, R),
                  MaxMin_match<LHS, RHS, umin_pred_ty, true>(L, R));
 }
 
 template <typename LHS, typename RHS>
-inline auto m_UMax(const LHS &L, const RHS &R) {
+inline BinaryOpc_match<LHS, RHS, true> m_UMax(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::UMAX, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_UMaxLike(const LHS &L, const RHS &R) {
   return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::UMAX, L, R),
                  MaxMin_match<LHS, RHS, umax_pred_ty, true>(L, R));
 }
