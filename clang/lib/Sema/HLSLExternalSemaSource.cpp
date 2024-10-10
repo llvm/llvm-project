@@ -443,14 +443,13 @@ struct TemplateParameterListBuilder {
     return conceptDecl;
   }
 
-  BuiltinTypeDeclBuilder &addConceptSpecializationExpr(Sema &S) {
+  ConceptSpecializationExpr *getConceptSpecializationExpr(Sema &S) {
     ASTContext &context = S.getASTContext();
     SourceLocation loc = Builder.Record->getBeginLoc();
     ConceptDecl *CD = getTypedBufferConceptDecl(S, Builder.Record);
     DeclarationNameInfo DNI(Builder.Record->getDeclName(), loc);
     NestedNameSpecifierLoc NNS;
-    ClassTemplateDecl *TD = Builder.Template;
-
+    DeclContext *DC = Builder.Record->getDeclContext();
     TemplateArgumentListInfo TALI(loc, loc);
     const ASTTemplateArgumentListInfo *ATALI =
         ASTTemplateArgumentListInfo::Create(context, TALI);
@@ -458,8 +457,22 @@ struct TemplateParameterListBuilder {
     ConceptReference *CR = ConceptReference::Create(
         S.getASTContext(), NNS, loc, DNI, Builder.Record, CD, ATALI);
 
-    TemplateTypeParmDecl *T = dyn_cast<TemplateTypeParmDecl>(
-        TD->getTemplateParameters()->getParam(0));
+    clang::TemplateTypeParmDecl *T =
+        clang::TemplateTypeParmDecl::Create(
+            context,                          // AST context
+            context.getTranslationUnitDecl(), // DeclContext
+            loc,                              // SourceLocation of 'T'
+            loc,                              // SourceLocation of 'T' again
+            /*depth=*/0,            // Depth in the template parameter list
+            /*position=*/0,         // Position in the template parameter list
+            /*id=*/Builder.Record->getIdentifier(), // Identifier for 'T'
+            /*Typename=*/true,      // Indicates this is a 'typename' or 'class'
+            /*ParameterPack=*/false,// Not a parameter pack
+            /*HasTypeConstraint=*/true // Not a parameter pack
+        );
+
+    T->setDeclContext(DC);
+    T->setReferenced();
 
     clang::QualType TType = context.getTypeDeclType(T);
 
@@ -470,29 +483,25 @@ struct TemplateParameterListBuilder {
             context, Builder.Record->getDeclContext(), loc, ConvertedArgs);
     const ConstraintSatisfaction CS(CD, ConvertedArgs);
 
-    TemplateParameterList *templateParams = TD->getTemplateParameters();
     ConceptSpecializationExpr *CSE =
         ConceptSpecializationExpr::Create(context, CR, IDecl, &CS);
-
-    TD->setTemplateParameters(templateParams);
     T->setTypeConstraint(CR, CSE);
-
-    Builder.Record->getDeclContext()->addDecl(IDecl);
-
-    return Builder;
+    
+    return CSE;
   }
 
   BuiltinTypeDeclBuilder &finalizeTemplateArgs() {
     if (Params.empty())
       return Builder;
+    ConceptSpecializationExpr *CSE = getConceptSpecializationExpr(S);
+
     auto *ParamList = TemplateParameterList::Create(S.Context, SourceLocation(),
                                                     SourceLocation(), Params,
-                                                    SourceLocation(), nullptr);
+                                                    SourceLocation(), CSE);
     Builder.Template = ClassTemplateDecl::Create(
         S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         DeclarationName(Builder.Record->getIdentifier()), ParamList,
         Builder.Record);
-    addConceptSpecializationExpr(S);
 
     Builder.Record->setDescribedClassTemplate(Builder.Template);
     Builder.Template->setImplicit(true);
