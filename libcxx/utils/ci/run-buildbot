@@ -238,7 +238,7 @@ check-generated-output)
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
     set -x
-    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
+    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test \
            --exclude '*.dat' \
            --exclude '*unicode*.cpp' \
            --exclude '*print*.sh.cpp' \
