@@ -18,6 +18,7 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::Sign;
 
 template <typename T>
 class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {

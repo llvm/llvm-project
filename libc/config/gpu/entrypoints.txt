@@ -240,6 +240,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.remove
+    libc.src.stdio.rename
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout

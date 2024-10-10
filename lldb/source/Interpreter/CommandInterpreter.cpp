@@ -797,7 +797,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       new CommandObjectRegexCommand(
           *this, "gdb-remote",
           "Connect to a process via remote GDB server.\n"
-          "If no host is specifed, localhost is assumed.\n"
+          "If no host is specified, localhost is assumed.\n"
           "gdb-remote is an abbreviation for 'process connect --plugin "
           "gdb-remote connect://<hostname>:<port>'\n",
           "gdb-remote [<hostname>:]<portnum>", 0, false));
@@ -1887,7 +1887,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
   std::string command_string(command_line);
-  std::string original_command_string(command_line);
+  std::string original_command_string(command_string);
+  std::string real_original_command_string(command_string);
 
   Log *log = GetLog(LLDBLog::Commands);
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
@@ -2076,6 +2077,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     }
 
     ElapsedTime elapsed(execute_time);
+    cmd_obj->SetOriginalCommandString(real_original_command_string);
     cmd_obj->Execute(remainder.c_str(), result);
   }
 
@@ -3306,6 +3308,10 @@ bool CommandInterpreter::SaveTranscript(
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
                                  output_file->c_str());
+  if (!GetSaveTranscript())
+    result.AppendError(
+        "Note: the setting interpreter.save-transcript is set to false, so the "
+        "transcript might not have been recorded.");
 
   if (GetOpenTranscriptInEditor() && Host::IsInteractiveGraphicSession()) {
     const FileSpec file_spec;

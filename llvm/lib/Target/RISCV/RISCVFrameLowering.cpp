@@ -755,6 +755,19 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
+void RISCVFrameLowering::deallocateStack(MachineFunction &MF,
+                                         MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI,
+                                         const DebugLoc &DL, uint64_t StackSize,
+                                         int64_t CFAOffset) const {
+  const RISCVRegisterInfo *RI = STI.getRegisterInfo();
+
+  Register SPReg = getSPReg(STI);
+
+  RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(StackSize),
+                MachineInstr::FrameDestroy, getStackAlign());
+}
+
 void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
@@ -786,19 +799,48 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
       --MBBI;
   }
 
-  const auto &CSI = getUnmanagedCSI(MF, MFI.getCalleeSavedInfo());
+  const auto &CSI = MFI.getCalleeSavedInfo();
 
   // Skip to before the restores of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
-  auto LastFrameDestroy = MBBI;
-  if (!CSI.empty())
-    LastFrameDestroy = std::prev(MBBI, CSI.size());
+  auto LastFrameDestroy = std::prev(MBBI, getUnmanagedCSI(MF, CSI).size());
 
-  uint64_t RealStackSize = getStackSizeWithRVVPadding(MF);
-  uint64_t StackSize = RealStackSize - RVFI->getReservedSpillsSize();
-  uint64_t FPOffset = RealStackSize - RVFI->getVarArgsSaveSize();
+  uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
+  uint64_t RealStackSize = FirstSPAdjustAmount ? FirstSPAdjustAmount
+                                               : getStackSizeWithRVVPadding(MF);
+  uint64_t StackSize = FirstSPAdjustAmount ? FirstSPAdjustAmount
+                                           : getStackSizeWithRVVPadding(MF) -
+                                                 RVFI->getReservedSpillsSize();
+  uint64_t FPOffset = FirstSPAdjustAmount ? FirstSPAdjustAmount
+                                          : getStackSizeWithRVVPadding(MF) -
+                                                RVFI->getVarArgsSaveSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
+
+  bool RestoreFP = RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
+                   !hasReservedCallFrame(MF);
+
+  if (RVVStackSize) {
+    // If RestoreFP the stack pointer will be restored using the frame pointer
+    // value.
+    if (!RestoreFP)
+      adjustStackForRVV(MF, MBB, LastFrameDestroy, DL, RVVStackSize,
+                        MachineInstr::FrameDestroy);
+  }
+
+  if (FirstSPAdjustAmount) {
+    uint64_t SecondSPAdjustAmount =
+        getStackSizeWithRVVPadding(MF) - FirstSPAdjustAmount;
+    assert(SecondSPAdjustAmount > 0 &&
+           "SecondSPAdjustAmount should be greater than zero");
+
+    // If RestoreFP the stack pointer will be restored using the frame pointer
+    // value.
+    if (!RestoreFP)
+      RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg,
+                    StackOffset::getFixed(SecondSPAdjustAmount),
+                    MachineInstr::FrameDestroy, getStackAlign());
+  }
 
   // Restore the stack pointer using the value of the frame pointer. Only
   // necessary if the stack pointer was modified, meaning the stack size is
@@ -810,35 +852,17 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // normally it's just checking the variable sized object is present or not
   // is enough, but we also don't preserve that at prologue/epilogue when
   // have vector objects in stack.
-  if (RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-      !hasReservedCallFrame(MF)) {
+  if (RestoreFP) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
+
     RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, FPReg,
-                  StackOffset::getFixed(-FPOffset),
-                  MachineInstr::FrameDestroy, getStackAlign());
-  } else {
-    if (RVVStackSize)
-      adjustStackForRVV(MF, MBB, LastFrameDestroy, DL, RVVStackSize,
-                        MachineInstr::FrameDestroy);
+                  StackOffset::getFixed(-FPOffset), MachineInstr::FrameDestroy,
+                  getStackAlign());
   }
 
-  uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
-  if (FirstSPAdjustAmount) {
-    uint64_t SecondSPAdjustAmount =
-        getStackSizeWithRVVPadding(MF) - FirstSPAdjustAmount;
-    assert(SecondSPAdjustAmount > 0 &&
-           "SecondSPAdjustAmount should be greater than zero");
-
-    RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg,
-                  StackOffset::getFixed(SecondSPAdjustAmount),
-                  MachineInstr::FrameDestroy, getStackAlign());
-  }
-
-  if (FirstSPAdjustAmount)
-    StackSize = FirstSPAdjustAmount;
-
-  if (RVFI->isPushable(MF) && MBBI != MBB.end() &&
-      MBBI->getOpcode() == RISCV::CM_POP) {
+  bool ApplyPop = RVFI->isPushable(MF) && MBBI != MBB.end() &&
+                  MBBI->getOpcode() == RISCV::CM_POP;
+  if (ApplyPop) {
     // Use available stack adjustment in pop instruction to deallocate stack
     // space. Align the stack size down to a multiple of 16. This is needed for
     // RVE.
@@ -846,13 +870,18 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     uint64_t Spimm = std::min(alignDown(StackSize, 16), (uint64_t)48);
     MBBI->getOperand(1).setImm(Spimm);
     StackSize -= Spimm;
+
+    if (StackSize != 0)
+      deallocateStack(MF, MBB, MBBI, DL, StackSize,
+                      /*stack_adj of cm.pop instr*/ RealStackSize - StackSize);
+
+    ++MBBI;
   }
 
-  // Deallocate stack
-  if (StackSize != 0) {
-    RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(StackSize),
-                  MachineInstr::FrameDestroy, getStackAlign());
-  }
+  // Deallocate stack if we didn't already do it during cm.pop handling and
+  // StackSize isn't a zero
+  if (StackSize != 0 && !ApplyPop)
+    deallocateStack(MF, MBB, MBBI, DL, StackSize, 0);
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
@@ -1090,26 +1119,36 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
   for (int FI : ObjectsToAllocate) {
     // ObjectSize in bytes.
     int64_t ObjectSize = MFI.getObjectSize(FI);
-    auto ObjectAlign = std::max(Align(8), MFI.getObjectAlign(FI));
+    auto ObjectAlign =
+        std::max(Align(RISCV::RVVBitsPerBlock / 8), MFI.getObjectAlign(FI));
     // If the data type is the fractional vector type, reserve one vector
     // register for it.
-    if (ObjectSize < 8)
-      ObjectSize = 8;
+    if (ObjectSize < (RISCV::RVVBitsPerBlock / 8))
+      ObjectSize = (RISCV::RVVBitsPerBlock / 8);
     Offset = alignTo(Offset + ObjectSize, ObjectAlign);
     MFI.setObjectOffset(FI, -Offset);
     // Update the maximum alignment of the RVV stack section
     RVVStackAlign = std::max(RVVStackAlign, ObjectAlign);
   }
 
+  uint64_t StackSize = Offset;
+
+  // Multiply by vscale.
+  if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+    StackSize *= ST.getRealMinVLen() / RISCV::RVVBitsPerBlock;
+
   // Ensure the alignment of the RVV stack. Since we want the most-aligned
   // object right at the bottom (i.e., any padding at the top of the frame),
   // readjust all RVV objects down by the alignment padding.
-  uint64_t StackSize = Offset;
   if (auto AlignmentPadding = offsetToAlignment(StackSize, RVVStackAlign)) {
     StackSize += AlignmentPadding;
     for (int FI : ObjectsToAllocate)
       MFI.setObjectOffset(FI, MFI.getObjectOffset(FI) - AlignmentPadding);
   }
+
+  // Remove vscale.
+  if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+    StackSize /= ST.getRealMinVLen() / RISCV::RVVBitsPerBlock;
 
   return std::make_pair(StackSize, RVVStackAlign);
 }

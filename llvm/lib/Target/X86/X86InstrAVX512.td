@@ -2617,20 +2617,19 @@ defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, SchedWriteFCmp>, E
 multiclass avx512_mask_mov<bits<8> opc_kk, bits<8> opc_km, bits<8> opc_mk,
                           string OpcodeStr, RegisterClass KRC, ValueType vvt,
                           X86MemOperand x86memop, string Suffix = ""> {
-  let explicitOpPrefix = !if(!eq(Suffix, ""), NoExplicitOpPrefix, ExplicitEVEX) in {
-    let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove] in
-    def kk#Suffix : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
-                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
-                    Sched<[WriteMove]>;
-    def km#Suffix : I<opc_km, MRMSrcMem, (outs KRC:$dst), (ins x86memop:$src),
-                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                      [(set KRC:$dst, (vvt (load addr:$src)))]>,
-                    Sched<[WriteLoad]>, NoCD8;
-    def mk#Suffix : I<opc_mk, MRMDestMem, (outs), (ins x86memop:$dst, KRC:$src),
-                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                      [(store KRC:$src, addr:$dst)]>,
-                    Sched<[WriteStore]>, NoCD8;
-  }
+  let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove],
+      explicitOpPrefix = !if(!eq(Suffix, ""), NoExplicitOpPrefix, ExplicitEVEX) in
+  def kk#Suffix : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
+                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
+                  Sched<[WriteMove]>;
+  def km#Suffix : I<opc_km, MRMSrcMem, (outs KRC:$dst), (ins x86memop:$src),
+                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
+                    [(set KRC:$dst, (vvt (load addr:$src)))]>,
+                  Sched<[WriteLoad]>, NoCD8;
+  def mk#Suffix : I<opc_mk, MRMDestMem, (outs), (ins x86memop:$dst, KRC:$src),
+                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
+                    [(store KRC:$src, addr:$dst)]>,
+                  Sched<[WriteStore]>, NoCD8;
 }
 
 multiclass avx512_mask_mov_gpr<bits<8> opc_kr, bits<8> opc_rk,

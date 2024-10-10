@@ -34,8 +34,14 @@ ENUM_LOWERINGOPT(NoPPCNativeVecElemOrder, unsigned, 1, 0)
 /// On by default.
 ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
 
+/// If true, assume the behavior of integer overflow is defined
+/// (i.e. wraps around as two's complement). On by default.
+/// TODO: make the default off
+ENUM_LOWERINGOPT(IntegerWrapAround, unsigned, 1, 1)
+
 /// If true, add nsw flags to loop variable increments.
 /// Off by default.
+/// TODO: integrate this option with the above
 ENUM_LOWERINGOPT(NSWOnLoopVarInc, unsigned, 1, 0)
 
 #undef LOWERINGOPT

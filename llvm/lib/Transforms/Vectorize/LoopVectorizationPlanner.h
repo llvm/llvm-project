@@ -220,6 +220,17 @@ public:
         new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
   }
 
+  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                              const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(false), DL, Name));
+  }
+  VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                                const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+  }
+
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPCanonicalIVPHIRecipe *CanonicalIV,
@@ -430,11 +441,10 @@ public:
   /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
   /// to re-use expansion results generated during main plan execution.
   ///
-  /// Returns a mapping of SCEVs to their expanded IR values and a mapping for
-  /// the reduction resume values. Note that this is a temporary workaround
-  /// needed due to the current epilogue handling.
-  std::pair<DenseMap<const SCEV *, Value *>,
-            DenseMap<const RecurrenceDescriptor *, Value *>>
+  /// Returns a mapping of SCEVs to their expanded IR values.
+  /// Note that this is a temporary workaround needed due to the current
+  /// epilogue handling.
+  DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
               bool IsEpilogueVectorization,

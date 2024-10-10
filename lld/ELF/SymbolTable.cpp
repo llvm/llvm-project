@@ -215,7 +215,7 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
   // Get a list of symbols which we need to assign the version to.
   SmallVector<Symbol *, 0> syms = findByVersion(ver);
 
-  auto getName = [](uint16_t ver) -> std::string {
+  auto getName = [&ctx = ctx](uint16_t ver) -> std::string {
     if (ver == VER_NDX_LOCAL)
       return "VER_NDX_LOCAL";
     if (ver == VER_NDX_GLOBAL)

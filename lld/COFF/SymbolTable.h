@@ -57,7 +57,10 @@ public:
   // Try to resolve any undefined symbols and update the symbol table
   // accordingly, then print an error message for any remaining undefined
   // symbols and warn about imported local symbols.
-  void resolveRemainingUndefines();
+  // Returns whether more files might need to be linked in to resolve lazy
+  // symbols, in which case the caller is expected to call the function again
+  // after linking those files.
+  bool resolveRemainingUndefines();
 
   // Load lazy objects that are needed for MinGW automatic import and for
   // doing stdcall fixups.
