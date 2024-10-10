@@ -23,7 +23,7 @@ struct _LIBCPP_TEMPLATE_VIS is_same : _BoolConstant<__is_same(_Tp, _Up)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp, class _Up>
-inline constexpr bool is_same_v = __is_same(_Tp, _Up);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_same_v = __is_same(_Tp, _Up);
 #endif
 
 // _IsSame<T,U> has the same effect as is_same<T,U> but instantiates fewer types:

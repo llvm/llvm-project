@@ -236,10 +236,10 @@ template <class _Ret, class _Fn, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_invocable_r : integral_constant<bool, __invokable_r<_Ret, _Fn, _Args...>::value> {};
 
 template <class _Fn, class... _Args>
-inline constexpr bool is_invocable_v = is_invocable<_Fn, _Args...>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_invocable_v = is_invocable<_Fn, _Args...>::value;
 
 template <class _Ret, class _Fn, class... _Args>
-inline constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::value;
 
 // is_nothrow_invocable
 
@@ -252,10 +252,10 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r
     : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value> {};
 
 template <class _Fn, class... _Args>
-inline constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args...>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args...>::value;
 
 template <class _Ret, class _Fn, class... _Args>
-inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
 
 template <class _Fn, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS invoke_result : __invoke_of<_Fn, _Args...> {};

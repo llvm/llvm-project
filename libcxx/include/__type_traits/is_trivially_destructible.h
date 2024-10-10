@@ -39,7 +39,7 @@ struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_trivially_destructible_v = is_trivially_destructible<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_trivially_destructible_v = is_trivially_destructible<_Tp>::value;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

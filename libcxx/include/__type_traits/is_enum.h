@@ -23,7 +23,7 @@ struct _LIBCPP_TEMPLATE_VIS is_enum : public integral_constant<bool, __is_enum(_
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_enum_v = __is_enum(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_enum_v = __is_enum(_Tp);
 #endif
 
 #if _LIBCPP_STD_VER >= 23
@@ -32,7 +32,7 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_scoped_enum : bool_constant<__is_scoped_enum(_Tp)> {};
 
 template <class _Tp>
-inline constexpr bool is_scoped_enum_v = __is_scoped_enum(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_scoped_enum_v = __is_scoped_enum(_Tp);
 
 #endif // _LIBCPP_STD_VER >= 23
 

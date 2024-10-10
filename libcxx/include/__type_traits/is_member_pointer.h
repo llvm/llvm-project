@@ -29,13 +29,13 @@ struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer : _BoolConstant<__is_memb
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_member_pointer_v = __is_member_pointer(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_member_pointer_v = __is_member_pointer(_Tp);
 
 template <class _Tp>
-inline constexpr bool is_member_object_pointer_v = __is_member_object_pointer(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_member_object_pointer_v = __is_member_object_pointer(_Tp);
 
 template <class _Tp>
-inline constexpr bool is_member_function_pointer_v = __is_member_function_pointer(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_member_function_pointer_v = __is_member_function_pointer(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

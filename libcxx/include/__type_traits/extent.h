@@ -26,7 +26,7 @@ struct _LIBCPP_TEMPLATE_VIS extent : integral_constant<size_t, __array_extent(_T
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp, unsigned _Ip = 0>
-inline constexpr size_t extent_v = __array_extent(_Tp, _Ip);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr size_t extent_v = __array_extent(_Tp, _Ip);
 #  endif
 
 #else // __has_builtin(__array_extent)

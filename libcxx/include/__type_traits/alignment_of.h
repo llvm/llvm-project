@@ -24,7 +24,7 @@ struct _LIBCPP_TEMPLATE_VIS alignment_of : public integral_constant<size_t, _LIB
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr size_t alignment_of_v = _LIBCPP_ALIGNOF(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr size_t alignment_of_v = _LIBCPP_ALIGNOF(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

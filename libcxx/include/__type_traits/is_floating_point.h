@@ -31,7 +31,7 @@ struct _LIBCPP_TEMPLATE_VIS is_floating_point : public __libcpp_is_floating_poin
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_floating_point_v = is_floating_point<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_floating_point_v = is_floating_point<_Tp>::value;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

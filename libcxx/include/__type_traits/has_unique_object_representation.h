@@ -31,7 +31,7 @@ struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
     : public integral_constant<bool, __has_unique_object_representations(remove_all_extents_t<_Tp>)> {};
 
 template <class _Tp>
-inline constexpr bool has_unique_object_representations_v = __has_unique_object_representations(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool has_unique_object_representations_v = __has_unique_object_representations(_Tp);
 
 #endif
 
