@@ -201,6 +201,15 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue UMax = DAG->getNode(ISD::UMAX, DL, Int32VT, Op0, Op1);
   SDValue UMin = DAG->getNode(ISD::UMIN, DL, Int32VT, Op1, Op0);
 
+  SDValue ICMP_GT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGT);
+  SDValue ICMP_UGT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETUGT);
+  SDValue ICMP_LT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETLT);
+  SDValue ICMP_ULT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETULT);
+  SDValue SMaxLike = DAG->getSelect(DL, MVT::i32, ICMP_GT, Op0, Op1);
+  SDValue UMaxLike = DAG->getSelect(DL, MVT::i32, ICMP_UGT, Op0, Op1);
+  SDValue SMinLike = DAG->getSelect(DL, MVT::i32, ICMP_LT, Op0, Op1);
+  SDValue UMinLike = DAG->getSelect(DL, MVT::i32, ICMP_ULT, Op0, Op1);
+
   SDValue SFAdd = DAG->getNode(ISD::STRICT_FADD, DL, {Float32VT, MVT::Other},
                                {DAG->getEntryNode(), Op2, Op2});
 
@@ -231,12 +240,20 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
 
   EXPECT_TRUE(sd_match(SMax, m_c_BinOp(ISD::SMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMax, m_SMax(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMax, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMaxLike, m_SMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_c_BinOp(ISD::SMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_SMin(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMin, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMinLike, m_SMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_c_BinOp(ISD::UMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_UMax(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMax, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMaxLike, m_UMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_c_BinOp(ISD::UMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_UMin(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMin, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMinLike, m_UMinLike(m_Value(), m_Value())));
 
   SDValue BindVal;
   EXPECT_TRUE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_Value(BindVal),
