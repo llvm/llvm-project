@@ -586,7 +586,8 @@ private:
   bool optimizePTestInstr(MachineInstr *PTest, unsigned MaskReg,
                           unsigned PredReg,
                           const MachineRegisterInfo *MRI) const;
-  std::optional<unsigned>
+
+  std::optional<std::pair<unsigned, MachineInstr *>>
   canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
                       MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
 
