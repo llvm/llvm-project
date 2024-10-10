@@ -8,8 +8,6 @@ add_entrypoint_object(
     libc.hdr.types.jmp_buf
   COMPILE_OPTIONS
     -O3
-    -fomit-frame-pointer
-    -momit-leaf-frame-pointer
 )
 
 add_entrypoint_object(
