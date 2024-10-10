@@ -8,15 +8,65 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
 
 namespace llvm::sandboxir {
 
+PredIterator::value_type PredIterator::operator*() {
+  // If it's a DGNode then we dereference the operand iterator.
+  if (!isa<MemDGNode>(N)) {
+    assert(OpIt != OpItE && "Can't dereference end iterator!");
+    return DAG->getNode(cast<Instruction>((Value *)*OpIt));
+  }
+  // It's a MemDGNode, so we check if we return either the use-def operand,
+  // or a mem predecessor.
+  if (OpIt != OpItE)
+    return DAG->getNode(cast<Instruction>((Value *)*OpIt));
+  // It's a MemDGNode with OpIt == end, so we need to use MemIt.
+  assert(MemIt != cast<MemDGNode>(N)->MemPreds.end() &&
+         "Cant' dereference end iterator!");
+  return *MemIt;
+}
+
+PredIterator &PredIterator::operator++() {
+  // If it's a DGNode then we increment the use-def iterator.
+  if (!isa<MemDGNode>(N)) {
+    assert(OpIt != OpItE && "Already at end!");
+    ++OpIt;
+    // Skip operands that are not instructions.
+    OpIt = skipNonInstr(OpIt, OpItE);
+    return *this;
+  }
+  // It's a MemDGNode, so if we are not at the end of the use-def iterator we
+  // need to first increment that.
+  if (OpIt != OpItE) {
+    ++OpIt;
+    // Skip operands that are not instructions.
+    OpIt = skipNonInstr(OpIt, OpItE);
+    return *this;
+  }
+  // It's a MemDGNode with OpIt == end, so we need to increment MemIt.
+  assert(MemIt != cast<MemDGNode>(N)->MemPreds.end() && "Already at end!");
+  ++MemIt;
+  return *this;
+}
+
+bool PredIterator::operator==(const PredIterator &Other) const {
+  assert(DAG == Other.DAG && "Iterators of different DAGs!");
+  assert(N == Other.N && "Iterators of different nodes!");
+  return OpIt == Other.OpIt && MemIt == Other.MemIt;
+}
+
 #ifndef NDEBUG
-void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
+void DGNode::print(raw_ostream &OS, bool PrintDeps) const { I->dumpOS(OS); }
+void DGNode::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
   I->dumpOS(OS);
   if (PrintDeps) {
-    OS << "\n";
     // Print memory preds.
     static constexpr const unsigned Indent = 4;
     for (auto *Pred : MemPreds) {
@@ -25,10 +75,6 @@ void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
       OS << "\n";
     }
   }
-}
-void DGNode::dump() const {
-  print(dbgs());
-  dbgs() << "\n";
 }
 #endif // NDEBUG
 
@@ -135,7 +181,7 @@ bool DependencyGraph::hasDep(Instruction *SrcI, Instruction *DstI) {
   llvm_unreachable("Unknown DependencyType enum");
 }
 
-void DependencyGraph::scanAndAddDeps(DGNode &DstN,
+void DependencyGraph::scanAndAddDeps(MemDGNode &DstN,
                                      const Interval<MemDGNode> &SrcScanRange) {
   assert(isa<MemDGNode>(DstN) &&
          "DstN is the mem dep destination, so it must be mem");

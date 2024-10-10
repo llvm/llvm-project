@@ -10257,9 +10257,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         // If reference to barrier id is not an inline constant then it must be
         // referenced with M0[4:0]. Perform an OR with the member count to
         // include it in M0.
-        M0Val = SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32,
-                                           Op.getOperand(2), M0Val),
-                        0);
+        M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, Op.getOperand(2), M0Val);
       }
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
     } else if (IsInlinableBarID) {
