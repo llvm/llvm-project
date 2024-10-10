@@ -23,14 +23,12 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -13598,6 +13596,10 @@ static SDValue combineSubShiftToOrcB(SDNode *N, SelectionDAG &DAG,
   if (!ShAmtCLeft)
     return SDValue();
   unsigned ShiftedAmount = 8 - ShAmtCLeft->getZExtValue();
+
+  if (ShiftedAmount >= 8)
+    return SDValue();
+
   SDValue LeftShiftOperand = N0->getOperand(0);
   SDValue RightShiftOperand = N1;
 
