@@ -414,13 +414,13 @@ struct TemplateParameterListBuilder {
 
     ConceptSpecializationExpr *CSE =
         ConceptSpecializationExpr::Create(Context, CR, ImplicitCSEDecl, &CS);
-
     return CSE;
   }
 
   BuiltinTypeDeclBuilder &finalizeTemplateArgs(ConceptDecl *CD = nullptr) {
     if (Params.empty())
       return Builder;
+
     ConceptSpecializationExpr *CSE =
         CD ? constructConceptSpecializationExpr(S, CD) : nullptr;
 
