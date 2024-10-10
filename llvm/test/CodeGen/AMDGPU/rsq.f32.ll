@@ -637,9 +637,10 @@ define amdgpu_kernel void @neg_rsq_f32(ptr addrspace(1) noalias %out, ptr addrsp
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
 ; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
-; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], |v0|, s2
-; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v0
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
 ; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
@@ -762,14 +763,15 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s9, s3
 ; GCN-DAZ-SAFE-NEXT:    buffer_load_dword v0, off, s[8:11], 0
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s2, 0x8f800000
-; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s4, s0
 ; GCN-DAZ-SAFE-NEXT:    s_mov_b32 s5, s1
 ; GCN-DAZ-SAFE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0xcf800000, v0
+; GCN-DAZ-SAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v0
+; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
 ; GCN-DAZ-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
+; GCN-DAZ-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GCN-DAZ-SAFE-NEXT:    v_rsq_f32_e32 v1, v0
+; GCN-DAZ-SAFE-NEXT:    v_mov_b32_e32 v2, 0x260
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v3, v0, v1
 ; GCN-DAZ-SAFE-NEXT:    v_mul_f32_e32 v1, 0.5, v1
 ; GCN-DAZ-SAFE-NEXT:    v_fma_f32 v4, -v1, v3, 0.5
@@ -802,9 +804,10 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
 ; SI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
 ; SI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
-; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
+; SI-IEEE-SAFE-NEXT:    v_xor_b32_e32 v2, 0x80000000, v0
+; SI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0xcf800000, v0
 ; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, v0
-; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, v2, v3, s[0:1]
 ; SI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
 ; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, -1, v2
 ; SI-IEEE-SAFE-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
@@ -818,9 +821,10 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
 ; SI-IEEE-SAFE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
 ; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v1, -v0
-; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], |v0|, s2
-; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[0:1]
+; SI-IEEE-SAFE-NEXT:    v_xor_b32_e32 v1, 0x80000000, v0
+; SI-IEEE-SAFE-NEXT:    v_frexp_mant_f32_e64 v2, -v0
+; SI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s2
+; SI-IEEE-SAFE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-IEEE-SAFE-NEXT:    v_rcp_f32_e32 v1, v1
 ; SI-IEEE-SAFE-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; SI-IEEE-SAFE-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
@@ -844,9 +848,10 @@ define amdgpu_kernel void @neg_rsq_neg_f32(ptr addrspace(1) noalias %out, ptr ad
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s4, s8
 ; CI-IEEE-SAFE-NEXT:    s_mov_b32 s5, s9
 ; CI-IEEE-SAFE-NEXT:    s_waitcnt vmcnt(0)
-; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v0
+; CI-IEEE-SAFE-NEXT:    v_xor_b32_e32 v2, 0x80000000, v0
+; CI-IEEE-SAFE-NEXT:    v_mul_f32_e32 v3, 0xcf800000, v0
 ; CI-IEEE-SAFE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, v0
-; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, s[0:1]
+; CI-IEEE-SAFE-NEXT:    v_cndmask_b32_e64 v0, v2, v3, s[0:1]
 ; CI-IEEE-SAFE-NEXT:    v_sqrt_f32_e32 v2, v0
 ; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v3, vcc, -1, v2
 ; CI-IEEE-SAFE-NEXT:    v_add_i32_e32 v4, vcc, 1, v2
