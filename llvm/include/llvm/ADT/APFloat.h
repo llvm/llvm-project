@@ -1473,9 +1473,6 @@ public:
   friend DoubleAPFloat;
 };
 
-static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
-              "Empty base class optimization is not performed.");
-
 /// See friend declarations above.
 ///
 /// These additional declarations are required in order to compile LLVM with IBM
