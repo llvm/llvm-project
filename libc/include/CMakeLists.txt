@@ -210,7 +210,6 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.complex_macros
-    .llvm-libc-types._Imaginary
 )
 
 add_header_macro(
