@@ -12,9 +12,9 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 #define LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 
-#include "CoroInstr.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
 
 namespace llvm {
 
@@ -49,7 +49,7 @@ enum class ABI {
 
 // Holds structural Coroutine Intrinsics for a particular function and other
 // values used during CoroSplit pass.
-struct LLVM_LIBRARY_VISIBILITY Shape {
+struct Shape {
   CoroBeginInst *CoroBegin = nullptr;
   SmallVector<AnyCoroEndInst *, 4> CoroEnds;
   SmallVector<CoroSizeInst *, 2> CoroSizes;

@@ -355,6 +355,10 @@ private:
   /// and stores a mapping from the struct to the symbol pointing to the
   /// translated operation.
   void processComdat(const llvm::Comdat *comdat);
+  /// Returns a symbol name for a nameless global. MLIR, in contrast to LLVM,
+  /// always requires a symbol name.
+  FlatSymbolRefAttr
+  getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
