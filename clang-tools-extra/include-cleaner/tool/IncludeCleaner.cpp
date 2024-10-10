@@ -174,7 +174,8 @@ private:
       writeHTML();
 
     // Source File's path of compiler invocation, converted to absolute path.
-    llvm::SmallString<256> AbsPath(SM.getFileEntryRefForID(SM.getMainFileID())->getName());
+    llvm::SmallString<256> AbsPath(
+        SM.getFileEntryRefForID(SM.getMainFileID())->getName());
     assert(!AbsPath.empty() && "Main file path not known?");
     SM.getFileManager().makeAbsolutePath(AbsPath);
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
