@@ -669,11 +669,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     // passed in memory because it is bigger than 2 eight bytes. This has the
     // funny effect of
     // {_Complex long double} return to be dealt with differently than
-    // _Complex long double. ICC, NVC, and Clang return the struct in memory,
-    // GCC does not. The code here follows ICC and Clang because that seems to
-    // be in line with the standard (nothing in the section about return says
-    // that the step 5. of the aggregate classification should not be done for
-    // the classification of the result).
+    // _Complex long double.
 
     if (auto fieldType =
             passAsFieldIfOneFieldStruct(recTy, /*allowComplex=*/true)) {
