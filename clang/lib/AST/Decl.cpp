@@ -1737,12 +1737,17 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       continue;
 
     // Suppress inline namespace if it doesn't make the result ambiguous.
-    if (Ctx->isInlineNamespace() && NameInScope &&
-        (P.AlwaysSuppressInlineNamespace ||
-         (P.SuppressInlineNamespace &&
-          cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(
-              NameInScope))))
-      continue;
+    if (Ctx->isInlineNamespace() && NameInScope) {
+      bool const isRedundant =
+          cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope);
+      if (P.SuppressInlineNamespace ==
+              PrintingPolicy::SupressInlineNamespaceMode::All ||
+          (P.SuppressInlineNamespace ==
+               PrintingPolicy::SupressInlineNamespaceMode::Redundant &&
+           isRedundant)) {
+        continue;
+      }
+    }
 
     // Skip non-named contexts such as linkage specifications and ExportDecls.
     const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);

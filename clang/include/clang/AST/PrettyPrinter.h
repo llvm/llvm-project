@@ -55,13 +55,15 @@ public:
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
 struct PrintingPolicy {
+  enum class SupressInlineNamespaceMode : uint8_t { None, Redundant, All };
+
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
-        SuppressInlineNamespace(true), SuppressElaboration(false),
-        AlwaysSuppressInlineNamespace(false), SuppressInitializers(false),
+        SuppressInlineNamespace(SupressInlineNamespaceMode::Redundant),
+        SuppressElaboration(false), SuppressInitializers(false),
         ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
         SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
@@ -141,20 +143,16 @@ struct PrintingPolicy {
   unsigned SuppressUnwrittenScope : 1;
 
   /// Suppress printing parts of scope specifiers that correspond
-  /// to inline namespaces, where the name is unambiguous with the specifier
+  /// to inline namespaces.
+  /// If Redudant, where the name is unambiguous with the specifier removed.
+  /// If All, even if the name is ambiguous with the specifier
   /// removed.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SuppressInlineNamespace : 1;
+  SupressInlineNamespaceMode SuppressInlineNamespace : 2;
 
   /// Ignore qualifiers and tag keywords as specified by elaborated type sugar,
   /// instead letting the underlying type print as normal.
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressElaboration : 1;
-
-  /// Suppress printing parts of scope specifiers that correspond
-  /// to inline namespaces, even if the name is ambiguous with the specifier
-  /// removed.
-  unsigned AlwaysSuppressInlineNamespace : 1;
 
   /// Suppress printing of variable initializers.
   ///
