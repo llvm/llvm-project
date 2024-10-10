@@ -429,6 +429,62 @@ tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   return std::nullopt;
 }
 
+static std::optional<std::tuple<TypedValue<ShapedType>, MeshSharding>>
+tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
+                          MeshSharding sourceSharding,
+                          MeshSharding targetSharding,
+                          ShapedType sourceUnshardedShape,
+                          TypedValue<ShapedType> sourceShard) {
+  if (sourceSharding.equalSplitAndPartialAxes(targetSharding) &&
+      sourceSharding.getPartialAxes().empty() &&
+      targetSharding.getPartialAxes().empty() &&
+      sourceSharding.getStaticShardedDimsSizes().empty() &&
+      targetSharding.getStaticShardedDimsSizes().empty() &&
+      !sourceSharding.equalHaloSizes(targetSharding)) {
+    auto srcHaloSizes = sourceSharding.getStaticHaloSizes();
+    auto tgtHaloSizes = targetSharding.getStaticHaloSizes();
+    assert(
+        ((srcHaloSizes.empty() || !ShapedType::isDynamicShape(srcHaloSizes)) &&
+         !ShapedType::isDynamicShape(tgtHaloSizes) &&
+         sourceShard.getType().hasStaticShape()) &&
+        "dynamic shapes/halos are not supported yet for mesh-spmdization");
+    auto rank = sourceShard.getType().getRank();
+    SmallVector<int64_t> outShape, srcCoreOffs(rank, 0), tgtCoreOffs,
+        strides(rank, 1), coreShape(sourceShard.getType().getShape());
+    for (auto i = 0u; i < rank; ++i) {
+      if (!srcHaloSizes.empty()) {
+        coreShape[i] -= srcHaloSizes[i * 2] + srcHaloSizes[i * 2 + 1];
+        srcCoreOffs[i] = srcHaloSizes[i * 2];
+      }
+      tgtCoreOffs.emplace_back(tgtHaloSizes[i * 2]);
+      outShape.emplace_back(coreShape[i] + tgtHaloSizes[i * 2] +
+                            tgtHaloSizes[i * 2 + 1]);
+    }
+    auto noVals = ValueRange{};
+    auto initVal = builder.create<tensor::EmptyOp>(
+        sourceShard.getLoc(), outShape, sourceShard.getType().getElementType());
+    auto core = builder.create<tensor::ExtractSliceOp>(
+        sourceShard.getLoc(),
+        RankedTensorType::get(coreShape,
+                              sourceShard.getType().getElementType()),
+        sourceShard, noVals, noVals, noVals, srcCoreOffs, coreShape, strides);
+    auto initOprnd = builder.create<tensor::InsertSliceOp>(
+        sourceShard.getLoc(), core, initVal, noVals, noVals, noVals,
+        tgtCoreOffs, coreShape, strides);
+    auto targetShard = builder.create<UpdateHaloOp>(
+        sourceShard.getLoc(),
+        RankedTensorType::get(outShape, sourceShard.getType().getElementType()),
+        sourceShard, initOprnd, mesh.getSymName(),
+        MeshAxesArrayAttr::get(builder.getContext(),
+                               sourceSharding.getSplitAxes()),
+        sourceSharding.getDynamicHaloSizes(),
+        sourceSharding.getStaticHaloSizes());
+    return std::make_tuple(
+        cast<TypedValue<ShapedType>>(targetShard.getResult()), targetSharding);
+  }
+  return std::nullopt;
+}
+
 // Handles only resharding on a 1D mesh.
 // Currently the sharded tensor axes must be exactly divisible by the single
 // mesh axis size.
@@ -454,10 +510,10 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh,
 
   TypedValue<ShapedType> targetShard;
   MeshSharding actualTargetSharding;
-  if (reducedSourceSharding.getStaticHaloSizes().empty() &&
-      targetSharding.getStaticHaloSizes().empty() &&
-      reducedSourceSharding.getStaticShardedDimsSizes().empty() &&
-      targetSharding.getStaticShardedDimsSizes().empty()) {
+  if (reducedSourceSharding.getStaticShardedDimsSizes().empty() &&
+      targetSharding.getStaticShardedDimsSizes().empty() &&
+      reducedSourceSharding.getStaticHaloSizes().empty() &&
+      targetSharding.getStaticHaloSizes().empty()) {
     if (auto tryRes = tryMoveLastSplitAxisInResharding(
             builder, mesh, reducedSourceSharding, targetSharding,
             sourceUnshardedValue.getType(), reducedSourceShard)) {
@@ -483,6 +539,12 @@ TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, MeshOp mesh,
                                MeshSharding targetSharding,
                                TypedValue<ShapedType> sourceUnshardedValue,
                                TypedValue<ShapedType> sourceShard) {
+  if (auto tryRes = tryUpdateHaloInResharding(
+          builder, mesh, sourceSharding, targetSharding,
+          sourceUnshardedValue.getType(), sourceShard)) {
+    return std::get<0>(tryRes.value()); // targetShard
+  }
+
   // Resort to handling only 1D meshes since the general case is complicated if
   // it needs to be communication efficient in terms of minimizing the data
   // transfered between devices.
@@ -497,9 +559,10 @@ TypedValue<ShapedType> reshard(OpBuilder &builder, MeshOp mesh, ShardOp source,
   auto sourceSharding = source.getSharding();
   auto targetSharding = target.getSharding();
   ImplicitLocOpBuilder implicitLocOpBuilder(target->getLoc(), builder);
-  return reshard(implicitLocOpBuilder, mesh, sourceSharding, targetSharding,
-                 cast<TypedValue<ShapedType>>(source.getSrc()),
-                 sourceShardValue);
+  auto shard =
+      reshard(implicitLocOpBuilder, mesh, sourceSharding, targetSharding,
+              cast<TypedValue<ShapedType>>(source.getSrc()), sourceShardValue);
+  return shard;
 }
 
 TypedValue<ShapedType> reshard(OpBuilder &builder, ShardOp source,

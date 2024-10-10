@@ -576,25 +576,15 @@ bool MeshSharding::equalSplitAndPartialAxes(const MeshSharding &rhs) const {
 }
 
 bool MeshSharding::equalHaloAndShardSizes(const MeshSharding &rhs) const {
-  if (rhs.getStaticHaloSizes().size() != getStaticHaloSizes().size() ||
-      !llvm::equal(llvm::make_range(getStaticHaloSizes().begin(),
-                                    getStaticHaloSizes().end()),
-                   llvm::make_range(rhs.getStaticHaloSizes().begin(),
-                                    rhs.getStaticHaloSizes().end()))) {
-    return false;
-  }
+  return equalShardSizes(rhs) && equalHaloSizes(rhs);
+}
+
+bool MeshSharding::equalShardSizes(const MeshSharding &rhs) const {
   if (rhs.getStaticShardedDimsSizes().size() != getStaticShardedDimsSizes().size() ||
       !llvm::equal(llvm::make_range(getStaticShardedDimsSizes().begin(),
                                     getStaticShardedDimsSizes().end()),
                    llvm::make_range(rhs.getStaticShardedDimsSizes().begin(),
                                     rhs.getStaticShardedDimsSizes().end()))) {
-    return false;
-  }
-  if (rhs.getDynamicHaloSizes().size() != getDynamicHaloSizes().size() ||
-      !llvm::equal(llvm::make_range(getDynamicHaloSizes().begin(),
-                                    getDynamicHaloSizes().end()),
-                   llvm::make_range(rhs.getDynamicHaloSizes().begin(),
-                                    rhs.getDynamicHaloSizes().end()))) {
     return false;
   }
   if (rhs.getDynamicShardedDimsSizes().size() !=
@@ -603,6 +593,23 @@ bool MeshSharding::equalHaloAndShardSizes(const MeshSharding &rhs) const {
                                     getDynamicShardedDimsSizes().end()),
                    llvm::make_range(rhs.getDynamicShardedDimsSizes().begin(),
                                     rhs.getDynamicShardedDimsSizes().end()))) {
+    return false;
+  }
+}
+
+bool MeshSharding::equalHaloSizes(const MeshSharding &rhs) const {
+  if (rhs.getStaticHaloSizes().size() != getStaticHaloSizes().size() ||
+      !llvm::equal(llvm::make_range(getStaticHaloSizes().begin(),
+                                    getStaticHaloSizes().end()),
+                   llvm::make_range(rhs.getStaticHaloSizes().begin(),
+                                    rhs.getStaticHaloSizes().end()))) {
+    return false;
+  }
+  if (rhs.getDynamicHaloSizes().size() != getDynamicHaloSizes().size() ||
+      !llvm::equal(llvm::make_range(getDynamicHaloSizes().begin(),
+                                    getDynamicHaloSizes().end()),
+                   llvm::make_range(rhs.getDynamicHaloSizes().begin(),
+                                    rhs.getDynamicHaloSizes().end()))) {
     return false;
   }
   return true;
