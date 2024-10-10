@@ -339,14 +339,14 @@ public:
   }
 
   /// Returns a list of memory ranges that should be saved in the core file,
-  /// specific for this dßynamic loader.
+  /// specific for this dynamic loader.
   ///
-  /// By default, this returns an empty list, but for POSIX/ELF it will return
-  /// the link map, and the TLS data.
+  /// For example, an implementation of this function can save the thread
+  /// local data of a given thread.
   virtual void CalculateDynamicSaveCoreRanges(
       lldb_private::Process &process,
       std::vector<lldb_private::MemoryRegionInfo> &ranges,
-      std::function<bool(const lldb_private::Thread &)> save_thread_predicate) {
+      llvm::function_ref<bool(const lldb_private::Thread &)> save_thread_predicate) {
   };
 
 protected:

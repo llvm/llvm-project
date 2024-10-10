@@ -869,7 +869,7 @@ bool DynamicLoaderPOSIXDYLD::IsCoreFile() const {
 }
 
 // For our ELF/POSIX builds save off the fs_base/gs_base regions
-static void AddSegmentRegisterSections(Process &process, ThreadSP &thread_sp,
+static void AddThreadLocalMemoryRegions(Process &process, ThreadSP &thread_sp,
                                        std::vector<MemoryRegionInfo> &ranges) {
   lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
   if (!reg_ctx)
@@ -930,17 +930,17 @@ static void AddLinkMapSections(Process &process,
 void DynamicLoaderPOSIXDYLD::CalculateDynamicSaveCoreRanges(
     lldb_private::Process &process,
     std::vector<lldb_private::MemoryRegionInfo> &ranges,
-    std::function<bool(const lldb_private::Thread &)> save_thread_predicate) {
+    llvm::function_ref<bool(const lldb_private::Thread &)> save_thread_predicate) {
   ThreadList &thread_list = process.GetThreadList();
   for (size_t idx = 0; idx < thread_list.GetSize(); idx++) {
     ThreadSP thread_sp = thread_list.GetThreadAtIndex(idx);
     if (!thread_sp)
       continue;
 
-    if (!save_thread_predicate(*thread_sp.get()))
+    if (!save_thread_predicate(*thread_sp))
       continue;
 
-    AddSegmentRegisterSections(process, thread_sp, ranges);
+    AddThreadLocalMemoryRegions(process, thread_sp, ranges);
   }
 
   AddLinkMapSections(process, ranges);
