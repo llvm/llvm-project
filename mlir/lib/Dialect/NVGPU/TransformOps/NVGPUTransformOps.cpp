@@ -1018,7 +1018,7 @@ void HopperBuilder::buildTryWaitParity(
   Value ticksBeforeRetry =
       rewriter.create<arith::ConstantIndexOp>(loc, 10000000);
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  rewriter.create<nvgpu::MBarrierTryWaitParityOp>(loc, barrier, parity,
+  rewriter.create<nvgpu::MBarrierTryWaitParityOp>(loc, i1, barrier, parity,
                                                   ticksBeforeRetry, zero);
 }
 
