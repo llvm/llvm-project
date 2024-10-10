@@ -1777,9 +1777,9 @@ bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
                  TII.get(SPIRV::OpGroupNonUniformShuffle))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII))
       .addUse(I.getOperand(2).getReg())
-      .addUse(I.getOperand(3).getReg())
-      .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
+      .addUse(I.getOperand(3).getReg());
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,

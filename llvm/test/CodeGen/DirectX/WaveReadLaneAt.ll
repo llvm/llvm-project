@@ -44,6 +44,13 @@ entry:
   ret i32 %ret
 }
 
+define noundef i64 @wave_rla_i64(i64 noundef %expr, i32 noundef %idx) {
+entry:
+; CHECK: call i64 @dx.op.waveReadLaneAt.i64(i32 117, i64 %expr, i32 %idx)
+  %ret = call i64 @llvm.dx.wave.readlane.i64(i64 %expr, i32 %idx)
+  ret i64 %ret
+}
+
 declare half @llvm.dx.wave.readlane.f16(half, i32)
 declare float @llvm.dx.wave.readlane.f32(float, i32)
 declare double @llvm.dx.wave.readlane.f64(double, i32)
@@ -51,3 +58,4 @@ declare double @llvm.dx.wave.readlane.f64(double, i32)
 declare i1 @llvm.dx.wave.readlane.i1(i1, i32)
 declare i16 @llvm.dx.wave.readlane.i16(i16, i32)
 declare i32 @llvm.dx.wave.readlane.i32(i32, i32)
+declare i64 @llvm.dx.wave.readlane.i64(i64, i32)
