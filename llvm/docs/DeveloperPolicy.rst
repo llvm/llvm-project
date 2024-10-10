@@ -86,6 +86,11 @@ that notices of confidentiality or non-disclosure cannot be respected.
 Making and Submitting a Patch
 -----------------------------
 
+The LLVM community requires contributors to have a public email address
+associated with their GitHub commits, so please ensure that "Keep my email
+addresses private" is disabled in your
+`account settings <https://github.com/settings/emails>`_.
+
 When making a patch for review, the goal is to make it as easy for the reviewer
 to read it as possible.  As such, we recommend that you:
 
