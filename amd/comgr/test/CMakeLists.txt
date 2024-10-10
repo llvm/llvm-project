@@ -20,23 +20,6 @@ macro(add_test_input_binary name input output)
   list(APPEND TEST_INPUT_BINARIES "${name}")
 endmacro()
 
-# Creates target ${name} and output ${output} by linking two object files.
-# ${target1} and ${target2} should refer to the targets created in the above
-# add_test_input_binary() macro, and ${input1} and ${input2} should refer
-# to the associated object files built by the same macro.
-macro(add_test_shared_binary name target1 input1 target2 input2 output)
-  add_custom_command(
-    OUTPUT "${output}"
-    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa
-      "${input1}" "${input2}" -o "${output}"
-    VERBATIM
-    DEPENDS clang lld ${target1} ${target2})
-  add_custom_target("${name}"
-    DEPENDS "${output}"
-    SOURCES "${input1}" "${input2}")
-  list(APPEND TEST_INPUT_BINARIES "${name}")
-endmacro()
-
 # Creates target ${name} which depends on a clang command to compile ${input} to
 # ${output}, with any additional arguments from ${ARGN}, and add it to the
 # TEST_INPUT_BITCODES target list.
