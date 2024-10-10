@@ -38,10 +38,6 @@ public:
     return true;
   }
 
-  bool trackLivenessAfterRegAlloc(const MachineFunction &) const override {
-    return true;
-  }
-
   const uint16_t *
   getCalleeSavedRegs(const MachineFunction *MF = 0) const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
