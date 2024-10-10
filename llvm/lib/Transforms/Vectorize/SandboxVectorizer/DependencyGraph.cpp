@@ -78,23 +78,43 @@ void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
 }
 #endif // NDEBUG
 
+MemDGNode *
+MemDGNodeIntervalBuilder::getTopMemDGNode(const Interval<Instruction> &Intvl,
+                                          const DependencyGraph &DAG) {
+  Instruction *I = Intvl.top();
+  Instruction *BeforeI = Intvl.bottom();
+  // Walk down the chain looking for a mem-dep candidate instruction.
+  while (!DGNode::isMemDepNodeCandidate(I) && I != BeforeI)
+    I = I->getNextNode();
+  if (!DGNode::isMemDepNodeCandidate(I))
+    return nullptr;
+  return cast<MemDGNode>(DAG.getNode(I));
+}
+
+MemDGNode *
+MemDGNodeIntervalBuilder::getBotMemDGNode(const Interval<Instruction> &Intvl,
+                                          const DependencyGraph &DAG) {
+  Instruction *I = Intvl.bottom();
+  Instruction *AfterI = Intvl.top();
+  // Walk up the chain looking for a mem-dep candidate instruction.
+  while (!DGNode::isMemDepNodeCandidate(I) && I != AfterI)
+    I = I->getPrevNode();
+  if (!DGNode::isMemDepNodeCandidate(I))
+    return nullptr;
+  return cast<MemDGNode>(DAG.getNode(I));
+}
+
 Interval<MemDGNode>
 MemDGNodeIntervalBuilder::make(const Interval<Instruction> &Instrs,
                                DependencyGraph &DAG) {
-  // If top or bottom instructions are not mem-dep candidate nodes we need to
-  // walk down/up the chain and find the mem-dep ones.
-  Instruction *MemTopI = Instrs.top();
-  Instruction *MemBotI = Instrs.bottom();
-  while (!DGNode::isMemDepNodeCandidate(MemTopI) && MemTopI != MemBotI)
-    MemTopI = MemTopI->getNextNode();
-  while (!DGNode::isMemDepNodeCandidate(MemBotI) && MemBotI != MemTopI)
-    MemBotI = MemBotI->getPrevNode();
+  auto *TopMemN = getTopMemDGNode(Instrs, DAG);
   // If we couldn't find a mem node in range TopN - BotN then it's empty.
-  if (!DGNode::isMemDepNodeCandidate(MemTopI))
+  if (TopMemN == nullptr)
     return {};
+  auto *BotMemN = getBotMemDGNode(Instrs, DAG);
+  assert(BotMemN != nullptr && "TopMemN should be null too!");
   // Now that we have the mem-dep nodes, create and return the range.
-  return Interval<MemDGNode>(cast<MemDGNode>(DAG.getNode(MemTopI)),
-                             cast<MemDGNode>(DAG.getNode(MemBotI)));
+  return Interval<MemDGNode>(TopMemN, BotMemN);
 }
 
 DependencyGraph::DependencyType
