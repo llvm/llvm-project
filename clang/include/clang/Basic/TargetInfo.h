@@ -235,6 +235,7 @@ protected:
   bool HasFullBFloat16; // True if the backend supports native bfloat16
                         // arithmetic. Used to determine excess precision
                         // support in the frontend.
+  bool HasMFloat8;
   bool HasIbm128;
   bool HasLongDouble;
   bool HasFPReturn;
@@ -700,6 +701,9 @@ public:
   virtual bool hasBFloat16Type() const {
     return HasBFloat16 || HasFullBFloat16;
   }
+
+  /// Determine whether the _mfp8 type is supported on this target.
+  virtual bool hasArmMFloat8Type() const { return HasMFloat8; }
 
   /// Determine whether the BFloat type is fully supported on this target, i.e
   /// arithemtic operations.

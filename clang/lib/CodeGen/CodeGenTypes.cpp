@@ -476,7 +476,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                                     Context.getFloatTypeSemantics(T),
                                     /* UseNativeHalf = */ false);
       break;
-
     case BuiltinType::NullPtr:
       // Model std::nullptr_t as i8*
       ResultType = llvm::PointerType::getUnqual(getLLVMContext());
@@ -504,6 +503,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:
+#define AARCH64_SCALAR_TYPE(Acronym, Name, MangledName, Id, SingletonId)
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
       {
@@ -526,6 +526,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       }
     case BuiltinType::SveCount:
       return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    case BuiltinType::ArmMFloat8:
+      ResultType =
+          llvm::VectorType::get(llvm::Type::getInt8Ty(getLLVMContext()),
+                                llvm::ElementCount::getFixed(1));
+      break;
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id: \
       ResultType = \

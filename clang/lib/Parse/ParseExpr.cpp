@@ -1625,6 +1625,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw__BitInt:
   case tok::kw_signed:
   case tok::kw_unsigned:
+  case tok::kw___mfp8:
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:

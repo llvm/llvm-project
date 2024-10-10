@@ -2647,6 +2647,8 @@ public:
   bool isQueueT() const;                        // OpenCL queue_t
   bool isReserveIDT() const;                    // OpenCL reserve_id_t
 
+  bool isArmMFloat8Type() const;
+
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   bool is##Id##Type() const;
 #include "clang/Basic/OpenCLExtensionTypes.def"
@@ -8402,6 +8404,10 @@ inline bool Type::isPipeType() const {
 
 inline bool Type::isBitIntType() const {
   return isa<BitIntType>(CanonicalType);
+}
+
+inline bool Type::isArmMFloat8Type() const {
+  return isSpecificBuiltinType(BuiltinType::ArmMFloat8);
 }
 
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
