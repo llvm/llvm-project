@@ -1,0 +1,11 @@
+add_integration_test(
+  cprng_test
+  SUITE
+    stdlib-integration-tests
+  SRCS
+    cprng_test.cpp
+  DEPENDS
+    libc.src.stdlib.linux.cprng
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)

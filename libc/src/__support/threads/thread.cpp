@@ -117,7 +117,7 @@ public:
 
   int add_callback(AtExitCallback *callback, void *obj) {
     cpp::lock_guard lock(mtx);
-    return callback_list.push_back({callback, obj});
+    return callback_list.push_back({callback, obj}) ? 0 : -1;
   }
 
   void call() {
@@ -159,6 +159,10 @@ void call_atexit_callbacks(ThreadAttributes *attrib) {
     if (unit.dtor != nullptr && unit.payload != nullptr)
       unit.dtor(unit.payload);
   }
+}
+
+bool add_atexit_callback(void (*callback)(void *), void *obj) {
+  return atexit_callback_mgr.add_callback(callback, obj) == 0;
 }
 
 } // namespace internal
