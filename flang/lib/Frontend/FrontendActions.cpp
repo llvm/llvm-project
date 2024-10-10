@@ -84,6 +84,16 @@ extern cl::opt<bool> PrintPipelinePasses;
 
 using namespace Fortran::frontend;
 
+static constexpr llvm::StringLiteral timingIdParse = "Parse";
+static constexpr llvm::StringLiteral timingIdMLIRGen = "MLIR generation";
+static constexpr llvm::StringLiteral timingIdMLIRPasses =
+    "MLIR translation/optimization";
+static constexpr llvm::StringLiteral timingIdLLVMIRGen = "LLVM IR generation";
+static constexpr llvm::StringLiteral timingIdLLVMIRPasses =
+    "LLVM IR optimizations";
+static constexpr llvm::StringLiteral timingIdBackend =
+    "Assembly/Object code generation";
+
 // Declare plugin extension function declarations.
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
@@ -227,6 +237,14 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
 bool CodeGenAction::beginSourceFileAction() {
   llvmCtx = std::make_unique<llvm::LLVMContext>();
   CompilerInstance &ci = this->getInstance();
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
+
+  // This will provide timing information even when the input is an LLVM IR or
+  // MLIR file. That is fine because those do have to be parsed, so the label
+  // is still accurate.
+  mlir::TimingScope timingScopeParse = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdParse, timingMgr));
 
   // If the input is an LLVM file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::LLVM_IR) {
@@ -288,6 +306,10 @@ bool CodeGenAction::beginSourceFileAction() {
   if (!res)
     return res;
 
+  timingScopeParse.stop();
+  mlir::TimingScope timingScopeMLIRGen = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdMLIRGen, timingMgr));
+
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =
       ci.getSemanticsContext().defaultKinds();
@@ -322,6 +344,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // constants etc.
   addDependentLibs(*mlirModule, ci);
   addAMDGPUSpecificMLIRItems(*mlirModule, ci);
+  timingScopeMLIRGen.stop();
 
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
@@ -344,6 +367,7 @@ bool CodeGenAction::beginSourceFileAction() {
 
   pm.enableVerifier(/*verifyPasses=*/true);
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
+  pm.enableTiming(timingScopeMLIRGen);
 
   if (mlir::failed(pm.run(*mlirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -352,6 +376,7 @@ bool CodeGenAction::beginSourceFileAction() {
     ci.getDiagnostics().Report(diagID);
     return false;
   }
+  timingScopeMLIRGen.stop();
 
   // Print initial full MLIR module, before lowering or transformations, if
   // -save-temps has been specified.
@@ -702,8 +727,10 @@ void CodeGenAction::lowerHLFIRToFIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
 
   CompilerInstance &ci = this->getInstance();
-  auto opts = ci.getInvocation().getCodeGenOpts();
+  const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
   llvm::OptimizationLevel level = mapToLevel(opts);
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
   fir::support::loadDialects(*mlirCtx);
 
@@ -718,6 +745,9 @@ void CodeGenAction::lowerHLFIRToFIR() {
   fir::createHLFIRToFIRPassPipeline(pm, level);
   (void)mlir::applyPassManagerCLOptions(pm);
 
+  mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdMLIRPasses, timingMgr));
+  pm.enableTiming(timingScopeMLIRPasses);
   if (!mlir::succeeded(pm.run(*mlirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Lowering to FIR failed");
@@ -802,9 +832,12 @@ void CodeGenAction::generateLLVMIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
 
   CompilerInstance &ci = this->getInstance();
-  auto opts = ci.getInvocation().getCodeGenOpts();
-  auto mathOpts = ci.getInvocation().getLoweringOpts().getMathOptions();
+  CompilerInvocation &invoc = ci.getInvocation();
+  const CodeGenOptions &opts = invoc.getCodeGenOpts();
+  const auto &mathOpts = invoc.getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
   fir::support::loadDialects(*mlirCtx);
   mlir::DialectRegistry registry;
@@ -836,11 +869,15 @@ void CodeGenAction::generateLLVMIR() {
   (void)mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
+  mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdMLIRPasses, timingMgr));
+  pm.enableTiming(timingScopeMLIRPasses);
   if (!mlir::succeeded(pm.run(*mlirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Lowering to LLVM IR failed");
     ci.getDiagnostics().Report(diagID);
   }
+  timingScopeMLIRPasses.stop();
 
   // Print final MLIR module, just before translation into LLVM IR, if
   // -save-temps has been specified.
@@ -853,6 +890,8 @@ void CodeGenAction::generateLLVMIR() {
   }
 
   // Translate to LLVM IR
+  mlir::TimingScope timingScopeLLVMIRGen = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdLLVMIRGen, timingMgr));
   std::optional<llvm::StringRef> moduleName = mlirModule->getName();
   llvmModule = mlir::translateModuleToLLVMIR(
       *mlirModule, *llvmCtx, moduleName ? *moduleName : "FIRModule");
@@ -956,11 +995,12 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
-  auto opts = getInstance().getInvocation().getCodeGenOpts();
-  auto &diags = getInstance().getDiagnostics();
+  CompilerInstance &ci = getInstance();
+  const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
+  clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
-  llvm::TargetMachine *targetMachine = &getInstance().getTargetMachine();
+  llvm::TargetMachine *targetMachine = &ci.getTargetMachine();
   // Create the analysis managers.
   llvm::LoopAnalysisManager lam;
   llvm::FunctionAnalysisManager fam;
@@ -974,6 +1014,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::StandardInstrumentations si(llvmModule->getContext(),
                                     opts.DebugPassManager);
   si.registerCallbacks(pic, &mam);
+  if (ci.isTimingEnabled())
+    si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
   llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
   // Attempt to load pass plugins and register their callbacks with PB.
@@ -1035,6 +1077,10 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Run the passes.
   mpm.run(*llvmModule, mam);
+
+  // Print the timers to the associated output stream and reset them.
+  if (ci.isTimingEnabled())
+    si.getTimePasses().print();
 }
 
 // This class handles optimization remark messages requested if
@@ -1255,6 +1301,8 @@ void CodeGenAction::executeAction() {
   const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
   Fortran::lower::LoweringOptions &loweringOpts =
       ci.getInvocation().getLoweringOpts();
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
   // If the output stream is a file, generate it and define the corresponding
   // output stream. If a pre-defined output stream is available, we will use
@@ -1300,6 +1348,11 @@ void CodeGenAction::executeAction() {
   if (!llvmModule)
     generateLLVMIR();
 
+  // This will already have been started in generateLLVMIR(). But we need to
+  // continue operating on the module, so we continue timing it.
+  mlir::TimingScope timingScopeLLVMIRGen = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdLLVMIRGen, timingMgr));
+
   // If generating the LLVM module failed, abort! No need for further error
   // reporting since generateLLVMIR() does this already.
   if (!llvmModule)
@@ -1329,6 +1382,7 @@ void CodeGenAction::executeAction() {
   // Embed offload objects specified with -fembed-offload-object
   if (!codeGenOpts.OffloadObjects.empty())
     embedOffloadObjects();
+  timingScopeLLVMIRGen.stop();
 
   BackendRemarkConsumer remarkConsumer(diags, codeGenOpts);
 
@@ -1357,7 +1411,10 @@ void CodeGenAction::executeAction() {
   }
 
   // Run LLVM's middle-end (i.e. the optimizer).
+  mlir::TimingScope timingScopeLLVMIRPasses = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdLLVMIRPasses, timingMgr));
   runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
+  timingScopeLLVMIRPasses.stop();
 
   if (action == BackendActionTy::Backend_EmitLL ||
       action == BackendActionTy::Backend_EmitBC) {
@@ -1366,11 +1423,15 @@ void CodeGenAction::executeAction() {
   }
 
   // Run LLVM's backend and generate either assembly or machine code
+  mlir::TimingScope timingScopeBackend = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdBackend, timingMgr));
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
         diags, targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
+    if (timingMgr.isEnabled())
+      llvm::reportAndResetTimings(&ci.getTimingStreamCodeGen());
     return;
   }
 }
