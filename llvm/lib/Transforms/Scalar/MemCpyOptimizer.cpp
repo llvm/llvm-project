@@ -284,6 +284,7 @@ static bool mayBeVisibleThroughUnwinding(Value *V, Instruction *Start,
 
 void MemCpyOptPass::eraseInstruction(Instruction *I) {
   MSSAU->removeMemoryAccess(I);
+  EEI->removeInstruction(I);
   I->eraseFromParent();
 }
 
@@ -638,7 +639,7 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
   if (!LI->isSimple() || !LI->hasOneUse() || LI->getParent() != SI->getParent())
     return false;
 
-  BatchAAResults BAA(*AA);
+  BatchAAResults BAA(*AA, EEI);
   auto *T = LI->getType();
   // Don't introduce calls to memcpy/memmove intrinsics out of thin air if
   // the corresponding libcalls are not available.
@@ -1147,14 +1148,14 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   IRBuilder<> Builder(M);
   auto *CopySource = MDep->getSource();
   Instruction *NewCopySource = nullptr;
-  auto CleanupOnRet = llvm::make_scope_exit([&NewCopySource] {
+  auto CleanupOnRet = llvm::make_scope_exit([&] {
     if (NewCopySource && NewCopySource->use_empty())
       // Safety: It's safe here because we will only allocate more instructions
       // after finishing all BatchAA queries, but we have to be careful if we
       // want to do something like this in another place. Then we'd probably
       // have to delay instruction removal until all transforms on an
       // instruction finished.
-      NewCopySource->eraseFromParent();
+      eraseInstruction(NewCopySource);
   });
   MaybeAlign CopySourceAlign = MDep->getSourceAlign();
   // We just need to calculate the actual size of the copy.
@@ -1751,7 +1752,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
         return true;
       }
 
-  BatchAAResults BAA(*AA);
+  BatchAAResults BAA(*AA, EEI);
   // FIXME: Not using getClobberingMemoryAccess() here due to PR54682.
   MemoryAccess *AnyClobber = MA->getDefiningAccess();
   MemoryLocation DestLoc = MemoryLocation::getForDest(M);
@@ -1876,7 +1877,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   if (!CallAccess)
     return false;
   MemCpyInst *MDep = nullptr;
-  BatchAAResults BAA(*AA);
+  BatchAAResults BAA(*AA, EEI);
   MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
       CallAccess->getDefiningAccess(), Loc, BAA);
   if (auto *MD = dyn_cast<MemoryDef>(Clobber))
@@ -1949,7 +1950,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
 /// 4. The memcpy src is not modified during the call. (ModRef check shows no
 /// Mod.)
 bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
-  BatchAAResults BAA(*AA);
+  BatchAAResults BAA(*AA, EEI);
   Value *ImmutArg = CB.getArgOperand(ArgNo);
 
   // 1. Ensure passed argument is immutable during call.
@@ -2117,6 +2118,8 @@ bool MemCpyOptPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
   MSSA = MSSA_;
   MemorySSAUpdater MSSAU_(MSSA_);
   MSSAU = &MSSAU_;
+  EarliestEscapeInfo EEI_(*DT);
+  EEI = &EEI_;
 
   while (true) {
     if (!iterateOnFunction(F))

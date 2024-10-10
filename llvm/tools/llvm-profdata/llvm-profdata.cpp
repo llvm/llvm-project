@@ -1220,11 +1220,9 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       }
     }
 
-    if (!StaticFuncMap.contains(NewName)) {
-      StaticFuncMap[NewName] = Name;
-    } else {
-      StaticFuncMap[NewName] = DuplicateNameStr;
-    }
+    auto [It, Inserted] = StaticFuncMap.try_emplace(NewName, Name);
+    if (!Inserted)
+      It->second = DuplicateNameStr;
   };
 
   // We need to flatten the SampleFDO profile as the InstrFDO
@@ -3415,8 +3413,9 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {
-    errs() << ProgName
-           << ": No subcommand specified! Run llvm-profata --help for usage.\n";
+    errs()
+        << ProgName
+        << ": No subcommand specified! Run llvm-profdata --help for usage.\n";
     return 1;
   }
 

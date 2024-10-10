@@ -184,10 +184,10 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
 endif()
 target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
-if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED)
   set_target_properties(cxxabi_shared
     PROPERTIES
+      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_SHARED}>,FALSE,TRUE>"
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
       OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
       SOVERSION "1"
@@ -208,20 +208,32 @@ if (LIBCXXABI_ENABLE_SHARED)
     PUBLIC cxxabi_shared_objects
     PRIVATE ${LIBCXXABI_LIBRARIES})
 
+if (LIBCXXABI_ENABLE_SHARED)
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
-  if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
-    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
-  endif()
+endif()
+if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
+  list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
+endif()
 
+  # TODO: Move this to libc++'s HandleLibCXXABI.cmake since this is effectively trying to control
+  #       what libc++ re-exports.
   add_library(cxxabi-reexports INTERFACE)
-  function(reexport_symbols file)
+  function(export_symbols file)
     # -exported_symbols_list is only available on Apple platforms
     if (APPLE)
       target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${file}")
+    endif()
+  endfunction()
+
+  function(reexport_symbols file)
+    export_symbols("${file}")
+    # -reexported_symbols_list is only available on Apple platforms
+    if (APPLE)
       target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
     endif()
   endfunction()
 
+  export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/symbols-not-reexported.exp")
   reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxxabiv1.exp")
   reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/fundamental-types.exp")
   reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
@@ -244,7 +256,6 @@ if (LIBCXXABI_ENABLE_SHARED)
       reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
     endif()
   endif()
-endif()
 
 # Build the static library.
 add_library(cxxabi_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
@@ -284,13 +295,13 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
       _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
 endif()
 
-if (LIBCXXABI_ENABLE_STATIC)
   add_library(cxxabi_static STATIC)
   if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
     target_link_libraries(cxxabi_static PUBLIC unwind_static)
   endif()
   set_target_properties(cxxabi_static
     PROPERTIES
+      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXXABI_ENABLE_STATIC}>,FALSE,TRUE>"
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
       OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
     )
@@ -298,15 +309,15 @@ if (LIBCXXABI_ENABLE_STATIC)
     PUBLIC cxxabi_static_objects
     PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
 
+if (LIBCXXABI_ENABLE_STATIC)
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
-  if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
-    list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
-  endif()
+endif()
+if (LIBCXXABI_INSTALL_STATIC_LIBRARY)
+  list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_static")
 endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
-add_dependencies(cxxabi-test-depends cxxabi cxx)
 
 if (LIBCXXABI_INSTALL_LIBRARY)
   install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}

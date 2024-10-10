@@ -139,6 +139,7 @@ TARGET_BUILTIN(__nvvm_is_explicit_cluster, "b", "nc", AND(SM_90, PTX78))
 BUILTIN(__nvvm_read_ptx_sreg_laneid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_warpid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nwarpid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_warpsize, "i", "nc")
 
 BUILTIN(__nvvm_read_ptx_sreg_smid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nsmid, "i", "nc")

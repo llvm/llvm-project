@@ -1785,6 +1785,18 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   if (ArgsWritten)
     Record.AddASTTemplateArgumentListInfo(ArgsWritten);
 
+  // Mention the implicitly generated C++ deduction guide to make sure the
+  // deduction guide will be rewritten as expected.
+  //
+  // FIXME: Would it be more efficient to add a callback register function
+  // in sema to register the deduction guide?
+  if (Writer.isWritingStdCXXNamedModules()) {
+    auto Name = Context.DeclarationNames.getCXXDeductionGuideName(
+        D->getSpecializedTemplate());
+    for (auto *DG : D->getDeclContext()->noload_lookup(Name))
+      Writer.GetDeclRef(DG->getCanonicalDecl());
+  }
+
   Code = serialization::DECL_CLASS_TEMPLATE_SPECIALIZATION;
 }
 

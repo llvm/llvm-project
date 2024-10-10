@@ -3771,6 +3771,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.4a";
   else if (FBS[AArch64::HasV9_5aOps])
     Str += "ARMv9.5a";
+  else if (FBS[AArch64::HasV9_6aOps])
+    Str += "ARMv9.6a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {

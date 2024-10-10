@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
 
@@ -594,72 +595,6 @@ FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
   auto NewPtr = std::unique_ptr<FCmpInst>(new FCmpInst(I, *this));
   return cast<FCmpInst>(registerValue(std::move(NewPtr)));
 }
-CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2,
-                         Instruction *InsertBefore, Context &Ctx,
-                         const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
-  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
-  if (dyn_cast<llvm::ICmpInst>(LLVMI))
-    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
-  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
-}
-CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
-                                        const Instruction *F,
-                                        Instruction *InsertBefore, Context &Ctx,
-                                        const Twine &Name) {
-  CmpInst *Inst = create(P, S1, S2, InsertBefore, Ctx, Name);
-  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
-  return Inst;
-}
-
-Type *CmpInst::makeCmpResultType(Type *OpndType) {
-  if (auto *VT = dyn_cast<VectorType>(OpndType)) {
-    // TODO: Cleanup when we have more complete support for
-    // sandboxir::VectorType
-    return OpndType->getContext().getType(llvm::VectorType::get(
-        llvm::Type::getInt1Ty(OpndType->getContext().LLVMCtx),
-        cast<llvm::VectorType>(VT->LLVMTy)->getElementCount()));
-  }
-  return Type::getInt1Ty(OpndType->getContext());
-}
-
-void CmpInst::setPredicate(Predicate P) {
-  Ctx.getTracker()
-      .emplaceIfTracking<
-          GenericSetter<&CmpInst::getPredicate, &CmpInst::setPredicate>>(this);
-  cast<llvm::CmpInst>(Val)->setPredicate(P);
-}
-
-void CmpInst::swapOperands() {
-  if (ICmpInst *IC = dyn_cast<ICmpInst>(this))
-    IC->swapOperands();
-  else
-    cast<FCmpInst>(this)->swapOperands();
-}
-
-void ICmpInst::swapOperands() {
-  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
-  cast<llvm::ICmpInst>(Val)->swapOperands();
-}
-
-void FCmpInst::swapOperands() {
-  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
-  cast<llvm::FCmpInst>(Val)->swapOperands();
-}
-
-#ifndef NDEBUG
-void CmpInst::dumpOS(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void CmpInst::dump() const {
-  dumpOS(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
 Value *Context::getValue(llvm::Value *V) const {
   auto It = LLVMValueToValueMap.find(V);
   if (It != LLVMValueToValueMap.end())

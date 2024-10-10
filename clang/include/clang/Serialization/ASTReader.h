@@ -984,6 +984,9 @@ private:
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<GlobalDeclID, 4> DeclsToCheckForDeferredDiags;
 
+  /// The IDs of all decls with function effects to be checked.
+  SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
+
 private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
@@ -2524,7 +2527,7 @@ private:
 
 inline bool shouldSkipCheckingODR(const Decl *D) {
   return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
-         D->isFromGlobalModule();
+         (D->isFromGlobalModule() || D->isFromHeaderUnit());
 }
 
 } // namespace clang

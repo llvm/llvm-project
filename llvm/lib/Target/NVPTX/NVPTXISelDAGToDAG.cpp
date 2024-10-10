@@ -1109,11 +1109,21 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
   AddrSpaceCastSDNode *CastN = cast<AddrSpaceCastSDNode>(N);
   unsigned SrcAddrSpace = CastN->getSrcAddressSpace();
   unsigned DstAddrSpace = CastN->getDestAddressSpace();
+  SDLoc DL(N);
   assert(SrcAddrSpace != DstAddrSpace &&
          "addrspacecast must be between different address spaces");
 
   if (DstAddrSpace == ADDRESS_SPACE_GENERIC) {
     // Specific to generic
+
+    if (TM.is64Bit() && TM.getPointerSizeInBits(SrcAddrSpace) == 32) {
+      SDValue CvtNone =
+          CurDAG->getTargetConstant(NVPTX::PTXCvtMode::NONE, DL, MVT::i32);
+      SDNode *Cvt = CurDAG->getMachineNode(NVPTX::CVT_u64_u32, DL, MVT::i64,
+                                           Src, CvtNone);
+      Src = SDValue(Cvt, 0);
+    }
+
     unsigned Opc;
     switch (SrcAddrSpace) {
     default: report_fatal_error("Bad address space in addrspacecast");
@@ -1121,26 +1131,16 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
       Opc = TM.is64Bit() ? NVPTX::cvta_global_64 : NVPTX::cvta_global;
       break;
     case ADDRESS_SPACE_SHARED:
-      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(SrcAddrSpace) == 32
-                                ? NVPTX::cvta_shared_6432
-                                : NVPTX::cvta_shared_64)
-                         : NVPTX::cvta_shared;
+      Opc = TM.is64Bit() ? NVPTX::cvta_shared_64 : NVPTX::cvta_shared;
       break;
     case ADDRESS_SPACE_CONST:
-      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(SrcAddrSpace) == 32
-                                ? NVPTX::cvta_const_6432
-                                : NVPTX::cvta_const_64)
-                         : NVPTX::cvta_const;
+      Opc = TM.is64Bit() ? NVPTX::cvta_const_64 : NVPTX::cvta_const;
       break;
     case ADDRESS_SPACE_LOCAL:
-      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(SrcAddrSpace) == 32
-                                ? NVPTX::cvta_local_6432
-                                : NVPTX::cvta_local_64)
-                         : NVPTX::cvta_local;
+      Opc = TM.is64Bit() ? NVPTX::cvta_local_64 : NVPTX::cvta_local;
       break;
     }
-    ReplaceNode(N, CurDAG->getMachineNode(Opc, SDLoc(N), N->getValueType(0),
-                                          Src));
+    ReplaceNode(N, CurDAG->getMachineNode(Opc, DL, N->getValueType(0), Src));
     return;
   } else {
     // Generic to specific
@@ -1153,30 +1153,28 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
       Opc = TM.is64Bit() ? NVPTX::cvta_to_global_64 : NVPTX::cvta_to_global;
       break;
     case ADDRESS_SPACE_SHARED:
-      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(DstAddrSpace) == 32
-                                ? NVPTX::cvta_to_shared_3264
-                                : NVPTX::cvta_to_shared_64)
-                         : NVPTX::cvta_to_shared;
+      Opc = TM.is64Bit() ? NVPTX::cvta_to_shared_64 : NVPTX::cvta_to_shared;
       break;
     case ADDRESS_SPACE_CONST:
-      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(DstAddrSpace) == 32
-                                ? NVPTX::cvta_to_const_3264
-                                : NVPTX::cvta_to_const_64)
-                         : NVPTX::cvta_to_const;
+      Opc = TM.is64Bit() ? NVPTX::cvta_to_const_64 : NVPTX::cvta_to_const;
       break;
     case ADDRESS_SPACE_LOCAL:
-      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(DstAddrSpace) == 32
-                                ? NVPTX::cvta_to_local_3264
-                                : NVPTX::cvta_to_local_64)
-                         : NVPTX::cvta_to_local;
+      Opc = TM.is64Bit() ? NVPTX::cvta_to_local_64 : NVPTX::cvta_to_local;
       break;
     case ADDRESS_SPACE_PARAM:
-      Opc = TM.is64Bit() ? NVPTX::nvvm_ptr_gen_to_param_64
-                         : NVPTX::nvvm_ptr_gen_to_param;
+      Opc = TM.is64Bit() ? NVPTX::IMOV64rr : NVPTX::IMOV32rr;
       break;
     }
-    ReplaceNode(N, CurDAG->getMachineNode(Opc, SDLoc(N), N->getValueType(0),
-                                          Src));
+
+    SDNode *CVTA = CurDAG->getMachineNode(Opc, DL, N->getValueType(0), Src);
+    if (TM.is64Bit() && TM.getPointerSizeInBits(DstAddrSpace) == 32) {
+      SDValue CvtNone =
+          CurDAG->getTargetConstant(NVPTX::PTXCvtMode::NONE, DL, MVT::i32);
+      CVTA = CurDAG->getMachineNode(NVPTX::CVT_u32_u64, DL, MVT::i32,
+                                    SDValue(CVTA, 0), CvtNone);
+    }
+
+    ReplaceNode(N, CVTA);
     return;
   }
 }
