@@ -880,6 +880,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(Op, MVT::f16, Legal);
   }
   // clang-format on
+  if (!Subtarget->hasFullFP16())
+    setOperationPromotedToType(ISD::FCANONICALIZE, MVT::f16, MVT::f32);
 
   // Basic strict FP operations are legal
   for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
@@ -1361,6 +1363,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       if (Subtarget->hasFullFP16())
         for (MVT Ty : {MVT::v4f16, MVT::v8f16})
           setOperationAction(Op, Ty, Legal);
+    }
+    if (!Subtarget->hasFullFP16()) {
+      setOperationPromotedToType(ISD::FCANONICALIZE, MVT::v4f16, MVT::v4f32);
+      setOperationPromotedToType(ISD::FCANONICALIZE, MVT::v8f16, MVT::v8f32);
     }
 
     // LRINT and LLRINT.
