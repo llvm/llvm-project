@@ -34,6 +34,7 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "llvm/Support/ThreadPool.h"
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
@@ -47,6 +48,36 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+#define LLDB_PROPERTIES_dynamicloaderdarwin
+#include "DynamicLoaderDarwinProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_dynamicloaderdarwin
+#include "DynamicLoaderDarwinPropertiesEnum.inc"
+};
+
+ConstString &DynamicLoaderDarwinProperties::GetSettingName() {
+  static ConstString g_setting_name("darwin");
+  return g_setting_name;
+}
+
+DynamicLoaderDarwinProperties::DynamicLoaderDarwinProperties() : Properties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+  m_collection_sp->Initialize(g_dynamicloaderdarwin_properties);
+}
+
+bool DynamicLoaderDarwinProperties::GetEnableParallelImageLoad() const {
+  return GetPropertyAtIndexAs<bool>(
+      ePropertyEnableParallelImageLoad,
+      g_dynamicloaderdarwin_properties[ePropertyEnableParallelImageLoad]
+              .default_uint_value != 0);
+}
+
+DynamicLoaderDarwinProperties &DynamicLoaderDarwinProperties::GetGlobal() {
+  static DynamicLoaderDarwinProperties g_settings;
+  return g_settings;
+}
 
 // Constructor
 DynamicLoaderDarwin::DynamicLoaderDarwin(Process *process)
@@ -75,6 +106,17 @@ void DynamicLoaderDarwin::DidLaunch() {
   PrivateInitialize(m_process);
   DoInitialImageFetch();
   SetNotificationBreakpoint();
+}
+
+void DynamicLoaderDarwin::CreateSettings(lldb_private::Debugger &debugger) {
+  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
+          debugger, DynamicLoaderDarwinProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForDynamicLoaderPlugin(
+        debugger,
+        DynamicLoaderDarwinProperties::GetGlobal().GetValueProperties(),
+        "Properties for the DynamicLoaderDarwin plug-in.", is_global_setting);
+  }
 }
 
 // Clear out the state of this class.
@@ -642,6 +684,41 @@ ModuleSP DynamicLoaderDarwin::GetDYLDModule() {
 
 void DynamicLoaderDarwin::ClearDYLDModule() { m_dyld_module_wp.reset(); }
 
+template <typename InputIterator, typename ResultType>
+std::vector<ResultType>
+parallel_map(llvm::ThreadPoolInterface &threadPool, InputIterator first,
+             InputIterator last,
+             llvm::function_ref<ResultType(
+                 typename std::iterator_traits<InputIterator>::value_type &)>
+                 transform) {
+  const auto size = std::distance(first, last);
+  std::vector<ResultType> results(size);
+  if (size > 0) {
+    llvm::ThreadPoolTaskGroup taskGroup(threadPool);
+    auto it = first;
+    for (ssize_t i = 0; i < size; ++i, ++it) {
+      taskGroup.async([&, i, it]() { results[i] = transform(*it); });
+    }
+    taskGroup.wait();
+  }
+  return results;
+}
+
+template <typename InputIterator, typename ResultType>
+std::vector<ResultType>
+map(InputIterator first, InputIterator last,
+    llvm::function_ref<
+        ResultType(typename std::iterator_traits<InputIterator>::value_type &)>
+        transform) {
+  const auto size = std::distance(first, last);
+  std::vector<ResultType> results(size);
+  auto it = first;
+  for (ssize_t i = 0; i < size; ++i, ++it) {
+    results[i] = transform(*it);
+  }
+  return results;
+}
+
 bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
     ImageInfo::collection &image_infos) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -651,17 +728,27 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
   Target &target = m_process->GetTarget();
   ModuleList &target_images = target.GetImages();
 
-  for (uint32_t idx = 0; idx < image_infos.size(); ++idx) {
+  auto ImageLoad = [this, log](ImageInfo &image_info) {
     if (log) {
       LLDB_LOGF(log, "Adding new image at address=0x%16.16" PRIx64 ".",
-                image_infos[idx].address);
-      image_infos[idx].PutToLog(log);
+                image_info.address);
+      image_info.PutToLog(log);
     }
+    return FindTargetModuleForImageInfo(image_info, true, nullptr);
+  };
+  bool is_parallel_load =
+      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
+  auto images = is_parallel_load
+                    ? parallel_map<ImageInfo::collection::iterator, ModuleSP>(
+                          Debugger::GetThreadPool(), image_infos.begin(),
+                          image_infos.end(), ImageLoad)
+                    : map<ImageInfo::collection::iterator, ModuleSP>(
+                          image_infos.begin(), image_infos.end(), ImageLoad);
 
+  for (uint32_t idx = 0; idx < image_infos.size(); ++idx) {
     m_dyld_image_infos.push_back(image_infos[idx]);
 
-    ModuleSP image_module_sp(
-        FindTargetModuleForImageInfo(image_infos[idx], true, nullptr));
+    ModuleSP image_module_sp = images[idx];
 
     if (image_module_sp) {
       ObjectFile *objfile = image_module_sp->GetObjectFile();

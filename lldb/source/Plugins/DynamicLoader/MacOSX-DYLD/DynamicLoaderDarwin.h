@@ -24,6 +24,15 @@
 
 namespace lldb_private {
 
+class DynamicLoaderDarwinProperties : public Properties {
+public:
+  static ConstString &GetSettingName();
+  static DynamicLoaderDarwinProperties &GetGlobal();
+  DynamicLoaderDarwinProperties();
+  ~DynamicLoaderDarwinProperties() override = default;
+  bool GetEnableParallelImageLoad() const;
+};
+
 class DynamicLoaderDarwin : public lldb_private::DynamicLoader {
 public:
   DynamicLoaderDarwin(lldb_private::Process *process);
@@ -57,6 +66,8 @@ public:
   virtual bool NeedToDoInitialImageFetch() = 0;
 
   std::optional<lldb_private::Address> GetStartAddress() override;
+
+  static void CreateSettings(lldb_private::Debugger &debugger);
 
 protected:
   void PrivateInitialize(lldb_private::Process *process);
