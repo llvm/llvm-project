@@ -131,11 +131,6 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-# TODO: Remove this, which shouldn't be necessary since we know we're being built
-#       side-by-side with libc++.
-set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
-    "Specify path to libc++ includes.")
-
 set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
   set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT ON)
