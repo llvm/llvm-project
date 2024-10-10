@@ -10,6 +10,7 @@
 #include "llvm/Support/SYCLPropertySetIO.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
@@ -23,69 +24,63 @@ TEST(SYCLPropertySet, IncorrectValuesIO) {
   auto MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   auto PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
-  if (PropSetsPtr)
-    FAIL() << "SYCLPropertySetRegistry::Invalid line error not caught\n";
+  EXPECT_THAT_ERROR(std::move(PropSetsPtr.takeError()), Failed())
+      << "Invalid line";
 
   Content = "[Staff/Ages\n";
   MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
-  if (PropSetsPtr)
-    FAIL() << "SYCLPropertySetRegistry::Invalid line error not caught\n";
+  EXPECT_THAT_ERROR(std::move(PropSetsPtr.takeError()), Failed())
+      << "Invalid line";
 
   Content = "[Staff/Ages]\n"
             "person1=\n";
   MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
-  if (PropSetsPtr)
-    FAIL()
-        << "SYCLPropertySetRegistry::Invalid property line error not caught\n";
+  EXPECT_THAT_ERROR(std::move(PropSetsPtr.takeError()), Failed())
+      << "Invalid property line";
 
   Content = "[Staff/Ages]\n"
             "person1=|10\n";
   MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
-  if (PropSetsPtr)
-    FAIL()
-        << "SYCLPropertySetRegistry::Invalid property value error not caught\n";
+  EXPECT_THAT_ERROR(std::move(PropSetsPtr.takeError()), Failed())
+      << "Invalid property value";
 
   Content = "[Staff/Ages]\n"
             "person1=abc|10\n";
   MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
-  if (PropSetsPtr)
-    FAIL()
-        << "SYCLPropertySetRegistry::Invalid property type error not caught\n";
+  EXPECT_THAT_ERROR(std::move(PropSetsPtr.takeError()), Failed())
+      << "Invalid property type";
 
   Content = "[Staff/Ages]\n"
             "person1=2|10\n";
   MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
-  if (PropSetsPtr)
-    FAIL()
-        << "SYCLPropertySetRegistry::Invalid property value error not caught\n";
+  EXPECT_THAT_ERROR(std::move(PropSetsPtr.takeError()), Failed())
+      << "Invalid property value";
 
   Content = "[Staff/Ages]\n"
             "person1=2|IAQ\n";
   MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
-  if (PropSetsPtr)
-    FAIL()
-        << "SYCLPropertySetRegistry::Invalid property value error not caught\n";
+  EXPECT_THAT_ERROR(std::move(PropSetsPtr.takeError()), Failed())
+      << "Invalid property value";
 
   Content = "[Staff/Ages]\n"
             "person1=100|10\n";
   MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
-  if (PropSetsPtr)
-    FAIL()
-        << "SYCLPropertySetRegistry::Invalid property type error not caught\n";
+  EXPECT_THAT_ERROR(std::move(PropSetsPtr.takeError()), Failed())
+      << "Invalid property type";
 }
 
 TEST(SYCLPropertySet, IntValuesIO) {
