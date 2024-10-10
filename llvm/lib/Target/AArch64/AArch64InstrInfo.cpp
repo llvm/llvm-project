@@ -114,7 +114,7 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (!MFI->shouldSignReturnAddress(MF))
       return NumBytes;
 
-    auto &STI = MF->getSubtarget<AArch64Subtarget>();
+    const auto &STI = MF->getSubtarget<AArch64Subtarget>();
     auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
     NumBytes += AArch64PAuth::getCheckerSizeInBytes(Method);
     return NumBytes;

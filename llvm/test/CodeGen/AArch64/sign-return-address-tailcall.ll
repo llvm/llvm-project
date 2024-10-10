@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=aarch64 -asm-verbose=0 -aarch64-authenticated-lr-check-method=high-bits-notbi        < %s | FileCheck -DAUTIASP="hint #29" --check-prefixes=COMMON,BITS-NOTBI,BRK %s
 ; RUN: llc -mtriple=aarch64 -asm-verbose=0 -aarch64-authenticated-lr-check-method=xpac-hint              < %s | FileCheck -DAUTIASP="hint #29" -DXPACLRI="hint #7" --check-prefixes=COMMON,XPAC,BRK %s
 ; RUN: llc -mtriple=aarch64 -asm-verbose=0 -aarch64-authenticated-lr-check-method=xpac-hint -mattr=v8.3a < %s | FileCheck -DAUTIASP="autiasp"  -DXPACLRI="xpaclri" --check-prefixes=COMMON,XPAC,BRK %s
+; RUN: llc -mtriple=aarch64 -asm-verbose=0 -aarch64-authenticated-lr-check-method=xpac      -mattr=v8.3a < %s | FileCheck -DAUTIASP="autiasp"  --check-prefixes=COMMON,XPAC83,BRK %s
 
 define i32 @tailcall_direct() "sign-return-address"="non-leaf" {
 ; COMMON-LABEL: tailcall_direct:
@@ -20,6 +21,11 @@ define i32 @tailcall_direct() "sign-return-address"="non-leaf" {
 ; XPAC-NEXT:      [[XPACLRI]]
 ; XPAC-NEXT:      cmp x30, x16
 ; XPAC-NEXT:      b.eq .[[GOOD:Lauth_success[_0-9]+]]
+;
+; XPAC83-NEXT:    mov x16, x30
+; XPAC83-NEXT:    xpaci x16
+; XPAC83-NEXT:    cmp x30, x16
+; XPAC83-NEXT:    b.eq .[[GOOD:Lauth_success[_0-9]+]]
 ;
 ; BRK-NEXT:       brk #0xc470
 ; BRK-NEXT:     .[[GOOD]]:
@@ -45,6 +51,11 @@ define i32 @tailcall_indirect(ptr %fptr) "sign-return-address"="non-leaf" {
 ; XPAC-NEXT:      [[XPACLRI]]
 ; XPAC-NEXT:      cmp x30, x16
 ; XPAC-NEXT:      b.eq .[[GOOD:Lauth_success[_0-9]+]]
+;
+; XPAC83-NEXT:    mov x16, x30
+; XPAC83-NEXT:    xpaci x16
+; XPAC83-NEXT:    cmp x30, x16
+; XPAC83-NEXT:    b.eq .[[GOOD:Lauth_success[_0-9]+]]
 ;
 ; BRK-NEXT:       brk #0xc470
 ; BRK-NEXT:     .[[GOOD]]:
@@ -87,6 +98,11 @@ define i32 @tailcall_direct_noframe_sign_all() "sign-return-address"="all" {
 ; XPAC-NEXT:      cmp x30, x16
 ; XPAC-NEXT:      b.eq .[[GOOD:Lauth_success[_0-9]+]]
 ;
+; XPAC83-NEXT:    mov x16, x30
+; XPAC83-NEXT:    xpaci x16
+; XPAC83-NEXT:    cmp x30, x16
+; XPAC83-NEXT:    b.eq .[[GOOD:Lauth_success[_0-9]+]]
+;
 ; BRK-NEXT:       brk #0xc470
 ; BRK-NEXT:     .[[GOOD]]:
 ; COMMON-NEXT:    b callee
@@ -110,6 +126,11 @@ define i32 @tailcall_indirect_noframe_sign_all(ptr %fptr) "sign-return-address"=
 ; XPAC-NEXT:      [[XPACLRI]]
 ; XPAC-NEXT:      cmp x30, x16
 ; XPAC-NEXT:      b.eq .[[GOOD:Lauth_success[_0-9]+]]
+;
+; XPAC83-NEXT:    mov x16, x30
+; XPAC83-NEXT:    xpaci x16
+; XPAC83-NEXT:    cmp x30, x16
+; XPAC83-NEXT:    b.eq .[[GOOD:Lauth_success[_0-9]+]]
 ;
 ; BRK-NEXT:       brk #0xc470
 ; BRK-NEXT:     .[[GOOD]]:
@@ -147,6 +168,11 @@ define i32 @tailcall_two_branches(i1 %0) "sign-return-address"="all" {
 ; XPAC-NEXT:         [[XPACLRI]]
 ; XPAC-NEXT:         cmp x30, x16
 ; XPAC-NEXT:         b.eq .[[GOOD:Lauth_success[_0-9]+]]
+;
+; XPAC83-NEXT:       mov x16, x30
+; XPAC83-NEXT:       xpaci x16
+; XPAC83-NEXT:       cmp x30, x16
+; XPAC83-NEXT:       b.eq .[[GOOD:Lauth_success[_0-9]+]]
 ;
 ; BRK-NEXT:          brk #0xc470
 ; BRK-NEXT:        .[[GOOD]]:

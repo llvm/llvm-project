@@ -1984,16 +1984,16 @@ let Predicates = [HasPAuth] in {
 
   let Predicates = [TailCallAny] in
     def : Pat<(AArch64authtcret tcGPR64:$dst, (i32 timm:$FPDiff), (i32 timm:$Key),
-                                (i64 timm:$Disc), tcGPR64:$AddrDisc),
+                                (i64 timm:$Disc), tcGPRnotx16x17:$AddrDisc),
               (AUTH_TCRETURN tcGPR64:$dst, imm:$FPDiff, imm:$Key, imm:$Disc,
-                             tcGPR64:$AddrDisc)>;
+                             tcGPRnotx16x17:$AddrDisc)>;
 
   let Predicates = [TailCallX16X17] in
     def : Pat<(AArch64authtcret tcGPRx16x17:$dst, (i32 timm:$FPDiff),
                                 (i32 timm:$Key), (i64 timm:$Disc),
-                                tcGPR64:$AddrDisc),
+                                tcGPRnotx16x17:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
-                                 imm:$Disc, tcGPR64:$AddrDisc)>;
+                                 imm:$Disc, tcGPRnotx16x17:$AddrDisc)>;
 }
 
 // v9.5-A pointer authentication extensions
