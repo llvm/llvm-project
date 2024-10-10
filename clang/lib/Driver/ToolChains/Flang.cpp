@@ -869,6 +869,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
