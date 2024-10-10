@@ -41,6 +41,9 @@ public:
   // prevent creation of jump tables
   bool areJTsAllowed(const Function *) const override { return false; }
 
+  // allow for typed pointers
+  bool hasTypedPointer() const override { return true; }
+
   // This is to prevent sexts of non-i64 vector indices which are generated
   // within general IRTranslator hence type generation for it is omitted.
   MVT getVectorIdxTy(const DataLayout &DL) const override {

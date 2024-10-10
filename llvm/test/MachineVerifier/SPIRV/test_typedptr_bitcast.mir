@@ -1,0 +1,15 @@
+#RUN: llc -mtriple=spirv64-unknown-unknown -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+
+---
+name:            test_typedptr_bitcast
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    ; CHECK-NOT: Bad machine code: bitcast must change the type
+    %0:_(p0) = G_IMPLICIT_DEF
+    %1:_(p0) = G_BITCAST %0
+...
