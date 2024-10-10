@@ -101,8 +101,6 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
                                     IntrinsicInst *II) {
   assert(II != nullptr && "Intrinsic cannot be null");
   Intrinsic::ID IID = II->getIntrinsicID();
-  if (IID == Intrinsic::not_intrinsic)
-    return false;
   Type *RetTy = II->getType();
   Type *ScalarRetTy = RetTy->getScalarType();
   // At the moment VFABI assumes the return type is always widened unless it is
@@ -208,6 +206,8 @@ static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
   for (auto &I : instructions(F)) {
     // Process only intrinsic calls that return void or a vector.
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+      if (II->getIntrinsicID() == Intrinsic::not_intrinsic)
+        continue;
       if (!II->getType()->isVectorTy() && !II->getType()->isVoidTy())
         continue;
 
