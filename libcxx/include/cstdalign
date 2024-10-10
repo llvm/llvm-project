@@ -7,30 +7,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CTGMATH
-#define _LIBCPP_CTGMATH
+#ifndef _LIBCPP_CSTDALIGN
+#define _LIBCPP_CSTDALIGN
 
 /*
-    ctgmath synopsis
+    cstdalign synopsis
 
-#include <ccomplex>
-#include <cmath>
+Macros:
+
+    __alignas_is_defined
+    __alignof_is_defined
 
 */
 
 #include <__config>
 
-#if _LIBCPP_STD_VER >= 17
-#  include <complex>
-#else
-#  include <ccomplex>
-#endif
-
-#include <cmath>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+#undef __alignas_is_defined
+#define __alignas_is_defined 1
+
+#undef __alignof_is_defined
+#define __alignof_is_defined 1
 
 #if _LIBCPP_STD_VER >= 17
 #  if _LIBCPP_STD_VER >= 20
@@ -39,10 +39,10 @@
 #    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED
 #  endif
 
-using __standard_header_ctgmath _DEPRECATION_ANNOTATION = void;
-using __use_standard_header_ctgmath                     = __standard_header_ctgmath;
+using __standard_header_cstdalign _DEPRECATION_ANNOTATION = void;
+using __use_standard_header_cstdalign                     = __standard_header_cstdalign;
 
 #  undef _DEPRECATION_ANNOTATION
 #endif
 
-#endif // _LIBCPP_CTGMATH
+#endif // _LIBCPP_CSTDALIGN

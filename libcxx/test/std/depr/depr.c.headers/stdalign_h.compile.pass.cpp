@@ -6,18 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <ccomplex> // deprecated in C++17, removed in C++20, but still provided by libc++ as an extension
+// test <stdalign.h>
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+#include <stdalign.h>
 
-#include <ccomplex>
+#ifndef __alignas_is_defined
+#  error __alignas_is_defined not defined
+#endif
 
-#include "test_macros.h"
+#ifndef __alignof_is_defined
+#  error __alignof_is_defined not defined
+#endif
 
-int main(int, char**)
-{
-    std::complex<double> d;
-    (void)d;
+#ifdef alignas
+#  error alignas should not be defined
+#endif
 
-  return 0;
-}
+#ifdef alignof
+#  error alignof should not be defined
+#endif

@@ -7,13 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_TGMATH_H
-#define _LIBCPP_TGMATH_H
+#ifndef _LIBCPP_STDALIGN_H
+#define _LIBCPP_STDALIGN_H
 
 /*
-    tgmath.h synopsis
+    stdalign.h synopsis
 
-#include <ctgmath>
+Macros:
+
+    __alignas_is_defined
+    __alignof_is_defined
 
 */
 
@@ -23,17 +26,17 @@
 #  pragma GCC system_header
 #endif
 
-#ifdef __cplusplus
-#  if _LIBCPP_STD_VER >= 17
-#    include <cmath>
-#    include <complex>
-#  else
-#    include <ctgmath>
-#  endif
-#else
-#  if __has_include_next(<tgmath.h>)
-#    include_next <tgmath.h>
-#  endif
+#if __has_include_next(<stdalign.h>)
+#  include_next <stdalign.h>
 #endif
 
-#endif // _LIBCPP_TGMATH_H
+#ifdef __cplusplus
+#  undef alignas
+#  undef alignof
+#  undef __alignas_is_defined
+#  undef __alignof_is_defined
+#  define __alignas_is_defined 1
+#  define __alignof_is_defined 1
+#endif
+
+#endif // _LIBCPP_STDALIGN_H

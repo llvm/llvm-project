@@ -32,6 +32,15 @@ header_restrictions = {
     "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
 }
 
+# Undeprecate headers that are deprecated in C++17 and removed in C++20.
+header_undeprecations = {
+    "ccomplex": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ciso646": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdalign": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "cstdbool": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ctgmath": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+}
+
 lit_header_restrictions = {
     "barrier": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "clocale": "// UNSUPPORTED: no-localization",
@@ -202,7 +211,7 @@ module_headers = [
     for header in toplevel_headers
     if not header.endswith(".h") and is_public_header(header)
     # These headers have been removed in C++20 so are never part of a module.
-    and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+    and not header in ["ccomplex", "ciso646", "cstdalign", "cstdbool", "ctgmath"]
 ]
 
 # The C headers used in the std and std.compat modules.

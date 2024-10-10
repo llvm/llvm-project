@@ -6,18 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <ccomplex> // deprecated in C++17, removed in C++20, but still provided by libc++ as an extension
+// <ciso646>
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// check that <ciso646> is removed in C++20
 
-#include <ccomplex>
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::complex<double> d;
-    (void)d;
+// expected-warning {{'__standard_header_ciso646' is deprecated: removed in C++20}}
 
-  return 0;
-}
+#include <ciso646>

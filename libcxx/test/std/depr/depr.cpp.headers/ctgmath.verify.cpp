@@ -6,18 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <ccomplex> // deprecated in C++17, removed in C++20, but still provided by libc++ as an extension
+// <ctgmath>
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// check that <ctgmath> is deprecated in C++17 and removed in C++20
 
-#include <ccomplex>
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::complex<double> d;
-    (void)d;
+#if TEST_STD_VER >= 20
+// expected-warning {{'__standard_header_ctgmath' is deprecated: removed in C++20}}
 
-  return 0;
-}
+#  include <ctgmath>
+#else
+// expected-warning {{'__standard_header_ctgmath' is deprecated}}
+
+#  include <ctgmath>
+#endif
