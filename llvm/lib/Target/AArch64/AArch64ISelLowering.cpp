@@ -14399,39 +14399,44 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
     return convertFromScalableVector(DAG, VT, Seq);
   }
 
+  unsigned NumElems = VT.getVectorNumElements();
   if (!VT.isPow2VectorType() || VT.getFixedSizeInBits() > 128 ||
-      VT.getVectorNumElements() <= 1 || BVN->isConstant())
+      NumElems <= 1 || BVN->isConstant())
+    return SDValue();
+
+  auto IsExtractElt = [](SDValue Op) {
+    return Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+  };
+
+  // For integer types that are not already in vectors limit to at most four
+  // elements. This is an arbitrary restriction to avoid many fmovs from GPRs.
+  if (VT.getScalarType().isInteger() &&
+      NumElems - count_if(Op->op_values(), IsExtractElt) > 4)
     return SDValue();
 
   // Lower (pow2) BUILD_VECTORS that are <= 128-bit to a sequence of ZIP1s.
-  EVT ZipVT = ContainerVT;
   SDValue ZeroI64 = DAG.getConstant(0, DL, MVT::i64);
-  SmallVector<SDValue, 16> Intermediates =
-      llvm::map_to_vector<16>(Op->op_values(), [&](SDValue Op) {
-        SDValue Undef = DAG.getUNDEF(ZipVT);
+  SmallVector<SDValue, 16> Intermediates = llvm::map_to_vector<16>(
+      Op->op_values(), [&, Undef = DAG.getUNDEF(ContainerVT)](SDValue Op) {
         return Op.isUndef() ? Undef
-                            : DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ZipVT,
-                                          Undef, Op, ZeroI64);
+                            : DAG.getNode(ISD::INSERT_VECTOR_ELT, DL,
+                                          ContainerVT, Undef, Op, ZeroI64);
       });
 
+  ElementCount ZipEC = ContainerVT.getVectorElementCount();
   while (Intermediates.size() > 1) {
-    auto ToZipVT = [&](SDValue Op) { return DAG.getBitcast(ZipVT, Op); };
+    EVT ZipVT = getPackedSVEVectorVT(ZipEC);
+
     for (unsigned I = 0; I < Intermediates.size(); I += 2) {
-      SDValue Op0 = Intermediates[I + 0];
-      SDValue Op1 = Intermediates[I + 1];
-      Intermediates[I / 2] = Op1.isUndef()
-                                 ? Op0
-                                 : DAG.getNode(AArch64ISD::ZIP1, DL, ZipVT,
-                                               ToZipVT(Op0), ToZipVT(Op1));
+      SDValue Op0 = DAG.getBitcast(ZipVT, Intermediates[I + 0]);
+      SDValue Op1 = DAG.getBitcast(ZipVT, Intermediates[I + 1]);
+      Intermediates[I / 2] =
+          Op1.isUndef() ? Op0
+                        : DAG.getNode(AArch64ISD::ZIP1, DL, ZipVT, Op0, Op1);
     }
 
     Intermediates.resize(Intermediates.size() / 2);
-    if (Intermediates.size() > 1) {
-      // Prefer FP values to keep elements within vector registers (and also as
-      // f16 is conveniently a legal type).
-      ZipVT = getPackedSVEVectorVT(EVT::getFloatingPointVT(
-          ZipVT.getVectorElementType().getSizeInBits() * 2));
-    }
+    ZipEC = ZipEC.divideCoefficientBy(2);
   }
 
   assert(Intermediates.size() == 1);

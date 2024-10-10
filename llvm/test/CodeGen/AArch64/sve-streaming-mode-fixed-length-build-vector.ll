@@ -430,23 +430,20 @@ define void @build_vector_non_const_v2i32(i32 %a, i32 %b, ptr %out) {
 define void @build_vector_non_const_v8i8(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %h, ptr %out) {
 ; CHECK-LABEL: build_vector_non_const_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w7
-; CHECK-NEXT:    fmov s1, w6
-; CHECK-NEXT:    ldr x8, [sp]
-; CHECK-NEXT:    fmov s2, w4
-; CHECK-NEXT:    fmov s3, w3
-; CHECK-NEXT:    fmov s4, w2
-; CHECK-NEXT:    fmov s5, w1
-; CHECK-NEXT:    fmov s6, w0
-; CHECK-NEXT:    zip1 z0.b, z1.b, z0.b
-; CHECK-NEXT:    fmov s1, w5
-; CHECK-NEXT:    zip1 z1.b, z2.b, z1.b
-; CHECK-NEXT:    zip1 z2.b, z4.b, z3.b
-; CHECK-NEXT:    zip1 z3.b, z6.b, z5.b
-; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    zip1 z1.h, z3.h, z2.h
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    strb w7, [sp, #15]
+; CHECK-NEXT:    ldr x8, [sp, #16]
+; CHECK-NEXT:    strb w6, [sp, #14]
+; CHECK-NEXT:    strb w5, [sp, #13]
+; CHECK-NEXT:    strb w4, [sp, #12]
+; CHECK-NEXT:    strb w3, [sp, #11]
+; CHECK-NEXT:    strb w2, [sp, #10]
+; CHECK-NEXT:    strb w1, [sp, #9]
+; CHECK-NEXT:    strb w0, [sp, #8]
+; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    str d0, [x8]
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: build_vector_non_const_v8i8:
