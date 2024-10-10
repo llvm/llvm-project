@@ -5865,6 +5865,7 @@ def print_enabled_extensions : Flag<["-", "--"], "print-enabled-extensions">,
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
 def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
 def time : Flag<["-"], "time">,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Time individual commands">;
 def traditional_cpp : Flag<["-", "--"], "traditional-cpp">,
   Visibility<[ClangOption, CC1Option]>,
