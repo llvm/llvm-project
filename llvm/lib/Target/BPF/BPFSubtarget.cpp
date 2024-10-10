@@ -40,6 +40,12 @@ static cl::opt<bool> Disable_gotol("disable-gotol", cl::Hidden, cl::init(false),
 static cl::opt<bool>
     Disable_StoreImm("disable-storeimm", cl::Hidden, cl::init(false),
                      cl::desc("Disable BPF_ST (immediate store) insn"));
+static cl::opt<bool>
+    Disable_load_acquire("disable-load-acquire", cl::Hidden, cl::init(false),
+                         cl::desc("Disable load-acquire insns"));
+static cl::opt<bool>
+    Disable_store_release("disable-store-release", cl::Hidden, cl::init(false),
+                          cl::desc("Disable store-release insns"));
 
 void BPFSubtarget::anchor() {}
 
@@ -62,6 +68,8 @@ void BPFSubtarget::initializeEnvironment() {
   HasSdivSmod = false;
   HasGotol = false;
   HasStoreImm = false;
+  HasLoadAcquire = false;
+  HasStoreRelease = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
@@ -91,6 +99,8 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasSdivSmod = !Disable_sdiv_smod;
     HasGotol = !Disable_gotol;
     HasStoreImm = !Disable_StoreImm;
+    HasLoadAcquire = !Disable_load_acquire;
+    HasStoreRelease = !Disable_store_release;
     return;
   }
 }
