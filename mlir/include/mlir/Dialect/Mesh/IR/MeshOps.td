@@ -155,6 +155,39 @@ def Mesh_ProcessLinearIndexOp : Mesh_Op<"process_linear_index", [
   ];
 }
 
+def Mesh_NeighborsLinearIndicesOp : Mesh_Op<"neighbors_linear_indices", [
+  Pure,
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+  DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+]> {
+  let summary =
+      "For given split axes get the linear indices of the direct neighbor processes.";
+  let description = [{
+    Example:
+    ```
+    %idx = mesh.neighbor_linear_index on @mesh for $device 
+               split_axes = $split_axes : index
+    ```
+    Given `@mesh` with shape `(10, 20, 30)`,
+          `device` = `(1, 2, 3)`
+          `$split_axes` = `[1]`
+    returns two indices, `633` and `693`, which correspond to the index of the previous
+    process `(1, 1, 3)`, and the next process `(1, 3, 3) along the split axis `1`.
+
+    A negative value is returned if `$device` has no neighbor in the given
+    direction along the given `split_axes`.
+  }];
+  let arguments = (ins FlatSymbolRefAttr:$mesh,
+                       Variadic<Index>:$device,
+                       Mesh_MeshAxesAttr:$split_axes);
+  let results = (outs Index:$neighbor_down, Index:$neighbor_up);
+  let assemblyFormat =  [{
+      `on` $mesh `[` $device `]`
+      `split_axes` `=` $split_axes
+      attr-dict `:` type(results)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Sharding operations.
 //===----------------------------------------------------------------------===//
