@@ -3183,15 +3183,10 @@ SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
   SDValue Chain = TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL,
                                   MVT::isVoid, {}, CallOptions, getCurSDLoc())
                       .second;
-  // On PS4/PS5, the "return address" must still be within the calling
-  // function, even if it's at the very end, so emit an explicit TRAP here.
-  // Passing 'true' for doesNotReturn above won't generate the trap for us.
-  if (TM.getTargetTriple().isPS())
-    Chain = DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, Chain);
-  // WebAssembly needs an unreachable instruction after a non-returning call,
-  // because the function return type can be different from __stack_chk_fail's
-  // return type (void).
-  if (TM.getTargetTriple().isWasm())
+
+  // Emit a trap instruction if we are required to do so.
+  const TargetOptions &TargetOpts = DAG.getTarget().Options;
+  if (TargetOpts.TrapUnreachable && !TargetOpts.NoTrapAfterNoreturn)
     Chain = DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, Chain);
 
   DAG.setRoot(Chain);
