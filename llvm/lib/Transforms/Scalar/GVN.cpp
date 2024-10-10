@@ -1208,34 +1208,100 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
   ORE->emit(R);
 }
 
+static bool findDominatingValueInBlock(const MemoryLocation &Loc, Type *LoadTy,
+                                       Instruction *From,
+                                       BatchAAResults *BatchAA,
+                                       uint32_t &NumVisitedInsts,
+                                       Value *&FoundVal) {
+  for (auto *Inst = From; Inst != nullptr;
+       Inst = Inst->getPrevNonDebugInstruction()) {
+    // Stop the search if limit is reached.
+    if (++NumVisitedInsts > MaxNumVisitedInsts) {
+      return false;
+    }
+    if (isModSet(BatchAA->getModRefInfo(Inst, Loc))) {
+      return false;
+    }
+    if (auto *LI = dyn_cast<LoadInst>(Inst))
+      if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy) {
+        FoundVal = LI;
+        return true;
+      }
+  }
+  FoundVal = nullptr;
+  return true;
+}
+
 // Find non-clobbered value for Loc memory location in extended basic block
 // (chain of basic blocks with single predecessors) starting From instruction.
 static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
                                   Instruction *From, AAResults *AA) {
-  uint32_t NumVisitedInsts = 0;
   BasicBlock *FromBB = From->getParent();
+  uint32_t NumVisitedInsts = 0;
   BatchAAResults BatchAA(*AA);
-  for (BasicBlock *BB = FromBB; BB; BB = BB->getSinglePredecessor())
-    for (auto *Inst = BB == FromBB ? From : BB->getTerminator();
-         Inst != nullptr; Inst = Inst->getPrevNonDebugInstruction()) {
-      // Stop the search if limit is reached.
-      if (++NumVisitedInsts > MaxNumVisitedInsts)
-        return nullptr;
-      if (isModSet(BatchAA.getModRefInfo(Inst, Loc)))
-        return nullptr;
-      if (auto *LI = dyn_cast<LoadInst>(Inst))
-        if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy)
-          return LI;
-    }
+  for (BasicBlock *BB = FromBB; BB; BB = BB->getSinglePredecessor()) {
+    Value *FoundVal;
+    if (!findDominatingValueInBlock(Loc, LoadTy,
+                                    BB == FromBB ? From : BB->getTerminator(),
+                                    &BatchAA, NumVisitedInsts, FoundVal))
+      return nullptr;
+    else if (FoundVal)
+      return FoundVal;
+  }
   return nullptr;
 }
 
 std::optional<AvailableValue>
-GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
-                                 Value *Address) {
+GVNPass::AnalyzeLoadAvailability(LoadInst *Load, BasicBlock *DepBB,
+                                 MemDepResult DepInfo, Value *Address) {
   assert(Load->isUnordered() && "rules below are incorrect for ordered access");
-  assert(DepInfo.isLocal() && "expected a local dependence");
 
+  // Even for an unknown memory dependence we can still walk backwards through
+  // any predecessor blocks to see if we can find an available load for the
+  // address. This load needs to be the same for every possible predecessor.
+  // Here is one such example:
+  //   LoadBB
+  //     |   \
+  //     |    MidBB
+  //     |   /
+  //    DepBB
+  // This is similar to what we already do for a SelectInst further down.
+  // There must be no instructions between the load and the end of DepBB
+  // that could clobber the load.
+  if (!DepInfo.isLocal()) {
+    if (!Address || pred_empty(DepBB))
+      return std::nullopt;
+
+    // First Check to see if there is anything in DepBB that would clobber the
+    // load.
+    auto Loc = MemoryLocation::get(Load).getWithNewPtr(Address);
+    Value *FoundVal;
+    uint32_t NumVisitedInsts = 0;
+    BatchAAResults BatchAA(*getAliasAnalysis());
+    if (!findDominatingValueInBlock(Loc, Load->getType(),
+                                    DepBB->getTerminator(), &BatchAA,
+                                    NumVisitedInsts, FoundVal))
+      return std::nullopt;
+    else if (FoundVal)
+      return AvailableValue::getLoad(cast<LoadInst>(FoundVal));
+
+    // Then look for a common dominating value along all the predecessor paths.
+    Value *LoadOfAddr = nullptr;
+    for (BasicBlock *PredBB : predecessors(DepBB)) {
+      FoundVal = findDominatingValue(
+          Loc, Load->getType(), PredBB->getTerminator(), getAliasAnalysis());
+      if (!FoundVal)
+        return std::nullopt;
+      if (!LoadOfAddr)
+        LoadOfAddr = FoundVal;
+      else if (FoundVal != LoadOfAddr)
+        return std::nullopt;
+    }
+
+    return AvailableValue::getLoad(cast<LoadInst>(LoadOfAddr));
+  }
+
+  assert(DepInfo.isLocal() && "expected a local dependence");
   Instruction *DepInst = DepInfo.getInst();
 
   const DataLayout &DL = Load->getDataLayout();
@@ -1389,15 +1455,11 @@ void GVNPass::AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
       continue;
     }
 
-    if (!DepInfo.isLocal()) {
-      UnavailableBlocks.push_back(DepBB);
-      continue;
-    }
-
     // The address being loaded in this non-local block may not be the same as
     // the pointer operand of the load if PHI translation occurs.  Make sure
     // to consider the right address.
-    if (auto AV = AnalyzeLoadAvailability(Load, DepInfo, Dep.getAddress())) {
+    if (auto AV =
+            AnalyzeLoadAvailability(Load, DepBB, DepInfo, Dep.getAddress())) {
       // subtlety: because we know this was a non-local dependency, we know
       // it's safe to materialize anywhere between the instruction within
       // DepInfo and the end of it's block.
@@ -2226,7 +2288,7 @@ bool GVNPass::processLoad(LoadInst *L) {
     return false;
   }
 
-  auto AV = AnalyzeLoadAvailability(L, Dep, L->getPointerOperand());
+  auto AV = AnalyzeLoadAvailability(L, nullptr, Dep, L->getPointerOperand());
   if (!AV)
     return false;
 
