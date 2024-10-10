@@ -16825,6 +16825,9 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("T A::operator()();", NoSpace);
   verifyFormat("X A::operator++(T);", NoSpace);
   verifyFormat("auto lambda = []() { return 0; };", NoSpace);
+  verifyFormat("auto lambda = [] [[attr]] () { return 0; };", NoSpace);
+  verifyFormat("auto lambda = [] MACRO_ATTR () { return 0; };", NoSpace);
+  verifyFormat("auto lambda = [] FN_MACRO_ATTR(a, (b + c)) () { return 0; };", NoSpace);
   verifyFormat("#if (foo || bar) && baz\n"
                "#elif ((a || b) && c) || d\n"
                "#endif",
@@ -16882,6 +16885,9 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("T A::operator() ();", Space);
   verifyFormat("X A::operator++ (T);", Space);
   verifyFormat("auto lambda = [] () { return 0; };", Space);
+  verifyFormat("auto lambda = [] [[attr]] () { return 0; };", Space);
+  verifyFormat("auto lambda = [] MACRO_ATTR () { return 0; };", Space);
+  verifyFormat("auto lambda = [] FN_MACRO_ATTR(a, (b + c)) () { return 0; };", Space);
   verifyFormat("int x = int (y);", Space);
   verifyFormat("#define F(...) __VA_OPT__ (__VA_ARGS__)", Space);
   verifyFormat("__builtin_LINE ()", Space);
@@ -16942,6 +16948,9 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("X A::operator++ (T);", SomeSpace);
   verifyFormat("int x = int (y);", SomeSpace);
   verifyFormat("auto lambda = []() { return 0; };", SomeSpace);
+  verifyFormat("auto lambda = [] [[attr]] () { return 0; };", SomeSpace);
+  verifyFormat("auto lambda = [] MACRO_ATTR () { return 0; };", SomeSpace);
+  verifyFormat("auto lambda = [] FN_MACRO_ATTR(a, (b + c)) () { return 0; };", SomeSpace);
 
   FormatStyle SpaceControlStatements = getLLVMStyle();
   SpaceControlStatements.SpaceBeforeParens = FormatStyle::SBPO_Custom;
