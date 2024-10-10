@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -verify-machineinstrs | FileCheck %s
 
 ;; NOTE: This does not check for structured control-flow operations.
 

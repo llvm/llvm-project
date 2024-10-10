@@ -267,3 +267,27 @@ bool SPIRVInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
   return false;
 }
+
+// The SPIR-V backends can emit the OpPhi instruction.
+bool SPIRVInstrInfo::isPhiInstr(const MachineInstr &MI) const {
+  return TargetInstrInfo::isPhiInstr(MI) || MI.getOpcode() == SPIRV::OpPhi;
+}
+
+unsigned SPIRVInstrInfo::getNumPhiIncomingPair(const MachineInstr &MI) const {
+  // OpPhi has 2 operands before the [Value, Src] pairs.
+  if (MI.getOpcode() == SPIRV::OpPhi)
+    return (MI.getNumOperands() - 2) / 2;
+  return TargetInstrInfo::getNumPhiIncomingPair(MI);
+}
+
+std::pair<MachineOperand, MachineBasicBlock *>
+SPIRVInstrInfo::getPhiIncomingPair(const MachineInstr &MI,
+                                   unsigned index) const {
+  if (MI.getOpcode() != SPIRV::OpPhi)
+    return TargetInstrInfo::getPhiIncomingPair(MI, index);
+
+  // Skip the first 2 operands (dst, type), and access each [Value, Src] pairs.
+  MachineOperand Operand = MI.getOperand(index * 2 + 2);
+  MachineBasicBlock *MBB = MI.getOperand(index * 2 + 3).getMBB();
+  return {Operand, MBB};
+}
