@@ -26,25 +26,24 @@ class X86CodeGenPassBuilder
 public:
   explicit X86CodeGenPassBuilder(X86TargetMachine &TM,
                                  const CGPassBuilderOption &Opts,
-                                 PassInstrumentationCallbacks *PIC)
-      : CodeGenPassBuilder(TM, Opts, PIC) {}
-  void addPreISel(AddIRPass &addPass) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
-  Error addInstSelector(AddMachinePass &) const;
+                                 PassBuilder &PB)
+      : CodeGenPassBuilder(TM, Opts, PB) {}
+  void addPreISel();
+  void addAsmPrinter(CreateMCStreamer);
+  Error addInstSelector();
 };
 
-void X86CodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
+void X86CodeGenPassBuilder::addPreISel() {
   // TODO: Add passes pre instruction selection.
 }
 
-void X86CodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
-                                          CreateMCStreamer) const {
+void X86CodeGenPassBuilder::addAsmPrinter(CreateMCStreamer) {
   // TODO: Add AsmPrinter.
 }
 
-Error X86CodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
-  // TODO: Add instruction selector related passes.
-  addPass(X86ISelDAGToDAGPass(TM));
+Error X86CodeGenPassBuilder::addInstSelector() {
+  // TODO: Add instruction selector.
+  addMachineFunctionPass(X86ISelDAGToDAGPass(TM));
   return Error::success();
 }
 
@@ -57,8 +56,7 @@ void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 Error X86TargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opt,
-    PassInstrumentationCallbacks *PIC) {
-  auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
+    CodeGenFileType FileType, const CGPassBuilderOption &Opt, PassBuilder &PB) {
+  auto CGPB = X86CodeGenPassBuilder(*this, Opt, PB);
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
