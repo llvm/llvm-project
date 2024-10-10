@@ -160,7 +160,7 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
 static SmallVector<AffineMap>
 getDefaultIndexingMapsForMatmul(MLIRContext *context) {
   AffineExpr d0, d1, d2;
-  SmallVector<AffineMap, 3> indexingMaps;
+  SmallVector<AffineMap, 6> indexingMaps;
   bindDims(context, d0, d1, d2);
   indexingMaps.push_back(AffineMap::get(3, 0, {d0, d2}, context));
   indexingMaps.push_back(AffineMap::get(3, 0, {d2, d1}, context));
