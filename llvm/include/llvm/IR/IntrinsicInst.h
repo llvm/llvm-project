@@ -1222,6 +1222,7 @@ public:
     case Intrinsic::memmove:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
+    case Intrinsic::memset_pattern:
     case Intrinsic::memcpy_inline:
       return true;
     default:
@@ -1233,7 +1234,8 @@ public:
   }
 };
 
-/// This class wraps the llvm.memset and llvm.memset.inline intrinsics.
+/// This class wraps the llvm.memset, llvm.memset.inline, and
+/// llvm.memset.pattern intrinsics.
 class MemSetInst : public MemSetBase<MemIntrinsic> {
 public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -1241,6 +1243,7 @@ public:
     switch (I->getIntrinsicID()) {
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
+    case Intrinsic::memset_pattern:
       return true;
     default:
       return false;
@@ -1257,6 +1260,18 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::memset_inline;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This class wraps the llvm.memset.pattern intrinsic.
+class MemSetPatternInst : public MemSetInst {
+public:
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::memset_pattern;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -1339,6 +1354,7 @@ public:
     case Intrinsic::memmove:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
+    case Intrinsic::memset_pattern:
     case Intrinsic::memcpy_element_unordered_atomic:
     case Intrinsic::memmove_element_unordered_atomic:
     case Intrinsic::memset_element_unordered_atomic:
@@ -1361,6 +1377,7 @@ public:
     switch (I->getIntrinsicID()) {
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
+    case Intrinsic::memset_pattern:
     case Intrinsic::memset_element_unordered_atomic:
       return true;
     default:
