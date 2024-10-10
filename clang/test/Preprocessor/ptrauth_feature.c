@@ -119,3 +119,11 @@ void has_ptrauth_indirect_gotos() {}
 // NOGOTOS: no_ptrauth_indirect_gotos
 void no_ptrauth_indirect_gotos() {}
 #endif
+
+#if __has_feature(ptrauth_qualifier)
+// INTRIN: has_ptrauth_qualifier
+void has_ptrauth_qualifier() {}
+#else
+// NOINTRIN: no_ptrauth_qualifier
+void no_ptrauth_qualifier() {}
+#endif
