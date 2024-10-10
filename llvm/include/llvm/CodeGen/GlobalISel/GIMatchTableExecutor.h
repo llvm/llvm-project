@@ -237,6 +237,7 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   /// - SizeInBits(ULEB128) - The size of the pointer value in bits.
   GIM_CheckPointerToAny,
+  GIM_CheckIntPtr,
 
   /// Check the register bank for the specified operand
   /// - InsnID(ULEB128) - Instruction ID
