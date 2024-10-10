@@ -415,8 +415,7 @@ double fixed_5i(__int5 *in) {
 
 __attribute__((noinline)) double args_vec_3d(int fixed, __double3 c3) {
   // CHECK: args_vec_3d
-  // CHECK: [[LOAD:%.*]] = load <4 x double>, ptr {{%.*}}
-  // CHECK: shufflevector <4 x double> [[LOAD]], <4 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+  // CHECK: [[LOAD:%.*]] = load <3 x double>, ptr {{%.*}}
   double sum = fixed;
   sum = sum + c3.x + c3.y;
   return sum;
