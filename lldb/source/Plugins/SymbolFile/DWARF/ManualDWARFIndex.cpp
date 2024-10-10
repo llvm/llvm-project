@@ -230,7 +230,6 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     const char *mangled_cstr = nullptr;
     bool is_declaration = false;
     bool has_address = false;
-    bool has_location_or_const_value = false;
     bool is_global_or_static_variable = false;
 
     DWARFFormValue specification_die_form;
@@ -269,9 +268,6 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
 
       case DW_AT_location:
       case DW_AT_const_value:
-        has_location_or_const_value = true;
-        is_global_or_static_variable = die.IsGlobalOrStaticScopeVariable();
-
         break;
 
       case DW_AT_specification:
@@ -363,7 +359,8 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       break;
 
     case DW_TAG_variable:
-      if (name && has_location_or_const_value && is_global_or_static_variable) {
+      is_global_or_static_variable = die.IsGlobalOrStaticScopeVariable();
+      if (name && is_global_or_static_variable) {
         set.globals.Insert(ConstString(name), ref);
         // Be sure to include variables by their mangled and demangled names if
         // they have any since a variable can have a basename "i", a mangled

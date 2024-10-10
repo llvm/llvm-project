@@ -470,6 +470,13 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
         LLDB_INVALID_REGNUM, lldb_kind                                         \
   }
 
+// Generates register kinds array for registers with only generic kind
+#define GENERIC_KIND(generic_kind)                                             \
+  {                                                                            \
+    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, generic_kind,                    \
+        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM                               \
+  }
+
 // Generates register kinds array for registers with only lldb kind
 #define KIND_ALL_INVALID                                                       \
   {                                                                            \
@@ -535,10 +542,10 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
   }
 
 // Defines pointer authentication mask registers
-#define DEFINE_EXTENSION_REG(reg)                                              \
+#define DEFINE_EXTENSION_REG(reg, kind)                                        \
   {                                                                            \
     #reg, nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                \
-        KIND_ALL_INVALID, nullptr, nullptr, nullptr,                           \
+        kind, nullptr, nullptr, nullptr,                                       \
   }
 
 static lldb_private::RegisterInfo g_register_infos_arm64_le[] = {
