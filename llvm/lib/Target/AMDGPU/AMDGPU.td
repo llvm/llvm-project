@@ -1349,8 +1349,7 @@ def FeatureISAVersion9_Generic : FeatureSet<
 
 def FeatureISAVersion9_0_MI_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureFmaMixInsts,
-     FeatureDLInsts,
+    [FeatureDLInsts,
      FeatureDot1Insts,
      FeatureDot2Insts,
      FeatureDot3Insts,
@@ -1427,7 +1426,6 @@ def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
    FeatureGFX90AInsts,
    FeatureGFX940Insts,
-   FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
