@@ -1204,6 +1204,10 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
   return Result;
 }
 
+Expected<bool> parseInferFunctionAttrsOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "O0", "InferFunctionAttrs");
+}
+
 Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
   SmallVector<std::string, 1> PreservedGVs;
   while (!Params.empty()) {
