@@ -492,23 +492,36 @@ NativeProcessWindows::OnDebugException(bool first_chance,
   }
   case DWORD(STATUS_BREAKPOINT):
   case STATUS_WX86_BREAKPOINT:
-    if (FindSoftwareBreakpoint(record.GetExceptionAddress())) {
-      LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
-               record.GetExceptionAddress());
 
-      StopThread(record.GetThreadID(), StopReason::eStopReasonBreakpoint);
+    if (NativeThreadWindows *stop_thread =
+            GetThreadByID(record.GetThreadID())) {
+      auto &reg_ctx = stop_thread->GetRegisterContext();
+      const auto exception_addr = record.GetExceptionAddress();
+      const auto thread_id = record.GetThreadID();
 
-      if (NativeThreadWindows *stop_thread =
-              GetThreadByID(record.GetThreadID())) {
-        auto &register_context = stop_thread->GetRegisterContext();
-        uint32_t breakpoint_size = GetSoftwareBreakpointPCOffset();
-        // The current PC is AFTER the BP opcode, on all architectures.
-        uint64_t pc = register_context.GetPC() - breakpoint_size;
-        register_context.SetPC(pc);
+      if (FindSoftwareBreakpoint(exception_addr)) {
+        LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
+                 exception_addr);
+
+        reg_ctx.SetPC(reg_ctx.GetPC() - GetSoftwareBreakpointPCOffset());
+        StopThread(thread_id, StopReason::eStopReasonBreakpoint);
+        SetState(eStateStopped, true);
+        return ExceptionResult::MaskException;
+      } else {
+        const std::vector<ULONG_PTR> &args = record.GetExceptionArguments();
+        if (args.size() >= 2) {
+          uint32_t hw_id = LLDB_INVALID_INDEX32;
+          reg_ctx.GetWatchpointHitIndex(hw_id, args[1]);
+
+          if (hw_id != LLDB_INVALID_INDEX32) {
+            std::string desc =
+                formatv("{0} {1} {2}", args[1], hw_id, exception_addr).str();
+            StopThread(thread_id, StopReason::eStopReasonWatchpoint, desc);
+            SetState(eStateStopped, true);
+            return ExceptionResult::MaskException;
+          }
+        }
       }
-
-      SetState(eStateStopped, true);
-      return ExceptionResult::MaskException;
     }
 
     if (!initial_stop) {
