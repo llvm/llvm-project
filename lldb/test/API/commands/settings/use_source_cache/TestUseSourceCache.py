@@ -50,12 +50,14 @@ class SettingsUseSourceCacheTestCase(TestBase):
 
         if is_cache_enabled:
             self.assertFalse(
-                is_file_overwritten, "Source cache is enabled, but writing to file succeeded"
+                is_file_overwritten,
+                "Source cache is enabled, but writing to file succeeded",
             )
 
         if not is_cache_enabled:
             self.assertTrue(
-                is_file_overwritten, "Source cache is disabled, but writing to file failed"
+                is_file_overwritten,
+                "Source cache is disabled, but writing to file failed",
             )
 
     def overwriteFile(self, src):
