@@ -3073,7 +3073,6 @@ class OffloadingActionBuilder final {
             CUID = llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
           }
         }
-        IA->setId(CUID);
 
         if (CompileHostOnly)
           return ABRT_Success;
@@ -3081,6 +3080,8 @@ class OffloadingActionBuilder final {
         // Replicate inputs for each GPU architecture.
         auto Ty = IA->getType() == types::TY_HIP ? types::TY_HIP_DEVICE
                                                  : types::TY_CUDA_DEVICE;
+        IA->setId(CUID);
+        
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
           CudaDeviceActions.push_back(
               C.MakeAction<InputAction>(IA->getInputArg(), Ty, IA->getId()));
