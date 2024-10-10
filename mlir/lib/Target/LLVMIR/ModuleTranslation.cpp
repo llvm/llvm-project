@@ -1072,8 +1072,7 @@ LogicalResult ModuleTranslation::convertGlobals() {
       // 1. For the languages that support modules, the scope hierarchy can be
       // variable -> DIModule -> DICompileUnit
       //
-      // 2. For the Fortran common block variable, the scope hierarchy looks
-      // like as follows:
+      // 2. For the Fortran common block variable, the scope hierarchy can be
       // variable -> DICommonBlock -> DISubprogram -> DICompileUnit
       //
       // 3. For entities like static local variables in C or variable with
