@@ -549,8 +549,8 @@ define void @test12_memset_later_store_exceeds_memset(ptr %ptr) {
 define void @test12_memset_later_store_before_memset(ptr %ptr) {
 ; CHECK-LABEL: @test12_memset_later_store_before_memset(
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTR_1]], i64 7
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP1]], i8 0, i64 3, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[PTR_1]], i64 6
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP1]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    store i64 0, ptr [[PTR]], align 8
 ; CHECK-NEXT:    ret void
 ;
