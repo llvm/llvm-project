@@ -179,8 +179,7 @@ static RankedTensorType
 foldDynamicToStaticDimSizes(RankedTensorType type, ValueRange dynamicSizes,
                             SmallVector<Value> &foldedDynamicSizes) {
   SmallVector<int64_t> staticShape(type.getShape());
-  assert(type.getNumDynamicDims() ==
-             static_cast<int64_t>(dynamicSizes.size()) &&
+  assert(type.getNumDynamicDims() == dynamicSizes.size() &&
          "incorrect number of dynamic sizes");
 
   // Compute new static and dynamic sizes.
@@ -894,8 +893,7 @@ void EmptyOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult EmptyOp::verify() {
-  if (getType().getNumDynamicDims() !=
-      static_cast<int64_t>(getDynamicSizes().size()))
+  if (getType().getNumDynamicDims() != getDynamicSizes().size())
     return emitOpError("incorrect number of dynamic sizes, has ")
            << getDynamicSizes().size() << ", expected "
            << getType().getNumDynamicDims();
@@ -3672,8 +3670,7 @@ void SplatOp::getAsmResultNames(
 }
 
 LogicalResult SplatOp::verify() {
-  if (getType().getNumDynamicDims() !=
-      static_cast<int64_t>(getDynamicSizes().size()))
+  if (getType().getNumDynamicDims() != getDynamicSizes().size())
     return emitOpError("incorrect number of dynamic sizes, has ")
            << getDynamicSizes().size() << ", expected "
            << getType().getNumDynamicDims();
@@ -4335,16 +4332,25 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
           rewriter.create<tensor::CastOp>(loc, newSrcType, packOp.getSource());
     }
     Value dest = packOp.getDest();
-    if (destShape != packOp.getDestType().getShape()) {
+    RankedTensorType originalResultType = packOp.getDestType();
+    bool needUpdateDestType = (destShape != originalResultType.getShape());
+    if (needUpdateDestType) {
       auto newDestType = packOp.getDestType().clone(destShape);
       dest =
           rewriter.create<tensor::CastOp>(loc, newDestType, packOp.getDest());
     }
-    Value newOp = rewriter.create<tensor::PackOp>(
-        loc, source, dest, packOp.getInnerDimsPos(), packOp.getMixedTiles(),
-        packOp.getPaddingValue(), packOp.getOuterDimsPerm());
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(
-        packOp, packOp.getResult().getType(), newOp);
+    rewriter.modifyOpInPlace(packOp, [&] {
+      packOp.getSourceMutable().assign(source);
+      packOp.getDestMutable().assign(dest);
+      packOp.getResult().setType(cast<RankedTensorType>(dest.getType()));
+    });
+    // Insert a cast if needed
+    if (needUpdateDestType) {
+      rewriter.setInsertionPointAfter(packOp);
+      auto castOp =
+          rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
+      rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
+    }
     return success();
   }
 

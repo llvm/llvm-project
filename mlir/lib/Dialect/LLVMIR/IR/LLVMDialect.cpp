@@ -3010,8 +3010,16 @@ LogicalResult AtomicRMWOp::verify() {
   auto valType = getVal().getType();
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
       getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax) {
-    if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
+    if (isCompatibleVectorType(valType)) {
+      if (isScalableVectorType(valType))
+        return emitOpError("expected LLVM IR fixed vector type");
+      Type elemType = getVectorElementType(valType);
+      if (!isCompatibleFloatingPointType(elemType))
+        return emitOpError(
+            "expected LLVM IR floating point type for vector element");
+    } else if (!isCompatibleFloatingPointType(valType)) {
       return emitOpError("expected LLVM IR floating point type");
+    }
   } else if (getBinOp() == AtomicBinOp::xchg) {
     DataLayout dataLayout = DataLayout::closest(*this);
     if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
@@ -3218,6 +3226,8 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
   return foldChainableCast(*this, adaptor);
 }
 
+Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
+
 //===----------------------------------------------------------------------===//
 // Folder for LLVM::GEPOp
 //===----------------------------------------------------------------------===//
@@ -3268,6 +3278,8 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+Value LLVM::GEPOp::getViewSource() { return getBase(); }
+
 //===----------------------------------------------------------------------===//
 // ShlOp
 //===----------------------------------------------------------------------===//
@@ -3314,6 +3326,36 @@ LogicalResult CallIntrinsicOp::verify() {
   if (failed(verifyOperandBundles(*this)))
     return failure();
   return success();
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::StringAttr intrin, mlir::ValueRange args) {
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        fastMathFlags,
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::Type resultType, mlir::StringAttr intrin,
+                            mlir::ValueRange args) {
+  build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::TypeRange resultTypes,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+  build(builder, state, resultTypes, intrin, args, fastMathFlags,
+        /*op_bundle_operands=*/{});
 }
 
 //===----------------------------------------------------------------------===//

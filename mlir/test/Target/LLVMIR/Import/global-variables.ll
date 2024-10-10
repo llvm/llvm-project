@@ -41,6 +41,25 @@
 
 ; // -----
 
+; Verifies that converting a reference to a global does not convert the global
+; a second time.
+
+; CHECK-LABEL: llvm.mlir.global external constant @reference
+; CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @simple
+; CHECK-NEXT: llvm.return %[[ADDR]]
+@reference = constant ptr @simple
+
+@simple = global { ptr } { ptr null }
+
+; // -----
+
+; CHECK-LABEL: llvm.mlir.global external @recursive
+; CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @recursive
+; CHECK: llvm.return %[[ADDR]]
+@recursive = global ptr @recursive
+
+; // -----
+
 ; alignment attribute.
 
 ; CHECK:  llvm.mlir.global private @global_int_align_32
@@ -311,3 +330,14 @@ declare void @"mlir.llvm.nameless_global_2"()
 !5 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
 !6 = !{}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
+
+; // -----
+
+; Verify that unnamed globals can also be referenced before they are defined.
+
+; CHECK:  llvm.mlir.global internal constant @reference()
+; CHECK:    llvm.mlir.addressof @mlir.llvm.nameless_global_0 : !llvm.ptr
+@reference = internal constant ptr @0
+
+; CHECK:  llvm.mlir.global private unnamed_addr constant @mlir.llvm.nameless_global_0("0\00")
+@0 = private unnamed_addr constant [2 x i8] c"0\00"

@@ -783,9 +783,22 @@ IsDevicePtr make(const parser::OmpClause::IsDevicePtr &inp,
 
 Lastprivate make(const parser::OmpClause::Lastprivate &inp,
                  semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpObjectList
-  return Lastprivate{{/*LastprivateModifier=*/std::nullopt,
-                      /*List=*/makeObjects(inp.v, semaCtx)}};
+  // inp.v -> parser::OmpLastprivateClause
+  using wrapped = parser::OmpLastprivateClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpLastprivateClause::LastprivateModifier,
+      Lastprivate::LastprivateModifier,
+      // clang-format off
+      MS(Conditional, Conditional)
+      // clang-format on
+  );
+
+  auto &t0 = std::get<std::optional<wrapped::LastprivateModifier>>(inp.v.t);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  return Lastprivate{{/*LastprivateModifier=*/maybeApply(convert, t0),
+                      /*List=*/makeObjects(t1, semaCtx)}};
 }
 
 Linear make(const parser::OmpClause::Linear &inp,
@@ -1146,6 +1159,12 @@ Sizes make(const parser::OmpClause::Sizes &inp,
            semantics::SemanticsContext &semaCtx) {
   // inp.v -> std::list<parser::ScalarIntExpr>
   return Sizes{/*SizeList=*/makeList(inp.v, makeExprFn(semaCtx))};
+}
+
+Permutation make(const parser::OmpClause::Permutation &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::list<parser::ScalarIntConstantExpr>
+  return Permutation{/*ArgList=*/makeList(inp.v, makeExprFn(semaCtx))};
 }
 
 TaskReduction make(const parser::OmpClause::TaskReduction &inp,

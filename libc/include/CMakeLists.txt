@@ -147,6 +147,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  malloc
+  ../libc/newhdrgen/yaml/malloc.yaml
+  malloc.h.def
+  malloc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.malloc_macros
+)
+
+add_header_macro(
   math
   ../libc/newhdrgen/yaml/math.yaml
   math.h.def

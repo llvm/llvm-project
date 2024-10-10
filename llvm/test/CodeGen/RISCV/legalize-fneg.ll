@@ -56,16 +56,16 @@ entry:
 define void @test3(ptr %a, ptr %b) nounwind {
 ; RV32-LABEL: test3:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lw a2, 4(a1)
-; RV32-NEXT:    lw a3, 12(a1)
+; RV32-NEXT:    lw a2, 12(a1)
+; RV32-NEXT:    lw a3, 4(a1)
 ; RV32-NEXT:    lw a4, 8(a1)
 ; RV32-NEXT:    lw a1, 0(a1)
 ; RV32-NEXT:    lui a5, 524288
-; RV32-NEXT:    xor a3, a3, a5
+; RV32-NEXT:    xor a2, a2, a5
 ; RV32-NEXT:    sw a4, 8(a0)
 ; RV32-NEXT:    sw a1, 0(a0)
-; RV32-NEXT:    sw a2, 4(a0)
-; RV32-NEXT:    sw a3, 12(a0)
+; RV32-NEXT:    sw a3, 4(a0)
+; RV32-NEXT:    sw a2, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test3:

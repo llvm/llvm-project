@@ -1573,8 +1573,8 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
 // Public functions for populating patterns
 //===----------------------------------------------------------------------===//
 
-void mlir::populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                              RewritePatternSet &patterns) {
+void mlir::populateBuiltinFuncToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<FuncOpConversion>(typeConverter, patterns.getContext());
 }
 
