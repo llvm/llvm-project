@@ -335,6 +335,15 @@ template <typename Cat> Log *GetLog(Cat mask) {
   return LogChannelFor<Cat>().GetLog(Log::MaskType(mask));
 }
 
+/// Getter and setter for the error log (see g_error_log).
+/// The error log is set to the system log in SystemInitializerFull. We can't
+/// use the system log directly because that would violate the layering between
+/// Utility and Host.
+/// @{
+void SetLLDBErrorLog(Log *log);
+Log *GetLLDBErrorLog();
+/// @}
+
 } // namespace lldb_private
 
 /// The LLDB_LOG* macros defined below are the way to emit log messages.
@@ -387,6 +396,9 @@ template <typename Cat> Log *GetLog(Cat mask) {
     if (log_private && error_private) {                                        \
       log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
                                __VA_ARGS__);                                   \
+    } else if (::lldb_private::Log *log_error = GetLLDBErrorLog()) {           \
+      log_error->FormatError(::std::move(error_private), __FILE__, __func__,   \
+                             __VA_ARGS__);                                     \
     } else                                                                     \
       ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
@@ -401,6 +413,9 @@ template <typename Cat> Log *GetLog(Cat mask) {
     if (log_private && log_private->GetVerbose() && error_private) {           \
       log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
                                __VA_ARGS__);                                   \
+    } else if (::lldb_private::Log *log_error = GetLLDBErrorLog()) {           \
+      log_error->FormatError(::std::move(error_private), __FILE__, __func__,   \
+                             __VA_ARGS__);                                     \
     } else                                                                     \
       ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
