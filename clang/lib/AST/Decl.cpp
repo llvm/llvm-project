@@ -1741,9 +1741,9 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       bool const isRedundant =
           cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope);
       if (P.SuppressInlineNamespace ==
-              PrintingPolicy::SupressInlineNamespaceMode::All ||
+              PrintingPolicy::SuppressInlineNamespaceMode::All ||
           (P.SuppressInlineNamespace ==
-               PrintingPolicy::SupressInlineNamespaceMode::Redundant &&
+               PrintingPolicy::SuppressInlineNamespaceMode::Redundant &&
            isRedundant)) {
         continue;
       }

@@ -55,14 +55,14 @@ public:
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
 struct PrintingPolicy {
-  enum class SupressInlineNamespaceMode : uint8_t { None, Redundant, All };
+  enum class SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
 
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
-        SuppressInlineNamespace(SupressInlineNamespaceMode::Redundant),
+        SuppressInlineNamespace(SuppressInlineNamespaceMode::Redundant),
         SuppressElaboration(false), SuppressInitializers(false),
         ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
         SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
@@ -147,7 +147,7 @@ struct PrintingPolicy {
   /// If Redudant, where the name is unambiguous with the specifier removed.
   /// If All, even if the name is ambiguous with the specifier
   /// removed.
-  SupressInlineNamespaceMode SuppressInlineNamespace : 2;
+  SuppressInlineNamespaceMode SuppressInlineNamespace : 2;
 
   /// Ignore qualifiers and tag keywords as specified by elaborated type sugar,
   /// instead letting the underlying type print as normal.

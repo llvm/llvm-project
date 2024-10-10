@@ -656,7 +656,8 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
     PrintingPolicy Policy = Node.getASTContext().getPrintingPolicy();
     Policy.SuppressUnwrittenScope = SkipUnwritten;
     Policy.SuppressInlineNamespace =
-        PrintingPolicy::SupressInlineNamespaceMode::All;
+        SkipUnwritten ? PrintingPolicy::SuppressInlineNamespaceMode::All
+                      : PrintingPolicy::SuppressInlineNamespaceMode::None;
     Node.printQualifiedName(OS, Policy);
 
     const StringRef FullName = OS.str();

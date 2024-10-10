@@ -61,7 +61,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
   Policy.SuppressInlineNamespace =
-      PrintingPolicy::SupressInlineNamespaceMode::None;
+      PrintingPolicy::SuppressInlineNamespaceMode::None;
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
