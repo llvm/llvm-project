@@ -7,37 +7,18 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
 
 define amdgpu_ps i16 @s_mul_i16(i16 inreg %num, i16 inreg %den) {
-; GFX7-LABEL: s_mul_i16:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_mul_i32 s0, s0, s1
-; GFX7-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: s_mul_i16:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX8-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX8-NEXT:    s_mul_i32 s0, s0, s1
-; GFX8-NEXT:    ; return to shader part epilog
-;
-; GFX9-LABEL: s_mul_i16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX9-NEXT:    s_mul_i32 s0, s0, s1
-; GFX9-NEXT:    ; return to shader part epilog
+; GCN-LABEL: s_mul_i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_mul_i32 s0, s0, s1
+; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_mul_i16:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX10PLUS-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX10PLUS-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_mul_i16:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX12-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX12-NEXT:    ; return to shader part epilog
   %result = mul i16 %num, %den
@@ -93,35 +74,27 @@ define amdgpu_ps zeroext i16 @s_mul_i16_zeroext(i16 inreg zeroext %num, i16 inre
 ;
 ; GFX8-LABEL: s_mul_i16_zeroext:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX8-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX8-NEXT:    s_mul_i32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_mul_i16_zeroext:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX9-NEXT:    s_mul_i32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_mul_i16_zeroext:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX10PLUS-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX10PLUS-NEXT:    s_mul_i32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10PLUS-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_mul_i16_zeroext:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX12-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mul_i32 s0, s0, s1
-; GFX12-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX12-NEXT:    ; return to shader part epilog
   %result = mul i16 %num, %den
   ret i16 %result
@@ -170,42 +143,22 @@ define zeroext i16 @v_mul_i16_zeroext(i16 zeroext %num, i16 zeroext %den) {
 }
 
 define amdgpu_ps signext i16 @s_mul_i16_signext(i16 inreg signext %num, i16 inreg signext %den) {
-; GFX7-LABEL: s_mul_i16_signext:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_mul_i32 s0, s0, s1
-; GFX7-NEXT:    s_sext_i32_i16 s0, s0
-; GFX7-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: s_mul_i16_signext:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX8-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX8-NEXT:    s_mul_i32 s0, s0, s1
-; GFX8-NEXT:    s_sext_i32_i16 s0, s0
-; GFX8-NEXT:    ; return to shader part epilog
-;
-; GFX9-LABEL: s_mul_i16_signext:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX9-NEXT:    s_mul_i32 s0, s0, s1
-; GFX9-NEXT:    s_sext_i32_i16 s0, s0
-; GFX9-NEXT:    ; return to shader part epilog
+; GCN-LABEL: s_mul_i16_signext:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_mul_i32 s0, s0, s1
+; GCN-NEXT:    s_sext_i32_i16 s0, s0
+; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_mul_i16_signext:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX10PLUS-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX10PLUS-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX10PLUS-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_mul_i16_signext:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX12-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mul_i32 s0, s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
   %result = mul i16 %num, %den

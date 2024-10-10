@@ -46,10 +46,10 @@ static cl::opt<bool> WidenLoads(
   cl::init(false));
 
 static cl::opt<bool> Widen16BitOps(
-  "amdgpu-codegenprepare-widen-16-bit-ops",
-  cl::desc("Widen uniform 16-bit instructions to 32-bit in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(true));
+    "amdgpu-codegenprepare-widen-16-bit-ops",
+    cl::desc(
+        "Widen uniform 16-bit instructions to 32-bit in AMDGPUCodeGenPrepare"),
+    cl::ReallyHidden, cl::init(false));
 
 static cl::opt<bool>
     BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
