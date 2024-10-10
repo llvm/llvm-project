@@ -71,6 +71,19 @@ void JSONNodeDumper::Visit(const Stmt *S) {
 }
 
 void JSONNodeDumper::Visit(const Type *T) {
+  // SEI: ensure FPTs are debloated. this can be expanded to ALL types, if
+  // desired
+  if (T && cacheAddress((void *)T)) {
+    // add this as a child to know that it's a Type
+    AddChild("typeDetails",
+             [=] { JOS.attribute("refId", createPointerRepresentation(T)); });
+
+    InnerTypeVisitor::Visit(T);
+    // SEI
+    VisitQualTypeDetails(T->getCanonicalTypeInternal());
+    return;
+  }
+
   JOS.attribute("id", createPointerRepresentation(T));
 
   if (!T)
@@ -87,13 +100,44 @@ void JSONNodeDumper::Visit(const Type *T) {
                       T->containsUnexpandedParameterPack());
   attributeOnlyIfTrue("isImported", T->isFromAST());
   InnerTypeVisitor::Visit(T);
+  // SEI
+  VisitQualTypeDetails(T->getCanonicalTypeInternal());
 }
 
 void JSONNodeDumper::Visit(QualType T) {
-  JOS.attribute("id", createPointerRepresentation(T.getAsOpaquePtr()));
-  JOS.attribute("kind", "QualType");
-  JOS.attribute("type", createQualType(T));
-  JOS.attribute("qualifiers", T.split().Quals.getAsString());
+
+  // SEI: used AddChild to prevent qualType from being part added to a list
+  // JOS.attributeArray("qualTypes", [=] {
+
+  // SEI: force qualType into its own block, otherwise multiple Visits
+  // create a bunch of siblings, which is invalid JSON
+  JOS.attributeBegin("qualType");
+  JOS.objectBegin();
+
+  // SEI: cache visited addresses and add only its refId
+  // instead of the kind, type, quals, but leave the qual type details
+  // because those can differ among IDs
+  if (cacheAddress(T.getAsOpaquePtr())) {
+    JOS.attribute("refId", createPointerRepresentation(T.getAsOpaquePtr()));
+  } else {
+    JOS.attribute("id", createPointerRepresentation(T.getAsOpaquePtr()));
+    JOS.attribute("kind", "QualType");
+    JOS.attribute("type", createQualType(T));
+    JOS.attribute("qualifiers", T.split().Quals.getAsString());
+  }
+
+  // SEI: get add'l info required for redemption analysis
+  // the qual type details differ even among cached references
+  VisitQualTypeDetails(T);
+
+  // SEI: if this is a pointer type, then recursively call ourselves
+  // until it's not
+  if (T->isPointerType())
+    Visit(T->getPointeeType());
+
+  JOS.objectEnd();
+  JOS.attributeEnd();
+  //} );
 }
 
 void JSONNodeDumper::Visit(TypeLoc TL) {
@@ -109,6 +153,64 @@ void JSONNodeDumper::Visit(TypeLoc TL) {
                 createQualType(QualType(TL.getType()), /*Desugar=*/false));
   JOS.attributeObject("range",
                       [TL, this] { writeSourceRange(TL.getSourceRange()); });
+}
+
+void JSONNodeDumper::VisitQualTypeDetails(QualType T) {
+  // SEI: get more detailed info on type. this info is not transferrable
+  // with the refId, so this must be called on every type even if that type
+  // has been cached
+  JOS.attributeBegin("qualDetails");
+  JOS.arrayBegin();
+
+  auto CT = T->getCanonicalTypeInternal();
+
+  if (CT->isStructureType())
+    JOS.value("struct");
+
+  if (CT->isNullPtrType())
+    JOS.value("null");
+  if (CT->isUndeducedType())
+    JOS.value("undeduced");
+
+  if (CT->isPointerType())
+    JOS.value("ptr");
+  if (CT->isVoidType())
+    JOS.value("void");
+
+  if (CT->isSignedIntegerType())
+    JOS.value("signed");
+  if (CT->isUnsignedIntegerType())
+    JOS.value("unsigned");
+  if (CT->isIntegerType())
+    JOS.value("integer");
+  if (CT->isFloatingType())
+    JOS.value("fpp");
+  if (CT->isEnumeralType())
+    JOS.value("enum");
+  if (CT->isUnionType())
+    JOS.value("union");
+  if (CT->isFunctionPointerType())
+    JOS.value("func_ptr");
+  if (CT->isTypedefNameType())
+    JOS.value("type_def");
+  if (CT->isArrayType())
+    JOS.value("array");
+
+  JOS.arrayEnd();
+  JOS.attributeEnd();
+}
+
+// SEI: capture the return info in a nested JSON block
+void JSONNodeDumper::VisitReturnType(QualType T) {
+  // using this function allows us to easily wrap just the returnType
+  // section into its own JSON block. if we do this in ASTNodeTraverser,
+  // then the TextNodeDumper works as expected but the JSONNodeDumper
+  // rolls all siblings into the returnType node with those siblings as child
+  // nodes
+
+  JOS.attributeObject("returnTypeDetail", [=] { Visit(T); });
+
+  // Visit(T);
 }
 
 void JSONNodeDumper::Visit(const Decl *D) {
@@ -175,6 +277,14 @@ void JSONNodeDumper::Visit(const TemplateArgument &TA, SourceRange R,
 
 void JSONNodeDumper::Visit(const CXXCtorInitializer *Init) {
   JOS.attribute("kind", "CXXCtorInitializer");
+
+  // SEI: added id for
+  JOS.attribute("id", createPointerRepresentation(Init));
+
+  // SEI: added range for CXXCtorInitializers
+  JOS.attributeObject(
+      "range", [Init, this] { writeSourceRange(Init->getSourceRange()); });
+
   if (Init->isAnyMemberInitializer())
     JOS.attribute("anyInit", createBareDeclRef(Init->getAnyMember()));
   else if (Init->isBaseInitializer())
@@ -958,6 +1068,10 @@ void JSONNodeDumper::VisitFieldDecl(const FieldDecl *FD) {
   attributeOnlyIfTrue("modulePrivate", FD->isModulePrivate());
   attributeOnlyIfTrue("isBitfield", FD->isBitField());
   attributeOnlyIfTrue("hasInClassInitializer", FD->hasInClassInitializer());
+
+  // SEI: had to add this in b/c FieldDecls do not seem to call
+  // Visit(QualType)
+  Visit(FD->getType());
 }
 
 void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
@@ -1346,6 +1460,8 @@ void JSONNodeDumper::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   case NOUR_Discarded: JOS.attribute("nonOdrUseReason", "discarded"); break;
   }
   attributeOnlyIfTrue("isImmediateEscalating", DRE->isImmediateEscalating());
+  // SEI: this doesn't call VisitNamedDecl, so we force it
+  Visit(DRE->getType());
 }
 
 void JSONNodeDumper::VisitSYCLUniqueStableNameExpr(

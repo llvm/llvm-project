@@ -241,6 +241,14 @@ void TextNodeDumper::Visit(QualType T) {
   OS << " " << T.split().Quals.getAsString();
 }
 
+void TextNodeDumper::VisitReturnType(QualType T) {
+  OS << "ReturnType";
+  dumpPointer(T.getAsOpaquePtr());
+  OS << " ";
+  dumpBareType(T, false);
+  OS << " " << T.split().Quals.getAsString();
+}
+
 void TextNodeDumper::Visit(TypeLoc TL) {
   if (!TL) {
     ColorScope Color(OS, ShowColors, NullColor);
