@@ -45,11 +45,11 @@ class MemProfContextDisambiguation
 
   // Whether we are building with SamplePGO. This is needed for correctly
   // updating profile metadata on speculatively promoted calls.
-  bool SamplePGO;
+  bool isSamplePGO;
 
 public:
   MemProfContextDisambiguation(const ModuleSummaryIndex *Summary = nullptr,
-                               bool SamplePGO = false);
+                               bool isSamplePGO = false);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 

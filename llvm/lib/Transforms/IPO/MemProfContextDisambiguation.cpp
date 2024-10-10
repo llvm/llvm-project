@@ -4218,12 +4218,13 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
     // Data structures for saving indirect call profile info for use in ICP with
     // cloning.
     struct ICallAnalysisData {
+      CallBase *CB;
       std::vector<InstrProfValueData> CandidateProfileData;
       uint32_t NumCandidates;
       uint64_t TotalCount;
-      unsigned CallsiteInfoStartIndex;
+      size_t CallsiteInfoStartIndex;
     };
-    std::map<CallBase *, ICallAnalysisData> ICallAnalysisMap;
+    SmallVector<ICallAnalysisData> ICallAnalysisInfo;
 
     // Assume for now that the instructions are in the exact same order
     // as when the summary was created, but confirm this is correct by
@@ -4386,10 +4387,11 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
                 ICallAnalysis.getPromotionCandidatesForInstruction(
                     CB, TotalCount, NumCandidates);
             if (!CandidateProfileData.empty()) {
-              unsigned CallsiteInfoStartStartIndex =
-                  static_cast<unsigned int>(SI - FS->callsites().begin());
+              size_t CallsiteInfoStartIndex =
+                  std::distance(FS->callsites().begin(), SI);
               // Iterate past all of the associated callsites nodes and check
               // them.
+              bool ICPNeeded = false;
               for (const auto &Candidate : CandidateProfileData) {
 #ifndef NDEBUG
                 auto CalleeValueInfo =
@@ -4403,20 +4405,20 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
                 // See if any of the clones of the indirect callsite for this
                 // profiled target should call a cloned version of the profiled
                 // target. We only need to do the ICP here if so.
-                for (auto CloneNo : StackNode.Clones) {
-                  if (!CloneNo)
-                    continue;
-                  // Save information for ICP, which is performed later to avoid
-                  // messing up the current function traversal.
-                  ICallAnalysisMap[CB] = {CandidateProfileData.vec(),
-                                          NumCandidates, TotalCount,
-                                          CallsiteInfoStartStartIndex};
-                  break;
-                }
+                ICPNeeded |=
+                    llvm::any_of(StackNode.Clones,
+                                 [](unsigned CloneNo) { return CloneNo != 0; });
                 // Perform cloning if not yet done. This is done here in case
                 // we don't need to do ICP, but might need to clone this
                 // function as it is the target of other cloned calls.
                 CloneFuncIfNeeded(/*NumClones=*/StackNode.Clones.size());
+              }
+              if (ICPNeeded) {
+                // Save information for ICP, which is performed later to avoid
+                // messing up the current function traversal.
+                ICallAnalysisInfo.push_back({CB, CandidateProfileData.vec(),
+                                             NumCandidates, TotalCount,
+                                             CallsiteInfoStartIndex});
               }
             }
           }
@@ -4463,9 +4465,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
     // devirtualization) for each clone of the callsite, and update its callee
     // to the appropriate clone. Note that the ICP compares against the original
     // version of the target, which is what is in the vtable.
-    for (auto &ICallInfo : ICallAnalysisMap) {
-      auto *CB = ICallInfo.first;
-      auto &Info = ICallInfo.second;
+    for (auto &Info : ICallAnalysisInfo) {
+      auto *CB = Info.CB;
       auto CallsiteIndex = Info.CallsiteInfoStartIndex;
       auto TotalCount = Info.TotalCount;
       unsigned NumPromoted = 0;
@@ -4484,7 +4485,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         // (similar to what is done in the ICP pass).
         Function *TargetFunction = Symtab.getFunction(Candidate.Value);
         if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
-          ORE.emit([&]() {
+          ORE.emit([&, CB = CB]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget",
                                             CB)
                    << "Cannot promote indirect call: target with md5sum "
@@ -4499,7 +4500,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         // Check if legal to promote
         const char *Reason = nullptr;
         if (!isLegalToPromote(*CB, TargetFunction, &Reason)) {
-          ORE.emit([&]() {
+          ORE.emit([&, CB = CB]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", CB)
                    << "Cannot promote indirect call to "
                    << ore::NV("TargetFunction", TargetFunction)
@@ -4514,29 +4515,28 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         // Handle each call clone, applying ICP so that each clone directly
         // calls the specified callee clone, guarded by the appropriate ICP
         // check.
-        auto CalleeOrigName = TargetFunction->getName();
+        CallBase *CBClone = CB;
         for (unsigned J = 0; J < NumClones; J++) {
-          CallBase *CBClone;
           // Copy 0 is the original function.
-          if (!J)
-            CBClone = CB;
-          else
+          if (J > 0)
             CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
           // We do the promotion using the original name, so that the comparison
           // is against the name in the vtable. Then just below, change the new
           // direct call to call the cloned function.
           auto &DirectCall = pgo::promoteIndirectCall(
-              *CBClone, TargetFunction, Candidate.Count, TotalCount, SamplePGO,
-              &ORE);
+              *CBClone, TargetFunction, Candidate.Count, TotalCount,
+              isSamplePGO, &ORE);
           auto *TargetToUse = TargetFunction;
           // Call original if this version calls the original version of its
           // callee.
-          if (StackNode.Clones[J])
+          if (StackNode.Clones[J]) {
             TargetToUse = cast<Function>(
                 M.getOrInsertFunction(
-                     getMemProfFuncName(CalleeOrigName, StackNode.Clones[J]),
+                     getMemProfFuncName(TargetFunction->getName(),
+                                        StackNode.Clones[J]),
                      TargetFunction->getFunctionType())
                     .getCallee());
+          }
           DirectCall.setCalledFunction(TargetToUse);
           ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
                    << ore::NV("Call", CBClone) << " in clone "
@@ -4551,12 +4551,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
       }
       // Adjust the MD.prof metadata for all clones, now that we have the new
       // TotalCount and the number promoted.
+      CallBase *CBClone = CB;
       for (unsigned J = 0; J < NumClones; J++) {
-        CallBase *CBClone;
         // Copy 0 is the original function.
-        if (!J)
-          CBClone = CB;
-        else
+        if (J > 0)
           CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
         // First delete the old one.
         CBClone->setMetadata(LLVMContext::MD_prof, nullptr);
@@ -4640,8 +4638,8 @@ bool MemProfContextDisambiguation::processModule(
 }
 
 MemProfContextDisambiguation::MemProfContextDisambiguation(
-    const ModuleSummaryIndex *Summary, bool SamplePGO)
-    : ImportSummary(Summary), SamplePGO(SamplePGO) {
+    const ModuleSummaryIndex *Summary, bool isSamplePGO)
+    : ImportSummary(Summary), isSamplePGO(isSamplePGO) {
   if (ImportSummary) {
     // The MemProfImportSummary should only be used for testing ThinLTO
     // distributed backend handling via opt, in which case we don't have a

@@ -1,12 +1,13 @@
 ;; Test that cloning of an indirect call works. We should perform ICP and update
 ;; promoted call to the correct clone.
 
-;; This was created from the following source code, then the IR was reduced
+;; This was created from the following source code, for which both memprof and
+;; instrumentation PGO was collected and then applied, then the IR was reduced
 ;; using llvm-reduce with the expected FileCheck input.
+;; TODO: Consider adding a sample PGO based test, however, that uses the same VP
+;; metadata and should behave the same.
 
 ;; -- virtfunc.h: --
-;; #include <unistd.h>
-;;
 ;; void external(int *x);
 ;;
 ;; class B0 {
@@ -31,6 +32,7 @@
 ;; -- virtfunc_main.cc: --
 ;; #include "virtfunc.h"
 ;; #include <stdio.h>
+;; #include <unistd.h>
 ;;
 ;; int main() {
 ;;   B b;
