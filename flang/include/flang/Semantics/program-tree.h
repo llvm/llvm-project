@@ -9,8 +9,8 @@
 #ifndef FORTRAN_SEMANTICS_PROGRAM_TREE_H_
 #define FORTRAN_SEMANTICS_PROGRAM_TREE_H_
 
+#include "symbol.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/symbol.h"
 #include <list>
 #include <variant>
 
@@ -35,7 +35,7 @@ public:
       std::list<common::Reference<const parser::GenericSpec>>;
 
   // Build the ProgramTree rooted at one of these program units.
-  static ProgramTree Build(const parser::ProgramUnit &, SemanticsContext &);
+  static ProgramTree &Build(const parser::ProgramUnit &, SemanticsContext &);
   static std::optional<ProgramTree> Build(
       const parser::MainProgram &, SemanticsContext &);
   static std::optional<ProgramTree> Build(
