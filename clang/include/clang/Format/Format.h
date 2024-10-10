@@ -3847,23 +3847,42 @@ struct FormatStyle {
   ReferenceAlignmentStyle ReferenceAlignment;
 
   // clang-format off
-  /// If ``true``, clang-format will attempt to re-flow comments. That is it
-  /// will touch a comment and *reflow* long comments into new lines, trying to
-  /// obey the ``ColumnLimit``.
-  /// \code
-  ///    false:
-  ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
-  ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
-  ///
-  ///    true:
-  ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-  ///    // information
-  ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-  ///     * information */
-  /// \endcode
-  /// \version 3.8
-  bool ReflowComments;
+  /// \brief Types of comment reflow style.
+  enum ReflowCommentsStyle : int8_t {
+    /// Leave comments untouched.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///         * and a misaligned second line */
+    /// \endcode
+    RCS_Never,
+    /// Only apply indentation rules, moving comments left or right, without
+    /// changing formatting inside the comments.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+    ///     * and a misaligned second line */
+    /// \endcode
+    RCS_IndentOnly,
+    /// Apply indentation rules and reflow long comments into new lines, trying
+    /// to obey the ``ColumnLimit``.
+    /// \code
+    ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///    // information
+    ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///     * information */
+    ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+    ///     * information and a misaligned second line */
+    /// \endcode
+    RCS_Always
+  };
   // clang-format on
+
+  /// \brief Comment reformatting style.
+  /// \version 3.8
+  ReflowCommentsStyle ReflowComments;
 
   /// Remove optional braces of control statements (``if``, ``else``, ``for``,
   /// and ``while``) in C++ according to the LLVM coding style.
