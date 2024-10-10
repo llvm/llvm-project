@@ -1425,6 +1425,42 @@ is not specified.
   }];
 }
 
+def ExplicitInitDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+The ``clang::requires_explicit_initialization`` attribute indicates that the
+field of an aggregate must be initialized explicitly by users when the class
+is constructed. Its usage is invalid on non-aggregates.
+
+Note that this attribute is *not* a memory safety feature, and is *not* intended
+to guard against use of uninitialized memory.
+
+Rather, it is intended for use in "parameter-objects", used to simulate the
+passing of named parameters.
+The attribute generates a warning when explicit initializers for such
+"named parameters" are not provided:
+
+.. code-block:: c++
+
+  struct ArrayIOParams {
+    size_t count [[clang::requires_explicit_initialization]];
+    size_t element_size [[clang::requires_explicit_initialization]];
+    int flags = 0;
+  };
+
+  size_t ReadArray(FILE *file, void *buffer, ArrayIOParams params);
+
+  int main() {
+    unsigned int buf[512];
+    ReadArray(stdin, buf, {
+      .count = sizeof(buf) / sizeof(*buf),
+      // warning: field 'element_size' is not explicitly initialized
+    });
+  }
+
+  }];
+}
+
 def NoUniqueAddressDocs : Documentation {
   let Category = DocCatField;
   let Content = [{
