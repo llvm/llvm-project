@@ -14,8 +14,7 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index__s_add_i32__fi_const
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
-    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_MOV_B32_]], 128, implicit-def $scc
+    ; CHECK: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, 128, implicit-def $scc
     ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_I32_]]
     ; CHECK-NEXT: SI_RETURN implicit $sgpr4
     %0:sreg_32 = S_MOV_B32 %stack.0
@@ -35,8 +34,7 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index__s_add_i32__const_fi
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
-    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 128, [[S_MOV_B32_]], implicit-def $scc
+    ; CHECK: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 128, %stack.0, implicit-def $scc
     ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_I32_]]
     ; CHECK-NEXT: SI_RETURN implicit $sgpr4
     %0:sreg_32 = S_MOV_B32 %stack.0
@@ -56,8 +54,7 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index__s_add_i32__materializedconst_fi
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
-    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 256, [[S_MOV_B32_]], implicit-def $scc
+    ; CHECK: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 256, %stack.0, implicit-def $scc
     ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_I32_]]
     ; CHECK-NEXT: SI_RETURN implicit $sgpr4
     %0:sreg_32 = S_MOV_B32 256
@@ -101,8 +98,7 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index__s_add_i32__fi_materializedconst_1
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
-    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 256, [[S_MOV_B32_]], implicit-def $scc
+    ; CHECK: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 256, %stack.0, implicit-def $scc
     ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_I32_]]
     ; CHECK-NEXT: SI_RETURN implicit $sgpr4
     %0:sreg_32 = S_MOV_B32 256
@@ -173,8 +169,7 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index__v_add_u32_e32__const_v_fi
-    ; CHECK: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 128, [[V_MOV_B32_e32_]], implicit $exec
+    ; CHECK: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 128, %stack.0, implicit $exec
     ; CHECK-NEXT: $sgpr4 = COPY [[V_ADD_U32_e32_]]
     ; CHECK-NEXT: SI_RETURN implicit $sgpr4
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
@@ -215,21 +210,10 @@ stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
   bb.0:
-    ; GFX9-LABEL: name: fold_frame_index__v_add_u32_e64__imm_v_fi
-    ; GFX9: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; GFX9-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 64, [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX9-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
-    ; GFX9-NEXT: SI_RETURN implicit $sgpr4
-    ;
-    ; GFX10-LABEL: name: fold_frame_index__v_add_u32_e64__imm_v_fi
-    ; GFX10: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 64, %stack.0, 0, implicit $exec
-    ; GFX10-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
-    ; GFX10-NEXT: SI_RETURN implicit $sgpr4
-    ;
-    ; GFX12-LABEL: name: fold_frame_index__v_add_u32_e64__imm_v_fi
-    ; GFX12: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 64, %stack.0, 0, implicit $exec
-    ; GFX12-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
-    ; GFX12-NEXT: SI_RETURN implicit $sgpr4
+    ; CHECK-LABEL: name: fold_frame_index__v_add_u32_e64__imm_v_fi
+    ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 64, %stack.0, 0, implicit $exec
+    ; CHECK-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     %1:vgpr_32 = V_ADD_U32_e64 64, %0, 0, implicit $exec
     $sgpr4 = COPY %1
@@ -246,21 +230,10 @@ stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
   bb.0:
-    ; GFX9-LABEL: name: fold_frame_index__v_add_u32_e64___v_fi_imm
-    ; GFX9: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; GFX9-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MOV_B32_e32_]], 64, 0, implicit $exec
-    ; GFX9-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
-    ; GFX9-NEXT: SI_RETURN implicit $sgpr4
-    ;
-    ; GFX10-LABEL: name: fold_frame_index__v_add_u32_e64___v_fi_imm
-    ; GFX10: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, 64, 0, implicit $exec
-    ; GFX10-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
-    ; GFX10-NEXT: SI_RETURN implicit $sgpr4
-    ;
-    ; GFX12-LABEL: name: fold_frame_index__v_add_u32_e64___v_fi_imm
-    ; GFX12: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, 64, 0, implicit $exec
-    ; GFX12-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
-    ; GFX12-NEXT: SI_RETURN implicit $sgpr4
+    ; CHECK-LABEL: name: fold_frame_index__v_add_u32_e64___v_fi_imm
+    ; CHECK: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, 64, 0, implicit $exec
+    ; CHECK-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     %1:vgpr_32 = V_ADD_U32_e64 %0, 64, 0, implicit $exec
     $sgpr4 = COPY %1
@@ -278,8 +251,7 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index__v_add_co_u32_e32__const_v_fi
-    ; CHECK: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; CHECK-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 128, [[V_MOV_B32_e32_]], implicit-def $vcc, implicit $exec
+    ; CHECK: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 128, %stack.0, implicit-def $vcc, implicit $exec
     ; CHECK-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e32_]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
@@ -298,21 +270,10 @@ stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
   bb.0:
-    ; GFX9-LABEL: name: fold_frame_index__v_add_co_u32_e64__v_fi_imm
-    ; GFX9: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; GFX9-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[V_MOV_B32_e32_]], 64, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e64_]]
-    ; GFX9-NEXT: SI_RETURN implicit $vgpr0
-    ;
-    ; GFX10-LABEL: name: fold_frame_index__v_add_co_u32_e64__v_fi_imm
-    ; GFX10: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 %stack.0, 64, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e64_]]
-    ; GFX10-NEXT: SI_RETURN implicit $vgpr0
-    ;
-    ; GFX12-LABEL: name: fold_frame_index__v_add_co_u32_e64__v_fi_imm
-    ; GFX12: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 %stack.0, 64, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e64_]]
-    ; GFX12-NEXT: SI_RETURN implicit $vgpr0
+    ; CHECK-LABEL: name: fold_frame_index__v_add_co_u32_e64__v_fi_imm
+    ; CHECK: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 %stack.0, 64, 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     %1:vgpr_32, %2:sreg_64 = V_ADD_CO_U32_e64 %0, 64, 0, implicit $exec
     $vgpr0 = COPY %1
@@ -329,21 +290,10 @@ stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
   bb.0:
-    ; GFX9-LABEL: name: fold_frame_index__v_add_co_u32_e64__imm_v_fi
-    ; GFX9: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    ; GFX9-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 64, [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX9-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e64_]]
-    ; GFX9-NEXT: SI_RETURN implicit $vgpr0
-    ;
-    ; GFX10-LABEL: name: fold_frame_index__v_add_co_u32_e64__imm_v_fi
-    ; GFX10: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 64, %stack.0, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e64_]]
-    ; GFX10-NEXT: SI_RETURN implicit $vgpr0
-    ;
-    ; GFX12-LABEL: name: fold_frame_index__v_add_co_u32_e64__imm_v_fi
-    ; GFX12: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 64, %stack.0, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e64_]]
-    ; GFX12-NEXT: SI_RETURN implicit $vgpr0
+    ; CHECK-LABEL: name: fold_frame_index__v_add_co_u32_e64__imm_v_fi
+    ; CHECK: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 64, %stack.0, 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_ADD_CO_U32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     %1:vgpr_32, %2:sreg_64 = V_ADD_CO_U32_e64 64, %0, 0, implicit $exec
     $vgpr0 = COPY %1
