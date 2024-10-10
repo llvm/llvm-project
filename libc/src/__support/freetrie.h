@@ -14,7 +14,28 @@
 namespace LIBC_NAMESPACE_DECL {
 
 /// A trie of free lists.
-
+///
+/// This is an unusual little data structure originally from Doug Lea's malloc.
+/// Finding the best fit from a set of differently-sized free list typically
+/// required some kind of ordered map, and these are typically implemented using
+/// a self-balancing binary search tree. Those are notorious for having a
+/// relatively large number of special cases, while this trie has relatively
+/// few, which helps with code size.
+///
+/// Operations on the trie are logarithmic not on the number of nodes within it,
+/// but rather the fixed range of possible sizes that the trie can contain. This
+/// means that the data structure would likely actually perform worse than an
+/// e.g. red-black tree, but its implementation is still much simpler.
+///
+/// Each trie node's children subdivide the range of possible sizes into two
+/// halves: a lower and an upper. The node itself holds a free list of some size
+/// within its range. This makes it possible to summarily replace any node with
+/// any leaf within its subtrie, which makes it very straightforward to remove a
+/// node. Insertion is also simple; the only real complexity lies with finding
+/// the best fit. This can still be done in logarithmic time with only a few
+/// cases to consider.
+///
+/// The trie refers to, but does not own, the Nodes that comprise it.
 class FreeTrie {
 public:
   /// A trie node that is also a free list. The subtrie contains a continous
@@ -23,9 +44,6 @@ public:
   /// between the size of this node's free list and the contents of the lower
   /// and upper subtries.
   class Node : public FreeList::Node {
-    /// Return an abitrary leaf in the subtrie.
-    Node &leaf();
-
     /// The child subtrie covering the lower half of this subtrie's size range.
     Node *lower;
     /// The child subtrie covering the upper half of this subtrie's size range.
@@ -41,37 +59,38 @@ public:
     size_t min;
     size_t width;
 
-    constexpr SizeRange(size_t min, size_t width) : min(min), width(width) {
+    LIBC_INLINE constexpr SizeRange(size_t min, size_t width)
+        : min(min), width(width) {
       LIBC_ASSERT(!(width & (width - 1)) && "width must be a power of two");
     }
 
     /// @returns The lower half of the size range.
-    SizeRange lower() const { return {min, width / 2}; }
+    LIBC_INLINE SizeRange lower() const { return {min, width / 2}; }
 
     /// @returns The lower half of the size range.
-    SizeRange upper() const { return {min + width / 2, width / 2}; }
+    LIBC_INLINE SizeRange upper() const { return {min + width / 2, width / 2}; }
 
     /// @returns The largest size in this range.
-    size_t max() const { return min + (width - 1); }
+    LIBC_INLINE size_t max() const { return min + (width - 1); }
 
     /// @returns Whether the range contains the given size.
-    bool contains(size_t size) const {
+    LIBC_INLINE bool contains(size_t size) const {
       return min <= size && size < min + width;
     }
   };
 
-  constexpr FreeTrie() : FreeTrie(SizeRange{0, 0}) {}
-  constexpr FreeTrie(SizeRange range) : range(range) {}
+  LIBC_INLINE constexpr FreeTrie() : FreeTrie(SizeRange{0, 0}) {}
+  LIBC_INLINE constexpr FreeTrie(SizeRange range) : range(range) {}
 
   /// Sets the range of possible block sizes. This can only be called when the
   /// trie is empty.
-  void set_range(FreeTrie::SizeRange range) {
+  LIBC_INLINE void set_range(FreeTrie::SizeRange range) {
     LIBC_ASSERT(empty() && "cannot change the range of a preexisting trie");
     this->range = range;
   }
 
   /// @returns Whether the trie contains any blocks.
-  bool empty() const { return !root; }
+  LIBC_INLINE bool empty() const { return !root; }
 
   /// Push a block to the trie.
   void push(Block<> *block);
@@ -120,34 +139,6 @@ LIBC_INLINE void FreeTrie::push(Block<> *block) {
   FreeList list = *cur;
   list.push(node);
   *cur = static_cast<Node *>(list.begin());
-}
-
-LIBC_INLINE void FreeTrie::remove(Node *node) {
-  LIBC_ASSERT(!empty() && "cannot remove from empty trie");
-  FreeList list = node;
-  list.pop();
-  Node *new_node = static_cast<Node *>(list.begin());
-  if (!new_node) {
-    // The freelist is empty. Replace the subtrie root with an arbitrary leaf.
-    // This is legal because there is no relationship between the size of the
-    // root and its children.
-    Node *leaf = &node->leaf();
-    if (leaf == node) {
-      // If the root is a leaf, then removing it empties the subtrie.
-      replace_node(node, nullptr);
-      return;
-    }
-
-    replace_node(leaf, nullptr);
-    new_node = leaf;
-  }
-
-  // Copy the trie links to the new head.
-  new_node->lower = node->lower;
-  new_node->upper = node->upper;
-  new_node->parent = node->parent;
-  replace_node(node, new_node);
-  return;
 }
 
 LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
@@ -221,30 +212,6 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
       cur_range = cur_range.lower();
     }
   }
-}
-
-LIBC_INLINE void FreeTrie::replace_node(Node *node, Node *new_node) {
-  if (node->parent) {
-    Node *&parent_child =
-        node->parent->lower == node ? node->parent->lower : node->parent->upper;
-    LIBC_ASSERT(parent_child == node &&
-                "no reference to child node found in parent");
-    parent_child = new_node;
-  } else {
-    LIBC_ASSERT(root == node && "non-root node had no parent");
-    root = new_node;
-  }
-  if (node->lower)
-    node->lower->parent = new_node;
-  if (node->upper)
-    node->upper->parent = new_node;
-}
-
-LIBC_INLINE FreeTrie::Node &FreeTrie::Node::leaf() {
-  Node *cur = this;
-  while (cur->lower || cur->upper)
-    cur = cur->lower ? cur->lower : cur->upper;
-  return *cur;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

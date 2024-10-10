@@ -14,6 +14,7 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::freelist_heap;
+using LIBC_NAMESPACE::Block;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
 using LIBC_NAMESPACE::cpp::byte;
@@ -41,7 +42,7 @@ using LIBC_NAMESPACE::cpp::span;
     void RunTest(FreeListHeap &allocator, [[maybe_unused]] size_t N);          \
   };                                                                           \
   TEST_F(LlvmLibcFreeListHeapTest##TestCase, TestCase) {                       \
-    alignas(FreeListHeap::BlockType) byte buf[BufferSize] = {byte(0)};         \
+    alignas(Block<>) byte buf[BufferSize] = {byte(0)};                         \
     FreeListHeap allocator(buf);                                               \
     RunTest(allocator, BufferSize);                                            \
     RunTest(*freelist_heap, freelist_heap->region().size());                   \
@@ -94,14 +95,13 @@ TEST_FOR_EACH_ALLOCATOR(ReturnsNullWhenAllocationTooLarge, 2048) {
 // is used for other test cases and we don't explicitly free them.
 TEST(LlvmLibcFreeListHeap, ReturnsNullWhenFull) {
   constexpr size_t N = 2048;
-  alignas(FreeListHeap::BlockType) byte buf[N] = {byte(0)};
+  alignas(Block<>) byte buf[N] = {byte(0)};
 
   FreeListHeap allocator(buf);
 
   // Use aligned_allocate so we don't need to worry about ensuring the `buf`
   // being aligned to max_align_t.
-  EXPECT_NE(allocator.aligned_allocate(
-                1, N - 2 * FreeListHeap::BlockType::BLOCK_OVERHEAD),
+  EXPECT_NE(allocator.aligned_allocate(1, N - 2 * Block<>::BLOCK_OVERHEAD),
             static_cast<void *>(nullptr));
   EXPECT_EQ(allocator.allocate(1), static_cast<void *>(nullptr));
 }
@@ -241,17 +241,16 @@ TEST_FOR_EACH_ALLOCATOR(AlignedAlloc, 2048) {
 
 // This test is not part of the TEST_FOR_EACH_ALLOCATOR since we want to
 // explicitly ensure that the buffer can still return aligned allocations even
-// if the underlying buffer is at most aligned to the BlockType alignment. This
+// if the underlying buffer is at most aligned to the Block<> alignment. This
 // is so we can check that we can still get aligned allocations even if the
 // underlying buffer is not aligned to the alignments we request.
-TEST(LlvmLibcFreeListHeap, AlignedAllocOnlyBlockTypeAligned) {
+TEST(LlvmLibcFreeListHeap, AlignedAllocOnlyBlockAligned) {
   constexpr size_t BUFFER_SIZE = 4096;
-  constexpr size_t BUFFER_ALIGNMENT = alignof(FreeListHeap::BlockType) * 2;
+  constexpr size_t BUFFER_ALIGNMENT = alignof(Block<>) * 2;
   alignas(BUFFER_ALIGNMENT) byte buf[BUFFER_SIZE] = {byte(0)};
 
   // Ensure the underlying buffer is at most aligned to the block type.
-  FreeListHeap allocator(
-      span<byte>(buf).subspan(alignof(FreeListHeap::BlockType)));
+  FreeListHeap allocator(span<byte>(buf).subspan(alignof(Block<>)));
 
   constexpr size_t ALIGNMENTS[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
   constexpr size_t SIZE_SCALES[] = {1, 2, 3, 4, 5};

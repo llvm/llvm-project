@@ -17,9 +17,15 @@ namespace LIBC_NAMESPACE_DECL {
 /// removed in logarithmic time.
 class FreeStore {
 public:
+  FreeStore() = default;
+  FreeStore(const FreeStore &other) = delete;
+  FreeStore &operator=(const FreeStore &other) = delete;
+
   /// Sets the range of possible block sizes. This can only be called when the
   /// trie is empty.
-  void set_range(FreeTrie::SizeRange range) { large_trie.set_range(range); }
+  LIBC_INLINE void set_range(FreeTrie::SizeRange range) {
+    large_trie.set_range(range);
+  }
 
   /// Insert a free block. If the block is too small to be tracked, nothing
   /// happens.
@@ -42,10 +48,10 @@ private:
   static constexpr size_t NUM_SMALL_SIZES =
       (MIN_LARGE_OUTER_SIZE - MIN_OUTER_SIZE) / ALIGNMENT;
 
-  static bool too_small(Block<> *block) {
+  LIBC_INLINE static bool too_small(Block<> *block) {
     return block->outer_size() < MIN_OUTER_SIZE;
   }
-  static bool is_small(Block<> *block) {
+  LIBC_INLINE static bool is_small(Block<> *block) {
     return block->outer_size() < MIN_LARGE_OUTER_SIZE;
   }
 

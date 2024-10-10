@@ -32,8 +32,6 @@ LIBC_INLINE constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
 class FreeListHeap {
 public:
-  using BlockType = Block<>;
-
   constexpr FreeListHeap() : begin(&_end), end(&__llvm_libc_heap_limit) {}
 
   constexpr FreeListHeap(span<cpp::byte> region)
@@ -90,8 +88,11 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (!is_initialized)
     init();
 
-  size_t request_size =
-      alignment <= alignof(max_align_t) ? size : size + alignment - 1;
+  size_t request_size = size;
+  if (alignment > alignof(max_align_t)) {
+    if (add_overflow(size, alignment - 1, size))
+      return nullptr;
+  }
 
   Block<> *block = free_store.remove_best_fit(request_size);
   if (!block)
@@ -194,9 +195,12 @@ LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
 }
 
 LIBC_INLINE void *FreeListHeap::calloc(size_t num, size_t size) {
-  void *ptr = allocate(num * size);
+  size_t bytes;
+  if (__builtin_mul_overflow(num, size, &bytes))
+    return nullptr;
+  void *ptr = allocate(bytes);
   if (ptr != nullptr)
-    LIBC_NAMESPACE::inline_memset(ptr, 0, num * size);
+    LIBC_NAMESPACE::inline_memset(ptr, 0, bytes);
   return ptr;
 }
 
