@@ -716,6 +716,16 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 static std::string buildSpirvTypeName(const SPIRVType *Type,
                                       MachineIRBuilder &MIRBuilder) {
   switch (Type->getOpcode()) {
+  case SPIRV::OpTypeSampledImage: {
+    Register SampledTypeReg = Type->getOperand(1).getReg();
+    auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
+    std::string TypeName =
+        "sampled_image_" + buildSpirvTypeName(SampledType, MIRBuilder);
+    for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
+      TypeName = (TypeName + '_' + Twine(Type->getOperand(I).getImm())).str();
+    }
+    return TypeName;
+  }
   case SPIRV::OpTypeImage: {
     Register SampledTypeReg = Type->getOperand(1).getReg();
     auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
@@ -726,8 +736,18 @@ static std::string buildSpirvTypeName(const SPIRVType *Type,
     }
     return TypeName;
   }
+  case SPIRV::OpTypeArray: {
+    Register ElementTypeReg = Type->getOperand(1).getReg();
+    auto *ElementType = MIRBuilder.getMRI()->getUniqueVRegDef(ElementTypeReg);
+    uint32_t ArraySize = 32; // Type->getOperand(2).getCImm()->getZExtValue();
+    return (buildSpirvTypeName(ElementType, MIRBuilder) + Twine("[") +
+            Twine(ArraySize) + Twine("]"))
+        .str();
+  }
   case SPIRV::OpTypeFloat:
     return ("f" + Twine(Type->getOperand(1).getImm())).str();
+  case SPIRV::OpTypeSampler:
+    return ("sampler");
   case SPIRV::OpTypeInt:
     if (Type->getOperand(2).getImm())
       return ("i" + Twine(Type->getOperand(1).getImm())).str();
