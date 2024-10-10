@@ -277,11 +277,6 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     // Target is a lambda, or a generic callable. Search for a single operator() overload
     std::optional<ConstString> mangled_func_name;
     
-    // TODO: I am still not sure whether it is a good idea to reconstruct the full type
-    // here.. it seems there are handy FindFunctions that could perhaps to a good job
-    // at locating candidates. However even when limiting the search to the decl_ctx of
-    // the class the code seems to iterate over way more DIEs than I expected. What to do?
-    
     // TODO: Because we have access to the type we know a _lot_ about callable_type, we
     // could even extract a ValueObjectSP to it if we wanted. It would be cool to make
     // std::function have a synt children provider showing the wrapped lambda/callable!
