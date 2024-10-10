@@ -302,6 +302,7 @@ struct BuiltinTypeDeclBuilder {
   TemplateParameterListBuilder addTemplateArgumentList(Sema &S);
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(Sema &S,
                                                   ArrayRef<StringRef> Names);
+  BuiltinTypeDeclBuilder &addConceptSpecializationExpr(Sema &S);
 };
 
 struct TemplateParameterListBuilder {
@@ -324,7 +325,8 @@ struct TemplateParameterListBuilder {
         SourceLocation(), /* TemplateDepth */ 0, Position,
         &S.Context.Idents.get(Name, tok::TokenKind::identifier),
         /* Typename */ false,
-        /* ParameterPack */ false);
+        /* ParameterPack */ false,
+        /* HasTypeConstraint*/ true);
     if (!DefaultValue.isNull())
       Decl->setDefaultArgument(
           S.Context, S.getTrivialTemplateArgumentLoc(DefaultValue, QualType(),
@@ -332,6 +334,152 @@ struct TemplateParameterListBuilder {
 
     Params.emplace_back(Decl);
     return *this;
+  }
+
+  Expr *getTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
+                                     TemplateTypeParmDecl *T) {
+    clang::ASTContext &context = S.getASTContext();
+    // Obtain the QualType for 'unsigned long'
+    clang::QualType unsignedLongType = context.UnsignedLongTy;
+
+    // Create a QualType that points to this TemplateTypeParmDecl
+    clang::QualType TType = context.getTypeDeclType(T);
+
+    // Create a TypeSourceInfo for the template type parameter 'T'
+    clang::TypeSourceInfo *TTypeSourceInfo =
+        context.getTrivialTypeSourceInfo(TType, NameLoc);
+
+    clang::UnaryExprOrTypeTraitExpr *sizeofExpr = new (S.getASTContext())
+        clang::UnaryExprOrTypeTraitExpr(clang::UETT_SizeOf, TTypeSourceInfo,
+                                        unsignedLongType, NameLoc, NameLoc);
+
+    // Create an IntegerLiteral for the value '16'
+    llvm::APInt intValue(context.getIntWidth(context.IntTy), 4);
+    clang::IntegerLiteral *intLiteral = new (context)
+        clang::IntegerLiteral(context, intValue, context.IntTy, NameLoc);
+
+    // Create an ImplicitCastExpr to cast 'int' to 'unsigned long'
+    FPOptionsOverride fpoo = FPOptionsOverride();
+    clang::ImplicitCastExpr *implicitCastExpr = clang::ImplicitCastExpr::Create(
+        context,
+        unsignedLongType, // The type we are casting to (QualType for 'unsigned
+                          // long')
+        clang::CK_IntegralCast, // CastKind (e.g., Integral cast)
+        intLiteral,             // Sub-expression being cast
+        nullptr,                // Base path, usually null for implicit casts
+        clang::VK_XValue,
+        fpoo // Value kind, typically VK_RValue for implicit casts
+    );
+
+    clang::QualType BoolTy = context.BoolTy;
+
+    clang::BinaryOperator *binaryOperator = clang::BinaryOperator::Create(
+        context, sizeofExpr, // Left-hand side expression
+        implicitCastExpr,    // Right-hand side expression
+        clang::BO_LE,        // Binary operator kind (<=)
+        BoolTy,              // Result type (bool)
+        clang::VK_XValue,    // Value kind
+        clang::OK_Ordinary,  // Object kind
+        NameLoc,             // Source location of operator
+        fpoo);
+
+    return binaryOperator;
+  }
+
+  ConceptDecl *getTypedBufferConceptDecl(Sema &S, CXXRecordDecl *Decl) {
+    DeclContext *DC = S.CurContext;
+    clang::ASTContext &context = S.getASTContext();
+    SourceLocation NameLoc = Decl->getBeginLoc();
+    IdentifierInfo *Name = Decl->getIdentifier();
+
+    clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
+        context,                          // AST context
+        context.getTranslationUnitDecl(), // DeclContext
+        NameLoc,                          // SourceLocation of 'T'
+        NameLoc,                          // SourceLocation of 'T' again
+        /*depth=*/0,            // Depth in the template parameter list
+        /*position=*/0,         // Position in the template parameter list
+        /*id=*/Name,            // Identifier for 'T'
+        /*Typename=*/true,      // Indicates this is a 'typename' or 'class'
+        /*ParameterPack=*/false // Not a parameter pack
+    );
+
+    T->setDeclContext(DC);
+    T->setReferenced();
+
+    // Create and Attach Template Parameter List to ConceptDecl
+
+    llvm::ArrayRef<NamedDecl *> TemplateParamArrayRef = {T};
+    clang::TemplateParameterList *Params = clang::TemplateParameterList::Create(
+        context,
+        NameLoc, // Source location of the template parameter list start
+        NameLoc, // Source location of the template parameter list end
+        TemplateParamArrayRef, // Template parameter (list as an ArrayRef)
+        NameLoc, // Source location of the template parameter list within
+                 // concept
+        nullptr  // Source location of the template parameter list end within
+                 // concept
+    );
+
+    Expr *ConstraintExpr = getTypedBufferConstraintExpr(S, NameLoc, T);
+
+    DeclarationName DeclName = DeclarationName(Name);
+    // Create a ConceptDecl
+    clang::ConceptDecl *conceptDecl = clang::ConceptDecl::Create(
+        context,
+        context.getTranslationUnitDecl(), // DeclContext
+        NameLoc,                          // Source location of start of concept
+        DeclName,                         // Source location of end of concept
+        Params,                           // Template type parameter
+        ConstraintExpr                    // Expression defining the concept
+    );
+
+    // Attach the template parameter list to the ConceptDecl
+    conceptDecl->setTemplateParameters(Params);
+
+    // Add the concept declaration to the Translation Unit Decl
+    context.getTranslationUnitDecl()->addDecl(conceptDecl);
+
+    return conceptDecl;
+  }
+
+  BuiltinTypeDeclBuilder &addConceptSpecializationExpr(Sema &S) {
+    ASTContext &context = S.getASTContext();
+    SourceLocation loc = Builder.Record->getBeginLoc();
+    ConceptDecl *CD = getTypedBufferConceptDecl(S, Builder.Record);
+    DeclarationNameInfo DNI(Builder.Record->getDeclName(), loc);
+    NestedNameSpecifierLoc NNS;
+    ClassTemplateDecl *TD = Builder.Template;
+
+    TemplateArgumentListInfo TALI(loc, loc);
+    const ASTTemplateArgumentListInfo *ATALI =
+        ASTTemplateArgumentListInfo::Create(context, TALI);
+
+    ConceptReference *CR = ConceptReference::Create(
+        S.getASTContext(), NNS, loc, DNI, Builder.Record, CD, ATALI);
+
+    TemplateTypeParmDecl *T = dyn_cast<TemplateTypeParmDecl>(
+        TD->getTemplateParameters()->getParam(0));
+
+    clang::QualType TType = context.getTypeDeclType(T);
+
+    ArrayRef<TemplateArgument> ConvertedArgs = {TemplateArgument(TType)};
+
+    ImplicitConceptSpecializationDecl *IDecl =
+        ImplicitConceptSpecializationDecl::Create(
+            context, Builder.Record->getDeclContext(), loc, ConvertedArgs);
+    const ConstraintSatisfaction CS(CD, ConvertedArgs);
+
+    TemplateParameterList *templateParams = TD->getTemplateParameters();
+    ConceptSpecializationExpr *CSE =
+        ConceptSpecializationExpr::Create(context, CR, IDecl, &CS);
+
+    TD->setTemplateParameters(templateParams);
+    T->setTypeConstraint(CR, CSE);
+
+    Builder.Record->getDeclContext()->addDecl(IDecl);
+
+    return Builder;
   }
 
   BuiltinTypeDeclBuilder &finalizeTemplateArgs() {
@@ -344,9 +492,12 @@ struct TemplateParameterListBuilder {
         S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         DeclarationName(Builder.Record->getIdentifier()), ParamList,
         Builder.Record);
+    addConceptSpecializationExpr(S);
+
     Builder.Record->setDescribedClassTemplate(Builder.Template);
     Builder.Template->setImplicit(true);
     Builder.Template->setLexicalDeclContext(Builder.Record->getDeclContext());
+
     // NOTE: setPreviousDecl before addDecl so new decl replace old decl when
     // make visible.
     Builder.Template->setPreviousDecl(Builder.PrevTemplate);
@@ -372,6 +523,7 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(Sema &S,
   TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
     Builder.addTypeParameter(Name);
+
   return Builder.finalizeTemplateArgs();
 }
 
