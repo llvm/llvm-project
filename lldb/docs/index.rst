@@ -81,6 +81,10 @@ are welcome:
 expected to work, with functionality improving rapidly. ARM and AArch64 support
 is more experimental, with more known issues than the others.
 
+RISC-V support is in active development, refer to the
+`tracking issue <https://github.com/llvm/llvm-project/issues/55383>`_
+for the current status.
+
 Get Involved
 ------------
 
