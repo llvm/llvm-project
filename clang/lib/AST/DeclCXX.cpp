@@ -477,10 +477,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
   if (data().IsStandardLayout && NumBases > 1 && hasRepeatedBaseClass(this))
     data().IsStandardLayout = false;
 
-  if (VBases.empty()) {
-    data().IsParsingBaseSpecifiers = false;
+  if (VBases.empty())
     return;
-  }
 
   // Create base specifier for any direct or indirect virtual bases.
   data().VBases = new (C) CXXBaseSpecifier[VBases.size()];
@@ -491,8 +489,6 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       addedClassSubobject(Type->getAsCXXRecordDecl());
     data().getVBases()[I] = *VBases[I];
   }
-
-  data().IsParsingBaseSpecifiers = false;
 }
 
 unsigned CXXRecordDecl::getODRHash() const {
