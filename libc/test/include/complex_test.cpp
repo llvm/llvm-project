@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "include/llvm-libc-macros/complex-macros.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcComplexTest, VersionMacro) {
@@ -14,9 +15,9 @@ TEST(LlvmLibcComplexTest, VersionMacro) {
 }
 
 TEST(LlvmLibcComplexTest, IMacro) {
-  EXPECT_EQ(I, 1.0fi);
+  EXPECT_FP_EQ(I, 1.0fi);
 }
 
 TEST(LlvmLibcComplexTest, _Complex_IMacro) {
-  EXPECT_EQ(_Complex_I, 1.0fi);
+  EXPECT_FP_EQ(_Complex_I, 1.0fi);
 }
