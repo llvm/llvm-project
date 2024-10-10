@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Interpreter/RemoteJITUtils.h"
+
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -24,7 +26,10 @@
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
+
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.
@@ -34,10 +39,34 @@
 LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
 #endif
 
+#define DEBUG_TYPE "clang-repl"
+
 static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> OffloadArch("offload-arch", llvm::cl::Hidden);
-
+static llvm::cl::OptionCategory OOPCategory("Out-of-process Execution Options");
+static llvm::cl::opt<std::string> SlabAllocateSizeString(
+    "slab-allocate",
+    llvm::cl::desc("Allocate from a slab of the given size "
+                   "(allowable suffixes: Kb, Mb, Gb. default = "
+                   "Kb)"),
+    llvm::cl::init(""), llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<std::string>
+    OOPExecutor("oop-executor",
+                llvm::cl::desc("Launch an out-of-process executor to run code"),
+                llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<std::string> OOPExecutorConnectTCP(
+    "oop-executor-connect",
+    llvm::cl::desc(
+        "Connect to an out-of-process executor through a TCP socket"),
+    llvm::cl::value_desc("<hostname>:<port>"));
+static llvm::cl::opt<std::string>
+    OrcRuntimePath("orc-runtime", llvm::cl::desc("Path to the ORC runtime"),
+                   llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<bool> UseSharedMemory(
+    "use-shared-memory",
+    llvm::cl::desc("Use shared memory to transfer generated code and data"),
+    llvm::cl::init(false), llvm::cl::cat(OOPCategory));
 static llvm::cl::list<std::string>
     ClangArgs("Xcc",
               llvm::cl::desc("Argument to pass to the CompilerInvocation"),
@@ -46,6 +75,46 @@ static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
+
+static llvm::Error sanitizeOopArguments(const char *ArgV0) {
+  // Only one of -oop-executor and -oop-executor-connect can be used.
+  if (!!OOPExecutor.getNumOccurrences() &&
+      !!OOPExecutorConnectTCP.getNumOccurrences())
+    return llvm::make_error<llvm::StringError>(
+        "Only one of -" + OOPExecutor.ArgStr + " and -" +
+            OOPExecutorConnectTCP.ArgStr + " can be specified",
+        llvm::inconvertibleErrorCode());
+
+  // Out-of-process executors must run with the ORC runtime for destructor
+  // support.
+  if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
+                                 OOPExecutorConnectTCP.getNumOccurrences())) {
+    llvm::SmallString<256> OrcPath(llvm::sys::fs::getMainExecutable(
+        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
+    llvm::sys::path::remove_filename(OrcPath); // Remove clang-repl filename.
+    llvm::sys::path::remove_filename(OrcPath); // Remove ./bin directory.
+    llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
+    llvm::StringRef Path;
+    if (SystemTriple.isOSBinFormatELF())
+      Path = "lib/clang/20/lib/x86_64-unknown-linux-gnu/liborc_rt.a";
+    else if (SystemTriple.isOSBinFormatMachO())
+      Path = "lib/clang/20/lib/darwin/liborc_rt_osx.a";
+    llvm::sys::path::append(OrcPath, Path);
+    OrcRuntimePath = OrcPath.str().str();
+  }
+
+  // If -oop-executor was used but no value was specified then use a sensible
+  // default.
+  if (!!OOPExecutor.getNumOccurrences() && OOPExecutor.empty()) {
+    llvm::SmallString<256> OOPExecutorPath(llvm::sys::fs::getMainExecutable(
+        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
+    llvm::sys::path::remove_filename(OOPExecutorPath);
+    llvm::sys::path::append(OOPExecutorPath, "llvm-jitlink-executor");
+    OOPExecutor = OOPExecutorPath.str().str();
+  }
+
+  return llvm::Error::success();
+}
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
@@ -181,6 +250,25 @@ int main(int argc, const char **argv) {
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
 
+  ExitOnErr(sanitizeOopArguments(argv[0]));
+
+  std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
+  if (OOPExecutor.getNumOccurrences()) {
+    // Launch an out-of-process executor locally in a child process.
+    EPC = ExitOnErr(
+        launchExecutor(OOPExecutor, UseSharedMemory, SlabAllocateSizeString));
+  } else if (OOPExecutorConnectTCP.getNumOccurrences()) {
+    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnectTCP, UseSharedMemory,
+                                     SlabAllocateSizeString));
+  }
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+  if (EPC) {
+    CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
+    JB = ExitOnErr(
+        clang::Interpreter::createLLJITBuilder(std::move(EPC), OrcRuntimePath));
+  }
+
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
   std::unique_ptr<clang::CompilerInstance> CI;
@@ -212,6 +300,9 @@ int main(int argc, const char **argv) {
       auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
+  } else if (JB) {
+    Interp =
+        ExitOnErr(clang::Interpreter::create(std::move(CI), std::move(JB)));
   } else
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
 
