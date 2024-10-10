@@ -1774,6 +1774,22 @@ void Verifier::visitModuleFlags() {
       continue;
     }
   }
+
+  // Validate only one of the flags set with none zero value.
+  auto isModuleAttributeSet = [&](const StringRef &ModAttr) -> bool {
+    const auto *Attr =
+        mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(ModAttr));
+    return Attr && Attr->getZExtValue();
+  };
+  const std::pair<StringRef, StringRef> ConflictingFlags[] = {
+      {"sign-return-address", "sign-return-address-all"}};
+
+  for (auto FlagPair : ConflictingFlags) {
+    if (isModuleAttributeSet(FlagPair.first) &&
+        isModuleAttributeSet(FlagPair.second))
+      CheckFailed("invalid pair of flags set as " + FlagPair.first + " and " +
+                  FlagPair.second);
+  }
 }
 
 void
