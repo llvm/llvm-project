@@ -6071,6 +6071,9 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
         .addImm(ShAmt)
         .addReg(MemberCount);
     M0Val = TmpReg0;
+
+    if (!STI.hasSBarrierInitImm())
+      BarValImm = std::nullopt;
   }
 
   // If not inlinable, get reference to barrier depending on the instruction

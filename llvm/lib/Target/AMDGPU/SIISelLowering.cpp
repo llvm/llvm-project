@@ -11242,6 +11242,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (isa<ConstantSDNode>(BarOp)) {
       BarVal = cast<ConstantSDNode>(BarOp)->getSExtValue();
       IsInlinableBarID = AMDGPU::isInlinableIntLiteral(BarVal);
+
+      if (IntrinsicID == Intrinsic::amdgcn_s_barrier_init &&
+          !Subtarget->hasSBarrierInitImm())
+        IsInlinableBarID = false;
     }
 
     if (IsInlinableBarID) {

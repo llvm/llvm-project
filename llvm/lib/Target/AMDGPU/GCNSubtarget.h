@@ -1786,6 +1786,9 @@ public:
   unsigned getBarrierMemberCountShift() const {
     return getGeneration() >= GFX13 ? 12 : 16;
   }
+
+  /// \returns true if the operand of s_barrier_init can be an immediate.
+  bool hasSBarrierInitImm() const { return getGeneration() == GFX12; }
 };
 
 class GCNUserSGPRUsageInfo {
