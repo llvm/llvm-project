@@ -2188,9 +2188,8 @@ TemplateInstantiator::TransformAnnotateAttr(const AnnotateAttr *AA) {
   SmallVector<Expr *> Args;
   for (Expr *Arg : AA->args()) {
     ExprResult Res = getDerived().TransformExpr(Arg);
-    if (!Res.isUsable())
-      return AA;
-    Args.push_back(Res.get());
+    if (Res.isUsable())
+      Args.push_back(Res.get());
   }
   return AnnotateAttr::CreateImplicit(getSema().Context, AA->getAnnotation(),
                                       Args.data(), Args.size(), AA->getRange());

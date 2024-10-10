@@ -679,6 +679,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleMSConstexprAttr(S, St, A, Range);
   case ParsedAttr::AT_NoConvergent:
     return handleNoConvergentAttr(S, St, A, Range);
+  case ParsedAttr::AT_Annotate:
+    return S.CreateAnnotationAttr(A);
   default:
     if (Attr *AT = nullptr; A.getInfo().handleStmtAttribute(S, St, A, AT) !=
                             ParsedAttrInfo::NotHandled) {
