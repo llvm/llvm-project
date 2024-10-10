@@ -2294,3 +2294,18 @@ bool RISCVTTIImpl::shouldConsiderAddressTypePromotion(
   }
   return Considerable;
 }
+
+RISCVTTIImpl::TTI::MemCmpExpansionOptions
+RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  // FIXME: Vector haven't been tested.
+  Options.AllowOverlappingLoads =
+      (ST->enableUnalignedScalarMem() || ST->enableUnalignedVectorMem());
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  if (ST->is64Bit())
+    Options.LoadSizes = {8, 4, 2, 1};
+  else
+    Options.LoadSizes = {4, 2, 1};
+  return Options;
+}
