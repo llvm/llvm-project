@@ -525,6 +525,12 @@ private:
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B) const;
 
+  /// Returns true if the per-lane cost of VectorizationFactor A is lower than
+  /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
+  bool isMoreProfitable(const VectorizationFactor &A,
+                        const VectorizationFactor &B,
+                        const unsigned MaxTripCount) const;
+
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.
   bool isCandidateForEpilogueVectorization(const ElementCount VF) const;
