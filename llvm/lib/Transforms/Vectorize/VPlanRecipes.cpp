@@ -97,7 +97,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenEVLSC:
-  case VPWidenSelectSC: {
+  case VPWidenSelectSC:
+  case VPWidenSelectEVLSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
@@ -140,7 +141,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenEVLSC:
-  case VPWidenSelectSC: {
+  case VPWidenSelectSC:
+  case VPWidenSelectEVLSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
@@ -179,7 +181,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenPointerInductionSC:
   case VPWidenSC:
   case VPWidenEVLSC:
-  case VPWidenSelectSC: {
+  case VPWidenSelectSC:
+  case VPWidenSelectEVLSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
@@ -1163,6 +1166,21 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
   getOperand(2)->printAsOperand(O, SlotTracker);
   O << (isInvariantCond() ? " (condition is loop invariant)" : "");
 }
+
+void VPWidenSelectEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                                   VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-SELECT ";
+  printAsOperand(O, SlotTracker);
+  O << " = vp.select ";
+  getOperand(0)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(2)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(3)->printAsOperand(O, SlotTracker);
+  O << (isInvariantCond() ? " (condition is loop invariant)" : "");
+}
 #endif
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
@@ -1181,6 +1199,31 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
   State.set(this, Sel);
   State.addMetadata(Sel, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+}
+
+void VPWidenSelectEVLRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
+  Value *EVLArg = State.get(getEVL(), /*NeedsScalar=*/true);
+  IRBuilderBase &BuilderIR = State.Builder;
+  VectorBuilder Builder(BuilderIR);
+  Builder.setEVL(EVLArg);
+  // The condition can be loop invariant but still defined inside the
+  // loop. This means that we can't just use the original 'cond' value.
+  // We have to take the 'vectorized' value and pick the first lane.
+  // Instcombine will make this a no-op.
+  auto *InvarCond =
+      isInvariantCond() ? State.get(getCond(), VPLane(0)) : nullptr;
+
+  Value *Cond = InvarCond ? InvarCond : State.get(getCond(), 0);
+  assert(isa<VectorType>(Cond->getType()) && "CondType must be vector Type.");
+
+  Value *Op0 = State.get(getOperand(1), 0);
+  Value *Op1 = State.get(getOperand(2), 0);
+  Value *VPInst = Builder.createVectorInstruction(
+      Instruction::Select, Op0->getType(), {Cond, Op0, Op1}, "vp.select");
+  State.set(this, VPInst, 0);
+  State.addMetadata(VPInst,
+                    dyn_cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
 VPRecipeWithIRFlags::FastMathFlagsTy::FastMathFlagsTy(

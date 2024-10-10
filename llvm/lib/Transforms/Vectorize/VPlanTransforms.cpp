@@ -1380,6 +1380,10 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                   return nullptr;
                 return new VPWidenEVLRecipe(*W, EVL);
               })
+              .Case<VPWidenSelectRecipe>(
+                  [&](VPWidenSelectRecipe *W) -> VPRecipeBase * {
+                    return new VPWidenSelectEVLRecipe(*W, EVL);
+                  })
               .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);

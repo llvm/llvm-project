@@ -890,6 +890,7 @@ public:
     case VPRecipeBase::VPWidenSC:
     case VPRecipeBase::VPWidenEVLSC:
     case VPRecipeBase::VPWidenSelectSC:
+    case VPRecipeBase::VPWidenSelectEVLSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
@@ -1787,10 +1788,17 @@ public:
 
 /// A recipe for widening select instructions.
 struct VPWidenSelectRecipe : public VPSingleDefRecipe {
+
+protected:
+  template <typename IterT>
+  VPWidenSelectRecipe(unsigned VPDefOpcode, SelectInst &I,
+                      iterator_range<IterT> Operands)
+      : VPSingleDefRecipe(VPDefOpcode, Operands, &I, I.getDebugLoc()) {}
+
+public:
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
-      : VPSingleDefRecipe(VPDef::VPWidenSelectSC, Operands, &I,
-                          I.getDebugLoc()) {}
+      : VPWidenSelectRecipe(VPDef::VPWidenSelectSC, I, Operands) {}
 
   ~VPWidenSelectRecipe() override = default;
 
@@ -1799,7 +1807,15 @@ struct VPWidenSelectRecipe : public VPSingleDefRecipe {
                                    operands());
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenSelectSC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenSelectSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenSelectEVLSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
 
   /// Produce a widened version of the select instruction.
   void execute(VPTransformState &State) override;
@@ -1817,6 +1833,52 @@ struct VPWidenSelectRecipe : public VPSingleDefRecipe {
   bool isInvariantCond() const {
     return getCond()->isDefinedOutsideLoopRegions();
   }
+};
+
+// A recipe for widening select instruction with vector-predication intrinsics
+// with explicit vector length (EVL).
+struct VPWidenSelectEVLRecipe : public VPWidenSelectRecipe {
+
+  template <typename IterT>
+  VPWidenSelectEVLRecipe(SelectInst &I, iterator_range<IterT> Operands,
+                         VPValue &EVL)
+      : VPWidenSelectRecipe(VPDef::VPWidenSelectEVLSC, I, Operands) {
+    addOperand(&EVL);
+  }
+
+  VPWidenSelectEVLRecipe(VPWidenSelectRecipe &W, VPValue &EVL)
+      : VPWidenSelectEVLRecipe(*cast<SelectInst>(W.getUnderlyingInstr()),
+                               W.operands(), EVL) {}
+
+  ~VPWidenSelectEVLRecipe() override = default;
+
+  VPWidenSelectEVLRecipe *clone() final {
+    llvm_unreachable("VPWidenSelectEVLRecipe cannot be cloned");
+    return nullptr;
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenSelectEVLSC)
+
+  VPValue *getEVL() { return getOperand(getNumOperands() - 1); }
+  const VPValue *getEVL() const { return getOperand(getNumOperands() - 1); }
+
+  /// Produce a vp-intrinsic version of the select instruction.
+  void execute(VPTransformState &State) final;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // EVL in that recipe is always the last operand, thus any use before means
+    // the VPValue should be vectorized.
+    return getEVL() == Op;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const final;
+#endif
 };
 
 /// A recipe for handling GEP instructions.
