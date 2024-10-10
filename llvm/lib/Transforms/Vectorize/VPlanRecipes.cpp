@@ -1038,7 +1038,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
 
-StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
+std::string VPWidenIntrinsicRecipe::getIntrinsicName() const {
   return Intrinsic::getBaseName(VectorIntrinsicID);
 }
 

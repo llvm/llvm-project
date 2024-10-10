@@ -147,7 +147,7 @@ void IRInstructionData::setCalleeName(bool MatchByName) {
           Intrinsic::getName(IntrinsicID, FT->params(), II->getModule(), FT);
     // If there is not an overloaded name, we only need to use this version.
     else
-      CalleeName = Intrinsic::getName(IntrinsicID).str();
+      CalleeName = Intrinsic::getName(IntrinsicID);
 
     return;
   }

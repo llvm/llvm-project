@@ -130,7 +130,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   std::string ScalarName =
       Intrinsic::isOverloaded(IID)
           ? Intrinsic::getName(IID, ScalarArgTypes, II->getModule())
-          : Intrinsic::getName(IID).str();
+          : Intrinsic::getName(IID);
 
   // Try to find the mapping for the scalar version of this intrinsic and the
   // exact vector width of the call operands in the TargetLibraryInfo. First,

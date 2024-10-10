@@ -39,12 +39,14 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <system_error>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -2472,10 +2474,24 @@ LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
 }
 
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
+  static std::unordered_map<Intrinsic::ID, std::string> IntrinsicNamePool;
+  static sys::Mutex Mutex;
   auto IID = llvm_map_to_intrinsic_id(ID);
-  auto Str = llvm::Intrinsic::getName(IID);
+
+  std::lock_guard<sys::Mutex> Guard(Mutex);
+  auto [Iter, Inserted] = IntrinsicNamePool.try_emplace(IID);
+  if (Inserted)
+    Iter->second = llvm::Intrinsic::getName(IID);
+  const std::string &Name = Iter->second;
+  *NameLength = Name.size();
+  return Name.data();
+}
+
+char *LLVMIntrinsicCopyName(unsigned ID, size_t *NameLength) {
+  auto IID = llvm_map_to_intrinsic_id(ID);
+  std::string Str = llvm::Intrinsic::getName(IID);
   *NameLength = Str.size();
-  return Str.data();
+  return strdup(Str.c_str());
 }
 
 LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
@@ -2485,10 +2501,8 @@ LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
   return wrap(llvm::Intrinsic::getType(*unwrap(Ctx), IID, Tys));
 }
 
-const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount,
-                                            size_t *NameLength) {
+char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *ParamTypes,
+                                      size_t ParamCount, size_t *NameLength) {
   auto IID = llvm_map_to_intrinsic_id(ID);
   ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
   auto Str = llvm::Intrinsic::getNameNoUnnamedTypes(IID, Tys);
@@ -2496,10 +2510,9 @@ const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
   return strdup(Str.c_str());
 }
 
-const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
-                                             LLVMTypeRef *ParamTypes,
-                                             size_t ParamCount,
-                                             size_t *NameLength) {
+char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
+                                       LLVMTypeRef *ParamTypes,
+                                       size_t ParamCount, size_t *NameLength) {
   auto IID = llvm_map_to_intrinsic_id(ID);
   ArrayRef<Type *> Tys(unwrap(ParamTypes), ParamCount);
   auto Str = llvm::Intrinsic::getName(IID, Tys, unwrap(Mod));

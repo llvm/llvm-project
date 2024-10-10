@@ -78,8 +78,7 @@ public:
 Function *getBasePtrIntrinsic(Module &M, bool IsV5OrAbove) {
   auto IntrinsicId = IsV5OrAbove ? Intrinsic::amdgcn_implicitarg_ptr
                                  : Intrinsic::amdgcn_dispatch_ptr;
-  StringRef Name = Intrinsic::getName(IntrinsicId);
-  return M.getFunction(Name);
+  return M.getFunction(Intrinsic::getName(IntrinsicId));
 }
 
 } // end anonymous namespace

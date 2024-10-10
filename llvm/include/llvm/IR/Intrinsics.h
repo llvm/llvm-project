@@ -52,11 +52,11 @@ namespace Intrinsic {
   /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx".
   /// Note, this version is for intrinsics with no overloads.  Use the other
   /// version of getName if overloads are required.
-  StringRef getName(ID id);
+  std::string getName(ID id);
 
   /// Return the LLVM name for an intrinsic, without encoded types for
   /// overloading, such as "llvm.ssa.copy".
-  StringRef getBaseName(ID id);
+  std::string getBaseName(ID id);
 
   /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx" or
   /// "llvm.ssa.copy.p0s_s.1". Note, this version of getName supports overloads.
