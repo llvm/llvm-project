@@ -8,7 +8,7 @@
 ! This test is for x86_64, where exponent-letter 'q' is for
 ! 10-byte extended precision
 ! UNSUPPORTED: system-windows, system-aix
-! REQUIRES: x86-registered-target
+! REQUIRES: target=x86_64{{.*}}
 
 subroutine s(var)
   real :: realvar1 = 4.0E6_4
