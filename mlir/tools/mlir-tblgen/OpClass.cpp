@@ -36,7 +36,16 @@ OpClass::OpClass(StringRef name, std::string extraClassDeclaration,
 }
 
 void OpClass::finalize() {
+  std::string traitList;
+  llvm::raw_string_ostream os(traitList);
+  iterator_range parentTemplateParams(std::begin(parent.templateParams) + 1,
+                                      std::end(parent.templateParams));
+  llvm::interleaveComma(parentTemplateParams, os, [&](auto &trait) {
+    os << trait << "<" << getClassName().str() << ">";
+  });
+  declare<UsingDeclaration>("traits", "std::tuple<" + traitList + ">");
   Class::finalize();
+
   declare<VisibilityDeclaration>(Visibility::Public);
   declare<ExtraClassDeclaration>(extraClassDeclaration, extraClassDefinition);
 }
