@@ -2923,10 +2923,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
                    IVEndValues[Entry.first], LoopMiddleBlock, Plan, State);
   }
 
-  // Fix live-out phis not already fixed earlier.
-  for (const auto &KV : Plan.getLiveOuts())
-    KV.second->fixPhi(Plan, State);
-
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
 
@@ -8887,7 +8883,14 @@ static void addLiveOutsForFirstOrderRecurrences(
         VPInstruction::ResumePhi, {Resume, FOR->getStartValue()}, {},
         "scalar.recur.init");
     auto *FORPhi = cast<PHINode>(FOR->getUnderlyingInstr());
-    Plan.addLiveOut(FORPhi, ResumePhiRecipe);
+    for (VPRecipeBase &R :
+         *cast<VPIRBasicBlock>(ScalarPHVPBB->getSingleSuccessor())) {
+      auto *IRI = cast<VPIRInstruction>(&R);
+      if (&IRI->getInstruction() == FORPhi) {
+        IRI->addOperand(ResumePhiRecipe);
+        break;
+      }
+    }
 
     // Now update VPIRInstructions modeling LCSSA phis in the exit block.
     // Extract the penultimate value of the recurrence and use it as operand for
