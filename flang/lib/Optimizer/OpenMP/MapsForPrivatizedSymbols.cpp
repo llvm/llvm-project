@@ -69,7 +69,6 @@ class MapsForPrivatizedSymbolsPass
 
     if (mlir::isa<fir::BaseBoxType>(varPtr.getType()) ||
         mlir::isa<fir::BoxCharType>(varPtr.getType())) {
-      llvm::errs() << "Is a basebox type\n";
       OpBuilder::InsertPoint savedInsPoint = builder.saveInsertionPoint();
       mlir::Block *allocaBlock = builder.getAllocaBlock();
       assert(allocaBlock && "No allocablock  found for a funcOp");
@@ -94,11 +93,12 @@ class MapsForPrivatizedSymbolsPass
         StringAttr(), builder.getBoolAttr(false));
   }
   void addMapInfoOp(omp::TargetOp targetOp, omp::MapInfoOp mapInfoOp) {
-    Location loc = targetOp.getLoc();
+    auto argIface = llvm::cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
+    unsigned insertIndex =
+        argIface.getMapBlockArgsStart() + argIface.numMapBlockArgs();
     targetOp.getMapVarsMutable().append(ValueRange{mapInfoOp});
-    size_t numMapVars = targetOp.getMapVars().size();
-    targetOp.getRegion().insertArgument(numMapVars - 1, mapInfoOp.getType(),
-                                        loc);
+    targetOp.getRegion().insertArgument(insertIndex, mapInfoOp.getType(),
+                                        mapInfoOp.getLoc());
   }
   void addMapInfoOps(omp::TargetOp targetOp,
                      llvm::SmallVectorImpl<omp::MapInfoOp> &mapInfoOps) {
@@ -129,9 +129,7 @@ class MapsForPrivatizedSymbolsPass
         }
         builder.setInsertionPoint(targetOp);
         Location loc = targetOp.getLoc();
-        llvm::errs() << "Here\n";
         omp::MapInfoOp mapInfoOp = createMapInfo(loc, privVar, builder);
-        llvm::errs() << "Here again\n";
         mapInfoOps.push_back(mapInfoOp);
         LLVM_DEBUG(llvm::dbgs() << "MapsForPrivatizedSymbolsPass created ->\n");
         LLVM_DEBUG(mapInfoOp.dump());
