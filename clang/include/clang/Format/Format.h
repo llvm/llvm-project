@@ -2799,20 +2799,28 @@ struct FormatStyle {
 
   /// Indent goto labels.
   ///
-  /// When ``false``, goto labels are flushed left.
   /// \code
-  ///    true:                                  false:
-  ///    int f() {                      vs.     int f() {
-  ///      if (foo()) {                           if (foo()) {
-  ///      label1:                              label1:
-  ///        bar();                                 bar();
-  ///      }                                      }
-  ///    label2:                                label2:
-  ///      return 1;                              return 1;
-  ///    }                                      }
+  ///    GLI_Indent:                            GLI_None:
+  /// namespace NS {                  vs.     namespace NS {
+  ///   class C {                              class C {
+  ///     void foo() {                           void foo() {
+  ///       while (x) {                            while (x) {
+  ///         if (y) {                               if (y) {
+  ///         label:                               label:
+  ///         }                                      }
+  ///       }                                       }
+  ///     }                                       }
+  ///   }                                       }
+  /// }                                       }
   /// \endcode
   /// \version 10
-  bool IndentGotoLabels;
+
+  enum GotoLabelIndentation {
+    GLI_None,   // Do not indent goto labels.
+    GLI_Indent, // Indent goto labels at the same level as the surrounding code.
+  };
+
+  GotoLabelIndentation IndentGotoLabels;
 
   /// Indents extern blocks
   enum IndentExternBlockStyle : int8_t {

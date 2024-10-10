@@ -149,6 +149,16 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
   EXPECT_EQ(0, parseConfiguration(#STRUCT ":\n  " TEXT, &Style).value());      \
   EXPECT_EQ(VALUE, Style.STRUCT.FIELD) << "Unexpected value after parsing!"
 
+#define CHECK_PARSE_ENUM_FIELD(FIELD, CONFIG_NAME, ENUM_VAL)
+Style.FIELD = FormatStyle::GotoLabelIndentation::GLI_None;
+EXPECT_EQ(0, parseConfiguration(CONFIG_NAME ": true", &Style).value());
+EXPECT_EQ(ENUM_VAL, Style.FIELD);
+EXPECT_EQ(0, parseConfiguration(CONFIG_NAME ": false", &Style).value());
+EXPECT_EQ(FormatStyle::GotoLabelIndentation::GLI_None, Style.FIELD)
+
+#define CHECK_PARSE_ENUM(FIELD, ENUM_VAL)                                      \
+  CHECK_PARSE_ENUM_FIELD(FIELD, #FIELD, ENUM_VAL)
+
 TEST(ConfigParseTest, ParsesConfigurationBools) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
@@ -171,7 +181,8 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentAccessModifiers);
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
-  CHECK_PARSE_BOOL(IndentGotoLabels);
+  CHECK_PARSE_ENUM(IndentGotoLabels,
+                   FormatStyle::GotoLabelIndentation::GLI_Indent);
   CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);

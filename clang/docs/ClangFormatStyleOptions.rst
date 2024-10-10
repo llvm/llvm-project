@@ -4257,22 +4257,22 @@ the configuration (without a prefix: ``Auto``).
 
 .. _IndentGotoLabels:
 
-**IndentGotoLabels** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <IndentGotoLabels>`
+**IndentGotoLabels** (``enum``) :versionbadge:`clang-format 10` :ref:`¶ <IndentGotoLabels>`
   Indent goto labels.
 
-  When ``false``, goto labels are flushed left.
+  When ``GLI_None``, goto labels are flushed left.
 
   .. code-block:: c++
 
-     true:                                  false:
-     int f() {                      vs.     int f() {
-       if (foo()) {                           if (foo()) {
-       label1:                              label1:
-         bar();                                 bar();
-       }                                      }
-     label2:                                label2:
-       return 1;                              return 1;
-     }                                      }
+    GLI_Indent:                            GLI_None:
+    int f() {                      vs.     int f() {
+      if (foo()) {                           if (foo()) {
+      label1:                              label1:
+        bar();                                 bar();
+      }                                      }
+    label2:                                label2:
+      return 1;                              return 1;
+    }                                      }
 
 .. _IndentPPDirectives:
 
