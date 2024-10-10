@@ -41,8 +41,8 @@ class DominanceFrontierBase {
 public:
   // Dom set for a bb. Use SetVector to make iterating dom frontiers of a bb
   // deterministic.
-  using DomSetType = SetVector<BlockT *>;
-  using DomSetMapType = DenseMap<BlockT *, DomSetType>; // Dom set map
+  using DomSetType = SmallSetVector<BlockT *, 16>;
+  using DomSetMapType = SmallDenseMap<BlockT *, DomSetType, 16>; // Dom set map
 
 protected:
   using BlockTraits = GraphTraits<BlockT *>;

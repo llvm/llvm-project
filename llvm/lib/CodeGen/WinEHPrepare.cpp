@@ -90,7 +90,7 @@ private:
   EHPersonality Personality = EHPersonality::Unknown;
 
   const DataLayout *DL = nullptr;
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  BlockColorMapT BlockColors;
   MapVector<BasicBlock *, std::vector<BasicBlock *>> FuncletBlocks;
 };
 
@@ -189,7 +189,7 @@ static BasicBlock *getCleanupRetUnwindDest(const CleanupPadInst *CleanupPad) {
 static void calculateStateNumbersForInvokes(const Function *Fn,
                                             WinEHFuncInfo &FuncInfo) {
   auto *F = const_cast<Function *>(Fn);
-  DenseMap<BasicBlock *, ColorVector> BlockColors = colorEHFunclets(*F);
+  BlockColorMapT BlockColors = colorEHFunclets(*F);
   for (BasicBlock &BB : *F) {
     auto *II = dyn_cast<InvokeInst>(BB.getTerminator());
     if (!II)

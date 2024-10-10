@@ -73,7 +73,7 @@ class scc_iterator : public iterator_facade_base<
   ///
   /// nodeVisitNumbers are per-node visit numbers, also used as DFS flags.
   unsigned visitNum;
-  DenseMap<NodeRef, unsigned> nodeVisitNumbers;
+  SmallDenseMap<NodeRef, unsigned, 16> nodeVisitNumbers;
 
   /// Stack holding nodes of the SCC.
   std::vector<NodeRef> SCCNodeStack;

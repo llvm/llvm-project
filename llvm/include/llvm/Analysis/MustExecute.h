@@ -58,7 +58,7 @@ class raw_ostream;
 /// methods except for computeLoopSafetyInfo is undefined.
 class LoopSafetyInfo {
   // Used to update funclet bundle operands.
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  BlockColorMapT BlockColors;
 
 protected:
   /// Computes block colors.
@@ -66,7 +66,7 @@ protected:
 
 public:
   /// Returns block colors map that is used to update funclet operand bundles.
-  const DenseMap<BasicBlock *, ColorVector> &getBlockColors() const;
+  const BlockColorMapT &getBlockColors() const;
 
   /// Copy colors of block \p Old into the block \p New.
   void copyColors(BasicBlock *New, BasicBlock *Old);

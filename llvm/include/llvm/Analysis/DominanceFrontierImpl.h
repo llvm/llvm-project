@@ -55,7 +55,7 @@ void DominanceFrontierBase<BlockT, IsPostDom>::print(raw_ostream &OS) const {
       OS << " <<exit node>>";
     OS << " is:\t";
 
-    const SetVector<BlockT *> &BBs = I->second;
+    const SmallSetVector<BlockT *, 16> &BBs = I->second;
 
     for (const BlockT *BB : BBs) {
       OS << ' ';
