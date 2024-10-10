@@ -14,11 +14,11 @@
 #define __STDC_VERSION_COMPLEX_H__ 202311L
 
 #define complex _Complex
-#define _Complex_I (float _Complex)1.0fi
+#define _Complex_I ((float _Complex)1.0fi)
 
 #ifdef _Imaginary
 #define imaginary _Imaginary
-#define _Imaginary_I (float _Imaginary)1.0i
+#define _Imaginary_I ((float _Imaginary)1.0i)
 
 #define I _Imaginary_I
 #else
