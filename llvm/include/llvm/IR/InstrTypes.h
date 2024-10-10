@@ -1868,6 +1868,10 @@ public:
   /// parameter.
   FPClassTest getParamNoFPClass(unsigned i) const;
 
+  /// If arg ArgNo has a range attribute, return the value range of the
+  /// argument. Otherwise, std::nullopt is returned.
+  std::optional<ConstantRange> getParamRange(unsigned ArgNo) const;
+
   /// If this return value has a range attribute, return the value range of the
   /// argument. Otherwise, std::nullopt is returned.
   std::optional<ConstantRange> getRange() const;

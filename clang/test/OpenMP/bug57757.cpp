@@ -39,7 +39,7 @@ void foo() {
 // CHECK-NEXT:    ]
 // CHECK:       .untied.jmp..i:
 // CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4, !tbaa [[TBAA16]], !alias.scope [[META13]], !noalias [[META17]]
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @__kmpc_omp_task(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr [[TMP1]]), !noalias [[META13]]
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @__kmpc_omp_task(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP1]]), !noalias [[META13]]
 // CHECK-NEXT:    br label [[DOTOMP_OUTLINED__EXIT]]
 // CHECK:       .untied.next..i:
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 40
