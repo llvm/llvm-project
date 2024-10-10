@@ -277,12 +277,6 @@ public:
     return false;
   }
 
-  /// Return true if the target wants to keep the frame pointer regardless of
-  /// the function attribute "frame-pointer".
-  virtual bool keepFramePointer(const MachineFunction &MF) const {
-    return false;
-  }
-
   /// hasFP - Return true if the specified function should have a dedicated
   /// frame pointer register. For most targets this is true only if the function
   /// has variable sized allocas or if frame pointer elimination is disabled.

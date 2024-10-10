@@ -51,7 +51,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 ; BOTH:  [SP-8]{{.+}}8{{.+}}4
 ; DEBUG: a @ dot.c:13
 ; STRIPPED-NOT: a @ dot.c:13
-define void @cleanup_array(ptr %0) #1 {
+define void @cleanup_array(ptr %0) #3 {
   %2 = alloca ptr, align 8
   store ptr %0, ptr %2, align 8
   call void @llvm.dbg.declare(metadata ptr %2, metadata !41, metadata !DIExpression()), !dbg !46
@@ -62,7 +62,7 @@ define void @cleanup_array(ptr %0) #1 {
 ; BOTH:  [SP-8]{{.+}}8{{.+}}4
 ; DEBUG: res @ dot.c:21
 ; STRIPPED-NOT: res @ dot.c:21
-define void @cleanup_result(ptr %0) #1 {
+define void @cleanup_result(ptr %0) #3 {
   %2 = alloca ptr, align 8
   store ptr %0, ptr %2, align 8
   call void @llvm.dbg.declare(metadata ptr %2, metadata !47, metadata !DIExpression()), !dbg !51
@@ -92,7 +92,7 @@ define void @cleanup_result(ptr %0) #1 {
 ; BOTH:  [SP-40]{{.+}}4{{.+}}4
 ; DEBUG: i @ dot.c:55
 ; STRIPPED-NOT: i @ dot.c:55
-define i32 @do_work(ptr %0, ptr %1, ptr %2) #1 {
+define i32 @do_work(ptr %0, ptr %1, ptr %2) #3 {
   %4 = alloca i32, align 4
   %5 = alloca ptr, align 8
   %6 = alloca ptr, align 8
@@ -144,7 +144,7 @@ define i32 @do_work(ptr %0, ptr %1, ptr %2) #1 {
 ; BOTH:  [SP-20]{{.+}}4{{.*}}4
 ; DEBUG: i @ dot.c:69
 ; STRIPPED-NOT: i @ dot.c:69
-define ptr @gen_array(i32 %0) #1 {
+define ptr @gen_array(i32 %0) #3 {
   %2 = alloca ptr, align 8
   %3 = alloca i32, align 4
   %4 = alloca ptr, align 8
@@ -227,6 +227,7 @@ uselistorder ptr @llvm.dbg.declare, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 
 attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 attributes #1 = { "frame-pointer"="all" }
 attributes #2 = { ssp "stack-protector-buffer-size"="5" "frame-pointer"="all" }
+attributes #3 = { "frame-pointer"="none" }
 
 !llvm.dbg.cu = !{!0, !2}
 !llvm.module.flags = !{!18, !19, !20, !21, !22, !23, !24}
