@@ -1462,6 +1462,49 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
+InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  auto *SrcTy = cast<VectorType>(
+      ToVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
+  auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
+  // Computes the CastContextHint from a VPWidenMemoryRecipe instruction.
+  auto ComputeCCH = [&](VPWidenMemoryRecipe *R) -> TTI::CastContextHint {
+    assert((isa<VPWidenLoadRecipe>(R) || isa<VPWidenStoreRecipe>(R)) &&
+           "Expected a load or a store!");
+
+    if (VF.isScalar())
+      return TTI::CastContextHint::Normal;
+    if (!R->isConsecutive())
+      return TTI::CastContextHint::GatherScatter;
+    if (R->isReverse())
+      return TTI::CastContextHint::Reversed;
+    if (R->isMasked())
+      return TTI::CastContextHint::Masked;
+    return TTI::CastContextHint::Normal;
+  };
+
+  TTI::CastContextHint CCH = TTI::CastContextHint::None;
+  // For Trunc, the context is the only user, which must be a
+  // VPWidenStoreRecipe.
+  if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
+    if (!cast<VPValue>(this)->hasMoreThanOneUniqueUser())
+      if (VPWidenMemoryRecipe *Store =
+              dyn_cast<VPWidenMemoryRecipe>(*this->user_begin()))
+        CCH = ComputeCCH(Store);
+  }
+  // For Z/Sext, the context is the operand, which must be a VPWidenLoadRecipe.
+  else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
+           Opcode == Instruction::FPExt) {
+    if (VPWidenMemoryRecipe *Load = dyn_cast<VPWidenMemoryRecipe>(
+            this->getOperand(0)->getDefiningRecipe()))
+      CCH = ComputeCCH(Load);
+  }
+  // Arm TTI will use the underlying instruction to determine the cost.
+  return Ctx.TTI.getCastInstrCost(
+      Opcode, DestTy, SrcTy, CCH, TTI::TCK_RecipThroughput,
+      dyn_cast_if_present<Instruction>(getUnderlyingValue()));
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
