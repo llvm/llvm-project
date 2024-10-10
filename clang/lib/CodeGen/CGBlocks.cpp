@@ -2841,9 +2841,9 @@ llvm::FunctionCallee CodeGenModule::getBlockObjectDispose() {
   llvm::Type *args[] = { Int8PtrTy, Int32Ty };
   llvm::FunctionType *fty
     = llvm::FunctionType::get(VoidTy, args, false);
-  BlockObjectDispose = CreateRuntimeFunction(fty, "_Block_object_dispose");
+  BlockObjectDispose = CreateRuntimeFunction(fty, "_Block_object_dispose",
+                           {{AttrIndex::FirstArgIndex + 1, AttrKind::SExt}});
   // FIXME: Correct signedness of extension??
-  BlockObjectDispose.getAsFunction()->addParamAttr(1, llvm::Attribute::SExt);
   configureBlocksRuntimeObject(
       *this, cast<llvm::Constant>(BlockObjectDispose.getCallee()));
   return BlockObjectDispose;
@@ -2856,8 +2856,8 @@ llvm::FunctionCallee CodeGenModule::getBlockObjectAssign() {
   llvm::Type *args[] = { Int8PtrTy, Int8PtrTy, Int32Ty };
   llvm::FunctionType *fty
     = llvm::FunctionType::get(VoidTy, args, false);
-  BlockObjectAssign = CreateRuntimeFunction(fty, "_Block_object_assign");
-  BlockObjectAssign.getAsFunction()->addParamAttr(2, llvm::Attribute::SExt);
+  BlockObjectAssign = CreateRuntimeFunction(fty, "_Block_object_assign",
+                           {{AttrIndex::FirstArgIndex + 2, AttrKind::SExt}});
   configureBlocksRuntimeObject(
       *this, cast<llvm::Constant>(BlockObjectAssign.getCallee()));
   return BlockObjectAssign;

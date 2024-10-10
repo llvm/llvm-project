@@ -4755,6 +4755,15 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     llvm::AttrBuilder B(F->getContext(), ExtraAttrs.getFnAttrs());
     F->addFnAttrs(B);
   }
+  if (ExtraAttrs.hasRetAttrs()) {
+    llvm::AttrBuilder B(F->getContext(), ExtraAttrs.getRetAttrs());
+    F->addRetAttrs(B);
+  }
+  for (unsigned i = 0; i < F->arg_size(); ++i)
+    if (ExtraAttrs.hasParamAttrs(i)) {
+      llvm::AttrBuilder B(F->getContext(), ExtraAttrs.getParamAttrs(i));
+      F->addParamAttrs(i, B);
+    }
 
   if (!DontDefer) {
     // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
@@ -4936,6 +4945,27 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
   }
 
   return {FTy, C};
+}
+
+llvm::FunctionCallee
+CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
+                                     ArrayRef<ArgExtAttr> ArgAttrs,
+                                     bool Local, bool AssumeConvergent) {
+  const auto &T = getTarget().getTriple();
+  llvm::AttributeList AL;
+  for (auto &A : ArgAttrs) {
+    bool Signed = (A.second == AttrKind::SExt);
+    AttrKind AK;
+    if (A.first == AttrIndex::ReturnIndex)
+      AK = llvm::TargetLibraryInfo::getExtAttrForI32Return(T, Signed);
+    else if (A.first >= AttrIndex::FirstArgIndex)
+      AK = llvm::TargetLibraryInfo::getExtAttrForI32Param(T, Signed);
+    else
+      llvm_unreachable("Only expecting return or argument indices.");
+    AL = AL.addAttributeAtIndex(getLLVMContext(), A.first, AK);
+  }
+
+  return CreateRuntimeFunction(Ty, Name, AL, Local, AssumeConvergent);
 }
 
 /// GetOrCreateLLVMGlobal - If the specified mangled name is not in the module,
