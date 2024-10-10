@@ -240,10 +240,51 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_TRUE(N1->hasMemPred(N0));
   EXPECT_FALSE(N0->hasMemPred(N1));
 
+  // Check preds().
+  EXPECT_TRUE(N0->preds(DAG).empty());
+  EXPECT_THAT(N1->preds(DAG), testing::ElementsAre(N0));
+
   // Check memPreds().
   EXPECT_TRUE(N0->memPreds().empty());
   EXPECT_THAT(N1->memPreds(), testing::ElementsAre(N0));
   EXPECT_TRUE(N2->memPreds().empty());
+}
+
+TEST_F(DependencyGraphTest, Preds) {
+  parseIR(C, R"IR(
+declare ptr @bar(i8)
+define i8 @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v0
+  %add1 = add i8 %v1, %v1
+  %add2 = add i8 %add0, %add1
+  %ptr = call ptr @bar(i8 %add1)
+  store i8 %add2, ptr %ptr
+  ret i8 %add2
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+
+  auto *AddN0 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *AddN1 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *AddN2 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *CallN = DAG.getNode(cast<sandboxir::CallInst>(&*It++));
+  auto *StN = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
+
+  // Check preds().
+  EXPECT_THAT(AddN0->preds(DAG), testing::ElementsAre());
+  EXPECT_THAT(AddN1->preds(DAG), testing::ElementsAre());
+  EXPECT_THAT(AddN2->preds(DAG), testing::ElementsAre(AddN0, AddN1));
+  EXPECT_THAT(CallN->preds(DAG), testing::ElementsAre(AddN1));
+  EXPECT_THAT(StN->preds(DAG),
+              testing::UnorderedElementsAre(CallN, CallN, AddN2));
+  EXPECT_THAT(RetN->preds(DAG), testing::ElementsAre(AddN2));
 }
 
 TEST_F(DependencyGraphTest, MemDGNode_getPrevNode_getNextNode) {
