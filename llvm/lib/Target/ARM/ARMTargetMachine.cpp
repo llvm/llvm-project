@@ -309,11 +309,15 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                        F.hasMinSize());
+                                       F.hasMinSize());
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
           "instructions, but the target does not support ARM mode execution.");
+
+    if (I->isTargetHardFloat() && !I->hasFPRegs())
+      F.getContext().emitError("The hard-float ABI is enabled, but the target "
+                               "lacks floating-point registers.");
   }
 
   return I.get();
