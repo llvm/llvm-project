@@ -1396,6 +1396,34 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
 void VPWidenEVLRecipe::execute(VPTransformState &State) {
   unsigned Opcode = getOpcode();
   // TODO: Support other opcodes
+  if (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) {
+    Value *Op1 = State.get(getOperand(0), 0);
+    Value *Op2 = State.get(getOperand(1), 0);
+    auto &Ctx = State.Builder.getContext();
+    Value *Pred = MetadataAsValue::get(
+        Ctx, MDString::get(Ctx, CmpInst::getPredicateName(getPredicate())));
+
+    IRBuilderBase &BuilderIR = State.Builder;
+    VectorBuilder Builder(BuilderIR);
+    Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
+    Builder.setMask(Mask).setEVL(State.get(getEVL(), /*NeedsScalar=*/true));
+
+    VectorType *DataType = VectorType::get(Type::getInt1Ty(Ctx), State.VF);
+
+    Value *VPInst = Builder.createVectorInstruction(Opcode, DataType,
+                                                    {Op1, Op2, Pred}, "vp.op");
+    //  if (isa<FPMathOperator>(VPInst))
+    // setFlags(cast<Instruction>(VPInst));
+    if (VPInst) {
+      if (auto *VecOp = dyn_cast<CastInst>(VPInst))
+        VecOp->copyIRFlags(getUnderlyingInstr());
+    }
+    State.set(this, VPInst, 0);
+    State.addMetadata(VPInst,
+                      dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+    return;
+  }
+
   if (!Instruction::isBinaryOp(Opcode) && !Instruction::isUnaryOp(Opcode))
     llvm_unreachable("Unsupported opcode in VPWidenEVLRecipe::execute");
 
