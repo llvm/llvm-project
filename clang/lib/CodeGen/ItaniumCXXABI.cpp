@@ -3536,7 +3536,6 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
       Name, Init->getType(), Linkage, Align.getAsAlign());
 
   GV->setInitializer(Init);
-
   return GV;
 }
 
@@ -4101,6 +4100,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   // And the name.
   llvm::GlobalVariable *TypeName = GetAddrOfTypeName(Ty, Linkage);
   llvm::Constant *TypeNameField;
+  llvm::GlobalValue::UnnamedAddr Scope;
 
   // If we're supposed to demote the visibility, be sure to set a flag
   // to use a string comparison for type_info comparisons.
@@ -4115,8 +4115,10 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     TypeNameField = llvm::ConstantExpr::getAdd(TypeNameField, flag);
     TypeNameField =
         llvm::ConstantExpr::getIntToPtr(TypeNameField, CGM.GlobalsInt8PtrTy);
+    Scope = llvm::GlobalValue::UnnamedAddr::Global;
   } else {
     TypeNameField = TypeName;
+    Scope = llvm::GlobalValue::UnnamedAddr::Local;
   }
   Fields.push_back(TypeNameField);
 
@@ -4274,6 +4276,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   TypeName->setPartition(CGM.getCodeGenOpts().SymbolPartition);
   GV->setPartition(CGM.getCodeGenOpts().SymbolPartition);
+
+  TypeName->setUnnamedAddr(Scope);
+  GV->setUnnamedAddr(Scope);
 
   return GV;
 }
