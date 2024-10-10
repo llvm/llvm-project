@@ -49,7 +49,8 @@ private:
   static constexpr StorageType MIN_SUBNORMAL =
       FPBits::min_subnormal().uintval();
 
-  static constexpr OutType INTEGER_MIN = OutType(1) << (sizeof(OutType) * 8 - 1);
+  static constexpr OutType INTEGER_MIN = OutType(1)
+                                         << (sizeof(OutType) * 8 - 1);
   static constexpr OutType INTEGER_MAX = -(INTEGER_MIN + 1);
 
   void test_one_input(RoundToIntegerFunc func, F input, OutType expected,
@@ -132,8 +133,8 @@ public:
     // The rest of this function compares with an equivalent MPFR function
     // which rounds floating point numbers to long values. There is no MPFR
     // function to round to long long or wider integer values. So, we will
-    // the remaining tests only if the width of OutType less than equal to that of
-    // long.
+    // the remaining tests only if the width of OutType less than equal to that
+    // of long.
     if (sizeof(OutType) > sizeof(long))
       return;
 
@@ -201,8 +202,8 @@ public:
     // This function compares with an equivalent MPFR function which rounds
     // floating point numbers to long values. There is no MPFR function to
     // round to long long or wider integer values. So, we will peform the
-    // comparisons in this function only if the width of OutType less than equal to
-    // that of long.
+    // comparisons in this function only if the width of OutType less than equal
+    // to that of long.
     if (sizeof(OutType) > sizeof(long))
       return;
 
@@ -240,7 +241,8 @@ public:
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
-    for (StorageType OutType = MIN_SUBNORMAL; OutType <= MAX_SUBNORMAL; OutType += STEP) {
+    for (StorageType OutType = MIN_SUBNORMAL; OutType <= MAX_SUBNORMAL;
+         OutType += STEP) {
       F x = FPBits(OutType).get_val();
       if (x == F(0.0))
         continue;
@@ -275,8 +277,8 @@ public:
     // This function compares with an equivalent MPFR function which rounds
     // floating point numbers to long values. There is no MPFR function to
     // round to long long or wider integer values. So, we will peform the
-    // comparisons in this function only if the width of OutType less than equal to
-    // that of long.
+    // comparisons in this function only if the width of OutType less than equal
+    // to that of long.
     if (sizeof(OutType) > sizeof(long))
       return;
 
@@ -284,7 +286,8 @@ public:
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
         StorageType(1));
-    for (StorageType OutType = MIN_NORMAL; OutType <= MAX_NORMAL; OutType += STEP) {
+    for (StorageType OutType = MIN_NORMAL; OutType <= MAX_NORMAL;
+         OutType += STEP) {
       FPBits xbits(OutType);
       F x = xbits.get_val();
       // In normal range on x86 platforms, the long double implicit 1 bit can be
@@ -317,9 +320,9 @@ public:
   }
 };
 
-#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, OutType, func, TestModes)              \
+#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, OutType, func, TestModes)        \
   using LlvmLibcRoundToIntegerTest =                                           \
-      RoundToIntegerTestTemplate<F, OutType, TestModes>;                             \
+      RoundToIntegerTestTemplate<F, OutType, TestModes>;                       \
   TEST_F(LlvmLibcRoundToIntegerTest, InfinityAndNaN) {                         \
     testInfinityAndNaN(&func);                                                 \
   }                                                                            \
@@ -335,10 +338,10 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcRoundToIntegerTest, NormalRange) { testNormalRange(&func); }
 
-#define LIST_ROUND_TO_INTEGER_TESTS(F, OutType, func)                                \
+#define LIST_ROUND_TO_INTEGER_TESTS(F, OutType, func)                          \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, OutType, func, false)
 
-#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, OutType, func)                     \
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, OutType, func)               \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, OutType, func, true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H

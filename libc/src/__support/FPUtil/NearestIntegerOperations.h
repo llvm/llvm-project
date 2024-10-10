@@ -346,9 +346,10 @@ fromfpx(T x, int rnd, unsigned int width) {
 
 namespace internal {
 
-template <typename F, typename InType,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<InType>,
-                           int> = 0>
+template <
+    typename F, typename InType,
+    cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<InType>,
+                     int> = 0>
 LIBC_INLINE InType rounded_float_to_signed_integer(F x) {
   constexpr InType INTEGER_MIN = (InType(1) << (sizeof(InType) * 8 - 1));
   constexpr InType INTEGER_MAX = -(INTEGER_MIN + 1);
@@ -385,16 +386,18 @@ LIBC_INLINE InType rounded_float_to_signed_integer(F x) {
 
 } // namespace internal
 
-template <typename F, typename InType,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<InType>,
-                           int> = 0>
+template <
+    typename F, typename InType,
+    cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<InType>,
+                     int> = 0>
 LIBC_INLINE InType round_to_signed_integer(F x) {
   return internal::rounded_float_to_signed_integer<F, InType>(round(x));
 }
 
-template <typename F, typename InType,
-          cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<InType>,
-                           int> = 0>
+template <
+    typename F, typename InType,
+    cpp::enable_if_t<cpp::is_floating_point_v<F> && cpp::is_integral_v<InType>,
+                     int> = 0>
 LIBC_INLINE InType round_to_signed_integer_using_current_rounding_mode(F x) {
   return internal::rounded_float_to_signed_integer<F, InType>(
       round_using_current_rounding_mode(x));
