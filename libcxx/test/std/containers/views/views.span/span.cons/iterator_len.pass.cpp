@@ -15,9 +15,10 @@
 //
 
 
-#include <span>
 #include <cassert>
+#include <cstddef>
 #include <iterator>
+#include <span>
 #include <type_traits>
 
 template <std::size_t Extent>

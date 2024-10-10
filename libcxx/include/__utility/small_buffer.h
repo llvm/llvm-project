@@ -10,13 +10,13 @@
 #define _LIBCPP___UTILITY_SMALL_BUFFER_H
 
 #include <__config>
+#include <__cstddef/byte.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
-#include <cstddef>
 #include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -11,6 +11,7 @@
 
 #include <__algorithm/upper_bound.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <cmath>

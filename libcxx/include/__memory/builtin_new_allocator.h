@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__memory/unique_ptr.h>
-#include <cstddef>
 #include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
