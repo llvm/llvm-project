@@ -47,6 +47,8 @@ public:
   using ExternalASTSource::CompleteType;
   /// Complete an incomplete HLSL builtin type
   void CompleteType(TagDecl *Tag) override;
+
+  ConceptDecl *getTypedBufferConceptDecl(Sema &S, CXXRecordDecl *Decl);
 };
 
 } // namespace clang
