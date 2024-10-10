@@ -359,3 +359,94 @@ bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
     return false;
   }
 }
+
+bool CombinerHelper::matchCombineZextTrunc(const MachineInstr &ZextMI,
+                                           const MachineInstr &TruncMI,
+                                           BuildFnTy &MatchInfo) {
+  const GZext *Zext = cast<GZext>(&ZextMI);
+  const GTrunc *Trunc = cast<GTrunc>(&TruncMI);
+
+  Register Dst = Zext->getReg(0);
+  Register Mid = Zext->getSrcReg();
+  Register Src = Trunc->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (!MRI.hasOneNonDBGUse(Mid))
+    return false;
+
+  unsigned DstSize = DstTy.getScalarSizeInBits();
+  unsigned MidSize = MRI.getType(Mid).getScalarSizeInBits();
+  unsigned SrcSize = SrcTy.getScalarSizeInBits();
+
+  // Are the truncated bits known to be zero?
+  if (DstTy == SrcTy &&
+      (KB->getKnownBits(Src).countMinLeadingZeros() >= DstSize - MidSize)) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+    return true;
+  }
+
+  // If the sizes are just right we can convert this into a logical
+  // 'and', which will be much cheaper than the pair of casts.
+
+  // If we're actually extending zero bits, then if
+  // SrcSize <  DstSize: zext(Src & mask)
+  // SrcSize == DstSize: Src & mask
+  // SrcSize  > DstSize: trunc(Src) & mask
+
+  if (DstSize == SrcSize) {
+    // Src & mask.
+
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {DstTy}}) ||
+        !isConstantLegalOrBeforeLegalizer(DstTy))
+      return false;
+
+    // build mask.
+    APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      auto Mask = B.buildConstant(DstTy, AndValue);
+      B.buildAnd(Dst, Src, Mask);
+    };
+    return true;
+  }
+
+  if (SrcSize < DstSize) {
+    // zext(Src & mask).
+
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {SrcTy}}) ||
+        !isConstantLegalOrBeforeLegalizer(SrcTy) ||
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
+      return false;
+
+    APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      auto Mask = B.buildConstant(SrcTy, AndValue);
+      auto And = B.buildAnd(SrcTy, Src, Mask);
+      B.buildZExt(Dst, And);
+    };
+    return true;
+  }
+
+  if (SrcSize > DstSize) {
+    // trunc(Src) & mask.
+
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {DstTy}}) ||
+        !isConstantLegalOrBeforeLegalizer(DstTy) ||
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
+      return false;
+
+    APInt AndValue(APInt::getLowBitsSet(DstSize, MidSize));
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      auto Mask = B.buildConstant(DstTy, AndValue);
+      auto Trunc = B.buildTrunc(DstTy, Src);
+      B.buildAnd(Dst, Trunc, Mask);
+    };
+    return true;
+  }
+
+  return false;
+}

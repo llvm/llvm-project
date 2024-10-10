@@ -12,6 +12,7 @@ define void @br_false() {
 ; WAVE64-NEXT:  .LBB0_1: ; %bb0
 ; WAVE64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE64-NEXT:    s_mov_b32 s4, 1
+; WAVE64-NEXT:    s_and_b32 s4, s4, 1
 ; WAVE64-NEXT:    s_cmp_lg_u32 s4, 0
 ; WAVE64-NEXT:    s_cbranch_scc1 .LBB0_1
 ; WAVE64-NEXT:  ; %bb.2: ; %.exit5
@@ -23,6 +24,7 @@ define void @br_false() {
 ; WAVE32-NEXT:  .LBB0_1: ; %bb0
 ; WAVE32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE32-NEXT:    s_mov_b32 s4, 1
+; WAVE32-NEXT:    s_and_b32 s4, s4, 1
 ; WAVE32-NEXT:    s_cmp_lg_u32 s4, 0
 ; WAVE32-NEXT:    s_cbranch_scc1 .LBB0_1
 ; WAVE32-NEXT:  ; %bb.2: ; %.exit5
@@ -44,6 +46,7 @@ define void @br_true() {
 ; WAVE64-NEXT:  .LBB1_1: ; %bb0
 ; WAVE64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE64-NEXT:    s_mov_b32 s4, 0
+; WAVE64-NEXT:    s_and_b32 s4, s4, 1
 ; WAVE64-NEXT:    s_cmp_lg_u32 s4, 0
 ; WAVE64-NEXT:    s_cbranch_scc1 .LBB1_1
 ; WAVE64-NEXT:  ; %bb.2: ; %.exit5
@@ -55,6 +58,7 @@ define void @br_true() {
 ; WAVE32-NEXT:  .LBB1_1: ; %bb0
 ; WAVE32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE32-NEXT:    s_mov_b32 s4, 0
+; WAVE32-NEXT:    s_and_b32 s4, s4, 1
 ; WAVE32-NEXT:    s_cmp_lg_u32 s4, 0
 ; WAVE32-NEXT:    s_cbranch_scc1 .LBB1_1
 ; WAVE32-NEXT:  ; %bb.2: ; %.exit5

@@ -165,9 +165,15 @@ define amdgpu_cs void @phi_uniform(i64 inreg %s0_1, i64 inreg %s2, ptr addrspace
 ; GISEL-LABEL: phi_uniform:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; GISEL-NEXT:    s_and_b32 s2, s2, 1
+; GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-NEXT:    s_cbranch_scc1 .LBB5_2
 ; GISEL-NEXT:  ; %bb.1: ; %if
 ; GISEL-NEXT:    s_add_u32 s0, s0, 1
+; GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; GISEL-NEXT:    s_and_b32 s2, s2, 1
+; GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GISEL-NEXT:  .LBB5_2: ; %endif
 ; GISEL-NEXT:    v_mov_b32_e32 v3, 0
@@ -220,6 +226,9 @@ define amdgpu_cs void @inverse_ballot_branch(i64 inreg %s0_1, i64 inreg %s2, ptr
 ; GISEL-NEXT:    s_and_saveexec_b64 s[2:3], s[4:5]
 ; GISEL-NEXT:  ; %bb.1: ; %if
 ; GISEL-NEXT:    s_add_u32 s0, s0, 1
+; GISEL-NEXT:    s_cselect_b32 s4, 1, 0
+; GISEL-NEXT:    s_and_b32 s4, s4, 1
+; GISEL-NEXT:    s_cmp_lg_u32 s4, 0
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GISEL-NEXT:  ; %bb.2: ; %endif
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[2:3]

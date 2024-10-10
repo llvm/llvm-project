@@ -237,6 +237,9 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; CI-GISEL-NEXT:    s_load_dword s0, s[6:7], 0x33
 ; CI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-GISEL-NEXT:    s_cmp_lg_u32 s1, s0
+; CI-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; CI-GISEL-NEXT:    s_and_b32 s0, s0, 1
+; CI-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; CI-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
 ; CI-GISEL-NEXT:  ; %bb.1: ; %bb0
 ; CI-GISEL-NEXT:    v_mov_b32_e32 v0, 0
@@ -251,6 +254,9 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
+; GFX9-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX9-GISEL-NEXT:    s_and_b32 s0, s0, 1
+; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX9-GISEL-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
@@ -265,6 +271,9 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX10-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lg_u32 s1, s3
+; GFX10-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX10-NEXT:    s_and_b32 s0, s0, 1
+; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX10-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX10-NEXT:  ; %bb.1: ; %bb0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
@@ -279,6 +288,10 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX11-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, s3
+; GFX11-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, s0, 1
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX11-NEXT:  ; %bb.1: ; %bb0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0

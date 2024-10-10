@@ -105,7 +105,8 @@ entry:
 define i64 @zext_nneg_i32_i64(i32 %a) {
 ; RV64IM-LABEL: zext_nneg_i32_i64:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    sext.w a0, a0
+; RV64IM-NEXT:    slli a0, a0, 32
+; RV64IM-NEXT:    srli a0, a0, 32
 ; RV64IM-NEXT:    ret
 entry:
   %b = zext nneg i32 %a to i64

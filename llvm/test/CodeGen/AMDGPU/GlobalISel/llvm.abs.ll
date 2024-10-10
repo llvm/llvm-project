@@ -32,14 +32,41 @@ define amdgpu_cs i32 @abs_sgpr_i32(i32 inreg %arg) {
 }
 
 define amdgpu_cs i64 @abs_sgpr_i64(i64 inreg %arg) {
-; GFX-LABEL: abs_sgpr_i64:
-; GFX:       ; %bb.0:
-; GFX-NEXT:    s_ashr_i32 s2, s1, 31
-; GFX-NEXT:    s_add_u32 s0, s0, s2
-; GFX-NEXT:    s_mov_b32 s3, s2
-; GFX-NEXT:    s_addc_u32 s1, s1, s2
-; GFX-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: abs_sgpr_i64:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX6-NEXT:    s_add_u32 s0, s0, s2
+; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX6-NEXT:    s_and_b32 s4, s4, 1
+; GFX6-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX6-NEXT:    s_mov_b32 s3, s2
+; GFX6-NEXT:    s_addc_u32 s1, s1, s2
+; GFX6-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: abs_sgpr_i64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX8-NEXT:    s_add_u32 s0, s0, s2
+; GFX8-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX8-NEXT:    s_and_b32 s4, s4, 1
+; GFX8-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX8-NEXT:    s_mov_b32 s3, s2
+; GFX8-NEXT:    s_addc_u32 s1, s1, s2
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: abs_sgpr_i64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX10-NEXT:    s_add_u32 s0, s0, s2
+; GFX10-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX10-NEXT:    s_and_b32 s4, s3, 1
+; GFX10-NEXT:    s_mov_b32 s3, s2
+; GFX10-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX10-NEXT:    s_addc_u32 s1, s1, s2
+; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX10-NEXT:    ; return to shader part epilog
   %res = call i64 @llvm.abs.i64(i64 %arg, i1 false)
   ret i64 %res
 }

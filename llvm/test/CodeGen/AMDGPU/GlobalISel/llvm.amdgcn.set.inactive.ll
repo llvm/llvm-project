@@ -95,8 +95,11 @@ define amdgpu_kernel void @set_inactive_scc(ptr addrspace(1) %out, i32 %in, <4 x
 ; GCN-NEXT:    s_mov_b64 exec, s[2:3]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 56
+; GCN-NEXT:    s_cselect_b32 s3, 1, 0
+; GCN-NEXT:    s_and_b32 s3, s3, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    s_mov_b32 s2, 1
+; GCN-NEXT:    s_cmp_lg_u32 s3, 0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GCN-NEXT:  ; %bb.1: ; %.one
 ; GCN-NEXT:    v_add_u32_e32 v2, vcc, 1, v1

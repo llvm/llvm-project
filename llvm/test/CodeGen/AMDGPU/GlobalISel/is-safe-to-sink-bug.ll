@@ -8,22 +8,25 @@
 define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-LABEL: _amdgpu_ps_main:
 ; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
+; CHECK-NEXT:    s_mov_b32 s10, -1
 ; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:    s_mov_b32 s6, s4
 ; CHECK-NEXT:    s_mov_b32 s7, s4
-; CHECK-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
-; CHECK-NEXT:    s_buffer_load_dword s1, s[4:7], 0x0
-; CHECK-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
-; CHECK-NEXT:    s_mov_b32 s10, -1
 ; CHECK-NEXT:    s_mov_b32 s11, 0x31c16000
 ; CHECK-NEXT:    s_add_u32 s8, s8, s0
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
+; CHECK-NEXT:    s_buffer_load_dword s0, s[4:7], 0x0
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_addc_u32 s9, s9, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_ge_i32 s1, 0
+; CHECK-NEXT:    s_cmp_ge_i32 s0, 0
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
+; CHECK-NEXT:    s_cselect_b32 s1, 1, 0
+; CHECK-NEXT:    s_and_b32 s1, s1, 1
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %bb12
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s4
