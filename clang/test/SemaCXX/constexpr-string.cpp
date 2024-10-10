@@ -603,12 +603,16 @@ namespace MemcpyEtc {
   };
   constexpr bool test_nontrivial_memcpy() { // expected-error {{never produces a constant}}
     NonTrivial arr[3] = {};
+    // expected-warning@+2 {{source of this '__builtin_memcpy' call is a pointer to record 'NonTrivial' that is not trivially-copyable}}
+    // expected-note@+1 {{explicitly cast the pointer to silence this warning}}
     __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note 2{{non-trivially-copyable}}
     return true;
   }
   static_assert(test_nontrivial_memcpy()); // expected-error {{constant}} expected-note {{in call}}
   constexpr bool test_nontrivial_memmove() { // expected-error {{never produces a constant}}
     NonTrivial arr[3] = {};
+    // expected-warning@+2 {{source of this '__builtin_memcpy' call is a pointer to record 'NonTrivial' that is not trivially-copyable}}
+    // expected-note@+1 {{explicitly cast the pointer to silence this warning}}
     __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // expected-note 2{{non-trivially-copyable}}
     return true;
   }

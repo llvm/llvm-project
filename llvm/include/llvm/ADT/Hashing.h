@@ -508,7 +508,7 @@ public:
       // with the variadic combine because that formation can have varying
       // argument types.
       size_t partial_store_size = buffer_end - buffer_ptr;
-      memcpy(buffer_ptr, &data, partial_store_size);
+      memcpy(buffer_ptr, reinterpret_cast<void *>(&data), partial_store_size);
 
       // If the store fails, our buffer is full and ready to hash. We have to
       // either initialize the hash state (on the first full buffer) or mix

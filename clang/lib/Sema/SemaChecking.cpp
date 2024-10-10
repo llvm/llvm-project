@@ -8899,18 +8899,42 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
           << ArgIdx << FnName << PointeeTy
           << Call->getCallee()->getSourceRange());
     else if (const auto *RT = PointeeTy->getAs<RecordType>()) {
+
+      auto IsTriviallyCopyableCXXRecord = [](auto const *RT) {
+        auto const *D = RT->getDecl();
+        if (!D)
+          return true;
+        auto const *RD = dyn_cast<CXXRecordDecl>(D);
+        if (!RD)
+          return true;
+        RD = RD->getDefinition();
+        if (!RD)
+          return true;
+        return RD->isTriviallyCopyable();
+      };
+
       if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
           RT->getDecl()->isNonTrivialToPrimitiveDefaultInitialize()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 0);
         SearchNonTrivialToInitializeField::diag(PointeeTy, Dest, *this);
+      } else if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
+                 !IsTriviallyCopyableCXXRecord(RT)) {
+        DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                            PDiag(diag::warn_cxxstruct_memaccess)
+                                << ArgIdx << FnName << PointeeTy);
       } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
                  RT->getDecl()->isNonTrivialToPrimitiveCopy()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 1);
         SearchNonTrivialToCopyField::diag(PointeeTy, Dest, *this);
+      } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
+                 !IsTriviallyCopyableCXXRecord(RT)) {
+        DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                            PDiag(diag::warn_cxxstruct_memaccess)
+                                << ArgIdx << FnName << PointeeTy);
       } else {
         continue;
       }

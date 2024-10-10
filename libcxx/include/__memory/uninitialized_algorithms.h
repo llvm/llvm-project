@@ -638,7 +638,7 @@ __uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
   } else {
-    __builtin_memcpy(__result, __first, sizeof(_Tp) * (__last - __first));
+    __builtin_memcpy((void*)__result, (void*)__first, sizeof(_Tp) * (__last - __first));
   }
 }
 
