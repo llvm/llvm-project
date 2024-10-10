@@ -97,7 +97,6 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg);
 class ThreadLister {
  public:
   explicit ThreadLister(pid_t pid);
-  ~ThreadLister();
   enum Result {
     Error,
     Incomplete,
@@ -108,8 +107,8 @@ class ThreadLister {
  private:
   bool IsAlive(int tid);
 
-  pid_t pid_;
-  int descriptor_ = -1;
+  InternalScopedString task_path_;
+  InternalScopedString status_path_;
   InternalMmapVector<char> buffer_;
 };
 
