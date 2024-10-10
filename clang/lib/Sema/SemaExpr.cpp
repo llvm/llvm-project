@@ -4089,6 +4089,9 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
         ResultVal = ResultVal.trunc(Width);
     }
     Res = IntegerLiteral::Create(Context, ResultVal, Ty, Tok.getLocation());
+
+    if (SemaRef.LangOpts.HIP)
+      SemaRef.CUDA().checkTargetMacroUse(Tok);
   }
 
   // If this is an imaginary literal, create the ImaginaryLiteral wrapper.

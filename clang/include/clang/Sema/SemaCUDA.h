@@ -263,6 +263,10 @@ public:
   // for __constant__ and __device__ variables.
   void checkAllowedInitializer(VarDecl *VD);
 
+  /// Check if the token is part of a macro that is used outside of its allowed
+  /// compilation mode.
+  void checkTargetMacroUse(const Token &Tok);
+
   /// Check whether NewFD is a valid overload for CUDA. Emits
   /// diagnostics and invalidates NewFD if not.
   void checkTargetOverload(FunctionDecl *NewFD, const LookupResult &Previous);
