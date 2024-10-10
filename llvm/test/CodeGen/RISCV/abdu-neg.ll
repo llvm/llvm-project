@@ -1855,9 +1855,9 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sub a1, a1, t2
 ; RV32I-NEXT:    sub a2, a2, a3
 ; RV32I-NEXT:  .LBB22_11:
-; RV32I-NEXT:    sw a6, 8(a0)
-; RV32I-NEXT:    sw a1, 4(a0)
 ; RV32I-NEXT:    sw a2, 0(a0)
+; RV32I-NEXT:    sw a1, 4(a0)
+; RV32I-NEXT:    sw a6, 8(a0)
 ; RV32I-NEXT:    sw a5, 12(a0)
 ; RV32I-NEXT:    ret
 ;
@@ -1942,9 +1942,9 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sub a1, a1, t2
 ; RV32ZBB-NEXT:    sub a2, a2, a3
 ; RV32ZBB-NEXT:  .LBB22_11:
-; RV32ZBB-NEXT:    sw a6, 8(a0)
-; RV32ZBB-NEXT:    sw a1, 4(a0)
 ; RV32ZBB-NEXT:    sw a2, 0(a0)
+; RV32ZBB-NEXT:    sw a1, 4(a0)
+; RV32ZBB-NEXT:    sw a6, 8(a0)
 ; RV32ZBB-NEXT:    sw a5, 12(a0)
 ; RV32ZBB-NEXT:    ret
 ;

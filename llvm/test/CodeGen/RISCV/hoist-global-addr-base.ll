@@ -17,9 +17,9 @@ define dso_local void @multiple_stores() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    lui a0, %hi(s)
 ; CHECK-NEXT:    addi a0, a0, %lo(s)
 ; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    li a2, 20
 ; CHECK-NEXT:    sw a1, 160(a0)
-; CHECK-NEXT:    li a1, 20
-; CHECK-NEXT:    sw a1, 164(a0)
+; CHECK-NEXT:    sw a2, 164(a0)
 ; CHECK-NEXT:    ret
 entry:
   store i32 10, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4

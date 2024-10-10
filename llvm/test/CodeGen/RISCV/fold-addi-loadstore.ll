@@ -293,8 +293,8 @@ define dso_local void @store_g_4() nounwind {
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi6:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4)
 ; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi6)
-; RV32I-MEDIUM-NEXT:    sw zero, 4(a0)
 ; RV32I-MEDIUM-NEXT:    sw zero, 0(a0)
+; RV32I-MEDIUM-NEXT:    sw zero, 4(a0)
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LABEL: store_g_4:
@@ -335,8 +335,8 @@ define dso_local void @store_g_8() nounwind {
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi7:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_8)
 ; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi7)
-; RV32I-MEDIUM-NEXT:    sw zero, 4(a0)
 ; RV32I-MEDIUM-NEXT:    sw zero, 0(a0)
+; RV32I-MEDIUM-NEXT:    sw zero, 4(a0)
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LABEL: store_g_8:

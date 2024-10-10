@@ -441,8 +441,8 @@ define <2 x i64> @usub_v2i64_vx(<2 x i64> %va, i64 %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
@@ -489,8 +489,8 @@ define <4 x i64> @usub_v4i64_vx(<4 x i64> %va, i64 %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -537,8 +537,8 @@ define <8 x i64> @usub_v8i64_vx(<8 x i64> %va, i64 %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -585,8 +585,8 @@ define <16 x i64> @usub_v16i64_vx(<16 x i64> %va, i64 %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
