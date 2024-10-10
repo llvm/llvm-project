@@ -26,7 +26,7 @@ class OperandUseIterator {
   OperandUseIterator(const class Use &Use) : Use(Use) {}
   friend class User;                                  // For constructor
 #define DEF_INSTR(ID, OPC, CLASS) friend class CLASS; // For constructor
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 
 public:
   using difference_type = std::ptrdiff_t;

@@ -1760,6 +1760,15 @@ public:
                                                      EndLoc);
   }
 
+  /// Build a new OpenMP 'permutation' clause.
+  OMPClause *RebuildOMPPermutationClause(ArrayRef<Expr *> PermExprs,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPPermutationClause(PermExprs, StartLoc,
+                                                           LParenLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'full' clause.
   OMPClause *RebuildOMPFullClause(SourceLocation StartLoc,
                                   SourceLocation EndLoc) {
@@ -4088,6 +4097,10 @@ public:
                                          StmtResult Loop) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Loop, BeginLoc, DirLoc, EndLoc, Clauses, Loop);
+  }
+
+  ExprResult RebuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
+    return getSema().OpenACC().ActOnOpenACCAsteriskSizeExpr(AsteriskLoc);
   }
 
 private:
@@ -8200,6 +8213,11 @@ TreeTransform<Derived>::TransformWhileStmt(WhileStmt *S) {
   if (Cond.isInvalid())
     return StmtError();
 
+  // OpenACC Restricts a while-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{SemaRef.OpenACC()};
+  SemaRef.OpenACC().ActOnWhileStmt(S->getBeginLoc());
+
   // Transform the body
   StmtResult Body = getDerived().TransformStmt(S->getBody());
   if (Body.isInvalid())
@@ -8217,6 +8235,11 @@ TreeTransform<Derived>::TransformWhileStmt(WhileStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformDoStmt(DoStmt *S) {
+  // OpenACC Restricts a do-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{SemaRef.OpenACC()};
+  SemaRef.OpenACC().ActOnDoStmt(S->getBeginLoc());
+
   // Transform the body
   StmtResult Body = getDerived().TransformStmt(S->getBody());
   if (Body.isInvalid())
@@ -8270,10 +8293,17 @@ TreeTransform<Derived>::TransformForStmt(ForStmt *S) {
   if (S->getInc() && !FullInc.get())
     return StmtError();
 
+  // OpenACC Restricts a for-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{SemaRef.OpenACC()};
+  SemaRef.OpenACC().ActOnForStmtBegin(S->getBeginLoc());
+
   // Transform the body
   StmtResult Body = getDerived().TransformStmt(S->getBody());
   if (Body.isInvalid())
     return StmtError();
+
+  SemaRef.OpenACC().ActOnForStmtEnd(S->getBeginLoc(), Body);
 
   if (!getDerived().AlwaysRebuild() &&
       Init.get() == S->getInit() &&
@@ -9008,9 +9038,16 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
     }
   }
 
+  // OpenACC Restricts a while-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{SemaRef.OpenACC()};
+  SemaRef.OpenACC().ActOnForStmtBegin(S->getBeginLoc());
+
   StmtResult Body = getDerived().TransformStmt(S->getBody());
   if (Body.isInvalid())
     return StmtError();
+
+  SemaRef.OpenACC().ActOnForStmtEnd(S->getBeginLoc(), Body);
 
   // Body has changed but we didn't rebuild the for-range statement. Rebuild
   // it now so we have a new statement to attach the body to.
@@ -10249,6 +10286,32 @@ OMPClause *TreeTransform<Derived>::TransformOMPSizesClause(OMPSizesClause *C) {
     return C;
   return RebuildOMPSizesClause(TransformedSizes, C->getBeginLoc(),
                                C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPPermutationClause(OMPPermutationClause *C) {
+  SmallVector<Expr *> TransformedArgs;
+  TransformedArgs.reserve(C->getNumLoops());
+  bool Changed = false;
+  for (Expr *E : C->getArgsRefs()) {
+    if (!E) {
+      TransformedArgs.push_back(nullptr);
+      continue;
+    }
+
+    ExprResult T = getDerived().TransformExpr(E);
+    if (T.isInvalid())
+      return nullptr;
+    if (E != T.get())
+      Changed = true;
+    TransformedArgs.push_back(T.get());
+  }
+
+  if (!Changed && !getDerived().AlwaysRebuild())
+    return C;
+  return RebuildOMPPermutationClause(TransformedArgs, C->getBeginLoc(),
+                                     C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -11822,6 +11885,61 @@ void OpenACCClauseTransform<Derived>::VisitReductionClause(
       ParsedClause.getLParenLoc(), C.getReductionOp(), ValidVars,
       ParsedClause.getEndLoc());
 }
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitCollapseClause(
+    const OpenACCCollapseClause &C) {
+  Expr *LoopCount = const_cast<Expr *>(C.getLoopCount());
+  assert(LoopCount && "collapse clause constructed with invalid loop count");
+
+  ExprResult NewLoopCount = Self.TransformExpr(LoopCount);
+
+  NewLoopCount = Self.getSema().OpenACC().ActOnIntExpr(
+      OpenACCDirectiveKind::Invalid, ParsedClause.getClauseKind(),
+      NewLoopCount.get()->getBeginLoc(), NewLoopCount.get());
+
+  NewLoopCount =
+      Self.getSema().OpenACC().CheckCollapseLoopCount(NewLoopCount.get());
+
+  if (!NewLoopCount.isUsable())
+    return;
+
+  ParsedClause.setCollapseDetails(C.hasForce(), NewLoopCount.get());
+  NewClause = OpenACCCollapseClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.isForce(),
+      ParsedClause.getLoopCount(), ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitTileClause(
+    const OpenACCTileClause &C) {
+
+  llvm::SmallVector<Expr *> TransformedExprs;
+
+  for (Expr *E : C.getSizeExprs()) {
+    ExprResult NewSizeExpr = Self.TransformExpr(E);
+
+    if (!NewSizeExpr.isUsable())
+      return;
+
+    NewSizeExpr = Self.getSema().OpenACC().ActOnIntExpr(
+        OpenACCDirectiveKind::Invalid, ParsedClause.getClauseKind(),
+        NewSizeExpr.get()->getBeginLoc(), NewSizeExpr.get());
+
+    NewSizeExpr = Self.getSema().OpenACC().CheckTileSizeExpr(NewSizeExpr.get());
+
+    if (!NewSizeExpr.isUsable())
+      return;
+    TransformedExprs.push_back(NewSizeExpr.get());
+  }
+
+  ParsedClause.setIntExprDetails(TransformedExprs);
+  NewClause = OpenACCTileClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getIntExprs(),
+      ParsedClause.getEndLoc());
+}
 } // namespace
 template <typename Derived>
 OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
@@ -11869,8 +11987,9 @@ StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
     return StmtError();
 
   // Transform Structured Block.
-  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),
-                                                C->getDirectiveKind());
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
+      getSema().OpenACC(), C->getDirectiveKind(), C->clauses(),
+      TransformedClauses);
   StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
   StrBlock = getSema().OpenACC().ActOnAssociatedStmt(
       C->getBeginLoc(), C->getDirectiveKind(), StrBlock);
@@ -11895,8 +12014,9 @@ TreeTransform<Derived>::TransformOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
     return StmtError();
 
   // Transform Loop.
-  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),
-                                                C->getDirectiveKind());
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
+      getSema().OpenACC(), C->getDirectiveKind(), C->clauses(),
+      TransformedClauses);
   StmtResult Loop = getDerived().TransformStmt(C->getLoop());
   Loop = getSema().OpenACC().ActOnAssociatedStmt(C->getBeginLoc(),
                                                  C->getDirectiveKind(), Loop);
@@ -11904,6 +12024,15 @@ TreeTransform<Derived>::TransformOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
   return getDerived().RebuildOpenACCLoopConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
       TransformedClauses, Loop);
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformOpenACCAsteriskSizeExpr(
+    OpenACCAsteriskSizeExpr *E) {
+  if (getDerived().AlwaysRebuild())
+    return getDerived().RebuildOpenACCAsteriskSizeExpr(E->getLocation());
+  // Nothing can ever change, so there is never anything to transform.
+  return E;
 }
 
 //===----------------------------------------------------------------------===//
@@ -13813,7 +13942,7 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
     }
 
     AllEmptyPacks &= Decls.empty();
-  };
+  }
 
   // C++ [temp.res]/8.4.2:
   //   The program is ill-formed, no diagnostic required, if [...] lookup for
@@ -15567,12 +15696,14 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       return true;
   }
 
+  if (ParenExpr *PE = dyn_cast_or_null<ParenExpr>(Result.get()))
+    PE->setIsProducedByFoldExpansion();
+
   // If we had no init and an empty pack, and we're not retaining an expansion,
   // then produce a fallback value or error.
   if (Result.isUnset())
     return getDerived().RebuildEmptyCXXFoldExpr(E->getEllipsisLoc(),
                                                 E->getOperator());
-
   return Result;
 }
 

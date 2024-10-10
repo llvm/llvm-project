@@ -110,6 +110,10 @@ bool GlobalValue::isInterposable() const {
 }
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
+  if (isTagged()) {
+    // Cannot create local aliases to MTE tagged globals.
+    return false;
+  }
   // See AsmPrinter::getSymbolPreferLocal(). For a deduplicate comdat kind,
   // references to a discarded local symbol from outside the group are not
   // allowed, so avoid the local alias.

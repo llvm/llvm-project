@@ -50,6 +50,8 @@ private:
                          MachineBasicBlock::iterator MBBI, unsigned Opcode);
   bool expandMV_FPR16INX(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI);
+  bool expandMV_FPR32INX(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI);
   bool expandRV32ZdinxStore(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI);
   bool expandRV32ZdinxLoad(MachineBasicBlock &MBB,
@@ -108,6 +110,8 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoMV_FPR16INX:
     return expandMV_FPR16INX(MBB, MBBI);
+  case RISCV::PseudoMV_FPR32INX:
+    return expandMV_FPR32INX(MBB, MBBI);
   case RISCV::PseudoRV32ZdinxSD:
     return expandRV32ZdinxStore(MBB, MBBI);
   case RISCV::PseudoRV32ZdinxLD:
@@ -278,6 +282,23 @@ bool RISCVExpandPseudo::expandMV_FPR16INX(MachineBasicBlock &MBB,
       MBBI->getOperand(0).getReg(), RISCV::sub_16, &RISCV::GPRRegClass);
   Register SrcReg = TRI->getMatchingSuperReg(
       MBBI->getOperand(1).getReg(), RISCV::sub_16, &RISCV::GPRRegClass);
+
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), DstReg)
+      .addReg(SrcReg, getKillRegState(MBBI->getOperand(1).isKill()))
+      .addImm(0);
+
+  MBBI->eraseFromParent(); // The pseudo instruction is gone now.
+  return true;
+}
+
+bool RISCVExpandPseudo::expandMV_FPR32INX(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MBBI) {
+  DebugLoc DL = MBBI->getDebugLoc();
+  const TargetRegisterInfo *TRI = STI->getRegisterInfo();
+  Register DstReg = TRI->getMatchingSuperReg(
+      MBBI->getOperand(0).getReg(), RISCV::sub_32, &RISCV::GPRRegClass);
+  Register SrcReg = TRI->getMatchingSuperReg(
+      MBBI->getOperand(1).getReg(), RISCV::sub_32, &RISCV::GPRRegClass);
 
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI), DstReg)
       .addReg(SrcReg, getKillRegState(MBBI->getOperand(1).isKill()))

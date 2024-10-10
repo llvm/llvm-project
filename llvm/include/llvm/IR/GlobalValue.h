@@ -303,9 +303,7 @@ public:
   void setDSOLocal(bool Local) { IsDSOLocal = Local; }
 
   bool isDSOLocal() const {
-    // Tagged globals cannot be DSO local, because the linker will put the
-    // tagged pointers into the GOT.
-    return IsDSOLocal && !isTagged();
+    return IsDSOLocal;
   }
 
   bool hasPartition() const {
