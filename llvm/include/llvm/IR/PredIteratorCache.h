@@ -26,7 +26,7 @@ namespace llvm {
 /// wants the predecessor list for the same blocks.
 class PredIteratorCache {
   /// Cached list of predecessors, allocated in Memory.
-  DenseMap<BasicBlock *, ArrayRef<BasicBlock *>> BlockToPredsMap;
+  SmallDenseMap<BasicBlock *, ArrayRef<BasicBlock *>, 16> BlockToPredsMap;
 
   /// Memory - This is the space that holds cached preds.
   BumpPtrAllocator Memory;

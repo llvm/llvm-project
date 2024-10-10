@@ -34,7 +34,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-ssaupdater"
 
-using AvailableValsTy = DenseMap<MachineBasicBlock *, Register>;
+using AvailableValsTy = SmallDenseMap<MachineBasicBlock *, Register, 16>;
 
 static AvailableValsTy &getAvailableVals(void *AV) {
   return *static_cast<AvailableValsTy*>(AV);

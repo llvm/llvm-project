@@ -107,12 +107,13 @@ inline bool isNoOpWithoutInvoke(EHPersonality Pers) {
 bool canSimplifyInvokeNoUnwind(const Function *F);
 
 typedef TinyPtrVector<BasicBlock *> ColorVector;
+typedef SmallDenseMap<BasicBlock *, ColorVector, 16> BlockColorMapT;
 
 /// If an EH funclet personality is in use (see isFuncletEHPersonality),
 /// this will recompute which blocks are in which funclet. It is possible that
 /// some blocks are in multiple funclets. Consider this analysis to be
 /// expensive.
-DenseMap<BasicBlock *, ColorVector> colorEHFunclets(Function &F);
+BlockColorMapT colorEHFunclets(Function &F);
 
 } // end namespace llvm
 

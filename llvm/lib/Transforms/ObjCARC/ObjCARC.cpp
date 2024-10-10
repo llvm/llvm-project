@@ -24,7 +24,7 @@ using namespace llvm::objcarc;
 CallInst *objcarc::createCallInstWithColors(
     FunctionCallee Func, ArrayRef<Value *> Args, const Twine &NameStr,
     BasicBlock::iterator InsertBefore,
-    const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
+    const BlockColorMapT &BlockColors) {
   FunctionType *FTy = Func.getFunctionType();
   Value *Callee = Func.getCallee();
   SmallVector<OperandBundleDef, 1> OpBundles;
@@ -73,13 +73,13 @@ BundledRetainClaimRVs::insertAfterInvokes(Function &F, DominatorTree *DT) {
 
 CallInst *BundledRetainClaimRVs::insertRVCall(BasicBlock::iterator InsertPt,
                                               CallBase *AnnotatedCall) {
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  BlockColorMapT BlockColors;
   return insertRVCallWithColors(InsertPt, AnnotatedCall, BlockColors);
 }
 
 CallInst *BundledRetainClaimRVs::insertRVCallWithColors(
     BasicBlock::iterator InsertPt, CallBase *AnnotatedCall,
-    const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
+    const BlockColorMapT &BlockColors) {
   IRBuilder<> Builder(InsertPt->getParent(), InsertPt);
   Function *Func = *objcarc::getAttachedARCFunction(AnnotatedCall);
   assert(Func && "operand isn't a Function");

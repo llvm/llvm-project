@@ -322,7 +322,7 @@ class LazyValueInfoImpl {
   SmallVector<std::pair<BasicBlock*, Value*>, 8> BlockValueStack;
 
   /// Keeps track of which block-value pairs are in BlockValueStack.
-  DenseSet<std::pair<BasicBlock*, Value*> > BlockValueSet;
+  SmallDenseSet<std::pair<BasicBlock*, Value*>, 16> BlockValueSet;
 
   /// Push BV onto BlockValueStack unless it's already in there.
   /// Returns true on success.

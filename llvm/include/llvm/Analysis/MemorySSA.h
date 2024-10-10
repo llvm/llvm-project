@@ -879,7 +879,7 @@ private:
   Loop *L = nullptr;
 
   // Memory SSA mappings
-  DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
+  SmallDenseMap<const Value *, MemoryAccess *, 16> ValueToMemoryAccess;
 
   // These two mappings contain the main block to access/def mappings for
   // MemorySSA. The list contained in PerBlockAccesses really owns all the
@@ -895,7 +895,7 @@ private:
   // Note that the numbering is local to a block, even though the map is
   // global.
   mutable SmallPtrSet<const BasicBlock *, 16> BlockNumberingValid;
-  mutable DenseMap<const MemoryAccess *, unsigned long> BlockNumbering;
+  mutable SmallDenseMap<const MemoryAccess *, unsigned long, 16> BlockNumbering;
 
   // Memory SSA building info
   std::unique_ptr<ClobberWalkerBase> WalkerBase;

@@ -417,7 +417,7 @@ static bool LinearizeExprTree(Instruction *I,
 
   // Leaves - Keeps track of the set of putative leaves as well as the number of
   // paths to each leaf seen so far.
-  using LeafMap = DenseMap<Value *, uint64_t>;
+  using LeafMap = SmallDenseMap<Value *, uint64_t, 16>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
   const DataLayout DL = I->getDataLayout();

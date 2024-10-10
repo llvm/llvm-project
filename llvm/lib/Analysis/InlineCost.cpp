@@ -608,7 +608,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   /// The mapping of caller Alloca values to their accumulated cost savings. If
   /// we have to disable SROA for one of the allocas, this tells us how much
   /// cost must be added.
-  DenseMap<AllocaInst *, int> SROAArgCosts;
+  SmallDenseMap<AllocaInst *, int, 16> SROAArgCosts;
 
   /// Return true if \p Call is a cold callsite.
   bool isColdCallSite(CallBase &Call, BlockFrequencyInfo *CallerBFI);

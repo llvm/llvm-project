@@ -97,8 +97,8 @@ struct LoopBodyTraits {
 class LoopBlocksDFS {
 public:
   /// Postorder list iterators.
-  typedef std::vector<BasicBlock*>::const_iterator POIterator;
-  typedef std::vector<BasicBlock*>::const_reverse_iterator RPOIterator;
+  typedef SmallVector<BasicBlock*, 16>::const_iterator POIterator;
+  typedef SmallVector<BasicBlock*, 16>::const_reverse_iterator RPOIterator;
 
   friend class LoopBlocksTraversal;
 
@@ -108,8 +108,8 @@ private:
   /// Map each block to its postorder number. A block is only mapped after it is
   /// preorder visited by DFS. It's postorder number is initially zero and set
   /// to nonzero after it is finished by postorder traversal.
-  DenseMap<BasicBlock*, unsigned> PostNumbers;
-  std::vector<BasicBlock*> PostBlocks;
+  SmallDenseMap<BasicBlock*, unsigned, 16> PostNumbers;
+  SmallVector<BasicBlock*, 16> PostBlocks;
 
 public:
   LoopBlocksDFS(Loop *Container) :

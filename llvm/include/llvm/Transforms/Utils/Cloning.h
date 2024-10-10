@@ -81,7 +81,7 @@ struct ClonedCodeInfo {
   /// Like VMap, but maps only unsimplified instructions. Values in the map
   /// may be dangling, it is only intended to be used via isSimplified(), to
   /// check whether the main VMap mapping involves simplification or not.
-  DenseMap<const Value *, const Value *> OrigVMap;
+  SmallDenseMap<const Value *, const Value *, 16> OrigVMap;
 
   ClonedCodeInfo() = default;
 

@@ -88,7 +88,7 @@ class ObjCARCContract {
   bool tryToPeepholeInstruction(
       Function &F, Instruction *Inst, inst_iterator &Iter,
       bool &TailOkForStoreStrong,
-      const DenseMap<BasicBlock *, ColorVector> &BlockColors);
+      const BlockColorMapT &BlockColors);
 
   bool optimizeRetainCall(Function &F, Instruction *Retain);
 
@@ -97,7 +97,7 @@ class ObjCARCContract {
 
   void tryToContractReleaseIntoStoreStrong(
       Instruction *Release, inst_iterator &Iter,
-      const DenseMap<BasicBlock *, ColorVector> &BlockColors);
+      const BlockColorMapT &BlockColors);
 
 public:
   bool init(Module &M);
@@ -338,7 +338,7 @@ findRetainForStoreStrongContraction(Value *New, StoreInst *Store,
 ///     safe.
 void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
     Instruction *Release, inst_iterator &Iter,
-    const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
+    const BlockColorMapT &BlockColors) {
   // See if we are releasing something that we just loaded.
   auto *Load = dyn_cast<LoadInst>(GetArgRCIdentityRoot(Release));
   if (!Load || !Load->isSimple())
@@ -415,7 +415,7 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
 bool ObjCARCContract::tryToPeepholeInstruction(
     Function &F, Instruction *Inst, inst_iterator &Iter,
     bool &TailOkForStoreStrongs,
-    const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
+    const BlockColorMapT &BlockColors) {
   // Only these library routines return their argument. In particular,
   // objc_retainBlock does not necessarily return its argument.
   ARCInstKind Class = GetBasicARCInstKind(Inst);
@@ -561,7 +561,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   Changed |= R.first;
   CFGChanged |= R.second;
 
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  BlockColorMapT BlockColors;
   if (F.hasPersonalityFn() &&
       isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     BlockColors = colorEHFunclets(F);

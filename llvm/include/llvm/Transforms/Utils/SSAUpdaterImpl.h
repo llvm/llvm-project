@@ -70,7 +70,7 @@ private:
       : BB(ThisBB), AvailableVal(V), DefBB(V ? this : nullptr) {}
   };
 
-  using AvailableValsTy = DenseMap<BlkT *, ValT>;
+  using AvailableValsTy = SmallDenseMap<BlkT *, ValT, 16>;
 
   AvailableValsTy *AvailableVals;
 

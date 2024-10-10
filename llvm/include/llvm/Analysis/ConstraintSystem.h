@@ -51,7 +51,7 @@ class ConstraintSystem {
 
   /// A map of variables (IR values) to their corresponding index in the
   /// constraint system.
-  DenseMap<Value *, unsigned> Value2Index;
+  SmallDenseMap<Value *, unsigned, 16> Value2Index;
 
   // Eliminate constraints from the system using Fourier–Motzkin elimination.
   bool eliminateUsingFM();
@@ -70,7 +70,7 @@ public:
       Value2Index.insert({Arg, Value2Index.size() + 1});
     }
   }
-  ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
+  ConstraintSystem(const SmallDenseMap<Value *, unsigned, 16> &Value2Index)
       : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
 
   bool addVariableRow(ArrayRef<int64_t> R) {
@@ -92,8 +92,8 @@ public:
     return true;
   }
 
-  DenseMap<Value *, unsigned> &getValue2Index() { return Value2Index; }
-  const DenseMap<Value *, unsigned> &getValue2Index() const {
+  SmallDenseMap<Value *, unsigned, 16> &getValue2Index() { return Value2Index; }
+  const SmallDenseMap<Value *, unsigned, 16> &getValue2Index() const {
     return Value2Index;
   }
 

@@ -285,10 +285,10 @@ public:
     }
   }
 
-  DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
+  SmallDenseMap<Value *, unsigned, 16> &getValue2Index(bool Signed) {
     return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
   }
-  const DenseMap<Value *, unsigned> &getValue2Index(bool Signed) const {
+  const SmallDenseMap<Value *, unsigned, 16> &getValue2Index(bool Signed) const {
     return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
   }
 
@@ -893,7 +893,7 @@ void ConstraintInfo::transferToOtherSystem(
 #ifndef NDEBUG
 
 static void dumpConstraint(ArrayRef<int64_t> C,
-                           const DenseMap<Value *, unsigned> &Value2Index) {
+                           const SmallDenseMap<Value *, unsigned, 16> &Value2Index) {
   ConstraintSystem CS(Value2Index);
   CS.addVariableRowFill(C);
   CS.dump();
