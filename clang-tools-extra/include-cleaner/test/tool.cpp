@@ -38,13 +38,12 @@ int x = foo();
 //      PRINT: #include "foo.h"
 //  PRINT-NOT: {{^}}#include "foobar.h"{{$}}
 
+//        RUN: mkdir -p $(dirname %t)/out
 //        RUN: cp %s %t.cpp
-//        RUN: clang-include-cleaner -edit %t.cpp -- -I%S/Inputs/
-//        RUN: FileCheck --match-full-lines --check-prefix=EDIT %s < %t.cpp
-//       EDIT: #include "foo.h"
-//   EDIT-NOT: {{^}}#include "foobar.h"{{$}}
-
-//        RUN: cp %s %t.cpp
-//        RUN: clang-include-cleaner -edit --ignore-headers="foobar\.h,foo\.h" %t.cpp -- -I%S/Inputs/ 
-//        RUN: FileCheck --match-full-lines --check-prefix=EDIT2 %s < %t.cpp
-//  EDIT2-NOT: {{^}}#include "foo.h"{{$}}
+//        RUN: echo "[{\"directory\":\"$(dirname %t)/out\",\"file\":\"../$(basename %t).cpp\",\"command\":\":clang++ -I%S/Inputs/ ../$(basename %t).cpp\"}]" > $(dirname %t)/out/compile_commands.json
+//       RUN: pushd $(dirname %t)
+//       RUN: clang-include-cleaner -p out -edit $(basename %t).cpp
+//       RUN: popd
+//       RUN: FileCheck --match-full-lines --check-prefix=EDIT3 %s < %t.cpp
+//     EDIT3: #include "foo.h"
+// EDIT3-NOT: {{^}}#include "foobar.h"{{$}}
