@@ -88,6 +88,9 @@ operator""  _div();
 using ::cwg2521::operator"" _\u03C0___;
 using ::cwg2521::operator""_div;
 // since-cxx11-warning@-2 {{identifier '_π___' preceded by whitespace in a literal operator declaration is deprecated}}
+
+long double operator"" _RESERVED(long double);
+// since-cxx11-warning@-1 {{identifier '_RESERVED' preceded by whitespace in a literal operator declaration is deprecated}}
 #pragma clang diagnostic pop
 #endif
 } // namespace cwg2521
