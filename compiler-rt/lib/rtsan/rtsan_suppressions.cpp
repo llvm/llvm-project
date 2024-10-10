@@ -72,10 +72,10 @@ bool __rtsan::IsStackTraceSuppressed(const StackTrace &stack) {
   if (!suppression_ctx->HasSuppressionType(call_stack_flag))
     return false;
 
+  Symbolizer *symbolizer = Symbolizer::GetOrInit();
   for (uptr i = 0; i < stack.size && stack.trace[i]; i++) {
     const uptr addr = stack.trace[i];
 
-    Symbolizer *symbolizer = Symbolizer::GetOrInit();
     SymbolizedStackHolder symbolized_stack(symbolizer->SymbolizePC(addr));
     const SymbolizedStack *frames = symbolized_stack.get();
     CHECK(frames);
