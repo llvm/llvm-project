@@ -2,7 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangApplyReplacements
+add_clang_library(clangApplyReplacements STATIC
   lib/Tooling/ApplyReplacements.cpp
 
   DEPENDS

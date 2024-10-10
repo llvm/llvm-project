@@ -172,6 +172,7 @@ size_t SBThread::GetStopReasonDataCount() {
         case eStopReasonInstrumentation:
         case eStopReasonProcessorTrace:
         case eStopReasonVForkDone:
+        case eStopReasonHistoryBoundary:
           // There is no data for these stop reasons.
           return 0;
 
@@ -233,6 +234,7 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
         case eStopReasonInstrumentation:
         case eStopReasonProcessorTrace:
         case eStopReasonVForkDone:
+        case eStopReasonHistoryBoundary:
           // There is no data for these stop reasons.
           return 0;
 
@@ -605,8 +607,11 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
     if (end_line == LLDB_INVALID_LINE_NUMBER)
       range = sc.line_entry.range;
     else {
-      if (!sc.GetAddressRangeFromHereToEndLine(end_line, range, error.ref()))
+      llvm::Error err = sc.GetAddressRangeFromHereToEndLine(end_line, range);
+      if (err) {
+        error = Status::FromErrorString(llvm::toString(std::move(err)).c_str());
         return;
+      }
     }
 
     const LazyBool step_out_avoids_code_without_debug_info =
