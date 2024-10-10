@@ -1,4 +1,5 @@
-//===-- ObjectFileXCOFF.h --------------------------------------- -*- C++ -*-===//
+//===-- ObjectFileXCOFF.h --------------------------------------- -*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,7 +77,7 @@ public:
                       bool value_is_offset) override;
 
   bool SetLoadAddressByType(lldb_private::Target &target, lldb::addr_t value,
-                              bool value_is_offset, int type_id) override;
+                            bool value_is_offset, int type_id) override;
 
   lldb::ByteOrder GetByteOrder() const override;
 
@@ -123,15 +124,15 @@ public:
   lldb_private::DataExtractor ReadImageData(uint32_t offset, size_t size);
 
   ObjectFileXCOFF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                lldb::offset_t data_offset, const lldb_private::FileSpec *file,
-                lldb::offset_t offset, lldb::offset_t length);
+                  lldb::offset_t data_offset,
+                  const lldb_private::FileSpec *file, lldb::offset_t offset,
+                  lldb::offset_t length);
 
   ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
-                lldb::DataBufferSP header_data_sp,
-                const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
+                  lldb::DataBufferSP header_data_sp,
+                  const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
 protected:
-
   typedef struct xcoff_header {
     uint16_t magic;
     uint16_t nsects;
@@ -209,8 +210,8 @@ protected:
   } xcoff_sym_csect_aux_entry_t;
 
   static bool ParseXCOFFHeader(lldb_private::DataExtractor &data,
-                              lldb::offset_t *offset_ptr,
-                              xcoff_header_t &xcoff_header);
+                               lldb::offset_t *offset_ptr,
+                               xcoff_header_t &xcoff_header);
   bool ParseXCOFFOptionalHeader(lldb_private::DataExtractor &data,
                                 lldb::offset_t *offset_ptr);
   bool ParseSectionHeaders(uint32_t offset);
