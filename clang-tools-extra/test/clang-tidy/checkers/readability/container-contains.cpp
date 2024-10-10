@@ -1,4 +1,7 @@
-// RUN: %check_clang_tidy -std=c++20-or-later %s readability-container-contains %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s readability-container-contains %t -- \
+// RUN:   -- -isystem %clang_tidy_headers
+
+#include <string>
 
 // Some *very* simplified versions of `map` etc.
 namespace std {
@@ -28,6 +31,8 @@ struct multimap {
   unsigned count(const Key &K) const;
   bool contains(const Key &K) const;
 };
+
+
 
 } // namespace std
 
@@ -452,4 +457,30 @@ void testOperandPermutations(std::map<int, int>& Map) {
   if (Map.end() == Map.find(0)) {};
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
   // CHECK-FIXES: if (!Map.contains(0)) {};
+}
+
+void testStringNops(std::string Str, std::string SubStr, std::string_view StrView) {
+  if (Str.find("test") == std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!Str.contains("test")) {};
+
+  if (Str.find('c') != std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Str.contains('c')) {};
+
+  if (Str.find('c') != Str.npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Str.contains('c')) {};
+
+  if (StrView.find("test") == std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!StrView.contains("test")) {};
+
+  if (StrView.find('c') != std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (StrView.contains('c')) {};
+
+  if (StrView.find('c') != StrView.npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (StrView.contains('c')) {};
 }
