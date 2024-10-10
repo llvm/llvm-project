@@ -198,6 +198,8 @@ public:
       /// The QualType, if this is a DynamicAllocLValue.
       void *DynamicAllocType;
     };
+  public:
+    uint64_t Metadata{0};
   };
 
   /// A FieldDecl or CXXRecordDecl, along with a flag indicating whether we
@@ -527,6 +529,8 @@ public:
   }
 
   const LValueBase getLValueBase() const;
+  uint64_t getLValueMetadata() const;
+  uint64_t & getLValueMetadata();
   CharUnits &getLValueOffset();
   const CharUnits &getLValueOffset() const {
     return const_cast<APValue*>(this)->getLValueOffset();

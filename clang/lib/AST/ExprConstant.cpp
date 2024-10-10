@@ -4498,6 +4498,11 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
                                bool WantObjectRepresentation = false) {
   if (LVal.Designator.Invalid)
     return false;
+  
+  if (LVal.Base.Metadata != 0) {
+    Info.FFDiag(Conv, diag::note_constexpr_dereferencing_tagged_pointer);
+    return false;
+  }
 
   // Check for special cases where there is no existing APValue to look at.
   const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
@@ -9735,6 +9740,87 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(E);
 
   switch (BuiltinOp) {
+  // emulation of pointer tagging without actually touching pointer value
+  // as there is no such thing as address here, so tag is stored as a metadata in lvalue base
+  case Builtin::BI__builtin_tag_pointer_mask_or: { 
+      APSInt Value, Mask;
+      if (!evaluatePointer(E->getArg(0), Result))
+        return Error(E);
+  
+      if (!EvaluateInteger(E->getArg(1), Value, Info))
+        return Error(E);
+  
+      if (!EvaluateInteger(E->getArg(2), Mask, Info))
+        return Error(E);
+      
+      if (Mask.getLimitedValue() == 0) {
+        CCEDiag(E->getArg(2), diag::note_constexpr_tagging_with_empty_mask);
+        return false;
+      }
+  
+      Result.Base.Metadata = (Result.Base.Metadata & ~Mask.getLimitedValue()) | (Value.getLimitedValue() & Mask.getLimitedValue());
+      return true;
+    }
+
+  // alternative approach to tagging which shifts pointer
+  // here we are only shifting metadata
+  case Builtin::BI__builtin_tag_pointer_shift_or: {
+    APSInt Value, Shift;
+    if (!evaluatePointer(E->getArg(0), Result))
+      return Error(E);
+
+    if (!EvaluateInteger(E->getArg(1), Value, Info))
+      return Error(E);
+
+    if (!EvaluateInteger(E->getArg(2), Shift, Info))
+      return Error(E);
+
+    if (Shift.getLimitedValue() == 0) {
+      CCEDiag(E->getArg(2), diag::note_constexpr_tagging_with_shift_zero);
+      return false;
+    }
+
+    const uint64_t Mask = (1ull << static_cast<uint64_t>(Shift.getLimitedValue())) - 1ull;
+    Result.Base.Metadata = (Result.Base.Metadata << static_cast<uint64_t>(Shift.getLimitedValue())) | (Value.getLimitedValue() & Mask);
+    return true;
+  }
+  
+  // recover pointer by masking metadata
+  // exprconstant allows dereferencing only metadata == 0 pointer
+  case Builtin::BI__builtin_tag_pointer_mask: {
+    APSInt Mask;
+    if (!evaluatePointer(E->getArg(0), Result))
+        return Error(E);
+  
+    if (!EvaluateInteger(E->getArg(1), Mask, Info))
+      return Error(E);
+    
+    if (Mask.getLimitedValue() == 0) {
+      CCEDiag(E->getArg(2), diag::note_constexpr_tagging_with_empty_mask);
+      return false;
+    }
+  
+    Result.Base.Metadata = (Result.Base.Metadata & Mask.getLimitedValue());
+    return true;
+  }
+
+  // shifting back pointer (also can convert tagged pointer back to normal pointer)
+  case Builtin::BI__builtin_tag_pointer_unshift: {
+    APSInt Shift;
+    if (!evaluatePointer(E->getArg(0), Result))
+        return Error(E);
+  
+    if (!EvaluateInteger(E->getArg(1), Shift, Info))
+      return Error(E);
+    
+    if (Shift.getLimitedValue() == 0) {
+      CCEDiag(E->getArg(2), diag::note_constexpr_tagging_with_shift_zero);
+      return false;
+    }
+  
+    Result.Base.Metadata = (Result.Base.Metadata >> static_cast<uint64_t>(Shift.getLimitedValue()));
+    return true;
+  }
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
@@ -12662,6 +12748,25 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   default:
     return false;
 
+  case Builtin::BI__builtin_tag_pointer_mask_as_int: {
+    LValue Pointer;
+    APSInt Mask;
+  
+    if (!EvaluatePointer(E->getArg(0), Pointer, Info))
+      return Error(E);
+
+    if (!EvaluateInteger(E->getArg(1), Mask, Info))
+      return Error(E);
+    
+    if (Mask.getLimitedValue() == 0) {
+      CCEDiag(E->getArg(2), diag::note_constexpr_tagging_with_empty_mask);
+      return false;
+    }
+  
+    const uint64_t Result = Pointer.Base.Metadata & (static_cast<uint64_t>(Mask.getLimitedValue()));
+    return Success(Result, E);
+  }
+
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
     // The type was checked when we built the expression.
@@ -14219,6 +14324,13 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       return Success(CmpResult::Less, E);
     if (CompareLHS > CompareRHS)
       return Success(CmpResult::Greater, E);
+    
+    // this makes tagged pointer not equal to original pointer
+    if (LHSValue.Base.Metadata < RHSValue.Base.Metadata)
+      return Success(CmpResult::Less, E);
+    if (LHSValue.Base.Metadata > RHSValue.Base.Metadata)
+      return Success(CmpResult::Greater, E);
+    
     return Success(CmpResult::Equal, E);
   }
 
