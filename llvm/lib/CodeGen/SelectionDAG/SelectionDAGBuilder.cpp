@@ -6866,6 +6866,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)), Flags));
     return;
   }
+  case Intrinsic::atan2:
+    setValue(&I, DAG.getNode(ISD::FATAN2, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
   case Intrinsic::lround:
   case Intrinsic::llround:
   case Intrinsic::lrint:
@@ -9356,6 +9362,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_atanf:
       case LibFunc_atanl:
         if (visitUnaryFloatCall(I, ISD::FATAN))
+          return;
+        break;
+      case LibFunc_atan2:
+      case LibFunc_atan2f:
+      case LibFunc_atan2l:
+        if (visitBinaryFloatCall(I, ISD::FATAN2))
           return;
         break;
       case LibFunc_sinh:

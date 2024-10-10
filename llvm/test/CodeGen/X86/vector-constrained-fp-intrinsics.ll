@@ -8672,6 +8672,263 @@ entry:
   ret <4 x double> %atan
 }
 
+define <1 x float> @constrained_vector_atan2_v1f32() #0 {
+; CHECK-LABEL: constrained_vector_atan2_v1f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [2.3E+1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    callq atan2f@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_atan2_v1f32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [2.3E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    callq atan2f@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %atan2 = call <1 x float> @llvm.experimental.constrained.atan2.v1f32(
+                             <1 x float> <float 42.0>,
+                             <1 x float> <float 23.0>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict") #0
+  ret <1 x float> %atan2
+}
+
+define <2 x double> @constrained_vector_atan2_v2f64() #0 {
+; CHECK-LABEL: constrained_vector_atan2_v2f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
+; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_atan2_v2f64:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    subq $24, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 32
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3100000000000001E+1,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3E+1,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    addq $24, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %atan2 = call <2 x double> @llvm.experimental.constrained.atan2.v2f64(
+                             <2 x double> <double 42.0, double 42.1>,
+                             <2 x double> <double 23.0, double 23.1>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict") #0
+  ret <2 x double> %atan2
+}
+
+define <3 x float> @constrained_vector_atan2_v3f32() #0 {
+; CHECK-LABEL: constrained_vector_atan2_v3f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [4.4E+1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [2.5E+1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    callq atan2f@PLT
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [2.3E+1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    callq atan2f@PLT
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [4.3E+1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [2.4E+1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    callq atan2f@PLT
+; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_atan2_v3f32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    subq $40, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 48
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [4.4E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [2.5E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    callq atan2f@PLT
+; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [2.3E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    callq atan2f@PLT
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [4.3E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [2.4E+1,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    callq atan2f@PLT
+; AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; AVX-NEXT:    vinsertps $32, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    addq $40, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %atan2 = call <3 x float> @llvm.experimental.constrained.atan2.v3f32(
+                              <3 x float> <float 42.0, float 43.0, float 44.0>,
+                              <3 x float> <float 23.0, float 24.0, float 25.0>,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict") #0
+  ret <3 x float> %atan2
+}
+
+define <3 x double> @constrained_vector_atan2_v3f64() #0 {
+; CHECK-LABEL: constrained_vector_atan2_v3f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3199999999999999E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    wait
+; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero
+; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_atan2_v3f64:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    subq $40, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 48
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3100000000000001E+1,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3E+1,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3199999999999999E+1,0.0E+0]
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX-NEXT:    addq $40, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %atan2 = call <3 x double> @llvm.experimental.constrained.atan2.v3f64(
+                          <3 x double> <double 42.0, double 42.1, double 42.2>,
+                          <3 x double> <double 23.0, double 23.1, double 23.2>,
+                          metadata !"round.dynamic",
+                          metadata !"fpexcept.strict") #0
+  ret <3 x double> %atan2
+}
+
+define <4 x double> @constrained_vector_atan2_v4f64() #0 {
+; CHECK-LABEL: constrained_vector_atan2_v4f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2299999999999997E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3300000000000001E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3199999999999999E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+;
+; AVX-LABEL: constrained_vector_atan2_v4f64:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    subq $40, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 48
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2299999999999997E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3300000000000001E+1,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3199999999999999E+1,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3100000000000001E+1,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.3E+1,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; AVX-NEXT:    addq $40, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %atan2 = call <4 x double> @llvm.experimental.constrained.atan2.v4f64(
+                             <4 x double> <double 42.0, double 42.1,
+                                           double 42.2, double 42.3>,
+                             <4 x double> <double 23.0, double 23.1,
+                                           double 23.2, double 23.3>,
+                             metadata !"round.dynamic",
+                             metadata !"fpexcept.strict") #0
+  ret <4 x double> %atan2
+}
+
 define <1 x float> @constrained_vector_cosh_v1f32() #0 {
 ; CHECK-LABEL: constrained_vector_cosh_v1f32:
 ; CHECK:       # %bb.0: # %entry
@@ -9546,6 +9803,7 @@ declare <4 x double> @llvm.experimental.constrained.tan.v4f64(<4 x double>, meta
 declare <4 x double> @llvm.experimental.constrained.asin.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.acos.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.atan.v4f64(<4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.atan2.v4f64(<4 x double>, <4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.sinh.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.cosh.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.tanh.v4f64(<4 x double>, metadata, metadata)
