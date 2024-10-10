@@ -407,8 +407,9 @@ Status ProcessKDP::DoResume(RunDirection direction) {
   Log *log = GetLog(KDPLog::Process);
 
   if (direction == RunDirection::eRunReverse) {
-    error.SetErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes", GetPluginName());
+    error.FromErrorStringWithFormatv(
+        "error: {0} does not support reverse execution of processes",
+        GetPluginName());
     return error;
   }
 
