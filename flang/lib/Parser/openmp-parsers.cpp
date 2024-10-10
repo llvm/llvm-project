@@ -113,7 +113,7 @@ static inline OmpMapClause makeMapClause(
       std::move(std::get<0>(mod)), std::move(std::get<1>(mod)), std::move(obj)};
 }
 
-TYPE_PARSER(construct<OmpMapClause>(applyFunction(makeMapClause,
+TYPE_PARSER(construct<OmpMapClause>(applyFunction<OmpMapClause>(makeMapClause,
     (MapModifiers(","_tok) ||
         MapModifiers(maybe(","_tok),
             "the specification of modifiers without comma separators for the "
