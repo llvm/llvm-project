@@ -1005,12 +1005,14 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
     R.moveBefore(*IRVPBB, IRVPBB->end());
   }
   VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
-  VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-  VPBlockUtils::connectBlocks(PredVPBB, IRVPBB);
-  for (auto *Succ : to_vector(VPBB->getSuccessors())) {
-    VPBlockUtils::connectBlocks(IRVPBB, Succ);
-    VPBlockUtils::disconnectBlocks(VPBB, Succ);
-  }
+  PredVPBB->replaceSuccessor(VPBB, IRVPBB);
+  IRVPBB->setPredecessors({PredVPBB});
+  for (auto *Succ : to_vector(VPBB->getSuccessors()))
+    Succ->replacePredecessor(VPBB, IRVPBB);
+  IRVPBB->setSuccessors(VPBB->getSuccessors());
+
+  VPBB->clearSuccessors();
+  VPBB->clearPredecessors();
   delete VPBB;
 }
 
