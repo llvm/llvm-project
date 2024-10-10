@@ -986,6 +986,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case LifetimeExtendedTemporary:
     case RequiresExprBody:
     case ImplicitConceptSpecialization:
+    case FunctionParmPack:
       // Never looked up by name.
       return 0;
   }

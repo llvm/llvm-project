@@ -2355,6 +2355,8 @@ DEF_TRAVERSE_DECL(ImplicitConceptSpecializationDecl, {
   TRY_TO(TraverseTemplateArguments(D->getTemplateArguments()));
 })
 
+DEF_TRAVERSE_DECL(FunctionParmPackDecl, {})
+
 #undef DEF_TRAVERSE_DECL
 
 // ----------------- Stmt traversal -----------------
