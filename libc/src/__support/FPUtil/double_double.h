@@ -122,10 +122,10 @@ LIBC_INLINE DoubleDouble quick_mult(double a, const DoubleDouble &b) {
   return r;
 }
 
-template <bool NO_FMA_ALL_ROUNDINGS = false>
+template <size_t SPLIT_B = 27>
 LIBC_INLINE DoubleDouble quick_mult(const DoubleDouble &a,
                                     const DoubleDouble &b) {
-  DoubleDouble r = exact_mult<NO_FMA_ALL_ROUNDINGS>(a.hi, b.hi);
+  DoubleDouble r = exact_mult<SPLIT_B>(a.hi, b.hi);
   double t1 = multiply_add(a.hi, b.lo, r.lo);
   double t2 = multiply_add(a.lo, b.hi, t1);
   r.lo = t2;
