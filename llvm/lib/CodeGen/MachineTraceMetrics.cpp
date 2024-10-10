@@ -14,7 +14,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -44,9 +43,8 @@ char MachineTraceMetrics::ID = 0;
 
 char &llvm::MachineTraceMetricsID = MachineTraceMetrics::ID;
 
-INITIALIZE_PASS_BEGIN(MachineTraceMetrics, DEBUG_TYPE,
-                      "Machine Trace Metrics", false, true)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_BEGIN(MachineTraceMetrics, DEBUG_TYPE, "Machine Trace Metrics",
+                      false, true)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(MachineTraceMetrics, DEBUG_TYPE,
                     "Machine Trace Metrics", false, true)
@@ -57,7 +55,6 @@ MachineTraceMetrics::MachineTraceMetrics() : MachineFunctionPass(ID) {
 
 void MachineTraceMetrics::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
