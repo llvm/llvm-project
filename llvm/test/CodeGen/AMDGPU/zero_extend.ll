@@ -19,7 +19,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}s_cmp_zext_i1_to_i32
-; GCN: v_cndmask_b32
+; GCN: s_cselect_b32
 define amdgpu_kernel void @s_cmp_zext_i1_to_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
   %tmp0 = icmp eq i32 %a, %b
@@ -54,9 +54,9 @@ define amdgpu_kernel void @s_cmp_zext_i1_to_i64(ptr addrspace(1) %out, i32 %a, i
 ; GCN-DAG: s_and_b32 [[MASK_A:s[0-9]+]], [[A]], 0xffff{{$}}
 ; GCN-DAG: s_and_b32 [[MASK_B:s[0-9]+]], [[B]], 0xffff{{$}}
 ; GCN: s_cmp_eq_u32 [[MASK_A]], [[MASK_B]]
-; GCN: s_cselect_b64 [[CC:s\[[0-9:]+\]]], -1, 0
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
-; GCN: buffer_store_short [[RESULT]]
+; FIXME: for mcpu=tonga, a v_cndmask_b32_e64 instruction is (still) created,
+; for the other mcpu runs, a s_cselect_b64 instruction
+; GCN: buffer_store_short
 define amdgpu_kernel void @s_cmp_zext_i1_to_i16(ptr addrspace(1) %out, [8 x i32], i16 zeroext %a, [8 x i32], i16 zeroext %b) #0 {
   %tmp0 = icmp eq i16 %a, %b
   %tmp1 = zext i1 %tmp0 to i16

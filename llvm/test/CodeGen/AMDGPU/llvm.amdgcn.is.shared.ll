@@ -184,9 +184,9 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; SI-NEXT:    s_load_dword s1, s[6:7], 0x33
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_eq_u32 s0, s1
-; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; SI-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; SI-NEXT:    s_cbranch_vccnz .LBB1_2
+; SI-NEXT:    s_cselect_b32 s0, 1, 0
+; SI-NEXT:    s_cmp_lg_u32 s0, 1
+; SI-NEXT:    s_cbranch_scc1 .LBB1_2
 ; SI-NEXT:  ; %bb.1: ; %bb0
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -202,9 +202,9 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; CI-SDAG-NEXT:    s_load_dword s1, s[6:7], 0x33
 ; CI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
-; CI-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CI-SDAG-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; CI-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
+; CI-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
+; CI-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
+; CI-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
 ; CI-SDAG-NEXT:  ; %bb.1: ; %bb0
 ; CI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-SDAG-NEXT:    flat_store_dword v[0:1], v0
@@ -218,9 +218,9 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_cmp_eq_u32 s2, s1
-; GFX9-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX9-SDAG-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; GFX9-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
+; GFX9-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX9-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX9-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-SDAG-NEXT:    global_store_dword v[0:1], v0, off

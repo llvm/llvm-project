@@ -54,12 +54,11 @@ define void @test() {
 ; CHECK-NEXT:    s_mov_b64 exec, s[10:11]
 ; CHECK-NEXT:    v_readlane_b32 s4, v1, 0
 ; CHECK-NEXT:    v_readlane_b32 s5, v1, 1
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; CHECK-NEXT:    s_mov_b32 s4, 1
-; CHECK-NEXT:    ; implicit-def: $sgpr5
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], v0, s4
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    s_mov_b32 s5, 1
+; CHECK-NEXT:    s_cmp_lg_u32 s4, s5
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.6: ; %bb.5
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload

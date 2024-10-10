@@ -1156,15 +1156,22 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_cmp_ne_u64_e64 s[10:11], s[4:5], 0
 ; GFX6-NEXT:    s_and_b64 vcc, exec, s[10:11]
-; GFX6-NEXT:    s_cbranch_vccz .LBB9_4
+; GFX6-NEXT:    s_cbranch_vccz .LBB9_2
 ; GFX6-NEXT:  ; %bb.1: ; %else
 ; GFX6-NEXT:    s_add_u32 s4, s4, s6
 ; GFX6-NEXT:    s_addc_u32 s5, s5, s7
-; GFX6-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; GFX6-NEXT:    s_cbranch_vccnz .LBB9_3
-; GFX6-NEXT:  .LBB9_2: ; %if
+; GFX6-NEXT:    s_branch .LBB9_3
+; GFX6-NEXT:  .LBB9_2:
+; GFX6-NEXT:    s_mov_b64 s[8:9], -1
+; GFX6-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX6-NEXT:  .LBB9_3: ; %Flow
+; GFX6-NEXT:    s_and_b64 s[6:7], s[8:9], exec
+; GFX6-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX6-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX6-NEXT:    s_cbranch_scc1 .LBB9_5
+; GFX6-NEXT:  ; %bb.4: ; %if
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
-; GFX6-NEXT:  .LBB9_3: ; %endif
+; GFX6-NEXT:  .LBB9_5: ; %endif
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
@@ -1172,9 +1179,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
-; GFX6-NEXT:  .LBB9_4:
-; GFX6-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX6-NEXT:    s_branch .LBB9_2
 ;
 ; GFX8-LABEL: add64_in_branch:
 ; GFX8:       ; %bb.0: ; %entry
@@ -1182,15 +1186,22 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX8-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX8-NEXT:    s_cbranch_scc0 .LBB9_4
+; GFX8-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX8-NEXT:  ; %bb.1: ; %else
 ; GFX8-NEXT:    s_add_u32 s4, s4, s6
 ; GFX8-NEXT:    s_addc_u32 s5, s5, s7
-; GFX8-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; GFX8-NEXT:    s_cbranch_vccnz .LBB9_3
-; GFX8-NEXT:  .LBB9_2: ; %if
+; GFX8-NEXT:    s_branch .LBB9_3
+; GFX8-NEXT:  .LBB9_2:
+; GFX8-NEXT:    s_mov_b64 s[8:9], -1
+; GFX8-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX8-NEXT:  .LBB9_3: ; %Flow
+; GFX8-NEXT:    s_and_b64 s[6:7], s[8:9], exec
+; GFX8-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX8-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX8-NEXT:    s_cbranch_scc1 .LBB9_5
+; GFX8-NEXT:  ; %bb.4: ; %if
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
-; GFX8-NEXT:  .LBB9_3: ; %endif
+; GFX8-NEXT:  .LBB9_5: ; %endif
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -1198,9 +1209,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8-NEXT:    s_endpgm
-; GFX8-NEXT:  .LBB9_4:
-; GFX8-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX8-NEXT:    s_branch .LBB9_2
 ;
 ; GFX9-LABEL: add64_in_branch:
 ; GFX9:       ; %bb.0: ; %entry
@@ -1208,90 +1216,114 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u64 s[8:9], 0
-; GFX9-NEXT:    s_cbranch_scc0 .LBB9_4
+; GFX9-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX9-NEXT:  ; %bb.1: ; %else
 ; GFX9-NEXT:    s_add_u32 s0, s8, s10
 ; GFX9-NEXT:    s_addc_u32 s1, s9, s11
-; GFX9-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
-; GFX9-NEXT:    s_cbranch_vccnz .LBB9_3
-; GFX9-NEXT:  .LBB9_2: ; %if
+; GFX9-NEXT:    s_branch .LBB9_3
+; GFX9-NEXT:  .LBB9_2:
+; GFX9-NEXT:    s_mov_b64 s[2:3], -1
+; GFX9-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; GFX9-NEXT:  .LBB9_3: ; %Flow
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX9-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX9-NEXT:    s_cbranch_scc1 .LBB9_5
+; GFX9-NEXT:  ; %bb.4: ; %if
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX9-NEXT:  .LBB9_3: ; %endif
+; GFX9-NEXT:  .LBB9_5: ; %endif
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
-; GFX9-NEXT:  .LBB9_4:
-; GFX9-NEXT:    ; implicit-def: $sgpr0_sgpr1
-; GFX9-NEXT:    s_branch .LBB9_2
 ;
 ; GFX10-LABEL: add64_in_branch:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lg_u64 s[8:9], 0
-; GFX10-NEXT:    s_cbranch_scc0 .LBB9_4
+; GFX10-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX10-NEXT:  ; %bb.1: ; %else
 ; GFX10-NEXT:    s_add_u32 s0, s8, s10
 ; GFX10-NEXT:    s_addc_u32 s1, s9, s11
-; GFX10-NEXT:    s_cbranch_execnz .LBB9_3
-; GFX10-NEXT:  .LBB9_2: ; %if
+; GFX10-NEXT:    s_mov_b32 s2, 0
+; GFX10-NEXT:    s_branch .LBB9_3
+; GFX10-NEXT:  .LBB9_2:
+; GFX10-NEXT:    s_mov_b32 s2, -1
+; GFX10-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; GFX10-NEXT:  .LBB9_3: ; %Flow
+; GFX10-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX10-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX10-NEXT:    s_cbranch_scc1 .LBB9_5
+; GFX10-NEXT:  ; %bb.4: ; %if
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX10-NEXT:  .LBB9_3: ; %endif
+; GFX10-NEXT:  .LBB9_5: ; %endif
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX10-NEXT:    s_endpgm
-; GFX10-NEXT:  .LBB9_4:
-; GFX10-NEXT:    ; implicit-def: $sgpr0_sgpr1
-; GFX10-NEXT:    s_branch .LBB9_2
 ;
 ; GFX11-LABEL: add64_in_branch:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX11-NEXT:    s_cbranch_scc0 .LBB9_4
+; GFX11-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX11-NEXT:  ; %bb.1: ; %else
 ; GFX11-NEXT:    s_add_u32 s4, s4, s6
 ; GFX11-NEXT:    s_addc_u32 s5, s5, s7
-; GFX11-NEXT:    s_cbranch_execnz .LBB9_3
-; GFX11-NEXT:  .LBB9_2: ; %if
+; GFX11-NEXT:    s_mov_b32 s6, 0
+; GFX11-NEXT:    s_branch .LBB9_3
+; GFX11-NEXT:  .LBB9_2:
+; GFX11-NEXT:    s_mov_b32 s6, -1
+; GFX11-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX11-NEXT:  .LBB9_3: ; %Flow
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX11-NEXT:    s_cbranch_scc1 .LBB9_5
+; GFX11-NEXT:  ; %bb.4: ; %if
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
-; GFX11-NEXT:  .LBB9_3: ; %endif
+; GFX11-NEXT:  .LBB9_5: ; %endif
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s5
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
-; GFX11-NEXT:  .LBB9_4:
-; GFX11-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX11-NEXT:    s_branch .LBB9_2
 ;
 ; GFX12-LABEL: add64_in_branch:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX12-NEXT:    s_cbranch_scc0 .LBB9_4
+; GFX12-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX12-NEXT:  ; %bb.1: ; %else
 ; GFX12-NEXT:    s_add_nc_u64 s[4:5], s[4:5], s[6:7]
-; GFX12-NEXT:    s_cbranch_execnz .LBB9_3
-; GFX12-NEXT:  .LBB9_2: ; %if
+; GFX12-NEXT:    s_mov_b32 s6, 0
+; GFX12-NEXT:    s_branch .LBB9_3
+; GFX12-NEXT:  .LBB9_2:
+; GFX12-NEXT:    s_mov_b32 s6, -1
+; GFX12-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; GFX12-NEXT:  .LBB9_3: ; %Flow
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_cbranch_scc1 .LBB9_5
+; GFX12-NEXT:  ; %bb.4: ; %if
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x0
-; GFX12-NEXT:  .LBB9_3: ; %endif
+; GFX12-NEXT:  .LBB9_5: ; %endif
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s5
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_endpgm
-; GFX12-NEXT:  .LBB9_4:
-; GFX12-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX12-NEXT:    s_branch .LBB9_2
 entry:
   %0 = icmp eq i64 %a, 0
   br i1 %0, label %if, label %else

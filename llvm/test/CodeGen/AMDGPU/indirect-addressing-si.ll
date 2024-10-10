@@ -882,39 +882,37 @@ define amdgpu_kernel void @extract_neg_offset_sgpr(ptr addrspace(1) %out, i32 %o
 ; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_add_i32 s2, s4, 0xfffffe00
-; GENERIC-NEXT:    s_cmp_eq_u32 s2, 1
-; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 2
-; GENERIC-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GENERIC-NEXT:    v_readfirstlane_b32 s4, v0
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 2
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 3
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 3
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 4
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 5
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 5
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 6
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 6
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 7
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 7
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 8
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 8
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 9
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 9
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 10
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 10
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 11
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 11
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 12
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 12
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 13
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 13
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 14
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 14
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 15
-; GENERIC-NEXT:    s_cmp_lg_u32 s2, 15
-; GENERIC-NEXT:    s_cselect_b32 s4, s4, 16
+; GENERIC-NEXT:    s_addk_i32 s4, 0xfe00
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 1
+; GENERIC-NEXT:    s_cselect_b32 s2, 1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 2
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 2
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 3
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 3
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 4
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 5
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 5
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 6
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 6
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 7
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 7
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 8
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 8
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 9
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 9
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 10
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 10
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 11
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 11
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 12
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 12
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 13
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 13
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 14
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 14
+; GENERIC-NEXT:    s_cselect_b32 s2, s2, 15
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 15
+; GENERIC-NEXT:    s_cselect_b32 s4, s2, 16
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    v_mov_b32_e32 v0, s4
 ; GENERIC-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -3316,60 +3314,60 @@ define amdgpu_kernel void @insert_neg_offset_sgpr(ptr addrspace(1) %in, ptr addr
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    s_add_i32 s6, s4, 0xfffffe00
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 0
-; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 3
-; GENERIC-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 3
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 2
-; GENERIC-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; GENERIC-NEXT:    s_cselect_b32 s5, 16, 2
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 1
-; GENERIC-NEXT:    v_mov_b32_e32 v3, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 1
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 7
-; GENERIC-NEXT:    v_mov_b32_e32 v2, s5
+; GENERIC-NEXT:    s_addk_i32 s4, 0xfe00
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 1
+; GENERIC-NEXT:    s_cselect_b32 s5, 16, 1
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 2
+; GENERIC-NEXT:    s_cselect_b32 s6, 16, 2
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 3
+; GENERIC-NEXT:    v_mov_b32_e32 v1, s5
+; GENERIC-NEXT:    s_cselect_b32 s5, 16, 3
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 0
+; GENERIC-NEXT:    v_mov_b32_e32 v2, s6
+; GENERIC-NEXT:    s_cselect_b32 s6, 1, 0
+; GENERIC-NEXT:    v_mov_b32_e32 v3, s5
+; GENERIC-NEXT:    s_lshl_b32 s5, s6, 4
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 7
+; GENERIC-NEXT:    v_mov_b32_e32 v0, s5
 ; GENERIC-NEXT:    s_cselect_b32 s5, 16, 7
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 6
-; GENERIC-NEXT:    v_mov_b32_e32 v1, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 6
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 5
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 6
+; GENERIC-NEXT:    s_cselect_b32 s6, 16, 6
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 5
 ; GENERIC-NEXT:    v_mov_b32_e32 v7, s5
 ; GENERIC-NEXT:    s_cselect_b32 s5, 16, 5
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 4
-; GENERIC-NEXT:    v_mov_b32_e32 v6, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 4
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 11
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 4
+; GENERIC-NEXT:    v_mov_b32_e32 v6, s6
+; GENERIC-NEXT:    s_cselect_b32 s6, 16, 4
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 11
 ; GENERIC-NEXT:    v_mov_b32_e32 v5, s5
 ; GENERIC-NEXT:    s_cselect_b32 s5, 16, 11
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 10
-; GENERIC-NEXT:    v_mov_b32_e32 v4, s4
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 10
+; GENERIC-NEXT:    v_mov_b32_e32 v4, s6
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 10
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 9
+; GENERIC-NEXT:    s_cselect_b32 s6, 16, 10
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 9
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
 ; GENERIC-NEXT:    v_mov_b32_e32 v7, s5
 ; GENERIC-NEXT:    s_cselect_b32 s5, 16, 9
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 8
-; GENERIC-NEXT:    v_mov_b32_e32 v6, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 8
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 15
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 8
+; GENERIC-NEXT:    v_mov_b32_e32 v6, s6
+; GENERIC-NEXT:    s_cselect_b32 s6, 16, 8
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 15
 ; GENERIC-NEXT:    v_mov_b32_e32 v5, s5
 ; GENERIC-NEXT:    s_cselect_b32 s5, 16, 15
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 14
-; GENERIC-NEXT:    v_mov_b32_e32 v4, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 14
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 13
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 14
+; GENERIC-NEXT:    v_mov_b32_e32 v4, s6
+; GENERIC-NEXT:    s_cselect_b32 s6, 16, 14
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 13
 ; GENERIC-NEXT:    s_cselect_b32 s7, 16, 13
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 12
-; GENERIC-NEXT:    s_cselect_b32 s6, 16, 12
+; GENERIC-NEXT:    s_cmp_eq_u32 s4, 12
+; GENERIC-NEXT:    s_cselect_b32 s4, 16, 12
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:32
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
 ; GENERIC-NEXT:    v_mov_b32_e32 v7, s5
-; GENERIC-NEXT:    v_mov_b32_e32 v6, s4
+; GENERIC-NEXT:    v_mov_b32_e32 v6, s6
 ; GENERIC-NEXT:    v_mov_b32_e32 v5, s7
-; GENERIC-NEXT:    v_mov_b32_e32 v4, s6
+; GENERIC-NEXT:    v_mov_b32_e32 v4, s4
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:48
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GENERIC-NEXT:    s_endpgm
@@ -7230,7 +7228,7 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; GENERIC-NEXT:    s_load_dword s0, s[2:3], 0x9
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GENERIC-NEXT:    s_cmp_lg_u32 s0, 0
-; GENERIC-NEXT:    s_cbranch_scc0 .LBB19_4
+; GENERIC-NEXT:    s_cbranch_scc0 .LBB19_2
 ; GENERIC-NEXT:  ; %bb.1: ; %bb4
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
@@ -7239,9 +7237,16 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; GENERIC-NEXT:    ;;#ASMSTART
 ; GENERIC-NEXT:    ; reg use v[0:3]
 ; GENERIC-NEXT:    ;;#ASMEND
-; GENERIC-NEXT:    s_mov_b64 vcc, exec
-; GENERIC-NEXT:    s_cbranch_execnz .LBB19_3
-; GENERIC-NEXT:  .LBB19_2: ; %bb1
+; GENERIC-NEXT:    s_mov_b64 s[0:1], 0
+; GENERIC-NEXT:    s_branch .LBB19_3
+; GENERIC-NEXT:  .LBB19_2:
+; GENERIC-NEXT:    s_mov_b64 s[0:1], -1
+; GENERIC-NEXT:  .LBB19_3: ; %Flow
+; GENERIC-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GENERIC-NEXT:    s_cselect_b32 s0, 1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s0, 1
+; GENERIC-NEXT:    s_cbranch_scc1 .LBB19_5
+; GENERIC-NEXT:  ; %bb.4: ; %bb1
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
@@ -7249,15 +7254,12 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; GENERIC-NEXT:    ;;#ASMSTART
 ; GENERIC-NEXT:    ; reg use v[0:3]
 ; GENERIC-NEXT:    ;;#ASMEND
-; GENERIC-NEXT:  .LBB19_3: ; %bb7
+; GENERIC-NEXT:  .LBB19_5: ; %bb7
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    s_endpgm
-; GENERIC-NEXT:  .LBB19_4:
-; GENERIC-NEXT:    s_mov_b64 vcc, 0
-; GENERIC-NEXT:    s_branch .LBB19_2
 ;
 ; NOOPT-LABEL: extract_adjacent_blocks:
 ; NOOPT:       ; %bb.0: ; %bb
@@ -7290,12 +7292,11 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    v_readlane_b32 s0, v4, 0
 ; NOOPT-NEXT:    v_readlane_b32 s1, v4, 1
-; NOOPT-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; NOOPT-NEXT:    s_mov_b32 s0, 1
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    v_cmp_ne_u32_e64 s[0:1], v0, s0
-; NOOPT-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; NOOPT-NEXT:    s_cbranch_vccnz .LBB19_4
+; NOOPT-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; NOOPT-NEXT:    s_cselect_b32 s0, 1, 0
+; NOOPT-NEXT:    s_mov_b32 s1, 1
+; NOOPT-NEXT:    s_cmp_lg_u32 s0, s1
+; NOOPT-NEXT:    s_cbranch_scc1 .LBB19_4
 ; NOOPT-NEXT:  ; %bb.2: ; %bb1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
@@ -7366,7 +7367,7 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; SI-MOVREL-NEXT:    s_load_dword s0, s[2:3], 0x9
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-MOVREL-NEXT:    s_cmp_lg_u32 s0, 0
-; SI-MOVREL-NEXT:    s_cbranch_scc0 .LBB19_4
+; SI-MOVREL-NEXT:    s_cbranch_scc0 .LBB19_2
 ; SI-MOVREL-NEXT:  ; %bb.1: ; %bb4
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
@@ -7375,8 +7376,16 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
 ; SI-MOVREL-NEXT:    ; reg use v[0:3]
 ; SI-MOVREL-NEXT:    ;;#ASMEND
-; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB19_3
-; SI-MOVREL-NEXT:  .LBB19_2: ; %bb1
+; SI-MOVREL-NEXT:    s_mov_b64 s[0:1], 0
+; SI-MOVREL-NEXT:    s_branch .LBB19_3
+; SI-MOVREL-NEXT:  .LBB19_2:
+; SI-MOVREL-NEXT:    s_mov_b64 s[0:1], -1
+; SI-MOVREL-NEXT:  .LBB19_3: ; %Flow
+; SI-MOVREL-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; SI-MOVREL-NEXT:    s_cselect_b32 s0, 1, 0
+; SI-MOVREL-NEXT:    s_cmp_lg_u32 s0, 1
+; SI-MOVREL-NEXT:    s_cbranch_scc1 .LBB19_5
+; SI-MOVREL-NEXT:  ; %bb.4: ; %bb1
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
 ; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
@@ -7384,66 +7393,76 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
 ; SI-MOVREL-NEXT:    ; reg use v[0:3]
 ; SI-MOVREL-NEXT:    ;;#ASMEND
-; SI-MOVREL-NEXT:  .LBB19_3: ; %bb7
+; SI-MOVREL-NEXT:  .LBB19_5: ; %bb7
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
 ; SI-MOVREL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_endpgm
-; SI-MOVREL-NEXT:  .LBB19_4:
-; SI-MOVREL-NEXT:    s_branch .LBB19_2
 ;
 ; VI-LABEL: extract_adjacent_blocks:
 ; VI:       ; %bb.0: ; %bb
 ; VI-NEXT:    s_load_dword s0, s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s0, 0
-; VI-NEXT:    s_cbranch_scc0 .LBB19_4
+; VI-NEXT:    s_cbranch_scc0 .LBB19_2
 ; VI-NEXT:  ; %bb.1: ; %bb4
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    ; reg use v[0:3]
 ; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_cbranch_execnz .LBB19_3
-; VI-NEXT:  .LBB19_2: ; %bb1
+; VI-NEXT:    s_mov_b64 s[0:1], 0
+; VI-NEXT:    s_branch .LBB19_3
+; VI-NEXT:  .LBB19_2:
+; VI-NEXT:    s_mov_b64 s[0:1], -1
+; VI-NEXT:  .LBB19_3: ; %Flow
+; VI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; VI-NEXT:    s_cselect_b32 s0, 1, 0
+; VI-NEXT:    s_cmp_lg_u32 s0, 1
+; VI-NEXT:    s_cbranch_scc1 .LBB19_5
+; VI-NEXT:  ; %bb.4: ; %bb1
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    ; reg use v[0:3]
 ; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:  .LBB19_3: ; %bb7
+; VI-NEXT:  .LBB19_5: ; %bb7
 ; VI-NEXT:    flat_store_dword v[0:1], v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:  .LBB19_4:
-; VI-NEXT:    s_branch .LBB19_2
 ;
 ; GFX9-IDXMODE-LABEL: extract_adjacent_blocks:
 ; GFX9-IDXMODE:       ; %bb.0: ; %bb
 ; GFX9-IDXMODE-NEXT:    s_load_dword s0, s[2:3], 0x24
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX9-IDXMODE-NEXT:    s_cbranch_scc0 .LBB19_4
+; GFX9-IDXMODE-NEXT:    s_cbranch_scc0 .LBB19_2
 ; GFX9-IDXMODE-NEXT:  ; %bb.1: ; %bb4
 ; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    ;;#ASMSTART
 ; GFX9-IDXMODE-NEXT:    ; reg use v[0:3]
 ; GFX9-IDXMODE-NEXT:    ;;#ASMEND
-; GFX9-IDXMODE-NEXT:    s_cbranch_execnz .LBB19_3
-; GFX9-IDXMODE-NEXT:  .LBB19_2: ; %bb1
+; GFX9-IDXMODE-NEXT:    s_mov_b64 s[0:1], 0
+; GFX9-IDXMODE-NEXT:    s_branch .LBB19_3
+; GFX9-IDXMODE-NEXT:  .LBB19_2:
+; GFX9-IDXMODE-NEXT:    s_mov_b64 s[0:1], -1
+; GFX9-IDXMODE-NEXT:  .LBB19_3: ; %Flow
+; GFX9-IDXMODE-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX9-IDXMODE-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX9-IDXMODE-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX9-IDXMODE-NEXT:    s_cbranch_scc1 .LBB19_5
+; GFX9-IDXMODE-NEXT:  ; %bb.4: ; %bb1
 ; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    ;;#ASMSTART
 ; GFX9-IDXMODE-NEXT:    ; reg use v[0:3]
 ; GFX9-IDXMODE-NEXT:    ;;#ASMEND
-; GFX9-IDXMODE-NEXT:  .LBB19_3: ; %bb7
+; GFX9-IDXMODE-NEXT:  .LBB19_5: ; %bb7
 ; GFX9-IDXMODE-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_endpgm
-; GFX9-IDXMODE-NEXT:  .LBB19_4:
-; GFX9-IDXMODE-NEXT:    s_branch .LBB19_2
 bb:
   %tmp = icmp eq i32 %arg, 0
   br i1 %tmp, label %bb1, label %bb4
@@ -7472,7 +7491,7 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; GENERIC-NEXT:    s_load_dword s0, s[2:3], 0x9
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GENERIC-NEXT:    s_cmp_lg_u32 s0, 0
-; GENERIC-NEXT:    s_cbranch_scc0 .LBB20_4
+; GENERIC-NEXT:    s_cbranch_scc0 .LBB20_2
 ; GENERIC-NEXT:  ; %bb.1: ; %bb4
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
@@ -7481,9 +7500,16 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; GENERIC-NEXT:    ;;#ASMSTART
 ; GENERIC-NEXT:    ; reg use v[0:3]
 ; GENERIC-NEXT:    ;;#ASMEND
-; GENERIC-NEXT:    s_mov_b64 vcc, exec
-; GENERIC-NEXT:    s_cbranch_execnz .LBB20_3
-; GENERIC-NEXT:  .LBB20_2: ; %bb1
+; GENERIC-NEXT:    s_mov_b64 s[0:1], 0
+; GENERIC-NEXT:    s_branch .LBB20_3
+; GENERIC-NEXT:  .LBB20_2:
+; GENERIC-NEXT:    s_mov_b64 s[0:1], -1
+; GENERIC-NEXT:  .LBB20_3: ; %Flow
+; GENERIC-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GENERIC-NEXT:    s_cselect_b32 s0, 1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s0, 1
+; GENERIC-NEXT:    s_cbranch_scc1 .LBB20_5
+; GENERIC-NEXT:  ; %bb.4: ; %bb1
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
@@ -7491,15 +7517,12 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; GENERIC-NEXT:    ;;#ASMSTART
 ; GENERIC-NEXT:    ; reg use v[0:3]
 ; GENERIC-NEXT:    ;;#ASMEND
-; GENERIC-NEXT:  .LBB20_3: ; %bb7
+; GENERIC-NEXT:  .LBB20_5: ; %bb7
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    s_endpgm
-; GENERIC-NEXT:  .LBB20_4:
-; GENERIC-NEXT:    s_mov_b64 vcc, 0
-; GENERIC-NEXT:    s_branch .LBB20_2
 ;
 ; NOOPT-LABEL: insert_adjacent_blocks:
 ; NOOPT:       ; %bb.0: ; %bb
@@ -7534,12 +7557,11 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    v_readlane_b32 s0, v4, 0
 ; NOOPT-NEXT:    v_readlane_b32 s1, v4, 1
-; NOOPT-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; NOOPT-NEXT:    s_mov_b32 s0, 1
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    v_cmp_ne_u32_e64 s[0:1], v0, s0
-; NOOPT-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; NOOPT-NEXT:    s_cbranch_vccnz .LBB20_4
+; NOOPT-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; NOOPT-NEXT:    s_cselect_b32 s0, 1, 0
+; NOOPT-NEXT:    s_mov_b32 s1, 1
+; NOOPT-NEXT:    s_cmp_lg_u32 s0, s1
+; NOOPT-NEXT:    s_cbranch_scc1 .LBB20_4
 ; NOOPT-NEXT:  ; %bb.2: ; %bb1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
@@ -7615,7 +7637,7 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; SI-MOVREL-NEXT:    s_load_dword s0, s[2:3], 0x9
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-MOVREL-NEXT:    s_cmp_lg_u32 s0, 0
-; SI-MOVREL-NEXT:    s_cbranch_scc0 .LBB20_4
+; SI-MOVREL-NEXT:    s_cbranch_scc0 .LBB20_2
 ; SI-MOVREL-NEXT:  ; %bb.1: ; %bb4
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
@@ -7624,8 +7646,16 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
 ; SI-MOVREL-NEXT:    ; reg use v[0:3]
 ; SI-MOVREL-NEXT:    ;;#ASMEND
-; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB20_3
-; SI-MOVREL-NEXT:  .LBB20_2: ; %bb1
+; SI-MOVREL-NEXT:    s_mov_b64 s[0:1], 0
+; SI-MOVREL-NEXT:    s_branch .LBB20_3
+; SI-MOVREL-NEXT:  .LBB20_2:
+; SI-MOVREL-NEXT:    s_mov_b64 s[0:1], -1
+; SI-MOVREL-NEXT:  .LBB20_3: ; %Flow
+; SI-MOVREL-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; SI-MOVREL-NEXT:    s_cselect_b32 s0, 1, 0
+; SI-MOVREL-NEXT:    s_cmp_lg_u32 s0, 1
+; SI-MOVREL-NEXT:    s_cbranch_scc1 .LBB20_5
+; SI-MOVREL-NEXT:  ; %bb.4: ; %bb1
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
 ; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
@@ -7633,66 +7663,76 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; SI-MOVREL-NEXT:    ;;#ASMSTART
 ; SI-MOVREL-NEXT:    ; reg use v[0:3]
 ; SI-MOVREL-NEXT:    ;;#ASMEND
-; SI-MOVREL-NEXT:  .LBB20_3: ; %bb7
+; SI-MOVREL-NEXT:  .LBB20_5: ; %bb7
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
 ; SI-MOVREL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_endpgm
-; SI-MOVREL-NEXT:  .LBB20_4:
-; SI-MOVREL-NEXT:    s_branch .LBB20_2
 ;
 ; VI-LABEL: insert_adjacent_blocks:
 ; VI:       ; %bb.0: ; %bb
 ; VI-NEXT:    s_load_dword s0, s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s0, 0
-; VI-NEXT:    s_cbranch_scc0 .LBB20_4
+; VI-NEXT:    s_cbranch_scc0 .LBB20_2
 ; VI-NEXT:  ; %bb.1: ; %bb4
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    ; reg use v[0:3]
 ; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_cbranch_execnz .LBB20_3
-; VI-NEXT:  .LBB20_2: ; %bb1
+; VI-NEXT:    s_mov_b64 s[0:1], 0
+; VI-NEXT:    s_branch .LBB20_3
+; VI-NEXT:  .LBB20_2:
+; VI-NEXT:    s_mov_b64 s[0:1], -1
+; VI-NEXT:  .LBB20_3: ; %Flow
+; VI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; VI-NEXT:    s_cselect_b32 s0, 1, 0
+; VI-NEXT:    s_cmp_lg_u32 s0, 1
+; VI-NEXT:    s_cbranch_scc1 .LBB20_5
+; VI-NEXT:  ; %bb.4: ; %bb1
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    ; reg use v[0:3]
 ; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:  .LBB20_3: ; %bb7
+; VI-NEXT:  .LBB20_5: ; %bb7
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:  .LBB20_4:
-; VI-NEXT:    s_branch .LBB20_2
 ;
 ; GFX9-IDXMODE-LABEL: insert_adjacent_blocks:
 ; GFX9-IDXMODE:       ; %bb.0: ; %bb
 ; GFX9-IDXMODE-NEXT:    s_load_dword s0, s[2:3], 0x24
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX9-IDXMODE-NEXT:    s_cbranch_scc0 .LBB20_4
+; GFX9-IDXMODE-NEXT:    s_cbranch_scc0 .LBB20_2
 ; GFX9-IDXMODE-NEXT:  ; %bb.1: ; %bb4
 ; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    ;;#ASMSTART
 ; GFX9-IDXMODE-NEXT:    ; reg use v[0:3]
 ; GFX9-IDXMODE-NEXT:    ;;#ASMEND
-; GFX9-IDXMODE-NEXT:    s_cbranch_execnz .LBB20_3
-; GFX9-IDXMODE-NEXT:  .LBB20_2: ; %bb1
+; GFX9-IDXMODE-NEXT:    s_mov_b64 s[0:1], 0
+; GFX9-IDXMODE-NEXT:    s_branch .LBB20_3
+; GFX9-IDXMODE-NEXT:  .LBB20_2:
+; GFX9-IDXMODE-NEXT:    s_mov_b64 s[0:1], -1
+; GFX9-IDXMODE-NEXT:  .LBB20_3: ; %Flow
+; GFX9-IDXMODE-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX9-IDXMODE-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX9-IDXMODE-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX9-IDXMODE-NEXT:    s_cbranch_scc1 .LBB20_5
+; GFX9-IDXMODE-NEXT:  ; %bb.4: ; %bb1
 ; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    ;;#ASMSTART
 ; GFX9-IDXMODE-NEXT:    ; reg use v[0:3]
 ; GFX9-IDXMODE-NEXT:    ;;#ASMEND
-; GFX9-IDXMODE-NEXT:  .LBB20_3: ; %bb7
+; GFX9-IDXMODE-NEXT:  .LBB20_5: ; %bb7
 ; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_endpgm
-; GFX9-IDXMODE-NEXT:  .LBB20_4:
-; GFX9-IDXMODE-NEXT:    s_branch .LBB20_2
 bb:
   %tmp = icmp eq i32 %arg, 0
   br i1 %tmp, label %bb1, label %bb4
@@ -9037,8 +9077,10 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; GENERIC-NEXT:    s_branch .LBB26_2
 ; GENERIC-NEXT:  .LBB26_1: ; %Flow
 ; GENERIC-NEXT:    ; in Loop: Header=BB26_2 Depth=1
-; GENERIC-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
-; GENERIC-NEXT:    s_cbranch_vccz .LBB26_4
+; GENERIC-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GENERIC-NEXT:    s_cselect_b32 s4, 1, 0
+; GENERIC-NEXT:    s_cmp_lg_u32 s4, 1
+; GENERIC-NEXT:    s_cbranch_scc0 .LBB26_4
 ; GENERIC-NEXT:  .LBB26_2: ; %bb2
 ; GENERIC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9291,14 +9333,13 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; NOOPT-NEXT:    v_readlane_b32 s0, v18, 2
 ; NOOPT-NEXT:    v_readlane_b32 s1, v18, 3
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:8 ; 4-byte Folded Reload
-; NOOPT-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
-; NOOPT-NEXT:    s_mov_b32 s0, 1
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    v_cmp_ne_u32_e64 s[0:1], v1, s0
-; NOOPT-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; NOOPT-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; NOOPT-NEXT:    s_cselect_b32 s0, 1, 0
+; NOOPT-NEXT:    s_mov_b32 s1, 1
+; NOOPT-NEXT:    s_cmp_lg_u32 s0, s1
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    s_cbranch_vccnz .LBB26_1
+; NOOPT-NEXT:    s_cbranch_scc1 .LBB26_1
 ; NOOPT-NEXT:  ; %bb.7: ; %bb8
 ; NOOPT-NEXT:    s_endpgm
 ;
@@ -9308,24 +9349,30 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v0, 8
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
-; SI-MOVREL-NEXT:    s_branch .LBB26_2
-; SI-MOVREL-NEXT:  .LBB26_1:
+; SI-MOVREL-NEXT:    s_branch .LBB26_3
+; SI-MOVREL-NEXT:  .LBB26_1: ; in Loop: Header=BB26_3 Depth=1
+; SI-MOVREL-NEXT:    s_mov_b64 s[4:5], -1
 ; SI-MOVREL-NEXT:    ; implicit-def: $vgpr0
-; SI-MOVREL-NEXT:    s_branch .LBB26_6
-; SI-MOVREL-NEXT:  .LBB26_2: ; %bb2
+; SI-MOVREL-NEXT:  .LBB26_2: ; %Flow
+; SI-MOVREL-NEXT:    ; in Loop: Header=BB26_3 Depth=1
+; SI-MOVREL-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; SI-MOVREL-NEXT:    s_cselect_b32 s4, 1, 0
+; SI-MOVREL-NEXT:    s_cmp_lg_u32 s4, 1
+; SI-MOVREL-NEXT:    s_cbranch_scc0 .LBB26_7
+; SI-MOVREL-NEXT:  .LBB26_3: ; %bb2
 ; SI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
-; SI-MOVREL-NEXT:    ; Child Loop BB26_4 Depth 2
+; SI-MOVREL-NEXT:    ; Child Loop BB26_5 Depth 2
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-MOVREL-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
 ; SI-MOVREL-NEXT:    s_cbranch_vccnz .LBB26_1
-; SI-MOVREL-NEXT:  ; %bb.3: ; %bb4
-; SI-MOVREL-NEXT:    ; in Loop: Header=BB26_2 Depth=1
+; SI-MOVREL-NEXT:  ; %bb.4: ; %bb4
+; SI-MOVREL-NEXT:    ; in Loop: Header=BB26_3 Depth=1
 ; SI-MOVREL-NEXT:    buffer_load_dword v16, off, s[0:3], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v17, s1
 ; SI-MOVREL-NEXT:    s_mov_b64 s[4:5], exec
 ; SI-MOVREL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; SI-MOVREL-NEXT:  .LBB26_4: ; Parent Loop BB26_2 Depth=1
+; SI-MOVREL-NEXT:  .LBB26_5: ; Parent Loop BB26_3 Depth=1
 ; SI-MOVREL-NEXT:    ; => This Inner Loop Header: Depth=2
 ; SI-MOVREL-NEXT:    v_readfirstlane_b32 s6, v16
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v16
@@ -9333,35 +9380,42 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; SI-MOVREL-NEXT:    s_mov_b32 m0, s6
 ; SI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v17
 ; SI-MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
-; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_4
-; SI-MOVREL-NEXT:  ; %bb.5: ; in Loop: Header=BB26_2 Depth=1
+; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_5
+; SI-MOVREL-NEXT:  ; %bb.6: ; in Loop: Header=BB26_3 Depth=1
 ; SI-MOVREL-NEXT:    s_mov_b64 exec, s[4:5]
-; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_2
-; SI-MOVREL-NEXT:  .LBB26_6: ; %bb8
+; SI-MOVREL-NEXT:    s_mov_b64 s[4:5], 0
+; SI-MOVREL-NEXT:    s_branch .LBB26_2
+; SI-MOVREL-NEXT:  .LBB26_7: ; %bb8
 ; SI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-MOVREL-LABEL: broken_phi_bb:
 ; VI-MOVREL:       ; %bb.0: ; %bb
 ; VI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, 8
-; VI-MOVREL-NEXT:    s_branch .LBB26_2
-; VI-MOVREL-NEXT:  .LBB26_1:
+; VI-MOVREL-NEXT:    s_branch .LBB26_3
+; VI-MOVREL-NEXT:  .LBB26_1: ; in Loop: Header=BB26_3 Depth=1
+; VI-MOVREL-NEXT:    s_mov_b64 s[2:3], -1
 ; VI-MOVREL-NEXT:    ; implicit-def: $vgpr0
-; VI-MOVREL-NEXT:    s_branch .LBB26_6
-; VI-MOVREL-NEXT:  .LBB26_2: ; %bb2
+; VI-MOVREL-NEXT:  .LBB26_2: ; %Flow
+; VI-MOVREL-NEXT:    ; in Loop: Header=BB26_3 Depth=1
+; VI-MOVREL-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; VI-MOVREL-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-MOVREL-NEXT:    s_cmp_lg_u32 s2, 1
+; VI-MOVREL-NEXT:    s_cbranch_scc0 .LBB26_7
+; VI-MOVREL-NEXT:  .LBB26_3: ; %bb2
 ; VI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
-; VI-MOVREL-NEXT:    ; Child Loop BB26_4 Depth 2
+; VI-MOVREL-NEXT:    ; Child Loop BB26_5 Depth 2
 ; VI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-MOVREL-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
 ; VI-MOVREL-NEXT:    s_cbranch_vccnz .LBB26_1
-; VI-MOVREL-NEXT:  ; %bb.3: ; %bb4
-; VI-MOVREL-NEXT:    ; in Loop: Header=BB26_2 Depth=1
+; VI-MOVREL-NEXT:  ; %bb.4: ; %bb4
+; VI-MOVREL-NEXT:    ; in Loop: Header=BB26_3 Depth=1
 ; VI-MOVREL-NEXT:    flat_load_dword v16, v[0:1] glc
 ; VI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v17, s1
 ; VI-MOVREL-NEXT:    s_mov_b64 s[2:3], exec
 ; VI-MOVREL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; VI-MOVREL-NEXT:  .LBB26_4: ; Parent Loop BB26_2 Depth=1
+; VI-MOVREL-NEXT:  .LBB26_5: ; Parent Loop BB26_3 Depth=1
 ; VI-MOVREL-NEXT:    ; => This Inner Loop Header: Depth=2
 ; VI-MOVREL-NEXT:    v_readfirstlane_b32 s4, v16
 ; VI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v16
@@ -9369,35 +9423,42 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; VI-MOVREL-NEXT:    s_mov_b32 m0, s4
 ; VI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v17
 ; VI-MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
-; VI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_4
-; VI-MOVREL-NEXT:  ; %bb.5: ; in Loop: Header=BB26_2 Depth=1
+; VI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_5
+; VI-MOVREL-NEXT:  ; %bb.6: ; in Loop: Header=BB26_3 Depth=1
 ; VI-MOVREL-NEXT:    s_mov_b64 exec, s[2:3]
-; VI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_2
-; VI-MOVREL-NEXT:  .LBB26_6: ; %bb8
+; VI-MOVREL-NEXT:    s_mov_b64 s[2:3], 0
+; VI-MOVREL-NEXT:    s_branch .LBB26_2
+; VI-MOVREL-NEXT:  .LBB26_7: ; %bb8
 ; VI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-IDXMODE-LABEL: broken_phi_bb:
 ; VI-IDXMODE:       ; %bb.0: ; %bb
 ; VI-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, 8
-; VI-IDXMODE-NEXT:    s_branch .LBB26_2
-; VI-IDXMODE-NEXT:  .LBB26_1:
+; VI-IDXMODE-NEXT:    s_branch .LBB26_3
+; VI-IDXMODE-NEXT:  .LBB26_1: ; in Loop: Header=BB26_3 Depth=1
+; VI-IDXMODE-NEXT:    s_mov_b64 s[2:3], -1
 ; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr0
-; VI-IDXMODE-NEXT:    s_branch .LBB26_6
-; VI-IDXMODE-NEXT:  .LBB26_2: ; %bb2
+; VI-IDXMODE-NEXT:  .LBB26_2: ; %Flow
+; VI-IDXMODE-NEXT:    ; in Loop: Header=BB26_3 Depth=1
+; VI-IDXMODE-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; VI-IDXMODE-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-IDXMODE-NEXT:    s_cmp_lg_u32 s2, 1
+; VI-IDXMODE-NEXT:    s_cbranch_scc0 .LBB26_7
+; VI-IDXMODE-NEXT:  .LBB26_3: ; %bb2
 ; VI-IDXMODE-NEXT:    ; =>This Loop Header: Depth=1
-; VI-IDXMODE-NEXT:    ; Child Loop BB26_4 Depth 2
+; VI-IDXMODE-NEXT:    ; Child Loop BB26_5 Depth 2
 ; VI-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-IDXMODE-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
 ; VI-IDXMODE-NEXT:    s_cbranch_vccnz .LBB26_1
-; VI-IDXMODE-NEXT:  ; %bb.3: ; %bb4
-; VI-IDXMODE-NEXT:    ; in Loop: Header=BB26_2 Depth=1
+; VI-IDXMODE-NEXT:  ; %bb.4: ; %bb4
+; VI-IDXMODE-NEXT:    ; in Loop: Header=BB26_3 Depth=1
 ; VI-IDXMODE-NEXT:    flat_load_dword v16, v[0:1] glc
 ; VI-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v17, s1
 ; VI-IDXMODE-NEXT:    s_mov_b64 s[2:3], exec
 ; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; VI-IDXMODE-NEXT:  .LBB26_4: ; Parent Loop BB26_2 Depth=1
+; VI-IDXMODE-NEXT:  .LBB26_5: ; Parent Loop BB26_3 Depth=1
 ; VI-IDXMODE-NEXT:    ; => This Inner Loop Header: Depth=2
 ; VI-IDXMODE-NEXT:    v_readfirstlane_b32 s4, v16
 ; VI-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v16
@@ -9406,35 +9467,42 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, v17
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_off
 ; VI-IDXMODE-NEXT:    s_xor_b64 exec, exec, vcc
-; VI-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_4
-; VI-IDXMODE-NEXT:  ; %bb.5: ; in Loop: Header=BB26_2 Depth=1
+; VI-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_5
+; VI-IDXMODE-NEXT:  ; %bb.6: ; in Loop: Header=BB26_3 Depth=1
 ; VI-IDXMODE-NEXT:    s_mov_b64 exec, s[2:3]
-; VI-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_2
-; VI-IDXMODE-NEXT:  .LBB26_6: ; %bb8
+; VI-IDXMODE-NEXT:    s_mov_b64 s[2:3], 0
+; VI-IDXMODE-NEXT:    s_branch .LBB26_2
+; VI-IDXMODE-NEXT:  .LBB26_7: ; %bb8
 ; VI-IDXMODE-NEXT:    s_endpgm
 ;
 ; GFX9-IDXMODE-LABEL: broken_phi_bb:
 ; GFX9-IDXMODE:       ; %bb.0: ; %bb
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, 8
-; GFX9-IDXMODE-NEXT:    s_branch .LBB26_2
-; GFX9-IDXMODE-NEXT:  .LBB26_1:
+; GFX9-IDXMODE-NEXT:    s_branch .LBB26_3
+; GFX9-IDXMODE-NEXT:  .LBB26_1: ; in Loop: Header=BB26_3 Depth=1
+; GFX9-IDXMODE-NEXT:    s_mov_b64 s[2:3], -1
 ; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr0
-; GFX9-IDXMODE-NEXT:    s_branch .LBB26_6
-; GFX9-IDXMODE-NEXT:  .LBB26_2: ; %bb2
+; GFX9-IDXMODE-NEXT:  .LBB26_2: ; %Flow
+; GFX9-IDXMODE-NEXT:    ; in Loop: Header=BB26_3 Depth=1
+; GFX9-IDXMODE-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-IDXMODE-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX9-IDXMODE-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX9-IDXMODE-NEXT:    s_cbranch_scc0 .LBB26_7
+; GFX9-IDXMODE-NEXT:  .LBB26_3: ; %bb2
 ; GFX9-IDXMODE-NEXT:    ; =>This Loop Header: Depth=1
-; GFX9-IDXMODE-NEXT:    ; Child Loop BB26_4 Depth 2
+; GFX9-IDXMODE-NEXT:    ; Child Loop BB26_5 Depth 2
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-IDXMODE-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
 ; GFX9-IDXMODE-NEXT:    s_cbranch_vccnz .LBB26_1
-; GFX9-IDXMODE-NEXT:  ; %bb.3: ; %bb4
-; GFX9-IDXMODE-NEXT:    ; in Loop: Header=BB26_2 Depth=1
+; GFX9-IDXMODE-NEXT:  ; %bb.4: ; %bb4
+; GFX9-IDXMODE-NEXT:    ; in Loop: Header=BB26_3 Depth=1
 ; GFX9-IDXMODE-NEXT:    global_load_dword v16, v[0:1], off glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v17, s1
 ; GFX9-IDXMODE-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; GFX9-IDXMODE-NEXT:  .LBB26_4: ; Parent Loop BB26_2 Depth=1
+; GFX9-IDXMODE-NEXT:  .LBB26_5: ; Parent Loop BB26_3 Depth=1
 ; GFX9-IDXMODE-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX9-IDXMODE-NEXT:    v_readfirstlane_b32 s4, v16
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v16
@@ -9443,11 +9511,12 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, v17
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
 ; GFX9-IDXMODE-NEXT:    s_xor_b64 exec, exec, vcc
-; GFX9-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_4
-; GFX9-IDXMODE-NEXT:  ; %bb.5: ; in Loop: Header=BB26_2 Depth=1
+; GFX9-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_5
+; GFX9-IDXMODE-NEXT:  ; %bb.6: ; in Loop: Header=BB26_3 Depth=1
 ; GFX9-IDXMODE-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX9-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_2
-; GFX9-IDXMODE-NEXT:  .LBB26_6: ; %bb8
+; GFX9-IDXMODE-NEXT:    s_mov_b64 s[2:3], 0
+; GFX9-IDXMODE-NEXT:    s_branch .LBB26_2
+; GFX9-IDXMODE-NEXT:  .LBB26_7: ; %bb8
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 bb:
   br label %bb2

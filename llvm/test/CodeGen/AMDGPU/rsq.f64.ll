@@ -19,8 +19,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-SDAG-NEXT:    s_lshl_b32 s2, s2, 8
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
 ; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
@@ -106,8 +108,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-SDAG-NEXT:    s_lshl_b32 s2, s2, 8
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
 ; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
@@ -199,8 +203,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e64 s[2:3], |s[0:1]|, v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[4:5], s[2:3], exec
+; SI-SDAG-NEXT:    s_cselect_b32 s4, 1, 0
+; SI-SDAG-NEXT:    s_lshl_b32 s4, s4, 8
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], |s[0:1]|, v0
 ; SI-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], exec
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
@@ -286,8 +292,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e64 s[2:3], |s[0:1]|, v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[4:5], s[2:3], exec
+; VI-SDAG-NEXT:    s_cselect_b32 s4, 1, 0
+; VI-SDAG-NEXT:    s_lshl_b32 s4, s4, 8
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], |s[0:1]|, v0
 ; VI-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
@@ -380,8 +388,10 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-SDAG-NEXT:    s_lshl_b32 s2, s2, 8
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
 ; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
@@ -467,8 +477,10 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-SDAG-NEXT:    s_lshl_b32 s2, s2, 8
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
 ; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
@@ -560,8 +572,10 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 9
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[0:1], v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-SDAG-NEXT:    s_lshl_b32 s2, s2, 8
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], -s[0:1], v0
 ; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
@@ -647,8 +661,10 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 9
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-SDAG-NEXT:    s_lshl_b32 s2, s2, 8
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], -s[0:1], v0
 ; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
@@ -4521,8 +4537,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) #0 {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-SDAG-NEXT:    s_lshl_b32 s2, s2, 8
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
 ; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
@@ -4592,8 +4610,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) #0 {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-SDAG-NEXT:    s_lshl_b32 s2, s2, 8
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
 ; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0

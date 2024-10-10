@@ -15,14 +15,16 @@ target datalayout = "A5"
 ; GCN-ALLOCA:         buffer_load_dword
 
 ; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-PROMOTE: s_cselect_b64 [[CC1:[^,]+]], -1, 0
-; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 2
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], vcc
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], vcc
+; GCN-PROMOTE: s_cselect_b32 s2, 1, 0
+; GCN-PROMOTE: s_cmp_lg_u32 s4, 2
+; GCN-PROMOTE: s_cselect_b32 s2, s2, 2 
+; GCN-PROMOTE: s_cmp_lg_u32 s4, 3 
+; GCN-PROMOTE: s_cselect_b32 s2, s2, 3 
+; GCN-PROMOTE: v_mov_b32_e32 v0, s0 
+; GCN-PROMOTE: v_mov_b32_e32 v1, s1 
+; GCN-PROMOTE: v_mov_b32_e32 v2, s2
+; GCN-PROMOTE: flat_store_dword v[0:1], v2
+; GCN-PROMOTE: s_endpgm
 ; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_read_alloca_bitcast(ptr addrspace(1) %out, i32 %index) {
@@ -51,8 +53,10 @@ entry:
 ; GCN-ALLOCA-COUNT-5: buffer_store_dword
 ; GCN-ALLOCA:         buffer_load_dword
 
-; GCN-PROMOTE-COUNT-7: v_cndmask
-
+; GCN-PROMOTE: s_load_dwordx4 s[0:3], s[2:3], 0x24
+; GCN-PROMOTE: s_waitcnt lgkmcnt(0)
+; GCN-PROMOTE: s_cmp_eq_u32 s2, 1
+; GCN-PROMOTE: s_cselect_b32 s4, 1, 0
 ; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_write_alloca_bitcast(ptr addrspace(1) %out, i32 %w_index, i32 %r_index) {
@@ -292,15 +296,17 @@ entry:
 ; GCN-ALLOCA:         buffer_load_dword
 
 ; GCN-PROMOTE: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-PROMOTE: s_cselect_b64 [[CC1:[^,]+]], -1, 0
-; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 2
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND1:v[0-9]+]], 0, 1, [[CC1]]
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE: s_cmp_lg_u32 s{{[0-9]+}}, 3
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND2:v[0-9]+]], 2, [[IND1]], vcc
-; GCN-PROMOTE: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE: v_cndmask_b32_e{{32|64}} [[IND3:v[0-9]+]], 3, [[IND2]], vcc
-
+; GCN-PROMOTE: s_cselect_b32 s2, 1, 0
+; GCN-PROMOTE: s_cmp_lg_u32 s4, 2
+; GCN-PROMOTE: s_cselect_b32 s2, s2, 2 
+; GCN-PROMOTE: s_cmp_lg_u32 s4, 3 
+; GCN-PROMOTE: s_cselect_b32 s2, s2, 3 
+; GCN-PROMOTE: s_add_i32 s2, s2, 1
+; GCN-PROMOTE: v_mov_b32_e32 v0, s0 
+; GCN-PROMOTE: v_mov_b32_e32 v1, s1 
+; GCN-PROMOTE: v_mov_b32_e32 v2, s2
+; GCN-PROMOTE: flat_store_dword v[0:1], v2
+; GCN-PROMOTE: s_endpgm
 ; GCN-PROMOTE: ScratchSize: 0
 
 define amdgpu_kernel void @vector_read_alloca_multiuse(ptr addrspace(1) %out, i32 %index) {

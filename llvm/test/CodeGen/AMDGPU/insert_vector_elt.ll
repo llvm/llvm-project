@@ -1969,17 +1969,22 @@ define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
-; SI-NEXT:    s_cbranch_scc0 .LBB42_4
+; SI-NEXT:    s_cbranch_scc0 .LBB42_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_load_dword s5, s[2:3], 0x1
 ; SI-NEXT:    s_mov_b64 s[6:7], 0
-; SI-NEXT:    s_andn2_b64 vcc, exec, s[6:7]
+; SI-NEXT:    s_branch .LBB42_3
+; SI-NEXT:  .LBB42_2:
+; SI-NEXT:    s_mov_b64 s[6:7], -1
+; SI-NEXT:  .LBB42_3: ; %Flow
+; SI-NEXT:    s_and_b64 s[6:7], s[6:7], exec
+; SI-NEXT:    s_cselect_b32 s6, 1, 0
+; SI-NEXT:    s_cmp_lg_u32 s6, 1
+; SI-NEXT:    s_cbranch_scc1 .LBB42_5
+; SI-NEXT:  ; %bb.4: ; %if
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 vcc, vcc
-; SI-NEXT:    s_cbranch_vccnz .LBB42_3
-; SI-NEXT:  .LBB42_2: ; %if
 ; SI-NEXT:    s_load_dword s5, s[2:3], 0x0
-; SI-NEXT:  .LBB42_3: ; %endif
+; SI-NEXT:  .LBB42_5: ; %endif
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
@@ -1987,8 +1992,6 @@ define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-; SI-NEXT:  .LBB42_4:
-; SI-NEXT:    s_branch .LBB42_2
 ;
 ; VI-LABEL: insert_split_bb:
 ; VI:       ; %bb.0: ; %entry
@@ -1996,14 +1999,22 @@ define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s4, 0
-; VI-NEXT:    s_cbranch_scc0 .LBB42_4
+; VI-NEXT:    s_cbranch_scc0 .LBB42_2
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_load_dword s5, s[2:3], 0x4
-; VI-NEXT:    s_cbranch_execnz .LBB42_3
-; VI-NEXT:  .LBB42_2: ; %if
+; VI-NEXT:    s_mov_b64 s[6:7], 0
+; VI-NEXT:    s_branch .LBB42_3
+; VI-NEXT:  .LBB42_2:
+; VI-NEXT:    s_mov_b64 s[6:7], -1
+; VI-NEXT:  .LBB42_3: ; %Flow
+; VI-NEXT:    s_and_b64 s[6:7], s[6:7], exec
+; VI-NEXT:    s_cselect_b32 s6, 1, 0
+; VI-NEXT:    s_cmp_lg_u32 s6, 1
+; VI-NEXT:    s_cbranch_scc1 .LBB42_5
+; VI-NEXT:  ; %bb.4: ; %if
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s5, s[2:3], 0x0
-; VI-NEXT:  .LBB42_3: ; %endif
+; VI-NEXT:  .LBB42_5: ; %endif
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    s_mov_b32 s3, 0x1100f000
@@ -2011,8 +2022,6 @@ define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
-; VI-NEXT:  .LBB42_4:
-; VI-NEXT:    s_branch .LBB42_2
 entry:
   %0 = insertelement <2 x i32> undef, i32 %a, i32 0
   %1 = icmp eq i32 %a, 0

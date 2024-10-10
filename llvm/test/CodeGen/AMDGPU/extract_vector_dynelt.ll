@@ -33,16 +33,14 @@ define amdgpu_kernel void @int4_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s4, 1
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GCN-NEXT:    s_cselect_b32 s2, 1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
-; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cselect_b32 s2, s2, 2
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 3
-; GCN-NEXT:    v_cndmask_b32_e32 v0, 2, v0, vcc
-; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
-; GCN-NEXT:    v_cndmask_b32_e32 v2, 4, v0, vcc
+; GCN-NEXT:    s_cselect_b32 s2, s2, 4
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -730,10 +728,8 @@ define amdgpu_kernel void @bit128_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 1
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GCN-NEXT:    s_cselect_b32 s2, 1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 2
-; GCN-NEXT:    v_readfirstlane_b32 s2, v0
 ; GCN-NEXT:    s_cselect_b32 s2, s2, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 3
 ; GCN-NEXT:    s_cselect_b32 s2, s2, 0
