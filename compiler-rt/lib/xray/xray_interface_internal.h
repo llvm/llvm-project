@@ -123,9 +123,9 @@ inline int32_t MakePackedId(int32_t FnId, int32_t ObjId) {
   return ((ObjId << XRayNFnBits) & XRayObjBitMask) | (FnId & XRayFnBitMask);
 }
 
-inline std::pair<int32_t, int32_t> UnpackId(int32_t CombinedId) {
-  uint32_t ObjId = (CombinedId & XRayObjBitMask) >> XRayNFnBits;
-  uint32_t FnId = CombinedId & XRayFnBitMask;
+inline std::pair<int32_t, int32_t> UnpackId(int32_t PackedId) {
+  uint32_t ObjId = (PackedId & XRayObjBitMask) >> XRayNFnBits;
+  uint32_t FnId = PackedId & XRayFnBitMask;
   return {ObjId, FnId};
 }
 
