@@ -1769,6 +1769,43 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
   }
 }
 
+class VIMAGE_RTS_Helper<bit HasVdst, bit IsTraceRay> {
+  list<RegisterClass> addr_types = !if(IsTraceRay, [VGPR_32, VReg_96, VGPR_32, VReg_96, VReg_96], [VGPR_32, VGPR_32, VGPR_32]);
+  int num_addrs = !size(addr_types);
+  int VAddrDwords = !if(IsTraceRay, 11, 3);
+  int VDataDwords = !if(HasVdst, !if(IsTraceRay, 1, 9), 0);
+}
+
+class VIMAGE_RTS<int op, string opcode, int num_addrs, dag RsrcIns, GFXGen gfxGen, MIMGEncoding encoding,
+                 list<RegisterClass> addr_types, bit HasVdst, bit IsTraceRay>
+    : VIMAGE<op, !if(HasVdst, !if(IsTraceRay, (outs VGPR_32:$vdata), (outs VReg_288:$vdata)), (outs)),
+             num_addrs, gfxGen.AssemblerPredicate, encoding, gfxGen.DecoderNamespace, addr_types>{
+  let InOperandList = !con(nsah.AddrIns, RsrcIns, (ins R128A16:$r128));
+  let AsmString = opcode#!if(HasVdst, " $vdata, ", " ")#nsah.AddrAsm#!if(IsTraceRay, ", $rsrc", ", null")#"$r128";
+}
+
+multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay>{
+  defvar info = VIMAGE_RTS_Helper<HasVdst, IsTraceRay>;
+  def "" : MIMGBaseOpcode {
+    let NoReturn = !not(HasVdst);
+    let BVH = 1;
+  }
+  let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
+      mayLoad = 0,
+      d16 = 0,
+      dmask = 0x0,
+      cpol = 0,
+      tfe = 0,
+      a16 = 0,
+      dim = {0,0,0},
+      rsrc = !if(IsTraceRay, ?, SGPR_NULL_gfx11plus.Index),
+      vdata = !if(HasVdst, ?, 0),
+      VDataDwords = info.VDataDwords,
+      VAddrDwords = info.VAddrDwords in
+        def _gfx13 : VIMAGE_RTS<op.GFX13, opcode, info.num_addrs, !if(IsTraceRay, (ins RsrcReg128Op:$rsrc), (ins)),
+                                GFX13Gen, MIMGEncGfx13, info.addr_types, HasVdst, IsTraceRay>;
+}
+
 //===----------------------------------------------------------------------===//
 // MIMG Instructions
 //===----------------------------------------------------------------------===//
@@ -1819,6 +1856,10 @@ defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x84, MIMG.NOP
 def IMAGE_ATOMIC_MAX_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
+
+defm RTS_TRACE_RAY          : MIMG_RTS<mimgopc<0x0f2, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray", 0, 1>;
+defm RTS_TRACE_RAY_NONBLOCK : MIMG_RTS<mimgopc<0x0f3, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray_nonblock", 1, 1>;
+defm RTS_READ_VERTEX        : MIMG_RTS<mimgopc<0x0f4, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_vertex", 1, 0>;
 
 defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x1b, 0x20>, AMDGPUSample>;
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts] in {

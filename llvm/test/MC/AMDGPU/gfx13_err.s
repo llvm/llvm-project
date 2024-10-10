@@ -43,3 +43,12 @@ v_dual_fma_f32 v7, v1, v2, v3 :: v_dual_cndmask_b32 v2, v4, v1
 
 s_barrier_init 0
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+rts_trace_ray [v0, v[1:3], v[4], v[5:7], v[8:10]], s[4:7]
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must set modifier r128=1
+
+rts_trace_ray_nonblock v14, [v0, v[1:3], v[4], v[5:7], v[8:10]], s[4:7]
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must set modifier r128=1
+
+rts_read_vertex v[0:8], [v9, v10, v11], null
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must set modifier r128=1

@@ -1904,7 +1904,7 @@ private:
   bool validateMIMGAddrSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
-  bool validateTensorR128(const MCInst &Inst);
+  bool validateR128(const MCInst &Inst);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
   bool validateNeg(const MCInst &Inst, int OpName);
@@ -4323,8 +4323,6 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst,
   int A16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::a16);
 
   assert(VAddr0Idx != -1);
-  assert(SrsrcIdx != -1);
-  assert(SrsrcIdx > VAddr0Idx);
 
   bool IsA16 = (A16Idx != -1 && Inst.getOperand(A16Idx).getImm());
   if (BaseOpcode->BVH) {
@@ -4333,6 +4331,9 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst,
     Error(IDLoc, "image address size does not match a16");
     return false;
   }
+
+  assert(SrsrcIdx != -1);
+  assert(SrsrcIdx > VAddr0Idx);
 
   unsigned Dim = Inst.getOperand(DimIdx).getImm();
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
@@ -4659,11 +4660,16 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
   return true;
 }
 
-bool AMDGPUAsmParser::validateTensorR128(const MCInst &Inst) {
+bool AMDGPUAsmParser::validateR128(const MCInst &Inst) {
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
-  if ((Desc.TSFlags & SIInstrFlags::TENSOR_CNT) == 0)
+  // Only validate tensor_* and rts_* instructions.
+  if (((Desc.TSFlags & SIInstrFlags::TENSOR_CNT) == 0) &&
+      (((Desc.TSFlags & SIInstrFlags::VIMAGE) == 0) ||
+       !AMDGPU::getMIMGBaseOpcodeInfo(AMDGPU::getMIMGInfo(Opc)->BaseOpcode)
+            ->BVH ||
+       !isGFX13()))
     return true;
 
   int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
@@ -5637,7 +5643,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     Error(IDLoc, "missing dim operand");
     return false;
   }
-  if (!validateTensorR128(Inst)) {
+  if (!validateR128(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
       "instruction must set modifier r128=1");
     return false;
@@ -6968,10 +6974,13 @@ bool AMDGPUAsmParser::parseInstruction(ParseInstructionInfo &Info,
   Operands.push_back(AMDGPUOperand::CreateToken(this, Name, NameLoc));
 
   bool IsMIMG = Name.starts_with("image_");
+  bool IsRTS = Name.starts_with("rts_");
 
   while (!trySkipToken(AsmToken::EndOfStatement)) {
     OperandMode Mode = OperandMode_Default;
     if (IsMIMG && isGFX10Plus() && Operands.size() == 2)
+      Mode = OperandMode_NSA;
+    if (IsRTS)
       Mode = OperandMode_NSA;
     ParseStatus Res = parseOperand(Operands, Name, Mode);
 
