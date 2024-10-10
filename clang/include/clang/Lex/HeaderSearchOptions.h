@@ -38,6 +38,10 @@ enum IncludeDirGroup {
   /// Like Angled, but marks header maps used when building frameworks.
   IndexHeaderMap,
 
+  /// Like Angled, but marks system directories while retaining relative order
+  /// with user directories.
+  External,
+
   /// Like Angled, but marks system directories.
   System,
 

@@ -288,7 +288,8 @@ public:
 
   /// getAllArgValues - Get the values of all instances of the given argument
   /// as strings.
-  std::vector<std::string> getAllArgValues(OptSpecifier Id) const;
+  std::vector<std::string>
+  getAllArgValues(OptSpecifier Id0, OptSpecifier Id1 = 0U) const;
 
   /// @}
   /// @name Translation Utilities

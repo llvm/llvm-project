@@ -366,9 +366,10 @@ void InitHeaderSearch::AddDefaultIncludePaths(
 }
 
 /// If there are duplicate directory entries in the specified search list,
-/// remove the later (dead) ones.  Returns the number of non-system headers
-/// removed, which is used to update NumAngled.
-static unsigned RemoveDuplicates(std::vector<DirectoryLookupInfo> &SearchList,
+/// identify and remove the ones to be ignored and issue a diagnostic.
+/// Returns the number of non-system search paths emoved.
+static unsigned RemoveDuplicates(const LangOptions &Lang,
+                                 std::vector<DirectoryLookupInfo> &SearchList,
                                  unsigned First, bool Verbose) {
   llvm::SmallPtrSet<const DirectoryEntry *, 8> SeenDirs;
   llvm::SmallPtrSet<const DirectoryEntry *, 8> SeenFrameworkDirs;
@@ -376,40 +377,43 @@ static unsigned RemoveDuplicates(std::vector<DirectoryLookupInfo> &SearchList,
   unsigned NonSystemRemoved = 0;
   for (unsigned i = First; i != SearchList.size(); ++i) {
     unsigned DirToRemove = i;
+    bool NonSystemDirRemoved = false;
 
     const DirectoryLookup &CurEntry = SearchList[i].Lookup;
 
+    // If the current entry is for a previously unseen location, cache it and
+    // continue with the next entry.
     if (CurEntry.isNormalDir()) {
-      // If this isn't the first time we've seen this dir, remove it.
       if (SeenDirs.insert(CurEntry.getDir()).second)
         continue;
     } else if (CurEntry.isFramework()) {
-      // If this isn't the first time we've seen this framework dir, remove it.
       if (SeenFrameworkDirs.insert(CurEntry.getFrameworkDir()).second)
         continue;
     } else {
       assert(CurEntry.isHeaderMap() && "Not a headermap or normal dir?");
-      // If this isn't the first time we've seen this headermap, remove it.
       if (SeenHeaderMaps.insert(CurEntry.getHeaderMap()).second)
         continue;
     }
 
-    // If we have a normal #include dir/framework/headermap that is shadowed
-    // later in the chain by a system include location, we actually want to
-    // ignore the user's request and drop the user dir... keeping the system
-    // dir.  This is weird, but required to emulate GCC's search path correctly.
+    // Pruning of duplicate search locations is intended to emulate the behavior
+    // exhibited by GCC (by default) or MSVC (in Microsoft compatibility mode)
+    // to ensure that #include and #include_next directives produce the same
+    // results as these other compilers.
     //
-    // Since dupes of system dirs are rare, just rescan to find the original
-    // that we're nuking instead of using a DenseMap.
+    // GCC and MSVC both prune duplicate user search locations that follow a
+    // previous matching user search location. Both compilers also prune user
+    // search locations that are also present as system search locations
+    // regardless of the order in which they appear. The compilers differ with
+    // respect to pruning system search locations that duplicate a previous
+    // system search location; GCC preserves the first such occurences while
+    // MSVC preserves the last one.
     if (CurEntry.getDirCharacteristic() != SrcMgr::C_User) {
-      // Find the dir that this is the same of.
+      // Find the matching search entry.
       unsigned FirstDir;
-      for (FirstDir = First;; ++FirstDir) {
-        assert(FirstDir != i && "Didn't find dupe?");
-
+      for (FirstDir = First; FirstDir < i; ++FirstDir) {
         const DirectoryLookup &SearchEntry = SearchList[FirstDir].Lookup;
 
-        // If these are different lookup types, then they can't be the dupe.
+        // Different lookup types are not considered duplicate entries.
         if (SearchEntry.getLookupType() != CurEntry.getLookupType())
           continue;
 
@@ -426,21 +430,34 @@ static unsigned RemoveDuplicates(std::vector<DirectoryLookupInfo> &SearchList,
         if (isSame)
           break;
       }
+      assert(FirstDir < i && "Expected duplicate search location not found");
 
-      // If the first dir in the search path is a non-system dir, zap it
-      // instead of the system one.
-      if (SearchList[FirstDir].Lookup.getDirCharacteristic() == SrcMgr::C_User)
+      if (Lang.MSVCCompat) {
+        // In Microsoft compatibility mode, a later system search location entry
+        // suppresses a previous user or system search location.
         DirToRemove = FirstDir;
+        if (SearchList[FirstDir].Lookup.getDirCharacteristic() ==
+            SrcMgr::C_User)
+          NonSystemDirRemoved = true;
+      } else {
+        // In GCC compatibility mode, a later system search location entry
+        // suppresses a previous user search location.
+        if (SearchList[FirstDir].Lookup.getDirCharacteristic() ==
+            SrcMgr::C_User) {
+          DirToRemove = FirstDir;
+          NonSystemDirRemoved = true;
+        }
+      }
     }
 
     if (Verbose) {
       llvm::errs() << "ignoring duplicate directory \""
                    << CurEntry.getName() << "\"\n";
-      if (DirToRemove != i)
+      if (NonSystemDirRemoved)
         llvm::errs() << "  as it is a non-system directory that duplicates "
                      << "a system directory\n";
     }
-    if (DirToRemove != i)
+    if (NonSystemDirRemoved)
       ++NonSystemRemoved;
 
     // This is reached if the current entry is a duplicate.  Remove the
@@ -484,14 +501,15 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
       SearchList.push_back(Include);
 
   // Deduplicate and remember index.
-  RemoveDuplicates(SearchList, 0, Verbose);
+  RemoveDuplicates(Lang, SearchList, 0, Verbose);
   unsigned NumQuoted = SearchList.size();
 
   for (auto &Include : IncludePath)
-    if (Include.Group == Angled || Include.Group == IndexHeaderMap)
+    if (Include.Group == Angled || Include.Group == IndexHeaderMap ||
+        Include.Group == External)
       SearchList.push_back(Include);
 
-  RemoveDuplicates(SearchList, NumQuoted, Verbose);
+  RemoveDuplicates(Lang, SearchList, NumQuoted, Verbose);
   unsigned NumAngled = SearchList.size();
 
   for (auto &Include : IncludePath)
@@ -510,7 +528,8 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   // Remove duplicates across both the Angled and System directories.  GCC does
   // this and failing to remove duplicates across these two groups breaks
   // #include_next.
-  unsigned NonSystemRemoved = RemoveDuplicates(SearchList, NumQuoted, Verbose);
+  unsigned NonSystemRemoved =
+      RemoveDuplicates(Lang, SearchList, NumQuoted, Verbose);
   NumAngled -= NonSystemRemoved;
 
   Headers.SetSearchPaths(extractLookups(SearchList), NumQuoted, NumAngled,

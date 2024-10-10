@@ -4561,6 +4561,9 @@ def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clan
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
+def iexternal : JoinedOrSeparate<["-"], "iexternal">, Group<clang_i_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Add directory to external include search path">, MetaVarName<"<directory>">;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to SYSTEM framework search path">;
@@ -8419,7 +8422,7 @@ def _SLASH_diagnostics_classic : CLFlag<"diagnostics:classic">,
 def _SLASH_D : CLJoinedOrSeparate<"D", [CLOption, DXCOption]>,
   HelpText<"Define macro">, MetaVarName<"<macro[=value]>">, Alias<D>;
 def _SLASH_E : CLFlag<"E">, HelpText<"Preprocess to stdout">, Alias<E>;
-def _SLASH_external_COLON_I : CLJoinedOrSeparate<"external:I">, Alias<isystem>,
+def _SLASH_external_COLON_I : CLJoinedOrSeparate<"external:I">, Alias<iexternal>,
   HelpText<"Add directory to include search path with warnings suppressed">,
   MetaVarName<"<dir>">;
 def _SLASH_fp_contract : CLFlag<"fp:contract">, HelpText<"">, Alias<ffp_contract>, AliasArgs<["on"]>;
