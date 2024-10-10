@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE {
 
-int asprintf(char **__restrict s, const char *format, ...);
+int asprintf(char **__restrict s, const char *__restrict format, ...);
 
 } // namespace LIBC_NAMESPACE
 

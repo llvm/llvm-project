@@ -39,7 +39,6 @@ add_libc_unittest(
   SRCS
     dup_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -58,7 +57,6 @@ add_libc_unittest(
   SRCS
     dup2_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -77,7 +75,6 @@ add_libc_unittest(
   SRCS
     dup3_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -96,7 +93,6 @@ add_libc_unittest(
   SRCS
     fchdir_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -112,7 +108,6 @@ add_libc_unittest(
   SRCS
     ftruncate_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -131,7 +126,6 @@ add_libc_unittest(
   SRCS
     pread_pwrite_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -151,7 +145,6 @@ add_libc_unittest(
   SRCS
     read_write_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -170,7 +163,6 @@ add_libc_unittest(
   SRCS
     link_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -186,7 +178,6 @@ add_libc_unittest(
   SRCS
     linkat_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -202,7 +193,6 @@ add_libc_unittest(
   SRCS
     lseek_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -219,7 +209,6 @@ add_libc_unittest(
   SRCS
     pipe_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.unistd.close
@@ -234,7 +223,6 @@ add_libc_unittest(
   SRCS
     rmdir_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.fcntl
     libc.src.errno.errno
     libc.src.sys.stat.mkdir
@@ -258,7 +246,6 @@ add_libc_unittest(
   SRCS
     readlink_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.unistd.readlink
@@ -275,7 +262,6 @@ add_libc_unittest(
   SRCS
     readlinkat_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.fcntl
     libc.include.unistd
     libc.src.errno.errno
@@ -293,7 +279,6 @@ add_libc_unittest(
   SRCS
     symlink_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -309,7 +294,6 @@ add_libc_unittest(
   SRCS
     symlinkat_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -325,7 +309,6 @@ add_libc_unittest(
   SRCS
     truncate_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -344,7 +327,6 @@ add_libc_unittest(
   SRCS
     unlink_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -359,7 +341,6 @@ add_libc_unittest(
   SRCS
     unlinkat_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -428,10 +409,10 @@ add_libc_unittest(
   SRCS
     syscall_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
     libc.include.fcntl
     libc.include.sys_syscall
+    libc.src.errno.errno 
     libc.src.unistd.__llvm_libc_syscall
     libc.test.UnitTest.ErrnoSetterMatcher
 )
