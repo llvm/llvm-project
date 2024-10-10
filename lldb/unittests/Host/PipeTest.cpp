@@ -55,7 +55,7 @@ TEST_F(PipeTest, OpenAsReader) {
 }
 #endif
 
-#if !defined(__AIX__)
+#if !defined(_AIX)
 TEST_F(PipeTest, WriteWithTimeout) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());

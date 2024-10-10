@@ -223,7 +223,7 @@ TEST_F(MainLoopTest, PendingCallbackAfterLoopExited) {
     loop.AddPendingCallback([&](MainLoopBase &loop) {});
 }
 
-#if defined(LLVM_ON_UNIX) && !defined(__AIX__)
+#if defined(LLVM_ON_UNIX) && !defined(_AIX)
 TEST_F(MainLoopTest, DetectsEOF) {
 
   PseudoTerminal term;

@@ -40,7 +40,7 @@
 
 #include <cassert>
 #include <memory>
-#ifdef __AIX__
+#ifdef _AIX
 #include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
 #endif
 
@@ -1260,7 +1260,7 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
 // Answer the question: Where did THIS frame save the CALLER frame ("previous"
 // frame)'s register value?
 
-#ifdef __AIX__
+#ifdef _AIX
 extern bool UGLY_HACK_NULL_TOPFRAME;
 #endif
 
@@ -1525,7 +1525,7 @@ RegisterContextUnwind::SavedLocationForRegister(
       new_regloc.type =
           UnwindLLDB::ConcreteRegisterLocation::eRegisterInLiveRegisterContext;
       new_regloc.location.register_number = regnum.GetAsKind(eRegisterKindLLDB);
-#ifdef __AIX__
+#ifdef _AIX
       if (UGLY_HACK_NULL_TOPFRAME && new_regloc.location.register_number == 0x20) {
         new_regloc.location.register_number = 0x24;
       }
@@ -2390,7 +2390,7 @@ bool RegisterContextUnwind::ReadPC(addr_t &pc) {
   }
 }
 
-#ifdef __AIX__
+#ifdef _AIX
 bool RegisterContextUnwind::ReadLR(addr_t &lr) {
   if (!IsValid())
     return false;

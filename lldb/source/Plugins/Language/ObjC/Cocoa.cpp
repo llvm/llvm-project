@@ -1227,7 +1227,7 @@ bool lldb_private::formatters::ObjCSELSummaryProvider(
 time_t lldb_private::formatters::GetOSXEpoch() {
   static time_t epoch = 0;
   if (!epoch) {
-#if !defined(__AIX__)
+#if !defined(_AIX)
 #ifndef _WIN32
     tzset();
     tm tm_epoch;

@@ -18,7 +18,7 @@
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#if defined(__AIX__)
+#if defined(_AIX)
 #include <sys/ldr.h>
 #endif
 
@@ -160,7 +160,7 @@ void DynamicLoaderAIXDYLD::DidAttach() {
   auto error = m_process->LoadModules();
   LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
 
-#if defined(__AIX__)
+#if defined(_AIX)
   // Get struct ld_xinfo (FIXME)
   struct ld_xinfo ldinfo[64];
   Status status = m_process->GetLDXINFO(&(ldinfo[0]));
@@ -221,7 +221,7 @@ void DynamicLoaderAIXDYLD::DidLaunch() {
     LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
   }
 
-#if defined(__AIX__)
+#if defined(_AIX)
   // Get struct ld_xinfo (FIXME)
   struct ld_xinfo ldinfo[64];
   Status status = m_process->GetLDXINFO(&(ldinfo[0]));

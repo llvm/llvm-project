@@ -179,7 +179,7 @@ Status MainLoopPosix::RunImpl::Poll() {
     read_fds.push_back(pfd);
   }
 
-#if defined(__AIX__)
+#if defined(_AIX)
   sigset_t origmask;
   int timeout;
 
@@ -325,7 +325,7 @@ MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
   // If we're using kqueue, the signal needs to be unblocked in order to
   // receive it. If using pselect/ppoll, we need to block it, and later unblock
   // it as a part of the system call.
-#if defined(__AIX__)
+#if defined(_AIX)
   //FIXME: where is signal unblocked?
   ret = pthread_sigmask(SIG_UNBLOCK, &new_action.sa_mask, &old_set);
 #else

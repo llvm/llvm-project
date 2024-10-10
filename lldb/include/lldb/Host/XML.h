@@ -11,7 +11,7 @@
 
 #include "lldb/Host/Config.h"
 
-#if defined(__AIX__)
+#if defined(_AIX)
 //FIXME for AIX
 #undef LLDB_ENABLE_LIBXML2
 #endif

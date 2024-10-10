@@ -45,7 +45,7 @@
 #include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
 #elif defined(_WIN32)
 #include "Plugins/Process/Windows/Common/NativeProcessWindows.h"
-#elif defined(__AIX__)
+#elif defined(_AIX)
 #include "Plugins/Process/AIX/NativeProcessAIX.h"
 #endif
 
@@ -72,7 +72,7 @@ typedef process_freebsd::NativeProcessFreeBSD::Manager NativeProcessManager;
 typedef process_netbsd::NativeProcessNetBSD::Manager NativeProcessManager;
 #elif defined(_WIN32)
 typedef NativeProcessWindows::Manager NativeProcessManager;
-#elif defined(__AIX__)
+#elif defined(_AIX)
 typedef process_aix::NativeProcessAIX::Manager NativeProcessManager;
 #else
 // Dummy implementation to make sure the code compiles
