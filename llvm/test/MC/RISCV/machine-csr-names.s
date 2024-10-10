@@ -1916,6 +1916,66 @@ csrrs t2, 0xB1F, zero
 ######################################
 # Machine Counter Setup
 ######################################
+# mnscratch
+# name
+# CHECK-INST: csrrs t1, mnscratch, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x74]
+# CHECK-INST-ALIAS: csrr t1, mnscratch
+# uimm12
+# CHECK-INST: csrrs t2, mnscratch, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x74]
+# CHECK-INST-ALIAS: csrr t2, mnscratch
+# name
+csrrs t1, mnscratch, zero
+# uimm12
+csrrs t2, 0x740, zero
+
+# mnepc
+# name
+# CHECK-INST: csrrs t1, mnepc, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x74]
+# CHECK-INST-ALIAS: csrr t1, mnepc
+# uimm12
+# CHECK-INST: csrrs t2, mnepc, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x74]
+# CHECK-INST-ALIAS: csrr t2, mnepc
+# name
+csrrs t1, mnepc, zero
+# uimm12
+csrrs t2, 0x741, zero
+
+# mncause
+# name
+# CHECK-INST: csrrs t1, mncause, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x74]
+# CHECK-INST-ALIAS: csrr t1, mncause
+# uimm12
+# CHECK-INST: csrrs t2, mncause, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x74]
+# CHECK-INST-ALIAS: csrr t2, mncause
+# name
+csrrs t1, mncause, zero
+# uimm12
+csrrs t2, 0x742, zero
+
+# mnstatus
+# name
+# CHECK-INST: csrrs t1, mnstatus, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x74]
+# CHECK-INST-ALIAS: csrr t1, mnstatus
+# uimm12
+# CHECK-INST: csrrs t2, mnstatus, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x74]
+# CHECK-INST-ALIAS: csrr t2, mnstatus
+# name
+csrrs t1, mnstatus, zero
+# uimm12
+csrrs t2, 0x744, zero
+
+
+######################################
+# Machine Counter Setup
+######################################
 # mcountinhibit
 # name
 # CHECK-INST: csrrs t1, mcountinhibit, zero
