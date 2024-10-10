@@ -2056,7 +2056,7 @@ define void @test_atomicrmw_fadd_f32_global_system_noret__amdgpu_ignore_denormal
 ; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0:![0-9]+]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2077,7 +2077,7 @@ define float @test_atomicrmw_fadd_f32_global_system_ret__amdgpu_ignore_denormal_
 ; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2140,7 +2140,7 @@ define void @test_atomicrmw_fadd_f32_daz_global_system_noret__amdgpu_ignore_deno
 ; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2161,7 +2161,7 @@ define float @test_atomicrmw_fadd_f32_daz_global_system_ret__amdgpu_ignore_denor
 ; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2182,7 +2182,7 @@ define void @test_atomicrmw_fadd_f32_dyndenorm_global_system_noret__amdgpu_ignor
 ; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2203,7 +2203,7 @@ define float @test_atomicrmw_fadd_f32_dyndenorm_global_system_ret__amdgpu_ignore
 ; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2306,7 +2306,7 @@ define void @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(pt
 ; CI-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2347,7 +2347,7 @@ define float @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(ptr
 ; CI-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2430,7 +2430,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_global_system_noret__amdgpu_ignor
 ; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2451,7 +2451,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_global_system_ret__amdgpu_ignor
 ; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2626,7 +2626,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; CI-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2642,7 +2642,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2658,7 +2658,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2682,7 +2682,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2703,7 +2703,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; CI-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; CI-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; CI-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; CI-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; CI-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; CI-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; CI-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2719,7 +2719,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; GFX9-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX9-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX9-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX9-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; GFX9-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX9-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX9-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2735,7 +2735,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2759,7 +2759,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -2780,7 +2780,7 @@ define void @test_atomicrmw_fadd_f32_flat_system_noret__amdgpu_ignore_denormal_m
 ; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2801,7 +2801,7 @@ define float @test_atomicrmw_fadd_f32_flat_system_ret__amdgpu_ignore_denormal_mo
 ; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
 ; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
-; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
@@ -2831,7 +2831,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; ALL-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
 ; ALL-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; ALL-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] monotonic monotonic, align 8, !noalias.addrspace [[META1]]
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; ALL-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -2865,7 +2865,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; ALL-NEXT:    [[NEW2:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW2]] to i64
 ; ALL-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; ALL-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] monotonic monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.ignore.denormal.mode [[META0]]
+; ALL-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] monotonic monotonic, align 8, !noalias.addrspace [[META1]]
 ; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; ALL-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double

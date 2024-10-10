@@ -194,6 +194,39 @@ static unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
   return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
 }
 
+/// Copy metadata that's safe to preserve when widening atomics.
+static void copyMetadataForAtomic(Instruction &Dest,
+                                  const Instruction &Source) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
+  Source.getAllMetadata(MD);
+  LLVMContext &Ctx = Dest.getContext();
+  MDBuilder MDB(Ctx);
+
+  for (auto [ID, N] : MD) {
+    switch (ID) {
+    case LLVMContext::MD_dbg:
+    case LLVMContext::MD_tbaa:
+    case LLVMContext::MD_tbaa_struct:
+    case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_noalias_addrspace:
+    case LLVMContext::MD_access_group:
+    case LLVMContext::MD_mmra:
+      Dest.setMetadata(ID, N);
+      break;
+    default:
+      if (ID == Ctx.getMDKindID("amdgpu.no.remote.memory"))
+        Dest.setMetadata(ID, N);
+      else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
+        Dest.setMetadata(ID, N);
+
+      // Losing amdgpu.ignore.denormal.mode, but it doesn't matter for current
+      // uses.
+      break;
+    }
+  }
+}
+
 // Determine if a particular atomic operation has a supported size,
 // and is of appropriate alignment, to be passed through for target
 // lowering. (Versus turning into a __atomic libcall)
@@ -617,7 +650,7 @@ static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
       Addr, Loaded, NewVal, AddrAlign, MemOpOrder,
       AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder), SSID);
   if (MetadataSrc)
-    Pair->copyMetadata(*MetadataSrc);
+    copyMetadataForAtomic(*Pair, *MetadataSrc);
 
   Success = Builder.CreateExtractValue(Pair, 1, "success");
   NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
@@ -968,37 +1001,6 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
   Value *FinalOldResult = extractMaskedValue(Builder, OldResult, PMV);
   AI->replaceAllUsesWith(FinalOldResult);
   AI->eraseFromParent();
-}
-
-/// Copy metadata that's safe to preserve when widening atomics.
-static void copyMetadataForAtomic(Instruction &Dest,
-                                  const Instruction &Source) {
-  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
-  Source.getAllMetadata(MD);
-  LLVMContext &Ctx = Dest.getContext();
-  MDBuilder MDB(Ctx);
-
-  for (auto [ID, N] : MD) {
-    switch (ID) {
-    case LLVMContext::MD_dbg:
-    case LLVMContext::MD_tbaa:
-    case LLVMContext::MD_tbaa_struct:
-    case LLVMContext::MD_alias_scope:
-    case LLVMContext::MD_noalias:
-    case LLVMContext::MD_noalias_addrspace:
-    case LLVMContext::MD_access_group:
-    case LLVMContext::MD_mmra:
-      Dest.setMetadata(ID, N);
-      break;
-    default:
-      if (ID == Ctx.getMDKindID("amdgpu.no.remote.memory"))
-        Dest.setMetadata(ID, N);
-      else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
-        Dest.setMetadata(ID, N);
-
-      break;
-    }
-  }
 }
 
 // Widen the bitwise atomicrmw (or/xor/and) to the minimum supported width.
@@ -1850,7 +1852,7 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
               Addr, Loaded, NewVal, Alignment, MemOpOrder,
               AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder), SSID);
           if (MetadataSrc)
-            Pair->copyMetadata(*MetadataSrc);
+            copyMetadataForAtomic(*Pair, *MetadataSrc);
 
           Success = Builder.CreateExtractValue(Pair, 1, "success");
           NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
