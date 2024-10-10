@@ -388,6 +388,8 @@ Improvements to Clang's diagnostics
   instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
   suboptimal in some way the error fails to mention (#GH111550).
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
