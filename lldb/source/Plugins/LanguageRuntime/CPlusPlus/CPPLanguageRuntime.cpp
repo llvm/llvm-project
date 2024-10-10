@@ -267,19 +267,81 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   if (!callable_type)
     return optional_info;
   
-  if (callable_type.IsFunctionPointerType() || callable_type.IsMemberFunctionPointerType()) {
-    // TODO: The previous implementation just does raw pointer arithmetic and reads
-    // 'a pointer' to a function right after the vtable.
+  // Now that the __func is a known type we can dig for the wrapped callable
+  ValueObjectSP callable;
+  {
+    // class __func<_Fp, _Alloc, _Rp(_ArgTypes...)> : __base<_Rp(_ArgTypes...)> {
+    //   __alloc_func<_Fp, _Alloc, _Rp(_ArgTypes...)> __f_;
+    // }
     //
-    // What is the preferred approach? Go digging for the compressed_pair.first in __func
-    // or assume layout citing ABI compatibility requirements?
+    // class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)> {
+    //   __compressed_pair<_Fp, _Ap> __f_;
+    // }
+    //
+    // class __compressed_pair : __compressed_pair_elem<_T1, 0>,
+    //                           __compressed_pair_elem<_T2, 1> {
+    // }
+    //
+    // struct __compressed_pair_elem {
+    //   _Tp __value_;
+    // }
+    ValueObjectSP alloc_func = func_as_base->Cast(func_type);
+    if (!alloc_func)
+      return optional_info;
+    
+    ValueObjectSP pair = alloc_func->GetChildAtNamePath({"__f_", "__f_"});
+    if (!pair)
+      return optional_info;
+    
+    if (callable_type.IsRecordType() && callable_type.GetNumFields() == 0) {
+      // callable_type is an empty class, and has been optimized away! Serve a dummy
+      callable = valobj_sp->CreateValueObjectFromAddress("__value_",
+                                                         pair->GetLoadAddress(),
+                                                         pair->GetExecutionContextRef(),
+                                                         callable_type);
+    } else {
+      ValueObjectSP elem0 = pair->GetChildAtIndex(0);
+      if (!elem0)
+        return optional_info;
+      
+      callable = elem0->GetChildMemberWithName("__value_");
+      if (!callable)
+        return optional_info;
+    }
+  }
+
+  if (callable_type.IsFunctionPointerType()) {
+    addr_t target_load_addr = callable->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    
+    ModuleSP mod = func_method_addr.CalculateSymbolContextModule();
+    
+    Address callable_addr;
+    if (!mod->ResolveFileAddress(target_load_addr, callable_addr))
+      return optional_info;
+    
+    SymbolContext sc;
+    mod->ResolveSymbolContextForAddress(callable_addr, eSymbolContextSymbol | eSymbolContextLineEntry, sc);
+    
+    if (!sc.symbol)
+      return optional_info;
+    
+    return LibCppStdFunctionCallableInfo {
+      .callable_symbol = *sc.symbol,
+      .callable_address = sc.symbol->GetAddress(),
+      .callable_line_entry = sc.line_entry,
+      .callable_case = LibCppStdFunctionCallableCase::FreeOrMemberFunction
+    };
+  } else if (callable_type.IsMemberFunctionPointerType()) {
+    // TODO: Member function's unsigned value comes back as invalid! I am guessing
+    // the ValueObject wants to let me know that this is not necessarily as simple
+    // as that.. I remember reading something in the Itanium ABI about member
+    // pointers taking up two pointers of space. Perhaps that's why it is not legal
+    // to read their underlying value raw?
+    
+    printf("Curious!");
   } else if (callable_type.IsRecordType()) {
     // Target is a lambda, or a generic callable. Search for a single operator() overload
     std::optional<ConstString> mangled_func_name;
-    
-    // TODO: Because we have access to the type we know a _lot_ about callable_type, we
-    // could even extract a ValueObjectSP to it if we wanted. It would be cool to make
-    // std::function have a synt children provider showing the wrapped lambda/callable!
     
     for (uint32_t idx = 0; idx < callable_type.GetNumMemberFunctions(); idx++) {
       TypeMemberFunctionImpl mfunc = callable_type.GetMemberFunctionAtIndex(idx);
