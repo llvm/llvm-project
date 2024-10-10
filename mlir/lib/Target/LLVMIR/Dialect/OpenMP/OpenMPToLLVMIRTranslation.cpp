@@ -3227,6 +3227,11 @@ static bool getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
 
 static bool targetOpSupported(Operation &opInst) {
   auto targetOp = cast<omp::TargetOp>(opInst);
+  if (targetOp.getBare()) {
+    opInst.emitError("ompx_bare not yet supported");
+    return false;
+  }
+
   if (targetOp.getIfExpr()) {
     opInst.emitError("If clause not yet supported");
     return false;
