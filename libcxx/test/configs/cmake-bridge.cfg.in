@@ -30,3 +30,7 @@ config.substitutions.append(('%{target-include-dir}', '@LIBCXX_TESTING_INSTALL_P
 config.substitutions.append(('%{lib-dir}', '@LIBCXX_TESTING_INSTALL_PREFIX@/@LIBCXX_INSTALL_LIBRARY_DIR@'))
 config.substitutions.append(('%{module-dir}', '@LIBCXX_TESTING_INSTALL_PREFIX@/@LIBCXX_INSTALL_MODULES_DIR@'))
 config.substitutions.append(('%{test-tools-dir}', '@LIBCXX_TEST_TOOLS_PATH@'))
+
+# Available if building libc++ on top of llvm-libc.
+config.substitutions.append(('%{libc-dir}', '@LIBCXX_LIBC_LIBRARY_DIR@'))
+config.substitutions.append(('%{libc-include-dir}', '@LIBCXX_LIBC_INCLUDE_DIR@'))

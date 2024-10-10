@@ -1,0 +1,30 @@
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',
+  f'--target={config.target_triple} -Wno-multi-gpu -flto -mcpu=native'))
+config.substitutions.append(('%{compile_flags}',
+    '-nogpulib -fno-builtin-printf -nogpuinc -nostdlibinc '
+    '-I %{include-dir} -I %{libc-include-dir} '
+    '-I %{target-include-dir} -I %{libcxx-dir}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+  '-nostdlib++ -L %{libc-dir} %{libc-dir}/crt1.o -lc -lm '
+  '-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0 '
+  '-L %{lib-dir} -L %{libc-dir} -lc++ -lc++abi -lclang_rt.builtins '
+))
+
+config.substitutions.append(('%{exec}',
+    '%{executor} --no-parallelism'
+))
+
+config.stdlib = 'llvm-libc++'
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)
