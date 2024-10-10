@@ -9,8 +9,10 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -586,25 +588,61 @@ DescriptorHoister::matchAndRewrite(vector::WarpExecuteOnLane0Op warpOp,
          << " : " << warpOp.getArgs()[argument.getArgNumber()] << "\n";
   rewriter.setInsertionPoint(warpOp);
 
-  DBGS() << "func's argument for block arg: "
-         << warpOp.getArgs()[argument.getArgNumber()].getDefiningOp() << "\n";
   auto srcTypedVal = dyn_cast<TypedValue<MemRefType>>(
       funcOp.getFunctionBody().getArgument(funcArg.getArgNumber()));
+
+  // auto descOffsets = desc.getStaticOffsets();
+  auto descOffsets = desc.getMixedOffsets();
+  if (!descOffsets.size())
+    rewriter.notifyMatchFailure(desc,
+                                "non-static offsets currently not supported");
+  auto laneid = warpOp.getLaneid();
+  auto shiftX = rewriter.create<arith::AddIOp>(
+      funcOp.getLoc(),
+
+      getValueOrCreateConstantIndexOp(rewriter, funcOp.getLoc(),
+                                      descOffsets[0]),
+      laneid);
+  auto shiftY = rewriter.create<arith::AddIOp>(
+      funcOp.getLoc(),
+      getValueOrCreateConstantIndexOp(rewriter, funcOp.getLoc(),
+                                      descOffsets[1]),
+      laneid);
+  xegpu::SGMapAttr sgMap = desc.getType().getSGMapAttr();
+  auto layout = sgMap.getWiLayout();
+  auto dataSizes = sgMap.getWiData();
+  auto viewShape = desc.getTensorDescShape();
+  SmallVector<int64_t, 2> distributedShape;
+
+  for (const auto [l, s] : llvm::zip(layout, viewShape)) {
+    if (!divisible(APInt(64, s), APInt(64, l)))
+      return rewriter.notifyMatchFailure(
+          desc,
+          "the tensor dimentions are not divisible by the distribution factor");
+    distributedShape.push_back(s / l);
+  }
+
   auto srcType = srcTypedVal.getType();
-  DBGS() << "src type rank: " << srcType.getRank() << "\n";
-  DBGS() << "offsets size: " << getAsOpFoldResult(desc.getOffsets()).size()
-         << "\n";
-  DBGS() << "original offsets:\n";
-  llvm::interleaveComma(desc.getConstOffsets(), DBGS());
-  DBGS() << "\nend of original offsets.\n";
 
-  auto newDescOp =
-      cast<xegpu::CreateNdDescOp>(rewriter.clone(*desc.getOperation()));
+  SmallVector<OpFoldResult> mixedOffsets = getAsOpFoldResult({shiftX, shiftY});
 
-  newDescOp.getSourceMutable().assign(
-      funcOp.getFunctionBody().getArgument(funcArg.getArgNumber()));
-  DBGS() << "Inserted a hoisted descriptor op:\n" << funcOp << "\n";
-  DBGS() << "End of func with hoisted desc op:\n";
+  // use the base memref strides
+  SmallVector<OpFoldResult> overwriteStrides =
+      getAsIndexOpFoldResult(rewriter.getContext(), SmallVector<int64_t>{1, 1});
+  SmallVector<OpFoldResult> overwriteSizes =
+      getAsIndexOpFoldResult(rewriter.getContext(), distributedShape);
+
+  auto subview = rewriter.create<memref::SubViewOp>(
+      funcOp.getLoc(), srcTypedVal, mixedOffsets, overwriteSizes,
+      overwriteStrides);
+
+  auto distributedDescType = xegpu::TensorDescType::get(
+      distributedShape, desc.getElementType(), /*array_lenght=*/1,
+      /*boundary_check=*/true,
+      static_cast<xegpu::MemorySpace>(desc.getSourceMemorySpace()),
+      desc.getType().getSgMap());
+  auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
+      desc.getLoc(), distributedDescType, subview.getResult(), mixedOffsets);
 
   rewriter.startOpModification(warpOp);
   rewriter.replaceAllUsesWith(desc, newDescOp);
@@ -613,7 +651,7 @@ DescriptorHoister::matchAndRewrite(vector::WarpExecuteOnLane0Op warpOp,
   warpOp.getBody()->eraseArgument(argument.getArgNumber());
   DBGS() << "After replacing uses:\n" << funcOp << "\n";
   rewriter.finalizeOpModification(warpOp);
-
+  DBGS() << "after inserts:\n" << funcOp << "---\n";
   return success();
 }
 

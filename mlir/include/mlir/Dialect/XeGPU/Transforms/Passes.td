@@ -31,6 +31,7 @@ def XeGPUDistributeToWI : Pass<"xegpu-distribute-to-wi", "gpu::GPUModuleOp"> {
       "vector::VectorDialect",
       "arith::ArithDialect",
       "func::FuncDialect",
+      "memref::MemRefDialect"
   ];
 }
 
