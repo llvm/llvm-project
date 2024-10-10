@@ -143,10 +143,6 @@ if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
     )
 endif()
 
-if(NOT LIBCXX_INSTALL_LIBRARY)
-  set(exclude_from_all EXCLUDE_FROM_ALL)
-endif()
-
 if (APPLE AND LLVM_USE_SANITIZER)
   if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
       ("${LLVM_USE_SANITIZER}" STREQUAL "Address;Undefined") OR
@@ -177,13 +173,13 @@ split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
 # Build the shared library.
-if (LIBCXX_ENABLE_SHARED)
-  add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  add_library(cxx_shared SHARED ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_shared PUBLIC cxx-headers libcxx-libc-shared
                                    PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
+      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXX_ENABLE_SHARED}>,FALSE,TRUE>"
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "${LIBCXX_SHARED_OUTPUT_NAME}"
@@ -247,7 +243,10 @@ if (LIBCXX_ENABLE_SHARED)
     )
   endif()
 
+if (LIBCXX_ENABLE_SHARED)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
+endif()
+
   if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
     # Since we most likely do not have a mt.exe replacement, disable the
     # manifest bundling.  This allows a normal cmake invocation to pass which
@@ -260,19 +259,18 @@ if (LIBCXX_ENABLE_SHARED)
                             APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
     endif()
   endif()
-endif()
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 
 # Build the static library.
-if (LIBCXX_ENABLE_STATIC)
-  add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  add_library(cxx_static STATIC ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_static PUBLIC cxx-headers libcxx-libc-static
                                    PRIVATE ${LIBCXX_LIBRARIES}
                                    PRIVATE libcxx-abi-static)
   set_target_properties(cxx_static
     PROPERTIES
+      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXX_ENABLE_STATIC}>,FALSE,TRUE>"
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "${LIBCXX_STATIC_OUTPUT_NAME}"
@@ -295,16 +293,18 @@ if (LIBCXX_ENABLE_STATIC)
     target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
   endif()
 
-  list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
+  if (LIBCXX_ENABLE_STATIC)
+    list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
+  endif()
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
     target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
   endif()
-endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
+# Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
   )
