@@ -6528,6 +6528,12 @@ void WarpExecuteOnLane0Op::getSuccessorRegions(
 }
 
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
+                                 Value laneId, int64_t warpSize) {
+  build(builder, result, TypeRange(), laneId, warpSize,
+        /*operands=*/std::nullopt, /*argTypes=*/std::nullopt);
+}
+
+void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,
                                  int64_t warpSize) {
   build(builder, result, resultTypes, laneId, warpSize,
