@@ -130,7 +130,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_ADDRSPACECAST(N);
     break;
   case ISD::FFREXP:
-    R = ScalarizeVecRes_FFREXP(N, ResNo);
+  case ISD::FSINCOS:
+    R = ScalarizeVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   case ISD::ADD:
   case ISD::AND:
@@ -275,7 +276,9 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_FIX(SDNode *N) {
                      Op2, N->getFlags());
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecRes_FFREXP(SDNode *N, unsigned ResNo) {
+SDValue
+DAGTypeLegalizer::ScalarizeVecRes_UnaryOpWithTwoResults(SDNode *N,
+                                                        unsigned ResNo) {
   assert(N->getValueType(0).getVectorNumElements() == 1 &&
          "Unexpected vector type!");
   SDValue Elt = GetScalarizedVector(N->getOperand(0));
@@ -1252,7 +1255,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_ADDRSPACECAST(N, Lo, Hi);
     break;
   case ISD::FFREXP:
-    SplitVecRes_FFREXP(N, ResNo, Lo, Hi);
+  case ISD::FSINCOS:
+    SplitVecRes_UnaryOpWithTwoResults(N, ResNo, Lo, Hi);
     break;
 
   case ISD::ANY_EXTEND:
@@ -2613,8 +2617,10 @@ void DAGTypeLegalizer::SplitVecRes_ADDRSPACECAST(SDNode *N, SDValue &Lo,
   Hi = DAG.getAddrSpaceCast(dl, HiVT, Hi, SrcAS, DestAS);
 }
 
-void DAGTypeLegalizer::SplitVecRes_FFREXP(SDNode *N, unsigned ResNo,
-                                          SDValue &Lo, SDValue &Hi) {
+void DAGTypeLegalizer::SplitVecRes_UnaryOpWithTwoResults(SDNode *N,
+                                                         unsigned ResNo,
+                                                         SDValue &Lo,
+                                                         SDValue &Hi) {
   SDLoc dl(N);
   auto [LoVT, HiVT] = DAG.GetSplitDestVTs(N->getValueType(0));
   auto [LoVT1, HiVT1] = DAG.GetSplitDestVTs(N->getValueType(1));
@@ -4749,6 +4755,14 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FSHR:
     Res = WidenVecRes_Ternary(N);
     break;
+  case ISD::FSINCOS: {
+    if (!unrollExpandedOp())
+      Res = WidenVecRes_FSINCOS(N);
+    for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++)
+      SetWidenedVector(SDValue(N, ResNum), Res.getValue(ResNum));
+    Res = SDValue();
+    break;
+  }
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -5495,6 +5509,12 @@ SDValue DAGTypeLegalizer::WidenVecRes_InregOp(SDNode *N) {
   SDValue WidenLHS = GetWidenedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N),
                      WidenVT, WidenLHS, DAG.getValueType(ExtVT));
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_FSINCOS(SDNode *N) {
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDValue InOp = GetWidenedVector(N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), {WidenVT, WidenVT}, InOp);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MERGE_VALUES(SDNode *N, unsigned ResNo) {
