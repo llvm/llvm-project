@@ -226,18 +226,10 @@ bool ThreadSuspender::SuspendAllThreads() {
         break;
     }
     for (tid_t tid : threads) {
-      if (SuspendThread(tid)) {
+      if (SuspendThread(tid))
         retry = true;
-      } else {
-        if (common_flags()->verbosity >= 2) {
-          InternalScopedString path;
-          path.AppendF("/proc/%d/task/%llu/status", pid_, tid);
-          InternalMmapVector<char> buffer;
-          ReadFileToVector(path.data(), &buffer);
-          buffer.push_back(0);
-          VReport(2, "%s: %s\n", path.data(), buffer.data());
-        }
-      }
+      else
+        VReport(2, "%llu/status: %s\n", tid, thread_lister.LoadStatus(tid));
     }
     if (retry)
       VReport(1, "SuspendAllThreads retry: %d\n", i);
