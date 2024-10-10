@@ -967,6 +967,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.asctime_r
     libc.src.time.ctime
     libc.src.time.ctime_r
+    libc.src.time.ctime_s
     libc.src.time.clock
     libc.src.time.clock_gettime
     libc.src.time.difftime
