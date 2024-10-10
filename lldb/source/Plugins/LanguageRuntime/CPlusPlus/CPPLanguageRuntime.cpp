@@ -181,6 +181,176 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   if (!valobj_sp)
     return optional_info;
 
+  // std::function has many variants, try to disambiguate
+  ValueObjectSP func_as_base_ptr;
+  {
+    ValueObjectSP outer_f = valobj_sp->GetChildMemberWithName("__f_");
+    
+    if (!outer_f)
+      return optional_info; // Unrecognized implementation
+    
+    if (outer_f->IsPointerType()) {
+      // git: 3e519524c118651123eecf60c2bbc5d65ad9bac3
+      //
+      // class function<_Rp()> {
+      //   aligned_storage<3*sizeof(void*)>::type __buf_;
+      //   __base<_Rp>* __f_;
+      // }
+      
+      func_as_base_ptr = std::move(outer_f);
+    } else if (auto inner_f = outer_f->GetChildMemberWithName("__f_")) {
+      // git: 050b064f15ee56ee0b42c9b957a3dd0f32532394
+      //
+      // class function<_Rp(_ArgTypes...)> {
+      //   __value_func<_Rp(_ArgTypes...)> __f_;
+      // }
+      //
+      // class __value_func<_Rp(_ArgTypes...)> {
+      //   aligned_storage<3 * sizeof(void*)>::type __buf_;
+      //   __base<_Rp(_ArgTypes...)>* __f_;
+      // }
+      
+      func_as_base_ptr = std::move(inner_f);
+    } else
+      return optional_info; // Unrecognized implementation
+  }
+  
+  // __base<...> is a pure virtual class with an interface to create/copy/destroy/invoke
+  // the underlying value. This interface is implemented by partial specializations of the
+  // __func<_Fp, _Alloc, ...> template where _Fp is the wrapped functor object
+  Status status;
+  ValueObjectSP func_as_base = func_as_base_ptr->Dereference(status);
+  if (status.Fail())
+    return optional_info;
+  
+  // First we'll try to extract the __func<...> template instantiation's type by looking up
+  // the declarations of the member function pointers in it's vtable
+  CompilerType func_type;
+  Address func_method_addr;
+  {
+    ValueObjectSP vtable = func_as_base->GetVTable();
+
+    llvm::Expected<uint32_t> num_entries = vtable->GetNumChildren();
+    if (num_entries.takeError())
+      return optional_info;
+    
+    // __base is pure virtual, __func is final. All member function pointers are equally
+    // good candidates to find the enclosing class.
+    //
+    // In practice the first two vtable entries point to artificial destructors which the
+    // type system refuses to elaborate as their artificial specifications are not added
+    // to the enclosing class' declaration context. This causes various warnings, and dont
+    // get us any closer to the concrete type thus we skip them.
+    for (uint32_t idx = 2; idx < *num_entries; idx++) {
+      ValueObjectSP entry = vtable->GetChildAtIndex(idx);
+      
+      // Points to a potentially interesting member function
+      addr_t mfunc_load_addr = entry->GetValueAsUnsigned(0);
+      if (!mfunc_load_addr)
+        continue;
+      
+      if (!valobj_sp->GetTargetSP()->ResolveLoadAddress(mfunc_load_addr, func_method_addr))
+        continue;
+      
+      Function* func = func_method_addr.CalculateSymbolContextFunction();
+      if (!func)
+        continue;
+      
+      CompilerDeclContext mfunc_decl_ctx = func->GetDeclContext();
+      if (!mfunc_decl_ctx.IsClassMethod())
+        continue;
+      
+      // Member functions are contained in their enclosing class' decl context
+      CompilerDeclContext mfunc_parent = mfunc_decl_ctx.GetDecl().GetDeclContext();
+      if (!mfunc_parent.IsValid())
+        continue;
+      
+      func_type = mfunc_parent.GetDecl().GetType();
+      break;
+    }
+  }
+  
+  CompilerType callable_type = func_type.GetTypeTemplateArgument(0);
+  if (!callable_type)
+    return optional_info;
+  
+  if (callable_type.IsFunctionPointerType() || callable_type.IsMemberFunctionPointerType()) {
+    // TODO: The previous implementation just does raw pointer arithmetic and reads
+    // 'a pointer' to a function right after the vtable.
+    //
+    // What is the preferred approach? Go digging for the compressed_pair.first in __func
+    // or assume layout citing ABI compatibility requirements?
+  } else if (callable_type.IsRecordType()) {
+    // Target is a lambda, or a generic callable. Search for a single operator() overload
+    std::optional<ConstString> mangled_func_name;
+    
+    // TODO: I am still not sure whether it is a good idea to reconstruct the full type
+    // here.. it seems there are handy FindFunctions that could perhaps to a good job
+    // at locating candidates. However even when limiting the search to the decl_ctx of
+    // the class the code seems to iterate over way more DIEs than I expected. What to do?
+    
+    // TODO: Because we have access to the type we know a _lot_ about callable_type, we
+    // could even extract a ValueObjectSP to it if we wanted. It would be cool to make
+    // std::function have a synt children provider showing the wrapped lambda/callable!
+    
+    for (uint32_t idx = 0; idx < callable_type.GetNumMemberFunctions(); idx++) {
+      TypeMemberFunctionImpl mfunc = callable_type.GetMemberFunctionAtIndex(idx);
+      
+      if (mfunc.GetKind() != eMemberFunctionKindInstanceMethod)
+        continue;
+      
+      if (mfunc.GetName() != "operator()")
+        continue;
+        
+      if (mangled_func_name)
+        return optional_info; // Cannot resolve ambiguous target
+      
+      mangled_func_name = mfunc.GetMangledName();
+    }
+    
+    // Locate the symbol context corresponding to the target function
+    SymbolContext sc;
+    {
+      // We'll assume that callable_type is in the same module as the vtable
+      ModuleSP mod = func_method_addr.CalculateSymbolContextModule();
+    
+      // Limit our lookup to callable_type
+      CompilerDeclContext decl_ctx = callable_type.GetTypeSystem()->GetCompilerDeclContextForType(callable_type);
+      
+      SymbolContextList list;
+      mod->FindFunctions(*mangled_func_name, decl_ctx, eFunctionNameTypeFull, {}, list);
+      
+      if (list.GetSize() != 1)
+        return optional_info;
+      
+      list.GetContextAtIndex(0, sc);
+    }
+    
+    // TODO: This feels a bit clunky, I am probably misusing the API? FindFunctions returns me
+    // SymbolContexts with the .function set but not .symbol ... At first glance it seemed like
+    // if we know the function there must be a symbol too!
+    if (!sc.function)
+      return optional_info;
+    
+    Symbol* symbol = sc.function->GetAddressRange().GetBaseAddress().CalculateSymbolContextSymbol();
+    if (!symbol)
+      return optional_info;
+    
+    return LibCppStdFunctionCallableInfo {
+      .callable_symbol = *symbol,
+      .callable_address = symbol->GetAddress(),
+      .callable_line_entry = sc.GetFunctionStartLineEntry(),
+      
+      // TODO: Can't tell lambdas apart from generic callables.. do we really need to?
+      // Is it important to have the correct qualification in the summary?
+      .callable_case = LibCppStdFunctionCallableCase::Lambda
+    };
+  }
+  
+  // Unrecognized callable type - skip the original implementation for now
+  if (!callable_type.IsVoidType())
+    return optional_info;
+  
   // Member __f_ has type __base*, the contents of which will hold:
   // 1) a vtable entry which may hold type information needed to discover the
   //    lambda being called
@@ -239,7 +409,6 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     return optional_info;
 
   uint32_t address_size = process->GetAddressByteSize();
-  Status status;
 
   // First item pointed to by __f_ should be the pointer to the vtable for
   // a __base object.
