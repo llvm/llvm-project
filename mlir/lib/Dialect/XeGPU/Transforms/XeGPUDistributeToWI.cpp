@@ -687,10 +687,6 @@ LogicalResult WarpOpLoadNd::matchAndRewrite(vector::WarpExecuteOnLane0Op warpOp,
   auto outputVectorShape = loadOp.getType().getShape();
 
   for (const auto [l, o, v] : llvm::zip(layout, origShape, outputVectorShape)) {
-    if (!divisible(APInt(64, o), APInt(64, l)))
-      return rewriter.notifyMatchFailure(
-          loadOp,
-          "the tensor dimentions are not divisible by the distribution factor");
     if (!divisible(APInt(64, v), APInt(64, l)))
       return rewriter.notifyMatchFailure(
           loadOp, "the output vector dimentions are not divisible by the "
