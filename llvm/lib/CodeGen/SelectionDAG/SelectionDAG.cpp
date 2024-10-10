@@ -1656,6 +1656,11 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   EVT EltVT = VT.getScalarType();
   const ConstantInt *Elt = &Val;
 
+  // Vector splats are explicit within the DAG, with ConstantSDNode holding the
+  // to-be-splatted scalar ConstantInt.
+  if (isa<VectorType>(Elt->getType()))
+    Elt = ConstantInt::get(*getContext(), Elt->getValue());
+
   // In some cases the vector type is legal but the element type is illegal and
   // needs to be promoted, for example v8i8 on ARM.  In this case, promote the
   // inserted value (the type does not need to match the vector element type).
@@ -1809,6 +1814,12 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
   assert(VT.isFloatingPoint() && "Cannot create integer FP constant!");
 
   EVT EltVT = VT.getScalarType();
+  const ConstantFP *Elt = &V;
+
+  // Vector splats are explicit within the DAG, with ConstantFPSDNode holding
+  // the to-be-splatted scalar ConstantFP.
+  if (isa<VectorType>(Elt->getType()))
+    Elt = ConstantFP::get(*getContext(), Elt->getValue());
 
   // Do the map lookup using the actual bit pattern for the floating point
   // value, so that we don't have problems with 0.0 comparing equal to -0.0, and
@@ -1817,7 +1828,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
   SDVTList VTs = getVTList(EltVT);
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opc, VTs, {});
-  ID.AddPointer(&V);
+  ID.AddPointer(Elt);
   void *IP = nullptr;
   SDNode *N = nullptr;
   if ((N = FindNodeOrInsertPos(ID, DL, IP)))
@@ -1825,7 +1836,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
       return SDValue(N, 0);
 
   if (!N) {
-    N = newSDNode<ConstantFPSDNode>(isTarget, &V, VTs);
+    N = newSDNode<ConstantFPSDNode>(isTarget, Elt, VTs);
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
   }

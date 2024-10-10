@@ -1678,6 +1678,7 @@ class ConstantSDNode : public SDNode {
       : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DebugLoc(),
                VTs),
         Value(val) {
+    assert(!isa<VectorType>(val->getType()) && "Unexpected vector type!");
     ConstantSDNodeBits.IsOpaque = isOpaque;
   }
 
@@ -1730,7 +1731,9 @@ class ConstantFPSDNode : public SDNode {
   ConstantFPSDNode(bool isTarget, const ConstantFP *val, SDVTList VTs)
       : SDNode(isTarget ? ISD::TargetConstantFP : ISD::ConstantFP, 0,
                DebugLoc(), VTs),
-        Value(val) {}
+        Value(val) {
+    assert(!isa<VectorType>(val->getType()) && "Unexpected vector type!");
+  }
 
 public:
   const APFloat& getValueAPF() const { return Value->getValueAPF(); }
