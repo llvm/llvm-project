@@ -2875,16 +2875,15 @@ public:
   /// instructions for passed in target arguments where neccessary
   /// \param Dependencies A vector of DependData objects that carry
   // dependency information as passed in the depend clause
-  InsertPointTy
-  createTarget(const LocationDescription &Loc, bool IsOffloadEntry,
-               OpenMPIRBuilder::InsertPointTy AllocaIP,
-               OpenMPIRBuilder::InsertPointTy CodeGenIP,
-               TargetRegionEntryInfo &EntryInfo, ArrayRef<int32_t> NumTeams,
-               ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Inputs,
-               GenMapInfoCallbackTy GenMapInfoCB,
-               TargetBodyGenCallbackTy BodyGenCB,
-               TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
-               SmallVector<DependData> Dependencies = {});
+  InsertPointTy createTarget(
+      const LocationDescription &Loc, bool IsOffloadEntry,
+      OpenMPIRBuilder::InsertPointTy AllocaIP,
+      OpenMPIRBuilder::InsertPointTy CodeGenIP,
+      TargetRegionEntryInfo &EntryInfo, ArrayRef<int32_t> NumTeams,
+      ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Inputs,
+      GenMapInfoCallbackTy GenMapInfoCB, TargetBodyGenCallbackTy BodyGenCB,
+      TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+      SmallVector<DependData> Dependencies = {}, bool HasNowait = false);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
