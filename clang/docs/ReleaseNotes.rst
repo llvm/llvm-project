@@ -388,6 +388,8 @@ Improvements to Clang's diagnostics
   instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
   suboptimal in some way the error fails to mention (#GH111550).
 
+- Clang now diagnoses missing format attributes for non-template functions and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

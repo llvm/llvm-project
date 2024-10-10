@@ -16034,6 +16034,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         }
       }
 
+      DiagnoseMissingFormatAttributes(Body, FD);
+
       // We might not have found a prototype because we didn't wish to warn on
       // the lack of a missing prototype. Try again without the checks for
       // whether we want to warn on the missing prototype.
