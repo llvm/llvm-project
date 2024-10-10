@@ -273,13 +273,14 @@ public:
 
   /// Get a \p File object for the file at \p Path, if one exists.
   virtual llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path) = 0;
+  openFileForRead(const Twine &Path, bool IsText = true) = 0;
 
   /// This is a convenience method that opens a file, gets its content and then
   /// closes the file.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(const Twine &Name, int64_t FileSize = -1,
-                   bool RequiresNullTerminator = true, bool IsVolatile = false);
+                   bool RequiresNullTerminator = true, bool IsVolatile = false,
+                   bool IsText = true);
 
   /// Get a directory_iterator for \p Dir.
   /// \note The 'end' iterator is directory_iterator().
@@ -392,7 +393,7 @@ public:
   llvm::ErrorOr<Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path) override;
+  openFileForRead(const Twine &Path, bool IsText = true) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
@@ -446,8 +447,8 @@ public:
   }
   bool exists(const Twine &Path) override { return FS->exists(Path); }
   llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path) override {
-    return FS->openFileForRead(Path);
+  openFileForRead(const Twine &Path, bool IsText = true) override {
+    return FS->openFileForRead(Path, IsText);
   }
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override {
     return FS->dir_begin(Dir, EC);
@@ -615,7 +616,7 @@ public:
 
   llvm::ErrorOr<Status> status(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<File>>
-  openFileForRead(const Twine &Path) override;
+  openFileForRead(const Twine &Path, bool IsText = true) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
@@ -1051,7 +1052,8 @@ public:
 
   ErrorOr<Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;
-  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
+  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path,
+                                                 bool IsText = true) override;
 
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
@@ -1155,9 +1157,10 @@ public:
     return ProxyFileSystem::status(Path);
   }
 
-  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override {
+  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path,
+                                                 bool IsText = true) override {
     ++NumOpenFileForReadCalls;
-    return ProxyFileSystem::openFileForRead(Path);
+    return ProxyFileSystem::openFileForRead(Path, IsText);
   }
 
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override {
