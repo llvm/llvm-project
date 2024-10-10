@@ -514,5 +514,12 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
       F.needsUnwindTableEntry() &&
       (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
     return SplitR11WindowsSEH;
+
+  // Returns R11SplitAAPCSBranchSigning if R11 and lr are not adjacent to each
+  // other in the list of callee saved registers in a frame, and branch
+  // signing is enabled.
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+      getFramePointerReg() == ARM::R11)
+    return SplitR11AAPCSSignRA;
   return NoSplit;
 }
