@@ -28,7 +28,7 @@ public:
     UnescapeVariable,
     Comment,
   };
-  
+
   Token(StringRef Str);
 
   Token(StringRef RawBody, StringRef Str, char Identifier);
