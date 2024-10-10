@@ -61,7 +61,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::ROUND_F128, "roundf128");
     setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
     setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-    setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
     setLibcallName(RTLIB::FMIN_F128, "fminf128");
     setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
     setLibcallName(RTLIB::LROUND_F128, "lroundf128");
