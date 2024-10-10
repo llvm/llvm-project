@@ -3214,7 +3214,8 @@ void MachineVerifier::calcRegsRequired() {
 
     // Handle the PHI node.
     for (const MachineInstr &MI : MBB.phis()) {
-      for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
+      for (unsigned i = MI.getIndexFirstPHIPair(), e = MI.getNumOperands();
+           i != e; i += 2) {
         // Skip those Operands which are undef regs or not regs.
         if (!MI.getOperand(i).isReg() || !MI.getOperand(i).readsReg())
           continue;
@@ -3269,7 +3270,8 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
     if (!DefReg.isVirtual())
       report("Expected first PHI operand to be a virtual register", &MODef, 0);
 
-    for (unsigned I = 1, E = Phi.getNumOperands(); I != E; I += 2) {
+    for (unsigned I = Phi.getIndexFirstPHIPair(), E = Phi.getNumOperands();
+         I != E; I += 2) {
       const MachineOperand &MO0 = Phi.getOperand(I);
       if (!MO0.isReg()) {
         report("Expected PHI operand to be a register", &MO0, I);

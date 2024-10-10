@@ -469,6 +469,7 @@ CodeGenInstruction::CodeGenInstruction(const Record *R)
   FastISelShouldIgnore = R->getValueAsBit("FastISelShouldIgnore");
   variadicOpsAreDefs = R->getValueAsBit("variadicOpsAreDefs");
   isAuthenticated = R->getValueAsBit("isAuthenticated");
+  isPhi = R->getValueAsBit("isPhi");
 
   bool Unset;
   mayLoad = R->getValueAsBitOrUnset("mayLoad", Unset);

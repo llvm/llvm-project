@@ -187,6 +187,7 @@ enum Flag {
   Trap,
   VariadicOpsAreDefs,
   Authenticated,
+  Phi,
 };
 } // namespace MCID
 
@@ -291,6 +292,10 @@ public:
   /// from executing the instruction immediately following it.  Examples include
   /// unconditional branches and return instructions.
   bool isBarrier() const { return Flags & (1ULL << MCID::Barrier); }
+
+  /// Returns true if this instruction acts as a PHI node.
+  /// Not all PHI operands need to dominates the definition.
+  bool isPhi() const { return Flags & (1ULL << MCID::Phi); }
 
   /// Returns true if this instruction part of the terminator for
   /// a basic block.  Typically this is things like return and branch

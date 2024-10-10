@@ -615,8 +615,10 @@ def OpFwidthCoarse: UnOp<"OpFwidthCoarse", 215>;
 
 // 3.42.17 Control-Flow Instructions
 
-def OpPhi: Op<245, (outs ID:$res), (ins TYPE:$type, ID:$var0, ID:$block0, variable_ops),
-                  "$res = OpPhi $type $var0 $block0">;
+let isPhi = 1 in {
+  def OpPhi: Op<245, (outs ID:$res), (ins TYPE:$type, ID:$var0, ID:$block0, variable_ops),
+                    "$res = OpPhi $type $var0 $block0">;
+}
 def OpLoopMerge: Op<246, (outs), (ins unknown:$merge, unknown:$continue, LoopControl:$lc, variable_ops),
                   "OpLoopMerge $merge $continue $lc">;
 def OpSelectionMerge: Op<247, (outs), (ins unknown:$merge, SelectionControl:$sc),
