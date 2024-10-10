@@ -194,26 +194,48 @@ void CommandObjectMultiword::Execute(const char *args_string,
 
   std::string error_msg;
   const size_t num_subcmd_matches = matches.GetSize();
-  if (num_subcmd_matches > 0)
-    error_msg.assign("ambiguous command ");
-  else
-    error_msg.assign("invalid command ");
-
-  error_msg.append("'");
-  error_msg.append(std::string(GetCommandName()));
-  error_msg.append(" ");
-  error_msg.append(std::string(sub_command));
-  error_msg.append("'.");
-
   if (num_subcmd_matches > 0) {
+    error_msg.assign("ambiguous command ");
+    error_msg.append("'");
+    error_msg.append(std::string(GetCommandName()));
+    error_msg.append(" ");
+    error_msg.append(std::string(sub_command));
+    error_msg.append("'.");
+
     error_msg.append(" Possible completions:");
     for (const std::string &match : matches) {
       error_msg.append("\n\t");
       error_msg.append(match);
     }
+  } else {
+    // Rather than simply complaining about the invalid (sub) command,
+    // try to offer some alternatives.
+    // This is especially useful for cases where the user types something
+    // seamingly trivial, such as `breakpoint foo`.
+    error_msg.assign(
+        llvm::Twine("'" + sub_command + "' is not a valid subcommand of \"" +
+                    GetCommandName() + "\". Valid subcommands are " +
+                    GetTopSubcommands(/*count=*/5) + ". Use \"help " +
+                    GetCommandName() + "\" to find out more.")
+            .str());
   }
   error_msg.append("\n");
   result.AppendRawError(error_msg.c_str());
+}
+
+std::string CommandObjectMultiword::GetTopSubcommands(int count) {
+  if (m_subcommand_dict.empty())
+    return "<NONE>";
+  std::string buffer = "{";
+  CommandMap::iterator pos;
+  for (pos = m_subcommand_dict.begin();
+       pos != m_subcommand_dict.end() && count > 0; ++pos, --count) {
+    buffer.append("'");
+    buffer.append(pos->first);
+    buffer.append("',");
+  }
+  buffer.append("...}");
+  return buffer;
 }
 
 void CommandObjectMultiword::GenerateHelpText(Stream &output_stream) {
