@@ -148,14 +148,6 @@ bool ThreadSuspender::SuspendThread(tid_t tid) {
     // Log this event and move on.
     VReport(1, "Could not attach to thread %zu (errno %d).\n", (uptr)tid,
             pterrno);
-    if (common_flags()->verbosity >= 2) {
-      InternalScopedString path;
-      path.AppendF("/proc/%d/task/%llu/status", pid_, tid);
-      InternalMmapVector<char> buffer;
-      ReadFileToVector(path.data(), &buffer);
-      buffer.push_back(0);
-      VReport(2, "%s: %s\n", path.data(), buffer.data());
-    }
     return false;
   } else {
     VReport(2, "Attached to thread %zu.\n", (uptr)tid);
@@ -234,8 +226,18 @@ bool ThreadSuspender::SuspendAllThreads() {
         break;
     }
     for (tid_t tid : threads) {
-      if (SuspendThread(tid))
+      if (SuspendThread(tid)) {
         retry = true;
+      } else {
+        if (common_flags()->verbosity >= 2) {
+          InternalScopedString path;
+          path.AppendF("/proc/%d/task/%llu/status", pid_, tid);
+          InternalMmapVector<char> buffer;
+          ReadFileToVector(path.data(), &buffer);
+          buffer.push_back(0);
+          VReport(2, "%s: %s\n", path.data(), buffer.data());
+        }
+      }
     }
     if (retry)
       VReport(1, "SuspendAllThreads retry: %d\n", i);
