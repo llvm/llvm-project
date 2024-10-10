@@ -24,8 +24,8 @@
 # Make fake mnemonics we use to match these in the tablegened asm match table isn't exposed.
 .insn_i  0x13,  0,  a0, a1, 13, 14 # CHECK: :[[@LINE]]:1: error: unknown directive
 
-.insn . # CHECK: :[[@LINE]]:7: error: expected instruction format or an integer constant
-.insn 0x2, # CHECK: :[[@LINE]]:12: error: expected an integer constant
+.insn . # CHECK: :[[@LINE]]:7: error: expected absolute expression
+.insn 0x2, # CHECK: :[[@LINE]]:12: error: unknown token in expression
 
 .insn 0x4, 0x13, 0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
 
@@ -49,7 +49,10 @@
 .insn 0x2, 0x10001 # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction
 .insn 0x4, 0x100000003 # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction
 .insn 0x6, 0x100000000001f # CHECK: :[[@LINE]]:7: error: encoding value does not fit into instruction
-.insn 0x8, 0x1000000000000003f # CHECK: :[[@LINE]]:12: error: expected an integer constant
+.insn 0x8, 0x1000000000000003f # CHECK: :[[@LINE]]:12: error: literal value out of range for directive
 
 .insn 0x0010 # CHECK: :[[@LINE]]:7: error: compressed instructions are not allowed
 .insn 0x2, 0x0001 # CHECK: :[[@LINE]]:7: error: compressed instructions are not allowed
+
+.insn 0x2 + 0x2, 0x3 | (31 # CHECK: :[[@LINE]]:28: error: expected ')'
+.insn 0x4 * , 0xbf | (31 << 59) # CHECK: :[[@LINE]]:13: error: unknown token in expression
