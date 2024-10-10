@@ -261,9 +261,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPWidenCanonicalIVRecipe>([this](const VPRecipeBase *R) {
-            return inferScalarType(R->getOperand(0));
-          })
+                VPReverseVectorPointerRecipe, VPWidenCanonicalIVRecipe>(
+              [this](const VPRecipeBase *R) {
+                return inferScalarType(R->getOperand(0));
+              })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPWidenEVLRecipe,
                 VPReplicateRecipe, VPWidenCallRecipe, VPWidenMemoryRecipe,
                 VPWidenSelectRecipe>(

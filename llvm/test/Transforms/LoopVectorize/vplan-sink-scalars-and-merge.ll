@@ -1101,6 +1101,7 @@ exit:
 define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-LABEL: LV: Checking a loop in 'ptr_induction_remove_dead_recipe'
 ; CHECK:       VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -1115,11 +1116,11 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<0> + vp<%3> * ir<-1>
+; CHECK-NEXT:     vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:     EMIT vp<[[PTR_IV:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<[[PTR_IV]]>, ir<-1>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%ptr.iv.next>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = reverse-vector-pointer ir<%ptr.iv.next>, vp<[[VF]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<0>
 ; CHECK-NEXT:     EMIT vp<[[NEG:%.+]]> = not ir<%c.1>
