@@ -4,14 +4,47 @@
 # GCN: %2:vgpr_32 = V_ADD_NC_U16_e64 0, %0, 0, %1, 1, 0, implicit $mode, implicit $exec
 # GCN: %3:vgpr_32 = V_ADD_NC_U16_e64 0, %1, 0, %0, 1, 0, implicit $mode, implicit $exec
 # GCN: DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %2, %3, 0, 1, 0, implicit $exec
+# ---
+# name: test_machine_cse_op_sel
+# body: |
+#   bb.0:
+#     %0:vgpr_32 = IMPLICIT_DEF
+#     %1:vgpr_32 = IMPLICIT_DEF
+#     %2:vgpr_32 = V_ADD_NC_U16_e64 0, %0, 0, %1, 1, 0, implicit $mode, implicit $exec
+#     %3:vgpr_32 = V_ADD_NC_U16_e64 0, %1, 0, %0, 1, 0, implicit $mode, implicit $exec
+#     DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %2, %3, 0, 1, 0, implicit $exec
+# ...
+
+--- |
+  @bar = internal global i32 10, align 4
+  @foo = internal global i32 10, align 4
+  
+  define i32 @test_machine_cse_op_sel() {
+  entry:
+    %0 = load i32, ptr @bar, align 4
+    ret i32 %0
+  }
+...
 ---
 name: test_machine_cse_op_sel
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
-    %2:vgpr_32 = V_ADD_NC_U16_e64 0, %0, 0, %1, 1, 0, implicit $mode, implicit $exec
-    %3:vgpr_32 = V_ADD_NC_U16_e64 0, %1, 0, %0, 1, 0, implicit $mode, implicit $exec
+
+    ; Case 1:
+    %2:vgpr_32 = V_ADD_NC_U16_e64 0, 1, 0, 2, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_ADD_NC_U16_e64 0, 2, 0, 1, 0, 0, implicit $mode, implicit $exec
     DS_WRITE2_B32_gfx9 undef %4:vgpr_32, %2, %3, 0, 1, 0, implicit $exec
+
+    ; Case 2:
+    %4:vgpr_32 = V_ADD_NC_U16_e64 0, 1, 0, @bar, 0, 0, implicit $mode, implicit $exec
+    %5:vgpr_32 = V_ADD_NC_U16_e64 0, @bar, 0, 1, 0, 0, implicit $mode, implicit $exec
+    DS_WRITE2_B32_gfx9 undef %6:vgpr_32, %4, %5, 0, 1, 0, implicit $exec
+
+    ; Case 3:
+    ;%7:vgpr_32 = V_ADD_NC_U16_e64 0, @foo, 0, @bar, 0, 0, implicit $mode, implicit $exec
+    ;%8:vgpr_32 = V_ADD_NC_U16_e64 0, @bar, 0, @foo, 0, 0, implicit $mode, implicit $exec
+    ;DS_WRITE2_B32_gfx9 undef %9:vgpr_32, %7, %8, 0, 1, 0, implicit $exec
 ...
 

@@ -870,9 +870,11 @@ let SubtargetPredicate = isGFX10Plus in {
     def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
     def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
   }
-
-  defm V_ADD_NC_U16 : VOP3Inst <"v_add_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, add>;
-  defm V_SUB_NC_U16 : VOP3Inst <"v_sub_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, sub>;
+  
+  let isCommutable = 1 in {
+    defm V_ADD_NC_U16 : VOP3Inst <"v_add_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, add>;
+    defm V_SUB_NC_U16 : VOP3Inst <"v_sub_nc_u16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>, sub>;
+  } // End isCommutable = 1
 
   def : OpSelBinOpClampPat<uaddsat, V_ADD_NC_U16_e64>;
   def : OpSelBinOpClampPat<usubsat, V_SUB_NC_U16_e64>;
