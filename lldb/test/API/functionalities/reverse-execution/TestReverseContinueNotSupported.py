@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 class TestReverseContinueNotSupported(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfDarwin # No Darwin ProcessNative impl for lldb-server
     def test_reverse_continue_not_supported(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
