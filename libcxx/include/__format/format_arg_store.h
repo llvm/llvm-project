@@ -64,7 +64,7 @@ consteval __arg_t __determine_arg_t() {
     return __arg_t::__int;
   else if constexpr (sizeof(_Tp) <= sizeof(long long))
     return __arg_t::__long_long;
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
   else if constexpr (sizeof(_Tp) == sizeof(__int128_t))
     return __arg_t::__i128;
 #  endif
@@ -79,7 +79,7 @@ consteval __arg_t __determine_arg_t() {
     return __arg_t::__unsigned;
   else if constexpr (sizeof(_Tp) <= sizeof(unsigned long long))
     return __arg_t::__unsigned_long_long;
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
   else if constexpr (sizeof(_Tp) == sizeof(__uint128_t))
     return __arg_t::__u128;
 #  endif

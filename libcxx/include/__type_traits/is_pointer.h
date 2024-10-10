@@ -40,7 +40,7 @@ template <class _Tp>
 struct __libcpp_remove_objc_qualifiers {
   typedef _Tp type;
 };
-#  if defined(_LIBCPP_HAS_OBJC_ARC)
+#  if _LIBCPP_HAS_OBJC_ARC
 // clang-format off
 template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __strong> { typedef _Tp type; };
 template <class _Tp> struct __libcpp_remove_objc_qualifiers<_Tp __weak> { typedef _Tp type; };

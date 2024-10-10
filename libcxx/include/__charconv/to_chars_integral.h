@@ -71,7 +71,7 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type) {
     return {__last, errc::value_too_large};
 }
 
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
 template <>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_itoa(char* __first, char* __last, __uint128_t __value, false_type) {

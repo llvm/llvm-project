@@ -156,7 +156,7 @@ using std::atomic_long _LIBCPP_USING_IF_EXISTS;
 using std::atomic_ulong _LIBCPP_USING_IF_EXISTS;
 using std::atomic_llong _LIBCPP_USING_IF_EXISTS;
 using std::atomic_ullong _LIBCPP_USING_IF_EXISTS;
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#  if _LIBCPP_HAS_CHAR8_T
 using std::atomic_char8_t _LIBCPP_USING_IF_EXISTS;
 #  endif
 using std::atomic_char16_t _LIBCPP_USING_IF_EXISTS;

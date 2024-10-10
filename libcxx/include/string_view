@@ -901,7 +901,7 @@ struct __string_view_hash : public __unary_function<basic_string_view<_CharT, ch
 template <>
 struct hash<basic_string_view<char, char_traits<char> > > : __string_view_hash<char> {};
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 template <>
 struct hash<basic_string_view<char8_t, char_traits<char8_t> > > : __string_view_hash<char8_t> {};
 #endif
@@ -931,7 +931,7 @@ operator""sv(const wchar_t* __str, size_t __len) noexcept {
 }
 #  endif
 
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
+#  if _LIBCPP_HAS_CHAR8_T
 inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char8_t>
 operator""sv(const char8_t* __str, size_t __len) noexcept {
   return basic_string_view<char8_t>(__str, __len);

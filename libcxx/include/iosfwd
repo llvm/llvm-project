@@ -134,7 +134,7 @@ typedef fpos<mbstate_t> streampos;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef fpos<mbstate_t> wstreampos;
 #endif
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 typedef fpos<mbstate_t> u8streampos;
 #endif
 typedef fpos<mbstate_t> u16streampos;
