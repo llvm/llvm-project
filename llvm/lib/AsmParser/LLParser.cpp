@@ -449,6 +449,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   UpgradeModuleFlags(*M);
   UpgradeSectionAttributes(*M);
+  CopyModuleAttrToFunctions(*M);
 
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
     M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
