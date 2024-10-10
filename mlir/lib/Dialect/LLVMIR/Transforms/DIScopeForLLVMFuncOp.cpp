@@ -86,9 +86,7 @@ namespace {
 /// Add a debug info scope to LLVMFuncOp that are missing it.
 struct DIScopeForLLVMFuncOp
     : public LLVM::impl::DIScopeForLLVMFuncOpBase<DIScopeForLLVMFuncOp> {
-  DIScopeForLLVMFuncOp() = default;
-  DIScopeForLLVMFuncOp(const mlir::LLVM::DIScopeForLLVMFuncOpOptions &options)
-      : DIScopeForLLVMFuncOpBase(options) {}
+  using Base::Base;
 
   void runOnOperation() override {
     ModuleOp module = getOperation();
@@ -135,12 +133,3 @@ struct DIScopeForLLVMFuncOp
 };
 
 } // end anonymous namespace
-
-std::unique_ptr<Pass> mlir::LLVM::createDIScopeForLLVMFuncOpPass() {
-  return std::make_unique<DIScopeForLLVMFuncOp>();
-}
-
-std::unique_ptr<Pass> mlir::LLVM::createDIScopeForLLVMFuncOpPass(
-    const mlir::LLVM::DIScopeForLLVMFuncOpOptions &options) {
-  return std::make_unique<DIScopeForLLVMFuncOp>(options);
-}
