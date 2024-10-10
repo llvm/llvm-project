@@ -3866,6 +3866,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
       return true;
     return selectImpl(I, *CoverageInfo);
   case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_ATOMIC_CMPXCHG:
   case TargetOpcode::G_ATOMICRMW_XCHG:
