@@ -205,9 +205,10 @@ struct MultilibGroupSerialization {
 
 struct MultilibSetSerialization {
   llvm::VersionTuple MultilibVersion;
-  std::vector<MultilibGroupSerialization> Groups;
-  std::vector<MultilibSerialization> Multilibs;
-  std::vector<MultilibSet::FlagMatcher> FlagMatchers;
+  SmallVector<MultilibGroupSerialization> Groups;
+  SmallVector<MultilibSerialization> Multilibs;
+  SmallVector<MultilibSet::FlagMatcher> FlagMatchers;
+  SmallVector<MultilibSet::CustomFlagDeclaration> CustomFlagDeclarations;
 };
 
 } // end anonymous namespace
@@ -259,11 +260,31 @@ template <> struct llvm::yaml::MappingTraits<MultilibSet::FlagMatcher> {
   }
 };
 
+template <>
+struct llvm::yaml::MappingTraits<MultilibSet::CustomFlagDeclaration> {
+  static void mapping(llvm::yaml::IO &io,
+                      MultilibSet::CustomFlagDeclaration &V) {
+    io.mapRequired("Name", V.Name);
+    io.mapRequired("Values", V.Values);
+    io.mapRequired("Default", V.DefaultValue);
+  }
+  static std::string validate(IO &io, MultilibSet::CustomFlagDeclaration &V) {
+    if (V.Name.empty())
+      return "name required for custom flag";
+    if (V.Values.empty())
+      return "at least one value is expected";
+    if (!llvm::is_contained(V.Values, V.DefaultValue))
+      return "default value is not one of the possible listed values";
+    return {};
+  }
+};
+
 template <> struct llvm::yaml::MappingTraits<MultilibSetSerialization> {
   static void mapping(llvm::yaml::IO &io, MultilibSetSerialization &M) {
     io.mapRequired("MultilibVersion", M.MultilibVersion);
     io.mapRequired("Variants", M.Multilibs);
     io.mapOptional("Groups", M.Groups);
+    io.mapOptional("Flags", M.CustomFlagDeclarations);
     io.mapOptional("Mappings", M.FlagMatchers);
   }
   static std::string validate(IO &io, MultilibSetSerialization &M) {
@@ -295,6 +316,7 @@ template <> struct llvm::yaml::MappingTraits<MultilibSetSerialization> {
 LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSerialization)
 LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibGroupSerialization)
 LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSet::FlagMatcher)
+LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSet::CustomFlagDeclaration)
 
 llvm::ErrorOr<MultilibSet>
 MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
@@ -323,7 +345,8 @@ MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
     }
   }
 
-  return MultilibSet(std::move(Multilibs), std::move(MS.FlagMatchers));
+  return MultilibSet(std::move(Multilibs), std::move(MS.FlagMatchers),
+                     std::move(MS.CustomFlagDeclarations));
 }
 
 LLVM_DUMP_METHOD void MultilibSet::dump() const {

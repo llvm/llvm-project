@@ -118,17 +118,26 @@ public:
     std::vector<std::string> Flags;
   };
 
+  struct CustomFlagDeclaration {
+    std::string Name;
+    SmallVector<std::string> Values;
+    std::string DefaultValue;
+  };
+
 private:
   multilib_list Multilibs;
-  std::vector<FlagMatcher> FlagMatchers;
+  SmallVector<FlagMatcher> FlagMatchers;
+  SmallVector<CustomFlagDeclaration> CustomFlagDecls;
   IncludeDirsFunc IncludeCallback;
   IncludeDirsFunc FilePathsCallback;
 
 public:
   MultilibSet() = default;
   MultilibSet(multilib_list &&Multilibs,
-              std::vector<FlagMatcher> &&FlagMatchers = {})
-      : Multilibs(Multilibs), FlagMatchers(FlagMatchers) {}
+              SmallVector<FlagMatcher> &&FlagMatchers = {},
+              SmallVector<CustomFlagDeclaration> &&CustomFlagDecls = {})
+      : Multilibs(std::move(Multilibs)), FlagMatchers(std::move(FlagMatchers)),
+        CustomFlagDecls(std::move(CustomFlagDecls)) {}
 
   const multilib_list &getMultilibs() { return Multilibs; }
 
