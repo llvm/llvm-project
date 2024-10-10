@@ -12,7 +12,7 @@ define dso_local void @vga_load_state() #0 {
 ; CHECK-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpl $3, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jg .LBB0_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -23,7 +23,7 @@ define dso_local void @vga_load_state() #0 {
 ; CHECK-NEXT:    jle .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: # %for.end
 ; CHECK-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %for.cond1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    #APP
