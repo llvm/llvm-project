@@ -4287,8 +4287,13 @@ void CodeGenModule::emitMultiVersionFunctions() {
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
             if (TVA->isDefaultVersion() && IsDefined)
               ShouldEmitResolver = true;
-            TVA->getFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
+            if (getTarget().getTriple().isRISCV()) {
+              Feats.push_back(TVA->getName());
+            } else {
+              assert(getTarget().getTriple().isAArch64());
+              TVA->getFeatures(Feats);
+            }
             Options.emplace_back(Func, /*Architecture*/ "", Feats);
           } else if (const auto *TC = CurFD->getAttr<TargetClonesAttr>()) {
             if (IsDefined)
@@ -5622,8 +5627,9 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     emitter->finalize(GV);
 
   // If it is safe to mark the global 'constant', do so now.
-  GV->setConstant(!NeedsGlobalCtor && !NeedsGlobalDtor &&
-                  D->getType().isConstantStorage(getContext(), true, true));
+  GV->setConstant((D->hasAttr<CUDAConstantAttr>() && LangOpts.CUDAIsDevice) ||
+                  (!NeedsGlobalCtor && !NeedsGlobalDtor &&
+                   D->getType().isConstantStorage(getContext(), true, true)));
 
   // If it is in a read-only section, mark it 'constant'.
   if (const SectionAttr *SA = D->getAttr<SectionAttr>()) {

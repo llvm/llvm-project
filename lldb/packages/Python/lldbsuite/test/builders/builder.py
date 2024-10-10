@@ -169,31 +169,31 @@ class Builder:
         if not os.getenv("LLVM_AR"):
             utils.extend(["LLVM_AR=%s" % getToolchainUtil("llvm-ar")])
 
-        if not lldbplatformutil.platformIsDarwin():
-            if cc_type in ["clang", "cc", "gcc"]:
-                util_paths = {}
-                # Assembly a toolchain side tool cmd based on passed CC.
-                for var, name in util_names.items():
-                    # Do not override explicity specified tool from the cmd line.
-                    if not os.getenv(var):
-                        util_paths[var] = getToolchainUtil(name)
-                    else:
-                        util_paths[var] = os.getenv(var)
-                utils.extend(["AR=%s" % util_paths["ARCHIVER"]])
+        if cc_type in ["clang", "cc", "gcc"]:
+            util_paths = {}
+            # Assembly a toolchain side tool cmd based on passed CC.
+            for var, name in util_names.items():
+                # Do not override explicity specified tool from the cmd line.
+                if not os.getenv(var):
+                    util_paths[var] = getToolchainUtil("llvm-" + name)
+                else:
+                    util_paths[var] = os.getenv(var)
+            utils.extend(["AR=%s" % util_paths["ARCHIVER"]])
 
-                # Look for llvm-dwp or gnu dwp
-                if not lldbutil.which(util_paths["DWP"]):
-                    util_paths["DWP"] = getToolchainUtil("llvm-dwp")
-                if not lldbutil.which(util_paths["DWP"]):
-                    util_paths["DWP"] = lldbutil.which("llvm-dwp")
+            # Look for llvm-dwp or gnu dwp
+            if not lldbutil.which(util_paths["DWP"]):
+                util_paths["DWP"] = getToolchainUtil("llvm-dwp")
+            if not lldbutil.which(util_paths["DWP"]):
+                util_paths["DWP"] = lldbutil.which("llvm-dwp")
+            if not util_paths["DWP"]:
+                util_paths["DWP"] = lldbutil.which("dwp")
                 if not util_paths["DWP"]:
-                    util_paths["DWP"] = lldbutil.which("dwp")
-                    if not util_paths["DWP"]:
-                        del util_paths["DWP"]
+                    del util_paths["DWP"]
 
-                for var, path in util_paths.items():
-                    utils.append("%s=%s" % (var, path))
-        else:
+            for var, path in util_paths.items():
+                utils.append("%s=%s" % (var, path))
+
+        if lldbplatformutil.platformIsDarwin():
             utils.extend(["AR=%slibtool" % os.getenv("CROSS_COMPILE", "")])
 
         return [

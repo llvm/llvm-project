@@ -412,6 +412,15 @@ public:
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader);
   std::optional<unsigned> getMinPageSize() const { return 4096; }
+  /// Return true if the (vector) instruction I will be lowered to an
+  /// instruction with a scalar splat operand for the given Operand number.
+  bool canSplatOperand(Instruction *I, int Operand) const;
+  /// Return true if a vector instruction will lower to a target instruction
+  /// able to splat the given operand.
+  bool canSplatOperand(unsigned Opcode, int Operand) const;
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
 };
 
 } // end namespace llvm

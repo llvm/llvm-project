@@ -722,12 +722,12 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
 } // namespace
 
 void mlir::populateFuncToLLVMFuncOpConversionPattern(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<FuncOpConversion>(converter);
 }
 
 void mlir::populateFuncToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     const SymbolTable *symbolTable) {
   populateFuncToLLVMFuncOpConversionPattern(converter, patterns);
   patterns.add<CallIndirectOpLowering>(converter);

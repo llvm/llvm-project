@@ -19,6 +19,7 @@
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -96,7 +97,7 @@ static cl::opt<bool>
 static cl::opt<bool> EnableMISchedLoadClustering(
     "riscv-misched-load-clustering", cl::Hidden,
     cl::desc("Enable load clustering in the machine scheduler"),
-    cl::init(false));
+    cl::init(true));
 
 static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
     "riscv-vsetvl-after-rvv-regalloc", cl::Hidden,
@@ -374,11 +375,17 @@ public:
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addFastRegAlloc() override;
+
+  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 } // namespace
 
 TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new RISCVPassConfig(*this, PM);
+}
+
+std::unique_ptr<CSEConfigBase> RISCVPassConfig::getCSEConfig() const {
+  return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
 FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {

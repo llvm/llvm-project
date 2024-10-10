@@ -938,7 +938,9 @@ void CheckBranchesIntoDoBody(const SourceStmtList &branches,
           context
               .Say(
                   fromPosition, "branch into loop body from outside"_warn_en_US)
-              .Attach(body.first, "the loop branched into"_en_US);
+              .Attach(body.first, "the loop branched into"_en_US)
+              .set_languageFeature(
+                  common::LanguageFeature::BranchIntoConstruct);
         }
       }
     }
@@ -1007,7 +1009,9 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
             .Say(position,
                 "A DO loop should terminate with an END DO or CONTINUE"_port_en_US)
             .Attach(doTarget.parserCharBlock,
-                "DO loop currently ends at statement:"_en_US);
+                "DO loop currently ends at statement:"_en_US)
+            .set_languageFeature(
+                common::LanguageFeature::OldLabelDoEndStatements);
       }
     } else if (!InInclusiveScope(scopes, scope, doTarget.proxyForScope)) {
       context.Say(position, "Label '%u' is not in DO loop scope"_err_en_US,
@@ -1067,9 +1071,11 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
             SayLabel(label));
       } else if (context.ShouldWarn(
                      common::LanguageFeature::BranchIntoConstruct)) {
-        context.Say(position,
-            "Label '%u' is in a construct that should not be used as a branch target here"_warn_en_US,
-            SayLabel(label));
+        context
+            .Say(position,
+                "Label '%u' is in a construct that should not be used as a branch target here"_warn_en_US,
+                SayLabel(label))
+            .set_languageFeature(common::LanguageFeature::BranchIntoConstruct);
       }
     }
   }
@@ -1097,7 +1103,8 @@ void CheckBranchTargetConstraints(const SourceStmtList &stmts,
             .Say(branchTarget.parserCharBlock,
                 "Label '%u' is not a branch target"_warn_en_US, SayLabel(label))
             .Attach(stmt.parserCharBlock, "Control flow use of '%u'"_en_US,
-                SayLabel(label));
+                SayLabel(label))
+            .set_languageFeature(common::LanguageFeature::BadBranchTarget);
       }
     }
   }
@@ -1152,9 +1159,12 @@ void CheckAssignTargetConstraints(const SourceStmtList &stmts,
             "Label '%u' is not a branch target or FORMAT"_err_en_US,
             SayLabel(label));
       } else if (context.ShouldWarn(common::LanguageFeature::BadBranchTarget)) {
-        msg = &context.Say(target.parserCharBlock,
-            "Label '%u' is not a branch target or FORMAT"_warn_en_US,
-            SayLabel(label));
+        msg =
+            &context
+                 .Say(target.parserCharBlock,
+                     "Label '%u' is not a branch target or FORMAT"_warn_en_US,
+                     SayLabel(label))
+                 .set_languageFeature(common::LanguageFeature::BadBranchTarget);
       }
       if (msg) {
         msg->Attach(stmt.parserCharBlock, "ASSIGN statement use of '%u'"_en_US,
