@@ -154,7 +154,6 @@ def : GINodeEquiv<G_FTAN, ftan>;
 def : GINodeEquiv<G_FACOS, facos>;
 def : GINodeEquiv<G_FASIN, fasin>;
 def : GINodeEquiv<G_FATAN, fatan>;
-def : GINodeEquiv<G_FATAN2, fatan2>;
 def : GINodeEquiv<G_FCOSH, fcosh>;
 def : GINodeEquiv<G_FSINH, fsinh>;
 def : GINodeEquiv<G_FTANH, ftanh>;
