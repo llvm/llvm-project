@@ -6,10 +6,10 @@ define i32 @widget(i32 %arg, i32 %arg1) {
 ; CHECK-SAME: i32 [[ARG:%.*]], i32 [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[ARG]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 20, [[TMP0]]
 ; CHECK-NEXT:    [[XOR:%.*]] = zext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD9:%.*]] = or disjoint i32 [[MUL]], [[XOR]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 20, [[XOR]]
+; CHECK-NEXT:    [[XOR1:%.*]] = zext i1 [[ICMP]] to i32
+; CHECK-NEXT:    [[ADD9:%.*]] = or disjoint i32 [[MUL]], [[XOR1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[ICMP]] to i32
 ; CHECK-NEXT:    [[MUL2:%.*]] = shl nuw nsw i32 [[ADD9]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MUL2]]
