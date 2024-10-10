@@ -66,7 +66,7 @@ define internal void @call_load_maxalign_alloca_maxalign() {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [13 x i16], align 4294967296, addrspace(5)
 ; CHECK-NEXT:    [[ADDRSPACECAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[ADDRSPACECAST_VAL:%.*]] = load i32, ptr [[ADDRSPACECAST]], align 4294967296
-; CHECK-NEXT:    call void @load_maxalign1(i32 [[ADDRSPACECAST_VAL]])
+; CHECK-NEXT:    call void @load_maxalign1.argprom(i32 [[ADDRSPACECAST_VAL]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -77,7 +77,7 @@ bb:
 }
 
 define internal void @load_maxalign1(ptr %arg) {
-; CHECK-LABEL: define internal void @load_maxalign1
+; CHECK-LABEL: define internal void @load_maxalign1.argprom
 ; CHECK-SAME: (i32 [[ARG_0_VAL:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -110,7 +110,7 @@ define internal void @call_load_maxalign_alloca_ptr128() {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [13 x i16], align 4294967296, addrspace(6)
 ; CHECK-NEXT:    [[ADDRSPACECAST:%.*]] = addrspacecast ptr addrspace(6) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[ADDRSPACECAST_VAL:%.*]] = load i32, ptr [[ADDRSPACECAST]], align 4294967296
-; CHECK-NEXT:    call void @load_maxalign2(i32 [[ADDRSPACECAST_VAL]])
+; CHECK-NEXT:    call void @load_maxalign2.argprom(i32 [[ADDRSPACECAST_VAL]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -121,7 +121,7 @@ bb:
 }
 
 define internal void @load_maxalign2(ptr %arg) {
-; CHECK-LABEL: define internal void @load_maxalign2
+; CHECK-LABEL: define internal void @load_maxalign2.argprom
 ; CHECK-SAME: (i32 [[ARG_0_VAL:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]

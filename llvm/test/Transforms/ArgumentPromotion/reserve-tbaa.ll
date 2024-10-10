@@ -14,7 +14,7 @@
 @d = global i8 0, align 1
 
 define internal fastcc void @fn(ptr nocapture readonly %p1, ptr nocapture readonly %p2) {
-; CHECK-LABEL: define {{[^@]+}}@fn
+; CHECK-LABEL: define {{[^@]+}}@fn.argprom
 ; CHECK-SAME: (i32 [[P1_0_VAL:%.*]], i64 [[P2_0_VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[P2_0_VAL]] to i32
@@ -40,7 +40,7 @@ define i32 @main() {
 ; CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 4, !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, ptr @g, align 4, !tbaa [[TBAA5]]
 ; CHECK-NEXT:    [[C_VAL:%.*]] = load i64, ptr @c, align 8, !tbaa [[TBAA7:![0-9]+]]
-; CHECK-NEXT:    call fastcc void @fn(i32 [[G_VAL]], i64 [[C_VAL]])
+; CHECK-NEXT:    call fastcc void @fn.argprom(i32 [[G_VAL]], i64 [[C_VAL]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

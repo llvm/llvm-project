@@ -215,6 +215,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
   NF->takeName(F);
+  NF->setName(NF->getName() + ".argprom");
 
   // Loop over all the callers of the function, transforming the call sites to
   // pass in the loaded pointers.

@@ -5,7 +5,7 @@
 target triple = "x86_64-pc-windows-msvc"
 
 define internal void @callee(ptr) {
-; CHECK-LABEL: define {{[^@]+}}@callee() {
+; CHECK-LABEL: define {{[^@]+}}@callee.argprom() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @thunk()
 ; CHECK-NEXT:    ret void
@@ -24,7 +24,7 @@ define void @test1() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    ret void
 ; CHECK:       cpad:
 ; CHECK-NEXT:    [[PAD:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    call void @callee() [ "funclet"(token [[PAD]]) ]
+; CHECK-NEXT:    call void @callee.argprom() [ "funclet"(token [[PAD]]) ]
 ; CHECK-NEXT:    cleanupret from [[PAD]] unwind to caller
 ;
 entry:

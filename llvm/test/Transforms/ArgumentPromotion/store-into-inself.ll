@@ -59,7 +59,7 @@ entry:
 }
 
 define internal void @l(ptr byval(ptr) align 4 %p) nounwind  {
-; CHECK-LABEL: define {{[^@]+}}@l
+; CHECK-LABEL: define {{[^@]+}}@l.argprom.argprom
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
@@ -83,7 +83,7 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    call void @g(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @h(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @k(ptr byval(ptr) align 4 [[S]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @l() #[[ATTR0]]
+; CHECK-NEXT:    call void @l.argprom.argprom() #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

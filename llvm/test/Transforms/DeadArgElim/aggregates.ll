@@ -4,7 +4,7 @@
 ; actually only used in ways we can eliminate. We gain benefit from analysing
 ; the "use" and applying its results to all sub-values.
 
-; CHECK-LABEL: define internal void @agguse_dead()
+; CHECK-LABEL: define internal void @agguse_dead.retelim()
 
 define internal { i32, i32 } @agguse_dead() {
   ret { i32, i32 } { i32 0, i32 1 }
@@ -20,7 +20,7 @@ define internal { i32, i32 } @test_agguse_dead() {
 ; Case 1: an opaque use of the aggregate exists (in this case dead). Otherwise
 ; only one value is used, so function can be simplified.
 
-; CHECK-LABEL: define internal i32 @rets_independent_if_agguse_dead()
+; CHECK-LABEL: define internal i32 @rets_independent_if_agguse_dead.retelim()
 ; CHECK: [[RET:%.*]] = extractvalue { i32, i32 } { i32 0, i32 1 }, 1
 ; CHECK: ret i32 [[RET]]
 
@@ -89,7 +89,7 @@ define [2 x i32] @test_array_rets_have_multiple_slots() {
 ; Case 4: we can remove some retvals from the array. It's nice to produce an
 ; array again having done so (rather than converting it to a struct).
 
-; CHECK-LABEL: define internal [2 x i32] @can_shrink_arrays()
+; CHECK-LABEL: define internal [2 x i32] @can_shrink_arrays.retelim()
 ; CHECK: [[VAL0:%.*]] = extractvalue [3 x i32] [i32 42, i32 43, i32 44], 0
 ; CHECK: [[RESTMP:%.*]] = insertvalue [2 x i32] poison, i32 [[VAL0]], 0
 ; CHECK: [[VAL2:%.*]] = extractvalue [3 x i32] [i32 42, i32 43, i32 44], 2
@@ -117,7 +117,7 @@ define void @test_can_shrink_arrays() {
 ; Case 5: %in gets passed directly to the return. It should mark be marked as
 ; used if *any* of the return values are, not just if value 0 is.
 
-; CHECK-LABEL: define internal i32 @ret_applies_to_all({ i32, i32 } %in)
+; CHECK-LABEL: define internal i32 @ret_applies_to_all.retelim({ i32, i32 } %in)
 ; CHECK: [[RET:%.*]] = extractvalue { i32, i32 } %in, 1
 ; CHECK: ret i32 [[RET]]
 
@@ -167,7 +167,7 @@ entry:
 }
 
 ; CHECK-LABEL: define void @PR24906
-; CHECK: %[[invoke:.*]] = invoke i32 @agg_ret()
+; CHECK: %[[invoke:.*]] = invoke i32 @agg_ret.retelim()
 ; CHECK: %[[oldret:.*]] = insertvalue { i32 } poison, i32 %[[invoke]], 0
 ; CHECK: phi { i32 } [ %[[oldret]],
 define void @PR24906() personality ptr poison {
