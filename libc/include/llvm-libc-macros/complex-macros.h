@@ -15,15 +15,9 @@
 
 #define complex _Complex
 #define _Complex_I ((float _Complex)1.0fi)
-
-#ifdef _Imaginary
-#define imaginary _Imaginary
-#define _Imaginary_I ((float _Imaginary)1.0i)
-
-#define I _Imaginary_I
-#else
 #define I _Complex_I
-#endif
+
+// TODO: Add imaginary macros once GCC or Clang support them.
 
 #endif
 

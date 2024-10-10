@@ -232,6 +232,10 @@ TEST_SPECIALIZATION(unsigned long long);
 
 TEST_SPECIALIZATION(bool);
 
+TEST_SPECIALIZATION(float _Complex);
+TEST_SPECIALIZATION(double _Complex);
+TEST_SPECIALIZATION(long double _Complex);
+
 // We cannot just use a single UInt128 specialization as that resolves to only
 // one type, UInt<128> or __uint128_t. We want both overloads as we want to
 #ifdef LIBC_TYPES_HAS_INT128
