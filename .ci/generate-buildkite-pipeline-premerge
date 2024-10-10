@@ -216,7 +216,7 @@ function check-targets() {
       echo "check-lldb"
     ;;
     pstl)
-      echo "check-all"
+      # Currently we do not run pstl tests in CI.
     ;;
     libclc)
       # Currently there is no testing for libclc.
