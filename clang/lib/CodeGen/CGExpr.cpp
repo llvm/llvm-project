@@ -5817,7 +5817,10 @@ LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
 
 LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E,
                                            llvm::CallBase **CallOrInvoke) {
-  RValue RV = EmitCallExpr(E, ReturnValueSlot(), CallOrInvoke);
+  RValue RV;
+  CGM.runWithSufficientStackSpace(E->getExprLoc(), [&] {
+    RV = EmitCallExpr(E, ReturnValueSlot(), CallOrInvoke);
+  });
 
   if (!RV.isScalar())
     return MakeAddrLValue(RV.getAggregateAddress(), E->getType(),
