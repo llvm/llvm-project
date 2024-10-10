@@ -58,13 +58,11 @@
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel1Pi(
-// OPT-SPIRV-SAME: ptr addrspace(1) noundef [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] {
+// OPT-SPIRV-SAME: ptr addrspace(1) nocapture noundef [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
-// OPT-SPIRV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[X_COERCE]] to i64
-// OPT-SPIRV-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr addrspace(4)
-// OPT-SPIRV-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4
-// OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
-// OPT-SPIRV-NEXT:    store i32 [[INC]], ptr addrspace(4) [[TMP1]], align 4
+// OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[X_COERCE]], align 4
+// OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
+// OPT-SPIRV-NEXT:    store i32 [[INC]], ptr addrspace(1) [[X_COERCE]], align 4
 // OPT-SPIRV-NEXT:    ret void
 //
 // HOST-LABEL: define dso_local void @_Z22__device_stub__kernel1Pi(
@@ -126,13 +124,11 @@ __global__ void kernel1(int *x) {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel2Ri(
-// OPT-SPIRV-SAME: ptr addrspace(1) noundef align 4 dereferenceable(4) [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: ptr addrspace(1) nocapture noundef align 4 dereferenceable(4) [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
-// OPT-SPIRV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[X_COERCE]] to i64
-// OPT-SPIRV-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr addrspace(4)
-// OPT-SPIRV-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4
-// OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
-// OPT-SPIRV-NEXT:    store i32 [[INC]], ptr addrspace(4) [[TMP1]], align 4
+// OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[X_COERCE]], align 4
+// OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
+// OPT-SPIRV-NEXT:    store i32 [[INC]], ptr addrspace(1) [[X_COERCE]], align 4
 // OPT-SPIRV-NEXT:    ret void
 //
 // HOST-LABEL: define dso_local void @_Z22__device_stub__kernel2Ri(
@@ -195,7 +191,7 @@ __global__ void kernel2(int &x) {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel3PU3AS2iPU3AS1i(
-// OPT-SPIRV-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[Y:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR1:[0-9]+]] {
+// OPT-SPIRV-SAME: ptr addrspace(2) nocapture noundef readonly [[X:%.*]], ptr addrspace(1) nocapture noundef writeonly [[Y:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[X]], align 4
 // OPT-SPIRV-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[Y]], align 4
@@ -261,7 +257,7 @@ __global__ void kernel3(__attribute__((address_space(2))) int *x,
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_func void @_Z4funcPi(
-// OPT-SPIRV-SAME: ptr addrspace(4) nocapture noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2:[0-9]+]] {
+// OPT-SPIRV-SAME: ptr addrspace(4) nocapture noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR1:[0-9]+]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[X]], align 4
 // OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
@@ -343,7 +339,7 @@ struct S {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel41S(
-// OPT-SPIRV-SAME: [[STRUCT_S:%.*]] [[S_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: [[STRUCT_S:%.*]] [[S_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2:[0-9]+]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_S]] [[S_COERCE]], 0
 // OPT-SPIRV-NEXT:    [[TMP1:%.*]] = extractvalue [[STRUCT_S]] [[S_COERCE]], 1
@@ -446,19 +442,17 @@ __global__ void kernel4(struct S s) {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel5P1S(
-// OPT-SPIRV-SAME: ptr addrspace(1) noundef [[S_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: ptr addrspace(1) nocapture noundef readonly [[S_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
-// OPT-SPIRV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[S_COERCE]] to i64
-// OPT-SPIRV-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr addrspace(4)
-// OPT-SPIRV-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[TMP1]], align 8
-// OPT-SPIRV-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4
-// OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP3]], 1
-// OPT-SPIRV-NEXT:    store i32 [[INC]], ptr addrspace(4) [[TMP2]], align 4
-// OPT-SPIRV-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP1]], i64 8
-// OPT-SPIRV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[Y]], align 8
-// OPT-SPIRV-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[TMP4]], align 4
-// OPT-SPIRV-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP5]], 1.000000e+00
-// OPT-SPIRV-NEXT:    store float [[ADD]], ptr addrspace(4) [[TMP4]], align 4
+// OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(1) [[S_COERCE]], align 8
+// OPT-SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[TMP0]], align 4
+// OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
+// OPT-SPIRV-NEXT:    store i32 [[INC]], ptr addrspace(4) [[TMP0]], align 4
+// OPT-SPIRV-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[S_COERCE]], i64 8
+// OPT-SPIRV-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(1) [[Y]], align 8
+// OPT-SPIRV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(4) [[TMP2]], align 4
+// OPT-SPIRV-NEXT:    [[ADD:%.*]] = fadd contract float [[TMP3]], 1.000000e+00
+// OPT-SPIRV-NEXT:    store float [[ADD]], ptr addrspace(4) [[TMP2]], align 4
 // OPT-SPIRV-NEXT:    ret void
 //
 // HOST-LABEL: define dso_local void @_Z22__device_stub__kernel5P1S(
@@ -551,7 +545,7 @@ struct T {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel61T(
-// OPT-SPIRV-SAME: [[STRUCT_T:%.*]] [[T_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: [[STRUCT_T:%.*]] [[T_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_T]] [[T_COERCE]], 0
 // OPT-SPIRV-NEXT:    [[DOTFCA_0_EXTRACT:%.*]] = extractvalue [2 x ptr addrspace(4)] [[TMP0]], 0
@@ -631,13 +625,11 @@ __global__ void kernel6(struct T t) {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel7Pi(
-// OPT-SPIRV-SAME: ptr addrspace(1) noalias noundef [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: ptr addrspace(1) noalias nocapture noundef [[X_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
-// OPT-SPIRV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[X_COERCE]] to i64
-// OPT-SPIRV-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr addrspace(4)
-// OPT-SPIRV-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4
-// OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
-// OPT-SPIRV-NEXT:    store i32 [[INC]], ptr addrspace(4) [[TMP1]], align 4
+// OPT-SPIRV-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[X_COERCE]], align 4
+// OPT-SPIRV-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
+// OPT-SPIRV-NEXT:    store i32 [[INC]], ptr addrspace(1) [[X_COERCE]], align 4
 // OPT-SPIRV-NEXT:    ret void
 //
 // HOST-LABEL: define dso_local void @_Z22__device_stub__kernel7Pi(
@@ -700,7 +692,7 @@ struct SS {
 // OPT-NEXT:    ret void
 //
 // OPT-SPIRV-LABEL: define spir_kernel void @_Z7kernel82SS(
-// OPT-SPIRV-SAME: [[STRUCT_SS:%.*]] [[A_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
+// OPT-SPIRV-SAME: [[STRUCT_SS:%.*]] [[A_COERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2]] {
 // OPT-SPIRV-NEXT:  [[ENTRY:.*:]]
 // OPT-SPIRV-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_SS]] [[A_COERCE]], 0
 // OPT-SPIRV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(4) [[TMP0]], align 4
