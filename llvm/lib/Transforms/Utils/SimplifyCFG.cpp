@@ -2788,7 +2788,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
   // including operand bundles.
   const InvokeInst *II0 = Invokes.front();
   for (auto *II : Invokes.drop_front())
-    if (!II->isSameOperationAs(II0))
+    if (!II->isSameOperationAs(II0, Instruction::CompareUsingIntersectedAttrs))
       return false;
 
   // Can we theoretically form the data operands for the merged `invoke`?
@@ -2927,6 +2927,10 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
     for (BasicBlock *OrigSuccBB : successors(II->getParent()))
       OrigSuccBB->removePredecessor(II->getParent());
     BranchInst::Create(MergedInvoke->getParent(), II->getParent());
+    bool Success = MergedInvoke->tryIntersectAttributes(II);
+    assert(Success && "Merged invokes with incompatible attributes");
+    // For NDEBUG Compile
+    (void)Success;
     II->replaceAllUsesWith(MergedInvoke);
     II->eraseFromParent();
     ++NumInvokesMerged;
