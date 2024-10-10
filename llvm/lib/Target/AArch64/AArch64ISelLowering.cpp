@@ -1118,7 +1118,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                        ISD::VECREDUCE_ADD, ISD::STEP_VECTOR});
 
-  setTargetDAGCombine({ISD::MGATHER, ISD::MSCATTER});
+  setTargetDAGCombine(
+      {ISD::MGATHER, ISD::MSCATTER, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM});
 
   setTargetDAGCombine(ISD::FP_EXTEND);
 
@@ -23713,11 +23714,27 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
 
 static SDValue performMaskedGatherScatterCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
-  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
-  assert(MGS && "Can only combine gather load or scatter store nodes");
-
   if (!DCI.isBeforeLegalize())
     return SDValue();
+
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM) {
+    MaskedHistogramSDNode *HG = cast<MaskedHistogramSDNode>(N);
+
+    SDValue Index = HG->getIndex();
+    if (!ISD::isExtOpcode(Index->getOpcode())) {
+      return SDValue();
+    }
+    SDLoc DL(HG);
+    SDValue ExtOp = Index.getOperand(0);
+    SDValue Ops[] = {HG->getChain(),   HG->getInc(), HG->getMask(),
+                     HG->getBasePtr(), ExtOp,        HG->getScale(),
+                     HG->getIntID()};
+    return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), HG->getMemoryVT(),
+                                  DL, Ops, HG->getMemOperand(),
+                                  HG->getIndexType());
+  }
+
+  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
 
   SDLoc DL(MGS);
   SDValue Chain = MGS->getChain();
@@ -25911,6 +25928,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return performMaskedGatherScatterCombine(N, DCI, DAG);
   case ISD::FP_EXTEND:
     return performFPExtendCombine(N, DAG, DCI, Subtarget);
