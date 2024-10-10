@@ -1071,9 +1071,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
-      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::VP_SINT_TO_FP,
-                          ISD::VP_UINT_TO_FP},
-                         VT, Custom);
+      setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT, Custom);
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
                           ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
                           ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
@@ -1343,9 +1341,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
-          setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP,
-                              ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
-                             VT, Custom);
+          setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT,
+                             Custom);
           setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
           if (Subtarget.hasStdExtZfhmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
