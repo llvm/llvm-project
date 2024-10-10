@@ -218,6 +218,12 @@ def note_constexpr_access_null : Note<
 def note_constexpr_access_past_end : Note<
   "%sub{access_kind}0 dereferenced one-past-the-end pointer "
   "is not allowed in a constant expression">;
+def note_constexpr_dereferencing_tagged_pointer: Note<
+  "dereferencing tagged pointer">;
+def note_constexpr_tagging_with_shift_zero: Note<
+  "you must shift pointer at least by one bit to store a tag">;
+def note_constexpr_tagging_with_empty_mask: Note<
+  "you must provide non-zero mask for pointer tagging">;
 def note_constexpr_access_unsized_array : Note<
   "%sub{access_kind}0 element of array without known bound "
   "is not allowed in a constant expression">;

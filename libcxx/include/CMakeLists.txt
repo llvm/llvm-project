@@ -553,6 +553,7 @@ set(files
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
+  __memory/tagged_ptr.h
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
