@@ -100,20 +100,10 @@ int llvm::compileModuleWithNewPM(
   }
 
   LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
-
   raw_pwrite_stream *OS = &Out->os();
-
-  // Fetch options from TargetPassConfig
-  CGPassBuilderOption Opt = getCGPassBuilderOption();
-  Opt.DisableVerify = VK != VerifierKind::InputOutput;
-  Opt.DebugPM = DebugPM;
-  Opt.RegAlloc = RegAlloc;
-
   MachineModuleInfo MMI(&LLVMTM);
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Context, Opt.DebugPM,
-                              VK == VerifierKind::EachPass);
   registerCodeGenCallback(PIC, LLVMTM);
 
   MachineFunctionAnalysisManager MFAM;
@@ -121,13 +111,19 @@ int llvm::compileModuleWithNewPM(
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
+  CGPassBuilderOption &CGPBO = PB.getCGPBO();
+  CGPBO.DisableVerify = VK != VerifierKind::InputOutput;
+  CGPBO.RegAlloc = RegAlloc;
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+
+  StandardInstrumentations SI(Context, DebugPM, VK == VerifierKind::EachPass);
   SI.registerCallbacks(PIC, &MAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
@@ -158,8 +154,9 @@ int llvm::compileModuleWithNewPM(
     if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
-    ExitOnErr(LLVMTM.buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+    ExitOnErr(PB.buildDefaultCodeGenPipeline(MPM, *OS,
+                                             DwoOut ? &DwoOut->os() : nullptr,
+                                             FileType, MMI.getContext()));
   }
 
   if (PrintPipelinePasses) {

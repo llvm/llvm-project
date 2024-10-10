@@ -145,6 +145,17 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
   return PA;
 }
 
+void ModuleToFunctionPassAdaptor::eraseIf(function_ref<bool(StringRef)> Pred) {
+  StringRef PassName = Pass->name();
+  if (PassName.contains("PassManager") || PassName.ends_with("PassAdaptor")) {
+    Pass->eraseIf(Pred);
+    if (Pass->isEmpty())
+      Pass.reset();
+  } else if (Pred(PassName)) {
+    Pass.reset();
+  }
+}
+
 template <>
 void llvm::printIRUnitNameForStackTrace<Module>(raw_ostream &OS,
                                                 const Module &IR) {

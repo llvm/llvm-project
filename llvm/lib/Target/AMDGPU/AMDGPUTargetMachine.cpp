@@ -57,9 +57,11 @@
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -733,6 +735,8 @@ parseAMDGPUAttributorPassOptions(StringRef Params) {
 }
 
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  CGPassBuilderOption &CGPTO = PB.getCGPBO();
+  CGPTO.RequiresCodeGenSCCOrder = true;
 
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
@@ -834,6 +838,31 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return onlyAllocateVGPRs;
         return nullptr;
       });
+
+  // CodeGen pass builder part
+  PB.registerISelPrepareEPCallback([](ModulePassManager &MPM) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        RequireAnalysisPass<UniformityInfoAnalysis, Function>()));
+  });
+
+  PB.setAddInstSelectorCallback([&](MachineFunctionPassManager &MFPM) {
+    MFPM.addPass(AMDGPUISelDAGToDAGPass(*this));
+    MFPM.addPass(SIFixSGPRCopiesPass());
+    MFPM.addPass(SILowerI1CopiesPass());
+  });
+
+  PB.setRegAllocFastCallback([&](MachineFunctionPassManager &MFPM) -> Error {
+    // TODO: Add complete pipeline.
+    MFPM.addPass(PHIEliminationPass());
+    // MFPM.addPass(SILowerControlFlowPass());
+    MFPM.addPass(TwoAddressInstructionPass());
+    // MFPM.addPass(SIWholeQuadModePass());
+    if (auto Err = PB.addRegAllocPass(MFPM, "sgpr"))
+      return Err;
+    if (auto Err = PB.addRegAllocPass(MFPM, "vgpr"))
+      return Err;
+    return Error::success();
+  });
 }
 
 int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {

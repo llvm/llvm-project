@@ -41,6 +41,9 @@ struct CGPassBuilderOption {
   bool PrintLSR = false;
   bool DisableMergeICmps = false;
   bool DisablePartialLibcallInlining = false;
+  bool DisableReplaceWithVecLib = false;
+  bool DisableLayoutFSProfileLoader = false;
+  bool DisablePrologEpilogInserterPass = false;
   bool DisableConstantHoisting = false;
   bool DisableSelectOptimize = true;
   bool DisableAtExitBasedGlobalDtorLowering = false;

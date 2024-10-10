@@ -434,9 +434,24 @@ public:
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
-    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
-  if (TM)
+    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), CGPBO(getCGPassBuilderOption()),
+      PIC(PIC) {
+  if (TM) {
+    if (TM->Options.EnableIPRA)
+      CGPBO.RequiresCodeGenSCCOrder = true;
+    AddCodeGenPreparePassesCallback = [&](ModulePassManager &MPM) {
+      addDefaultCodeGenPreparePasses(MPM);
+    };
+    AddRegAllocFastCallback = [&](MachineFunctionPassManager &MFPM) {
+      return addDefaultRegAllocFastPasses(MFPM);
+    };
+    AddRegAllocOptimizedCallback = [&](MachineFunctionPassManager &MFPM) {
+      return addDefaultRegAllocOptimizedPasses(MFPM);
+    };
+
     TM->registerPassBuilderCallbacks(*this);
+  }
+
   if (PIC) {
     PIC->registerClassToPassNameCallback([this, PIC]() {
       // MSVC requires this to be captured if it's used inside decltype.

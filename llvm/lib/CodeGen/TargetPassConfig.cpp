@@ -184,11 +184,11 @@ static cl::opt<bool> DisableLayoutFSProfileLoader(
     "disable-layout-fsprofile-loader", cl::init(false), cl::Hidden,
     cl::desc("Disable MIRProfileLoader before BlockPlacement"));
 // Specify FSProfile file name.
-static cl::opt<std::string>
+cl::opt<std::string>
     FSProfileFile("fs-profile-file", cl::init(""), cl::value_desc("filename"),
                   cl::desc("Flow Sensitive profile file name."), cl::Hidden);
 // Specify Remapping file for FSProfile.
-static cl::opt<std::string> FSRemappingFile(
+cl::opt<std::string> FSRemappingFile(
     "fs-remapping-file", cl::init(""), cl::value_desc("filename"),
     cl::desc("Flow Sensitive profile remapping file name."), cl::Hidden);
 
@@ -495,6 +495,8 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableMergeICmps)
   SET_BOOLEAN_OPTION(DisableLSR)
   SET_BOOLEAN_OPTION(DisableConstantHoisting)
+  SET_BOOLEAN_OPTION(DisableReplaceWithVecLib)
+  SET_BOOLEAN_OPTION(DisableLayoutFSProfileLoader)
   SET_BOOLEAN_OPTION(DisableCGP)
   SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
@@ -537,8 +539,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
   });
 }
 
-Expected<TargetPassConfig::StartStopInfo>
-TargetPassConfig::getStartStopInfo(PassInstrumentationCallbacks &PIC) {
+Expected<TargetPassConfig::StartStopInfo> TargetPassConfig::getStartStopInfo() {
   auto [StartBefore, StartBeforeInstanceNum] =
       getPassNameAndInstanceNum(StartBeforeOpt);
   auto [StartAfter, StartAfterInstanceNum] =

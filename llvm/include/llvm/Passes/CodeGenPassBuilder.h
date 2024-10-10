@@ -524,7 +524,7 @@ template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType) const {
-  auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
+  auto StartStopInfo = TargetPassConfig::getStartStopInfo();
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
