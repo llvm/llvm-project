@@ -3207,9 +3207,8 @@ bool LLParser::parseOptionalOperandBundles(
       if (Ty->isMetadataTy()) {
         if (parseMetadataAsValue(Input, PFS))
           return true;
-      } else {
-        if (parseValue(Ty, Input, PFS))
-          return true;
+      } else if (parseValue(Ty, Input, PFS)) {
+        return true;
       }
       Inputs.push_back(Input);
     }
