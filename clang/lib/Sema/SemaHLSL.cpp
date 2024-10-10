@@ -2239,6 +2239,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
           << 1;
       return true;
     }
+  }
+  case Builtin::BI__builtin_group_memory_barrier_with_group_sync: {
+    if (SemaRef.checkArgCountAtMost(TheCall, 0))
+      return true;
     break;
   }
   }

@@ -103,6 +103,7 @@ public:
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding, handle_fromBinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, bufferUpdateCounter)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync, groupMemoryBarrierWithGroupSync)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
