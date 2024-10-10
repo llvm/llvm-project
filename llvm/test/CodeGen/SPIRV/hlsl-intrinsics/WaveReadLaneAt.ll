@@ -14,7 +14,7 @@
 define float @test_1(float %fexpr, i32 %idx) {
 entry:
 ; CHECK:   %[[#fret:]] = OpGroupNonUniformShuffle %[[#f32]] %[[#fexpr]] %[[#idx1]] %[[#scope]]
-  %0 = call float @llvm.spv.wave.readlaneat.f32(float %fexpr, i32 %idx)
+  %0 = call float @llvm.spv.wave.readlane.f32(float %fexpr, i32 %idx)
   ret float %0
 }
 
@@ -23,7 +23,7 @@ entry:
 define i32 @test_2(i32 %iexpr, i32 %idx) {
 entry:
 ; CHECK:   %[[#iret:]] = OpGroupNonUniformShuffle %[[#uint]] %[[#iexpr]] %[[#idx2]] %[[#scope]]
-  %0 = call i32 @llvm.spv.wave.readlaneat.i32(i32 %iexpr, i32 %idx)
+  %0 = call i32 @llvm.spv.wave.readlane.i32(i32 %iexpr, i32 %idx)
   ret i32 %0
 }
 
@@ -32,10 +32,10 @@ entry:
 define <4 x i1> @test_3(<4 x i1> %vbexpr, i32 %idx) {
 entry:
 ; CHECK:   %[[#vbret:]] = OpGroupNonUniformShuffle %[[#v4_bool]] %[[#vbexpr]] %[[#idx3]] %[[#scope]]
-  %0 = call <4 x i1> @llvm.spv.wave.readlaneat.v4i1(<4 x i1> %vbexpr, i32 %idx)
+  %0 = call <4 x i1> @llvm.spv.wave.readlane.v4i1(<4 x i1> %vbexpr, i32 %idx)
   ret <4 x i1> %0
 }
 
-declare float @llvm.spv.wave.readlaneat.f32(float, i32)
-declare i32 @llvm.spv.wave.readlaneat.i32(i32, i32)
-declare <4 x i1> @llvm.spv.wave.readlaneat.v4i1(<4 x i1>, i32)
+declare float @llvm.spv.wave.readlane.f32(float, i32)
+declare i32 @llvm.spv.wave.readlane.i32(i32, i32)
+declare <4 x i1> @llvm.spv.wave.readlane.v4i1(<4 x i1>, i32)

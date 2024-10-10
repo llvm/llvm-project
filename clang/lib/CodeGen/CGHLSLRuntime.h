@@ -89,7 +89,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(SDot, sdot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlaneat)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.

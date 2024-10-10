@@ -18903,7 +18903,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
                                                      /*Local=*/false,
                                                      /*AssumeConvergent=*/true),
-                           ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlaneAt");
+                           ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);

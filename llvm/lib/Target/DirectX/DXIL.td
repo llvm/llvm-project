@@ -804,7 +804,7 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
 
 def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
   let Doc = "returns the value from the specified lane";
-  let LLVMIntrinsic = int_dx_wave_readlaneat;
+  let LLVMIntrinsic = int_dx_wave_readlane;
   let arguments = [OverloadTy, Int32Ty];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty]>];
