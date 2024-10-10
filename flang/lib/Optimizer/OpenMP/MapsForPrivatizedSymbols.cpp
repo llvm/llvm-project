@@ -65,8 +65,16 @@ class MapsForPrivatizedSymbolsPass
     auto declOp = llvm::dyn_cast_or_null<hlfir::DeclareOp>(definingOp);
     assert(declOp &&
            "Expected defining Op of privatized var to be hlfir.declare");
+
+    // We want the first result of the hlfir.declare op because our goal
+    // is to map the descriptor (fir.box or fir.boxchar) and the first
+    // result for hlfir.declare is the descriptor if a the symbol being
+    // decalred needs a descriptor.
     Value varPtr = declOp.getBase();
 
+    // If we do not have a reference to descritor, but the descriptor itself
+    // then we need to store that on the stack so that we can map the
+    // address of the descriptor.
     if (mlir::isa<fir::BaseBoxType>(varPtr.getType()) ||
         mlir::isa<fir::BoxCharType>(varPtr.getType())) {
       OpBuilder::InsertPoint savedInsPoint = builder.saveInsertionPoint();
