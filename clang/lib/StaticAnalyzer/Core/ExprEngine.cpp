@@ -212,6 +212,24 @@ typedef llvm::ImmutableMap<const LocationContext *, unsigned>
 REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingArrayDestruction,
                                  PendingArrayDestructionMap)
 
+// This trait is used to heuristically filter out results produced from
+// execution paths that took "weak" assumptions within a loop.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(SeenWeakLoopAssumption, bool)
+
+ProgramStateRef clang::ento::recordWeakLoopAssumption(ProgramStateRef State) {
+  return State->set<SeenWeakLoopAssumption>(true);
+}
+
+bool clang::ento::seenWeakLoopAssumption(ProgramStateRef State) {
+  return State->get<SeenWeakLoopAssumption>();
+}
+
+// This trait points to the last expression (logical operator) where an eager
+// assumption introduced a state split (i.e. both cases were feasible). This is
+// used by the WeakLoopAssumption heuristic to find situations where an eager
+// assumption introduces a state split in the evaluation of a loop condition.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeAssumptionAt, const Expr *)
+
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
 //===----------------------------------------------------------------------===//
@@ -2129,7 +2147,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
           (B->isRelationalOp() || B->isEqualityOp())) {
         ExplodedNodeSet Tmp;
         VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Tmp);
-        evalEagerlyAssumeBinOpBifurcation(Dst, Tmp, cast<Expr>(S));
+        evalEagerlyAssumeOpBifurcation(Dst, Tmp, cast<Expr>(S));
       }
       else
         VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Dst);
@@ -2402,7 +2420,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
         ExplodedNodeSet Tmp;
         VisitUnaryOperator(U, Pred, Tmp);
-        evalEagerlyAssumeBinOpBifurcation(Dst, Tmp, U);
+        evalEagerlyAssumeOpBifurcation(Dst, Tmp, U);
       }
       else
         VisitUnaryOperator(U, Pred, Dst);
@@ -2762,12 +2780,10 @@ assumeCondition(const Stmt *Condition, ExplodedNode *N) {
   return State->assume(V);
 }
 
-void ExprEngine::processBranch(const Stmt *Condition,
-                               NodeBuilderContext& BldCtx,
-                               ExplodedNode *Pred,
-                               ExplodedNodeSet &Dst,
-                               const CFGBlock *DstT,
-                               const CFGBlock *DstF) {
+void ExprEngine::processBranch(
+    const Stmt *Condition, NodeBuilderContext &BldCtx, ExplodedNode *Pred,
+    ExplodedNodeSet &Dst, const CFGBlock *DstT, const CFGBlock *DstF,
+    std::optional<unsigned> IterationsFinishedInLoop) {
   assert((!Condition || !isa<CXXBindTemporaryExpr>(Condition)) &&
          "CXXBindTemporaryExprs are handled by processBindTemporary.");
   const LocationContext *LCtx = Pred->getLocationContext();
@@ -2805,31 +2821,59 @@ void ExprEngine::processBranch(const Stmt *Condition,
     ProgramStateRef PrevState = PredN->getState();
 
     ProgramStateRef StTrue, StFalse;
-    if (const auto KnownCondValueAssumption = assumeCondition(Condition, PredN))
+    StTrue = StFalse = PrevState;
+
+    if (const auto KnownCondValueAssumption =
+            assumeCondition(Condition, PredN)) {
       std::tie(StTrue, StFalse) = *KnownCondValueAssumption;
-    else {
-      assert(!isa<ObjCForCollectionStmt>(Condition));
-      builder.generateNode(PrevState, true, PredN);
-      builder.generateNode(PrevState, false, PredN);
-      continue;
+
+      if (!StTrue)
+        builder.markInfeasible(true);
+
+      if (!StFalse)
+        builder.markInfeasible(false);
     }
-    if (StTrue && StFalse)
+    bool BothFeasible = builder.isFeasible(true) && builder.isFeasible(false);
+
+    if (BothFeasible)
       assert(!isa<ObjCForCollectionStmt>(Condition));
+
+    const Expr *EagerlyAssumeExpr =
+        PrevState->get<LastEagerlyAssumeAssumptionAt>();
+    bool DidEagerlyAssume = EagerlyAssumeExpr == dyn_cast<Expr>(Condition);
 
     // Process the true branch.
     if (builder.isFeasible(true)) {
-      if (StTrue)
-        builder.generateNode(StTrue, true, PredN);
-      else
-        builder.markInfeasible(true);
+      if ((BothFeasible || DidEagerlyAssume) && IterationsFinishedInLoop &&
+          *IterationsFinishedInLoop >= 2) {
+        // When programmers write a loop, they imply that at least two
+        // iterations are possible (otherwise they would just write an `if`),
+        // but the third iteration is not implied: there are situations where
+        // the programmer knows that there won't be a third iteration, but
+        // this is not marked in the source code. (For example, the ffmpeg
+        // project has 2-element arrays which are accessed from loops where
+        // the number of steps is opaque and the analyzer cannot deduce that
+        // there are <= 2 iterations.)
+        // Checkers may use this heuristic mark to discard results found on
+        // branches that contain this "weak" assumption.
+        StTrue = recordWeakLoopAssumption(StTrue);
+      }
+      builder.generateNode(StTrue, true, PredN);
     }
 
     // Process the false branch.
     if (builder.isFeasible(false)) {
-      if (StFalse)
-        builder.generateNode(StFalse, false, PredN);
-      else
-        builder.markInfeasible(false);
+      if ((BothFeasible || DidEagerlyAssume) && IterationsFinishedInLoop &&
+          *IterationsFinishedInLoop == 0) {
+        // There are many situations where the programmers know that there
+        // will be at least one iteration in a loop (e.g. a structure is not
+        // empty) but the analyzer cannot deduce this and reports false
+        // positives after skipping the loop.
+        // Checkers may use this heuristic mark to discard results found on
+        // branches that contain this "weak" assumption.
+        StFalse = recordWeakLoopAssumption(StFalse);
+      }
+      builder.generateNode(StFalse, false, PredN);
     }
   }
   currBldrCtx = nullptr;
@@ -3753,9 +3797,9 @@ ExprEngine::geteagerlyAssumeBinOpBifurcationTags() {
                         &eagerlyAssumeBinOpBifurcationFalse);
 }
 
-void ExprEngine::evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst,
-                                                   ExplodedNodeSet &Src,
-                                                   const Expr *Ex) {
+void ExprEngine::evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
+                                                ExplodedNodeSet &Src,
+                                                const Expr *Ex) {
   StmtNodeBuilder Bldr(Src, Dst, *currBldrCtx);
 
   for (const auto Pred : Src) {
@@ -3776,6 +3820,11 @@ void ExprEngine::evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst,
 
       ProgramStateRef StateTrue, StateFalse;
       std::tie(StateTrue, StateFalse) = state->assume(*SEV);
+
+      if (StateTrue && StateFalse) {
+        StateTrue = StateTrue->set<LastEagerlyAssumeAssumptionAt>(Ex);
+        StateFalse = StateFalse->set<LastEagerlyAssumeAssumptionAt>(Ex);
+      }
 
       // First assume that the condition is true.
       if (StateTrue) {

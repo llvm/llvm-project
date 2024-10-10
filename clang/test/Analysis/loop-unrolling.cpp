@@ -349,7 +349,7 @@ int simple_unknown_bound_loop() {
 #ifdef DFS
     clang_analyzer_numTimesReached(); // expected-warning {{16}}
 #else
-    clang_analyzer_numTimesReached(); // expected-warning {{8}}
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
 #endif
   }
   return 0;
@@ -369,9 +369,9 @@ int nested_inlined_no_unroll1() {
   int k;
   for (int i = 0; i < 9; i++) {
 #ifdef DFS
-    clang_analyzer_numTimesReached(); // expected-warning {{18}}
+    clang_analyzer_numTimesReached(); // expected-warning {{20}}
 #else
-    clang_analyzer_numTimesReached(); // expected-warning {{14}}
+    clang_analyzer_numTimesReached(); // expected-warning {{18}}
 #endif
     k = simple_unknown_bound_loop();  // reevaluation without inlining, splits the state as well
   }

@@ -121,6 +121,34 @@ struct EvalCallOptions {
   EvalCallOptions() {}
 };
 
+/// Simple control flow statements like `if` can only produce a single two-way
+/// state split, so when the analyzer cannot determine the value of the
+/// condition, it can assume either of the two options, because the fact that
+/// they are in the source code implies that the programmer thought that they
+/// are possible (at least under some conditions).
+/// (Note that this heuristic is not entirely correct when there are _several_
+/// `if` statements with unmarked logical connections between them, but it's
+/// still good enough and the analyzer heavily relies on it.)
+/// In contrast with this, a single loop statement can produce multiple state
+/// splits, and we cannot always single out safe assumptions where we can say
+/// that "the programmer included this loop in the source code, so they clearly
+/// thought that this execution path is possible".
+/// However, the analyzer wants to explore the code in and after the loop, so
+/// it makes assumptions about the loop condition (to get a concrete execution
+/// path) even when they are not justified.
+/// This function is called by the engine to mark the `State` when it makes an
+/// assumption which is "weak". Checkers may use this heuristical mark to
+/// discard the result and reduce the amount of false positives.
+/// TODO: Instead of just marking these branches for checker-specific handling,
+/// we could discard them completely. I suspect that this could eliminate some
+/// false positives without suppressing too many true positives, but I didn't
+/// have time to measure its effects.
+ProgramStateRef recordWeakLoopAssumption(ProgramStateRef State);
+
+/// Returns true if `recordWeakLoopAssumption()` was called on the execution
+/// path which produced `State`.
+bool seenWeakLoopAssumption(ProgramStateRef State);
+
 class ExprEngine {
   void anchor();
 
@@ -322,13 +350,14 @@ public:
                                ExplodedNode *Pred);
 
   /// ProcessBranch - Called by CoreEngine.  Used to generate successor
-  ///  nodes by processing the 'effects' of a branch condition.
-  void processBranch(const Stmt *Condition,
-                     NodeBuilderContext& BuilderCtx,
-                     ExplodedNode *Pred,
-                     ExplodedNodeSet &Dst,
-                     const CFGBlock *DstT,
-                     const CFGBlock *DstF);
+  /// nodes by processing the 'effects' of a branch condition.
+  /// If the branch condition is a loop condition, IterationsFinishedInLoop is
+  /// the number of already finished iterations (0, 1, 2, ...); otherwise it's
+  /// std::nullopt.
+  void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
+                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                     const CFGBlock *DstT, const CFGBlock *DstF,
+                     std::optional<unsigned> IterationsFinishedInLoop);
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
@@ -583,11 +612,11 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
-  /// evalEagerlyAssumeBinOpBifurcation - Given the nodes in 'Src', eagerly assume symbolic
-  ///  expressions of the form 'x != 0' and generate new nodes (stored in Dst)
-  ///  with those assumptions.
-  void evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
-                         const Expr *Ex);
+  /// evalEagerlyAssumeOpBifurcation - Given the nodes in 'Src', eagerly assume
+  /// symbolic expressions of the form 'x != 0' or '!x' and generate new nodes
+  /// (stored in Dst) with those assumptions.
+  void evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
+                                      ExplodedNodeSet &Src, const Expr *Ex);
 
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
     geteagerlyAssumeBinOpBifurcationTags();
