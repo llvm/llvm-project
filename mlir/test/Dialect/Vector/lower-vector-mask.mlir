@@ -88,3 +88,12 @@ func.func @empty_vector_mask_with_return(%a : vector<8xf32>, %mask : vector<8xi1
   return %0 : vector<8xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @vector_mask_with_unmaskable_op
+//       CHECK:   vector.mask
+func.func @vector_mask_with_unmaskable_op(%arg0: vector<2xf32>) -> vector<2xi32> {
+  %mask = arith.constant dense<[0, 1]> : vector<2xi1>
+  %0 = vector.mask %mask { vector.bitcast %arg0 : vector<2xf32> to vector<2xi32> } : vector<2xi1> -> vector<2xi32>
+  return %0 : vector<2xi32>
+}
