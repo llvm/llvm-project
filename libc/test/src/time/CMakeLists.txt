@@ -46,6 +46,7 @@ add_libc_unittest(
     libc.hdr.types.time_t
     libc.src.time.ctime
     libc.src.time.time_utils
+    libc.src.time.timezone
 )
 
 add_libc_unittest(
@@ -64,6 +65,64 @@ add_libc_unittest(
     libc.hdr.types.time_t
     libc.src.time.ctime_r
     libc.src.time.time_utils
+    libc.src.time.timezone
+)
+
+add_libc_unittest(
+  localtime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    localtime_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
+    libc.src.time.localtime
+    libc.src.time.time_utils
+    libc.src.time.timezone
+)
+
+add_libc_unittest(
+  localtime_r_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    localtime_r_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
+    libc.src.time.localtime_r
+    libc.src.time.time_utils
+    libc.src.time.timezone
+)
+
+add_libc_unittest(
+  localtime_s_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    localtime_s_test.cpp
+  HDRS
+    TmHelper.h
+    TmMatcher.h
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
+    libc.src.time.localtime_s
+    libc.src.time.time_utils
+    libc.src.time.timezone
 )
 
 add_libc_test(
