@@ -138,23 +138,6 @@ define void @f3(ptr %a, ptr %b) {
   ret void
 }
 
-define float @f4(float %val) {
-  ; X86-LABEL: name: f4
-  ; X86: bb.1 (%ir-block.0):
-  ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X86-NEXT:   [[LOAD:%[0-9]+]]:psr(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s32) from %fixed-stack.0)
-  ; X86-NEXT:   $fp0 = COPY [[LOAD]](s32)
-  ; X86-NEXT:   RET 0, implicit $fp0
-  ;
-  ; X64-LABEL: name: f4
-  ; X64: bb.1 (%ir-block.0):
-  ; X64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X64-NEXT:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s32) from %fixed-stack.0, align 16)
-  ; X64-NEXT:   $xmm0 = COPY [[LOAD]](s32)
-  ; X64-NEXT:   RET 0, implicit $xmm0
-  ret float %val
-}
-
 define void @f5(ptr %a, ptr %b) {
   ; X86-LABEL: name: f5
   ; X86: bb.1 (%ir-block.0):
