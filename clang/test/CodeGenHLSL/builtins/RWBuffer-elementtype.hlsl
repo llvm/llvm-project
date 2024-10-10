@@ -1,5 +1,19 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
 
+// CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", i16, 1, 0, 1), i16 }
+// CHECK: %"class.hlsl::RWBuffer.0" = type { target("dx.TypedBuffer", i16, 1, 0, 0), i16 }
+// CHECK: %"class.hlsl::RWBuffer.1" = type { target("dx.TypedBuffer", i32, 1, 0, 1), i32 }
+// CHECK: %"class.hlsl::RWBuffer.2" = type { target("dx.TypedBuffer", i32, 1, 0, 0), i32 }
+// CHECK: %"class.hlsl::RWBuffer.3" = type { target("dx.TypedBuffer", i64, 1, 0, 1), i64 }
+// CHECK: %"class.hlsl::RWBuffer.4" = type { target("dx.TypedBuffer", i64, 1, 0, 0), i64 }
+// CHECK: %"class.hlsl::RWBuffer.5" = type { target("dx.TypedBuffer", half, 1, 0, 0), half }
+// CHECK: %"class.hlsl::RWBuffer.6" = type { target("dx.TypedBuffer", float, 1, 0, 0), float }
+// CHECK: %"class.hlsl::RWBuffer.7" = type { target("dx.TypedBuffer", double, 1, 0, 0), double }
+// CHECK: %"class.hlsl::RWBuffer.8" = type { target("dx.TypedBuffer", <4 x i16>, 1, 0, 0), <4 x i16> }
+// CHECK: %"class.hlsl::RWBuffer.9" = type { target("dx.TypedBuffer", <3 x i32>, 1, 0, 0), <3 x i32> }
+// CHECK: %"class.hlsl::RWBuffer.10" = type { target("dx.TypedBuffer", <2 x half>, 1, 0, 0), <2 x half> }
+// CHECK: %"class.hlsl::RWBuffer.11" = type { target("dx.TypedBuffer", <3 x float>, 1, 0, 0), <3 x float> }
+
 RWBuffer<int16_t> BufI16;
 RWBuffer<uint16_t> BufU16;
 RWBuffer<int> BufI32;

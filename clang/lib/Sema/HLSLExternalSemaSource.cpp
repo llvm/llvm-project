@@ -208,8 +208,6 @@ struct BuiltinTypeDeclBuilder {
   BuiltinTypeDeclBuilder &addArraySubscriptOperator(bool IsConst) {
     if (Record->isCompleteDefinition())
       return *this;
-    assert(Fields.count("h") > 0 &&
-           "Subscript operator must be added after the handle.");
 
     ASTContext &AST = Record->getASTContext();
     QualType ElemTy = AST.Char8Ty;

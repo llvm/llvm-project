@@ -282,6 +282,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::HLSLAttributedResource:
       return TEK_Scalar;
 
     // Complexes.
