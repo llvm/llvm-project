@@ -444,13 +444,23 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       // The last arguments of a constrained intrinsic are metadata that
       // represent rounding mode (absents in some intrinsics) and exception
       // behavior. The inlined function uses default settings.
-      if (Intrinsic::hasConstrainedFPRoundingModeOperand(CIID))
+      SmallVector<OperandBundleDef, 2> Bundles;
+      if (Intrinsic::hasConstrainedFPRoundingModeOperand(CIID)) {
         Args.push_back(
             MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.tonearest")));
+        Bundles.emplace_back(
+            "fpe.round",
+            ConstantInt::get(
+                Type::getInt32Ty(Ctx),
+                static_cast<int>(RoundingMode::NearestTiesToEven)));
+      }
       Args.push_back(
           MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore")));
-
-      NewInst = CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+      Bundles.emplace_back("fpe.except",
+                           ConstantInt::get(Type::getInt32Ty(Ctx),
+                                            fp::ExceptionBehavior::ebIgnore));
+      NewInst =
+          CallInst::Create(IFn, Args, Bundles, OldInst.getName() + ".strict");
     }
   }
   if (!NewInst)
