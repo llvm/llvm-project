@@ -71,6 +71,14 @@ public:
   virtual void
   GetTypesWithQuery(TypeQuery &query,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
+  /// Get namespace DIEs whose base name match \param name with \param
+  /// parent_decl_ctx in its decl parent chain.  A base implementation
+  /// is provided. Specializations should override this if they are able to
+  /// provide a faster implementation.
+  virtual void
+  GetNamespacesWithParents(ConstString name,
+                           const CompilerDeclContext &parent_decl_ctx,
+                           llvm::function_ref<bool(DWARFDIE die)> callback);
   virtual void
   GetFunctions(const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
                const CompilerDeclContext &parent_decl_ctx,
@@ -127,6 +135,9 @@ protected:
   bool
   ProcessTypeDIEMatchQuery(TypeQuery &query, DWARFDIE die,
                            llvm::function_ref<bool(DWARFDIE die)> callback);
+  bool ProcessNamespaceDieMatchParents(
+      const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
+      llvm::function_ref<bool(DWARFDIE die)> callback);
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

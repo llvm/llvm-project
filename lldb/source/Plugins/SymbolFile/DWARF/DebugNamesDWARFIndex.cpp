@@ -565,6 +565,48 @@ void DebugNamesDWARFIndex::GetTypesWithQuery(
   m_fallback.GetTypesWithQuery(query, callback);
 }
 
+void DebugNamesDWARFIndex::GetNamespacesWithParents(
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  std::vector<lldb_private::CompilerContext> parent_contexts =
+      parent_decl_ctx.GetCompilerContext();
+  if (parent_contexts.empty())
+    return GetNamespaces(name, callback);
+
+  llvm::SmallVector<CompilerContext> parent_named_contexts;
+  std::copy_if(parent_contexts.rbegin(), parent_contexts.rend(),
+               std::back_inserter(parent_named_contexts),
+               [](const CompilerContext &ctx) { return !ctx.name.IsEmpty(); });
+  for (const DebugNames::Entry &entry :
+       m_debug_names_up->equal_range(name.GetStringRef())) {
+    lldb_private::dwarf::Tag entry_tag = entry.tag();
+    if (entry_tag == DW_TAG_namespace ||
+        entry_tag == DW_TAG_imported_declaration) {
+      std::optional<llvm::SmallVector<Entry, 4>> parent_chain =
+          getParentChain(entry);
+      if (!parent_chain) {
+        // Fallback: use the base class implementation.
+        if (!ProcessEntry(entry, [&](DWARFDIE die) {
+              return ProcessNamespaceDieMatchParents(parent_decl_ctx, die,
+                                                     callback);
+            }))
+          return;
+        continue;
+      }
+
+      if (WithinParentChain(parent_named_contexts, *parent_chain) &&
+          !ProcessEntry(entry, [&](DWARFDIE die) {
+            // After .debug_names filtering still sending to base class for
+            // further filtering before calling the callback.
+            return ProcessNamespaceDieMatchParents(parent_decl_ctx, die,
+                                                   callback);
+          }))
+        return;
+    }
+  }
+  m_fallback.GetNamespacesWithParents(name, parent_decl_ctx, callback);
+}
+
 void DebugNamesDWARFIndex::GetFunctions(
     const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx,
