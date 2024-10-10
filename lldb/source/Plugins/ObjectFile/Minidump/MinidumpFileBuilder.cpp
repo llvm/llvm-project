@@ -75,8 +75,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
     if (stop_info_sp) {
       const StopReason &stop_reason = stop_info_sp->GetStopReason();
-      if (stop_reason == StopReason::eStopReasonException ||
-          stop_reason == StopReason::eStopReasonSignal)
+      if (stop_reason != lldb::eStopReasonInvalid)
         m_expected_directories++;
     }
   }
@@ -685,50 +684,45 @@ Status MinidumpFileBuilder::AddExceptions() {
   Status error;
   for (const ThreadSP &thread_sp : thread_list) {
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
-    bool add_exception = false;
-    if (stop_info_sp) {
-      switch (stop_info_sp->GetStopReason()) {
-      case eStopReasonSignal:
-      case eStopReasonException:
-        add_exception = true;
-        break;
-      default:
-        break;
-      }
-    }
-    if (add_exception) {
-      constexpr size_t minidump_exception_size =
-          sizeof(llvm::minidump::ExceptionStream);
-      error = AddDirectory(StreamType::Exception, minidump_exception_size);
-      if (error.Fail())
-        return error;
+    // If we don't have a stop info, or if it's invalid, skip.
+    if (!stop_info_sp ||
+        stop_info_sp->GetStopReason() == lldb::eStopReasonInvalid)
+      continue;
 
-      StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
-      RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
-      Exception exp_record = {};
-      exp_record.ExceptionCode =
-          static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
-      exp_record.ExceptionFlags = static_cast<llvm::support::ulittle32_t>(0);
-      exp_record.ExceptionRecord = static_cast<llvm::support::ulittle64_t>(0);
-      exp_record.ExceptionAddress = reg_ctx_sp->GetPC();
-      exp_record.NumberParameters = static_cast<llvm::support::ulittle32_t>(0);
-      exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
-      // exp_record.ExceptionInformation;
+    constexpr size_t minidump_exception_size =
+        sizeof(llvm::minidump::ExceptionStream);
+    error = AddDirectory(StreamType::Exception, minidump_exception_size);
+    if (error.Fail())
+      return error;
 
-      ExceptionStream exp_stream;
-      exp_stream.ThreadId =
-          static_cast<llvm::support::ulittle32_t>(thread_sp->GetID());
-      exp_stream.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
-      exp_stream.ExceptionRecord = exp_record;
-      auto Iter = m_tid_to_reg_ctx.find(thread_sp->GetID());
-      if (Iter != m_tid_to_reg_ctx.end()) {
-        exp_stream.ThreadContext = Iter->second;
-      } else {
-        exp_stream.ThreadContext.DataSize = 0;
-        exp_stream.ThreadContext.RVA = 0;
-      }
-      m_data.AppendData(&exp_stream, minidump_exception_size);
+    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+    Exception exp_record = {};
+    exp_record.ExceptionCode =
+        static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
+    exp_record.ExceptionFlags =
+        static_cast<llvm::support::ulittle32_t>(Exception::LLDB_FLAG);
+    exp_record.ExceptionRecord = static_cast<llvm::support::ulittle64_t>(0);
+    exp_record.ExceptionAddress = reg_ctx_sp->GetPC();
+    exp_record.NumberParameters = static_cast<llvm::support::ulittle32_t>(1);
+    std::string description = stop_info_sp->GetDescription();
+    // We have 120 bytes to work with and it's unlikely description will
+    // overflow, but we gotta check.
+    memcpy(&exp_record.ExceptionInformation, description.c_str(),
+           std::max(description.size(), Exception::MaxParameterBytes));
+    exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
+    ExceptionStream exp_stream;
+    exp_stream.ThreadId =
+        static_cast<llvm::support::ulittle32_t>(thread_sp->GetID());
+    exp_stream.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
+    exp_stream.ExceptionRecord = exp_record;
+    auto Iter = m_tid_to_reg_ctx.find(thread_sp->GetID());
+    if (Iter != m_tid_to_reg_ctx.end()) {
+      exp_stream.ThreadContext = Iter->second;
+    } else {
+      exp_stream.ThreadContext.DataSize = 0;
+      exp_stream.ThreadContext.RVA = 0;
     }
+    m_data.AppendData(&exp_stream, minidump_exception_size);
   }
 
   return error;
