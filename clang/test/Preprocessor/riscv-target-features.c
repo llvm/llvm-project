@@ -29,6 +29,7 @@
 // CHECK-NOT: __riscv_smaia {{.*$}}
 // CHECK-NOT: __riscv_smcdeleg {{.*$}}
 // CHECK-NOT: __riscv_smcsrind {{.*$}}
+// CHECK-NOT: __riscv_smdbltrp {{.*$}}
 // CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_smstateen {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
@@ -37,6 +38,7 @@
 // CHECK-NOT: __riscv_sscofpmf {{.*$}}
 // CHECK-NOT: __riscv_sscounterenw {{.*$}}
 // CHECK-NOT: __riscv_sscsrind {{.*$}}
+// CHECK-NOT: __riscv_ssdbltrp {{.*$}}
 // CHECK-NOT: __riscv_ssqosid{{.*$}}
 // CHECK-NOT: __riscv_ssstateen {{.*$}}
 // CHECK-NOT: __riscv_ssstrict {{.*$}}
@@ -1424,6 +1426,22 @@
 // RUN:   -march=rv64isscsrind1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSCSRIND-EXT %s
 // CHECK-SSCSRIND-EXT: __riscv_sscsrind  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32ismdbltrp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMDBLTRP-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64ismdbltrp1p0 -E -dM %s \
+// RUN:   -o   | FileCheck --check-prefix=CHECK-SMDBLTRP-EXT %s
+// CHECK-SMDBLTRP-EXT: __riscv_smdbltrp  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32issdbltrp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSDBLTRP-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64issdbltrp1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSDBLTRP-EXT %s
+// CHECK-SSDBLTRP-EXT: __riscv_ssdbltrp  1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_ssqosid1p0 -E -dM %s \
