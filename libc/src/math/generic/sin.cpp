@@ -46,13 +46,12 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
     // |x| < 2^-7
     if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 7)) {
-      // |x| < 2^-26
+      // |x| < 2^-26, |sin(x) - x| < ulp(x)/2.
       if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 26)) {
         // Signed zeros.
         if (LIBC_UNLIKELY(x == 0.0))
           return x;
 
-        // For |x| < 2^-26, |sin(x) - x| < ulp(x)/2.
 #ifdef LIBC_TARGET_CPU_HAS_FMA
         return fputil::multiply_add(x, -0x1.0p-54, x);
 #else
