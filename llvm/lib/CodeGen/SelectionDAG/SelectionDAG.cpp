@@ -1657,7 +1657,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   const ConstantInt *Elt = &Val;
 
   // Vector splats are explicit within the DAG, with ConstantSDNode holding the
-  // to be splatted scalar ConstantInt.
+  // to-be-splatted scalar ConstantInt.
   if (isa<VectorType>(Elt->getType()))
     Elt = ConstantInt::get(*getContext(), Elt->getValue());
 
@@ -1817,7 +1817,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
   const ConstantFP *Elt = &V;
 
   // Vector splats are explicit within the DAG, with ConstantFPSDNode holding
-  // the to be splatted scalar ConstantFP.
+  // the to-be-splatted scalar ConstantFP.
   if (isa<VectorType>(Elt->getType()))
     Elt = ConstantFP::get(*getContext(), Elt->getValue());
 
