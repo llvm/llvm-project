@@ -4,9 +4,6 @@
 
 // REQUIRES: system-linux
 
-// An externally visible variable so static libraries extract.
-__attribute__((visibility("protected"), used)) int x;
-
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.elf.o
 // RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -o %t.nvptx.bc
 // RUN: %clang -cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm-bc -o %t.amdgpu.bc
@@ -169,7 +166,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack-
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-off.o -fembed-offload-object=%t-off.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld %t-on.o %t-off.o %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=AMD-TARGET-ID
+// RUN:   --linker-path=/usr/bin/ld %t-on.o %t-off.o --whole-archive %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=AMD-TARGET-ID
 
 // AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
 // AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
@@ -185,7 +182,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t2.o -fembed-offload-object=%t2.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld %t1.o %t2.o %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=ARCH-ALL
+// RUN:   --linker-path=/usr/bin/ld %t1.o %t2.o --whole-archive %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=ARCH-ALL
 
 // ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
 // ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -O2 -flto -Wl,--no-undefined {{.*}}.o {{.*}}.o
