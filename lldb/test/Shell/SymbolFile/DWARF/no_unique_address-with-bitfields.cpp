@@ -8,6 +8,8 @@
 // RUN:   -o "image dump ast" \
 // RUN:   -o exit | FileCheck %s
 
+// REQUIRES: system-darwin
+
 // CHECK:      (lldb) image dump ast
 // CHECK:      CXXRecordDecl {{.*}} struct Foo definition
 // CHECK:      |-FieldDecl {{.*}} data 'char[5]'
