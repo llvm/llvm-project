@@ -102,6 +102,11 @@ using ControlFoldFn = std::function<bool(OpOperand *)>;
 void populateRewriteAsConstantPatterns(RewritePatternSet &patterns,
                                        const ControlFoldFn &controlFn);
 
+/// Appends patterns for eliminating whole-slice extract_slice and insert_slice.
+/// The patterns remove extract_slice and insert_slice when the size matches
+/// and the offsets of the slice are all zeros and strides are all ones.
+void populateEliminateWholeSlicingPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 // Transform helpers
 //===----------------------------------------------------------------------===//
