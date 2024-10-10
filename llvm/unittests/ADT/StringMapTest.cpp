@@ -552,6 +552,16 @@ TEST_F(StringMapTest, StructuredBindings) {
   }
 }
 
+TEST_F(StringMapTest, StructuredBindingsMoveOnly) {
+  StringMap<MoveOnly> A;
+  A.insert(std::make_pair("a", MoveOnly(42)));
+
+  for (auto &&[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(42, Value.i);
+  }
+}
+
 namespace {
 // Simple class that counts how many moves and copy happens when growing a map
 struct CountCtorCopyAndMove {
