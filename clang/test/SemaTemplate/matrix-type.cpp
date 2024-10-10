@@ -64,7 +64,7 @@ matrix<float, R + 1, C + 2> use_matrix_2(matrix<int, R, C> &m) {}
 
 template <unsigned long R, unsigned long C>
 void use_matrix_2(matrix<int, R + 2, C / 2> &m1, matrix<float, R, C> &m2) {}
-// expected-note@-1 {{candidate function [with R = 3, C = 11] not viable: no known conversion from 'matrix<int, 5, 6>' (aka 'int __attribute__((matrix_type(5, 6)))') to 'matrix<int, 3UL + 2, 11UL / 2> &' (aka 'int & __attribute__((matrix_type(5, 5)))') for 1st argument}}
+// expected-note@-1 {{candidate function [with R = 3, C = 11] not viable: no known conversion from 'matrix<int, 5, 6>' (aka 'int __attribute__((matrix_type(5, 6)))') to 'matrix<int, 3UL + 2, 11UL / 2> &' (aka 'int  __attribute__((matrix_type(5, 5)))&') for 1st argument}}
 // expected-note@-2 {{candidate template ignored: deduced type 'matrix<float, 3UL, 4UL>' of 2nd parameter does not match adjusted type 'matrix<int, 3, 4>' of argument [with R = 3, C = 4]}}
 
 template <typename T, unsigned long R, unsigned long C>

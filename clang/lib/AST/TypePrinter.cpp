@@ -855,6 +855,11 @@ void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,
   if (Policy.UseHLSLTypes)
     OS << "matrix<";
   printBefore(T->getElementType(), OS);
+  if (!Policy.UseHLSLTypes) {
+    OS << " __attribute__((matrix_type(";
+    OS << T->getNumRows() << ", " << T->getNumColumns();
+    OS << ")))";
+  }
 }
 
 void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
@@ -864,10 +869,6 @@ void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
     OS << ", ";
     OS << T->getNumRows() << ", " << T->getNumColumns();
     OS << ">";
-  } else {
-    OS << " __attribute__((matrix_type(";
-    OS << T->getNumRows() << ", " << T->getNumColumns();
-    OS << ")))";
   }
 }
 
