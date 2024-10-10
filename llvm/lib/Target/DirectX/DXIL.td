@@ -277,7 +277,6 @@ def IsFeedback : DXILAttribute;
 def IsWave : DXILAttribute;
 def NeedsUniformInputs : DXILAttribute;
 def IsBarrier : DXILAttribute;
-def NoDuplicate : DXILAttribute;
 
 class Overloads<Version ver, list<DXILOpParamType> ols> {
   Version dxil_version = ver;
@@ -827,5 +826,5 @@ def Barrier : DXILOp<80, barrier> {
   let arguments = [Int32Ty];
   let result = VoidTy;
   let stages = [Stages<DXIL1_0, [compute, library]>];
-  let attributes = [Attributes<DXIL1_0, [NoDuplicate]>];
+  let attributes = [Attributes<DXIL1_0, []>];
 }
