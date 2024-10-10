@@ -916,7 +916,7 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
 
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
-  let arguments = [Int32Ty];
+  let arguments = [];
   let result = VoidTy;
   let stages = [Stages<DXIL1_0, [compute, library]>];
   let attributes = [Attributes<DXIL1_0, []>];
