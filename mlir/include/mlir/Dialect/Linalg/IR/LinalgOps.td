@@ -313,7 +313,7 @@ def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform",
 }
 
 def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform",
-    [AllElementTypesMatch<["value", "output"]>,
+    [AllElementTypesMatch<["value", "output"]>, DestinationStyleOpInterface,
      DeclareOpInterfaceMethods<TilingInterface,
       ["getIterationDomain",
        "getLoopIteratorTypes",
@@ -396,6 +396,7 @@ def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform",
     int64_t getOutputFDim() {
       return 3;
     }
+    MutableOperandRange getDpsInitsMutable() { return getOutputMutable(); }
   }];
   let hasVerifier = 1;
 }
