@@ -386,6 +386,9 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       {"cl", "--driver-mode=cl"},
       {"++", "--driver-mode=g++"},
       {"flang", "--driver-mode=flang"},
+      // For backwards compatibility, we create a symlink for `flang` called
+      // `flang-new`. This will be removed in the future.
+      {"flang-new", "--driver-mode=flang"},
       {"clang-dxc", "--driver-mode=dxc"},
   };
 
