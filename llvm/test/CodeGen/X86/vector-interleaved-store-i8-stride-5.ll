@@ -1167,14 +1167,14 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm8 = zero,xmm8[6,7],zero,zero,zero,xmm8[8,9],zero,zero,zero,xmm8[10,11],zero,zero,zero
 ; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[6],zero,zero,zero,xmm2[9,8],zero,zero,zero,xmm2[11,10],zero,zero,zero,xmm2[13,12]
-; AVX-NEXT:    vpor %xmm2, %xmm8, %xmm2
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,zero,xmm0[3],zero,zero,zero,zero,xmm0[4],zero,zero,zero,zero,xmm0[5],zero,zero
+; AVX-NEXT:    vpor %xmm3, %xmm8, %xmm3
 ; AVX-NEXT:    vpor %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm7[4,5],zero,zero,zero,xmm7[6,7],zero,zero,zero,xmm7[8,9],zero,zero
 ; AVX-NEXT:    vpunpckhbw {{.*#+}} xmm1 = xmm4[8],xmm1[8],xmm4[9],xmm1[9],xmm4[10],xmm1[10],xmm4[11],xmm1[11],xmm4[12],xmm1[12],xmm4[13],xmm1[13],xmm4[14],xmm1[14],xmm4[15],xmm1[15]
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[2],zero,zero,zero,xmm1[5,4],zero,zero,zero,xmm1[7,6],zero,zero,zero,xmm1[9,8]
-; AVX-NEXT:    vpor %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpshufb {{.*#+}} xmm3 = zero,xmm0[9],zero,zero,zero,zero,xmm0[10],zero,zero,zero,zero,xmm0[11],zero,zero,zero,zero
+; AVX-NEXT:    vpshufb {{.*#+}} xmm4 = zero,xmm0[9],zero,zero,zero,zero,xmm0[10],zero,zero,zero,zero,xmm0[11],zero,zero,zero,zero
+; AVX-NEXT:    vpor %xmm4, %xmm3, %xmm3
 ; AVX-NEXT:    vpor %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vmovdqa %xmm1, 48(%r9)
 ; AVX-NEXT:    vmovdqa %xmm2, 16(%r9)

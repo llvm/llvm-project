@@ -1068,11 +1068,11 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    orl %ecx, %eax
-; SSE2-NEXT:    testb $1, %al
+; SSE2-NEXT:    movd %xmm0, %edx
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    orl %ecx, %edx
+; SSE2-NEXT:    testb $1, %dl
 ; SSE2-NEXT:    je .LBB27_2
 ; SSE2-NEXT:  # %bb.1:
 ; SSE2-NEXT:    xorl %eax, %eax

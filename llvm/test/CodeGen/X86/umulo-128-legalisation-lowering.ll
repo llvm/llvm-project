@@ -108,46 +108,43 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    adcl %ebx, %edx
-; X86-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X86-NEXT:    setb %bl
 ; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    setne %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    testl %esi, %esi
-; X86-NEXT:    setne %ch
-; X86-NEXT:    andb %cl, %ch
-; X86-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
-; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Folded Reload
-; X86-NEXT:    orb %ch, %cl
-; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Folded Reload
-; X86-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-NEXT:    setne %bh
+; X86-NEXT:    andb %cl, %bh
+; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bh # 1-byte Folded Reload
+; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bh # 1-byte Folded Reload
+; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bh # 1-byte Folded Reload
 ; X86-NEXT:    testl %edi, %edi
-; X86-NEXT:    setne %cl
+; X86-NEXT:    setne %ch
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    testl %edi, %edi
-; X86-NEXT:    setne %ch
-; X86-NEXT:    andb %cl, %ch
-; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 1-byte Folded Reload
-; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bl # 1-byte Folded Reload
-; X86-NEXT:    orb %ch, %bl
-; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %bl # 1-byte Folded Reload
+; X86-NEXT:    setne %cl
+; X86-NEXT:    andb %ch, %cl
+; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Folded Reload
+; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Folded Reload
+; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Folded Reload
 ; X86-NEXT:    orl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    setne %bh
+; X86-NEXT:    setne %ch
 ; X86-NEXT:    orl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; X86-NEXT:    movl %esi, 4(%ecx)
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; X86-NEXT:    movl %esi, (%ecx)
-; X86-NEXT:    movl %eax, 8(%ecx)
-; X86-NEXT:    movl %edx, 12(%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; X86-NEXT:    movl %edi, 4(%esi)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
+; X86-NEXT:    movl %edi, (%esi)
+; X86-NEXT:    movl %eax, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    setne %al
-; X86-NEXT:    andb %bh, %al
+; X86-NEXT:    andb %ch, %al
+; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    orb %bh, %al
 ; X86-NEXT:    orb %bl, %al
-; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
-; X86-NEXT:    orb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Folded Reload
 ; X86-NEXT:    andb $1, %al
-; X86-NEXT:    movb %al, 16(%ecx)
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movb %al, 16(%esi)
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $24, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi

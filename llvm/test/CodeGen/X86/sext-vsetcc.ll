@@ -571,50 +571,51 @@ define <8 x i32> @PR63946(<8 x i32> %a0, <8 x i32> %b0) nounwind {
 ; SSE-LABEL: PR63946:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movdqa %xmm1, %xmm4
-; SSE-NEXT:    movdqa %xmm0, %xmm13
+; SSE-NEXT:    movdqa %xmm0, %xmm11
 ; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm2[1,2,3,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm9 = xmm3[1,2,3,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[2,3,0,1]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm8 = xmm2[2,3,0,1]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[3,0,1,2]
-; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[3,0,1,2]
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm9, %xmm11
-; SSE-NEXT:    pcmpeqd %xmm4, %xmm11
-; SSE-NEXT:    movdqa %xmm7, %xmm12
-; SSE-NEXT:    movdqa %xmm8, %xmm10
-; SSE-NEXT:    movdqa %xmm5, %xmm15
-; SSE-NEXT:    pcmpeqd %xmm4, %xmm15
-; SSE-NEXT:    movdqa %xmm1, %xmm14
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[3,0,1,2]
+; SSE-NEXT:    movdqa %xmm11, %xmm6
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm6
+; SSE-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm9, %xmm10
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm10
+; SSE-NEXT:    movdqa %xmm7, %xmm13
+; SSE-NEXT:    movdqa %xmm8, %xmm12
+; SSE-NEXT:    movdqa %xmm5, %xmm14
 ; SSE-NEXT:    pcmpeqd %xmm4, %xmm14
+; SSE-NEXT:    movdqa %xmm1, %xmm15
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm15
 ; SSE-NEXT:    pcmpeqd %xmm4, %xmm2
 ; SSE-NEXT:    pcmpeqd %xmm4, %xmm7
 ; SSE-NEXT:    pcmpeqd %xmm4, %xmm8
-; SSE-NEXT:    movdqa %xmm6, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm4, %xmm6
+; SSE-NEXT:    movdqa %xmm0, %xmm6
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm0
 ; SSE-NEXT:    pcmpeqd %xmm3, %xmm4
-; SSE-NEXT:    por %xmm4, %xmm11
-; SSE-NEXT:    pcmpeqd %xmm13, %xmm12
-; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
-; SSE-NEXT:    pcmpeqd %xmm13, %xmm10
-; SSE-NEXT:    pcmpeqd %xmm13, %xmm0
+; SSE-NEXT:    por %xmm4, %xmm10
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm13
+; SSE-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Folded Reload
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm12
+; SSE-NEXT:    por %xmm13, %xmm12
+; SSE-NEXT:    por %xmm10, %xmm14
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm6
 ; SSE-NEXT:    por %xmm15, %xmm2
-; SSE-NEXT:    por %xmm11, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm13, %xmm3
-; SSE-NEXT:    por %xmm3, %xmm10
-; SSE-NEXT:    por %xmm12, %xmm10
-; SSE-NEXT:    por %xmm14, %xmm7
-; SSE-NEXT:    pcmpeqd %xmm13, %xmm9
-; SSE-NEXT:    por %xmm0, %xmm9
-; SSE-NEXT:    pcmpeqd %xmm13, %xmm5
+; SSE-NEXT:    por %xmm14, %xmm2
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm3
+; SSE-NEXT:    por %xmm3, %xmm6
+; SSE-NEXT:    por %xmm12, %xmm6
+; SSE-NEXT:    por %xmm2, %xmm7
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm9
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm5
 ; SSE-NEXT:    por %xmm9, %xmm5
-; SSE-NEXT:    por %xmm10, %xmm5
+; SSE-NEXT:    por %xmm6, %xmm5
 ; SSE-NEXT:    por %xmm7, %xmm8
-; SSE-NEXT:    por %xmm2, %xmm8
 ; SSE-NEXT:    packssdw %xmm8, %xmm5
-; SSE-NEXT:    pcmpeqd %xmm13, %xmm1
-; SSE-NEXT:    packssdw %xmm6, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm1
+; SSE-NEXT:    packssdw %xmm0, %xmm1
 ; SSE-NEXT:    por %xmm5, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
@@ -638,12 +639,12 @@ define <8 x i32> @PR63946(<8 x i32> %a0, <8 x i32> %b0) nounwind {
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm2, %ymm2
 ; AVX2-NEXT:    vpor %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm3, %ymm2
-; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm4, %ymm3
-; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm5, %ymm4
-; AVX2-NEXT:    vpor %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm6, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm4, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm5, %ymm3
 ; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm6, %ymm3
+; AVX2-NEXT:    vpor %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm7, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm8, %ymm0

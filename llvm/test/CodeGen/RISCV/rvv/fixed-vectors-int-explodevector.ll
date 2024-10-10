@@ -28,8 +28,8 @@ define i8 @explode_4xi8(<4 x i8> %v) {
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
   %e0 = extractelement <4 x i8> %v, i32 0
   %e1 = extractelement <4 x i8> %v, i32 1
@@ -62,11 +62,11 @@ define i8 @explode_8xi8(<8 x i8> %v) {
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a6, v8
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a6, a0
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:    add a0, a0, a5
 ; CHECK-NEXT:    ret
   %e0 = extractelement <8 x i8> %v, i32 0
@@ -123,20 +123,20 @@ define i8 @explode_16xi8(<16 x i8> %v) {
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s t6, v8
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, t6, a0
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    add a5, a5, a6
-; CHECK-NEXT:    add a5, a5, a7
-; CHECK-NEXT:    add a5, a5, t0
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:    add a0, a0, a5
-; CHECK-NEXT:    add t1, t1, t2
-; CHECK-NEXT:    add t1, t1, t3
-; CHECK-NEXT:    add t1, t1, t4
-; CHECK-NEXT:    add t1, t1, t5
+; CHECK-NEXT:    add a0, a0, a6
+; CHECK-NEXT:    add a0, a0, a7
+; CHECK-NEXT:    add a0, a0, t0
 ; CHECK-NEXT:    add a0, a0, t1
+; CHECK-NEXT:    add a0, a0, t2
+; CHECK-NEXT:    add a0, a0, t3
+; CHECK-NEXT:    add a0, a0, t4
+; CHECK-NEXT:    add a0, a0, t5
 ; CHECK-NEXT:    ret
   %e0 = extractelement <16 x i8> %v, i32 0
   %e1 = extractelement <16 x i8> %v, i32 1
@@ -198,8 +198,8 @@ define i16 @explode_4xi16(<4 x i16> %v) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
   %e0 = extractelement <4 x i16> %v, i32 0
   %e1 = extractelement <4 x i16> %v, i32 1
@@ -232,11 +232,11 @@ define i16 @explode_8xi16(<8 x i16> %v) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a6, v8
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a6, a0
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:    add a0, a0, a5
 ; CHECK-NEXT:    ret
   %e0 = extractelement <8 x i16> %v, i32 0
@@ -294,20 +294,20 @@ define i16 @explode_16xi16(<16 x i16> %v) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s t6, v8
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, t6, a0
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    add a5, a5, a6
-; CHECK-NEXT:    add a5, a5, a7
-; CHECK-NEXT:    add a5, a5, t0
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:    add a0, a0, a5
-; CHECK-NEXT:    add t1, t1, t2
-; CHECK-NEXT:    add t1, t1, t3
-; CHECK-NEXT:    add t1, t1, t4
-; CHECK-NEXT:    add t1, t1, t5
+; CHECK-NEXT:    add a0, a0, a6
+; CHECK-NEXT:    add a0, a0, a7
+; CHECK-NEXT:    add a0, a0, t0
 ; CHECK-NEXT:    add a0, a0, t1
+; CHECK-NEXT:    add a0, a0, t2
+; CHECK-NEXT:    add a0, a0, t3
+; CHECK-NEXT:    add a0, a0, t4
+; CHECK-NEXT:    add a0, a0, t5
 ; CHECK-NEXT:    ret
   %e0 = extractelement <16 x i16> %v, i32 0
   %e1 = extractelement <16 x i16> %v, i32 1
@@ -369,8 +369,8 @@ define i32 @explode_4xi32(<4 x i32> %v) {
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vredxor.vs v8, v8, v9
 ; RV32-NEXT:    vmv.x.s a2, v8
-; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a2, a0
+; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: explode_4xi32:
@@ -384,8 +384,8 @@ define i32 @explode_4xi32(<4 x i32> %v) {
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s a2, v8
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    addw a0, a2, a0
+; RV64-NEXT:    add a0, a2, a0
+; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i32> %v, i32 0
   %e1 = extractelement <4 x i32> %v, i32 1
@@ -419,11 +419,11 @@ define i32 @explode_8xi32(<8 x i32> %v) {
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vredxor.vs v8, v8, v9
 ; RV32-NEXT:    vmv.x.s a6, v8
-; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a6, a0
-; RV32-NEXT:    add a2, a2, a3
-; RV32-NEXT:    add a2, a2, a4
+; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a0, a2
+; RV32-NEXT:    add a0, a0, a3
+; RV32-NEXT:    add a0, a0, a4
 ; RV32-NEXT:    add a0, a0, a5
 ; RV32-NEXT:    ret
 ;
@@ -447,11 +447,11 @@ define i32 @explode_8xi32(<8 x i32> %v) {
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s a6, v8
-; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a6, a0
-; RV64-NEXT:    add a2, a2, a3
-; RV64-NEXT:    add a2, a2, a4
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    add a0, a0, a4
 ; RV64-NEXT:    addw a0, a0, a5
 ; RV64-NEXT:    ret
   %e0 = extractelement <8 x i32> %v, i32 0
@@ -513,20 +513,20 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vredxor.vs v8, v8, v9
 ; RV32-NEXT:    vmv.x.s t6, v8
-; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, t6, a0
-; RV32-NEXT:    add a2, a2, a3
-; RV32-NEXT:    add a2, a2, a4
+; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    add a5, a5, a6
+; RV32-NEXT:    add a0, a0, a3
+; RV32-NEXT:    add a0, a0, a4
 ; RV32-NEXT:    add a0, a0, a5
-; RV32-NEXT:    add a7, a7, t0
-; RV32-NEXT:    add a7, a7, t1
+; RV32-NEXT:    add a0, a0, a6
 ; RV32-NEXT:    add a0, a0, a7
-; RV32-NEXT:    add t2, t2, t3
-; RV32-NEXT:    add t2, t2, t4
-; RV32-NEXT:    add t2, t2, t5
+; RV32-NEXT:    add a0, a0, t0
+; RV32-NEXT:    add a0, a0, t1
 ; RV32-NEXT:    add a0, a0, t2
+; RV32-NEXT:    add a0, a0, t3
+; RV32-NEXT:    add a0, a0, t4
+; RV32-NEXT:    add a0, a0, t5
 ; RV32-NEXT:    addi sp, s0, -128
 ; RV32-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
@@ -573,20 +573,20 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s t6, v8
-; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, t6, a0
-; RV64-NEXT:    add a2, a2, a3
-; RV64-NEXT:    add a2, a2, a4
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a5, a5, a6
+; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    add a0, a0, a4
 ; RV64-NEXT:    add a0, a0, a5
-; RV64-NEXT:    add a7, a7, t0
-; RV64-NEXT:    add a7, a7, t1
+; RV64-NEXT:    add a0, a0, a6
 ; RV64-NEXT:    add a0, a0, a7
-; RV64-NEXT:    add t2, t2, t3
-; RV64-NEXT:    add t2, t2, t4
-; RV64-NEXT:    add t2, t2, t5
-; RV64-NEXT:    addw a0, a0, t2
+; RV64-NEXT:    add a0, a0, t0
+; RV64-NEXT:    add a0, a0, t1
+; RV64-NEXT:    add a0, a0, t2
+; RV64-NEXT:    add a0, a0, t3
+; RV64-NEXT:    add a0, a0, t4
+; RV64-NEXT:    addw a0, a0, t5
 ; RV64-NEXT:    addi sp, s0, -128
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
@@ -693,8 +693,8 @@ define i64 @explode_4xi64(<4 x i64> %v) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s a2, v8
-; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a2, a0
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    ret
   %e0 = extractelement <4 x i64> %v, i32 0
   %e1 = extractelement <4 x i64> %v, i32 1
@@ -750,20 +750,20 @@ define i64 @explode_8xi64(<8 x i64> %v) {
 ; RV32-NEXT:    add a0, a0, a3
 ; RV32-NEXT:    add a4, a2, a4
 ; RV32-NEXT:    sltu a1, a4, a2
-; RV32-NEXT:    add a1, a1, a5
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a5
 ; RV32-NEXT:    add a6, a4, a6
 ; RV32-NEXT:    sltu a1, a6, a4
-; RV32-NEXT:    add a1, a1, a7
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a7
 ; RV32-NEXT:    add t0, a6, t0
 ; RV32-NEXT:    sltu a1, t0, a6
-; RV32-NEXT:    add a1, a1, t1
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, t1
 ; RV32-NEXT:    add t2, t0, t2
 ; RV32-NEXT:    sltu a1, t2, t0
-; RV32-NEXT:    add a1, a1, t3
-; RV32-NEXT:    add a1, a0, a1
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a1, a0, t3
 ; RV32-NEXT:    add a0, t2, t4
 ; RV32-NEXT:    sltu a2, a0, t2
 ; RV32-NEXT:    add a1, a1, a2
@@ -796,11 +796,11 @@ define i64 @explode_8xi64(<8 x i64> %v) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s a6, v8
-; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a6, a0
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a3, a3, a4
 ; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    add a0, a0, a4
 ; RV64-NEXT:    add a0, a0, a5
 ; RV64-NEXT:    addi sp, s0, -128
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
@@ -902,8 +902,8 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV32-NEXT:    vmv.x.s s7, v16
 ; RV32-NEXT:    vslidedown.vi v16, v8, 13
 ; RV32-NEXT:    vsrl.vx v24, v16, a0
-; RV32-NEXT:    vmv.x.s s9, v24
-; RV32-NEXT:    vmv.x.s s8, v16
+; RV32-NEXT:    vmv.x.s s8, v24
+; RV32-NEXT:    vmv.x.s s9, v16
 ; RV32-NEXT:    vslidedown.vi v16, v8, 14
 ; RV32-NEXT:    vsrl.vx v24, v16, a0
 ; RV32-NEXT:    vmv.s.x v17, zero
@@ -924,59 +924,59 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV32-NEXT:    add a0, a0, a3
 ; RV32-NEXT:    add a4, a2, a4
 ; RV32-NEXT:    sltu a1, a4, a2
-; RV32-NEXT:    add a1, a1, a5
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a5
 ; RV32-NEXT:    add a6, a4, a6
 ; RV32-NEXT:    sltu a1, a6, a4
-; RV32-NEXT:    add a1, a1, a7
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a7
 ; RV32-NEXT:    add t0, a6, t0
 ; RV32-NEXT:    sltu a1, t0, a6
-; RV32-NEXT:    add a1, a1, t1
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, t1
 ; RV32-NEXT:    add t2, t0, t2
 ; RV32-NEXT:    sltu a1, t2, t0
-; RV32-NEXT:    add a1, a1, t3
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, t3
 ; RV32-NEXT:    add t4, t2, t4
 ; RV32-NEXT:    sltu a1, t4, t2
-; RV32-NEXT:    add a1, a1, t5
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, t5
 ; RV32-NEXT:    add t6, t4, t6
 ; RV32-NEXT:    sltu a1, t6, t4
-; RV32-NEXT:    add a1, a1, s0
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, s0
 ; RV32-NEXT:    add s1, t6, s1
 ; RV32-NEXT:    sltu a1, s1, t6
-; RV32-NEXT:    add a1, a1, s2
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, s2
 ; RV32-NEXT:    add s3, s1, s3
 ; RV32-NEXT:    sltu a1, s3, s1
-; RV32-NEXT:    add a1, a1, s4
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, s4
 ; RV32-NEXT:    add s5, s3, s5
 ; RV32-NEXT:    sltu a1, s5, s3
-; RV32-NEXT:    add a1, a1, s6
 ; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, s6
 ; RV32-NEXT:    add s7, s5, s7
 ; RV32-NEXT:    sltu a1, s7, s5
-; RV32-NEXT:    add a1, a1, s9
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, s8
+; RV32-NEXT:    add s9, s7, s9
+; RV32-NEXT:    sltu a1, s9, s7
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    vmv.x.s a1, v24
-; RV32-NEXT:    add s8, s7, s8
-; RV32-NEXT:    sltu a2, s8, s7
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    vmv.x.s a2, v16
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    vmv.x.s a1, v0
-; RV32-NEXT:    add a2, s8, a2
-; RV32-NEXT:    sltu a3, a2, s8
-; RV32-NEXT:    add a1, a3, a1
-; RV32-NEXT:    add a1, a0, a1
+; RV32-NEXT:    vmv.x.s a1, v16
+; RV32-NEXT:    add a1, s9, a1
+; RV32-NEXT:    sltu a2, a1, s9
+; RV32-NEXT:    add a0, a0, a2
+; RV32-NEXT:    vmv.x.s a2, v0
+; RV32-NEXT:    add a2, a0, a2
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    add a0, a2, a0
-; RV32-NEXT:    sltu a2, a0, a2
-; RV32-NEXT:    add a1, a1, a2
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    sltu a1, a0, a1
+; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    lw s0, 44(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 40(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s2, 36(sp) # 4-byte Folded Reload
@@ -1027,20 +1027,20 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s t6, v8
-; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, t6, a0
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a3, a3, a4
 ; RV64-NEXT:    add a0, a0, a3
-; RV64-NEXT:    add a5, a5, a6
-; RV64-NEXT:    add a5, a5, a7
+; RV64-NEXT:    add a0, a0, a4
 ; RV64-NEXT:    add a0, a0, a5
-; RV64-NEXT:    add t0, t0, t1
-; RV64-NEXT:    add t0, t0, t2
-; RV64-NEXT:    add t0, t0, t3
+; RV64-NEXT:    add a0, a0, a6
+; RV64-NEXT:    add a0, a0, a7
 ; RV64-NEXT:    add a0, a0, t0
-; RV64-NEXT:    add t4, t4, t5
+; RV64-NEXT:    add a0, a0, t1
+; RV64-NEXT:    add a0, a0, t2
+; RV64-NEXT:    add a0, a0, t3
 ; RV64-NEXT:    add a0, a0, t4
+; RV64-NEXT:    add a0, a0, t5
 ; RV64-NEXT:    addi sp, s0, -256
 ; RV64-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
@@ -1113,20 +1113,20 @@ define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vredxor.vs v8, v8, v9
 ; RV32-NEXT:    vmv.x.s t6, v8
-; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, t6, a0
-; RV32-NEXT:    add a2, a2, a3
-; RV32-NEXT:    add a2, a2, a4
+; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    add a5, a5, a6
-; RV32-NEXT:    add a5, a5, a7
-; RV32-NEXT:    add a5, a5, t0
+; RV32-NEXT:    add a0, a0, a3
+; RV32-NEXT:    add a0, a0, a4
 ; RV32-NEXT:    add a0, a0, a5
-; RV32-NEXT:    add t1, t1, t2
-; RV32-NEXT:    add t1, t1, t3
-; RV32-NEXT:    add t1, t1, t4
-; RV32-NEXT:    add t1, t1, t5
+; RV32-NEXT:    add a0, a0, a6
+; RV32-NEXT:    add a0, a0, a7
+; RV32-NEXT:    add a0, a0, t0
 ; RV32-NEXT:    add a0, a0, t1
+; RV32-NEXT:    add a0, a0, t2
+; RV32-NEXT:    add a0, a0, t3
+; RV32-NEXT:    add a0, a0, t4
+; RV32-NEXT:    add a0, a0, t5
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: explode_16xi32_exact_vlen:
@@ -1161,20 +1161,20 @@ define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s t6, v8
-; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, t6, a0
-; RV64-NEXT:    add a2, a2, a3
-; RV64-NEXT:    add a2, a2, a4
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a5, a5, a6
-; RV64-NEXT:    add a5, a5, a7
-; RV64-NEXT:    add a5, a5, t0
+; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    add a0, a0, a4
 ; RV64-NEXT:    add a0, a0, a5
-; RV64-NEXT:    add t1, t1, t2
-; RV64-NEXT:    add t1, t1, t3
-; RV64-NEXT:    add t1, t1, t4
-; RV64-NEXT:    add t1, t1, t5
-; RV64-NEXT:    addw a0, a0, t1
+; RV64-NEXT:    add a0, a0, a6
+; RV64-NEXT:    add a0, a0, a7
+; RV64-NEXT:    add a0, a0, t0
+; RV64-NEXT:    add a0, a0, t1
+; RV64-NEXT:    add a0, a0, t2
+; RV64-NEXT:    add a0, a0, t3
+; RV64-NEXT:    add a0, a0, t4
+; RV64-NEXT:    addw a0, a0, t5
 ; RV64-NEXT:    ret
   %e0 = extractelement <16 x i32> %v, i32 0
   %e1 = extractelement <16 x i32> %v, i32 1

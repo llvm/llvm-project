@@ -64,10 +64,11 @@ body:             |
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[FLW:%[0-9]+]]:fpr32 = FLW [[COPY5]], 0 :: (load (s32) from %ir.0)
     ; CHECK-NEXT: [[FLW1:%[0-9]+]]:fpr32 = FLW [[COPY4]], 0 :: (load (s32) from %ir.1)
-    ; CHECK-NEXT: [[FMADD_S:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMADD_S [[FLW1]], [[FLW]], [[COPY3]], 7, implicit $frm
-    ; CHECK-NEXT: FSW killed [[FMADD_S]], [[COPY1]], 0 :: (store (s32) into %ir.4)
-    ; CHECK-NEXT: [[FNMSUB_S:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FNMSUB_S [[FLW1]], [[FLW]], [[COPY2]], 7, implicit $frm
-    ; CHECK-NEXT: FSW killed [[FNMSUB_S]], [[COPY]], 0 :: (store (s32) into %ir.5)
+    ; CHECK-NEXT: [[FMUL_S:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FMUL_S [[FLW1]], [[FLW]], 7, implicit $frm
+    ; CHECK-NEXT: [[FADD_S:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADD_S [[FMUL_S]], [[COPY3]], 7, implicit $frm
+    ; CHECK-NEXT: FSW killed [[FADD_S]], [[COPY1]], 0 :: (store (s32) into %ir.4)
+    ; CHECK-NEXT: [[FSUB_S:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FSUB_S [[COPY2]], [[FMUL_S]], 7, implicit $frm
+    ; CHECK-NEXT: FSW killed [[FSUB_S]], [[COPY]], 0 :: (store (s32) into %ir.5)
     ; CHECK-NEXT: PseudoRET
     %5:gpr = COPY $x13
     %4:gpr = COPY $x12

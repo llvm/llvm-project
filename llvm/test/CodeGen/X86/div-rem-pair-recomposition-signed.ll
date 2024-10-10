@@ -124,10 +124,10 @@ define i64 @scalar_i64(i64 %x, i64 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __divdi3
@@ -136,11 +136,11 @@ define i64 @scalar_i64(i64 %x, i64 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %ecx, 4(%edx)
 ; X86-NEXT:    movl %eax, (%edx)
-; X86-NEXT:    imull %eax, %ebp
-; X86-NEXT:    mull %ebx
-; X86-NEXT:    addl %ebp, %edx
-; X86-NEXT:    imull %ebx, %ecx
+; X86-NEXT:    imull %eax, %ebx
+; X86-NEXT:    mull %ebp
+; X86-NEXT:    imull %ebp, %ecx
 ; X86-NEXT:    addl %edx, %ecx
+; X86-NEXT:    addl %ebx, %ecx
 ; X86-NEXT:    subl %eax, %esi
 ; X86-NEXT:    sbbl %ecx, %edi
 ; X86-NEXT:    movl %esi, %eax

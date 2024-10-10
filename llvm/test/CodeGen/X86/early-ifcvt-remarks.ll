@@ -8,10 +8,11 @@ target triple = "x86_64-none-none"
 ; CHECK-SAME: and the long leg adds another {{[0-9]+}} cycles{{s?}},
 ; CHECK-SAME: each staying under the threshold of {{[0-9]+}} cycles{{s?}}.
 
-; CHECK: remark: <unknown>:0:0: did not if-convert branch:
-; CHECK-SAME: the condition would add {{[0-9]+}} cycles{{s?}} to the critical path,
-; CHECK-SAME: and the short leg would add another {{[0-9]+}} cycles{{s?}},
-; CHECK-SAME: and the long leg would add another {{[0-9]+}} cycles{{s?}} exceeding the limit of {{[0-9]+}} cycles{{s?}}.
+; CHECK: remark: <unknown>:0:0: performing if-conversion on branch:
+; CHECK-SAME: the condition adds {{[0-9]+}} cycle{{s?}} to the critical path,
+; CHECK-SAME: and the short leg adds another {{[0-9]+}} cycles{{s?}},
+; CHECK-SAME: and the long leg adds another {{[0-9]+}} cycles{{s?}},
+; CHECK-SAME: each staying under the threshold of {{[0-9]+}} cycles{{s?}}.
 
 ; CHECK: remark: <unknown>:0:0: did not if-convert branch:
 ; CHECK-SAME: the resulting critical path ({{[0-9]+}} cycles{{s?}})
@@ -42,16 +43,16 @@ if.else:
 define i32 @mm2(i1 %pred, i32 %val, i32 %e1, i32 %e2, i32 %e3, i32 %e4, i32 %e5) {
 ; CHECK-LABEL: mm2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    # kill: def $r8d killed $r8d def $r8
+; CHECK-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (%rdx,%rsi), %eax
+; CHECK-NEXT:    addl %r8d, %ecx
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    addl %r9d, %eax
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    je .LBB1_2
-; CHECK-NEXT:  # %bb.1: # %if.true
-; CHECK-NEXT:    addl %eax, %edx
-; CHECK-NEXT:    addl %ecx, %r8d
-; CHECK-NEXT:    addl %edx, %r8d
-; CHECK-NEXT:    addl %r8d, %r9d
-; CHECK-NEXT:    movl %r9d, %eax
-; CHECK-NEXT:  .LBB1_2: # %if.else
+; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
   br i1 %pred, label %if.true, label %if.else
@@ -71,9 +72,8 @@ if.else:
 define i64 @mm3(i1 %pred, i64 %val, i64 %e1, i128 %e2, i128 %e3, i128 %e4, i128 %e5) {
 ; CHECK-LABEL: mm3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movq %rsi, %r10
+; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %if.false
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
@@ -90,25 +90,25 @@ define i64 @mm3(i1 %pred, i64 %val, i64 %e1, i128 %e2, i128 %e3, i128 %e4, i128 
 ; CHECK-NEXT:    addq %r10, %r8
 ; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8
+; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    xorq %r8, %rdi
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    xorq %rsi, %r10
-; CHECK-NEXT:    xorq %rax, %r10
-; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    xorq %rsi, %rax
+; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    sarq %cl, %rax
+; CHECK-NEXT:    sarq %cl, %rdx
 ; CHECK-NEXT:    addq %rdi, %rdi
 ; CHECK-NEXT:    notb %cl
 ; CHECK-NEXT:    shlq %cl, %rdi
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shrq %cl, %r10
-; CHECK-NEXT:    orq %rdi, %r10
+; CHECK-NEXT:    shrq %cl, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    testb $64, %sil
-; CHECK-NEXT:    cmovneq %rax, %r10
-; CHECK-NEXT:    movq %r9, %rax
+; CHECK-NEXT:    cmovneq %rdx, %rax
+; CHECK-NEXT:    movq %r9, %rsi
 ; CHECK-NEXT:  .LBB2_2: # %if.endif
-; CHECK-NEXT:    addq %r10, %rax
+; CHECK-NEXT:    addq %rax, %rsi
+; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    retq
 entry:
   br i1 %pred, label %if.true, label %if.false
