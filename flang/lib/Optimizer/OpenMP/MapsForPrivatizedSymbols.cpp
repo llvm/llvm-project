@@ -142,9 +142,7 @@ class MapsForPrivatizedSymbolsPass
         }
         builder.setInsertionPoint(targetOp);
         Location loc = targetOp.getLoc();
-        llvm::errs() << "Here\n";
         omp::MapInfoOp mapInfoOp = createMapInfo(loc, privVar, builder);
-        llvm::errs() << "Here again\n";
         mapInfoOps.push_back(mapInfoOp);
         LLVM_DEBUG(llvm::dbgs() << "MapsForPrivatizedSymbolsPass created ->\n");
         LLVM_DEBUG(mapInfoOp.dump());
