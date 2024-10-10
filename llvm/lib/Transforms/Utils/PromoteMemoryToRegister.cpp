@@ -49,6 +49,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
+#include <bitset>
 #include <cassert>
 #include <iterator>
 #include <utility>
@@ -62,6 +63,10 @@ STATISTIC(NumLocalPromoted, "Number of alloca's promoted within one block");
 STATISTIC(NumSingleStore,   "Number of alloca's promoted with a single store");
 STATISTIC(NumDeadAlloca,    "Number of dead alloca's removed");
 STATISTIC(NumPHIInsert,     "Number of PHI nodes inserted");
+
+static cl::opt<bool> UseVectorizedMem2Reg(
+    "vectorized-mem2reg", cl::init(true), cl::Hidden,
+    cl::desc("Use a vectorized algorithm to compute PHI nodes in batches."));
 
 bool llvm::isAllocaPromotable(const AllocaInst *AI) {
   // Only allow direct and non-volatile loads and stores...
@@ -439,6 +444,264 @@ private:
   }
 };
 
+/// This class computes liveness and dominance frontier (DF) of allocas in
+/// batch. The scalar Mem2Reg algorithm processes alloca one by one, which is
+/// not efficient in general because it repeatedly traverses the CFG and
+/// enumerates predecessors or successors of basic blocks. Given that most
+/// blocks are likely covered by the liveness of more than one values,
+/// processing these values at one go can reduce the amount of CFG traversal.
+/// This requires certain modifications to the algorithm computing liveness
+/// range and DF of allocas. In general, previously we use a set to track
+/// visited blocks, which is equivalent to have each block keeping track of a
+/// "visited" state, and now the visited state becomes a bit vector
+/// corresponding to each alloca to be process in one go. We OR the states when
+/// visiting a block and if the state is changed we need to keep traversing
+/// (because info carried by one alloca from a certain edge has not converged
+/// yet) again, otherwise we have reached a fixed point and can stop there. The
+/// number of repeated traversal is bounded by the bit vector's width because
+/// each time at least a bit is set, so the overall complexity will be less than
+/// the sum of each alloca being processed individually.
+class VectorizedMem2Reg {
+  // Max number of allocas per batch for each round of computation.
+  static constexpr size_t MaxAllocaNum = 32;
+
+  typedef decltype(std::declval<BasicBlock>().getNumber()) BBNumberTy;
+
+  // Packed bits indicating the state of each alloca in Allocas.
+  typedef std::bitset<MaxAllocaNum> AllocaState;
+
+  // Each enum selects one of the several states used by this analysis.
+  // Each basic block has an AllocaState for each enum value, and it can be
+  // accessed by get<StateSelector>(BBNumber).
+  enum StateSelector {
+
+    // This is a transient state associated to the basic block inside Worklist
+    // (for liveness analysis) or PQ (for IDF computation) to be processed.
+    // Since a basic block can have multiple predecessors or successors, it is
+    // necessary not to add the same block multiple times to Worklist or PQ,
+    // which is done by checking whether this state of the block is zero. If
+    // not, the block is already added and this state should be updated instead.
+    // It is an invariant that get<UPDATE_STATE>(BB) != 0 iff BB is in Worklist
+    // for liveness analysis or in PQ for IDF.
+    UPDATE_STATE,
+
+    // These states indicate for each alloca in Allocas, whether it is defined
+    // (DEF), alive and will be used in a successor (ALIVE), or expanded by one
+    // iteration of DF (IDF) in a block. The i-th position of the state bits
+    // corresponds to the i-th alloca. For example get<DEF_STATE>[1][2] == true
+    // means basic block #1 has a definition of Allocas[2].
+    DEF_STATE,
+    ALIVE_STATE,
+    IDF_STATE,
+  };
+
+  // Encapsulating the states used by this analysis, making the data layout of
+  // state bits opaque so that we can optimize it without affecting the
+  // algorithm implementation.
+  struct State {
+    struct BlockState {
+      AllocaState UpdateState;
+      AllocaState DefState;
+      AllocaState AliveState;
+      AllocaState IDFState;
+    };
+
+    // A vector containing a state for each block in the function, indexed by
+    // its BB Number.
+    std::vector<BlockState> StateVector;
+
+    State(size_t MaxBlockNumber) : StateVector(MaxBlockNumber) {}
+
+    ~State() {
+      assert(llvm::all_of(StateVector,
+                          [](const BlockState &V) {
+                            return V.UpdateState.none();
+                          }));
+    }
+
+    // Select which kind of state to access. BN is the index of the basic block.
+    template <enum StateSelector Kind> AllocaState &get(BBNumberTy BN) {
+      if constexpr (Kind == UPDATE_STATE)
+        return StateVector[BN].UpdateState;
+      else if constexpr (Kind == DEF_STATE)
+        return StateVector[BN].DefState;
+      else if constexpr (Kind == ALIVE_STATE)
+        return StateVector[BN].AliveState;
+      else if constexpr (Kind == IDF_STATE)
+        return StateVector[BN].IDFState;
+      else
+        static_assert(Kind != Kind, "Invalid StateSelector enum");
+    }
+
+    void Clear() {
+      for (BlockState &State : StateVector) {
+        assert(State.UpdateState.none());
+        State.DefState.reset();
+        State.AliveState.reset();
+        State.IDFState.reset();
+      }
+    }
+  };
+
+  // Pointers to crucial objects of Mem2Reg.
+  DominatorTree *DT;
+  Function *F;
+
+  // Reverse mapping from BB number to blocks.
+  std::vector<BasicBlock *> BBList;
+
+  // Predecessors and successors of basic blocks represented by block number.
+  // They are materialized once at initialization since this pass does not
+  // modify the CFG and usually almost every basic block contains at least one
+  // value alive, so they are all needed.
+  std::vector<llvm::SmallVector<BBNumberTy, 2>> Predecessors;
+  std::vector<llvm::SmallVector<BBNumberTy, 2>> Successors;
+
+  // Alloca instructions in the order they are gathered.
+  llvm::SmallVector<AllocaInst *, MaxAllocaNum> Allocas;
+
+  // The analysis states of every basic block.
+  State BlockStates;
+
+  // The output vectors of blocks to be added with PHI nodes for each alloca.
+  std::vector<BBNumberTy> PHIBlocks[MaxAllocaNum];
+
+  // Temporary storage for BB to be processed in liveness analysis, and in DT
+  // subtree traversal.
+  std::vector<BBNumberTy> Worklist;
+
+  // See GenericIteratedDominanceFrontier.h, this is the vectorized version
+  // using bit vectors indexed by BB number.
+  // Use a priority queue keyed on dominator tree level so that inserted nodes
+  // are handled from the bottom of the dominator tree upwards. We also augment
+  // the level with a DFS number to ensure that the blocks are ordered in a
+  // deterministic way.
+  using DomTreeNodePair =
+      std::pair<DomTreeNodeBase<BasicBlock> *, std::pair<unsigned, unsigned>>;
+  using IDFPriorityQueue =
+      std::priority_queue<DomTreeNodePair, std::vector<DomTreeNodePair>,
+                          less_second>;
+  IDFPriorityQueue PQ;
+
+  // Add a block to the worklist for DFS traversal in liveless analysis.
+  void PushWorkList(BBNumberTy BN, const AllocaState &UpdateState) {
+    assert(UpdateState.any());
+    // If UPDATE state is previously zero, this BB is newly encountered or
+    // has been previously processed, add it to the worklist. Otherwise it is
+    // already in the worklist, so we just need to merge existing UPDATE state.
+    if (BlockStates.get<UPDATE_STATE>(BN).none())
+      Worklist.push_back(BN);
+    BlockStates.get<UPDATE_STATE>(BN) |= UpdateState;
+  }
+
+  // Get a block number and its UPDATE state from the worklist.
+  std::pair<BBNumberTy, AllocaState> PopWorkList() {
+    assert(!Worklist.empty());
+    BBNumberTy BN = Worklist.back();
+    Worklist.pop_back();
+    AllocaState State = BlockStates.get<UPDATE_STATE>(BN);
+    BlockStates.get<UPDATE_STATE>(BN).reset();
+    return {BN, State};
+  }
+
+  // Add a node of the DT to the priority queue for IDF computation, also update
+  // its state carrying info of new DEFs that is to be expanded into its DF
+  // nodes.
+  void PushPQ(DomTreeNodeBase<BasicBlock> *Node,
+              const AllocaState &UpdateState) {
+    assert(UpdateState.any());
+    // If UPDATE state is previously zero, this node is newly encountered or
+    // has been previously processed, add it to the PQ. Otherwise it is already
+    // in the PQ, so we just need to merge existing UPDATE state.
+    unsigned BN = Node->getBlock()->getNumber();
+    if (BlockStates.get<UPDATE_STATE>(BN).none())
+      PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
+    BlockStates.get<UPDATE_STATE>(BN) |= UpdateState;
+  }
+
+  // Get the head node and its UPDATE state from the PQ.
+  std::tuple<DomTreeNodeBase<BasicBlock> *, AllocaState> PopPQ() {
+    assert(!PQ.empty());
+    auto Node = PQ.top().first;
+    BBNumberTy BN = Node->getBlock()->getNumber();
+    PQ.pop();
+    AllocaState State = BlockStates.get<UPDATE_STATE>(BN);
+    BlockStates.get<UPDATE_STATE>(BN).reset();
+    return {Node, State};
+  }
+
+  // Access the underlying container of PQ.
+  std::vector<DomTreeNodePair> &GetPQContainer() {
+    struct Getter : IDFPriorityQueue {
+      static typename std::vector<DomTreeNodePair> &
+      Get(IDFPriorityQueue &Object) {
+        return Object.*&Getter::c;
+      }
+    };
+    return Getter::Get(PQ);
+  }
+
+public:
+  VectorizedMem2Reg(PromoteMem2Reg *Mem2Reg)
+      : DT(&Mem2Reg->DT), F(DT->getRoot()->getParent()),
+        BBList(F->getMaxBlockNumber()), Predecessors(F->getMaxBlockNumber()),
+        Successors(F->getMaxBlockNumber()),
+        BlockStates(F->getMaxBlockNumber()) {
+    for (BasicBlock &BB : *F) {
+      BBNumberTy BN = BB.getNumber();
+      BBList[BN] = &BB;
+
+      for (const BasicBlock *Predecessor : predecessors(&BB)) {
+        Predecessors[BN].push_back(Predecessor->getNumber());
+      }
+
+      for (const BasicBlock *Successor : successors(&BB)) {
+        Successors[BN].push_back(Successor->getNumber());
+      }
+    }
+    Worklist.reserve(BBList.size());
+    GetPQContainer().reserve(BBList.size());
+
+    DT->updateDFSNumbers();
+  }
+
+  ~VectorizedMem2Reg() {
+    assert(Worklist.empty() && PQ.empty() &&
+           "Some nodes have not been processed.");
+  }
+
+  /// Clear allocas and their states for next round of computation.
+  void clear() {
+    assert(Worklist.empty() && PQ.empty() &&
+           "Some nodes have not been processed.");
+    Allocas.clear();
+    BlockStates.Clear();
+    for (size_t I = 0; I < MaxAllocaNum; ++I)
+      PHIBlocks[I].clear();
+  }
+
+  size_t size() { return Allocas.size(); }
+
+  /// Add an alloca to be processed, and perform some pre-processing for
+  /// liveness analysis. Return true if we reached the max capacity of allocas.
+  /// Currently we just gather enough allocas to fill up the bit vector. This
+  /// can be improved by grouping allocas with similar liveness range in a
+  /// batch.
+  bool GatherAlloca(AllocaInst *AI, const AllocaInfo &Info);
+
+  /// Calculate lists of basic blocks needing PHI nodes for the current batch
+  /// of allocas if they are promoted to registers.
+  void Calculate();
+
+  /// After Calculate, retrieve the list of blocks needing PHI node for the
+  /// alloca specified by the index.
+  auto GetPHIBlocks(size_t AllocaIndex) {
+    assert(AllocaIndex < Allocas.size());
+    return llvm::map_range(PHIBlocks[AllocaIndex],
+                           [this](BBNumberTy BB) { return BBList[BB]; });
+  }
+};
+
 } // end anonymous namespace
 
 /// Given a LoadInst LI this adds assume(LI != null) after it.
@@ -753,6 +1016,22 @@ void PromoteMem2Reg::run() {
 
   NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 
+  std::unique_ptr<VectorizedMem2Reg> VM2R;
+  if (UseVectorizedMem2Reg)
+    VM2R.reset(new VectorizedMem2Reg(this));
+
+  llvm::SmallVector<unsigned, 64> AllocaNums;
+  auto ProcessAllocaBatch = [&]() {
+    VM2R->Calculate();
+    for (size_t I = 0; I < VM2R->size(); ++I) {
+      unsigned CurrentVersion = 0;
+      for (BasicBlock *BB : VM2R->GetPHIBlocks(I))
+        QueuePhiNode(BB, AllocaNums[I], CurrentVersion);
+    }
+    VM2R->clear();
+    AllocaNums.clear();
+  };
+
   for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
     AllocaInst *AI = Allocas[AllocaNum];
 
@@ -813,6 +1092,13 @@ void PromoteMem2Reg::run() {
     // Keep the reverse mapping of the 'Allocas' array for the rename pass.
     AllocaLookup[Allocas[AllocaNum]] = AllocaNum;
 
+    if (VM2R) {
+      AllocaNums.push_back(AllocaNum);
+      if (VM2R->GatherAlloca(AI, Info))
+        ProcessAllocaBatch();
+      continue;
+    }
+
     // Unique the set of defining blocks for efficient lookup.
     SmallPtrSet<BasicBlock *, 32> DefBlocks(Info.DefiningBlocks.begin(),
                                             Info.DefiningBlocks.end());
@@ -838,6 +1124,9 @@ void PromoteMem2Reg::run() {
     for (BasicBlock *BB : PHIBlocks)
       QueuePhiNode(BB, AllocaNum, CurrentVersion);
   }
+  // Process the last batch.
+  if (VM2R && !AllocaNums.empty())
+    ProcessAllocaBatch();
 
   if (Allocas.empty()) {
     cleanUpDbgAssigns();
@@ -1058,6 +1347,194 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
       LiveInBlockWorklist.push_back(P);
     }
   }
+}
+
+bool VectorizedMem2Reg::GatherAlloca(AllocaInst *AI, const AllocaInfo &Info) {
+  assert(Allocas.size() < MaxAllocaNum && "Allocas vector is full.");
+  // Add new alloca to the current batch.
+  size_t Index = Allocas.size();
+  Allocas.push_back(AI);
+
+  // Populate DEF states.
+  for (BasicBlock* Def : Info.DefiningBlocks) {
+    // We need to calculate IDF of every DEF block, adding them to the PQ here
+    // so that a BB is only added once at most.
+    if (BlockStates.get<DEF_STATE>(Def->getNumber()).none())
+      if (DomTreeNodeBase<BasicBlock> *Node = DT->getNode(Def))
+        PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
+    BlockStates.get<DEF_STATE>(Def->getNumber()).set(Index);
+  }
+
+  // Initialize Worklist to compute ALIVE state. Find all uses of the value
+  // where it is defined in another block and add them to Worklist.
+  for (BasicBlock *Use : Info.UsingBlocks) {
+    BBNumberTy BN = Use->getNumber();
+
+    // If the use block is not the def block, the use block is live-in. It is
+    // possible that a previous alloca lives in this block, so we should merge
+    // their UPDATE states.
+    if (!BlockStates.get<DEF_STATE>(BN)[Index]) {
+      PushWorkList(BN, AllocaState().set(Index));
+      continue;
+    }
+
+    // If use and def happens in the same block, check if the def occurs before
+    // the use, in this case the value is not live-in at this block.
+    for (BasicBlock::iterator I = Use->begin();; ++I) {
+      if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+        if (SI->getOperand(1) != AI)
+          continue;
+
+        // We found a store to the alloca before a load. The alloca is not
+        // actually live-in here.
+        break;
+      }
+
+      if (LoadInst *LI = dyn_cast<LoadInst>(I))
+        // Okay, we found a load before a store to the alloca.  It is actually
+        // live into this block. Add it to the worklist.
+        if (LI->getOperand(0) == AI) {
+          PushWorkList(BN, AllocaState().set(Index));
+          break;
+        }
+    }
+  }
+
+  return Allocas.size() == MaxAllocaNum;
+}
+
+void VectorizedMem2Reg::Calculate() {
+  // @TODO: Assign BB number in a way such that the BB deepest in the CFG has
+  // the largest number, and traverse it first using a priority queue. This
+  // allows faster convergence to the fixed-point.
+
+  // Compute ALIVE state for every block.
+  // Now Worklist is initialized with blocks containing any live-in allocas. We
+  // recursively add their predecessors to Worklist until we find the full
+  // region where the value is alive. Whenever a block's ALIVE state is updated,
+  // we need to check if the state value is actually modified, if so, we need
+  // to iterate its predecessors again to propagate the new state until reaching
+  // a fixed point.
+  while (!Worklist.empty()) {
+    auto [BN, State] = PopWorkList();
+
+    // Update the ALIVE state of this block. If the state remains unchanged, we
+    // have reached a fixed point, there is no more new liveness info to be
+    // propagated to its predecessors.
+    AllocaState OldState = BlockStates.get<ALIVE_STATE>(BN);
+    AllocaState NewState = (BlockStates.get<ALIVE_STATE>(BN) |= State);
+    if (NewState == OldState)
+      continue;
+
+    // If a fixed point is not reached, this is because either block BN is
+    // visited for the first time, or a loop in the CFG brings new liveness info
+    // back to this block. Either case, we add its predecessors to the worklist.
+    for (BBNumberTy Pred : Predecessors[BN]) {
+      // The value is not ALIVE in a predecessor if it contains a DEF, so we
+      // need to exclude such values, and only find those values not defined in
+      // this block.
+      AllocaState UpdateState = NewState & ~BlockStates.get<DEF_STATE>(Pred);
+      // Only add to Worklist if there is any value ALIVE at Pred.
+      if (UpdateState.any())
+        PushWorkList(Pred, UpdateState);
+    }
+  }
+
+  // Initialize UPDATE states of blocks in PQ to maintain the invaraince. We
+  // calculate IDF of every DEF, so the initial UPDATE state is DEF state.
+  for (auto &Node : GetPQContainer()) {
+    unsigned BN = Node.first->getBlock()->getNumber();
+    BlockStates.get<UPDATE_STATE>(BN) = BlockStates.get<DEF_STATE>(BN);
+  }
+
+  // Compute IDF for every block containing alloca. Visiting blocks from the
+  // largest to the smallest DT level number.
+  while (!PQ.empty()) {
+    // RootState is the values available at Root, which will be propagated to
+    // the successors of its dominatees per the algorithm of IDF.
+    auto [Root, RootState] = PopPQ();
+    unsigned RootLevel = Root->getLevel();
+    BBNumberTy RootBN = Root->getBlock()->getNumber();
+
+    // Perform one iteration of dominance frontier computation on all blocks
+    // dominated by root. Here Worklist is not associated with UPDATE state
+    // because visited nodes are updated with the same RootState instead.
+    Worklist.push_back(RootBN);
+    while (!Worklist.empty()) {
+      unsigned BN = Worklist.back();
+      Worklist.pop_back();
+
+      for (BBNumberTy Succ : Successors[BN]) {
+        auto SuccNode = DT->getNode(Succ);
+        unsigned SuccLevel = SuccNode->getLevel();
+
+        // Successor node Succ with higher level in DT must be dominated by
+        // current node BN, so PHI will not be placed in it.
+        if (SuccLevel > RootLevel)
+          continue;
+
+        // Update IDF state of Succ by merging its previous state with available
+        // values from Root. Values no longer alive need not to be propagated,
+        // so that the algorithm converges faster.
+        AllocaState AliveState = BlockStates.get<ALIVE_STATE>(Succ);
+        AllocaState OldState = BlockStates.get<IDF_STATE>(Succ);
+        AllocaState NewState =
+            (BlockStates.get<IDF_STATE>(Succ) |= (RootState & AliveState));
+        // If IDF state is unchanged, we reached a fixed point, and there will
+        // be no more new value to propagate. This includes the case that no
+        // value from Root is alive at Succ ((RootState & AliveState) == 0).
+        if (NewState == OldState)
+          continue;
+
+        // We always filter UPDATE state with ALIVE state, so it is an invariant
+        // that IDF values are a subset of ALIVE values.
+        assert((AliveState | OldState) == AliveState);
+        assert((AliveState | NewState) == AliveState);
+
+        // Any newly set bit in IDF state represents inserted PHI, add it to the
+        // output.
+        AllocaState Inserted = NewState ^ OldState;
+        do {
+          size_t Index = 0;
+          if constexpr (MaxAllocaNum <= sizeof(unsigned long long) * CHAR_BIT) {
+            Index = llvm::countr_zero(Inserted.to_ullong());
+          } else {
+            while (!Inserted.test(Index))
+              ++Index;
+          }
+          PHIBlocks[Index].push_back(Succ);
+          Inserted.reset(Index);
+        } while (Inserted.any());
+
+        // If any new PHI is inserted at Succ, we need to iterate it too since
+        // it will propagate the PHI to blocks it does not dominate. An existing
+        // value is killed by DEF so the UPDATE state should exclude it.
+        AllocaState UpdateState = NewState & ~BlockStates.get<DEF_STATE>(Succ);
+        if (UpdateState.any())
+          PushPQ(SuccNode, UpdateState);
+      }
+
+      // Visit every node in DT subtree.
+      for (auto DomChild : *(DT->getNode(BN))) {
+        BBNumberTy DomChildBN = DomChild->getBlock()->getNumber();
+        // Since any value available at the dominator is available at the child
+        // node, we merge the dominator's IDF state into it. If the child's IDF
+        // state is unchanged, we reached a fixed point, so we do not need to
+        // visit it. Values no longer alive need not to be propagated, so that
+        // the algorithm converges faster.
+        AllocaState OldState = BlockStates.get<IDF_STATE>(DomChildBN);
+        AllocaState NewState = BlockStates.get<IDF_STATE>(DomChildBN) |=
+            (RootState & BlockStates.get<ALIVE_STATE>(DomChildBN));
+        // Since DT is a tree, there will be no dups in Worklist.
+        if (OldState != NewState)
+          Worklist.push_back(DomChildBN);
+      }
+    }
+  }
+
+  // Order inserted PHI nodes in a deterministic way.
+  for (size_t I = 0; I < Allocas.size(); ++I)
+    llvm::sort(PHIBlocks[I]);
 }
 
 /// Queue a phi-node to be added to a basic-block for a specific Alloca.
