@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "libc")
 
+include(CheckCXXCompilerFlag)
+
 # Include LLVM's cmake policies.
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -53,18 +55,19 @@ set(LIBC_NAMESPACE ${default_namespace}
 
 add_subdirectory(newhdrgen)
 
-
-if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
-  if(NOT LIBC_HDRGEN_EXE)
-    # We need to set up hdrgen first since other targets depend on it.
-    add_subdirectory(utils/LibcTableGenUtil)
-    add_subdirectory(utils/HdrGen)
-    # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
-    # PARENT_SCOPE which get lost until saved in the cache.
-    set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
-    set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
-  else()
-    message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
+if(NOT LIBC_USE_NEW_HEADER_GEN)
+  if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
+    if(NOT LIBC_HDRGEN_EXE)
+      # We need to set up hdrgen first since other targets depend on it.
+      add_subdirectory(utils/LibcTableGenUtil)
+      add_subdirectory(utils/HdrGen)
+      # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
+      # PARENT_SCOPE which get lost until saved in the cache.
+      set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
+      set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
+    else()
+      message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
+    endif()
   endif()
 endif()
 # We will build the GPU utilities if we are not doing a runtimes build.
@@ -347,7 +350,9 @@ endif()
 
 option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)
 if(LLVM_LIBC_INCLUDE_SCUDO)
-  if (NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
+  if (LLVM_LIBC_COMPILER_RT_PATH)
+    add_subdirectory(${LLVM_LIBC_COMPILER_RT_PATH} ${CMAKE_CURRENT_BINARY_DIR}/compiler-rt)
+  elseif(NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
     message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
   endif()
 endif()
