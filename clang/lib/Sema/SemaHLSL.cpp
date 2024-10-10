@@ -1136,24 +1136,21 @@ static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
   // Basic types
   if (Ty->isArithmeticType()) {
     bool DeclaredInCOrTBuffer = isa<HLSLBufferDecl>(D->getDeclContext());
-    if (SpecifiedSpace && !DeclaredInCOrTBuffer) {
+    if (SpecifiedSpace && !DeclaredInCOrTBuffer)
       S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
-    }
 
     if (!DeclaredInCOrTBuffer &&
         (Ty->isIntegralType(S.getASTContext()) || Ty->isFloatingType())) {
       // Default Globals
       if (RegType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
-      else if (RegType != RegisterType::C) {
+      else if (RegType != RegisterType::C)
         S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
-      }
     } else {
       if (RegType == RegisterType::C)
         S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_packoffset);
-      else {
+      else
         S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
-      }
     }
     return false;
   }
@@ -1172,12 +1169,7 @@ static bool ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
   // make sure that there are no two register annotations
   // applied to the decl with the same register type
   bool RegisterTypesDetected[5] = {false};
-
   RegisterTypesDetected[static_cast<int>(regType)] = true;
-
-  // we need a static map to keep track of previous conflicts
-  // so that we don't emit the same error multiple times
-  static std::map<Decl *, std::set<RegisterType>> PreviousConflicts;
 
   for (auto it = TheDecl->attr_begin(); it != TheDecl->attr_end(); ++it) {
     if (HLSLResourceBindingAttr *attr =
