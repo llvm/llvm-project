@@ -1065,7 +1065,7 @@ LogicalResult ModuleTranslation::convertGlobals() {
       // assigned to DICompileUnit. We have to build the list by looking at the
       // dbgExpr of all the GlobalOps. The scope of the variable is used to get
       // the DICompileUnit in which to add it.
-      // But there are cases where the scope of the global points does not
+      // But there are cases where the scope of a global does not
       // directly point to the DICompileUnit and we have to do a bit more work
       // to get to it. Some of those cases are:
       //
