@@ -1,0 +1,7 @@
+# REQUIRES: amdgpu-registered-target
+## Check that remove duplicate is working
+
+# RUN: cp -f %S/Inputs/amdgpu_asm_remove_duplicates.s %t.s && %update_mc_test_checks --remove-duplicate %t.s
+# RUN: diff -u %S/Inputs/amdgpu_asm_remove_duplicates.s.expected %t.s
+# RUN: cp -f %S/Inputs/amdgpu_dasm_remove_duplicates.txt %t.txt && %update_mc_test_checks --remove-duplicate %t.txt
+# RUN: diff -u %S/Inputs/amdgpu_dasm_remove_duplicates.txt.expected %t.txt

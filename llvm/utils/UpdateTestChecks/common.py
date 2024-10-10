@@ -275,7 +275,7 @@ class TestInfo(object):
         self.run_lines = find_run_lines(test, self.input_lines)
         self.comment_prefix = comment_prefix
         if self.comment_prefix is None:
-            if self.path.endswith(".mir"):
+            if self.path.endswith(".mir") or self.path.endswith(".txt"):
                 self.comment_prefix = "#"
             else:
                 self.comment_prefix = ";"
