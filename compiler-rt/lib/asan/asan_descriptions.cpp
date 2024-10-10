@@ -63,8 +63,8 @@ void DescribeThread(AsanThreadContext *context) {
   if (flags()->print_full_thread_history) {
     AsanThreadContext *parent_context =
         GetThreadContextByTidLocked(context->parent_tid);
-    // `context->parent_tid` may point to reused slot, double check, `unique_id`
-    // of new user will always be greater then the child.
+    // `context->parent_tid` may point to reused slot. Check `unique_id` which
+    // is always smaller for the parent, always greater for a new user.
     if (context->unique_id > parent_context->unique_id)
       DescribeThread(parent_context);
   }
