@@ -148,6 +148,14 @@ bool ThreadSuspender::SuspendThread(tid_t tid) {
     // Log this event and move on.
     VReport(1, "Could not attach to thread %zu (errno %d).\n", (uptr)tid,
             pterrno);
+    if (common_flags()->verbosity >= 2) {
+      InternalScopedString path;
+      path.AppendF("/proc/%d/task/%llu/status", pid_, tid);
+      InternalMmapVector<char> buffer;
+      ReadFileToVector(path.data(), &buffer);
+      buffer.push_back(0);
+      VReport(2, "%s: %s\n", path.data(), buffer.data());
+    }
     return false;
   } else {
     VReport(2, "Attached to thread %zu.\n", (uptr)tid);
