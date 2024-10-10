@@ -3810,6 +3810,10 @@ public:
         Kind = k_FPSRegisterListWithVPR;
       else
         Kind = k_SPRRegisterList;
+    } else if (Regs.front().second == ARM::VPR) {
+      assert(Regs.size() == 1 &&
+             "Register list starting with VPR expected to only contain VPR");
+      Kind = k_FPSRegisterListWithVPR;
     }
 
     if (Kind == k_RegisterList && Regs.back().second == ARM::APSR)
@@ -4617,15 +4621,15 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
 
   // Check the first register in the list to see what register class
   // this is a list of.
-  MCRegister Reg = tryParseRegister();
+  MCRegister Reg = tryParseRegister(AllowOutOfBoundReg);
   if (!Reg)
     return Error(RegLoc, "register expected");
   if (!AllowRAAC && Reg == ARM::RA_AUTH_CODE)
     return Error(RegLoc, "pseudo-register not allowed");
-  // The reglist instructions have at most 16 registers, so reserve
+  // The reglist instructions have at most 32 registers, so reserve
   // space for that many.
   int EReg = 0;
-  SmallVector<std::pair<unsigned, MCRegister>, 16> Registers;
+  SmallVector<std::pair<unsigned, MCRegister>, 32> Registers;
 
   // Allow Q regs and just interpret them as the two D sub-registers.
   if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
@@ -4644,6 +4648,8 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
     RC = &ARMMCRegisterClasses[ARM::SPRRegClassID];
   else if (ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(Reg))
     RC = &ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID];
+  else if (Reg == ARM::VPR)
+    RC = &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID];
   else
     return Error(RegLoc, "invalid register in register list");
 
@@ -6335,7 +6341,8 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   case AsmToken::LBrac:
     return parseMemory(Operands);
   case AsmToken::LCurly: {
-    bool AllowOutOfBoundReg = Mnemonic == "vlldm" || Mnemonic == "vlstm";
+    bool AllowOutOfBoundReg =
+        Mnemonic == "vlldm" || Mnemonic == "vlstm" || Mnemonic == "vscclrm";
     return parseRegisterList(Operands, !Mnemonic.starts_with("clr"), false,
                              AllowOutOfBoundReg);
   }
