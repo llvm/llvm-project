@@ -495,14 +495,12 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   }
 }
 
-// Returns handle type of a resource, if the VarDecl is a resource
+// Returns handle type of a resource, if the type is a resource
 // or an array of resources
-static const HLSLAttributedResourceType *
-findHandleTypeOnResource(const VarDecl *VD) {
-  // If VarDecl is a resource class, the first field must
+static const HLSLAttributedResourceType *findHandleTypeOnResource(QualType QT) {
+  // If the type is a resource class, the first field must
   // be the resource handle of type HLSLAttributedResourceType
-  assert(VD != nullptr && "expected VarDecl");
-  const clang::Type *Ty = VD->getType()->getPointeeOrArrayElementType();
+  const clang::Type *Ty = QT->getUnqualifiedDesugaredType();
   if (RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
     if (!RD->fields().empty()) {
       const auto &FirstFD = RD->fields().begin();
@@ -521,9 +519,10 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
   if (!RBA)
     return;
 
-  // FIXME: support for resource arrays or resource fields on user defined
-  // classes is not yet implemented
-  if (RBA->ResourceField != nullptr || VD->getType()->isArrayType())
+  if (!findHandleTypeOnResource(VD->getType()))
+    // FIXME: Only simple declarations of resources are supported for now.
+    // Arrays of resources or resources in user defined classes are
+    // not implemented yet.
     return;
 
   ResourcesToBind.emplace_back(std::make_pair(VD, Var));
@@ -556,16 +555,8 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
       if (!RBA)
         continue;
 
-      if (RBA->getResourceField() != nullptr) {
-        // FIXME: Register bindings inside user defined struct are not yet
-        // supported
-        llvm_unreachable("Register bindings inside user defined struct are not "
-                         "implemented yet");
-        continue;
-      }
-
       const HLSLAttributedResourceType *AttrResType =
-          findHandleTypeOnResource(VD);
+          findHandleTypeOnResource(VD->getType());
       assert(AttrResType != nullptr &&
              "Resource class must have a handle of HLSLAttributedResourceType");
 
