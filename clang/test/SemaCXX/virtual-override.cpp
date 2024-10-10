@@ -289,3 +289,13 @@ namespace PR8168 {
     static void foo() {} // expected-error{{'static' member function 'foo' overrides a virtual function}}
   };
 }
+
+namespace T13 {
+  struct A {
+    virtual const int *f() const; // expected-note{{overridden virtual function is here}}
+  };
+
+  struct B : A {
+    int *f() const override; // expected-error{{virtual function 'f' has a different return type ('int *') than the function it overrides (which has return type 'const int *')}}
+  };
+}
