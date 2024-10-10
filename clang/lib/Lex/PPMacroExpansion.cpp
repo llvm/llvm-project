@@ -437,42 +437,40 @@ static bool isTrivialSingleTokenExpansion(const MacroInfo *MI,
   return !llvm::is_contained(MI->params(), II);
 }
 
-/// isNextPPTokenLParen - Determine whether the next preprocessor token to be
-/// lexed is a '('.  If so, consume the token and return true, if not, this
-/// method should have no observable side-effect on the lexed tokens.
-bool Preprocessor::isNextPPTokenLParen() {
+/// isNextPPTokenLParen - Peek the next token. If so, return the token, if not,
+/// this method should have no observable side-effect on the lexed tokens.
+std::optional<Token> Preprocessor::peekNextPPToken() {
   // Do some quick tests for rejection cases.
-  unsigned Val;
+  std::optional<Token> Val;
   if (CurLexer)
-    Val = CurLexer->isNextPPTokenLParen();
+    Val = CurLexer->peekNextPPToken();
   else
-    Val = CurTokenLexer->isNextTokenLParen();
+    Val = CurTokenLexer->peekNextPPToken();
 
-  if (Val == 2) {
+  if (!Val) {
     // We have run off the end.  If it's a source file we don't
     // examine enclosing ones (C99 5.1.1.2p4).  Otherwise walk up the
     // macro stack.
     if (CurPPLexer)
-      return false;
+      return std::nullopt;
     for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
       if (Entry.TheLexer)
-        Val = Entry.TheLexer->isNextPPTokenLParen();
+        Val = Entry.TheLexer->peekNextPPToken();
       else
-        Val = Entry.TheTokenLexer->isNextTokenLParen();
+        Val = Entry.TheTokenLexer->peekNextPPToken();
 
-      if (Val != 2)
+      if (Val)
         break;
 
       // Ran off the end of a source file?
       if (Entry.ThePPLexer)
-        return false;
+        return std::nullopt;
     }
   }
 
-  // Okay, if we know that the token is a '(', lex it and return.  Otherwise we
-  // have found something that isn't a '(' or we found the end of the
-  // translation unit.  In either case, return false.
-  return Val == 1;
+  // Okay, we found the token and return.  Otherwise we found the end of the
+  // translation unit.
+  return Val;
 }
 
 /// HandleMacroExpandedIdentifier - If an identifier token is read that is to be

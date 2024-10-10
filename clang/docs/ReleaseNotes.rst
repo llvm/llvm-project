@@ -182,6 +182,8 @@ C++17 Feature Support
 - The implementation of the relaxed template template argument matching rules is
   more complete and reliable, and should provide more accurate diagnostics.
 
+- Implemented `P3034R1 Module Declarations Shouldn’t be Macros <https://wg21.link/P3034R1>`_.
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
