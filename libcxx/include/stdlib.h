@@ -98,15 +98,9 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 extern "C++" {
 // abs
 
-#    ifdef abs
-#      undef abs
-#    endif
-#    ifdef labs
-#      undef labs
-#    endif
-#    ifdef llabs
-#      undef llabs
-#    endif
+#    undef abs
+#    undef labs
+#    undef llabs
 
 // MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
 #    if !defined(_LIBCPP_MSVCRT)
@@ -128,15 +122,9 @@ extern "C++" {
 
 // div
 
-#    ifdef div
-#      undef div
-#    endif
-#    ifdef ldiv
-#      undef ldiv
-#    endif
-#    ifdef lldiv
-#      undef lldiv
-#    endif
+#    undef div
+#    undef ldiv
+#    undef lldiv
 
 // MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
 #    if !defined(_LIBCPP_MSVCRT)
