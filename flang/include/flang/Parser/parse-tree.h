@@ -3458,7 +3458,7 @@ struct OmpMapClause {
   ENUM_CLASS(Type, To, From, Tofrom, Alloc, Release, Delete)
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
   std::tuple<std::optional<std::list<TypeModifier>>, std::optional<Type>,
-             OmpObjectList>
+      OmpObjectList>
       t;
 };
 

@@ -23,17 +23,16 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
-template <typename Separator>
-struct MapModifiers {
-  constexpr MapModifiers(Separator sep,
-                         std::optional<MessageFixedText> msg = std::nullopt)
+template <typename Separator> struct MapModifiers {
+  constexpr MapModifiers(
+      Separator sep, std::optional<MessageFixedText> msg = std::nullopt)
       : sep_(sep), msg_(msg) {}
   constexpr MapModifiers(const MapModifiers &) = default;
   constexpr MapModifiers(MapModifiers &&) = default;
 
   using resultType =
       std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
-                 std::optional<OmpMapClause::Type>>;
+          std::optional<OmpMapClause::Type>>;
 
   std::optional<resultType> Parse(ParseState &state) const {
     auto pmod{Parser<OmpMapClause::TypeModifier>{}};
@@ -47,8 +46,8 @@ struct MapModifiers {
               *maybe(attempt(nonemptySeparated(pmod, sep_))).Parse(state)}) {
         // mods = optional<list>, and the list is nonempty.
         return attempt(sep_).Parse(state)
-                   ? resultType(mods, *maybe(attempt(ptype)).Parse(state))
-                   : resultType(mods, std::nullopt);
+            ? resultType(mods, *maybe(attempt(ptype)).Parse(state))
+            : resultType(mods, std::nullopt);
       }
       return {std::nullopt, *maybe(attempt(ptype)).Parse(state)};
     }();
@@ -92,35 +91,34 @@ TYPE_PARSER(construct<OmpProcBindClause>(
 // map-type-modifiers -> map-type-modifier [,] [...]
 // map-type-modifier -> ALWAYS | CLOSE | OMPX_HOLD | PRESENT
 // map-type -> ALLOC | DELETE | FROM | RELEASE | TO | TOFROM
-TYPE_PARSER(construct<OmpMapClause::TypeModifier>(
+TYPE_PARSER(
+    construct<OmpMapClause::TypeModifier>(
     "ALWAYS" >> pure(OmpMapClause::TypeModifier::Always) ||
     "CLOSE" >> pure(OmpMapClause::TypeModifier::Close) ||
     "OMPX_HOLD" >> pure(OmpMapClause::TypeModifier::OmpxHold) ||
     "PRESENT" >> pure(OmpMapClause::TypeModifier::Present)))
 
-TYPE_PARSER(construct<OmpMapClause::Type>(
-    "ALLOC" >> pure(OmpMapClause::Type::Alloc) ||
-    "DELETE" >> pure(OmpMapClause::Type::Delete) ||
-    "FROM" >> pure(OmpMapClause::Type::From) ||
-    "RELEASE" >> pure(OmpMapClause::Type::Release) ||
-    "TO"_id >> pure(OmpMapClause::Type::To) ||
-    "TOFROM" >> pure(OmpMapClause::Type::Tofrom)))
+TYPE_PARSER(
+    construct<OmpMapClause::Type>("ALLOC" >> pure(OmpMapClause::Type::Alloc) ||
+        "DELETE" >> pure(OmpMapClause::Type::Delete) ||
+        "FROM" >> pure(OmpMapClause::Type::From) ||
+        "RELEASE" >> pure(OmpMapClause::Type::Release) ||
+        "TO"_id >> pure(OmpMapClause::Type::To) ||
+        "TOFROM" >> pure(OmpMapClause::Type::Tofrom)))
 
-static inline OmpMapClause
-makeMapClause(std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
-                         std::optional<OmpMapClause::Type>> &&mod,
-             OmpObjectList &&obj) {
-  return OmpMapClause{std::move(std::get<0>(mod)), std::move(std::get<1>(mod)),
-                      std::move(obj)};
+static inline OmpMapClause makeMapClause(
+    std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
+        std::optional<OmpMapClause::Type>> &&mod,
+    OmpObjectList &&obj) {
+  return OmpMapClause{
+      std::move(std::get<0>(mod)), std::move(std::get<1>(mod)), std::move(obj)};
 }
 
-TYPE_PARSER(construct<OmpMapClause>(applyFunction(
-    makeMapClause,
+TYPE_PARSER(construct<OmpMapClause>(applyFunction(makeMapClause,
     (MapModifiers(","_tok) ||
-     MapModifiers(
-         maybe(","_tok),
-         "the specification of modifiers without comma separators for the "
-         "'MAP' clause has been deprecated"_port_en_US)),
+        MapModifiers(maybe(","_tok),
+            "the specification of modifiers without comma separators for the "
+            "'MAP' clause has been deprecated"_port_en_US)),
     Parser<OmpObjectList>{})))
 
 // [OpenMP 5.0]
