@@ -1,10 +1,12 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,DARWIN %s
+// RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,DARWIN,CXX11 %s
+// RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++17 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,DARWIN,CXX17 %s
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK,DARWIN %s
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 3 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,ELF %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,ELF,CXX11 %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++17 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,ELF,CXX17 %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK,ELF %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
@@ -19,6 +21,11 @@
 // CHECK: @__const._Z13testArrayInitv.p1 = private unnamed_addr constant [1 x { i64, i64 }] [{ i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 35591) to i64), i64 0 }], align 8
 // CHECK: @__const._Z13testArrayInitv.c0 = private unnamed_addr constant %struct.Class0 { { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base011nonvirtual0Ev, i32 0, i64 35591) to i64), i64 0 } }, align 8
 // CHECK: @__const._Z13testArrayInitv.c1 = private unnamed_addr constant %struct.Class0 { { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 35591) to i64), i64 0 } }, align 8
+
+// CHECK: @_ZN22testNoexceptConversion6mfptr1E = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S19nonvirtual_noexceptEv, i32 0, i64 [[DISC_NO_NOEXCEPT:.*]]) to i64), i64 0 },
+// CHECK: @_ZN22testNoexceptConversion6mfptr2E = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S16virtual_noexceptEv_vfpthunk_, i32 0, i64 [[DISC_NO_NOEXCEPT]]) to i64), i64 0 },
+// CXX11: @_ZN22testNoexceptConversion15mfptr3_noexceptE = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S19nonvirtual_noexceptEv, i32 0, i64 [[DISC_NO_NOEXCEPT]]) to i64), i64 0 },
+// CXX17: @_ZN22testNoexceptConversion15mfptr3_noexceptE = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S19nonvirtual_noexceptEv, i32 0, i64 [[DISC_NOEXCEPT:.*]]) to i64), i64 0 },
 
 // CHECK: @_ZTV5Base0 = unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr @_ZTI5Base0,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN5Base08virtual1Ev, i32 0, i64 55600, ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV5Base0, i32 0, i32 0, i32 2)),
@@ -437,4 +444,102 @@ void testArrayInit() {
 
 void testConvertNull() {
   VariadicMethodTy0 t = (VariadicMethodTy0)(MethodTy0{});
+}
+
+namespace testNoexceptConversion {
+
+// CHECK-LABEL: define internal void @__cxx_global_var_init()
+// CXX17: [[ENTRY:.*]]:
+// CHECK: %[[V0:.*]] = load { i64, i64 }, ptr @_ZN22testNoexceptConversion15mfptr0_noexceptE, align 8
+// CXX17: %[[MEMPTR_PTR:.*]] = extractvalue { i64, i64 } %[[V0]], 0
+// CXX17: %[[MEMPTR_ADJ:.*]] = extractvalue { i64, i64 } %[[V0]], 1
+// CXX17: %[[V1:.*]] = and i64 %[[MEMPTR_ADJ]], 1
+// CXX17: %[[IS_VIRTUAL_OFFSET:.*]] = icmp ne i64 %[[V1]], 0
+// CXX17: br i1 %[[IS_VIRTUAL_OFFSET]], label %[[MERGE:.*]], label %[[RESIGN:.*]]
+
+// CXX17: [[RESIGN]]:
+// CXX17: %[[V2:.*]] = inttoptr i64 %[[MEMPTR_PTR]] to ptr
+// CXX17: %[[V3:.*]] = icmp ne ptr %[[V2]], null
+// CXX17: br i1 %[[V3]], label %[[RESIGN_NONNULL:.*]], label %[[RESIGN_CONT:.*]]
+
+// CXX17: [[RESIGN_NONNULL]]:
+// CXX17: %[[V4:.*]] = ptrtoint ptr %[[V2]] to i64
+// CXX17: %[[V5:.*]] = call i64 @llvm.ptrauth.resign(i64 %[[V4]], i32 0, i64 [[DISC_NOEXCEPT]], i32 0, i64 [[DISC_NO_NOEXCEPT]])
+// CXX17: %[[V6:.*]] = inttoptr i64 %[[V5]] to ptr
+// CXX17: br label %[[RESIGN_CONT]]
+
+// CXX17: [[RESIGN_CONT]]:
+// CXX17: %[[V7:.*]] = phi ptr [ null, %[[RESIGN]] ], [ %[[V6]], %[[RESIGN_NONNULL]] ]
+// CXX17: %[[V8:.*]] = ptrtoint ptr %[[V7]] to i64
+// CXX17: %[[V9:.*]] = insertvalue { i64, i64 } %[[V0]], i64 %[[V8]], 0
+// CXX17: br label %[[MERGE]]
+
+// CXX17: [[MERGE]]:
+// CXX17: %[[V10:.*]] = phi { i64, i64 } [ %[[V0]], %[[ENTRY]] ], [ %[[V9]], %[[RESIGN_CONT]] ]
+// CXX17: store { i64, i64 } %[[V10]], ptr @_ZN22testNoexceptConversion6mfptr4E, align 8
+// CXX11: store { i64, i64 } %[[V0]], ptr @_ZN22testNoexceptConversion6mfptr4E, align 8
+
+// CHECK: define {{.*}}void @_ZN22testNoexceptConversion5test0Ev()
+// CHECK: %[[P0:.*]] = alloca { i64, i64 }, align 8
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S19nonvirtual_noexceptEv, i32 0, i64 [[DISC_NO_NOEXCEPT]]) to i64), i64 0 }, ptr %[[P0]], align 8,
+
+// CHECK: define {{.*}}void @_ZN22testNoexceptConversion5test1Ev()
+// CHECK: %[[P0:.*]] = alloca { i64, i64 }, align 8
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S16virtual_noexceptEv_vfpthunk_, i32 0, i64 [[DISC_NO_NOEXCEPT]]) to i64), i64 0 }, ptr %[[P0]], align 8,
+
+// CHECK: define {{.*}}void @_ZN22testNoexceptConversion5test2Ev()
+// CXX17: [[ENTRY:.*]]:
+// CHECK: %[[P0:.*]] = alloca { i64, i64 }, align 8
+// CHECK: %[[V0:.*]] = load { i64, i64 }, ptr @_ZN22testNoexceptConversion15mfptr0_noexceptE, align 8
+// CXX17: %[[MEMPTR_PTR:.*]] = extractvalue { i64, i64 } %[[V0]], 0
+// CXX17: %[[MEMPTR_ADJ:.*]] = extractvalue { i64, i64 } %[[V0]], 1
+// CXX17: %[[V1:.*]] = and i64 %[[MEMPTR_ADJ]], 1
+// CXX17: %[[IS_VIRTUAL_OFFSET:.*]] = icmp ne i64 %[[V1]], 0
+// CXX17: br i1 %[[IS_VIRTUAL_OFFSET]], label %[[MERGE:.*]], label %[[RESIGN:.*]]
+
+// CXX17: [[RESIGN]]:
+// CXX17: %[[V2:.*]] = inttoptr i64 %[[MEMPTR_PTR]] to ptr
+// CXX17: %[[V3:.*]] = icmp ne ptr %[[V2]], null
+// CXX17: br i1 %[[V3]], label %[[RESIGN_NONNULL:.*]], label %[[RESIGN_CONT:.*]]
+
+// CXX17: [[RESIGN_NONNULL]]:
+// CXX17: %[[V4:.*]] = ptrtoint ptr %[[V2]] to i64
+// CXX17: %[[V5:.*]] = call i64 @llvm.ptrauth.resign(i64 %[[V4]], i32 0, i64 [[DISC_NOEXCEPT]], i32 0, i64 [[DISC_NO_NOEXCEPT]])
+// CXX17: %[[V6:.*]] = inttoptr i64 %[[V5]] to ptr
+// CXX17: br label %[[RESIGN_CONT]]
+
+// CXX17: [[RESIGN_CONT]]:
+// CXX17: %[[V7:.*]] = phi ptr [ null, %[[RESIGN]] ], [ %[[V6]], %[[RESIGN_NONNULL]] ]
+// CXX17: %[[V8:.*]] = ptrtoint ptr %[[V7]] to i64
+// CXX17: %[[V9:.*]] = insertvalue { i64, i64 } %[[V0]], i64 %[[V8]], 0
+// CXX17: br label %[[MERGE]]
+
+// CXX17: [[MERGE]]:
+// CXX17: %[[V10:.*]] = phi { i64, i64 } [ %[[V0]], %[[ENTRY]] ], [ %[[V9]], %[[RESIGN_CONT]] ]
+// CXX11: store { i64, i64 } %[[V0]], ptr %[[P0]], align 8
+// CXX17: store { i64, i64 } %[[V10]], ptr %[[P0]], align 8
+
+struct S {
+  void nonvirtual_noexcept() noexcept;
+  virtual void virtual_noexcept() noexcept;
+};
+
+void (S::*mfptr0_noexcept)() noexcept;
+void (S::*mfptr1)() = &S::nonvirtual_noexcept;
+void (S::*mfptr2)() = &S::virtual_noexcept;
+void (S::*mfptr3_noexcept)() noexcept = &S::nonvirtual_noexcept;
+void (S::*mfptr4)() = mfptr0_noexcept;
+
+void test0() {
+  void (S::*p0)() = &S::nonvirtual_noexcept;
+}
+
+void test1() {
+  void (S::*p0)() = &S::virtual_noexcept;
+}
+
+void test2() {
+  void (S::*p0)() = mfptr0_noexcept;
+}
+
 }
