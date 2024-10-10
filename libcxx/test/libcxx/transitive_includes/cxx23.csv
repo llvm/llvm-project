@@ -27,11 +27,13 @@ array cctype
 array compare
 array cstddef
 array cstdint
+array cstring
 array cwchar
 array cwctype
 array initializer_list
 array limits
 array new
+array optional
 array stdexcept
 array version
 atomic climits
@@ -67,6 +69,7 @@ bitset initializer_list
 bitset iosfwd
 bitset limits
 bitset new
+bitset optional
 bitset stdexcept
 bitset string
 bitset string_view
@@ -95,6 +98,7 @@ ccomplex istream
 ccomplex limits
 ccomplex locale
 ccomplex new
+ccomplex optional
 ccomplex ratio
 ccomplex sstream
 ccomplex stdexcept
@@ -165,6 +169,7 @@ codecvt initializer_list
 codecvt iosfwd
 codecvt limits
 codecvt new
+codecvt optional
 codecvt stdexcept
 codecvt string
 codecvt string_view
@@ -197,6 +202,7 @@ complex istream
 complex limits
 complex locale
 complex new
+complex optional
 complex ratio
 complex sstream
 complex stdexcept
@@ -224,6 +230,7 @@ condition_variable initializer_list
 condition_variable iosfwd
 condition_variable limits
 condition_variable new
+condition_variable optional
 condition_variable ratio
 condition_variable stdexcept
 condition_variable string
@@ -262,6 +269,7 @@ ctgmath istream
 ctgmath limits
 ctgmath locale
 ctgmath new
+ctgmath optional
 ctgmath ratio
 ctgmath sstream
 ctgmath stdexcept
@@ -284,6 +292,7 @@ deque cwctype
 deque initializer_list
 deque limits
 deque new
+deque optional
 deque stdexcept
 deque tuple
 deque version
@@ -321,6 +330,7 @@ experimental/iterator iterator
 experimental/iterator limits
 experimental/iterator locale
 experimental/iterator new
+experimental/iterator optional
 experimental/iterator ratio
 experimental/iterator stdexcept
 experimental/iterator streambuf
@@ -374,6 +384,7 @@ filesystem istream
 filesystem limits
 filesystem locale
 filesystem new
+filesystem optional
 filesystem ratio
 filesystem stdexcept
 filesystem streambuf
@@ -505,6 +516,7 @@ future limits
 future locale
 future mutex
 future new
+future optional
 future ratio
 future sstream
 future stdexcept
@@ -538,6 +550,7 @@ iomanip istream
 iomanip limits
 iomanip locale
 iomanip new
+iomanip optional
 iomanip ratio
 iomanip stdexcept
 iomanip streambuf
@@ -563,6 +576,7 @@ ios initializer_list
 ios iosfwd
 ios limits
 ios new
+ios optional
 ios ratio
 ios stdexcept
 ios string
@@ -626,6 +640,7 @@ istream iosfwd
 istream limits
 istream locale
 istream new
+istream optional
 istream ratio
 istream stdexcept
 istream streambuf
@@ -684,6 +699,7 @@ locale ios
 locale iosfwd
 locale limits
 locale new
+locale optional
 locale ratio
 locale stdexcept
 locale streambuf
@@ -713,11 +729,13 @@ mdspan compare
 mdspan concepts
 mdspan cstddef
 mdspan cstdint
+mdspan cstring
 mdspan cwchar
 mdspan cwctype
 mdspan initializer_list
 mdspan limits
 mdspan new
+mdspan optional
 mdspan span
 mdspan stdexcept
 mdspan version
@@ -747,6 +765,7 @@ memory_resource iosfwd
 memory_resource limits
 memory_resource mutex
 memory_resource new
+memory_resource optional
 memory_resource ratio
 memory_resource stdexcept
 memory_resource string
@@ -769,6 +788,7 @@ mutex initializer_list
 mutex iosfwd
 mutex limits
 mutex new
+mutex optional
 mutex ratio
 mutex stdexcept
 mutex string
@@ -877,6 +897,7 @@ queue initializer_list
 queue iosfwd
 queue limits
 queue new
+queue optional
 queue stdexcept
 queue string
 queue string_view
@@ -953,6 +974,7 @@ regex initializer_list
 regex iosfwd
 regex limits
 regex new
+regex optional
 regex stdexcept
 regex string
 regex string_view
@@ -1003,6 +1025,7 @@ shared_mutex initializer_list
 shared_mutex iosfwd
 shared_mutex limits
 shared_mutex new
+shared_mutex optional
 shared_mutex ratio
 shared_mutex stdexcept
 shared_mutex string
@@ -1037,6 +1060,7 @@ sstream istream
 sstream limits
 sstream locale
 sstream new
+sstream optional
 sstream ratio
 sstream stdexcept
 sstream streambuf
@@ -1056,6 +1080,7 @@ stack deque
 stack initializer_list
 stack limits
 stack new
+stack optional
 stack stdexcept
 stack tuple
 stack version
@@ -1086,6 +1111,7 @@ streambuf ios
 streambuf iosfwd
 streambuf limits
 streambuf new
+streambuf optional
 streambuf ratio
 streambuf stdexcept
 streambuf string
@@ -1106,6 +1132,7 @@ string initializer_list
 string iosfwd
 string limits
 string new
+string optional
 string stdexcept
 string string_view
 string tuple
@@ -1122,6 +1149,7 @@ string_view initializer_list
 string_view iosfwd
 string_view limits
 string_view new
+string_view optional
 string_view stdexcept
 string_view version
 strstream array
@@ -1210,6 +1238,7 @@ system_error initializer_list
 system_error iosfwd
 system_error limits
 system_error new
+system_error optional
 system_error stdexcept
 system_error string
 system_error string_view
@@ -1238,6 +1267,7 @@ thread istream
 thread limits
 thread locale
 thread new
+thread optional
 thread ratio
 thread sstream
 thread stdexcept
@@ -1291,11 +1321,14 @@ utility initializer_list
 utility limits
 utility version
 valarray cmath
+valarray compare
 valarray cstddef
 valarray cstdint
+valarray cstring
 valarray initializer_list
 valarray limits
 valarray new
+valarray optional
 valarray version
 variant compare
 variant cstddef
@@ -1322,6 +1355,7 @@ vector initializer_list
 vector iosfwd
 vector limits
 vector new
+vector optional
 vector stdexcept
 vector string
 vector string_view
