@@ -4339,6 +4339,7 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
   switch (Ty->getKind()) {
   default:
     llvm_unreachable("Unsupported builtin vector type");
+
 #define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
                             ElBits, NF, IsSigned)                              \
   case BuiltinType::Id:                                                        \
@@ -4353,16 +4354,12 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
                                ElBits, NF)                                     \
   case BuiltinType::Id:                                                        \
     return {BFloat16Ty, llvm::ElementCount::getScalable(NumEls), NF};
-#define SVE_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
-                               ElBits, NF)                                     \
-  case BuiltinType::Id:                                                        \
-    return {getIntTypeForBitwidth(ElBits, false),                              \
-            llvm::ElementCount::getScalable(NumEls), NF};
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
+
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
   case BuiltinType::Id:                                                        \

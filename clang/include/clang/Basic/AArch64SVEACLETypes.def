@@ -72,11 +72,6 @@
   SVE_VECTOR_TYPE_DETAILS(Name, MangledName, Id, SingletonId, NumEls, ElBits, NF, true, false, true)
 #endif
 
-#ifndef SVE_VECTOR_TYPE_MFLOAT
-#define SVE_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, ElBits, NF) \
-  SVE_VECTOR_TYPE_DETAILS(Name, MangledName, Id, SingletonId, NumEls, ElBits, NF, false, false, true)
-#endif
-
 #ifndef SVE_VECTOR_TYPE_FLOAT
 #define SVE_VECTOR_TYPE_FLOAT(Name, MangledName, Id, SingletonId, NumEls, ElBits, NF) \
   SVE_VECTOR_TYPE_DETAILS(Name, MangledName, Id, SingletonId, NumEls, ElBits, NF, false, true, false)
@@ -119,7 +114,9 @@ SVE_VECTOR_TYPE_FLOAT("__SVFloat32_t", "__SVFloat32_t", SveFloat32, SveFloat32Ty
 SVE_VECTOR_TYPE_FLOAT("__SVFloat64_t", "__SVFloat64_t", SveFloat64, SveFloat64Ty, 2, 64, 1)
 
 SVE_VECTOR_TYPE_BFLOAT("__SVBfloat16_t", "__SVBfloat16_t", SveBFloat16, SveBFloat16Ty, 8, 16, 1)
-SVE_VECTOR_TYPE_MFLOAT("__SVMfloat8_t", "__SVMfloat8_t",  SveMFloat8, SveMFloat8Ty, 16, 8, 1)
+
+// This is a 8 bits opaque type.
+SVE_VECTOR_TYPE_INT("__SVMfloat8_t", "__SVMfloat8_t",  SveMFloat8, SveMFloat8Ty, 16, 8, 1, false)
 
 //
 // x2
@@ -189,7 +186,6 @@ SVE_OPAQUE_TYPE("__SVCount_t", "__SVCount_t", SveCount, SveCountTy)
 
 #undef SVE_VECTOR_TYPE
 #undef SVE_VECTOR_TYPE_BFLOAT
-#undef SVE_VECTOR_TYPE_MFLOAT
 #undef SVE_VECTOR_TYPE_FLOAT
 #undef SVE_VECTOR_TYPE_INT
 #undef SVE_PREDICATE_TYPE

@@ -5,9 +5,9 @@
 
 #include <arm_sve.h>
 void test_vector_sve(svmfloat8_t a, svuint8_t c) {
-  a + c;  // sve-error {{cannot convert between vector and non-scalar values ('svmfloat8_t' (aka '__SVMfloat8_t') and 'svuint8_t' (aka '__SVUint8_t'))}}
-  a - c;  // sve-error {{cannot convert between vector and non-scalar values ('svmfloat8_t' (aka '__SVMfloat8_t') and 'svuint8_t' (aka '__SVUint8_t'))}}
-  a * c;  // sve-error {{cannot convert between vector and non-scalar values ('svmfloat8_t' (aka '__SVMfloat8_t') and 'svuint8_t' (aka '__SVUint8_t'))}}
-  a / c;  // sve-error {{cannot convert between vector and non-scalar values ('svmfloat8_t' (aka '__SVMfloat8_t') and 'svuint8_t' (aka '__SVUint8_t'))}}
+  a + c;  // sve-error {{cannot convert between vector type 'svuint8_t' (aka '__SVUint8_t') and vector type 'svmfloat8_t' (aka '__SVMfloat8_t') as implicit conversion would cause truncation}}
+  a - c;  // sve-error {{cannot convert between vector type 'svuint8_t' (aka '__SVUint8_t') and vector type 'svmfloat8_t' (aka '__SVMfloat8_t') as implicit conversion would cause truncation}}
+  a * c;  // sve-error {{cannot convert between vector type 'svuint8_t' (aka '__SVUint8_t') and vector type 'svmfloat8_t' (aka '__SVMfloat8_t') as implicit conversion would cause truncation}}
+  a / c;  // sve-error {{cannot convert between vector type 'svuint8_t' (aka '__SVUint8_t') and vector type 'svmfloat8_t' (aka '__SVMfloat8_t') as implicit conversion would cause truncation}}
 }
 

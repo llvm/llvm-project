@@ -82,14 +82,13 @@ public:
   bool isVector() const { return NumVectors > 0; }
   bool isScalableVector() const { return isVector() && IsScalable; }
   bool isFixedLengthVector() const { return isVector() && !IsScalable; }
-  bool isChar() const { return ElementBitwidth == 8; }
+  bool isChar() const { return ElementBitwidth == 8 && !MFloat; }
   bool isVoid() const { return Void && !Pointer; }
   bool isDefault() const { return DefaultType; }
-  bool isFloat() const { return Float && !BFloat; }
-  bool isBFloat() const { return BFloat && !Float; }
+  bool isFloat() const { return Float && !BFloat && !MFloat; }
+  bool isBFloat() const { return BFloat && !Float && !MFloat; }
   bool isMFloat() const {
     return MFloat && !BFloat && !Float;
-    ;
   }
   bool isFloatingPoint() const { return Float || BFloat; }
   bool isInteger() const {
@@ -459,6 +458,7 @@ std::string SVEType::builtin_str() const {
     assert(ElementBitwidth == 16 && "Not a valid BFloat.");
     S += "y";
   } else if (isMFloat()) {
+    assert(ElementBitwidth == 8 && "Not a valid MFloat.");
     S += "m";
   }
 
@@ -580,9 +580,11 @@ void SVEType::applyTypespec(StringRef TS) {
     case 'b':
       BFloat = true;
       Float = false;
+      MFloat = false;
       ElementBitwidth = 16;
       break;
     case 'm':
+      Signed = false;
       MFloat = true;
       Float = false;
       BFloat = false;
