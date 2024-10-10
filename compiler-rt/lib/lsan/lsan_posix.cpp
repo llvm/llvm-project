@@ -97,6 +97,7 @@ void InstallAtExitCheckLeaks() {
 }
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %d\n", GetTid());
   LockGlobal();
   LockThreads();
   LockAllocator();
@@ -108,6 +109,7 @@ static void AfterFork(bool fork_child) {
   UnlockAllocator();
   UnlockThreads();
   UnlockGlobal();
+  VReport(2, "AfterFork tid: %d\n", GetTid());
 }
 
 void InstallAtForkHandler() {
