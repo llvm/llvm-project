@@ -83,6 +83,16 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
         types:
           parallel, reduction, window
 
+    Any element within the output operands that are not indexed by the 
+    `indexing_maps` are undefined. 
+    For example, if the output operand is a `tensor<2x2xf32>`, and is accessed
+    by the affine map `affine_map<(i) -> (i, i)>` indexing the diagonal elements
+    `[0, 0]` and `[1, 1]`, then the other elements (at `[0, 1]` and `[1, 0]`) are
+    undefined. 
+    
+    Any dimensions associated with a `reduction` `iterator_types` must not 
+    be used for indexing output operands, otherwise the results are undefined.
+
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
       ```mlir
