@@ -121,6 +121,8 @@ struct VPlanTransforms {
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
+
+  static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF);
 };
 
 } // namespace llvm

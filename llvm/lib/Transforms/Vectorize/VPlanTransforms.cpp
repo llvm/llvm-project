@@ -29,6 +29,9 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 
+#define LV_NAME "loop-vectorize"
+#define DEBUG_TYPE LV_NAME
+
 using namespace llvm;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
@@ -1663,4 +1666,126 @@ void VPlanTransforms::createInterleaveGroups(
         MemberR->eraseFromParent();
       }
   }
+}
+
+static bool supportedLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
+  if (auto *W = dyn_cast_or_null<VPWidenLoadRecipe>(V->getDefiningRecipe())) {
+    return !W->getMask() && (R0->getOperand(0) == V || R0->getOperand(1) == V);
+  }
+
+  if (auto *IR = dyn_cast_or_null<VPInterleaveRecipe>(V->getDefiningRecipe())) {
+    return IR->getInterleaveGroup()->getFactor() ==
+               IR->getInterleaveGroup()->getNumMembers() &&
+           IR->getVPValue(Idx) == V;
+  }
+  return false;
+}
+
+/// Returns true if \p IR is a full interleave group with factor and number of
+/// members both equal to \p VF.
+static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *IR,
+                                         ElementCount VF) {
+  if (!IR)
+    return false;
+  auto IG = IR->getInterleaveGroup();
+  return IG->getFactor() == IG->getNumMembers() &&
+         IG->getNumMembers() == VF.getFixedValue();
+}
+
+void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
+  using namespace llvm::VPlanPatternMatch;
+  if (VF.isScalable())
+    return;
+
+  SmallVector<VPInterleaveRecipe *> StoreGroups;
+  for (auto &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock()) {
+    if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
+        isa<VPCanonicalIVPHIRecipe>(&R))
+      continue;
+
+    // Bail out on recipes not supported at the moment:
+    //  * phi recipes other than the canonical induction
+    //  * recipes writing to memory except interleave groups
+    // Only support plans with a canonical induction phi.
+    if (R.isPhi())
+      return;
+
+    auto *IR = dyn_cast<VPInterleaveRecipe>(&R);
+    if (R.mayWriteToMemory() && !IR)
+      return;
+
+    if (!IR)
+      continue;
+
+    if (!isConsecutiveInterleaveGroup(IR, VF))
+      return;
+    if (IR->getStoredValues().empty())
+      continue;
+
+    auto *Lane0 = dyn_cast_or_null<VPWidenRecipe>(
+        IR->getStoredValues()[0]->getDefiningRecipe());
+    if (!Lane0)
+      return;
+    for (const auto &[I, V] : enumerate(IR->getStoredValues())) {
+      auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
+      if (!R || R->getOpcode() != Lane0->getOpcode())
+        return;
+      if (any_of(R->operands(), [Lane0, Idx = I](VPValue *V) {
+            return !supportedLoad(Lane0, V, Idx);
+          }))
+        return;
+    }
+
+    StoreGroups.push_back(IR);
+  }
+
+  if (StoreGroups.empty())
+    return;
+
+  // Narrow operation tree rooted at store groups.
+  for (auto *StoreGroup : StoreGroups) {
+    auto *Lane0 = cast<VPWidenRecipe>(
+        StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+
+    unsigned LoadGroupIdx =
+        isa<VPInterleaveRecipe>(Lane0->getOperand(1)->getDefiningRecipe()) ? 1
+                                                                           : 0;
+    unsigned WideLoadIdx = 1 - LoadGroupIdx;
+    auto *LoadGroup = cast<VPInterleaveRecipe>(
+        Lane0->getOperand(LoadGroupIdx)->getDefiningRecipe());
+
+    auto *WideLoad = cast<VPWidenLoadRecipe>(
+        Lane0->getOperand(WideLoadIdx)->getDefiningRecipe());
+
+    // Narrow wide load to uniform scalar load, as transformed VPlan will only
+    // process one original iteration.
+    auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(),
+                                    WideLoad->operands(), true);
+    // Narrow interleave group to wide load, as transformed VPlan will only
+    // process one original iteration.
+    auto *L = new VPWidenLoadRecipe(
+        *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
+        LoadGroup->getAddr(), LoadGroup->getMask(), true, false,
+        LoadGroup->getDebugLoc());
+    L->insertBefore(LoadGroup);
+    N->insertBefore(LoadGroup);
+    Lane0->setOperand(LoadGroupIdx, L);
+    Lane0->setOperand(WideLoadIdx, N);
+
+    auto *S = new VPWidenStoreRecipe(
+        *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
+        StoreGroup->getAddr(), Lane0, nullptr, true, false,
+        StoreGroup->getDebugLoc());
+    S->insertBefore(StoreGroup);
+    StoreGroup->eraseFromParent();
+  }
+
+  // Adjust induction to reflect that the transformed plan only processes one
+  // original iteration.
+  auto *CanIV = Plan.getCanonicalIV();
+  VPInstruction *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
+  Inc->setOperand(
+      1, Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
+  removeDeadRecipes(Plan);
+  LLVM_DEBUG(dbgs() << "Narrowed interleave\n");
 }
