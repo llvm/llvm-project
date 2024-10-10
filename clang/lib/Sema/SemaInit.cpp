@@ -8207,6 +8207,14 @@ ExprResult InitializationSequence::Perform(Sema &S,
             Kind.getRange().getEnd());
       } else {
         CurInit = new (S.Context) ImplicitValueInitExpr(Step->Type);
+        // Note the return value isn't used to return early
+        // to preserve the AST as best as possible even though an error
+        // might have occurred. For struct initialization it also allows
+        // all field assignments to be checked rather than bailing on the
+        // first error.
+        S.BoundsSafetyCheckInitialization(Entity, Kind, Sema::AA_Initializing,
+                                          /*LHSType=*/Step->Type,
+                                          /*RHSExpr=*/CurInit.get());
       }
       break;
     }
@@ -8252,6 +8260,15 @@ ExprResult InitializationSequence::Perform(Sema &S,
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
         }
       }
+
+      // Note the return value isn't used to return early so that additional
+      // diagnostics can be emitted and to preserve the AST as best as possible
+      // even though an error might have occurred. For struct initialization it
+      // also allows all field assignments to be checked rather than bailing on
+      // the first error.
+      (void)S.BoundsSafetyCheckInitialization(
+          Entity, Kind, /*Action=*/getAssignmentAction(Entity, true),
+          /*LHSType=*/Step->Type, /*RHSExpr=*/InitialCurInit.get());
 
       bool Complained;
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
