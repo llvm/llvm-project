@@ -103,6 +103,7 @@ class ThreadLister {
     Ok,
   };
   Result ListThreads(InternalMmapVector<tid_t> *threads);
+  const char *LoadStatus(int tid);
 
  private:
   bool IsAlive(int tid);
