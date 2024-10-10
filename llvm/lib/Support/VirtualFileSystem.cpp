@@ -305,8 +305,8 @@ private:
     return Storage;
   }
 
-  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Name,
-                                                 sys::fs::OpenFlags Flags) {
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadWithFlags(const Twine &Name, sys::fs::OpenFlags Flags) {
     SmallString<256> RealName, Storage;
     Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
         adjustPath(Name, Storage), Flags, &RealName);
@@ -338,12 +338,12 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
-  return openFileForRead(Name, sys::fs::OF_Text);
+  return openFileForReadWithFlags(Name, sys::fs::OF_Text);
 }
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForReadBinary(const Twine &Name) {
-  return openFileForRead(Name, sys::fs::OF_None);
+  return openFileForReadWithFlags(Name, sys::fs::OF_None);
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {

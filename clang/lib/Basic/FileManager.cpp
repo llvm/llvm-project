@@ -530,8 +530,8 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
-                              bool RequiresNullTerminator, bool IsText,
-                              std::optional<int64_t> MaybeLimit) {
+                              bool RequiresNullTerminator,
+                              std::optional<int64_t> MaybeLimit, bool IsText) {
   const FileEntry *Entry = &FE.getFileEntry();
   // If the content is living on the file entry, return a reference to it.
   if (Entry->Content)
