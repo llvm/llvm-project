@@ -328,6 +328,8 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
       const SCEV *TripCount =
           computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
       Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
+      // For the multiplication result to fit, request a type twice as wide.
+      WiderType = WiderType->getExtendedType();
       RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
                               SE.getNoopOrZeroExtend(TripCount, WiderType));
     }
@@ -338,8 +340,12 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
   assert(RefCost && "Expecting a valid RefCost");
 
   // Attempt to fold RefCost into a constant.
+  // CacheCostTy is a signed integer, but the tripcount value can be large
+  // and may not fit, so saturate/limit the value to the maximum signed
+  // integer value.
   if (auto ConstantCost = dyn_cast<SCEVConstant>(RefCost))
-    return ConstantCost->getValue()->getZExtValue();
+    return (CacheCostTy)ConstantCost->getValue()->getLimitedValue(
+        std::numeric_limits<CacheCostTy>::max());
 
   LLVM_DEBUG(dbgs().indent(4)
              << "RefCost is not a constant! Setting to RefCost=InvalidCost "
@@ -712,7 +718,13 @@ CacheCost::computeLoopCacheCost(const Loop &L,
   CacheCostTy LoopCost = 0;
   for (const ReferenceGroupTy &RG : RefGroups) {
     CacheCostTy RefGroupCost = computeRefGroupCacheCost(RG, L);
-    LoopCost += RefGroupCost * TripCountsProduct;
+
+    // Saturate the cost to INT MAX if the value can overflow.
+    if (RefGroupCost >
+        (std::numeric_limits<CacheCostTy>::max() / TripCountsProduct))
+      LoopCost = std::numeric_limits<CacheCostTy>::max();
+    else
+      LoopCost += RefGroupCost * TripCountsProduct;
   }
 
   LLVM_DEBUG(dbgs().indent(2) << "Loop '" << L.getName()
