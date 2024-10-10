@@ -200,7 +200,7 @@ void Process::PreventCoreFiles() {
 
 std::optional<std::string> Process::GetEnv(StringRef Name) {
   std::string NameStr = Name.str();
-  const char *Val = ::getenv(NameStr.c_str());
+  const char *Val = std::getenv(NameStr.c_str());
   if (!Val)
     return std::nullopt;
   return std::string(Val);

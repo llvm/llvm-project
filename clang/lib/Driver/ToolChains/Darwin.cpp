@@ -1977,7 +1977,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
   static_assert(std::size(EnvVars) == Darwin::LastDarwinPlatform + 1,
                 "Missing platform");
   for (const auto &I : llvm::enumerate(llvm::ArrayRef(EnvVars))) {
-    if (char *Env = ::getenv(I.value()))
+    if (char *Env = std::getenv(I.value()))
       Targets[I.index()] = Env;
   }
 
@@ -2258,7 +2258,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     if (!getVFS().exists(A->getValue()))
       getDriver().Diag(clang::diag::warn_missing_sysroot) << A->getValue();
   } else {
-    if (char *env = ::getenv("SDKROOT")) {
+    if (char *env = std::getenv("SDKROOT")) {
       // We only use this value as the default if it is an absolute path,
       // exists, and it is not the root path.
       if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
@@ -3258,13 +3258,13 @@ ToolChain::UnwindTableLevel MachO::getDefaultUnwindTableLevel(const ArgList &Arg
 }
 
 bool MachO::UseDwarfDebugFlags() const {
-  if (const char *S = ::getenv("RC_DEBUG_OPTIONS"))
+  if (const char *S = std::getenv("RC_DEBUG_OPTIONS"))
     return S[0] != '\0';
   return false;
 }
 
 std::string MachO::GetGlobalDebugPathRemapping() const {
-  if (const char *S = ::getenv("RC_DEBUG_PREFIX_MAP"))
+  if (const char *S = std::getenv("RC_DEBUG_PREFIX_MAP"))
     return S;
   return {};
 }

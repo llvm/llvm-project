@@ -522,7 +522,7 @@ private:
 // Nothing interesting here, just subprocess/temp-file plumbing.
 llvm::Expected<std::string> renderSVG(llvm::StringRef DotGraph) {
   std::string DotPath;
-  if (const auto *FromEnv = ::getenv("GRAPHVIZ_DOT"))
+  if (const auto *FromEnv = std::getenv("GRAPHVIZ_DOT"))
     DotPath = FromEnv;
   else {
     auto FromPath = llvm::sys::findProgramByName("dot");

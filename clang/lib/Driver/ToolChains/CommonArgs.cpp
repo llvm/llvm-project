@@ -390,7 +390,7 @@ tools::unifyTargetFeatures(ArrayRef<StringRef> Features) {
 
 void tools::addDirectoryList(const ArgList &Args, ArgStringList &CmdArgs,
                              const char *ArgName, const char *EnvVar) {
-  const char *DirList = ::getenv(EnvVar);
+  const char *DirList = std::getenv(EnvVar);
   bool CombinedArg = false;
 
   if (!DirList)

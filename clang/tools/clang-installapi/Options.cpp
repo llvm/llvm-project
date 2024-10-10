@@ -455,10 +455,10 @@ bool Options::processLinkerOptions(InputArgList &Args) {
       drv::OPT_fapplication_extension, drv::OPT_fno_application_extension,
       /*Default=*/LinkerOpts.AppExtensionSafe);
 
-  if (::getenv("LD_NO_ENCRYPT") != nullptr)
+  if (std::getenv("LD_NO_ENCRYPT") != nullptr)
     LinkerOpts.AppExtensionSafe = true;
 
-  if (::getenv("LD_APPLICATION_EXTENSION_SAFE") != nullptr)
+  if (std::getenv("LD_APPLICATION_EXTENSION_SAFE") != nullptr)
     LinkerOpts.AppExtensionSafe = true;
 
   // Capture library paths.
@@ -511,7 +511,7 @@ bool Options::processFrontendOptions(InputArgList &Args) {
   } else if (FEOpts.ISysroot.empty()) {
     // Mirror CLANG and obtain the isysroot from the SDKROOT environment
     // variable, if it wasn't defined by the  command line.
-    if (auto *Env = ::getenv("SDKROOT")) {
+    if (auto *Env = std::getenv("SDKROOT")) {
       if (StringRef(Env) != "/" && llvm::sys::path::is_absolute(Env) &&
           FM->getOptionalFileRef(Env))
         FEOpts.ISysroot = Env;

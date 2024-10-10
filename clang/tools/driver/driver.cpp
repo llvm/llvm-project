@@ -123,12 +123,12 @@ static void getCLEnvVarOptions(std::string &EnvValue, llvm::StringSaver &Saver,
 template <class T>
 static T checkEnvVar(const char *EnvOptSet, const char *EnvOptFile,
                      std::string &OptFile) {
-  const char *Str = ::getenv(EnvOptSet);
+  const char *Str = std::getenv(EnvOptSet);
   if (!Str)
     return T{};
 
   T OptVal = Str;
-  if (const char *Var = ::getenv(EnvOptFile))
+  if (const char *Var = std::getenv(EnvOptFile))
     OptFile = Var;
   return OptVal;
 }
@@ -154,7 +154,7 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
         return false;
       }
 
-      const char *FilteringStr = ::getenv("CC_PRINT_HEADERS_FILTERING");
+      const char *FilteringStr = std::getenv("CC_PRINT_HEADERS_FILTERING");
       HeaderIncludeFilteringKind Filtering;
       if (!stringToHeaderIncludeFiltering(FilteringStr, Filtering)) {
         TheDriver.Diag(clang::diag::err_drv_print_header_env_var)
@@ -296,7 +296,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   llvm::StringSet<> SavedStrings;
   // Handle CCC_OVERRIDE_OPTIONS, used for editing a command line behind the
   // scenes.
-  if (const char *OverrideStr = ::getenv("CCC_OVERRIDE_OPTIONS")) {
+  if (const char *OverrideStr = std::getenv("CCC_OVERRIDE_OPTIONS")) {
     // FIXME: Driver shouldn't take extra initial argument.
     driver::applyOverrideOptions(Args, OverrideStr, SavedStrings,
                                  &llvm::errs());
@@ -378,7 +378,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     }
     ReproLevel = *Level;
   }
-  if (!!::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
+  if (!!std::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
     ReproLevel = Driver::ReproLevel::Always;
 
   int Res = 1;
@@ -422,7 +422,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   // Print the bug report message that would be printed if we did actually
   // crash, but only if we're crashing due to FORCE_CLANG_DIAGNOSTICS_CRASH.
-  if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
+  if (std::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
     llvm::dbgs() << llvm::getBugReportMsg();
   if (FailingCommand != nullptr &&
     TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
