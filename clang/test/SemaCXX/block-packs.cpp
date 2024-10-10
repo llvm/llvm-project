@@ -1,14 +1,20 @@
-// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fsyntax-only -verify %s -frecovery-ast -frecovery-ast-type
+// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fsyntax-only -verify -Wno-unused %s
+// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -fsyntax-only -verify -Wno-unused %s -frecovery-ast -frecovery-ast-type
 
-// This checks that when a block is discarded, the enclosing lambda’s
-// unexpanded parameter pack flag is reset to what it was before the
-// block is parsed so we don't crash when trying to diagnose unexpanded
-// parameter packs in the lambda.
+template <typename ...Ts>
+void f() {
+  ((^ { Ts t; }), ...);
+  ((^ (Ts t) {}), ...);
+  ((^ Ts () {}), ...);
+
+  ^ { Ts t; }; // expected-error {{unexpanded parameter pack 'Ts'}}
+  ^ (Ts t) {}; // expected-error {{unexpanded parameter pack 'Ts'}}
+  ^ Ts () {};  // expected-error {{unexpanded parameter pack 'Ts'}}
+}
 
 template <typename ...Ts>
 void gh109148() {
-  (^Ts); // expected-error {{expected expression}} expected-error {{unexpanded parameter pack 'Ts'}}
+  (^Ts); // expected-error {{expected expression}}
 
   [] {
     (^Ts); // expected-error {{expected expression}}
@@ -29,7 +35,7 @@ void gh109148() {
   };
 
   [] { // expected-error {{unexpanded parameter pack 'Ts'}}
-    (void) ^ { Ts x; };
+    ^ { Ts x; };
   };
 
   [] { // expected-error {{unexpanded parameter pack 'Ts'}}
@@ -45,4 +51,14 @@ void gh109148() {
   [] { // expected-error {{unexpanded parameter pack 'Ts'}}
     ^ { Ts s; return not_defined; }; // expected-error {{use of undeclared identifier 'not_defined'}}
   };
+}
+
+void g() {
+  f<>();
+  f<int>();
+  f<long, float>();
+
+  gh109148<>();
+  gh109148<int>();
+  gh109148<long, float>();
 }

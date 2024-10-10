@@ -1693,10 +1693,16 @@ namespace {
       if (SemaRef.RebuildingImmediateInvocation)
         return E;
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
-                                    /*InstantiatingLambda=*/true);
+                                    /*InstantiatingLambdaOrBlock=*/true);
       Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
 
       return inherited::TransformLambdaExpr(E);
+    }
+
+    ExprResult TransformBlockExpr(BlockExpr *E) {
+      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
+                                    /*InstantiatingLambdaOrBlock=*/true);
+      return inherited::TransformBlockExpr(E);
     }
 
     ExprResult RebuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -2475,7 +2481,7 @@ QualType TemplateInstantiator::TransformFunctionProtoType(TypeLocBuilder &TLB,
                                  CXXRecordDecl *ThisContext,
                                  Qualifiers ThisTypeQuals,
                                  Fn TransformExceptionSpec) {
-  // If this is a lambda, the transformation MUST be done in the
+  // If this is a lambda or block, the transformation MUST be done in the
   // CurrentInstantiationScope since it introduces a mapping of
   // the original to the newly created transformed parameters.
   //
@@ -2484,7 +2490,7 @@ QualType TemplateInstantiator::TransformFunctionProtoType(TypeLocBuilder &TLB,
   // a second one.
   LocalInstantiationScope *Current = getSema().CurrentInstantiationScope;
   std::optional<LocalInstantiationScope> Scope;
-  if (!Current || !Current->isLambda())
+  if (!Current || !Current->isLambdaOrBlock())
     Scope.emplace(SemaRef, /*CombineWithOuterScope=*/true);
 
   return inherited::TransformFunctionProtoType(
