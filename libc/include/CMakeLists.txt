@@ -203,6 +203,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  complex
+  ../libc/newhdrgen/yaml/complex.yaml
+  complex.h.def
+  complex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.complex_macros
+)
+
+add_header_macro(
   setjmp
   ../libc/newhdrgen/yaml/setjmp.yaml
   setjmp.h.def

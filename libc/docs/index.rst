@@ -73,6 +73,7 @@ stages there is no ABI stability in any form.
    libc_search
    c23
    ctype
+   complex
    signal
    threads
    setjmp
