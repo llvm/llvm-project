@@ -979,7 +979,7 @@ def extract_td_op_info(op_def):
     # Get instruction category
     prefix = "SPIRV_"
     inst_category = [
-        o[len(prefix) :] for o in re.findall(prefix + "\w+Op", op_def.split(":", 1)[1])
+        o[len(prefix) :] for o in re.findall(prefix + r"\w+Op\b", op_def.split(":", 1)[1])
     ]
     assert len(inst_category) <= 1, "more than one ops in the same section!"
     inst_category = inst_category[0] if len(inst_category) == 1 else "Op"
