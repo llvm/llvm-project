@@ -34219,10 +34219,12 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMAXS)
   NODE_NAME_CASE(FMAX_SAE)
   NODE_NAME_CASE(FMAXS_SAE)
+  NODE_NAME_CASE(STRICT_FMAX)
   NODE_NAME_CASE(FMIN)
   NODE_NAME_CASE(FMINS)
   NODE_NAME_CASE(FMIN_SAE)
   NODE_NAME_CASE(FMINS_SAE)
+  NODE_NAME_CASE(STRICT_FMIN)
   NODE_NAME_CASE(FMAXC)
   NODE_NAME_CASE(FMINC)
   NODE_NAME_CASE(FRSQRT)
@@ -46461,17 +46463,21 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // x<=y?x:y, because of how they handle negative zero (which can be
   // ignored in unsafe-math mode).
   // We also try to create v2f32 min/max nodes, which we later widen to v4f32.
-  if (Cond.getOpcode() == ISD::SETCC && VT.isFloatingPoint() &&
-      VT != MVT::f80 && VT != MVT::f128 && !isSoftF16(VT, Subtarget) &&
-      (TLI.isTypeLegal(VT) || VT == MVT::v2f32) &&
+  if ((Cond.getOpcode() == ISD::SETCC ||
+       Cond.getOpcode() == ISD::STRICT_FSETCCS) &&
+      VT.isFloatingPoint() && VT != MVT::f80 && VT != MVT::f128 &&
+      !isSoftF16(VT, Subtarget) && (TLI.isTypeLegal(VT) || VT == MVT::v2f32) &&
       (Subtarget.hasSSE2() ||
        (Subtarget.hasSSE1() && VT.getScalarType() == MVT::f32))) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    bool IsStrict = Cond->isStrictFPOpcode();
+    ISD::CondCode CC =
+        cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
+    SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
+    SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
 
     unsigned Opcode = 0;
     // Check for x CC y ? x : y.
-    if (DAG.isEqualTo(LHS, Cond.getOperand(0)) &&
-        DAG.isEqualTo(RHS, Cond.getOperand(1))) {
+    if (DAG.isEqualTo(LHS, Op0) && DAG.isEqualTo(RHS, Op1)) {
       switch (CC) {
       default: break;
       case ISD::SETULT:
@@ -46539,8 +46545,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         break;
       }
     // Check for x CC y ? y : x -- a min/max with reversed arms.
-    } else if (DAG.isEqualTo(LHS, Cond.getOperand(1)) &&
-               DAG.isEqualTo(RHS, Cond.getOperand(0))) {
+    } else if (DAG.isEqualTo(LHS, Op1) && DAG.isEqualTo(RHS, Op0)) {
       switch (CC) {
       default: break;
       case ISD::SETOGE:
@@ -46605,8 +46610,17 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    if (Opcode)
+    if (Opcode) {
+      if (IsStrict) {
+        SDValue Ret = DAG.getNode(Opcode == X86ISD::FMIN ? X86ISD::STRICT_FMIN
+                                                         : X86ISD::STRICT_FMAX,
+                                  DL, {N->getValueType(0), MVT::Other},
+                                  {Cond.getOperand(0), LHS, RHS});
+        DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
+        return Ret;
+      }
       return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
+    }
   }
 
   // Some mask scalar intrinsics rely on checking if only one bit is set
