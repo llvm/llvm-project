@@ -62,6 +62,7 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
   // Cache some information.
   Is64Bit = TT.isArch64Bit();
   IsWin64 = Is64Bit && TT.isOSWindows();
+  IsUEFI64 = Is64Bit && TT.isUEFI();
 
   // Use a callee-saved register as the base pointer.  These registers must
   // not conflict with any ABI requirements.  For example, in 32-bit mode PIC
@@ -238,7 +239,7 @@ bool X86RegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
 const TargetRegisterClass *
 X86RegisterInfo::getGPRsForTailCall(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  if (IsWin64 || (F.getCallingConv() == CallingConv::Win64))
+  if (IsWin64 || IsUEFI64 || (F.getCallingConv() == CallingConv::Win64))
     return &X86::GR64_TCW64RegClass;
   else if (Is64Bit)
     return &X86::GR64_TCRegClass;
@@ -340,7 +341,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
-      if (IsWin64) {
+      if (IsWin64 || IsUEFI64) {
         return (HasSSE ? CSR_Win64_RegCall_SaveList :
                          CSR_Win64_RegCall_NoSSE_SaveList);
       } else {
@@ -400,7 +401,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return IsWin64 ? CSR_Win64_SwiftError_SaveList
                      : CSR_64_SwiftError_SaveList;
 
-    if (IsWin64)
+    if (IsWin64 || IsUEFI64)
       return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
@@ -467,7 +468,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
-      if (IsWin64) {
+      if (IsWin64 || IsUEFI64) {
         return (HasSSE ? CSR_Win64_RegCall_RegMask :
                          CSR_Win64_RegCall_NoSSE_RegMask);
       } else {
@@ -525,7 +526,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (IsSwiftCC)
       return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
 
-    return IsWin64 ? CSR_Win64_RegMask : CSR_64_RegMask;
+    return (IsWin64 || IsUEFI64) ? CSR_Win64_RegMask : CSR_64_RegMask;
   }
 
   return CSR_32_RegMask;

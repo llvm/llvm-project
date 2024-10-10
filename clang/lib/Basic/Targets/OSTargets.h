@@ -778,12 +778,19 @@ public:
   }
 };
 
+void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
+                       MacroBuilder &Builder);
+
 // UEFI target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {}
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__UEFI__");
+    Builder.defineMacro("__PECOFF__");
+    // addWindowsDefines(Triple, Opts, Builder);
+  }
 
 public:
   UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -793,8 +800,7 @@ public:
   }
 };
 
-void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
-                       MacroBuilder &Builder);
+
 
 // Windows target
 template <typename Target>

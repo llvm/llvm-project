@@ -826,10 +826,11 @@ public:
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
   }
 
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    getOSDefines(Opts, X86TargetInfo::getTriple(), Builder);
-  }
+  // void getTargetDefines(const LangOptions &Opts,
+  //                       MacroBuilder &Builder) const override {
+  //   getOSDefines(Opts, X86TargetInfo::getTriple(), Builder);
+  //   Builder.defineMacro("__x86_64__");
+  // }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::CharPtrBuiltinVaList;

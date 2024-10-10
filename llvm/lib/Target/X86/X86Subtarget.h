@@ -321,7 +321,11 @@ public:
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
 
-  bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
+  bool isUEFI() const { return TargetTriple.isUEFI(); }
+
+  bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
+
+  bool isTargetWin64() const { return Is64Bit && (isOSWindows() || isUEFI()); }
 
   bool isTargetWin32() const { return !Is64Bit && isOSWindows(); }
 
@@ -335,8 +339,11 @@ public:
   bool isPositionIndependent() const;
 
   bool isCallingConvWin64(CallingConv::ID CC) const {
+    // llvm::outs() << "\nIn isCallingConvWin64 check calling
+    // convention******************* ";
     switch (CC) {
-    // On Win64, all these conventions just use the default convention.
+    // On Win64 and UEFI64, all these conventions just use the default
+    // convention.
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Tail:
@@ -347,9 +354,11 @@ public:
     case CallingConv::X86_ThisCall:
     case CallingConv::X86_VectorCall:
     case CallingConv::Intel_OCL_BI:
-      return isTargetWin64();
+      return isTargetWin64() || isTargetUEFI64();
     // This convention allows using the Win64 convention on other targets.
     case CallingConv::Win64:
+      // llvm::outs() << "\nReturning true for Win64 calling
+      // convention******************* ";
       return true;
     // This convention allows using the SysV convention on Windows targets.
     case CallingConv::X86_64_SysV:

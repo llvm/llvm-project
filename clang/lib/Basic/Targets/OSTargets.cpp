@@ -260,6 +260,7 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
                        MacroBuilder &Builder) {
   Builder.defineMacro("_WIN32");
+  Builder.defineMacro("__PECOFF__");
   if (Triple.isArch64Bit())
     Builder.defineMacro("_WIN64");
   if (Triple.isWindowsGNUEnvironment())
