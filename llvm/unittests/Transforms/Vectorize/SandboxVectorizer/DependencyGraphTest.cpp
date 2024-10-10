@@ -7,7 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
@@ -20,12 +26,34 @@ using namespace llvm;
 struct DependencyGraphTest : public testing::Test {
   LLVMContext C;
   std::unique_ptr<Module> M;
+  std::unique_ptr<AssumptionCache> AC;
+  std::unique_ptr<DominatorTree> DT;
+  std::unique_ptr<BasicAAResult> BAA;
+  std::unique_ptr<AAResults> AA;
 
   void parseIR(LLVMContext &C, const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
     if (!M)
       Err.print("DependencyGraphTest", errs());
+  }
+
+  AAResults &getAA(llvm::Function &LLVMF) {
+    TargetLibraryInfoImpl TLII;
+    TargetLibraryInfo TLI(TLII);
+    AA = std::make_unique<AAResults>(TLI);
+    AC = std::make_unique<AssumptionCache>(LLVMF);
+    DT = std::make_unique<DominatorTree>(LLVMF);
+    BAA = std::make_unique<BasicAAResult>(M->getDataLayout(), LLVMF, TLI, *AC,
+                                          DT.get());
+    AA->addAAResult(*BAA);
+    return *AA;
+  }
+  /// \Returns true if there is a dependency: SrcN->DstN.
+  bool dependency(sandboxir::DGNode *SrcN, sandboxir::DGNode *DstN) {
+    const auto &Preds = DstN->memPreds();
+    auto It = find(Preds, SrcN);
+    return It != Preds.end();
   }
 };
 
@@ -151,6 +179,7 @@ define void @foo(i8 %v1, ptr %ptr) {
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
+
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
   auto It = BB->begin();
@@ -165,7 +194,7 @@ define void @foo(i8 %v1, ptr %ptr) {
   auto *Call = cast<sandboxir::CallInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG;
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Store)));
   EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Load)));
@@ -195,7 +224,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
-  sandboxir::DependencyGraph DAG;
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   auto Span = DAG.extend({&*BB->begin(), BB->getTerminator()});
   // Check extend().
   EXPECT_EQ(Span.top(), &*BB->begin());
@@ -214,7 +243,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   // Check memPreds().
   EXPECT_TRUE(N0->memPreds().empty());
   EXPECT_THAT(N1->memPreds(), testing::ElementsAre(N0));
-  EXPECT_THAT(N2->memPreds(), testing::ElementsAre(N1));
+  EXPECT_TRUE(N2->memPreds().empty());
 }
 
 TEST_F(DependencyGraphTest, MemDGNode_getPrevNode_getNextNode) {
@@ -236,7 +265,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG;
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   DAG.extend({&*BB->begin(), BB->getTerminator()});
 
   auto *S0N = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
@@ -270,7 +299,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG;
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   DAG.extend({&*BB->begin(), BB->getTerminator()});
 
   auto *S0N = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
@@ -312,4 +341,279 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_THAT(
       getPtrVec(sandboxir::MemDGNodeIntervalBuilder::make({Add0, Add0}, DAG)),
       testing::ElementsAre());
+}
+
+TEST_F(DependencyGraphTest, AliasingStores) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
+  store i8 %v0, ptr %ptr
+  store i8 %v1, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+  auto It = BB->begin();
+  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
+  EXPECT_TRUE(Store0N->memPreds().empty());
+  EXPECT_THAT(Store1N->memPreds(), testing::ElementsAre(Store0N));
+  EXPECT_TRUE(RetN->memPreds().empty());
+}
+
+TEST_F(DependencyGraphTest, NonAliasingStores) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v0, i8 %v1) {
+  store i8 %v0, ptr %ptr0
+  store i8 %v1, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+  auto It = BB->begin();
+  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
+  // We expect no dependencies because the stores don't alias.
+  EXPECT_TRUE(Store0N->memPreds().empty());
+  EXPECT_TRUE(Store1N->memPreds().empty());
+  EXPECT_TRUE(RetN->memPreds().empty());
+}
+
+TEST_F(DependencyGraphTest, VolatileLoads) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
+  %ld0 = load volatile i8, ptr %ptr0
+  %ld1 = load volatile i8, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+  auto It = BB->begin();
+  auto *Ld0N = DAG.getNode(cast<sandboxir::LoadInst>(&*It++));
+  auto *Ld1N = DAG.getNode(cast<sandboxir::LoadInst>(&*It++));
+  auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
+  EXPECT_TRUE(Ld0N->memPreds().empty());
+  EXPECT_THAT(Ld1N->memPreds(), testing::ElementsAre(Ld0N));
+  EXPECT_TRUE(RetN->memPreds().empty());
+}
+
+TEST_F(DependencyGraphTest, VolatileSotres) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v) {
+  store volatile i8 %v, ptr %ptr0
+  store volatile i8 %v, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+  auto It = BB->begin();
+  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
+  EXPECT_TRUE(Store0N->memPreds().empty());
+  EXPECT_THAT(Store1N->memPreds(), testing::ElementsAre(Store0N));
+  EXPECT_TRUE(RetN->memPreds().empty());
+}
+
+TEST_F(DependencyGraphTest, Call) {
+  parseIR(C, R"IR(
+declare void @bar1()
+declare void @bar2()
+define void @foo(float %v1, float %v2) {
+  call void @bar1()
+  %add = fadd float %v1, %v2
+  call void @bar2()
+  ret void
+}
+)IR");
+  Function *LLVMF = M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
+
+  auto It = BB->begin();
+  auto *Call1N = DAG.getNode(&*It++);
+  auto *AddN = DAG.getNode(&*It++);
+  auto *Call2N = DAG.getNode(&*It++);
+
+  EXPECT_THAT(Call1N->memPreds(), testing::ElementsAre());
+  EXPECT_THAT(AddN->memPreds(), testing::ElementsAre());
+  EXPECT_THAT(Call2N->memPreds(), testing::ElementsAre(Call1N));
+}
+
+// Check that there is a dependency: stacksave -> alloca -> stackrestore.
+TEST_F(DependencyGraphTest, StackSaveRestoreInAlloca) {
+  parseIR(C, R"IR(
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr %ptr)
+
+define void @foo() {
+  %stack0 = call ptr @llvm.stacksave()        ; Should depend on store
+  %alloca0 = alloca inalloca i8               ; Should depend on stacksave
+  call void @llvm.stackrestore(ptr %stack0)   ; Should depend transiently on %alloca0
+  ret void
+}
+)IR");
+  Function *LLVMF = M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
+
+  auto It = BB->begin();
+  auto *StackSaveN = DAG.getNode(&*It++);
+  auto *AllocaN = DAG.getNode(&*It++);
+  auto *StackRestoreN = DAG.getNode(&*It++);
+
+  EXPECT_TRUE(dependency(AllocaN, StackRestoreN));
+  EXPECT_TRUE(dependency(StackSaveN, AllocaN));
+}
+
+// Checks that stacksave and stackrestore depend on other mem instrs.
+TEST_F(DependencyGraphTest, StackSaveRestoreDependOnOtherMem) {
+  parseIR(C, R"IR(
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr %ptr)
+
+define void @foo(i8 %v0, i8 %v1, ptr %ptr) {
+  store volatile i8 %v0, ptr %ptr, align 4
+  %stack0 = call ptr @llvm.stacksave()       ; Should depend on store
+  call void @llvm.stackrestore(ptr %stack0)  ; Should depend on stacksave
+  store volatile i8 %v1, ptr %ptr, align 4   ; Should depend on stackrestore
+  ret void
+}
+)IR");
+  Function *LLVMF = M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
+
+  auto It = BB->begin();
+  auto *Store0N = DAG.getNode(&*It++);
+  auto *StackSaveN = DAG.getNode(&*It++);
+  auto *StackRestoreN = DAG.getNode(&*It++);
+  auto *Store1N = DAG.getNode(&*It++);
+
+  EXPECT_TRUE(dependency(Store0N, StackSaveN));
+  EXPECT_TRUE(dependency(StackSaveN, StackRestoreN));
+  EXPECT_TRUE(dependency(StackRestoreN, Store1N));
+}
+
+// Make sure there is a dependency between a stackrestore and an alloca.
+TEST_F(DependencyGraphTest, StackRestoreAndInAlloca) {
+  parseIR(C, R"IR(
+declare void @llvm.stackrestore(ptr %ptr)
+
+define void @foo(ptr %ptr) {
+  call void @llvm.stackrestore(ptr %ptr)
+  %alloca0 = alloca inalloca i8              ; Should depend on stackrestore
+  ret void
+}
+)IR");
+  Function *LLVMF = M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
+
+  auto It = BB->begin();
+  auto *StackRestoreN = DAG.getNode(&*It++);
+  auto *AllocaN = DAG.getNode(&*It++);
+
+  EXPECT_TRUE(dependency(StackRestoreN, AllocaN));
+}
+
+// Make sure there is a dependency between the alloca and stacksave
+TEST_F(DependencyGraphTest, StackSaveAndInAlloca) {
+  parseIR(C, R"IR(
+declare ptr @llvm.stacksave()
+
+define void @foo(ptr %ptr) {
+  %alloca0 = alloca inalloca i8              ; Should depend on stackrestore
+  %stack0 = call ptr @llvm.stacksave()       ; Should depend on alloca0
+  ret void
+}
+)IR");
+  Function *LLVMF = M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
+
+  auto It = BB->begin();
+  auto *AllocaN = DAG.getNode(&*It++);
+  auto *StackSaveN = DAG.getNode(&*It++);
+
+  EXPECT_TRUE(dependency(AllocaN, StackSaveN));
+}
+
+// A non-InAlloca in a stacksave-stackrestore region does not need extra
+// dependencies.
+TEST_F(DependencyGraphTest, StackSaveRestoreNoInAlloca) {
+  parseIR(C, R"IR(
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr %ptr)
+declare void @use(ptr %ptr)
+
+define void @foo() {
+  %stack = call ptr @llvm.stacksave()
+  %alloca1 = alloca i8                         ; No dependency
+  call void @llvm.stackrestore(ptr %stack)
+  ret void
+}
+)IR");
+  Function *LLVMF = M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
+
+  auto It = BB->begin();
+  auto *StackSaveN = DAG.getNode(&*It++);
+  auto *AllocaN = DAG.getNode(&*It++);
+  auto *StackRestoreN = DAG.getNode(&*It++);
+
+  EXPECT_FALSE(dependency(StackSaveN, AllocaN));
+  EXPECT_FALSE(dependency(AllocaN, StackRestoreN));
 }

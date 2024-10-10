@@ -222,7 +222,7 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
   CufAllocOpConversion(mlir::MLIRContext *context, mlir::DataLayout *dl,
-                       fir::LLVMTypeConverter *typeConverter)
+                       const fir::LLVMTypeConverter *typeConverter)
       : OpRewritePattern(context), dl{dl}, typeConverter{typeConverter} {}
 
   mlir::LogicalResult
@@ -311,7 +311,7 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
 
 private:
   mlir::DataLayout *dl;
-  fir::LLVMTypeConverter *typeConverter;
+  const fir::LLVMTypeConverter *typeConverter;
 };
 
 struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
@@ -583,7 +583,7 @@ public:
 } // namespace
 
 void cuf::populateCUFToFIRConversionPatterns(
-    fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
+    const fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
     mlir::RewritePatternSet &patterns) {
   patterns.insert<CufAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,

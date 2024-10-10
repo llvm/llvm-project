@@ -131,7 +131,7 @@ struct FormatStyle {
     /// Don't align array initializer columns.
     AIAS_None
   };
-  /// if not ``None``, when using initialization for an array of structs
+  /// If not ``None``, when using initialization for an array of structs
   /// aligns the fields into columns.
   ///
   /// \note
@@ -145,11 +145,12 @@ struct FormatStyle {
   /// Alignment options.
   ///
   /// They can also be read as a whole for compatibility. The choices are:
-  /// - None
-  /// - Consecutive
-  /// - AcrossEmptyLines
-  /// - AcrossComments
-  /// - AcrossEmptyLinesAndComments
+  ///
+  /// * ``None``
+  /// * ``Consecutive``
+  /// * ``AcrossEmptyLines``
+  /// * ``AcrossComments``
+  /// * ``AcrossEmptyLinesAndComments``
   ///
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
@@ -225,6 +226,20 @@ struct FormatStyle {
     ///   bbb = 2;
     /// \endcode
     bool AlignCompound;
+    /// Only for ``AlignConsecutiveDeclarations``. Whether function declarations
+    /// are aligned.
+    /// \code
+    ///   true:
+    ///   unsigned int f1(void);
+    ///   void         f2(void);
+    ///   size_t       f3(void);
+    ///
+    ///   false:
+    ///   unsigned int f1(void);
+    ///   void f2(void);
+    ///   size_t f3(void);
+    /// \endcode
+    bool AlignFunctionDeclarations;
     /// Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
     /// aligned.
     /// \code
@@ -264,6 +279,7 @@ struct FormatStyle {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
              AlignCompound == R.AlignCompound &&
+             AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
              PadOperators == R.PadOperators;
     }

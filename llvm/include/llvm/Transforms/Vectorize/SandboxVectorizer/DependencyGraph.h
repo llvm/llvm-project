@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/IntrinsicInst.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
@@ -47,6 +48,7 @@ protected:
   // TODO: Use a PointerIntPair for SubclassID and I.
   /// For isa/dyn_cast etc.
   DGNodeID SubclassID;
+  // TODO: Move MemPreds to MemDGNode.
   /// Memory predecessors.
   DenseSet<MemDGNode *> MemPreds;
 
@@ -86,13 +88,20 @@ public:
            (!(II = dyn_cast<IntrinsicInst>(I)) || isMemIntrinsic(II));
   }
 
+  /// \Returns true if \p I is fence like. It excludes non-mem intrinsics.
+  static bool isFenceLike(Instruction *I) {
+    IntrinsicInst *II;
+    return I->isFenceLike() &&
+           (!(II = dyn_cast<IntrinsicInst>(I)) || isMemIntrinsic(II));
+  }
+
   /// \Returns true if \p I is a memory dependency candidate instruction.
   static bool isMemDepNodeCandidate(Instruction *I) {
     AllocaInst *Alloca;
     return isMemDepCandidate(I) ||
            ((Alloca = dyn_cast<AllocaInst>(I)) &&
             Alloca->isUsedWithInAlloca()) ||
-           isStackSaveOrRestoreIntrinsic(I);
+           isStackSaveOrRestoreIntrinsic(I) || isFenceLike(I);
   }
 
   Instruction *getInstruction() const { return I; }
@@ -110,7 +119,7 @@ public:
 
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS, bool PrintDeps = true) const;
-  friend raw_ostream &operator<<(DGNode &N, raw_ostream &OS) {
+  friend raw_ostream &operator<<(raw_ostream &OS, DGNode &N) {
     N.print(OS);
     return OS;
   }
@@ -159,8 +168,36 @@ private:
   /// The DAG spans across all instructions in this interval.
   Interval<Instruction> DAGInterval;
 
+  std::unique_ptr<BatchAAResults> BatchAA;
+
+  enum class DependencyType {
+    ReadAfterWrite,  ///> Memory dependency write -> read
+    WriteAfterWrite, ///> Memory dependency write -> write
+    WriteAfterRead,  ///> Memory dependency read -> write
+    Control,         ///> Control-related dependency, like with PHI/Terminator
+    Other,           ///> Currently used for stack related instrs
+    None,            ///> No memory/other dependency
+  };
+  /// \Returns the dependency type depending on whether instructions may
+  /// read/write memory or whether they are some specific opcode-related
+  /// restrictions.
+  /// Note: It does not check whether a memory dependency is actually correct,
+  /// as it won't call AA. Therefore it returns the worst-case dep type.
+  static DependencyType getRoughDepType(Instruction *FromI, Instruction *ToI);
+
+  // TODO: Implement AABudget.
+  /// \Returns true if there is a memory/other dependency \p SrcI->DstI.
+  bool alias(Instruction *SrcI, Instruction *DstI, DependencyType DepType);
+
+  bool hasDep(sandboxir::Instruction *SrcI, sandboxir::Instruction *DstI);
+
+  /// Go through all mem nodes in \p SrcScanRange and try to add dependencies to
+  /// \p DstN.
+  void scanAndAddDeps(DGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
+
 public:
-  DependencyGraph() {}
+  DependencyGraph(AAResults &AA)
+      : BatchAA(std::make_unique<BatchAAResults>(AA)) {}
 
   DGNode *getNode(Instruction *I) const {
     auto It = InstrToNodeMap.find(I);

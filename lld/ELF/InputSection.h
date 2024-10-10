@@ -244,9 +244,7 @@ public:
   // relocations, assuming that Buf points to this section's copy in
   // the mmap'ed output buffer.
   template <class ELFT> void relocate(uint8_t *buf, uint8_t *bufEnd);
-  static uint64_t getRelocTargetVA(const InputFile *File, RelType Type,
-                                   int64_t A, uint64_t P, const Symbol &Sym,
-                                   RelExpr Expr);
+  uint64_t getRelocTargetVA(Ctx &, const Relocation &r, uint64_t p) const;
 
   // The native ELF reloc data type is not very convenient to handle.
   // So we convert ELF reloc records to our own records in Relocations.cpp.
@@ -479,10 +477,10 @@ public:
 
   virtual ~SyntheticSection() = default;
   virtual size_t getSize(Ctx &) const = 0;
-  virtual bool updateAllocSize() { return false; }
+  virtual bool updateAllocSize(Ctx &) { return false; }
   // If the section has the SHF_ALLOC flag and the size may be changed if
   // thunks are added, update the section size.
-  virtual bool isNeeded() const { return true; }
+  virtual bool isNeeded(Ctx &) const { return true; }
   virtual void finalizeContents(Ctx &) {}
   virtual void writeTo(Ctx &, uint8_t *buf) = 0;
 
