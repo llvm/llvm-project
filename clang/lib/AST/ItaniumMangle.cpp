@@ -4510,14 +4510,15 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_s";
     break;
   }
-  mangleVendorQualifier(Str);
   if (Attrs.IsROV)
-    mangleVendorQualifier("_ROV");
+    Str += "_ROV";
   if (Attrs.RawBuffer)
-    mangleVendorQualifier("_Raw");
+    Str += "_Raw";
+  if (T->hasContainedType())
+    Str += "_CT";
+  mangleVendorQualifier(Str);
 
-  if (!T->hasContainedType()) {
-    mangleVendorQualifier("__CT");
+  if (T->hasContainedType()) {
     mangleType(T->getContainedType());
   }
   mangleType(T->getWrappedType());

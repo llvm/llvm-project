@@ -11544,10 +11544,12 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
         LHS->castAs<HLSLAttributedResourceType>();
     const HLSLAttributedResourceType *RHSTy =
         RHS->castAs<HLSLAttributedResourceType>();
+    assert(LHSTy->getWrappedType() == RHSTy->getWrappedType() &&
+           LHSTy->getWrappedType()->isHLSLResourceType() &&
+           "HLSLAttributedResourceType should always wrap __hlsl_resource_t");
 
-    if (LHSTy->getWrappedType() == RHSTy->getWrappedType() &&
-        LHSTy->getContainedType() == RHSTy->getContainedType() &&
-        LHSTy->getAttrs() == RHSTy->getAttrs())
+    if (LHSTy->getAttrs() == RHSTy->getAttrs() &&
+        LHSTy->getContainedType() == RHSTy->getContainedType())
       return LHS;
     return {};
   }
