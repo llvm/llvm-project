@@ -20,6 +20,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 using namespace llvm;
 
@@ -54,6 +55,7 @@ public:
 } // namespace
 
 static bool ParseParams;
+static bool Quote;
 static bool StripUnderscore;
 static bool Types;
 
@@ -64,7 +66,15 @@ static void error(const Twine &Message) {
   exit(1);
 }
 
-static std::string demangle(const std::string &Mangled) {
+// Quote Undecorated with "" if asked for and not already followed by a '"'
+static std::string optionalQuote(std::string Undecorated,
+                                 StringRef Delimiters) {
+  if (Quote && (Delimiters.empty() || Delimiters[0] != '"'))
+    return '"' + Undecorated + '"';
+  return Undecorated;
+}
+
+static std::string demangle(const std::string &Mangled, StringRef Delimiters) {
   using llvm::itanium_demangle::starts_with;
   std::string_view DecoratedStr = Mangled;
   bool CanHaveLeadingDot = true;
@@ -76,7 +86,7 @@ static std::string demangle(const std::string &Mangled) {
   std::string Result;
   if (nonMicrosoftDemangle(DecoratedStr, Result, CanHaveLeadingDot,
                            ParseParams))
-    return Result;
+    return optionalQuote(Result, Delimiters);
 
   std::string Prefix;
   char *Undecorated = nullptr;
@@ -89,7 +99,8 @@ static std::string demangle(const std::string &Mangled) {
     Undecorated = itaniumDemangle(DecoratedStr.substr(6), ParseParams);
   }
 
-  Result = Undecorated ? Prefix + Undecorated : Mangled;
+  Result =
+      Undecorated ? Prefix + optionalQuote(Undecorated, Delimiters) : Mangled;
   free(Undecorated);
   return Result;
 }
@@ -137,9 +148,10 @@ static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
     SmallVector<std::pair<StringRef, StringRef>, 16> Words;
     SplitStringDelims(Mangled, Words, IsLegalItaniumChar);
     for (const auto &Word : Words)
-      Result += ::demangle(std::string(Word.first)) + Word.second.str();
+      Result +=
+          ::demangle(std::string(Word.first), Word.second) + Word.second.str();
   } else
-    Result = ::demangle(std::string(Mangled));
+    Result = ::demangle(std::string(Mangled), "");
   OS << Result << '\n';
   OS.flush();
 }
@@ -171,6 +183,8 @@ int llvm_cxxfilt_main(int argc, char **argv, const llvm::ToolContext &) {
   ParseParams = !Args.hasArg(OPT_no_params);
 
   Types = Args.hasArg(OPT_types);
+
+  Quote = Args.hasArg(OPT_quote);
 
   std::vector<std::string> Decorated = Args.getAllArgValues(OPT_INPUT);
   if (Decorated.empty())

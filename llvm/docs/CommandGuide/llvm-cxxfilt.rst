@@ -52,6 +52,11 @@ OPTIONS
 
   Do not demangle function parameters or return types.
 
+.. option:: --quote, -q
+
+  Add `"` `"` around demangled function symbols, typically to keep LLVM/MLIR
+  assembly files with `@<symbols>` valid. Do not quote already quoted symbols.
+
 .. option:: --no-strip-underscore, -n
 
   Do not strip a leading underscore. This is the default for all platforms
