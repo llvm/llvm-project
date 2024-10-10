@@ -309,13 +309,43 @@ void SymbolTable::scanVersionScript() {
 
   // Then, assign versions to "*". In GNU linkers they have lower priority than
   // other wildcards.
+  bool globalAsteriskFound = false;
+  bool localAsteriskFound = false;
+  bool asteriskReported = false;
+  auto assignAsterisk = [&](SymbolVersion &pat, VersionDefinition *ver,
+                            bool isLocal) {
+    // Avoid issuing a warning if both '--retain-symbol-file' and a version
+    // script with `global: *` are used.
+    //
+    // '--retain-symbol-file' adds a "*" pattern to
+    // 'config->versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns', see
+    // 'readConfigs()' in 'Driver.cpp'. Note that it is not '.localPatterns',
+    // and may seem counterintuitive, but still works as expected. Here we can
+    // exploit that and skip analyzing the pattern added for this option.
+    if (!asteriskReported && (isLocal || ver->id > VER_NDX_LOCAL)) {
+      if ((isLocal && globalAsteriskFound) ||
+          (!isLocal && localAsteriskFound)) {
+        warn("wildcard pattern '*' is used for both 'local' and 'global' "
+             "scopes in version script");
+        asteriskReported = true;
+      } else if (!isLocal && globalAsteriskFound) {
+        warn("wildcard pattern '*' is used for multiple version definitions in "
+             "version script");
+        asteriskReported = true;
+      } else {
+        localAsteriskFound = isLocal;
+        globalAsteriskFound = !isLocal;
+      }
+    }
+    assignWildcard(pat, isLocal ? VER_NDX_LOCAL : ver->id, ver->name);
+  };
   for (VersionDefinition &v : llvm::reverse(ctx.arg.versionDefinitions)) {
     for (SymbolVersion &pat : v.nonLocalPatterns)
       if (pat.hasWildcard && pat.name == "*")
-        assignWildcard(pat, v.id, v.name);
+        assignAsterisk(pat, &v, false);
     for (SymbolVersion &pat : v.localPatterns)
       if (pat.hasWildcard && pat.name == "*")
-        assignWildcard(pat, VER_NDX_LOCAL, v.name);
+        assignAsterisk(pat, &v, true);
   }
 
   // Symbol themselves might know their versions because symbols
