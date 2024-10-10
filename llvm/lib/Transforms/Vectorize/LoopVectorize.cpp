@@ -1409,9 +1409,8 @@ public:
 
   /// Selects and saves TailFoldingStyle for 2 options - if IV update may
   /// overflow or not.
-  /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
-  void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
+  void setTailFoldingStyles(unsigned UserIC) {
     assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
       ChosenTailFoldingStyle =
@@ -1434,12 +1433,9 @@ public:
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
-    bool EVLIsLegal =
-        IsScalableVF && UserIC <= 1 &&
-        TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-        !EnableVPlanNativePath &&
-        // FIXME: implement support for max safe dependency distance.
-        Legal->isSafeForAnyVectorWidth();
+    bool EVLIsLegal = UserIC <= 1 &&
+                      TTI.hasActiveVectorLength(0, nullptr, Align()) &&
+                      !EnableVPlanNativePath;
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -1457,12 +1453,28 @@ public:
     }
   }
 
+  /// Disables previously chosen tail folding policy, sets it to None. Expects,
+  /// that the tail policy was selected.
+  void disableTailFolding() {
+    assert(ChosenTailFoldingStyle && "Tail folding must be selected.");
+    ChosenTailFoldingStyle =
+        std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
+  }
+
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const {
     // TODO: check if it is possible to check for None style independent of
     // IVUpdateMayOverflow flag in getTailFoldingStyle.
     return getTailFoldingStyle() != TailFoldingStyle::None;
   }
+
+  /// Return maximum safe number of elements to be processed, which do not
+  /// prevent store-load forwarding and safe with regard of the memory
+  /// dependencies. Required for EVL-based VPlans to correctly calculate AVL
+  /// (application vector length) as min(remaining AVL, MaxSafeElements).
+  /// TODO: need to consider adjusting cost model to use this value as a
+  /// vectorization factor for EVL-based vectorization.
+  std::optional<unsigned> getMaxSafeElements() const { return MaxSafeElements; }
 
   /// Returns true if the instructions in this block requires predication
   /// for any reason, e.g. because tail folding now requires a predicate
@@ -1614,6 +1626,11 @@ private:
 
   /// true if scalable vectorization is supported and enabled.
   std::optional<bool> IsScalableVectorizationAllowed;
+
+  /// Maximum safe number of elements to be processed, which do not
+  /// prevent store-load forwarding and safe with regard of the memory
+  /// dependencies.
+  std::optional<unsigned> MaxSafeElements;
 
   /// A map holding scalar costs for different vectorization factors. The
   /// presence of a cost for an instruction in the mapping indicates that the
@@ -3859,6 +3876,8 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
 
   auto MaxSafeFixedVF = ElementCount::getFixed(MaxSafeElements);
   auto MaxSafeScalableVF = getMaxLegalScalableVF(MaxSafeElements);
+  if (!Legal->isSafeForAnyVectorWidth())
+    this->MaxSafeElements = MaxSafeElements;
 
   LLVM_DEBUG(dbgs() << "LV: The max safe fixed VF is: " << MaxSafeFixedVF
                     << ".\n");
@@ -4028,7 +4047,10 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
-  FixedScalableVFPair MaxFactors = computeFeasibleMaxVF(MaxTC, UserVF, true);
+  // Set requested tail folding style.
+  setTailFoldingStyles(UserIC);
+  FixedScalableVFPair MaxFactors =
+      computeFeasibleMaxVF(MaxTC, UserVF, foldTailByMasking());
 
   // Avoid tail folding if the trip count is known to be a multiple of any VF
   // we choose.
@@ -4036,7 +4058,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
     std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
-    if (MaxVScale && TTI.isVScaleKnownToBeAPowerOfTwo()) {
+    // If scalable vector factor is not set or power-of-2 or tail folding with
+    // EVL is not set, try to avoid tail folding if the trip count is known to
+    // be a multiple of any chosen VF.
+    if (MaxVScale && TTI.isVScaleKnownToBeAPowerOfTwo() &&
+        (!foldTailWithEVL() || isPowerOf2_32(MaxSafeElements.value_or(0)))) {
       MaxPowerOf2RuntimeVF = std::max<unsigned>(
           *MaxPowerOf2RuntimeVF,
           *MaxVScale * MaxFactors.ScalableVF.getKnownMinValue());
@@ -4065,15 +4091,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     if (Rem->isZero()) {
       // Accept MaxFixedVF if we do not have a tail.
       LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
+      disableTailFolding();
       return MaxFactors;
     }
   }
 
-  // If we don't know the precise trip count, or if the trip count that we
-  // found modulo the vectorization factor is not zero, try to fold the tail
-  // by masking.
-  // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
-  setTailFoldingStyles(MaxFactors.ScalableVF.isScalable(), UserIC);
   if (foldTailByMasking()) {
     if (getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
       LLVM_DEBUG(
@@ -8665,8 +8687,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       VPlanTransforms::optimize(*Plan);
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
-      if (CM.foldTailWithEVL() &&
-          !VPlanTransforms::tryAddExplicitVectorLength(*Plan))
+      if (CM.foldTailWithEVL() && !VPlanTransforms::tryAddExplicitVectorLength(
+                                      *Plan, CM.getMaxSafeElements()))
         break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
