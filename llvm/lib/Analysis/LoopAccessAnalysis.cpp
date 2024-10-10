@@ -512,10 +512,8 @@ void RuntimePointerChecking::groupChecks(
   unsigned TotalComparisons = 0;
 
   DenseMap<Value *, SmallVector<unsigned>> PositionMap;
-  for (unsigned Index = 0; Index < Pointers.size(); ++Index) {
-    auto [It, _] = PositionMap.insert({Pointers[Index].PointerValue, {}});
-    It->second.push_back(Index);
-  }
+  for (unsigned Index = 0; Index < Pointers.size(); ++Index)
+    PositionMap[Pointers[Index].PointerValue].push_back(Index);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.

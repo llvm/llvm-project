@@ -375,6 +375,16 @@ static DecodeStatus decodeFRMArg(MCInst &Inst, uint32_t Imm, int64_t Address,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
+                                 const MCDisassembler *Decoder) {
+  assert(isUInt<3>(Imm) && "Invalid immediate");
+  if (Imm != RISCVFPRndMode::RTZ)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);

@@ -19,10 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines/CoroSplit.h"
-#include "ABI.h"
-#include "CoroInstr.h"
 #include "CoroInternal.h"
-#include "MaterializationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -64,6 +61,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Coroutines/ABI.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/MaterializationUtils.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
@@ -2053,7 +2053,8 @@ void coro::SwitchABI::splitCoroutine(Function &F, coro::Shape &Shape,
 }
 
 static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
-                             coro::BaseABI &ABI, TargetTransformInfo &TTI) {
+                             coro::BaseABI &ABI, TargetTransformInfo &TTI,
+                             bool OptimizeFrame) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
   auto &Shape = ABI.Shape;
@@ -2064,7 +2065,7 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   simplifySuspendPoints(Shape);
 
   normalizeCoroutine(F, Shape, TTI);
-  ABI.buildCoroutineFrame();
+  ABI.buildCoroutineFrame(OptimizeFrame);
   replaceFrameSizeAndAlignment(Shape);
 
   bool isNoSuspendCoroutine = Shape.CoroSuspends.empty();
@@ -2273,7 +2274,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     // unreachable blocks before collecting intrinsics into Shape.
     removeUnreachableBlocks(F);
 
-    coro::Shape Shape(F, OptimizeFrame);
+    coro::Shape Shape(F);
     if (!Shape.CoroBegin)
       continue;
 
@@ -2283,7 +2284,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
     SmallVector<Function *, 4> Clones;
     auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
-    doSplitCoroutine(F, Clones, *ABI, TTI);
+    doSplitCoroutine(F, Clones, *ABI, TTI, OptimizeFrame);
     CurrentSCC = &updateCallGraphAfterCoroutineSplit(
         *N, Shape, Clones, *CurrentSCC, CG, AM, UR, FAM);
 

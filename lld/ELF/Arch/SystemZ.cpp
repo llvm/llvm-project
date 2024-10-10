@@ -170,7 +170,7 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
 
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -183,7 +183,7 @@ void SystemZ::writeGotHeader(uint8_t *buf) const {
 }
 
 void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  write64be(buf, s.getPltVA() + 14);
+  write64be(buf, s.getPltVA(ctx) + 14);
 }
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
@@ -227,9 +227,9 @@ void SystemZ::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  write32be(buf + 2, (sym.getGotPltVA() - pltEntryAddr) >> 1);
+  write32be(buf + 2, (sym.getGotPltVA(ctx) - pltEntryAddr) >> 1);
   write32be(buf + 24, (ctx.in.plt->getVA() - pltEntryAddr - 22) >> 1);
-  write32be(buf + 28, ctx.in.relaPlt->entsize * sym.getPltIdx());
+  write32be(buf + 28, ctx.in.relaPlt->entsize * sym.getPltIdx(ctx));
 }
 
 int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
@@ -261,7 +261,7 @@ int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -447,12 +447,11 @@ bool SystemZ::relaxOnce(int pass) const {
           continue;
 
         uint64_t v = sec->getRelocTargetVA(
-            sec->file, rel.type, rel.addend,
-            sec->getOutputSection()->addr + rel.offset, *rel.sym, rel.expr);
+            ctx, rel, sec->getOutputSection()->addr + rel.offset);
         if (isInt<33>(v) && !(v & 1))
           continue;
         if (rel.sym->auxIdx == 0) {
-          rel.sym->allocateAux();
+          rel.sym->allocateAux(ctx);
           addGotEntry(ctx, *rel.sym);
           changed = true;
         }
@@ -601,7 +600,4 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-TargetInfo *elf::getSystemZTargetInfo(Ctx &ctx) {
-  static SystemZ t(ctx);
-  return &t;
-}
+void elf::setSystemZTargetInfo(Ctx &ctx) { ctx.target.reset(new SystemZ(ctx)); }

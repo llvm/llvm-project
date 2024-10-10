@@ -1216,6 +1216,8 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
+  if (T->isDependentType())
+    return true;
   if (RefOkay) {
     if (T->isReferenceType())
       return true;
@@ -1284,7 +1286,7 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     for (unsigned I = 0, E = getFunctionOrMethodNumParams(D);
          I != E && !AnyPointers; ++I) {
       QualType T = getFunctionOrMethodParamType(D, I);
-      if (T->isDependentType() || S.isValidPointerAttrType(T))
+      if (S.isValidPointerAttrType(T))
         AnyPointers = true;
     }
 
@@ -1409,8 +1411,7 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
   AllocAlignAttr TmpAttr(Context, CI, ParamIdx());
   SourceLocation AttrLoc = CI.getLoc();
 
-  if (!ResultType->isDependentType() &&
-      !isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
+  if (!isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
     Diag(AttrLoc, diag::warn_attribute_return_pointers_refs_only)
         << &TmpAttr << CI.getRange() << getFunctionOrMethodResultSourceRange(D);
     return;
@@ -3040,6 +3041,54 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
   llvm::SmallVector<StringRef, 8> Features;
+  if (Context.getTargetInfo().getTriple().isRISCV()) {
+    llvm::SmallVector<StringRef, 8> AttrStrs;
+    AttrStr.split(AttrStrs, ';');
+
+    bool HasArch = false;
+    bool HasPriority = false;
+    bool HasDefault = false;
+    bool DuplicateAttr = false;
+    for (auto &AttrStr : AttrStrs) {
+      // Only support arch=+ext,... syntax.
+      if (AttrStr.starts_with("arch=+")) {
+        if (HasArch)
+          DuplicateAttr = true;
+        HasArch = true;
+        ParsedTargetAttr TargetAttr =
+            Context.getTargetInfo().parseTargetAttr(AttrStr);
+
+        if (TargetAttr.Features.empty() ||
+            llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+              return !RISCV().isValidFMVExtension(Ext);
+            }))
+          return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << AttrStr << TargetVersion;
+      } else if (AttrStr.starts_with("default")) {
+        if (HasDefault)
+          DuplicateAttr = true;
+        HasDefault = true;
+      } else if (AttrStr.consume_front("priority=")) {
+        if (HasPriority)
+          DuplicateAttr = true;
+        HasPriority = true;
+        int Digit;
+        if (AttrStr.getAsInteger(0, Digit))
+          return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << AttrStr << TargetVersion;
+      } else {
+        return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+      }
+    }
+
+    if (((HasPriority || HasArch) && HasDefault) || DuplicateAttr ||
+        (HasPriority && !HasArch))
+      return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << AttrStr << TargetVersion;
+
+    return false;
+  }
   AttrStr.split(Features, "+");
   for (auto &CurFeature : Features) {
     CurFeature = CurFeature.trim();

@@ -78,9 +78,7 @@ void insertChildMapInfoIntoParent(
     std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs);
+    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms);
 
 mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);

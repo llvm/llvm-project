@@ -15,11 +15,7 @@
 // the value into the coroutine frame.
 //===----------------------------------------------------------------------===//
 
-#include "ABI.h"
 #include "CoroInternal.h"
-#include "MaterializationUtils.h"
-#include "SpillUtils.h"
-#include "SuspendCrossingInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -33,6 +29,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/OptimizedStructLayout.h"
+#include "llvm/Transforms/Coroutines/ABI.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/MaterializationUtils.h"
+#include "llvm/Transforms/Coroutines/SpillUtils.h"
+#include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -234,7 +235,7 @@ public:
   /// Side Effects: Because We sort the allocas, the order of allocas in the
   /// frame may be different with the order in the source code.
   void addFieldForAllocas(const Function &F, FrameDataInfo &FrameData,
-                          coro::Shape &Shape);
+                          coro::Shape &Shape, bool OptimizeFrame);
 
   /// Add a field to this structure.
   [[nodiscard]] FieldIDType addField(Type *Ty, MaybeAlign MaybeFieldAlignment,
@@ -336,7 +337,8 @@ void FrameDataInfo::updateLayoutIndex(FrameTypeBuilder &B) {
 
 void FrameTypeBuilder::addFieldForAllocas(const Function &F,
                                           FrameDataInfo &FrameData,
-                                          coro::Shape &Shape) {
+                                          coro::Shape &Shape,
+                                          bool OptimizeFrame) {
   using AllocaSetType = SmallVector<AllocaInst *, 4>;
   SmallVector<AllocaSetType, 4> NonOverlapedAllocas;
 
@@ -350,7 +352,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
     }
   });
 
-  if (!Shape.OptimizeFrame) {
+  if (!OptimizeFrame) {
     for (const auto &A : FrameData.Allocas) {
       AllocaInst *Alloca = A.Alloca;
       NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
@@ -796,8 +798,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
     AlignInBits = OffsetCache[Index].first * 8;
     OffsetInBits = OffsetCache[Index].second * 8;
 
-    if (NameCache.contains(Index)) {
-      Name = NameCache[Index].str();
+    if (auto It = NameCache.find(Index); It != NameCache.end()) {
+      Name = It->second.str();
       DITy = TyCache[Index];
     } else {
       DITy = solveDIType(DBuilder, Ty, Layout, FrameDITy, LineNum, DITypeCache);
@@ -860,7 +862,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 //     ... spills ...
 //   };
 static StructType *buildFrameType(Function &F, coro::Shape &Shape,
-                                  FrameDataInfo &FrameData) {
+                                  FrameDataInfo &FrameData,
+                                  bool OptimizeFrame) {
   LLVMContext &C = F.getContext();
   const DataLayout &DL = F.getDataLayout();
   StructType *FrameTy = [&] {
@@ -905,7 +908,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 
   // Because multiple allocas may own the same field slot,
   // we add allocas to field here.
-  B.addFieldForAllocas(F, FrameData, Shape);
+  B.addFieldForAllocas(F, FrameData, Shape, OptimizeFrame);
   // Add PromiseAlloca to Allocas list so that
   // 1. updateLayoutIndex could update its index after
   // `performOptimizedStructLayout`
@@ -2056,7 +2059,7 @@ void coro::normalizeCoroutine(Function &F, coro::Shape &Shape,
   rewritePHIs(F);
 }
 
-void coro::BaseABI::buildCoroutineFrame() {
+void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
   SuspendCrossingInfo Checker(F, Shape.CoroSuspends, Shape.CoroEnds);
   doRematerializations(F, Checker, IsMaterializable);
 
@@ -2087,7 +2090,7 @@ void coro::BaseABI::buildCoroutineFrame() {
 
   // Build frame
   FrameDataInfo FrameData(Spills, Allocas);
-  Shape.FrameTy = buildFrameType(F, Shape, FrameData);
+  Shape.FrameTy = buildFrameType(F, Shape, FrameData, OptimizeFrame);
   Shape.FramePtr = Shape.CoroBegin;
   // For now, this works for C++ programs only.
   buildFrameDebugInfo(F, Shape, FrameData);

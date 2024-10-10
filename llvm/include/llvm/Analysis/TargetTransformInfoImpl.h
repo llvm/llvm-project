@@ -377,6 +377,11 @@ public:
     return false;
   }
 
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const {
+    return false;
+  }
+
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
@@ -971,6 +976,13 @@ public:
                              Align Alignment) const {
     return false;
   }
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const {
+    return false;
+  }
+
+  bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
 
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {

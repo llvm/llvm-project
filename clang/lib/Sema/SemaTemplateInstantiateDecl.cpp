@@ -4986,6 +4986,16 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       Function->setInstantiationIsPending(true);
       PendingInstantiations.push_back(
         std::make_pair(Function, PointOfInstantiation));
+
+      if (llvm::isTimeTraceVerbose()) {
+        llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
+          std::string Name;
+          llvm::raw_string_ostream OS(Name);
+          Function->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                         /*Qualified=*/true);
+          return Name;
+        });
+      }
     } else if (TSK == TSK_ImplicitInstantiation) {
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&
           !getSourceManager().isInSystemHeader(PatternDecl->getBeginLoc())) {

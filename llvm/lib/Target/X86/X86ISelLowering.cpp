@@ -5190,6 +5190,21 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
   return true;
 }
 
+static bool isConstantPowerOf2(SDValue V, unsigned EltSizeInBIts,
+                               bool AllowUndefs) {
+  APInt UndefElts;
+  SmallVector<APInt, 64> EltBits;
+  if (!getTargetConstantBitsFromNode(V, EltSizeInBIts, UndefElts, EltBits,
+                                     /*AllowWholeUndefs*/ AllowUndefs,
+                                     /*AllowPartialUndefs*/ false))
+    return false;
+
+  bool IsPow2OrUndef = true;
+  for (unsigned I = 0, E = EltBits.size(); I != E; ++I)
+    IsPow2OrUndef &= UndefElts[I] || EltBits[I].isPowerOf2();
+  return IsPow2OrUndef;
+}
+
 // Match not(xor X, -1) -> X.
 // Match not(pcmpgt(C, X)) -> pcmpgt(X, C - 1).
 // Match not(extract_subvector(xor X, -1)) -> extract_subvector(X).
@@ -23600,17 +23615,11 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   // Revert part of the simplifySetCCWithAnd combine, to avoid an invert.
   if (Cond == ISD::SETNE && ISD::isBuildVectorAllZeros(Op1.getNode())) {
     SDValue BC0 = peekThroughBitcasts(Op0);
-    if (BC0.getOpcode() == ISD::AND) {
-      APInt UndefElts;
-      SmallVector<APInt, 64> EltBits;
-      if (getTargetConstantBitsFromNode(
-              BC0.getOperand(1), VT.getScalarSizeInBits(), UndefElts, EltBits,
-              /*AllowWholeUndefs*/ false, /*AllowPartialUndefs*/ false)) {
-        if (llvm::all_of(EltBits, [](APInt &V) { return V.isPowerOf2(); })) {
-          Cond = ISD::SETEQ;
-          Op1 = DAG.getBitcast(VT, BC0.getOperand(1));
-        }
-      }
+    if (BC0.getOpcode() == ISD::AND &&
+        isConstantPowerOf2(BC0.getOperand(1), VT.getScalarSizeInBits(),
+                           /*AllowUndefs=*/false)) {
+      Cond = ISD::SETEQ;
+      Op1 = DAG.getBitcast(VT, BC0.getOperand(1));
     }
   }
 
@@ -34662,29 +34671,6 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
-bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
-  unsigned Bits = Ty->getScalarSizeInBits();
-
-  // XOP has v16i8/v8i16/v4i32/v2i64 variable vector shifts.
-  // Splitting for v32i8/v16i16 on XOP+AVX2 targets is still preferred.
-  if (Subtarget.hasXOP() &&
-      (Bits == 8 || Bits == 16 || Bits == 32 || Bits == 64))
-    return false;
-
-  // AVX2 has vpsllv[dq] instructions (and other shifts) that make variable
-  // shifts just as cheap as scalar ones.
-  if (Subtarget.hasAVX2() && (Bits == 32 || Bits == 64))
-    return false;
-
-  // AVX512BW has shifts such as vpsllvw.
-  if (Subtarget.hasBWI() && Bits == 16)
-    return false;
-
-  // Otherwise, it's significantly cheaper to shift by a scalar amount than by a
-  // fully general vector.
-  return true;
-}
-
 bool X86TargetLowering::isBinOp(unsigned Opcode) const {
   switch (Opcode) {
   // These are non-commutative binops.
@@ -34793,63 +34779,6 @@ bool X86TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   case MVT::i16:
   case MVT::i32:
     // X86 has 8, 16, and 32-bit zero-extending loads.
-    return true;
-  }
-
-  return false;
-}
-
-bool X86TargetLowering::shouldSinkOperands(Instruction *I,
-                                           SmallVectorImpl<Use *> &Ops) const {
-  using namespace llvm::PatternMatch;
-
-  FixedVectorType *VTy = dyn_cast<FixedVectorType>(I->getType());
-  if (!VTy)
-    return false;
-
-  if (I->getOpcode() == Instruction::Mul &&
-      VTy->getElementType()->isIntegerTy(64)) {
-    for (auto &Op : I->operands()) {
-      // Make sure we are not already sinking this operand
-      if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
-        continue;
-
-      // Look for PMULDQ pattern where the input is a sext_inreg from vXi32 or
-      // the PMULUDQ pattern where the input is a zext_inreg from vXi32.
-      if (Subtarget.hasSSE41() &&
-          match(Op.get(), m_AShr(m_Shl(m_Value(), m_SpecificInt(32)),
-                                 m_SpecificInt(32)))) {
-        Ops.push_back(&cast<Instruction>(Op)->getOperandUse(0));
-        Ops.push_back(&Op);
-      } else if (Subtarget.hasSSE2() &&
-                 match(Op.get(),
-                       m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))))) {
-        Ops.push_back(&Op);
-      }
-    }
-
-    return !Ops.empty();
-  }
-
-  // A uniform shift amount in a vector shift or funnel shift may be much
-  // cheaper than a generic variable vector shift, so make that pattern visible
-  // to SDAG by sinking the shuffle instruction next to the shift.
-  int ShiftAmountOpNum = -1;
-  if (I->isShift())
-    ShiftAmountOpNum = 1;
-  else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    if (II->getIntrinsicID() == Intrinsic::fshl ||
-        II->getIntrinsicID() == Intrinsic::fshr)
-      ShiftAmountOpNum = 2;
-  }
-
-  if (ShiftAmountOpNum == -1)
-    return false;
-
-  auto *Shuf = dyn_cast<ShuffleVectorInst>(I->getOperand(ShiftAmountOpNum));
-  if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0 &&
-      isVectorShiftByScalarCheap(I->getType())) {
-    Ops.push_back(&I->getOperandUse(ShiftAmountOpNum));
     return true;
   }
 
@@ -46906,6 +46835,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
 
+    // select(pcmpeq(and(X,Pow2),0),A,B) -> select(pcmpeq(and(X,Pow2),Pow2),B,A)
+    if (Cond.getOpcode() == X86ISD::PCMPEQ &&
+        Cond.getOperand(0).getOpcode() == ISD::AND &&
+        ISD::isBuildVectorAllZeros(Cond.getOperand(1).getNode()) &&
+        isConstantPowerOf2(Cond.getOperand(0).getOperand(1),
+                           Cond.getScalarValueSizeInBits(),
+                           /*AllowUndefs=*/true) &&
+        Cond.hasOneUse()) {
+      Cond = DAG.getNode(X86ISD::PCMPEQ, DL, CondVT, Cond.getOperand(0),
+                         Cond.getOperand(0).getOperand(1));
+      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
+    }
+
     // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
     // signbit.
     if (Cond.getOpcode() == X86ISD::PCMPGT &&
@@ -48476,6 +48418,24 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalize() && VT.isVector())
     return reduceVMULWidth(N, DL, DAG, Subtarget);
 
+  if (VT != MVT::i64 && VT != MVT::i32 &&
+      (!VT.isVector() || !VT.isSimple() || !VT.isInteger()))
+    return SDValue();
+
+  KnownBits Known1 = DAG.computeKnownBits(N->getOperand(1));
+  if (!Known1.isConstant())
+    return SDValue();
+
+  const APInt &C = Known1.getConstant();
+  if (C.isZero())
+    return DAG.getConstant(0, DL, VT);
+
+  if (C.isAllOnes())
+    return DAG.getNegative(N->getOperand(0), DL, VT);
+
+  if (isPowerOf2_64(C.getZExtValue()))
+    return SDValue();
+
   // Optimize a single multiply with constant into two operations in order to
   // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
   if (!MulConstantOptimization)
@@ -48486,18 +48446,6 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
-    return SDValue();
-
-  if (VT != MVT::i64 && VT != MVT::i32 &&
-      (!VT.isVector() || !VT.isSimple() || !VT.isInteger()))
-    return SDValue();
-
-  KnownBits Known1 = DAG.computeKnownBits(N->getOperand(1));
-  if (!Known1.isConstant())
-    return SDValue();
-
-  const APInt &C = Known1.getConstant();
-  if (isPowerOf2_64(C.getZExtValue()))
     return SDValue();
 
   int64_t SignMulAmt = C.getSExtValue();
@@ -48563,10 +48511,6 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   }
   if (!NewMul) {
     EVT ShiftVT = VT.isVector() ? VT : MVT::i8;
-    assert(C.getZExtValue() != 0 &&
-           C.getZExtValue() != maxUIntN(VT.getScalarSizeInBits()) &&
-           "Both cases that could cause potential overflows should have "
-           "already been handled.");
     if (isPowerOf2_64(AbsMulAmt - 1)) {
       // (mul x, 2^N + 1) => (add (shl x, N), x)
       NewMul = DAG.getNode(
@@ -50027,17 +49971,14 @@ static SDValue getIndexFromUnindexedLoad(LoadSDNode *Ld) {
     return SDValue();
 
   SDValue Base = Ld->getBasePtr();
-
   if (Base.getOpcode() != ISD::ADD)
     return SDValue();
 
   SDValue ShiftedIndex = Base.getOperand(0);
-
   if (ShiftedIndex.getOpcode() != ISD::SHL)
     return SDValue();
 
   return ShiftedIndex.getOperand(0);
-
 }
 
 static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
@@ -50066,22 +50007,21 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
 
   // Try matching the pattern for both operands.
   for (unsigned i = 0; i < 2; i++) {
-    SDValue N = Node->getOperand(i);
-    LoadSDNode *Ld = dyn_cast<LoadSDNode>(N.getNode());
-
-     // continue if the operand is not a load instruction
+    // continue if the operand is not a load instruction
+    auto *Ld = dyn_cast<LoadSDNode>(Node->getOperand(i));
     if (!Ld)
-      return SDValue();
-
+      continue;
     const Value *MemOp = Ld->getMemOperand()->getValue();
-
     if (!MemOp)
-      return SDValue();
+      continue;
+    // Get the Node which indexes into the array.
+    SDValue Index = getIndexFromUnindexedLoad(Ld);
+    if (!Index)
+      continue;
 
-    if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(MemOp)) {
-      if (GlobalVariable *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0))) {
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(MemOp)) {
+      if (auto *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0))) {
         if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-
           Constant *Init = GV->getInitializer();
           Type *Ty = Init->getType();
           if (!isa<ConstantDataArray>(Init) ||
@@ -50109,21 +50049,15 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
           // -> (and (load arr[idx]), inp)
           // <- (and (srl 0xFFFFFFFF, (sub 32, idx)))
           //    that will be replaced with one bzhi instruction.
-          SDValue Inp = (i == 0) ? Node->getOperand(1) : Node->getOperand(0);
+          SDValue Inp = Node->getOperand(i == 0 ? 1 : 0);
           SDValue SizeC = DAG.getConstant(VT.getSizeInBits(), dl, MVT::i32);
 
-          // Get the Node which indexes into the array.
-          SDValue Index = getIndexFromUnindexedLoad(Ld);
-          if (!Index)
-            return SDValue();
           Index = DAG.getZExtOrTrunc(Index, dl, MVT::i32);
-
           SDValue Sub = DAG.getNode(ISD::SUB, dl, MVT::i32, SizeC, Index);
           Sub = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Sub);
 
           SDValue AllOnes = DAG.getAllOnesConstant(dl, VT);
           SDValue LShr = DAG.getNode(ISD::SRL, dl, VT, AllOnes, Sub);
-
           return DAG.getNode(ISD::AND, dl, VT, Inp, LShr);
         }
       }
@@ -51232,20 +51166,11 @@ static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
   if (Opc == ISD::XOR && N0.getOpcode() == X86ISD::PCMPEQ &&
       N0.getOperand(0).getOpcode() == ISD::AND &&
       ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode()) &&
-      ISD::isBuildVectorAllOnes(N1.getNode())) {
-    APInt UndefElts;
-    SmallVector<APInt> EltBits;
-    if (getTargetConstantBitsFromNode(N0.getOperand(0).getOperand(1),
-                                      VT.getScalarSizeInBits(), UndefElts,
-                                      EltBits)) {
-      bool IsPow2OrUndef = true;
-      for (unsigned I = 0, E = EltBits.size(); I != E; ++I)
-        IsPow2OrUndef &= UndefElts[I] || EltBits[I].isPowerOf2();
-
-      if (IsPow2OrUndef)
-        return DAG.getNode(X86ISD::PCMPEQ, DL, VT, N0.getOperand(0),
-                           N0.getOperand(0).getOperand(1));
-    }
+      ISD::isBuildVectorAllOnes(N1.getNode()) &&
+      isConstantPowerOf2(N0.getOperand(0).getOperand(1),
+                         VT.getScalarSizeInBits(), /*AllowUndefs=*/true)) {
+    return DAG.getNode(X86ISD::PCMPEQ, DL, VT, N0.getOperand(0),
+                       N0.getOperand(0).getOperand(1));
   }
 
   return SDValue();

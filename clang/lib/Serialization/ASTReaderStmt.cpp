@@ -706,6 +706,7 @@ void ASTStmtReader::VisitCharacterLiteral(CharacterLiteral *E) {
 
 void ASTStmtReader::VisitParenExpr(ParenExpr *E) {
   VisitExpr(E);
+  E->setIsProducedByFoldExpansion(Record.readInt());
   E->setLParen(readSourceLocation());
   E->setRParen(readSourceLocation());
   E->setSubExpr(Record.readSubExpr());

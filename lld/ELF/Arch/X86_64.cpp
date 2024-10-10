@@ -180,8 +180,7 @@ static bool isFallThruRelocation(InputSection &is, InputFile *file,
     return false;
 
   uint64_t addrLoc = is.getOutputSection()->addr + is.outSecOff + r.offset;
-  uint64_t targetOffset = InputSectionBase::getRelocTargetVA(
-      file, r.type, r.addend, addrLoc, *r.sym, r.expr);
+  uint64_t targetOffset = is.getRelocTargetVA(ctx, r, addrLoc);
 
   // If this jmp is a fall thru, the target offset is the beginning of the
   // next section.
@@ -331,14 +330,15 @@ bool X86_64::relaxOnce(int pass) const {
           continue;
         assert(rel.addend == -4);
 
-        uint64_t v = sec->getRelocTargetVA(
-            sec->file, rel.type, rel.expr == R_RELAX_GOT_PC_NOPIC ? 0 : -4,
-            sec->getOutputSection()->addr + sec->outSecOff + rel.offset,
-            *rel.sym, rel.expr);
+        Relocation rel1 = rel;
+        rel1.addend = rel.expr == R_RELAX_GOT_PC_NOPIC ? 0 : -4;
+        uint64_t v = sec->getRelocTargetVA(ctx, rel1,
+                                           sec->getOutputSection()->addr +
+                                               sec->outSecOff + rel.offset);
         if (isInt<32>(v))
           continue;
         if (rel.sym->auxIdx == 0) {
-          rel.sym->allocateAux();
+          rel.sym->allocateAux(ctx);
           addGotEntry(ctx, *rel.sym);
           changed = true;
         }
@@ -401,7 +401,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_NONE:
     return R_NONE;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -417,7 +417,7 @@ void X86_64::writeGotPltHeader(uint8_t *buf) const {
 
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // See comments in X86::writeGotPlt.
-  write64le(buf, s.getPltVA() + 6);
+  write64le(buf, s.getPltVA(ctx) + 6);
 }
 
 void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
@@ -448,8 +448,8 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  write32le(buf + 2, sym.getGotPltVA() - pltEntryAddr - 6);
-  write32le(buf + 7, sym.getPltIdx());
+  write32le(buf + 2, sym.getGotPltVA(ctx) - pltEntryAddr - 6);
+  write32le(buf + 7, sym.getPltIdx(ctx));
   write32le(buf + 12, ctx.in.plt->getVA() - pltEntryAddr - 16);
 }
 
@@ -483,7 +483,7 @@ static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     // Convert leaq x@tlsdesc(%rip), %REG to movq $x@tpoff, %REG.
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLocation(loc - 3) +
+      errorOrWarn(getErrorLoc(ctx, loc - 3) +
                   "R_X86_64_GOTPC32_TLSDESC must be used "
                   "in leaq x@tlsdesc(%rip), %REG");
       return;
@@ -524,7 +524,7 @@ static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if ((loc[-3] & 0xfb) != 0x48 || loc[-2] != 0x8d ||
         (loc[-1] & 0xc7) != 0x05) {
-      errorOrWarn(getErrorLocation(loc - 3) +
+      errorOrWarn(getErrorLoc(ctx, loc - 3) +
                   "R_X86_64_GOTPC32_TLSDESC must be used "
                   "in leaq x@tlsdesc(%rip), %REG");
       return;
@@ -573,7 +573,7 @@ static void relaxTlsIeToLe(uint8_t *loc, const Relocation &, uint64_t val) {
     memcpy(inst, "\x48\xc7", 2);
     *regSlot = 0xc0 | reg;
   } else {
-    error(getErrorLocation(loc - 3) +
+    error(getErrorLoc(ctx, loc - 3) +
           "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
   }
 
@@ -617,7 +617,7 @@ static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     return;
   }
 
-  error(getErrorLocation(loc - 3) +
+  error(getErrorLoc(ctx, loc - 3) +
         "expected R_X86_64_PLT32 or R_X86_64_GOTPCRELX after R_X86_64_TLSLD");
 }
 
@@ -756,7 +756,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -1059,9 +1059,7 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     if (rel.expr == R_NONE) // See deleteFallThruJmpInsn
       continue;
     uint8_t *loc = buf + rel.offset;
-    const uint64_t val =
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr);
+    const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
     relocate(loc, rel, val);
   }
   if (sec.jumpInstrMod) {
@@ -1087,8 +1085,8 @@ public:
 } // namespace
 
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  uint64_t va =
-      ctx.in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
+  uint64_t va = ctx.in.ibtPlt->getVA() + IBTPltHeaderSize +
+                s.getPltIdx(ctx) * pltEntrySize;
   write64le(buf, va);
 }
 
@@ -1100,7 +1098,7 @@ void IntelIBT::writePlt(uint8_t *buf, const Symbol &sym,
       0x66, 0x0f, 0x1f, 0x44, 0, 0, // nop
   };
   memcpy(buf, Inst, sizeof(Inst));
-  write32le(buf + 6, sym.getGotPltVA() - pltEntryAddr - 10);
+  write32le(buf + 6, sym.getGotPltVA(ctx) - pltEntryAddr - 10);
 }
 
 void IntelIBT::writeIBTPlt(uint8_t *buf, size_t numEntries) const {
@@ -1158,7 +1156,7 @@ Retpoline::Retpoline(Ctx &ctx) : X86_64(ctx) {
 }
 
 void Retpoline::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  write64le(buf, s.getPltVA() + 17);
+  write64le(buf, s.getPltVA(ctx) + 17);
 }
 
 void Retpoline::writePltHeader(uint8_t *buf) const {
@@ -1197,10 +1195,10 @@ void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
 
   uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
 
-  write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
+  write32le(buf + 3, sym.getGotPltVA(ctx) - pltEntryAddr - 7);
   write32le(buf + 8, -off - 12 + 32);
   write32le(buf + 13, -off - 17 + 18);
-  write32le(buf + 18, sym.getPltIdx());
+  write32le(buf + 18, sym.getPltIdx(ctx));
   write32le(buf + 23, -off - 27);
 }
 
@@ -1235,25 +1233,21 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, insn, sizeof(insn));
 
-  write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
+  write32le(buf + 3, sym.getGotPltVA(ctx) - pltEntryAddr - 7);
   write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
 }
 
-TargetInfo *elf::getX86_64TargetInfo(Ctx &ctx) {
+void elf::setX86_64TargetInfo(Ctx &ctx) {
   if (ctx.arg.zRetpolineplt) {
-    if (ctx.arg.zNow) {
-      static RetpolineZNow t(ctx);
-      return &t;
-    }
-    static Retpoline t(ctx);
-    return &t;
+    if (ctx.arg.zNow)
+      ctx.target.reset(new RetpolineZNow(ctx));
+    else
+      ctx.target.reset(new Retpoline(ctx));
+    return;
   }
 
-  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
-    static IntelIBT t(ctx);
-    return &t;
-  }
-
-  static X86_64 t(ctx);
-  return &t;
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)
+    ctx.target.reset(new IntelIBT(ctx));
+  else
+    ctx.target.reset(new X86_64(ctx));
 }
