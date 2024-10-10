@@ -204,7 +204,8 @@ Resolutions to C++ Defect Reports
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
 
 - Clang now has improved resolution to CWG2398, allowing class templates to have
-  default arguments deduced when partial ordering.
+  default arguments deduced when partial ordering, and better backwards compatibility
+  in overload resolution.
 
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
