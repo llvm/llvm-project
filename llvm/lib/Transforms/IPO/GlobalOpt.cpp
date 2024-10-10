@@ -2130,12 +2130,11 @@ static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
   // are memcpys.
   for (auto *User : SourceVar->users()) {
     auto *CI = dyn_cast<CallInst>(User);
-      if (!callInstIsMemcpy(CI))
-          continue;
+    if (!callInstIsMemcpy(CI))
+      continue;
 
     if (CI->getArgOperand(1) != SourceVar)
-        continue;
-
+      continue;
 
     widenDestArray(CI, NumBytesToPad, NumBytesToCopy, SourceDataArray);
 
