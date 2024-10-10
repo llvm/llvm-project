@@ -63,6 +63,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     case VPInstruction::FirstOrderRecurrenceSplice:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
+    case VPInstruction::MergeUntilPivot:
       return false;
     default:
       return true;
@@ -666,7 +667,16 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
     return NewPhi;
   }
-
+  case VPInstruction::MergeUntilPivot: {
+    Value *Cond = State.get(getOperand(0));
+    Value *OnTrue = State.get(getOperand(1));
+    Value *OnFalse = State.get(getOperand(2));
+    Value *Pivot = State.get(getOperand(3), /* IsScalar */ true);
+    assert(Pivot->getType()->isIntegerTy() && "Pivot should be an integer.");
+    return Builder.CreateIntrinsic(Intrinsic::vp_merge, {OnTrue->getType()},
+                                   {Cond, OnTrue, OnFalse, Pivot}, nullptr,
+                                   Name);
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -747,6 +757,9 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::BranchOnCond:
   case VPInstruction::ResumePhi:
     return true;
+  case VPInstruction::MergeUntilPivot:
+    // Pivot must be an integer.
+    return Op == getOperand(3);
   };
   llvm_unreachable("switch should return");
 }
@@ -765,6 +778,7 @@ bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
   case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::MergeUntilPivot:
     return true;
   };
   llvm_unreachable("switch should return");
@@ -830,6 +844,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
+    break;
+  case VPInstruction::MergeUntilPivot:
+    O << "merge-until-pivot";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
