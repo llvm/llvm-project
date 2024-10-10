@@ -453,6 +453,10 @@ public:
   /// function to the current output stream.
   virtual void emitJumpTableInfo();
 
+  /// Emit jump table annotations correlating each table with its associated
+  /// indirect branch instruction.
+  virtual void emitJumpTableAnnotation(const MachineFunction &MF, const MachineInstr &MI);
+
   /// Emit the specified global variable to the .s file.
   virtual void emitGlobalVariable(const GlobalVariable *GV);
 
