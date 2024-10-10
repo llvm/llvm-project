@@ -24,9 +24,11 @@ class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
+class DWARFFormValue;
 
 class DWARFBaseDIE {
 public:
+  using DWARFFormValue = dwarf::DWARFFormValue;
   DWARFBaseDIE() = default;
 
   DWARFBaseDIE(DWARFUnit *cu, DWARFDebugInfoEntry *die)
@@ -46,6 +48,7 @@ public:
   explicit operator bool() const { return IsValid(); }
 
   bool IsValid() const { return m_cu && m_die; }
+  bool isValid() const { return IsValid(); }
 
   bool HasChildren() const;
 
@@ -85,6 +88,8 @@ public:
   // Accessing information about a DIE
   dw_tag_t Tag() const;
 
+  dw_tag_t getTag() const { return Tag(); }
+
   dw_offset_t GetOffset() const;
 
   // Get the LLDB user ID for this DIE. This is often just the DIE offset,
@@ -94,6 +99,8 @@ public:
   lldb::user_id_t GetID() const;
 
   const char *GetName() const;
+
+  const char *getShortName() const { return GetName(); }
 
   lldb::ModuleSP GetModule() const;
 

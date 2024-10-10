@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Error.h"
 
 #include <string>
 
@@ -107,13 +108,11 @@ void DWARFTypePrinter<DieType>::appendArrayType(const DieType &D) {
     if (std::optional<typename DieType::DWARFFormValue> UpperV =
             C.find(dwarf::DW_AT_upper_bound))
       UB = UpperV->getAsUnsignedConstant();
-    if (std::optional<typename DieType::DWARFFormValue> LV =
-            D.getDwarfUnit()->getUnitDIE().find(dwarf::DW_AT_language))
-      if (std::optional<uint64_t> LC = LV->getAsUnsignedConstant())
-        if ((DefaultLB =
-                 LanguageLowerBound(static_cast<dwarf::SourceLanguage>(*LC))))
-          if (LB && *LB == *DefaultLB)
-            LB = std::nullopt;
+    if (std::optional<uint64_t> LV = D.getLanguage())
+      if ((DefaultLB =
+               LanguageLowerBound(static_cast<dwarf::SourceLanguage>(*LV))))
+        if (LB && *LB == *DefaultLB)
+          LB = std::nullopt;
     if (!LB && !Count && !UB)
       OS << "[]";
     else if (!LB && (Count || UB) && DefaultLB)
@@ -149,6 +148,16 @@ DieType resolveReferencedType(DieType D,
 template <typename DieType>
 DieType resolveReferencedType(DieType D, typename DieType::DWARFFormValue F) {
   return D.resolveReferencedType(F);
+}
+template <typename DWARFFormValueType>
+const char *toString(std::optional<DWARFFormValueType> F) {
+  if (F) {
+    llvm::Expected<const char *> E = F->getAsCString();
+    if (E)
+      return *E;
+    llvm::consumeError(E.takeError());
+  }
+  return nullptr;
 }
 } // namespace detail
 
@@ -239,7 +248,7 @@ DieType DWARFTypePrinter<DieType>::appendUnqualifiedNameBefore(
     appendConstVolatileQualifierBefore(D);
     break;
   case dwarf::DW_TAG_namespace: {
-    if (const char *Name = dwarf::toString(D.find(dwarf::DW_AT_name), nullptr))
+    if (const char *Name = detail::toString(D.find(dwarf::DW_AT_name)))
       OS << Name;
     else
       OS << "(anonymous namespace)";
@@ -261,7 +270,7 @@ DieType DWARFTypePrinter<DieType>::appendUnqualifiedNameBefore(
   case DW_TAG_base_type:
   */
   default: {
-    const char *NamePtr = dwarf::toString(D.find(dwarf::DW_AT_name), nullptr);
+    const char *NamePtr = detail::toString(D.find(dwarf::DW_AT_name));
     if (!NamePtr) {
       appendTypeTagName(D.getTag());
       return DieType();
@@ -440,7 +449,7 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
       if (T.getTag() == dwarf::DW_TAG_pointer_type ||
           T.getTag() == dwarf::DW_TAG_reference_type)
         continue;
-      const char *RawName = dwarf::toString(T.find(dwarf::DW_AT_name), nullptr);
+      const char *RawName = detail::toString(T.find(dwarf::DW_AT_name));
       assert(RawName);
       StringRef Name = RawName;
       auto V = C.find(dwarf::DW_AT_const_value);
@@ -533,7 +542,7 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
     }
     if (C.getTag() == dwarf::DW_TAG_GNU_template_template_param) {
       const char *RawName =
-          dwarf::toString(C.find(dwarf::DW_AT_GNU_template_name), nullptr);
+          detail::toString(C.find(dwarf::DW_AT_GNU_template_name));
       assert(RawName);
       StringRef Name = RawName;
       Sep();
