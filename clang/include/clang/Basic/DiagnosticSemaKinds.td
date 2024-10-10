@@ -4031,7 +4031,9 @@ def warn_acquired_before : Warning<
 def warn_acquired_before_after_cycle : Warning<
   "cycle in acquired_before/after dependencies, starting with '%0'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
-
+def warn_attribute_mismatch : Warning<
+  "attribute mismatch between function declarations of %0">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 
 // Thread safety warnings negative capabilities
 def warn_acquire_requires_negative_cap : Warning<

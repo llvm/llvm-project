@@ -2198,8 +2198,8 @@ namespace FunctionDefinitionTest {
 class Foo {
 public:
   void foo1();
-  void foo2();
-  void foo3(Foo *other);
+  void foo2() EXCLUSIVE_LOCKS_REQUIRED(mu_);
+  void foo3(Foo *other) EXCLUSIVE_LOCKS_REQUIRED(other->mu_);
 
   template<class T>
   void fooT1(const T& dummy1);
@@ -2249,8 +2249,8 @@ void fooF1(Foo *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu_) {
   f->a = 1;
 }
 
-void fooF2(Foo *f);
-void fooF2(Foo *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu_) {
+void fooF2(Foo *f); // expected-warning {{attribute mismatch between function declarations of 'fooF2'}}
+void fooF2(Foo *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu_) { // expected-note {{declared here}}
   f->a = 2;
 }
 
@@ -2269,7 +2269,7 @@ void test() {
   Foo myFoo;
 
   myFoo.foo2();        // \
-    // expected-warning {{calling function 'foo2' requires holding mutex 'myFoo.mu_' exclusively}}
+    // expected-warning 2{{calling function 'foo2' requires holding mutex 'myFoo.mu_' exclusively}}
   myFoo.foo3(&myFoo);  // \
     // expected-warning {{calling function 'foo3' requires holding mutex 'myFoo.mu_' exclusively}}
   myFoo.fooT1(dummy);  // \

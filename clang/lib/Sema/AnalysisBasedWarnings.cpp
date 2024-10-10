@@ -2073,6 +2073,18 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
+  void handleAttributeMismatch(const NamedDecl *ThisDecl,
+                               const NamedDecl *PrevDecl) override {
+    PartialDiagnosticAt Warning(ThisDecl->getLocation(),
+                                S.PDiag(diag::warn_attribute_mismatch)
+                                    << ThisDecl);
+    Warnings.emplace_back(std::move(Warning), getNotes());
+
+    PartialDiagnosticAt Note(PrevDecl->getLocation(),
+                             S.PDiag(diag::note_previous_decl) << PrevDecl);
+    Warnings.emplace_back(std::move(Note), getNotes());
+  }
+
   void enterFunction(const FunctionDecl* FD) override {
     CurrentFunction = FD;
   }

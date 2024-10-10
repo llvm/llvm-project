@@ -230,6 +230,9 @@ public:
   /// Warn that there is a cycle in acquired_before/after dependencies.
   virtual void handleBeforeAfterCycle(Name L1Name, SourceLocation Loc) {}
 
+  virtual void handleAttributeMismatch(const NamedDecl *D1,
+                                       const NamedDecl *D2) {}
+
   /// Called by the analysis when starting analysis of a function.
   /// Used to issue suggestions for changes to annotations.
   virtual void enterFunction(const FunctionDecl *FD) {}
