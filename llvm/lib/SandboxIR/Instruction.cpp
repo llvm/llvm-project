@@ -447,19 +447,8 @@ Value *StoreInst::getPointerOperand() const {
   return Ctx.getValue(cast<llvm::StoreInst>(Val)->getPointerOperand());
 }
 
-UnreachableInst *UnreachableInst::create(Instruction *InsertBefore,
-                                         Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
-  Builder.SetInsertPoint(LLVMBefore);
-  llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
-  return Ctx.createUnreachableInst(NewUI);
-}
-
-UnreachableInst *UnreachableInst::create(BasicBlock *InsertAtEnd,
-                                         Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+UnreachableInst *UnreachableInst::create(InsertPosition Pos, Context &Ctx) {
+  auto &Builder = setInsertPos(Pos);
   llvm::UnreachableInst *NewUI = Builder.CreateUnreachable();
   return Ctx.createUnreachableInst(NewUI);
 }
@@ -478,18 +467,9 @@ ReturnInst *ReturnInst::createCommon(Value *RetVal, IRBuilder<> &Builder,
   return Ctx.createReturnInst(NewRI);
 }
 
-ReturnInst *ReturnInst::create(Value *RetVal, Instruction *InsertBefore,
+ReturnInst *ReturnInst::create(Value *RetVal, InsertPosition Pos,
                                Context &Ctx) {
-  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(BeforeIR);
-  return createCommon(RetVal, Builder, Ctx);
-}
-
-ReturnInst *ReturnInst::create(Value *RetVal, BasicBlock *InsertAtEnd,
-                               Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  auto &Builder = setInsertPos(Pos);
   return createCommon(RetVal, Builder, Ctx);
 }
 
@@ -534,14 +514,9 @@ void CallBase::setCalledFunction(Function *F) {
 }
 
 CallInst *CallInst::create(FunctionType *FTy, Value *Func,
-                           ArrayRef<Value *> Args, BasicBlock::iterator WhereIt,
-                           BasicBlock *WhereBB, Context &Ctx,
-                           const Twine &NameStr) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                           ArrayRef<Value *> Args, InsertPosition Pos,
+                           Context &Ctx, const Twine &NameStr) {
+  auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMArgs;
   LLVMArgs.reserve(Args.size());
   for (Value *Arg : Args)
@@ -551,30 +526,11 @@ CallInst *CallInst::create(FunctionType *FTy, Value *Func,
   return Ctx.createCallInst(NewCI);
 }
 
-CallInst *CallInst::create(FunctionType *FTy, Value *Func,
-                           ArrayRef<Value *> Args, Instruction *InsertBefore,
-                           Context &Ctx, const Twine &NameStr) {
-  return CallInst::create(FTy, Func, Args, InsertBefore->getIterator(),
-                          InsertBefore->getParent(), Ctx, NameStr);
-}
-
-CallInst *CallInst::create(FunctionType *FTy, Value *Func,
-                           ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
-                           Context &Ctx, const Twine &NameStr) {
-  return CallInst::create(FTy, Func, Args, InsertAtEnd->end(), InsertAtEnd, Ctx,
-                          NameStr);
-}
-
 InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
                                BasicBlock *IfNormal, BasicBlock *IfException,
-                               ArrayRef<Value *> Args, BBIterator WhereIt,
-                               BasicBlock *WhereBB, Context &Ctx,
-                               const Twine &NameStr) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                               ArrayRef<Value *> Args, InsertPosition Pos,
+                               Context &Ctx, const Twine &NameStr) {
+  auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMArgs;
   LLVMArgs.reserve(Args.size());
   for (Value *Arg : Args)
@@ -584,24 +540,6 @@ InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
       cast<llvm::BasicBlock>(IfNormal->Val),
       cast<llvm::BasicBlock>(IfException->Val), LLVMArgs, NameStr);
   return Ctx.createInvokeInst(Invoke);
-}
-
-InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
-                               BasicBlock *IfNormal, BasicBlock *IfException,
-                               ArrayRef<Value *> Args,
-                               Instruction *InsertBefore, Context &Ctx,
-                               const Twine &NameStr) {
-  return create(FTy, Func, IfNormal, IfException, Args,
-                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
-                NameStr);
-}
-
-InvokeInst *InvokeInst::create(FunctionType *FTy, Value *Func,
-                               BasicBlock *IfNormal, BasicBlock *IfException,
-                               ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
-                               Context &Ctx, const Twine &NameStr) {
-  return create(FTy, Func, IfNormal, IfException, Args, InsertAtEnd->end(),
-                InsertAtEnd, Ctx, NameStr);
 }
 
 BasicBlock *InvokeInst::getNormalDest() const {
@@ -633,15 +571,9 @@ BasicBlock *InvokeInst::getSuccessor(unsigned SuccIdx) const {
 CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
                                BasicBlock *DefaultDest,
                                ArrayRef<BasicBlock *> IndirectDests,
-                               ArrayRef<Value *> Args, BBIterator WhereIt,
-                               BasicBlock *WhereBB, Context &Ctx,
-                               const Twine &NameStr) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-
+                               ArrayRef<Value *> Args, InsertPosition Pos,
+                               Context &Ctx, const Twine &NameStr) {
+  auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::BasicBlock *> LLVMIndirectDests;
   LLVMIndirectDests.reserve(IndirectDests.size());
   for (BasicBlock *IndDest : IndirectDests)
@@ -657,25 +589,6 @@ CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
                            cast<llvm::BasicBlock>(DefaultDest->Val),
                            LLVMIndirectDests, LLVMArgs, NameStr);
   return Ctx.createCallBrInst(CallBr);
-}
-
-CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
-                               BasicBlock *DefaultDest,
-                               ArrayRef<BasicBlock *> IndirectDests,
-                               ArrayRef<Value *> Args,
-                               Instruction *InsertBefore, Context &Ctx,
-                               const Twine &NameStr) {
-  return create(FTy, Func, DefaultDest, IndirectDests, Args,
-                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
-                NameStr);
-}
-CallBrInst *CallBrInst::create(FunctionType *FTy, Value *Func,
-                               BasicBlock *DefaultDest,
-                               ArrayRef<BasicBlock *> IndirectDests,
-                               ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
-                               Context &Ctx, const Twine &NameStr) {
-  return create(FTy, Func, DefaultDest, IndirectDests, Args, InsertAtEnd->end(),
-                InsertAtEnd, Ctx, NameStr);
 }
 
 Value *CallBrInst::getIndirectDestLabel(unsigned Idx) const {
@@ -720,13 +633,9 @@ BasicBlock *CallBrInst::getSuccessor(unsigned Idx) const {
 }
 
 LandingPadInst *LandingPadInst::create(Type *RetTy, unsigned NumReservedClauses,
-                                       BBIterator WhereIt, BasicBlock *WhereBB,
-                                       Context &Ctx, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                                       InsertPosition Pos, Context &Ctx,
+                                       const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   llvm::LandingPadInst *LLVMI =
       Builder.CreateLandingPad(RetTy->LLVMTy, NumReservedClauses, Name);
   return Ctx.createLandingPadInst(LLVMI);
@@ -773,13 +682,9 @@ CatchSwitchInst *CatchPadInst::getCatchSwitch() const {
 }
 
 CatchPadInst *CatchPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
-                                   BBIterator WhereIt, BasicBlock *WhereBB,
-                                   Context &Ctx, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                                   InsertPosition Pos, Context &Ctx,
+                                   const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMArgs;
   LLVMArgs.reserve(Args.size());
   for (auto *Arg : Args)
@@ -790,13 +695,9 @@ CatchPadInst *CatchPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
 }
 
 CleanupPadInst *CleanupPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
-                                       BBIterator WhereIt, BasicBlock *WhereBB,
-                                       Context &Ctx, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                                       InsertPosition Pos, Context &Ctx,
+                                       const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMArgs;
   LLVMArgs.reserve(Args.size());
   for (auto *Arg : Args)
@@ -807,13 +708,8 @@ CleanupPadInst *CleanupPadInst::create(Value *ParentPad, ArrayRef<Value *> Args,
 }
 
 CatchReturnInst *CatchReturnInst::create(CatchPadInst *CatchPad, BasicBlock *BB,
-                                         BBIterator WhereIt,
-                                         BasicBlock *WhereBB, Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                                         InsertPosition Pos, Context &Ctx) {
+  auto &Builder = setInsertPos(Pos);
   llvm::CatchReturnInst *LLVMI = Builder.CreateCatchRet(
       cast<llvm::CatchPadInst>(CatchPad->Val), cast<llvm::BasicBlock>(BB->Val));
   return Ctx.createCatchReturnInst(LLVMI);
@@ -852,14 +748,8 @@ Value *CatchReturnInst::getCatchSwitchParentPad() const {
 
 CleanupReturnInst *CleanupReturnInst::create(CleanupPadInst *CleanupPad,
                                              BasicBlock *UnwindBB,
-                                             BBIterator WhereIt,
-                                             BasicBlock *WhereBB,
-                                             Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                                             InsertPosition Pos, Context &Ctx) {
+  auto &Builder = setInsertPos(Pos);
   auto *LLVMUnwindBB =
       UnwindBB != nullptr ? cast<llvm::BasicBlock>(UnwindBB->Val) : nullptr;
   llvm::CleanupReturnInst *LLVMI = Builder.CreateCleanupRet(
@@ -896,15 +786,9 @@ void CleanupReturnInst::setUnwindDest(BasicBlock *NewDest) {
 }
 
 Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
-                                 ArrayRef<Value *> IdxList,
-                                 BasicBlock::iterator WhereIt,
-                                 BasicBlock *WhereBB, Context &Ctx,
-                                 const Twine &NameStr) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                                 ArrayRef<Value *> IdxList, InsertPosition Pos,
+                                 Context &Ctx, const Twine &NameStr) {
+  auto &Builder = setInsertPos(Pos);
   SmallVector<llvm::Value *> LLVMIdxList;
   LLVMIdxList.reserve(IdxList.size());
   for (Value *Idx : IdxList)
@@ -915,23 +799,6 @@ Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
     return Ctx.createGetElementPtrInst(NewGEP);
   assert(isa<llvm::Constant>(NewV) && "Expected constant");
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
-                                 ArrayRef<Value *> IdxList,
-                                 Instruction *InsertBefore, Context &Ctx,
-                                 const Twine &NameStr) {
-  return GetElementPtrInst::create(Ty, Ptr, IdxList,
-                                   InsertBefore->getIterator(),
-                                   InsertBefore->getParent(), Ctx, NameStr);
-}
-
-Value *GetElementPtrInst::create(Type *Ty, Value *Ptr,
-                                 ArrayRef<Value *> IdxList,
-                                 BasicBlock *InsertAtEnd, Context &Ctx,
-                                 const Twine &NameStr) {
-  return GetElementPtrInst::create(Ty, Ptr, IdxList, InsertAtEnd->end(),
-                                   InsertAtEnd, Ctx, NameStr);
 }
 
 Type *GetElementPtrInst::getSourceElementType() const {
@@ -958,11 +825,10 @@ BasicBlock *PHINode::LLVMBBToBB::operator()(llvm::BasicBlock *LLVMBB) const {
 }
 
 PHINode *PHINode::create(Type *Ty, unsigned NumReservedValues,
-                         Instruction *InsertBefore, Context &Ctx,
-                         const Twine &Name) {
-  llvm::PHINode *NewPHI = llvm::PHINode::Create(
-      Ty->LLVMTy, NumReservedValues, Name,
-      InsertBefore->getTopmostLLVMInstruction()->getIterator());
+                         InsertPosition Pos, Context &Ctx, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
+  llvm::PHINode *NewPHI =
+      Builder.CreatePHI(Ty->LLVMTy, NumReservedValues, Name);
   return Ctx.createPHINode(NewPHI);
 }
 
@@ -1061,6 +927,70 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate) {
   }
 }
 
+CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2, InsertPosition Pos,
+                         Context &Ctx, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
+  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
+  if (dyn_cast<llvm::ICmpInst>(LLVMI))
+    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
+  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
+}
+CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
+                                        const Instruction *F,
+                                        InsertPosition Pos, Context &Ctx,
+                                        const Twine &Name) {
+  CmpInst *Inst = create(P, S1, S2, Pos, Ctx, Name);
+  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
+  return Inst;
+}
+
+Type *CmpInst::makeCmpResultType(Type *OpndType) {
+  if (auto *VT = dyn_cast<VectorType>(OpndType)) {
+    // TODO: Cleanup when we have more complete support for
+    // sandboxir::VectorType
+    return OpndType->getContext().getType(llvm::VectorType::get(
+        llvm::Type::getInt1Ty(OpndType->getContext().LLVMCtx),
+        cast<llvm::VectorType>(VT->LLVMTy)->getElementCount()));
+  }
+  return Type::getInt1Ty(OpndType->getContext());
+}
+
+void CmpInst::setPredicate(Predicate P) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&CmpInst::getPredicate, &CmpInst::setPredicate>>(this);
+  cast<llvm::CmpInst>(Val)->setPredicate(P);
+}
+
+void CmpInst::swapOperands() {
+  if (ICmpInst *IC = dyn_cast<ICmpInst>(this))
+    IC->swapOperands();
+  else
+    cast<FCmpInst>(this)->swapOperands();
+}
+
+void ICmpInst::swapOperands() {
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
+  cast<llvm::ICmpInst>(Val)->swapOperands();
+}
+
+void FCmpInst::swapOperands() {
+  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
+  cast<llvm::FCmpInst>(Val)->swapOperands();
+}
+
+#ifndef NDEBUG
+void CmpInst::dumpOS(raw_ostream &OS) const {
+  dumpCommonPrefix(OS);
+  dumpCommonSuffix(OS);
+}
+
+void CmpInst::dump() const {
+  dumpOS(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
+
 static llvm::Instruction::CastOps getLLVMCastOp(Instruction::Opcode Opc) {
   switch (Opc) {
   case Instruction::Opcode::ZExt:
@@ -1107,14 +1037,9 @@ static llvm::Instruction::UnaryOps getLLVMUnaryOp(Instruction::Opcode Opc) {
 
 CatchSwitchInst *CatchSwitchInst::create(Value *ParentPad, BasicBlock *UnwindBB,
                                          unsigned NumHandlers,
-                                         BBIterator WhereIt,
-                                         BasicBlock *WhereBB, Context &Ctx,
+                                         InsertPosition Pos, Context &Ctx,
                                          const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto &Builder = setInsertPos(Pos);
   llvm::CatchSwitchInst *LLVMCSI = Builder.CreateCatchSwitch(
       ParentPad->Val, cast<llvm::BasicBlock>(UnwindBB->Val), NumHandlers, Name);
   return Ctx.createCatchSwitchInst(LLVMCSI);
@@ -1150,13 +1075,8 @@ void CatchSwitchInst::addHandler(BasicBlock *Dest) {
       cast<llvm::BasicBlock>(Dest->Val));
 }
 
-ResumeInst *ResumeInst::create(Value *Exn, BBIterator WhereIt,
-                               BasicBlock *WhereBB, Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+ResumeInst *ResumeInst::create(Value *Exn, InsertPosition Pos, Context &Ctx) {
+  auto &Builder = setInsertPos(Pos);
   auto *LLVMI = cast<llvm::ResumeInst>(Builder.CreateResume(Exn->Val));
   return Ctx.createResumeInst(LLVMI);
 }
@@ -1166,14 +1086,9 @@ Value *ResumeInst::getValue() const {
 }
 
 SwitchInst *SwitchInst::create(Value *V, BasicBlock *Dest, unsigned NumCases,
-                               BasicBlock::iterator WhereIt,
-                               BasicBlock *WhereBB, Context &Ctx,
+                               InsertPosition Pos, Context &Ctx,
                                const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto &Builder = setInsertPos(Pos);
   llvm::SwitchInst *LLVMSwitch =
       Builder.CreateSwitch(V->Val, cast<llvm::BasicBlock>(Dest->Val), NumCases);
   return Ctx.createSwitchInst(LLVMSwitch);
@@ -1244,13 +1159,9 @@ void SwitchInst::setSuccessor(unsigned Idx, BasicBlock *NewSucc) {
 }
 
 Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
-                             BBIterator WhereIt, BasicBlock *WhereBB,
-                             Context &Ctx, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+                             InsertPosition Pos, Context &Ctx,
+                             const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   auto *NewLLVMV = Builder.CreateUnOp(getLLVMUnaryOp(Op), OpV->Val, Name);
   if (auto *NewUnOpV = dyn_cast<llvm::UnaryOperator>(NewLLVMV)) {
     return Ctx.createUnaryOperator(NewUnOpV);
@@ -1259,43 +1170,13 @@ Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewLLVMV));
 }
 
-Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
-                             Instruction *InsertBefore, Context &Ctx,
-                             const Twine &Name) {
-  return create(Op, OpV, InsertBefore->getIterator(), InsertBefore->getParent(),
-                Ctx, Name);
-}
-
-Value *UnaryOperator::create(Instruction::Opcode Op, Value *OpV,
-                             BasicBlock *InsertAfter, Context &Ctx,
-                             const Twine &Name) {
-  return create(Op, OpV, InsertAfter->end(), InsertAfter, Ctx, Name);
-}
-
 Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                            Value *CopyFrom, BBIterator WhereIt,
-                                            BasicBlock *WhereBB, Context &Ctx,
-                                            const Twine &Name) {
-  auto *NewV = create(Op, OpV, WhereIt, WhereBB, Ctx, Name);
+                                            Value *CopyFrom, InsertPosition Pos,
+                                            Context &Ctx, const Twine &Name) {
+  auto *NewV = create(Op, OpV, Pos, Ctx, Name);
   if (auto *UnI = dyn_cast<llvm::UnaryOperator>(NewV->Val))
     UnI->copyIRFlags(CopyFrom->Val);
   return NewV;
-}
-
-Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                            Value *CopyFrom,
-                                            Instruction *InsertBefore,
-                                            Context &Ctx, const Twine &Name) {
-  return createWithCopiedFlags(Op, OpV, CopyFrom, InsertBefore->getIterator(),
-                               InsertBefore->getParent(), Ctx, Name);
-}
-
-Value *UnaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                            Value *CopyFrom,
-                                            BasicBlock *InsertAtEnd,
-                                            Context &Ctx, const Twine &Name) {
-  return createWithCopiedFlags(Op, OpV, CopyFrom, InsertAtEnd->end(),
-                               InsertAtEnd, Ctx, Name);
 }
 
 /// \Returns the LLVM opcode that corresponds to \p Opc.
@@ -1342,13 +1223,9 @@ static llvm::Instruction::BinaryOps getLLVMBinaryOp(Instruction::Opcode Opc) {
   }
 }
 Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                              BBIterator WhereIt, BasicBlock *WhereBB,
-                              Context &Ctx, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+                              InsertPosition Pos, Context &Ctx,
+                              const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV =
       Builder.CreateBinOp(getLLVMBinaryOp(Op), LHS->Val, RHS->Val, Name);
   if (auto *NewBinOp = dyn_cast<llvm::BinaryOperator>(NewV))
@@ -1357,46 +1234,15 @@ Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
 
-Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                              Instruction *InsertBefore, Context &Ctx,
-                              const Twine &Name) {
-  return create(Op, LHS, RHS, InsertBefore->getIterator(),
-                InsertBefore->getParent(), Ctx, Name);
-}
-
-Value *BinaryOperator::create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                              BasicBlock *InsertAtEnd, Context &Ctx,
-                              const Twine &Name) {
-  return create(Op, LHS, RHS, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
-}
-
 Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
                                              Value *RHS, Value *CopyFrom,
-                                             BBIterator WhereIt,
-                                             BasicBlock *WhereBB, Context &Ctx,
+                                             InsertPosition Pos, Context &Ctx,
                                              const Twine &Name) {
 
-  Value *NewV = create(Op, LHS, RHS, WhereIt, WhereBB, Ctx, Name);
+  Value *NewV = create(Op, LHS, RHS, Pos, Ctx, Name);
   if (auto *NewBO = dyn_cast<BinaryOperator>(NewV))
     cast<llvm::BinaryOperator>(NewBO->Val)->copyIRFlags(CopyFrom->Val);
   return NewV;
-}
-
-Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
-                                             Value *RHS, Value *CopyFrom,
-                                             Instruction *InsertBefore,
-                                             Context &Ctx, const Twine &Name) {
-  return createWithCopiedFlags(Op, LHS, RHS, CopyFrom,
-                               InsertBefore->getIterator(),
-                               InsertBefore->getParent(), Ctx, Name);
-}
-
-Value *BinaryOperator::createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
-                                             Value *RHS, Value *CopyFrom,
-                                             BasicBlock *InsertAtEnd,
-                                             Context &Ctx, const Twine &Name) {
-  return createWithCopiedFlags(Op, LHS, RHS, CopyFrom, InsertAtEnd->end(),
-                               InsertAtEnd, Ctx, Name);
 }
 
 void PossiblyDisjointInst::setIsDisjoint(bool B) {
@@ -1445,34 +1291,13 @@ Value *AtomicRMWInst::getValOperand() {
 
 AtomicRMWInst *AtomicRMWInst::create(BinOp Op, Value *Ptr, Value *Val,
                                      MaybeAlign Align, AtomicOrdering Ordering,
-                                     BBIterator WhereIt, BasicBlock *WhereBB,
-                                     Context &Ctx, SyncScope::ID SSID,
-                                     const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+                                     InsertPosition Pos, Context &Ctx,
+                                     SyncScope::ID SSID, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   auto *LLVMAtomicRMW =
       Builder.CreateAtomicRMW(Op, Ptr->Val, Val->Val, Align, Ordering, SSID);
   LLVMAtomicRMW->setName(Name);
   return Ctx.createAtomicRMWInst(LLVMAtomicRMW);
-}
-
-AtomicRMWInst *AtomicRMWInst::create(BinOp Op, Value *Ptr, Value *Val,
-                                     MaybeAlign Align, AtomicOrdering Ordering,
-                                     Instruction *InsertBefore, Context &Ctx,
-                                     SyncScope::ID SSID, const Twine &Name) {
-  return create(Op, Ptr, Val, Align, Ordering, InsertBefore->getIterator(),
-                InsertBefore->getParent(), Ctx, SSID, Name);
-}
-
-AtomicRMWInst *AtomicRMWInst::create(BinOp Op, Value *Ptr, Value *Val,
-                                     MaybeAlign Align, AtomicOrdering Ordering,
-                                     BasicBlock *InsertAtEnd, Context &Ctx,
-                                     SyncScope::ID SSID, const Twine &Name) {
-  return create(Op, Ptr, Val, Align, Ordering, InsertAtEnd->end(), InsertAtEnd,
-                Ctx, SSID, Name);
 }
 
 void AtomicCmpXchgInst::setSyncScopeID(SyncScope::ID SSID) {
@@ -1498,42 +1323,14 @@ Value *AtomicCmpXchgInst::getNewValOperand() {
 AtomicCmpXchgInst *
 AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
                           AtomicOrdering SuccessOrdering,
-                          AtomicOrdering FailureOrdering, BBIterator WhereIt,
-                          BasicBlock *WhereBB, Context &Ctx, SyncScope::ID SSID,
-                          const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+                          AtomicOrdering FailureOrdering, InsertPosition Pos,
+                          Context &Ctx, SyncScope::ID SSID, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   auto *LLVMAtomicCmpXchg =
       Builder.CreateAtomicCmpXchg(Ptr->Val, Cmp->Val, New->Val, Align,
                                   SuccessOrdering, FailureOrdering, SSID);
   LLVMAtomicCmpXchg->setName(Name);
   return Ctx.createAtomicCmpXchgInst(LLVMAtomicCmpXchg);
-}
-
-AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
-                                             MaybeAlign Align,
-                                             AtomicOrdering SuccessOrdering,
-                                             AtomicOrdering FailureOrdering,
-                                             Instruction *InsertBefore,
-                                             Context &Ctx, SyncScope::ID SSID,
-                                             const Twine &Name) {
-  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
-                InsertBefore->getIterator(), InsertBefore->getParent(), Ctx,
-                SSID, Name);
-}
-
-AtomicCmpXchgInst *AtomicCmpXchgInst::create(Value *Ptr, Value *Cmp, Value *New,
-                                             MaybeAlign Align,
-                                             AtomicOrdering SuccessOrdering,
-                                             AtomicOrdering FailureOrdering,
-                                             BasicBlock *InsertAtEnd,
-                                             Context &Ctx, SyncScope::ID SSID,
-                                             const Twine &Name) {
-  return create(Ptr, Cmp, New, Align, SuccessOrdering, FailureOrdering,
-                InsertAtEnd->end(), InsertAtEnd, Ctx, SSID, Name);
 }
 
 void AtomicCmpXchgInst::setAlignment(Align Align) {
@@ -1573,31 +1370,13 @@ void AtomicCmpXchgInst::setFailureOrdering(AtomicOrdering Ordering) {
   cast<llvm::AtomicCmpXchgInst>(Val)->setFailureOrdering(Ordering);
 }
 
-AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, BBIterator WhereIt,
-                               BasicBlock *WhereBB, Context &Ctx,
-                               Value *ArraySize, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace, InsertPosition Pos,
+                               Context &Ctx, Value *ArraySize,
+                               const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   auto *NewAlloca =
       Builder.CreateAlloca(Ty->LLVMTy, AddrSpace, ArraySize->Val, Name);
   return Ctx.createAllocaInst(NewAlloca);
-}
-
-AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace,
-                               Instruction *InsertBefore, Context &Ctx,
-                               Value *ArraySize, const Twine &Name) {
-  return create(Ty, AddrSpace, InsertBefore->getIterator(),
-                InsertBefore->getParent(), Ctx, ArraySize, Name);
-}
-
-AllocaInst *AllocaInst::create(Type *Ty, unsigned AddrSpace,
-                               BasicBlock *InsertAtEnd, Context &Ctx,
-                               Value *ArraySize, const Twine &Name) {
-  return create(Ty, AddrSpace, InsertAtEnd->end(), InsertAtEnd, Ctx, ArraySize,
-                Name);
 }
 
 Type *AllocaInst::getAllocatedType() const {
@@ -1635,34 +1414,15 @@ PointerType *AllocaInst::getType() const {
 }
 
 Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
-                        BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
-                        const Twine &Name) {
+                        InsertPosition Pos, Context &Ctx, const Twine &Name) {
   assert(getLLVMCastOp(Op) && "Opcode not suitable for CastInst!");
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt == WhereBB->end())
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-  else
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
+  auto &Builder = setInsertPos(Pos);
   auto *NewV =
       Builder.CreateCast(getLLVMCastOp(Op), Operand->Val, DestTy->LLVMTy, Name);
   if (auto *NewCI = dyn_cast<llvm::CastInst>(NewV))
     return Ctx.createCastInst(NewCI);
   assert(isa<llvm::Constant>(NewV) && "Expected constant");
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
-                        Instruction *InsertBefore, Context &Ctx,
-                        const Twine &Name) {
-  return create(DestTy, Op, Operand, InsertBefore->getIterator(),
-                InsertBefore->getParent(), Ctx, Name);
-}
-
-Value *CastInst::create(Type *DestTy, Opcode Op, Value *Operand,
-                        BasicBlock *InsertAtEnd, Context &Ctx,
-                        const Twine &Name) {
-  return create(DestTy, Op, Operand, InsertAtEnd->end(), InsertAtEnd, Ctx,
-                Name);
 }
 
 bool CastInst::classof(const Value *From) {

@@ -2678,12 +2678,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       Register TmpReg;
 
+      // FIXME: Scavenger should figure out that the result register is
+      // available. Also should do this for the v_add case.
+      if (OtherOp.isReg() && OtherOp.getReg() != DstOp.getReg())
+        TmpReg = DstOp.getReg();
+
       if (FrameReg && !ST.enableFlatScratch()) {
         // FIXME: In the common case where the add does not also read its result
         // (i.e. this isn't a reg += fi), it's not finding the dest reg as
         // available.
-        TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass, MI,
-                                               false, 0);
+        if (!TmpReg)
+          TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
+                                                 MI, false, 0);
         BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_LSHR_B32))
             .addDef(TmpReg, RegState::Renamable)
             .addReg(FrameReg)
@@ -2711,7 +2717,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         if (!TmpReg && MaterializedReg == FrameReg) {
           TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
-                                                 MI, false, 0);
+                                                 MI, /*RestoreAfter=*/false, 0,
+                                                 /*AllowSpill=*/false);
           DstReg = TmpReg;
         }
 

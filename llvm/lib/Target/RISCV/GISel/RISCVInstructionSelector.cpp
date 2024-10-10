@@ -100,6 +100,8 @@ private:
     return selectSHXADD_UWOp(Root, ShAmt);
   }
 
+  ComplexRendererFns renderVLOp(MachineOperand &Root) const;
+
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
@@ -374,6 +376,29 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
   }
 
   return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
+  assert(Root.isReg() && "Expected operand to be a Register");
+  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
+
+  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    auto C = RootDef->getOperand(1).getCImm();
+    if (C->getValue().isAllOnes())
+      // If the operand is a G_CONSTANT with value of all ones it is larger than
+      // VLMAX. We convert it to an immediate with value VLMaxSentinel. This is
+      // recognized specially by the vsetvli insertion pass.
+      return {{[=](MachineInstrBuilder &MIB) {
+        MIB.addImm(RISCV::VLMaxSentinel);
+      }}};
+
+    if (isUInt<5>(C->getZExtValue())) {
+      uint64_t ZExtC = C->getZExtValue();
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(ZExtC); }}};
+    }
+  }
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); }}};
 }
 
 InstructionSelector::ComplexRendererFns
@@ -775,6 +800,7 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     replacePtrWithInt(MI.getOperand(1), MIB);
     MI.setDesc(TII.get(TargetOpcode::G_AND));
     MRI->setType(DstReg, sXLen);
+    break;
   }
   }
 }

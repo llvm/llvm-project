@@ -36,6 +36,18 @@ using namespace Fortran::runtime::cuda;
 
 namespace {
 
+static inline unsigned getMemType(cuf::DataAttribute attr) {
+  if (attr == cuf::DataAttribute::Device)
+    return kMemTypeDevice;
+  if (attr == cuf::DataAttribute::Managed)
+    return kMemTypeManaged;
+  if (attr == cuf::DataAttribute::Unified)
+    return kMemTypeUnified;
+  if (attr == cuf::DataAttribute::Pinned)
+    return kMemTypePinned;
+  llvm::report_fatal_error("unsupported memory type");
+}
+
 template <typename OpTy>
 static bool isPinned(OpTy op) {
   if (op.getDataAttr() && *op.getDataAttr() == cuf::DataAttribute::Pinned)
@@ -210,7 +222,7 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
   CufAllocOpConversion(mlir::MLIRContext *context, mlir::DataLayout *dl,
-                       fir::LLVMTypeConverter *typeConverter)
+                       const fir::LLVMTypeConverter *typeConverter)
       : OpRewritePattern(context), dl{dl}, typeConverter{typeConverter} {}
 
   mlir::LogicalResult
@@ -299,7 +311,7 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
 
 private:
   mlir::DataLayout *dl;
-  fir::LLVMTypeConverter *typeConverter;
+  const fir::LLVMTypeConverter *typeConverter;
 };
 
 struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
@@ -571,7 +583,7 @@ public:
 } // namespace
 
 void cuf::populateCUFToFIRConversionPatterns(
-    fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
+    const fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
     mlir::RewritePatternSet &patterns) {
   patterns.insert<CufAllocOpConversion>(patterns.getContext(), &dl, &converter);
   patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,

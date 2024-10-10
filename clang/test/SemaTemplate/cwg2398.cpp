@@ -156,16 +156,14 @@ namespace ttp_defaults {
 namespace ttp_only {
   template <template <class...    > class TT1> struct A      { static constexpr int V = 0; };
   template <template <class       > class TT2> struct A<TT2> { static constexpr int V = 1; };
-  // new-note@-1 {{partial specialization matches}}
   template <template <class, class> class TT3> struct A<TT3> { static constexpr int V = 2; };
-  // new-note@-1 {{partial specialization matches}}
 
   template <class ...          > struct B;
   template <class              > struct C;
   template <class, class       > struct D;
   template <class, class, class> struct E;
 
-  static_assert(A<B>::V == 0); // new-error {{ambiguous partial specializations}}
+  static_assert(A<B>::V == 0);
   static_assert(A<C>::V == 1);
   static_assert(A<D>::V == 2);
   static_assert(A<E>::V == 0);
@@ -407,16 +405,95 @@ namespace packs {
   } // namespace t4
 } // namespace packs
 
+namespace fun_tmpl_call {
+  namespace match_func {
+    template <template <class> class TT> void f(TT<int>) {};
+    // old-note@-1 {{has different template parameters}}
+    template <class...> struct A {};
+    void test() { f(A<int>()); }
+    // old-error@-1 {{no matching function for call to 'f'}}
+  } // namespace match_func
+  namespace order_func_nonpack {
+    template <template <class> class TT> void f(TT<int>) {}
+    template <template <class...> class TT> void f(TT<int>) = delete;
+
+    template <class> struct A {};
+    void test() { f(A<int>()); }
+  } // namespace order_func_nonpack
+  namespace order_func_pack {
+    template <template <class> class TT> void f(TT<int>) = delete;
+    template <template <class...> class TT> void f(TT<int>) {}
+
+    template <class...> struct A {};
+    void test() { f(A<int>()); }
+  } // namespace order_func_pack
+  namespace match_method {
+    struct A {
+      template <template <class> class TT> void f(TT<int>) {};
+      // old-note@-1 {{has different template parameters}}
+    };
+    template <class...> struct B {};
+    void test() { A().f(B<int>()); }
+    // old-error@-1 {{no matching member function for call to 'f'}}
+  } // namespace t2
+  namespace order_method_nonpack {
+    struct A {
+      template <template <class> class TT> void f(TT<int>) {}
+      template <template <class...> class TT> void f(TT<int>) = delete;
+    };
+    template <class> struct B {};
+    void test() { A().f(B<int>()); }
+  } // namespace order_method_nonpack
+  namespace order_method_pack {
+    struct A {
+      template <template <class> class TT> void f(TT<int>) = delete;
+      template <template <class...> class TT> void f(TT<int>) {}
+    };
+    template <class...> struct B {};
+    void test() { A().f(B<int>()); }
+  } // namespace order_method_pack
+  namespace match_conv {
+    struct A {
+      template <template <class> class TT> operator TT<int>() { return {}; }
+      // old-note@-1 {{different template parameters}}
+    };
+    template <class...> struct B {};
+    // old-note@-1 2{{not viable}}
+    void test() { B<int> b = A(); }
+    // old-error@-1 {{no viable conversion from 'A' to 'B<int>'}}
+  } // namespace match_conv
+  namespace order_conv_nonpack {
+    struct A {
+      template <template <class> class TT> operator TT<int>() { return {}; };
+      template <template <class...> class TT> operator TT<int>() = delete;
+    };
+    template <class> struct B {};
+    void test() { B<int> b = A(); }
+  } // namespace order_conv_nonpack
+  namespace order_conv_pack {
+    struct A {
+      template <template <class> class TT> operator TT<int>() = delete;
+      template <template <class...> class TT> operator TT<int>() { return {}; }
+    };
+    template <class...> struct B {};
+    void test() { B<int> b = A(); }
+  } // namespace order_conv_pack
+  namespace regression1 {
+    template <template <class, class...> class TT, class T1, class... T2s>
+    void f(TT<T1, T2s...>) {}
+    template <class> struct A {};
+    void test() { f(A<int>()); }
+  } // namespace regression1
+} // namespace fun_tmpl_packs
+
 namespace partial {
   namespace t1 {
     template<template<class... T1s> class TT1> struct A {};
 
     template<template<class T2> class TT2> struct A<TT2>;
-    // new-note@-1 {{template is declared here}}
 
     template<class... T3s> struct B;
     template struct A<B>;
-    // new-error@-1 {{explicit instantiation of undefined template}}
   } // namespace t1
   namespace t2 {
     template<template<class... T1s> class TT1> struct A;
@@ -541,9 +618,3 @@ namespace regression2 {
   template <typename, int> struct Matrix;
   template struct D<Matrix<double, 3>>;
 } // namespace regression2
-
-namespace regression3 {
-  template <template <auto...> class TT> struct A {};
-  template <auto, int> struct B;
-  template struct A<B>;
-} // namespace regression3
