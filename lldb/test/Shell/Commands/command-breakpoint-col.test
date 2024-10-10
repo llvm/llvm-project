@@ -3,8 +3,10 @@
 # RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
 # RUN: %lldb -b -o 'help breakpoint set' -o 'breakpoint set -f main.c -l 2 -u 21' %t.out | FileCheck %s --check-prefix HELP --check-prefix CHECK
 # RUN: %lldb -b -o 'help _regexp-break' -o 'b main.c:2:21' %t.out | FileCheck %s --check-prefix HELP-REGEX --check-prefix CHECK
+# RUN: not %lldb -b -o 'breakpoint foo' %t.out -o exit 2>&1 | FileCheck %s --check-prefix ERROR-MSG
 # HELP: -u <column> ( --column <column> )
 # HELP: Specifies the column number on which to set this breakpoint.
 # HELP-REGEX: _regexp-break <filename>:<linenum>:<colnum>
 # HELP-REGEX: main.c:12:21{{.*}}Break at line 12 and column 21 of main.c
 # CHECK: at main.c:2:21
+# ERROR-MSG: 'foo' is not a valid subcommand of "breakpoint". Valid subcommands are {'clear','command','delete','disable','enable',...}. Use "help breakpoint" to find out more.
