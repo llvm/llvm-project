@@ -91,8 +91,7 @@ TYPE_PARSER(construct<OmpProcBindClause>(
 // map-type-modifiers -> map-type-modifier [,] [...]
 // map-type-modifier -> ALWAYS | CLOSE | OMPX_HOLD | PRESENT
 // map-type -> ALLOC | DELETE | FROM | RELEASE | TO | TOFROM
-TYPE_PARSER(
-    construct<OmpMapClause::TypeModifier>(
+TYPE_PARSER(construct<OmpMapClause::TypeModifier>(
     "ALWAYS" >> pure(OmpMapClause::TypeModifier::Always) ||
     "CLOSE" >> pure(OmpMapClause::TypeModifier::Close) ||
     "OMPX_HOLD" >> pure(OmpMapClause::TypeModifier::OmpxHold) ||
