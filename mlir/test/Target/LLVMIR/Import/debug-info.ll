@@ -843,3 +843,27 @@ define void @fn_with_annotations() !dbg !12 {
 
 
 ; CHECK-DAG: #llvm.di_subprogram<{{.*}}name = "fn_with_annotations"{{.*}}annotations = #llvm.di_annotation<name = "foo", value = "bar">>
+
+; // -----
+
+@block = common global [4 x i8] zeroinitializer, !dbg !0
+
+define void @test() !dbg !3 {
+  ret void
+}
+
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!7}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "alpha", scope: !2, file: !4, type: !9)
+!2 = !DICommonBlock(scope: !3, declaration: null, name: "block", file: !4, line: 3)
+!3 = distinct !DISubprogram(name: "test", scope: !4, file: !4, spFlags: DISPFlagDefinition, unit: !7)
+!4 = !DIFile(filename: "test.f90", directory: "")
+!7 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !4)
+!9 = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+
+; CHECK: #[[FILE:.+]] = #llvm.di_file<"test.f90" in "">
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
+; CHECK: #llvm.di_common_block<scope = #[[SP]], name = "block", file = #[[FILE]], line = 3>
