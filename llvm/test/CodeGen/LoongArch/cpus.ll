@@ -4,6 +4,8 @@
 ; RUN: llc < %s --mtriple=loongarch64 -mattr=+d --mcpu=loongarch64 2>&1 | FileCheck %s
 ; RUN: llc < %s --mtriple=loongarch64 -mattr=+d --mcpu=la464 2>&1 | FileCheck %s
 ; RUN: llc < %s --mtriple=loongarch64 -mattr=+d --mcpu=la664 2>&1 | FileCheck %s
+; RUN: llc < %s --mtriple=loongarch64 -mattr=+d --mcpu=la64v1.0 2>&1 | FileCheck %s
+; RUN: llc < %s --mtriple=loongarch64 -mattr=+d --mcpu=la64v1.1 2>&1 | FileCheck %s
 ; RUN: llc < %s --mtriple=loongarch64 -mattr=+d 2>&1 | FileCheck %s
 
 ; CHECK-NOT: {{.*}} is not a recognized processor for this target
@@ -21,5 +23,13 @@ define void @tune_cpu_la464() "tune-cpu"="la464" {
 }
 
 define void @tune_cpu_la664() "tune-cpu"="la664" {
+  ret void
+}
+
+define void @tune_cpu_la64v1_0() "tune-cpu"="la64v1.0" {
+  ret void
+}
+
+define void @tune_cpu_la64v1_1() "tune-cpu"="la64v1.1" {
   ret void
 }
