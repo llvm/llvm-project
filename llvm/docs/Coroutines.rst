@@ -1079,8 +1079,8 @@ Overview:
 """""""""
 
 The '``llvm.coro.begin.custom.abi``' intrinsic is used in place of the
-`coro.begin` intrinsic with an additional parameter to specify the custom ABI
-for the coroutine. The return is identical to that of the `coro.begin`
+`coro.begin` intrinsic that has an additional parameter to specify the custom
+ABI for the coroutine. The return is identical to that of the `coro.begin`
 intrinsic.
 
 Arguments:
