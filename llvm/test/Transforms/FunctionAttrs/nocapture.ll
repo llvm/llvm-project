@@ -360,22 +360,22 @@ define void @nc3(ptr %p) {
   ret void
 }
 
-declare void @external(ptr) readonly nounwind
-define void @nc4(ptr %p) {
+declare i32 @external(ptr) readonly nounwind
+define i32 @nc4(ptr %p) {
 ; FNATTRS: Function Attrs: nofree nounwind memory(read)
-; FNATTRS-LABEL: define void @nc4
-; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR9:[0-9]+]] {
-; FNATTRS-NEXT:    call void @external(ptr [[P]])
-; FNATTRS-NEXT:    ret void
+; FNATTRS-LABEL: define i32 @nc4
+; FNATTRS-SAME: (ptr readonly [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; FNATTRS-NEXT:    [[RESULT:%.*]] = call i32 @external(ptr [[P]])
+; FNATTRS-NEXT:    ret i32 [[RESULT]]
 ;
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
-; ATTRIBUTOR-LABEL: define void @nc4
-; ATTRIBUTOR-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR7:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @external(ptr nocapture readonly [[P]]) #[[ATTR4]]
-; ATTRIBUTOR-NEXT:    ret void
+; ATTRIBUTOR-LABEL: define i32 @nc4
+; ATTRIBUTOR-SAME: (ptr readonly [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    [[RESULT:%.*]] = call i32 @external(ptr [[P]]) #[[ATTR4]]
+; ATTRIBUTOR-NEXT:    ret i32 [[RESULT]]
 ;
-  call void @external(ptr %p)
-  ret void
+  %result = call i32 @external(ptr %p)
+  ret i32 %result
 }
 
 define void @nc5(ptr %f, ptr %p) {
