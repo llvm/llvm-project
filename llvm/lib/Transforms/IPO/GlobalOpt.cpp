@@ -2043,12 +2043,8 @@ static bool callInstIsMemcpy(CallInst *CI) {
 }
 
 static bool destArrayCanBeWidened(CallInst *CI) {
-  auto *GV = dyn_cast<GlobalVariable>(CI->getArgOperand(0));
   auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
   auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
-
-  if (!GV || !GV->hasInitializer())
-    return false;
 
   if (!Alloca || !IsVolatile || IsVolatile->isOne())
     return false;
@@ -2129,12 +2125,17 @@ static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
       widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
   if (!NewSourceGV)
     return false;
+
   // Update arguments of remaining uses  that
   // are memcpys.
   for (auto *User : SourceVar->users()) {
     auto *CI = dyn_cast<CallInst>(User);
-    if (!callInstIsMemcpy(CI))
-      continue;
+      if (!callInstIsMemcpy(CI))
+          continue;
+
+    if (CI->getArgOperand(1) != SourceVar)
+        continue;
+
 
     widenDestArray(CI, NumBytesToPad, NumBytesToCopy, SourceDataArray);
 

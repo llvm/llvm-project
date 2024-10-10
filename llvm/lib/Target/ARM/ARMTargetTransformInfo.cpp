@@ -56,7 +56,7 @@ static cl::opt<bool>
     AllowWLSLoops("allow-arm-wlsloops", cl::Hidden, cl::init(true),
                   cl::desc("Enable the generation of WLS loops"));
 
-static cl::opt<unsigned> UseWidenGlobalStrings(
+static cl::opt<bool> UseWidenGlobalArrays(
     "widen-global-strings", cl::Hidden, cl::init(true),
     cl::desc("Enable the widening of global strings to alignment boundaries"));
 
@@ -2815,6 +2815,11 @@ bool ARMTTIImpl::useWidenGlobalStrings() const { return UseWidenGlobalStrings; }
 
 unsigned ARMTTIImpl::getNumBytesToPadGlobalArray(unsigned Size,
                                                  Type *ArrayType) const {
+    if (!UseWidenGlobalArrays){
+        LLVM_DEBUG(dbgs() << "Padding global arrays disabled\n");
+        return false;
+    }
+
   // Don't modify none integer array types
   if (!ArrayType || !ArrayType->isArrayTy() ||
       !ArrayType->getArrayElementType()->isIntegerTy())
