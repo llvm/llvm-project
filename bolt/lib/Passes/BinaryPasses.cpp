@@ -15,6 +15,7 @@
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 #include <mutex>
@@ -1923,7 +1924,7 @@ Error RemoveNops::runOnFunctions(BinaryContext &BC) {
   };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
-    return BF.shouldPreserveNops();
+    return BF.shouldPreserveNops() || (!opts::StrictMode && !BF.isSimple());
   };
 
   ParallelUtilities::runOnEachFunction(
