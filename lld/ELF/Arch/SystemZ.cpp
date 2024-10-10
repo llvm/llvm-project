@@ -23,7 +23,7 @@ using namespace lld::elf;
 namespace {
 class SystemZ : public TargetInfo {
 public:
-  SystemZ();
+  SystemZ(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -51,7 +51,7 @@ private:
 };
 } // namespace
 
-SystemZ::SystemZ() {
+SystemZ::SystemZ(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_390_COPY;
   gotRel = R_390_GLOB_DAT;
   pltRel = R_390_JMP_SLOT;
@@ -170,7 +170,7 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
     return R_GOT_PC;
 
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -183,11 +183,11 @@ void SystemZ::writeGotHeader(uint8_t *buf) const {
 }
 
 void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  write64be(buf, s.getPltVA() + 14);
+  write64be(buf, s.getPltVA(ctx) + 14);
 }
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends)
+  if (ctx.arg.writeAddends)
     write64be(buf, s.getVA());
 }
 
@@ -227,9 +227,9 @@ void SystemZ::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  write32be(buf + 2, (sym.getGotPltVA() - pltEntryAddr) >> 1);
+  write32be(buf + 2, (sym.getGotPltVA(ctx) - pltEntryAddr) >> 1);
   write32be(buf + 24, (ctx.in.plt->getVA() - pltEntryAddr - 22) >> 1);
-  write32be(buf + 28, ctx.in.relaPlt->entsize * sym.getPltIdx());
+  write32be(buf + 28, ctx.in.relaPlt->entsize * sym.getPltIdx(ctx));
 }
 
 int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
@@ -261,7 +261,7 @@ int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -417,7 +417,7 @@ void SystemZ::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 RelExpr SystemZ::adjustGotPcExpr(RelType type, int64_t addend,
                                  const uint8_t *loc) const {
   // Only R_390_GOTENT with addend 2 can be relaxed.
-  if (!config->relax || addend != 2 || type != R_390_GOTENT)
+  if (!ctx.arg.relax || addend != 2 || type != R_390_GOTENT)
     return R_GOT_PC;
   const uint16_t op = read16be(loc - 2);
 
@@ -447,13 +447,12 @@ bool SystemZ::relaxOnce(int pass) const {
           continue;
 
         uint64_t v = sec->getRelocTargetVA(
-            sec->file, rel.type, rel.addend,
-            sec->getOutputSection()->addr + rel.offset, *rel.sym, rel.expr);
+            ctx, rel, sec->getOutputSection()->addr + rel.offset);
         if (isInt<33>(v) && !(v & 1))
           continue;
         if (rel.sym->auxIdx == 0) {
-          rel.sym->allocateAux();
-          addGotEntry(*rel.sym);
+          rel.sym->allocateAux(ctx);
+          addGotEntry(ctx, *rel.sym);
           changed = true;
         }
         rel.expr = R_GOT_PC;
@@ -601,7 +600,4 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-TargetInfo *elf::getSystemZTargetInfo() {
-  static SystemZ t;
-  return &t;
-}
+void elf::setSystemZTargetInfo(Ctx &ctx) { ctx.target.reset(new SystemZ(ctx)); }

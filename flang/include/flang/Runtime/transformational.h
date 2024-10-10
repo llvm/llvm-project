@@ -53,7 +53,7 @@ void RTDECL(BesselJn_10)(Descriptor &result, int32_t n1, int32_t n2,
     int line = 0);
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDECL(BesselJn_16)(Descriptor &result, int32_t n1, int32_t n2,
     CppFloat128Type x, CppFloat128Type bn2, CppFloat128Type bn2_1,
     const char *sourceFile = nullptr, int line = 0);
@@ -76,7 +76,7 @@ void RTDECL(BesselJnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile = nullptr, int line = 0);
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDECL(BesselJnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile = nullptr, int line = 0);
 #endif
@@ -101,7 +101,7 @@ void RTDECL(BesselYn_10)(Descriptor &result, int32_t n1, int32_t n2,
     int line = 0);
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDECL(BesselYn_16)(Descriptor &result, int32_t n1, int32_t n2,
     CppFloat128Type x, CppFloat128Type bn1, CppFloat128Type bn1_1,
     const char *sourceFile = nullptr, int line = 0);
@@ -124,7 +124,7 @@ void RTDECL(BesselYnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile = nullptr, int line = 0);
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDECL(BesselYnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
     const char *sourceFile = nullptr, int line = 0);
 #endif

@@ -521,6 +521,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x6A:  // 6A XX = push XX
       return 2;
 
+    // This instruction can be encoded with a 16-bit immediate but that is
+    // incredibly unlikely.
+    case 0x68:  // 68 XX XX XX XX : push imm32
+      return 5;
+
     case 0xb8:  // b8 XX XX XX XX : mov eax, XX XX XX XX
     case 0xB9:  // b9 XX XX XX XX : mov ecx, XX XX XX XX
       return 5;
@@ -558,6 +563,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xC033:  // 33 C0 : xor eax, eax
     case 0xC933:  // 33 C9 : xor ecx, ecx
     case 0xD233:  // 33 D2 : xor edx, edx
+    case 0xDB84:  // 84 DB : test bl,bl
+    case 0xC984:  // 84 C9 : test cl,cl
+    case 0xD284:  // 84 D2 : test dl,dl
       return 2;
 
     // Cannot overwrite control-instruction. Return 0 to indicate failure.
@@ -566,6 +574,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   }
 
   switch (0x00FFFFFF & *(u32*)address) {
+    case 0xF8E483:  // 83 E4 F8 : and esp, 0xFFFFFFF8
+    case 0x64EC83:  // 83 EC 64 : sub esp, 64h
+      return 3;
     case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
       return 7;
   }
@@ -580,6 +591,21 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
                 //   movabs eax, dword ptr ds:[XXXXXXXX]
       return 9;
+    case 0xF2:
+      switch (*(u32 *)(address + 1)) {
+          case 0x2444110f:  //  f2 0f 11 44 24 XX       movsd  QWORD PTR
+                            //  [rsp + XX], xmm0
+          case 0x244c110f:  //  f2 0f 11 4c 24 XX       movsd  QWORD PTR
+                            //  [rsp + XX], xmm1
+          case 0x2454110f:  //  f2 0f 11 54 24 XX       movsd  QWORD PTR
+                            //  [rsp + XX], xmm2
+          case 0x245c110f:  //  f2 0f 11 5c 24 XX       movsd  QWORD PTR
+                            //  [rsp + XX], xmm3
+          case 0x2464110f:  //  f2 0f 11 64 24 XX       movsd  QWORD PTR
+                            //  [rsp + XX], xmm4
+            return 6;
+      }
+      break;
 
     case 0x83:
       const u8 next_byte = *(u8*)(address + 1);
@@ -609,49 +635,120 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 2;
 
     case 0x058A:  // 8A 05 XX XX XX XX : mov al, byte ptr [XX XX XX XX]
+    case 0x7E80:  // 80 7E YY XX  cmp BYTE PTR [rsi+YY], XX
+    case 0x7D80:  // 80 7D YY XX  cmp BYTE PTR [rbp+YY], XX
+    case 0x7A80:  // 80 7A YY XX  cmp BYTE PTR [rdx+YY], XX
+    case 0x7880:  // 80 78 YY XX  cmp BYTE PTR [rax+YY], XX
+    case 0x7B80:  // 80 7B YY XX  cmp BYTE PTR [rbx+YY], XX
+    case 0x7980:  // 80 79 YY XX  cmp BYTE ptr [rcx+YY], XX
+      return 4;
+
     case 0x058B:  // 8B 05 XX XX XX XX : mov eax, dword ptr [XX XX XX XX]
       if (rel_offset)
         *rel_offset = 2;
       return 6;
+
+    case 0x7E81:  // 81 7E YY XX XX XX XX  cmp DWORD PTR [rsi+YY], XX XX XX XX
+    case 0x7D81:  // 81 7D YY XX XX XX XX  cmp DWORD PTR [rbp+YY], XX XX XX XX
+    case 0x7A81:  // 81 7A YY XX XX XX XX  cmp DWORD PTR [rdx+YY], XX XX XX XX
+    case 0x7881:  // 81 78 YY XX XX XX XX  cmp DWORD PTR [rax+YY], XX XX XX XX
+    case 0x7B81:  // 81 7B YY XX XX XX XX  cmp DWORD PTR [rbx+YY], XX XX XX XX
+    case 0x7981:  // 81 79 YY XX XX XX XX  cmp dword ptr [rcx+YY], XX XX XX XX
+      return 7;
   }
 
   switch (0x00FFFFFF & *(u32*)address) {
-    case 0xe58948:    // 48 8b c4 : mov rbp, rsp
-    case 0xc18b48:    // 48 8b c1 : mov rax, rcx
-    case 0xc48b48:    // 48 8b c4 : mov rax, rsp
-    case 0xd9f748:    // 48 f7 d9 : neg rcx
-    case 0xd12b48:    // 48 2b d1 : sub rdx, rcx
     case 0x07c1f6:    // f6 c1 07 : test cl, 0x7
-    case 0xc98548:    // 48 85 C9 : test rcx, rcx
-    case 0xd28548:    // 48 85 d2 : test rdx, rdx
-    case 0xc0854d:    // 4d 85 c0 : test r8, r8
-    case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
+    case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
+    case 0xc00b4d:    // 4d 0b c0 : or r8, r8
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d
+    case 0xc08548:    // 48 85 c0 : test rax, rax
+    case 0xc0854d:    // 4d 85 c0 : test r8, r8
+    case 0xc08b41:    // 41 8b c0 : mov eax, r8d
+    case 0xc0ff48:    // 48 ff c0 : inc rax
+    case 0xc0ff49:    // 49 ff c0 : inc r8
+    case 0xc18b41:    // 41 8b c1 : mov eax, r9d
+    case 0xc18b48:    // 48 8b c1 : mov rax, rcx
+    case 0xc18b4c:    // 4c 8b c1 : mov r8, rcx
+    case 0xc1ff48:    // 48 ff c1 : inc rcx
+    case 0xc1ff49:    // 49 ff c1 : inc r9
+    case 0xc28b41:    // 41 8b c2 : mov eax, r10d
+    case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
+    case 0xc2ff48:    // 48 ff c2 : inc rdx
+    case 0xc2ff49:    // 49 ff c2 : inc r10
+    case 0xc38b41:    // 41 8b c3 : mov eax, r11d
+    case 0xc3ff48:    // 48 ff c3 : inc rbx
+    case 0xc3ff49:    // 49 ff c3 : inc r11
+    case 0xc48b41:    // 41 8b c4 : mov eax, r12d
+    case 0xc48b48:    // 48 8b c4 : mov rax, rsp
+    case 0xc4ff49:    // 49 ff c4 : inc r12
+    case 0xc5ff49:    // 49 ff c5 : inc r13
+    case 0xc6ff48:    // 48 ff c6 : inc rsi
+    case 0xc6ff49:    // 49 ff c6 : inc r14
+    case 0xc7ff48:    // 48 ff c7 : inc rdi
+    case 0xc7ff49:    // 49 ff c7 : inc r15
     case 0xc93345:    // 45 33 c9 : xor r9d, r9d
-    case 0xdb3345:    // 45 33 DB : xor r11d, r11d
-    case 0xd98b4c:    // 4c 8b d9 : mov r11, rcx
-    case 0xd28b4c:    // 4c 8b d2 : mov r10, rdx
-    case 0xc98b4c:    // 4C 8B C9 : mov r9, rcx
-    case 0xc18b4c:    // 4C 8B C1 : mov r8, rcx
-    case 0xd2b60f:    // 0f b6 d2 : movzx edx, dl
+    case 0xc98548:    // 48 85 c9 : test rcx, rcx
+    case 0xc9854d:    // 4d 85 c9 : test r9, r9
+    case 0xc98b4c:    // 4c 8b c9 : mov r9, rcx
     case 0xca2b48:    // 48 2b ca : sub rcx, rdx
     case 0xca3b48:    // 48 3b ca : cmp rcx, rdx
-    case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
-    case 0xc00b4d:    // 3d 0b c0 : or r8, r8
-    case 0xc08b41:    // 41 8b c0 : mov eax, r8d
+    case 0xd12b48:    // 48 2b d1 : sub rdx, rcx
     case 0xd18b48:    // 48 8b d1 : mov rdx, rcx
-    case 0xdc8b4c:    // 4c 8b dc : mov r11, rsp
     case 0xd18b4c:    // 4c 8b d1 : mov r10, rcx
-    case 0xE0E483:    // 83 E4 E0 : and esp, 0xFFFFFFE0
+    case 0xd28548:    // 48 85 d2 : test rdx, rdx
+    case 0xd2854d:    // 4d 85 d2 : test r10, r10
+    case 0xd28b4c:    // 4c 8b d2 : mov r10, rdx
+    case 0xd2b60f:    // 0f b6 d2 : movzx edx, dl
+    case 0xd98b4c:    // 4c 8b d9 : mov r11, rcx
+    case 0xd9f748:    // 48 f7 d9 : neg rcx
+    case 0xdb3345:    // 45 33 db : xor r11d, r11d
+    case 0xdb8548:    // 48 85 db : test rbx, rbx
+    case 0xdb854d:    // 4d 85 db : test r11, r11
+    case 0xdc8b4c:    // 4c 8b dc : mov r11, rsp
+    case 0xe0e483:    // 83 e4 e0 : and esp, 0xFFFFFFE0
+    case 0xe48548:    // 48 85 e4 : test rsp, rsp
+    case 0xe4854d:    // 4d 85 e4 : test r12, r12
+    case 0xe58948:    // 48 89 e5 : mov rbp, rsp
+    case 0xed8548:    // 48 85 ed : test rbp, rbp
+    case 0xed854d:    // 4d 85 ed : test r13, r13
+    case 0xf6854d:    // 4d 85 f6 : test r14, r14
+    case 0xff854d:    // 4d 85 ff : test r15, r15
       return 3;
 
+    case 0x245489:    // 89 54 24 XX : mov DWORD PTR[rsp + XX], edx
+    case 0x428d44:    // 44 8d 42 XX : lea r8d , [rdx + XX]
+    case 0x588948:    // 48 89 58 XX : mov QWORD PTR[rax + XX], rbx
     case 0xec8348:    // 48 83 ec XX : sub rsp, XX
     case 0xf88349:    // 49 83 f8 XX : cmp r8, XX
-    case 0x588948:    // 48 89 58 XX : mov QWORD PTR[rax + XX], rbx
       return 4;
+
+    case 0x246483:  // 83 64 24 XX YY :   and    DWORD PTR [rsp+XX], YY
+      return 5;
+
+    case 0x788166:  // 66 81 78 XX YY YY  cmp WORD PTR [rax+XX], YY YY
+    case 0x798166:  // 66 81 79 XX YY YY  cmp WORD PTR [rcx+XX], YY YY
+    case 0x7a8166:  // 66 81 7a XX YY YY  cmp WORD PTR [rdx+XX], YY YY
+    case 0x7b8166:  // 66 81 7b XX YY YY  cmp WORD PTR [rbx+XX], YY YY
+    case 0x7e8166:  // 66 81 7e XX YY YY  cmp WORD PTR [rsi+XX], YY YY
+    case 0x7f8166:  // 66 81 7f XX YY YY  cmp WORD PTR [rdi+XX], YY YY
+      return 6;
 
     case 0xec8148:    // 48 81 EC XX XX XX XX : sub rsp, XXXXXXXX
       return 7;
+
+    // clang-format off
+    case 0x788141:  // 41 81 78 XX YY YY YY YY : cmp DWORD PTR [r8+YY], XX XX XX XX
+    case 0x798141:  // 41 81 79 XX YY YY YY YY : cmp DWORD PTR [r9+YY], XX XX XX XX
+    case 0x7a8141:  // 41 81 7a XX YY YY YY YY : cmp DWORD PTR [r10+YY], XX XX XX XX
+    case 0x7b8141:  // 41 81 7b XX YY YY YY YY : cmp DWORD PTR [r11+YY], XX XX XX XX
+    case 0x7c8141:  // 41 81 7c XX YY YY YY YY : cmp DWORD PTR [r12+YY], XX XX XX XX
+    case 0x7d8141:  // 41 81 7d XX YY YY YY YY : cmp DWORD PTR [r13+YY], XX XX XX XX
+    case 0x7e8141:  // 41 81 7e XX YY YY YY YY : cmp DWORD PTR [r14+YY], XX XX XX XX
+    case 0x7f8141:  // 41 81 7f YY XX XX XX XX : cmp DWORD PTR [r15+YY], XX XX XX XX
+    case 0x247c81:  // 81 7c 24 YY XX XX XX XX : cmp DWORD PTR [rsp+YY], XX XX XX XX
+      return 8;
+      // clang-format on
 
     case 0x058b48:    // 48 8b 05 XX XX XX XX :
                       //   mov rax, QWORD PTR [rip + XXXXXXXX]
@@ -680,8 +777,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x24548948:  // 48 89 54 24 XX : mov QWORD PTR [rsp + XX], rdx
     case 0x244c894c:  // 4c 89 4c 24 XX : mov QWORD PTR [rsp + XX], r9
     case 0x2444894c:  // 4c 89 44 24 XX : mov QWORD PTR [rsp + XX], r8
+    case 0x244c8944:  // 44 89 4c 24 XX   mov DWORD PTR [rsp + XX], r9d
+    case 0x24448944:  // 44 89 44 24 XX   mov DWORD PTR [rsp + XX], r8d
+    case 0x246c8d48:  // 48 8d 6c 24 XX : lea rbp, [rsp + XX]
       return 5;
-    case 0x24648348:  // 48 83 64 24 XX : and QWORD PTR [rsp + XX], YY
+    case 0x24648348:  // 48 83 64 24 XX YY : and QWORD PTR [rsp + XX], YY
       return 6;
   }
 
@@ -695,6 +795,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x458B:  // 8B 45 XX : mov eax, dword ptr [ebp + XX]
     case 0x5D8B:  // 8B 5D XX : mov ebx, dword ptr [ebp + XX]
     case 0x7D8B:  // 8B 7D XX : mov edi, dword ptr [ebp + XX]
+    case 0x758B:  // 8B 75 XX : mov esi, dword ptr [ebp + XX]
     case 0xEC83:  // 83 EC XX : sub esp, XX
     case 0x75FF:  // FF 75 XX : push dword ptr [ebp + XX]
       return 3;

@@ -13,6 +13,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -24,7 +25,6 @@ namespace llvm {
 class MCContext;
 class MCInst;
 class MCInstrInfo;
-class MCRegister;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
@@ -483,7 +483,7 @@ public:
                                        bool MatchingInlineAsm) = 0;
 
   /// Allows targets to let registers opt out of clobber lists.
-  virtual bool omitRegisterFromClobberLists(unsigned RegNo) { return false; }
+  virtual bool omitRegisterFromClobberLists(MCRegister Reg) { return false; }
 
   /// Allow a target to add special case operand matching for things that
   /// tblgen doesn't/can't handle effectively. For example, literal

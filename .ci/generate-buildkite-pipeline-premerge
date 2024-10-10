@@ -198,7 +198,7 @@ function check-targets() {
       echo "check-clang-tools"
     ;;
     compiler-rt)
-      echo "check-all"
+      echo "check-compiler-rt"
     ;;
     cross-project-tests)
       echo "check-cross-project"
@@ -219,7 +219,7 @@ function check-targets() {
       echo "check-all"
     ;;
     libclc)
-      echo "check-all"
+      # Currently there is no testing for libclc.
     ;;
     *)
       echo "check-${project}"

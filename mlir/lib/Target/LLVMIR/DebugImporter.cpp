@@ -245,12 +245,32 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   if (llvm::is_contained(retainedNodes, nullptr))
     retainedNodes.clear();
 
+  SmallVector<DINodeAttr> annotations;
+  // We currently only support `string` values for annotations on the MLIR side.
+  // Theoretically we could support other primitives, but LLVM is not using
+  // other types in practice.
+  if (llvm::DINodeArray rawAnns = node->getAnnotations(); rawAnns) {
+    for (size_t i = 0, e = rawAnns->getNumOperands(); i < e; ++i) {
+      const llvm::MDTuple *tuple = cast<llvm::MDTuple>(rawAnns->getOperand(i));
+      if (tuple->getNumOperands() != 2)
+        continue;
+      const llvm::MDString *name = cast<llvm::MDString>(tuple->getOperand(0));
+      const llvm::MDString *value =
+          dyn_cast<llvm::MDString>(tuple->getOperand(1));
+      if (name && value) {
+        annotations.push_back(DIAnnotationAttr::get(
+            context, StringAttr::get(context, name->getString()),
+            StringAttr::get(context, value->getString())));
+      }
+    }
+  }
+
   return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),
                                node->getScopeLine(), *subprogramFlags, type,
-                               retainedNodes);
+                               retainedNodes, annotations);
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {

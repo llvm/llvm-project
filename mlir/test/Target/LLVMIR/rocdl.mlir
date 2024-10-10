@@ -142,6 +142,27 @@ llvm.func @rocdl.barrier() {
   llvm.return
 }
 
+llvm.func @rocdl.s.barrier.signal() {
+  // CHECK-LABEL: rocdl.s.barrier.signal
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.signal(i32 -1)
+  rocdl.s.barrier.signal -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.wait() {
+  // CHECK-LABEL: rocdl.s.barrier.wait
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.wait(i16 -1)
+  rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.dscnt() {
+  // CHECK-LABEL: rocdl.s.wait.dscnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.dscnt(i16 0)
+  rocdl.s.wait.dscnt 0
+  llvm.return
+}
+
 llvm.func @rocdl.setprio() {
   // CHECK: call void @llvm.amdgcn.s.setprio(i16 0)
   rocdl.s.setprio 0
@@ -543,9 +564,32 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
 }
 
 llvm.func @rocdl_16bit_packed_floats(%sourceA: f32, %sourceB: f32) -> vector<2xf16> {
+  // CHECK-LABEL: @rocdl_16bit_packed_floats
   // CHECK: call <2 x half> @llvm.amdgcn.cvt.pkrtz(float {{.*}}, float {{.*}})
   %source = rocdl.cvt.pkrtz %sourceA, %sourceB  : vector<2xf16>
   llvm.return %source : vector<2xf16>
+}
+
+llvm.func @rocdl_atomic_attrs(%ptr: !llvm.ptr<1>, %data: f32) {
+  // CHECK-LABEL: @rocdl_atomic_attrs
+  // CHECK: atomicrmw
+  // CHECK-SAME: !amdgpu.ignore.denormal.mode
+  // CHECK-SAME: !amdgpu.no.fine.grained.memory
+  // CHECK-SAME: !amdgpu.no.remote.memory
+  llvm.atomicrmw fadd %ptr, %data monotonic {
+    rocdl.ignore_denormal_mode,
+    rocdl.no_fine_grained_memory,
+    rocdl.no_remote_memory} : !llvm.ptr<1>, f32
+  llvm.return
+}
+
+llvm.func @rocdl_last_use(%ptr: !llvm.ptr<1>) -> i32 {
+  // CHECK-LABEL: @rocdl_last_use
+  // CHECK: %[[ret:.+]] = load
+  // CHECK-SAME: !amdgpu.last.use
+  // CHECK: ret i32 %[[ret]]
+  %ret = llvm.load %ptr {rocdl.last_use} : !llvm.ptr<1> -> i32
+  llvm.return %ret : i32
 }
 
 // CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="true" }

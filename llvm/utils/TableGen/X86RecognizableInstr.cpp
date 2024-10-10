@@ -154,7 +154,7 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
       UID(uid), Spec(&tables.specForUID(uid)) {
   // Check for 64-bit inst which does not require REX
   // FIXME: Is there some better way to check for In64BitMode?
-  for (const Record *Predicate : Rec->getValueAsListOfConstDefs("Predicates")) {
+  for (const Record *Predicate : Rec->getValueAsListOfDefs("Predicates")) {
     if (Predicate->getName().contains("Not64Bit") ||
         Predicate->getName().contains("In32Bit")) {
       Is32Bit = true;

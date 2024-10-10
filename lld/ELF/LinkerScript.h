@@ -290,7 +290,7 @@ class LinkerScript final {
   // that must be reinitialized for each call to the above functions, and must
   // not be used outside of the scope of a call to the above functions.
   struct AddressState {
-    AddressState();
+    AddressState(const LinkerScript &);
     OutputSection *outSec = nullptr;
     MemoryRegion *memRegion = nullptr;
     MemoryRegion *lmaRegion = nullptr;
@@ -298,10 +298,12 @@ class LinkerScript final {
     uint64_t tbssAddr = 0;
   };
 
+  Ctx &ctx;
   llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
   StringRef getOutputSectionName(const InputSectionBase *s) const;
   void addSymbol(SymbolAssignment *cmd);
+  void declareSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
   void setDot(Expr e, const Twine &loc, bool inSec);
   void expandOutputSection(uint64_t size);
@@ -335,6 +337,7 @@ class LinkerScript final {
   uint64_t dot = 0;
 
 public:
+  LinkerScript(Ctx &ctx) : ctx(ctx) {}
   OutputDesc *createOutputSection(StringRef name, StringRef location);
   OutputDesc *getOrCreateOutputSection(StringRef name);
 

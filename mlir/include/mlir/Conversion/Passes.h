@@ -78,6 +78,7 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRVPass.h"
+#include "mlir/Conversion/VectorToXeGPU/VectorToXeGPU.h"
 
 namespace mlir {
 

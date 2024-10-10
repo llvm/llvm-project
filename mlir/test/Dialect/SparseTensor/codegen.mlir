@@ -826,3 +826,19 @@ func.func @sparse_new_coo_permute_no(%arg0: !llvm.ptr) -> tensor<?x?xf32, #CooPN
   %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<?x?xf32, #CooPNo>
   return %0 : tensor<?x?xf32, #CooPNo>
 }
+
+// CHECK-LABEL: func.func @test_tensor_dim_unranked
+//       CHECK: tensor.dim
+func.func @test_tensor_dim_unranked(%arg0: tensor<*xf32>) -> index {
+  %c = arith.constant 0 : index
+  %0 = tensor.dim %arg0, %c : tensor<*xf32>
+  return %0 : index
+}
+
+// CHECK-LABEL: func.func @test_tensor_reshape_unranked
+//       CHECK: tensor.reshape
+func.func @test_tensor_reshape_unranked(%src: tensor<*xf32>, %shape: tensor<1xi32>) -> tensor<?xf32> {
+  %dst = tensor.reshape %src(%shape)
+         : (tensor<*xf32>, tensor<1xi32>) -> tensor<?xf32>
+  return %dst : tensor<?xf32>
+}

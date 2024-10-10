@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_WCHAR_BTOWC_H
 #define LLVM_LIBC_SRC_WCHAR_BTOWC_H
 
+#include "hdr/types/wint_t.h"
 #include "src/__support/macros/config.h"
-#include <wchar.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

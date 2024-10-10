@@ -62,10 +62,7 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("positiveComparison"),
                      this);
   AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("!="), hasRHS(Literal0))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName("!="), hasRHS(CountCall))
+      binaryOperator(hasOperatorName("!="), hasOperands(CountCall, Literal0))
           .bind("positiveComparison"));
   AddSimpleMatcher(
       binaryOperator(hasLHS(CountCall), hasOperatorName(">"), hasRHS(Literal0))
@@ -82,10 +79,7 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
 
   // Find inverted membership tests which use `count()`.
   AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("=="), hasRHS(Literal0))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName("=="), hasRHS(CountCall))
+      binaryOperator(hasOperatorName("=="), hasOperands(CountCall, Literal0))
           .bind("negativeComparison"));
   AddSimpleMatcher(
       binaryOperator(hasLHS(CountCall), hasOperatorName("<="), hasRHS(Literal0))
@@ -102,10 +96,10 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
 
   // Find membership tests based on `find() == end()`.
   AddSimpleMatcher(
-      binaryOperator(hasLHS(FindCall), hasOperatorName("!="), hasRHS(EndCall))
+      binaryOperator(hasOperatorName("!="), hasOperands(FindCall, EndCall))
           .bind("positiveComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(FindCall), hasOperatorName("=="), hasRHS(EndCall))
+      binaryOperator(hasOperatorName("=="), hasOperands(FindCall, EndCall))
           .bind("negativeComparison"));
 }
 

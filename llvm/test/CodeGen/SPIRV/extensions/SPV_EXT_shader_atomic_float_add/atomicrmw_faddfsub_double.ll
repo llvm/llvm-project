@@ -10,13 +10,14 @@
 ; CHECK-DAG: %[[TyInt32:[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[Const0:[0-9]+]] = OpConstant %[[TyFP64]] 0
 ; CHECK-DAG: %[[Const42:[0-9]+]] = OpConstant %[[TyFP64]] 42
-; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1
+; CHECK-DAG: %[[ScopeAllSvmDevices:[0-9]+]] = OpConstantNull %[[TyInt32]]
 ; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 16
+; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1
 ; CHECK-DAG: %[[TyFP64Ptr:[0-9]+]] = OpTypePointer {{[a-zA-Z]+}} %[[TyFP64]]
 ; CHECK-DAG: %[[DblPtr:[0-9]+]] = OpVariable %[[TyFP64Ptr]] {{[a-zA-Z]+}} %[[Const0]]
-; CHECK: OpAtomicFAddEXT %[[TyFP64]] %[[DblPtr]] %[[ScopeDevice]] %[[MemSeqCst]] %[[Const42]]
+; CHECK: OpAtomicFAddEXT %[[TyFP64]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42]]
 ; CHECK: %[[Const42Neg:[0-9]+]] = OpFNegate %[[TyFP64]] %[[Const42]]
-; CHECK: OpAtomicFAddEXT %[[TyFP64]] %[[DblPtr]] %[[ScopeDevice]] %[[MemSeqCst]] %[[Const42Neg]]
+; CHECK: OpAtomicFAddEXT %[[TyFP64]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42Neg]]
 ; CHECK: OpAtomicFAddEXT %[[TyFP64]] %[[DblPtr]] %[[ScopeDevice]] %[[MemSeqCst]] %[[Const42]]
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"

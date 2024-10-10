@@ -40,16 +40,16 @@ class InputSection;
 class Symbol;
 
 // Opens a given file.
-std::optional<MemoryBufferRef> readFile(StringRef path);
+std::optional<MemoryBufferRef> readFile(Ctx &, StringRef path);
 
 // Add symbols in File to the symbol table.
-void parseFile(InputFile *file);
-void parseFiles(const std::vector<InputFile *> &files,
-                InputFile *armCmseImpLib);
+void parseFile(Ctx &, InputFile *file);
+void parseFiles(Ctx &, const std::vector<InputFile *> &files);
 
 // The root class of input files.
 class InputFile {
 protected:
+  Ctx &ctx;
   std::unique_ptr<Symbol *[]> symbols;
   uint32_t numSymbols = 0;
   SmallVector<InputSectionBase *, 0> sections;
@@ -63,7 +63,7 @@ public:
     InternalKind,
   };
 
-  InputFile(Kind k, MemoryBufferRef m);
+  InputFile(Ctx &, Kind k, MemoryBufferRef m);
   Kind kind() const { return fileKind; }
 
   bool isElf() const {
@@ -105,7 +105,7 @@ public:
   }
 
   template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
-    uint32_t symIndex = rel.getSymbol(config->isMips64EL);
+    uint32_t symIndex = rel.getSymbol(ctx.arg.isMips64EL);
     return getSymbol(symIndex);
   }
 
@@ -128,8 +128,6 @@ public:
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
   // group ID. For more info, see checkDependency() in SymbolTable.cpp.
   uint32_t groupId;
-  static bool isInGroup;
-  static uint32_t nextGroupId;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
@@ -178,7 +176,7 @@ private:
 
 class ELFFileBase : public InputFile {
 public:
-  ELFFileBase(Kind k, ELFKind ekind, MemoryBufferRef m);
+  ELFFileBase(Ctx &ctx, Kind k, ELFKind ekind, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->isElf(); }
 
   void init();
@@ -242,8 +240,8 @@ public:
     return this->ELFFileBase::getObj<ELFT>();
   }
 
-  ObjFile(ELFKind ekind, MemoryBufferRef m, StringRef archiveName)
-      : ELFFileBase(ObjKind, ekind, m) {
+  ObjFile(Ctx &ctx, ELFKind ekind, MemoryBufferRef m, StringRef archiveName)
+      : ELFFileBase(ctx, ObjKind, ekind, m) {
     this->archiveName = archiveName;
   }
 
@@ -327,7 +325,7 @@ private:
 
 class BitcodeFile : public InputFile {
 public:
-  BitcodeFile(MemoryBufferRef m, StringRef archiveName,
+  BitcodeFile(Ctx &, MemoryBufferRef m, StringRef archiveName,
               uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
@@ -340,7 +338,7 @@ public:
 // .so file.
 class SharedFile : public ELFFileBase {
 public:
-  SharedFile(MemoryBufferRef m, StringRef defaultSoName);
+  SharedFile(Ctx &, MemoryBufferRef m, StringRef defaultSoName);
 
   // This is actually a vector of Elf_Verdef pointers.
   SmallVector<const void *, 0> verdefs;
@@ -374,16 +372,17 @@ private:
 
 class BinaryFile : public InputFile {
 public:
-  explicit BinaryFile(MemoryBufferRef m) : InputFile(BinaryKind, m) {}
+  explicit BinaryFile(Ctx &ctx, MemoryBufferRef m)
+      : InputFile(ctx, BinaryKind, m) {}
   static bool classof(const InputFile *f) { return f->kind() == BinaryKind; }
   void parse();
 };
 
-InputFile *createInternalFile(StringRef name);
-ELFFileBase *createObjFile(MemoryBufferRef mb, StringRef archiveName = "",
-                           bool lazy = false);
+InputFile *createInternalFile(Ctx &, StringRef name);
+ELFFileBase *createObjFile(Ctx &, MemoryBufferRef mb,
+                           StringRef archiveName = "", bool lazy = false);
 
-std::string replaceThinLTOSuffix(StringRef path);
+std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 
 } // namespace elf
 } // namespace lld
