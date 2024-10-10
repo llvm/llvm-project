@@ -4572,9 +4572,7 @@ static QualType mergeTypeNullabilityForRedecl(Sema &S, SourceLocation loc,
     return type;
 
   // Otherwise, provide the result with the same nullability.
-  return S.Context.getAttributedType(
-           AttributedType::getNullabilityAttrKind(*prevNullability),
-           type, type);
+  return S.Context.getAttributedType(*prevNullability, type, type);
 }
 
 /// Merge information from the declaration of a method in the \@interface

@@ -128,6 +128,8 @@ public:
     AddStmt(const_cast<Stmt*>(S));
   }
 
+  void writeAttr(const Attr *A) { AddAttr(A); }
+
   /// Write an BTFTypeTagAttr object.
   void writeBTFTypeTagAttr(const BTFTypeTagAttr *A) { AddAttr(A); }
 
