@@ -99,6 +99,9 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
