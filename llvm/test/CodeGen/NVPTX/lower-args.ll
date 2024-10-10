@@ -9,13 +9,13 @@ target triple = "nvptx64-nvidia-cuda"
 
 %class.outer = type <{ %class.inner, i32, [4 x i8] }>
 %class.inner = type { ptr, ptr }
+%class.padded = type { i8, i32 }
 
 ; Check that nvptx-lower-args preserves arg alignment
 ; COMMON-LABEL: load_alignment
 define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %arg) {
 entry:
-; IR: load %class.outer, ptr addrspace(101)
-; IR-SAME: align 8
+; IR: call void @llvm.memcpy.p0.p101.i64(ptr align 8
 ; PTX: ld.param.u64
 ; PTX-NOT: ld.param.u8
   %arg.idx.val = load ptr, ptr %arg, align 8
@@ -33,6 +33,36 @@ entry:
   ret void
 }
 
+; Check that nvptx-lower-args copies padding as the struct may have been a union
+; COMMON-LABEL: load_padding
+define void @load_padding(ptr nocapture readonly byval(%class.padded) %arg) {
+; PTX:       {
+; PTX-NEXT:    .local .align 8 .b8 __local_depot1[8];
+; PTX-NEXT:    .reg .b64 %SP;
+; PTX-NEXT:    .reg .b64 %SPL;
+; PTX-NEXT:    .reg .b64 %rd<5>;
+; PTX-EMPTY:
+; PTX-NEXT:  // %bb.0:
+; PTX-NEXT:    mov.u64 %SPL, __local_depot1;
+; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
+; PTX-NEXT:    ld.param.u64 %rd1, [load_padding_param_0];
+; PTX-NEXT:    st.u64 [%SP+0], %rd1;
+; PTX-NEXT:    add.u64 %rd2, %SP, 0;
+; PTX-NEXT:    { // callseq 1, 0
+; PTX-NEXT:    .param .b64 param0;
+; PTX-NEXT:    st.param.b64 [param0+0], %rd2;
+; PTX-NEXT:    .param .b64 retval0;
+; PTX-NEXT:    call.uni (retval0),
+; PTX-NEXT:    escape,
+; PTX-NEXT:    (
+; PTX-NEXT:    param0
+; PTX-NEXT:    );
+; PTX-NEXT:    ld.param.b64 %rd3, [retval0+0];
+; PTX-NEXT:    } // callseq 1
+; PTX-NEXT:    ret;
+  %tmp = call ptr @escape(ptr nonnull align 16 %arg)
+  ret void
+}
 
 ; COMMON-LABEL: ptr_generic
 define void @ptr_generic(ptr %out, ptr %in) {
