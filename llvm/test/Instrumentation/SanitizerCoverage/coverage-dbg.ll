@@ -14,9 +14,11 @@
 ; clang++ ../1.cc -O3 -g -S -emit-llvm  -fno-strict-aliasing
 ; and add sanitize_address to @_ZN1A1fEv
 
-; Test that __sanitizer_cov_trace_pc_guard call has !dbg pointing to the opening { of A::f().
+; Test that __sanitizer_cov_trace_pc_guard call has !dbg pointing at a
+; compiler-generated instruction.
+
 ; CHECK: call void @__sanitizer_cov_trace_pc_guard(ptr{{.*}}) #{{.*}}, !dbg [[A:!.*]]
-; CHECK: [[A]] = !DILocation(line: 6, scope: !{{.*}})
+; CHECK: [[A]] = !DILocation(line: 1, scope: !{{.*}})
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
