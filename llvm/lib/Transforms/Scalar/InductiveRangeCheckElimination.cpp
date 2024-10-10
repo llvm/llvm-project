@@ -430,8 +430,8 @@ bool InductiveRangeCheck::reassociateSubLHS(
   auto getExprScaledIfOverflow = [&](Instruction::BinaryOps BinOp,
                                      const SCEV *LHS,
                                      const SCEV *RHS) -> const SCEV * {
-    const SCEV *(ScalarEvolution::*Operation)(const SCEV *, const SCEV *,
-                                              SCEV::NoWrapFlags, unsigned);
+    SCEVUse (ScalarEvolution::*Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
+                                          unsigned);
     switch (BinOp) {
     default:
       llvm_unreachable("Unsupported binary op");
@@ -750,7 +750,7 @@ InductiveRangeCheck::computeSafeIterationSpace(ScalarEvolution &SE,
   const SCEV *Zero = SE.getZero(M->getType());
 
   // This function returns SCEV equal to 1 if X is non-negative 0 otherwise.
-  auto SCEVCheckNonNegative = [&](const SCEV *X) {
+  auto SCEVCheckNonNegative = [&](const SCEV *X) -> const SCEV * {
     const Loop *L = IndVar->getLoop();
     const SCEV *Zero = SE.getZero(X->getType());
     const SCEV *One = SE.getOne(X->getType());

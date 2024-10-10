@@ -63,10 +63,10 @@ static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
   return SE.computeConstantDifference(LHS, RHS);
 }
 
-  static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
-                        const SCEV *&RHS) {
-    return SE.matchURem(Expr, LHS, RHS);
-  }
+static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, SCEVUse &LHS,
+                      SCEVUse &RHS) {
+  return SE.matchURem(Expr, LHS, RHS);
+}
 
   static bool isImpliedCond(
       ScalarEvolution &SE, ICmpInst::Predicate Pred, const SCEV *LHS,
@@ -1522,8 +1522,8 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
   runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     for (auto *N : {"rem1", "rem2", "rem3", "rem5"}) {
       auto *URemI = getInstructionByName(F, N);
-      auto *S = SE.getSCEV(URemI);
-      const SCEV *LHS, *RHS;
+      const SCEV *S = SE.getSCEV(URemI);
+      SCEVUse LHS, RHS;
       EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
       EXPECT_EQ(LHS, SE.getSCEV(URemI->getOperand(0)));
       EXPECT_EQ(RHS, SE.getSCEV(URemI->getOperand(1)));
@@ -1535,8 +1535,8 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
     // match results are extended to the size of the input expression.
     auto *Ext = getInstructionByName(F, "ext");
     auto *URem1 = getInstructionByName(F, "rem4");
-    auto *S = SE.getSCEV(Ext);
-    const SCEV *LHS, *RHS;
+    const SCEV *S = SE.getSCEV(Ext);
+    SCEVUse LHS, RHS;
     EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
     EXPECT_NE(LHS, SE.getSCEV(URem1->getOperand(0)));
     // RHS and URem1->getOperand(1) have different widths, so compare the
@@ -1662,11 +1662,11 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
     auto *ExtractValue = getInstructionByName(F, "extractvalue");
     auto *IV = getInstructionByName(F, "iv");
 
-    auto *ExtractValueScev = SE.getSCEV(ExtractValue);
+    auto ExtractValueScev = SE.getSCEV(ExtractValue);
     EXPECT_NE(ExtractValueScev, nullptr);
 
     SE.forgetValue(IV);
-    auto *ExtractValueScevForgotten = SE.getExistingSCEV(ExtractValue);
+    auto ExtractValueScevForgotten = SE.getExistingSCEV(ExtractValue);
     EXPECT_EQ(ExtractValueScevForgotten, nullptr);
   });
 }
@@ -1705,6 +1705,61 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
     // crash if the comparator has the specific caching bug.
     SE.getSCEV(F.getEntryBlock().getTerminator()->getOperand(0));
   });
+}
+
+TEST_F(ScalarEvolutionsTest, SCEVUseWithFlags) {
+  Type *Ty = IntegerType::get(Context, 32);
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), {Ty, Ty, Ty}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
+  ReturnInst::Create(Context, nullptr, BB);
+
+  Value *V0 = F->getArg(0);
+  Value *V1 = F->getArg(1);
+  Value *V2 = F->getArg(2);
+
+  ScalarEvolution SE = buildSE(*F);
+
+  const SCEV *S0 = SE.getSCEV(V0);
+  const SCEV *S1 = SE.getSCEV(V1);
+  const SCEV *S2 = SE.getSCEV(V2);
+
+  SCEVUse AddNoFlags = SE.getAddExpr(S0, SE.getConstant(S0->getType(), 2));
+  SCEVUse AddWithFlag2 = {AddNoFlags, 2};
+  SCEVUse MulNoFlags = SE.getMulExpr(AddNoFlags, S1);
+  SCEVUse MulFlags2 = SE.getMulExpr(AddWithFlag2, S1);
+  EXPECT_EQ(AddNoFlags.getCanonical(SE), AddWithFlag2.getCanonical(SE));
+  EXPECT_EQ(MulNoFlags.getCanonical(SE), MulFlags2.getCanonical(SE));
+
+  SCEVUse AddWithFlag1 = {AddNoFlags, 1};
+  SCEVUse MulFlags1 = SE.getMulExpr(AddWithFlag1, S1);
+  EXPECT_EQ(MulNoFlags.getCanonical(SE), MulFlags1.getCanonical(SE));
+  EXPECT_EQ(MulFlags1.getCanonical(SE), MulFlags2.getCanonical(SE));
+
+  SCEVUse AddNoFlags2 = SE.getAddExpr(S0, SE.getConstant(S0->getType(), 2));
+  EXPECT_EQ(AddNoFlags.getCanonical(SE), AddNoFlags2.getCanonical(SE));
+  EXPECT_EQ(AddNoFlags2.getCanonical(SE), AddWithFlag2.getCanonical(SE));
+
+  SCEVUse MulFlags22 = SE.getMulExpr(AddWithFlag2, S1);
+  EXPECT_EQ(MulFlags22.getCanonical(SE), MulFlags2.getCanonical(SE));
+  EXPECT_EQ(MulNoFlags.getCanonical(SE), MulFlags22.getCanonical(SE));
+
+  SCEVUse MulNoFlags2 = SE.getMulExpr(AddNoFlags, S1);
+  EXPECT_EQ(MulNoFlags.getCanonical(SE), MulNoFlags2.getCanonical(SE));
+  EXPECT_EQ(MulNoFlags2.getCanonical(SE), MulFlags2.getCanonical(SE));
+  EXPECT_EQ(MulNoFlags2.getCanonical(SE), MulFlags22.getCanonical(SE));
+
+  SE.getAddExpr(MulNoFlags, S2);
+  SE.getAddExpr(MulFlags1, S2);
+  SE.getAddExpr(MulFlags2, S2);
+  SCEVUse AddMulNoFlags = SE.getAddExpr(MulNoFlags, S2);
+  SCEVUse AddMulFlags1 = SE.getAddExpr(MulFlags1, S2);
+  SCEVUse AddMulFlags2 = SE.getAddExpr(MulFlags2, S2);
+
+  EXPECT_EQ(AddMulNoFlags.getCanonical(SE), AddMulFlags1.getCanonical(SE));
+  EXPECT_EQ(AddMulNoFlags.getCanonical(SE), AddMulFlags2.getCanonical(SE));
+  EXPECT_EQ(AddMulFlags1.getCanonical(SE), AddMulFlags2.getCanonical(SE));
 }
 
 }  // end namespace llvm

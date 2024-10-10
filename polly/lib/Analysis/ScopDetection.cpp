@@ -520,7 +520,7 @@ bool ScopDetection::involvesMultiplePtrs(const SCEV *S0, const SCEV *S1,
     if (!V->getType()->isPointerTy())
       continue;
 
-    auto *PtrSCEV = SE.getSCEVAtScope(V, Scope);
+    SCEVUse PtrSCEV = SE.getSCEVAtScope(V, Scope);
     if (isa<SCEVConstant>(PtrSCEV))
       continue;
 
@@ -720,7 +720,7 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
 
         // Bail if a pointer argument has a base address not known to
         // ScalarEvolution. Note that a zero pointer is acceptable.
-        auto *ArgSCEV = SE.getSCEVAtScope(Arg, LI.getLoopFor(CI.getParent()));
+        SCEVUse ArgSCEV = SE.getSCEVAtScope(Arg, LI.getLoopFor(CI.getParent()));
         if (ArgSCEV->isZero())
           continue;
 
@@ -891,7 +891,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
         if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
           SmallVector<const SCEV *, 0> Operands;
 
-          for (auto *MulOp : AF2->operands()) {
+          for (SCEVUse MulOp : AF2->operands()) {
             if (auto *Const = dyn_cast<SCEVConstant>(MulOp))
               Operands.push_back(Const);
             if (auto *Unknown = dyn_cast<SCEVUnknown>(MulOp)) {
@@ -1366,7 +1366,7 @@ bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) {
 ScopDetection::LoopStats
 ScopDetection::countBeneficialSubLoops(Loop *L, ScalarEvolution &SE,
                                        unsigned MinProfitableTrips) {
-  auto *TripCount = SE.getBackedgeTakenCount(L);
+  SCEVUse TripCount = SE.getBackedgeTakenCount(L);
 
   int NumLoops = 1;
   int MaxLoopDepth = 1;
