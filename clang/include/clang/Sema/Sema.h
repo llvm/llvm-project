@@ -11637,7 +11637,8 @@ public:
                         SourceLocation RAngleLoc, unsigned ArgumentPackIndex,
                         SmallVectorImpl<TemplateArgument> &SugaredConverted,
                         SmallVectorImpl<TemplateArgument> &CanonicalConverted,
-                        CheckTemplateArgumentKind CTAK);
+                        CheckTemplateArgumentKind CTAK,
+                        bool *MatchedPackOnParmToNonPackOnArg);
 
   /// Check that the given template arguments can be provided to
   /// the given template, converting the arguments along the way.
@@ -11684,7 +11685,8 @@ public:
       SmallVectorImpl<TemplateArgument> &SugaredConverted,
       SmallVectorImpl<TemplateArgument> &CanonicalConverted,
       bool UpdateArgsWithConversions = true,
-      bool *ConstraintsNotSatisfied = nullptr, bool PartialOrderingTTP = false);
+      bool *ConstraintsNotSatisfied = nullptr, bool PartialOrderingTTP = false,
+      bool *MatchedPackOnParmToNonPackOnArg = nullptr);
 
   bool CheckTemplateTypeArgument(
       TemplateTypeParmDecl *Param, TemplateArgumentLoc &Arg,
@@ -11718,7 +11720,8 @@ public:
   /// It returns true if an error occurred, and false otherwise.
   bool CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
                                      TemplateParameterList *Params,
-                                     TemplateArgumentLoc &Arg, bool IsDeduced);
+                                     TemplateArgumentLoc &Arg, bool IsDeduced,
+                                     bool *MatchedPackOnParmToNonPackOnArg);
 
   void NoteTemplateLocation(const NamedDecl &Decl,
                             std::optional<SourceRange> ParamRange = {});
@@ -12419,7 +12422,7 @@ public:
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
       TemplateParameterList *PParam, TemplateDecl *PArg, TemplateDecl *AArg,
       const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
-      bool IsDeduced);
+      bool IsDeduced, bool *MatchedPackOnParmToNonPackOnArg);
 
   /// Mark which template parameters are used in a given expression.
   ///
@@ -13418,7 +13421,8 @@ public:
   bool InstantiateClassTemplateSpecialization(
       SourceLocation PointOfInstantiation,
       ClassTemplateSpecializationDecl *ClassTemplateSpec,
-      TemplateSpecializationKind TSK, bool Complain = true);
+      TemplateSpecializationKind TSK, bool Complain = true,
+      bool PrimaryHasMatchedPackOnParmToNonPackOnArg = false);
 
   /// Instantiates the definitions of all of the member
   /// of the given class, which is an instantiation of a class template

@@ -156,16 +156,14 @@ namespace ttp_defaults {
 namespace ttp_only {
   template <template <class...    > class TT1> struct A      { static constexpr int V = 0; };
   template <template <class       > class TT2> struct A<TT2> { static constexpr int V = 1; };
-  // new-note@-1 {{partial specialization matches}}
   template <template <class, class> class TT3> struct A<TT3> { static constexpr int V = 2; };
-  // new-note@-1 {{partial specialization matches}}
 
   template <class ...          > struct B;
   template <class              > struct C;
   template <class, class       > struct D;
   template <class, class, class> struct E;
 
-  static_assert(A<B>::V == 0); // new-error {{ambiguous partial specializations}}
+  static_assert(A<B>::V == 0);
   static_assert(A<C>::V == 1);
   static_assert(A<D>::V == 2);
   static_assert(A<E>::V == 0);
@@ -412,11 +410,9 @@ namespace partial {
     template<template<class... T1s> class TT1> struct A {};
 
     template<template<class T2> class TT2> struct A<TT2>;
-    // new-note@-1 {{template is declared here}}
 
     template<class... T3s> struct B;
     template struct A<B>;
-    // new-error@-1 {{explicit instantiation of undefined template}}
   } // namespace t1
   namespace t2 {
     template<template<class... T1s> class TT1> struct A;
