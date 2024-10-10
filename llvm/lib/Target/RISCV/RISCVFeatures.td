@@ -927,6 +927,13 @@ def FeatureStdExtSscsrind
     : RISCVExtension<"sscsrind", 1, 0,
                      "'Sscsrind' (Indirect CSR Access Supervisor Level)">;
 
+def FeatureStdExtSmdbltrp
+    : RISCVExtension<"smdbltrp", 1, 0,
+                     "'Smdbltrp' (Double Trap Machine Level)">;
+def FeatureStdExtSsdbltrp
+    : RISCVExtension<"ssdbltrp", 1, 0,
+                     "'Ssdbltrp' (Double Trap Supervisor Level)">;
+
 def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
