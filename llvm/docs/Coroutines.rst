@@ -755,11 +755,11 @@ Custom ABIs and Plugin Libraries
 
 Plugin libraries can extend coroutine lowering enabling a wide variety of users
 to utilize the coroutine transformation passes. An existing coroutine lowering
-is extended by: 1. defining custom ABIs that inherit from the existing ABIs,
-2. give a list of generators for the custom ABIs when constructing the
-`CoroSplit`_ pass, and 3. use `coro.begin.custom.abi` in place of `coro.begin`
-with an additional parameter for the index of the generator/ABI to be used for
-the coroutine.
+is extended by:
+
+#. defining custom ABIs that inherit from the existing ABIs,
+#. give a list of generators for the custom ABIs when constructing the `CoroSplit`_ pass, and
+#. use `coro.begin.custom.abi` in place of `coro.begin` that has an additional parameter for the index of the generator/ABI to be used for the coroutine.
 
 A custom ABI overriding the SwitchABI's materialization looks like:
 
@@ -777,7 +777,7 @@ pass looks like:
 .. code-block:: c++
 
   CoroSplitPass::BaseABITy GenCustomABI = [](Function &F, coro::Shape &S) {
-    return new CustomSwitchABI(F, S);
+    return std::make_unique<CustomSwitchABI>(F, S);
   };
 
   CGSCCPassManager CGPM;
