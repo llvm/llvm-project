@@ -1543,6 +1543,29 @@ static void computeKnownBitsFromOperator(const Operator *I,
         }
         break;
       }
+
+      case Instruction::UDiv: {
+        // For UDiv, the result can never exceed either the numerator, or the
+        // start value, whichever is greater. The case where the PHI is not
+        // the numerator of the UDiv is already handled by other code.
+        if (BO->getOperand(0) != P)
+          break;
+        [[fallthrough]];
+      }
+
+      case Instruction::URem: {
+        // For URem, the result can never exceed the start value.
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
+
+        unsigned OpNum = P->getOperand(0) == R ? 0 : 1;
+        Instruction *RInst = P->getIncomingBlock(OpNum)->getTerminator();
+
+        RecQ.CxtI = RInst;
+        computeKnownBits(R, DemandedElts, Known2, Depth + 1, RecQ);
+        Known.Zero.setHighBits(Known2.countMinLeadingZeros());
+        break;
+      }
+
       default:
         break;
       }
@@ -8997,12 +9020,14 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
     switch (Opcode) {
     default:
       continue;
-    // TODO: Expand list -- xor, div, gep, uaddo, etc..
+    // TODO: Expand list -- xor, gep, uadd.sat etc.
     case Instruction::LShr:
     case Instruction::AShr:
     case Instruction::Shl:
     case Instruction::Add:
     case Instruction::Sub:
+    case Instruction::UDiv:
+    case Instruction::URem:
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Mul:
