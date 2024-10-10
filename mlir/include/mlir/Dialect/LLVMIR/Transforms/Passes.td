@@ -48,7 +48,7 @@ def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
   let constructor = "::mlir::NVVM::createOptimizeForTargetPass()";
 }
 
-def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir::ModuleOp"> {
+def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir::ModuleOp"> {
   let summary = "Materialize LLVM debug info subprogram attribute on every LLVMFuncOp";
   let description = [{
     Having a debug info subprogram attribute on a function is required for
