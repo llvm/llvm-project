@@ -1,27 +1,31 @@
 ================
-LLDB Code Owners
+LLDB Maintainers
 ================
 
-This file is a list of the `code owners <https://llvm.org/docs/DeveloperPolicy.html#code-owners>`_ for LLDB.
+This file is a list of the `maintainers <https://llvm.org/docs/DeveloperPolicy.html#maintainers>`_ for LLDB.
 
 .. contents::
    :depth: 2
    :local:
 
-Current Code Owners
+Current Maintainers
 ===================
-The following people are the active code owners for the project. Please reach
+The following people are the active maintainers for the project. Please reach
 out to them for code reviews, questions about their area of expertise, or other
 assistance.
 
-All parts of LLDB not covered by someone else
-----------------------------------------------
+Lead Maintainer
+---------------
+
+Responsible for project as a whole, and for any areas not covered by a specific
+maintainer.
+
 | Jonas Devlieghere
 | jonas\@devlieghere.com (email), jdevlieghere (GitHub), jdevlieghere (Discourse), jdevlieghere (Discord)
 
 Components
 ----------
-These code owners are responsible for particular high-level components within
+These maintainers are responsible for particular high-level components within
 LLDB.
 
 ABI
@@ -242,10 +246,10 @@ lldb-dap
 | Walter Erquinigo
 | a20012251\@gmail.com (email), walter-erquinigo (GitHub), wallace (Discourse), werquinigo (Discord)
 
-Former Code Owners
+Former Maintainers
 ==================
-The following people have graciously spent time performing code ownership
-responsibilities but are no longer active in that role. Thank you for all your
+The following people have graciously spent time performing maintainership
+duties but are no longer active in that role. Thank you for all your
 help with the success of the project!
 
 | Kamil Rytarowski (kamil\@netbsd.org)
