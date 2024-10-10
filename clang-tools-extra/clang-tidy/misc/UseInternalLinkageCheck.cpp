@@ -8,12 +8,15 @@
 
 #include "UseInternalLinkageCheck.h"
 #include "../utils/FileExtensionsUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
@@ -110,10 +113,36 @@ static constexpr StringRef Message =
     "%0 %1 can be made static or moved into an anonymous namespace "
     "to enforce internal linkage";
 
+static SourceLocation getQualifiedTypeStartLoc(SourceLocation L,
+                                               const SourceManager &SM,
+                                               const ASTContext &Context) {
+  const SourceLocation StartOfFile = SM.getLocForStartOfFile(SM.getFileID(L));
+  if (L.isInvalid() || L.isMacroID())
+    return L;
+  bool HasChanged = true;
+  while (HasChanged) {
+    if (L == StartOfFile)
+      return L;
+    auto [Tok, Loc] =
+        utils::lexer::getPreviousTokenAndStart(L, SM, Context.getLangOpts());
+    if (Tok.is(tok::raw_identifier)) {
+      IdentifierInfo &Info = Context.Idents.get(
+          StringRef(SM.getCharacterData(Tok.getLocation()), Tok.getLength()));
+      Tok.setIdentifierInfo(&Info);
+      Tok.setKind(Info.getTokenID());
+    }
+    HasChanged = Tok.isOneOf(tok::kw_const, tok::kw_volatile);
+    if (HasChanged)
+      L = Loc;
+  }
+  return L;
+}
+
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
     DiagnosticBuilder DB = diag(FD->getLocation(), Message) << "function" << FD;
-    SourceLocation FixLoc = FD->getTypeSpecStartLoc();
+    const SourceLocation FixLoc = getQualifiedTypeStartLoc(
+        FD->getTypeSpecStartLoc(), *Result.SourceManager, *Result.Context);
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
     if (FixMode == FixModeKind::UseStatic)
@@ -128,7 +157,8 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     DiagnosticBuilder DB = diag(VD->getLocation(), Message) << "variable" << VD;
-    SourceLocation FixLoc = VD->getTypeSpecStartLoc();
+    const SourceLocation FixLoc = getQualifiedTypeStartLoc(
+        VD->getTypeSpecStartLoc(), *Result.SourceManager, *Result.Context);
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
     if (FixMode == FixModeKind::UseStatic)
