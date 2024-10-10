@@ -474,10 +474,12 @@ def V1Write_11c_9L01_9S_9V : SchedWriteRes<[V1UnitL01, V1UnitL01, V1UnitL01,
 
 // NOTE: SOG, p. 20, n. 2: Accumulator forwarding is not supported for
 // consumers of 64 bit multiply high operations?
+def V1Wr_IM   : SchedWriteRes<[V1UnitM]>  { let Latency = 2; }
+def V1Wr_IMA  : SchedWriteRes<[V1UnitM0]> { let Latency = 2; }
 def V1WriteIM : SchedWriteVariant<
-                  [SchedVar<NeoverseMULIdiomPred, [V1Write_2c_1M]>,
-                   SchedVar<NoSchedPred,          [V1Write_2c_1M0]>]>;
-def V1Rd_MA : SchedReadAdvance<1, [V1Write_2c_1M0]>;
+                  [SchedVar<NeoverseMULIdiomPred, [V1Wr_IM]>,
+                   SchedVar<NoSchedPred,          [V1Wr_IMA]>]>;
+def V1Rd_IMA : SchedReadAdvance<1, [V1Wr_IMA]>;
 
 def V1Wr_FMA : SchedWriteRes<[V1UnitV]> { let Latency = 4; }
 def V1Rd_FMA : SchedReadAdvance<2, [WriteFMul, V1Wr_FMA]>;
@@ -634,21 +636,18 @@ def : InstRW<[V1Write_1c_1J], (instrs SETF8, SETF16, RMIF, CFINV)>;
 def : SchedAlias<WriteID32, V1Write_12c5_1M0>;
 def : SchedAlias<WriteID64, V1Write_20c5_1M0>;
 
-def           : SchedAlias<WriteIM32, V1Write_2c_1M>;
-def           : SchedAlias<WriteIM64, V1Write_2c_1M>;
+def : SchedAlias<WriteIM32, V1Write_2c_1M>;
+def : SchedAlias<WriteIM64, V1Write_2c_1M>;
 
 // Multiply
 // Multiply accumulate, W-form
 // Multiply accumulate, X-form
-/*def V1WriteIM : SchedWriteVariant<
-                  [SchedVar<NeoverseMULIdiomPred, [V1Write_2c_1M]>,
-                   SchedVar<NoSchedPred,          [V1Write_2c_1M0]>]>;
-def V1Rd_MA : SchedReadAdvance<1, [V1Write_2c_1M0]>;*/
-def : InstRW<[V1WriteIM, ReadIM, ReadIM, V1Rd_MA], (instregex "^M(ADD|SUB)[WX]rrr$")>;
+def : InstRW<[V1WriteIM, ReadIM, ReadIM, V1Rd_IMA],
+             (instregex "^M(ADD|SUB)[WX]rrr$")>;
 
 // Multiply accumulate long
 // Multiply long
-def : InstRW<[V1WriteIM, ReadIM, ReadIM, V1Rd_MA],
+def : InstRW<[V1WriteIM, ReadIM, ReadIM, V1Rd_IMA],
              (instregex "^(S|U)M(ADD|SUB)Lrrr$")>;
 // Multiply high
 def : InstRW<[V1Write_3c_1M, ReadIM, ReadIM], (instrs SMULHrr, UMULHrr)>;
@@ -770,7 +769,8 @@ def : InstRW<[V1Write_16c7_1V02], (instrs FSQRTDr)>;
 def : WriteRes<WriteFMul, [V1UnitV]> { let Latency = 3; }
 
 // FP multiply accumulate
-def : InstRW<[V1Wr_FMA, ReadDefault, ReadDefault, V1Rd_FMA], (instregex "^FN?M(ADD|SUB)[HSD]rrr$")>;
+def : InstRW<[V1Wr_FMA, ReadDefault, ReadDefault, V1Rd_FMA],
+             (instregex "^FN?M(ADD|SUB)[HSD]rrr$")>;
 
 // FP round to integral
 def : InstRW<[V1Write_3c_1V02], (instregex "^FRINT[AIMNPXZ][HSD]r$",
@@ -930,7 +930,8 @@ def : InstRW<[V1Write_4c_2V13], (instregex "^(ADD|[SU]ADDL)Vv16i8v$",
 
 // ASIMD dot product
 // ASIMD dot product using signed and unsigned integers
-def : InstRW<[V1Wr_VDOT, V1Rd_VDOT], (instregex "^([SU]|SU|US)DOT(lane)?v(8|16)i8$")>;
+def : InstRW<[V1Wr_VDOT, V1Rd_VDOT],
+             (instregex "^([SU]|SU|US)DOT(lane)?v(8|16)i8$")>;
 
 // ASIMD matrix multiply-accumulate
 def : InstRW<[V1Wr_VMMA, V1Rd_VMMA], (instrs SMMLA, UMMLA, USMMLA)>;
@@ -1536,7 +1537,8 @@ def : InstRW<[V1Write_20c7_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
 def : InstRW<[V1Wr_ZDOTB, V1Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_S$")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
-def : InstRW<[V1Wr_ZUDOTB, V1Rd_ZUDOTB], (instrs SUDOT_ZZZI, USDOT_ZZZ, USDOT_ZZZI)>;
+def : InstRW<[V1Wr_ZUDOTB, V1Rd_ZUDOTB],
+             (instrs SUDOT_ZZZI, USDOT_ZZZ, USDOT_ZZZI)>;
 
 // Dot product, 16 bit
 def : InstRW<[V1Wr_ZDOTH, V1Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_D$")>;
@@ -1680,8 +1682,6 @@ def : InstRW<[V1Write_2c_1V0], (instregex "^FAC(GE|GT)_PPzZZ_[HSD]$",
 def : InstRW<[V1Write_3c_1V01], (instregex "^FCADD_ZPmZ_[HSD]$")>;
 
 // Floating point complex multiply add
-/*def : InstRW<[V1Write_5c_1V01], (instregex "^FCMLA_ZPmZZ_[HSD]$",
-                                           "^FCMLA_ZZZI_[HS]$")>;*/
 def : InstRW<[V1Wr_ZFCMA, ReadDefault, V1Rd_ZFCMA], (instregex "^FCMLA_ZPmZZ_[HSD]")>;
 def : InstRW<[V1Wr_ZFCMA, V1Rd_ZFCMA],              (instregex "^FCMLA_ZZZI_[HS]")>;
 
