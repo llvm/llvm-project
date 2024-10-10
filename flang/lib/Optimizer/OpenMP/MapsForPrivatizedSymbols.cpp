@@ -23,7 +23,9 @@
 // 2. Generalize this for more than just omp.target ops.
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -54,7 +56,8 @@ class MapsForPrivatizedSymbolsPass
       return false;
     return true;
   }
-  omp::MapInfoOp createMapInfo(Location loc, Value var, OpBuilder &builder) {
+  omp::MapInfoOp createMapInfo(Location loc, Value var,
+                               fir::FirOpBuilder &builder) {
     uint64_t mapTypeTo = static_cast<
         std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
@@ -62,8 +65,20 @@ class MapsForPrivatizedSymbolsPass
     auto declOp = llvm::dyn_cast_or_null<hlfir::DeclareOp>(definingOp);
     assert(declOp &&
            "Expected defining Op of privatized var to be hlfir.declare");
-    Value varPtr = declOp.getOriginalBase();
+    Value varPtr = declOp.getBase();
 
+    if (mlir::isa<fir::BaseBoxType>(varPtr.getType()) ||
+        mlir::isa<fir::BoxCharType>(varPtr.getType())) {
+      llvm::errs() << "Is a basebox type\n";
+      OpBuilder::InsertPoint savedInsPoint = builder.saveInsertionPoint();
+      mlir::Block *allocaBlock = builder.getAllocaBlock();
+      assert(allocaBlock && "No allocablock  found for a funcOp");
+      builder.setInsertionPointToStart(allocaBlock);
+      auto alloca = builder.create<fir::AllocaOp>(loc, varPtr.getType());
+      builder.restoreInsertionPoint(savedInsPoint);
+      builder.create<fir::StoreOp>(loc, varPtr, alloca);
+      varPtr = alloca;
+    }
     return builder.create<omp::MapInfoOp>(
         loc, varPtr.getType(), varPtr,
         TypeAttr::get(llvm::cast<omp::PointerLikeType>(varPtr.getType())
@@ -91,10 +106,12 @@ class MapsForPrivatizedSymbolsPass
       addMapInfoOp(targetOp, mapInfoOp);
   }
   void runOnOperation() override {
-    MLIRContext *context = &getContext();
-    OpBuilder builder(context);
+    ModuleOp module = getOperation()->getParentOfType<ModuleOp>();
+    fir::KindMapping kindMap = fir::getKindMapping(module);
+    fir::FirOpBuilder builder{module, std::move(kindMap)};
     llvm::DenseMap<Operation *, llvm::SmallVector<omp::MapInfoOp, 4>>
         mapInfoOpsForTarget;
+
     getOperation()->walk([&](omp::TargetOp targetOp) {
       if (targetOp.getPrivateVars().empty())
         return;
@@ -112,7 +129,9 @@ class MapsForPrivatizedSymbolsPass
         }
         builder.setInsertionPoint(targetOp);
         Location loc = targetOp.getLoc();
+        llvm::errs() << "Here\n";
         omp::MapInfoOp mapInfoOp = createMapInfo(loc, privVar, builder);
+        llvm::errs() << "Here again\n";
         mapInfoOps.push_back(mapInfoOp);
         LLVM_DEBUG(llvm::dbgs() << "MapsForPrivatizedSymbolsPass created ->\n");
         LLVM_DEBUG(mapInfoOp.dump());

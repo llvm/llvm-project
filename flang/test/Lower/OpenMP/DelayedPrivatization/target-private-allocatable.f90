@@ -67,7 +67,7 @@ end subroutine target_allocatable
 ! CHECK-SAME: {bindc_name = "alloc_var", {{.*}}}
 ! CHECK:  %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
 
-! CHECK: %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#1 : [[TYPE]], [[DESC_TYPE]])
+! CHECK: %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]])
 ! CHECK-SAME: map_clauses(to) capture(ByRef) -> [[TYPE]]
 ! CHECK:  omp.target map_entries(%[[MAP_VAR]] -> %arg0 : [[TYPE]]) private(
 ! CHECK-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %{{.*}} : [[TYPE]]) {
