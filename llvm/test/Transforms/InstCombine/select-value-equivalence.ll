@@ -31,8 +31,7 @@ define <2 x i8> @select_icmp_shufflevector(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i8> @select_icmp_shufflevector(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[Y]], <i8 2, i8 2>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i8> [[Y]], <2 x i8> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[SHUFFLE]], <2 x i8> [[X]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 2, i8 2>, <2 x i8> [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[RETVAL]]
 ;
   %cmp = icmp eq <2 x i8> %y, <i8 2, i8 2>
