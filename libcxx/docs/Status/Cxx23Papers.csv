@@ -12,7 +12,7 @@
 "`P2259R1 <https://wg21.link/P2259R1>`__","Repairing input range adaptors and counted_iterator","2021-02 (Virtual)","","",""
 "","","","","",""
 "`P0401R6 <https://wg21.link/P0401R6>`__","Providing size feedback in the Allocator interface","2021-06 (Virtual)","|Complete|","15.0",""
-"`P0448R4 <https://wg21.link/P0448R4>`__","A strstream replacement using span<charT> as buffer","2021-06 (Virtual)","","",""
+"`P0448R4 <https://wg21.link/P0448R4>`__","A ``strstream`` replacement using ``span<charT>`` as buffer","2021-06 (Virtual)","|Partial|","20.0",""
 "`P1132R8 <https://wg21.link/P1132R8>`__","out_ptr - a scalable output pointer abstraction","2021-06 (Virtual)","|Complete|","19.0",""
 "`P1328R1 <https://wg21.link/P1328R1>`__","Making std::type_info::operator== constexpr","2021-06 (Virtual)","|Complete|","17.0",""
 "`P1425R4 <https://wg21.link/P1425R4>`__","Iterators pair constructors for stack and queue","2021-06 (Virtual)","|Complete|","14.0",""

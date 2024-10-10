@@ -1814,6 +1814,13 @@ module std [system] {
     export *
   }
 
+  module spanstream {
+    module fwd { header "__fwd/spanstream.h" }
+
+    header "spanstream"
+    export *
+  }
+
   module sstream {
     module fwd { header "__fwd/sstream.h" }
 

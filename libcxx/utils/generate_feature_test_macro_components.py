@@ -1230,7 +1230,6 @@ feature_test_macros = [
             "name": "__cpp_lib_spanstream",
             "values": {"c++23": 202106},
             "headers": ["spanstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ssize",
@@ -1448,6 +1447,7 @@ lit_markup = {
     "regex": ["UNSUPPORTED: no-localization"],
     "semaphore": ["UNSUPPORTED: no-threads"],
     "shared_mutex": ["UNSUPPORTED: no-threads"],
+    "spanstream": ["UNSUPPORTED: no-localization"],
     "sstream": ["UNSUPPORTED: no-localization"],
     "syncstream": ["UNSUPPORTED: no-localization"],
     "stdatomic.h": ["UNSUPPORTED: no-threads"],
