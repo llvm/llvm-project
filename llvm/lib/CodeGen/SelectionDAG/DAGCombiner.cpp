@@ -20322,13 +20322,11 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
         !FastLD || !FastST)
       return SDValue();
 
-    SDValue NewLD =
-        DAG.getLoad(IntVT, SDLoc(Value), LD->getChain(), LD->getBasePtr(),
-                    LD->getPointerInfo(), LD->getAlign());
+    SDValue NewLD = DAG.getLoad(IntVT, SDLoc(Value), LD->getChain(),
+                                LD->getBasePtr(), LD->getMemOperand());
 
-    SDValue NewST =
-        DAG.getStore(ST->getChain(), SDLoc(N), NewLD, ST->getBasePtr(),
-                     ST->getPointerInfo(), ST->getAlign());
+    SDValue NewST = DAG.getStore(ST->getChain(), SDLoc(N), NewLD,
+                                 ST->getBasePtr(), ST->getMemOperand());
 
     AddToWorklist(NewLD.getNode());
     AddToWorklist(NewST.getNode());

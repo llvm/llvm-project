@@ -818,7 +818,7 @@ def AllocCN : Opcode {
 }
 
 def Free : Opcode {
-  let Args = [ArgBool];
+  let Args = [ArgBool, ArgBool];
 }
 
 def CheckNewTypeMismatch : Opcode {
