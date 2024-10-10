@@ -13,7 +13,8 @@
 
 namespace LIBC_NAMESPACE {
 
-int vasprintf(char **__restrict s, const char *format, va_list vlist);
+int vasprintf(char **__restrict s, const char *__restrict format,
+              va_list vlist);
 
 } // namespace LIBC_NAMESPACE
 
