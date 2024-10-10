@@ -2003,14 +2003,10 @@ static bool impliesEquivalanceIfTrue(CmpInst* Cmp) {
       Value *RHS = Cmp->getOperand(1);
       // If we can prove either side non-zero, then equality must imply
       // equivalence.
-      // FIXME: We should do this optimization if 'no signed zeros' is
-      // applicable via an instruction-level fast-math-flag or some other
-      // indicator that relaxed FP semantics are being used.
       if (isa<ConstantFP>(LHS) && !cast<ConstantFP>(LHS)->isZero())
         return true;
       if (isa<ConstantFP>(RHS) && !cast<ConstantFP>(RHS)->isZero())
         return true;
-      // TODO: Handle vector floating point constants
   }
   return false;
 }
@@ -2029,14 +2025,10 @@ static bool impliesEquivalanceIfFalse(CmpInst* Cmp) {
       Value *RHS = Cmp->getOperand(1);
       // If we can prove either side non-zero, then equality must imply
       // equivalence.
-      // FIXME: We should do this optimization if 'no signed zeros' is
-      // applicable via an instruction-level fast-math-flag or some other
-      // indicator that relaxed FP semantics are being used.
       if (isa<ConstantFP>(LHS) && !cast<ConstantFP>(LHS)->isZero())
         return true;
       if (isa<ConstantFP>(RHS) && !cast<ConstantFP>(RHS)->isZero())
         return true;
-      // TODO: Handle vector floating point constants
   }
   return false;
 }
