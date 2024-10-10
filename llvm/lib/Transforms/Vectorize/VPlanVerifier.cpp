@@ -244,14 +244,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     return false;
   }
 
-  VPBlockBase *MiddleBB =
-      IRBB->getPlan()->getVectorLoopRegion()->getSingleSuccessor();
-  if (IRBB != IRBB->getPlan()->getPreheader() &&
-      IRBB->getSinglePredecessor() != MiddleBB) {
-    errs() << "VPIRBasicBlock can only be used as pre-header or a successor of "
-              "middle-block at the moment!\n";
-    return false;
-  }
   return true;
 }
 
@@ -269,9 +261,9 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
-  if (VPB->getNumSuccessors() > 1 ||
-      (VPBB && VPBB->getParent() && VPBB->isExiting() &&
-       !VPBB->getParent()->isReplicator())) {
+  if (VPBB && (VPB->getNumSuccessors() > 1 ||
+               (VPBB && VPBB->getParent() && VPBB->isExiting() &&
+                !VPBB->getParent()->isReplicator()))) {
     if (!VPBB || !VPBB->getTerminator()) {
       errs() << "Block has multiple successors but doesn't "
                 "have a proper branch recipe!\n";
@@ -409,8 +401,10 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!LastInst || (LastInst->getOpcode() != VPInstruction::BranchOnCount &&
-                    LastInst->getOpcode() != VPInstruction::BranchOnCond)) {
+  if (!LastInst ||
+      (LastInst->getOpcode() != VPInstruction::BranchOnCount &&
+       LastInst->getOpcode() != VPInstruction::BranchOnCond &&
+       LastInst->getOpcode() != VPInstruction::BranchMultipleConds)) {
     errs() << "VPlan vector loop exit must end with BranchOnCount or "
               "BranchOnCond VPInstruction\n";
     return false;

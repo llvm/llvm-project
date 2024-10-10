@@ -43,6 +43,9 @@ AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
                        cl::desc("Enable recognition of non-constant strided "
                                 "pointer induction variables."));
 
+static cl::opt<bool> EnableMultiCond("enable-multi-cond-vectorization",
+                                     cl::init(false), cl::Hidden, cl::desc(""));
+
 namespace llvm {
 cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
@@ -1378,6 +1381,8 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 }
 
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
+  if (canVectorizeMultiCond() && BB != TheLoop->getHeader())
+    return true;
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
 }
 
@@ -1511,6 +1516,35 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   }
 
   // We can if-convert this loop.
+  return true;
+}
+
+bool LoopVectorizationLegality::canVectorizeMultiCond() const {
+  if (!EnableMultiCond)
+    return false;
+  SmallVector<BasicBlock *> Exiting;
+  TheLoop->getExitingBlocks(Exiting);
+  if (Exiting.size() != 2 || Exiting[0] != TheLoop->getHeader() ||
+      Exiting[1] != TheLoop->getLoopLatch() ||
+      any_of(*TheLoop->getHeader(), [](Instruction &I) {
+        return I.mayReadFromMemory() || I.mayHaveSideEffects();
+      }))
+    return false;
+  CmpInst::Predicate Pred;
+  Value *A, *B;
+  if (!match(
+          TheLoop->getHeader()->getTerminator(),
+          m_Br(m_ICmp(Pred, m_Value(A), m_Value(B)), m_Value(), m_Value())) ||
+      Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE)
+    return false;
+  if (any_of(TheLoop->getBlocks(), [this](BasicBlock *BB) {
+        return any_of(*BB, [this](Instruction &I) {
+          return any_of(I.users(), [this](User *U) {
+            return !TheLoop->contains(cast<Instruction>(U)->getParent());
+          });
+        });
+      }))
+    return false;
   return true;
 }
 
