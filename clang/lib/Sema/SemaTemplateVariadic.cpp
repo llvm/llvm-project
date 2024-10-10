@@ -18,6 +18,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
 using namespace clang;
@@ -263,16 +264,14 @@ namespace {
       if (!Lambda->containsUnexpandedParameterPack())
         return true;
 
-      bool WasInLambdaOrBlock = InLambdaOrBlock;
+      SaveAndRestore _(InLambdaOrBlock, true);
       unsigned OldDepthLimit = DepthLimit;
 
-      InLambdaOrBlock = true;
       if (auto *TPL = Lambda->getTemplateParameterList())
         DepthLimit = TPL->getDepth();
 
       inherited::TraverseLambdaExpr(Lambda);
 
-      InLambdaOrBlock = WasInLambdaOrBlock;
       DepthLimit = OldDepthLimit;
       return true;
     }
@@ -282,12 +281,8 @@ namespace {
       if (!Block->containsUnexpandedParameterPack())
         return true;
 
-      bool WasInLambdaOrBlock = InLambdaOrBlock;
-      InLambdaOrBlock = true;
-
+      SaveAndRestore _(InLambdaOrBlock, true);
       inherited::TraverseBlockExpr(Block);
-
-      InLambdaOrBlock = WasInLambdaOrBlock;
       return true;
     }
 
