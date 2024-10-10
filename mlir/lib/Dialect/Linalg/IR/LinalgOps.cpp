@@ -157,7 +157,7 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
 
 /// Helper to create a typical indexing map for MatmulOp. Returns a list of
 /// AffineMap.
-static SmallVector<AffineMap>
+static SmallVector<AffineMap, 3>
 getDefaultIndexingMapsForMatmul(MLIRContext *context) {
   AffineExpr d0, d1, d2;
   SmallVector<AffineMap, 3> indexingMaps;
