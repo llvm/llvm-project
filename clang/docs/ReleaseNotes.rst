@@ -494,6 +494,7 @@ Bug Fixes to C++ Support
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
   and undeclared templates. (#GH107047, #GH49093)
+- Fixed overload handling for object parameters with top-level cv-qualifiers in explicit member functions (#GH100394)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
