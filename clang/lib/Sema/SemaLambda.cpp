@@ -30,207 +30,6 @@
 using namespace clang;
 using namespace sema;
 
-/// Examines the FunctionScopeInfo stack to determine the nearest
-/// enclosing lambda (to the current lambda) that is 'capture-ready' for
-/// the variable referenced in the current lambda (i.e. \p VarToCapture).
-/// If successful, returns the index into Sema's FunctionScopeInfo stack
-/// of the capture-ready lambda's LambdaScopeInfo.
-///
-/// Climbs down the stack of lambdas (deepest nested lambda - i.e. current
-/// lambda - is on top) to determine the index of the nearest enclosing/outer
-/// lambda that is ready to capture the \p VarToCapture being referenced in
-/// the current lambda.
-/// As we climb down the stack, we want the index of the first such lambda -
-/// that is the lambda with the highest index that is 'capture-ready'.
-///
-/// A lambda 'L' is capture-ready for 'V' (var or this) if:
-///  - its enclosing context is non-dependent
-///  - and if the chain of lambdas between L and the lambda in which
-///    V is potentially used (i.e. the lambda at the top of the scope info
-///    stack), can all capture or have already captured V.
-/// If \p VarToCapture is 'null' then we are trying to capture 'this'.
-///
-/// Note that a lambda that is deemed 'capture-ready' still needs to be checked
-/// for whether it is 'capture-capable' (see
-/// getStackIndexOfNearestEnclosingCaptureCapableLambda), before it can truly
-/// capture.
-///
-/// \param FunctionScopes - Sema's stack of nested FunctionScopeInfo's (which a
-///  LambdaScopeInfo inherits from).  The current/deepest/innermost lambda
-///  is at the top of the stack and has the highest index.
-/// \param VarToCapture - the variable to capture.  If NULL, capture 'this'.
-///
-/// \returns An std::optional<unsigned> Index that if evaluates to 'true'
-/// contains the index (into Sema's FunctionScopeInfo stack) of the innermost
-/// lambda which is capture-ready.  If the return value evaluates to 'false'
-/// then no lambda is capture-ready for \p VarToCapture.
-
-static inline std::optional<unsigned>
-getStackIndexOfNearestEnclosingCaptureReadyLambda(
-    ArrayRef<const clang::sema::FunctionScopeInfo *> FunctionScopes,
-    ValueDecl *VarToCapture) {
-  // Label failure to capture.
-  const std::optional<unsigned> NoLambdaIsCaptureReady;
-
-  // Ignore all inner captured regions.
-  unsigned CurScopeIndex = FunctionScopes.size() - 1;
-  while (CurScopeIndex > 0 && isa<clang::sema::CapturedRegionScopeInfo>(
-                                  FunctionScopes[CurScopeIndex]))
-    --CurScopeIndex;
-  assert(
-      isa<clang::sema::LambdaScopeInfo>(FunctionScopes[CurScopeIndex]) &&
-      "The function on the top of sema's function-info stack must be a lambda");
-
-  // If VarToCapture is null, we are attempting to capture 'this'.
-  const bool IsCapturingThis = !VarToCapture;
-  const bool IsCapturingVariable = !IsCapturingThis;
-
-  // Start with the current lambda at the top of the stack (highest index).
-  DeclContext *EnclosingDC =
-      cast<sema::LambdaScopeInfo>(FunctionScopes[CurScopeIndex])->CallOperator;
-
-  do {
-    const clang::sema::LambdaScopeInfo *LSI =
-        cast<sema::LambdaScopeInfo>(FunctionScopes[CurScopeIndex]);
-    // IF we have climbed down to an intervening enclosing lambda that contains
-    // the variable declaration - it obviously can/must not capture the
-    // variable.
-    // Since its enclosing DC is dependent, all the lambdas between it and the
-    // innermost nested lambda are dependent (otherwise we wouldn't have
-    // arrived here) - so we don't yet have a lambda that can capture the
-    // variable.
-    if (IsCapturingVariable &&
-        VarToCapture->getDeclContext()->Equals(EnclosingDC))
-      return NoLambdaIsCaptureReady;
-
-    // For an enclosing lambda to be capture ready for an entity, all
-    // intervening lambda's have to be able to capture that entity. If even
-    // one of the intervening lambda's is not capable of capturing the entity
-    // then no enclosing lambda can ever capture that entity.
-    // For e.g.
-    // const int x = 10;
-    // [=](auto a) {    #1
-    //   [](auto b) {   #2 <-- an intervening lambda that can never capture 'x'
-    //    [=](auto c) { #3
-    //       f(x, c);  <-- can not lead to x's speculative capture by #1 or #2
-    //    }; }; };
-    // If they do not have a default implicit capture, check to see
-    // if the entity has already been explicitly captured.
-    // If even a single dependent enclosing lambda lacks the capability
-    // to ever capture this variable, there is no further enclosing
-    // non-dependent lambda that can capture this variable.
-    if (LSI->ImpCaptureStyle == sema::LambdaScopeInfo::ImpCap_None) {
-      if (IsCapturingVariable && !LSI->isCaptured(VarToCapture))
-        return NoLambdaIsCaptureReady;
-      if (IsCapturingThis && !LSI->isCXXThisCaptured())
-        return NoLambdaIsCaptureReady;
-    }
-    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC);
-
-    assert(CurScopeIndex);
-    --CurScopeIndex;
-  } while (!EnclosingDC->isTranslationUnit() &&
-           EnclosingDC->isDependentContext() &&
-           isLambdaCallOperator(EnclosingDC));
-
-  assert(CurScopeIndex < (FunctionScopes.size() - 1));
-  // If the enclosingDC is not dependent, then the immediately nested lambda
-  // (one index above) is capture-ready.
-  if (!EnclosingDC->isDependentContext())
-    return CurScopeIndex + 1;
-  return NoLambdaIsCaptureReady;
-}
-
-/// Examines the FunctionScopeInfo stack to determine the nearest
-/// enclosing lambda (to the current lambda) that is 'capture-capable' for
-/// the variable referenced in the current lambda (i.e. \p VarToCapture).
-/// If successful, returns the index into Sema's FunctionScopeInfo stack
-/// of the capture-capable lambda's LambdaScopeInfo.
-///
-/// Given the current stack of lambdas being processed by Sema and
-/// the variable of interest, to identify the nearest enclosing lambda (to the
-/// current lambda at the top of the stack) that can truly capture
-/// a variable, it has to have the following two properties:
-///  a) 'capture-ready' - be the innermost lambda that is 'capture-ready':
-///     - climb down the stack (i.e. starting from the innermost and examining
-///       each outer lambda step by step) checking if each enclosing
-///       lambda can either implicitly or explicitly capture the variable.
-///       Record the first such lambda that is enclosed in a non-dependent
-///       context. If no such lambda currently exists return failure.
-///  b) 'capture-capable' - make sure the 'capture-ready' lambda can truly
-///  capture the variable by checking all its enclosing lambdas:
-///     - check if all outer lambdas enclosing the 'capture-ready' lambda
-///       identified above in 'a' can also capture the variable (this is done
-///       via tryCaptureVariable for variables and CheckCXXThisCapture for
-///       'this' by passing in the index of the Lambda identified in step 'a')
-///
-/// \param FunctionScopes - Sema's stack of nested FunctionScopeInfo's (which a
-/// LambdaScopeInfo inherits from).  The current/deepest/innermost lambda
-/// is at the top of the stack.
-///
-/// \param VarToCapture - the variable to capture.  If NULL, capture 'this'.
-///
-///
-/// \returns An std::optional<unsigned> Index that if evaluates to 'true'
-/// contains the index (into Sema's FunctionScopeInfo stack) of the innermost
-/// lambda which is capture-capable.  If the return value evaluates to 'false'
-/// then no lambda is capture-capable for \p VarToCapture.
-
-std::optional<unsigned>
-clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
-    ArrayRef<const sema::FunctionScopeInfo *> FunctionScopes,
-    ValueDecl *VarToCapture, Sema &S) {
-
-  const std::optional<unsigned> NoLambdaIsCaptureCapable;
-
-  const std::optional<unsigned> OptionalStackIndex =
-      getStackIndexOfNearestEnclosingCaptureReadyLambda(FunctionScopes,
-                                                        VarToCapture);
-  if (!OptionalStackIndex)
-    return NoLambdaIsCaptureCapable;
-
-  const unsigned IndexOfCaptureReadyLambda = *OptionalStackIndex;
-  assert(((IndexOfCaptureReadyLambda != (FunctionScopes.size() - 1)) ||
-          S.getCurGenericLambda()) &&
-         "The capture ready lambda for a potential capture can only be the "
-         "current lambda if it is a generic lambda");
-
-  const sema::LambdaScopeInfo *const CaptureReadyLambdaLSI =
-      cast<sema::LambdaScopeInfo>(FunctionScopes[IndexOfCaptureReadyLambda]);
-
-  // If VarToCapture is null, we are attempting to capture 'this'
-  const bool IsCapturingThis = !VarToCapture;
-  const bool IsCapturingVariable = !IsCapturingThis;
-
-  if (IsCapturingVariable) {
-    // Check if the capture-ready lambda can truly capture the variable, by
-    // checking whether all enclosing lambdas of the capture-ready lambda allow
-    // the capture - i.e. make sure it is capture-capable.
-    QualType CaptureType, DeclRefType;
-    const bool CanCaptureVariable =
-        !S.tryCaptureVariable(VarToCapture,
-                              /*ExprVarIsUsedInLoc*/ SourceLocation(),
-                              clang::Sema::TryCapture_Implicit,
-                              /*EllipsisLoc*/ SourceLocation(),
-                              /*BuildAndDiagnose*/ false, CaptureType,
-                              DeclRefType, &IndexOfCaptureReadyLambda);
-    if (!CanCaptureVariable)
-      return NoLambdaIsCaptureCapable;
-  } else {
-    // Check if the capture-ready lambda can truly capture 'this' by checking
-    // whether all enclosing lambdas of the capture-ready lambda can capture
-    // 'this'.
-    const bool CanCaptureThis =
-        !S.CheckCXXThisCapture(
-             CaptureReadyLambdaLSI->PotentialThisCaptureLocation,
-             /*Explicit*/ false, /*BuildAndDiagnose*/ false,
-             &IndexOfCaptureReadyLambda);
-    if (!CanCaptureThis)
-      return NoLambdaIsCaptureCapable;
-  }
-  return IndexOfCaptureReadyLambda;
-}
-
 static inline TemplateParameterList *
 getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
   if (!LSI->GLTemplateParameterList && !LSI->TemplateParams.empty()) {
@@ -2128,11 +1927,15 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
       // Use source ranges of explicit captures for fixits where available.
       SourceRange CaptureRange = LSI->ExplicitCaptureRanges[I];
-
+      bool PotentiallyCaptured = false;
+      LSI->visitPotentialCaptures([&](ValueDecl *Var, Expr *VarExpr) {
+        if (Var == From.getVariable())
+          PotentiallyCaptured = true;
+      });
       // Warn about unused explicit captures.
       bool IsCaptureUsed = true;
       if (!CurContext->isDependentContext() && !IsImplicit &&
-          !From.isODRUsed()) {
+          !From.isODRUsed() && !PotentiallyCaptured) {
         // Initialized captures that are non-ODR used may not be eliminated.
         // FIXME: Where did the IsGenericLambda here come from?
         bool NonODRUsedInitCapture =
