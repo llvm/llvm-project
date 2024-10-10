@@ -18,6 +18,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
+#define DEFAULT_DOUBLE_SPLIT 27
+
 using DoubleDouble = LIBC_NAMESPACE::NumberPair<double>;
 
 // The output of Dekker's FastTwoSum algorithm is correct, i.e.:
@@ -61,7 +63,8 @@ LIBC_INLINE constexpr DoubleDouble add(const DoubleDouble &a, double b) {
 //   Zimmermann, P., "Note on the Veltkamp/Dekker Algorithms with Directed
 //   Roundings," https://inria.hal.science/hal-04480440.
 // Default splitting constant = 2^ceil(prec(double)/2) + 1 = 2^27 + 1.
-template <size_t N = 27> LIBC_INLINE constexpr DoubleDouble split(double a) {
+template <size_t N = DEFAULT_DOUBLE_SPLIT>
+LIBC_INLINE constexpr DoubleDouble split(double a) {
   DoubleDouble r{0.0, 0.0};
   // CN = 2^N.
   constexpr double CN = static_cast<double>(1 << N);
@@ -73,16 +76,12 @@ template <size_t N = 27> LIBC_INLINE constexpr DoubleDouble split(double a) {
   return r;
 }
 
-// Helper for non-fma exact mult where the first number is already splitted.
-template <bool NO_FMA_ALL_ROUNDINGS = false>
+// Helper for non-fma exact mult where the first number is already split.
+template <size_t SPLIT_B = DEFAULT_DOUBLE_SPLIT>
 LIBC_INLINE DoubleDouble exact_mult(const DoubleDouble &as, double a,
                                     double b) {
-  DoubleDouble bs, r;
-
-  if constexpr (NO_FMA_ALL_ROUNDINGS)
-    bs = split<28>(b);
-  else
-    bs = split(b);
+  DoubleDouble bs = split<SPLIT_B>(b);
+  DoubleDouble r{0.0, 0.0};
 
   r.hi = a * b;
   double t1 = as.hi * bs.hi - r.hi;
@@ -100,7 +99,7 @@ LIBC_INLINE DoubleDouble exact_mult(const DoubleDouble &as, double a,
 // Using Theorem 1 in the paper above, without FMA instruction, if we restrict
 // the generated constants to precision <= 51, and splitting it by 2^28 + 1,
 // then a * b = r.hi + r.lo is exact for all rounding modes.
-template <bool NO_FMA_ALL_ROUNDINGS = false>
+template <size_t SPLIT_B = 27>
 LIBC_INLINE DoubleDouble exact_mult(double a, double b) {
   DoubleDouble r{0.0, 0.0};
 
@@ -111,7 +110,7 @@ LIBC_INLINE DoubleDouble exact_mult(double a, double b) {
   // Dekker's Product.
   DoubleDouble as = split(a);
 
-  r = exact_mult<NO_FMA_ALL_ROUNDINGS>(as, a, b);
+  r = exact_mult<SPLIT_B>(as, a, b);
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
   return r;
