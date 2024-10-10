@@ -605,7 +605,7 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
     if (log) {
       clang::QualType new_iface_type = ast_ctx.getObjCInterfaceType(iface_decl);
 
-      LLDB_LOG(log, "AOCTV::FT Created {1} (isa 0x{2:x})",
+      LLDB_LOG(log, "AOCTV::FT Created {0} (isa 0x{1:x})",
                new_iface_type.getAsString(), (uint64_t)isa);
     }
 

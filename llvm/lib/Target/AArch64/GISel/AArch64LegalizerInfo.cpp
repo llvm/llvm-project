@@ -422,7 +422,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    return std::pair(0, LLT::scalar(VecTy.getSizeInBits()));
                  })
       .customIf(IsPtrVecPred)
-      .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0);
+      .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   StoreActions
       .customIf([=](const LegalityQuery &Query) {
@@ -463,7 +464,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    return std::pair(0, LLT::scalar(VecTy.getSizeInBits()));
                  })
       .customIf(IsPtrVecPred)
-      .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0);
+      .scalarizeIf(typeInSet(0, {v2s16, v2s8}), 0)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_INDEXED_STORE)
       // Idx 0 == Ptr, Idx 1 == Val

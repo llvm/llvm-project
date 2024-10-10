@@ -366,7 +366,7 @@ private:
     } else if (OpeningParen.Previous &&
                (OpeningParen.Previous->isOneOf(
                     tok::kw_static_assert, tok::kw_noexcept, tok::kw_explicit,
-                    tok::kw_while, tok::l_paren, tok::comma,
+                    tok::kw_while, tok::l_paren, tok::comma, TT_CastRParen,
                     TT_BinaryOperator) ||
                 OpeningParen.Previous->isIf())) {
       // static_assert, if and while usually contain expressions.
@@ -3738,6 +3738,13 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
 
   const auto *Prev = Current.getPreviousNonComment();
   assert(Prev);
+
+  if (Prev->is(tok::coloncolon))
+    Prev = Prev->Previous;
+
+  if (!Prev)
+    return false;
+
   const auto &Previous = *Prev;
 
   if (const auto *PrevPrev = Previous.getPreviousNonComment();
@@ -4903,6 +4910,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Left.is(tok::star) && Right.is(tok::comment))
     return true;
 
+  const auto *BeforeLeft = Left.Previous;
+
   if (IsCpp) {
     if (Left.is(TT_OverloadedOperator) &&
         Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) {
@@ -4955,7 +4964,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.Tok.getIdentifierInfo() && Right.Tok.isLiteral())
       return true;
   } else if (Style.isProto()) {
-    if (Right.is(tok::period) &&
+    if (Right.is(tok::period) && !(BeforeLeft && BeforeLeft->is(tok::period)) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
                      Keywords.kw_repeated, Keywords.kw_extend)) {
       return true;
@@ -5063,8 +5072,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(TT_FatArrow))
       return true;
     // for await ( ...
-    if (Right.is(tok::l_paren) && Left.is(Keywords.kw_await) && Left.Previous &&
-        Left.Previous->is(tok::kw_for)) {
+    if (Right.is(tok::l_paren) && Left.is(Keywords.kw_await) && BeforeLeft &&
+        BeforeLeft->is(tok::kw_for)) {
       return true;
     }
     if (Left.is(Keywords.kw_async) && Right.is(tok::l_paren) &&
@@ -5101,7 +5110,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         return false;
       // Valid JS method names can include keywords, e.g. `foo.delete()` or
       // `bar.instanceof()`. Recognize call positions by preceding period.
-      if (Left.Previous && Left.Previous->is(tok::period) &&
+      if (BeforeLeft && BeforeLeft->is(tok::period) &&
           Left.Tok.getIdentifierInfo()) {
         return false;
       }
@@ -5119,22 +5128,22 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
          // "of" is only a keyword if it appears after another identifier
          // (e.g. as "const x of y" in a for loop), or after a destructuring
          // operation (const [x, y] of z, const {a, b} of c).
-         (Left.is(Keywords.kw_of) && Left.Previous &&
-          (Left.Previous->is(tok::identifier) ||
-           Left.Previous->isOneOf(tok::r_square, tok::r_brace)))) &&
-        (!Left.Previous || Left.Previous->isNot(tok::period))) {
+         (Left.is(Keywords.kw_of) && BeforeLeft &&
+          (BeforeLeft->is(tok::identifier) ||
+           BeforeLeft->isOneOf(tok::r_square, tok::r_brace)))) &&
+        (!BeforeLeft || BeforeLeft->isNot(tok::period))) {
       return true;
     }
-    if (Left.isOneOf(tok::kw_for, Keywords.kw_as) && Left.Previous &&
-        Left.Previous->is(tok::period) && Right.is(tok::l_paren)) {
+    if (Left.isOneOf(tok::kw_for, Keywords.kw_as) && BeforeLeft &&
+        BeforeLeft->is(tok::period) && Right.is(tok::l_paren)) {
       return false;
     }
     if (Left.is(Keywords.kw_as) &&
         Right.isOneOf(tok::l_square, tok::l_brace, tok::l_paren)) {
       return true;
     }
-    if (Left.is(tok::kw_default) && Left.Previous &&
-        Left.Previous->is(tok::kw_export)) {
+    if (Left.is(tok::kw_default) && BeforeLeft &&
+        BeforeLeft->is(tok::kw_export)) {
       return true;
     }
     if (Left.is(Keywords.kw_is) && Right.is(tok::l_brace))
@@ -5445,6 +5454,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   }
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
     return ShouldAddSpacesInAngles();
+  if (Left.is(tok::r_paren) && Right.is(TT_PointerOrReference) &&
+      Right.isOneOf(tok::amp, tok::ampamp)) {
+    return true;
+  }
   // Space before TT_StructuredBindingLSquare.
   if (Right.is(TT_StructuredBindingLSquare)) {
     return !Left.isOneOf(tok::amp, tok::ampamp) ||

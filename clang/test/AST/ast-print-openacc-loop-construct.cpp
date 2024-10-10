@@ -2,6 +2,7 @@
 
 struct SomeStruct{};
 
+constexpr int get_value() { return 1; }
 void foo() {
 // CHECK: #pragma acc loop
 // CHECK-NEXT: for (;;)
@@ -82,4 +83,16 @@ void foo() {
 #pragma acc loop collapse(force:2)
   for(;;)
     for(;;);
+
+// CHECK: #pragma acc loop tile(1, 3, *, get_value())
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc loop tile(1, 3, *, get_value())
+  for(;;)
+    for(;;)
+      for(;;)
+        for(;;);
 }

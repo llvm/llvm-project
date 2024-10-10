@@ -2387,6 +2387,12 @@ void OMPClauseEnqueue::VisitOMPSizesClause(const OMPSizesClause *C) {
     Visitor->AddStmt(E);
 }
 
+void OMPClauseEnqueue::VisitOMPPermutationClause(
+    const OMPPermutationClause *C) {
+  for (auto E : C->getArgsRefs())
+    Visitor->AddStmt(E);
+}
+
 void OMPClauseEnqueue::VisitOMPFullClause(const OMPFullClause *C) {}
 
 void OMPClauseEnqueue::VisitOMPPartialClause(const OMPPartialClause *C) {
@@ -2836,6 +2842,11 @@ void OpenACCClauseEnqueue::VisitVectorLengthClause(
 }
 void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
   for (Expr *IE : C.getIntExprs())
+    Visitor.AddStmt(IE);
+}
+
+void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
+  for (Expr *IE : C.getSizeExprs())
     Visitor.AddStmt(IE);
 }
 

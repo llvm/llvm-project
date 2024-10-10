@@ -42,6 +42,23 @@ private:
   /// above collection.
   bool InsideComputeConstruct = false;
 
+  /// Certain clauses care about the same things that aren't specific to the
+  /// individual clause, but can be shared by a few, so store them here. All
+  /// require a 'no intervening constructs' rule, so we know they are all from
+  /// the same 'place'.
+  struct LoopCheckingInfo {
+    /// Records whether we've seen the top level 'for'. We already diagnose
+    /// later that the 'top level' is a for loop, so we use this to suppress the
+    /// 'collapse inner loop not a 'for' loop' diagnostic.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TopLevelLoopSeen : 1;
+
+    /// Records whether this 'tier' of the loop has already seen a 'for' loop,
+    /// used to diagnose if there are multiple 'for' loops at any one level.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CurLevelHasLoopAlready : 1;
+  } LoopInfo{/*TopLevelLoopSeen=*/false, /*CurLevelHasLoopAlready=*/false};
+
   /// The 'collapse' clause requires quite a bit of checking while
   /// parsing/instantiating its body, so this structure/object keeps all of the
   /// necessary information as we do checking.  This should rarely be directly
@@ -59,25 +76,27 @@ private:
     /// else it should be 'N' minus the current depth traversed.
     std::optional<llvm::APSInt> CurCollapseCount;
 
-    /// Records whether we've seen the top level 'for'. We already diagnose
-    /// later that the 'top level' is a for loop, so we use this to suppress the
-    /// 'collapse inner loop not a 'for' loop' diagnostic.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned TopLevelLoopSeen : 1;
-
-    /// Records whether this 'tier' of the loop has already seen a 'for' loop,
-    /// used to diagnose if there are multiple 'for' loops at any one level.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned CurLevelHasLoopAlready : 1;
-
     /// Records whether we've hit a CurCollapseCount of '0' on the way down,
     /// which allows us to diagnose if the value of 'N' is too large for the
     /// current number of 'for' loops.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned CollapseDepthSatisfied : 1;
-  } CollapseInfo{nullptr, std::nullopt, /*TopLevelLoopSeen=*/false,
-                 /*CurLevelHasLoopAlready=*/false,
-                 /*CollapseDepthSatisfied=*/true};
+    bool CollapseDepthSatisfied = true;
+  } CollapseInfo;
+
+  /// The 'tile' clause requires a bit of additional checking as well, so like
+  /// the `CollapseCheckingInfo`, ensure we maintain information here too.
+  struct TileCheckingInfo {
+    OpenACCTileClause *ActiveTile = nullptr;
+
+    /// This is the number of expressions on a 'tile' clause.  This doesn't have
+    /// to be an APSInt because it isn't the result of a constexpr, just by our
+    /// own counting of elements.
+    std::optional<unsigned> CurTileCount;
+
+    /// Records whether we've hit a 'CurTileCount' of '0' on the wya down,
+    /// which allows us to diagnose if the number of arguments is too large for
+    /// the current number of 'for' loops.
+    bool TileDepthSatisfied = true;
+  } TileInfo;
 
 public:
   // Redeclaration of the version in OpenACCClause.h.
@@ -179,6 +198,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
@@ -224,6 +244,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
@@ -335,6 +356,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
@@ -343,6 +365,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{std::move(IntExprs)};
@@ -522,17 +545,26 @@ public:
                                    SourceLocation RBLoc);
   /// Checks the loop depth value for a collapse clause.
   ExprResult CheckCollapseLoopCount(Expr *LoopCount);
+  /// Checks a single size expr for a tile clause. 'gang' could possibly call
+  /// this, but has slightly stricter rules as to valid values.
+  ExprResult CheckTileSizeExpr(Expr *SizeExpr);
+
+  ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
+  ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
 
   /// Helper type to restore the state of various 'loop' constructs when we run
   /// into a loop (for, etc) inside the construct.
   class LoopInConstructRAII {
     SemaOpenACC &SemaRef;
+    LoopCheckingInfo OldLoopInfo;
     CollapseCheckingInfo OldCollapseInfo;
+    TileCheckingInfo OldTileInfo;
     bool PreserveDepth;
 
   public:
     LoopInConstructRAII(SemaOpenACC &SemaRef, bool PreserveDepth = true)
-        : SemaRef(SemaRef), OldCollapseInfo(SemaRef.CollapseInfo),
+        : SemaRef(SemaRef), OldLoopInfo(SemaRef.LoopInfo),
+          OldCollapseInfo(SemaRef.CollapseInfo), OldTileInfo(SemaRef.TileInfo),
           PreserveDepth(PreserveDepth) {}
     ~LoopInConstructRAII() {
       // The associated-statement level of this should NOT preserve this, as it
@@ -541,12 +573,20 @@ public:
       bool CollapseDepthSatisified =
           PreserveDepth ? SemaRef.CollapseInfo.CollapseDepthSatisfied
                         : OldCollapseInfo.CollapseDepthSatisfied;
+      bool TileDepthSatisfied = PreserveDepth
+                                    ? SemaRef.TileInfo.TileDepthSatisfied
+                                    : OldTileInfo.TileDepthSatisfied;
       bool CurLevelHasLoopAlready =
-          PreserveDepth ? SemaRef.CollapseInfo.CurLevelHasLoopAlready
-                        : OldCollapseInfo.CurLevelHasLoopAlready;
+          PreserveDepth ? SemaRef.LoopInfo.CurLevelHasLoopAlready
+                        : OldLoopInfo.CurLevelHasLoopAlready;
+
+      SemaRef.LoopInfo = OldLoopInfo;
       SemaRef.CollapseInfo = OldCollapseInfo;
+      SemaRef.TileInfo = OldTileInfo;
+
       SemaRef.CollapseInfo.CollapseDepthSatisfied = CollapseDepthSatisified;
-      SemaRef.CollapseInfo.CurLevelHasLoopAlready = CurLevelHasLoopAlready;
+      SemaRef.TileInfo.TileDepthSatisfied = TileDepthSatisfied;
+      SemaRef.LoopInfo.CurLevelHasLoopAlready = CurLevelHasLoopAlready;
     }
   };
 
@@ -565,6 +605,9 @@ public:
                        ArrayRef<const OpenACCClause *>,
                        ArrayRef<OpenACCClause *>);
     void SetCollapseInfoBeforeAssociatedStmt(
+        ArrayRef<const OpenACCClause *> UnInstClauses,
+        ArrayRef<OpenACCClause *> Clauses);
+    void SetTileInfoBeforeAssociatedStmt(
         ArrayRef<const OpenACCClause *> UnInstClauses,
         ArrayRef<OpenACCClause *> Clauses);
     ~AssociatedStmtRAII();

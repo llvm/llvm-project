@@ -352,15 +352,6 @@ void DataSharingProcessor::collectSymbols(
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
 
-  // Add implicitly referenced symbols from statement functions.
-  if (curScope) {
-    for (const auto &sym : curScope->GetSymbols()) {
-      if (sym->test(semantics::Symbol::Flag::OmpFromStmtFunction) &&
-          sym->test(flag))
-        allSymbols.insert(&*sym);
-    }
-  }
-
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
 
@@ -376,7 +367,8 @@ void DataSharingProcessor::collectSymbols(
     return !semantics::IsProcedure(sym) &&
            !sym.GetUltimate().has<semantics::DerivedTypeDetails>() &&
            !sym.GetUltimate().has<semantics::NamelistDetails>() &&
-           !semantics::IsImpliedDoIndex(sym.GetUltimate());
+           !semantics::IsImpliedDoIndex(sym.GetUltimate()) &&
+           !semantics::IsStmtFunction(sym);
   };
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {

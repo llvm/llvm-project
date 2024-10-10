@@ -42,6 +42,7 @@ Implemented Papers
 - P2609R3: Relaxing Ranges Just A Smidge (`Github <https://github.com/llvm/llvm-project/issues/105253>`__)
 - P2985R0: A type trait for detecting virtual base classes (`Github <https://github.com/llvm/llvm-project/issues/105432>`__)
 - ``std::jthread`` and ``<stop_token>`` are not guarded behind ``-fexperimental-library`` anymore
+- P2674R1: A trait for implicit lifetime types (`Github <https://github.com/llvm/llvm-project/issues/105259>`__)
 
 Improvements and New Features
 -----------------------------
@@ -76,6 +77,10 @@ Deprecations and Removals
 - The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro no longer has any effect. ``std::allocator<const T>`` is not
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
   standards conforming.
+
+- Non-conforming member typedefs ``iterator`` and ``const_iterator`` of ``std::bitset`` are removed. Previously, they
+  were private but could cause ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in
+  LLVM 20.
 
 Upcoming Deprecations and Removals
 ----------------------------------

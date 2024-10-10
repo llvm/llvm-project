@@ -9386,7 +9386,8 @@ let CategoryName = "Inline Assembly Issue" in {
     "global register variables on this target">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
     "match variable size">;
-  def err_asm_bad_register_type : Error<"bad type for named register variable">;
+  def err_asm_unsupported_register_type : Error<
+    "unsupported type for named register variable">;
   def err_asm_invalid_input_size : Error<
     "invalid input size for constraint '%0'">;
   def err_asm_invalid_output_size : Error<
@@ -10510,8 +10511,8 @@ def err_first_argument_to_cwsc_pdtor_call : Error<
 def err_second_argument_to_cwsc_not_pointer : Error<
   "second argument to __builtin_call_with_static_chain must be of pointer type">;
 
-def err_vector_incorrect_num_initializers : Error<
-  "%select{too many|too few}0 elements in vector initialization (expected %1 elements, have %2)">;
+def err_vector_incorrect_num_elements : Error<
+  "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
 def err_invalid_neon_type_code : Error<
@@ -11708,6 +11709,10 @@ def err_omp_dispatch_statement_call
             " to a target function or an assignment to one">;
 def err_omp_unroll_full_variable_trip_count : Error<
   "loop to be fully unrolled must have a constant trip count">;
+def err_omp_interchange_permutation_value_range : Error<
+  "permutation index must be at least 1 and at most %0">;
+def err_omp_interchange_permutation_value_repeated : Error<
+  "index %0 must appear exactly once in the permutation clause">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
 def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;
@@ -12666,19 +12671,23 @@ def err_acc_loop_spec_conflict
 def err_acc_collapse_loop_count
     : Error<"OpenACC 'collapse' clause loop count must be a %select{constant "
             "expression|positive integer value, evaluated to %1}0">;
-def err_acc_invalid_in_collapse_loop
-    : Error<"%select{OpenACC '%1' construct|while loop|do loop}0 cannot appear "
-            "in intervening code of a 'loop' with a 'collapse' clause">;
-def note_acc_collapse_clause_here
-    : Note<"active 'collapse' clause defined here">;
-def err_acc_collapse_multiple_loops
+def err_acc_size_expr_value
+    : Error<
+          "OpenACC 'tile' clause size expression must be %select{an asterisk "
+          "or a constant expression|positive integer value, evaluated to %1}0">;
+def err_acc_invalid_in_loop
+    : Error<"%select{OpenACC '%2' construct|while loop|do loop}0 cannot appear "
+            "in intervening code of a 'loop' with a '%1' clause">;
+def note_acc_active_clause_here
+    : Note<"active '%0' clause defined here">;
+def err_acc_clause_multiple_loops
     : Error<"more than one for-loop in a loop associated with OpenACC 'loop' "
-            "construct with a 'collapse' clause">;
-def err_acc_collapse_insufficient_loops
-    : Error<"'collapse' clause specifies a loop count greater than the number "
+            "construct with a '%select{collapse|tile}0' clause">;
+def err_acc_insufficient_loops
+    : Error<"'%0' clause specifies a loop count greater than the number "
             "of available loops">;
-def err_acc_collapse_intervening_code
-    : Error<"inner loops must be tightly nested inside a 'collapse' clause on "
+def err_acc_intervening_code
+    : Error<"inner loops must be tightly nested inside a '%0' clause on "
             "a 'loop' construct">;
 
 // AMDGCN builtins diagnostics

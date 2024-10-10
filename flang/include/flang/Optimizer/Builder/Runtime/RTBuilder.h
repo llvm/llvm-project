@@ -441,13 +441,15 @@ constexpr TypeBuilderFunc getModel<const std::complex<double> *>() {
 template <>
 constexpr TypeBuilderFunc getModel<c_float_complex_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::ComplexType::get(context, sizeof(float));
+    mlir::Type floatTy = getModel<float>()(context);
+    return mlir::ComplexType::get(floatTy);
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<c_double_complex_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::ComplexType::get(context, sizeof(double));
+    mlir::Type floatTy = getModel<double>()(context);
+    return mlir::ComplexType::get(floatTy);
   };
 }
 template <>

@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen --print-detailed-records %s | FileCheck %s -DFILE=anonymous-location.td
+// RUN: llvm-tblgen --print-detailed-records %s | FileCheck %s -DFILE=%{s:basename}
 
 class A<int a> {
   int Num = a;

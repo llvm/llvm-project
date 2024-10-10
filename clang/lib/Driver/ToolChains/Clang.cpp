@@ -5139,6 +5139,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Args.hasArg(options::OPT_fclangir))
+    CmdArgs.push_back("-fclangir");
+
   if (IsOpenMPDevice) {
     // We have to pass the triple of the host if compiling for an OpenMP device.
     std::string NormalizedTriple =
@@ -6280,8 +6283,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_unique_internal_linkage_names);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
                     options::OPT_fno_unique_basic_block_section_names);
-  Args.addOptInFlag(CmdArgs, options::OPT_fconvergent_functions,
-                    options::OPT_fno_convergent_functions);
 
   if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                options::OPT_fno_split_machine_functions)) {
@@ -6298,6 +6299,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
                   options::OPT_finstrument_functions_after_inlining,
                   options::OPT_finstrument_function_entry_bare);
+  Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
+                  options::OPT_fno_convergent_functions);
 
   // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
   // for sampling, overhead of call arc collection is way too high and there's
@@ -9107,13 +9110,6 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                   [](StringRef Arg) { return !Arg.starts_with("-target"); });
 
-    if (TC->getTriple().isAMDGPU()) {
-      for (StringRef Feature : llvm::split(Arch.split(':').second, ':')) {
-        FeatureArgs.emplace_back(
-            Args.MakeArgString(Feature.take_back() + Feature.drop_back()));
-      }
-    }
-
     // TODO: We need to pass in the full target-id and handle it properly in the
     // linker wrapper.
     SmallVector<std::string> Parts{
@@ -9123,7 +9119,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
-    if (TC->getDriver().isUsingOffloadLTO() || TC->getTriple().isAMDGPU())
+    if (TC->getDriver().isUsingOffloadLTO())
       for (StringRef Feature : FeatureArgs)
         Parts.emplace_back("feature=" + Feature.str());
 

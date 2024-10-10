@@ -18,27 +18,27 @@
 !CHECK:    omp.yield(%[[PVT_REF]] : !fir.ref<!fir.logical<4>>)
 !CHECK:  }
 
-!CHECK:  omp.private {type = firstprivate} @[[ARG2_COMPLEX_PRIVATIZER:_QFfirstprivate_complexEarg2_firstprivate_ref_z64]] : !fir.ref<!fir.complex<8>> alloc
+!CHECK:  omp.private {type = firstprivate} @[[ARG2_COMPLEX_PRIVATIZER:_QFfirstprivate_complexEarg2_firstprivate_ref_z64]] : !fir.ref<complex<f64>> alloc
 
-!CHECK:  omp.private {type = firstprivate} @[[ARG1_COMPLEX_PRIVATIZER:_QFfirstprivate_complexEarg1_firstprivate_ref_z32]] : !fir.ref<!fir.complex<4>> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<!fir.complex<4>>):
-!CHECK:    %[[PVT_ALLOC:.*]] = fir.alloca !fir.complex<4> {bindc_name = "arg1", {{.*}}}
+!CHECK:  omp.private {type = firstprivate} @[[ARG1_COMPLEX_PRIVATIZER:_QFfirstprivate_complexEarg1_firstprivate_ref_z32]] : !fir.ref<complex<f32>> alloc {
+!CHECK:  ^bb0(%{{.*}}: !fir.ref<complex<f32>>):
+!CHECK:    %[[PVT_ALLOC:.*]] = fir.alloca complex<f32> {bindc_name = "arg1", {{.*}}}
 !CHECK:    %[[PVT_DECL:.*]]:2 = hlfir.declare %[[PVT_ALLOC]] {{.*}}
-!CHECK:    omp.yield(%[[PVT_DECL]]#0 : !fir.ref<!fir.complex<4>>)
+!CHECK:    omp.yield(%[[PVT_DECL]]#0 : !fir.ref<complex<f32>>)
 !CHECK:  } copy {
-!CHECK:  ^bb0(%[[ORIG_REF:.*]]: !fir.ref<!fir.complex<4>>, %[[PVT_REF:.*]]: !fir.ref<!fir.complex<4>>):
+!CHECK:  ^bb0(%[[ORIG_REF:.*]]: !fir.ref<complex<f32>>, %[[PVT_REF:.*]]: !fir.ref<complex<f32>>):
 !CHECK:    %[[ORIG_VAL:.*]] = fir.load %[[ORIG_REF]] : {{.*}}
 !CHECK:    hlfir.assign %[[ORIG_VAL]] to %[[PVT_REF]] {{.*}}
-!CHECK:    omp.yield(%[[PVT_REF]] : !fir.ref<!fir.complex<4>>)
+!CHECK:    omp.yield(%[[PVT_REF]] : !fir.ref<complex<f32>>)
 !CHECK:  }
 
-!CHECK-DAG: func @_QPfirstprivate_complex(%[[ARG1:.*]]: !fir.ref<!fir.complex<4>>{{.*}}, %[[ARG2:.*]]: !fir.ref<!fir.complex<8>>{{.*}}) {
-!CHECK:    %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivate_complexEarg1"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-!CHECK:    %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivate_complexEarg2"} : (!fir.ref<!fir.complex<8>>, !fir.dscope) -> (!fir.ref<!fir.complex<8>>, !fir.ref<!fir.complex<8>>)
+!CHECK-DAG: func @_QPfirstprivate_complex(%[[ARG1:.*]]: !fir.ref<complex<f32>>{{.*}}, %[[ARG2:.*]]: !fir.ref<complex<f64>>{{.*}}) {
+!CHECK:    %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivate_complexEarg1"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+!CHECK:    %[[ARG2_DECL:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivate_complexEarg2"} : (!fir.ref<complex<f64>>, !fir.dscope) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
 !CHECK:   omp.parallel private(@[[ARG1_COMPLEX_PRIVATIZER]] %{{.*}}#0 -> %[[ARG1_PVT:.*]], @[[ARG2_COMPLEX_PRIVATIZER]] %{{.*}}#0 -> %[[ARG2_PVT:.*]] : {{.*}}) {
-!CHECK:     %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] {uniq_name = "_QFfirstprivate_complexEarg1"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-!CHECK:     %[[ARG2_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG2_PVT]] {uniq_name = "_QFfirstprivate_complexEarg2"} : (!fir.ref<!fir.complex<8>>) -> (!fir.ref<!fir.complex<8>>, !fir.ref<!fir.complex<8>>)
-!CHECK:     fir.call @_QPfoo(%[[ARG1_PVT_DECL]]#1, %[[ARG2_PVT_DECL]]#1) {{.*}}: (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<8>>) -> ()
+!CHECK:     %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] {uniq_name = "_QFfirstprivate_complexEarg1"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+!CHECK:     %[[ARG2_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG2_PVT]] {uniq_name = "_QFfirstprivate_complexEarg2"} : (!fir.ref<complex<f64>>) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
+!CHECK:     fir.call @_QPfoo(%[[ARG1_PVT_DECL]]#1, %[[ARG2_PVT_DECL]]#1) {{.*}}: (!fir.ref<complex<f32>>, !fir.ref<complex<f64>>) -> ()
 !CHECK:     omp.terminator
 !CHECK:   }
 

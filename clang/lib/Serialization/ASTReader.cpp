@@ -10604,6 +10604,11 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
+  case llvm::omp::OMPC_permutation: {
+    unsigned NumLoops = Record.readInt();
+    C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
+    break;
+  }
   case llvm::omp::OMPC_full:
     C = OMPFullClause::CreateEmpty(Context);
     break;
@@ -10988,6 +10993,12 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPPermutationClause(OMPPermutationClause *C) {
+  for (Expr *&E : C->getArgsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }
@@ -12306,6 +12317,15 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCCollapseClause::Create(getContext(), BeginLoc, LParenLoc,
                                          HasForce, LoopCount, EndLoc);
   }
+  case OpenACCClauseKind::Tile: {
+    SourceLocation LParenLoc = readSourceLocation();
+    unsigned NumClauses = readInt();
+    llvm::SmallVector<Expr *> SizeExprs;
+    for (unsigned I = 0; I < NumClauses; ++I)
+      SizeExprs.push_back(readSubExpr());
+    return OpenACCTileClause::Create(getContext(), BeginLoc, LParenLoc,
+                                     SizeExprs, EndLoc);
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -12322,7 +12342,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");

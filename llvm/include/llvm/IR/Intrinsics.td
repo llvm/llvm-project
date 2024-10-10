@@ -372,6 +372,10 @@ class LLVMType<ValueType vt> {
     []);
   assert !le(!size(IIT_Vecs), 1), "Duplicate type";
 
+  // For vector types, assert that the IIT_Vecs list is not empty.
+  assert !or(!not(vt.isVector), !not(!empty(IIT_Vecs))),
+         "Invalid IIT encoding for vector type v" # vt.nElem # vt.ElementType;
+
   list<int> Sig = !listconcat(
     !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
     !foreach(iit, IIT_Vecs, iit.Number),
@@ -518,7 +522,6 @@ def llvm_v128i1_ty     : LLVMType<v128i1>;   // 128 x i1
 def llvm_v256i1_ty     : LLVMType<v256i1>;   // 256 x i1
 def llvm_v512i1_ty     : LLVMType<v512i1>;   // 512 x i1
 def llvm_v1024i1_ty    : LLVMType<v1024i1>;  //1024 x i1
-def llvm_v2048i1_ty    : LLVMType<v2048i1>;  //2048 x i1
 
 def llvm_v1i8_ty       : LLVMType<v1i8>;     //  1 x i8
 def llvm_v2i8_ty       : LLVMType<v2i8>;     //  2 x i8
@@ -1716,7 +1719,8 @@ def int_coro_prepare_async : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
                                        [IntrNoMem]>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                                [WriteOnly<ArgIndex<1>>]>;
-
+def int_coro_begin_custom_abi : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty, llvm_i32_ty],
+                               [WriteOnly<ArgIndex<1>>]>;
 def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                               [IntrReadMem, IntrArgMemOnly,
                                ReadOnly<ArgIndex<1>>,
