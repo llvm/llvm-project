@@ -251,10 +251,16 @@ Expected<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
   return DA.getRelocatedValue(ItemSize, &Offset);
 }
 
+bool UGLY_FLAG_FOR_AIX __attribute__((weak)) = false;
+
 Error DWARFUnitHeader::extract(DWARFContext &Context,
                                const DWARFDataExtractor &debug_info,
                                uint64_t *offset_ptr,
                                DWARFSectionKind SectionKind) {
+  if (UGLY_FLAG_FOR_AIX) {
+    // FIXME: hack to get version
+    *offset_ptr += 8;
+  }
   Offset = *offset_ptr;
   Error Err = Error::success();
   IndexEntry = nullptr;
@@ -267,8 +273,13 @@ Error DWARFUnitHeader::extract(DWARFContext &Context,
     AbbrOffset = debug_info.getRelocatedValue(
         FormParams.getDwarfOffsetByteSize(), offset_ptr, nullptr, &Err);
   } else {
-    AbbrOffset = debug_info.getRelocatedValue(
-        FormParams.getDwarfOffsetByteSize(), offset_ptr, nullptr, &Err);
+    if (UGLY_FLAG_FOR_AIX) {
+        AbbrOffset = debug_info.getRelocatedValue(
+            8, offset_ptr, nullptr, &Err);
+    } else {
+        AbbrOffset = debug_info.getRelocatedValue(
+            FormParams.getDwarfOffsetByteSize(), offset_ptr, nullptr, &Err);
+    }
     FormParams.AddrSize = debug_info.getU8(offset_ptr, &Err);
     // Fake a unit type based on the section type.  This isn't perfect,
     // but distinguishing compile and type units is generally enough.

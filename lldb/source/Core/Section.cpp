@@ -263,6 +263,10 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
 
 bool Section::ContainsFileAddress(addr_t vm_addr) const {
   const addr_t file_addr = GetFileAddress();
+#ifdef _AIX
+  if (file_addr == 0)
+    return false;
+#endif
   if (file_addr != LLDB_INVALID_ADDRESS && !IsThreadSpecific()) {
     if (file_addr <= vm_addr) {
       const addr_t offset = (vm_addr - file_addr) * m_target_byte_size;

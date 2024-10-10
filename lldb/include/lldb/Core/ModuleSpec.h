@@ -21,6 +21,7 @@
 
 #include <mutex>
 #include <vector>
+#include <string.h>
 
 namespace lldb_private {
 
@@ -41,8 +42,26 @@ public:
   }
 
   ModuleSpec(const FileSpec &file_spec, const ArchSpec &arch)
-      : m_file(file_spec), m_arch(arch), m_object_offset(0),
-        m_object_size(FileSystem::Instance().GetByteSize(file_spec)) {}
+      : m_arch(arch), m_object_offset(0) {
+    // parse object inside module format for example: /usr/ccs/lib/libc.a(shr_64.o)
+    llvm::SmallString<256> path_with_object;
+    file_spec.GetPath(path_with_object);
+    if (strstr(path_with_object.c_str(), "(") != nullptr) {
+      char *part;
+      char *str = (char *)path_with_object.c_str();
+      part = strtok(str, "()");
+      assert(part);
+      llvm::StringRef file_name(part);
+      part = strtok(nullptr, "()");
+      assert(part);
+      m_object_name = ConstString(part);
+      m_file = FileSpec(file_name);
+      m_object_size = FileSystem::Instance().GetByteSize(m_file);
+    } else {
+      m_file = file_spec;
+      m_object_size = FileSystem::Instance().GetByteSize(file_spec);
+    }
+  }
 
   FileSpec *GetFileSpecPtr() { return (m_file ? &m_file : nullptr); }
 
