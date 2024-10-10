@@ -902,6 +902,10 @@ void Preprocessor::Lex(Token &Result) {
     case tok::r_brace:
       StdCXXImportSeqState.handleCloseBrace();
       break;
+#define PRAGMA_ANNOTATION(X) case tok::annot_##X:
+// For `#pragma ...` mimic ';'.
+#include "clang/Basic/TokenKinds.def"
+#undef PRAGMA_ANNOTATION
     // This token is injected to represent the translation of '#include "a.h"'
     // into "import a.h;". Mimic the notional ';'.
     case tok::annot_module_include:
@@ -951,16 +955,9 @@ void Preprocessor::Lex(Token &Result) {
         break;
       [[fallthrough]];
     default:
-      if (tok::isPragmaAnnotation(Result.getKind())) {
-        // For `#pragma ...` mimic ';'.
-        TrackGMFState.handleSemi();
-        StdCXXImportSeqState.handleSemi();
-        ModuleDeclState.handleSemi();
-      } else {
-        TrackGMFState.handleMisc();
-        StdCXXImportSeqState.handleMisc();
-        ModuleDeclState.handleMisc();
-      }
+      TrackGMFState.handleMisc();
+      StdCXXImportSeqState.handleMisc();
+      ModuleDeclState.handleMisc();
       break;
     }
   }
