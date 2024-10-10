@@ -90,6 +90,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
 
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding, handle_fromBinding)
+
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
@@ -135,6 +137,8 @@ public:
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
+  void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
+  llvm::Function *createResourceBindingInitFn();
 
 private:
   void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
@@ -146,6 +150,9 @@ private:
   void addBufferDecls(const DeclContext *DC, Buffer &CB);
   llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
+
+  llvm::SmallVector<std::pair<const VarDecl *, llvm::GlobalVariable *>>
+      ResourcesToBind;
 };
 
 } // namespace CodeGen
