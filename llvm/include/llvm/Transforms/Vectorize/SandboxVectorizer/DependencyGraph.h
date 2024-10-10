@@ -231,6 +231,14 @@ public:
 /// Convenience builders for a MemDGNode interval.
 class MemDGNodeIntervalBuilder {
 public:
+  /// Scans the instruction chain in \p Intvl top-down, returning the top-most
+  /// MemDGNode, or nullptr.
+  static MemDGNode *getTopMemDGNode(const Interval<Instruction> &Intvl,
+                                    const DependencyGraph &DAG);
+  /// Scans the instruction chain in \p Intvl bottom-up, returning the
+  /// bottom-most MemDGNode, or nullptr.
+  static MemDGNode *getBotMemDGNode(const Interval<Instruction> &Intvl,
+                                    const DependencyGraph &DAG);
   /// Given \p Instrs it finds their closest mem nodes in the interval and
   /// returns the corresponding mem range. Note: BotN (or its neighboring mem
   /// node) is included in the range.

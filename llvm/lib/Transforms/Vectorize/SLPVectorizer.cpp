@@ -1293,8 +1293,7 @@ public:
   using InstrList = SmallVector<Instruction *, 16>;
   using ValueSet = SmallPtrSet<Value *, 16>;
   using StoreList = SmallVector<StoreInst *, 8>;
-  using ExtraValueToDebugLocsMap =
-      MapVector<Value *, SmallVector<Instruction *, 2>>;
+  using ExtraValueToDebugLocsMap = SmallDenseSet<Value *, 4>;
   using OrdersType = SmallVector<unsigned, 4>;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
@@ -6322,7 +6321,7 @@ void BoUpSLP::buildExternalUses(
         continue;
 
       // Check if the scalar is externally used as an extra arg.
-      const auto *ExtI = ExternallyUsedValues.find(Scalar);
+      const auto ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
         int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
@@ -18820,7 +18819,7 @@ public:
     // List of the values that were reduced in other trees as part of gather
     // nodes and thus requiring extract if fully vectorized in other trees.
     SmallPtrSet<Value *, 4> RequiredExtract;
-    Value *VectorizedTree = nullptr;
+    WeakTrackingVH VectorizedTree = nullptr;
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
@@ -18916,6 +18915,7 @@ public:
       bool SameScaleFactor = false;
       bool OptReusedScalars = IsSupportedHorRdxIdentityOp &&
                               SameValuesCounter.size() != Candidates.size();
+      BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
       if (OptReusedScalars) {
         SameScaleFactor =
             (RdxKind == RecurKind::Add || RdxKind == RecurKind::FAdd ||
@@ -18936,6 +18936,7 @@ public:
               emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
           VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
           VectorizedVals.try_emplace(OrigV, Cnt);
+          ExternallyUsedValues.insert(OrigV);
           continue;
         }
       }
@@ -19015,17 +19016,18 @@ public:
         V.reorderBottomToTop(/*IgnoreReorder=*/true);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
-        BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues;
+        BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(
+            ExternallyUsedValues);
         // The reduction root is used as the insertion point for new
         // instructions, so set it as externally used to prevent it from being
         // deleted.
-        LocalExternallyUsedValues[ReductionRoot];
+        LocalExternallyUsedValues.insert(ReductionRoot);
         for (unsigned Cnt = 0, Sz = ReducedVals.size(); Cnt < Sz; ++Cnt) {
           if (Cnt == I || (ShuffledExtracts && Cnt == I - 1))
             continue;
           for (Value *V : ReducedVals[Cnt])
             if (isa<Instruction>(V))
-              LocalExternallyUsedValues[TrackedVals[V]];
+              LocalExternallyUsedValues.insert(TrackedVals[V]);
         }
         if (!IsSupportedHorRdxIdentityOp) {
           // Number of uses of the candidates in the vector of values.
@@ -19054,21 +19056,21 @@ public:
           // Check if the scalar was vectorized as part of the vectorization
           // tree but not the top node.
           if (!VLScalars.contains(RdxVal) && V.isVectorized(RdxVal)) {
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
             continue;
           }
           Value *OrigV = TrackedToOrig.at(RdxVal);
           unsigned NumOps =
               VectorizedVals.lookup(OrigV) + At(SameValuesCounter, OrigV);
           if (NumOps != ReducedValsToOps.at(OrigV).size())
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
         }
         // Do not need the list of reused scalars in regular mode anymore.
         if (!IsSupportedHorRdxIdentityOp)
           SameValuesCounter.clear();
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
         V.buildExternalUses(LocalExternallyUsedValues);
 
         V.computeMinimumValueSizes();
