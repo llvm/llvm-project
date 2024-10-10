@@ -160,6 +160,7 @@ struct ObjectSizeOpts {
   /// though they can't be evaluated. Otherwise, null is always considered to
   /// point to a 0 byte region of memory.
   bool NullIsUnknownSize = false;
+
   /// If set, used for more accurate evaluation
   AAResults *AA = nullptr;
 };
@@ -230,6 +231,7 @@ class ObjectSizeOffsetVisitor
   ObjectSizeOpts Options;
   unsigned IntTyBits;
   APInt Zero;
+  APInt ConstantOffset;
   SmallDenseMap<Instruction *, SizeOffsetAPInt, 8> SeenInsts;
   unsigned InstructionsVisited;
 
