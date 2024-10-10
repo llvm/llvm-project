@@ -242,6 +242,24 @@ static Attr *handleNoConvergentAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) NoConvergentAttr(S.Context, A);
 }
 
+static Attr *handleAnnotateAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                SourceRange Range) {
+  // Make sure that there is a string literal as the annotation's first
+  // argument.
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(A, 0, Str))
+    return nullptr;
+
+  llvm::SmallVector<Expr *, 4> Args;
+  Args.reserve(A.getNumArgs() - 1);
+  for (unsigned Idx = 1; Idx < A.getNumArgs(); Idx++) {
+    assert(!A.isArgIdent(Idx));
+    Args.push_back(A.getArgAsExpr(Idx));
+  }
+
+  return AnnotateAttr::Create(S.Context, Str, Args.data(), Args.size(), A);
+}
+
 template <typename OtherAttr, int DiagIdx>
 static bool CheckStmtInlineAttr(Sema &SemaRef, const Stmt *OrigSt,
                                 const Stmt *CurSt,
@@ -679,6 +697,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleMSConstexprAttr(S, St, A, Range);
   case ParsedAttr::AT_NoConvergent:
     return handleNoConvergentAttr(S, St, A, Range);
+  case ParsedAttr::AT_Annotate:
+    return handleAnnotateAttr(S, St, A, Range);
   default:
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
     // declaration attribute is not written on a statement, but this code is
