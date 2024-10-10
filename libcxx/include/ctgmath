@@ -18,6 +18,8 @@
 
 */
 
+#include <__config>
+
 #if _LIBCPP_STD_VER >= 17
 #  include <complex>
 #else
