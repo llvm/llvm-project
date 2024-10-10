@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.0-library %s \
+// RUN:   dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   -DTARGET=dx -DFNATTRS=noundef -check-prefixes=CHECK,CHECK-DXIL
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
