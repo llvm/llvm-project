@@ -17,7 +17,6 @@
 #define LLVM_CODEGEN_BASICTTIIMPL_H
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1282,10 +1281,18 @@ public:
     return 1;
   }
 
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1) {
+  virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                             TTI::TargetCostKind CostKind,
+                                             unsigned Index, Value *Op0,
+                                             Value *Op1) {
     return getRegUsageForType(Val->getScalarType());
+  }
+
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+    return getVectorInstrCost(Opcode, Val, CostKind, Index, nullptr, nullptr);
   }
 
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
