@@ -14416,7 +14416,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
 
   // Lower (pow2) BUILD_VECTORS that are <= 128-bit to a sequence of ZIP1s.
   SDValue ZeroI64 = DAG.getConstant(0, DL, MVT::i64);
-  SmallVector<SDValue, 16> Intermediates = llvm::map_to_vector<16>(
+  SmallVector<SDValue, 16> Intermediates = map_to_vector<16>(
       Op->op_values(), [&, Undef = DAG.getUNDEF(ContainerVT)](SDValue Op) {
         return Op.isUndef() ? Undef
                             : DAG.getNode(ISD::INSERT_VECTOR_ELT, DL,
