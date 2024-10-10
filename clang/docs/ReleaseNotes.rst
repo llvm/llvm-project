@@ -209,6 +209,9 @@ Resolutions to C++ Defect Reports
 - Clang now has improved resolution to CWG2398, allowing class templates to have
   default arguments deduced when partial ordering, and better backwards compatibility
   in overload resolution.
+  As a benefit of this improved support, the flag `-frelaxed-template-template-args`
+  and its negation have been removed altogether, having been deprecated since the previous
+  release.
 
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
