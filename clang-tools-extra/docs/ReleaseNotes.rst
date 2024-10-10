@@ -74,6 +74,8 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- Added `Swap operands` tweak for certain binary operators.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -97,17 +99,33 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
+  the configuration options of the `Clang Static Analyzer Checks
+  <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
+
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-bitwise-pointer-cast
+  <clang-tidy/checks/bugprone/bitwise-pointer-cast>` check.
+
+  Warns about code that tries to cast between pointers by means of
+  ``std::bit_cast`` or ``memcpy``.
+
 - New :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
 
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
+
+- New :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check.
+
+  Finds cases when an uninstantiated virtual member function in a template class 
+  causes cross-compiler incompatibility.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -171,6 +189,10 @@ Changes in existing checks
   as a replacement for parameters of incomplete C array type in C++20 and 
   ``std::array`` or ``std::vector`` before C++20.
 
+- Improved :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
+  using loop variable in initializer of lambda capture.
+
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
   a false positive when only an implicit conversion happened inside an
@@ -182,15 +204,21 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
-  member function calls too.
+  member function calls too and to only expand macros starting with ``PRI``
+  and ``__PRI`` from ``<inttypes.h>`` in the format string.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
-  member function calls too.
+  member function calls too and to only expand macros starting with ``PRI``
+  and ``__PRI`` from ``<inttypes.h>`` in the format string.
 
 - Improved :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
   placeholder when lexer cannot get source text.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check to fix a crash when
+  an argument type is declared but not defined.
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on

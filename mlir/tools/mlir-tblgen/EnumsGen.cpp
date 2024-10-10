@@ -641,11 +641,11 @@ public:
   emitDenseMapInfo(qualName, underlyingType, cppNamespace, os);
 }
 
-static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  llvm::emitSourceFileHeader("Enum Utility Declarations", os, recordKeeper);
+static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
+  llvm::emitSourceFileHeader("Enum Utility Declarations", os, records);
 
   for (const Record *def :
-       recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
+       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
     emitEnumDecl(*def, os);
 
   return false;
@@ -679,11 +679,11 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   os << "\n";
 }
 
-static bool emitEnumDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  llvm::emitSourceFileHeader("Enum Utility Definitions", os, recordKeeper);
+static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
+  llvm::emitSourceFileHeader("Enum Utility Definitions", os, records);
 
   for (const Record *def :
-       recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
+       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
     emitEnumDef(*def, os);
 
   return false;

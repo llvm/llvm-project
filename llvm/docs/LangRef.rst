@@ -8047,6 +8047,43 @@ it will contain a list of ids, including the ids of the callsites in the
 full inline sequence, in order from the leaf-most call's id to the outermost
 inlined call.
 
+
+'``noalias.addrspace``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``noalias.addrspace`` metadata is used to identify memory
+operations which cannot access objects allocated in a range of address
+spaces. It is attached to memory instructions, including
+:ref:`atomicrmw <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, and
+:ref:`call <i_call>` instructions.
+
+This follows the same form as :ref:`range metadata <range-metadata>`,
+except the field entries must be of type `i32`. The interpretation is
+the same numeric address spaces as applied to IR values.
+
+Example:
+
+.. code-block:: llvm
+
+    ; %ptr cannot point to an object allocated in addrspace(5)
+    %rmw.valid = atomicrmw and ptr %ptr, i64 %value seq_cst, !noalias.addrspace !0
+
+    ; Undefined behavior. The underlying object is allocated in one of the listed
+    ; address spaces.
+    %alloca = alloca i64, addrspace(5)
+    %alloca.cast = addrspacecast ptr addrspace(5) %alloca to ptr
+    %rmw.ub = atomicrmw and ptr %alloca.cast, i64 %value seq_cst, !noalias.addrspace !0
+
+    !0 = !{i32 5, i32 6} ; Exclude addrspace(5) only
+
+
+This is intended for use on targets with a notion of generic address
+spaces, which at runtime resolve to different physical memory
+spaces. The interpretation of the address space values is target
+specific. The behavior is undefined if the runtime memory address does
+resolve to an object defined in one of the indicated address spaces.
+
+
 Module Flags Metadata
 =====================
 
@@ -16990,11 +17027,11 @@ floating-point type. Not all targets support all types however.
 
 ::
 
-      declare i64 @llvm.lround.i64.f32(float %Val)
-      declare i64 @llvm.lround.i64.f64(double %Val)
-      declare i64 @llvm.lround.i64.f80(float %Val)
-      declare i64 @llvm.lround.i64.f128(double %Val)
-      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+      declare i64 @llvm.llround.i64.f32(float %Val)
+      declare i64 @llvm.llround.i64.f64(double %Val)
+      declare i64 @llvm.llround.i64.f80(float %Val)
+      declare i64 @llvm.llround.i64.f128(double %Val)
+      declare i64 @llvm.llround.i64.ppcf128(double %Val)
 
 Overview:
 """""""""

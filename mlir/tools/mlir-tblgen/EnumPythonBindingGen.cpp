@@ -132,16 +132,16 @@ static bool emitDialectEnumAttributeBuilder(StringRef attrDefName,
 
 /// Emits Python bindings for all enums in the record keeper. Returns
 /// `false` on success, `true` on failure.
-static bool emitPythonEnums(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static bool emitPythonEnums(const RecordKeeper &records, raw_ostream &os) {
   os << fileHeader;
   for (const Record *it :
-       recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {
+       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {
     EnumAttr enumAttr(*it);
     emitEnumClass(enumAttr, os);
     emitAttributeBuilder(enumAttr, os);
   }
   for (const Record *it :
-       recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
+       records.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
     AttrOrTypeDef attr(&*it);
     if (!attr.getMnemonic()) {
       llvm::errs() << "enum case " << attr

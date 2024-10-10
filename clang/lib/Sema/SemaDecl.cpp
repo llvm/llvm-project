@@ -3803,7 +3803,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     const auto OldFX = Old->getFunctionEffects();
     const auto NewFX = New->getFunctionEffects();
     if (OldFX != NewFX) {
-      const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
+      const auto Diffs = FunctionEffectDiffVector(OldFX, NewFX);
       for (const auto &Diff : Diffs) {
         if (Diff.shouldDiagnoseRedeclaration(*Old, OldFX, *New, NewFX)) {
           Diag(New->getLocation(),
@@ -3838,6 +3838,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
           EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
           OldQTypeForComparison = Context.getFunctionType(
               OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
+        }
+        if (OldFX.empty()) {
+          // A redeclaration may add the attribute to a previously seen function
+          // body which needs to be verified.
+          maybeAddDeclWithEffects(Old, MergedFX);
         }
       }
     }
@@ -7952,7 +7957,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       }
 
       if (!R->isIntegralType(Context) && !R->isPointerType()) {
-        Diag(D.getBeginLoc(), diag::err_asm_bad_register_type);
+        Diag(TInfo->getTypeLoc().getBeginLoc(),
+             diag::err_asm_unsupported_register_type)
+            << TInfo->getTypeLoc().getSourceRange();
         NewVD->setInvalidDecl(true);
       }
     }
@@ -10324,7 +10331,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
-  if (NewTVA && !NewTVA->isDefaultVersion() &&
+  if (Context.getTargetInfo().getTriple().isAArch64() && NewTVA &&
+      !NewTVA->isDefaultVersion() &&
       !Context.getTargetInfo().hasFeature("fmv")) {
     // Don't add to scope fmv functions declarations if fmv disabled
     AddToScope = false;
@@ -11033,7 +11041,16 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
 
   if (TVA) {
     llvm::SmallVector<StringRef, 8> Feats;
-    TVA->getFeatures(Feats);
+    ParsedTargetAttr ParseInfo;
+    if (S.getASTContext().getTargetInfo().getTriple().isRISCV()) {
+      ParseInfo =
+          S.getASTContext().getTargetInfo().parseTargetAttr(TVA->getName());
+      for (auto &Feat : ParseInfo.Features)
+        Feats.push_back(StringRef{Feat}.substr(1));
+    } else {
+      assert(S.getASTContext().getTargetInfo().getTriple().isAArch64());
+      TVA->getFeatures(Feats);
+    }
     for (const auto &Feat : Feats) {
       if (!TargetInfo.validateCpuSupports(Feat)) {
         S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
@@ -11319,7 +11336,8 @@ static bool PreviousDeclsHaveMultiVersionAttribute(const FunctionDecl *FD) {
 }
 
 static void patchDefaultTargetVersion(FunctionDecl *From, FunctionDecl *To) {
-  if (!From->getASTContext().getTargetInfo().getTriple().isAArch64())
+  if (!From->getASTContext().getTargetInfo().getTriple().isAArch64() &&
+      !From->getASTContext().getTargetInfo().getTriple().isRISCV())
     return;
 
   MultiVersionKind MVKindFrom = From->getMultiVersionKind();
@@ -15506,7 +15524,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     FD->setInvalidDecl();
   }
   if (const auto *Attr = FD->getAttr<TargetVersionAttr>()) {
-    if (!Context.getTargetInfo().hasFeature("fmv") &&
+    if (Context.getTargetInfo().getTriple().isAArch64() &&
+        !Context.getTargetInfo().hasFeature("fmv") &&
         !Attr->isDefaultVersion()) {
       // If function multi versioning disabled skip parsing function body
       // defined with non-default target_version attribute
@@ -15676,6 +15695,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       getCurLexicalContext()->getDeclKind() != Decl::ObjCCategoryImpl &&
       getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation)
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
+
+  maybeAddDeclWithEffects(FD);
 
   return D;
 }
@@ -20302,60 +20323,4 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
-}
-
-void Sema::diagnoseFunctionEffectMergeConflicts(
-    const FunctionEffectSet::Conflicts &Errs, SourceLocation NewLoc,
-    SourceLocation OldLoc) {
-  for (const FunctionEffectSet::Conflict &Conflict : Errs) {
-    Diag(NewLoc, diag::warn_conflicting_func_effects)
-        << Conflict.Kept.description() << Conflict.Rejected.description();
-    Diag(OldLoc, diag::note_previous_declaration);
-  }
-}
-
-bool Sema::diagnoseConflictingFunctionEffect(
-    const FunctionEffectsRef &FX, const FunctionEffectWithCondition &NewEC,
-    SourceLocation NewAttrLoc) {
-  // If the new effect has a condition, we can't detect conflicts until the
-  // condition is resolved.
-  if (NewEC.Cond.getCondition() != nullptr)
-    return false;
-
-  // Diagnose the new attribute as incompatible with a previous one.
-  auto Incompatible = [&](const FunctionEffectWithCondition &PrevEC) {
-    Diag(NewAttrLoc, diag::err_attributes_are_not_compatible)
-        << ("'" + NewEC.description() + "'")
-        << ("'" + PrevEC.description() + "'") << false;
-    // We don't necessarily have the location of the previous attribute,
-    // so no note.
-    return true;
-  };
-
-  // Compare against previous attributes.
-  FunctionEffect::Kind NewKind = NewEC.Effect.kind();
-
-  for (const FunctionEffectWithCondition &PrevEC : FX) {
-    // Again, can't check yet when the effect is conditional.
-    if (PrevEC.Cond.getCondition() != nullptr)
-      continue;
-
-    FunctionEffect::Kind PrevKind = PrevEC.Effect.kind();
-    // Note that we allow PrevKind == NewKind; it's redundant and ignored.
-
-    if (PrevEC.Effect.oppositeKind() == NewKind)
-      return Incompatible(PrevEC);
-
-    // A new allocating is incompatible with a previous nonblocking.
-    if (PrevKind == FunctionEffect::Kind::NonBlocking &&
-        NewKind == FunctionEffect::Kind::Allocating)
-      return Incompatible(PrevEC);
-
-    // A new nonblocking is incompatible with a previous allocating.
-    if (PrevKind == FunctionEffect::Kind::Allocating &&
-        NewKind == FunctionEffect::Kind::NonBlocking)
-      return Incompatible(PrevEC);
-  }
-
-  return false;
 }

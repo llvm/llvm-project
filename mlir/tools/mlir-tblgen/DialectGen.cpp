@@ -297,11 +297,10 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
        << "::" << dialect.getCppClassName() << ")\n";
 }
 
-static bool emitDialectDecls(const RecordKeeper &recordKeeper,
-                             raw_ostream &os) {
-  emitSourceFileHeader("Dialect Declarations", os, recordKeeper);
+static bool emitDialectDecls(const RecordKeeper &records, raw_ostream &os) {
+  emitSourceFileHeader("Dialect Declarations", os, records);
 
-  auto dialectDefs = recordKeeper.getAllDerivedDefinitions("Dialect");
+  auto dialectDefs = records.getAllDerivedDefinitions("Dialect");
   if (dialectDefs.empty())
     return false;
 
@@ -342,7 +341,7 @@ static const char *const dialectDestructorStr = R"(
 
 )";
 
-static void emitDialectDef(Dialect &dialect, const RecordKeeper &recordKeeper,
+static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
                            raw_ostream &os) {
   std::string cppClassName = dialect.getCppClassName();
 
@@ -390,10 +389,10 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &recordKeeper,
     os << llvm::formatv(dialectDestructorStr, cppClassName);
 }
 
-static bool emitDialectDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Dialect Definitions", os, recordKeeper);
+static bool emitDialectDefs(const RecordKeeper &records, raw_ostream &os) {
+  emitSourceFileHeader("Dialect Definitions", os, records);
 
-  auto dialectDefs = recordKeeper.getAllDerivedDefinitions("Dialect");
+  auto dialectDefs = records.getAllDerivedDefinitions("Dialect");
   if (dialectDefs.empty())
     return false;
 
@@ -401,7 +400,7 @@ static bool emitDialectDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
   std::optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
-  emitDialectDef(*dialect, recordKeeper, os);
+  emitDialectDef(*dialect, records, os);
   return false;
 }
 

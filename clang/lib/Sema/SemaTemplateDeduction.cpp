@@ -2767,8 +2767,12 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     for (; hasTemplateArgumentForDeduction(As, ArgIdx) &&
            PackScope.hasNextElement();
          ++ArgIdx) {
-      if (!FoldPackParameter && !As[ArgIdx].isPackExpansion())
-        return TemplateDeductionResult::MiscellaneousDeductionFailure;
+      if (!As[ArgIdx].isPackExpansion()) {
+        if (!FoldPackParameter)
+          return TemplateDeductionResult::MiscellaneousDeductionFailure;
+        if (FoldPackArgument)
+          Info.setMatchedPackOnParmToNonPackOnArg();
+      }
       // Deduce template arguments from the pattern.
       if (auto Result = DeduceTemplateArguments(
               S, TemplateParams, Pattern, As[ArgIdx], Info, PartialOrdering,
@@ -2951,7 +2955,7 @@ Sema::getIdentityTemplateArgumentLoc(NamedDecl *TemplateParm,
 /// fully-converted template arguments.
 static bool ConvertDeducedTemplateArgument(
     Sema &S, NamedDecl *Param, DeducedTemplateArgument Arg, NamedDecl *Template,
-    TemplateDeductionInfo &Info, bool IsDeduced,
+    TemplateDeductionInfo &Info, bool IsDeduced, bool PartialOrdering,
     SmallVectorImpl<TemplateArgument> &SugaredOutput,
     SmallVectorImpl<TemplateArgument> &CanonicalOutput) {
   auto ConvertArg = [&](DeducedTemplateArgument Arg,
@@ -2962,15 +2966,20 @@ static bool ConvertDeducedTemplateArgument(
     TemplateArgumentLoc ArgLoc = S.getTrivialTemplateArgumentLoc(
         Arg, QualType(), Info.getLocation(), Param);
 
+    bool MatchedPackOnParmToNonPackOnArg = false;
     // Check the template argument, converting it as necessary.
-    return S.CheckTemplateArgument(
+    auto Res = S.CheckTemplateArgument(
         Param, ArgLoc, Template, Template->getLocation(),
         Template->getSourceRange().getEnd(), ArgumentPackIndex, SugaredOutput,
         CanonicalOutput,
         IsDeduced
             ? (Arg.wasDeducedFromArrayBound() ? Sema::CTAK_DeducedFromArrayBound
                                               : Sema::CTAK_Deduced)
-            : Sema::CTAK_Specified);
+            : Sema::CTAK_Specified,
+        PartialOrdering, &MatchedPackOnParmToNonPackOnArg);
+    if (MatchedPackOnParmToNonPackOnArg)
+      Info.setMatchedPackOnParmToNonPackOnArg();
+    return Res;
   };
 
   if (Arg.getKind() == TemplateArgument::Pack) {
@@ -3053,9 +3062,9 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
     TemplateDeductionInfo &Info,
     SmallVectorImpl<TemplateArgument> &SugaredBuilder,
-    SmallVectorImpl<TemplateArgument> &CanonicalBuilder,
-    LocalInstantiationScope *CurrentInstantiationScope = nullptr,
-    unsigned NumAlreadyConverted = 0, bool *IsIncomplete = nullptr) {
+    SmallVectorImpl<TemplateArgument> &CanonicalBuilder, bool PartialOrdering,
+    LocalInstantiationScope *CurrentInstantiationScope,
+    unsigned NumAlreadyConverted, bool *IsIncomplete) {
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
 
   for (unsigned I = 0, N = TemplateParams->size(); I != N; ++I) {
@@ -3098,8 +3107,8 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
       // We may have deduced this argument, so it still needs to be
       // checked and converted.
       if (ConvertDeducedTemplateArgument(S, Param, Deduced[I], Template, Info,
-                                         IsDeduced, SugaredBuilder,
-                                         CanonicalBuilder)) {
+                                         IsDeduced, PartialOrdering,
+                                         SugaredBuilder, CanonicalBuilder)) {
         Info.Param = makeTemplateParameter(Param);
         // FIXME: These template arguments are temporary. Free them!
         Info.reset(
@@ -3165,7 +3174,9 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
     // Check whether we can actually use the default argument.
     if (S.CheckTemplateArgument(
             Param, DefArg, TD, TD->getLocation(), TD->getSourceRange().getEnd(),
-            0, SugaredBuilder, CanonicalBuilder, Sema::CTAK_Specified)) {
+            /*ArgumentPackIndex=*/0, SugaredBuilder, CanonicalBuilder,
+            Sema::CTAK_Specified, /*PartialOrdering=*/false,
+            /*MatchedPackOnParmToNonPackOnArg=*/nullptr)) {
       Info.Param = makeTemplateParameter(
                          const_cast<NamedDecl *>(TemplateParams->getParam(I)));
       // FIXME: These template arguments are temporary. Free them!
@@ -3273,7 +3284,9 @@ FinishTemplateArgumentDeduction(
   SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
   if (auto Result = ConvertDeducedTemplateArguments(
           S, Partial, IsPartialOrdering, Deduced, Info, SugaredBuilder,
-          CanonicalBuilder);
+          CanonicalBuilder, IsPartialOrdering,
+          /*CurrentInstantiationScope=*/nullptr, /*NumAlreadyConverted=*/0,
+          /*IsIncomplete=*/nullptr);
       Result != TemplateDeductionResult::Success)
     return Result;
 
@@ -3314,16 +3327,20 @@ FinishTemplateArgumentDeduction(
     return TemplateDeductionResult::SubstitutionFailure;
   }
 
+  bool MatchedPackOnParmToNonPackOnArg = false;
   bool ConstraintsNotSatisfied;
   SmallVector<TemplateArgument, 4> SugaredConvertedInstArgs,
       CanonicalConvertedInstArgs;
   if (S.CheckTemplateArgumentList(
           Template, Partial->getLocation(), InstArgs, /*DefaultArgs=*/{}, false,
           SugaredConvertedInstArgs, CanonicalConvertedInstArgs,
-          /*UpdateArgsWithConversions=*/true, &ConstraintsNotSatisfied))
+          /*UpdateArgsWithConversions=*/true, &ConstraintsNotSatisfied,
+          /*PartialOrderingTTP=*/false, &MatchedPackOnParmToNonPackOnArg))
     return ConstraintsNotSatisfied
                ? TemplateDeductionResult::ConstraintsNotSatisfied
                : TemplateDeductionResult::SubstitutionFailure;
+  if (MatchedPackOnParmToNonPackOnArg)
+    Info.setMatchedPackOnParmToNonPackOnArg();
 
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
   for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
@@ -3369,10 +3386,10 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   //   explicitly specified, template argument deduction fails.
   SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
   if (auto Result = ConvertDeducedTemplateArguments(
-          S, Template, /*IsDeduced*/ PartialOrdering, Deduced, Info,
-          SugaredBuilder, CanonicalBuilder,
+          S, Template, /*IsDeduced=*/PartialOrdering, Deduced, Info,
+          SugaredBuilder, CanonicalBuilder, PartialOrdering,
           /*CurrentInstantiationScope=*/nullptr,
-          /*NumAlreadyConverted=*/0U);
+          /*NumAlreadyConverted=*/0U, /*IsIncomplete=*/nullptr);
       Result != TemplateDeductionResult::Success)
     return Result;
 
@@ -3437,7 +3454,9 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
   if (auto Result = ConvertDeducedTemplateArguments(
           S, TD, /*IsDeduced=*/false, Deduced, Info, SugaredBuilder,
-          CanonicalBuilder);
+          CanonicalBuilder, /*PartialOrdering=*/false,
+          /*CurrentInstantiationScope=*/nullptr, /*NumAlreadyConverted=*/0,
+          /*IsIncomplete=*/nullptr);
       Result != TemplateDeductionResult::Success)
     return Result;
 
@@ -3975,7 +3994,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     unsigned NumExplicitlySpecified, FunctionDecl *&Specialization,
     TemplateDeductionInfo &Info,
     SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
-    bool PartialOverloading, llvm::function_ref<bool()> CheckNonDependent) {
+    bool PartialOverloading, bool PartialOrdering,
+    llvm::function_ref<bool()> CheckNonDependent) {
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -3998,9 +4018,10 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   bool IsIncomplete = false;
   SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
   if (auto Result = ConvertDeducedTemplateArguments(
-          *this, FunctionTemplate, /*IsDeduced*/ true, Deduced, Info,
-          SugaredBuilder, CanonicalBuilder, CurrentInstantiationScope,
-          NumExplicitlySpecified, PartialOverloading ? &IsIncomplete : nullptr);
+          *this, FunctionTemplate, /*IsDeduced=*/true, Deduced, Info,
+          SugaredBuilder, CanonicalBuilder, PartialOrdering,
+          CurrentInstantiationScope, NumExplicitlySpecified,
+          PartialOverloading ? &IsIncomplete : nullptr);
       Result != TemplateDeductionResult::Success)
     return Result;
 
@@ -4532,7 +4553,8 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
     FunctionDecl *&Specialization, TemplateDeductionInfo &Info,
     bool PartialOverloading, bool AggregateDeductionCandidate,
-    QualType ObjectType, Expr::Classification ObjectClassification,
+    bool PartialOrdering, QualType ObjectType,
+    Expr::Classification ObjectClassification,
     llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent) {
   if (FunctionTemplate->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
@@ -4747,7 +4769,8 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   runWithSufficientStackSpace(Info.getLocation(), [&] {
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
-        &OriginalCallArgs, PartialOverloading, [&, CallingCtx]() {
+        &OriginalCallArgs, PartialOverloading, PartialOrdering,
+        [&, CallingCtx]() {
           ContextRAII SavedContext(*this, CallingCtx);
           return CheckNonDependent(ParamTypesForArgChecking);
         });
@@ -4859,9 +4882,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
 
   TemplateDeductionResult Result;
   runWithSufficientStackSpace(Info.getLocation(), [&] {
-    Result = FinishTemplateArgumentDeduction(FunctionTemplate, Deduced,
-                                             NumExplicitlySpecified,
-                                             Specialization, Info);
+    Result = FinishTemplateArgumentDeduction(
+        FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
+        /*OriginalCallArgs=*/nullptr, /*PartialOverloading=*/false,
+        /*PartialOrdering=*/true);
   });
   if (Result != TemplateDeductionResult::Success)
     return Result;
@@ -5041,9 +5065,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   FunctionDecl *ConversionSpecialized = nullptr;
   TemplateDeductionResult Result;
   runWithSufficientStackSpace(Info.getLocation(), [&] {
-    Result = FinishTemplateArgumentDeduction(ConversionTemplate, Deduced, 0,
-                                             ConversionSpecialized, Info,
-                                             &OriginalCallArgs);
+    Result = FinishTemplateArgumentDeduction(
+        ConversionTemplate, Deduced, 0, ConversionSpecialized, Info,
+        &OriginalCallArgs, /*PartialOverloading=*/false,
+        /*PartialOrdering=*/false);
   });
   Specialization = cast_or_null<CXXConversionDecl>(ConversionSpecialized);
   return Result;
@@ -5620,7 +5645,8 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   SmallVector<TemplateArgument, 4> SugaredBuilder, CanonicalBuilder;
   if (auto Result = ConvertDeducedTemplateArguments(
           S, FTD, /*IsDeduced=*/true, Deduced, Info, SugaredBuilder,
-          CanonicalBuilder, /*CurrentInstantiationScope=*/nullptr,
+          CanonicalBuilder, /*PartialOrdering=*/true,
+          /*CurrentInstantiationScope=*/nullptr,
           /*NumAlreadyConverted=*/0, &IsIncomplete);
       Result != TemplateDeductionResult::Success)
     return Result;
@@ -6466,7 +6492,7 @@ bool Sema::isMoreSpecializedThanPrimary(
 bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     TemplateParameterList *P, TemplateDecl *PArg, TemplateDecl *AArg,
     const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
-    bool IsDeduced) {
+    bool PartialOrdering, bool *MatchedPackOnParmToNonPackOnArg) {
   // C++1z [temp.arg.template]p4: (DR 150)
   //   A template template-parameter P is at least as specialized as a
   //   template template-argument A if, given the following rewrite to two
@@ -6518,11 +6544,11 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     //   If the rewrite produces an invalid type, then P is not at least as
     //   specialized as A.
     SmallVector<TemplateArgument, 4> CanonicalPArgs;
-    if (CheckTemplateArgumentList(AArg, ArgLoc, PArgList, DefaultArgs, false,
-                                  PArgs, CanonicalPArgs,
-                                  /*UpdateArgsWithConversions=*/true,
-                                  /*ConstraintsNotSatisfied=*/nullptr,
-                                  /*PartialOrderingTTP=*/true))
+    if (CheckTemplateArgumentList(
+            AArg, ArgLoc, PArgList, DefaultArgs, false, PArgs, CanonicalPArgs,
+            /*UpdateArgsWithConversions=*/true,
+            /*ConstraintsNotSatisfied=*/nullptr,
+            /*PartialOrderingTTP=*/true, MatchedPackOnParmToNonPackOnArg))
       return false;
   }
 
@@ -6545,9 +6571,12 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   switch (::DeduceTemplateArguments(
       *this, A, AArgs, PArgs, Info, Deduced,
       /*NumberOfArgumentsMustMatch=*/false, /*PartialOrdering=*/true,
-      IsDeduced ? PackFold::ArgumentToParameter : PackFold::Both,
+      PartialOrdering ? PackFold::ArgumentToParameter : PackFold::Both,
       /*HasDeducedAnyParam=*/nullptr)) {
   case clang::TemplateDeductionResult::Success:
+    if (MatchedPackOnParmToNonPackOnArg &&
+        Info.hasMatchedPackOnParmToNonPackOnArg())
+      *MatchedPackOnParmToNonPackOnArg = true;
     break;
 
   case TemplateDeductionResult::MiscellaneousDeductionFailure:
