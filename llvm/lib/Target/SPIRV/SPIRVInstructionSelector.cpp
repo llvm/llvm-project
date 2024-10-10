@@ -2521,8 +2521,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
     return selectSign(ResVReg, ResType, I);
-  case Intrinsic::spv_groupMemoryBarrierWithGroupSync: {
-    Register MemSemReg = buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
+  case Intrinsic::spv_group_memory_barrier_with_group_sync: {
+    Register MemSemReg =
+        buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
     Register ScopeReg = buildI32Constant(SPIRV::Scope::Workgroup, I);
     MachineBasicBlock &BB = *I.getParent();
     return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpControlBarrier))
@@ -2530,7 +2531,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(ScopeReg)
         .addUse(MemSemReg)
         .constrainAllUses(TII, TRI, RBI);
-    //return selectBarrier(ResVReg, ResType, I, SPIRV::OpControlBarrier, );
   } break;
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {
