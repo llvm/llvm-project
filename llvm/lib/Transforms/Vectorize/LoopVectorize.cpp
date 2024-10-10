@@ -2762,8 +2762,9 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
                                    ? Instruction::FSub
                                    : Instruction::FAdd,
                                EndValue, Step);
-      } else
+      } else {
         llvm_unreachable("all possible induction types must be handled");
+      }
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
     }
