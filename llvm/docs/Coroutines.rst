@@ -759,7 +759,7 @@ is extended by:
 
 #. defining custom ABIs that inherit from the existing ABIs,
 #. give a list of generators for the custom ABIs when constructing the `CoroSplit`_ pass, and
-#. use `coro.begin.custom.abi` in place of `coro.begin` that has an additional parameter for the index of the generator/ABI to be used for the coroutine.
+#. use `coro.begin.custom.abi`_ in place of `coro.begin`_ that has an additional parameter for the index of the generator/ABI to be used for the coroutine.
 
 A custom ABI overriding the SwitchABI's materialization looks like:
 
