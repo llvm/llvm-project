@@ -210,8 +210,9 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   VPValue *ExitValue = getOperand(0);
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  auto *Region = dyn_cast<VPRegionBlock>(Plan.getEntry()->getSingleSuccessor());
+  VPBasicBlock *MiddleVPBB = dyn_cast_or_null<VPBasicBlock>(
+      Region ? Region->getSingleSuccessor() : nullptr);
   VPRecipeBase *ExitingRecipe = ExitValue->getDefiningRecipe();
   auto *ExitingVPBB = ExitingRecipe ? ExitingRecipe->getParent() : nullptr;
   // Values leaving the vector loop reach live out phi's in the exiting block
@@ -2208,7 +2209,9 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   // Replace the temporary unreachable terminator with a new conditional branch,
   // whose two destinations will be set later when they are created.
   auto *CurrentTerminator = State.CFG.PrevBB->getTerminator();
-  assert(isa<UnreachableInst>(CurrentTerminator) &&
+  assert((isa<UnreachableInst>(CurrentTerminator) ||
+          (isa<BranchInst>(CurrentTerminator) &&
+           !CurrentTerminator->getOperand(0))) &&
          "Expected to replace unreachable terminator with conditional branch.");
   auto *CondBr = BranchInst::Create(State.CFG.PrevBB, nullptr, ConditionBit);
   CondBr->setSuccessor(0, nullptr);
