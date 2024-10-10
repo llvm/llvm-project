@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -1794,6 +1795,44 @@ ConstantRange Constant::toConstantRange() const {
   }
 
   return ConstantRange::getFull(BitWidth);
+}
+
+ConstantFPRange Constant::toConstantFPRange() const {
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return ConstantFPRange(CFP->getValue());
+
+  const fltSemantics &Sem = getType()->getScalarType()->getFltSemantics();
+  if (!getType()->isVectorTy())
+    return ConstantFPRange::getFull(Sem);
+
+  if (auto *CFP =
+          dyn_cast_or_null<ConstantFP>(getSplatValue(/*AllowPoison=*/true)))
+    return ConstantFPRange(CFP->getValue());
+
+  if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
+    ConstantFPRange CR = ConstantFPRange::getEmpty(Sem);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(ConstantFPRange(CDV->getElementAsAPFloat(I)));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(this)) {
+    ConstantFPRange CR = ConstantFPRange::getEmpty(Sem);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = CV->getOperand(I);
+      if (!Elem)
+        return ConstantFPRange::getFull(Sem);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CFP = dyn_cast<ConstantFP>(Elem);
+      if (!CFP)
+        return ConstantFPRange::getFull(Sem);
+      CR = CR.unionWith(ConstantFPRange(CFP->getValue()));
+    }
+    return CR;
+  }
+
+  return ConstantFPRange::getFull(Sem);
 }
 
 //---- ConstantPointerNull::get() implementation.
