@@ -681,3 +681,70 @@ define void @foo() {
   EXPECT_FALSE(memDependency(StackSaveN, AllocaN));
   EXPECT_FALSE(memDependency(AllocaN, StackRestoreN));
 }
+
+TEST_F(DependencyGraphTest, Extend) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  store i8 %v4, ptr %ptr
+  store i8 %v5, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S4 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S5 = cast<sandboxir::StoreInst>(&*It++);
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  {
+    // Scenario 1: Build new DAG
+    auto NewIntvl = DAG.extend({S3, S3});
+    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S3, S3));
+    EXPECT_EQ(DAG.getInterval().top(), S3);
+    EXPECT_EQ(DAG.getInterval().bottom(), S3);
+    [[maybe_unused]] auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+  }
+  {
+    // Scenario 2: Extend below
+    auto NewIntvl = DAG.extend({S5, S5});
+    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S4, S5));
+    auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
+    auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
+    EXPECT_TRUE(S4N->hasMemPred(S3N));
+    EXPECT_TRUE(S5N->hasMemPred(S4N));
+    EXPECT_TRUE(S5N->hasMemPred(S3N));
+  }
+  {
+    // Scenario 3: Extend above
+    auto NewIntvl = DAG.extend({S1, S2});
+    EXPECT_EQ(NewIntvl, sandboxir::Interval<sandboxir::Instruction>(S1, S2));
+    auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+    auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+    auto *S3N = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+    auto *S4N = cast<sandboxir::MemDGNode>(DAG.getNode(S4));
+    auto *S5N = cast<sandboxir::MemDGNode>(DAG.getNode(S5));
+
+    EXPECT_TRUE(S2N->hasMemPred(S1N));
+
+    EXPECT_TRUE(S3N->hasMemPred(S2N));
+    EXPECT_TRUE(S3N->hasMemPred(S1N));
+
+    EXPECT_TRUE(S4N->hasMemPred(S3N));
+    EXPECT_TRUE(S4N->hasMemPred(S2N));
+    EXPECT_TRUE(S4N->hasMemPred(S1N));
+
+    EXPECT_TRUE(S5N->hasMemPred(S4N));
+    EXPECT_TRUE(S5N->hasMemPred(S3N));
+    EXPECT_TRUE(S5N->hasMemPred(S2N));
+    EXPECT_TRUE(S5N->hasMemPred(S1N));
+  }
+}

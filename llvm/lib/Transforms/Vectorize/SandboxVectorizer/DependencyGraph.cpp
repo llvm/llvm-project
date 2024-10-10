@@ -215,17 +215,11 @@ void DependencyGraph::scanAndAddDeps(MemDGNode &DstN,
   }
 }
 
-Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
-  if (Instrs.empty())
-    return {};
-
-  Interval<Instruction> InstrInterval(Instrs);
-
-  DGNode *LastN = getOrCreateNode(InstrInterval.top());
-  // Create DGNodes for all instrs in Interval to avoid future Instruction to
-  // DGNode lookups.
+void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
+  // Create Nodes only for the new sections of the DAG.
+  DGNode *LastN = getOrCreateNode(NewInterval.top());
   MemDGNode *LastMemN = dyn_cast<MemDGNode>(LastN);
-  for (Instruction &I : drop_begin(InstrInterval)) {
+  for (Instruction &I : drop_begin(NewInterval)) {
     auto *N = getOrCreateNode(&I);
     // Build the Mem node chain.
     if (auto *MemN = dyn_cast<MemDGNode>(N)) {
@@ -235,16 +229,105 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
       LastMemN = MemN;
     }
   }
+  // Link new MemDGNode chain with the old one, if any.
+  if (!DAGInterval.empty()) {
+    bool NewIsAbove = NewInterval.bottom()->comesBefore(DAGInterval.bottom());
+    const auto &TopInterval = NewIsAbove ? NewInterval : DAGInterval;
+    const auto &BotInterval = NewIsAbove ? DAGInterval : NewInterval;
+    MemDGNode *LinkTopN =
+        MemDGNodeIntervalBuilder::getBotMemDGNode(TopInterval, *this);
+    MemDGNode *LinkBotN =
+        MemDGNodeIntervalBuilder::getTopMemDGNode(BotInterval, *this);
+    assert(LinkTopN->comesBefore(LinkBotN) && "Wrong order!");
+    if (LinkTopN != nullptr && LinkBotN != nullptr) {
+      LinkTopN->setNextNode(LinkBotN);
+      LinkBotN->setPrevNode(LinkTopN);
+    }
+#ifndef NDEBUG
+    // TODO: Remove this once we've done enough testing.
+    // Check that the chain is well formed.
+    auto UnionIntvl = DAGInterval.getUnionInterval(NewInterval);
+    MemDGNode *ChainTopN =
+        MemDGNodeIntervalBuilder::getTopMemDGNode(UnionIntvl, *this);
+    MemDGNode *ChainBotN =
+        MemDGNodeIntervalBuilder::getBotMemDGNode(UnionIntvl, *this);
+    if (ChainTopN != nullptr && ChainBotN != nullptr) {
+      for (auto *N = ChainTopN->getNextNode(), *LastN = ChainTopN; N != nullptr;
+           LastN = N, N = N->getNextNode()) {
+        assert(N == LastN->getNextNode() && "Bad chain!");
+        assert(N->getPrevNode() == LastN && "Bad chain!");
+      }
+    }
+#endif // NDEBUG
+  }
+}
+
+Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
+  if (Instrs.empty())
+    return {};
+
+  Interval<Instruction> InstrsInterval(Instrs);
+  Interval<Instruction> Union = DAGInterval.getUnionInterval(InstrsInterval);
+  auto NewInterval = Union.getSingleDiff(DAGInterval);
+  if (NewInterval.empty())
+    return {};
+
+  createNewNodes(NewInterval);
+
   // Create the dependencies.
-  auto DstRange = MemDGNodeIntervalBuilder::make(InstrInterval, *this);
-  if (!DstRange.empty()) {
-    for (MemDGNode &DstN : drop_begin(DstRange)) {
-      auto SrcRange = Interval<MemDGNode>(DstRange.top(), DstN.getPrevNode());
+  //
+  // 1. DAGInterval empty      2. New is below Old     3. New is above old
+  // ------------------------  -------------------      -------------------
+  //                                         Scan:           DstN:    Scan:
+  //                           +---+         -ScanTopN  +---+DstTopN  -ScanTopN
+  //                           |   |         |          |New|         |
+  //                           |Old|         |          +---+         -ScanBotN
+  //                           |   |         |          +---+
+  //      DstN:    Scan:       +---+DstN:    |          |   |
+  // +---+DstTopN  -ScanTopN   +---+DstTopN  |          |Old|
+  // |New|         |           |New|         |          |   |
+  // +---+DstBotN  -ScanBotN   +---+DstBotN  -ScanBotN  +---+DstBotN
+
+  // 1. This is a new DAG.
+  if (DAGInterval.empty()) {
+    assert(NewInterval == InstrsInterval && "Expected empty DAGInterval!");
+    auto DstRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
+    if (!DstRange.empty()) {
+      for (MemDGNode &DstN : drop_begin(DstRange)) {
+        auto SrcRange = Interval<MemDGNode>(DstRange.top(), DstN.getPrevNode());
+        scanAndAddDeps(DstN, SrcRange);
+      }
+    }
+  }
+  // 2. The new section is below the old section.
+  else if (DAGInterval.bottom()->comesBefore(NewInterval.top())) {
+    auto DstRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
+    auto SrcRangeFull = MemDGNodeIntervalBuilder::make(
+        DAGInterval.getUnionInterval(NewInterval), *this);
+    for (MemDGNode &DstN : DstRange) {
+      auto SrcRange =
+          Interval<MemDGNode>(SrcRangeFull.top(), DstN.getPrevNode());
       scanAndAddDeps(DstN, SrcRange);
     }
   }
+  // 3. The new section is above the old section.
+  else if (NewInterval.bottom()->comesBefore(DAGInterval.top())) {
+    auto DstRange = MemDGNodeIntervalBuilder::make(
+        NewInterval.getUnionInterval(DAGInterval), *this);
+    auto SrcRangeFull = MemDGNodeIntervalBuilder::make(NewInterval, *this);
+    if (!DstRange.empty()) {
+      for (MemDGNode &DstN : drop_begin(DstRange)) {
+        auto SrcRange =
+            Interval<MemDGNode>(SrcRangeFull.top(), DstN.getPrevNode());
+        scanAndAddDeps(DstN, SrcRange);
+      }
+    }
+  } else {
+    llvm_unreachable("We don't expect extending in both directions!");
+  }
 
-  return InstrInterval;
+  DAGInterval = Union;
+  return NewInterval;
 }
 
 #ifndef NDEBUG
