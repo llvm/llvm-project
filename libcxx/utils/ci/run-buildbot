@@ -28,10 +28,6 @@ ${PROGNAME} [options] <BUILDER>
 --build-dir <DIR>   The directory to use for building the library. By default,
                     this is '<llvm-root>/build/<builder>'.
 
---osx-roots <DIR>   Path to pre-downloaded macOS dylibs. By default, we download
-                    them from Green Dragon. This is only relevant at all when
-                    running back-deployment testing if one wants to override
-                    the old dylibs we use to run the tests with different ones.
 Environment variables
 CC                  The C compiler to use, this value is used by CMake. This
                     variable is optional.
@@ -64,10 +60,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --build-dir)
             BUILD_DIR="${2}"
-            shift; shift
-            ;;
-        --osx-roots)
-            OSX_ROOTS="${2}"
             shift; shift
             ;;
         *)
@@ -246,7 +238,7 @@ check-generated-output)
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
     set -x
-    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
+    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test \
            --exclude '*.dat' \
            --exclude '*unicode*.cpp' \
            --exclude '*print*.sh.cpp' \
@@ -371,14 +363,8 @@ bootstrapping-build)
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     echo "+++ Running the LLDB libc++ data formatter tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx \
-                                check-lldb-api-functionalities-data-formatter-data-formatter-stl-generic \
-                                check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx-simulators \
-                                check-lldb-api-commands-expression-import-std-module \
-                                check-lldb-api-lang-cpp-std-function-step-into-callable \
-                                check-lldb-api-lang-cpp-std-function-recognizer \
-                                check-lldb-api-lang-cpp-std-invoke-recognizer
-
+    ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
+    ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
 
     echo "--- Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes

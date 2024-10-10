@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string_view>
 
 using namespace llvm;
 
@@ -622,6 +623,270 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
   return true;
 }
 
+// This table is indexed by the imm8 binary function specified in a
+// vpternlog{d,q} instruction. The symbols {a,b,c} correspond to the three
+// inputs to the binary function. This table was taken from
+// https://gist.github.com/dougallj/81a80cd381988466c4e1c4889ecac95b#file-2-x86-base-txt
+// with slight massaging.
+constexpr StringLiteral TernlogFunctions[] = {
+    "0",
+    "~(a | b | c)",
+    "c & ~(a | b)",
+    "~(a | b)",
+    "b & ~(a | c)",
+    "~(a | c)",
+    "~a & (b ^ c)",
+    "~(a | (b & c))",
+    "b & c & ~a",
+    "~(a | (b ^ c))",
+    "c & ~a",
+    "~a & (c | ~b)",
+    "b & ~a",
+    "~a & (b | ~c)",
+    "~a & (b | c)",
+    "~a",
+    "a & ~(b | c)",
+    "~(b | c)",
+    "~b & (a ^ c)",
+    "~((a & c) | b)",
+    "~c & (a ^ b)",
+    "~((a & b) | c)",
+    "a ^ ((a & b) | (b ^ c))",
+    "(a & (b ^ c)) ^ ~(b & c)",
+    "(a ^ b) & (a ^ c)",
+    "~((a & b) | (b ^ c))",
+    "a ^ ((a & b) | c)",
+    "(a & c) ^ (c | ~b)",
+    "a ^ ((a & c) | b)",
+    "(a & b) ^ (b | ~c)",
+    "a ^ (b | c)",
+    "~(a & (b | c))",
+    "a & c & ~b",
+    "~(b | (a ^ c))",
+    "c & ~b",
+    "~b & (c | ~a)",
+    "(a ^ b) & (b ^ c)",
+    "~((a & b) | (a ^ c))",
+    "b ^ ((a & b) | c)",
+    "(b & c) ^ (c | ~a)",
+    "c & (a ^ b)",
+    "(a | b) ^ ((a & b) | ~c)",
+    "c & ~(a & b)",
+    "(c & (a ^ b)) | ~(a | b)",
+    "(b | c) & (a ^ b)",
+    "a ^ (b | ~c)",
+    "(a & b) ^ (b | c)",
+    "(c & ~b) | ~a",
+    "a & ~b",
+    "~b & (a | ~c)",
+    "~b & (a | c)",
+    "~b",
+    "b ^ (a | (b & c))",
+    "(a & b) ^ (a | ~c)",
+    "b ^ (a | c)",
+    "~(b & (a | c))",
+    "(a | c) & (a ^ b)",
+    "b ^ (a | ~c)",
+    "(a & b) ^ (a | c)",
+    "(c & ~a) | ~b",
+    "a ^ b",
+    "~(a | c) | (a ^ b)",
+    "(c & ~a) | (a ^ b)",
+    "~(a & b)",
+    "a & b & ~c",
+    "~(c | (a ^ b))",
+    "(a ^ c) & (b ^ c)",
+    "~((a & c) | (a ^ b))",
+    "b & ~c",
+    "~c & (b | ~a)",
+    "c ^ ((a & c) | b)",
+    "(b & c) ^ (b | ~a)",
+    "b & (a ^ c)",
+    "(a | c) ^ ((a & c) | ~b)",
+    "(b | c) & (a ^ c)",
+    "a ^ (c | ~b)",
+    "b & ~(a & c)",
+    "(b & (a ^ c)) | ~(a | c)",
+    "(a & c) ^ (b | c)",
+    "(b & ~c) | ~a",
+    "a & ~c",
+    "~c & (a | ~b)",
+    "c ^ (a | (b & c))",
+    "(a & c) ^ (a | ~b)",
+    "~c & (a | b)",
+    "~c",
+    "c ^ (a | b)",
+    "~(c & (a | b))",
+    "(a | b) & (a ^ c)",
+    "c ^ (a | ~b)",
+    "a ^ c",
+    "~(a | b) | (a ^ c)",
+    "(a & c) ^ (a | b)",
+    "(b & ~a) | ~c",
+    "(b & ~a) | (a ^ c)",
+    "~(a & c)",
+    "a & (b ^ c)",
+    "~(b ^ c) ^ (a | (b & c))",
+    "(a | c) & (b ^ c)",
+    "b ^ (c | ~a)",
+    "(a | b) & (b ^ c)",
+    "c ^ (b | ~a)",
+    "b ^ c",
+    "~(a | b) | (b ^ c)",
+    "(a | b) & (c ^ (a & b))",
+    "b ^ c ^ ~a",
+    "c ^ (a & b)",
+    "~(a | b) | (c ^ (a & b))",
+    "b ^ (a & c)",
+    "~(a | c) | (b ^ (a & c))",
+    "(b & ~a) | (b ^ c)",
+    "~a | (b ^ c)",
+    "a & ~(b & c)",
+    "(a & (b ^ c)) | ~(b | c)",
+    "(b & c) ^ (a | c)",
+    "(a & ~c) | ~b",
+    "(b & c) ^ (a | b)",
+    "(a & ~b) | ~c",
+    "(a & ~b) | (b ^ c)",
+    "~(b & c)",
+    "a ^ (b & c)",
+    "~(b | c) | (a ^ (b & c))",
+    "(a & ~b) | (a ^ c)",
+    "~b | (a ^ c)",
+    "(a & ~c) | (a ^ b)",
+    "~c | (a ^ b)",
+    "(a ^ b) | (a ^ c)",
+    "~(a & b & c)",
+    "a & b & c",
+    "~((a ^ b) | (a ^ c))",
+    "c & ~(a ^ b)",
+    "~(a ^ b) & (c | ~a)",
+    "b & ~(a ^ c)",
+    "~(a ^ c) & (b | ~a)",
+    "(b | c) & (a ^ b ^ c)",
+    "(b & c) ^ ~a",
+    "b & c",
+    "~(b ^ c) & (b | ~a)",
+    "c & (b | ~a)",
+    "~((b & c) ^ (a | b))",
+    "b & (c | ~a)",
+    "~((b & c) ^ (a | c))",
+    "a ^ ((a ^ b) | (a ^ c))",
+    "(b & c) | ~a",
+    "a & ~(b ^ c)",
+    "~(b ^ c) & (a | ~b)",
+    "(a | c) & (a ^ b ^ c)",
+    "(a & c) ^ ~b",
+    "(a | b) & (a ^ b ^ c)",
+    "(a & b) ^ ~c",
+    "a ^ b ^ c",
+    "~(a | b) | (a ^ b ^ c)",
+    "~(b ^ c) & (a | b)",
+    "~(b ^ c)",
+    "c ^ (a & ~b)",
+    "~((a | b) & (b ^ c))",
+    "b ^ (a & ~c)",
+    "~((a | c) & (b ^ c))",
+    "(b & c) | (a ^ (b | c))",
+    "~(a & (b ^ c))",
+    "a & c",
+    "~(a ^ c) & (a | ~b)",
+    "c & (a | ~b)",
+    "~((a & c) ^ (a | b))",
+    "~(a ^ c) & (a | b)",
+    "~(a ^ c)",
+    "c ^ (b & ~a)",
+    "~((a | b) & (a ^ c))",
+    "c & (a | b)",
+    "~c ^ (a | b)",
+    "c",
+    "c | ~(a | b)",
+    "b ^ (a & (b ^ c))",
+    "(b & c) | ~(a ^ c)",
+    "(b & ~a) | c",
+    "c | ~a",
+    "a & (c | ~b)",
+    "~((a & c) ^ (b | c))",
+    "a ^ ((a ^ c) & (b ^ c))",
+    "(a & c) | ~b",
+    "a ^ (b & ~c)",
+    "~((b | c) & (a ^ c))",
+    "(a & c) | (a ^ b ^ c)",
+    "~(b & (a ^ c))",
+    "a ^ (b & (a ^ c))",
+    "(a & c) | ~(b ^ c)",
+    "(a & ~b) | c",
+    "c | ~b",
+    "(a & c) | (a ^ b)",
+    "~((a ^ c) & (b ^ c))",
+    "c | (a ^ b)",
+    "c | ~(a & b)",
+    "a & b",
+    "~(a ^ b) & (a | ~c)",
+    "~(a ^ b) & (a | c)",
+    "~(a ^ b)",
+    "b & (a | ~c)",
+    "~((a & b) ^ (a | c))",
+    "b ^ (c & ~a)",
+    "~((a | c) & (a ^ b))",
+    "b & (a | c)",
+    "~b ^ (a | c)",
+    "c ^ (a & (b ^ c))",
+    "(b & c) | ~(a ^ b)",
+    "b",
+    "b | ~(a | c)",
+    "(c & ~a) | b",
+    "b | ~a",
+    "a & (b | ~c)",
+    "~((a & b) ^ (b | c))",
+    "a ^ (c & ~b)",
+    "~((b | c) & (a ^ b))",
+    "a ^ ((a ^ b) & (b ^ c))",
+    "(a & b) | ~c",
+    "(a & b) | (a ^ b ^ c)",
+    "~(c & (a ^ b))",
+    "a ^ (c & (a ^ b))",
+    "(a & b) | ~(b ^ c)",
+    "(a & b) | (a ^ c)",
+    "~((a ^ b) & (b ^ c))",
+    "(a & ~c) | b",
+    "b | ~c",
+    "b | (a ^ c)",
+    "b | ~(a & c)",
+    "a & (b | c)",
+    "~a ^ (b | c)",
+    "c ^ (b & (a ^ c))",
+    "(a & c) | ~(a ^ b)",
+    "b ^ (c & (a ^ b))",
+    "(a & b) | ~(a ^ c)",
+    "(a & b) | (b ^ c)",
+    "~((a ^ b) & (a ^ c))",
+    "(a | b) & ((a & b) | c)",
+    "(a & b) | (b ^ c ^ ~a)",
+    "(a & b) | c",
+    "c | ~(a ^ b)",
+    "(a & c) | b",
+    "b | ~(a ^ c)",
+    "b | c",
+    "~a | b | c",
+    "a",
+    "a | ~(b | c)",
+    "a | (c & ~b)",
+    "a | ~b",
+    "a | (b & ~c)",
+    "a | ~c",
+    "a | (b ^ c)",
+    "a | ~(b & c)",
+    "a | (b & c)",
+    "a | ~(b ^ c)",
+    "a | c",
+    "~b | a | c",
+    "a | b",
+    "~c | a | b",
+    "a | b | c",
+    "-1",
+};
+
 static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
                                   const MCInstrInfo &MCII) {
   unsigned NumOperands = MI->getNumOperands();
@@ -650,58 +915,35 @@ static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
   default:
     return false;
   }
-  const char *DestName = getRegName(MI->getOperand(0).getReg());
-  const char *Src1Name = getRegName(MI->getOperand(1).getReg());
-  const char *Src2Name = getRegName(MI->getOperand(Src2Idx).getReg());
-  const char *Src3Name =
+  StringRef DestName = getRegName(MI->getOperand(0).getReg());
+  StringRef Src1Name = getRegName(MI->getOperand(1).getReg());
+  StringRef Src2Name = getRegName(MI->getOperand(Src2Idx).getReg());
+  StringRef Src3Name =
       Src3Idx != -1 ? getRegName(MI->getOperand(Src3Idx).getReg()) : "mem";
   uint8_t TruthTable = MI->getOperand(NumOperands - 1).getImm();
+
+  StringRef SrcNames[] = {Src1Name, Src2Name, Src3Name};
 
   OS << DestName;
   printMasking(OS, MI, MCII);
   OS << " = ";
 
-  constexpr unsigned kNumVariables = 3;
-  constexpr unsigned kNumTruthTableEntries = 1 << kNumVariables;
-  int NumMinterms = llvm::popcount(TruthTable);
-  if (NumMinterms == 0) {
-    OS << '0';
-  } else if (NumMinterms == kNumTruthTableEntries) {
-    OS << "-1";
-  } else {
-    while (TruthTable != 0) {
-      // Index of the lowest bit set.
-      unsigned I = llvm::countr_zero(TruthTable);
-      // Clear the lowest bit set.
-      TruthTable &= TruthTable - 1;
-      // Our index tells us which sources are and are not complemented. Note
-      // that the indexing goes left-to-right.
-      bool Src1 = I & 0b100;
-      bool Src2 = I & 0b010;
-      bool Src3 = I & 0b001;
+  static_assert(std::size(TernlogFunctions) == 256);
+  std::string_view BooleanFunction = TernlogFunctions[TruthTable];
 
-      // Group in parenthesis to make the output more obvious but only if there
-      // are multiple terms.
-      if (NumMinterms > 1)
-        OS << '(';
-
-      if (!Src1)
-        OS << '~';
-      OS << Src1Name << " & ";
-      if (!Src2)
-        OS << '~';
-      OS << Src2Name << " & ";
-      if (!Src3)
-        OS << '~';
-      OS << Src3Name;
-
-      if (NumMinterms > 1)
-        OS << ')';
-
-      // Output an OR if there is another term in the table.
-      if (TruthTable != 0)
-        OS << " | ";
+  while (!BooleanFunction.empty()) {
+    // Print the expression up to the next symbol.
+    size_t SymbolOffset = BooleanFunction.find_first_of("abc");
+    OS << BooleanFunction.substr(0, SymbolOffset);
+    if (SymbolOffset == std::string_view::npos) {
+      // No more symbols, that means we just printed everything.
+      break;
     }
+    // Let's replace {a,b,c} with Src{1,2,3}Name.
+    char Symbol = BooleanFunction[SymbolOffset];
+    OS << SrcNames[Symbol - 'a'];
+    // Consume the part of the expression we handled.
+    BooleanFunction.remove_prefix(SymbolOffset + 1);
   }
   OS << '\n';
   return true;

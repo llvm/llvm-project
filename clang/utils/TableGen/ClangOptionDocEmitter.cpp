@@ -181,7 +181,7 @@ const unsigned UnlimitedArgs = unsigned(-1);
 
 // Get the number of arguments expected for an option, or -1 if any number of
 // arguments are accepted.
-unsigned getNumArgsForKind(Record *OptionKind, const Record *Option) {
+unsigned getNumArgsForKind(const Record *OptionKind, const Record *Option) {
   return StringSwitch<unsigned>(OptionKind->getName())
     .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE", 1)
     .Cases("KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",

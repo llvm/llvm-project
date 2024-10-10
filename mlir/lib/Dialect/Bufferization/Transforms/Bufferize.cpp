@@ -130,7 +130,7 @@ public:
 } // namespace
 
 void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<BufferizeToTensorOp, BufferizeToMemrefOp>(typeConverter,
                                                          patterns.getContext());
 }

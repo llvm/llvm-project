@@ -728,6 +728,7 @@ bool Sema::addInstantiatedCapturesToScope(
     ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
 
     if (!CapturedPattern->isInitCapture()) {
+      Instantiated++;
       continue;
     }
 

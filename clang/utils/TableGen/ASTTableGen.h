@@ -320,7 +320,7 @@ public:
   }
 
   std::vector<const llvm::Record *> getBufferElementTypes() const {
-    return get()->getValueAsListOfConstDefs(BufferElementTypesFieldName);
+    return get()->getValueAsListOfDefs(BufferElementTypesFieldName);
   }
 
   static llvm::StringRef getTableGenNodeClassName() {

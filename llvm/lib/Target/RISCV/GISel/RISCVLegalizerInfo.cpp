@@ -158,14 +158,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .lower();
 
   auto &ShiftActions = getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL});
-  if (ST.is64Bit())
-    ShiftActions.customFor({{s32, s32}});
-  ShiftActions.legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
+  ShiftActions.legalFor({{s32, s32}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
       .clampScalar(0, s32, sXLen)
       .minScalarSameAs(1, 0)
-      .widenScalarToNextPow2(1);
+      .maxScalarSameAs(1, 0);
 
   auto &ExtActions =
       getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
@@ -204,13 +202,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
-  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb()) {
-    RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
-    // Widen s32 rotate amount to s64 so SDAG patterns will match.
-    if (ST.is64Bit())
-      RotateActions.widenScalarIf(all(typeIs(0, s32), typeIs(1, s32)),
-                                  changeTo(1, sXLen));
-  }
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
+    RotateActions.legalFor({{s32, s32}, {sXLen, sXLen}});
   RotateActions.lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
@@ -661,30 +654,6 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
 }
 
-bool RISCVLegalizerInfo::legalizeShlAshrLshr(
-    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-    GISelChangeObserver &Observer) const {
-  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
-         MI.getOpcode() == TargetOpcode::G_LSHR ||
-         MI.getOpcode() == TargetOpcode::G_SHL);
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  // If the shift amount is a G_CONSTANT, promote it to a 64 bit type so the
-  // imported patterns can select it later. Either way, it will be legal.
-  Register AmtReg = MI.getOperand(2).getReg();
-  auto VRegAndVal = getIConstantVRegValWithLookThrough(AmtReg, MRI);
-  if (!VRegAndVal)
-    return true;
-  // Check the shift amount is in range for an immediate form.
-  uint64_t Amount = VRegAndVal->Value.getZExtValue();
-  if (Amount > 31)
-    return true; // This will have to remain a register variant.
-  auto ExtCst = MIRBuilder.buildConstant(LLT::scalar(64), Amount);
-  Observer.changingInstr(MI);
-  MI.getOperand(2).setReg(ExtCst.getReg(0));
-  Observer.changedInstr(MI);
-  return true;
-}
-
 bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
                                          MachineIRBuilder &MIRBuilder) const {
   // Stores the address of the VarArgsFrameIndex slot into the memory location
@@ -864,19 +833,21 @@ static MachineInstrBuilder buildAllOnesMask(LLT VecTy, const SrcOp &VL,
 
 /// Gets the two common "VL" operands: an all-ones mask and the vector length.
 /// VecTy is a scalable vector type.
-static std::pair<MachineInstrBuilder, Register>
+static std::pair<MachineInstrBuilder, MachineInstrBuilder>
 buildDefaultVLOps(const DstOp &Dst, MachineIRBuilder &MIB,
                   MachineRegisterInfo &MRI) {
   LLT VecTy = Dst.getLLTTy(MRI);
   assert(VecTy.isScalableVector() && "Expecting scalable container type");
-  Register VL(RISCV::X0);
-  MachineInstrBuilder Mask = buildAllOnesMask(VecTy, VL, MIB, MRI);
+  const RISCVSubtarget &STI = MIB.getMF().getSubtarget<RISCVSubtarget>();
+  LLT XLenTy(STI.getXLenVT());
+  auto VL = MIB.buildConstant(XLenTy, -1);
+  auto Mask = buildAllOnesMask(VecTy, VL, MIB, MRI);
   return {Mask, VL};
 }
 
 static MachineInstrBuilder
 buildSplatPartsS64WithVL(const DstOp &Dst, const SrcOp &Passthru, Register Lo,
-                         Register Hi, Register VL, MachineIRBuilder &MIB,
+                         Register Hi, const SrcOp &VL, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI) {
   // TODO: If the Hi bits of the splat are undefined, then it's fine to just
   // splat Lo even if it might be sign extended. I don't think we have
@@ -892,7 +863,7 @@ buildSplatPartsS64WithVL(const DstOp &Dst, const SrcOp &Passthru, Register Lo,
 
 static MachineInstrBuilder
 buildSplatSplitS64WithVL(const DstOp &Dst, const SrcOp &Passthru,
-                         const SrcOp &Scalar, Register VL,
+                         const SrcOp &Scalar, const SrcOp &VL,
                          MachineIRBuilder &MIB, MachineRegisterInfo &MRI) {
   assert(Scalar.getLLTTy(MRI) == LLT::scalar(64) && "Unexpected VecTy!");
   auto Unmerge = MIB.buildUnmerge(LLT::scalar(32), Scalar);
@@ -1059,7 +1030,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
     LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  GISelChangeObserver &Observer = Helper.Observer;
   MachineFunction &MF = *MI.getParent()->getParent();
   switch (MI.getOpcode()) {
   default:
@@ -1078,10 +1048,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
       return true;
     return Helper.lowerConstant(MI);
   }
-  case TargetOpcode::G_SHL:
-  case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR:
-    return legalizeShlAshrLshr(MI, MIRBuilder, Observer);
   case TargetOpcode::G_SEXT_INREG: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     int64_t SizeInBits = MI.getOperand(2).getImm();

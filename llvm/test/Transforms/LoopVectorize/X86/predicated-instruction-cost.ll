@@ -52,3 +52,52 @@ loop.latch:
 exit:
   ret void
 }
+
+; Test case for https://github.com/llvm/llvm-project/issues/108697.
+define void @test_wide_shift_uses_predicated_invariant_instruction(i32 %d, i1 %c, ptr %dst) {
+; CHECK-LABEL: define void @test_wide_shift_uses_predicated_invariant_instruction(
+; CHECK-SAME: i32 [[D:%.*]], i1 [[C:%.*]], ptr [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[ELSE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[REM]], 12
+; CHECK-NEXT:    [[SHL_I:%.*]] = shl i32 999, [[SEXT]]
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[SHL_I]], %[[ELSE]] ], [ 0, %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[P]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c, label %loop.latch, label %else
+
+else:
+  %rem = urem i32 100, %d
+  %sext = shl i32 %rem, 12
+  %shl.i = shl i32 999, %sext
+  br label %loop.latch
+
+loop.latch:
+  %p = phi i32 [ %shl.i, %else ], [ 0, %loop.header ]
+  %gep = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 %p, ptr %gep
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 100
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

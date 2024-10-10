@@ -647,8 +647,8 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
           initialize = true;
           repl_sp = target.GetREPL(repl_error, m_command_options.language,
                                     nullptr, true);
-          if (!repl_error.Success()) {
-            result.SetError(repl_error);
+          if (repl_error.Fail()) {
+            result.SetError(std::move(repl_error));
             return;
           }
         }
@@ -668,7 +668,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
           repl_error = Status::FromErrorStringWithFormat(
               "Couldn't create a REPL for %s",
               Language::GetNameForLanguageType(m_command_options.language));
-          result.SetError(repl_error);
+          result.SetError(std::move(repl_error));
           return;
         }
       }

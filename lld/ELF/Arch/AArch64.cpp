@@ -32,9 +32,9 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
 // Target Identification has been enabled.  As linker generated branches are
 // via x16 the BTI landing pads are defined as: BTI C, BTI J, BTI JC, PACIASP,
 // PACIBSP.
-bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
+bool elf::isAArch64BTILandingPad(Ctx &ctx, Symbol &s, int64_t a) {
   // PLT entries accessed indirectly have a BTI c.
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return true;
   Defined *d = dyn_cast<Defined>(&s);
   if (!isa_and_nonnull<InputSection>(d->section))
@@ -91,9 +91,10 @@ private:
 };
 
 struct AArch64Relaxer {
+  Ctx &ctx;
   bool safeToRelaxAdrpLdr = false;
 
-  AArch64Relaxer(ArrayRef<Relocation> relocs);
+  AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs);
   bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
                        uint64_t secAddr, uint8_t *buf) const;
   bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
@@ -212,7 +213,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_NONE:
     return R_NONE;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -347,7 +348,7 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return SignExtend64<28>(getBits(read32le(buf), 0, 25) << 2);
 
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -393,7 +394,7 @@ void AArch64::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
   relocateNoSym(buf, R_AARCH64_ADR_PREL_PG_HI21,
                 getAArch64Page(gotPltEntryAddr) - getAArch64Page(pltEntryAddr));
   relocateNoSym(buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, gotPltEntryAddr);
@@ -407,7 +408,7 @@ bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // be resolved as a branch to the next instruction. If it is hidden, its
   // binding has been converted to local, so we just check isUndefined() here. A
   // undefined non-weak symbol will have been errored.
-  if (s.isUndefined() && !s.isInPlt())
+  if (s.isUndefined() && !s.isInPlt(ctx))
     return false;
   // ELF for the ARM 64-bit architecture, section Call and Jump relocations
   // only permits range extension thunks for R_AARCH64_CALL26 and
@@ -415,7 +416,7 @@ bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
       type != R_AARCH64_PLT32)
     return false;
-  uint64_t dst = expr == R_PLT_PC ? s.getPltVA() : s.getVA(a);
+  uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(a);
   return !inBranchRange(type, branchAddr, dst);
 }
 
@@ -750,7 +751,8 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
-AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
+AArch64Relaxer::AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs)
+    : ctx(ctx) {
   if (!ctx.arg.relax)
     return;
   // Check if R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
@@ -909,13 +911,11 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += s->outSecOff;
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
-  AArch64Relaxer relaxer(sec.relocs());
+  AArch64Relaxer relaxer(ctx, sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
     uint8_t *loc = buf + rel.offset;
-    const uint64_t val =
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr);
+    const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 
     if (needsGotForMemtag(rel)) {
       relocate(loc, rel, val);
@@ -1089,7 +1089,7 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
     pltEntryAddr += sizeof(btiData);
   }
 
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
   memcpy(buf, addrInst, sizeof(addrInst));
   relocateNoSym(buf, R_AARCH64_ADR_PREL_PG_HI21,
                 getAArch64Page(gotPltEntryAddr) - getAArch64Page(pltEntryAddr));
@@ -1149,13 +1149,13 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // Ideally, this isn't a problem, as any TU that imports or exports tagged
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
-void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
+void elf::createTaggedSymbols(Ctx &ctx) {
   assert(hasMemtag());
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.
   DenseMap<Symbol *, unsigned> taggedSymbolReferenceCount;
-  for (InputFile* file : files) {
+  for (InputFile *file : ctx.objectFiles) {
     if (file->kind() != InputFile::ObjKind)
       continue;
     for (InputSectionBase *section : file->getSections()) {
@@ -1171,7 +1171,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // definitions to a symbol exceeds the amount of times they're marked as
   // tagged, it means we have an objfile that uses the untagged variant of the
   // symbol.
-  for (InputFile *file : files) {
+  for (InputFile *file : ctx.objectFiles) {
     if (file->kind() != InputFile::BinaryKind &&
         file->kind() != InputFile::ObjKind)
       continue;
@@ -1208,12 +1208,10 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   }
 }
 
-TargetInfo *elf::getAArch64TargetInfo(Ctx &ctx) {
+void elf::setAArch64TargetInfo(Ctx &ctx) {
   if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      ctx.arg.zPacPlt) {
-    static AArch64BtiPac t(ctx);
-    return &t;
-  }
-  static AArch64 t(ctx);
-  return &t;
+      ctx.arg.zPacPlt)
+    ctx.target.reset(new AArch64BtiPac(ctx));
+  else
+    ctx.target.reset(new AArch64(ctx));
 }

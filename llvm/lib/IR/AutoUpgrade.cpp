@@ -34,9 +34,11 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -846,6 +848,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return false; // No other 'aarch64.sve.bf*'.
       }
 
+      // 'aarch64.sve.fcvt.bf16f32' || 'aarch64.sve.fcvtnt.bf16f32'
+      if (Name == "fcvt.bf16f32" || Name == "fcvtnt.bf16f32") {
+        NewFn = nullptr;
+        return true;
+      }
+
       if (Name.consume_front("addqv")) {
         // 'aarch64.sve.addqv'.
         if (!F->getReturnType()->isFPOrFPVectorTy())
@@ -1033,14 +1041,17 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
-      if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
-          Name.starts_with("ds.fmax") ||
-          Name.starts_with("global.atomic.fadd") ||
-          Name.starts_with("flat.atomic.fadd")) {
-        // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
-        // declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
+          Name.consume_front("flat.atomic.")) {
+        if (Name.starts_with("fadd") ||
+            // FIXME: We should also remove fmin.num and fmax.num intrinsics.
+            (Name.starts_with("fmin") && !Name.starts_with("fmin.num")) ||
+            (Name.starts_with("fmax") && !Name.starts_with("fmax.num"))) {
+          // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
+          // declaration.
+          NewFn = nullptr;
+          return true;
+        }
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -4072,6 +4083,35 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   return Rep;
 }
 
+static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
+                                          Function *F, IRBuilder<> &Builder) {
+  Intrinsic::ID NewID =
+      StringSwitch<Intrinsic::ID>(Name)
+          .Case("sve.fcvt.bf16f32", Intrinsic::aarch64_sve_fcvt_bf16f32_v2)
+          .Case("sve.fcvtnt.bf16f32", Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2)
+          .Default(Intrinsic::not_intrinsic);
+  if (NewID == Intrinsic::not_intrinsic)
+    llvm_unreachable("Unhandled Intrinsic!");
+
+  SmallVector<Value *, 3> Args(CI->args());
+
+  // The original intrinsics incorrectly used a predicate based on the smallest
+  // element type rather than the largest.
+  Type *BadPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 8);
+  Type *GoodPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
+
+  if (Args[1]->getType() != BadPredTy)
+    llvm_unreachable("Unexpected predicate type!");
+
+  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                    BadPredTy, Args[1]);
+  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
+                                    GoodPredTy, Args[1]);
+
+  Function *NewF = Intrinsic::getDeclaration(CI->getModule(), NewID);
+  return Builder.CreateCall(NewF, Args, CI->getName());
+}
+
 static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                                       IRBuilder<> &Builder) {
   if (Name == "mve.vctp64.old") {
@@ -4181,7 +4221,11 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
           .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
           .StartsWith("global.atomic.fadd", AtomicRMWInst::FAdd)
-          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd);
+          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("global.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("flat.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("global.atomic.fmax", AtomicRMWInst::FMax)
+          .StartsWith("flat.atomic.fmax", AtomicRMWInst::FMax);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.
@@ -4235,11 +4279,20 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   AtomicRMWInst *RMW =
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
-  if (PtrTy->getAddressSpace() != 3) {
+  unsigned AddrSpace = PtrTy->getAddressSpace();
+  if (AddrSpace != AMDGPUAS::LOCAL_ADDRESS) {
     MDNode *EmptyMD = MDNode::get(F->getContext(), {});
     RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
     if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
       RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+  }
+
+  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
+    MDBuilder MDB(F->getContext());
+    MDNode *RangeNotPrivate =
+        MDB.createRange(APInt(32, AMDGPUAS::PRIVATE_ADDRESS),
+                        APInt(32, AMDGPUAS::PRIVATE_ADDRESS + 1));
+    RMW->setMetadata(LLVMContext::MD_noalias_addrspace, RangeNotPrivate);
   }
 
   if (IsVolatile)
@@ -4325,6 +4378,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     bool IsX86 = Name.consume_front("x86.");
     bool IsNVVM = Name.consume_front("nvvm.");
+    bool IsAArch64 = Name.consume_front("aarch64.");
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
@@ -4336,6 +4390,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeNVVMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsX86) {
       Rep = upgradeX86IntrinsicCall(Name, CI, F, Builder);
+    } else if (IsAArch64) {
+      Rep = upgradeAArch64IntrinsicCall(Name, CI, F, Builder);
     } else if (IsARM) {
       Rep = upgradeARMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsAMDGCN) {
@@ -5523,8 +5579,8 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     std::string I128 = "-i128:128";
     if (!StringRef(Res).contains(I128)) {
       size_t Pos = Res.find(I64);
-      assert(Pos != size_t(-1) && "no i64 data layout found!");
-      Res.insert(Pos + I64.size(), I128);
+      if (Pos != size_t(-1))
+        Res.insert(Pos + I64.size(), I128);
     }
     return Res;
   }
