@@ -103,6 +103,7 @@ enum OutputFormatTy {
   md,
   yaml,
   html,
+  mhtml
 };
 
 static llvm::cl::opt<OutputFormatTy>
@@ -112,7 +113,9 @@ static llvm::cl::opt<OutputFormatTy>
                                 clEnumValN(OutputFormatTy::md, "md",
                                            "Documentation in MD format."),
                                 clEnumValN(OutputFormatTy::html, "html",
-                                           "Documentation in HTML format.")),
+                                           "Documentation in HTML format."),
+                                clEnumValN(OutputFormatTy::mhtml, "mhtml",
+                                           "Documentation in mHTML format")),
                llvm::cl::init(OutputFormatTy::yaml),
                llvm::cl::cat(ClangDocCategory));
 
@@ -124,6 +127,8 @@ std::string getFormatString() {
     return "md";
   case OutputFormatTy::html:
     return "html";
+  case OutputFormatTy::mhtml:
+    return "mhtml";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -205,6 +210,32 @@ llvm::Error getHtmlAssetFiles(const char *Argv0,
   return getDefaultAssetFiles(Argv0, CDCtx);
 }
 
+llvm::Error getMustacheHtmlFiles(const char *Argv0,
+                                 clang::doc::ClangDocContext &CDCtx) {
+  if (!UserAssetPath.empty() &&
+      !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
+    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
+                 << " falling back to default\n";
+  if (llvm::sys::fs::is_directory(std::string(UserAssetPath)))
+    return getAssetFiles(CDCtx);
+  
+  void *MainAddr = (void *)(intptr_t)getExecutablePath;
+  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
+  llvm::SmallString<128> NativeClangDocPath;
+  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
+  
+  llvm::SmallString<128> AssetsPath;
+  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
+  
+  llvm::SmallString<128> MustacheTemplate;
+  llvm::sys::path::native(AssetsPath, MustacheTemplate);
+  llvm::sys::path::append(MustacheTemplate, "template.mustache");
+  CDCtx.MustacheTemplates.insert({"template", MustacheTemplate.c_str()});
+  
+  return llvm::Error::success();
+}
+
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
 void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
@@ -273,6 +304,13 @@ Example usage for a project using a compile commands database:
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
+      llvm::errs() << toString(std::move(Err)) << "\n";
+      return 1;
+    }
+  }
+  
+  if (Format == "mhtml") {
+    if (auto Err = getMustacheHtmlFiles(argv[0], CDCtx)) {
       llvm::errs() << toString(std::move(Err)) << "\n";
       return 1;
     }
