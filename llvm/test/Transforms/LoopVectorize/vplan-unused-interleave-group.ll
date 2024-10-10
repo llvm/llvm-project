@@ -8,7 +8,7 @@
 
 define void @test_unused_interleave(ptr %src, i32 %length) {
 ; CHECK-LABEL: Checking a loop in 'test_unused_interleave'
-; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK: VPlan 'Final VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<%0> = VF * UF
 ; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%length> = original trip-count

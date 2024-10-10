@@ -1201,19 +1201,12 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 //   %Negated = Not %ALM
 //   branch-on-cond %Negated
 //
-static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
-    VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
+static VPActiveLaneMaskPHIRecipe *createActiveLaneMaskPhi(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
-  auto *CanonicalIVIncrement =
-      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
-  // TODO: Check if dropping the flags is needed if
-  // !DataAndControlFlowWithoutRuntimeCheck.
-  CanonicalIVIncrement->dropPoisonGeneratingFlags();
-  DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
+  DebugLoc DL = CanonicalIVPHI->getDebugLoc();
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
   // we have to take unrolling into account. Each part needs to start at
   //   Part * VF
@@ -1223,21 +1216,6 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // Create the ActiveLaneMask instruction using the correct start values.
   VPValue *TC = Plan.getTripCount();
 
-  VPValue *TripCount, *IncrementValue;
-  if (!DataAndControlFlowWithoutRuntimeCheck) {
-    // When the loop is guarded by a runtime overflow check for the loop
-    // induction variable increment by VF, we can increment the value before
-    // the get.active.lane mask and use the unmodified tripcount.
-    IncrementValue = CanonicalIVIncrement;
-    TripCount = TC;
-  } else {
-    // When avoiding a runtime check, the active.lane.mask inside the loop
-    // uses a modified trip count and the induction variable increment is
-    // done after the active.lane.mask intrinsic is called.
-    IncrementValue = CanonicalIVPHI;
-    TripCount = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
-                                     {TC}, DL);
-  }
   auto *EntryIncrement = Builder.createOverflowingOp(
       VPInstruction::CanonicalIVIncrementForPart, {StartV}, {false, false}, DL,
       "index.part.next");
@@ -1251,24 +1229,6 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // preheader ActiveLaneMask instruction.
   auto *LaneMaskPhi = new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc());
   LaneMaskPhi->insertAfter(CanonicalIVPHI);
-
-  // Create the active lane mask for the next iteration of the loop before the
-  // original terminator.
-  VPRecipeBase *OriginalTerminator = EB->getTerminator();
-  Builder.setInsertPoint(OriginalTerminator);
-  auto *InLoopIncrement =
-      Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
-                                  {IncrementValue}, {false, false}, DL);
-  auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                   {InLoopIncrement, TripCount}, DL,
-                                   "active.lane.mask.next");
-  LaneMaskPhi->addOperand(ALM);
-
-  // Replace the original terminator with BranchOnCond. We have to invert the
-  // mask here because a true condition means jumping to the exit block.
-  auto *NotMask = Builder.createNot(ALM, DL);
-  Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
-  OriginalTerminator->eraseFromParent();
   return LaneMaskPhi;
 }
 
@@ -1334,8 +1294,7 @@ void VPlanTransforms::addActiveLaneMask(
       cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
   VPSingleDefRecipe *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
-    LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
-        Plan, DataAndControlFlowWithoutRuntimeCheck);
+    LaneMask = createActiveLaneMaskPhi(Plan);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
     LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
@@ -1451,6 +1410,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
+  VPBasicBlock *Latch = Plan.getVectorLoopRegion()->getExitingBasicBlock();
 
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
@@ -1464,30 +1424,26 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
       new VPInstruction(VPInstruction::ExplicitVectorLength, AVL, DebugLoc());
   VPEVL->insertAfter(AVL);
 
-  auto *CanonicalIVIncrement =
-      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   VPSingleDefRecipe *OpVPEVL = VPEVL;
+  VPRecipeBase *LatchTerm = Latch->getTerminator();
   if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
       IVSize != 32) {
     OpVPEVL = new VPScalarCastRecipe(IVSize < 32 ? Instruction::Trunc
                                                  : Instruction::ZExt,
                                      OpVPEVL, CanonicalIVPHI->getScalarType());
-    OpVPEVL->insertBefore(CanonicalIVIncrement);
+    OpVPEVL->insertBefore(LatchTerm);
   }
   auto *NextEVLIV =
-      new VPInstruction(Instruction::Add, {OpVPEVL, EVLPhi},
-                        {CanonicalIVIncrement->hasNoUnsignedWrap(),
-                         CanonicalIVIncrement->hasNoSignedWrap()},
-                        CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
-  NextEVLIV->insertBefore(CanonicalIVIncrement);
+      new VPInstruction(Instruction::Add, {OpVPEVL, EVLPhi}, {false, false},
+                        CanonicalIVPHI->getDebugLoc(), "index.evl.next");
+  NextEVLIV->insertBefore(LatchTerm);
   EVLPhi->addOperand(NextEVLIV);
 
   transformRecipestoEVLRecipes(Plan, *VPEVL);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
+  // VPEVLBasedIVPHIRecipe.
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
-  CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
   return true;
@@ -1663,4 +1619,79 @@ void VPlanTransforms::createInterleaveGroups(
         MemberR->eraseFromParent();
       }
   }
+}
+
+void VPlanTransforms::lowerCanonicalIV(
+    VPlan &Plan, bool HasNUW, bool DataAndControlFlowWithoutRuntimeCheck) {
+  auto *CanIV = Plan.getCanonicalIV();
+
+  VPBasicBlock *EB = Plan.getVectorLoopRegion()->getExitingBasicBlock();
+  auto *Term = EB->getTerminator();
+  VPBuilder Builder(Term);
+  DebugLoc DL = CanIV->getDebugLoc();
+  // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
+  auto *CanonicalIVIncrement =
+      Builder.createOverflowingOp(Instruction::Add, {CanIV, &Plan.getVFxUF()},
+                                  {HasNUW, false}, DL, "index.next");
+
+  CanIV->addOperand(CanonicalIVIncrement);
+
+  auto FoundLaneMaskPhi = find_if(
+      Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+      [](VPRecipeBase &P) { return isa<VPActiveLaneMaskPHIRecipe>(P); });
+
+  if (FoundLaneMaskPhi ==
+      Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis().end()) {
+
+    // Update BranchOnCount VPInstruction in the latch to use increment.
+    // TODO: Should have separate opcodes for separate semantics.
+    Term->setOperand(0, CanonicalIVIncrement);
+    return;
+  }
+
+  // Now introduce a conditional branch to control the loop until the lane mask
+  // is exhuasted.
+  auto *LaneMaskPhi = cast<VPActiveLaneMaskPHIRecipe>(&*FoundLaneMaskPhi);
+  auto *VecPreheader =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSinglePredecessor());
+  Builder.setInsertPoint(VecPreheader);
+
+  VPValue *TC = Plan.getTripCount();
+
+  // TODO: Check if dropping the flags is needed if
+  // !DataAndControlFlowWithoutRuntimeCheck.
+  CanonicalIVIncrement->dropPoisonGeneratingFlags();
+  VPValue *TripCount, *IncrementValue;
+  if (!DataAndControlFlowWithoutRuntimeCheck) {
+    // When the loop is guarded by a runtime overflow check for the loop
+    // induction variable increment by VF, we can increment the value before
+    // the get.active.lane mask and use the unmodified tripcount.
+    IncrementValue = CanonicalIVIncrement;
+    TripCount = TC;
+  } else {
+    // When avoiding a runtime check, the active.lane.mask inside the loop
+    // uses a modified trip count and the induction variable increment is
+    // done after the active.lane.mask intrinsic is called.
+    IncrementValue = CanIV;
+    TripCount = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
+                                     {TC}, DL);
+  }
+  // Create the active lane mask for the next iteration of the loop before the
+  // original terminator.
+  Builder.setInsertPoint(EB);
+  auto *InLoopIncrement = Plan.getUF() > 1
+                              ? Builder.createOverflowingOp(
+                                    VPInstruction::CanonicalIVIncrementForPart,
+                                    {IncrementValue}, {false, false}, DL)
+                              : IncrementValue;
+  auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                   {InLoopIncrement, TripCount}, DL,
+                                   "active.lane.mask.next");
+  LaneMaskPhi->addOperand(ALM);
+
+  // Replace the original terminator with BranchOnCond. We have to invert the
+  // mask here because a true condition means jumping to the exit block.
+  auto *NotMask = Builder.createNot(ALM, DL);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
+  Term->eraseFromParent();
 }

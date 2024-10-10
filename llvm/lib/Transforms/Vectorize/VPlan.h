@@ -2991,7 +2991,8 @@ public:
 
   VPCanonicalIVPHIRecipe *clone() override {
     auto *R = new VPCanonicalIVPHIRecipe(getOperand(0), getDebugLoc());
-    R->addOperand(getBackedgeValue());
+    if (getNumOperands() == 2)
+      R->addOperand(getBackedgeValue());
     return R;
   }
 
