@@ -90,7 +90,6 @@ EXTERN void __tgt_rtl_deinit() { deinitRuntime(); }
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
-  TIMESCOPE();
   initRuntime();
   if (PM->delayRegisterLib(Desc))
     return;
