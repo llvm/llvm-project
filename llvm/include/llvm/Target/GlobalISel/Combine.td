@@ -905,6 +905,16 @@ def extract_vec_elt_build_vec : GICombineRule<
     [{ return Helper.matchExtractVecEltBuildVec(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyExtractVecEltBuildVec(*${root}, ${matchinfo}); }])>;
 
+def extract_vector_register_to_id_mapping_matchinfo :
+  GIDefMatchData<"SmallVector<std::pair<Register, int>>">;
+def vector_reg_pair_matchinfo :
+  GIDefMatchData<"std::pair<Register, Register>">;
+def extract_vector_element_build_vector_to_shuffle_vector : GICombineRule<
+  (defs root:$root, extract_vector_register_to_id_mapping_matchinfo:$matchinfo, vector_reg_pair_matchinfo:$regpair),
+  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+    [{ return Helper.matchCombineExtractToShuffle(*${root}, ${matchinfo}, ${regpair}); }]),
+  (apply [{ Helper.applyCombineExtractToShuffle(*${root}, ${matchinfo}, ${regpair}); }])>;
+
 // Fold away full elt extracts from a build_vector.
 def extract_all_elts_from_build_vector_matchinfo :
   GIDefMatchData<"SmallVector<std::pair<Register, MachineInstr*>>">;
@@ -916,7 +926,8 @@ def extract_all_elts_from_build_vector : GICombineRule<
 
 def extract_vec_elt_combines : GICombineGroup<[
   extract_vec_elt_build_vec,
-  extract_all_elts_from_build_vector]>;
+  extract_all_elts_from_build_vector,
+  extract_vector_element_build_vector_to_shuffle_vector]>;
 
 def funnel_shift_from_or_shift : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
