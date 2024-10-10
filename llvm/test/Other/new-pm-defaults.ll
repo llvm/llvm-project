@@ -113,6 +113,13 @@
 ; CHECK-O3-NEXT: Running pass: CallSiteSplittingPass
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-EP-PIPELINE-EARLY-SIMPLIFICATION-NEXT: Running pass: NoOpModulePass
+; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
+; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
+; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph::SCC{{.*}}>
+; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
+; CHECK-O-NEXT: Running pass: ArgumentPromotionPass
+; CHECK-O-NEXT: Running pass: SROAPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
 ; CHECK-O-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
@@ -136,10 +143,6 @@
 ; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}AAManager
 ; CHECK-O-NEXT: Invalidating analysis: AAManager
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
-; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
-; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
-; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
-; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph::SCC{{.*}}>
 ; CHECK-O-NEXT: Running pass: DevirtSCCRepeatedPass
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
