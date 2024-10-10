@@ -1287,6 +1287,11 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
                                                     const InterpFrame *Frame,
                                                     const Function *Func,
                                                     const CallExpr *Call) {
+  if (!Call->getArg(0)->getType()->isIntegerType() ||
+      !Call->getArg(1)->getType()->isIntegerType() ||
+      !Call->getArg(2)->getType()->isIntegerType())
+    return false;
+
   unsigned BuiltinOp = Func->getBuiltinID();
   APSInt CarryIn = getAPSIntParam(Frame, 0);
   APSInt LHS = getAPSIntParam(Frame, 1);
