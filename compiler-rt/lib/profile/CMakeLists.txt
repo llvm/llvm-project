@@ -39,6 +39,17 @@ int main() {
 " COMPILER_RT_TARGET_HAS_FCNTL_LCK)
 
 CHECK_CXX_SOURCE_COMPILES("
+#include <sys/file.h>
+
+int fd;
+int main() {
+  flock(fd, LOCK_EX);
+  return 0;
+}
+
+" COMPILER_RT_TARGET_HAS_FLOCK)
+
+CHECK_CXX_SOURCE_COMPILES("
 #include <sys/utsname.h>
 int main() {
  return 0;
@@ -93,6 +104,13 @@ if(FUCHSIA OR UNIX)
      -Wno-pedantic)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
+  set(EXTRA_FLAGS
+      ${EXTRA_FLAGS}
+      -D_WASI_EMULATED_MMAN
+      -D_WASI_EMULATED_GETPID)
+endif()
+
 if(COMPILER_RT_TARGET_HAS_ATOMICS)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
@@ -103,6 +121,12 @@ if(COMPILER_RT_TARGET_HAS_FCNTL_LCK)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_FCNTL_LCK=1)
+endif()
+
+if(COMPILER_RT_TARGET_HAS_FLOCK)
+  set(EXTRA_FLAGS
+      ${EXTRA_FLAGS}
+      -DCOMPILER_RT_HAS_FLOCK=1)
 endif()
 
 if(COMPILER_RT_TARGET_HAS_UNAME)
