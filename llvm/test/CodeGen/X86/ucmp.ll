@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=X64,SSE,SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=X64,AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X64,AVX,AVX512
-; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mcpu=generic | FileCheck %s --check-prefix=X86
 
 define i8 @ucmp.8.8(i8 %x, i8 %y) nounwind {
 ; X64-LABEL: ucmp.8.8:
@@ -310,9 +310,9 @@ define i141 @ucmp_wide_result(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: ucmp_wide_result:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    seta %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sbbb $0, %cl
 ; X86-NEXT:    movsbl %cl, %ecx
 ; X86-NEXT:    movl %ecx, (%eax)
@@ -469,27 +469,27 @@ define <4 x i32> @ucmp_normal_vectors(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    seta %dl
 ; X86-NEXT:    sbbb $0, %dl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movsbl %dl, %edx
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    seta %bl
 ; X86-NEXT:    sbbb $0, %bl
-; X86-NEXT:    movsbl %bl, %edi
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    seta %bl
-; X86-NEXT:    sbbb $0, %bl
+; X86-NEXT:    seta %bh
 ; X86-NEXT:    movsbl %bl, %esi
+; X86-NEXT:    sbbb $0, %bh
+; X86-NEXT:    movsbl %bh, %edi
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    seta %cl
 ; X86-NEXT:    sbbb $0, %cl
 ; X86-NEXT:    movsbl %cl, %ecx
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %esi, 8(%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -604,33 +604,29 @@ define <4 x i8> @ucmp_narrow_vec_result(<4 x i32> %x, <4 x i32> %y) nounwind {
 ;
 ; X86-LABEL: ucmp_narrow_vec_result:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    seta %cl
 ; X86-NEXT:    sbbb $0, %cl
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    seta %ch
 ; X86-NEXT:    sbbb $0, %ch
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    seta %bl
-; X86-NEXT:    sbbb $0, %bl
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    seta %dl
 ; X86-NEXT:    sbbb $0, %dl
-; X86-NEXT:    movb %dl, 3(%eax)
-; X86-NEXT:    movb %bl, 2(%eax)
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    seta %dh
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbb $0, %dh
+; X86-NEXT:    movb %dh, 3(%eax)
+; X86-NEXT:    movb %dl, 2(%eax)
 ; X86-NEXT:    movb %ch, 1(%eax)
 ; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
   %1 = call <4 x i8> @llvm.ucmp(<4 x i32> %x, <4 x i32> %y)
   ret <4 x i8> %1
@@ -690,18 +686,18 @@ define <4 x i32> @ucmp_narrow_vec_op(<4 x i8> %x, <4 x i8> %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %dl
 ; X86-NEXT:    seta %dl
 ; X86-NEXT:    sbbb $0, %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movsbl %dl, %edx
 ; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %bl
 ; X86-NEXT:    seta %bl
 ; X86-NEXT:    sbbb $0, %bl
-; X86-NEXT:    movsbl %bl, %esi
 ; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %ch
 ; X86-NEXT:    seta %ch
+; X86-NEXT:    movsbl %bl, %esi
 ; X86-NEXT:    sbbb $0, %ch
 ; X86-NEXT:    movsbl %ch, %edi
 ; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %cl
@@ -819,7 +815,7 @@ define <16 x i32> @ucmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; AVX512-NEXT:    vpcmpltub %xmm1, %xmm0, %k1
 ; AVX512-NEXT:    vpcmpnleub %xmm1, %xmm0, %k2
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 {%k2} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
 ;
@@ -867,13 +863,13 @@ define <16 x i32> @ucmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %dl
-; X86-NEXT:    seta %bl
-; X86-NEXT:    sbbb $0, %bl
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    movb %al, (%esp) # 1-byte Spill
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    seta %bl
+; X86-NEXT:    sbbb $0, %bl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    seta %bh
@@ -882,33 +878,33 @@ define <16 x i32> @ucmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movsbl %al, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movsbl %al, %edi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movsbl %al, %ebp
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movsbl %al, %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movsbl %al, %edx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    seta %ah
 ; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    sbbb $0, %ah
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    seta %al
+; X86-NEXT:    movsbl %ah, %edi
+; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    seta %ah
+; X86-NEXT:    movsbl %al, %ebp
+; X86-NEXT:    sbbb $0, %ah
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    seta %al
+; X86-NEXT:    movsbl %ah, %esi
+; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    cmpb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    seta %ah
+; X86-NEXT:    movsbl %al, %edx
+; X86-NEXT:    sbbb $0, %ah
+; X86-NEXT:    movsbl %ah, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %ecx, 60(%eax)
 ; X86-NEXT:    movl %edx, 56(%eax)
@@ -921,10 +917,10 @@ define <16 x i32> @ucmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    movsbl %bh, %ecx
 ; X86-NEXT:    movl %ecx, 36(%eax)
 ; X86-NEXT:    movsbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
-; X86-NEXT:    movsbl (%esp), %edx # 1-byte Folded Reload
+; X86-NEXT:    movsbl %bl, %edx
 ; X86-NEXT:    movl %edx, 32(%eax)
 ; X86-NEXT:    movsbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
-; X86-NEXT:    movsbl %bl, %edi
+; X86-NEXT:    movsbl (%esp), %edi # 1-byte Folded Reload
 ; X86-NEXT:    movl %edi, 28(%eax)
 ; X86-NEXT:    movsbl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 1-byte Folded Reload
 ; X86-NEXT:    movsbl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 1-byte Folded Reload
@@ -1358,10 +1354,10 @@ define <16 x i8> @ucmp_wide_vec_op(<16 x i32> %x, <16 x i32> %y) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ebp
@@ -1369,15 +1365,33 @@ define <16 x i8> @ucmp_wide_vec_op(<16 x i32> %x, <16 x i32> %y) nounwind {
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    seta %al
+; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    seta %al
+; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    seta %al
+; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    seta %al
+; X86-NEXT:    sbbb $0, %al
+; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    sbbb $0, %al
@@ -1387,29 +1401,11 @@ define <16 x i8> @ucmp_wide_vec_op(<16 x i32> %x, <16 x i32> %y) nounwind {
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    seta %al
-; X86-NEXT:    sbbb $0, %al
-; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    seta %bh
 ; X86-NEXT:    sbbb $0, %bh
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax

@@ -2,10 +2,10 @@
 ; When we accept small parameters on Windows, make sure we do not assume they
 ; are zero or sign extended in memory or in registers.
 
-; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefix=WIN64
-; RUN: llc < %s -mtriple=x86_64-windows-gnu | FileCheck %s --check-prefix=WIN64
-; RUN: llc < %s -mtriple=i686-windows-msvc | FileCheck %s --check-prefix=WIN32-MSVC
-; RUN: llc < %s -mtriple=i686-windows-gnu | FileCheck %s --check-prefix=WIN32-GNU
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=generic | FileCheck %s --check-prefix=WIN64
+; RUN: llc < %s -mtriple=x86_64-windows-gnu -mcpu=generic | FileCheck %s --check-prefix=WIN64
+; RUN: llc < %s -mtriple=i686-windows-msvc -mcpu=generic | FileCheck %s --check-prefix=WIN32-MSVC
+; RUN: llc < %s -mtriple=i686-windows-gnu -mcpu=generic | FileCheck %s --check-prefix=WIN32-GNU
 
 define void @call() {
 ; WIN64-LABEL: call:
