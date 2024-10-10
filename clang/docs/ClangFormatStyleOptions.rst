@@ -184,6 +184,30 @@ the configuration (without a prefix: ``Auto``).
     With this option you can overwrite some parts of your main style for your
     subdirectories. This is also possible through the command line, e.g.:
     ``--style={BasedOnStyle: InheritParentConfig, ColumnLimit: 20}``
+  * ``file:<format-file-path>``
+    Allows to use an explicit path to another format file as the base style.
+    It is an error if this file cannot be read (e.g., if it does not exist,
+    or access is denied). ``<format-file-path>`` must have one of the
+    following forms:
+
+      * a relative path. If used within a ``.clang-format`` file, the path is
+        relative to the directory containing the current format file; if used
+        within a command-line ``--style='{...}'`` argument, the path is
+        relative to the process's current working directory). E.g.,
+        ``BasedOnStyle: file:../format/shared.clang-format``.
+      * a path beginning with ``$(CLANG_FORMAT_DIR)``. The string
+        ``$(CLANG_FORMAT_DIR)`` is replaced with the value of the environment
+        variable ``CLANG_FORMAT_DIR``, which must be defined to the absolute
+        path to a valid, readable directory.  E.g.,
+        ``BasedOnStyle: file:$(CLANG_FORMAT_DIR)/shared.clang-format``
+
+    With this option, you can maintain a shared base style in a centralized location
+    other than the root directory of your project.
+
+    Note that the file at ``<format-file-path>`` may itself use
+    ``BasedOnStyle: InheritParentConfig`` or ``BasedOnStyle: file:<another-file-path>``,
+    and in these cases, the next base format is located relative to ``<format-file-path>``,
+    *not* relative to the original config that refers to ``<format-file-path>``.
 
 .. START_FORMAT_STYLE_OPTIONS
 
