@@ -204,6 +204,7 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
   if (TripleStr.empty())
     TripleStr = sys::getDefaultTargetTriple();
   llvm::Triple Triple(TripleStr);
+  StringRef TargetABI = options.MCOptions.getABIName();
 
   // find machine architecture for this module
   std::string errMsg;
@@ -213,7 +214,7 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
 
   // construct LTOModule, hand over ownership of module and target
   SubtargetFeatures Features;
-  Features.getDefaultSubtargetFeatures(Triple);
+  Features.getDefaultSubtargetFeatures(Triple, TargetABI);
   std::string FeatureStr = Features.getString();
   // Set a default CPU for Darwin triples.
   std::string CPU;

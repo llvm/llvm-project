@@ -40,7 +40,7 @@ struct TargetMachineBuilder {
   std::optional<Reloc::Model> RelocModel;
   CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Aggressive;
 
-  std::unique_ptr<TargetMachine> create() const;
+  std::unique_ptr<TargetMachine> create(const StringRef TargetABI) const;
 };
 
 /// This class define an interface similar to the LTOCodeGenerator, but adapted

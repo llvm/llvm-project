@@ -68,7 +68,8 @@ LLVM_DUMP_METHOD void SubtargetFeatures::dump() const {
 }
 #endif
 
-void SubtargetFeatures::getDefaultSubtargetFeatures(const Triple& Triple) {
+void SubtargetFeatures::getDefaultSubtargetFeatures(const Triple &Triple,
+                                                    const StringRef TargetABI) {
   // FIXME: This is an inelegant way of specifying the features of a
   // subtarget. It would be better if we could encode this information
   // into the IR.
@@ -81,5 +82,14 @@ void SubtargetFeatures::getDefaultSubtargetFeatures(const Triple& Triple) {
       AddFeature("64bit");
       AddFeature("altivec");
     }
+  } else if (Triple.isRISCV64()) {
+    if (TargetABI.contains("lp64d"))
+      AddFeature("+d");
+    if (TargetABI.contains("lp64f"))
+      AddFeature("+f");
+    if (TargetABI.contains("lp64q"))
+      AddFeature("+q");
+  } else if (Triple.isRISCV32() && TargetABI.contains("ilp32f")) {
+    AddFeature("+f");
   }
 }
