@@ -885,6 +885,7 @@ public:
     case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
     case VPRecipeBase::VPWidenCastSC:
+    case VPRecipeBase::VPWidenCastEVLSC:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
@@ -1081,6 +1082,7 @@ public:
            R->getVPDefID() == VPRecipeBase::VPWidenEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenCastEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
   }
@@ -1543,18 +1545,27 @@ class VPWidenCastRecipe : public VPRecipeWithIRFlags {
   /// Result type for the cast.
   Type *ResultTy;
 
-public:
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst &UI)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), Opcode(Opcode),
+protected:
+  VPWidenCastRecipe(unsigned VPDefOpcode, Instruction::CastOps Opcode,
+                    VPValue *Op, Type *ResultTy, CastInst &UI)
+      : VPRecipeWithIRFlags(VPDefOpcode, Op, UI), Opcode(Opcode),
         ResultTy(ResultTy) {
     assert(UI.getOpcode() == Opcode &&
            "opcode of underlying cast doesn't match");
   }
 
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), Opcode(Opcode),
+  VPWidenCastRecipe(unsigned VPDefOpcode, Instruction::CastOps Opcode,
+                    VPValue *Op, Type *ResultTy)
+      : VPRecipeWithIRFlags(VPDefOpcode, Op), Opcode(Opcode),
         ResultTy(ResultTy) {}
+
+public:
+  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
+                    CastInst &UI)
+      : VPWidenCastRecipe(VPDef::VPWidenCastSC, Opcode, Op, ResultTy, UI) {}
+
+  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
+      : VPWidenCastRecipe(VPDef::VPWidenCastSC, Opcode, Op, ResultTy) {}
 
   ~VPWidenCastRecipe() override = default;
 
@@ -1566,7 +1577,15 @@ public:
     return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenCastEVLSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
 
   /// Produce widened copies of the cast.
   void execute(VPTransformState &State) override;
@@ -1581,6 +1600,55 @@ public:
 
   /// Returns the result type of the cast.
   Type *getResultType() const { return ResultTy; }
+};
+
+/// A recipe for widening cast operation with vector-predication intrinsics with
+/// explicit vector length (EVL).
+class VPWidenCastEVLRecipe : public VPWidenCastRecipe {
+  using VPRecipeWithIRFlags::transferFlags;
+
+public:
+  VPWidenCastEVLRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
+                       CastInst &UI, VPValue &EVL)
+      : VPWidenCastRecipe(VPDef::VPWidenCastEVLSC, Opcode, Op, ResultTy, UI) {
+    addOperand(&EVL);
+  }
+
+  VPWidenCastEVLRecipe(VPWidenCastRecipe &W, VPValue &EVL)
+      : VPWidenCastEVLRecipe(W.getOpcode(), W.getOperand(0), W.getResultType(),
+                             *cast<CastInst>(W.getUnderlyingInstr()), EVL) {
+    transferFlags(W);
+  }
+
+  ~VPWidenCastEVLRecipe() override = default;
+
+  VPWidenCastEVLRecipe *clone() final {
+    llvm_unreachable("VPWidenEVLRecipe cannot be cloned");
+    return nullptr;
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenCastEVLSC)
+
+  VPValue *getEVL() { return getOperand(getNumOperands() - 1); }
+  const VPValue *getEVL() const { return getOperand(getNumOperands() - 1); }
+
+  /// Produce a vp-intrinsic copies of the cast.
+  void execute(VPTransformState &State) final;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // EVL in that recipe is always the last operand, thus any use before means
+    // the VPValue should be vectorized.
+    return getEVL() == Op;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const final;
+#endif
 };
 
 /// VPScalarCastRecipe is a recipe to create scalar cast instructions.
