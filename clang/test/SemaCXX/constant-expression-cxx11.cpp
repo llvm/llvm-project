@@ -2508,15 +2508,19 @@ void testValueInRangeOfEnumerationValues() {
 
   constexpr E4 x11 = static_cast<E4>(0);
   constexpr E4 x12 = static_cast<E4>(1);
+  // expected-error@-1 {{constexpr variable 'x12' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 1 is outside the valid range of values [0, 0] for the enumeration type 'E4'}}
   constexpr E4 x13 = static_cast<E4>(2);
   // expected-error@-1 {{constexpr variable 'x13' must be initialized by a constant expression}}
-  // expected-note@-2 {{integer value 2 is outside the valid range of values [0, 1] for the enumeration type 'E4'}}
+  // expected-note@-2 {{integer value 2 is outside the valid range of values [0, 0] for the enumeration type 'E4'}}
 
   constexpr EEmpty x14 = static_cast<EEmpty>(0);
   constexpr EEmpty x15 = static_cast<EEmpty>(1);
+  // expected-error@-1 {{constexpr variable 'x15' must be initialized by a constant expression}}
+  // expected-note@-2 {{integer value 1 is outside the valid range of values [0, 0] for the enumeration type 'EEmpty'}}
   constexpr EEmpty x16 = static_cast<EEmpty>(2);
   // expected-error@-1 {{constexpr variable 'x16' must be initialized by a constant expression}}
-  // expected-note@-2 {{integer value 2 is outside the valid range of values [0, 1] for the enumeration type 'EEmpty'}}
+  // expected-note@-2 {{integer value 2 is outside the valid range of values [0, 0] for the enumeration type 'EEmpty'}}
 
   constexpr EFixed x17 = static_cast<EFixed>(100);
   constexpr EScoped x18 = static_cast<EScoped>(100);
