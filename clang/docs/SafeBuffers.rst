@@ -357,7 +357,7 @@ There are a few natural reasons to use this pragma:
   never be converted to C++) or with the code that simply haven't been converted
   yet.
 
-Interoperation with unsafe code code may require a lot of suppressions.
+Interoperation with unsafe code may require a lot of suppressions.
 You are encouraged to introduce "unsafe wrapper functions" for various unsafe
 operations that you need to perform regularly.
 
