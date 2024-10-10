@@ -2443,16 +2443,22 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   if (Style == TailFoldingStyle::None) {
     Value *Step = CreateStep();
     ScalarEvolution &SE = *PSE.getSE();
-    // Check if we can prove that the trip count is >= the step.
     // TODO: Emit unconditional branch to vector preheader instead of
     // conditional branch with known condition.
     const SCEV *TripCountSCEV = SE.getSCEV(Count);
-    if (SE.isKnownPredicate(CmpInst::getInversePredicate(P),
-                            SE.applyLoopGuards(TripCountSCEV, OrigLoop),
-                            SE.getSCEV(Step)))
-      CheckMinIters = Builder.getFalse();
-    else
+    // Check if the trip count is < the step.
+    if (SE.isKnownPredicate(P, SE.applyLoopGuards(TripCountSCEV, OrigLoop),
+                            SE.getSCEV(Step))) {
+      // TODO: Should not attempt to vectorize when the vector loop is known to
+      // never execute.
+      CheckMinIters = Builder.getTrue();
+    } else if (!SE.isKnownPredicate(CmpInst::getInversePredicate(P),
+                                    SE.applyLoopGuards(TripCountSCEV, OrigLoop),
+                                    SE.getSCEV(Step))) {
+      // Only generate the minimum iteration check only if we cannot prove the
+      // check is known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
+    }
   } else if (VF.isScalable() &&
              !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
              Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
@@ -2465,8 +2471,17 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
         ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask());
     Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
 
+    Value *Step = CreateStep();
+    ScalarEvolution &SE = *PSE.getSE();
+    // Check if we can prove that the trip count is >= the step.
+    // TODO: Emit unconditional branch to vector preheader instead of
+    // conditional branch with known condition.
+    const SCEV *TripCountSCEV = SE.getSCEV(LHS);
+    assert(!SE.isKnownPredicate(CmpInst::getInversePredicate(ICmpInst::ICMP_ULT),
+                            SE.applyLoopGuards(TripCountSCEV, OrigLoop),
+                            SE.getSCEV(Step)) && "SCEV unexpectedly proved overflow check to be known);
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
+    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, Step);
   }
 
   // Create new preheader for vector loop.
