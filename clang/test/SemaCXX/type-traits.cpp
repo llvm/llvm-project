@@ -4501,6 +4501,12 @@ void add_pointer() {
   static_assert(__is_same(add_pointer_t<int()>, int (*)()));
   static_assert(__is_same(add_pointer_t<int (*)()>, int (**)()));
   static_assert(__is_same(add_pointer_t<int (&)()>, int (*)()));
+  static_assert(__is_same(add_pointer_t<int () const>, int () const));
+  static_assert(__is_same(add_pointer_t<int () &>, int () &));
+  static_assert(__is_same(add_pointer_t<int[]>, int(*)[]));
+  static_assert(__is_same(add_pointer_t<int[1]>, int(*)[1]));
+  static_assert(__is_same(add_pointer_t<int(&)[1]>, int(*)[1]));
+  static_assert(__is_same(add_pointer_t<int(&&)[1]>, int(*)[1]));
 
   static_assert(__is_same(add_pointer_t<S>, S *));
   static_assert(__is_same(add_pointer_t<const S>, const S *));
@@ -4705,6 +4711,12 @@ void check_decay() {
   static_assert(__is_same(decay_t<int (&)()>, int (*)()));
   static_assert(__is_same(decay_t<IntAr>, int *));
   static_assert(__is_same(decay_t<IntArNB>, int *));
+  static_assert(__is_same(decay_t<int () const>, int () const));
+  static_assert(__is_same(decay_t<int () &>, int () &));
+  static_assert(__is_same(decay_t<int[]>, int*));
+  static_assert(__is_same(decay_t<int[1]>, int*));
+  static_assert(__is_same(decay_t<int(&)[1]>, int*));
+  static_assert(__is_same(decay_t<int(&&)[1]>, int*));
 
   static_assert(__is_same(decay_t<S>, S));
   static_assert(__is_same(decay_t<S &>, S));

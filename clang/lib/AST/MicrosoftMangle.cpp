@@ -2857,7 +2857,7 @@ void MicrosoftCXXNameMangler::mangleType(const FunctionProtoType *T, Qualifiers,
   // Structors only appear in decls, so at this point we know it's not a
   // structor type.
   // FIXME: This may not be lambda-friendly.
-  if (T->getMethodQuals() || T->getRefQualifier() != RQ_None) {
+  if (T->hasQualifiers()) {
     Out << "$$A8@@";
     mangleFunctionType(T, /*D=*/nullptr, /*ForceThisQuals=*/true);
   } else {
