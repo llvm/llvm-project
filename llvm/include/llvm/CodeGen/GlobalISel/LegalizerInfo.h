@@ -970,8 +970,7 @@ public:
         LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           const LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && !VecTy.isScalable() &&
-                 VecTy.getSizeInBits() < VectorSize;
+          return VecTy.isFixedVector() && VecTy.getSizeInBits() < VectorSize;
         },
         [=](const LegalityQuery &Query) {
           const LLT VecTy = Query.Types[TypeIdx];
@@ -1139,7 +1138,7 @@ public:
         LegalizeAction::MoreElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  VecTy.getNumElements() < MinElements;
         },
         [=](const LegalityQuery &Query) {
@@ -1157,7 +1156,7 @@ public:
         LegalizeAction::MoreElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  (VecTy.getNumElements() % NumElts != 0);
         },
         [=](const LegalityQuery &Query) {
@@ -1177,7 +1176,7 @@ public:
         LegalizeAction::FewerElements,
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          return VecTy.isVector() && VecTy.getElementType() == EltTy &&
+          return VecTy.isFixedVector() && VecTy.getElementType() == EltTy &&
                  VecTy.getNumElements() > MaxElements;
         },
         [=](const LegalityQuery &Query) {
@@ -1197,6 +1196,11 @@ public:
                                     const LLT MaxTy) {
     assert(MinTy.getElementType() == MaxTy.getElementType() &&
            "Expected element types to agree");
+
+    if (MinTy.isScalableVector())
+      return actionIf(LegalizeAction::Unsupported, always);
+    if (MaxTy.isScalableVector())
+      return actionIf(LegalizeAction::Unsupported, always);
 
     const LLT EltTy = MinTy.getElementType();
     return clampMinNumElements(TypeIdx, EltTy, MinTy.getNumElements())
