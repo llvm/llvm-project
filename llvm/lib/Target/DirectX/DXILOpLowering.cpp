@@ -209,19 +209,14 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerBarrier(Function& F, Intrinsic::ID IntrId) {
+  [[nodiscard]] bool lowerBarrier(Function &F, Intrinsic::ID IntrId,
+                                  ArrayRef<dxil::BarrierMode> BarrierModes) {
+    unsigned BarrierMode = 0;
+    for (const dxil::BarrierMode B : BarrierModes) {
+      BarrierMode |= (unsigned)B;
+    }
     IRBuilder<> &IRB = OpBuilder.getIRB();
     return replaceFunction(F, [&](CallInst *CI) -> Error {
-      unsigned BarrierMode = 0;
-      switch (IntrId) {
-      default:
-        report_fatal_error("Unhandled barrier operation type.");
-        break;
-      case Intrinsic::dx_groupMemoryBarrierWithGroupSync:
-        BarrierMode = (unsigned)dxil::BarrierMode::TGSMFence | (unsigned)dxil::BarrierMode::SyncThreadGroup;
-        break;
-      }
-
       std::array<Value *, 1> Args{IRB.getInt32(BarrierMode)};
 
       IRB.SetInsertPoint(CI);
@@ -504,8 +499,10 @@ public:
     HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
     break;
 #include "DXILOperation.inc"
-      case Intrinsic::dx_groupMemoryBarrierWithGroupSync:
-        HasErrors |= lowerBarrier(F, ID);
+      case Intrinsic::dx_group_memory_barrier_with_group_sync:
+        HasErrors |= lowerBarrier(
+            F, ID,
+            {dxil::BarrierMode::TGSMFence, dxil::BarrierMode::SyncThreadGroup});
         break;
       case Intrinsic::dx_handle_fromBinding:
         HasErrors |= lowerHandleFromBinding(F);
