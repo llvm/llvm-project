@@ -26,6 +26,7 @@ class MachineFunction;
 class MachineBasicBlock;
 class BitVector;
 class AllocaInst;
+class TargetInstrInfo;
 
 /// The CalleeSavedInfo class tracks the information need to locate where a
 /// callee saved register is in the current frame.
@@ -844,6 +845,64 @@ public:
 
   /// dump - Print the function to stderr.
   void dump(const MachineFunction &MF) const;
+};
+
+/// Computes and stores the call frame sizes at the entries and exits of
+/// MachineBasicBlocks of a MachineFunction based on call frame setup and
+/// destroy pseudo instructions. Usually, no call frame is open at block
+/// boundaries, except if a call sequence has been split into multiple blocks.
+/// Computing this information is deferred until it is queried.
+///
+/// This class assumes that call frame instructions are placed properly, i.e.,
+/// every program path hits a frame destroy of equal size after hitting a frame
+/// setup, and a frame setup of equal size before a frame destroy. Nested call
+/// frame sequences are not allowed.
+class MachineFrameSizeInfo {
+public:
+  MachineFrameSizeInfo(MachineFunction &MF) : MF(MF) {}
+
+  /// Get the call frame size just before MI. Contains no value if MI is not in
+  /// a call sequence. Zero-sized call frames are possible.
+  std::optional<unsigned> getCallFrameSizeAt(MachineInstr &MI);
+
+  /// Get the call frame size just before MII. Contains no value if MII is not
+  /// in a call sequence. Zero-sized call frames are possible.
+  std::optional<unsigned> getCallFrameSizeAt(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MII);
+
+  /// Get the call frame size at the entry of MBB. Contains no value if the
+  /// entry of MBB is not in a call sequence. Zero-sized call frames are
+  /// possible. Prefer this over getCallFrameSizeAt(MBB, MBB.begin()).
+  std::optional<unsigned> getCallFrameSizeAtBegin(MachineBasicBlock &MBB);
+
+  /// Get the call frame size at the exit of MBB. Contains no value if the exit
+  /// of MBB is not in a call sequence. Zero-sized call frames are possible.
+  /// Prefer this over getCallFrameSizeAt(MBB, MBB.end()).
+  std::optional<unsigned> getCallFrameSizeAtEnd(MachineBasicBlock &MBB);
+
+private:
+  /// Stores the call frame sizes at the boundaries of a MachineBasicBlock.
+  struct MachineFrameSizeInfoForBB {
+    MachineFrameSizeInfoForBB() = default;
+    MachineFrameSizeInfoForBB(std::optional<unsigned> EntryVal,
+                              std::optional<unsigned> ExitVal)
+        : Entry(EntryVal), Exit(ExitVal) {}
+
+    std::optional<unsigned> Entry;
+    std::optional<unsigned> Exit;
+  };
+
+  /// Compute call frame sizes at the boundaries of each MachineBasicBlock.
+  void computeSizes();
+
+  MachineFunction &MF;
+  const TargetInstrInfo *TII;
+  unsigned FrameSetupOpcode = ~0u;
+  unsigned FrameDestroyOpcode = ~0u;
+  bool HasFrameOpcodes = false;
+  bool HasNoBrokenUpCallSeqs = false;
+  SmallVector<MachineFrameSizeInfoForBB, 8> State;
+  bool IsComputed = false;
 };
 
 } // End llvm namespace
