@@ -3583,10 +3583,12 @@ protected:
       addr_t start_addr = range.GetBaseAddress().GetLoadAddress(target);
       if (abi)
         start_addr = abi->FixCodeAddress(start_addr);
+      range.GetBaseAddress().SetLoadAddress(start_addr, target);
 
       FuncUnwindersSP func_unwinders_sp(
           sc.module_sp->GetUnwindTable()
-              .GetUncachedFuncUnwindersContainingAddress(start_addr, sc));
+              .GetUncachedFuncUnwindersContainingAddress(range.GetBaseAddress(),
+                                                         sc));
       if (!func_unwinders_sp)
         continue;
 
