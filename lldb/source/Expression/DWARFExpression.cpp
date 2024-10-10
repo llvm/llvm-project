@@ -94,13 +94,15 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
   m_reg_kind = reg_kind;
 }
 
-static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
-                                             lldb::RegisterKind reg_kind,
-                                             uint32_t reg_num, Value &value) {
+// static
+llvm::Error
+DWARFExpression::ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                           lldb::RegisterKind reg_kind,
+                                           uint32_t reg_num, Value &value) {
   if (reg_ctx == nullptr)
     return llvm::createStringError("no register context in frame");
 
-  const uint32_t native_reg =
+  uint32_t native_reg =
       reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
   if (native_reg == LLDB_INVALID_REGNUM)
     return llvm::createStringError(
@@ -2251,8 +2253,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     default:
       if (dwarf_cu) {
+        Status error_ptr;
         if (dwarf_cu->GetSymbolFileDWARF().ParseVendorDWARFOpcode(
-                op, opcodes, offset, stack)) {
+                op, reg_ctx, opcodes, reg_kind, offset, stack, &error_ptr)) {
           break;
         }
       }
