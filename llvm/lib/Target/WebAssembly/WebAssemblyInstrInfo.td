@@ -84,6 +84,10 @@ def HasTailCall :
     Predicate<"Subtarget->hasTailCall()">,
     AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
 
+def HasWideArithmetic :
+    Predicate<"Subtarget->hasWideArithmetic()">,
+    AssemblerPredicate<(all_of FeatureWideArithmetic), "wide-arithmetic">;
+
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
 //===----------------------------------------------------------------------===//
