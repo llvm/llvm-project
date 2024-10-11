@@ -23,7 +23,8 @@ PredIterator::value_type PredIterator::operator*() {
   // or a mem predecessor.
   if (OpIt != OpItE)
     return DAG->getNode(cast<Instruction>((Value *)*OpIt));
-  assert(MemIt != cast<MemDGNode>(N)->memPreds().end() &&
+  // It's a MemDGNode with OpIt == end, so we need to use MemIt.
+  assert(MemIt != cast<MemDGNode>(N)->MemPreds.end() &&
          "Cant' dereference end iterator!");
   return *MemIt;
 }
@@ -45,7 +46,8 @@ PredIterator &PredIterator::operator++() {
     OpIt = skipNonInstr(OpIt, OpItE);
     return *this;
   }
-  assert(MemIt != cast<MemDGNode>(N)->memPreds().end() && "Already at end!");
+  // It's a MemDGNode with OpIt == end, so we need to increment MemIt.
+  assert(MemIt != cast<MemDGNode>(N)->MemPreds.end() && "Already at end!");
   ++MemIt;
   return *this;
 }
@@ -57,10 +59,14 @@ bool PredIterator::operator==(const PredIterator &Other) const {
 }
 
 #ifndef NDEBUG
-void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
+void DGNode::print(raw_ostream &OS, bool PrintDeps) const { I->dumpOS(OS); }
+void DGNode::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
   I->dumpOS(OS);
   if (PrintDeps) {
-    OS << "\n";
     // Print memory preds.
     static constexpr const unsigned Indent = 4;
     for (auto *Pred : MemPreds) {
@@ -70,29 +76,45 @@ void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
     }
   }
 }
-void DGNode::dump() const {
-  print(dbgs());
-  dbgs() << "\n";
-}
 #endif // NDEBUG
+
+MemDGNode *
+MemDGNodeIntervalBuilder::getTopMemDGNode(const Interval<Instruction> &Intvl,
+                                          const DependencyGraph &DAG) {
+  Instruction *I = Intvl.top();
+  Instruction *BeforeI = Intvl.bottom();
+  // Walk down the chain looking for a mem-dep candidate instruction.
+  while (!DGNode::isMemDepNodeCandidate(I) && I != BeforeI)
+    I = I->getNextNode();
+  if (!DGNode::isMemDepNodeCandidate(I))
+    return nullptr;
+  return cast<MemDGNode>(DAG.getNode(I));
+}
+
+MemDGNode *
+MemDGNodeIntervalBuilder::getBotMemDGNode(const Interval<Instruction> &Intvl,
+                                          const DependencyGraph &DAG) {
+  Instruction *I = Intvl.bottom();
+  Instruction *AfterI = Intvl.top();
+  // Walk up the chain looking for a mem-dep candidate instruction.
+  while (!DGNode::isMemDepNodeCandidate(I) && I != AfterI)
+    I = I->getPrevNode();
+  if (!DGNode::isMemDepNodeCandidate(I))
+    return nullptr;
+  return cast<MemDGNode>(DAG.getNode(I));
+}
 
 Interval<MemDGNode>
 MemDGNodeIntervalBuilder::make(const Interval<Instruction> &Instrs,
                                DependencyGraph &DAG) {
-  // If top or bottom instructions are not mem-dep candidate nodes we need to
-  // walk down/up the chain and find the mem-dep ones.
-  Instruction *MemTopI = Instrs.top();
-  Instruction *MemBotI = Instrs.bottom();
-  while (!DGNode::isMemDepNodeCandidate(MemTopI) && MemTopI != MemBotI)
-    MemTopI = MemTopI->getNextNode();
-  while (!DGNode::isMemDepNodeCandidate(MemBotI) && MemBotI != MemTopI)
-    MemBotI = MemBotI->getPrevNode();
+  auto *TopMemN = getTopMemDGNode(Instrs, DAG);
   // If we couldn't find a mem node in range TopN - BotN then it's empty.
-  if (!DGNode::isMemDepNodeCandidate(MemTopI))
+  if (TopMemN == nullptr)
     return {};
+  auto *BotMemN = getBotMemDGNode(Instrs, DAG);
+  assert(BotMemN != nullptr && "TopMemN should be null too!");
   // Now that we have the mem-dep nodes, create and return the range.
-  return Interval<MemDGNode>(cast<MemDGNode>(DAG.getNode(MemTopI)),
-                             cast<MemDGNode>(DAG.getNode(MemBotI)));
+  return Interval<MemDGNode>(TopMemN, BotMemN);
 }
 
 DependencyGraph::DependencyType
@@ -179,7 +201,7 @@ bool DependencyGraph::hasDep(Instruction *SrcI, Instruction *DstI) {
   llvm_unreachable("Unknown DependencyType enum");
 }
 
-void DependencyGraph::scanAndAddDeps(DGNode &DstN,
+void DependencyGraph::scanAndAddDeps(MemDGNode &DstN,
                                      const Interval<MemDGNode> &SrcScanRange) {
   assert(isa<MemDGNode>(DstN) &&
          "DstN is the mem dep destination, so it must be mem");

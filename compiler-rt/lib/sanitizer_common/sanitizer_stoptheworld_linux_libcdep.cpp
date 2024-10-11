@@ -228,6 +228,8 @@ bool ThreadSuspender::SuspendAllThreads() {
     for (tid_t tid : threads) {
       if (SuspendThread(tid))
         retry = true;
+      else
+        VReport(2, "%llu/status: %s\n", tid, thread_lister.LoadStatus(tid));
     }
     if (retry)
       VReport(1, "SuspendAllThreads retry: %d\n", i);

@@ -1,4 +1,4 @@
-//===- DependencyGraph.h ----------------------------------*- C++ -*-===//
+//===- DependencyGraph.h ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -96,9 +96,6 @@ protected:
   // TODO: Use a PointerIntPair for SubclassID and I.
   /// For isa/dyn_cast etc.
   DGNodeID SubclassID;
-  // TODO: Move MemPreds to MemDGNode.
-  /// Memory predecessors.
-  DenseSet<MemDGNode *> MemPreds;
 
   DGNode(Instruction *I, DGNodeID ID) : I(I), SubclassID(ID) {}
   friend class MemDGNode; // For constructor.
@@ -125,6 +122,10 @@ public:
   iterator preds_end(DependencyGraph &DAG) const {
     return const_cast<DGNode *>(this)->preds_end(DAG);
   }
+  /// \Returns a range of DAG predecessors nodes. If this is a MemDGNode then
+  /// this will also include the memory dependency predecessors.
+  /// Please note that this can include the same node more than once, if for
+  /// example it's both a use-def predecessor and a mem dep predecessor.
   iterator_range<iterator> preds(DependencyGraph &DAG) const {
     return make_range(preds_begin(DAG), preds_end(DAG));
   }
@@ -170,17 +171,6 @@ public:
   }
 
   Instruction *getInstruction() const { return I; }
-  void addMemPred(MemDGNode *PredN) { MemPreds.insert(PredN); }
-  /// \Returns all memory dependency predecessors.
-  iterator_range<DenseSet<MemDGNode *>::const_iterator> memPreds() const {
-    return make_range(MemPreds.begin(), MemPreds.end());
-  }
-  /// \Returns true if there is a memory dependency N->this.
-  bool hasMemPred(DGNode *N) const {
-    if (auto *MN = dyn_cast<MemDGNode>(N))
-      return MemPreds.count(MN);
-    return false;
-  }
 
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS, bool PrintDeps = true) const;
@@ -198,6 +188,9 @@ public:
 class MemDGNode final : public DGNode {
   MemDGNode *PrevMemN = nullptr;
   MemDGNode *NextMemN = nullptr;
+  /// Memory predecessors.
+  DenseSet<MemDGNode *> MemPreds;
+  friend class PredIterator; // For MemPreds.
 
   void setNextNode(MemDGNode *N) { NextMemN = N; }
   void setPrevNode(MemDGNode *N) { PrevMemN = N; }
@@ -222,11 +215,34 @@ public:
   MemDGNode *getPrevNode() const { return PrevMemN; }
   /// \Returns the next Mem DGNode in instruction order.
   MemDGNode *getNextNode() const { return NextMemN; }
+  /// Adds the mem dependency edge PredN->this.
+  void addMemPred(MemDGNode *PredN) { MemPreds.insert(PredN); }
+  /// \Returns true if there is a memory dependency N->this.
+  bool hasMemPred(DGNode *N) const {
+    if (auto *MN = dyn_cast<MemDGNode>(N))
+      return MemPreds.count(MN);
+    return false;
+  }
+  /// \Returns all memory dependency predecessors. Used by tests.
+  iterator_range<DenseSet<MemDGNode *>::const_iterator> memPreds() const {
+    return make_range(MemPreds.begin(), MemPreds.end());
+  }
+#ifndef NDEBUG
+  virtual void print(raw_ostream &OS, bool PrintDeps = true) const override;
+#endif // NDEBUG
 };
 
 /// Convenience builders for a MemDGNode interval.
 class MemDGNodeIntervalBuilder {
 public:
+  /// Scans the instruction chain in \p Intvl top-down, returning the top-most
+  /// MemDGNode, or nullptr.
+  static MemDGNode *getTopMemDGNode(const Interval<Instruction> &Intvl,
+                                    const DependencyGraph &DAG);
+  /// Scans the instruction chain in \p Intvl bottom-up, returning the
+  /// bottom-most MemDGNode, or nullptr.
+  static MemDGNode *getBotMemDGNode(const Interval<Instruction> &Intvl,
+                                    const DependencyGraph &DAG);
   /// Given \p Instrs it finds their closest mem nodes in the interval and
   /// returns the corresponding mem range. Note: BotN (or its neighboring mem
   /// node) is included in the range.
@@ -266,7 +282,7 @@ private:
 
   /// Go through all mem nodes in \p SrcScanRange and try to add dependencies to
   /// \p DstN.
-  void scanAndAddDeps(DGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
+  void scanAndAddDeps(MemDGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
 
 public:
   DependencyGraph(AAResults &AA)
