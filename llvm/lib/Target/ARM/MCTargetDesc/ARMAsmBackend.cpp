@@ -447,6 +447,16 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
                                          const MCSubtargetInfo* STI) const {
   unsigned Kind = Fixup.getKind();
 
+  // For MOVW/MOVT Instructions, the Fixup Value needs to be 16 bit aligned.
+  // If this is not the case, we should reject compilation.
+  if((Kind == ARM::fixup_arm_movw_lo16 || Kind == ARM::fixup_arm_movt_hi16 ||
+      Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16) &&
+      (!(minIntN(16) <= static_cast<int64_t>(Value) &&
+    static_cast<int64_t>(Value) <= maxIntN(16)))) {
+    Ctx.reportError(Fixup.getLoc(), "Relocation Not In Range");
+    return 0;
+  }
+
   // MachO tries to make .o files that look vaguely pre-linked, so for MOVW/MOVT
   // and .word relocations they put the Thumb bit into the addend if possible.
   // Other relocation types don't want this bit though (branches couldn't encode
@@ -473,19 +483,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case FK_SecRel_4:
     return Value;
   case ARM::fixup_arm_movt_hi16:
-    if(!(minIntN(16) <= static_cast<int64_t>(Value) && static_cast<int64_t>(Value) <= maxIntN(16))) {
-      Ctx.reportError(Fixup.getLoc(), "Relocation Not In Range");
-      return 0;
-    }
     assert(STI != nullptr);
     if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
     [[fallthrough]];
   case ARM::fixup_arm_movw_lo16: {
-    if(!(minIntN(16) <= static_cast<int64_t>(Value) && static_cast<int64_t>(Value) <= maxIntN(16))) {
-      Ctx.reportError(Fixup.getLoc(), "Relocation Not In Range");
-      return 0;
-    }
     unsigned Hi4 = (Value & 0xF000) >> 12;
     unsigned Lo12 = Value & 0x0FFF;
     // inst{19-16} = Hi4;
