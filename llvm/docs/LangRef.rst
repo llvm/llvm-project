@@ -3681,7 +3681,7 @@ result on all machines and optimization levels.
 
 This means that optimizations and backends may not change the observed bitwise
 result of these operations in any way (unless NaNs are returned), and frontends
-can rely on these operations providing perfectly rounded results as described in
+can rely on these operations providing correctly rounded results as described in
 the standard.
 
 (Note that this is only about the value returned by these operations; see the
