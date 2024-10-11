@@ -489,8 +489,7 @@ public:
 
     mpfr_sinpi(result.value, value, mpfr_rounding);
 #else
-    int ret = mpfr_integer_p(value);
-    if (ret != 0) {
+    if (mpfr_integer_p(value)) {
       mpfr_set_si(result.value, 0, mpfr_rounding);
       return result;
     }
