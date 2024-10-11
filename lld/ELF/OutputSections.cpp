@@ -248,7 +248,7 @@ void OutputSection::finalizeInputSections(Ctx &ctx) {
       commitSection(ctx, s);
   }
   for (auto *ms : mergeSections)
-    ms->finalizeContents(ctx);
+    ms->finalizeContents();
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,
@@ -525,7 +525,7 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
     for (size_t i = begin; i != end; ++i) {
       InputSection *isec = sections[i];
       if (auto *s = dyn_cast<SyntheticSection>(isec))
-        s->writeTo(ctx, buf + isec->outSecOff);
+        s->writeTo(buf + isec->outSecOff);
       else
         isec->writeTo<ELFT>(buf + isec->outSecOff);
 
