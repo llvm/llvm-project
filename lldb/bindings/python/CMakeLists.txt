@@ -211,10 +211,8 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
           "LLDB_INCLUDE_TESTS=Off)")
       endif()
     else()
-      # swiftCore is defined in swift/stdlib/public/core/CMakeLists.txt
-      # It's not configured yet, so we cannot depend on it.
       add_custom_command(TARGET ${swig_target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy -t ${lldb_python_target_dir} $<TARGET_RUNTIME_DLLS:liblldb> ${SWIFT_BINARY_DIR}/bin/swiftCore.dll
+        COMMAND ${CMAKE_COMMAND} -E copy -t ${lldb_python_target_dir} $<TARGET_RUNTIME_DLLS:liblldb>
         COMMAND_EXPAND_LISTS)
     endif()
   endif()
