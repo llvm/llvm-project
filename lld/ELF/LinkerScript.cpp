@@ -1811,6 +1811,11 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
 }
 
 bool LinkerScript::shouldAddProvideSym(StringRef symName) {
+  // A Defined may be demoted to Undefined but the return value must stay the
+  // same. Use isUsedInRegularObj to ensure this. The exportDynamic condition,
+  // while not so accurate, allows PROVIDE to define a symbol referenced by a
+  // DSO.
   Symbol *sym = elf::ctx.symtab->find(symName);
-  return sym && !sym->isDefined() && !sym->isCommon();
+  return sym && !sym->isDefined() && !sym->isCommon() &&
+         (sym->isUsedInRegularObj || sym->exportDynamic);
 }
