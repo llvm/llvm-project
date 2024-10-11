@@ -154,8 +154,10 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
   auto addGenericFeatures = [&]() {
+    Features["bulk-memory"] = true;
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
+    Features["nontrapping-fptoint"] = true;
     Features["reference-types"] = true;
     Features["sign-ext"] = true;
   };
