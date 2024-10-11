@@ -469,6 +469,9 @@ def AllocaOp : CIR_Op<"alloca", [
     cases, the first use contains the initialization (a cir.store, a cir.call
     to a ctor, etc).
 
+    The presence of the `const` attribute indicates that the local variable is
+    declared with C/C++ `const` keyword.
+
     The `dynAllocSize` specifies the size to dynamically allocate on the stack
     and ignores the allocation size based on the original type. This is useful
     when handling VLAs and is omitted when declaring regular local variables.
@@ -492,6 +495,7 @@ def AllocaOp : CIR_Op<"alloca", [
     TypeAttr:$allocaType,
     StrAttr:$name,
     UnitAttr:$init,
+    UnitAttr:$constant,
     ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
     OptionalAttr<ArrayAttr>:$annotations,
     OptionalAttr<ASTVarDeclInterface>:$ast
@@ -530,6 +534,7 @@ def AllocaOp : CIR_Op<"alloca", [
     ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
     `[` $name
        (`,` `init` $init^)?
+       (`,` `const` $constant^)?
     `]`
     ($annotations^)?
     (`ast` $ast^)? attr-dict

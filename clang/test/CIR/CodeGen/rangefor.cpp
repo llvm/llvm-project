@@ -33,10 +33,10 @@ void init(unsigned numImages) {
 // CHECK:   %3 = cir.cast(integral, %2 : !u32i), !u64i
 // CHECK:   cir.call @_ZNSt6vectorI6tripleEC1Em(%1, %3) : (!cir.ptr<![[VEC]]>, !u64i) -> ()
 // CHECK:   cir.scope {
-// CHECK:     %4 = cir.alloca !cir.ptr<![[VEC]]>, !cir.ptr<!cir.ptr<![[VEC]]>>, ["__range1", init] {alignment = 8 : i64}
+// CHECK:     %4 = cir.alloca !cir.ptr<![[VEC]]>, !cir.ptr<!cir.ptr<![[VEC]]>>, ["__range1", init, const] {alignment = 8 : i64}
 // CHECK:     %5 = cir.alloca ![[VEC_IT]], !cir.ptr<![[VEC_IT]]>, ["__begin1", init] {alignment = 8 : i64}
 // CHECK:     %6 = cir.alloca ![[VEC_IT]], !cir.ptr<![[VEC_IT]]>, ["__end1", init] {alignment = 8 : i64}
-// CHECK:     %7 = cir.alloca !cir.ptr<!ty_triple>, !cir.ptr<!cir.ptr<!ty_triple>>, ["image", init] {alignment = 8 : i64}
+// CHECK:     %7 = cir.alloca !cir.ptr<!ty_triple>, !cir.ptr<!cir.ptr<!ty_triple>>, ["image", init, const] {alignment = 8 : i64}
 // CHECK:     cir.store %1, %4 : !cir.ptr<![[VEC]]>, !cir.ptr<!cir.ptr<![[VEC]]>>
 // CHECK:     %8 = cir.load %4 : !cir.ptr<!cir.ptr<![[VEC]]>>, !cir.ptr<![[VEC]]>
 // CHECK:     %9 = cir.call @_ZNSt6vectorI6tripleE5beginEv(%8) : (!cir.ptr<![[VEC]]>) -> ![[VEC_IT]]

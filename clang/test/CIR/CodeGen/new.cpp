@@ -12,8 +12,8 @@ void m(int a, int b) {
 }
 
 // CHECK: cir.func linkonce_odr @_ZSt11make_sharedI1SJRiS1_EESt10shared_ptrIT_EDpOT0_(
-// CHECK:   %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["args", init] {alignment = 8 : i64}
-// CHECK:   %1 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["args", init] {alignment = 8 : i64}
+// CHECK:   %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["args", init, const] {alignment = 8 : i64}
+// CHECK:   %1 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["args", init, const] {alignment = 8 : i64}
 // CHECK:   %2 = cir.alloca !ty_std3A3Ashared_ptr3CS3E, !cir.ptr<!ty_std3A3Ashared_ptr3CS3E>, ["__retval"] {alignment = 1 : i64}
 // CHECK:   cir.store %arg0, %0 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CHECK:   cir.store %arg1, %1 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

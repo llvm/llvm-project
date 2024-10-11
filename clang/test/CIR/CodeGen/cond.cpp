@@ -11,8 +11,8 @@ min(const unsigned long& __a, const unsigned long& __b) {
 }
 
 // CHECK: cir.func @_Z3minRKmS0_(%arg0: !cir.ptr<!u64i>
-// CHECK:   %0 = cir.alloca !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!u64i>>, ["__a", init] {alignment = 8 : i64}
-// CHECK:   %1 = cir.alloca !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!u64i>>, ["__b", init] {alignment = 8 : i64}
+// CHECK:   %0 = cir.alloca !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!u64i>>, ["__a", init, const] {alignment = 8 : i64}
+// CHECK:   %1 = cir.alloca !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!u64i>>, ["__b", init, const] {alignment = 8 : i64}
 // CHECK:   %2 = cir.alloca !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!u64i>>, ["__retval"] {alignment = 8 : i64}
 // CHECK:   cir.store %arg0, %0 : !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!u64i>>
 // CHECK:   cir.store %arg1, %1 : !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!u64i>>

@@ -109,7 +109,7 @@ void vcall(C1 &c1) {
 }
 
 // CHECK: cir.func @_Z5vcallR2C1(%arg0: !cir.ptr<!ty_C1_>
-// CHECK:   %0 = cir.alloca !cir.ptr<!ty_C1_>, !cir.ptr<!cir.ptr<!ty_C1_>>, ["c1", init] {alignment = 8 : i64}
+// CHECK:   %0 = cir.alloca !cir.ptr<!ty_C1_>, !cir.ptr<!cir.ptr<!ty_C1_>>, ["c1", init, const] {alignment = 8 : i64}
 // CHECK:   %1 = cir.alloca !ty_buffy, !cir.ptr<!ty_buffy>, ["b"] {alignment = 8 : i64}
 // CHECK:   %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"] {alignment = 4 : i64}
 // CHECK:   %3 = cir.alloca !ty_buffy, !cir.ptr<!ty_buffy>, ["agg.tmp0"] {alignment = 8 : i64}

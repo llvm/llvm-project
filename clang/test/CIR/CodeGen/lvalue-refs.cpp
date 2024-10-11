@@ -7,7 +7,7 @@ struct String {
 void split(String &S) {}
 
 // CHECK: cir.func @_Z5splitR6String(%arg0: !cir.ptr<!ty_String>
-// CHECK:     %0 = cir.alloca !cir.ptr<!ty_String>, !cir.ptr<!cir.ptr<!ty_String>>, ["S", init]
+// CHECK:     %0 = cir.alloca !cir.ptr<!ty_String>, !cir.ptr<!cir.ptr<!ty_String>>, ["S", init, const]
 
 void foo() {
   String s;

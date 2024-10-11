@@ -7,7 +7,7 @@ struct String {
   String(const String &s) : size{s.size} {}
 // CHECK: cir.func linkonce_odr @_ZN6StringC2ERKS_
 // CHECK:     %0 = cir.alloca !cir.ptr<!ty_String>, !cir.ptr<!cir.ptr<!ty_String>>, ["this", init] {alignment = 8 : i64}
-// CHECK:     %1 = cir.alloca !cir.ptr<!ty_String>, !cir.ptr<!cir.ptr<!ty_String>>, ["s", init] {alignment = 8 : i64}
+// CHECK:     %1 = cir.alloca !cir.ptr<!ty_String>, !cir.ptr<!cir.ptr<!ty_String>>, ["s", init, const] {alignment = 8 : i64}
 // CHECK:     cir.store %arg0, %0
 // CHECK:     cir.store %arg1, %1
 // CHECK:     %2 = cir.load %0

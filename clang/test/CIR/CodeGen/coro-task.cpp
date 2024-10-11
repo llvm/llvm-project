@@ -275,8 +275,8 @@ folly::coro::Task<int> byRef(const std::string& s) {
 
 // FIXME: this could be less redundant than two allocas + reloads
 // CHECK: cir.func coroutine @_Z5byRefRKSt6string(%arg0: !cir.ptr<![[StdString]]> {{.*}} ![[IntTask]] extra{{.*}}{
-// CHECK: %[[#AllocaParam:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
-// CHECK: %[[#AllocaFnUse:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
+// CHECK: %[[#AllocaParam:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init, const]
+// CHECK: %[[#AllocaFnUse:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init, const]
 
 folly::coro::Task<void> silly_coro() {
   std::optional<folly::coro::Task<int>> task;

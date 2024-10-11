@@ -16,7 +16,7 @@ struct String {
   //
   // CHECK: cir.func linkonce_odr @_ZN10StringViewC2ERK6String
   // CHECK:   %0 = cir.alloca !cir.ptr<!ty_StringView>, !cir.ptr<!cir.ptr<!ty_StringView>>, ["this", init] {alignment = 8 : i64}
-  // CHECK:   %1 = cir.alloca !cir.ptr<!ty_String>, !cir.ptr<!cir.ptr<!ty_String>>, ["s", init] {alignment = 8 : i64}
+  // CHECK:   %1 = cir.alloca !cir.ptr<!ty_String>, !cir.ptr<!cir.ptr<!ty_String>>, ["s", init, const] {alignment = 8 : i64}
   // CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_StringView>
   // CHECK:   cir.store %arg1, %1 : !cir.ptr<!ty_String>
   // CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_StringView>>
@@ -47,7 +47,7 @@ struct String {
   //
   // CHECK: cir.func linkonce_odr @_ZN10StringViewaSEOS_
   // CHECK:   %0 = cir.alloca !cir.ptr<!ty_StringView>, !cir.ptr<!cir.ptr<!ty_StringView>>, ["this", init] {alignment = 8 : i64}
-  // CHECK:   %1 = cir.alloca !cir.ptr<!ty_StringView>, !cir.ptr<!cir.ptr<!ty_StringView>>, ["", init] {alignment = 8 : i64}
+  // CHECK:   %1 = cir.alloca !cir.ptr<!ty_StringView>, !cir.ptr<!cir.ptr<!ty_StringView>>, ["", init, const] {alignment = 8 : i64}
   // CHECK:   %2 = cir.alloca !cir.ptr<!ty_StringView>, !cir.ptr<!cir.ptr<!ty_StringView>>, ["__retval"] {alignment = 8 : i64}
   // CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_StringView>
   // CHECK:   cir.store %arg1, %1 : !cir.ptr<!ty_StringView>

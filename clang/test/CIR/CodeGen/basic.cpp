@@ -155,8 +155,8 @@ void x() {
 }
 
 // CHECK: cir.func @_Z1xv()
-// CHECK:   %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b0", init] {alignment = 1 : i64}
-// CHECK:   %1 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b1", init] {alignment = 1 : i64}
+// CHECK:   %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b0", init, const] {alignment = 1 : i64}
+// CHECK:   %1 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b1", init, const] {alignment = 1 : i64}
 // CHECK:   %2 = cir.const #true
 // CHECK:   cir.store %2, %0 : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:   %3 = cir.const #false
