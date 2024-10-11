@@ -29,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <typename T, typename Y> concept convertible_to_from = std::convertible_to<Y, T> && std::convertible_to<T, Y>;
   
 template <typename T> concept pointer_tagging_schema = requires(T::dirty_pointer payload, T::clean_pointer clean, T::tag_type tag) {
-  //requires convertible_to_from<typename T::tag_type, uintptr_t>;
+  requires convertible_to_from<typename T::tag_type, uintptr_t>;
   requires std::is_pointer_v<typename T::clean_pointer>;
   
   { T::encode_pointer_with_tag(clean, tag) } noexcept -> std::same_as<typename T::dirty_pointer>;
@@ -41,6 +41,7 @@ template <typename T> concept pointer_tagging_schema_with_aliasing = pointer_tag
   { T::recover_aliasing_pointer(payload) } noexcept -> std::same_as<typename T::clean_pointer>;
 };
 
+// no-op schema so I can better explain how schemas work
 struct no_tag {
   template <typename T, typename Tag> struct schema {
     using clean_pointer = T *;
@@ -53,12 +54,17 @@ struct no_tag {
     [[clang::always_inline]] static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
       return (clean_pointer)_ptr;
     }
+    [[clang::always_inline]] static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
+      return (clean_pointer)_ptr;
+    }
     [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer) noexcept {
       return {};
     }
   };
 };
 
+// most basic schema for tagging
+// it lets user to provide their own mask
 template <uintptr_t Mask> struct bitmask_tag {
   static constexpr uintptr_t _mask = Mask;
 
@@ -91,16 +97,40 @@ template <uintptr_t Mask> struct bitmask_tag {
   };
 };
 
+// schema which allows only pointer of custom provided minimal alignment 
+// otherwise it behaves as custom mask schema
 template <unsigned Alignment> struct custom_alignment_tag {
   static constexpr uintptr_t mask = (static_cast<uintptr_t>(1u) << static_cast<uintptr_t>(Alignment)) - 1ull;
-  template <typename T, typename Tag> using schema = typename bitmask_tag<mask>::template schema<T, Tag>;
+  template <typename T, typename Tag> struct schema: bitmask_tag<mask>::template schema<T, Tag> {
+    using _underlying_schema =bitmask_tag<mask>::template schema<T, Tag>;
+  
+    using clean_pointer = _underlying_schema::clean_pointer;
+    using dirty_pointer = _underlying_schema::dirty_pointer;
+    using tag_type = _underlying_schema::tag_type;
+    
+    [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+#if __has_builtin(__builtin_is_aligned)
+      _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__builtin_is_aligned(_ptr, Alignment), "Pointer must be aligned by provided alignemt for tagging");
+#else
+      if !consteval {
+        _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(reinterpret_cast<uintptr_t>(std::addressof(_ptr)) % Alignment == 0, "Pointer must be aligned by provided alignemt for tagging");
+      }
+#endif
+      return _underlying_schema::encode_pointer_with_tag(_ptr, _value);
+    }
+    
+    using _underlying_schema::recover_pointer;
+    using _underlying_schema::recover_value;
+  };
 };
 
+// default scheme which gives only bits from alignment
 struct alignment_low_bits_tag {
   template <typename T> static constexpr unsigned alignment = alignof(T);
   template <typename T, typename Tag> using schema = typename custom_alignment_tag<alignment<T>>::template schema<T, Tag>;
 };
 
+// scheme which shifts bits to left by Bits bits and gives the space for tagging
 template <unsigned Bits> struct shift_tag {
   static constexpr unsigned _shift = Bits;
   static constexpr uintptr_t _mask = (uintptr_t{1u} << _shift) - 1u;
@@ -134,39 +164,55 @@ template <unsigned Bits> struct shift_tag {
   };
 };
 
+// scheme which shifts pointer to left by 8 bits and give this space as guaranteed space for tagging
 struct low_byte_tag {
   template <typename T, typename Tag> using schema = typename shift_tag<8>::template schema<T, Tag>;
 };
 
+// this will give user access to upper byte of pointer on aarch64
+// also it supports recovering aliasing pointer as no-op (fast-path)
 struct upper_byte_tag {
   template <typename T> static constexpr unsigned _shift = sizeof(T *) * 8ull - 8ull;
   template <typename T> static constexpr uintptr_t _mask = 0b1111'1111ull << _shift<T>;
   
-  template <typename T, typename Tag> using schema = typename bitmask_tag<_mask<T>>::template schema<T, Tag>;
-};
-
-struct upper_byte_shifted_tag: upper_byte_tag {
-  template <typename T, typename Tag> struct schema {
-    using _underlying_schema = typename upper_byte_tag::template schema<T, uintptr_t>;
-    static constexpr unsigned _shift = upper_byte_tag::template _shift<T>;
+  template <typename T, typename Tag> struct schema: bitmask_tag<_mask<T>>::template schema<T, Tag> {
+    using _underlying_schema = bitmask_tag<_mask<T>>::template schema<T, Tag>;
     
-    using clean_pointer = T *;
-    using dirty_pointer = void *;
-    using tag_type = Tag;
+    using clean_pointer = _underlying_schema::clean_pointer;
+    using dirty_pointer = _underlying_schema::dirty_pointer;
+    using tag_type = _underlying_schema::tag_type;
   
-    [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
-      return _underlying_schema::encode_pointer_with_tag(_ptr, static_cast<uintptr_t>(_value) << _shift);
+    [[clang::always_inline]] static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
+      return (clean_pointer)_ptr;
     }
-    [[clang::always_inline]] static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
-      return _underlying_schema::recover_pointer(_ptr);
-    }
-    [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer _ptr) noexcept {
-      return static_cast<tag_type>(_underlying_schema::recover_value(_ptr) >> _shift);
-    }
+    
+    using _underlying_schema::encode_pointer_with_tag;
+    using _underlying_schema::recover_pointer;
+    using _underlying_schema::recover_value;
   };
 };
 
-
+// improved version of previous aarch64 upper byte scheme
+// with added shifting tag value into position, so the tag doesn't need to know about exact position
+struct upper_byte_shifted_tag: upper_byte_tag { 
+  template <typename T, typename Tag> struct schema: upper_byte_tag::template schema<T, uintptr_t> {
+    using _underlying_schema = upper_byte_tag::template schema<T, uintptr_t>;
+    
+    using clean_pointer = _underlying_schema::clean_pointer;
+    using dirty_pointer = _underlying_schema::dirty_pointer;
+    using tag_type = Tag;
+  
+    [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+      return _underlying_schema::encode_pointer_with_tag(_ptr, static_cast<uintptr_t>(_value) << upper_byte_tag::_shift<T>);
+    }
+    [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer _ptr) noexcept {
+      return static_cast<tag_type>(_underlying_schema::recover_value(_ptr) >> upper_byte_tag::_shift<T>);
+    }
+    
+    using _underlying_schema::recover_pointer;
+    using _underlying_schema::recover_aliasing_pointer;
+  };
+};
 
 // forward declaration
 template <typename _T, typename _Tag = uintptr_t, typename _Schema = alignment_low_bits_tag> class tagged_ptr;
