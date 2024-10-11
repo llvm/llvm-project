@@ -93,13 +93,13 @@ LLVM_LIBC_FUNCTION(double, cos, (double x)) {
     }
     return ans;
   };
-  DoubleDouble sin_k = get_idx_dd(k + 128);
+  DoubleDouble msin_k = get_idx_dd(k + 128);
   DoubleDouble cos_k = get_idx_dd(k + 64);
 #else
   // Fast look up version, but needs 256-entry table.
   // -sin(k * pi/128) = sin((k + 128) * pi/128)
   // cos(k * pi/128) = sin(k * pi/128 + pi/2) = sin((k + 64) * pi/128).
-  DoubleDouble sin_k = SIN_K_PI_OVER_128[(k + 128) & 255];
+  DoubleDouble msin_k = SIN_K_PI_OVER_128[(k + 128) & 255];
   DoubleDouble cos_k = SIN_K_PI_OVER_128[(k + 64) & 255];
 #endif // LIBC_MATH_HAS_SMALL_TABLES
 
@@ -108,7 +108,7 @@ LLVM_LIBC_FUNCTION(double, cos, (double x)) {
   // Then cos(x) = cos((k * pi/128 + y)
   //             = cos(y) * cos(k*pi/128) - sin(y) * sin(k*pi/128)
   DoubleDouble cos_k_cos_y = fputil::quick_mult(cos_y, cos_k);
-  DoubleDouble msin_k_sin_y = fputil::quick_mult(sin_y, sin_k);
+  DoubleDouble msin_k_sin_y = fputil::quick_mult(sin_y, msin_k);
 
   DoubleDouble rr = fputil::exact_add<false>(cos_k_cos_y.hi, msin_k_sin_y.hi);
   rr.lo += msin_k_sin_y.lo + cos_k_cos_y.lo;
