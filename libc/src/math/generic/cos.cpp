@@ -93,7 +93,7 @@ LLVM_LIBC_FUNCTION(double, cos, (double x)) {
     }
     return ans;
   };
-  DoubleDouble sin_k = get_idx_dd(k + 128);
+  DoubleDouble msin_k = get_idx_dd(k + 128);
   DoubleDouble cos_k = get_idx_dd(k + 64);
 #else
   // Fast look up version, but needs 256-entry table.

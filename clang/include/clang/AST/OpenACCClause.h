@@ -157,7 +157,7 @@ protected:
 
 public:
   static bool classof(const OpenACCClause *C) {
-    return C->getClauseKind() == OpenACCClauseKind::Gang;
+    return C->getClauseKind() == OpenACCClauseKind::Vector;
   }
 
   static OpenACCVectorClause *
@@ -183,7 +183,7 @@ protected:
 
 public:
   static bool classof(const OpenACCClause *C) {
-    return C->getClauseKind() == OpenACCClauseKind::Gang;
+    return C->getClauseKind() == OpenACCClauseKind::Worker;
   }
 
   static OpenACCWorkerClause *
