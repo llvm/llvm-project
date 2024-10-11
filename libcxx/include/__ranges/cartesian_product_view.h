@@ -55,6 +55,10 @@ constexpr auto cartesian_common_arg_end(R& r) {
   }
 }
 
+template <bool Const, class First, class... Vs>
+concept __cartesian_product_all_random_access =
+    (random_access_range<__maybe_const<Const, First>> && ... && random_access_range<__maybe_const<Const, Vs>>);
+
 template <input_range First, forward_range... Vs>
   requires(view<First> && ... && view<Vs>)
 class cartesian_product_view : public view_interface<cartesian_product_view<First, Vs...>> {
@@ -174,6 +178,12 @@ public:
   }
 
   friend constexpr bool operator==(const iterator& x, default_sentinel_t) { return x.at_end(); }
+
+  friend constexpr auto operator<=>(const iterator& x, const iterator& y)
+    requires __cartesian_product_all_random_access<Const, First, Vs...>
+  {
+    return x.current_ <=> y.current_;
+  }
 
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
