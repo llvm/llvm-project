@@ -134,8 +134,7 @@ bool isPrimitiveNthRootOfUnity(const APInt &root, const APInt &n,
 /// Verify that the types involved in an NTT or INTT operation are
 /// compatible.
 static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
-                                 RankedTensorType tensorType,
-                                 std::optional<PrimitiveRootAttr> root) {
+                                 RankedTensorType tensorType) {
   Attribute encoding = tensorType.getEncoding();
   if (!encoding) {
     return op->emitOpError()
@@ -166,9 +165,10 @@ static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
     return diag;
   }
 
-  if (root.has_value()) {
-    APInt rootValue = root.value().getValue().getValue();
-    APInt rootDegree = root.value().getDegree().getValue();
+  auto root = ring.getPrimitiveRoot();
+  if (root) {
+    APInt rootValue = root.getValue().getValue();
+    APInt rootDegree = root.getDegree().getValue();
     APInt cmod = ring.getCoefficientModulus().getValue();
     if (!isPrimitiveNthRootOfUnity(rootValue, rootDegree, cmod)) {
       return op->emitOpError()
@@ -177,6 +177,9 @@ static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
              << "of unity mod " << cmod.getZExtValue()
              << ", with the specified degree " << rootDegree.getZExtValue();
     }
+  } else {
+    return op->emitOpError()
+           << "primitive root not provided but ntt/intt op called";
   }
 
   return success();
@@ -184,12 +187,12 @@ static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
 
 LogicalResult NTTOp::verify() {
   return verifyNTTOp(this->getOperation(), getInput().getType().getRing(),
-                     getOutput().getType(), getRoot());
+                     getOutput().getType());
 }
 
 LogicalResult INTTOp::verify() {
   return verifyNTTOp(this->getOperation(), getOutput().getType().getRing(),
-                     getInput().getType(), getRoot());
+                     getInput().getType());
 }
 
 ParseResult ConstantOp::parse(OpAsmParser &parser, OperationState &result) {

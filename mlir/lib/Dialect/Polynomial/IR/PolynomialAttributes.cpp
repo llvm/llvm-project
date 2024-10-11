@@ -206,7 +206,8 @@ Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
 LogicalResult
 RingAttr::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
                  Type coefficientType, IntegerAttr coefficientModulus,
-                 IntPolynomialAttr polynomialModulus) {
+                 IntPolynomialAttr polynomialModulus,
+                 PrimitiveRootAttr primitiveRoot) {
   if (coefficientModulus) {
     auto coeffIntType = llvm::dyn_cast<IntegerType>(coefficientType);
     if (!coeffIntType) {

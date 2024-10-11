@@ -126,6 +126,26 @@ def Polynomial_TypedFloatPolynomialAttr : Polynomial_Attr<
   }];
 }
 
+def Polynomial_PrimitiveRootAttr: Polynomial_Attr<"PrimitiveRoot", "primitive_root"> {
+  let summary = "an attribute containing an integer and its degree as a root of unity";
+  let description = [{
+    A primitive root attribute stores an integer root `value` and an integer
+    `degree`, corresponding to a primitive root of unity of the given degree in
+    an unspecified ring.
+
+    Example:
+
+    ```mlir
+    #poly = #polynomial.primitive_root<value=123 : i32, degree : 7 index>
+    ```
+  }];
+  let parameters = (ins
+    "::mlir::IntegerAttr":$value,
+    "::mlir::IntegerAttr":$degree
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
   let summary = "an attribute specifying a polynomial ring";
   let description = [{
@@ -141,6 +161,9 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     each polynomial is represented as its remainder when dividing by the
     modulus. For single-variable polynomials, an "polynomialModulus" is always specificed
     via a single polynomial, which we call `polynomialModulus`.
+
+    For ntt/intt and mul to ntt/intt optimization to work, an n-th or 2n-th
+    _primitiveRoot_ should be specified.
 
     An expressive example is polynomials with i32 coefficients, whose
     coefficients are taken modulo `2**32 - 5`, with a polynomial modulus of
@@ -177,7 +200,8 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
   let parameters = (ins
     "Type": $coefficientType,
     OptionalParameter<"::mlir::IntegerAttr">: $coefficientModulus,
-    OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">: $polynomialModulus
+    OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">: $polynomialModulus,
+    OptionalParameter<"::mlir::polynomial::PrimitiveRootAttr">: $primitiveRoot
   );
   let genVerifyDecl = 1;
   let assemblyFormat = "`<` struct(params) `>`";
@@ -185,38 +209,16 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     AttrBuilderWithInferredContext<
         (ins "::mlir::Type":$coefficientTy,
               CArg<"::mlir::IntegerAttr", "nullptr"> :$coefficientModulusAttr,
-              CArg<"::mlir::polynomial::IntPolynomialAttr", "nullptr"> :$polynomialModulusAttr), [{
+              CArg<"::mlir::polynomial::IntPolynomialAttr", "nullptr"> :$polynomialModulusAttr,
+              CArg<"::mlir::polynomial::PrimitiveRootAttr", "nullptr"> :$primitiveRootAttr), [{
       return $_get(
         coefficientTy.getContext(),
         coefficientTy,
         coefficientModulusAttr,
-        polynomialModulusAttr);
+        polynomialModulusAttr,
+        primitiveRootAttr);
     }]>,
   ];
 }
-
-def Polynomial_PrimitiveRootAttr: Polynomial_Attr<"PrimitiveRoot", "primitive_root"> {
-  let summary = "an attribute containing an integer and its degree as a root of unity";
-  let description = [{
-    A primitive root attribute stores an integer root `value` and an integer
-    `degree`, corresponding to a primitive root of unity of the given degree in
-    an unspecified ring.
-
-    This is used as an attribute on `polynomial.ntt` and `polynomial.intt` ops
-    to specify the root of unity used in lowering the transform.
-
-    Example:
-
-    ```mlir
-    #poly = #polynomial.primitive_root<value=123 : i32, degree : 7 index>
-    ```
-  }];
-  let parameters = (ins
-    "::mlir::IntegerAttr":$value,
-    "::mlir::IntegerAttr":$degree
-  );
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
 
 #endif // POLYNOMIAL_ATTRIBUTES

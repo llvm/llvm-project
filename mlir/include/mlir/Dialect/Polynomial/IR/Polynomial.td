@@ -311,12 +311,12 @@ def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {
 
       `f[k] = F(omega[n]^k) ; k = {0, ..., n-1}`
 
-    The choice of primitive root may be optionally specified.
+    The choice of primitive root is specified in the primitiveRootAttr of RingAttr.
+    Its degree affects the behavior of ntt performed, with n-th primitive root
+    performing cyclic convolution and 2n-th primitive root performing negacyclic
+    convolution.
   }];
-  let arguments = (ins
-    Polynomial_PolynomialType:$input,
-    OptionalAttr<Polynomial_PrimitiveRootAttr>:$root
-  );
+  let arguments = (ins Polynomial_PolynomialType:$input);
   let results = (outs RankedTensorOf<[AnyInteger]>:$output);
   let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
   let hasCanonicalizer = 1;
@@ -335,12 +335,12 @@ def Polynomial_INTTOp : Polynomial_Op<"intt", [Pure]> {
     `polynomial.ntt`). The ring of the polynomial is taken from the required
     encoding attribute of the tensor.
 
-    The choice of primitive root may be optionally specified.
+    The choice of primitive root is specified in the primitiveRootAttr of RingAttr.
+    Its degree affects the behavior of ntt performed, with n-th primitive root
+    performing cyclic convolution and 2n-th primitive root performing negacyclic
+    convolution.
   }];
-  let arguments = (
-    ins RankedTensorOf<[AnyInteger]>:$input,
-    OptionalAttr<Polynomial_PrimitiveRootAttr>:$root
-  );
+  let arguments = (ins RankedTensorOf<[AnyInteger]>:$input);
   let results = (outs Polynomial_PolynomialType:$output);
   let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
   let hasCanonicalizer = 1;
