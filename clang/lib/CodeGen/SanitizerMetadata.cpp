@@ -92,8 +92,8 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
       FsanitizeArgument.Mask & SanitizerKind::HWAddress, GV, Loc, Ty);
 
   if (shouldTagGlobal(*GV)) {
-    Meta.Memtag |=
-        static_cast<bool>(FsanitizeArgument.Mask & SanitizerKind::MemtagGlobals);
+    Meta.Memtag |= static_cast<bool>(FsanitizeArgument.Mask &
+                                     SanitizerKind::MemtagGlobals);
     Meta.Memtag &= !NoSanitizeAttrSet.hasOneOf(SanitizerKind::MemTag);
     Meta.Memtag &= !CGM.isInNoSanitizeList(
         FsanitizeArgument.Mask & SanitizerKind::MemTag, GV, Loc, Ty);
