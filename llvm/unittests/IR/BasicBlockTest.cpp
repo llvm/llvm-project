@@ -109,8 +109,10 @@ TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
   Argument *V = new Argument(Type::getInt32Ty(Ctx));
   Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);
 
-  Function *DbgDeclare = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
-  Function *DbgValue = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
+  Function *DbgDeclare =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_declare);
+  Function *DbgValue =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_value);
   Value *DIV = MetadataAsValue::get(Ctx, (Metadata *)nullptr);
   SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
 
@@ -174,7 +176,7 @@ class InstrOrderInvalidationTest : public ::testing::Test {
 protected:
   void SetUp() override {
     M.reset(new Module("MyModule", Ctx));
-    Nop = Intrinsic::getDeclaration(M.get(), Intrinsic::donothing);
+    Nop = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::donothing);
     FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
     Function *F = Function::Create(FT, Function::ExternalLinkage, "foo", *M);
     BB = BasicBlock::Create(Ctx, "entry", F);

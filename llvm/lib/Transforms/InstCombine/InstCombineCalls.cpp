@@ -488,7 +488,8 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   // cttz(bitreverse(x)) -> ctlz(x)
   if (match(Op0, m_BitReverse(m_Value(X)))) {
     Intrinsic::ID ID = IsTZ ? Intrinsic::ctlz : Intrinsic::cttz;
-    Function *F = Intrinsic::getDeclaration(II.getModule(), ID, II.getType());
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(II.getModule(), ID, II.getType());
     return CallInst::Create(F, {X, II.getArgOperand(1)});
   }
 
@@ -647,7 +648,7 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   if (Op0->hasOneUse() &&
       match(Op0, m_c_Or(m_Value(X), m_Neg(m_Deferred(X))))) {
     Function *F =
-        Intrinsic::getDeclaration(II.getModule(), Intrinsic::cttz, Ty);
+        Intrinsic::getOrInsertDeclaration(II.getModule(), Intrinsic::cttz, Ty);
     auto *Cttz = IC.Builder.CreateCall(F, {X, IC.Builder.getFalse()});
     auto *Bw = ConstantInt::get(Ty, APInt(BitWidth, BitWidth));
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Bw, Cttz));
@@ -657,7 +658,7 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   if (match(Op0,
             m_c_And(m_Not(m_Value(X)), m_Add(m_Deferred(X), m_AllOnes())))) {
     Function *F =
-        Intrinsic::getDeclaration(II.getModule(), Intrinsic::cttz, Ty);
+        Intrinsic::getOrInsertDeclaration(II.getModule(), Intrinsic::cttz, Ty);
     return CallInst::Create(F, {X, IC.Builder.getFalse()});
   }
 
@@ -1181,7 +1182,8 @@ Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
     return nullptr;
 
   // Finally create and return the sat intrinsic, truncated to the new type
-  Function *F = Intrinsic::getDeclaration(MinMax1.getModule(), IntrinsicID, NewTy);
+  Function *F = Intrinsic::getOrInsertDeclaration(MinMax1.getModule(),
+                                                  IntrinsicID, NewTy);
   Value *AT = Builder.CreateTrunc(AddSub->getOperand(0), NewTy);
   Value *BT = Builder.CreateTrunc(AddSub->getOperand(1), NewTy);
   Value *Sat = Builder.CreateCall(F, {AT, BT});
@@ -1286,8 +1288,8 @@ reassociateMinMaxWithConstantInOperand(IntrinsicInst *II,
     return nullptr;
 
   // max (max X, C), Y --> max (max X, Y), C
-  Function *MinMax =
-      Intrinsic::getDeclaration(II->getModule(), MinMaxID, II->getType());
+  Function *MinMax = Intrinsic::getOrInsertDeclaration(II->getModule(),
+                                                       MinMaxID, II->getType());
   Value *NewInner = Builder.CreateBinaryIntrinsic(MinMaxID, X, Y);
   NewInner->takeName(Inner);
   return CallInst::Create(MinMax, {NewInner, C});
@@ -1346,7 +1348,8 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
     return nullptr;
 
   Module *Mod = II->getModule();
-  Function *MinMax = Intrinsic::getDeclaration(Mod, MinMaxID, II->getType());
+  Function *MinMax =
+      Intrinsic::getOrInsertDeclaration(Mod, MinMaxID, II->getType());
   return CallInst::Create(MinMax, { MinMaxOp, ThirdOp });
 }
 
@@ -1571,7 +1574,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           Type *Tys[3] = { CI.getArgOperand(0)->getType(),
                            CI.getArgOperand(1)->getType(),
                            CI.getArgOperand(2)->getType() };
-          CI.setCalledFunction(Intrinsic::getDeclaration(M, MemCpyID, Tys));
+          CI.setCalledFunction(
+              Intrinsic::getOrInsertDeclaration(M, MemCpyID, Tys));
           Changed = true;
         }
     }
@@ -2095,7 +2099,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         Constant *LeftShiftC = ConstantExpr::getSub(WidthC, ShAmtC);
         Module *Mod = II->getModule();
-        Function *Fshl = Intrinsic::getDeclaration(Mod, Intrinsic::fshl, Ty);
+        Function *Fshl =
+            Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::fshl, Ty);
         return CallInst::Create(Fshl, { Op0, Op1, LeftShiftC });
       }
       assert(IID == Intrinsic::fshl &&
@@ -2115,7 +2120,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // fshl i16 X, X, 8 --> bswap i16 X (reduce to more-specific form)
       if (Op0 == Op1 && BitWidth == 16 && match(ShAmtC, m_SpecificInt(8))) {
         Module *Mod = II->getModule();
-        Function *Bswap = Intrinsic::getDeclaration(Mod, Intrinsic::bswap, Ty);
+        Function *Bswap =
+            Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::bswap, Ty);
         return CallInst::Create(Bswap, { Op0 });
       }
       if (Instruction *BitOp =
@@ -2824,7 +2830,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       CallArgs.push_back(II->getArgOperand(4));
     }
 
-    Function *NewFn = Intrinsic::getDeclaration(II->getModule(), NewIntrin);
+    Function *NewFn =
+        Intrinsic::getOrInsertDeclaration(II->getModule(), NewIntrin);
     return CallInst::Create(NewFn, CallArgs);
   }
   case Intrinsic::arm_neon_vtbl1:
