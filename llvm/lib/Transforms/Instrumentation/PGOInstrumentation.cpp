@@ -863,7 +863,8 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
 // funclet information, if any is needed, that should be placed on the generated
 // value profiling call for the value profile candidate call.
 static void
-populateEHOperandBundle(VPCandidateInfo &Cand, BlockColorMapT &BlockColors,
+populateEHOperandBundle(VPCandidateInfo &Cand,
+                        BlockColorMapT &BlockColors,
                         SmallVectorImpl<OperandBundleDef> &OpBundles) {
   auto *OrigCall = dyn_cast<CallBase>(Cand.AnnotatedInst);
   if (!OrigCall)

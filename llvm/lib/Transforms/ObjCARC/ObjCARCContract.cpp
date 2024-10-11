@@ -414,7 +414,8 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
 
 bool ObjCARCContract::tryToPeepholeInstruction(
     Function &F, Instruction *Inst, inst_iterator &Iter,
-    bool &TailOkForStoreStrongs, const BlockColorMapT &BlockColors) {
+    bool &TailOkForStoreStrongs,
+    const BlockColorMapT &BlockColors) {
   // Only these library routines return their argument. In particular,
   // objc_retainBlock does not necessarily return its argument.
   ARCInstKind Class = GetBasicARCInstKind(Inst);
