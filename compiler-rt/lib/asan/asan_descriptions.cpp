@@ -48,9 +48,20 @@ void DescribeThread(AsanThreadContext *context) {
     return;
   }
   context->announced = true;
+
+  AsanThreadContext *parent_context =
+      context->parent_tid == kInvalidTid
+          ? nullptr
+          : GetThreadContextByTidLocked(context->parent_tid);
+
+  // `context->parent_tid` may point to reused slot. Check `unique_id` which
+  // is always smaller for the parent, always greater for a new user.
+  if (context->unique_id <= parent_context->unique_id)
+    parent_context = nullptr;
+
   InternalScopedString str;
   str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
-  if (context->parent_tid == kInvalidTid) {
+  if (!parent_context) {
     str.Append(" created by unknown thread\n");
     Printf("%s", str.data());
     return;
@@ -60,14 +71,8 @@ void DescribeThread(AsanThreadContext *context) {
   Printf("%s", str.data());
   StackDepotGet(context->stack_id).Print();
   // Recursively described parent thread if needed.
-  if (flags()->print_full_thread_history) {
-    AsanThreadContext *parent_context =
-        GetThreadContextByTidLocked(context->parent_tid);
-    // `context->parent_tid` may point to reused slot, double check, `unique_id`
-    // of new user will always be greater then the child.
-    if (context->unique_id > parent_context->unique_id)
-      DescribeThread(parent_context);
-  }
+  if (flags()->print_full_thread_history)
+    DescribeThread(parent_context);
 }
 
 // Shadow descriptions

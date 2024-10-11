@@ -36,7 +36,8 @@ class AsanThread;
 class AsanThreadContext final : public ThreadContextBase {
  public:
   explicit AsanThreadContext(int tid)
-      : ThreadContextBase(tid), announced(false),
+      : ThreadContextBase(tid),
+        announced(false),
         destructor_iterations(GetPthreadDestructorIterations()),
         thread(nullptr) {}
   bool announced;
