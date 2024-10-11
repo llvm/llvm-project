@@ -69,6 +69,7 @@ class SPIRVEmitIntrinsics
   SPIRVGlobalRegistry *GR = nullptr;
   Function *F = nullptr;
   bool TrackConstants = true;
+  bool HaveFunPtrs = false;
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
@@ -714,6 +715,37 @@ static bool deduceOperandElementTypeCalledFunction(
   return true;
 }
 
+// Try to deduce element type for a function pointer.
+static void deduceOperandElementTypeFunctionPointer(
+    SPIRVGlobalRegistry *GR, Instruction *I, CallInst *CI,
+    SmallVector<std::pair<Value *, unsigned>> &Ops, Type *&KnownElemTy) {
+  Value *Op = CI->getCalledOperand();
+  if (!Op || !isPointerTy(Op->getType()))
+    return;
+  Ops.push_back(std::make_pair(Op, std::numeric_limits<unsigned>::max()));
+  FunctionType *FTy = CI->getFunctionType();
+  bool IsNewFTy = false;
+  SmallVector<Type *, 4> ArgTys;
+  for (Value *Arg : CI->args()) {
+    Type *ArgTy = Arg->getType();
+    if (ArgTy->isPointerTy())
+      if (Type *ElemTy = GR->findDeducedElementType(Arg)) {
+        IsNewFTy = true;
+        ArgTy = TypedPointerType::get(ElemTy, getPointerAddressSpace(ArgTy));
+      }
+    ArgTys.push_back(ArgTy);
+  }
+  Type *RetTy = FTy->getReturnType();
+  if (I->getType()->isPointerTy())
+    if (Type *ElemTy = GR->findDeducedElementType(I)) {
+      IsNewFTy = true;
+      RetTy =
+          TypedPointerType::get(ElemTy, getPointerAddressSpace(I->getType()));
+    }
+  KnownElemTy =
+      IsNewFTy ? FunctionType::get(RetTy, ArgTys, FTy->isVarArg()) : FTy;
+}
+
 // If the Instruction has Pointer operands with unresolved types, this function
 // tries to deduce them. If the Instruction has Pointer operands with known
 // types which differ from expected, this function tries to insert a bitcast to
@@ -820,17 +852,11 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
       Ops.push_back(std::make_pair(Op0, 0));
     }
   } else if (CallInst *CI = dyn_cast<CallInst>(I)) {
-    if (!CI->isIndirectCall()) {
+    if (!CI->isIndirectCall())
       deduceOperandElementTypeCalledFunction(GR, I, InstrSet, CI, Ops,
                                              KnownElemTy);
-    } else if (TM->getSubtarget<SPIRVSubtarget>(*F).canUseExtension(
-                   SPIRV::Extension::SPV_INTEL_function_pointers)) {
-      Value *Op = CI->getCalledOperand();
-      if (!Op || !isPointerTy(Op->getType()))
-        return;
-      Ops.push_back(std::make_pair(Op, std::numeric_limits<unsigned>::max()));
-      KnownElemTy = CI->getFunctionType();
-    }
+    else if (HaveFunPtrs)
+      deduceOperandElementTypeFunctionPointer(GR, I, CI, Ops, KnownElemTy);
   }
 
   // There is no enough info to deduce types or all is valid.
@@ -1710,23 +1736,53 @@ void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
   }
 }
 
+static FunctionType *getFunctionPointerElemType(Function *F,
+                                                SPIRVGlobalRegistry *GR) {
+  FunctionType *FTy = F->getFunctionType();
+  bool IsNewFTy = false;
+  SmallVector<Type *, 4> ArgTys;
+  for (Argument &Arg : F->args()) {
+    Type *ArgTy = Arg.getType();
+    if (ArgTy->isPointerTy())
+      if (Type *ElemTy = GR->findDeducedElementType(&Arg)) {
+        IsNewFTy = true;
+        ArgTy = TypedPointerType::get(ElemTy, getPointerAddressSpace(ArgTy));
+      }
+    ArgTys.push_back(ArgTy);
+  }
+  return IsNewFTy
+             ? FunctionType::get(FTy->getReturnType(), ArgTys, FTy->isVarArg())
+             : FTy;
+}
+
 bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
-  bool IsExt = false;
   SmallVector<Function *> Worklist;
   for (auto &F : M) {
-    if (!IsExt) {
-      if (!TM->getSubtarget<SPIRVSubtarget>(F).canUseExtension(
-              SPIRV::Extension::SPV_INTEL_function_pointers))
-        return false;
-      IsExt = true;
-    }
-    if (!F.isDeclaration() || F.isIntrinsic())
+    if (F.isIntrinsic())
       continue;
-    for (User *U : F.users()) {
-      CallInst *CI = dyn_cast<CallInst>(U);
-      if (!CI || CI->getCalledFunction() != &F) {
-        Worklist.push_back(&F);
-        break;
+    if (F.isDeclaration()) {
+      for (User *U : F.users()) {
+        CallInst *CI = dyn_cast<CallInst>(U);
+        if (!CI || CI->getCalledFunction() != &F) {
+          Worklist.push_back(&F);
+          break;
+        }
+      }
+    } else {
+      if (F.user_empty())
+        continue;
+      Type *FPElemTy = GR->findDeducedElementType(&F);
+      if (!FPElemTy)
+        FPElemTy = getFunctionPointerElemType(&F, GR);
+      for (User *U : F.users()) {
+        IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
+        if (!II || II->arg_size() != 3 || II->getOperand(0) != &F)
+          continue;
+        if (II->getIntrinsicID() == Intrinsic::spv_assign_ptr_type ||
+            II->getIntrinsicID() == Intrinsic::spv_ptrcast) {
+          updateAssignType(II, &F, PoisonValue::get(FPElemTy));
+          break;
+        }
       }
     }
   }
@@ -1764,6 +1820,10 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   GR = ST.getSPIRVGlobalRegistry();
   InstrSet = ST.isOpenCLEnv() ? SPIRV::InstructionSet::OpenCL_std
                               : SPIRV::InstructionSet::GLSL_std_450;
+
+  if (!F)
+    HaveFunPtrs =
+        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
 
   F = &Func;
   IRBuilder<> B(Func.getContext());
@@ -1910,7 +1970,8 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   }
 
   Changed |= postprocessTypes();
-  Changed |= processFunctionPointers(M);
+  if (HaveFunPtrs)
+    Changed |= processFunctionPointers(M);
 
   return Changed;
 }
