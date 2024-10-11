@@ -282,7 +282,7 @@ static void convertToParamAS(Use *OldUse, Value *Param, bool HasCvtaParam,
           [](Value *Addr, Instruction *OriginalUser) -> Value * {
         PointerType *ReturnTy =
             PointerType::get(OriginalUser->getContext(), ADDRESS_SPACE_GENERIC);
-        Function *CvtToGen = Intrinsic::getDeclaration(
+        Function *CvtToGen = Intrinsic::getOrInsertDeclaration(
             OriginalUser->getModule(), Intrinsic::nvvm_ptr_param_to_gen,
             {ReturnTy, PointerType::get(OriginalUser->getContext(),
                                         ADDRESS_SPACE_PARAM)});

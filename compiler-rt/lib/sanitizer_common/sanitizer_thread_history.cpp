@@ -29,7 +29,7 @@ void PrintThreadHistory(ThreadRegistry &registry, InternalScopedString &out) {
            return true;
          if (a->stack_id > b->stack_id)
            return false;
-         return a->tid < b->tid;
+         return a->unique_id < b->unique_id;
        });
 
   auto describe_thread = [&](const ThreadContextBase *context) {
@@ -56,10 +56,9 @@ void PrintThreadHistory(ThreadRegistry &registry, InternalScopedString &out) {
 
   const ThreadContextBase *prev = nullptr;
   for (const ThreadContextBase *context : stacks) {
-    if (prev->stack_id != context->stack_id) {
+    if (prev && prev->stack_id != context->stack_id)
       StackDepotGet(prev->stack_id).PrintTo(&out);
-      prev = context;
-    }
+    prev = context;
     out.Append("Thread ");
     describe_thread(context);
     out.Append(" was created by ");
