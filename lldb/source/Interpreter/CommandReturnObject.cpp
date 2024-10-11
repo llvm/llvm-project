@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/CommandReturnObject.h"
 
+#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -41,7 +42,7 @@ static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
 }
 
 CommandReturnObject::CommandReturnObject(bool colors)
-    : m_out_stream(colors), m_err_stream(colors) {}
+    : m_out_stream(colors), m_err_stream(colors), m_diag_stream(colors) {}
 
 void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   SetStatus(eReturnStatusFailed);
@@ -112,8 +113,39 @@ void CommandReturnObject::SetError(Status error) {
 }
 
 void CommandReturnObject::SetError(llvm::Error error) {
-  if (error)
+  // Retrieve any diagnostics.
+  error = llvm::handleErrors(std::move(error), [&](DiagnosticError &error) {
+    SetStatus(eReturnStatusFailed);
+    m_diagnostics = error.GetDetails();
+  });
+  if (error) {
     AppendError(llvm::toString(std::move(error)));
+  }
+}
+
+llvm::StringRef CommandReturnObject::GetInlineDiagnosticsData(unsigned indent) {
+  RenderDiagnosticDetails(m_diag_stream, indent, true, m_diagnostics);
+  // Duplex the diagnostics to the secondary stream (but not inlined).
+  if (auto stream_sp = m_err_stream.GetStreamAtIndex(eStreamStringIndex))
+    RenderDiagnosticDetails(*stream_sp, std::nullopt, false, m_diagnostics);
+
+  // Clear them so GetErrorData() doesn't render them again.
+  m_diagnostics.clear();
+  return m_diag_stream.GetString();
+}
+
+llvm::StringRef CommandReturnObject::GetErrorData() {
+  // Diagnostics haven't been fetched; render them now (not inlined).
+  if (!m_diagnostics.empty()) {
+    RenderDiagnosticDetails(GetErrorStream(), std::nullopt, false,
+                            m_diagnostics);
+    m_diagnostics.clear();
+  }
+
+  lldb::StreamSP stream_sp(m_err_stream.GetStreamAtIndex(eStreamStringIndex));
+  if (stream_sp)
+    return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
+  return llvm::StringRef();
 }
 
 // Similar to AppendError, but do not prepend 'Status: ' to message, and don't
