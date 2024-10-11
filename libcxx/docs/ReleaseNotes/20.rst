@@ -78,6 +78,10 @@ Deprecations and Removals
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
   standards conforming.
 
+- Non-conforming member typedefs ``iterator`` and ``const_iterator`` of ``std::bitset`` are removed. Previously, they
+  were private but could cause ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in
+  LLVM 20.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
