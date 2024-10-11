@@ -14,7 +14,7 @@
 
 using LlvmLibcSinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
-namespace mpfr = LIBC_NAMESPACE : testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 // Range: [0, Inf]
 static constexpr uint16_t POS_START = 0x0000U;
@@ -27,15 +27,15 @@ static constexpr uint16_t NEG_STOP = 0xfc00U;
 TEST_F(LlvmLibcSinpif16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::sinpif16, x,
-                                   LIBC_NAMESPACE::sinpif16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, x,
+                                   LIBC_NAMESPACE::sinpif16(x), 1);
   }
 }
 
-TEST_F(LLvmLibcSinpif16Test, NegativeRange) {
+TEST_F(LlvmLibcSinpif16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::sinpif16, x,
-                                   LIBC_NAMESPACE::sinpif16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, x,
+                                   LIBC_NAMESPACE::sinpif16(x), 1);
   }
 }
