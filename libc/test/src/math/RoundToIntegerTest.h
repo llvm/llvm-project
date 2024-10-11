@@ -53,8 +53,8 @@ private:
                                          << (sizeof(IntType) * 8 - 1);
   static constexpr IntType INTEGER_MAX = -(INTEGER_MIN + 1);
 
-  void test_one_input(RoundToIntegerFunc func, FloatType input, IntType expected,
-                      bool expectError) {
+  void test_one_input(RoundToIntegerFunc func, FloatType input,
+                      IntType expected, bool expectError) {
     LIBC_NAMESPACE::libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
@@ -169,7 +169,8 @@ public:
 
   void do_fractions_test(RoundToIntegerFunc func, int mode) {
     constexpr FloatType FRACTIONS[] = {
-        FloatType(0.5), FloatType(-0.5), FloatType(0.115), FloatType(-0.115), FloatType(0.715), FloatType(-0.715),
+        FloatType(0.5),    FloatType(-0.5),  FloatType(0.115),
+        FloatType(-0.115), FloatType(0.715), FloatType(-0.715),
     };
     for (FloatType x : FRACTIONS) {
       long mpfr_long_result;
@@ -318,9 +319,10 @@ public:
   }
 };
 
-#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, TestModes)        \
+#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func,           \
+                                           TestModes)                          \
   using LlvmLibcRoundToIntegerTest =                                           \
-      RoundToIntegerTestTemplate<FloatType, IntType, TestModes>;                       \
+      RoundToIntegerTestTemplate<FloatType, IntType, TestModes>;               \
   TEST_F(LlvmLibcRoundToIntegerTest, InfinityAndNaN) {                         \
     testInfinityAndNaN(&func);                                                 \
   }                                                                            \
@@ -336,10 +338,10 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcRoundToIntegerTest, NormalRange) { testNormalRange(&func); }
 
-#define LIST_ROUND_TO_INTEGER_TESTS(FloatType, IntType, func)                          \
+#define LIST_ROUND_TO_INTEGER_TESTS(FloatType, IntType, func)                  \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, false)
 
-#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(FloatType, IntType, func)               \
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(FloatType, IntType, func)       \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
