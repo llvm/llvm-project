@@ -11,6 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidEndlCheck.h"
 #include "EnumSizeCheck.h"
+#include "ExpensiveFlatContainerOperationCheck.h"
 #include "FasterStringFindCheck.h"
 #include "ForRangeCopyCheck.h"
 #include "ImplicitConversionInLoopCheck.h"
@@ -37,6 +38,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidEndlCheck>("performance-avoid-endl");
     CheckFactories.registerCheck<EnumSizeCheck>("performance-enum-size");
+    CheckFactories.registerCheck<ExpensiveFlatContainerOperationCheck>(
+        "performance-expensive-flat-container-operation");
     CheckFactories.registerCheck<FasterStringFindCheck>(
         "performance-faster-string-find");
     CheckFactories.registerCheck<ForRangeCopyCheck>(

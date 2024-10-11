@@ -121,6 +121,11 @@ New checks
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
 
+- New :doc:`performance-expensive-flat-container-operation
+  <clang-tidy/checks/performance/expensive-flat-container-operation>` check.
+
+  Warns when calling an O(N) operation on a flat container.
+
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 
