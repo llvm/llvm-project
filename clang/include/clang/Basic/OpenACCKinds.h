@@ -550,6 +550,35 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
                                      OpenACCReductionOperator Op) {
   return printOpenACCReductionOperator(Out, Op);
 }
+
+enum class OpenACCGangKind : uint8_t {
+  /// num:
+  Num,
+  /// dim:
+  Dim,
+  /// static:
+  Static
+};
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCGangKind(StreamTy &Out, OpenACCGangKind GK) {
+  switch (GK) {
+  case OpenACCGangKind::Num:
+    return Out << "num";
+  case OpenACCGangKind::Dim:
+    return Out << "dim";
+  case OpenACCGangKind::Static:
+    return Out << "static";
+  }
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCGangKind Op) {
+  return printOpenACCGangKind(Out, Op);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCGangKind Op) {
+  return printOpenACCGangKind(Out, Op);
+}
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_OPENACCKINDS_H
