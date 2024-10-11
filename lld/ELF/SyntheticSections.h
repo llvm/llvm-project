@@ -554,7 +554,7 @@ public:
            (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
             d->type == llvm::ELF::SHT_RELR ||
             (d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR &&
-             ctx.arg.emachine == llvm::ELF::EM_AARCH64));
+             elf::ctx.arg.emachine == llvm::ELF::EM_AARCH64));
   }
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
@@ -1433,7 +1433,7 @@ private:
 };
 
 template <class ELFT> void createSyntheticSections(Ctx &);
-InputSection *createInterpSection();
+InputSection *createInterpSection(Ctx &);
 MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections(Ctx &);
 void combineEhSections(Ctx &);
