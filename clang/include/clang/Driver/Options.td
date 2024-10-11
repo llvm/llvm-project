@@ -1316,9 +1316,6 @@ defm offload_via_llvm : BoolFOption<"offload-via-llvm",
   BothFlags<[], [ClangOption], " LLVM/Offload as portable offloading runtime.">>;
 }
 
-def gpustartfiles : Flag<["-"], "gpustartfiles">, Group<Link_Group>,
-  HelpText<"Link the GPU C startup utilities automatically, used for testing.">;
-
 // CUDA options
 let Group = cuda_Group in {
 def cuda_include_ptx_EQ : Joined<["--"], "cuda-include-ptx=">,
@@ -5615,6 +5612,7 @@ def noprebind : Flag<["-"], "noprebind">;
 def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
 def nostartfiles : Flag<["-"], "nostartfiles">, Group<Link_Group>;
+def startfiles : Flag<["-"], "startfiles">, Group<Link_Group>;
 def nostdinc : Flag<["-"], "nostdinc">,
   Visibility<[ClangOption, CLOption, DXCOption]>, Group<IncludePath_Group>,
   HelpText<"Disable both standard system #include directories and builtin #include directories">;
@@ -5625,6 +5623,9 @@ def nostdincxx : Flag<["-"], "nostdinc++">, Visibility<[ClangOption, CC1Option]>
   HelpText<"Disable standard #include directories for the C++ standard library">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"UseStandardCXXIncludes">>;
 def nostdlib : Flag<["-"], "nostdlib">,
+  Visibility<[ClangOption, CLOption, FlangOption, DXCOption]>,
+  Group<Link_Group>;
+def stdlib : Flag<["-"], "stdlib">,
   Visibility<[ClangOption, CLOption, FlangOption, DXCOption]>,
   Group<Link_Group>;
 def nostdlibxx : Flag<["-"], "nostdlib++">;
