@@ -2513,6 +2513,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::mix, GL::FMix);
   case Intrinsic::spv_length:
     return selectExtInst(ResVReg, ResType, I, CL::length, GL::Length);
+  case Intrinsic::spv_degrees:
+    return selectExtInst(ResVReg, ResType, I, CL::degrees, GL::Degrees);
   case Intrinsic::spv_frac:
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:

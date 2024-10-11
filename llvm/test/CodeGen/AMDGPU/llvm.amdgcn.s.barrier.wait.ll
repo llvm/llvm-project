@@ -737,11 +737,9 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX12-SDAG-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX12-SDAG-NEXT:    s_barrier_init m0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe

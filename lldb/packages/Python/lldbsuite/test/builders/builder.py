@@ -10,6 +10,7 @@ import lldbsuite.test.lldbplatformutil as lldbplatformutil
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test import configuration
 from lldbsuite.test_event import build_exception
+from lldbsuite.support import seven
 
 
 class Builder:
@@ -189,6 +190,9 @@ class Builder:
                 util_paths["DWP"] = lldbutil.which("dwp")
                 if not util_paths["DWP"]:
                     del util_paths["DWP"]
+
+            if lldbplatformutil.platformIsDarwin():
+                util_paths["STRIP"] = seven.get_command_output("xcrun -f strip")
 
             for var, path in util_paths.items():
                 utils.append("%s=%s" % (var, path))
