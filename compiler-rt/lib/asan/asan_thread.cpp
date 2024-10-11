@@ -28,10 +28,7 @@ namespace __asan {
 // AsanThreadContext implementation.
 
 void AsanThreadContext::OnCreated(void *arg) {
-  CreateThreadContextArgs *args = static_cast<CreateThreadContextArgs *>(arg);
-  if (args->stack)
-    stack_id = StackDepotPut(*args->stack);
-  thread = args->thread;
+  thread = static_cast<AsanThread *>(arg);
   thread->set_context(this);
 }
 
@@ -106,8 +103,8 @@ AsanThread *AsanThread::Create(const void *start_data, uptr data_size,
     CHECK_LE(data_size, availible_size);
     internal_memcpy(thread->start_data_, start_data, data_size);
   }
-  AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
-  asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
+  asanThreadRegistry().CreateThread(0, detached, parent_tid,
+                                    stack ? StackDepotPut(*stack) : 0, thread);
 
   return thread;
 }
