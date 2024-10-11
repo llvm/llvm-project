@@ -16,7 +16,6 @@
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Dialect/LLVMIR/LLVMEnums.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -1152,9 +1151,6 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
   let hasFolder = 1;
 }
-
-def DIGlobalVariableExpressionArrayAttr :
-  TypedArrayAttrBase<LLVM_DIGlobalVariableExpressionAttr, "an array of variable expressions">;
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
