@@ -1367,13 +1367,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MODereferenceable;
     return true;
   }
-  case Intrinsic::amdgcn_global_atomic_fmin:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_atomic_cond_sub_u32: {
@@ -1485,14 +1481,10 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_csub:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
-  case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
@@ -1832,26 +1824,16 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
            Subtarget->hasUnalignedDSAccessEnabled();
   }
 
-  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
-    bool AlignedBy4 = Alignment >= Align(4);
-    if (IsFast)
-      *IsFast = AlignedBy4;
-
-    return AlignedBy4 ||
-           Subtarget->enableFlatScratch() ||
-           Subtarget->hasUnalignedScratchAccess();
-  }
-
   // FIXME: We have to be conservative here and assume that flat operations
   // will access scratch.  If we had access to the IR function, then we
   // could determine if any private memory was used in the function.
-  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS &&
-      !Subtarget->hasUnalignedScratchAccess()) {
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+      AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
     bool AlignedBy4 = Alignment >= Align(4);
     if (IsFast)
       *IsFast = AlignedBy4;
 
-    return AlignedBy4;
+    return AlignedBy4 || Subtarget->hasUnalignedScratchAccessEnabled();
   }
 
   // So long as they are correct, wide global memory operations perform better
@@ -2510,24 +2492,25 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
     const SmallVectorImpl<ISD::InputArg> &Ins, MachineFunction &MF,
     const SIRegisterInfo &TRI, SIMachineFunctionInfo &Info) const {
   Function &F = MF.getFunction();
-  unsigned LastExplicitArgOffset =
-      MF.getSubtarget<GCNSubtarget>().getExplicitKernelArgOffset();
+  unsigned LastExplicitArgOffset = Subtarget->getExplicitKernelArgOffset();
   GCNUserSGPRUsageInfo &SGPRInfo = Info.getUserSGPRInfo();
   bool InPreloadSequence = true;
   unsigned InIdx = 0;
+  bool AlignedForImplictArgs = false;
+  unsigned ImplicitArgOffset = 0;
   for (auto &Arg : F.args()) {
     if (!InPreloadSequence || !Arg.hasInRegAttr())
       break;
 
-    int ArgIdx = Arg.getArgNo();
+    unsigned ArgIdx = Arg.getArgNo();
     // Don't preload non-original args or parts not in the current preload
     // sequence.
-    if (InIdx < Ins.size() && (!Ins[InIdx].isOrigArg() ||
-                               (int)Ins[InIdx].getOrigArgIndex() != ArgIdx))
+    if (InIdx < Ins.size() &&
+        (!Ins[InIdx].isOrigArg() || Ins[InIdx].getOrigArgIndex() != ArgIdx))
       break;
 
     for (; InIdx < Ins.size() && Ins[InIdx].isOrigArg() &&
-           (int)Ins[InIdx].getOrigArgIndex() == ArgIdx;
+           Ins[InIdx].getOrigArgIndex() == ArgIdx;
          InIdx++) {
       assert(ArgLocs[ArgIdx].isMemLoc());
       auto &ArgLoc = ArgLocs[InIdx];
@@ -2536,6 +2519,18 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
       Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
       unsigned NumAllocSGPRs =
           alignTo(ArgLoc.getLocVT().getFixedSizeInBits(), 32) / 32;
+
+      // Fix alignment for hidden arguments.
+      if (Arg.hasAttribute("amdgpu-hidden-argument")) {
+        if (!AlignedForImplictArgs) {
+          ImplicitArgOffset =
+              alignTo(LastExplicitArgOffset,
+                      Subtarget->getAlignmentForImplicitArgPtr()) -
+              LastExplicitArgOffset;
+          AlignedForImplictArgs = true;
+        }
+        ArgOffset += ImplicitArgOffset;
+      }
 
       // Arg is preloaded into the previous SGPR.
       if (ArgLoc.getLocVT().getStoreSize() < 4 && Alignment < 4) {
@@ -9384,12 +9379,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     DAG.setNodeMemRefs(NewNode, {MemRef});
     return SDValue(NewNode, 0);
   }
-  case Intrinsic::amdgcn_global_atomic_fmin:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -9400,16 +9391,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     };
     unsigned Opcode = 0;
     switch (IntrID) {
-    case Intrinsic::amdgcn_global_atomic_fmin:
     case Intrinsic::amdgcn_global_atomic_fmin_num:
-    case Intrinsic::amdgcn_flat_atomic_fmin:
     case Intrinsic::amdgcn_flat_atomic_fmin_num: {
       Opcode = ISD::ATOMIC_LOAD_FMIN;
       break;
     }
-    case Intrinsic::amdgcn_global_atomic_fmax:
     case Intrinsic::amdgcn_global_atomic_fmax_num:
-    case Intrinsic::amdgcn_flat_atomic_fmax:
     case Intrinsic::amdgcn_flat_atomic_fmax_num: {
       Opcode = ISD::ATOMIC_LOAD_FMAX;
       break;
@@ -10034,9 +10021,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         // If reference to barrier id is not an inline constant then it must be
         // referenced with M0[4:0]. Perform an OR with the member count to
         // include it in M0.
-        M0Val = SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32,
-                                           Op.getOperand(2), M0Val),
-                        0);
+        M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, Op.getOperand(2), M0Val);
       }
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
     } else if (IsInlinableBarID) {
@@ -10680,19 +10665,48 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
     return FastLowered;
 
   SDLoc SL(Op);
-  SDValue Src0 = Op.getOperand(0);
-  SDValue Src1 = Op.getOperand(1);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
 
-  SDValue CvtSrc0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src0);
-  SDValue CvtSrc1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src1);
+  // a32.u = opx(V_CVT_F32_F16, a.u); // CVT to F32
+  // b32.u = opx(V_CVT_F32_F16, b.u); // CVT to F32
+  // r32.u = opx(V_RCP_F32, b32.u); // rcp = 1 / d
+  // q32.u = opx(V_MUL_F32, a32.u, r32.u); // q = n * rcp
+  // e32.u = opx(V_MAD_F32, (b32.u^_neg32), q32.u, a32.u); // err = -d * q + n
+  // q32.u = opx(V_MAD_F32, e32.u, r32.u, q32.u); // q = n * rcp
+  // e32.u = opx(V_MAD_F32, (b32.u^_neg32), q32.u, a32.u); // err = -d * q + n
+  // tmp.u = opx(V_MUL_F32, e32.u, r32.u);
+  // tmp.u = opx(V_AND_B32, tmp.u, 0xff800000)
+  // q32.u = opx(V_ADD_F32, tmp.u, q32.u);
+  // q16.u = opx(V_CVT_F16_F32, q32.u);
+  // q16.u = opx(V_DIV_FIXUP_F16, q16.u, b.u, a.u); // q = touchup(q, d, n)
 
-  SDValue RcpSrc1 = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, CvtSrc1);
-  SDValue Quot = DAG.getNode(ISD::FMUL, SL, MVT::f32, CvtSrc0, RcpSrc1);
+  // We will use ISD::FMA on targets that don't support ISD::FMAD.
+  unsigned FMADOpCode =
+      isOperationLegal(ISD::FMAD, MVT::f32) ? ISD::FMAD : ISD::FMA;
 
-  SDValue FPRoundFlag = DAG.getTargetConstant(0, SL, MVT::i32);
-  SDValue BestQuot = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot, FPRoundFlag);
-
-  return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, BestQuot, Src1, Src0);
+  SDValue LHSExt = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, LHS);
+  SDValue RHSExt = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, RHS);
+  SDValue NegRHSExt = DAG.getNode(ISD::FNEG, SL, MVT::f32, RHSExt);
+  SDValue Rcp =
+      DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, RHSExt, Op->getFlags());
+  SDValue Quot =
+      DAG.getNode(ISD::FMUL, SL, MVT::f32, LHSExt, Rcp, Op->getFlags());
+  SDValue Err = DAG.getNode(FMADOpCode, SL, MVT::f32, NegRHSExt, Quot, LHSExt,
+                            Op->getFlags());
+  Quot = DAG.getNode(FMADOpCode, SL, MVT::f32, Err, Rcp, Quot, Op->getFlags());
+  Err = DAG.getNode(FMADOpCode, SL, MVT::f32, NegRHSExt, Quot, LHSExt,
+                    Op->getFlags());
+  SDValue Tmp = DAG.getNode(ISD::FMUL, SL, MVT::f32, Err, Rcp, Op->getFlags());
+  SDValue TmpCast = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Tmp);
+  TmpCast = DAG.getNode(ISD::AND, SL, MVT::i32, TmpCast,
+                        DAG.getConstant(0xff800000, SL, MVT::i32));
+  Tmp = DAG.getNode(ISD::BITCAST, SL, MVT::f32, TmpCast);
+  Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, Op->getFlags());
+  SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
+                             DAG.getConstant(0, SL, MVT::i32));
+  return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, RDst, RHS, LHS,
+                     Op->getFlags());
 }
 
 // Faster 2.5 ULP division that does not support denormals.

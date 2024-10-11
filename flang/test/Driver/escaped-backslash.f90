@@ -1,14 +1,14 @@
 ! Ensure argument -fbackslash works as expected.
 
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
 ! RUN: %flang -E %s  2>&1 | FileCheck %s --check-prefix=ESCAPED
 ! RUN: %flang -E -fbackslash -fno-backslash %s  2>&1 | FileCheck %s --check-prefix=ESCAPED
 ! RUN: %flang -E -fbackslash %s  2>&1 | FileCheck %s --check-prefix=UNESCAPED
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
 ! RUN: %flang_fc1 -E %s  2>&1 | FileCheck %s --check-prefix=ESCAPED
 ! RUN: %flang_fc1 -E -fbackslash -fno-backslash %s  2>&1 | FileCheck %s --check-prefix=ESCAPED

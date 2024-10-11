@@ -87,7 +87,7 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
     // (e.g. a table of function pointers). When we encounter this, ignore the
     // relocation and emit a warning instead.
     if (!s.isFunc() && s.type != STT_NOTYPE) {
-      warn(getErrorLocation(loc) +
+      warn(getErrorLoc(ctx, loc) +
            "found R_MIPS_JALR relocation against non-function symbol " +
            toString(s) + ". This is invalid and most likely a compiler bug.");
       return R_NONE;
@@ -191,7 +191,7 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_NONE:
     return R_NONE;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -319,7 +319,7 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
 template <class ELFT>
 void MIPS<ELFT>::writePlt(uint8_t *buf, const Symbol &sym,
                           uint64_t pltEntryAddr) const {
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
   if (isMicroMips(ctx)) {
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(buf, 0, pltEntrySize);
@@ -473,14 +473,14 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
 }
 
 static std::pair<uint32_t, uint64_t>
-calculateMipsRelChain(uint8_t *loc, RelType type, uint64_t val) {
+calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
   // MIPS N64 ABI packs multiple relocations into the single relocation
   // record. In general, all up to three relocations can have arbitrary
   // types. In fact, Clang and GCC uses only a few combinations. For now,
@@ -501,7 +501,7 @@ calculateMipsRelChain(uint8_t *loc, RelType type, uint64_t val) {
     return std::make_pair(type2, val);
   if (type2 == R_MIPS_SUB && (type3 == R_MIPS_HI16 || type3 == R_MIPS_LO16))
     return std::make_pair(type3, -val);
-  error(getErrorLocation(loc) + "unsupported relocations combination " +
+  error(getErrorLoc(ctx, loc) + "unsupported relocations combination " +
         Twine(type));
   return std::make_pair(type & 0xff, val);
 }
@@ -559,7 +559,7 @@ static uint64_t fixupCrossModeJump(uint8_t *loc, RelType type, uint64_t val) {
     llvm_unreachable("unexpected jump/branch relocation");
   }
 
-  error(getErrorLocation(loc) +
+  error(getErrorLoc(ctx, loc) +
         "unsupported jump/branch instruction between ISA modes referenced by " +
         toString(type) + " relocation");
   return val;
@@ -572,7 +572,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
   RelType type = rel.type;
 
   if (ELFT::Is64Bits || ctx.arg.mipsN32Abi)
-    std::tie(type, val) = calculateMipsRelChain(loc, type, val);
+    std::tie(type, val) = calculateMipsRelChain(ctx, loc, type, val);
 
   // Detect cross-mode jump/branch and fix instruction.
   val = fixupCrossModeJump<ELFT>(loc, type, val);
@@ -779,23 +779,23 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
 }
 
-TargetInfo *elf::getMipsTargetInfo(Ctx &ctx) {
+void elf::setMipsTargetInfo(Ctx &ctx) {
   switch (ctx.arg.ekind) {
   case ELF32LEKind: {
-    static MIPS<ELF32LE> t(ctx);
-    return &t;
+    ctx.target.reset(new MIPS<ELF32LE>(ctx));
+    return;
   }
   case ELF32BEKind: {
-    static MIPS<ELF32BE> t(ctx);
-    return &t;
+    ctx.target.reset(new MIPS<ELF32BE>(ctx));
+    return;
   }
   case ELF64LEKind: {
-    static MIPS<ELF64LE> t(ctx);
-    return &t;
+    ctx.target.reset(new MIPS<ELF64LE>(ctx));
+    return;
   }
   case ELF64BEKind: {
-    static MIPS<ELF64BE> t(ctx);
-    return &t;
+    ctx.target.reset(new MIPS<ELF64BE>(ctx));
+    return;
   }
   default:
     llvm_unreachable("unsupported target");

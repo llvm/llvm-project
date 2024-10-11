@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SpillUtils.h"
+#include "llvm/Transforms/Coroutines/SpillUtils.h"
+#include "CoroInternal.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/IR/CFG.h"
