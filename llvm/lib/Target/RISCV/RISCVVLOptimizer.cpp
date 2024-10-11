@@ -122,6 +122,7 @@ struct OperandInfo {
   }
 };
 
+LLVM_ATTRIBUTE_UNUSED
 static raw_ostream &operator<<(raw_ostream &OS, const OperandInfo &OI) {
   OI.print(OS);
   return OS;
