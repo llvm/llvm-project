@@ -16,13 +16,16 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/TargetInfo.h"
 
+#include "mlir/Dialect/CIR/IR/CIRDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 using namespace cir;
 using namespace clang;
+using namespace mlir::cir;
 
-CIRGenFunction::CIRGenFunction(CIRGenModule &CGM)
-    : CGM{CGM}, CurFuncDecl(nullptr), SanOpts(CGM.getLangOpts().Sanitize) {}
+CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, mlir::OpBuilder &builder)
+    : CGM{CGM}, builder(builder), CurFuncDecl(nullptr),
+      SanOpts(CGM.getLangOpts().Sanitize) {}
 
 clang::ASTContext &CIRGenFunction::getContext() const {
   return CGM.getASTContext();
@@ -87,203 +90,283 @@ TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   }
 }
 
-static bool hasInAllocaArgs(CIRGenModule &CGM, CallingConv ExplicitCC,
-                            ArrayRef<QualType> ArgTypes) {
-  assert(ExplicitCC != CC_Swift && ExplicitCC != CC_SwiftAsync && "Swift NYI");
-  assert(!CGM.getTarget().getCXXABI().isMicrosoft() && "MSABI NYI");
+mlir::Type CIRGenFunction::convertType(QualType T) {
+  return CGM.getTypes().ConvertType(T);
+}
+
+mlir::LogicalResult CIRGenFunction::buildFunctionBody(const Stmt *Body) {
+  const CompoundStmt *S = dyn_cast<CompoundStmt>(Body);
+  assert(S && "expected compound stmt");
+
+  // We start with function level scope for variables.
+  SymTableScopeTy varScope(symbolTable);
+  return buildCompoundStmtWithoutScope(*S);
+}
+
+mlir::Location CIRGenFunction::getLoc(SourceLocation SLoc) {
+  const SourceManager &SM = getContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
+  StringRef Filename = PLoc.getFilename();
+  return mlir::FileLineColLoc::get(builder.getStringAttr(Filename),
+                                   PLoc.getLine(), PLoc.getColumn());
+}
+
+mlir::Location CIRGenFunction::getLoc(SourceRange SLoc) {
+  mlir::Location B = getLoc(SLoc.getBegin());
+  mlir::Location E = getLoc(SLoc.getEnd());
+  SmallVector<mlir::Location, 2> locs = {B, E};
+  mlir::Attribute metadata;
+  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+}
+
+mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
+  SmallVector<mlir::Location, 2> locs = {lhs, rhs};
+  mlir::Attribute metadata;
+  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+}
+
+/// Return true if the statement contains a label in it.  If
+/// this statement is not executed normally, it not containing a label means
+/// that we can just remove the code.
+bool CIRGenFunction::ContainsLabel(const Stmt *S, bool IgnoreCaseStmts) {
+  // Null statement, not a label!
+  if (!S)
+    return false;
+
+  // If this is a label, we have to emit the code, consider something like:
+  // if (0) {  ...  foo:  bar(); }  goto foo;
+  //
+  // TODO: If anyone cared, we could track __label__'s, since we know that you
+  // can't jump to one from outside their declared region.
+  if (isa<LabelStmt>(S))
+    return true;
+
+  // If this is a case/default statement, and we haven't seen a switch, we
+  // have to emit the code.
+  if (isa<SwitchCase>(S) && !IgnoreCaseStmts)
+    return true;
+
+  // If this is a switch statement, we want to ignore cases below it.
+  if (isa<SwitchStmt>(S))
+    IgnoreCaseStmts = true;
+
+  // Scan subexpressions for verboten labels.
+  for (const Stmt *SubStmt : S->children())
+    if (ContainsLabel(SubStmt, IgnoreCaseStmts))
+      return true;
 
   return false;
 }
 
-void CIRGenFunction::buildCallArgs(
-    CallArgList &Args, PrototypeWrapper Prototype,
-    llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
-    AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order) {
+/// If the specified expression does not fold
+/// to a constant, or if it does but contains a label, return false.  If it
+/// constant folds return true and set the folded value.
+bool CIRGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
+                                                  llvm::APSInt &ResultInt,
+                                                  bool AllowLabels) {
+  // FIXME: Rename and handle conversion of other evaluatable things
+  // to bool.
+  Expr::EvalResult Result;
+  if (!Cond->EvaluateAsInt(Result, getContext()))
+    return false; // Not foldable, not integer or not fully evaluatable.
 
-  llvm::SmallVector<QualType, 16> ArgTypes;
+  llvm::APSInt Int = Result.Val.getInt();
+  if (!AllowLabels && ContainsLabel(Cond))
+    return false; // Contains a label.
 
-  assert((ParamsToSkip == 0 || Prototype.P) &&
-         "Can't skip parameters if type info is not provided");
+  ResultInt = Int;
+  return true;
+}
 
-  // This variable only captures *explicitly* written conventions, not those
-  // applied by default via command line flags or target defaults, such as
-  // thiscall, appcs, stdcall via -mrtd, etc. Computing that correctly would
-  // require knowing if this is a C++ instance method or being able to see
-  // unprotyped FunctionTypes.
-  CallingConv ExplicitCC = CC_C;
+mlir::Type CIRGenFunction::getCIRType(const QualType &type) {
+  return CGM.getCIRType(type);
+}
 
-  // First, if a prototype was provided, use those argument types.
-  bool IsVariadic = false;
-  if (Prototype.P) {
-    const auto *MD = Prototype.P.dyn_cast<const ObjCMethodDecl *>();
-    assert(!MD && "ObjCMethodDecl NYI");
+void CIRGenFunction::buildAndUpdateRetAlloca(QualType ty, mlir::Location loc,
+                                             CharUnits alignment) {
+  auto addr =
+      buildAlloca("__retval", InitStyle::uninitialized, ty, loc, alignment);
+  FnRetAlloca = addr;
+}
 
-    const auto *FPT = Prototype.P.get<const FunctionProtoType *>();
-    IsVariadic = FPT->isVariadic();
-    assert(!IsVariadic && "Variadic functions NYI");
-    ExplicitCC = FPT->getExtInfo().getCC();
-    ArgTypes.assign(FPT->param_type_begin() + ParamsToSkip,
-                    FPT->param_type_end());
+mlir::LogicalResult CIRGenFunction::declare(const Decl *var, QualType ty,
+                                            mlir::Location loc,
+                                            CharUnits alignment,
+                                            mlir::Value &addr, bool isParam) {
+  const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
+  assert(namedVar && "Needs a named decl");
+  assert(!symbolTable.count(var) && "not supposed to be available just yet");
+
+  addr = buildAlloca(namedVar->getName(),
+                     isParam ? InitStyle::paraminit : InitStyle::uninitialized,
+                     ty, loc, alignment);
+
+  symbolTable.insert(var, addr);
+  return mlir::success();
+}
+
+/// All scope related cleanup needed:
+/// - Patching up unsolved goto's.
+/// - Build all cleanup code and insert yield/returns.
+void CIRGenFunction::LexicalScopeGuard::cleanup() {
+  auto &builder = CGF.builder;
+  auto *localScope = CGF.currLexScope;
+
+  // Handle pending gotos and the solved labels in this scope.
+  while (!localScope->PendingGotos.empty()) {
+    auto gotoInfo = localScope->PendingGotos.back();
+    // FIXME: Currently only support resolving goto labels inside the
+    // same lexical ecope.
+    assert(localScope->SolvedLabels.count(gotoInfo.second) &&
+           "goto across scopes not yet supported");
+
+    // The goto in this lexical context actually maps to a basic
+    // block.
+    auto g = cast<mlir::cir::BrOp>(gotoInfo.first);
+    g.setSuccessor(CGF.LabelMap[gotoInfo.second].getBlock());
+    localScope->PendingGotos.pop_back();
+  }
+  localScope->SolvedLabels.clear();
+
+  // Cleanup are done right before codegen resume a scope. This is where
+  // objects are destroyed.
+  unsigned curLoc = 0;
+  for (auto *retBlock : localScope->getRetBlocks()) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(retBlock);
+    mlir::Location retLoc = *localScope->getRetLocs()[curLoc];
+    curLoc++;
+
+    // TODO: insert actual scope cleanup HERE (dtors and etc)
+
+    // If there's anything to return, load it first.
+    if (CGF.FnRetTy.has_value()) {
+      auto val = builder.create<LoadOp>(retLoc, *CGF.FnRetTy, *CGF.FnRetAlloca);
+      builder.create<ReturnOp>(retLoc, llvm::ArrayRef(val.getResult()));
+    } else {
+      builder.create<ReturnOp>(retLoc);
+    }
   }
 
-  // If we still have any arguments, emit them using the type of the argument.
-  for (auto *A : llvm::drop_begin(ArgRange, ArgTypes.size())) {
-    assert(!IsVariadic && "Variadic functions NYI");
-    ArgTypes.push_back(A->getType());
+  auto insertCleanupAndLeave = [&](mlir::Block *InsPt) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(InsPt);
+    // TODO: insert actual scope cleanup (dtors and etc)
+    if (localScope->Depth != 0) // end of any local scope != function
+      builder.create<YieldOp>(localScope->EndLoc);
+    else
+      builder.create<ReturnOp>(localScope->EndLoc);
   };
-  assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
 
-  // We must evaluate arguments from right to left in the MS C++ ABI, because
-  // arguments are destroyed left to right in the callee. As a special case,
-  // there are certain language constructs taht require left-to-right
-  // evaluation, and in those cases we consider the evaluation order requirement
-  // to trump the "destruction order is reverse construction order" guarantee.
-  bool LeftToRight = true;
-  assert(!CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee() &&
-         "MSABI NYI");
-  assert(!hasInAllocaArgs(CGM, ExplicitCC, ArgTypes) && "NYI");
+  // If a cleanup block has been created at some point, branch to it
+  // and set the insertion point to continue at the cleanup block.
+  // Terminators are then inserted either in the cleanup block or
+  // inline in this current block.
+  auto *cleanupBlock = localScope->getCleanupBlock(builder);
+  if (cleanupBlock)
+    insertCleanupAndLeave(cleanupBlock);
 
-  // Evaluate each argument in the appropriate order.
-  size_t CallArgsStart = Args.size();
-  for (unsigned I = 0, E = ArgTypes.size(); I != E; ++I) {
-    unsigned Idx = LeftToRight ? I : E - I - 1;
-    CallExpr::const_arg_iterator Arg = ArgRange.begin() + Idx;
-    unsigned InitialArgSize = Args.size();
-    assert(!isa<ObjCIndirectCopyRestoreExpr>(*Arg) && "NYI");
-    assert(!isa<ObjCMethodDecl>(AC.getDecl()) && "NYI");
+  // Now deal with any pending block wrap up like implicit end of
+  // scope.
 
-    buildCallArg(Args, *Arg, ArgTypes[Idx]);
-    // In particular, we depend on it being the last arg in Args, and the
-    // objectsize bits depend on there only being one arg if !LeftToRight.
-    assert(InitialArgSize + 1 == Args.size() &&
-           "The code below depends on only adding one arg per buildCallArg");
-    (void)InitialArgSize;
-    // Since pointer argument are never emitted as LValue, it is safe to emit
-    // non-null argument check for r-value only.
-    assert(!SanOpts.has(SanitizerKind::NonnullAttribute) && "Sanitizers NYI");
-    assert(!SanOpts.has(SanitizerKind::NullabilityArg) && "Sanitizers NYI");
+  // If a terminator is already present in the current block, nothing
+  // else to do here.
+  bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
+  auto *currBlock = builder.getBlock();
+  bool hasTerminator =
+      !currBlock->empty() &&
+      currBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
+  if (hasTerminator)
+    return;
+
+  // An empty non-entry block has nothing to offer.
+  if (!entryBlock && currBlock->empty()) {
+    currBlock->erase();
+    return;
   }
 
-  if (!LeftToRight) {
-    // Un-reverse the arguments we just evaluated so they match up with the CIR
-    // function.
-    std::reverse(Args.begin() + CallArgsStart, Args.end());
+  // If there's a cleanup block, branch to it, nothing else to do.
+  if (cleanupBlock) {
+    builder.create<BrOp>(currBlock->back().getLoc(), cleanupBlock);
+    return;
   }
+
+  // No pre-existent cleanup block, emit cleanup code and yield/return.
+  insertCleanupAndLeave(currBlock);
 }
 
-/// Emit code to compute the specified expression which
-/// can have any type.  The result is returned as an RValue struct.
-RValue CIRGenFunction::buildAnyExpr(const Expr *E, AggValueSlot aggSlot,
-                                    bool ignoreResult) {
-  switch (CIRGenFunction::getEvaluationKind(E->getType())) {
-  case TEK_Scalar:
-    return RValue::get(CGM.buildScalarExpr(E));
-  case TEK_Complex:
-    assert(0 && "not implemented");
-  case TEK_Aggregate:
-    assert(0 && "not implemented");
+mlir::FuncOp CIRGenFunction::buildFunction(const FunctionDecl *FD) {
+  // Create a scope in the symbol table to hold variable declarations.
+  SymTableScopeTy varScope(symbolTable);
+
+  const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
+  assert(!MD && "methods not implemented");
+  auto fnLoc = getLoc(FD->getSourceRange());
+
+  FnRetQualTy = FD->getReturnType();
+  mlir::TypeRange FnTyRange = {};
+  if (!FnRetQualTy->isVoidType()) {
+    FnRetTy = getCIRType(FnRetQualTy);
   }
-  llvm_unreachable("bad evaluation kind");
-}
+  auto funcType = getTypes().GetFunctionType(GlobalDecl(FD));
 
-RValue CIRGenFunction::buildCallExpr(const clang::CallExpr *E,
-                                     ReturnValueSlot ReturnValue) {
-  assert(!E->getCallee()->getType()->isBlockPointerType() && "ObjC Blocks NYI");
-  assert(!dyn_cast<CXXMemberCallExpr>(E) && "NYI");
-  assert(!dyn_cast<CUDAKernelCallExpr>(E) && "CUDA NYI");
-  assert(!dyn_cast<CXXOperatorCallExpr>(E) && "NYI");
+  mlir::FuncOp function = mlir::FuncOp::create(fnLoc, FD->getName(), funcType);
+  if (!function)
+    return nullptr;
 
-  CIRGenCallee callee = buildCallee(E->getCallee());
+  // In MLIR the entry block of the function is special: it must have the
+  // same argument list as the function itself.
+  mlir::Block *entryBlock = function.addEntryBlock();
 
-  assert(!callee.isBuiltin() && "builtins NYI");
-  assert(!callee.isPsuedoDestructor() && "NYI");
+  // Set the insertion point in the builder to the beginning of the
+  // function body, it will be used throughout the codegen to create
+  // operations in this function.
+  builder.setInsertionPointToStart(entryBlock);
+  auto FnBeginLoc = getLoc(FD->getBody()->getEndLoc());
+  auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
 
-  return buildCall(E->getCallee()->getType(), callee, E, ReturnValue);
-}
+  // Initialize lexical scope information.
+  {
+    LexicalScopeContext lexScope{FnBeginLoc, FnEndLoc,
+                                 builder.getInsertionBlock()};
+    LexicalScopeGuard scopeGuard{*this, &lexScope};
 
-RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
-                                 const CIRGenCallee &OrigCallee,
-                                 const clang::CallExpr *E,
-                                 ReturnValueSlot ReturnValue,
-                                 mlir::Value Chain) {
-  // Get the actual function type. The callee type will always be a pointer to
-  // function type or a block pointer type.
-  assert(CalleeType->isFunctionPointerType() &&
-         "Call must have function pointer type!");
+    // Declare all the function arguments in the symbol table.
+    for (const auto nameValue :
+         llvm::zip(FD->parameters(), entryBlock->getArguments())) {
+      auto *paramVar = std::get<0>(nameValue);
+      auto paramVal = std::get<1>(nameValue);
+      auto alignment = getContext().getDeclAlign(paramVar);
+      auto paramLoc = getLoc(paramVar->getSourceRange());
+      paramVal.setLoc(paramLoc);
 
-  CalleeType = getContext().getCanonicalType(CalleeType);
+      mlir::Value addr;
+      if (failed(declare(paramVar, paramVar->getType(), paramLoc, alignment,
+                         addr, true /*param*/)))
+        return nullptr;
+      // Location of the store to the param storage tracked as beginning of
+      // the function body.
+      auto fnBodyBegin = getLoc(FD->getBody()->getBeginLoc());
+      builder.create<mlir::cir::StoreOp>(fnBodyBegin, paramVal, addr);
+    }
+    assert(builder.getInsertionBlock() && "Should be valid");
 
-  auto PointeeType = cast<PointerType>(CalleeType)->getPointeeType();
+    // When the current function is not void, create an address to store the
+    // result value.
+    if (FnRetTy.has_value())
+      buildAndUpdateRetAlloca(FnRetQualTy, FnEndLoc,
+                              CGM.getNaturalTypeAlignment(FnRetQualTy));
 
-  CIRGenCallee Callee = OrigCallee;
+    // Emit the body of the function.
+    if (mlir::failed(buildFunctionBody(FD->getBody()))) {
+      function.erase();
+      return nullptr;
+    }
+    assert(builder.getInsertionBlock() && "Should be valid");
+  }
 
-  if (getLangOpts().CPlusPlus)
-    assert(!SanOpts.has(SanitizerKind::Function) && "Sanitizers NYI");
+  if (mlir::failed(function.verifyBody()))
+    return nullptr;
 
-  const auto *FnType = cast<FunctionType>(PointeeType);
-
-  assert(!SanOpts.has(SanitizerKind::CFIICall) && "Sanitizers NYI");
-
-  CallArgList Args;
-
-  assert(!Chain && "FIX THIS");
-
-  // C++17 requires that we evaluate arguments to a call using assignment syntax
-  // right-to-left, and that we evaluate arguments to certain other operators
-  // left-to-right. Note that we allow this to override the order dictated by
-  // the calling convention on the MS ABI, which means that parameter
-  // destruction order is not necessarily reverse construction order.
-  // FIXME: Revisit this based on C++ committee response to unimplementability.
-  EvaluationOrder Order = EvaluationOrder::Default;
-  assert(!dyn_cast<CXXOperatorCallExpr>(E) && "Operators NYI");
-
-  buildCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
-                E->getDirectCallee(), /*ParamsToSkip*/ 0, Order);
-
-  const CIRGenFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
-      Args, FnType, /*ChainCall=*/Chain.getAsOpaquePointer());
-
-  // C99 6.5.2.2p6:
-  //   If the expression that denotes the called function has a type that does
-  //   not include a prototype, [the default argument promotions are performed].
-  //   If the number of arguments does not equal the number of parameters, the
-  //   behavior is undefined. If the function is defined with at type that
-  //   includes a prototype, and either the prototype ends with an ellipsis (,
-  //   ...) or the types of the arguments after promotion are not compatible
-  //   with the types of the parameters, the behavior is undefined. If the
-  //   function is defined with a type that does not include a prototype, and
-  //   the types of the arguments after promotion are not compatible with those
-  //   of the parameters after promotion, the behavior is undefined [except in
-  //   some trivial cases].
-  // That is, in the general case, we should assume that a call through an
-  // unprototyped function type works like a *non-variadic* call. The way we
-  // make this work is to cast to the exxact type fo the promoted arguments.
-  //
-  // Chain calls use the same code path to add the inviisble chain parameter to
-  // the function type.
-  assert(!isa<FunctionNoProtoType>(FnType) && "NYI");
-  // if (isa<FunctionNoProtoType>(FnType) || Chain) {
-  //   mlir::FunctionType CalleeTy = getTypes().GetFunctionType(FnInfo);
-  // int AS = Callee.getFunctionPointer()->getType()->getPointerAddressSpace();
-  // CalleeTy = CalleeTy->getPointerTo(AS);
-
-  // llvm::Value *CalleePtr = Callee.getFunctionPointer();
-  // CalleePtr = Builder.CreateBitCast(CalleePtr, CalleeTy, "callee.knr.cast");
-  // Callee.setFunctionPointer(CalleePtr);
-  // }
-
-  assert(!CGM.getLangOpts().HIP && "HIP NYI");
-
-  assert(!MustTailCall && "Must tail NYI");
-  mlir::func::CallOp callOP = nullptr;
-  RValue Call = buildCall(FnInfo, Callee, ReturnValue, Args, callOP,
-                          E == MustTailCall, E->getExprLoc());
-
-  assert(!getDebugInfo() && "Debug Info NYI");
-
-  return Call;
-}
-
-mlir::Type CIRGenFunction::convertType(QualType T) {
-  return CGM.getTypes().ConvertType(T);
+  return function;
 }

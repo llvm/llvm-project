@@ -114,7 +114,7 @@ void clang::sema::CIRBasedWarnings::IssueWarnings(
 
   // Unlike Clang CFG, we share CIR state between each analyzed function,
   // retrieve or create a new context.
-  CIRGen->EmitFunction(FD);
+  // CIRGen->EmitFunction(FD);
 }
 
 void clang::sema::CIRBasedWarnings::PrintStats() const {

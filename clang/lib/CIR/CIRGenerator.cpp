@@ -43,9 +43,7 @@ void CIRGenerator::Initialize(ASTContext &astCtx) {
 void CIRGenerator::verifyModule() { CGM->verifyModule(); }
 
 bool CIRGenerator::EmitFunction(const FunctionDecl *FD) {
-  auto func = CGM->buildFunction(FD);
-  assert(func && "should emit function");
-  return func.getOperation() != nullptr;
+  llvm_unreachable("NYI");
 }
 
 mlir::ModuleOp CIRGenerator::getModule() { return CGM->getModule(); }
