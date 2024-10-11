@@ -177,7 +177,7 @@ C++23 Feature Support
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
-  supported `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
+  supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
