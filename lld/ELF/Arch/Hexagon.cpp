@@ -181,11 +181,13 @@ static const InstructionMask r6[] = {
     {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
     {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
 
+constexpr uint32_t instParsePacketEnd = 0x0000c000;
+
 static bool isDuplex(uint32_t insn) {
   // Duplex forms have a fixed mask and parse bits 15:14 are always
   // zero.  Non-duplex insns will always have at least one bit set in the
   // parse field.
-  return (0xC000 & insn) == 0;
+  return (instParsePacketEnd & insn) == 0;
 }
 
 static uint32_t findMaskR6(uint32_t insn) {
@@ -216,6 +218,12 @@ static uint32_t findMaskR11(uint32_t insn) {
 }
 
 static uint32_t findMaskR16(uint32_t insn) {
+  if (isDuplex(insn))
+    return 0x03f00000;
+
+  // Clear the end-packet-parse bits:
+  insn = insn & ~instParsePacketEnd;
+
   if ((0xff000000 & insn) == 0x48000000)
     return 0x061f20ff;
   if ((0xff000000 & insn) == 0x49000000)
@@ -225,8 +233,14 @@ static uint32_t findMaskR16(uint32_t insn) {
   if ((0xff000000 & insn) == 0xb0000000)
     return 0x0fe03fe0;
 
-  if (isDuplex(insn))
-    return 0x03f00000;
+  if ((0xff802000 & insn) == 0x74000000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74002000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74800000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74802000)
+    return 0x00001fe0;
 
   for (InstructionMask i : r6)
     if ((0xff000000 & insn) == i.cmpMask)
