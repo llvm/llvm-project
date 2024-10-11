@@ -1814,6 +1814,13 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
 }
 
 bool LinkerScript::shouldAddProvideSym(StringRef symName) {
+  // This function is called before and after garbage collection. To prevent
+  // undefined references from the RHS, the result of this function for a
+  // symbol must be the same for each call. We use isUsedInRegularObj to not
+  // change the return value of a demoted symbol. The exportDynamic condition,
+  // while not so accurate, allows PROVIDE to define a symbol referenced by a
+  // DSO.
   Symbol *sym = elf::ctx.symtab->find(symName);
-  return sym && !sym->isDefined() && !sym->isCommon();
+  return sym && !sym->isDefined() && !sym->isCommon() &&
+         (sym->isUsedInRegularObj || sym->exportDynamic);
 }
