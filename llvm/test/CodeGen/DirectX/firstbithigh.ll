@@ -2,18 +2,18 @@
 
 ; Make sure dxil operation function calls for firstbithigh are generated for all integer types.
 
-define noundef i16 @test_firstbithigh_ushort(i16 noundef %a) {
+define noundef i32 @test_firstbithigh_ushort(i16 noundef %a) {
 entry:
-; CHECK: call i16 @dx.op.unary.i16(i32 33, i16 %{{.*}})
-  %elt.firstbithigh = call i16 @llvm.dx.firstbituhigh.i16(i16 %a)
-  ret i16 %elt.firstbithigh
+; CHECK: call i32 @dx.op.unary.i16(i32 33, i16 %{{.*}})
+  %elt.firstbithigh = call i32 @llvm.dx.firstbituhigh.i16(i16 %a)
+  ret i32 %elt.firstbithigh
 }
 
-define noundef i16 @test_firstbithigh_short(i16 noundef %a) {
+define noundef i32 @test_firstbithigh_short(i16 noundef %a) {
 entry:
-; CHECK: call i16 @dx.op.unary.i16(i32 34, i16 %{{.*}})
-  %elt.firstbithigh = call i16 @llvm.dx.firstbitshigh.i16(i16 %a)
-  ret i16 %elt.firstbithigh
+; CHECK: call i32 @dx.op.unary.i16(i32 34, i16 %{{.*}})
+  %elt.firstbithigh = call i32 @llvm.dx.firstbitshigh.i16(i16 %a)
+  ret i32 %elt.firstbithigh
 }
 
 define noundef i32 @test_firstbithigh_uint(i32 noundef %a) {
@@ -30,18 +30,18 @@ entry:
   ret i32 %elt.firstbithigh
 }
 
-define noundef i64 @test_firstbithigh_ulong(i64 noundef %a) {
+define noundef i32 @test_firstbithigh_ulong(i64 noundef %a) {
 entry:
-; CHECK: call i64 @dx.op.unary.i64(i32 33, i64 %{{.*}})
-  %elt.firstbithigh = call i64 @llvm.dx.firstbituhigh.i64(i64 %a)
-  ret i64 %elt.firstbithigh
+; CHECK: call i32 @dx.op.unary.i64(i32 33, i64 %{{.*}})
+  %elt.firstbithigh = call i32 @llvm.dx.firstbituhigh.i64(i64 %a)
+  ret i32 %elt.firstbithigh
 }
 
-define noundef i64 @test_firstbithigh_long(i64 noundef %a) {
+define noundef i32 @test_firstbithigh_long(i64 noundef %a) {
 entry:
-; CHECK: call i64 @dx.op.unary.i64(i32 34, i64 %{{.*}})
-  %elt.firstbithigh = call i64 @llvm.dx.firstbitshigh.i64(i64 %a)
-  ret i64 %elt.firstbithigh
+; CHECK: call i32 @dx.op.unary.i64(i32 34, i64 %{{.*}})
+  %elt.firstbithigh = call i32 @llvm.dx.firstbitshigh.i64(i64 %a)
+  ret i32 %elt.firstbithigh
 }
 
 define noundef <4 x i32> @test_firstbituhigh_vec4_i32(<4 x i32> noundef %a)  {
@@ -80,12 +80,12 @@ entry:
   ret <4 x i32> %2
 }
 
-declare i16 @llvm.dx.firstbituhigh.i16(i16)
+declare i32 @llvm.dx.firstbituhigh.i16(i16)
 declare i32 @llvm.dx.firstbituhigh.i32(i32)
-declare i64 @llvm.dx.firstbituhigh.i64(i64)
+declare i32 @llvm.dx.firstbituhigh.i64(i64)
 declare <4 x i32> @llvm.dx.firstbituhigh.v4i32(<4 x i32>)
 
-declare i16 @llvm.dx.firstbitshigh.i16(i16)
+declare i32 @llvm.dx.firstbitshigh.i16(i16)
 declare i32 @llvm.dx.firstbitshigh.i32(i32)
-declare i64 @llvm.dx.firstbitshigh.i64(i64)
+declare i32 @llvm.dx.firstbitshigh.i64(i64)
 declare <4 x i32> @llvm.dx.firstbitshigh.v4i32(<4 x i32>)

@@ -18880,7 +18880,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *X = EmitScalarExpr(E->getArg(0));
 
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(),
+	 /*ReturnType=*/ConvertType(E->getType()),
         getFirstBitHighIntrinsic(CGM.getHLSLRuntime(), E->getArg(0)->getType()),
         ArrayRef<Value *>{X}, nullptr, "hlsl.firstbithigh");
   }
