@@ -5262,6 +5262,13 @@ def note_template_arg_refers_here_func : Note<
 def err_template_arg_template_params_mismatch : Error<
   "template template argument has different template parameters than its "
   "corresponding template template parameter">;
+def note_template_arg_template_params_mismatch : Note<
+  "template template argument has different template parameters than its "
+  "corresponding template template parameter">;
+def err_non_deduced_mismatch : Error<
+  "could not match %diff{$ against $|types}0,1">;
+def err_inconsistent_deduction : Error<
+  "conflicting deduction %diff{$ against $|types}0,1 for parameter">;
 def err_template_arg_not_integral_or_enumeral : Error<
   "non-type template argument of type %0 must have an integral or enumeration"
   " type">;
@@ -11702,6 +11709,10 @@ def err_omp_dispatch_statement_call
             " to a target function or an assignment to one">;
 def err_omp_unroll_full_variable_trip_count : Error<
   "loop to be fully unrolled must have a constant trip count">;
+def err_omp_interchange_permutation_value_range : Error<
+  "permutation index must be at least 1 and at most %0">;
+def err_omp_interchange_permutation_value_repeated : Error<
+  "index %0 must appear exactly once in the permutation clause">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
 def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;

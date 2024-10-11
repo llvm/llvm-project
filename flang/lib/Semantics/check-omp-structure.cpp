@@ -200,8 +200,12 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   return CheckAllowed(clause);
 }
 
+bool OmpStructureChecker::IsVariableListItem(const Symbol &sym) {
+  return evaluate::IsVariable(sym) || sym.attrs().test(Attr::POINTER);
+}
+
 bool OmpStructureChecker::IsExtendedListItem(const Symbol &sym) {
-  return evaluate::IsVariable(sym) || sym.IsSubprogram();
+  return IsVariableListItem(sym) || sym.IsSubprogram();
 }
 
 bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
@@ -2351,7 +2355,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[sym, source] : symbols) {
-      if (!evaluate::IsVariable(sym)) {
+      if (!IsVariableListItem(*sym)) {
         deferredNonVariables_.insert({sym, source});
       }
     }
@@ -2402,6 +2406,7 @@ CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Simd, OMPC_simd)
 CHECK_SIMPLE_CLAUSE(Sizes, OMPC_sizes)
+CHECK_SIMPLE_CLAUSE(Permutation, OMPC_permutation)
 CHECK_SIMPLE_CLAUSE(TaskReduction, OMPC_task_reduction)
 CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
 CHECK_SIMPLE_CLAUSE(Unknown, OMPC_unknown)
@@ -3427,7 +3432,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
   for (const auto &[sym, source] : symbols) {
-    if (!evaluate::IsVariable(*sym)) {
+    if (!IsVariableListItem(*sym)) {
       context_.SayWithDecl(
           *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
     }

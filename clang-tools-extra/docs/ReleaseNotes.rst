@@ -121,6 +121,12 @@ New checks
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
 
+- New :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check.
+
+  Finds cases when an uninstantiated virtual member function in a template class 
+  causes cross-compiler incompatibility.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -209,6 +215,10 @@ Changes in existing checks
 - Improved :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
   placeholder when lexer cannot get source text.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check to fix a crash when
+  an argument type is declared but not defined.
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on
