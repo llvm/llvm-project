@@ -64,11 +64,12 @@ static void MarkUidAsPresent(ThreadContextBase *tctx, void *arg) {
 
 static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
   // Create and start a main thread.
-  EXPECT_EQ(0U, registry->CreateThread(get_uid(0), true, -1, 0));
+  EXPECT_EQ(0U, registry->CreateThread(get_uid(0), true, -1, 0, nullptr));
   registry->StartThread(0, 0, ThreadType::Regular, 0);
   // Create a bunch of threads.
   for (u32 i = 1; i <= 10; i++) {
-    EXPECT_EQ(i, registry->CreateThread(get_uid(i), is_detached(i), 0, 0));
+    EXPECT_EQ(i, registry->CreateThread(get_uid(i), is_detached(i), 100 + i,
+                                        200 + i, nullptr));
   }
   CheckThreadQuantity(registry, 11, 1, 11);
   // Start some of them.
@@ -88,19 +89,27 @@ static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
   std::vector<u32> new_tids;
   for (u32 i = 11; i <= 15; i++) {
     new_tids.push_back(
-        registry->CreateThread(get_uid(i), is_detached(i), 0, 0));
+        registry->CreateThread(get_uid(i), is_detached(i), 0, 0, nullptr));
   }
   ASSERT_LE(kRegistryQuarantine, 5U);
-  u32 exp_total = 16 - (has_quarantine ? 5 - kRegistryQuarantine  : 0);
+  u32 exp_total = 16 - (has_quarantine ? 5 - kRegistryQuarantine : 0);
   CheckThreadQuantity(registry, exp_total, 6, 11);
   // Test SetThreadName and FindThread.
   registry->SetThreadName(6, "six");
   registry->SetThreadName(7, "seven");
-  EXPECT_EQ(7U, registry->FindThread(HasName, (void*)"seven"));
+  EXPECT_EQ(7U, registry->FindThread(HasName, (void *)"seven"));
   EXPECT_EQ(kInvalidTid, registry->FindThread(HasName, (void *)"none"));
-  EXPECT_EQ(0U, registry->FindThread(HasUid, (void*)get_uid(0)));
-  EXPECT_EQ(10U, registry->FindThread(HasUid, (void*)get_uid(10)));
+  EXPECT_EQ(0U, registry->FindThread(HasUid, (void *)get_uid(0)));
+  EXPECT_EQ(10U, registry->FindThread(HasUid, (void *)get_uid(10)));
   EXPECT_EQ(kInvalidTid, registry->FindThread(HasUid, (void *)0x1234));
+  EXPECT_EQ(7U,
+            registry->FindThread([](ThreadContextBase *tctx,
+                                    void *) { return tctx->parent_tid == 107; },
+                                 nullptr));
+  EXPECT_EQ(8U,
+            registry->FindThread([](ThreadContextBase *tctx,
+                                    void *) { return tctx->stack_id == 208; },
+                                 nullptr));
   // Detach and finish and join remaining threads.
   for (u32 i = 6; i <= 10; i++) {
     registry->DetachThread(i, 0);
