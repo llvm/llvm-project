@@ -11,10 +11,18 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_thread_registry.h"
 
+#include <iostream>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_stacktrace.h"
+#include "sanitizer_common/sanitizer_thread_history.h"
 #include "sanitizer_pthread_wrappers.h"
+
+using testing::HasSubstr;
 
 namespace __sanitizer {
 
@@ -237,6 +245,58 @@ TEST(SanitizerCommon, ThreadRegistryThreadedTest) {
   ThreadRegistry registry(GetThreadContext<TestThreadContext>,
                           kThreadsPerShard * kNumShards + 1, 10, 0);
   ThreadedTestRegistry(&registry);
+}
+
+TEST(SanitizerCommon, PrintThreadHistory) {
+  ThreadRegistry registry(GetThreadContext<TestThreadContext>,
+                          kThreadsPerShard * kNumShards + 1, 10, 0);
+
+  UNINITIALIZED BufferedStackTrace stack1;
+  stack1.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, false,
+                /*max_depth=*/1);
+
+  UNINITIALIZED BufferedStackTrace stack2;
+  stack2.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, false,
+                /*max_depth=*/1);
+
+  EXPECT_EQ(0U, registry.CreateThread(0, true, -1, 0, nullptr));
+  for (int i = 0; i < 5; i++) {
+    registry.CreateThread(0, true, 0, StackDepotPut(stack1), nullptr);
+    registry.CreateThread(0, true, 0, StackDepotPut(stack2), nullptr);
+  }
+
+  InternalScopedString out;
+  PrintThreadHistory(registry, out);
+
+  std::string substrings[] = {
+      "Thread T0/0 was created by T-1",
+      "<empty stack>",
+      "",
+      "Thread T1/0 was created by T0/0",
+      "Thread T3/0 was created by T0/0",
+      "Thread T5/0 was created by T0/0",
+      "Thread T7/0 was created by T0/0",
+      "Thread T9/0 was created by T0/0",
+      "#0 0x",
+      "",
+      "Thread T2/0 was created by T0/0",
+      "Thread T4/0 was created by T0/0",
+      "Thread T6/0 was created by T0/0",
+      "Thread T8/0 was created by T0/0",
+      "Thread T10/0 was created by T0/0",
+      "#0 0x",
+      "",
+  };
+
+  std::stringstream ss(out.data());
+  std::string line;
+
+  for (auto substr : substrings) {
+    std::getline(ss, line);
+    EXPECT_THAT(line, HasSubstr(substr)) << line;
+  }
+
+  EXPECT_FALSE(std::getline(ss, line)) << "Unmatched line: " << line;
 }
 
 }  // namespace __sanitizer
