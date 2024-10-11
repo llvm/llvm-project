@@ -105,7 +105,6 @@ template <typename LoadOrStoreT> void SeedContainer::insert(LoadOrStoreT *LSI) {
     BundleVec.back()->insert(LSI, SE);
 
   SeedLookupMap[LSI] = BundleVec.back().get();
-  this->dump();
 }
 
 // Explicit instantiations
@@ -113,23 +112,19 @@ template void SeedContainer::insert<LoadInst>(LoadInst *);
 template void SeedContainer::insert<StoreInst>(StoreInst *);
 
 #ifndef NDEBUG
-void SeedContainer::dump(raw_ostream &OS) const {
+void SeedContainer::dump() const {
   for (const auto &Pair : Bundles) {
     auto [I, Ty, Opc] = Pair.first;
     const auto &SeedsVec = Pair.second;
     std::string RefType = dyn_cast<LoadInst>(I)    ? "Load"
                           : dyn_cast<StoreInst>(I) ? "Store"
                                                    : "Other";
-    OS << "[Inst=" << *I << " Ty=" << Ty << " " << RefType << "]\n";
+    dbgs() << "[Inst=" << *I << " Ty=" << Ty << " " << RefType << "]\n";
     for (const auto &SeedPtr : SeedsVec) {
-      SeedPtr->dump(OS);
-      OS << "\n";
+      SeedPtr->dump(dbgs());
+      dbgs() << "\n";
     }
   }
-}
-
-void SeedContainer::dump() const {
-  dump(dbgs());
   dbgs() << "\n";
 }
 #endif // NDEBUG

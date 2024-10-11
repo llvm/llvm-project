@@ -266,7 +266,6 @@ public:
   unsigned size() const { return Bundles.size(); }
 
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG
 };
