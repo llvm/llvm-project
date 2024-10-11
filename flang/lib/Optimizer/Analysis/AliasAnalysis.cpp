@@ -301,7 +301,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
-          if (llvm::isa<fir::DeclareOp>(loadMemrefOp) &&
+          bool isDeclareOp = llvm::isa<fir::DeclareOp>(loadMemrefOp) ||
+                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp);
+          if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
             v = op.getMemref();
             defOp = v.getDefiningOp();
@@ -337,11 +339,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             auto argIface = cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
             for (auto [opArg, blockArg] : llvm::zip_equal(
                      targetOp.getMapVars(), argIface.getMapBlockArgs())) {
-              if (opArg == op.getMemref()) {
+              if (blockArg == op.getMemref()) {
                 omp::MapInfoOp mapInfo =
-                    llvm::cast<omp::MapInfoOp>(blockArg.getDefiningOp());
-                defOp = mapInfo.getVarPtr().getDefiningOp();
+                    llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
                 v = mapInfo.getVarPtr();
+                defOp = v.getDefiningOp();
                 return;
               }
             }

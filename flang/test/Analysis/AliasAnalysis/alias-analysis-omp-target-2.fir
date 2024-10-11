@@ -17,21 +17,22 @@
 // end subroutine
 
 // CHECK-LABEL: Testing : "_QPTestTargetData"
-// CHECK-DAG: ArrayA#0 <-> ArrayB#0: NoAlias
-// CHECK-DAG: ArrayA#0 <-> ArrayP#0: NoAlias
-// CHECK-DAG: ArrayB#0 <-> ArrayP#0: NoAlias
+
+// CHECK-DAG: targetArrayA#0 <-> targetArrayP#0: NoAlias
+// CHECK-DAG: targetArrayA#0 <-> targetArrayB#0: NoAlias
+// CHECK-DAG: targetArrayP#0 <-> targetArrayB#0: NoAlias
 
 func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "p"}, %arg1: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "a"}, %arg2: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "b"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg1(%1) dummy_scope %0 {uniq_name = "_QFtest_target_dataEa", test.ptr = "ArrayA"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %2:2 = hlfir.declare %arg1(%1) dummy_scope %0 {uniq_name = "_QFtest_target_dataEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %c10_0 = arith.constant 10 : index
   %3 = fir.shape %c10_0 : (index) -> !fir.shape<1>
-  %4:2 = hlfir.declare %arg2(%3) dummy_scope %0 {uniq_name = "_QFtest_target_dataEb", test.ptr = "ArrayB"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %4:2 = hlfir.declare %arg2(%3) dummy_scope %0 {uniq_name = "_QFtest_target_dataEb"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %c10_1 = arith.constant 10 : index
   %5 = fir.shape %c10_1 : (index) -> !fir.shape<1>
-  %6:2 = hlfir.declare %arg0(%5) dummy_scope %0 {uniq_name = "_QFtest_target_dataEp", test.ptr = "ArrayP"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %6:2 = hlfir.declare %arg0(%5) dummy_scope %0 {uniq_name = "_QFtest_target_dataEp"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %7 = arith.subi %c10_1, %c1 : index
@@ -56,10 +57,10 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
       %24 = fir.shape %c10_11 : (index) -> !fir.shape<1>
       %25:2 = hlfir.declare %arg4(%24) {uniq_name = "_QFtest_target_dataEp"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
       %c1_12 = arith.constant 1 : index
-      %26 = hlfir.designate %23#0 (%c1_12)  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      %26 = hlfir.designate %23#0 (%c1_12) {test.ptr = "targetArrayA"}  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
       %27 = fir.load %26 : !fir.ref<f32>
       %c1_13 = arith.constant 1 : index
-      %28 = hlfir.designate %25#0 (%c1_13)  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      %28 = hlfir.designate %25#0 (%c1_13) {test.ptr = "targetArrayP"}  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
       hlfir.assign %27 to %28 : f32, !fir.ref<f32>
       omp.terminator
     }
@@ -81,10 +82,10 @@ func.func @_QPTestTargetData(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name
       %24 = fir.shape %c10_11 : (index) -> !fir.shape<1>
       %25:2 = hlfir.declare %arg4(%24) {uniq_name = "_QFtest_target_dataEp"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
       %c1_12 = arith.constant 1 : index
-      %26 = hlfir.designate %23#0 (%c1_12)  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      %26 = hlfir.designate %23#0 (%c1_12) {test.ptr = "targetArrayB"}  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
       %27 = fir.load %26 : !fir.ref<f32>
       %c1_13 = arith.constant 1 : index
-      %28 = hlfir.designate %25#0 (%c1_13)  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      %28 = hlfir.designate %25#0 (%c1_13) {test.ptr = "targetArrayP"}  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
       hlfir.assign %27 to %28 : f32, !fir.ref<f32>
       omp.terminator
     }

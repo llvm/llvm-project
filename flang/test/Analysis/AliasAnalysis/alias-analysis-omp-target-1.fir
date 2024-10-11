@@ -13,12 +13,12 @@
 // end TestAllocatableArray
 
 // CHECK-LABEL: Testing : "_QPTestAllocatableArray"
-// CHECK-DAG: ArrayA#0 <-> ArrayB#0: NoAlias
+// CHECK-DAG: targetArrayB#0 <-> targetArrayA#0: NoAlias
 func.func @_QPTestAllocatableArray() {
   %0 = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
-  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "ArrayA", test.ptr = "ArrayA" } : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "ArrayA" } : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
   %2 = fir.address_of(@_QFEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
-  %3:2 = hlfir.declare %2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "ArrayB", test.ptr = "ArrayB" } : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %3:2 = hlfir.declare %2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "ArrayB" } : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
   %4 = fir.load %1#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
@@ -50,11 +50,11 @@ func.func @_QPTestAllocatableArray() {
     %23:2 = hlfir.declare %arg3 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
     %24 = fir.load %23#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
     %c0_6 = arith.constant 0 : index
-    %25 = hlfir.designate %24 (%c0_6)  : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> !fir.ref<f64>
+    %25 = hlfir.designate %24 (%c0_6) {test.ptr = "targetArrayB"} : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> !fir.ref<f64>
     %26 = fir.load %25 : !fir.ref<f64>
     %27 = fir.load %22#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
     %c0_7 = arith.constant 0 : index
-    %28 = hlfir.designate %27 (%c0_7)  : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> !fir.ref<f64>
+    %28 = hlfir.designate %27 (%c0_7) {test.ptr = "targetArrayA"} : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> !fir.ref<f64>
     hlfir.assign %26 to %28 : f64, !fir.ref<f64>
     omp.terminator
   }
