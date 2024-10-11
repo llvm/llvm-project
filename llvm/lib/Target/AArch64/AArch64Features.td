@@ -523,38 +523,38 @@ def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
 //===----------------------------------------------------------------------===//
 
 def FeatureCMPBR : ExtensionWithMArch<"cmpbr", "CMPBR", "FEAT_CMPBR",
-  "Enable A64 base compare and branch instructions">;
+  "Enable Armv9.6-A base compare and branch instructions">;
 
 def FeatureF8F32MM: ExtensionWithMArch<"f8f32mm", "F8F32MM", "FEAT_F8F32MM",
-  "Enable FP8 to Single-Precision Matrix Multiplication", [FeatureFP8DOT4]>;
+  "Enable Armv9.6-A FP8 to Single-Precision Matrix Multiplication", [FeatureFP8DOT4]>;
 
 def FeatureF8F16MM: ExtensionWithMArch<"f8f16mm", "F8F16MM", "FEAT_F8F16MM",
-  "Enable FP8 to Half-Precision Matrix Multiplication", [FeatureFP8DOT2, FeatureF8F32MM]>;
+  "Enable Armv9.6-A FP8 to Half-Precision Matrix Multiplication", [FeatureFP8DOT2, FeatureF8F32MM]>;
 
 def FeatureFPRCVT: ExtensionWithMArch<"fprcvt", "FPRCVT", "FEAT_FPRCVT",
-  "Enable A64 base convert instructions for SIMD&FP scalar register operands of"
+  "Enable Armv9.6-A base convert instructions for SIMD&FP scalar register operands of"
   " different input and output sizes", [FeatureFPARMv8]>;
 
 def FeatureLSFE : ExtensionWithMArch<"lsfe", "LSFE", "FEAT_LSFE",
-  "Enable A64 base Atomic floating-point in-memory instructions", [FeatureFPARMv8]>;
+  "Enable Armv9.6-A base Atomic floating-point in-memory instructions", [FeatureFPARMv8]>;
 
 def FeatureSME2p2: ExtensionWithMArch<"sme2p2", "SME2p2", "FEAT_SME2p2",
-  "Enable Scalable Matrix Extension 2.2 instructions", [FeatureSME2p1]>;
+  "Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions", [FeatureSME2p1]>;
 
 def FeatureSSVE_AES : ExtensionWithMArch<"ssve-aes", "SSVE_AES", "FEAT_SSVE_AES",
-  "Enable SVE2 AES support in streaming SVE mode", [FeatureSME2p1]>;
+  "Enable Armv9.6-A SVE2 AES support in streaming SVE mode", [FeatureSME2p1]>;
 
 def FeatureSVE2p2 : ExtensionWithMArch<"sve2p2", "SVE2p2", "FEAT_SVE2p2",
-  "Enable Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
+  "Enable Armv9.6-A Scalable Vector Extension 2.2 instructions", [FeatureSVE2p1]>;
 
 def FeatureSVEAES2: ExtensionWithMArch<"sve-aes2", "SVE_AES2", "FEAT_SVE_AES2",
-  "Enable SVE multi-vector AES and 128-bit PMULL instructions", [FeatureSVE2AES]>;
+  "Enable Armv9.6-A SVE multi-vector AES and 128-bit PMULL instructions", [FeatureSVE2AES]>;
 
 def FeatureSVEBFSCALE: ExtensionWithMArch<"sve-bfscale", "SVE_BFSCALE", "FEAT_SVE_BFSCALE",
-  "Enable SVE BFloat16 scaling instructions", [FeatureSVEB16B16]>;
+  "Enable Armv9.6-A SVE BFloat16 scaling instructions", [FeatureSVEB16B16]>;
 
 def FeatureSVE_F16F32MM: ExtensionWithMArch<"sve-f16f32mm", "SVE_F16F32MM", "FEAT_SVE_F16F32MM",
-  "Enable FP16 to FP32 Matrix Multiply instructions", [FeatureSVE2p1]>;
+  "Enable Armv9.6-A FP16 to FP32 Matrix Multiply instructions", [FeatureSVE2p1]>;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
