@@ -1564,8 +1564,7 @@ static void insertFoldCacheEntry(
     UserIDs.pop_back();
     I.first->second = S;
   }
-  auto R = FoldCacheUser.insert({S, {}});
-  R.first->second.push_back(ID);
+  FoldCacheUser[S].push_back(ID);
 }
 
 const SCEV *

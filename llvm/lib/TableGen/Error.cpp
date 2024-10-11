@@ -168,11 +168,10 @@ bool CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
     return true;
   }
   if (!CondValue->getValue()) {
-    PrintError(Loc, "assertion failed");
-    if (auto *MessageInit = dyn_cast<StringInit>(Message))
-      PrintNote(MessageInit->getValue());
-    else
-      PrintNote("(assert message is not a string)");
+    auto *MessageInit = dyn_cast<StringInit>(Message);
+    StringRef AssertMsg = MessageInit ? MessageInit->getValue()
+                                      : "(assert message is not a string)";
+    PrintError(Loc, "assertion failed: " + AssertMsg);
     return true;
   }
   return false;
@@ -180,12 +179,10 @@ bool CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
 
 // Dump a message to stderr.
 void dumpMessage(SMLoc Loc, Init *Message) {
-  auto *MessageInit = dyn_cast<StringInit>(Message);
-  if (!MessageInit) {
-    PrintError(Loc, "dump value is not of type string");
-  } else {
+  if (auto *MessageInit = dyn_cast<StringInit>(Message))
     PrintNote(Loc, MessageInit->getValue());
-  }
+  else
+    PrintError(Loc, "dump value is not of type string");
 }
 
 } // end namespace llvm

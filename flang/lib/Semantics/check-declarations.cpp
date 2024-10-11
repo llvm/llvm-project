@@ -3765,12 +3765,20 @@ void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
 void SubprogramMatchHelper::CheckDummyProcedure(const Symbol &symbol1,
     const Symbol &symbol2, const DummyProcedure &proc1,
     const DummyProcedure &proc2) {
+  std::string whyNot;
   if (!CheckSameIntent(symbol1, symbol2, proc1.intent, proc2.intent)) {
   } else if (!CheckSameAttrs(symbol1, symbol2, proc1.attrs, proc2.attrs)) {
-  } else if (proc1 != proc2) {
+  } else if (!proc2.IsCompatibleWith(proc1, &whyNot)) {
     Say(symbol1, symbol2,
-        "Dummy procedure '%s' does not match the corresponding argument in"
-        " the interface body"_err_en_US);
+        "Dummy procedure '%s' is not compatible with the corresponding argument in the interface body: %s"_err_en_US,
+        whyNot);
+  } else if (proc1 != proc2) {
+    evaluate::AttachDeclaration(
+        symbol1.owner().context().Warn(
+            common::UsageWarning::MismatchingDummyProcedure,
+            "Dummy procedure '%s' does not exactly match the corresponding argument in the interface body"_warn_en_US,
+            symbol1.name()),
+        symbol2);
   }
 }
 

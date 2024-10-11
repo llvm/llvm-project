@@ -36,7 +36,10 @@ adds `FOO=1` and `bar` to the environment:
   "name": "Debug",
   "program": "/tmp/a.out",
   "args": [ "one", "two", "three" ],
-  "env": [ "FOO=1", "BAR" ],
+  "env": {
+    "FOO": "1"
+    "BAR": ""
+  }
 }
 ```
 

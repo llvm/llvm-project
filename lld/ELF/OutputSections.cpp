@@ -896,7 +896,7 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
               : ctx.target->getImplicitAddend(relocTarget, rel.type);
       if (addend != writtenAddend)
         internalLinkerError(
-            getErrorLocation(relocTarget),
+            getErrorLoc(ctx, relocTarget),
             "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
                 " instead of 0x" + utohexstr(addend) +
                 " for dynamic relocation " + toString(rel.type) +

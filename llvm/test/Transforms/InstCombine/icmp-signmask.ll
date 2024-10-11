@@ -3,7 +3,8 @@
 
 define i1 @cmp_x_and_negp2_with_eq(i8 %x) {
 ; CHECK-LABEL: @cmp_x_and_negp2_with_eq(
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[X:%.*]], -126
+; CHECK-NEXT:    [[ANDX:%.*]] = and i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ANDX]], -128
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %andx = and i8 %x, -2
@@ -24,7 +25,8 @@ define i1 @cmp_x_and_negp2_with_eq_fail_not_signmask(i8 %x) {
 
 define <2 x i1> @cmp_x_and_negp2_with_ne(<2 x i8> %x) {
 ; CHECK-LABEL: @cmp_x_and_negp2_with_ne(
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -121, i8 -113>
+; CHECK-NEXT:    [[ANDX:%.*]] = and <2 x i8> [[X:%.*]], <i8 -8, i8 -16>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[ANDX]], <i8 -128, i8 -128>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %andx = and <2 x i8> %x, <i8 -8, i8 -16>
@@ -34,7 +36,8 @@ define <2 x i1> @cmp_x_and_negp2_with_ne(<2 x i8> %x) {
 
 define <2 x i1> @cmp_x_and_negp2_with_ne_or_z(<2 x i8> %x) {
 ; CHECK-LABEL: @cmp_x_and_negp2_with_ne_or_z(
-; CHECK-NEXT:    [[R:%.*]] = icmp sge <2 x i8> [[X:%.*]], <i8 -128, i8 -112>
+; CHECK-NEXT:    [[ANDX:%.*]] = and <2 x i8> [[X:%.*]], <i8 0, i8 -16>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[ANDX]], <i8 -128, i8 -128>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %andx = and <2 x i8> %x, <i8 0, i8 -16>
