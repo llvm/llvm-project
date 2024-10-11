@@ -1,4 +1,4 @@
-// REQUIRES: x86-registered-target, amdgpu-registered-target, lld, system-linux
+// REQUIRES: x86-registered-target, amdgpu-registered-target, lld
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN:   --offload-arch=gfx906 -c -nostdinc -nogpuinc -nohipwrapperinc \
