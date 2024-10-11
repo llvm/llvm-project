@@ -1037,7 +1037,7 @@ ThreadLister::Result ThreadLister::ListThreads(
     Report("Can't open %s for reading.\n", task_path_.data());
     return Error;
   }
-  auto acts_cleanup = at_scope_exit([&] { internal_close(descriptor); });
+  auto cleanup = at_scope_exit([&] { internal_close(descriptor); });
   threads->clear();
 
   Result result = Ok;
