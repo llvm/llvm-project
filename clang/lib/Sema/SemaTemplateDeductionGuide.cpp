@@ -1216,7 +1216,7 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
   if (!RHSTemplate)
     return nullptr;
 
-  llvm::SmallVector<TypedefNameDecl *, 4> TypedefDecls;
+  llvm::SmallVector<TypedefNameDecl *> TypedefDecls;
   llvm::SmallVector<QualType> NewParamTypes;
   ExtractTypeForDeductionGuide TypeAliasTransformer(SemaRef, TypedefDecls);
   for (QualType P : ParamTypes) {
