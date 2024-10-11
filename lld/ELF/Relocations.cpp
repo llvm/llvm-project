@@ -381,8 +381,8 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool isRO = isReadOnly<ELFT>(ss);
-  BssSection *sec =
-      make<BssSection>(isRO ? ".bss.rel.ro" : ".bss", symSize, ss.alignment);
+  BssSection *sec = make<BssSection>(ctx, isRO ? ".bss.rel.ro" : ".bss",
+                                     symSize, ss.alignment);
   OutputSection *osec = (isRO ? ctx.in.bssRelRo : ctx.in.bss)->getParent();
 
   // At this point, sectionBases has been migrated to sections. Append sec to
@@ -2185,7 +2185,7 @@ void ThunkCreator::createInitialThunkSections(
 ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
                                             InputSectionDescription *isd,
                                             uint64_t off) {
-  auto *ts = make<ThunkSection>(os, off);
+  auto *ts = make<ThunkSection>(ctx, os, off);
   ts->partition = os->partition;
   if ((ctx.arg.fixCortexA53Errata843419 || ctx.arg.fixCortexA8) &&
       !isd->sections.empty()) {
