@@ -775,6 +775,8 @@ static bool PrintResults(LeakReport &report) {
     report.PrintSummary();
     return true;
   }
+  if (common_flags()->verbosity >= 2 && flags()->log_threads)
+    PrintThreads();
   return false;
 }
 
