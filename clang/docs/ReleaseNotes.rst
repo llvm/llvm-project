@@ -99,6 +99,19 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
+- Clang will now correctly not consider pointers to non classes for covariance.
+
+  .. code-block:: c++
+
+  struct A {
+    virtual const int *f() const;
+  };
+  struct B : A {
+    // Return type has less cv-qualification but doesn't point to a class.
+    // Error will be generated.
+    int *f() const override;
+  };
+
 ABI Changes in This Version
 ---------------------------
 
