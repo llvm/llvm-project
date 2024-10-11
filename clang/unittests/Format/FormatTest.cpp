@@ -11519,6 +11519,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignLeft);
   verifyFormat("template <typename T> void operator=(T) & {}", AlignLeft);
   verifyFormat("template <typename T> void operator=(T) && {}", AlignLeft);
+  verifyFormat("for (foo<void() &&>& cb : X)", AlignLeft);
 
   FormatStyle AlignMiddle = getLLVMStyle();
   AlignMiddle.PointerAlignment = FormatStyle::PAS_Middle;

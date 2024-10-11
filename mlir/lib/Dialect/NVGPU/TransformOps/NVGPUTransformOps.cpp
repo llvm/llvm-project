@@ -821,6 +821,12 @@ DiagnosedSilenceableFailure transform::RewriteMatmulAsMmaSyncOp::applyToOne(
   bool fail = true;
   // TODO: more robust detection of matmulOp, with transposes etc.
   if (isa_and_nonnull<linalg::MatmulOp>(linalgOp.getOperation())) {
+    // Check to not let go the matmul with extended semantic, through this
+    // transform.
+    if (linalgOp.hasUserDefinedMaps()) {
+      return emitSilenceableError()
+             << "only matmul ops with non-extended semantics are supported";
+    }
     Location loc = linalgOp.getLoc();
     // TODO: more robust computation of laneId, for now assume a single warp.
     Value laneId = rewriter.create<gpu::ThreadIdOp>(

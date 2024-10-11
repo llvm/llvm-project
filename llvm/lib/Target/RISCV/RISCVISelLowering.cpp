@@ -1071,9 +1071,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
-      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::VP_SINT_TO_FP,
-                          ISD::VP_UINT_TO_FP},
-                         VT, Custom);
+      setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT, Custom);
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
                           ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
                           ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
@@ -1343,9 +1341,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
-          setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP,
-                              ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP},
-                             VT, Custom);
+          setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT,
+                             Custom);
           setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
           if (Subtarget.hasStdExtZfhmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
@@ -2066,145 +2063,6 @@ bool RISCVTargetLowering::
   // So only do the transform if X is not a constant. This matches the default
   // implementation of this function.
   return !XC;
-}
-
-bool RISCVTargetLowering::canSplatOperand(unsigned Opcode, int Operand) const {
-  switch (Opcode) {
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return true;
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::URem:
-  case Instruction::SRem:
-  case Instruction::Select:
-    return Operand == 1;
-  default:
-    return false;
-  }
-}
-
-
-bool RISCVTargetLowering::canSplatOperand(Instruction *I, int Operand) const {
-  if (!I->getType()->isVectorTy() || !Subtarget.hasVInstructions())
-    return false;
-
-  if (canSplatOperand(I->getOpcode(), Operand))
-    return true;
-
-  auto *II = dyn_cast<IntrinsicInst>(I);
-  if (!II)
-    return false;
-
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::fma:
-  case Intrinsic::vp_fma:
-    return Operand == 0 || Operand == 1;
-  case Intrinsic::vp_shl:
-  case Intrinsic::vp_lshr:
-  case Intrinsic::vp_ashr:
-  case Intrinsic::vp_udiv:
-  case Intrinsic::vp_sdiv:
-  case Intrinsic::vp_urem:
-  case Intrinsic::vp_srem:
-  case Intrinsic::ssub_sat:
-  case Intrinsic::vp_ssub_sat:
-  case Intrinsic::usub_sat:
-  case Intrinsic::vp_usub_sat:
-    return Operand == 1;
-    // These intrinsics are commutative.
-  case Intrinsic::vp_add:
-  case Intrinsic::vp_mul:
-  case Intrinsic::vp_and:
-  case Intrinsic::vp_or:
-  case Intrinsic::vp_xor:
-  case Intrinsic::vp_fadd:
-  case Intrinsic::vp_fmul:
-  case Intrinsic::vp_icmp:
-  case Intrinsic::vp_fcmp:
-  case Intrinsic::smin:
-  case Intrinsic::vp_smin:
-  case Intrinsic::umin:
-  case Intrinsic::vp_umin:
-  case Intrinsic::smax:
-  case Intrinsic::vp_smax:
-  case Intrinsic::umax:
-  case Intrinsic::vp_umax:
-  case Intrinsic::sadd_sat:
-  case Intrinsic::vp_sadd_sat:
-  case Intrinsic::uadd_sat:
-  case Intrinsic::vp_uadd_sat:
-    // These intrinsics have 'vr' versions.
-  case Intrinsic::vp_sub:
-  case Intrinsic::vp_fsub:
-  case Intrinsic::vp_fdiv:
-    return Operand == 0 || Operand == 1;
-  default:
-    return false;
-  }
-}
-
-/// Check if sinking \p I's operands to I's basic block is profitable, because
-/// the operands can be folded into a target instruction, e.g.
-/// splats of scalars can fold into vector instructions.
-bool RISCVTargetLowering::shouldSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
-  using namespace llvm::PatternMatch;
-
-  if (!I->getType()->isVectorTy() || !Subtarget.hasVInstructions())
-    return false;
-
-  // Don't sink splat operands if the target prefers it. Some targets requires
-  // S2V transfer buffers and we can run out of them copying the same value
-  // repeatedly.
-  // FIXME: It could still be worth doing if it would improve vector register
-  // pressure and prevent a vector spill.
-  if (!Subtarget.sinkSplatOperands())
-    return false;
-
-  for (auto OpIdx : enumerate(I->operands())) {
-    if (!canSplatOperand(I, OpIdx.index()))
-      continue;
-
-    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
-    // Make sure we are not already sinking this operand
-    if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
-      continue;
-
-    // We are looking for a splat that can be sunk.
-    if (!match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
-                             m_Undef(), m_ZeroMask())))
-      continue;
-
-    // Don't sink i1 splats.
-    if (cast<VectorType>(Op->getType())->getElementType()->isIntegerTy(1))
-      continue;
-
-    // All uses of the shuffle should be sunk to avoid duplicating it across gpr
-    // and vector registers
-    for (Use &U : Op->uses()) {
-      Instruction *Insn = cast<Instruction>(U.getUser());
-      if (!canSplatOperand(Insn, U.getOperandNo()))
-        return false;
-    }
-
-    Ops.push_back(&Op->getOperandUse(0));
-    Ops.push_back(&OpIdx.value());
-  }
-  return true;
 }
 
 bool RISCVTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {

@@ -171,6 +171,9 @@ C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
 
+- Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
+  supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -204,7 +207,8 @@ Resolutions to C++ Defect Reports
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
 
 - Clang now has improved resolution to CWG2398, allowing class templates to have
-  default arguments deduced when partial ordering.
+  default arguments deduced when partial ordering, and better backwards compatibility
+  in overload resolution.
 
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
@@ -380,6 +384,10 @@ Improvements to Clang's diagnostics
 
 - Clang now omits warnings for extra parentheses in fold expressions with single expansion (#GH101863).
 
+- The warning for an unsupported type for a named register variable is now phrased ``unsupported type for named register variable``,
+  instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
+  suboptimal in some way the error fails to mention (#GH111550).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -407,6 +415,8 @@ Bug Fixes to Compiler Builtins
   that was not instantiated elsewhere.
 
 - ``__noop`` can now be used in a constant expression. (#GH102064)
+
+- Fix ``__has_builtin`` incorrectly returning ``false`` for some C++ type traits. (#GH111477)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -481,9 +491,9 @@ Bug Fixes to C++ Support
   in certain friend declarations. (#GH93099)
 - Clang now instantiates the correct lambda call operator when a lambda's class type is
   merged across modules. (#GH110401)
-- Clang now uses the correct set of template argument lists when comparing the constraints of
-  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
-  a class template. (#GH102320)
+- Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
+- Fixed an assertion failure when invoking recovery call expressions with explicit attributes
+  and undeclared templates. (#GH107047, #GH49093)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

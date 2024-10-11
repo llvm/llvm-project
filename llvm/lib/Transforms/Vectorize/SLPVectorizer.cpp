@@ -278,6 +278,22 @@ static unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI,
   return bit_ceil(divideCeil(Sz, NumParts)) * NumParts;
 }
 
+/// Returns the number of elements of the given type \p Ty, not greater than \p
+/// Sz, which forms type, which splits by \p TTI into whole vector types during
+/// legalization.
+static unsigned
+getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
+                                   unsigned Sz) {
+  if (!isValidElementType(Ty))
+    return bit_floor(Sz);
+  // Find the number of elements, which forms full vectors.
+  unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
+  if (NumParts == 0 || NumParts >= Sz)
+    return bit_floor(Sz);
+  unsigned RegVF = bit_ceil(divideCeil(Sz, NumParts));
+  return (Sz / RegVF) * RegVF;
+}
+
 static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
                                                    SmallVectorImpl<int> &Mask) {
   // The ShuffleBuilder implementation use shufflevector to splat an "element".
@@ -1277,8 +1293,7 @@ public:
   using InstrList = SmallVector<Instruction *, 16>;
   using ValueSet = SmallPtrSet<Value *, 16>;
   using StoreList = SmallVector<StoreInst *, 8>;
-  using ExtraValueToDebugLocsMap =
-      MapVector<Value *, SmallVector<Instruction *, 2>>;
+  using ExtraValueToDebugLocsMap = SmallDenseSet<Value *, 4>;
   using OrdersType = SmallVector<unsigned, 4>;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
@@ -1371,6 +1386,8 @@ public:
     MustGather.clear();
     NonScheduledFirst.clear();
     EntryToLastInstruction.clear();
+    LoadEntriesToVectorize.clear();
+    IsGraphTransformMode = false;
     GatheredLoadsEntriesFirst.reset();
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
@@ -3613,6 +3630,14 @@ private:
       DenseMap<Value *, SmallPtrSet<const TreeEntry *, 4>>;
   ValueToGatherNodesMap ValueToGatherNodes;
 
+  /// A list of the load entries (node indices), which can be vectorized using
+  /// strided or masked gather approach, but attempted to be represented as
+  /// contiguous loads.
+  SetVector<unsigned> LoadEntriesToVectorize;
+
+  /// true if graph nodes transforming mode is on.
+  bool IsGraphTransformMode = false;
+
   /// The index of the first gathered load entry in the VectorizeTree.
   std::optional<unsigned> GatheredLoadsEntriesFirst;
 
@@ -4618,17 +4643,15 @@ static bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
   if (getUnderlyingObject(Ptr1) != getUnderlyingObject(Ptr2))
     return false;
   auto *GEP1 = dyn_cast<GetElementPtrInst>(Ptr1);
-  if (!GEP1)
-    return false;
   auto *GEP2 = dyn_cast<GetElementPtrInst>(Ptr2);
-  if (!GEP2)
-    return false;
-  return GEP1->getNumOperands() == 2 && GEP2->getNumOperands() == 2 &&
-         ((isConstant(GEP1->getOperand(1)) &&
-           isConstant(GEP2->getOperand(1))) ||
+  return (!GEP1 || GEP1->getNumOperands() == 2) &&
+         (!GEP2 || GEP2->getNumOperands() == 2) &&
+         (((!GEP1 || isConstant(GEP1->getOperand(1))) &&
+           (!GEP2 || isConstant(GEP2->getOperand(1)))) ||
           !CompareOpcodes ||
-          getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI)
-              .getOpcode());
+          (GEP1 && GEP2 &&
+           getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI)
+               .getOpcode()));
 }
 
 /// Calculates minimal alignment as a common alignment.
@@ -5118,9 +5141,9 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
       L && Sz > 2 && static_cast<unsigned>(count_if(PointerOps, [L](Value *V) {
                        return L->isLoopInvariant(V);
                      })) <= Sz / 2;
-  if (ProfitableGatherPointers || all_of(PointerOps, [IsSorted](Value *P) {
+  if (ProfitableGatherPointers || all_of(PointerOps, [](Value *P) {
         auto *GEP = dyn_cast<GetElementPtrInst>(P);
-        return (IsSorted && !GEP && doesNotNeedToBeScheduled(P)) ||
+        return (!GEP && doesNotNeedToBeScheduled(P)) ||
                (GEP && GEP->getNumOperands() == 2 &&
                 isa<Constant, Instruction>(GEP->getOperand(1)));
       })) {
@@ -6298,7 +6321,7 @@ void BoUpSLP::buildExternalUses(
         continue;
 
       // Check if the scalar is externally used as an extra arg.
-      const auto *ExtI = ExternallyUsedValues.find(Scalar);
+      const auto ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
         int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
@@ -6667,6 +6690,12 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     ArrayRef<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads) {
   GatheredLoadsEntriesFirst = VectorizableTree.size();
 
+  SmallVector<SmallPtrSet<const Value *, 4>> LoadSetsToVectorize(
+      LoadEntriesToVectorize.size());
+  for (auto [Idx, Set] : zip(LoadEntriesToVectorize, LoadSetsToVectorize))
+    Set.insert(VectorizableTree[Idx]->Scalars.begin(),
+               VectorizableTree[Idx]->Scalars.end());
+
   // Sort loads by distance.
   auto LoadSorter = [](const std::pair<LoadInst *, int> &L1,
                        const std::pair<LoadInst *, int> &L2) {
@@ -6924,8 +6953,42 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                   }
                 }
               }
+              // Cannot represent the loads as consecutive vectorizable nodes -
+              // just exit.
+              unsigned ConsecutiveNodesSize = 0;
+              if (!LoadEntriesToVectorize.empty() &&
+                  any_of(zip(LoadEntriesToVectorize, LoadSetsToVectorize),
+                         [&, Slice = Slice](const auto &P) {
+                           const auto *It = find_if(Slice, [&](Value *V) {
+                             return std::get<1>(P).contains(V);
+                           });
+                           if (It == Slice.end())
+                             return false;
+                           ArrayRef<Value *> VL =
+                               VectorizableTree[std::get<0>(P)]->Scalars;
+                           ConsecutiveNodesSize += VL.size();
+                           unsigned Start = std::distance(Slice.begin(), It);
+                           unsigned Sz = Slice.size() - Start;
+                           return Sz < VL.size() ||
+                                  Slice.slice(std::distance(Slice.begin(), It),
+                                              VL.size()) != VL;
+                         }))
+                continue;
               // Try to build long masked gather loads.
               UserMaxVF = bit_ceil(UserMaxVF);
+              if (any_of(seq<unsigned>(Slice.size() / UserMaxVF),
+                         [&, Slice = Slice](unsigned Idx) {
+                           OrdersType Order;
+                           SmallVector<Value *> PointerOps;
+                           return canVectorizeLoads(
+                                      Slice.slice(Idx * UserMaxVF, UserMaxVF),
+                                      Slice[Idx * UserMaxVF], Order,
+                                      PointerOps) ==
+                                  LoadsState::ScatterVectorize;
+                         }))
+                UserMaxVF = MaxVF;
+              if (Slice.size() != ConsecutiveNodesSize)
+                MaxVF = std::min<unsigned>(MaxVF, UserMaxVF);
             }
             for (unsigned VF = MaxVF; VF >= 2; VF /= 2) {
               bool IsVectorized = true;
@@ -6933,6 +6996,16 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 ArrayRef<Value *> SubSlice =
                     Slice.slice(I, std::min(VF, E - I));
                 if (getTreeEntry(SubSlice.front()))
+                  continue;
+                // Check if the subslice is to be-vectorized entry, which is not
+                // equal to entry.
+                if (any_of(zip(LoadEntriesToVectorize, LoadSetsToVectorize),
+                           [&](const auto &P) {
+                             return !SubSlice.equals(
+                                        VectorizableTree[std::get<0>(P)]
+                                            ->Scalars) &&
+                                    set_is_subset(SubSlice, std::get<1>(P));
+                           }))
                   continue;
                 unsigned Sz = VectorizableTree.size();
                 buildTree_rec(SubSlice, 0, EdgeInfo());
@@ -6967,6 +7040,20 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     }
     // Final attempt to vectorize non-vectorized loads.
     (void)ProcessGatheredLoads(FinalGatheredLoads, /*Final=*/true);
+  }
+  // Try to vectorize postponed load entries, previously marked as gathered.
+  for (unsigned Idx : LoadEntriesToVectorize) {
+    const TreeEntry &E = *VectorizableTree[Idx];
+    SmallVector<Value *> GatheredScalars(E.Scalars.begin(), E.Scalars.end());
+    // Avoid reordering, if possible.
+    if (!E.ReorderIndices.empty()) {
+      // Build a mask out of the reorder indices and reorder scalars per this
+      // mask.
+      SmallVector<int> ReorderMask;
+      inversePermutation(E.ReorderIndices, ReorderMask);
+      reorderScalars(GatheredScalars, ReorderMask);
+    }
+    buildTree_rec(GatheredScalars, 0, EdgeInfo());
   }
   // If no new entries created, consider it as no gathered loads entries must be
   // handled.
@@ -7280,6 +7367,11 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     case LoadsState::Vectorize:
       return TreeEntry::Vectorize;
     case LoadsState::ScatterVectorize:
+      if (!IsGraphTransformMode && !VectorizableTree.empty()) {
+        // Delay slow vectorized nodes for better vectorization attempts.
+        LoadEntriesToVectorize.insert(VectorizableTree.size());
+        return TreeEntry::NeedToGather;
+      }
       return TreeEntry::ScatterVectorize;
     case LoadsState::StridedVectorize:
       return TreeEntry::StridedVectorize;
@@ -7639,7 +7731,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
     size_t NumUniqueScalarValues = UniqueValues.size();
     bool IsFullVectors = hasFullVectorsOrPowerOf2(
-        *TTI, UniqueValues.front()->getType(), NumUniqueScalarValues);
+        *TTI, getValueType(UniqueValues.front()), NumUniqueScalarValues);
     if (NumUniqueScalarValues == VL.size() &&
         (VectorizeNonPowerOf2 || IsFullVectors)) {
       ReuseShuffleIndices.clear();
@@ -9117,6 +9209,17 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
 void BoUpSLP::transformNodes() {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   BaseGraphSize = VectorizableTree.size();
+  // Turn graph transforming mode on and off, when done.
+  class GraphTransformModeRAAI {
+    bool &SavedIsGraphTransformMode;
+
+  public:
+    GraphTransformModeRAAI(bool &IsGraphTransformMode)
+        : SavedIsGraphTransformMode(IsGraphTransformMode) {
+      IsGraphTransformMode = true;
+    }
+    ~GraphTransformModeRAAI() { SavedIsGraphTransformMode = false; }
+  } TransformContext(IsGraphTransformMode);
   // Operands are profitable if they are:
   // 1. At least one constant
   // or
@@ -9149,7 +9252,7 @@ void BoUpSLP::transformNodes() {
       unsigned MinVF = getMinVF(2 * Sz);
       // Do not try partial vectorization for small nodes (<= 2), nodes with the
       // same opcode and same parent block or all constants.
-      if (VL.size() <= 2 ||
+      if (VL.size() <= 2 || LoadEntriesToVectorize.contains(Idx) ||
           !(!E.getOpcode() || E.getOpcode() == Instruction::Load ||
             E.isAltShuffle() || !allSameBlock(VL)) ||
           allConstant(VL) || isSplat(VL))
@@ -9248,6 +9351,8 @@ void BoUpSLP::transformNodes() {
             continue;
           }
           unsigned PrevSize = VectorizableTree.size();
+          [[maybe_unused]] unsigned PrevEntriesSize =
+              LoadEntriesToVectorize.size();
           buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
           if (PrevSize + 1 == VectorizableTree.size() &&
               VectorizableTree[PrevSize]->isGather() &&
@@ -9255,6 +9360,8 @@ void BoUpSLP::transformNodes() {
                   Instruction::ExtractElement &&
               !isSplat(Slice)) {
             VectorizableTree.pop_back();
+            assert(PrevEntriesSize == LoadEntriesToVectorize.size() &&
+                   "LoadEntriesToVectorize expected to remain the same");
             continue;
           }
           AddCombinedNode(PrevSize, Cnt);
@@ -9340,17 +9447,19 @@ void BoUpSLP::transformNodes() {
     }
   }
 
-  // Single load node - exit.
-  if (VectorizableTree.size() <= 1 &&
-      VectorizableTree.front()->getOpcode() == Instruction::Load)
-    return;
-  // Small graph with small VF - exit.
-  constexpr unsigned SmallTree = 3;
-  constexpr unsigned SmallVF = 2;
-  if ((VectorizableTree.size() <= SmallTree &&
-       VectorizableTree.front()->Scalars.size() == SmallVF) ||
-      (VectorizableTree.size() <= 2 && UserIgnoreList))
-    return;
+  if (LoadEntriesToVectorize.empty()) {
+    // Single load node - exit.
+    if (VectorizableTree.size() <= 1 &&
+        VectorizableTree.front()->getOpcode() == Instruction::Load)
+      return;
+    // Small graph with small VF - exit.
+    constexpr unsigned SmallTree = 3;
+    constexpr unsigned SmallVF = 2;
+    if ((VectorizableTree.size() <= SmallTree &&
+         VectorizableTree.front()->Scalars.size() == SmallVF) ||
+        (VectorizableTree.size() <= 2 && UserIgnoreList))
+      return;
+  }
 
   // A list of loads to be gathered during the vectorization process. We can
   // try to vectorize them at the end, if profitable.
@@ -17372,7 +17481,11 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
   unsigned VF = Chain.size();
 
-  if (!has_single_bit(Sz) || !has_single_bit(VF) || VF < 2 || VF < MinVF) {
+  if (!has_single_bit(Sz) ||
+      !hasFullVectorsOrPowerOf2(
+          *TTI, cast<StoreInst>(Chain.front())->getValueOperand()->getType(),
+          VF) ||
+      VF < 2 || VF < MinVF) {
     // Check if vectorizing with a non-power-of-2 VF should be considered. At
     // the moment, only consider cases where VF + 1 is a power-of-2, i.e. almost
     // all vector lanes are used.
@@ -17390,10 +17503,12 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   InstructionsState S = getSameOpcode(ValOps.getArrayRef(), *TLI);
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
-    bool IsPowerOf2 =
-        has_single_bit(ValOps.size()) ||
+    bool IsAllowedSize =
+        hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(),
+                                 ValOps.size()) ||
         (VectorizeNonPowerOf2 && has_single_bit(ValOps.size() + 1));
-    if ((!IsPowerOf2 && S.getOpcode() && S.getOpcode() != Instruction::Load &&
+    if ((!IsAllowedSize && S.getOpcode() &&
+         S.getOpcode() != Instruction::Load &&
          (!S.MainOp->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
                  [&](Value *V) {
@@ -17404,7 +17519,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                            }));
                  }))) ||
         (ValOps.size() > Chain.size() / 2 && !S.getOpcode())) {
-      Size = (!IsPowerOf2 && S.getOpcode()) ? 1 : 2;
+      Size = (!IsAllowedSize && S.getOpcode()) ? 1 : 2;
       return false;
     }
   }
@@ -17532,15 +17647,11 @@ bool SLPVectorizerPass::vectorizeStores(
 
       unsigned MaxVF =
           std::min(R.getMaximumVF(EltSize, Instruction::Store), MaxElts);
-      unsigned MaxRegVF = MaxVF;
       auto *Store = cast<StoreInst>(Operands[0]);
       Type *StoreTy = Store->getValueOperand()->getType();
       Type *ValueTy = StoreTy;
       if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
         ValueTy = Trunc->getSrcTy();
-      if (ValueTy == StoreTy &&
-          R.getVectorElementSize(Store->getValueOperand()) <= EltSize)
-        MaxVF = std::min<unsigned>(MaxVF, bit_floor(Operands.size()));
       unsigned MinVF = std::max<unsigned>(
           2, PowerOf2Ceil(TTI->getStoreMinimumVF(
                  R.getMinVF(DL->getTypeStoreSizeInBits(StoreTy)), StoreTy,
@@ -17558,10 +17669,21 @@ bool SLPVectorizerPass::vectorizeStores(
         // First try vectorizing with a non-power-of-2 VF. At the moment, only
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
-        unsigned CandVF =
-            std::clamp<unsigned>(Operands.size(), MaxVF, MaxRegVF);
-        if (has_single_bit(CandVF + 1))
+        unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
+        if (has_single_bit(CandVF + 1)) {
           NonPowerOf2VF = CandVF;
+          assert(NonPowerOf2VF != MaxVF &&
+                 "Non-power-of-2 VF should not be equal to MaxVF");
+        }
+      }
+
+      unsigned MaxRegVF = MaxVF;
+      MaxVF = std::min<unsigned>(MaxVF, bit_floor(Operands.size()));
+      if (MaxVF < MinVF) {
+        LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
+                          << ") < "
+                          << "MinVF (" << MinVF << ")\n");
+        continue;
       }
 
       unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
@@ -17716,7 +17838,7 @@ bool SLPVectorizerPass::vectorizeStores(
                         std::bind(IsNotVectorized, Size >= MaxRegVF,
                                   std::placeholders::_1)));
           }
-          if (!AnyProfitableGraph && Size >= MaxRegVF)
+          if (!AnyProfitableGraph && Size >= MaxRegVF && has_single_bit(Size))
             break;
         }
         // All values vectorized - exit.
@@ -17729,7 +17851,7 @@ bool SLPVectorizerPass::vectorizeStores(
             (Repeat > 1 && (RepeatChanged || !AnyProfitableGraph)))
           break;
         constexpr unsigned StoresLimit = 64;
-        const unsigned MaxTotalNum = bit_floor(std::min<unsigned>(
+        const unsigned MaxTotalNum = std::min<unsigned>(
             Operands.size(),
             static_cast<unsigned>(
                 End -
@@ -17737,8 +17859,13 @@ bool SLPVectorizerPass::vectorizeStores(
                     RangeSizes.begin(),
                     find_if(RangeSizes, std::bind(IsNotVectorized, true,
                                                   std::placeholders::_1))) +
-                1)));
-        unsigned VF = PowerOf2Ceil(CandidateVFs.front()) * 2;
+                1));
+        unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
+        unsigned Limit =
+            getFloorFullVectorNumberOfElements(*TTI, StoreTy, MaxTotalNum);
+        CandidateVFs.clear();
+        if (bit_floor(Limit) == VF)
+          CandidateVFs.push_back(Limit);
         if (VF > MaxTotalNum || VF >= StoresLimit)
           break;
         for_each(RangeSizes, [&](std::pair<unsigned, unsigned> &P) {
@@ -17747,7 +17874,6 @@ bool SLPVectorizerPass::vectorizeStores(
         });
         // Last attempt to vectorize max number of elements, if all previous
         // attempts were unsuccessful because of the cost issues.
-        CandidateVFs.clear();
         CandidateVFs.push_back(VF);
       }
     }
@@ -18494,14 +18620,14 @@ public:
         8>
         PossibleReducedVals;
     initReductionOps(Root);
-    DenseMap<Value *, SmallVector<LoadInst *>> LoadsMap;
+    DenseMap<std::pair<size_t, Value *>, SmallVector<LoadInst *>> LoadsMap;
     SmallSet<size_t, 2> LoadKeyUsed;
 
     auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
       Key = hash_combine(hash_value(LI->getParent()), Key);
       Value *Ptr = getUnderlyingObject(LI->getPointerOperand());
-      if (LoadKeyUsed.contains(Key)) {
-        auto LIt = LoadsMap.find(Ptr);
+      if (!LoadKeyUsed.insert(Key).second) {
+        auto LIt = LoadsMap.find(std::make_pair(Key, Ptr));
         if (LIt != LoadsMap.end()) {
           for (LoadInst *RLI : LIt->second) {
             if (getPointersDiff(RLI->getType(), RLI->getPointerOperand(),
@@ -18523,8 +18649,8 @@ public:
           }
         }
       }
-      LoadKeyUsed.insert(Key);
-      LoadsMap.try_emplace(Ptr).first->second.push_back(LI);
+      LoadsMap.try_emplace(std::make_pair(Key, Ptr))
+          .first->second.push_back(LI);
       return hash_value(LI->getPointerOperand());
     };
 
@@ -18693,7 +18819,7 @@ public:
     // List of the values that were reduced in other trees as part of gather
     // nodes and thus requiring extract if fully vectorized in other trees.
     SmallPtrSet<Value *, 4> RequiredExtract;
-    Value *VectorizedTree = nullptr;
+    WeakTrackingVH VectorizedTree = nullptr;
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
@@ -18789,6 +18915,7 @@ public:
       bool SameScaleFactor = false;
       bool OptReusedScalars = IsSupportedHorRdxIdentityOp &&
                               SameValuesCounter.size() != Candidates.size();
+      BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
       if (OptReusedScalars) {
         SameScaleFactor =
             (RdxKind == RecurKind::Add || RdxKind == RecurKind::FAdd ||
@@ -18809,6 +18936,7 @@ public:
               emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
           VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
           VectorizedVals.try_emplace(OrigV, Cnt);
+          ExternallyUsedValues.insert(OrigV);
           continue;
         }
       }
@@ -18888,17 +19016,18 @@ public:
         V.reorderBottomToTop(/*IgnoreReorder=*/true);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
-        BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues;
+        BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(
+            ExternallyUsedValues);
         // The reduction root is used as the insertion point for new
         // instructions, so set it as externally used to prevent it from being
         // deleted.
-        LocalExternallyUsedValues[ReductionRoot];
+        LocalExternallyUsedValues.insert(ReductionRoot);
         for (unsigned Cnt = 0, Sz = ReducedVals.size(); Cnt < Sz; ++Cnt) {
           if (Cnt == I || (ShuffledExtracts && Cnt == I - 1))
             continue;
           for (Value *V : ReducedVals[Cnt])
             if (isa<Instruction>(V))
-              LocalExternallyUsedValues[TrackedVals[V]];
+              LocalExternallyUsedValues.insert(TrackedVals[V]);
         }
         if (!IsSupportedHorRdxIdentityOp) {
           // Number of uses of the candidates in the vector of values.
@@ -18927,21 +19056,21 @@ public:
           // Check if the scalar was vectorized as part of the vectorization
           // tree but not the top node.
           if (!VLScalars.contains(RdxVal) && V.isVectorized(RdxVal)) {
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
             continue;
           }
           Value *OrigV = TrackedToOrig.at(RdxVal);
           unsigned NumOps =
               VectorizedVals.lookup(OrigV) + At(SameValuesCounter, OrigV);
           if (NumOps != ReducedValsToOps.at(OrigV).size())
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
         }
         // Do not need the list of reused scalars in regular mode anymore.
         if (!IsSupportedHorRdxIdentityOp)
           SameValuesCounter.clear();
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
         V.buildExternalUses(LocalExternallyUsedValues);
 
         V.computeMinimumValueSizes();

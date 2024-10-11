@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMVectorize
   LoopVectorizationLegality.cpp
   LoopVectorize.cpp
   SandboxVectorizer/DependencyGraph.cpp
+  SandboxVectorizer/Interval.cpp
   SandboxVectorizer/Passes/BottomUpVec.cpp
   SandboxVectorizer/SandboxVectorizer.cpp
   SandboxVectorizer/SeedCollector.cpp

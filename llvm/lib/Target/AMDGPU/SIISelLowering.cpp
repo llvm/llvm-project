@@ -1367,13 +1367,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MODereferenceable;
     return true;
   }
-  case Intrinsic::amdgcn_global_atomic_fmin:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_atomic_cond_sub_u32: {
@@ -1485,14 +1481,10 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_csub:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
-  case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
@@ -9397,12 +9389,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     DAG.setNodeMemRefs(NewNode, {MemRef});
     return SDValue(NewNode, 0);
   }
-  case Intrinsic::amdgcn_global_atomic_fmin:
-  case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -9413,16 +9401,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     };
     unsigned Opcode = 0;
     switch (IntrID) {
-    case Intrinsic::amdgcn_global_atomic_fmin:
     case Intrinsic::amdgcn_global_atomic_fmin_num:
-    case Intrinsic::amdgcn_flat_atomic_fmin:
     case Intrinsic::amdgcn_flat_atomic_fmin_num: {
       Opcode = ISD::ATOMIC_LOAD_FMIN;
       break;
     }
-    case Intrinsic::amdgcn_global_atomic_fmax:
     case Intrinsic::amdgcn_global_atomic_fmax_num:
-    case Intrinsic::amdgcn_flat_atomic_fmax:
     case Intrinsic::amdgcn_flat_atomic_fmax_num: {
       Opcode = ISD::ATOMIC_LOAD_FMAX;
       break;
@@ -10047,9 +10031,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         // If reference to barrier id is not an inline constant then it must be
         // referenced with M0[4:0]. Perform an OR with the member count to
         // include it in M0.
-        M0Val = SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32,
-                                           Op.getOperand(2), M0Val),
-                        0);
+        M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, Op.getOperand(2), M0Val);
       }
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
     } else if (IsInlinableBarID) {
