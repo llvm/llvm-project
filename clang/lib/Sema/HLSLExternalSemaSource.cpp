@@ -447,15 +447,15 @@ struct TemplateParameterListBuilder {
     ASTContext &context = S.getASTContext();
     SourceLocation loc = Builder.Record->getBeginLoc();
     ConceptDecl *CD = getTypedBufferConceptDecl(S, Builder.Record);
-    DeclarationNameInfo DNI(Builder.Record->getDeclName(), loc);
+    DeclarationNameInfo DNI(CD->getDeclName(), loc);
     NestedNameSpecifierLoc NNS;
     DeclContext *DC = Builder.Record->getDeclContext();
     TemplateArgumentListInfo TALI(loc, loc);
     const ASTTemplateArgumentListInfo *ATALI =
         ASTTemplateArgumentListInfo::Create(context, TALI);
 
-    ConceptReference *CR = ConceptReference::Create(
-        S.getASTContext(), NNS, loc, DNI, Builder.Record, CD, ATALI);
+    ConceptReference *CR = ConceptReference::Create(S.getASTContext(), NNS, loc,
+                                                    DNI, CD, CD, ATALI);
 
     clang::TemplateTypeParmDecl *T =
         clang::TemplateTypeParmDecl::Create(
@@ -476,17 +476,18 @@ struct TemplateParameterListBuilder {
 
     clang::QualType TType = context.getTypeDeclType(T);
 
-    ArrayRef<TemplateArgument> ConvertedArgs = {TemplateArgument(TType)};
+    ArrayRef<TemplateArgument> ConvertedArgs = {TemplateArgument(TType),
+                                                TemplateArgument(TType)};
 
     ImplicitConceptSpecializationDecl *IDecl =
         ImplicitConceptSpecializationDecl::Create(
             context, Builder.Record->getDeclContext(), loc, ConvertedArgs);
+
     const ConstraintSatisfaction CS(CD, ConvertedArgs);
 
     ConceptSpecializationExpr *CSE =
         ConceptSpecializationExpr::Create(context, CR, IDecl, &CS);
     T->setTypeConstraint(CR, CSE);
-    
     return CSE;
   }
 
