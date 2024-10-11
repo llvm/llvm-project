@@ -1432,7 +1432,7 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SMDBLTRP-EXT %s
 // RUN: %clang --target=riscv64 \
 // RUN:   -march=rv64ismdbltrp1p0 -E -dM %s \
-// RUN:   -o   | FileCheck --check-prefix=CHECK-SMDBLTRP-EXT %s
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMDBLTRP-EXT %s
 // CHECK-SMDBLTRP-EXT: __riscv_smdbltrp  1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
