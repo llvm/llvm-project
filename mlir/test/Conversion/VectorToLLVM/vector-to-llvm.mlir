@@ -2002,7 +2002,7 @@ func.func @vector_fma(%a: vector<8xf32>, %b: vector<2x4xf32>, %c: vector<1x1x1xf
 }
 
 func.func @vector_fma_scalable(%a: vector<[8]xf32>, %b: vector<2x[4]xf32>, %c: vector<1x1x[1]xf32>, %d: vector<f32>) -> (vector<[8]xf32>, vector<2x[4]xf32>, vector<1x1x[1]xf32>) {
-  // CHECK-LABEL: @vector_fma
+  // CHECK-LABEL: @vector_fma_scalable
   //  CHECK-SAME: %[[A:.*]]: vector<[8]xf32>
   //  CHECK-SAME: %[[B:.*]]: vector<2x[4]xf32>
   //  CHECK-SAME: %[[C:.*]]: vector<1x1x[1]xf32>
