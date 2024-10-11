@@ -2405,6 +2405,8 @@ example:
     function which has an ``ssp`` or ``sspstrong`` attribute, the calling
     function's attribute will be upgraded to ``sspreq``.
 
+.. _strictfp:
+
 ``strictfp``
     This attribute indicates that the function was called from a scope that
     requires strict floating-point semantics.  LLVM will not attempt any
@@ -3686,11 +3688,12 @@ the standard.
 :ref:`floating-point environment section <floatenv>` regarding flags and
 exceptions.)
 
-Various flags and attributes can alter the behavior of these operations and thus
-make them not bit-identical across machines and optimization levels any more:
-most notably, the :ref:`fast-math flags <fastmath>` as well as the ``strictfp``
-and ``denormal-fp-math`` attributes. See their corresponding documentation for
-details.
+Various flags, attributes, and metadata can alter the behavior of these
+operations and thus make them not bit-identical across machines and optimization
+levels any more: most notably, the :ref:`fast-math flags <fastmath>` as well as
+the :ref:`strictfp <strictfp>` and :ref:`denormal-fp-math <denormal_fp_math>`
+attributes and :ref:`!fpmath metadata <fpmath-metadata>`. See their
+corresponding documentation for details.
 
 .. _fastmath:
 
@@ -6955,6 +6958,8 @@ For example,
     ; !alias.scope list):
     %2 = load float, ptr %c, align 4, !alias.scope !6
     store float %0, ptr %arrayidx.i, align 4, !noalias !7
+
+.. _fpmath-metadata:
 
 '``fpmath``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^
