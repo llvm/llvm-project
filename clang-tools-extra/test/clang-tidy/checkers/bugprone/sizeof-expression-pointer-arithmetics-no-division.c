@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- \
-// RUN:   -config="{CheckOptions: [{key: bugprone-sizeof-expression.WarnOnSizeOfPointerArithmeticWithDivisionScaled, value: 0}]}"
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-sizeof-expression.WarnOnArithmeticWithDivisionBySizeOf: false \
+// RUN:   }}'
 
 typedef __SIZE_TYPE__ size_t;
 

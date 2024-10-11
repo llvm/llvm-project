@@ -229,8 +229,8 @@ While scaling an integer up (multiplying) with ``sizeof`` is likely **always**
 an issue, a scaling down (division) is not always inherently dangerous, in case
 the developer is aware that the division happens between an appropriate number
 of _bytes_ and a ``sizeof`` value.
-Turning :option:`WarnOnSizeOfPointerArithmeticWithDivisionScaledInteger` off
-will restrict the warnings to the multiplication case.
+Turning :option:`WarnOnArithmeticWithDivisionBySizeOf` off will restrict the
+warnings to the multiplication case.
 
 This case also checks suspicious ``alignof`` and ``offsetof`` usages in
 pointer arithmetic, as both return the "size" in bytes and not elements,
@@ -311,7 +311,7 @@ Options
    idiomatic expressions that are probably intentional and correct).
    This detects occurrences of CWE 467. Default is `false`.
 
-.. option:: WarnOnSizeOfPointerArithmeticWithDivisionScaledInteger
+.. option:: WarnOnArithmeticWithDivisionBySizeOWarnOnArithmeticWithDivisionBySizeOf
 
    When `true`, the check will warn on pointer arithmetic where the
    element count is obtained from a division with ``sizeof(...)``,

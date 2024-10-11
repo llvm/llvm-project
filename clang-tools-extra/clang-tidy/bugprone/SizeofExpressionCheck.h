@@ -31,7 +31,7 @@ private:
   const bool WarnOnSizeOfCompareToConstant;
   const bool WarnOnSizeOfPointerToAggregate;
   const bool WarnOnSizeOfPointer;
-  const bool WarnOnSizeOfPointerArithmeticWithDivisionScaled;
+  const bool WarnOnArithmeticWithDivisionBySizeOf;
 };
 
 } // namespace clang::tidy::bugprone
