@@ -57,16 +57,16 @@ struct no_tag {
     
     static constexpr uintptr_t _mask = 0u;
 
-    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type) noexcept {
+    static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type) noexcept {
       return (dirty_pointer)_ptr;
     }
-    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
+    static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
       return (clean_pointer)_ptr;
     }
-    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
+    static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
       return (clean_pointer)_ptr;
     }
-    _LIBCPP_ALWAYS_INLINE static constexpr tag_type recover_tag(dirty_pointer) noexcept {
+    static constexpr tag_type recover_tag(dirty_pointer) noexcept {
       return {};
     }
   };
@@ -82,21 +82,21 @@ template <uintptr_t Mask> struct bitmask_tag {
     
     static constexpr uintptr_t _mask = Mask;
 
-    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+    static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
 #if __has_builtin(__builtin_tag_pointer_mask_or)
       return static_cast<dirty_pointer>(__builtin_tag_pointer_mask_or((void *)(_ptr), static_cast<uintptr_t>(_value), _mask));
 #else
       return reinterpret_cast<dirty_pointer>((reinterpret_cast<uintptr_t>(_ptr) & static_cast<uintptr_t>(_mask)) | (static_cast<uintptr_t>(_value) & ~static_cast<uintptr_t>(_mask)));
 #endif
     }
-    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
+    static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
 #if __has_builtin(__builtin_tag_pointer_mask)
       return static_cast<clean_pointer>(__builtin_tag_pointer_mask((void *)_ptr, ~_mask));
 #else
       return reinterpret_cast<clean_pointer>(reinterpret_cast<uintptr_t>(_ptr) & ~static_cast<uintptr_t>(_mask));
 #endif
     }
-    _LIBCPP_ALWAYS_INLINE static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
+    static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
 #if __has_builtin(__builtin_tag_pointer_mask_as_int)
       return static_cast<tag_type>(__builtin_tag_pointer_mask_as_int((void *)_ptr, _mask));
 #else
@@ -119,7 +119,7 @@ template <unsigned Alignment> struct custom_alignment_tag {
     using dirty_pointer = _underlying_schema::dirty_pointer;
     using tag_type = _underlying_schema::tag_type;
     
-    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+    static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
 #if __has_builtin(__builtin_is_aligned)
       _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__builtin_is_aligned(_ptr, Alignment), "Pointer must be aligned by provided alignemt for tagging");
 #else
@@ -152,21 +152,21 @@ template <unsigned Bits> struct left_shift_tag {
     
     static constexpr uintptr_t _mask = left_shift_tag::_mask;
 
-    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+    static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
 #if __has_builtin(__builtin_tag_pointer_shift_or)
       return static_cast<dirty_pointer>(__builtin_tag_pointer_shift_or((void *)(_ptr), (uintptr_t)_value, _shift));
 #else
       return reinterpret_cast<dirty_pointer>((reinterpret_cast<uintptr_t>(_ptr) << _shift) | (static_cast<uintptr_t>(_value) & ((1ull << static_cast<uintptr_t>(_shift)) - 1ull)));
 #endif
     }
-    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
+    static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
 #if __has_builtin(__builtin_tag_pointer_unshift)
       return static_cast<clean_pointer>(__builtin_tag_pointer_unshift((void *)_ptr, _shift));
 #else
       return reinterpret_cast<clean_pointer>(reinterpret_cast<uintptr_t>(_ptr) >> _shift);
 #endif
     }
-    _LIBCPP_ALWAYS_INLINE static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
+    static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
 #if __has_builtin(__builtin_tag_pointer_mask_as_int)
       return static_cast<tag_type>(__builtin_tag_pointer_mask_as_int((void *)_ptr, _mask));
 #else
@@ -194,7 +194,7 @@ struct upper_byte_tag {
     using dirty_pointer = _underlying_schema::dirty_pointer;
     using tag_type = _underlying_schema::tag_type;
   
-    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
+    static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
       return (clean_pointer)_ptr;
     }
     
@@ -214,10 +214,10 @@ struct upper_byte_shifted_tag: upper_byte_tag {
     using dirty_pointer = _underlying_schema::dirty_pointer;
     using tag_type = Tag;
   
-    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+    static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
       return _underlying_schema::encode_pointer_with_tag(_ptr, static_cast<uintptr_t>(_value) << upper_byte_tag::_shift<T>);
     }
-    _LIBCPP_ALWAYS_INLINE static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
+    static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
       return static_cast<tag_type>(_underlying_schema::recover_tag(_ptr) >> upper_byte_tag::_shift<T>);
     }
     
@@ -297,35 +297,35 @@ public:
   
   explicit constexpr tagged_ptr(already_tagged_t, dirty_pointer _ptr) noexcept: _pointer{_ptr} { }
   
-  _LIBCPP_ALWAYS_INLINE explicit constexpr tagged_ptr(clean_pointer _ptr, tag_type _tag = {}) noexcept: _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
+  explicit constexpr tagged_ptr(clean_pointer _ptr, tag_type _tag = {}) noexcept: _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(pointer() == _ptr, "pointer must be recoverable after untagging");
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(tag() == _tag, "stored tag must be recoverable and within schema provided bit capacity");
   } 
 
   // accessors
-  _LIBCPP_ALWAYS_INLINE constexpr decltype(auto) operator*() const noexcept {
+  constexpr decltype(auto) operator*() const noexcept {
     return *pointer();
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr clean_pointer operator->() const noexcept {
+  constexpr clean_pointer operator->() const noexcept {
     return pointer();
   }
    
-  template <typename...Ts> _LIBCPP_ALWAYS_INLINE constexpr decltype(auto) operator[](Ts... args) const noexcept requires std::is_array_v<element_type> && (sizeof...(Ts) == std::rank_v<element_type>) {
+  template <typename...Ts> constexpr decltype(auto) operator[](Ts... args) const noexcept requires std::is_array_v<element_type> && (sizeof...(Ts) == std::rank_v<element_type>) {
     return (*pointer())[args...];
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr decltype(auto) operator[](difference_type diff) const noexcept requires (!std::is_array_v<element_type>) {
+  constexpr decltype(auto) operator[](difference_type diff) const noexcept requires (!std::is_array_v<element_type>) {
     return *(pointer() + diff);
   }
   
   // swap
-  _LIBCPP_ALWAYS_INLINE friend constexpr void swap(tagged_ptr & lhs, tagged_ptr & rhs) noexcept {
+  friend constexpr void swap(tagged_ptr & lhs, tagged_ptr & rhs) noexcept {
     std::swap(lhs._pointer, rhs._pointer);
   }
   
   // modifiers for tag
-  _LIBCPP_ALWAYS_INLINE constexpr auto & set(tag_type new_tag) noexcept {
+  constexpr auto & set(tag_type new_tag) noexcept {
     // this is here so I can avoid checks
     // TODO we should be able to check what bits available
     _pointer = schema::encode_pointer_with_tag(pointer(), new_tag);
@@ -333,53 +333,53 @@ public:
   }
 
   // modifiers for pointer
-  _LIBCPP_ALWAYS_INLINE constexpr auto & operator++() noexcept {
+  constexpr auto & operator++() noexcept {
     _pointer = tagged_ptr{pointer()+1u, tag()}._pointer;
     return *this;
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr auto operator++(int) noexcept {
+  constexpr auto operator++(int) noexcept {
     auto copy = auto(*this);
     this->operator++();
     return copy;
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr auto & operator+=(difference_type diff) noexcept {
+  constexpr auto & operator+=(difference_type diff) noexcept {
     _pointer = tagged_ptr{pointer()+diff, tag()}._pointer;
     return *this;
   }
   
-  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator+(tagged_ptr lhs, difference_type diff) noexcept {
+  friend constexpr auto operator+(tagged_ptr lhs, difference_type diff) noexcept {
     lhs += diff;
     return lhs;
   }
   
-  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator+(difference_type diff, tagged_ptr rhs) noexcept {
+  friend constexpr auto operator+(difference_type diff, tagged_ptr rhs) noexcept {
     rhs += diff;
     return rhs;
   }
   
-  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator-(tagged_ptr lhs, difference_type diff) noexcept {
+  friend constexpr auto operator-(tagged_ptr lhs, difference_type diff) noexcept {
     lhs -= diff;
     return lhs;
   }
   
-  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator-(difference_type diff, tagged_ptr rhs) noexcept {
+  friend constexpr auto operator-(difference_type diff, tagged_ptr rhs) noexcept {
     rhs -= diff;
     return rhs;
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr auto & operator-=(difference_type diff) noexcept {
+  constexpr auto & operator-=(difference_type diff) noexcept {
     _pointer = tagged_ptr{pointer()-diff, tag()}._pointer;
     return *this;
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr auto & operator--() noexcept {
+  constexpr auto & operator--() noexcept {
     _pointer = tagged_ptr{pointer()-1u, tag()}._pointer;
     return *this;
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr auto operator--(int) noexcept {
+  constexpr auto operator--(int) noexcept {
     auto copy = auto(*this);
     this->operator--();
     return copy;
@@ -394,7 +394,7 @@ public:
   
   static constexpr bool support_aliasing_masking = pointer_tagging_schema_with_aliasing<schema>;
   
-  _LIBCPP_ALWAYS_INLINE constexpr clean_pointer aliasing_pointer() const noexcept {
+  constexpr clean_pointer aliasing_pointer() const noexcept {
     if constexpr (support_aliasing_masking) {
       if !consteval {
         return schema::recover_aliasing_pointer(_pointer);
@@ -404,11 +404,11 @@ public:
     return schema::recover_pointer(_pointer);
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr clean_pointer pointer() const noexcept {
+  constexpr clean_pointer pointer() const noexcept {
     return schema::recover_pointer(_pointer);
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr tag_type tag() const noexcept {
+  constexpr tag_type tag() const noexcept {
     return schema::recover_tag(_pointer);
   }
   
@@ -421,16 +421,16 @@ public:
     }
   }
   
-  _LIBCPP_ALWAYS_INLINE constexpr explicit operator bool() const noexcept {
+  constexpr explicit operator bool() const noexcept {
     return pointer() != nullptr;
   }
   
-  _LIBCPP_ALWAYS_INLINE friend constexpr ptrdiff_t operator-(tagged_ptr lhs, tagged_ptr rhs) noexcept {
+  friend constexpr ptrdiff_t operator-(tagged_ptr lhs, tagged_ptr rhs) noexcept {
     return lhs.pointer() - rhs.pointer();
   }
   
   // comparison operators
-  _LIBCPP_ALWAYS_INLINE friend bool operator==(tagged_ptr, tagged_ptr) = default;
+  friend bool operator==(tagged_ptr, tagged_ptr) = default;
   
   struct _compare_object {
     clean_pointer pointer;
@@ -439,16 +439,16 @@ public:
     friend auto operator<=>(_compare_object, _compare_object) = default;
   };
   
-  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator<=>(tagged_ptr lhs, tagged_ptr rhs) noexcept {
+  friend constexpr auto operator<=>(tagged_ptr lhs, tagged_ptr rhs) noexcept {
     return _compare_object{lhs.pointer(), lhs.tag()} <=> _compare_object{rhs.pointer(), rhs.tag()};
   }
-  _LIBCPP_ALWAYS_INLINE friend constexpr bool operator==(tagged_ptr lhs, clean_pointer rhs) noexcept {
+  friend constexpr bool operator==(tagged_ptr lhs, clean_pointer rhs) noexcept {
     return lhs.pointer() == rhs;
   }
-  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator<=>(tagged_ptr lhs, clean_pointer rhs) noexcept {
+  friend constexpr auto operator<=>(tagged_ptr lhs, clean_pointer rhs) noexcept {
     return lhs.pointer() <=> rhs;
   }
-  _LIBCPP_ALWAYS_INLINE friend constexpr bool operator==(tagged_ptr lhs, nullptr_t) noexcept {
+  friend constexpr bool operator==(tagged_ptr lhs, nullptr_t) noexcept {
     return lhs.pointer() == nullptr;
   }
 };
