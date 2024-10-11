@@ -1085,9 +1085,7 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   // vector register or a multiple thereof, or the surrounding elements are
   // undef, then this is a subvector insert which naturally aligns to a vector
   // register. These can easily be handled using subregister manipulation.
-  if (RemIdx == 0 &&
-      (ExactlyVecRegSized ||
-       MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF))
+  if (RemIdx == 0 && ExactlyVecRegSized)
     return true;
 
   // If the subvector is smaller than a vector register, then the insertion
@@ -1123,35 +1121,37 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   auto [Mask, _] = buildDefaultVLOps(BigTy, MIB, MRI);
   auto VL = MIB.buildVScale(XLenTy, LitTy.getElementCount().getKnownMinValue());
 
-  // Use tail agnostic policy if we're inserting over InterLitTy's tail.
-  ElementCount EndIndex =
-      ElementCount::getScalable(RemIdx) + LitTy.getElementCount();
-  uint64_t Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  if (STI.expandVScale(EndIndex) ==
-      STI.expandVScale(InterLitTy.getElementCount()))
-    Policy = RISCVII::TAIL_AGNOSTIC;
-
   // If we're inserting into the lowest elements, use a tail undisturbed
   // vmv.v.v.
   MachineInstrBuilder Inserted;
+  bool NeedInsertSubvec =
+      TypeSize::isKnownGT(BigTy.getSizeInBits(), InterLitTy.getSizeInBits());
+  Register InsertedDst =
+      NeedInsertSubvec ? MRI.createGenericVirtualRegister(InterLitTy) : Dst;
   if (RemIdx == 0) {
-    Inserted = MIB.buildInstr(RISCV::G_VMV_V_V_VL, {InterLitTy},
+    Inserted = MIB.buildInstr(RISCV::G_VMV_V_V_VL, {InsertedDst},
                               {AlignedExtract, Insert, VL});
   } else {
     auto SlideupAmt = MIB.buildVScale(XLenTy, RemIdx);
     // Construct the vector length corresponding to RemIdx + length(LitTy).
     VL = MIB.buildAdd(XLenTy, SlideupAmt, VL);
+    // Use tail agnostic policy if we're inserting over InterLitTy's tail.
+    ElementCount EndIndex =
+        ElementCount::getScalable(RemIdx) + LitTy.getElementCount();
+    uint64_t Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    if (STI.expandVScale(EndIndex) ==
+        STI.expandVScale(InterLitTy.getElementCount()))
+      Policy = RISCVII::TAIL_AGNOSTIC;
+
     Inserted =
-        MIB.buildInstr(RISCV::G_VSLIDEUP_VL, {InterLitTy},
+        MIB.buildInstr(RISCV::G_VSLIDEUP_VL, {InsertedDst},
                        {AlignedExtract, Insert, SlideupAmt, Mask, VL, Policy});
   }
 
   // If required, insert this subvector back into the correct vector register.
   // This should resolve to an INSERT_SUBREG instruction.
-  if (TypeSize::isKnownGT(BigTy.getSizeInBits(), InterLitTy.getSizeInBits()))
-    MIB.buildInsertSubvector(Dst, BigVec, LitVec, AlignedIdx);
-  else
-    Inserted->getOperand(0).setReg(Dst);
+  if (NeedInsertSubvec)
+    MIB.buildInsertSubvector(Dst, BigVec, Inserted, AlignedIdx);
 
   MI.eraseFromParent();
   return true;
