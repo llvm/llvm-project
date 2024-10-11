@@ -449,10 +449,10 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
 
   // For MOVW/MOVT Instructions, the Fixup Value needs to be 16 bit aligned.
   // If this is not the case, we should reject compilation.
-  if((Kind == ARM::fixup_arm_movw_lo16 || Kind == ARM::fixup_arm_movt_hi16 ||
-      Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16) &&
+  if ((Kind == ARM::fixup_arm_movw_lo16 || Kind == ARM::fixup_arm_movt_hi16 ||
+       Kind == ARM::fixup_t2_movw_lo16 || Kind == ARM::fixup_t2_movt_hi16) &&
       (!(minIntN(16) <= static_cast<int64_t>(Value) &&
-    static_cast<int64_t>(Value) <= maxIntN(16)))) {
+         static_cast<int64_t>(Value) <= maxIntN(16)))) {
     Ctx.reportError(Fixup.getLoc(), "Relocation Not In Range");
     return 0;
   }
