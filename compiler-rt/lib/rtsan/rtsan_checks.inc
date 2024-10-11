@@ -16,4 +16,4 @@
 // RTSAN_CHECK(Name, SummaryKind)
 // SummaryKind should be a string literal.
 
-RTSAN_CHECK(InCallStack, "in-call-stack")
+RTSAN_CHECK(CallStackContains, "call-stack-contains")

@@ -52,6 +52,8 @@ static const char *ConvertTypeToFlagName(ErrorType Type) {
   UNREACHABLE("unknown ErrorType!");
 }
 
+bool __rtsan::HasSuppressions() { return suppression_ctx != nullptr; }
+
 void __rtsan::InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
 
@@ -65,10 +67,10 @@ void __rtsan::InitializeSuppressions() {
 }
 
 bool __rtsan::IsStackTraceSuppressed(const StackTrace &stack) {
-  if (suppression_ctx == nullptr)
-    return false;
+  CHECK(HasSuppressions());
 
-  const char *call_stack_flag = ConvertTypeToFlagName(ErrorType::InCallStack);
+  const char *call_stack_flag =
+      ConvertTypeToFlagName(ErrorType::CallStackContains);
   if (!suppression_ctx->HasSuppressionType(call_stack_flag))
     return false;
 
