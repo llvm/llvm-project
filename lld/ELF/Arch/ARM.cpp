@@ -1331,7 +1331,7 @@ private:
 };
 
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
-    : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
+    : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
                        /*alignment=*/32, ".gnu.sgstubs"),
       ctx(ctx) {
@@ -1446,10 +1446,11 @@ void ArmCmseSGSection::finalizeContents(Ctx &) {
 // https://developer.arm.com/documentation/ecm0359818/latest
 template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   StringTableSection *shstrtab =
-      make<StringTableSection>(".shstrtab", /*dynamic=*/false);
+      make<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
   StringTableSection *strtab =
-      make<StringTableSection>(".strtab", /*dynamic=*/false);
-  SymbolTableBaseSection *impSymTab = make<SymbolTableSection<ELFT>>(*strtab);
+      make<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
+  SymbolTableBaseSection *impSymTab =
+      make<SymbolTableSection<ELFT>>(ctx, *strtab);
 
   SmallVector<std::pair<OutputSection *, SyntheticSection *>, 0> osIsPairs;
   osIsPairs.emplace_back(make<OutputSection>(strtab->name, 0, 0), strtab);
