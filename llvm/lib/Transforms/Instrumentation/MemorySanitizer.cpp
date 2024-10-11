@@ -5610,11 +5610,10 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
     // and 32 bytes for ABIv2.  This is usually determined by target
     // endianness, but in theory could be overridden by function attribute.
     if (TargetTriple.isPPC64()) {
-      if (TargetTriple.isPPC64ELFv2ABI()) {
+      if (TargetTriple.isPPC64ELFv2ABI())
         VAArgBase = 32;
-      } else {
+      else
         VAArgBase = 48;
-      }
     } else {
       // Parameter save area is 8 bytes from frame pointer in PPC32
       VAArgBase = 8;
@@ -5677,9 +5676,8 @@ struct VarArgPowerPCHelper : public VarArgHelperBase {
         VAArgOffset += ArgSize;
         VAArgOffset = alignTo(VAArgOffset, Align(8));
       }
-      if (IsFixed) {
+      if (IsFixed)
         VAArgBase = VAArgOffset;
-      }
     }
 
     Constant *TotalVAArgSize =
@@ -6154,9 +6152,8 @@ struct VarArgGenericHelper : public VarArgHelperBase {
     unsigned VAArgOffset = 0;
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      if (IsFixed) {
+      if (IsFixed)
         continue;
-      }
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
       if (DL.isBigEndian()) {
         // Adjusting the shadow for argument with size < IntptrSize to match the
@@ -6167,9 +6164,8 @@ struct VarArgGenericHelper : public VarArgHelperBase {
       Value *Base = getShadowPtrForVAArgument(IRB, VAArgOffset, ArgSize);
       VAArgOffset += ArgSize;
       VAArgOffset = alignTo(VAArgOffset, IntptrSize);
-      if (!Base) {
+      if (!Base)
         continue;
-      }
       IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
     }
 
@@ -6254,56 +6250,44 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
   // on other platforms.
   Triple TargetTriple(Func.getParent()->getTargetTriple());
 
-  if (TargetTriple.getArch() == Triple::x86) {
+  if (TargetTriple.getArch() == Triple::x86)
     return new VarArgI386Helper(Func, Msan, Visitor);
-  }
 
-  if (TargetTriple.getArch() == Triple::x86_64) {
+  if (TargetTriple.getArch() == Triple::x86_64)
     return new VarArgAMD64Helper(Func, Msan, Visitor);
-  }
 
-  if (TargetTriple.isARM()) {
+  if (TargetTriple.isARM())
     return new VarArgARM32Helper(Func, Msan, Visitor, /*VAListTagSize=*/4);
-  }
 
-  if (TargetTriple.isAArch64()) {
+  if (TargetTriple.isAArch64())
     return new VarArgAArch64Helper(Func, Msan, Visitor);
-  }
 
-  if (TargetTriple.isSystemZ()) {
+  if (TargetTriple.isSystemZ())
     return new VarArgSystemZHelper(Func, Msan, Visitor);
-  }
 
-  if (TargetTriple.isPPC32()) {
-    // On PowerPC32 VAListTag is a struct
-    // {char, char, i16 padding, char *, char *}
+  // On PowerPC32 VAListTag is a struct
+  // {char, char, i16 padding, char *, char *}
+  if (TargetTriple.isPPC32())
     return new VarArgPowerPCHelper(Func, Msan, Visitor, /*VAListTagSize=*/12);
-  }
 
-  if (TargetTriple.isPPC64()) {
+  if (TargetTriple.isPPC64())
     return new VarArgPowerPCHelper(Func, Msan, Visitor, /*VAListTagSize=*/8);
-  }
 
-  if (TargetTriple.isRISCV32()) {
+  if (TargetTriple.isRISCV32())
     return new VarArgRISCVHelper(Func, Msan, Visitor, /*VAListTagSize=*/4);
-  }
 
-  if (TargetTriple.isRISCV64()) {
+  if (TargetTriple.isRISCV64())
     return new VarArgRISCVHelper(Func, Msan, Visitor, /*VAListTagSize=*/8);
-  }
 
-  if (TargetTriple.isMIPS32()) {
+  if (TargetTriple.isMIPS32())
     return new VarArgMIPSHelper(Func, Msan, Visitor, /*VAListTagSize=*/4);
-  }
 
-  if (TargetTriple.isMIPS64()) {
+  if (TargetTriple.isMIPS64())
     return new VarArgMIPSHelper(Func, Msan, Visitor, /*VAListTagSize=*/8);
-  }
 
-  if (TargetTriple.isLoongArch64()) {
+  if (TargetTriple.isLoongArch64())
     return new VarArgLoongArch64Helper(Func, Msan, Visitor,
                                        /*VAListTagSize=*/8);
-  }
 
   return new VarArgNoOpHelper(Func, Msan, Visitor);
 }
