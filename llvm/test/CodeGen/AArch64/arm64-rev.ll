@@ -397,13 +397,10 @@ define void @test_vrev64(ptr nocapture %source, ptr nocapture %dst) nounwind ssp
 ;
 ; CHECK-GI-LABEL: test_vrev64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI27_0
 ; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI27_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    mov h1, v0[1]
-; CHECK-GI-NEXT:    str h0, [x1]
-; CHECK-GI-NEXT:    str h1, [x1, #2]
+; CHECK-GI-NEXT:    add x8, x1, #2
+; CHECK-GI-NEXT:    st1.h { v0 }[6], [x1]
+; CHECK-GI-NEXT:    st1.h { v0 }[5], [x8]
 ; CHECK-GI-NEXT:    ret
 entry:
   %tmp2 = load <8 x i16>, ptr %source, align 4

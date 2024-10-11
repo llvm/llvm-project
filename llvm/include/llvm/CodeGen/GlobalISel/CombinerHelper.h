@@ -594,12 +594,9 @@ public:
 
   /// Combine extracts of two different arrays into one build vector into a
   /// shuffle vector.
-  bool matchCombineExtractToShuffle(
-      MachineInstr &MI, SmallVectorImpl<std::pair<Register, int>> &MatchInfo,
-      std::pair<Register, Register> &VectorRegisters);
-  void applyCombineExtractToShuffle(
-      MachineInstr &MI, SmallVectorImpl<std::pair<Register, int>> &MatchInfo,
-      std::pair<Register, Register> &VectorRegisters);
+  bool
+  matchCombineExtractToShuffle(MachineInstr &MI, SmallVectorImpl<Register> &Ops,
+                               std::pair<Register, Register> &VectorRegisters);
 
   bool matchExtractAllEltsFromBuildVector(
       MachineInstr &MI,

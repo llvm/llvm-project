@@ -1351,10 +1351,30 @@ define <4 x i32> @testDUP.v1i32(<1 x i32> %a) {
 }
 
 define <8 x i8> @getl(<16 x i8> %x) #0 {
-; CHECK-LABEL: getl:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: getl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: getl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov b2, v0.b[1]
+; CHECK-GI-NEXT:    mov v1.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov b3, v0.b[2]
+; CHECK-GI-NEXT:    mov v1.b[1], v2.b[0]
+; CHECK-GI-NEXT:    mov b2, v0.b[3]
+; CHECK-GI-NEXT:    mov v1.b[2], v3.b[0]
+; CHECK-GI-NEXT:    mov b3, v0.b[4]
+; CHECK-GI-NEXT:    mov v1.b[3], v2.b[0]
+; CHECK-GI-NEXT:    mov b2, v0.b[5]
+; CHECK-GI-NEXT:    mov v1.b[4], v3.b[0]
+; CHECK-GI-NEXT:    mov b3, v0.b[6]
+; CHECK-GI-NEXT:    mov b0, v0.b[7]
+; CHECK-GI-NEXT:    mov v1.b[5], v2.b[0]
+; CHECK-GI-NEXT:    mov v1.b[6], v3.b[0]
+; CHECK-GI-NEXT:    mov v1.b[7], v0.b[0]
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    ret
   %vecext = extractelement <16 x i8> %x, i32 0
   %vecinit = insertelement <8 x i8> undef, i8 %vecext, i32 0
   %vecext1 = extractelement <16 x i8> %x, i32 1
