@@ -13,7 +13,7 @@ namespace __sanitizer {
 
 void PrintThreadHistory(ThreadRegistry &registry, InternalScopedString &out) {
   ThreadRegistryLock l(&registry);
-  // Stack traces are largest part of printout and they offten the same for
+  // Stack traces are largest part of printout and they often the same for
   // multiple threads, so we will deduplicate them.
   InternalMmapVector<const ThreadContextBase *> stacks;
 
