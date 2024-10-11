@@ -321,6 +321,8 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
 
 PreservedAnalyses KernelInfoPrinter::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-  KernelInfo::emitKernelInfo(F, AM, TM);
+  // Skip it if remarks are not enabled as it will do nothing useful.
+  if (F.getContext().getDiagHandlerPtr()->isPassedOptRemarkEnabled(DEBUG_TYPE))
+    KernelInfo::emitKernelInfo(F, AM, TM);
   return PreservedAnalyses::all();
 }

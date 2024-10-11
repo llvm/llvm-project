@@ -825,7 +825,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
           PM.addPass(AMDGPUAttributorPass(*this));
-        if (KernelInfoEndLTO) {
+        if (!NoKernelInfoEndLTO) {
           FunctionPassManager FPM;
           FPM.addPass(KernelInfoPrinter(this));
           PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));

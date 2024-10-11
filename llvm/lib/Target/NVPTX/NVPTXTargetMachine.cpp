@@ -240,7 +240,7 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 
-  if (KernelInfoEndLTO) {
+  if (!NoKernelInfoEndLTO) {
     PB.registerFullLinkTimeOptimizationLastEPCallback(
         [this](ModulePassManager &PM, OptimizationLevel Level) {
           FunctionPassManager FPM;
