@@ -191,6 +191,12 @@ public:
     return iterator(x) += y;
   }
 
+  friend constexpr iterator operator+(difference_type x, const iterator& y)
+    requires cartesian_product_is_random_access<Const, First, Vs...>
+  {
+    return y + x;
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
