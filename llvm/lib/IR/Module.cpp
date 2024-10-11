@@ -73,7 +73,7 @@ template class llvm::SymbolTableListTraits<GlobalIFunc>;
 
 Module::Module(StringRef MID, LLVMContext &C)
     : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>(-1)),
-      ModuleID(std::string(MID)), SourceFileName(std::string(MID)), DL(""),
+      ModuleID(std::string(MID)), SourceFileName(std::string(MID)),
       IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   Context.addModule(this);
 }
@@ -89,21 +89,22 @@ Module::~Module() {
 
 void Module::removeDebugIntrinsicDeclarations() {
   auto *DeclareIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_declare);
   assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
          "Debug declare intrinsic should have had uses removed.");
   DeclareIntrinsicFn->eraseFromParent();
   auto *ValueIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_value);
   assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
          "Debug value intrinsic should have had uses removed.");
   ValueIntrinsicFn->eraseFromParent();
   auto *AssignIntrinsicFn =
-      Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_assign);
   assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
          "Debug assign intrinsic should have had uses removed.");
   AssignIntrinsicFn->eraseFromParent();
-  auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
+  auto *LabelntrinsicFn =
+      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_label);
   assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
          "Debug label intrinsic should have had uses removed.");
   LabelntrinsicFn->eraseFromParent();

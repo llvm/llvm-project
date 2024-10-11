@@ -18,6 +18,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
@@ -25,6 +26,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -52,6 +54,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -63,6 +66,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -305,6 +309,10 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
       return true;
 
   }
+
+  if (auto *Concept = dyn_cast<ConceptDecl>(D);
+      Concept && CheckConceptUseInDefinition(Concept, Loc))
+    return true;
 
   if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
     // Lambdas are only default-constructible or assignable in C++2a onwards.
@@ -918,6 +926,13 @@ ExprResult Sema::DefaultArgumentPromotion(Expr *E) {
     E = Temp.get();
   }
 
+  // C++ [expr.call]p7, per CWG722:
+  //   An argument that has (possibly cv-qualified) type std::nullptr_t is
+  //   converted to void* ([conv.ptr]).
+  // (This does not apply to C23 nullptr)
+  if (getLangOpts().CPlusPlus && E->getType()->isNullPtrType())
+    E = ImpCastExprToType(E, Context.VoidPtrTy, CK_NullToPointer).get();
+
   return E;
 }
 
@@ -928,9 +943,9 @@ Sema::VarArgKind Sema::isValidVarArgType(const QualType &Ty) {
     //   enumeration, pointer, pointer to member, or class type, the program
     //   is ill-formed.
     //
-    // Since we've already performed array-to-pointer and function-to-pointer
-    // decay, the only such type in C++ is cv void. This also handles
-    // initializer lists as variadic arguments.
+    // Since we've already performed null pointer conversion, array-to-pointer
+    // decay and function-to-pointer decay, the only such type in C++ is cv
+    // void. This also handles initializer lists as variadic arguments.
     if (Ty->isVoidType())
       return VAK_Invalid;
 
@@ -2455,7 +2470,15 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
       LookupCtx ? LookupCtx : (SS.isEmpty() ? CurContext : nullptr);
   while (DC) {
     if (isa<CXXRecordDecl>(DC)) {
-      LookupQualifiedName(R, DC);
+      if (ExplicitTemplateArgs) {
+        if (LookupTemplateName(
+                R, S, SS, Context.getRecordType(cast<CXXRecordDecl>(DC)),
+                /*EnteringContext*/ false, TemplateNameIsRequired,
+                /*RequiredTemplateKind*/ nullptr, /*AllowTypoCorrection*/ true))
+          return true;
+      } else {
+        LookupQualifiedName(R, DC);
+      }
 
       if (!R.empty()) {
         // Don't give errors about ambiguities in this lookup.
@@ -4455,6 +4478,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::UnaryTransform:
     case Type::Attributed:
     case Type::BTFTagAttributed:
+    case Type::HLSLAttributedResource:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:
@@ -5021,8 +5045,7 @@ ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
       }
     }
 
-    ExprResult ConvExpr =
-        tryConvertExprToType(IndexExpr, Context.getSizeType());
+    ExprResult ConvExpr = IndexExpr;
     assert(!ConvExpr.isInvalid() &&
            "should be able to convert any integer type to size type");
     return ConvExpr.get();
@@ -5416,6 +5439,8 @@ struct EnsureImmediateInvocationInDefaultArgs
   EnsureImmediateInvocationInDefaultArgs(Sema &SemaRef)
       : TreeTransform(SemaRef) {}
 
+  bool AlwaysRebuild() { return true; }
+
   // Lambda can only have immediate invocations in the default
   // args of their parameters, which is transformed upon calling the closure.
   // The body is not a subexpression, so we have nothing to do.
@@ -5430,11 +5455,24 @@ struct EnsureImmediateInvocationInDefaultArgs
 
   // Rewrite to source location to refer to the context in which they are used.
   ExprResult TransformSourceLocExpr(SourceLocExpr *E) {
-    if (E->getParentContext() == SemaRef.CurContext)
+    DeclContext *DC = E->getParentContext();
+    if (DC == SemaRef.CurContext)
       return E;
-    return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
-                                             E->getBeginLoc(), E->getEndLoc(),
-                                             SemaRef.CurContext);
+
+    // FIXME: During instantiation, because the rebuild of defaults arguments
+    // is not always done in the context of the template instantiator,
+    // we run the risk of producing a dependent source location
+    // that would never be rebuilt.
+    // This usually happens during overload resolution, or in contexts
+    // where the value of the source location does not matter.
+    // However, we should find a better way to deal with source location
+    // of function templates.
+    if (!SemaRef.CurrentInstantiationScope ||
+        !SemaRef.CurContext->isDependentContext() || DC->isDependentContext())
+      DC = SemaRef.CurContext;
+
+    return getDerived().RebuildSourceLocExpr(
+        E->getIdentKind(), E->getType(), E->getBeginLoc(), E->getEndLoc(), DC);
   }
 };
 
@@ -5444,7 +5482,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
   assert(Param->hasDefaultArg() && "can't build nonexistent default arg");
 
   bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
-  bool InLifetimeExtendingContext = isInLifetimeExtendingContext();
+  bool NeedRebuild = needsRebuildOfDefaultArgOrInit();
   std::optional<ExpressionEvaluationContextRecord::InitializationContext>
       InitializationContext =
           OutermostDeclarationWithDelayedImmediateInvocations();
@@ -5480,13 +5518,15 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
 
     // Rewrite the call argument that was created from the corresponding
     // parameter's default argument.
-    if (V.HasImmediateCalls || InLifetimeExtendingContext) {
+    if (V.HasImmediateCalls ||
+        (NeedRebuild && isa_and_present<ExprWithCleanups>(Param->getInit()))) {
       if (V.HasImmediateCalls)
         ExprEvalContexts.back().DelayedDefaultInitializationContext = {
             CallLoc, Param, CurContext};
       // Pass down lifetime extending flag, and collect temporaries in
       // CreateMaterializeTemporaryExpr when we rewrite the call argument.
-      keepInLifetimeExtendingContext();
+      currentEvaluationContext().InLifetimeExtendingContext =
+          parentEvaluationContext().InLifetimeExtendingContext;
       EnsureImmediateInvocationInDefaultArgs Immediate(*this);
       ExprResult Res;
       runWithSufficientStackSpace(CallLoc, [&] {
@@ -5532,7 +5572,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   Expr *Init = nullptr;
 
   bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
-
+  bool NeedRebuild = needsRebuildOfDefaultArgOrInit();
   EnterExpressionEvaluationContext EvalContext(
       *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
 
@@ -5567,12 +5607,27 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   ImmediateCallVisitor V(getASTContext());
   if (!NestedDefaultChecking)
     V.TraverseDecl(Field);
-  if (V.HasImmediateCalls) {
+
+  // CWG1815
+  // Support lifetime extension of temporary created by aggregate
+  // initialization using a default member initializer. We should rebuild
+  // the initializer in a lifetime extension context if the initializer
+  // expression is an ExprWithCleanups. Then make sure the normal lifetime
+  // extension code recurses into the default initializer and does lifetime
+  // extension when warranted.
+  bool ContainsAnyTemporaries =
+      isa_and_present<ExprWithCleanups>(Field->getInClassInitializer());
+  if (Field->getInClassInitializer() &&
+      !Field->getInClassInitializer()->containsErrors() &&
+      (V.HasImmediateCalls || (NeedRebuild && ContainsAnyTemporaries))) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
         NestedDefaultChecking;
-
+    // Pass down lifetime extending flag, and collect temporaries in
+    // CreateMaterializeTemporaryExpr when we rewrite the call argument.
+    currentEvaluationContext().InLifetimeExtendingContext =
+        parentEvaluationContext().InLifetimeExtendingContext;
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
     runWithSufficientStackSpace(Loc, [&] {
@@ -5594,6 +5649,8 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
       runWithSufficientStackSpace(Loc, [&] {
         MarkDeclarationsReferencedInExpr(E, /*SkipLocalVariables=*/false);
       });
+    if (isInLifetimeExtendingContext())
+      DiscardCleanupsInEvaluationContext();
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
     //   full-expression.
@@ -5915,6 +5972,13 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
           ProtoArgType->isBlockPointerType())
         if (auto *BE = dyn_cast<BlockExpr>(Arg->IgnoreParenNoopCasts(Context)))
           BE->getBlockDecl()->setDoesNotEscape();
+      if ((Proto->getExtParameterInfo(i).getABI() == ParameterABI::HLSLOut ||
+           Proto->getExtParameterInfo(i).getABI() == ParameterABI::HLSLInOut)) {
+        ExprResult ArgExpr = HLSL().ActOnOutParamExpr(Param, Arg);
+        if (ArgExpr.isInvalid())
+          return true;
+        Arg = ArgExpr.getAs<Expr>();
+      }
 
       InitializedEntity Entity =
           Param ? InitializedEntity::InitializeParameter(Context, Param,
@@ -6075,7 +6139,7 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -6911,8 +6975,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   }
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(FDecl))
-    if (!isa<RequiresExprBodyDecl>(CurContext) &&
-        Method->isImplicitObjectMemberFunction())
+    if (Method->isImplicitObjectMemberFunction())
       return ExprError(Diag(LParenLoc, diag::err_member_call_without_object)
                        << Fn->getSourceRange() << 0);
 
@@ -9575,7 +9638,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
       QualType RHSType = RHS.get()->getType();
       if (Diagnose) {
         RHS = PerformImplicitConversion(RHS.get(), LHSType.getUnqualifiedType(),
-                                        AA_Assigning);
+                                        AssignmentAction::Assigning);
       } else {
         ImplicitConversionSequence ICS =
             TryImplicitConversion(RHS.get(), LHSType.getUnqualifiedType(),
@@ -9587,7 +9650,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
         if (ICS.isFailure())
           return Incompatible;
         RHS = PerformImplicitConversion(RHS.get(), LHSType.getUnqualifiedType(),
-                                        ICS, AA_Assigning);
+                                        ICS, AssignmentAction::Assigning);
       }
       if (RHS.isInvalid())
         return Incompatible;
@@ -9816,7 +9879,9 @@ static bool tryVectorConvertAndSplat(Sema &S, ExprResult *scalar,
   // if necessary.
   CastKind scalarCast = CK_NoOp;
 
-  if (vectorEltTy->isIntegralType(S.Context)) {
+  if (vectorEltTy->isBooleanType() && scalarTy->isIntegralType(S.Context)) {
+    scalarCast = CK_IntegralToBoolean;
+  } else if (vectorEltTy->isIntegralType(S.Context)) {
     if (S.getLangOpts().OpenCL && (scalarTy->isRealFloatingType() ||
         (scalarTy->isIntegerType() &&
          S.Context.getIntegerTypeOrder(vectorEltTy, scalarTy) < 0))) {
@@ -9877,6 +9942,9 @@ static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
 /// IntTy without losing precision.
 static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
                                       QualType OtherIntTy) {
+  if (Int->get()->containsErrors())
+    return false;
+
   QualType IntTy = Int->get()->getType().getUnqualifiedType();
 
   // Reject cases where the value of the Int is unknown as that would
@@ -9915,6 +9983,9 @@ static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
 /// FloatTy without losing precision.
 static bool canConvertIntTyToFloatTy(Sema &S, ExprResult *Int,
                                      QualType FloatTy) {
+  if (Int->get()->containsErrors())
+    return false;
+
   QualType IntTy = Int->get()->getType().getUnqualifiedType();
 
   // Determine if the integer constant can be expressed as a floating point
@@ -10072,6 +10143,10 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
   const VectorType *LHSVecType = LHSType->getAs<VectorType>();
   const VectorType *RHSVecType = RHSType->getAs<VectorType>();
   assert(LHSVecType || RHSVecType);
+
+  if (getLangOpts().HLSL)
+    return HLSL().handleVectorBinOpConversion(LHS, RHS, LHSType, RHSType,
+                                              IsCompAssign);
 
   // AltiVec-style "vector bool op vector bool" combinations are allowed
   // for some operators but not others.
@@ -12803,7 +12878,8 @@ static void diagnoseXorMisusedAsPow(Sema &S, const ExprResult &XorLHS,
 }
 
 QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
-                                          SourceLocation Loc) {
+                                          SourceLocation Loc,
+                                          BinaryOperatorKind Opc) {
   // Ensure that either both operands are of the same vector type, or
   // one operand is of a vector type and the other is of its element type.
   QualType vType = CheckVectorOperands(LHS, RHS, Loc, false,
@@ -12823,6 +12899,15 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (!getLangOpts().CPlusPlus &&
       !(isa<ExtVectorType>(vType->getAs<VectorType>())))
     return InvalidLogicalVectorOperands(Loc, LHS, RHS);
+  // Beginning with HLSL 2021, HLSL disallows logical operators on vector
+  // operands and instead requires the use of the `and`, `or`, `any`, `all`, and
+  // `select` functions.
+  if (getLangOpts().HLSL &&
+      getLangOpts().getHLSLVersion() >= LangOptionsBase::HLSL_2021) {
+    (void)InvalidOperands(Loc, LHS, RHS);
+    HLSL().emitLogicalOperatorFixIt(LHS.get(), RHS.get(), Opc);
+    return QualType();
+  }
 
   return GetSignedVectorType(LHS.get()->getType());
 }
@@ -12994,7 +13079,7 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   // Check vector operands differently.
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
-    return CheckVectorLogicalOperands(LHS, RHS, Loc);
+    return CheckVectorLogicalOperands(LHS, RHS, Loc, Opc);
 
   bool EnumConstantInBoolContext = false;
   for (const ExprResult &HS : {LHS, RHS}) {
@@ -13643,8 +13728,8 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     ConvTy = CheckAssignmentConstraints(Loc, LHSType, RHSType);
   }
 
-  if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType,
-                               RHS.get(), AA_Assigning))
+  if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType, RHS.get(),
+                               AssignmentAction::Assigning))
     return QualType();
 
   CheckForNullPointerDereference(*this, LHSExpr);
@@ -15057,6 +15142,37 @@ static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
     DiagnoseShiftCompare(Self, OpLoc, LHSExpr, RHSExpr);
 }
 
+static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
+                                                 Expr *Operand) {
+  if (auto *CT = Operand->getType()->getAs<ComplexType>()) {
+    QualType ElementType = CT->getElementType();
+    bool IsComplexRangePromoted = S.getLangOpts().getComplexRange() ==
+                                  LangOptions::ComplexRangeKind::CX_Promoted;
+    if (ElementType->isFloatingType() && IsComplexRangePromoted) {
+      ASTContext &Ctx = S.getASTContext();
+      QualType HigherElementType = Ctx.GetHigherPrecisionFPType(ElementType);
+      const llvm::fltSemantics &ElementTypeSemantics =
+          Ctx.getFloatTypeSemantics(ElementType);
+      const llvm::fltSemantics &HigherElementTypeSemantics =
+          Ctx.getFloatTypeSemantics(HigherElementType);
+      if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
+          llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+        // Retain the location of the first use of higher precision type.
+        if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
+          S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
+        for (auto &[Type, Num] : S.ExcessPrecisionNotSatisfied) {
+          if (Type == HigherElementType) {
+            Num++;
+            return;
+          }
+        }
+        S.ExcessPrecisionNotSatisfied.push_back(std::make_pair(
+            HigherElementType, S.ExcessPrecisionNotSatisfied.size()));
+      }
+    }
+  }
+}
+
 ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
                             tok::TokenKind Kind,
                             Expr *LHSExpr, Expr *RHSExpr) {
@@ -15066,6 +15182,11 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
 
   // Emit warnings for tricky precedence issues, e.g. "bitfield & 0x4 == 0"
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
+
+  // Emit warnings if the requested higher precision type equal to the current
+  // type precision.
+  if (Kind == tok::TokenKind::slash)
+    DetectPrecisionLossInComplexDivision(*this, TokLoc, LHSExpr);
 
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }
@@ -16102,6 +16223,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   BlockScopeInfo *BSI = cast<BlockScopeInfo>(FunctionScopes.back());
   BlockDecl *BD = BSI->TheDecl;
 
+  maybeAddDeclWithEffects(BD);
+
   if (BSI->HasImplicitReturnType)
     deduceClosureReturnType(*BSI);
 
@@ -16652,7 +16775,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatiblePointer:
-    if (Action == AA_Passing_CFAudited) {
+    if (Action == AssignmentAction::Passing_CFAudited) {
       DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
     } else if (getLangOpts().CPlusPlus) {
       DiagKind = diag::err_typecheck_convert_incompatible_pointer;
@@ -16806,19 +16929,19 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
 
   QualType FirstType, SecondType;
   switch (Action) {
-  case AA_Assigning:
-  case AA_Initializing:
+  case AssignmentAction::Assigning:
+  case AssignmentAction::Initializing:
     // The destination type comes first.
     FirstType = DstType;
     SecondType = SrcType;
     break;
 
-  case AA_Returning:
-  case AA_Passing:
-  case AA_Passing_CFAudited:
-  case AA_Converting:
-  case AA_Sending:
-  case AA_Casting:
+  case AssignmentAction::Returning:
+  case AssignmentAction::Passing:
+  case AssignmentAction::Passing_CFAudited:
+  case AssignmentAction::Converting:
+  case AssignmentAction::Sending:
+  case AssignmentAction::Casting:
     // The source type comes first.
     FirstType = SrcType;
     SecondType = DstType;
@@ -16827,8 +16950,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
 
   PartialDiagnostic FDiag = PDiag(DiagKind);
   AssignmentAction ActionForDiag = Action;
-  if (Action == AA_Passing_CFAudited)
-    ActionForDiag = AA_Passing;
+  if (Action == AssignmentAction::Passing_CFAudited)
+    ActionForDiag = AssignmentAction::Passing;
 
   FDiag << FirstType << SecondType << ActionForDiag
         << SrcExpr->getSourceRange();
@@ -16868,7 +16991,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   if (CheckInferredResultType)
     ObjC().EmitRelatedResultTypeNote(SrcExpr);
 
-  if (Action == AA_Returning && ConvTy == IncompatiblePointer)
+  if (Action == AssignmentAction::Returning && ConvTy == IncompatiblePointer)
     ObjC().EmitRelatedResultTypeNoteForReturn(DstType);
 
   if (Complained)
@@ -17452,11 +17575,22 @@ static void RemoveNestedImmediateInvocation(
     ExprResult TransformInitializer(Expr *Init, bool NotCopyInit) {
       if (!Init)
         return Init;
-      /// ConstantExpr are the first layer of implicit node to be removed so if
+
+      // We cannot use IgnoreImpCasts because we need to preserve
+      // full expressions.
+      while (true) {
+        if (auto *ICE = dyn_cast<ImplicitCastExpr>(Init))
+          Init = ICE->getSubExpr();
+        else if (auto *ICE = dyn_cast<MaterializeTemporaryExpr>(Init))
+          Init = ICE->getSubExpr();
+        else
+          break;
+      }
+      /// ConstantExprs are the first layer of implicit node to be removed so if
       /// Init isn't a ConstantExpr, no ConstantExpr will be skipped.
-      if (auto *CE = dyn_cast<ConstantExpr>(Init))
-        if (CE->isImmediateInvocation())
-          RemoveImmediateInvocation(CE);
+      if (auto *CE = dyn_cast<ConstantExpr>(Init);
+          CE && CE->isImmediateInvocation())
+        RemoveImmediateInvocation(CE);
       return Base::TransformInitializer(Init, NotCopyInit);
     }
     ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
@@ -17465,7 +17599,7 @@ static void RemoveNestedImmediateInvocation(
     }
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       // Do not rebuild lambdas to avoid creating a new type.
-      // Lambdas have already been processed inside their eval context.
+      // Lambdas have already been processed inside their eval contexts.
       return E;
     }
     bool AlwaysRebuild() { return false; }
@@ -17572,7 +17706,8 @@ HandleImmediateInvocations(Sema &SemaRef,
         (SemaRef.inTemplateInstantiation() && !ImmediateEscalating)) {
       SemaRef.Diag(DR->getBeginLoc(), diag::err_invalid_consteval_take_address)
           << ND << isa<CXXRecordDecl>(ND) << FD->isConsteval();
-      SemaRef.Diag(ND->getLocation(), diag::note_declared_at);
+      if (!FD->getBuiltinID())
+        SemaRef.Diag(ND->getLocation(), diag::note_declared_at);
       if (auto Context =
               SemaRef.InnermostDeclarationWithDelayedImmediateInvocations()) {
         SemaRef.Diag(Context->Loc, diag::note_invalid_consteval_initializer)
@@ -17624,11 +17759,10 @@ void Sema::PopExpressionEvaluationContext() {
 
   // Append the collected materialized temporaries into previous context before
   // exit if the previous also is a lifetime extending context.
-  auto &PrevRecord = parentEvaluationContext();
   if (getLangOpts().CPlusPlus23 && Rec.InLifetimeExtendingContext &&
-      PrevRecord.InLifetimeExtendingContext &&
+      parentEvaluationContext().InLifetimeExtendingContext &&
       !Rec.ForRangeLifetimeExtendTemps.empty()) {
-    PrevRecord.ForRangeLifetimeExtendTemps.append(
+    parentEvaluationContext().ForRangeLifetimeExtendTemps.append(
         Rec.ForRangeLifetimeExtendTemps);
   }
 
@@ -18022,6 +18156,15 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
             Func->setInstantiationIsPending(true);
             PendingInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));
+            if (llvm::isTimeTraceVerbose()) {
+              llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
+                std::string Name;
+                llvm::raw_string_ostream OS(Name);
+                Func->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                           /*Qualified=*/true);
+                return Name;
+              });
+            }
             // Notify the consumer that a function was implicitly instantiated.
             Consumer.HandleCXXImplicitFunctionInstantiation(Func);
           }
@@ -20101,6 +20244,8 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
     return;
 
   Expr *E = ParenE->IgnoreParens();
+  if (ParenE->isProducedByFoldExpansion() && ParenE->getSubExpr() == E)
+    return;
 
   if (BinaryOperator *opE = dyn_cast<BinaryOperator>(E))
     if (opE->getOpcode() == BO_EQ &&
@@ -20878,7 +21023,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"

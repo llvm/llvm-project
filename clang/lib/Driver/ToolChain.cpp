@@ -9,6 +9,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/ARM.h"
+#include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CommonArgs.h"
 #include "ToolChains/Flang.h"
@@ -44,6 +45,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -124,7 +126,7 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
                                      "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
                                      "an integer, got '" +
                                          *Str + "'");
-    SecondsToWait = std::min(SecondsToWait, 0); // infinite
+    SecondsToWait = std::max(SecondsToWait, 0); // infinite
   }
   if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
                                 /*MemoryLimit=*/0, &ErrorMessage))
@@ -219,6 +221,17 @@ static void getAArch64MultilibFlags(const Driver &D,
   assert(!ArchName.empty() && "at least one architecture should be found");
   MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
   Result.push_back(llvm::join(MArch, "+"));
+
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  if (BranchProtectionArg) {
+    Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
+
+  const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
+  if (ABIArg) {
+    Result.push_back(ABIArg->getAsString(Args));
+  }
 }
 
 static void getARMMultilibFlags(const Driver &D,
@@ -266,6 +279,25 @@ static void getARMMultilibFlags(const Driver &D,
   case arm::FloatABI::Invalid:
     llvm_unreachable("Invalid float ABI");
   }
+
+  const Arg *BranchProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
+  if (BranchProtectionArg) {
+    Result.push_back(BranchProtectionArg->getAsString(Args));
+  }
+}
+
+static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
+                                  const llvm::opt::ArgList &Args,
+                                  Multilib::flags_list &Result) {
+  std::string Arch = riscv::getRISCVArch(Args, Triple);
+  // Canonicalize arch for easier matching
+  auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
+      Arch, /*EnableExperimentalExtensions*/ true);
+  if (!llvm::errorToBool(ISAInfo.takeError()))
+    Result.push_back("-march=" + (*ISAInfo)->toString());
+
+  Result.push_back(("-mabi=" + riscv::getRISCVABI(Args, Triple)).str());
 }
 
 Multilib::flags_list
@@ -287,6 +319,10 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
     getARMMultilibFlags(D, Triple, Args, Result);
+    break;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    getRISCVMultilibFlags(D, Triple, Args, Result);
     break;
   default:
     break;
@@ -350,6 +386,9 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       {"cl", "--driver-mode=cl"},
       {"++", "--driver-mode=g++"},
       {"flang", "--driver-mode=flang"},
+      // For backwards compatibility, we create a symlink for `flang` called
+      // `flang-new`. This will be removed in the future.
+      {"flang-new", "--driver-mode=flang"},
       {"clang-dxc", "--driver-mode=dxc"},
   };
 
@@ -812,8 +851,8 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   llvm::sys::path::append(P, "lib");
   if (auto Ret = getTargetSubDirPath(P))
     return Ret;
-  // Darwin does not use per-target runtime directory.
-  if (Triple.isOSDarwin())
+  // Darwin and AIX does not use per-target runtime directory.
+  if (Triple.isOSDarwin() || Triple.isOSAIX())
     return {};
   llvm::sys::path::append(P, Triple.str());
   return std::string(P);
@@ -1347,7 +1386,7 @@ bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
       Default = false;
     if (A && A->getOption().getID() == options::OPT_ffp_model_EQ) {
       StringRef Model = A->getValue();
-      if (Model != "fast")
+      if (Model != "fast" && Model != "aggressive")
         Default = false;
     }
   }

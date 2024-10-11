@@ -81,7 +81,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-; ALL-LABEL: define dso_local noundef ptr @_Z3foov()
+; ALL-LABEL: define dso_local noundef{{.*}}ptr @_Z3foov()
 ; There should be some PGO metadata
 ; PGO: !prof
 define dso_local noundef ptr @_Z3foov() #0 !dbg !10 {
@@ -96,7 +96,7 @@ entry:
 declare noundef nonnull ptr @_Znam(i64 noundef) #1
 
 ; Function Attrs: mustprogress noinline optnone uwtable
-; ALL-LABEL: define dso_local noundef ptr @_Z4foo2v()
+; ALL-LABEL: define dso_local noundef{{.*}}ptr @_Z4foo2v()
 define dso_local noundef ptr @_Z4foo2v() #0 !dbg !15 {
 entry:
   ; MEMPROF: call {{.*}} @_Z3foov{{.*}} !callsite ![[C2:[0-9]+]]

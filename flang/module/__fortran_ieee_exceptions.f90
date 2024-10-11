@@ -11,7 +11,7 @@
 ! here under another name so that IEEE_ARITHMETIC can USE it and export its
 ! declarations without clashing with a non-intrinsic module in a program.
 
-include '../include/flang/Runtime/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 module __fortran_ieee_exceptions
   use __fortran_builtins, only: &

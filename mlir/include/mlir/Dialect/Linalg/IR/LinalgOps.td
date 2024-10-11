@@ -154,8 +154,13 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
   let hasVerifier = 1;
 }
 
-def Linalg_WinogradFilterTransformOp :
-    Linalg_Op<"winograd_filter_transform", [AllElementTypesMatch<["filter", "output"]>]> {
+def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform",
+    [AllElementTypesMatch<["filter", "output"]>,
+     DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
   let summary = "Winograd filter transform operator";
   let description = [{
     Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
@@ -190,11 +195,42 @@ def Linalg_WinogradFilterTransformOp :
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)
   }];
+  let extraClassDeclaration = [{
+    ShapedType getFilterOperandType() {
+      return cast<ShapedType>(getFilter().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getFilterOperandRank() {
+      return getFilterOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+    int64_t getFilterFDim() {
+      return 0;
+    }
+    int64_t getFilterHDim() {
+      return 1;
+    }
+    int64_t getFilterWDim() {
+      return 2;
+    }
+    int64_t getFilterCDim() {
+      return 3;
+    }
+  }];
   let hasVerifier = 1;
 }
 
-def Linalg_WinogradInputTransformOp :
-    Linalg_Op<"winograd_input_transform", [AllElementTypesMatch<["input", "output"]>]> {
+def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform",
+    [AllElementTypesMatch<["input", "output"]>,
+     DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
   let summary = "Winograd input transform operator";
   let description = [{
     Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
@@ -229,11 +265,60 @@ def Linalg_WinogradInputTransformOp :
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)
   }];
+  let extraClassDeclaration = [{
+    ShapedType getInputOperandType() {
+      return cast<ShapedType>(getInput().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getInputOperandRank() {
+      return getInputOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+    int64_t getInputNDim() {
+      return 0;
+    }
+    int64_t getInputHDim() {
+      return 1;
+    }
+    int64_t getInputWDim() {
+      return 2;
+    }
+    int64_t getInputCDim() {
+      return 3;
+    }
+    int64_t getOutputAlphaHDim() {
+      return 0;
+    }
+    int64_t getOutputAlphaWDim() {
+      return 1;
+    }
+    int64_t getOutputTileHDim() {
+      return 2;
+    }
+    int64_t getOutputTileWDim() {
+      return 3;
+    }
+    int64_t getOutputNDim() {
+      return 4;
+    }
+    int64_t getOutputCDim() {
+      return 5;
+    }
+  }];
   let hasVerifier = 1;
 }
 
-def Linalg_WinogradOutputTransformOp :
-    Linalg_Op<"winograd_output_transform", [AllElementTypesMatch<["value", "output"]>]> {
+def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform",
+    [AllElementTypesMatch<["value", "output"]>, DestinationStyleOpInterface,
+     DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
   let summary = "Winograd output transform operator";
   let description = [{
     Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
@@ -267,6 +352,51 @@ def Linalg_WinogradOutputTransformOp :
     `ins` `(` $value `:` type($value) `)`
     `outs` `(` $output `:` type($output) `)`
     `->` type($result)
+  }];
+  let extraClassDeclaration = [{
+    ShapedType getValueOperandType() {
+      return cast<ShapedType>(getValue().getType());
+    }
+    ShapedType getOutputOperandType() {
+      return cast<ShapedType>(getOutput().getType());
+    }
+    int64_t getValueOperandRank() {
+      return getValueOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+    int64_t getValueAlphaHDim() {
+      return 0;
+    }
+    int64_t getValueAlphaWDim() {
+      return 1;
+    }
+    int64_t getValueTileHDim() {
+      return 2;
+    }
+    int64_t getValueTileWDim() {
+      return 3;
+    }
+    int64_t getValueNDim() {
+      return 4;
+    }
+    int64_t getValueFDim() {
+      return 5;
+    }
+    int64_t getOutputNDim() {
+      return 0;
+    }
+    int64_t getOutputHDim() {
+      return 1;
+    }
+    int64_t getOutputWDim() {
+      return 2;
+    }
+    int64_t getOutputFDim() {
+      return 3;
+    }
+    MutableOperandRange getDpsInitsMutable() { return getOutputMutable(); }
   }];
   let hasVerifier = 1;
 }

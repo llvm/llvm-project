@@ -1048,6 +1048,8 @@ let Command = "thread backtrace" in {
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
   Arg<"Boolean">, Desc<"Show the extended backtrace, if available">;
+  def thread_backtrace_unfiltered : Option<"unfiltered", "u">, Group<1>,
+  Desc<"Do not filter out frames according to installed frame recognizers">;
 }
 
 let Command = "thread step scope" in {
@@ -1197,7 +1199,7 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instruction_only_events : Option<"only-events", "E">,
     Group<1>,
     Desc<"Dump only the events that happened during the execution of the "
-    "target. No instrutions are dumped.">;
+    "target. No instructions are dumped.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
     Desc<"Continue dumping instructions right where the previous invocation of "

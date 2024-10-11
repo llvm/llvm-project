@@ -1,6 +1,21 @@
 import github
 import sys
 
+_SPECIAL_CASE_BINARIES = {
+    "keith": {"clang+llvm-18.1.8-arm64-apple-macos11.tar.xz"},
+}
+
+
+def _is_valid(uploader_name, valid_uploaders, asset_name):
+    if uploader_name in valid_uploaders:
+        return True
+
+    if uploader_name in _SPECIAL_CASE_BINARIES:
+        return asset_name in _SPECIAL_CASE_BINARIES[uploader_name]
+
+    return False
+
+
 def main():
     token = sys.argv[1]
 
@@ -41,7 +56,7 @@ def main():
             print(
                 f"{asset.name} : {asset.uploader.login} [{created_at} {updated_at}] ( {asset.download_count} )"
             )
-            if asset.uploader.login not in uploaders:
+            if not _is_valid(asset.uploader.login, uploaders, asset.name):
                 with open('comment', 'w') as file:
                     file.write(f'@{asset.uploader.login} is not a valid uploader.')
                 sys.exit(1)

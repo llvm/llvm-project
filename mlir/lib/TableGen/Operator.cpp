@@ -208,7 +208,7 @@ StringRef Operator::getResultName(int index) const {
 }
 
 auto Operator::getResultDecorators(int index) const -> var_decorator_range {
-  Record *result =
+  const Record *result =
       cast<DefInit>(def.getValueAsDag("results")->getArg(index))->getDef();
   if (!result->isSubClassOf("OpVariable"))
     return var_decorator_range(nullptr, nullptr);
@@ -246,7 +246,7 @@ StringRef Operator::getArgName(int index) const {
 }
 
 auto Operator::getArgDecorators(int index) const -> var_decorator_range {
-  Record *arg =
+  const Record *arg =
       cast<DefInit>(def.getValueAsDag("arguments")->getArg(index))->getDef();
   if (!arg->isSubClassOf("OpVariable"))
     return var_decorator_range(nullptr, nullptr);
@@ -572,7 +572,7 @@ void Operator::populateOpStructure() {
     if (!argDefInit)
       PrintFatalError(def.getLoc(),
                       Twine("undefined type for argument #") + Twine(i));
-    Record *argDef = argDefInit->getDef();
+    const Record *argDef = argDefInit->getDef();
     if (argDef->isSubClassOf(opVarClass))
       argDef = argDef->getValueAsDef("constraint");
 
@@ -626,7 +626,8 @@ void Operator::populateOpStructure() {
   // elements.
   int operandIndex = 0, attrIndex = 0, propIndex = 0;
   for (unsigned i = 0; i != numArgs; ++i) {
-    Record *argDef = dyn_cast<DefInit>(argumentValues->getArg(i))->getDef();
+    const Record *argDef =
+        dyn_cast<DefInit>(argumentValues->getArg(i))->getDef();
     if (argDef->isSubClassOf(opVarClass))
       argDef = argDef->getValueAsDef("constraint");
 
@@ -708,7 +709,7 @@ void Operator::populateOpStructure() {
     // do further verification based on those verified facts. If you see this
     // error, fix the traits declaration order by checking the `dependentTraits`
     // field.
-    auto verifyTraitValidity = [&](Record *trait) {
+    auto verifyTraitValidity = [&](const Record *trait) {
       auto *dependentTraits = trait->getValueAsListInit("dependentTraits");
       for (auto *traitInit : *dependentTraits)
         if (!traitSet.contains(traitInit))
@@ -798,14 +799,14 @@ const InferredResultType &Operator::getInferredResultType(int index) const {
 ArrayRef<SMLoc> Operator::getLoc() const { return def.getLoc(); }
 
 bool Operator::hasDescription() const {
-  return def.getValue("description") != nullptr;
+  return !getDescription().trim().empty();
 }
 
 StringRef Operator::getDescription() const {
   return def.getValueAsString("description");
 }
 
-bool Operator::hasSummary() const { return def.getValue("summary") != nullptr; }
+bool Operator::hasSummary() const { return !getSummary().trim().empty(); }
 
 StringRef Operator::getSummary() const {
   return def.getValueAsString("summary");

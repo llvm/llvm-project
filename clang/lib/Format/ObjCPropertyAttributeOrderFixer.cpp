@@ -86,12 +86,9 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
       Value = Tok->TokenText;
     }
 
-    auto It = SortOrderMap.find(Attribute);
-    if (It == SortOrderMap.end())
-      It = SortOrderMap.insert({Attribute, SortOrderMap.size()}).first;
-
     // Sort the indices based on the priority stored in `SortOrderMap`.
-    const auto Ordinal = It->second;
+    const auto Ordinal =
+        SortOrderMap.try_emplace(Attribute, SortOrderMap.size()).first->second;
     if (!Ordinals.insert(Ordinal).second) {
       HasDuplicates = true;
       continue;

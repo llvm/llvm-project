@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,UNPADDED
 // RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -fpadding-on-unsigned-fixed-point -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,PADDED
 
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,UNPADDED
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -fpadding-on-unsigned-fixed-point -emit-llvm %s -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,PADDED
+
 // Fixed point against other fixed point
 _Bool b_eq_true = 2.5hk == 2.5uhk;  // CHECK-DAG: @b_eq_true  = {{.*}}global i8 1, align 1
 _Bool b_eq_false = 2.5hk == 2.4uhk; // CHECK-DAG: @b_eq_false = {{.*}}global i8 0, align 1

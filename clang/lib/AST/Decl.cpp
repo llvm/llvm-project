@@ -350,7 +350,8 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       if (TemplateDecl *Template =
-              Arg.getAsTemplateOrTemplatePattern().getAsTemplateDecl())
+              Arg.getAsTemplateOrTemplatePattern().getAsTemplateDecl(
+                  /*IgnoreDeduced=*/true))
         LV.merge(getLVForDecl(Template, computation));
       continue;
 
@@ -1736,9 +1737,17 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       continue;
 
     // Suppress inline namespace if it doesn't make the result ambiguous.
-    if (P.SuppressInlineNamespace && Ctx->isInlineNamespace() && NameInScope &&
-        cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope))
-      continue;
+    if (Ctx->isInlineNamespace() && NameInScope) {
+      bool isRedundant =
+          cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope);
+      if (P.SuppressInlineNamespace ==
+              PrintingPolicy::SuppressInlineNamespaceMode::All ||
+          (P.SuppressInlineNamespace ==
+               PrintingPolicy::SuppressInlineNamespaceMode::Redundant &&
+           isRedundant)) {
+        continue;
+      }
+    }
 
     // Skip non-named contexts such as linkage specifications and ExportDecls.
     const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);
@@ -2799,9 +2808,17 @@ bool VarDecl::isKnownToBeDefined() const {
 }
 
 bool VarDecl::isNoDestroy(const ASTContext &Ctx) const {
-  return hasGlobalStorage() && (hasAttr<NoDestroyAttr>() ||
-                                (!Ctx.getLangOpts().RegisterStaticDestructors &&
-                                 !hasAttr<AlwaysDestroyAttr>()));
+  if (!hasGlobalStorage())
+    return false;
+  if (hasAttr<NoDestroyAttr>())
+    return true;
+  if (hasAttr<AlwaysDestroyAttr>())
+    return false;
+
+  using RSDKind = LangOptions::RegisterStaticDestructorsKind;
+  RSDKind K = Ctx.getLangOpts().getRegisterStaticDestructors();
+  return K == RSDKind::None ||
+         (K == RSDKind::ThreadLocal && getTLSKind() == TLS_None);
 }
 
 QualType::DestructionKind
@@ -3293,6 +3310,7 @@ bool FunctionDecl::isImmediateFunction() const {
 
 bool FunctionDecl::isMain() const {
   return isNamed(this, "main") && !getLangOpts().Freestanding &&
+         !getLangOpts().HLSL &&
          (getDeclContext()->getRedeclContext()->isTranslationUnit() ||
           isExternC());
 }
@@ -4676,6 +4694,19 @@ void FieldDecl::printName(raw_ostream &OS, const PrintingPolicy &Policy) const {
   }
   // Otherwise, do the normal printing.
   DeclaratorDecl::printName(OS, Policy);
+}
+
+const FieldDecl *FieldDecl::findCountedByField() const {
+  const auto *CAT = getType()->getAs<CountAttributedType>();
+  if (!CAT)
+    return nullptr;
+
+  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  const auto *CountDecl = CountDRE->getDecl();
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
+    CountDecl = IFD->getAnonField();
+
+  return dyn_cast<FieldDecl>(CountDecl);
 }
 
 //===----------------------------------------------------------------------===//

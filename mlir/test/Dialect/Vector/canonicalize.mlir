@@ -2471,13 +2471,15 @@ func.func @empty_vector_mask_with_return(%a : vector<8xf32>, %mask : vector<8xi1
 // -----
 
 // CHECK-LABEL: func @all_true_vector_mask
-//  CHECK-SAME:     %[[IN:.*]]: vector<3x4xf32>
-func.func @all_true_vector_mask(%a : vector<3x4xf32>) -> vector<3x4xf32> {
+//  CHECK-SAME:     %[[IN:.*]]: tensor<3x4xf32>
+func.func @all_true_vector_mask(%ta : tensor<3x4xf32>) -> vector<3x4xf32> {
 //   CHECK-NOT:   vector.mask
-//       CHECK:   %[[ADD:.*]] = arith.addf %[[IN]], %[[IN]] : vector<3x4xf32>
-//       CHECK:   return %[[ADD]] : vector<3x4xf32>
+//       CHECK:   %[[LD:.*]] = vector.transfer_read %[[IN]]
+//       CHECK:   return %[[LD]] : vector<3x4xf32>
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
   %all_true = vector.constant_mask [3, 4] : vector<3x4xi1>
-  %0 = vector.mask %all_true { arith.addf %a, %a : vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
+  %0 = vector.mask %all_true { vector.transfer_read %ta[%c0, %c0], %cf0 : tensor<3x4xf32>, vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
   return %0 : vector<3x4xf32>
 }
 
@@ -2739,4 +2741,53 @@ func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
   %0 = llvm.mlir.undef : vector<4xi8>
   %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
   return %1 : vector<4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract
+// CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0, 0, 0, 0] : vector<4xi32> from vector<8x1x2x1x1x4xi32>
+// CHECK-NEXT:   return %[[EXTRACT]] :  vector<4xi32>
+func.func @contiguous_extract_strided_slices_to_extract(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<4xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
+  %2 = vector.shape_cast %1 : vector<1x1x1x1x1x4xi32> to vector<4xi32>
+  return %2 : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_shorter_size_list
+// CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0, 0, 0] : vector<1x4xi32> from vector<8x1x2x1x1x4xi32>
+// CHECK-NEXT:   return %[[EXTRACT]] :  vector<1x4xi32>
+func.func @contiguous_extract_strided_slices_to_extract_shorter_size_list(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x4xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1], strides = [1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
+  %2 = vector.shape_cast %1 : vector<1x1x1x1x1x4xi32> to vector<1x4xi32>
+  return %2 : vector<1x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_unit_outer_size
+// CHECK-NEXT:   vector.extract_strided_slice
+func.func @contiguous_extract_strided_slices_to_extract_failure_non_unit_outer_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<8x1x1x1x1x4xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [8, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<8x1x1x1x1x4xi32>
+  return %1 : vector<8x1x1x1x1x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_full_size
+// CHECK-NEXT:   vector.extract_strided_slice
+func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x1x1x1x1x2xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 2], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x2xi32>
+  return %1 : vector<1x1x1x1x1x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_full_inner_size
+// CHECK-NEXT:    vector.extract_strided_slice
+func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_inner_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x1x2x1x1x1xi32> {
+  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 2, 1, 1, 1], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x2x1x1x1xi32>
+  return %1 : vector<1x1x2x1x1x1xi32>
 }

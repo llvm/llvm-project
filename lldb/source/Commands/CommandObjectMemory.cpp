@@ -68,7 +68,7 @@ public:
     case 'l':
       error = m_num_per_line.SetValueFromString(option_value);
       if (m_num_per_line.GetCurrentValue() == 0)
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "invalid value for --num-per-line option '%s'",
             option_value.str().c_str());
       break;
@@ -176,7 +176,7 @@ public:
     case eFormatBytesWithASCII:
       if (byte_size_option_set) {
         if (byte_size_value > 1)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "display format (bytes/bytes with ASCII) conflicts with the "
               "specified byte size %" PRIu64 "\n"
               "\tconsider using a different display format or don't specify "
@@ -913,12 +913,12 @@ public:
 
       case 'c':
         if (m_count.SetValueFromString(option_value).Fail())
-          error.SetErrorString("unrecognized value for count");
+          error = Status::FromErrorString("unrecognized value for count");
         break;
 
       case 'o':
         if (m_offset.SetValueFromString(option_value).Fail())
-          error.SetErrorString("unrecognized value for dump-offset");
+          error = Status::FromErrorString("unrecognized value for dump-offset");
         break;
 
       default:
@@ -1150,16 +1150,16 @@ public:
         FileSystem::Instance().Resolve(m_infile);
         if (!FileSystem::Instance().Exists(m_infile)) {
           m_infile.Clear();
-          error.SetErrorStringWithFormat("input file does not exist: '%s'",
-                                         option_value.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "input file does not exist: '%s'", option_value.str().c_str());
         }
         break;
 
       case 'o': {
         if (option_value.getAsInteger(0, m_infile_offset)) {
           m_infile_offset = 0;
-          error.SetErrorStringWithFormat("invalid offset string '%s'",
-                                         option_value.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid offset string '%s'", option_value.str().c_str());
         }
       } break;
 
@@ -1570,7 +1570,8 @@ protected:
 
     const bool stop_format = false;
     for (auto thread : thread_list) {
-      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format);
+      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format,
+                        /*should_filter*/ false);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);

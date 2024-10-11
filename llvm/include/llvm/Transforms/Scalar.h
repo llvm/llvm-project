@@ -53,6 +53,14 @@ Pass *createLoopStrengthReducePass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopTermFold -  This pass attempts to eliminate the last use of an IV in
+// a loop terminator instruction by rewriting it in terms of another IV.
+// Expected to be run immediately after LSR.
+//
+Pass *createLoopTermFoldPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopUnroll - This pass is a simple loop unrolling pass.
 //
 Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,

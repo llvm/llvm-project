@@ -488,8 +488,13 @@ struct ControlDropUnitDims {
     return SmallVector<unsigned>{};
   };
 };
-LogicalResult dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
-                           const ControlDropUnitDims &options);
+struct DropUnitDimsResult {
+  linalg::GenericOp resultOp;
+  SmallVector<Value> replacements;
+};
+FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
+                                           GenericOp genericOp,
+                                           const ControlDropUnitDims &options);
 
 /// Fuse two `linalg.generic` operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
@@ -497,11 +502,18 @@ LogicalResult dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
 struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
-  static llvm::SmallDenseSet<int>
-  getPreservedProducerResults(GenericOp producer, GenericOp consumer);
 };
 FailureOr<ElementwiseOpFusionResult>
 fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
+
+/// Returns a set of indices of the producer's results which would
+/// be preserved after the fusion.
+/// * There is a chance that the implementation of the transformation does not
+/// agree with the result of this method. This function gives a prediction based
+/// on an optimized fusion.
+llvm::SmallDenseSet<int> getPreservedProducerResults(GenericOp producer,
+                                                     GenericOp consumer,
+                                                     OpOperand *fusedOperand);
 
 /// Try to peel and canonicalize loop `op` and return the new result.
 /// Also applies affine_min/max bounds simplification on the fly where relevant.
@@ -537,7 +549,7 @@ namespace detail {
 struct PackingResult {
   SmallVector<OpFoldResult> offsets, sizes, strides;
   SmallVector<Value> clonedLoopIvs, leadingPackedTensorIndexings;
-  GenericOp maybeTransposeOp;
+  TransposeOp maybeTransposeOp;
   tensor::PadOp hoistedPadOp;
 };
 
@@ -556,9 +568,9 @@ buildPackingLoopNest(RewriterBase &rewriter, tensor::PadOp opToHoist,
 /// a larger tensor. On success, `opToHoist` is replaced by the cloned version
 /// in the packing loop so the caller can continue reasoning about the padding
 /// operation. If `transposeVector` is non-empty, hoist padding introduces a
-/// GenericOp to transpose the padded tensor before inserting it into the packed
-/// tensor. A `transposeVector` can change the storage order of the padded
-/// tensor but does not change the order of the pack or compute loops.
+/// TransposeOp to transpose the padded tensor before inserting it into the
+/// packed tensor. A `transposeVector` can change the storage order of the
+/// padded tensor but does not change the order of the pack or compute loops.
 ///
 /// TODO: In the future, we should consider rewriting as a tensor.pack after
 /// hoisting since this abstraction is now available.
@@ -603,13 +615,13 @@ FailureOr<Value>
 hoistPaddingOnTensors(RewriterBase &rewriter, tensor::PadOp opToHoist,
                       int64_t numLoops, ArrayRef<int64_t> transposeVector,
                       tensor::PadOp &hoistedOp,
-                      SmallVectorImpl<GenericOp> &transposeOps);
+                      SmallVectorImpl<TransposeOp> &transposeOps);
 /// Calls into `hoistPaddingOnTensors` with a local IRRewriter.
 FailureOr<Value>
 hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
                       ArrayRef<int64_t> transposeVector,
                       tensor::PadOp &hoistedOp,
-                      SmallVectorImpl<GenericOp> &transposeOps);
+                      SmallVectorImpl<TransposeOp> &transposeOps);
 
 /// Apply padding and hoisting to `linalgOp` according to the configuration
 /// specified in `options`.
@@ -749,6 +761,14 @@ LogicalResult copyToGPUPrivateMemory(OpBuilder &b, Value src, Value dst);
 /// In case of GPU private memory there is no need to deallocate since the
 /// memory is freed when going outside of the scope.
 LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
+
+/// Return true if there's dedicated logic in the Linalg Vectorizer to
+/// vectorize this Op, false otherwise.
+///
+/// Note that this helper merely implements a very high level check and that the
+/// vectorizer also requires various additional pre-conditions to be met for it
+/// to work (these are checked by the vectorizer itself).
+bool hasVectorizationImpl(Operation *);
 
 /// Emit a suitable vector form for an operation. If provided,
 /// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
@@ -1316,6 +1336,63 @@ FailureOr<Operation *> winogradConv2D(RewriterBase &rewriter,
                                       linalg::Conv2DNhwcFhwcOp op, int64_t m,
                                       int64_t r);
 
+/// Rewrite linalg.winograd_filter_transform. The data layout of the filter is
+/// FHWC. The transformation matrix is 2-dimension. We need to extract H x W
+/// from FHWC first. We generate 2 levels of loops to iterate on F and C. After
+/// the rewriting, we get
+///
+/// scf.for %f = lo_f to hi_f step 1
+///   scf.for %c = lo_c to hi_c step 1
+///     %extracted = extract filter<h x w> from filter<f x h x w x c>
+///     %ret = linalg.matmul G, %extracted
+///     %ret = linalg.matmul %ret, GT
+///     %inserted = insert %ret into filter<h x w x c x f>
+FailureOr<Operation *>
+decomposeWinogradFilterTransformOp(RewriterBase &rewriter,
+                                   linalg::WinogradFilterTransformOp op);
+
+/// Rewrite linalg.winograd_input_transform. The data layout of the input is
+/// NHWC. The transformation matrix is 2-dimension. We need to extract H x W
+/// from NHWC first. We generate 4 levels of loops to iterate on N, C, tileH,
+/// and tileW. After the rewriting, we get
+///
+/// scf.for %h = 0 to tileH step 1
+///   scf.for %w = 0 to tileW step 1
+///     scf.for %n = 0 to N step 1
+///       scf.for %c = 0 to C step 1
+///         %extracted = extract %extracted<alphaH x alphaW> from
+///                              %input<N x H x W x C>
+///                              at [%n, (%h x m), (%w x m), %c]
+///         %ret = linalg.matmul BT, %extracted
+///         %ret = linalg.matmul %ret, B
+///         %inserted = insert %ret<alphaH x alphaW> into
+///                            %output<alphaH x alphaW x tileH x tileW x N x C>
+///                            at [0, 0, %h, %w, %n, %c]
+FailureOr<Operation *>
+decomposeWinogradInputTransformOp(RewriterBase &rewriter,
+                                  linalg::WinogradInputTransformOp op);
+
+/// Rewrite linalg.winograd_output_transform. The data layout of the output is
+/// HWNF. The transformation matrix is 2-dimension. We need to extract H x W
+/// from HWNF first. We generate 4 levels of loops to iterate on N, F, tileH,
+/// and tileW. After the transformation, we get
+///
+/// scf.for %h = 0 to tileH step 1
+///   scf.for %w = 0 to tileW step 1
+///     scf.for %n = 0 to N step 1
+///       scf.for %f = 0 to F step 1
+///         %extracted = extract %extracted<alphaH x alphaW> from
+///                              %input<alphaH x alphaW x tileH x tileW x N x F>
+///                              at [0, 0, %h, %w, %n, %f]
+///         %ret = linalg.matmul AT, %extracted
+///         %ret = linalg.matmul %ret, A
+///         %inserted = insert %ret<alphaH x alphaW> into
+///                            output<N x H x W x F>
+///                            at [%n, (%h x m), (%w x m), %f]
+FailureOr<Operation *>
+decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
+                                   linalg::WinogradOutputTransformOp op);
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
 // TODO: every single such pattern should be a close to noop wrapper around a
@@ -1677,6 +1754,10 @@ void populateFoldReshapeOpsByCollapsingPatterns(
 /// Patterns to constant fold Linalg operations.
 void populateConstantFoldLinalgOperations(RewritePatternSet &patterns,
                                           const ControlFusionFn &controlFn);
+
+/// Pattern to replace `linalg.add` when destination passing on a contraction op
+/// suffices for achieving the sum.
+void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 
 /// Pattern to fuse a `tensor.pad` operation with the producer of its source,
 /// if the producer is a `linalg` operation with all parallel iterator types.

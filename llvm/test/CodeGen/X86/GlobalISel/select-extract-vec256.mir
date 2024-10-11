@@ -60,12 +60,12 @@ registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
 # AVX:               %0:vr256 = COPY $ymm1
-# AVX-NEXT:          %1:vr128 = VEXTRACTF128rr %0, 1
+# AVX-NEXT:          %1:vr128 = VEXTRACTF128rri %0, 1
 # AVX-NEXT:          $xmm0 = COPY %1
 # AVX-NEXT:          RET 0, implicit $xmm0
 #
 # AVX512VL:          %0:vr256x = COPY $ymm1
-# AVX512VL-NEXT:     %1:vr128x = VEXTRACTF32x4Z256rr %0, 1
+# AVX512VL-NEXT:     %1:vr128x = VEXTRACTF32x4Z256rri %0, 1
 # AVX512VL-NEXT:     $xmm0 = COPY %1
 # AVX512VL-NEXT:     RET 0, implicit $xmm0
 body:             |

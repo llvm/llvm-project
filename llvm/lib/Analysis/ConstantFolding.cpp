@@ -145,7 +145,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If this is a scalar -> vector cast, convert the input into a <1 x scalar>
   // vector so the code below can handle it uniformly.
-  if (isa<ConstantFP>(C) || isa<ConstantInt>(C)) {
+  if (!isa<VectorType>(C->getType()) &&
+      (isa<ConstantFP>(C) || isa<ConstantInt>(C))) {
     Constant *Ops = C; // don't take the address of C!
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }
@@ -1676,9 +1677,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
   case 'l':
-    return Name == "log" || Name == "logf" || Name == "log2" ||
-           Name == "log2f" || Name == "log10" || Name == "log10f" ||
-           Name == "logl";
+    return Name == "log" || Name == "logf" || Name == "logl" ||
+           Name == "log2" || Name == "log2f" || Name == "log10" ||
+           Name == "log10f" || Name == "logb" || Name == "logbf";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -1781,7 +1782,7 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
   return GetConstantFoldFPValue(Result, Ty);
 }
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
 Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
                             Type *Ty) {
   llvm_fenv_clearexcept();
@@ -2114,7 +2115,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
     if (Ty->isFP128Ty()) {
       if (IntrinsicID == Intrinsic::log) {
         float128 Result = logf128(Op->getValueAPF().convertToQuad());
@@ -2122,7 +2123,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       }
 
       LibFunc Fp128Func = NotLibFunc;
-      if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
+      if (TLI && TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
           Fp128Func == LibFunc_logl)
         return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
     }
@@ -2387,6 +2388,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
+      break;
+    case LibFunc_logb:
+    case LibFunc_logbf:
+      if (!APF.isZero() && TLI->has(Func))
+        return ConstantFoldFP(logb, APF, Ty);
       break;
     case LibFunc_logl:
       return nullptr;

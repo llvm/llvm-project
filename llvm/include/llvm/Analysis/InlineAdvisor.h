@@ -12,7 +12,6 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include <memory>
 

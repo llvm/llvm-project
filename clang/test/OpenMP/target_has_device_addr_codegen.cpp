@@ -586,7 +586,7 @@ void use_template() {
 // CHECK-NEXT:    store ptr [[K]], ptr [[K_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[K_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -601,7 +601,7 @@ void use_template() {
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 1
+// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP2]], i32 1
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP1]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -1079,7 +1079,7 @@ void use_template() {
 // CHECK-NEXT:    store ptr [[K]], ptr [[K_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[K_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -1094,7 +1094,7 @@ void use_template() {
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 1
+// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP2]], i32 1
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP1]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -1133,7 +1133,7 @@ void use_template() {
 // CHECK-NEXT:    store ptr [[K]], ptr [[K_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[K_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds ptr, ptr [[TMP1]], i32 1
+// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP1]], i32 1
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -1148,7 +1148,7 @@ void use_template() {
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i32 1
+// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP2]], i32 1
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP1]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -1422,14 +1422,14 @@ void use_template() {
 // SIMD-ONLY0-NEXT:    store ptr [[K]], ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    store ptr [[AA]], ptr [[RAA]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[K]], align 8
-// SIMD-ONLY0-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// SIMD-ONLY0-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // SIMD-ONLY0-NEXT:    store ptr [[INCDEC_PTR]], ptr [[K]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    store ptr [[TMP2]], ptr [[TMP]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
-// SIMD-ONLY0-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 1
+// SIMD-ONLY0-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP5]], i32 1
 // SIMD-ONLY0-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP4]], align 8
 // SIMD-ONLY0-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[AA]], i64 0, i64 0
 // SIMD-ONLY0-NEXT:    store i32 1, ptr [[ARRAYIDX]], align 4
@@ -1478,14 +1478,14 @@ void use_template() {
 // SIMD-ONLY0-NEXT:    store ptr [[TMP0]], ptr [[K]], align 8
 // SIMD-ONLY0-NEXT:    store ptr [[K]], ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[K]], align 8
-// SIMD-ONLY0-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// SIMD-ONLY0-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // SIMD-ONLY0-NEXT:    store ptr [[INCDEC_PTR]], ptr [[K]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    store ptr [[TMP2]], ptr [[TMP]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
-// SIMD-ONLY0-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 1
+// SIMD-ONLY0-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP5]], i32 1
 // SIMD-ONLY0-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP4]], align 8
 // SIMD-ONLY0-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[AA]], i64 0, i64 0
 // SIMD-ONLY0-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -1520,14 +1520,14 @@ void use_template() {
 // SIMD-ONLY0-NEXT:    store ptr [[TMP0]], ptr [[K]], align 8
 // SIMD-ONLY0-NEXT:    store ptr [[K]], ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[K]], align 8
-// SIMD-ONLY0-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds ptr, ptr [[TMP1]], i32 1
+// SIMD-ONLY0-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP1]], i32 1
 // SIMD-ONLY0-NEXT:    store ptr [[INCDEC_PTR]], ptr [[K]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    store ptr [[TMP2]], ptr [[TMP]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[Z]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP]], align 8
 // SIMD-ONLY0-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
-// SIMD-ONLY0-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds ptr, ptr [[TMP5]], i32 1
+// SIMD-ONLY0-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP5]], i32 1
 // SIMD-ONLY0-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP4]], align 8
 // SIMD-ONLY0-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x ptr], ptr [[AA]], i64 0, i64 0
 // SIMD-ONLY0-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8

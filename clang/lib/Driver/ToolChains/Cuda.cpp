@@ -17,6 +17,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -634,8 +635,6 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (StringRef Feature : Features)
     CmdArgs.append({"--feature", Args.MakeArgString(Feature)});
 
-  addGPULibraries(getToolChain(), Args, CmdArgs);
-
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
@@ -849,6 +848,10 @@ void CudaToolChain::addClangTargetOptions(
   if (CudaInstallation.version() >= CudaVersion::CUDA_90)
     CC1Args.push_back("-fcuda-allow-variadic-functions");
 
+  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
+                         options::OPT_fno_cuda_short_ptr, false))
+    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
+
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
@@ -873,10 +876,6 @@ void CudaToolChain::addClangTargetOptions(
     return;
 
   clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
-
-  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
-                         options::OPT_fno_cuda_short_ptr, false))
-    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
   if (CudaInstallationVersion >= CudaVersion::UNKNOWN)
     CC1Args.push_back(

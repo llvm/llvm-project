@@ -65,6 +65,8 @@ void BPFSubtarget::initializeEnvironment() {
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
+  if (CPU.empty())
+    CPU = "v3";
   if (CPU == "probe")
     CPU = sys::detail::getHostCPUNameForBPF();
   if (CPU == "generic" || CPU == "v1")

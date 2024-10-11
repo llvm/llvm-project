@@ -13,11 +13,13 @@
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/datasizeof.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_always_bitcastable.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_equality_comparable.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/is_trivially_lexicographically_comparable.h>

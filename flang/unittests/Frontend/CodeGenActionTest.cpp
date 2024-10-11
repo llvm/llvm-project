@@ -103,7 +103,7 @@ TEST(CodeGenAction, GracefullyHandleLLVMConversionFailure) {
   action.setCurrentInput(file);
 
   consumeError(action.execute());
-  ASSERT_EQ(diagnosticsOS.str(),
+  ASSERT_EQ(diagnosticOutput,
       "error: Lowering to LLVM IR failed\n"
       "error: failed to create the LLVM module\n");
 }

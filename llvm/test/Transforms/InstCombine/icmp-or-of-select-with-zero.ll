@@ -271,7 +271,7 @@ define i1 @src_tv_ne_invert(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
 ; CHECK-NEXT:    [[C0:%.*]] = xor i1 [[NOT_C0]], true
 ; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C0]], i8 [[Y]], i8 0
-; CHECK-NEXT:    [[CC:%.*]] = or i1 [[C0]], [[C1:%.*]]
+; CHECK-NEXT:    [[CC:%.*]] = or i1 [[C1:%.*]], [[C0]]
 ; CHECK-NEXT:    [[SEL_OTHER:%.*]] = select i1 [[CC]], i8 [[Y]], i8 [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[NOT_C0]]

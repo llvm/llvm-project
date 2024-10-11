@@ -547,6 +547,20 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_RISCV_RVE);
     BCase(EF_RISCV_TSO);
     break;
+  case ELF::EM_SPARC32PLUS:
+    BCase(EF_SPARC_32PLUS);
+    BCase(EF_SPARC_SUN_US1);
+    BCase(EF_SPARC_SUN_US3);
+    BCase(EF_SPARC_HAL_R1);
+    break;
+  case ELF::EM_SPARCV9:
+    BCase(EF_SPARC_SUN_US1);
+    BCase(EF_SPARC_SUN_US3);
+    BCase(EF_SPARC_HAL_R1);
+    BCaseMask(EF_SPARCV9_RMO, EF_SPARCV9_MM);
+    BCaseMask(EF_SPARCV9_PSO, EF_SPARCV9_MM);
+    BCaseMask(EF_SPARCV9_TSO, EF_SPARCV9_MM);
+    break;
   case ELF::EM_XTENSA:
     BCase(EF_XTENSA_XT_INSN);
     BCaseMask(EF_XTENSA_MACH_NONE, EF_XTENSA_MACH);

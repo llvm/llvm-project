@@ -14,6 +14,7 @@ name:            bar
 # CHECK-LABEL: name: bar
 alignment:       16
 tracksRegLiveness: true
+noPhis: false
 body:             |
   bb.0:
     %0:gr64 = IMPLICIT_DEF
@@ -29,8 +30,6 @@ body:             |
     ; CHECK-NOT: MOV64rm killed %0
     ; CHECK-NEXT: MOV64rm killed %0
 
-  ; FIXME: Dummy PHI to set the property NoPHIs to false. PR38439.
   bb.2:
-    %1:gr64 = PHI undef %1, %bb.2, undef %1, %bb.2
     JMP_1 %bb.2
 ...

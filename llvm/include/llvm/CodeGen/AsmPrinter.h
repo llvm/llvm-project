@@ -894,6 +894,10 @@ private:
 
   void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
+
+  void emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+                                 const Function &F) const;
+
   void emitLLVMUsedList(const ConstantArray *InitList);
   /// Emit llvm.ident metadata in an '.ident' directive.
   void emitModuleIdents(Module &M);

@@ -101,8 +101,10 @@ define void @trunc_sat_u8u16_notopt(ptr %x, ptr %y) {
 define void @trunc_sat_u8u16_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u16_maxmin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -117,8 +119,10 @@ define void @trunc_sat_u8u16_maxmin(ptr %x, ptr %y) {
 define void @trunc_sat_u8u16_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u16_minmax:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -352,8 +356,10 @@ define void @trunc_sat_u32u64_min(ptr %x, ptr %y) {
 define void @trunc_sat_u32u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u32u64_maxmin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v10, v8, 0
 ; CHECK-NEXT:    vse32.v v10, (a1)
 ; CHECK-NEXT:    ret
@@ -368,8 +374,10 @@ define void @trunc_sat_u32u64_maxmin(ptr %x, ptr %y) {
 define void @trunc_sat_u32u64_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u32u64_minmax:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v10, v8, 0
 ; CHECK-NEXT:    vse32.v v10, (a1)
 ; CHECK-NEXT:    ret
@@ -437,8 +445,10 @@ define void @trunc_sat_u8u32_min(ptr %x, ptr %y) {
 define void @trunc_sat_u8u32_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u32_maxmin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
@@ -455,8 +465,10 @@ define void @trunc_sat_u8u32_maxmin(ptr %x, ptr %y) {
 define void @trunc_sat_u8u32_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u32_minmax:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
@@ -532,8 +544,10 @@ define void @trunc_sat_u8u64_min(ptr %x, ptr %y) {
 define void @trunc_sat_u8u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u64_maxmin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v10, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v10, 0
@@ -552,8 +566,10 @@ define void @trunc_sat_u8u64_maxmin(ptr %x, ptr %y) {
 define void @trunc_sat_u8u64_minmax(ptr %x, ptr %y) {
 ; CHECK-LABEL: trunc_sat_u8u64_minmax:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v10, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v10, 0

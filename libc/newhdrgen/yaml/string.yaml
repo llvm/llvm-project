@@ -144,6 +144,14 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
+  - name: strcoll_l
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: locale_t
   - name: strcpy
     standards:
       - stdc
@@ -181,7 +189,7 @@ functions:
       - BSDExtensions
     return_type: size_t
     arguments:
-      - type: const char *__restrict
+      - type: char *__restrict
       - type: const char *__restrict
       - type: size_t
   - name: strlcpy
@@ -189,7 +197,7 @@ functions:
       - BSDExtensions
     return_type: size_t
     arguments:
-      - type: const char *__restrict
+      - type: char *__restrict
       - type: const char *__restrict
       - type: size_t
   - name: strlen
@@ -300,3 +308,12 @@ functions:
       - type: char *__restrict
       - type: const char *__restrict
       - type: size_t
+  - name: strxfrm_l
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+      - type: size_t
+      - type: locale_t

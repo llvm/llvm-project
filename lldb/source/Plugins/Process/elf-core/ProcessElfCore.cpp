@@ -160,19 +160,19 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromMemoryTagSegment(
 Status ProcessElfCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
-    error.SetErrorString("invalid core module");
+    error = Status::FromErrorString("invalid core module");
     return error;
   }
 
   ObjectFileELF *core = (ObjectFileELF *)(m_core_module_sp->GetObjectFile());
   if (core == nullptr) {
-    error.SetErrorString("invalid core object file");
+    error = Status::FromErrorString("invalid core object file");
     return error;
   }
 
   llvm::ArrayRef<elf::ELFProgramHeader> segments = core->ProgramHeaders();
   if (segments.size() == 0) {
-    error.SetErrorString("core file has no segments");
+    error = Status::FromErrorString("core file has no segments");
     return error;
   }
 
@@ -194,7 +194,7 @@ Status ProcessElfCore::DoLoadCore() {
     // Parse thread contexts and auxv structure
     if (H.p_type == llvm::ELF::PT_NOTE) {
       if (llvm::Error error = ParseThreadContextsFromNoteSegment(H, data))
-        return Status(std::move(error));
+        return Status::FromError(std::move(error));
     }
     // PT_LOAD segments contains address map
     if (H.p_type == llvm::ELF::PT_LOAD) {
@@ -383,8 +383,8 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   const VMRangeToFileOffset::Entry *address_range =
       m_core_aranges.FindEntryThatContains(addr);
   if (address_range == nullptr || address_range->GetRangeEnd() < addr) {
-    error.SetErrorStringWithFormat("core file does not contain 0x%" PRIx64,
-                                   addr);
+    error = Status::FromErrorStringWithFormat(
+        "core file does not contain 0x%" PRIx64, addr);
     return 0;
   }
 

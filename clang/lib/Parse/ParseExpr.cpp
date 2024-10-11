@@ -21,7 +21,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/LocInfoType.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/Parser.h"
@@ -444,10 +446,6 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     Token OpToken = Tok;
     ConsumeToken();
 
-    if (OpToken.is(tok::caretcaret)) {
-      return ExprError(Diag(Tok, diag::err_opencl_logical_exclusive_or));
-    }
-
     // If we're potentially in a template-id, we may now be able to determine
     // whether we're actually in one or not.
     if (OpToken.isOneOf(tok::comma, tok::greater, tok::greatergreater,
@@ -605,7 +603,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
         RHS = ExprError();
       }
       // If this is left-associative, only parse things on the RHS that bind
-      // more tightly than the current operator.  If it is left-associative, it
+      // more tightly than the current operator.  If it is right-associative, it
       // is okay, to bind exactly as tightly.  For example, compile A=B=C=D as
       // A=(B=(C=D)), where each paren is a level of recursion here.
       // The function takes ownership of the RHS.
@@ -3696,7 +3694,7 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       SawError = true;
       if (FailImmediatelyOnInvalidExpr)
         break;
-      SkipUntil(tok::comma, tok::r_paren, StopBeforeMatch);
+      SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
     } else {
       Exprs.push_back(Expr.get());
     }

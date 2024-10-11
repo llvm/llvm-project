@@ -34,7 +34,7 @@ subroutine omp_do_lastprivate(a)
   ! CHECK:      fir.if %[[SEL]] {
   ! CHECK:        fir.store %[[NEXT_ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
   ! CHECK:        %[[A_PVT_LOAD:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:      }
 
   ! CHECK-NEXT: omp.yield
@@ -84,9 +84,9 @@ subroutine omp_do_lastprivate2(a, n)
   ! CHECK: fir.if %[[SEL]] {
   ! CHECK:   fir.store %[[NEXT_ARG2]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
   ! CHECK:   %[[A_PVT_LOAD:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:   hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK:   hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:   %[[N_PVT_LOAD:.*]] = fir.load %[[N_PVT_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:   hlfir.assign %[[N_PVT_LOAD]] to %[[ARG1_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK:   hlfir.assign %[[N_PVT_LOAD]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK: }
 
   ! CHECK: omp.yield
@@ -143,7 +143,7 @@ subroutine omp_do_lastprivate_collapse2(a)
   ! CHECK:        fir.store %[[NEXT_ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
   ! CHECK:        fir.store %[[NEXT_ARG2]] to %[[J_PVT_DECL]]#1 : !fir.ref<i32>
   ! CHECK:        %[[A_PVT_LOAD:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:      }
 
   ! CHECK-NEXT: omp.yield
@@ -219,7 +219,7 @@ subroutine omp_do_lastprivate_collapse3(a)
   ! CHECK:        fir.store %[[NEXT_ARG2]] to %[[J_PVT_DECL]]#1 : !fir.ref<i32>
   ! CHECK:        fir.store %[[NEXT_ARG3]] to %[[K_PVT_DECL]]#1 : !fir.ref<i32>
   ! CHECK:        %[[A_PVT_LOAD:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:      }
 
   ! CHECK-NEXT: omp.yield

@@ -142,6 +142,17 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   return true;
 }
 
+// A pointer in 64bit mode is always passed as 64bit.
+inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                CCValAssign::LocInfo &LocInfo,
+                                ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  if (LocVT != MVT::i64) {
+    LocVT = MVT::i64;
+    LocInfo = CCValAssign::ZExt;
+  }
+  return false;
+}
+
 inline bool CC_XPLINK64_Shadow_Reg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                    CCValAssign::LocInfo &LocInfo,
                                    ISD::ArgFlagsTy &ArgFlags, CCState &State) {

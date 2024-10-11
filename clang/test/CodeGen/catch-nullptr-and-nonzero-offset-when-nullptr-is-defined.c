@@ -33,7 +33,7 @@ char *add_unsigned(char *base, unsigned long offset) {
   // CHECK-NEXT:                        store i64 %[[OFFSET]], ptr %[[OFFSET_ADDR]], align 8
   // CHECK-NEXT:                        %[[BASE_RELOADED:.*]] = load ptr, ptr %[[BASE_ADDR]], align 8
   // CHECK-NEXT:                        %[[OFFSET_RELOADED:.*]] = load i64, ptr %[[OFFSET_ADDR]], align 8
-  // CHECK-NEXT:                        %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %[[BASE_RELOADED]], i64 %[[OFFSET_RELOADED]]
+  // CHECK-NEXT:                        %[[ADD_PTR:.*]] = getelementptr inbounds nuw i8, ptr %[[BASE_RELOADED]], i64 %[[OFFSET_RELOADED]]
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_AGGREGATE:.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 1, i64 %[[OFFSET_RELOADED]]), !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[COMPUTED_OFFSET_OVERFLOWED:.*]] = extractvalue { i64, i1 } %[[COMPUTED_OFFSET_AGGREGATE]], 1, !nosanitize
   // CHECK-SANITIZE-NEXT:               %[[OR_OV:.+]] = or i1 %[[COMPUTED_OFFSET_OVERFLOWED]], false, !nosanitize

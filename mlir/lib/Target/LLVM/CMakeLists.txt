@@ -110,10 +110,12 @@ endif()
 
 add_mlir_dialect_library(MLIRROCDLTarget
   ROCDL/Target.cpp
+  ROCDL/Utils.cpp
 
   OBJECT
 
   LINK_COMPONENTS
+  FrontendOffloading
   MCParser
   ${AMDGPU_LIBS}
 

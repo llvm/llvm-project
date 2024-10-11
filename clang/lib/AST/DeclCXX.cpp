@@ -109,7 +109,7 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsLambda(false),
+      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsLambda(false),
       IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
       HasODRHash(false), Definition(D) {}
 
@@ -430,6 +430,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
     if (BaseClassDecl->isAnyDestructorNoReturn())
       data().IsAnyDestructorNoReturn = true;
+
+    if (BaseClassDecl->isHLSLIntangible())
+      data().IsHLSLIntangible = true;
 
     // C++11 [class.copy]p18:
     //   The implicitly-declared copy assignment operator for a class X will
@@ -1401,6 +1404,18 @@ void CXXRecordDecl::addedMember(Decl *D) {
     //   than subobjects of zero size
     if (data().Empty && !IsZeroSize)
       data().Empty = false;
+
+    if (getLangOpts().HLSL) {
+      const Type *Ty = Field->getType()->getUnqualifiedDesugaredType();
+      while (isa<ConstantArrayType>(Ty))
+        Ty = Ty->getArrayElementTypeNoTypeQual();
+
+      Ty = Ty->getUnqualifiedDesugaredType();
+      if (Ty->isBuiltinType())
+        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
+      else if (const RecordType *RT = dyn_cast<RecordType>(Ty))
+        data().IsHLSLIntangible |= RT->getAsCXXRecordDecl()->isHLSLIntangible();
+    }
   }
 
   // Handle using declarations of conversion functions.
@@ -1616,13 +1631,42 @@ static bool allLookupResultsAreTheSame(const DeclContext::lookup_result &R) {
 static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
   if (!RD.isLambda()) return nullptr;
   DeclarationName Name =
-    RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
-  DeclContext::lookup_result Calls = RD.lookup(Name);
+      RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
 
+  DeclContext::lookup_result Calls = RD.lookup(Name);
   assert(!Calls.empty() && "Missing lambda call operator!");
   assert(allLookupResultsAreTheSame(Calls) &&
          "More than one lambda call operator!");
-  return Calls.front();
+
+  // FIXME: If we have multiple call operators, we might be in a situation
+  // where we merged this lambda with one from another module; in that
+  // case, return our method (instead of that of the other lambda).
+  //
+  // This avoids situations where, given two modules A and B, if we
+  // try to instantiate A's call operator in a function in B, anything
+  // in the call operator that relies on local decls in the surrounding
+  // function will crash because it tries to find A's decls, but we only
+  // instantiated B's:
+  //
+  //   template <typename>
+  //   void f() {
+  //     using T = int;      // We only instantiate B's version of this.
+  //     auto L = [](T) { }; // But A's call operator would want A's here.
+  //   }
+  //
+  // Walk the call operator’s redecl chain to find the one that belongs
+  // to this module.
+  //
+  // TODO: We need to fix this properly (see
+  // https://github.com/llvm/llvm-project/issues/90154).
+  Module *M = RD.getOwningModule();
+  for (Decl *D : Calls.front()->redecls()) {
+    auto *MD = cast<NamedDecl>(D);
+    if (MD->getOwningModule() == M)
+      return MD;
+  }
+
+  llvm_unreachable("Couldn't find our call operator!");
 }
 
 FunctionTemplateDecl* CXXRecordDecl::getDependentLambdaCallOperator() const {
@@ -2196,9 +2240,10 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
     ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
     TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
-    DeductionCandidate Kind) {
-  return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T,
-                                           TInfo, EndLocation, Ctor, Kind);
+    DeductionCandidate Kind, Expr *TrailingRequiresClause) {
+  return new (C, DC)
+      CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T, TInfo,
+                            EndLocation, Ctor, Kind, TrailingRequiresClause);
 }
 
 CXXDeductionGuideDecl *
@@ -2206,7 +2251,7 @@ CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) CXXDeductionGuideDecl(
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
       QualType(), nullptr, SourceLocation(), nullptr,
-      DeductionCandidate::Normal);
+      DeductionCandidate::Normal, nullptr);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(

@@ -160,7 +160,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
-  CHECK_PARSE_BOOL(BinPackParameters);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
@@ -300,48 +299,53 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 #define CHECK_ALIGN_CONSECUTIVE(FIELD)                                         \
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
-    CHECK_PARSE(                                                               \
-        #FIELD ": None", FIELD,                                                \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(#FIELD ": None", FIELD,                                        \
+                FormatStyle::AlignConsecutiveStyle({}));                       \
     CHECK_PARSE(                                                               \
         #FIELD ": Consecutive", FIELD,                                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     CHECK_PARSE(                                                               \
         #FIELD ": AcrossEmptyLines", FIELD,                                    \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(                                                               \
+        #FIELD ": AcrossComments", FIELD,                                      \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
+             /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     CHECK_PARSE(                                                               \
         #FIELD ": AcrossEmptyLinesAndComments", FIELD,                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
              /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     /* For backwards compability, false / true should still parse */           \
-    CHECK_PARSE(                                                               \
-        #FIELD ": false", FIELD,                                               \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(#FIELD ": false", FIELD,                                       \
+                FormatStyle::AlignConsecutiveStyle({}));                       \
     CHECK_PARSE(                                                               \
         #FIELD ": true", FIELD,                                                \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
                                                                                \
     CHECK_PARSE_NESTED_BOOL(FIELD, Enabled);                                   \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossEmptyLines);                          \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossComments);                            \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignCompound);                             \
+    CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionDeclarations);                 \
+    CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionPointers);                     \
     CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
   } while (false)
 
@@ -444,6 +448,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   // For backward compatibility:
   CHECK_PARSE("BreakBeforeInheritanceComma: true", BreakInheritanceList,
               FormatStyle::BILS_BeforeComma);
+
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  CHECK_PARSE("BinPackParameters: BinPack", BinPackParameters,
+              FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: OnePerLine", BinPackParameters,
+              FormatStyle::BPPS_OnePerLine);
+  CHECK_PARSE("BinPackParameters: AlwaysOnePerLine", BinPackParameters,
+              FormatStyle::BPPS_AlwaysOnePerLine);
+  // For backward compatibility.
+  CHECK_PARSE("BinPackParameters: true", BinPackParameters,
+              FormatStyle::BPPS_BinPack);
+  CHECK_PARSE("BinPackParameters: false", BinPackParameters,
+              FormatStyle::BPPS_OnePerLine);
 
   Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   CHECK_PARSE("PackConstructorInitializers: Never", PackConstructorInitializers,

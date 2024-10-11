@@ -236,7 +236,7 @@ static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
   if (!DeoptBundle) {
     assert(AllowStatepointWithNoDeoptInfo &&
            "Found non-leaf call without deopt info!");
-    return std::nullopt;
+    return {};
   }
 
   return DeoptBundle->Inputs;
@@ -1525,8 +1525,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     if (auto *VT = dyn_cast<VectorType>(Ty))
       NewTy = FixedVectorType::get(NewTy,
                                    cast<FixedVectorType>(VT)->getNumElements());
-    return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
-                                     {NewTy});
+    return Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_gc_relocate, {NewTy});
   };
 
   // Lazily populated map from input types to the canonicalized form mentioned
@@ -1654,7 +1654,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   // be replacing a terminator.
   IRBuilder<> Builder(Call);
 
-  ArrayRef<Value *> GCArgs(LiveVariables);
+  ArrayRef<Value *> GCLive(LiveVariables);
   uint64_t StatepointID = StatepointDirectives::DefaultStatepointID;
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
@@ -1827,7 +1827,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   if (auto *CI = dyn_cast<CallInst>(Call)) {
     CallInst *SPCall = Builder.CreateGCStatepointCall(
         StatepointID, NumPatchBytes, CallTarget, Flags, CallArgs,
-        TransitionArgs, DeoptArgs, GCArgs, "safepoint_token");
+        TransitionArgs, DeoptArgs, GCLive, "safepoint_token");
 
     SPCall->setTailCallKind(CI->getTailCallKind());
     SPCall->setCallingConv(CI->getCallingConv());
@@ -1852,8 +1852,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // original block.
     InvokeInst *SPInvoke = Builder.CreateGCStatepointInvoke(
         StatepointID, NumPatchBytes, CallTarget, II->getNormalDest(),
-        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs, GCArgs,
-        "statepoint_token");
+        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs,
+        GCLive, "statepoint_token");
 
     SPInvoke->setCallingConv(II->getCallingConv());
 
@@ -2839,7 +2839,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // That Value* no longer exists and we need to use the new gc_result.
     // Thankfully, the live set is embedded in the statepoint (and updated), so
     // we just grab that.
-    llvm::append_range(Live, Info.StatepointToken->gc_args());
+    llvm::append_range(Live, Info.StatepointToken->gc_live());
 #ifndef NDEBUG
     // Do some basic validation checking on our liveness results before
     // performing relocation.  Relocation can and will turn mistakes in liveness
@@ -2847,7 +2847,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // TODO: It would be nice to test consistency as well
     assert(DT.isReachableFromEntry(Info.StatepointToken->getParent()) &&
            "statepoint must be reachable or liveness is meaningless");
-    for (Value *V : Info.StatepointToken->gc_args()) {
+    for (Value *V : Info.StatepointToken->gc_live()) {
       if (!isa<Instruction>(V))
         // Non-instruction values trivial dominate all possible uses
         continue;

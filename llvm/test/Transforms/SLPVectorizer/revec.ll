@@ -304,10 +304,10 @@ define void @test10() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.vector.insert.v32i8.v16i8(<32 x i8> poison, <16 x i8> poison, i64 16)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <32 x i8> @llvm.vector.insert.v32i8.v16i8(<32 x i8> [[TMP1]], <16 x i8> [[TMP0]], i64 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i8> [[TMP2]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i8> [[TMP3]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i8> [[TMP2]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <16 x i8> [[TMP4]] to <16 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i16> [[TMP5]], <16 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <32 x i16> [[TMP6]], <32 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i16> [[TMP5]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <16 x i16> [[TMP7]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <16 x i8> [[TMP8]] to <16 x i32>
 ; CHECK-NEXT:    store <16 x i32> [[TMP9]], ptr null, align 4
@@ -334,5 +334,33 @@ entry:
   store <4 x i32> %vmovl.i110, ptr %add.ptr29, align 4
   store <4 x i32> %vmovl.i109, ptr %add.ptr32, align 4
   store <4 x i32> %vmovl.i108, ptr %add.ptr35, align 4
+  ret void
+}
+
+define void @test11(<2 x i64> %0, i64 %1, <2 x i64> %2) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> <i64 5, i64 0>, [[TMP2:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP4]] to <2 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> poison, <2 x i16> [[TMP5]], i64 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <2 x i64> [[TMP3]] to <2 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> [[TMP6]], <2 x i16> [[TMP7]], i64 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i16> [[TMP8]] to <4 x i8>
+; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i8> @llvm.vector.insert.v4i8.v2i8(<4 x i8> poison, <2 x i8> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <4 x i8> @llvm.vector.insert.v4i8.v2i8(<4 x i8> [[TMP10]], <2 x i8> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP12:%.*]] = urem <4 x i8> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne <4 x i8> [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %3 = insertelement <2 x i64> %0, i64 %1, i32 1
+  %4 = add <2 x i64> <i64 5, i64 0>, %2
+  %5 = trunc <2 x i64> %3 to <2 x i8>
+  %6 = trunc <2 x i64> %4 to <2 x i8>
+  %7 = urem <2 x i8> %5, zeroinitializer
+  %8 = urem <2 x i8> %6, zeroinitializer
+  %9 = icmp ne <2 x i8> %7, zeroinitializer
+  %10 = icmp ne <2 x i8> %8, zeroinitializer
   ret void
 }

@@ -12,8 +12,25 @@
 #include "terminator.h"
 #include <cfenv>
 
+// When not supported, these macro are undefined in cfenv.h,
+// set them to zero in that case.
+#ifndef FE_INVALID
+#define FE_INVALID 0
+#endif
 #ifndef __FE_DENORM
 #define __FE_DENORM 0 // denorm is nonstandard
+#endif
+#ifndef FE_DIVBYZERO
+#define FE_DIVBYZERO 0
+#endif
+#ifndef FE_OVERFLOW
+#define FE_OVERFLOW 0
+#endif
+#ifndef FE_UNDERFLOW
+#define FE_UNDERFLOW 0
+#endif
+#ifndef FE_INEXACT
+#define FE_INEXACT 0
 #endif
 
 namespace Fortran::runtime {
@@ -45,7 +62,12 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
   if (excepts == 0 || excepts >= mapSize) {
     terminator.Crash("Invalid excepts value: %d", excepts);
   }
-  return map[excepts];
+  uint32_t except_value = map[excepts];
+  if (except_value == 0) {
+    terminator.Crash(
+        "Excepts value %d not supported by flang runtime", excepts);
+  }
+  return except_value;
 }
 
 // Verify that the size of ieee_modes_type and ieee_status_type objects from
