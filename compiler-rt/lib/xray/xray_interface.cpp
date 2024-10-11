@@ -36,8 +36,7 @@
 
 extern __sanitizer::SpinMutex XRayInstrMapMutex;
 extern __sanitizer::atomic_uint8_t XRayInitialized;
-extern __xray::XRaySledMap *XRayInstrMaps;
-extern __sanitizer::atomic_uint32_t XRayNumObjects;
+extern __xray::XRaySledMap XRayInstrMap;
 
 namespace __xray {
 
@@ -62,16 +61,16 @@ static const int16_t cSledLength = 20;
 #endif /* CPU architecture */
 
 // This is the function to call when we encounter the entry or exit sleds.
-atomic_uintptr_t XRayPatchedFunction SANITIZER_INTERFACE_ATTRIBUTE{0};
+atomic_uintptr_t XRayPatchedFunction{0};
 
 // This is the function to call from the arg1-enabled sleds/trampolines.
-atomic_uintptr_t XRayArgLogger SANITIZER_INTERFACE_ATTRIBUTE{0};
+atomic_uintptr_t XRayArgLogger{0};
 
 // This is the function to call when we encounter a custom event log call.
-atomic_uintptr_t XRayPatchedCustomEvent SANITIZER_INTERFACE_ATTRIBUTE{0};
+atomic_uintptr_t XRayPatchedCustomEvent{0};
 
 // This is the function to call when we encounter a typed event log call.
-atomic_uintptr_t XRayPatchedTypedEvent SANITIZER_INTERFACE_ATTRIBUTE{0};
+atomic_uintptr_t XRayPatchedTypedEvent{0};
 
 // This is the global status to determine whether we are currently
 // patching/unpatching.
@@ -151,42 +150,27 @@ public:
 
 namespace {
 
-bool isObjectLoaded(int32_t ObjId) {
-  SpinMutexLock Guard(&XRayInstrMapMutex);
-  if (ObjId < 0 ||
-      ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire)) {
-    return false;
-  }
-  return XRayInstrMaps[ObjId].Loaded;
-}
-
-bool patchSled(const XRaySledEntry &Sled, bool Enable, int32_t FuncId,
-               const XRayTrampolines &Trampolines) XRAY_NEVER_INSTRUMENT {
+bool patchSled(const XRaySledEntry &Sled, bool Enable,
+               int32_t FuncId) XRAY_NEVER_INSTRUMENT {
   bool Success = false;
   switch (Sled.Kind) {
   case XRayEntryType::ENTRY:
-    Success =
-        patchFunctionEntry(Enable, FuncId, Sled, Trampolines.EntryTrampoline);
+    Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_FunctionEntry);
     break;
   case XRayEntryType::EXIT:
-    Success =
-        patchFunctionExit(Enable, FuncId, Sled, Trampolines.ExitTrampoline);
+    Success = patchFunctionExit(Enable, FuncId, Sled);
     break;
   case XRayEntryType::TAIL:
-    Success = patchFunctionTailExit(Enable, FuncId, Sled,
-                                    Trampolines.TailExitTrampoline);
+    Success = patchFunctionTailExit(Enable, FuncId, Sled);
     break;
   case XRayEntryType::LOG_ARGS_ENTRY:
-    Success =
-        patchFunctionEntry(Enable, FuncId, Sled, Trampolines.LogArgsTrampoline);
+    Success = patchFunctionEntry(Enable, FuncId, Sled, __xray_ArgLoggerEntry);
     break;
   case XRayEntryType::CUSTOM_EVENT:
-    Success = patchCustomEvent(Enable, FuncId, Sled,
-                               Trampolines.CustomEventTrampoline);
+    Success = patchCustomEvent(Enable, FuncId, Sled);
     break;
   case XRayEntryType::TYPED_EVENT:
-    Success =
-        patchTypedEvent(Enable, FuncId, Sled, Trampolines.TypedEventTrampoline);
+    Success = patchTypedEvent(Enable, FuncId, Sled);
     break;
   default:
     Report("Unsupported sled kind '%" PRIu64 "' @%04x\n", Sled.Address,
@@ -221,9 +205,10 @@ findFunctionSleds(int32_t FuncId,
   return Index;
 }
 
-XRayPatchingStatus patchFunction(int32_t FuncId, int32_t ObjId,
+XRayPatchingStatus patchFunction(int32_t FuncId,
                                  bool Enable) XRAY_NEVER_INSTRUMENT {
-  if (!atomic_load(&XRayInitialized, memory_order_acquire))
+  if (!atomic_load(&XRayInitialized,
+                                memory_order_acquire))
     return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
 
   uint8_t NotPatching = false;
@@ -235,23 +220,12 @@ XRayPatchingStatus patchFunction(int32_t FuncId, int32_t ObjId,
   XRaySledMap InstrMap;
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
-    if (ObjId < 0 ||
-        ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire)) {
-      Report("Unable to patch function: invalid sled map index: %d", ObjId);
-      return XRayPatchingStatus::FAILED;
-    }
-    InstrMap = XRayInstrMaps[ObjId];
+    InstrMap = XRayInstrMap;
   }
 
   // If we don't have an index, we can't patch individual functions.
   if (InstrMap.Functions == 0)
     return XRayPatchingStatus::NOT_INITIALIZED;
-
-  // Check if the corresponding DSO has been unloaded.
-  if (!InstrMap.Loaded) {
-    Report("Invalid function id provided: %d\n", FuncId);
-    return XRayPatchingStatus::NOT_INITIALIZED;
-  }
 
   // FuncId must be a positive number, less than the number of functions
   // instrumented.
@@ -259,8 +233,6 @@ XRayPatchingStatus patchFunction(int32_t FuncId, int32_t ObjId,
     Report("Invalid function id provided: %d\n", FuncId);
     return XRayPatchingStatus::FAILED;
   }
-
-  auto PackedId = __xray::MakePackedId(FuncId, ObjId);
 
   // Now we patch ths sleds for this specific function.
   XRayFunctionSledIndex SledRange;
@@ -270,13 +242,13 @@ XRayPatchingStatus patchFunction(int32_t FuncId, int32_t ObjId,
   } else {
     SledRange = findFunctionSleds(FuncId, InstrMap);
   }
-
   auto *f = SledRange.Begin;
   bool SucceedOnce = false;
   for (size_t i = 0; i != SledRange.Size; ++i)
-    SucceedOnce |= patchSled(f[i], Enable, PackedId, InstrMap.Trampolines);
+    SucceedOnce |= patchSled(f[i], Enable, FuncId);
 
-  atomic_store(&XRayPatching, false, memory_order_release);
+  atomic_store(&XRayPatching, false,
+                            memory_order_release);
 
   if (!SucceedOnce) {
     Report("Failed patching any sled for function '%d'.", FuncId);
@@ -289,30 +261,31 @@ XRayPatchingStatus patchFunction(int32_t FuncId, int32_t ObjId,
 // controlPatching implements the common internals of the patching/unpatching
 // implementation. |Enable| defines whether we're enabling or disabling the
 // runtime XRay instrumentation.
-// This function should only be called after ensuring that XRay is initialized
-// and no other thread is currently patching.
-XRayPatchingStatus controlPatchingObjectUnchecked(bool Enable, int32_t ObjId) {
+XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
+  if (!atomic_load(&XRayInitialized,
+                                memory_order_acquire))
+    return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
+
+  uint8_t NotPatching = false;
+  if (!atomic_compare_exchange_strong(
+          &XRayPatching, &NotPatching, true, memory_order_acq_rel))
+    return XRayPatchingStatus::ONGOING; // Already patching.
+
+  uint8_t PatchingSuccess = false;
+  auto XRayPatchingStatusResetter =
+      at_scope_exit([&PatchingSuccess] {
+        if (!PatchingSuccess)
+          atomic_store(&XRayPatching, false,
+                                    memory_order_release);
+      });
+
   XRaySledMap InstrMap;
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
-    if (ObjId < 0 ||
-        ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire)) {
-      Report("Unable to patch functions: invalid sled map index: %d\n", ObjId);
-      return XRayPatchingStatus::FAILED;
-    }
-    InstrMap = XRayInstrMaps[ObjId];
+    InstrMap = XRayInstrMap;
   }
   if (InstrMap.Entries == 0)
     return XRayPatchingStatus::NOT_INITIALIZED;
-
-  if (Verbosity())
-    Report("Patching object %d with %d functions.\n", ObjId, InstrMap.Entries);
-
-  // Check if the corresponding DSO has been unloaded.
-  if (!InstrMap.Loaded) {
-    Report("Object is not loaded at index: %d\n", ObjId);
-    return XRayPatchingStatus::FAILED;
-  }
 
   uint32_t FuncId = 1;
   uint64_t CurFun = 0;
@@ -363,96 +336,20 @@ XRayPatchingStatus controlPatchingObjectUnchecked(bool Enable, int32_t ObjId) {
       ++FuncId;
       CurFun = F;
     }
-    auto PackedId = __xray::MakePackedId(FuncId, ObjId);
-    patchSled(Sled, Enable, PackedId, InstrMap.Trampolines);
+    patchSled(Sled, Enable, FuncId);
   }
-  atomic_store(&XRayPatching, false, memory_order_release);
+  atomic_store(&XRayPatching, false,
+                            memory_order_release);
+  PatchingSuccess = true;
   return XRayPatchingStatus::SUCCESS;
 }
 
-// Controls patching for all registered objects.
-// Returns: SUCCESS, if patching succeeds for all objects.
-//          NOT_INITIALIZED, if one or more objects returned NOT_INITIALIZED
-//             but none failed.
-//          FAILED, if patching of one or more objects failed.
-XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
-  if (!atomic_load(&XRayInitialized, memory_order_acquire))
-    return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
-
-  uint8_t NotPatching = false;
-  if (!atomic_compare_exchange_strong(&XRayPatching, &NotPatching, true,
-                                      memory_order_acq_rel))
-    return XRayPatchingStatus::ONGOING; // Already patching.
-
-  auto XRayPatchingStatusResetter = at_scope_exit(
-      [] { atomic_store(&XRayPatching, false, memory_order_release); });
-
-  unsigned NumObjects = __xray_num_objects();
-
-  XRayPatchingStatus CombinedStatus{NOT_INITIALIZED};
-  for (unsigned I = 0; I < NumObjects; ++I) {
-    if (!isObjectLoaded(I))
-      continue;
-    auto LastStatus = controlPatchingObjectUnchecked(Enable, I);
-    switch (LastStatus) {
-    case SUCCESS:
-      if (CombinedStatus == NOT_INITIALIZED)
-        CombinedStatus = SUCCESS;
-      break;
-    case FAILED:
-      // Report failure, but try to patch the remaining objects
-      CombinedStatus = FAILED;
-      break;
-    case NOT_INITIALIZED:
-      // XRay has been initialized but there are no sleds available for this
-      // object. Try to patch remaining objects.
-      if (CombinedStatus != FAILED)
-        CombinedStatus = NOT_INITIALIZED;
-      break;
-    case ONGOING:
-      UNREACHABLE("Status ONGOING should not appear at this point");
-    default:
-      UNREACHABLE("Unhandled patching status");
-    }
-  }
-  return CombinedStatus;
-}
-
-// Controls patching for one object.
-XRayPatchingStatus controlPatching(bool Enable,
-                                   int32_t ObjId) XRAY_NEVER_INSTRUMENT {
-
-  if (!atomic_load(&XRayInitialized, memory_order_acquire))
-    return XRayPatchingStatus::NOT_INITIALIZED; // Not initialized.
-
-  uint8_t NotPatching = false;
-  if (!atomic_compare_exchange_strong(&XRayPatching, &NotPatching, true,
-                                      memory_order_acq_rel))
-    return XRayPatchingStatus::ONGOING; // Already patching.
-
-  auto XRayPatchingStatusResetter = at_scope_exit(
-      [] { atomic_store(&XRayPatching, false, memory_order_release); });
-
-  return controlPatchingObjectUnchecked(Enable, ObjId);
-}
-
-XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId, int32_t ObjId,
+XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId,
                                             bool Enable) XRAY_NEVER_INSTRUMENT {
   XRaySledMap InstrMap;
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
-    if (ObjId < 0 ||
-        ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire)) {
-      Report("Unable to patch function: invalid sled map index: %d\n", ObjId);
-      return XRayPatchingStatus::FAILED;
-    }
-    InstrMap = XRayInstrMaps[ObjId];
-  }
-
-  // Check if the corresponding DSO has been unloaded.
-  if (!InstrMap.Loaded) {
-    Report("Object is not loaded at index: %d\n", ObjId);
-    return XRayPatchingStatus::FAILED;
+    InstrMap = XRayInstrMap;
   }
 
   // FuncId must be a positive number, less than the number of functions
@@ -501,7 +398,7 @@ XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId, int32_t ObjId,
     Report("Failed mprotect: %d\n", errno);
     return XRayPatchingStatus::FAILED;
   }
-  return patchFunction(FuncId, ObjId, Enable);
+  return patchFunction(FuncId, Enable);
 }
 
 } // namespace
@@ -515,10 +412,12 @@ using namespace __xray;
 
 int __xray_set_handler(void (*entry)(int32_t,
                                      XRayEntryType)) XRAY_NEVER_INSTRUMENT {
-  if (atomic_load(&XRayInitialized, memory_order_acquire)) {
+  if (atomic_load(&XRayInitialized,
+                               memory_order_acquire)) {
 
     atomic_store(&__xray::XRayPatchedFunction,
-                 reinterpret_cast<uintptr_t>(entry), memory_order_release);
+                              reinterpret_cast<uintptr_t>(entry),
+                              memory_order_release);
     return 1;
   }
   return 0;
@@ -526,9 +425,11 @@ int __xray_set_handler(void (*entry)(int32_t,
 
 int __xray_set_customevent_handler(void (*entry)(void *, size_t))
     XRAY_NEVER_INSTRUMENT {
-  if (atomic_load(&XRayInitialized, memory_order_acquire)) {
+  if (atomic_load(&XRayInitialized,
+                               memory_order_acquire)) {
     atomic_store(&__xray::XRayPatchedCustomEvent,
-                 reinterpret_cast<uintptr_t>(entry), memory_order_release);
+                              reinterpret_cast<uintptr_t>(entry),
+                              memory_order_release);
     return 1;
   }
   return 0;
@@ -536,9 +437,11 @@ int __xray_set_customevent_handler(void (*entry)(void *, size_t))
 
 int __xray_set_typedevent_handler(void (*entry)(size_t, const void *,
                                                 size_t)) XRAY_NEVER_INSTRUMENT {
-  if (atomic_load(&XRayInitialized, memory_order_acquire)) {
+  if (atomic_load(&XRayInitialized,
+                               memory_order_acquire)) {
     atomic_store(&__xray::XRayPatchedTypedEvent,
-                 reinterpret_cast<uintptr_t>(entry), memory_order_release);
+                              reinterpret_cast<uintptr_t>(entry),
+                              memory_order_release);
     return 1;
   }
   return 0;
@@ -571,78 +474,39 @@ XRayPatchingStatus __xray_patch() XRAY_NEVER_INSTRUMENT {
   return controlPatching(true);
 }
 
-XRayPatchingStatus __xray_patch_object(int32_t ObjId) XRAY_NEVER_INSTRUMENT {
-  return controlPatching(true, ObjId);
-}
-
 XRayPatchingStatus __xray_unpatch() XRAY_NEVER_INSTRUMENT {
   return controlPatching(false);
 }
 
-XRayPatchingStatus __xray_unpatch_object(int32_t ObjId) XRAY_NEVER_INSTRUMENT {
-  return controlPatching(false, ObjId);
-}
-
 XRayPatchingStatus __xray_patch_function(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
-  auto Ids = __xray::UnpackId(FuncId);
-  auto ObjId = Ids.first;
-  auto FnId = Ids.second;
-  return mprotectAndPatchFunction(FnId, ObjId, true);
-}
-
-XRayPatchingStatus
-__xray_patch_function_in_object(int32_t FuncId,
-                                int32_t ObjId) XRAY_NEVER_INSTRUMENT {
-  return mprotectAndPatchFunction(FuncId, ObjId, true);
+  return mprotectAndPatchFunction(FuncId, true);
 }
 
 XRayPatchingStatus
 __xray_unpatch_function(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
-  auto Ids = __xray::UnpackId(FuncId);
-  auto ObjId = Ids.first;
-  auto FnId = Ids.second;
-  return mprotectAndPatchFunction(FnId, ObjId, false);
-}
-
-XRayPatchingStatus
-__xray_unpatch_function_in_object(int32_t FuncId,
-                                  int32_t ObjId) XRAY_NEVER_INSTRUMENT {
-  return mprotectAndPatchFunction(FuncId, ObjId, false);
+  return mprotectAndPatchFunction(FuncId, false);
 }
 
 int __xray_set_handler_arg1(void (*entry)(int32_t, XRayEntryType, uint64_t)) {
-  if (!atomic_load(&XRayInitialized, memory_order_acquire))
+  if (!atomic_load(&XRayInitialized,
+                                memory_order_acquire))
     return 0;
 
   // A relaxed write might not be visible even if the current thread gets
   // scheduled on a different CPU/NUMA node.  We need to wait for everyone to
   // have this handler installed for consistency of collected data across CPUs.
   atomic_store(&XRayArgLogger, reinterpret_cast<uint64_t>(entry),
-               memory_order_release);
+                            memory_order_release);
   return 1;
 }
 
 int __xray_remove_handler_arg1() { return __xray_set_handler_arg1(nullptr); }
 
-uintptr_t
-__xray_function_address(int32_t CombinedFuncId) XRAY_NEVER_INSTRUMENT {
-  auto Ids = __xray::UnpackId(CombinedFuncId);
-  return __xray_function_address_in_object(Ids.second, Ids.first);
-}
-
-uintptr_t __xray_function_address_in_object(int32_t FuncId, int32_t ObjId)
-    XRAY_NEVER_INSTRUMENT {
+uintptr_t __xray_function_address(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
   XRaySledMap InstrMap;
   {
     SpinMutexLock Guard(&XRayInstrMapMutex);
-    auto count = atomic_load(&XRayNumObjects, memory_order_acquire);
-    if (ObjId < 0 || ObjId >= count) {
-      Report("Unable to determine function address: invalid sled map index %d "
-             "(size is %d)\n",
-             ObjId, (int)count);
-      return 0;
-    }
-    InstrMap = XRayInstrMaps[ObjId];
+    InstrMap = XRayInstrMap;
   }
 
   if (FuncId <= 0 || static_cast<size_t>(FuncId) > InstrMap.Functions)
@@ -661,29 +525,6 @@ uintptr_t __xray_function_address_in_object(int32_t FuncId, int32_t ObjId)
 }
 
 size_t __xray_max_function_id() XRAY_NEVER_INSTRUMENT {
-  return __xray_max_function_id_in_object(0);
-}
-
-size_t __xray_max_function_id_in_object(int32_t ObjId) XRAY_NEVER_INSTRUMENT {
   SpinMutexLock Guard(&XRayInstrMapMutex);
-  if (ObjId < 0 || ObjId >= atomic_load(&XRayNumObjects, memory_order_acquire))
-    return 0;
-  return XRayInstrMaps[ObjId].Functions;
-}
-
-size_t __xray_num_objects() XRAY_NEVER_INSTRUMENT {
-  SpinMutexLock Guard(&XRayInstrMapMutex);
-  return atomic_load(&XRayNumObjects, memory_order_acquire);
-}
-
-int32_t __xray_unpack_function_id(int32_t PackedId) {
-  return __xray::UnpackId(PackedId).second;
-}
-
-int32_t __xray_unpack_object_id(int32_t PackedId) {
-  return __xray::UnpackId(PackedId).first;
-}
-
-int32_t __xray_pack_id(int32_t FuncId, int32_t ObjId) {
-  return __xray::MakePackedId(FuncId, ObjId);
+  return XRayInstrMap.Functions;
 }
