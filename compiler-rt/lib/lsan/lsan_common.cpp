@@ -773,10 +773,10 @@ static bool PrintResults(LeakReport &report) {
     GetSuppressionContext()->PrintMatchedSuppressions();
   if (unsuppressed_count > 0) {
     report.PrintSummary();
+    if (common_flags()->verbosity >= 2 && flags()->log_threads)
+      PrintThreads();
     return true;
   }
-  if (common_flags()->verbosity >= 2 && flags()->log_threads)
-    PrintThreads();
   return false;
 }
 
