@@ -347,10 +347,7 @@ public:
 bool SIPreEmitPeephole::mustRetainExeczBranch(
     const MachineInstr &Branch, const MachineBasicBlock &From,
     const MachineBasicBlock &To) const {
-
-  const MachineBasicBlock &Head = *Branch.getParent();
-  assert(is_contained(Head.successors(), &From));
-
+  assert(is_contained(Branch.getParent()->successors(), &From));
   BranchWeightCostModel CostModel{*TII, Branch, From};
 
   const MachineFunction *MF = From.getParent();
