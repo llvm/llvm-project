@@ -63,5 +63,5 @@ body:             |
 
 ...
 # CHECK-LABEL: test
-# CHECK: tMUL
-# CHECK-NOT: t2MUL
+# CHECK: t2MUL
+# CHECK-NOT: tMUL
