@@ -47,7 +47,6 @@ const int OptAggressiveThreshold = 250;
 int getInstrCost();
 const int IndirectCallThreshold = 100;
 const int LoopPenalty = 25;
-const int LastCallToStaticBonus = 15000;
 const int ColdccPenalty = 2000;
 /// Do not inline functions which allocate this many bytes on the stack
 /// when the caller is recursive.
