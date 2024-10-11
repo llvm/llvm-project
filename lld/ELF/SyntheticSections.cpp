@@ -59,7 +59,7 @@ using llvm::support::endian::write64le;
 
 constexpr size_t MergeNoTailSection::numShards;
 
-static uint64_t readUint(uint8_t *buf) {
+static uint64_t readUint(Ctx &ctx, uint8_t *buf) {
   return ctx.arg.is64 ? read64(buf) : read32(buf);
 }
 
@@ -267,7 +267,7 @@ MipsReginfoSection<ELFT>::create(Ctx &ctx) {
   return std::make_unique<MipsReginfoSection<ELFT>>(ctx, reginfo);
 }
 
-InputSection *elf::createInterpSection() {
+InputSection *elf::createInterpSection(Ctx &) {
   // StringSaver guarantees that the returned string ends with '\0'.
   StringRef s = saver().save(ctx.arg.dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
@@ -609,7 +609,7 @@ static uint64_t readFdeAddr(uint8_t *buf, int size) {
   case DW_EH_PE_sdata8:
     return read64(buf);
   case DW_EH_PE_absptr:
-    return readUint(buf);
+    return readUint(ctx, buf);
   }
   fatal("unknown FDE size encoding");
 }
@@ -1452,7 +1452,8 @@ DynamicSection<ELFT>::computeContents() {
       addInSec(DT_PLTGOT, *ctx.in.plt);
       break;
     case EM_AARCH64:
-      if (llvm::find_if(ctx.in.relaPlt->relocs, [](const DynamicReloc &r) {
+      if (llvm::find_if(ctx.in.relaPlt->relocs, [&ctx = ctx](
+                                                    const DynamicReloc &r) {
             return r.type == ctx.target->pltRel &&
                    r.sym->stOther & STO_AARCH64_VARIANT_PCS;
           }) != ctx.in.relaPlt->relocs.end())
@@ -1460,7 +1461,8 @@ DynamicSection<ELFT>::computeContents() {
       addInSec(DT_PLTGOT, *ctx.in.gotPlt);
       break;
     case EM_RISCV:
-      if (llvm::any_of(ctx.in.relaPlt->relocs, [](const DynamicReloc &r) {
+      if (llvm::any_of(ctx.in.relaPlt->relocs, [&ctx = ctx](
+                                                   const DynamicReloc &r) {
             return r.type == ctx.target->pltRel &&
                    (r.sym->stOther & STO_RISCV_VARIANT_CC);
           }))
@@ -2441,7 +2443,7 @@ void GnuHashTableSection::writeTo(Ctx &ctx, uint8_t *buf) {
     // When C = 64, we choose a word with bits [6:...] and set 1 to two bits in
     // the word using bits [0:5] and [26:31].
     size_t i = (sym.hash / c) & (maskWords - 1);
-    uint64_t val = readUint(buf + i * ctx.arg.wordsize);
+    uint64_t val = readUint(ctx, buf + i * ctx.arg.wordsize);
     val |= uint64_t(1) << (sym.hash % c);
     val |= uint64_t(1) << ((sym.hash >> Shift2) % c);
     writeUint(buf + i * ctx.arg.wordsize, val);
@@ -3513,7 +3515,7 @@ createSymbols(
 
 // Returns a newly-created .gdb_index section.
 template <class ELFT>
-std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &) {
+std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Create gdb index");
 
   // Collect InputFiles with .debug_info. See the comment in
@@ -4684,7 +4686,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // SyntheticSections coming last.
   if (needsInterpSection(ctx)) {
     for (size_t i = 1; i <= ctx.partitions.size(); ++i) {
-      InputSection *sec = createInterpSection();
+      InputSection *sec = createInterpSection(ctx);
       sec->partition = i;
       ctx.inputSections.push_back(sec);
     }

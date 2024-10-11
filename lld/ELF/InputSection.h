@@ -472,10 +472,12 @@ static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:
+  Ctx &ctx;
   SyntheticSection(Ctx &ctx, uint64_t flags, uint32_t type, uint32_t addralign,
                    StringRef name)
       : InputSection(ctx.internalFile, flags, type, addralign, {}, name,
-                     InputSectionBase::Synthetic) {}
+                     InputSectionBase::Synthetic),
+        ctx(ctx) {}
 
   virtual ~SyntheticSection() = default;
   virtual size_t getSize(Ctx &) const = 0;
