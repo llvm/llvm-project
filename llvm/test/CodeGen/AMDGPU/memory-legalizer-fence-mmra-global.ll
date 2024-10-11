@@ -787,7 +787,6 @@ define amdgpu_kernel void @agent_release_fence() {
 ;
 ; GFX1210-LABEL: agent_release_fence:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -894,7 +893,6 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ;
 ; GFX1210-LABEL: agent_acq_rel_fence:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -1002,7 +1000,6 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ;
 ; GFX1210-LABEL: agent_seq_cst_fence:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -1193,7 +1190,6 @@ define amdgpu_kernel void @agent_one_as_release_fence() {
 ;
 ; GFX1210-LABEL: agent_one_as_release_fence:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -1300,7 +1296,6 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ;
 ; GFX1210-LABEL: agent_one_as_acq_rel_fence:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -1408,7 +1403,6 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ;
 ; GFX1210-LABEL: agent_one_as_seq_cst_fence:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0

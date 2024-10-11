@@ -472,19 +472,21 @@ static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:
-  SyntheticSection(uint64_t flags, uint32_t type, uint32_t addralign,
+  Ctx &ctx;
+  SyntheticSection(Ctx &ctx, uint64_t flags, uint32_t type, uint32_t addralign,
                    StringRef name)
       : InputSection(ctx.internalFile, flags, type, addralign, {}, name,
-                     InputSectionBase::Synthetic) {}
+                     InputSectionBase::Synthetic),
+        ctx(ctx) {}
 
   virtual ~SyntheticSection() = default;
-  virtual size_t getSize(Ctx &) const = 0;
+  virtual size_t getSize() const = 0;
   virtual bool updateAllocSize(Ctx &) { return false; }
   // If the section has the SHF_ALLOC flag and the size may be changed if
   // thunks are added, update the section size.
-  virtual bool isNeeded(Ctx &) const { return true; }
-  virtual void finalizeContents(Ctx &) {}
-  virtual void writeTo(Ctx &, uint8_t *buf) = 0;
+  virtual bool isNeeded() const { return true; }
+  virtual void finalizeContents() {}
+  virtual void writeTo(uint8_t *buf) = 0;
 
   static bool classof(const SectionBase *sec) {
     return sec->kind() == InputSectionBase::Synthetic;
