@@ -14,11 +14,7 @@
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
-#include "Interfaces/OperatingSystemPythonInterface.h"
-#include "Interfaces/ScriptedPlatformPythonInterface.h"
-#include "Interfaces/ScriptedProcessPythonInterface.h"
-#include "Interfaces/ScriptedThreadPlanPythonInterface.h"
-#include "Interfaces/ScriptedThreadPythonInterface.h"
+#include "Interfaces/ScriptInterpreterPythonInterfaces.h"
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
 #include "SWIGPythonBridge.h"
