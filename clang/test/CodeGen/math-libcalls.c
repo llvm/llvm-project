@@ -372,7 +372,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_MAYTRAP: declare float @llvm.experimental.constrained.minnum.f32(
 // HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.minnum.f80(
 
-  fmaximum_num(f,f);       fmaximum_numf(f,f);      fmaximum_numl(f,f);
+  fmaximum_num(*d,*d);       fmaximum_numf(f,f);      fmaximum_numl(*l,*l);
 
 // NO__ERRNO: declare double @llvm.maximumnum.f64(double, double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.maximumnum.f32(float, float) [[READNONE_INTRINSIC]]
@@ -384,7 +384,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_MAYTRAP: declare float @llvm.maximumnum.f32(
 // HAS_MAYTRAP: declare x86_fp80 @llvm.maximumnum.f80(
 
-  fminimum_num(f,f);       fminimum_numf(f,f);      fminimum_numl(f,f);
+  fminimum_num(*d,*d);       fminimum_numf(f,f);      fminimum_numl(*l,*l);
 
 // NO__ERRNO: declare double @llvm.minimumnum.f64(double, double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.minimumnum.f32(float, float) [[READNONE_INTRINSIC]]
