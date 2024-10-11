@@ -343,15 +343,15 @@ public:
   tagged_ptr & operator=(const tagged_ptr &) = default;
   tagged_ptr & operator=(tagged_ptr &&) = default;
   
-  explicit constexpr tagged_ptr(already_tagged_t, dirty_pointer _ptr) noexcept: _pointer{_ptr} { }
+  [[nodiscard]] constexpr tagged_ptr(already_tagged_t, dirty_pointer _ptr) noexcept: _pointer{_ptr} { }
   
-  explicit constexpr tagged_ptr(clean_pointer _ptr, tag_type _tag) noexcept requires (has_all_bits_available<std::pointer_traits<clean_pointer>::unused_bits>): _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
+  [[nodiscard]] constexpr tagged_ptr(clean_pointer _ptr, tag_type _tag) noexcept requires (has_all_bits_available<std::pointer_traits<clean_pointer>::unused_bits>): _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(pointer() == _ptr, "pointer must be recoverable after untagging");
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(tag() == _tag, "stored tag must be recoverable and within schema provided bit capacity");
   } 
   
   // construct which allows to communicate overaligned pointer to push over-aligned pointer
-  template <size_t Alignment> explicit constexpr tagged_ptr(overaligned_pointer_t<Alignment>, clean_pointer _ptr, tag_type _tag) noexcept requires (has_all_bits_available<std::pointer_traits<clean_pointer>::unused_bits | (std::alignment_free_bits<Alignment>)>): _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
+  template <size_t Alignment> [[nodiscard]] constexpr tagged_ptr(overaligned_pointer_t<Alignment>, clean_pointer _ptr, tag_type _tag) noexcept requires (has_all_bits_available<std::pointer_traits<clean_pointer>::unused_bits | (std::alignment_free_bits<Alignment>)>): _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
 #if __has_builtin(__builtin_is_aligned)
       _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__builtin_is_aligned(_ptr, Alignment), "Pointer must be aligned by provided alignment for tagging");
 #else
@@ -365,14 +365,14 @@ public:
   }
   
   // construct which allows manually provide known free bits (platform specific)
-  template <uintptr_t AdditionalFreeBits> explicit constexpr tagged_ptr(known_unused_bits_t<AdditionalFreeBits>, clean_pointer _ptr, tag_type _tag) noexcept requires (has_all_bits_available<std::pointer_traits<clean_pointer>::unused_bits | AdditionalFreeBits>): _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
+  template <uintptr_t AdditionalFreeBits> [[nodiscard]] constexpr tagged_ptr(known_unused_bits_t<AdditionalFreeBits>, clean_pointer _ptr, tag_type _tag) noexcept requires (has_all_bits_available<std::pointer_traits<clean_pointer>::unused_bits | AdditionalFreeBits>): _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(pointer() == _ptr, "pointer must be recoverable after untagging");
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(tag() == _tag, "stored tag must be recoverable and within schema provided bit capacity");
   } 
   
 
   // accessors
-  constexpr decltype(auto) operator*() const noexcept {
+  [[nodiscard]] constexpr decltype(auto) operator*() const noexcept {
     return *pointer();
   }
   
@@ -380,11 +380,11 @@ public:
     return pointer();
   }
    
-  template <typename...Ts> constexpr decltype(auto) operator[](Ts... args) const noexcept requires std::is_array_v<element_type> && (sizeof...(Ts) == std::rank_v<element_type>) {
+  template <typename...Ts> [[nodiscard]] constexpr decltype(auto) operator[](Ts... args) const noexcept requires std::is_array_v<element_type> && (sizeof...(Ts) == std::rank_v<element_type>) {
     return (*pointer())[args...];
   }
   
-  constexpr decltype(auto) operator[](difference_type diff) const noexcept requires (!std::is_array_v<element_type>) {
+  [[nodiscard]] constexpr decltype(auto) operator[](difference_type diff) const noexcept requires (!std::is_array_v<element_type>) {
     return *(pointer() + diff);
   }
   
@@ -407,7 +407,7 @@ public:
     return *this;
   }
   
-  constexpr auto operator++(int) noexcept {
+  [[nodiscard]] constexpr auto operator++(int) noexcept {
     auto copy = auto(*this);
     this->operator++();
     return copy;
@@ -418,22 +418,22 @@ public:
     return *this;
   }
   
-  friend constexpr auto operator+(tagged_ptr lhs, difference_type diff) noexcept {
+  [[nodiscard]] friend constexpr auto operator+(tagged_ptr lhs, difference_type diff) noexcept {
     lhs += diff;
     return lhs;
   }
   
-  friend constexpr auto operator+(difference_type diff, tagged_ptr rhs) noexcept {
+  [[nodiscard]] friend constexpr auto operator+(difference_type diff, tagged_ptr rhs) noexcept {
     rhs += diff;
     return rhs;
   }
   
-  friend constexpr auto operator-(tagged_ptr lhs, difference_type diff) noexcept {
+  [[nodiscard]] friend constexpr auto operator-(tagged_ptr lhs, difference_type diff) noexcept {
     lhs -= diff;
     return lhs;
   }
   
-  friend constexpr auto operator-(difference_type diff, tagged_ptr rhs) noexcept {
+  [[nodiscard]] friend constexpr auto operator-(difference_type diff, tagged_ptr rhs) noexcept {
     rhs -= diff;
     return rhs;
   }
@@ -448,23 +448,23 @@ public:
     return *this;
   }
   
-  constexpr auto operator--(int) noexcept {
+  [[nodiscard]] constexpr auto operator--(int) noexcept {
     auto copy = auto(*this);
     this->operator--();
     return copy;
   }
   
   // observers
-  constexpr dirty_pointer unsafe_dirty_pointer() const noexcept {
+  [[nodiscard]] constexpr dirty_pointer unsafe_dirty_pointer() const noexcept {
     // this function is not intentionally constexpr, as it is needed only to interact with
     // existing runtime code
     return _pointer;
   } 
   
-  static constexpr bool support_aliasing_masking = pointer_tagging_schema_with_aliasing<schema>;
+  static constexpr bool _support_aliasing_masking = pointer_tagging_schema_with_aliasing<schema>;
   
-  constexpr clean_pointer aliasing_pointer() const noexcept {
-    if constexpr (support_aliasing_masking) {
+  [[nodiscard]] constexpr clean_pointer aliasing_pointer() const noexcept {
+    if constexpr (_support_aliasing_masking) {
       if !consteval {
         return schema::recover_aliasing_pointer(_pointer);
       }
@@ -473,15 +473,15 @@ public:
     return schema::recover_pointer(_pointer);
   }
   
-  constexpr clean_pointer pointer() const noexcept {
+  [[nodiscard]] constexpr clean_pointer pointer() const noexcept {
     return schema::recover_pointer(_pointer);
   }
   
-  constexpr tag_type tag() const noexcept {
+  [[nodiscard]] constexpr tag_type tag() const noexcept {
     return schema::recover_tag(_pointer);
   }
   
-  template <std::size_t I> [[nodiscard, clang::always_inline]] friend constexpr decltype(auto) get(tagged_ptr _pair) noexcept {
+  template <std::size_t I> [[nodiscard]] friend constexpr decltype(auto) get(tagged_ptr _pair) noexcept {
     static_assert(I < 3);
     if constexpr (I == 0) {
       return _pair.pointer();
@@ -490,16 +490,16 @@ public:
     }
   }
   
-  constexpr explicit operator bool() const noexcept {
+  [[nodiscard]] constexpr explicit operator bool() const noexcept {
     return pointer() != nullptr;
   }
   
-  friend constexpr ptrdiff_t operator-(tagged_ptr lhs, tagged_ptr rhs) noexcept {
+  [[nodiscard]] friend constexpr ptrdiff_t operator-(tagged_ptr lhs, tagged_ptr rhs) noexcept {
     return lhs.pointer() - rhs.pointer();
   }
   
   // comparison operators
-  friend bool operator==(tagged_ptr, tagged_ptr) = default;
+  [[nodiscard]] friend bool operator==(tagged_ptr, tagged_ptr) = default;
   
   struct _compare_object {
     clean_pointer pointer;
@@ -508,16 +508,16 @@ public:
     friend auto operator<=>(_compare_object, _compare_object) = default;
   };
   
-  friend constexpr auto operator<=>(tagged_ptr lhs, tagged_ptr rhs) noexcept {
+  [[nodiscard]] friend constexpr auto operator<=>(tagged_ptr lhs, tagged_ptr rhs) noexcept {
     return _compare_object{lhs.pointer(), lhs.tag()} <=> _compare_object{rhs.pointer(), rhs.tag()};
   }
-  friend constexpr bool operator==(tagged_ptr lhs, clean_pointer rhs) noexcept {
+  [[nodiscard]] friend constexpr bool operator==(tagged_ptr lhs, clean_pointer rhs) noexcept {
     return lhs.pointer() == rhs;
   }
-  friend constexpr auto operator<=>(tagged_ptr lhs, clean_pointer rhs) noexcept {
+  [[nodiscard]] friend constexpr auto operator<=>(tagged_ptr lhs, clean_pointer rhs) noexcept {
     return lhs.pointer() <=> rhs;
   }
-  friend constexpr bool operator==(tagged_ptr lhs, nullptr_t) noexcept {
+  [[nodiscard]] friend constexpr bool operator==(tagged_ptr lhs, nullptr_t) noexcept {
     return lhs.pointer() == nullptr;
   }
 };
