@@ -2747,17 +2747,24 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
       if (isa_and_nonnull<FPMathOperator>(II.getInductionBinOp()))
         B.setFastMathFlags(II.getInductionBinOp()->getFastMathFlags());
 
-      Value *CountMinusOne = B.CreateSub(
-          VectorTripCount, ConstantInt::get(VectorTripCount->getType(), 1));
-      CountMinusOne->setName("cmo");
-
       VPValue *StepVPV = Plan.getSCEVExpansion(II.getStep());
       assert(StepVPV && "step must have been expanded during VPlan execution");
       Value *Step = StepVPV->isLiveIn() ? StepVPV->getLiveInIRValue()
                                         : State.get(StepVPV, VPLane(0));
-      Value *Escape =
-          emitTransformedIndex(B, CountMinusOne, II.getStartValue(), Step,
-                               II.getKind(), II.getInductionBinOp());
+      Value *Escape = nullptr;
+      if (EndValue->getType()->isIntegerTy())
+        Escape = B.CreateSub(EndValue, Step);
+      else if (EndValue->getType()->isPointerTy())
+        Escape = B.CreatePtrAdd(EndValue, B.CreateNeg(Step));
+      else if (EndValue->getType()->isFloatingPointTy()) {
+        Escape = B.CreateBinOp(II.getInductionBinOp()->getOpcode() ==
+                                       Instruction::FAdd
+                                   ? Instruction::FSub
+                                   : Instruction::FAdd,
+                               EndValue, Step);
+      } else {
+        llvm_unreachable("all possible induction types must be handled");
+      }
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
     }
