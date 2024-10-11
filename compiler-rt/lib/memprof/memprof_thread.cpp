@@ -25,7 +25,10 @@ namespace __memprof {
 // MemprofThreadContext implementation.
 
 void MemprofThreadContext::OnCreated(void *arg) {
-  thread = static_cast<MemprofThread *>(arg);
+  CreateThreadContextArgs *args = static_cast<CreateThreadContextArgs *>(arg);
+  if (args->stack)
+    stack_id = StackDepotPut(*args->stack);
+  thread = args->thread;
   thread->set_context(this);
 }
 
@@ -76,8 +79,8 @@ MemprofThread *MemprofThread::Create(thread_callback_t start_routine, void *arg,
   MemprofThread *thread = (MemprofThread *)MmapOrDie(size, __func__);
   thread->start_routine_ = start_routine;
   thread->arg_ = arg;
-  memprofThreadRegistry().CreateThread(
-      0, detached, parent_tid, stack ? StackDepotPut(*stack) : 0, thread);
+  MemprofThreadContext::CreateThreadContextArgs args = {thread, stack};
+  memprofThreadRegistry().CreateThread(0, detached, parent_tid, &args);
 
   return thread;
 }

@@ -2531,7 +2531,7 @@ bool
 ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
   bool RetVal = false;
 
-  DenseMap<MachineInstr*, unsigned> MI2LocMap;
+  DenseMap<MachineInstr *, unsigned> MI2LocMap;
   using MapIt = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>::iterator;
   using Base2InstMap = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>;
   using BaseVec = SmallVector<unsigned, 4>;
@@ -2570,7 +2570,7 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
       Register Base = MI.getOperand(1).getReg();
       int Offset = getMemoryOpOffset(MI);
       bool StopHere = false;
-      auto FindBases = [&] (Base2InstMap &Base2Ops, BaseVec &Bases) {
+      auto FindBases = [&](Base2InstMap &Base2Ops, BaseVec &Bases) {
         MapIt BI = Base2Ops.find(Base);
         if (BI == Base2Ops.end()) {
           Base2Ops[Base].push_back(&MI);
