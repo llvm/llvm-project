@@ -137,10 +137,6 @@ class ThreadSuspender {
 };
 
 bool ThreadSuspender::SuspendThread(tid_t tid) {
-  // Are we already attached to this thread?
-  // Currently this check takes linear time, however the number of threads is
-  // usually small.
-  if (suspended_threads_list_.ContainsTid(tid)) return false;
   int pterrno;
   if (internal_iserror(internal_ptrace(PTRACE_ATTACH, tid, nullptr, nullptr),
                        &pterrno)) {
@@ -226,6 +222,11 @@ bool ThreadSuspender::SuspendAllThreads() {
         break;
     }
     for (tid_t tid : threads) {
+      // Are we already attached to this thread?
+      // Currently this check takes linear time, however the number of threads
+      // is usually small.
+      if (suspended_threads_list_.ContainsTid(tid))
+        continue;
       if (SuspendThread(tid))
         retry = true;
       else
