@@ -55,8 +55,11 @@ private:
 };
 
 bool hasScalarDerivedResult(mlir::FunctionType funTy) {
+  // C_PTR/C_FUNPTR are results to void* in this pass, do not consider
+  // them as normal derived types.
   return funTy.getNumResults() == 1 &&
-         mlir::isa<fir::RecordType>(funTy.getResult(0));
+         mlir::isa<fir::RecordType>(funTy.getResult(0)) &&
+         !fir::isa_builtin_cptr_type(funTy.getResult(0));
 }
 
 static mlir::Type getResultArgumentType(mlir::Type resultType,
@@ -218,8 +221,9 @@ public:
   matchAndRewrite(fir::SaveResultOp op,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Operation *call = op.getValue().getDefiningOp();
-    if (mlir::isa<fir::RecordType>(op.getValue().getType()) && call &&
-        fir::hasBindcAttr(call)) {
+    mlir::Type type = op.getValue().getType();
+    if (mlir::isa<fir::RecordType>(type) && call && fir::hasBindcAttr(call) &&
+        !fir::isa_builtin_cptr_type(type)) {
       rewriter.replaceOpWithNewOp<fir::StoreOp>(op, op.getValue(),
                                                 op.getMemref());
     } else {
