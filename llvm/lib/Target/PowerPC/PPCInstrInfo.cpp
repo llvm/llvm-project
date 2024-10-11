@@ -5259,20 +5259,26 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   bool IsNonSignedExtInstrNeedPromoted = false;
   int NewOpcode = -1;
 
-  auto CheckAndSetNewOpcode = [&](int NewOpc) {
-    if (!IsNonSignedExtInstrNeedPromoted) {
-      NewOpcode = NewOpc;
-      IsNonSignedExtInstrNeedPromoted = true;
-    }
-  };
+#define MapOpCode(A)                                                           \
+  case A:                                                                      \
+    NewOpcode = A##8;                                                          \
+    IsNonSignedExtInstrNeedPromoted = true;                                    \
+    break
+
+  switch (Opcode) {
+    MapOpCode(PPC::OR);
+    MapOpCode(PPC::ISEL);
+    MapOpCode(PPC::ORI);
+    MapOpCode(PPC::XORI);
+    MapOpCode(PPC::ORIS);
+    MapOpCode(PPC::XORIS);
+    MapOpCode(PPC::AND);
+  }
+#undef MapOpCode
 
   switch (Opcode) {
   case PPC::OR:
-    CheckAndSetNewOpcode(PPC::OR8);
-    [[fallthrough]];
   case PPC::ISEL:
-    CheckAndSetNewOpcode(PPC::ISEL8);
-    [[fallthrough]];
   case PPC::OR8:
   case PPC::PHI:
     if (BinOpDepth < MAX_BINOP_DEPTH) {
@@ -5314,17 +5320,9 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     return;
   }
   case PPC::ORI:
-    CheckAndSetNewOpcode(PPC::ORI8);
-    [[fallthrough]];
   case PPC::XORI:
-    CheckAndSetNewOpcode(PPC::XORI8);
-    [[fallthrough]];
   case PPC::ORIS:
-    CheckAndSetNewOpcode(PPC::ORIS8);
-    [[fallthrough]];
   case PPC::XORIS:
-    CheckAndSetNewOpcode(PPC::XORIS8);
-    [[fallthrough]];
   case PPC::ORI8:
   case PPC::XORI8:
   case PPC::ORIS8:
@@ -5334,87 +5332,84 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     break;
   }
   case PPC::AND:
-    CheckAndSetNewOpcode(PPC::AND8);
-    [[fallthrough]];
   case PPC::AND8: {
     if (BinOpDepth < MAX_BINOP_DEPTH) {
       Register SrcReg1 = MI->getOperand(1).getReg();
-      promoteInstr32To64ForElimEXTSW(SrcReg1, MRI, BinOpDepth, LV);
+      promoteInstr32To64ForElimEXTSW(SrcReg1, MRI, BinOpDepth + 1, LV);
       Register SrcReg2 = MI->getOperand(2).getReg();
-      promoteInstr32To64ForElimEXTSW(SrcReg2, MRI, BinOpDepth, LV);
+      promoteInstr32To64ForElimEXTSW(SrcReg2, MRI, BinOpDepth + 1, LV);
     }
     break;
   }
-  default:
-    break;
   }
 
   const PPCInstrInfo *TII =
       MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
-  if (TII->isSExt32To64(Opcode) || IsNonSignedExtInstrNeedPromoted) {
+  if (!TII->isSExt32To64(Opcode) && !IsNonSignedExtInstrNeedPromoted)
+    return;
 
-    const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
-    if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
-      return;
+  if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
+    return;
 
-    // The TableGen function `get64BitInstrFromSignedExt32BitInstr` is used to
-    // map the 32-bit instruction with the `SExt32To64` flag to the 64-bit
-    // instruction with the same opcode.
-    if (!IsNonSignedExtInstrNeedPromoted)
-      NewOpcode = PPC::get64BitInstrFromSignedExt32BitInstr(Opcode);
+  // The TableGen function `get64BitInstrFromSignedExt32BitInstr` is used to
+  // map the 32-bit instruction with the `SExt32To64` flag to the 64-bit
+  // instruction with the same opcode.
+  if (!IsNonSignedExtInstrNeedPromoted)
+    NewOpcode = PPC::get64BitInstrFromSignedExt32BitInstr(Opcode);
 
-    assert(NewOpcode != -1 &&
-           "Must have a 64-bit opcode to map the 32-bit opcode!");
+  assert(NewOpcode != -1 &&
+         "Must have a 64-bit opcode to map the 32-bit opcode!");
 
-    const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-    const MCInstrDesc &MCID = TII->get(NewOpcode);
-    const TargetRegisterClass *NewRC =
-        TRI->getRegClass(MCID.operands()[0].RegClass);
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  const MCInstrDesc &MCID = TII->get(NewOpcode);
+  const TargetRegisterClass *NewRC =
+      TRI->getRegClass(MCID.operands()[0].RegClass);
 
-    Register SrcReg = MI->getOperand(0).getReg();
-    const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+  Register SrcReg = MI->getOperand(0).getReg();
+  const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
 
-    // If the register class of the defined register in the 32-bit instruction
-    // is the same as the register class of the defined register in the promoted
-    // 64-bit instruction, we do not need to promote the instruction.
-    if (NewRC == SrcRC)
-      return;
+  // If the register class of the defined register in the 32-bit instruction
+  // is the same as the register class of the defined register in the promoted
+  // 64-bit instruction, we do not need to promote the instruction.
+  if (NewRC == SrcRC)
+    return;
 
-    DebugLoc DL = MI->getDebugLoc();
-    auto MBB = MI->getParent();
+  DebugLoc DL = MI->getDebugLoc();
+  auto MBB = MI->getParent();
 
-    // Since the pseudo-opcode of the instruction is promoted from 32-bit to
-    // 64-bit, if the source reg class of the original instruction belongs to
-    // PPC::GRCRegClass or PPC::GPRC_and_GPRC_NOR0RegClass, we need to promote
-    // the operand to PPC::G8CRegClass or PPC::G8RC_and_G8RC_NOR0RegClass,
-    // respectively.
-    DenseMap<unsigned, Register> PromoteRegs;
-    for (unsigned i = 1; i < MI->getNumOperands(); i++) {
-      MachineOperand &Operand = MI->getOperand(i);
-      if (Operand.isReg()) {
-        Register OperandReg = Operand.getReg();
-        if (!OperandReg.isVirtual())
-          continue;
+  // Since the pseudo-opcode of the instruction is promoted from 32-bit to
+  // 64-bit, if the source reg class of the original instruction belongs to
+  // PPC::GRCRegClass or PPC::GPRC_and_GPRC_NOR0RegClass, we need to promote
+  // the operand to PPC::G8CRegClass or PPC::G8RC_and_G8RC_NOR0RegClass,
+  // respectively.
+  DenseMap<unsigned, Register> PromoteRegs;
+  for (unsigned i = 1; i < MI->getNumOperands(); i++) {
+    MachineOperand &Operand = MI->getOperand(i);
+    if (!Operand.isReg())
+      continue;
 
-        const TargetRegisterClass *NewUsedRegRC =
-            TRI->getRegClass(MCID.operands()[i].RegClass);
-        const TargetRegisterClass *OrgRC = MRI->getRegClass(OperandReg);
-        if (NewUsedRegRC != OrgRC &&
-            (OrgRC == &PPC::GPRCRegClass ||
-             OrgRC == &PPC::GPRC_and_GPRC_NOR0RegClass)) {
-          // Promote the used 32-bit register to 64-bit register.
-          Register TmpReg = MRI->createVirtualRegister(NewUsedRegRC);
-          Register DstTmpReg = MRI->createVirtualRegister(NewUsedRegRC);
-          BuildMI(*MBB, MI, DL, TII->get(PPC::IMPLICIT_DEF), TmpReg);
-          BuildMI(*MBB, MI, DL, TII->get(PPC::INSERT_SUBREG), DstTmpReg)
-              .addReg(TmpReg)
-              .addReg(OperandReg)
-              .addImm(PPC::sub_32);
-          PromoteRegs[i] = DstTmpReg;
-        }
-      }
+    Register OperandReg = Operand.getReg();
+    if (!OperandReg.isVirtual())
+      continue;
+
+    const TargetRegisterClass *NewUsedRegRC =
+        TRI->getRegClass(MCID.operands()[i].RegClass);
+    const TargetRegisterClass *OrgRC = MRI->getRegClass(OperandReg);
+    if (NewUsedRegRC != OrgRC && (OrgRC == &PPC::GPRCRegClass ||
+                                  OrgRC == &PPC::GPRC_and_GPRC_NOR0RegClass)) {
+      // Promote the used 32-bit register to 64-bit register.
+      Register TmpReg = MRI->createVirtualRegister(NewUsedRegRC);
+      Register DstTmpReg = MRI->createVirtualRegister(NewUsedRegRC);
+      BuildMI(*MBB, MI, DL, TII->get(PPC::IMPLICIT_DEF), TmpReg);
+      BuildMI(*MBB, MI, DL, TII->get(PPC::INSERT_SUBREG), DstTmpReg)
+          .addReg(TmpReg)
+          .addReg(OperandReg)
+          .addImm(PPC::sub_32);
+      PromoteRegs[i] = DstTmpReg;
     }
+  }
 
     Register NewDefinedReg = MRI->createVirtualRegister(NewRC);
 
@@ -5431,12 +5426,12 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
 
     for (unsigned i = 1; i < Iter->getNumOperands(); i++) {
       MachineOperand &Operand = Iter->getOperand(i);
-      if (Operand.isReg()) {
-        Register OperandReg = Operand.getReg();
-        if (!OperandReg.isVirtual())
-          continue;
-        LV->recomputeForSingleDefVirtReg(OperandReg);
-      }
+      if (!Operand.isReg())
+        continue;
+      Register OperandReg = Operand.getReg();
+      if (!OperandReg.isVirtual())
+        continue;
+      LV->recomputeForSingleDefVirtReg(OperandReg);
     }
 
     MI->eraseFromParent();
@@ -5448,7 +5443,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
         .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
     LV->recomputeForSingleDefVirtReg(NewDefinedReg);
-  }
   return;
 }
 
