@@ -1424,5 +1424,4 @@ void GCNTTIImpl::collectLaunchBounds(
   auto AmdgpuWavesPerEU = ST->getWavesPerEU(F);
   LB.push_back({"AmdgpuWavesPerEUMin", AmdgpuWavesPerEU.first});
   LB.push_back({"AmdgpuWavesPerEUMax", AmdgpuWavesPerEU.second});
-  // TODO: Any others we should add?
 }

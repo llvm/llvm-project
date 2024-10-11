@@ -455,5 +455,4 @@ void NVPTXTTIImpl::collectLaunchBounds(
     LB.push_back({"Maxntidy", *Val});
   if (auto Val = getMaxNTIDz(F))
     LB.push_back({"Maxntidz", *Val});
-  // TODO: Any others we should add?
 }
