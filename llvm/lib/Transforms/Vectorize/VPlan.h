@@ -3882,6 +3882,15 @@ public:
     To->removePredecessor(From);
   }
 
+  /// Reassociate all the blocks connected to \p Old so that they now point to
+  /// \p New.
+  static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Pred : to_vector(Old->getPredecessors()))
+      Pred->replaceSuccessor(Old, New);
+    for (auto *Succ : to_vector(Old->getSuccessors()))
+      Succ->replacePredecessor(Old, New);
+  }
+
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T>

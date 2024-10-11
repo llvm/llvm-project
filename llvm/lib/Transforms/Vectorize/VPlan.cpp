@@ -1004,15 +1004,12 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
     assert(!R.isPhi() && "Tried to move phi recipe to end of block");
     R.moveBefore(*IRVPBB, IRVPBB->end());
   }
-  VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
-  PredVPBB->replaceSuccessor(VPBB, IRVPBB);
-  IRVPBB->setPredecessors({PredVPBB});
-  for (auto *Succ : to_vector(VPBB->getSuccessors()))
-    Succ->replacePredecessor(VPBB, IRVPBB);
+
+  VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
+  IRVPBB->setPredecessors(VPBB->getPredecessors());
   IRVPBB->setSuccessors(VPBB->getSuccessors());
 
-  VPBB->clearSuccessors();
-  VPBB->clearPredecessors();
+  // Any successor/predecessor lists will be cleared on deletion.
   delete VPBB;
 }
 
