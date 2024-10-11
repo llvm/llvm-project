@@ -1,35 +1,50 @@
+module;
+
+export module M;
+
 const char8_t x = 1;
 
 template<typename T> requires true
 const int y = requires { typename T::type; requires T::value; };
 
-int f(){ co_await 1; }
+class co_test {};
 
-// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:1:3 %s | FileCheck --check-prefix=CHECK-TOP-LEVEL %s
-// CHECK-TOP-LEVEL: const
-// CHECK-TOP-LEVEL: consteval
-// CHECK-TOP-LEVEL: constexpr
-// CHECK-TOP-LEVEL: constinit
+int f(){ co_test test; return 1; }
 
-// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:1:12 %s | FileCheck --check-prefix=CHECK-TOP-LEVEL %s
-// CHECK-TOP-LEVEL: char8_t
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:1:3 %s | FileCheck --check-prefix=CHECK-MODULE %s
+// CHECK-MODULE: module;
+// CHECK-MODULE: module: private;
+// CHECK-MODULE: module <#name#>;
 
-// RUN: %clang-cc1 -std=c++20 -code-completion-at=%s:4:3 %s | FileCheck --check-prefix=CHECK-REQUIRES %s
-// CHECK-REQUIRES: concept
-// CHECK-REQUIRES: const
-// CHECK-REQUIRES: consteval
-// CHECK-REQUIRES: constexpr
-// CHECK-REQUIRES: constinit
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:3:3 %s | FileCheck --check-prefix=CHECK-EXPORT %s
+// CHECK-EXPORT: export
 
-// RUN: %clang-cc1 -std=c++20 -code-completion-at=%s:3:27 %s | FileCheck --check-prefix=CHECK-REQUIRES %s
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:5:3 %s | FileCheck --check-prefix=CHECK-CONST %s
+// CHECK-CONST: const
+// CHECK-CONST: consteval
+// CHECK-CONST: constexpr
+// CHECK-CONST: constinit
+
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:5:12 %s | FileCheck --check-prefix=CHECK-CHAR %s
+// CHECK-CHAR: char8_t
+
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:8:3 %s | FileCheck --check-prefix=CHECK-CONSTRAINT %s
+// CHECK-CONSTRAINT: concept
+// CHECK-CONSTRAINT: const
+// CHECK-CONSTRAINT: consteval
+// CHECK-CONSTRAINT: constexpr
+// CHECK-CONSTRAINT: constinit
+
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:7:27 %s | FileCheck --check-prefix=CHECK-REQUIRES %s
 // CHECK-REQUIRES: requires
 
-// RUN: %clang-cc1 -std=c++20 -code-completion-at=%s:4:20 %s | FileCheck -check-prefix=CHECK-CC1 %s
-// CHECK-CC1-NEXT: COMPLETION: Pattern: [#bool#]requires (<#parameters#>) {
-// CHECK-CC1-NEXT: <#requirements#>
-// CHECK-CC1-NEXT: }
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:8:20 %s | FileCheck -check-prefix=CHECK-REQUIRE %s
+// CHECK-REQUIRE: [#bool#]requires (<#parameters#>) {
+// CHECK-REQUIRE: <#requirements#>
+// CHECK-REQUIRE: }
 
-// RUN: %clang-cc1 -std=c++20 -code-completion-at=%s:6:13 %s | FileCheck --check-prefix=CHECK-COAWAIT %s
-// CHECK-COAWAIT: Pattern : co_await <#expression#>
-// CHECK-COAWAIT: Pattern : co_return <#expression#>;
-// CHECK-COAWAIT: Pattern : co_yield <#expression#>
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:12:13 %s | FileCheck --check-prefix=CHECK-COROUTINE %s
+// CHECK-COROUTINE: co_await <#expression#>
+// CHECK-COROUTINE: co_return <#expression#>;
+// CHECK-COROUTINE: co_yield <#expression#>
+
