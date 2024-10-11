@@ -99,6 +99,20 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
+- The warning ``-Wdeprecated-literal-operator`` is now on by default, as this is
+  something that WG21 has shown interest in removing from the language. The
+  result is that anyone who is compiling with ``-Werror`` should see this
+  diagnostic.  To fix this diagnostic, simply removing the space character from
+  between the ``operator""`` and the user defined literal name will make the
+  source no longer deprecated. This is consistent with `CWG2521 <https://cplusplus.github.io/CWG/issues/2521.html>_`.
+
+  .. code-block:: c++
+
+    // Now diagnoses by default.
+    unsigned operator"" _udl_name(unsigned long long);
+    // Fixed version:
+    unsigned operator""_udl_name(unsigned long long);
+
 ABI Changes in This Version
 ---------------------------
 
@@ -214,6 +228,10 @@ Resolutions to C++ Defect Reports
 
 - Clang now allows trailing requires clause on explicit deduction guides.
   (`CWG2707: Deduction guides cannot have a trailing requires-clause <https://cplusplus.github.io/CWG/issues/2707.html>`_).
+
+- Clang now diagnoses a space in the first production of a ``literal-operator-id``
+  by default.
+  (`CWG2521: User-defined literals and reserved identifiers <https://cplusplus.github.io/CWG/issues/2521.html>`_).
 
 C Language Changes
 ------------------
@@ -378,6 +396,10 @@ Improvements to Clang's diagnostics
 - The warning for an unsupported type for a named register variable is now phrased ``unsupported type for named register variable``,
   instead of ``bad type for named register variable``. This makes it clear that the type is not supported at all, rather than being
   suboptimal in some way the error fails to mention (#GH111550).
+  
+- Clang now emits a ``-Wdepredcated-literal-operator`` diagnostic, even if the
+  name was a reserved name, which we improperly allowed to suppress the
+  diagnostic.
 
 Improvements to Clang's time-trace
 ----------------------------------
