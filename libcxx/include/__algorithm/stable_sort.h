@@ -122,7 +122,12 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __merge_move_construct(
       __d.template __incr<value_type>();
       ++__first2;
     } else {
-      __STABLE_SORT_NEW(__result, value_type, _Ops::__iter_move, __first1);
+// __STABLE_SORT_NEW(__result, value_type, _Ops::__iter_move, __first1);
+#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 <= 140100)
+      [__result, &__first1] { ::new (__result) value_type(_Ops::__iter_move(__first1)); }();
+#else
+      ::new (__result) value_type(_Ops::__iter_move(__first1));
+#endif
       __d.template __incr<value_type>();
       ++__first1;
     }
