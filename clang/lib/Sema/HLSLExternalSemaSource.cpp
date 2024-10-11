@@ -342,6 +342,7 @@ struct TemplateParameterListBuilder {
       RWBuffer<int> Buf;
   }
 
+<<<<<<< HEAD
   When dumping the AST and filtering for "RWBuffer", the resulting AST
   structure is what we're trying to construct below, specifically the
   CSE portion.
