@@ -1027,7 +1027,6 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
 // ThreadLister implementation.
 ThreadLister::ThreadLister(pid_t pid) : buffer_(4096) {
   task_path_.AppendF("/proc/%d/task", pid);
-  status_path_.AppendF("%s/status", task_path_.data());
 }
 
 ThreadLister::Result ThreadLister::ListThreads(
@@ -1086,7 +1085,9 @@ ThreadLister::Result ThreadLister::ListThreads(
   }
 }
 
-const char *ThreadLister::LoadStatus(int tid) {
+const char *ThreadLister::LoadStatus(tid_t tid) {
+  status_path_.clear();
+  status_path_.AppendF("%s/%llu/status", task_path_.data(), tid);
   auto cleanup = at_scope_exit([&] {
     // Resize back to capacity if it is downsized by `ReadFileToVector`.
     buffer_.resize(buffer_.capacity());
@@ -1097,7 +1098,7 @@ const char *ThreadLister::LoadStatus(int tid) {
   return buffer_.data();
 }
 
-bool ThreadLister::IsAlive(int tid) {
+bool ThreadLister::IsAlive(tid_t tid) {
   // /proc/%d/task/%d/status uses same call to detect alive threads as
   // proc_task_readdir. See task_state implementation in Linux.
   static const char kPrefix[] = "\nPPid:";
