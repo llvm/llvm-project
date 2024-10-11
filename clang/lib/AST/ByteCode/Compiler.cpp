@@ -3406,7 +3406,7 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   if (!this->visit(Arg))
     return false;
 
-  return this->emitFree(E->isArrayForm(), E);
+  return this->emitFree(E->isArrayForm(), E->isGlobalDelete(), E);
 }
 
 template <class Emitter>
