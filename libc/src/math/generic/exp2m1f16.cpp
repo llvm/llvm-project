@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
@@ -117,7 +118,7 @@ LLVM_LIBC_FUNCTION(float16, exp2m1f16, (float16 x)) {
       // When -12 < x < -11, round(2^x - 1, HP, RN) = -0x1.ffcp-1.
       if (x_u < 0xca00U) {
         return fputil::round_result_slightly_down(
-            static_cast<float16>(-0x1.ffcp-1));
+            fputil::cast<float16>(-0x1.ffcp-1));
       }
 
       // When x <= -12, round(2^x - 1, HP, RN) = -1.
@@ -126,7 +127,7 @@ LLVM_LIBC_FUNCTION(float16, exp2m1f16, (float16 x)) {
       case FE_DOWNWARD:
         return FPBits::one(Sign::NEG).get_val();
       default:
-        return static_cast<float16>(-0x1.ffcp-1);
+        return -0x1.ffcp-1;
       }
     }
 
@@ -142,7 +143,7 @@ LLVM_LIBC_FUNCTION(float16, exp2m1f16, (float16 x)) {
       //   > display = hexadecimal;
       //   > P = fpminimax((2^x - 1)/x, 4, [|SG...|], [-2^-3, 2^-3]);
       //   > x * P;
-      return static_cast<float16>(
+      return fputil::cast<float16>(
           xf * fputil::polyeval(xf, 0x1.62e43p-1f, 0x1.ebfbdep-3f,
                                 0x1.c6af88p-5f, 0x1.3b45d6p-7f,
                                 0x1.641e7cp-10f));
@@ -155,7 +156,7 @@ LLVM_LIBC_FUNCTION(float16, exp2m1f16, (float16 x)) {
   // exp2(x) = exp2(hi + mid) * exp2(lo)
   auto [exp2_hi_mid, exp2_lo] = exp2_range_reduction(x);
   // exp2m1(x) = exp2(hi + mid) * exp2(lo) - 1
-  return static_cast<float16>(
+  return fputil::cast<float16>(
       fputil::multiply_add(exp2_hi_mid, exp2_lo, -1.0f));
 }
 

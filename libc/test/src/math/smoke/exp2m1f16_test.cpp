@@ -27,8 +27,7 @@ TEST_F(LlvmLibcExp2m1f16Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::exp2m1f16(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float16>(-1.0),
-                            LIBC_NAMESPACE::exp2m1f16(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(-1.0, LIBC_NAMESPACE::exp2m1f16(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp2m1f16(zero));
@@ -45,7 +44,7 @@ TEST_F(LlvmLibcExp2m1f16Test, Overflow) {
                               FE_OVERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  float16 x = static_cast<float16>(16.0);
+  float16 x = 16.0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
       inf, LIBC_NAMESPACE::exp2m1f16(x), FE_OVERFLOW | FE_INEXACT);
@@ -67,27 +66,22 @@ TEST_F(LlvmLibcExp2m1f16Test, Overflow) {
 TEST_F(LlvmLibcExp2m1f16Test, ResultNearNegOne) {
   LIBC_NAMESPACE::libc_errno = 0;
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(static_cast<float16>(-1.0),
-                              LIBC_NAMESPACE::exp2m1f16(neg_max_normal),
+  EXPECT_FP_EQ_WITH_EXCEPTION(-1.0, LIBC_NAMESPACE::exp2m1f16(neg_max_normal),
                               FE_INEXACT);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(
-      static_cast<float16>(-0x1.ffcp-1),
-      LIBC_NAMESPACE::exp2m1f16(static_cast<float16>(-11)));
+  EXPECT_FP_EQ_ALL_ROUNDING(-0x1.ffcp-1, LIBC_NAMESPACE::exp2m1f16(-11.0));
 
-  float16 x = static_cast<float16>(-12);
+  float16 x = -12.0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
-      static_cast<float16>(-1.0), LIBC_NAMESPACE::exp2m1f16(x), FE_INEXACT);
+      -1.0, LIBC_NAMESPACE::exp2m1f16(x), FE_INEXACT);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(static_cast<float16>(-0x1.ffcp-1),
-                                              LIBC_NAMESPACE::exp2m1f16(x),
-                                              FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(
+      -0x1.ffcp-1, LIBC_NAMESPACE::exp2m1f16(x), FE_INEXACT);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
-      static_cast<float16>(-1.0), LIBC_NAMESPACE::exp2m1f16(x), FE_INEXACT);
+      -1.0, LIBC_NAMESPACE::exp2m1f16(x), FE_INEXACT);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
-      static_cast<float16>(-0x1.ffcp-1), LIBC_NAMESPACE::exp2m1f16(x),
-      FE_INEXACT);
+      -0x1.ffcp-1, LIBC_NAMESPACE::exp2m1f16(x), FE_INEXACT);
 }
