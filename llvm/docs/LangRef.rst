@@ -2088,10 +2088,6 @@ example:
     divergence even if its inputs are uniform. A call with no further information
     would normally be considered a source of divergence; setting this attribute
     on a function means that a call to it is not a source of divergence.
-
-    This is useful where known-name calls are being used as an extension
-    mechanism for instructions, as for example in `llvm-dialects
-    <https://github.com/GPUOpen-Drivers/llvm-dialects>`.
 ``noduplicate``
     This attribute indicates that calls to the function cannot be
     duplicated. A call to a ``noduplicate`` function may be moved
