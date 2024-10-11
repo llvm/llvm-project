@@ -385,7 +385,7 @@ public:
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
   bool supportsWGP() const {
-    if (GFX1210Insts)
+    if (GFX1210Insts && !GFX13Insts)
       return false;
     return getGeneration() >= GFX10;
   }

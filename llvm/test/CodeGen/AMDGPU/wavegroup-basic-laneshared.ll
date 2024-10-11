@@ -115,7 +115,7 @@ store:
 ; KERNEL-NEXT:         .amdhsa_float_denorm_mode_32 3
 ; KERNEL-NEXT:         .amdhsa_float_denorm_mode_16_64 3
 ; KERNEL-NEXT:         .amdhsa_fp16_overflow 0
-; KERNEL-NEXT:         .amdhsa_workgroup_processor_mode 0
+; KERNEL-NEXT:         .amdhsa_workgroup_processor_mode 1
 ; KERNEL-NEXT:         .amdhsa_memory_ordered 1
 ; KERNEL-NEXT:         .amdhsa_forward_progress 0
 ; KERNEL-NEXT:         .amdhsa_round_robin_scheduling 0
