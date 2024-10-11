@@ -1738,7 +1738,7 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
 
     // Suppress inline namespace if it doesn't make the result ambiguous.
     if (Ctx->isInlineNamespace() && NameInScope) {
-      bool const isRedundant =
+      bool isRedundant =
           cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope);
       if (P.SuppressInlineNamespace ==
               PrintingPolicy::SuppressInlineNamespaceMode::All ||
