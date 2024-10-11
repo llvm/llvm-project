@@ -7957,7 +7957,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       }
 
       if (!R->isIntegralType(Context) && !R->isPointerType()) {
-        Diag(TInfo->getTypeLoc().getBeginLoc(), diag::err_asm_bad_register_type)
+        Diag(TInfo->getTypeLoc().getBeginLoc(),
+             diag::err_asm_unsupported_register_type)
             << TInfo->getTypeLoc().getSourceRange();
         NewVD->setInvalidDecl(true);
       }
