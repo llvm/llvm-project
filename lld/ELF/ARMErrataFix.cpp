@@ -417,7 +417,7 @@ void ARMErr657417Patcher::insertPatches(
 // isec so the branch we are patching always goes forwards.
 static void implementPatch(ScanResult sr, InputSection *isec,
                            std::vector<Patch657417Section *> &patches) {
-
+  Ctx &ctx = isec->getCtx();
   log("detected cortex-a8-657419 erratum sequence starting at " +
       utohexstr(isec->getVA(sr.off)) + " in unpatched output.");
   Patch657417Section *psec;
