@@ -39,6 +39,12 @@ public:
 
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+
+private:
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
 } // namespace
 
@@ -344,7 +350,8 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
   if (rel.type == R_386_TLS_GD) {
     // Convert (loc[-2] == 0x04)
     //   leal x@tlsgd(, %ebx, 1), %eax
@@ -379,7 +386,8 @@ static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   }
 }
 
-static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
   if (rel.type == R_386_TLS_GD) {
     // Convert (loc[-2] == 0x04)
     //   leal x@tlsgd(, %ebx, 1), %eax
@@ -413,7 +421,8 @@ static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-static void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
@@ -450,7 +459,8 @@ static void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   write32le(loc, val);
 }
 
-static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
   if (rel.type == R_386_TLS_LDO_32) {
     write32le(loc, val);
     return;
