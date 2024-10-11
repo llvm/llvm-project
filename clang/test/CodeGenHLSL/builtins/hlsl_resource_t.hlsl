@@ -5,9 +5,9 @@ using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::c
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }, 1, 0)
 
-// CHECK: define void @"?fa@@YAXUHLSLAttributedResourceType@__hlsl@@@Z"(target("dx.TypedBuffer", float, 1, 0, 0) %a)
-// CHECK: call void @"?foo1@@YAXUHLSLAttributedResourceType@__hlsl@@@Z"(target("dx.TypedBuffer", float, 1, 0, 0) %0)
-// CHECK: declare void @"?foo1@@YAXUHLSLAttributedResourceType@__hlsl@@@Z"(target("dx.TypedBuffer", float, 1, 0, 0))
+// CHECK: define void @_Z2faU9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0) %a)
+// CHECK: call void @_Z4foo1U9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0) %0)
+// CHECK: declare void @_Z4foo1U9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0))
 
 void foo1(handle_float_t res);
 
@@ -15,14 +15,14 @@ void fa(handle_float_t a) {
     foo1(a);
 }
 
-// CHECK: define void @"?fb@@YAXUHLSLAttributedResourceType@__hlsl@@@Z"(target("dx.TypedBuffer", float, 1, 0, 0) %a)
+// CHECK: define void @_Z2fbU9_Res_u_CTfu17__hlsl_resource_t(target("dx.TypedBuffer", float, 1, 0, 0) %a)
 void fb(handle_float_t a) {
     handle_float_t b = a;
 }
 
-// CHECK: define void @"?fc@@YAXV?$RWBuffer@T?$__vector@M$03@__clang@@@hlsl@@@Z"(ptr noundef byval(%"class.hlsl::RWBuffer") align 16 %a)
-// CHECK: call void @"?foo2@@YAXV?$RWBuffer@T?$__vector@M$03@__clang@@@hlsl@@@Z"(ptr noundef byval(%"class.hlsl::RWBuffer") align 16 %agg.tmp)  
-// CHECK: declare void @"?foo2@@YAXV?$RWBuffer@T?$__vector@M$03@__clang@@@hlsl@@@Z"(ptr noundef byval(%"class.hlsl::RWBuffer") align 16)
+// CHECK: define void @_Z2fcN4hlsl8RWBufferIDv4_fEE(ptr noundef byval(%"class.hlsl::RWBuffer") align 16 %a)
+// CHECK: call void @_Z4foo2N4hlsl8RWBufferIDv4_fEE(ptr noundef byval(%"class.hlsl::RWBuffer") align 16 %agg.tmp)
+// CHECK: declare void @_Z4foo2N4hlsl8RWBufferIDv4_fEE(ptr noundef byval(%"class.hlsl::RWBuffer") align 16)
 void foo2(RWBuffer<float4> buf);
 
 void fc(RWBuffer<float4> a) {
@@ -38,9 +38,9 @@ struct MyStruct {
   int2 i;
 };
 
-// CHECK: define void @"?fe@@YAXV?$StructuredBuffer@UMyStruct@@@hlsl@@@Z"(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 16 %a)
-// CHECK: call void @"?foo3@@YAXV?$StructuredBuffer@UMyStruct@@@hlsl@@@Z"(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 16 %agg.tmp)
-// CHECK: declare void @"?foo3@@YAXV?$StructuredBuffer@UMyStruct@@@hlsl@@@Z"(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 16)
+// CHECK: define void @_Z2feN4hlsl16StructuredBufferI8MyStructEE(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 16 %a)
+// CHECK: call void @_Z4foo3N4hlsl16StructuredBufferI8MyStructEE(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 16 %agg.tmp)
+// CHECK: declare void @_Z4foo3N4hlsl16StructuredBufferI8MyStructEE(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 16)
 void foo3(StructuredBuffer<MyStruct> buf);
 
 void fe(StructuredBuffer<MyStruct> a) {

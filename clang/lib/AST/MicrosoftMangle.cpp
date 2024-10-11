@@ -3756,8 +3756,7 @@ void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
                                          Qualifiers, SourceRange Range) {
-  mangleArtificialTagType(TagTypeKind::Struct, "HLSLAttributedResourceType",
-                          {"__hlsl"});
+  llvm_unreachable("HLSL uses Itanium name mangling");
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |
