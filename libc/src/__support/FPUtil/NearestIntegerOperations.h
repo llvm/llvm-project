@@ -346,10 +346,10 @@ fromfpx(T x, int rnd, unsigned int width) {
 
 namespace internal {
 
-template <
-    typename FloatType, typename IntType,
-    cpp::enable_if_t<cpp::is_floating_point_v<FloatType> && cpp::is_integral_v<IntType>,
-                     int> = 0>
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
+                           int> = 0>
 LIBC_INLINE IntType rounded_float_to_signed_integer(FloatType x) {
   constexpr IntType INTEGER_MIN = (IntType(1) << (sizeof(IntType) * 8 - 1));
   constexpr IntType INTEGER_MAX = -(INTEGER_MIN + 1);
@@ -386,19 +386,21 @@ LIBC_INLINE IntType rounded_float_to_signed_integer(FloatType x) {
 
 } // namespace internal
 
-template <
-    typename FloatType, typename IntType,
-    cpp::enable_if_t<cpp::is_floating_point_v<FloatType> && cpp::is_integral_v<IntType>,
-                     int> = 0>
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
+                           int> = 0>
 LIBC_INLINE IntType round_to_signed_integer(FloatType x) {
-  return internal::rounded_float_to_signed_integer<FloatType, IntType>(round(x));
+  return internal::rounded_float_to_signed_integer<FloatType, IntType>(
+      round(x));
 }
 
-template <
-    typename FloatType, typename IntType,
-    cpp::enable_if_t<cpp::is_floating_point_v<FloatType> && cpp::is_integral_v<IntType>,
-                     int> = 0>
-LIBC_INLINE IntType round_to_signed_integer_using_current_rounding_mode(FloatType x) {
+template <typename FloatType, typename IntType,
+          cpp::enable_if_t<cpp::is_floating_point_v<FloatType> &&
+                               cpp::is_integral_v<IntType>,
+                           int> = 0>
+LIBC_INLINE IntType
+round_to_signed_integer_using_current_rounding_mode(FloatType x) {
   return internal::rounded_float_to_signed_integer<FloatType, IntType>(
       round_using_current_rounding_mode(x));
 }
