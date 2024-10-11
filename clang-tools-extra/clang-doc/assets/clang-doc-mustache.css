@@ -1,3 +1,4 @@
+/* css for clang-doc mustache backend */
 @import "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap";
 
 *,*::before *::after {
@@ -18,6 +19,7 @@ video {
     display:block;
     max-width:100%
 }
+
 * {
     --brand-light:#ce6300;
     --text1-light:#000000;
@@ -30,6 +32,7 @@ video {
     --surface1-dark:#161212;
     --surface2-dark:#272424
 }
+
 :root {
     color-scheme:light;
     --brand:var(--brand-light);
@@ -40,6 +43,7 @@ video {
     --surface1:var(--surface1-light);
     --surface2:var(--surface2-light)
 }
+
 @media(prefers-color-scheme:dark) {
     :root {
         color-scheme:dark;
@@ -52,6 +56,7 @@ video {
         --surface2:var(--surface2-dark)
     }
 }
+
 [color-scheme=light] {
     color-scheme:light;
     --brand:var(--brand-light);
@@ -62,6 +67,7 @@ video {
     --surface1:var(--surface1-light);
     --surface2:var(--surface2-light)
 }
+
 [color-scheme=dark] {
     color-scheme:dark;
     --brand:var(--brand-dark);
@@ -72,6 +78,7 @@ video {
     --surface1:var(--surface1-dark);
     --surface2:var(--surface2-dark)
 }
+
 html {
     background-color:var(--surface1)
 }
@@ -200,6 +207,7 @@ body, html {
 .navbar__close:hover {
     color:var(--text1)
 }
+
 @media(min-width:769px) {
     .navbar__close {
         display:none
@@ -212,22 +220,27 @@ body, html {
     margin:0;
     padding:0
 }
+
 @media(max-width:768px) {
     .navbar__links {
         flex-direction:column
     }
 }
+
 .navbar__item {
     list-style-type:none
 }
+
 .navbar__link {
     color:var(--text2);
     text-decoration:none;
     padding:.5rem
 }
+
 .navbar__link:hover {
     color:var(--text1)
 }
+
 .navbar__theme-toggle-button {
     background:0 0;
     color:var(--text2);
@@ -237,6 +250,7 @@ body, html {
     width:2.5rem;
     height:2.5rem
 }
+
 .navbar__theme-toggle-button:hover {
     color:var(--text1)
 }
@@ -248,42 +262,51 @@ body, html {
     align-items:center;
     gap:2rem
 }
+
 .hero__title {
     font-size:2.5rem;
     margin-bottom:.5rem
 }
+
 .hero__title-large {
     font-size:3rem
 }
+
 @media(max-width:768px) {
     .hero__title-large {
         font-size:2.5rem
     }
 }
+
 @media(max-width:480px) {
     .hero__title-large {
         font-size:2rem
     }
 }
+
 @media(max-width:768px) {
     .hero__title {
         font-size:2rem
     }
 }
+
 @media(max-width:480px) {
     .hero__title {
         font-size:1.75rem
     }
 }
+
 .hero__subtitle {
     font-size:1.25rem;
     font-weight:500
 }
+
 @media(max-width:768px) {
     .hero__subtitle {
         font-size:1rem
     }
 }
+
 @media(max-width:480px) {
     .hero__subtitle {
         font-size:.875rem
@@ -299,67 +322,40 @@ body, html {
     padding:1rem 2rem
 }
 
-
 @media(max-width:768px) {
     .section-container {
         padding:1rem
     }
 }
+
 .section-container h2 {
     font-size:1.5rem;
     margin-bottom:1rem;
     color:var(--brand);
     border-bottom: 1px solid var(--text2);
 }
+
 @media(max-width:768px) {
     .section-container h2 {
         font-size:1.25rem
     }
 }
+
 .section-container p {
     font-size:1rem;
     line-height:1.5
 }
+
 @media(max-width:768px) {
     .section-container p {
         font-size:.875rem
     }
 }
+
 .home__row {
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
     gap:2rem
-}
-
-
-.links-wrapper {
-    display:grid;
-    gap:1rem;
-    grid-template-columns:1fr 1fr 1fr 1fr
-}
-@media(max-width:768px) {
-    .links-wrapper {
-        grid-template-columns:1fr 1fr
-    }
-}
-@media(max-width:480px) {
-    .links-wrapper {
-        grid-template-columns:1fr
-    }
-}
-.links-wrapper .link {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding:1rem;
-    border:1px solid var(--text1);
-    border-radius:.25rem
-}
-.links-wrapper .link__icon {
-    font-size:2rem
-}
-.links-wrapper .link__title {
-    font-size:1rem
 }
 
 .table-wrapper {
@@ -374,7 +370,6 @@ body, html {
     border:1px solid var(--text1);
     text-align: left;
 }
-
 
 .block-command-command {
     font-weight: bold;
@@ -442,7 +437,6 @@ body, html {
     color: var(--brand)
 }
 
-
 /* Content */
 .content {
     background-color: var(--text1-inverse);
@@ -452,6 +446,7 @@ body, html {
     width: calc(100% - 250px);
     height: 100vh;
 }
+
 .sidebar-item {
     color: var(--text1);
 }

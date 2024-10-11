@@ -16,6 +16,7 @@ add_clang_library(clangDoc
   Serialize.cpp
   YAMLGenerator.cpp
   HTMLMustacheGenerator.cpp
+  FileHelpersClangDoc.cpp
 
   DEPENDS
   omp_gen
