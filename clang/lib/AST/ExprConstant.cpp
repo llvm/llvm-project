@@ -52,6 +52,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/Sequence.h"
@@ -9619,7 +9620,7 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
   return ExprEvaluatorBaseTy::VisitCastExpr(E);
 }
 
-static CharUnits GetAlignOfType(EvalInfo &Info, QualType T,
+static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
                                 UnaryExprOrTypeTrait ExprKind) {
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
@@ -9630,23 +9631,22 @@ static CharUnits GetAlignOfType(EvalInfo &Info, QualType T,
     return CharUnits::One();
 
   const bool AlignOfReturnsPreferred =
-      Info.Ctx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+      Ctx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
 
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and _Alignof
   // as well.
   if (ExprKind == UETT_PreferredAlignOf || AlignOfReturnsPreferred)
-    return Info.Ctx.toCharUnitsFromBits(
-      Info.Ctx.getPreferredTypeAlign(T.getTypePtr()));
+    return Ctx.toCharUnitsFromBits(Ctx.getPreferredTypeAlign(T.getTypePtr()));
   // alignof and _Alignof are defined to return the ABI alignment.
   else if (ExprKind == UETT_AlignOf)
-    return Info.Ctx.getTypeAlignInChars(T.getTypePtr());
+    return Ctx.getTypeAlignInChars(T.getTypePtr());
   else
     llvm_unreachable("GetAlignOfType on a non-alignment ExprKind");
 }
 
-static CharUnits GetAlignOfExpr(EvalInfo &Info, const Expr *E,
-                                UnaryExprOrTypeTrait ExprKind) {
+CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
+                         UnaryExprOrTypeTrait ExprKind) {
   E = E->IgnoreParens();
 
   // The kinds of expressions that we have special-case logic here for
@@ -9656,22 +9656,22 @@ static CharUnits GetAlignOfExpr(EvalInfo &Info, const Expr *E,
   // alignof decl is always accepted, even if it doesn't make sense: we default
   // to 1 in those cases.
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
-    return Info.Ctx.getDeclAlign(DRE->getDecl(),
-                                 /*RefAsPointee*/true);
+    return Ctx.getDeclAlign(DRE->getDecl(),
+                            /*RefAsPointee*/ true);
 
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(E))
-    return Info.Ctx.getDeclAlign(ME->getMemberDecl(),
-                                 /*RefAsPointee*/true);
+    return Ctx.getDeclAlign(ME->getMemberDecl(),
+                            /*RefAsPointee*/ true);
 
-  return GetAlignOfType(Info, E->getType(), ExprKind);
+  return GetAlignOfType(Ctx, E->getType(), ExprKind);
 }
 
 static CharUnits getBaseAlignment(EvalInfo &Info, const LValue &Value) {
   if (const auto *VD = Value.Base.dyn_cast<const ValueDecl *>())
     return Info.Ctx.getDeclAlign(VD);
   if (const auto *E = Value.Base.dyn_cast<const Expr *>())
-    return GetAlignOfExpr(Info, E, UETT_AlignOf);
-  return GetAlignOfType(Info, Value.Base.getTypeInfoType(), UETT_AlignOf);
+    return GetAlignOfExpr(Info.Ctx, E, UETT_AlignOf);
+  return GetAlignOfType(Info.Ctx, Value.Base.getTypeInfoType(), UETT_AlignOf);
 }
 
 /// Evaluate the value of the alignment argument to __builtin_align_{up,down},
@@ -9767,11 +9767,8 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
       if (BaseAlignment < Align) {
         Result.Designator.setInvalid();
-        // FIXME: Add support to Diagnostic for long / long long.
-        CCEDiag(E->getArg(0),
-                diag::note_constexpr_baa_insufficient_alignment) << 0
-          << (unsigned)BaseAlignment.getQuantity()
-          << (unsigned)Align.getQuantity();
+        CCEDiag(E->getArg(0), diag::note_constexpr_baa_insufficient_alignment)
+            << 0 << BaseAlignment.getQuantity() << Align.getQuantity();
         return false;
       }
     }
@@ -9782,11 +9779,11 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
       (OffsetResult.Base
            ? CCEDiag(E->getArg(0),
-                     diag::note_constexpr_baa_insufficient_alignment) << 1
+                     diag::note_constexpr_baa_insufficient_alignment)
+                 << 1
            : CCEDiag(E->getArg(0),
                      diag::note_constexpr_baa_value_insufficient_alignment))
-        << (int)OffsetResult.Offset.getQuantity()
-        << (unsigned)Align.getQuantity();
+          << OffsetResult.Offset.getQuantity() << Align.getQuantity();
       return false;
     }
 
@@ -11872,6 +11869,13 @@ public:
     return Success(E->getValue(), E);
   }
 
+  bool VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *E) {
+    // This should not be evaluated during constant expr evaluation, as it
+    // should always be in an unevaluated context (the args list of a 'gang' or
+    // 'tile' clause).
+    return Error(E);
+  }
+
   bool VisitUnaryReal(const UnaryOperator *E);
   bool VisitUnaryImag(const UnaryOperator *E);
 
@@ -12113,7 +12117,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
@@ -13462,6 +13466,123 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     return Success(DidOverflow, E);
   }
+
+  case clang::X86::BI__builtin_ia32_addcarryx_u32:
+  case clang::X86::BI__builtin_ia32_addcarryx_u64:
+  case clang::X86::BI__builtin_ia32_subborrow_u32:
+  case clang::X86::BI__builtin_ia32_subborrow_u64: {
+    LValue ResultLValue;
+    APSInt CarryIn, LHS, RHS;
+    QualType ResultType = E->getArg(3)->getType()->getPointeeType();
+    if (!EvaluateInteger(E->getArg(0), CarryIn, Info) ||
+        !EvaluateInteger(E->getArg(1), LHS, Info) ||
+        !EvaluateInteger(E->getArg(2), RHS, Info) ||
+        !EvaluatePointer(E->getArg(3), ResultLValue, Info))
+      return false;
+
+    bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
+                 BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
+
+    unsigned BitWidth = LHS.getBitWidth();
+    unsigned CarryInBit = CarryIn.ugt(0) ? 1 : 0;
+    APInt ExResult =
+        IsAdd
+            ? (LHS.zext(BitWidth + 1) + (RHS.zext(BitWidth + 1) + CarryInBit))
+            : (LHS.zext(BitWidth + 1) - (RHS.zext(BitWidth + 1) + CarryInBit));
+
+    APInt Result = ExResult.extractBits(BitWidth, 0);
+    uint64_t CarryOut = ExResult.extractBitsAsZExtValue(1, BitWidth);
+
+    APValue APV{APSInt(Result, /*isUnsigned=*/true)};
+    if (!handleAssignment(Info, E, ResultLValue, ResultType, APV))
+      return false;
+    return Success(CarryOut, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_bextr_u32:
+  case clang::X86::BI__builtin_ia32_bextr_u64:
+  case clang::X86::BI__builtin_ia32_bextri_u32:
+  case clang::X86::BI__builtin_ia32_bextri_u64: {
+    APSInt Val, Idx;
+    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
+        !EvaluateInteger(E->getArg(1), Idx, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    uint64_t Shift = Idx.extractBitsAsZExtValue(8, 0);
+    uint64_t Length = Idx.extractBitsAsZExtValue(8, 8);
+    Length = Length > BitWidth ? BitWidth : Length;
+
+    // Handle out of bounds cases.
+    if (Length == 0 || Shift >= BitWidth)
+      return Success(0, E);
+
+    uint64_t Result = Val.getZExtValue() >> Shift;
+    Result &= llvm::maskTrailingOnes<uint64_t>(Length);
+    return Success(Result, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_bzhi_si:
+  case clang::X86::BI__builtin_ia32_bzhi_di: {
+    APSInt Val, Idx;
+    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
+        !EvaluateInteger(E->getArg(1), Idx, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    unsigned Index = Idx.extractBitsAsZExtValue(8, 0);
+    if (Index < BitWidth)
+      Val.clearHighBits(BitWidth - Index);
+    return Success(Val, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_lzcnt_u16:
+  case clang::X86::BI__builtin_ia32_lzcnt_u32:
+  case clang::X86::BI__builtin_ia32_lzcnt_u64: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    return Success(Val.countLeadingZeros(), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_tzcnt_u16:
+  case clang::X86::BI__builtin_ia32_tzcnt_u32:
+  case clang::X86::BI__builtin_ia32_tzcnt_u64: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    return Success(Val.countTrailingZeros(), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_pdep_si:
+  case clang::X86::BI__builtin_ia32_pdep_di: {
+    APSInt Val, Msk;
+    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
+        !EvaluateInteger(E->getArg(1), Msk, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    APInt Result = APInt::getZero(BitWidth);
+    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
+      if (Msk[I])
+        Result.setBitVal(I, Val[P++]);
+    return Success(Result, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_pext_si:
+  case clang::X86::BI__builtin_ia32_pext_di: {
+    APSInt Val, Msk;
+    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
+        !EvaluateInteger(E->getArg(1), Msk, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    APInt Result = APInt::getZero(BitWidth);
+    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
+      if (Msk[I])
+        Result.setBitVal(P++, Val[I]);
+    return Success(Result, E);
+  }
   }
 }
 
@@ -14353,11 +14474,11 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
   case UETT_PreferredAlignOf:
   case UETT_AlignOf: {
     if (E->isArgumentType())
-      return Success(GetAlignOfType(Info, E->getArgumentType(), E->getKind()),
-                     E);
+      return Success(
+          GetAlignOfType(Info.Ctx, E->getArgumentType(), E->getKind()), E);
     else
-      return Success(GetAlignOfExpr(Info, E->getArgumentExpr(), E->getKind()),
-                     E);
+      return Success(
+          GetAlignOfExpr(Info.Ctx, E->getArgumentExpr(), E->getKind()), E);
   }
 
   case UETT_PtrAuthTypeDiscriminator: {
@@ -16790,6 +16911,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
   case Expr::EmbedExprClass:
+  case Expr::OpenACCAsteriskSizeExprClass:
     return NoDiag();
 
   case Expr::PackIndexingExprClass:

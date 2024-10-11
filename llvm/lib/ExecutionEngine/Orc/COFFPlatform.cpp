@@ -521,10 +521,8 @@ void COFFPlatform::pushInitializersLoop(PushInitializersSendResultFn SendResult,
       }
 
       for (auto *DepJD : JDDepMap[CurJD])
-        if (!Visited.count(DepJD)) {
+        if (Visited.insert(DepJD).second)
           Worklist.push_back(DepJD);
-          Visited.insert(DepJD);
-        }
     }
   });
 

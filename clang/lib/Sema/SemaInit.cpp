@@ -763,6 +763,8 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
             SemaRef.parentEvaluationContext()
                 .DelayedDefaultInitializationContext;
+        SemaRef.currentEvaluationContext().InLifetimeExtendingContext =
+            SemaRef.parentEvaluationContext().InLifetimeExtendingContext;
         DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       }
       if (DIE.isInvalid()) {
@@ -1976,8 +1978,9 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
   if (numEltsInit != maxElements) {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
-                   diag::err_vector_incorrect_num_initializers)
-          << (numEltsInit < maxElements) << maxElements << numEltsInit;
+                   diag::err_vector_incorrect_num_elements)
+          << (numEltsInit < maxElements) << maxElements << numEltsInit
+          << /*initialization*/ 0;
     hadError = true;
   }
 }

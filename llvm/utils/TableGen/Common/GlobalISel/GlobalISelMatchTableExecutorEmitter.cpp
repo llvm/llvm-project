@@ -103,7 +103,7 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitComplexPredicates(
-    raw_ostream &OS, ArrayRef<Record *> ComplexOperandMatchers) {
+    raw_ostream &OS, ArrayRef<const Record *> ComplexOperandMatchers) {
   // Emit complex predicate table and an enum to reference them with.
   OS << "// ComplexPattern predicates.\n"
      << "enum {\n"
@@ -174,7 +174,8 @@ void GlobalISelMatchTableExecutorEmitter::emitMatchTable(
 
 void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
     raw_ostream &OS, const MatchTable &Table, ArrayRef<LLTCodeGen> TypeObjects,
-    ArrayRef<RuleMatcher> Rules, ArrayRef<Record *> ComplexOperandMatchers,
+    ArrayRef<RuleMatcher> Rules,
+    ArrayRef<const Record *> ComplexOperandMatchers,
     ArrayRef<StringRef> CustomOperandRenderers, StringRef IfDefName) {
   OS << "#ifdef " << IfDefName << "\n";
   emitTypeObjects(OS, TypeObjects);

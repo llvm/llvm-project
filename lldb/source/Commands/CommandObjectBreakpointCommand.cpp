@@ -389,7 +389,7 @@ protected:
               m_bp_options_vec, result);
         }
         if (!error.Success())
-          result.SetError(error);
+          result.SetError(std::move(error));
       } else {
         // Special handling for one-liner specified inline.
         if (m_options.m_use_one_liner)
