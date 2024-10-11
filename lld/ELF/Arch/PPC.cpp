@@ -79,7 +79,7 @@ void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
   if (!ctx.arg.isPic) {
     for (const Symbol *sym :
          cast<PPC32GlinkSection>(*ctx.in.plt).canonical_plts) {
-      writePPC32PltCallStub(ctx, buf, sym->getGotPltVA(), nullptr, 0);
+      writePPC32PltCallStub(ctx, buf, sym->getGotPltVA(ctx), nullptr, 0);
       buf += 16;
       glink += 16;
     }
@@ -181,7 +181,7 @@ void PPC::writeIplt(uint8_t *buf, const Symbol &sym,
                     uint64_t /*pltEntryAddr*/) const {
   // In -pie or -shared mode, assume r30 points to .got2+0x8000, and use a
   // .got2.plt_pic32. thunk.
-  writePPC32PltCallStub(ctx, buf, sym.getGotPltVA(), sym.file, 0x8000);
+  writePPC32PltCallStub(ctx, buf, sym.getGotPltVA(ctx), sym.file, 0x8000);
 }
 
 void PPC::writeGotHeader(uint8_t *buf) const {
@@ -194,14 +194,14 @@ void PPC::writeGotHeader(uint8_t *buf) const {
 void PPC::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // Address of the symbol resolver stub in .glink .
   write32(buf,
-          ctx.in.plt->getVA() + ctx.in.plt->headerSize + 4 * s.getPltIdx());
+          ctx.in.plt->getVA() + ctx.in.plt->headerSize + 4 * s.getPltIdx(ctx));
 }
 
 bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                      uint64_t branchAddr, const Symbol &s, int64_t a) const {
   if (type != R_PPC_LOCAL24PC && type != R_PPC_REL24 && type != R_PPC_PLTREL24)
     return false;
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return true;
   if (s.isUndefWeak())
     return false;
@@ -265,7 +265,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_TPREL16_HI:
     return R_TPREL;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -292,7 +292,7 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC_TPREL32:
     return SignExtend64<32>(read32(buf));
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
@@ -501,10 +501,8 @@ void PPC::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += s->outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
-    const uint64_t val = SignExtend64(
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr),
-        32);
+    const uint64_t val =
+        SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), 32);
     switch (rel.expr) {
     case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
       relaxTlsGdToIe(loc, rel, val);
@@ -525,7 +523,4 @@ void PPC::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   }
 }
 
-TargetInfo *elf::getPPCTargetInfo(Ctx &ctx) {
-  static PPC target(ctx);
-  return &target;
-}
+void elf::setPPCTargetInfo(Ctx &ctx) { ctx.target.reset(new PPC(ctx)); }

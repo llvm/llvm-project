@@ -150,6 +150,8 @@ static SDValue emitConstantSizeRepstos(SelectionDAG &DAG,
   MVT BlockType = MVT::i8;
   uint64_t BlockCount = Size;
   uint64_t BytesLeft = 0;
+
+  SDValue OriginalVal = Val;
   if (auto *ValC = dyn_cast<ConstantSDNode>(Val)) {
     BlockType = getOptimalRepType(Subtarget, Alignment);
     uint64_t Value = ValC->getZExtValue() & 255;
@@ -187,8 +189,8 @@ static SDValue emitConstantSizeRepstos(SelectionDAG &DAG,
       DAG.getMemset(Chain, dl,
                     DAG.getNode(ISD::ADD, dl, AddrVT, Dst,
                                 DAG.getConstant(Offset, dl, AddrVT)),
-                    Val, DAG.getConstant(BytesLeft, dl, SizeVT), Alignment,
-                    isVolatile, AlwaysInline,
+                    OriginalVal, DAG.getConstant(BytesLeft, dl, SizeVT),
+                    Alignment, isVolatile, AlwaysInline,
                     /* CI */ nullptr, DstPtrInfo.getWithOffset(Offset)));
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Results);

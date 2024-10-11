@@ -2029,7 +2029,7 @@ void Driver::PrintHelp(bool ShowHidden) const {
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   if (IsFlangMode()) {
-    OS << getClangToolFullVersion("flang-new") << '\n';
+    OS << getClangToolFullVersion("flang") << '\n';
   } else {
     // FIXME: The following handlers should use a callback mechanism, we don't
     // know what the client would like to do.
@@ -2322,7 +2322,7 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
 
   if (C.getArgs().hasArg(options::OPT_print_multi_lib)) {
     for (const Multilib &Multilib : TC.getMultilibs())
-      if (!Multilib.isFatalError())
+      if (!Multilib.isError())
         llvm::outs() << Multilib << "\n";
     return false;
   }

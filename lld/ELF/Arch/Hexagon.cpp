@@ -153,7 +153,7 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_TPREL_LO16:
     return R_TPREL;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -181,11 +181,13 @@ static const InstructionMask r6[] = {
     {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
     {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
 
+constexpr uint32_t instParsePacketEnd = 0x0000c000;
+
 static bool isDuplex(uint32_t insn) {
   // Duplex forms have a fixed mask and parse bits 15:14 are always
   // zero.  Non-duplex insns will always have at least one bit set in the
   // parse field.
-  return (0xC000 & insn) == 0;
+  return (instParsePacketEnd & insn) == 0;
 }
 
 static uint32_t findMaskR6(uint32_t insn) {
@@ -216,6 +218,12 @@ static uint32_t findMaskR11(uint32_t insn) {
 }
 
 static uint32_t findMaskR16(uint32_t insn) {
+  if (isDuplex(insn))
+    return 0x03f00000;
+
+  // Clear the end-packet-parse bits:
+  insn = insn & ~instParsePacketEnd;
+
   if ((0xff000000 & insn) == 0x48000000)
     return 0x061f20ff;
   if ((0xff000000 & insn) == 0x49000000)
@@ -225,8 +233,14 @@ static uint32_t findMaskR16(uint32_t insn) {
   if ((0xff000000 & insn) == 0xb0000000)
     return 0x0fe03fe0;
 
-  if (isDuplex(insn))
-    return 0x03f00000;
+  if ((0xff802000 & insn) == 0x74000000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74002000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74800000)
+    return 0x00001fe0;
+  if ((0xff802000 & insn) == 0x74802000)
+    return 0x00001fe0;
 
   for (InstructionMask i : r6)
     if ((0xff000000 & insn) == i.cmpMask)
@@ -374,7 +388,7 @@ void Hexagon::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
   relocateNoSym(buf, R_HEX_B32_PCREL_X, gotPltEntryAddr - pltEntryAddr);
   relocateNoSym(buf + 4, R_HEX_6_PCREL_X, gotPltEntryAddr - pltEntryAddr);
 }
@@ -398,13 +412,10 @@ int64_t Hexagon::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_HEX_TPREL_32:
     return SignExtend64<32>(read32(buf));
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   }
 }
 
-TargetInfo *elf::getHexagonTargetInfo(Ctx &ctx) {
-  static Hexagon target(ctx);
-  return &target;
-}
+void elf::setHexagonTargetInfo(Ctx &ctx) { ctx.target.reset(new Hexagon(ctx)); }

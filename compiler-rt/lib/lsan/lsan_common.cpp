@@ -698,7 +698,9 @@ void LeakSuppressionContext::PrintMatchedSuppressions() {
 
 // Fuchsia provides a libc interface that guarantees all threads are
 // covered, and SuspendedThreadList is never really used.
-static void ReportUnsuspendedThreads(const SuspendedThreadsList &) {}
+static bool ReportUnsuspendedThreads(const SuspendedThreadsList &) {
+  return true;
+}
 
 #  else  // !SANITIZER_FUCHSIA
 
@@ -778,10 +780,10 @@ static bool PrintResults(LeakReport &report) {
 
 static bool CheckForLeaks() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off()) {
-    VReport(1, "LeakSanitizer is disabled");
+    VReport(1, "LeakSanitizer is disabled\n");
     return false;
   }
-  VReport(1, "LeakSanitizer: checking for leaks");
+  VReport(1, "LeakSanitizer: checking for leaks\n");
   // Inside LockStuffAndStopTheWorld we can't run symbolizer, so we can't match
   // suppressions. However if a stack id was previously suppressed, it should be
   // suppressed in future checks as well.

@@ -1760,6 +1760,15 @@ public:
                                                      EndLoc);
   }
 
+  /// Build a new OpenMP 'permutation' clause.
+  OMPClause *RebuildOMPPermutationClause(ArrayRef<Expr *> PermExprs,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPPermutationClause(PermExprs, StartLoc,
+                                                           LParenLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'full' clause.
   OMPClause *RebuildOMPFullClause(SourceLocation StartLoc,
                                   SourceLocation EndLoc) {
@@ -10280,6 +10289,32 @@ OMPClause *TreeTransform<Derived>::TransformOMPSizesClause(OMPSizesClause *C) {
 }
 
 template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPPermutationClause(OMPPermutationClause *C) {
+  SmallVector<Expr *> TransformedArgs;
+  TransformedArgs.reserve(C->getNumLoops());
+  bool Changed = false;
+  for (Expr *E : C->getArgsRefs()) {
+    if (!E) {
+      TransformedArgs.push_back(nullptr);
+      continue;
+    }
+
+    ExprResult T = getDerived().TransformExpr(E);
+    if (T.isInvalid())
+      return nullptr;
+    if (E != T.get())
+      Changed = true;
+    TransformedArgs.push_back(T.get());
+  }
+
+  if (!Changed && !getDerived().AlwaysRebuild())
+    return C;
+  return RebuildOMPPermutationClause(TransformedArgs, C->getBeginLoc(),
+                                     C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPFullClause(OMPFullClause *C) {
   if (!getDerived().AlwaysRebuild())
     return C;
@@ -11903,6 +11938,29 @@ void OpenACCClauseTransform<Derived>::VisitTileClause(
   NewClause = OpenACCTileClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getIntExprs(),
+      ParsedClause.getEndLoc());
+}
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitGangClause(
+    const OpenACCGangClause &C) {
+  llvm::SmallVector<OpenACCGangKind> TransformedGangKinds;
+  llvm::SmallVector<Expr *> TransformedIntExprs;
+
+  for (unsigned I = 0; I < C.getNumExprs(); ++I) {
+    ExprResult ER = Self.TransformExpr(const_cast<Expr *>(C.getExpr(I).second));
+    if (!ER.isUsable())
+      continue;
+
+    ER = Self.getSema().OpenACC().CheckGangExpr(C.getExpr(I).first, ER.get());
+    if (!ER.isUsable())
+      continue;
+    TransformedGangKinds.push_back(C.getExpr(I).first);
+    TransformedIntExprs.push_back(ER.get());
+  }
+
+  NewClause = OpenACCGangClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), TransformedGangKinds, TransformedIntExprs,
       ParsedClause.getEndLoc());
 }
 } // namespace
@@ -13907,7 +13965,7 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
     }
 
     AllEmptyPacks &= Decls.empty();
-  };
+  }
 
   // C++ [temp.res]/8.4.2:
   //   The program is ill-formed, no diagnostic required, if [...] lookup for
@@ -15661,12 +15719,14 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       return true;
   }
 
+  if (ParenExpr *PE = dyn_cast_or_null<ParenExpr>(Result.get()))
+    PE->setIsProducedByFoldExpansion();
+
   // If we had no init and an empty pack, and we're not retaining an expansion,
   // then produce a fallback value or error.
   if (Result.isUnset())
     return getDerived().RebuildEmptyCXXFoldExpr(E->getEllipsisLoc(),
                                                 E->getOperator());
-
   return Result;
 }
 

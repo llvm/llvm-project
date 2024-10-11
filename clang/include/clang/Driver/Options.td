@@ -2996,7 +2996,7 @@ defm clangir : BoolFOption<"clangir",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
-def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
 /// ClangIR-specific options - END
 
@@ -5558,6 +5558,9 @@ def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
+def multi_lib_config : Joined<["-", "--"], "multi-lib-config=">,
+  HelpText<"Path to the YAML configuration file to be used for multilib selection">,
+  MetaVarName<"<file>">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
 def multiply__defined : Separate<["-"], "multiply_defined">;
@@ -6074,7 +6077,7 @@ def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOpti
 def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
 
 //===----------------------------------------------------------------------===//
-// pie/pic options (clang + flang-new)
+// pie/pic options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Visibility = [ClangOption, FlangOption] in {
 
@@ -6090,7 +6093,7 @@ def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
 } // let Vis = [Default, FlangOption]
 
 //===----------------------------------------------------------------------===//
-// Target Options (clang + flang-new)
+// Target Options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Flags = [TargetSpecific] in {
 let Visibility = [ClangOption, FlangOption] in {

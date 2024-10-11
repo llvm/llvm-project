@@ -792,6 +792,24 @@ private:
     return ResVal == nullptr;
   }
 
+  bool getValueOrMetadata(const SmallVectorImpl<uint64_t> &Record,
+                          unsigned &Slot, unsigned InstNum, Value *&ResVal,
+                          BasicBlock *ConstExprInsertBB) {
+    if (Slot == Record.size())
+      return true;
+    unsigned ValID = Record[Slot++];
+    if (ValID != bitc::OB_METADATA) {
+      unsigned TypeId;
+      return getValueTypePair(Record, --Slot, InstNum, ResVal, TypeId,
+                              ConstExprInsertBB);
+    }
+    if (Slot == Record.size())
+      return true;
+    unsigned ValNo = InstNum - (unsigned)Record[Slot++];
+    ResVal = MetadataAsValue::get(Context, getFnMetadataByID(ValNo));
+    return false;
+  }
+
   /// Read a value out of the specified record from slot 'Slot'. Increment Slot
   /// past the number of slots used by the value in the record. Return true if
   /// there is an error.
@@ -6767,8 +6785,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned OpNum = 1;
       while (OpNum != Record.size()) {
         Value *Op;
-        unsigned OpTypeID;
-        if (getValueTypePair(Record, OpNum, NextValueNo, Op, OpTypeID, CurBB))
+        if (getValueOrMetadata(Record, OpNum, NextValueNo, Op, CurBB))
           return error("Invalid record");
         Inputs.push_back(Op);
       }
