@@ -2973,8 +2973,8 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   }
 
-  mlir::cir::VectorType Ty = GetNeonType(this, Type);
-  if (!Ty)
+  mlir::cir::VectorType ty = GetNeonType(this, Type);
+  if (!ty)
     return nullptr;
 
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
@@ -2991,7 +2991,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
           buildAArch64TblBuiltinExpr(*this, BuiltinID, E, Ops, Arch))
     return V;
 
-  mlir::cir::VectorType VTy = Ty;
+  mlir::cir::VectorType vTy = ty;
   llvm::SmallVector<mlir::Value, 4> args;
   switch (BuiltinID) {
   default:
@@ -3071,8 +3071,8 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     // https://developer.arm.com/architectures/instruction-sets/intrinsics/
     return buildNeonCall(
         BuiltinID, *this,
-        {builder.getExtendedElementVectorType(Ty, true), SInt32Ty}, Ops,
-        "llvm.aarch64.neon.sqrshrun", Ty, getLoc(E->getExprLoc()));
+        {builder.getExtendedElementVectorType(ty, true), SInt32Ty}, Ops,
+        "llvm.aarch64.neon.sqrshrun", ty, getLoc(E->getExprLoc()));
   case NEON::BI__builtin_neon_vqshrn_n_v:
     llvm_unreachable("NYI");
   case NEON::BI__builtin_neon_vrshrn_n_v:
@@ -3085,7 +3085,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vrnda_v:
   case NEON::BI__builtin_neon_vrndaq_v: {
     assert(!MissingFeatures::buildConstrainedFPCall());
-    return buildNeonCall(BuiltinID, *this, {Ty}, Ops, "llvm.round", Ty,
+    return buildNeonCall(BuiltinID, *this, {ty}, Ops, "llvm.round", ty,
                          getLoc(E->getExprLoc()));
   }
   case NEON::BI__builtin_neon_vrndih_f16: {
@@ -3412,20 +3412,20 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v: {
-    return builder.createAlignedLoad(Ops[0].getLoc(), VTy, Ops[0],
+    return builder.createAlignedLoad(Ops[0].getLoc(), vTy, Ops[0],
                                      PtrOp0.getAlignment());
   }
   case NEON::BI__builtin_neon_vst1_v:
   case NEON::BI__builtin_neon_vst1q_v: {
-    Ops[1] = builder.createBitcast(Ops[1], VTy);
+    Ops[1] = builder.createBitcast(Ops[1], vTy);
     (void)builder.createAlignedStore(Ops[1].getLoc(), Ops[1], Ops[0],
                                      PtrOp0.getAlignment());
     return Ops[1];
   }
   case NEON::BI__builtin_neon_vld1_lane_v:
   case NEON::BI__builtin_neon_vld1q_lane_v: {
-    Ops[1] = builder.createBitcast(Ops[1], VTy);
-    Ops[0] = builder.createAlignedLoad(Ops[0].getLoc(), VTy.getEltType(),
+    Ops[1] = builder.createBitcast(Ops[1], vTy);
+    Ops[0] = builder.createAlignedLoad(Ops[0].getLoc(), vTy.getEltType(),
                                        Ops[0], PtrOp0.getAlignment());
     return builder.create<mlir::cir::VecInsertOp>(getLoc(E->getExprLoc()),
                                                   Ops[1], Ops[0], Ops[2]);
@@ -3440,7 +3440,7 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vst1_lane_v:
   case NEON::BI__builtin_neon_vst1q_lane_v: {
-    Ops[1] = builder.createBitcast(Ops[1], Ty);
+    Ops[1] = builder.createBitcast(Ops[1], ty);
     Ops[1] = builder.create<mlir::cir::VecExtractOp>(Ops[1].getLoc(), Ops[1],
                                                      Ops[2]);
     (void)builder.createAlignedStore(getLoc(E->getExprLoc()), Ops[1], Ops[0],
@@ -3513,7 +3513,41 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v: {
-    llvm_unreachable("NYI");
+    // This set of neon intrinsics implement SIMD matrix transpose.
+    // The matrix transposed is always 2x2, and these intrincis transpose
+    // multiple 2x2 matrices in parallel, that is why result type is
+    // always 2-D matrix whose last dimension is 2.
+    // For example `vtrn_s16` would have:
+    //  input 1: {0, 1, 2, 3}
+    //  input 2; {4, 5, 6, 7}
+    //  This basically represents two 2x2 matrices:
+    //  [ 0, 1 ]  and  [ 2, 3]
+    //  [ 4, 5 ]       [ 6, 7]
+    //  They should be simultaneously and independently transposed.
+    //  Thus, result is :
+    //   { {0, 4, 2, 6},
+    //     {1, 5, 3, 7 } }
+    Ops[1] = builder.createBitcast(Ops[1], ty);
+    Ops[2] = builder.createBitcast(Ops[2], ty);
+    // Adding a bitcast here as Ops[0] might be a void pointer.
+    mlir::Value baseAddr =
+        builder.createBitcast(Ops[0], builder.getPointerTo(ty));
+    mlir::Value sv;
+    mlir::Location loc = getLoc(E->getExprLoc());
+
+    for (unsigned vi = 0; vi != 2; ++vi) {
+      llvm::SmallVector<int64_t, 16> indices;
+      for (unsigned i = 0, e = vTy.getSize(); i != e; i += 2) {
+        indices.push_back(i + vi);
+        indices.push_back(i + e + vi);
+      }
+      mlir::cir::ConstantOp idx = builder.getConstInt(loc, SInt32Ty, vi);
+      mlir::Value addr = builder.create<mlir::cir::PtrStrideOp>(
+          loc, baseAddr.getType(), baseAddr, idx);
+      sv = builder.createVecShuffle(loc, Ops[1], Ops[2], indices);
+      (void)builder.CIRBaseBuilderTy::createStore(loc, sv, addr);
+    }
+    return sv;
   }
   case NEON::BI__builtin_neon_vuzp_v:
   case NEON::BI__builtin_neon_vuzpq_v: {
