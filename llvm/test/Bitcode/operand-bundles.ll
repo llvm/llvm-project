@@ -56,6 +56,13 @@ define void @f4(i32* %ptr) {
   ret void
 }
 
+define void @f5(i32 %x) {
+entry:
+  call void @callee1(i32 10, i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+; CHECK: call void @callee1(i32 10, i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+  ret void
+}
+
 ; Invoke versions of the above tests:
 
 
@@ -148,5 +155,22 @@ exception:
   %cleanup = landingpad i8 cleanup
   br label %normal
 normal:
+  ret void
+}
+
+define void @g5(ptr %ptr) personality i8 3 {
+entry:
+  %l = load i32, ptr %ptr, align 4
+  %x = add i32 42, 1
+  invoke void @callee1(i32 10, i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+          to label %normal unwind label %exception
+; CHECK:   invoke void @callee1(i32 10, i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+
+exception:                                        ; preds = %entry
+  %cleanup = landingpad i8
+          cleanup
+  br label %normal
+
+normal:                                           ; preds = %exception, %entry
   ret void
 }
