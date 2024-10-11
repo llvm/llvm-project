@@ -78,11 +78,15 @@ series of performance constraints. From weakest to strongest:
 
 ``nonblocking`` includes the ``nonallocating`` guarantee. 
 
-``nonblocking`` and ``nonallocating`` include the ``noexcept`` guarantee, but neither
-attribute implicitly specifies ``noexcept``. (It would be inappropriate for a Clang 
-attribute, ignored by non-Clang compilers, to imply a standard language feature.) Nonetheless,
-Clang emits a warning if, in C++, a function is declared ``nonblocking`` or ``nonallocating``
-without ``noexcept``. This diagnostic is controlled by ``-Wperf-constraint-implies-noexcept``.
+While ``nonblocking`` and ``nonallocating`` are conceptually a superset of ``noexcept``, neither
+attribute implicitly specifies ``noexcept``. Further, ``noexcept`` has a specified runtime behavior of 
+aborting if an exception is thrown, while the ``nonallocating`` and ``nonblocking`` attributes are
+purely for compile-time analysis and have no potential runtime behavior. Nonetheless, Clang emits a
+warning if, in C++, a function is declared ``nonblocking`` or ``nonallocating`` without
+``noexcept``. This diagnostic is controlled by ``-Wperf-constraint-implies-noexcept``.
+
+Also, the ``nonblocking`` and ``blocking`` attributes do have special runtime behavior in code built
+with Clang's :doc:`RealtimeSanitizer`.
 
 ``nonblocking(true)`` and ``nonallocating(true)`` apply to function *types*, and by extension, to
 function-like declarations. When applied to a declaration with a body, the compiler verifies the
