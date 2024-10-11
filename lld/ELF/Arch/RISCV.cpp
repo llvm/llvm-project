@@ -1044,11 +1044,12 @@ namespace {
 // extension.
 class RISCVAttributesSection final : public SyntheticSection {
 public:
-  RISCVAttributesSection()
-      : SyntheticSection(0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {}
+  RISCVAttributesSection(Ctx &ctx)
+      : SyntheticSection(ctx, 0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {
+  }
 
-  size_t getSize(Ctx &) const override { return size; }
-  void writeTo(Ctx &, uint8_t *buf) override;
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) override;
 
   static constexpr StringRef vendor = "riscv";
   DenseMap<unsigned, unsigned> intAttr;
@@ -1179,7 +1180,7 @@ mergeAttributesSection(Ctx &ctx,
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
-  ctx.in.riscvAttributes = std::make_unique<RISCVAttributesSection>();
+  ctx.in.riscvAttributes = std::make_unique<RISCVAttributesSection>(ctx);
   auto &merged = static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
 
   // Collect all tags values from attributes section.
@@ -1277,8 +1278,8 @@ mergeAttributesSection(Ctx &ctx,
   return &merged;
 }
 
-void RISCVAttributesSection::writeTo(Ctx &ctx, uint8_t *buf) {
-  const size_t size = getSize(ctx);
+void RISCVAttributesSection::writeTo(uint8_t *buf) {
+  const size_t size = getSize();
   uint8_t *const end = buf + size;
   *buf = ELFAttrs::Format_Version;
   write32(buf + 1, size - 1);

@@ -1637,7 +1637,7 @@ static std::optional<Instruction *> instCombineSVEAllActive(IntrinsicInst &II,
     return std::nullopt;
 
   auto *Mod = II.getModule();
-  auto *NewDecl = Intrinsic::getDeclaration(Mod, IID, {II.getType()});
+  auto *NewDecl = Intrinsic::getOrInsertDeclaration(Mod, IID, {II.getType()});
   II.setCalledFunction(NewDecl);
 
   return &II;
