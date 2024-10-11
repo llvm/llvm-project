@@ -33,6 +33,9 @@
 //                               // 16 digits for 64bit
 //   (uintptr_t) ptr);
 //
+// Any function that uses DEBUG_PREFIX and is implemented in a header that is
+// called by multiple plugins must be annotated with OMPTARGET_INLINE.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef OMPTARGET_SHARED_DEBUG_H
@@ -171,12 +174,14 @@ inline uint32_t getDebugLevel() {
       FAILURE_MESSAGE(__VA_ARGS__);                                            \
     }                                                                          \
   } while (false)
+#define OMPTARGET_INLINE __attribute__((always_inline))
 #else
 #define DEBUGP(prefix, ...)                                                    \
   {}
 #define DP(...)                                                                \
   {}
 #define REPORT(...) FAILURE_MESSAGE(__VA_ARGS__);
+#define OMPTARGET_INLINE
 #endif // OMPTARGET_DEBUG
 
 /// Emit a message giving the user extra information about the runtime if
