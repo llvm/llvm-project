@@ -292,7 +292,7 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
 }
 
 bool TargetTransformInfo::isSourceOfDivergence(const Value *V) const {
-  if (auto *Call = dyn_cast<CallBase>(V)) {
+  if (const auto *Call = dyn_cast<CallBase>(V)) {
     if (Call->hasFnAttr(Attribute::NoDivergenceSource))
       return false;
   }
