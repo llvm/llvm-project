@@ -54,11 +54,11 @@ void PrintThreadHistory(ThreadRegistry &registry, InternalScopedString &out) {
     return parent;
   };
 
-  u32 stack_id = 0;
+  const ThreadContextBase *prev = nullptr;
   for (const ThreadContextBase *context : stacks) {
-    if (stack_id != context->stack_id) {
-      StackDepotGet(stack_id).PrintTo(&out);
-      stack_id = context->stack_id;
+    if (prev->stack_id != context->stack_id) {
+      StackDepotGet(prev->stack_id).PrintTo(&out);
+      prev = context;
     }
     out.Append("Thread ");
     describe_thread(context);
@@ -66,8 +66,8 @@ void PrintThreadHistory(ThreadRegistry &registry, InternalScopedString &out) {
     describe_thread(get_parent(context));
     out.Append("\n");
   }
-  if (!stacks.empty())
-    StackDepotGet(stack_id).PrintTo(&out);
+  if (prev)
+    StackDepotGet(prev->stack_id).PrintTo(&out);
 }
 
 }  // namespace __sanitizer
