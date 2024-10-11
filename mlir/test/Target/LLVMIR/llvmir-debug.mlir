@@ -693,7 +693,7 @@ llvm.func @test() {
 
 // -----
 
-// Test multiple DIGlobalVariableExpression on a global
+// Test multiple DIGlobalVariableExpression on a global.
 #bt = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32>
 #file = #llvm.di_file<"test.f90" in "">
 #cu = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C,
