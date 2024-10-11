@@ -23,6 +23,22 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+// Map modifiers come from two categories: map-type-modifier and map-type.
+// There can be zero or more map-type-modifiers, and zero or one map-type.
+// Syntax-wise they look like a single list, where the last element could
+// be a map-type, and all elements in that list are comma-separated[1].
+// Only if there was at least one modifier (of any kind) specified, the
+// list must end with ":".
+// [1] Any of the commas are optional, but that syntax has been deprecated,
+// and the parsing code is intended to identify that. There are complications
+// coming from the fact that the comma separating the two kinds of modifiers
+// is only allowed if there is at least one modifier of each kind.
+// The MapModifiers parser parses the modifier list as a whole, and returns
+// a tuple with the (optional) map-type-modifier list, and the (optional)
+// type modifier as its members.
+// The list is then parsed, first with a mandatory separator, and if that
+// fails, with an optional one. If the latter succeeds, a deprecation
+// message is printed.
 template <typename Separator> struct MapModifiers {
   constexpr MapModifiers(
       Separator sep, std::optional<MessageFixedText> msg = std::nullopt)
