@@ -1027,7 +1027,6 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
 // ThreadLister implementation.
 ThreadLister::ThreadLister(pid_t pid) : buffer_(4096) {
   task_path_.AppendF("/proc/%d/task", pid);
-  status_path_.AppendF("%s/status", task_path_.data());
 }
 
 ThreadLister::Result ThreadLister::ListThreads(
@@ -1087,6 +1086,8 @@ ThreadLister::Result ThreadLister::ListThreads(
 }
 
 const char *ThreadLister::LoadStatus(tid_t tid) {
+  status_path_.clear();
+  status_path_.AppendF("%s/%llu/status", task_path_.data(), tid);
   auto cleanup = at_scope_exit([&] {
     // Resize back to capacity if it is downsized by `ReadFileToVector`.
     buffer_.resize(buffer_.capacity());
