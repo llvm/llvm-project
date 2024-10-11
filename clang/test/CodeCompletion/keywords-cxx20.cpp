@@ -35,8 +35,8 @@ int f(){ co_test test; return 1; }
 // CHECK-CONSTRAINT: constexpr
 // CHECK-CONSTRAINT: constinit
 
-// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:7:27 %s | FileCheck --check-prefix=CHECK-REQUIRES %s
-// CHECK-REQUIRES: requires
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:7:27 %s | FileCheck --check-prefix=CHECK-REQUIRES2 %s
+// CHECK-REQUIRES2: requires
 
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:8:20 %s | FileCheck -check-prefix=CHECK-REQUIRE %s
 // CHECK-REQUIRE: [#bool#]requires (<#parameters#>) {
