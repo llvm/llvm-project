@@ -2043,13 +2043,16 @@ static bool callInstIsMemcpy(CallInst *CI) {
 }
 
 static bool destArrayCanBeWidened(CallInst *CI) {
-  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
   auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
+  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
 
   if (!Alloca || !IsVolatile || IsVolatile->isOne())
     return false;
 
   if (!Alloca->isStaticAlloca())
+    return false;
+
+  if (!Alloca->getAllocatedType()->isArrayTy())
     return false;
 
   return true;
@@ -2089,15 +2092,8 @@ static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
                            const unsigned NumBytesToCopy,
                            ConstantDataArray *SourceDataArray) {
 
-  // Dest array can be global or local
-  auto *DestGV = dyn_cast<GlobalVariable>(CI->getArgOperand(0));
   auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
-  if (DestGV) {
-    auto *F = CI->getCalledFunction();
-    auto *NewDestGV =
-        widenGlobalVariable(DestGV, F, NumBytesToPad, NumBytesToCopy);
-    DestGV->replaceAllUsesWith(NewDestGV);
-  } else if (Alloca) {
+  if (Alloca) {
     unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
     unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
     unsigned NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
@@ -2130,7 +2126,7 @@ static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
   // are memcpys.
   for (auto *User : SourceVar->users()) {
     auto *CI = dyn_cast<CallInst>(User);
-    if (!callInstIsMemcpy(CI))
+    if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
       continue;
 
     if (CI->getArgOperand(1) != SourceVar)
