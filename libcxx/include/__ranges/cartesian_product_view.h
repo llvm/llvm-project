@@ -173,6 +173,8 @@ public:
     return x.current_ == y.current_;
   }
 
+  friend constexpr bool operator==(const iterator& x, default_sentinel_t) { return x.at_end(); }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
@@ -239,6 +241,15 @@ private:
       }
       it = first;
     }
+  }
+
+  template <auto N = sizeof...(Vs)>
+  constexpr bool at_end() const {
+    if (std::get<N>(current_) == end(std::get<N>(parent_->bases_)))
+      return true;
+    if constexpr (N > 0)
+      return at_end<N - 1>();
+    return false;
   }
 };
 
