@@ -843,7 +843,7 @@ void VPIRInstruction::execute(VPTransformState &State) {
     BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
     // Set insertion point in PredBB in case an extract needs to be generated.
     // TODO: Model extracts explicitly.
-    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
+    State.Builder.SetInsertPoint(&*PredBB->getTerminator());
     Value *V = State.get(ExitValue, VPLane(Lane));
     auto *Phi = cast<PHINode>(&I);
     // If there is no existing block for PredBB in the phi, add a new incoming
