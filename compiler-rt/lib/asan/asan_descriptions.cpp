@@ -24,7 +24,7 @@ AsanThreadIdAndName::AsanThreadIdAndName(AsanThreadContext *t) {
     internal_snprintf(name, sizeof(name), "T-1");
     return;
   }
-  int len = internal_snprintf(name, sizeof(name), "T%d", t->tid);
+  int len = internal_snprintf(name, sizeof(name), "T%llu", t->unique_id);
   CHECK(((unsigned int)len) < sizeof(name));
   if (internal_strlen(t->name))
     internal_snprintf(&name[len], sizeof(name) - len, " (%s)", t->name);
