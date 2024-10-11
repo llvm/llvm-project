@@ -95,6 +95,8 @@ using namespace llvm;
 
 namespace {
 
+/// Used the by the ReportedErrors class to guarantee only one error is reported
+/// at one time.
 static ManagedStatic<sys::SmartMutex<true>> ReportedErrorsLock;
 
 struct MachineVerifier {
@@ -239,12 +241,16 @@ struct MachineVerifier {
   LiveStacks *LiveStks = nullptr;
   SlotIndexes *Indexes = nullptr;
 
+  /// A class to track the number of reported error and to guarantee that only
+  /// one error is reported at one time.
   class ReportedErrors {
     unsigned NumReported = 0;
     bool AbortOnError;
 
   public:
+    /// \param AbortOnError -- If set, abort after printing the first error.
     ReportedErrors(bool AbortOnError) : AbortOnError(AbortOnError) {}
+
     ~ReportedErrors() {
       if (!hasError())
         return;
@@ -268,6 +274,7 @@ struct MachineVerifier {
       return NumReported == 1;
     }
 
+    /// \returns true if an error was reported.
     bool hasError() { return NumReported; }
   };
   ReportedErrors ReportedErrs;
