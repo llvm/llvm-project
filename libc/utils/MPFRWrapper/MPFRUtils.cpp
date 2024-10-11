@@ -492,7 +492,19 @@ public:
     MPFRNumber value_pi(0.0, 1280);
     mpfr_const_pi(value_pi.value, MPFR_RNDN);
     mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
-    mpfr_sin(result.value, value_pi.value, mpfr_rounding);
+
+    int ret = mpfr_integer_p(value);
+    MPFRNumber value_mul_two(*this);
+    mpfr_mul_si(value_mul_two.value, value, 2, MPFR_RNDN);
+    if (mpfr_integer_p(value_mul_two.value) != 0) {
+      if (ret != 0) {
+        mpfr_set_si(result.value, 0, mpfr_rounding);
+      } else {
+        mpfr_sin(result.value, value_pi.value, MPFR_RNDN);
+      }
+    } else {
+      mpfr_sin(result.value, value_pi.value, mpfr_rounding);
+    }
 #endif
 
     return result;
