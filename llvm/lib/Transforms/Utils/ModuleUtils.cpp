@@ -433,7 +433,7 @@ bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
       FunctionType::get(Type::getVoidTy(Ctx), false), Function::InternalLinkage,
       DL.getProgramAddressSpace(), "", &M);
 
-  // Disable Sanitizers as they might not yet initilised when the contructor
+  // Disable Sanitizers as they might not yet initialized when the contructor
   // runs.
   NewCtor->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
 
