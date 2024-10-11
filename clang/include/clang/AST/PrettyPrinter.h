@@ -55,7 +55,7 @@ public:
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
 struct PrintingPolicy {
-  enum class SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
+  enum SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
 
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
@@ -147,7 +147,8 @@ struct PrintingPolicy {
   /// If Redudant, where the name is unambiguous with the specifier removed.
   /// If All, even if the name is ambiguous with the specifier
   /// removed.
-  SuppressInlineNamespaceMode SuppressInlineNamespace : 2;
+  LLVM_PREFERRED_TYPE(SuppressInlineNamespaceMode)
+  unsigned SuppressInlineNamespace : 2;
 
   /// Ignore qualifiers and tag keywords as specified by elaborated type sugar,
   /// instead letting the underlying type print as normal.
