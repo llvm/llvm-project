@@ -65,8 +65,8 @@ class MemProfContextDisambiguation
   // Actually performs any needed ICP in the function, using the information
   // recorded in the ICallAnalysisInfo list.
   void performICP(Module &M, ArrayRef<CallsiteInfo> AllCallsites,
-                  SmallVectorImpl<std::unique_ptr<ValueToValueMapTy>> &VMaps,
-                  SmallVector<ICallAnalysisData> &ICallAnalysisInfo,
+                  ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps,
+                  ArrayRef<ICallAnalysisData> ICallAnalysisInfo,
                   OptimizationRemarkEmitter &ORE);
 
   /// Import summary containing cloning decisions for the ThinLTO backend.

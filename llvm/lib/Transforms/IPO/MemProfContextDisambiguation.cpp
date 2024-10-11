@@ -4482,8 +4482,8 @@ unsigned MemProfContextDisambiguation::recordICPInfo(
 
 void MemProfContextDisambiguation::performICP(
     Module &M, ArrayRef<CallsiteInfo> AllCallsites,
-    SmallVectorImpl<std::unique_ptr<ValueToValueMapTy>> &VMaps,
-    SmallVector<ICallAnalysisData> &ICallAnalysisInfo,
+    ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps,
+    ArrayRef<ICallAnalysisData> ICallAnalysisInfo,
     OptimizationRemarkEmitter &ORE) {
   // Now do any promotion required for cloning. Specifically, for each
   // recorded ICP candidate (which was only recorded because one clone of that
@@ -4513,7 +4513,7 @@ void MemProfContextDisambiguation::performICP(
       if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", CB)
-                 << "Cannot promote indirect call: target with md5sum "
+                 << "Memprof cannot promote indirect call: target with md5sum "
                  << ore::NV("target md5sum", Candidate.Value) << " not found";
         });
         // FIXME: See if we can use the new declaration importing support to
@@ -4527,7 +4527,7 @@ void MemProfContextDisambiguation::performICP(
       if (!isLegalToPromote(*CB, TargetFunction, &Reason)) {
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", CB)
-                 << "Cannot promote indirect call to "
+                 << "Memprof cannot promote indirect call to "
                  << ore::NV("TargetFunction", TargetFunction)
                  << " with count of " << ore::NV("TotalCount", TotalCount)
                  << ": " << Reason;
