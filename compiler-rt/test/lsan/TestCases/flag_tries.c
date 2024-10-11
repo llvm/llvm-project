@@ -1,7 +1,7 @@
 // Test retries option of lsan.
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts=use_stacks=0:use_registers=0:symbolize=0 %run %t foo 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK1
-// RUN: %env_lsan_opts=use_stacks=0:use_registers=0:symbolize=0:retries=12 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK12
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0:symbolize=0:tries=12 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK12
 
 #include <assert.h>
 #include <sanitizer/lsan_interface.h>

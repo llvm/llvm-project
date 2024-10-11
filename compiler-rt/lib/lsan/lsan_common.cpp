@@ -832,9 +832,9 @@ static bool CheckForLeaksOnce() {
 }
 
 static bool CheckForLeaks() {
-  int with_leaks = 0;
-  for (int i = 0; i < flags()->retries; ++i) with_leaks += CheckForLeaksOnce();
-  return with_leaks == flags()->retries;
+  int leaking_tries = 0;
+  for (int i = 0; i < flags()->tries; ++i) leaking_tries += CheckForLeaksOnce();
+  return leaking_tries == flags()->tries;
 }
 
 static bool has_reported_leaks = false;
