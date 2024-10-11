@@ -1333,8 +1333,7 @@ private:
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs"),
-      ctx(ctx) {
+                       /*alignment=*/32, ".gnu.sgstubs") {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
@@ -1384,7 +1383,7 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   sgVeneers.emplace_back(ss);
 }
 
-void ArmCmseSGSection::writeTo(Ctx &ctx, uint8_t *buf) {
+void ArmCmseSGSection::writeTo(uint8_t *buf) {
   for (ArmCmseSGVeneer *s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(p + 0, 0xe97f); // SG
@@ -1401,14 +1400,14 @@ void ArmCmseSGSection::addMappingSymbol() {
   addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
-size_t ArmCmseSGSection::getSize(Ctx &) const {
+size_t ArmCmseSGSection::getSize() const {
   if (sgVeneers.empty())
     return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
 
   return entries.size() * entsize;
 }
 
-void ArmCmseSGSection::finalizeContents(Ctx &) {
+void ArmCmseSGSection::finalizeContents() {
   if (sgVeneers.empty())
     return;
 
@@ -1476,8 +1475,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
     osec->recordSection(isec);
     osec->finalizeInputSections(ctx);
     osec->shName = shstrtab->addString(osec->name);
-    osec->size = isec->getSize(ctx);
-    isec->finalizeContents(ctx);
+    osec->size = isec->getSize();
+    isec->finalizeContents();
     osec->offset = alignToPowerOf2(off, osec->addralign);
     off = osec->offset + osec->size;
   }
