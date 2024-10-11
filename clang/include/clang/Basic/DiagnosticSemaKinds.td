@@ -439,7 +439,7 @@ def warn_reserved_extern_symbol: Warning<
   InGroup<ReservedIdentifier>, DefaultIgnore;
 def warn_deprecated_literal_operator_id: Warning<
   "identifier %0 preceded by whitespace in a literal operator declaration "
-  "is deprecated">, InGroup<DeprecatedLiteralOperator>, DefaultIgnore;
+  "is deprecated">, InGroup<DeprecatedLiteralOperator>;
 def warn_reserved_module_name : Warning<
   "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
 def warn_import_implementation_partition_unit_in_interface_unit : Warning<
@@ -5262,13 +5262,6 @@ def note_template_arg_refers_here_func : Note<
 def err_template_arg_template_params_mismatch : Error<
   "template template argument has different template parameters than its "
   "corresponding template template parameter">;
-def note_template_arg_template_params_mismatch : Note<
-  "template template argument has different template parameters than its "
-  "corresponding template template parameter">;
-def err_non_deduced_mismatch : Error<
-  "could not match %diff{$ against $|types}0,1">;
-def err_inconsistent_deduction : Error<
-  "conflicting deduction %diff{$ against $|types}0,1 for parameter">;
 def err_template_arg_not_integral_or_enumeral : Error<
   "non-type template argument of type %0 must have an integral or enumeration"
   " type">;
