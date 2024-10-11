@@ -1447,6 +1447,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    sign-extended from the width of the underlying PC hardware register even on
                                                    processors where the s_getpc_b64 instruction returns a zero-extended value.
 
+  llvm.amdgcn.ballot                               Returns a bitfield(i32 or i64) containing the result of its i1 argument
+                                                   in all active lanes, and zero in all inactive lanes.
+                                                   Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield
+                                                   used by hardware to control active lanes when used in EXEC register.
+                                                   For example, ballot(i1 true) return EXEC mask.
+
   llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4      Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor. The
                                                    last 4 operands correspond to the scale inputs.
                                                      2-bit byte index to use for each lane for matrix A

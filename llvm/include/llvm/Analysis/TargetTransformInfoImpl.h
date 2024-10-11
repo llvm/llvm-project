@@ -74,6 +74,11 @@ public:
   unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const {
     return 8;
   }
+  int getInliningLastCallToStaticBonus() const {
+    // This is the value of InlineConstants::LastCallToStaticBonus before it was
+    // removed along with the introduction of this function.
+    return 15000;
+  }
   unsigned adjustInliningThreshold(const CallBase *CB) const { return 0; }
   unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const {
     return 0;
