@@ -50,6 +50,12 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+
+private:
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
 } // namespace
 
@@ -460,7 +466,8 @@ RelType X86_64::getDynRel(RelType type) const {
   return R_X86_64_NONE;
 }
 
-static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
   if (rel.type == R_X86_64_TLSGD) {
     // Convert
     //   .byte 0x66
@@ -500,7 +507,8 @@ static void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   }
 }
 
-static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
   if (rel.type == R_X86_64_TLSGD) {
     // Convert
     //   .byte 0x66
@@ -541,7 +549,8 @@ static void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
 
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
 // R_X86_64_TPOFF32 so that it does not use GOT.
-static void relaxTlsIeToLe(uint8_t *loc, const Relocation &, uint64_t val) {
+void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
   uint8_t *inst = loc - 3;
   uint8_t reg = loc[-1] >> 3;
   uint8_t *regSlot = loc - 1;
@@ -582,7 +591,8 @@ static void relaxTlsIeToLe(uint8_t *loc, const Relocation &, uint64_t val) {
   write32le(loc, val + 4);
 }
 
-static void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+void X86_64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
   const uint8_t inst[] = {
       0x66, 0x66,                                           // .word 0x6666
       0x66,                                                 // .byte 0x66

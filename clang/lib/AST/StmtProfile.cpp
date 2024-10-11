@@ -2646,6 +2646,12 @@ void OpenACCClauseProfiler::VisitIndependentClause(
 
 void OpenACCClauseProfiler::VisitSeqClause(const OpenACCSeqClause &Clause) {}
 
+void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
+  for (unsigned I = 0; I < Clause.getNumExprs(); ++I) {
+    Profiler.VisitStmt(Clause.getExpr(I).second);
+  }
+}
+
 void OpenACCClauseProfiler::VisitReductionClause(
     const OpenACCReductionClause &Clause) {
   for (auto *E : Clause.getVarList())
