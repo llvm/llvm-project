@@ -211,12 +211,10 @@ void uses() {
   while(1);
 #pragma acc kernels device_type(*) async
   while(1);
-  // expected-error@+2{{OpenACC clause 'tile' may not follow a 'device_type' clause in a compute construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'tile' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) tile(Var, 1)
   while(1);
-  // expected-error@+2{{OpenACC clause 'gang' may not follow a 'dtype' clause in a compute construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'gang' clause is not valid on 'kernels' directive}}
 #pragma acc kernels dtype(*) gang
   while(1);
 #pragma acc kernels device_type(*) wait

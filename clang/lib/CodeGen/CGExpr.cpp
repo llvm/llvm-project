@@ -1095,6 +1095,8 @@ public:
     return Visit(E->getBase());
   }
   const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return IsExpectedRecordDecl(E) ? E : nullptr;
     return Visit(E->getSubExpr());
   }
   const Expr *VisitParenExpr(const ParenExpr *E) {
@@ -1161,18 +1163,14 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
-    Res = EmitDeclRefLValue(DRE).getPointer(*this);
-    Res = Builder.CreateAlignedLoad(ConvertType(DRE->getType()), Res,
-                                    getPointerAlign(), "dre.load");
-  } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(StructBase)) {
-    LValue LV = EmitMemberExpr(ME);
-    Address Addr = LV.getAddress();
-    Res = Addr.emitRawPointer(*this);
-  } else if (StructBase->getType()->isPointerType()) {
+  if (StructBase->getType()->isPointerType()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
+    Res = Addr.emitRawPointer(*this);
+  } else if (StructBase->isLValue()) {
+    LValue LV = EmitLValue(StructBase);
+    Address Addr = LV.getAddress();
     Res = Addr.emitRawPointer(*this);
   } else {
     return nullptr;
@@ -2368,7 +2366,7 @@ Address CodeGenFunction::EmitExtVectorElementLValue(LValue LV) {
   return VectorBasePtrPlusIx;
 }
 
-/// Load of global gamed gegisters are always calls to intrinsics.
+/// Load of global named registers are always calls to intrinsics.
 RValue CodeGenFunction::EmitLoadOfGlobalRegLValue(LValue LV) {
   assert((LV.getType()->isIntegerType() || LV.getType()->isPointerType()) &&
          "Bad type for register variable");

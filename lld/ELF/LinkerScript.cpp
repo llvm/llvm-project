@@ -227,7 +227,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t symValue = value.sec ? 0 : value.getValue();
 
-  Defined newSym(createInternalFile(cmd->location), cmd->name, STB_GLOBAL,
+  Defined newSym(createInternalFile(ctx, cmd->location), cmd->name, STB_GLOBAL,
                  visibility, value.type, symValue, 0, sec);
 
   Symbol *sym = ctx.symtab->insert(cmd->name);
@@ -239,7 +239,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
 
 // This function is called from LinkerScript::declareSymbols.
 // It creates a placeholder symbol if needed.
-static void declareSymbol(SymbolAssignment *cmd) {
+void LinkerScript::declareSymbol(SymbolAssignment *cmd) {
   if (!shouldDefineSym(cmd))
     return;
 
@@ -479,7 +479,7 @@ static void sortSections(MutableArrayRef<InputSectionBase *> vec,
 //    --sort-section is handled as an inner SORT command.
 // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
 // 4. If no SORT command is given, sort according to --sort-section.
-static void sortInputSections(MutableArrayRef<InputSectionBase *> vec,
+static void sortInputSections(Ctx &ctx, MutableArrayRef<InputSectionBase *> vec,
                               SortSectionPolicy outer,
                               SortSectionPolicy inner) {
   if (outer == SortSectionPolicy::None)
@@ -517,6 +517,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       for (size_t i = begin; i != end; ++i)
         ret[i] = sections[indexes[i]];
       sortInputSections(
+          ctx,
           MutableArrayRef<InputSectionBase *>(ret).slice(begin, end - begin),
           ctx.arg.sortSection, SortSectionPolicy::None);
     };
@@ -584,6 +585,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       // ret[sizeBeforeCurrPat,ret.size()) are already in the input order, so we
       // just sort by sortOuter and sortInner.
       sortInputSections(
+          ctx,
           MutableArrayRef<InputSectionBase *>(ret).slice(sizeBeforeCurrPat),
           pat.sortOuter, pat.sortInner);
       sizeAfterPrevSort = ret.size();
@@ -865,7 +867,8 @@ static OutputDesc *createSection(InputSectionBase *isec, StringRef outsecName) {
   return osd;
 }
 
-static OutputDesc *addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
+static OutputDesc *addInputSec(Ctx &ctx,
+                               StringMap<TinyPtrVector<OutputSection *>> &map,
                                InputSectionBase *isec, StringRef outsecName) {
   // Sections with SHT_GROUP or SHF_GROUP attributes reach here only when the -r
   // option is given. A section with SHT_GROUP defines a "section group", and
@@ -983,7 +986,7 @@ void LinkerScript::addOrphanSections() {
       } else if (OutputSection *sec = findByName(sectionCommands, name)) {
         sec->recordSection(s);
       } else {
-        if (OutputDesc *osd = addInputSec(map, s, name))
+        if (OutputDesc *osd = addInputSec(ctx, map, s, name))
           v.push_back(osd);
         assert(isa<MergeInputSection>(s) ||
                s->getOutputSection()->sectionIndex == UINT32_MAX);
@@ -1114,7 +1117,7 @@ LinkerScript::findMemoryRegion(OutputSection *sec, MemoryRegion *hint) {
   return {nullptr, nullptr};
 }
 
-static OutputSection *findFirstSection(PhdrEntry *load) {
+static OutputSection *findFirstSection(Ctx &ctx, PhdrEntry *load) {
   for (OutputSection *sec : ctx.outputSections)
     if (sec->ptLoad == load)
       return sec;
@@ -1187,7 +1190,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
 
   // Propagate state->lmaOffset to the first "non-header" section.
   if (PhdrEntry *l = sec->ptLoad)
-    if (sec == findFirstSection(l))
+    if (sec == findFirstSection(ctx, l))
       l->lmaOffset = state->lmaOffset;
 
   // We can call this method multiple times during the creation of
@@ -1442,7 +1445,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
         return cmd.hasPhdrs || cmd.hasFilehdr;
       });
   bool paged = !ctx.arg.omagic && !ctx.arg.nmagic;
-  uint64_t headerSize = getHeaderSize();
+  uint64_t headerSize = getHeaderSize(ctx);
 
   uint64_t base = 0;
   // If SECTIONS is present and the linkerscript is not explicit about program
@@ -1462,7 +1465,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
 
   ctx.out.elfHeader->ptLoad = nullptr;
   ctx.out.programHeaders->ptLoad = nullptr;
-  firstPTLoad->firstSec = findFirstSection(firstPTLoad);
+  firstPTLoad->firstSec = findFirstSection(ctx, firstPTLoad);
 
   llvm::erase_if(phdrs,
                  [](const PhdrEntry *e) { return e->p_type == PT_PHDR; });
@@ -1491,7 +1494,7 @@ LinkerScript::assignAddresses() {
     dot = ctx.target->getImageBase();
     ctx.out.elfHeader->addr = dot;
     ctx.out.programHeaders->addr = dot + ctx.out.elfHeader->size;
-    dot += getHeaderSize();
+    dot += getHeaderSize(ctx);
   }
 
   OutputSection *changedOsec = nullptr;
@@ -1811,6 +1814,13 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
 }
 
 bool LinkerScript::shouldAddProvideSym(StringRef symName) {
+  // This function is called before and after garbage collection. To prevent
+  // undefined references from the RHS, the result of this function for a
+  // symbol must be the same for each call. We use isUsedInRegularObj to not
+  // change the return value of a demoted symbol. The exportDynamic condition,
+  // while not so accurate, allows PROVIDE to define a symbol referenced by a
+  // DSO.
   Symbol *sym = elf::ctx.symtab->find(symName);
-  return sym && !sym->isDefined() && !sym->isCommon();
+  return sym && !sym->isDefined() && !sym->isCommon() &&
+         (sym->isUsedInRegularObj || sym->exportDynamic);
 }

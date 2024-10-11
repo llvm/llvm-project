@@ -115,3 +115,367 @@ void negative_constexpr(int i) {
   negative_constexpr_templ<int, 1>(); // #NCET1
 }
 
+template<unsigned Val>
+void depth_too_high_templ() {
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Val)
+  for(;;)
+    for(;;);
+}
+
+void depth_too_high() {
+  depth_too_high_templ<3>(); // expected-note{{in instantiation of function template specialization}}
+
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;)
+    for(;;);
+
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(three())
+  for(;;)
+    for(;;);
+
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(ConvertsThree{})
+  for(;;)
+    for(;;);
+}
+
+template<typename T, unsigned Three>
+void not_single_loop_templ() {
+  T Arr[5];
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1 2{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(auto x : Arr) {
+    for(auto y : Arr){
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1 2{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Three)
+  for(;;) {
+    for(;;){
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+#pragma acc loop collapse(Three)
+  for(;;) {
+    for(;;){
+      for(;;){
+        do{}while(true);
+      }
+    }
+  }
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1 2{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Three)
+  for(auto x : Arr) {
+    for(auto y: Arr) {
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+#pragma acc loop collapse(Three)
+  for(auto x : Arr) {
+    for(auto y: Arr) {
+      for(auto z: Arr) {
+        do{}while(true);
+      }
+    }
+  }
+}
+
+void not_single_loop() {
+  not_single_loop_templ<int, 3>(); // expected-note{{in instantiation of function template}}
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;) {
+    for(;;){
+      for(;;);
+    }
+    while(true); // expected-error{{while loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;) {
+    for(;;){
+      for(;;);
+    }
+    do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+  }
+
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1 2{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;) {
+    for(;;){
+      while(true); // expected-error{{while loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1 2{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;) {
+    for(;;){
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){
+      do{}while(true);
+    }
+  }
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){
+      while(true);
+    }
+  }
+
+  int Arr[5];
+  // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+  // expected-note@+1 2{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(auto x : Arr) {
+    for(auto y : Arr){
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+  // expected-note@+1 {{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for (;;) {
+    for (;;) {
+      for(;;);
+    }
+    // expected-error@+1{{more than one for-loop in a loop associated with OpenACC 'loop' construct with a 'collapse' clause}}
+    for(;;);
+  }
+
+  // expected-note@+1 {{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for (;;) {
+    for (;;) {
+      for(;;);
+    // expected-error@+1{{more than one for-loop in a loop associated with OpenACC 'loop' construct with a 'collapse' clause}}
+      for(;;);
+    }
+  }
+
+  for(;;);
+#pragma acc loop collapse(3)
+  for (;;) {
+    for (;;) {
+      for (;;);
+    }
+  }
+}
+
+template<unsigned Two, unsigned Three>
+void no_other_directives() {
+#pragma acc loop collapse(Two)
+  for(;;) {
+    for (;;) { // last loop associated with the top level.
+    // expected-error@+1{{'collapse' clause specifies a loop count greater than the number of available loops}}
+#pragma acc loop collapse(Three) // expected-note 2{{active 'collapse' clause defined here}}
+      for(;;) {
+        for(;;) {
+    // expected-error@+1{{OpenACC 'serial' construct cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+#pragma acc serial
+          ;
+        }
+      }
+    }
+  }
+#pragma acc loop collapse(Two)// expected-note{{active 'collapse' clause defined here}}
+  for(;;) {
+    for (;;) { // last loop associated with the top level.
+#pragma acc loop collapse(Three)
+      for(;;) {
+        for(;;) {
+          for(;;);
+        }
+      }
+    }
+    // expected-error@+1{{OpenACC 'serial' construct cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+#pragma acc serial
+          ;
+  }
+}
+
+void no_other_directives() {
+  no_other_directives<2,3>(); // expected-note{{in instantiation of function template specialization}}
+
+  // Ok, not inside the intervening list
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;) {
+#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+    }
+  }
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    // expected-error@+1{{OpenACC 'data' construct cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+    for(;;) {
+    }
+  }
+}
+
+void call();
+
+template<unsigned Two>
+void intervening_without_force_templ() {
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+    for(;;){}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Two)
+  for(;;) {
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+    for(;;){}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){}
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+  }
+
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    call();
+    for(;;){}
+  }
+
+#pragma acc loop collapse(force:Two)
+  for(;;) {
+    call();
+    for(;;){}
+  }
+
+
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    for(;;){}
+    call();
+  }
+
+#pragma acc loop collapse(force:Two)
+  for(;;) {
+    for(;;){}
+    call();
+  }
+
+#pragma acc loop collapse(Two)
+  for(;;) {
+    for(;;){
+    call();
+    }
+  }
+
+#pragma acc loop collapse(Two)
+  for(;;) {
+    {
+      {
+        for(;;){
+        call();
+        }
+      }
+    }
+  }
+
+#pragma acc loop collapse(force:Two)
+  for(;;) {
+    for(;;){
+    call();
+    }
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Two)
+  for(;;) {
+    for(;;){}
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+  }
+}
+
+void intervening_without_force() {
+  intervening_without_force_templ<2>(); // expected-note{{in instantiation of function template specialization}}
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+    for(;;){}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){}
+    // expected-error@+1{{inner loops must be tightly nested inside a 'collapse' clause on a 'loop' construct}}
+    call();
+  }
+
+  // The below two are fine, as they use the 'force' tag.
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    call();
+    for(;;){}
+  }
+
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    for(;;){}
+    call();
+  }
+
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){
+    call();
+    }
+  }
+#pragma acc loop collapse(2)
+  for(;;) {
+    {
+      {
+        for(;;){
+        call();
+        }
+      }
+    }
+  }
+
+#pragma acc loop collapse(force:2)
+  for(;;) {
+    for(;;){
+    call();
+    }
+  }
+}
+

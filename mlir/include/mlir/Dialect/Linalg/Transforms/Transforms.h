@@ -762,6 +762,14 @@ LogicalResult copyToGPUPrivateMemory(OpBuilder &b, Value src, Value dst);
 /// memory is freed when going outside of the scope.
 LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 
+/// Return true if there's dedicated logic in the Linalg Vectorizer to
+/// vectorize this Op, false otherwise.
+///
+/// Note that this helper merely implements a very high level check and that the
+/// vectorizer also requires various additional pre-conditions to be met for it
+/// to work (these are checked by the vectorizer itself).
+bool hasVectorizationImpl(Operation *);
+
 /// Emit a suitable vector form for an operation. If provided,
 /// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
 /// must match the rank of the iteration space of the operation and the sizes
@@ -1746,6 +1754,10 @@ void populateFoldReshapeOpsByCollapsingPatterns(
 /// Patterns to constant fold Linalg operations.
 void populateConstantFoldLinalgOperations(RewritePatternSet &patterns,
                                           const ControlFusionFn &controlFn);
+
+/// Pattern to replace `linalg.add` when destination passing on a contraction op
+/// suffices for achieving the sum.
+void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 
 /// Pattern to fuse a `tensor.pad` operation with the producer of its source,
 /// if the producer is a `linalg` operation with all parallel iterator types.

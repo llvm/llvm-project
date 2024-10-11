@@ -108,5 +108,6 @@ CHECK-NEXT:  -Wmisleading-indentation
 CHECK-NEXT:  -Wpacked-non-pod
 CHECK-NEXT:  -Wvla-cxx-extension
 CHECK-NEXT:    -Wvla-extension-static-assert
+CHECK-NEXT:  -Wperf-constraint-implies-noexcept
 
 CHECK-NOT:-W
