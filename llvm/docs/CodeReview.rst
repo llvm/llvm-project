@@ -158,12 +158,11 @@ approved. If unsure, the reviewer should provide a qualified approval, (e.g.,
 you are fairly certain that a particular community member will wish to review,
 even if that person hasn't done so yet.
 
-If new comments are posted after the patch has been approved (but not yet
-merged), these need to be addressed following similar process as outlined
-above. Specifically, a reviewer should confirm that all feedback has been
-addressed before a patch is merged, including the newly posted comments.
-Exceptions apply - e.g. there's no need to confirm that a comment requesting a
-typo to be fixed has been addressed (this should be evident from the code).
+If additional feedback is provided after acceptance (by the same reviewer or
+another), the author should use their best judgement in deciding whether that
+feedback can be incorporated into the change without comment (say a typo) or
+requires further review discussion. More substantial comments (e.g. about the
+design) will usually require further discussion. If unsure, ask the reviewer.
 
 Note that, if a reviewer has requested a particular community member to review,
 and after a week that community member has yet to respond, feel free to ping
