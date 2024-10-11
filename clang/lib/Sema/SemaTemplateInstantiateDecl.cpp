@@ -230,7 +230,10 @@ static void instantiateDependentAnnotationAttr(
     ActualArgs.insert(ActualArgs.begin(), Args.begin() + 1, Args.end());
     std::swap(Args, ActualArgs);
   }
-  S.AddAnnotationAttr(New, *Attr, Str, Args);
+  auto *AA = S.CreateAnnotationAttr(*Attr, Str, Args);
+  if (AA) {
+    New->addAttr(AA);
+  }
 }
 
 static Expr *instantiateDependentFunctionAttrCondition(

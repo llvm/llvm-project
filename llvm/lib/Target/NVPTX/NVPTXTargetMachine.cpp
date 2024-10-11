@@ -367,9 +367,13 @@ void NVPTXPassConfig::addIRPasses() {
     addPass(createSROAPass());
   }
 
-  const auto &Options = getNVPTXTargetMachine().Options;
-  addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
-                                          Options.NoTrapAfterNoreturn));
+  if (ST.hasPTXASUnreachableBug()) {
+    // Run LowerUnreachable to WAR a ptxas bug. See the commit description of
+    // 1ee4d880e8760256c606fe55b7af85a4f70d006d for more details.
+    const auto &Options = getNVPTXTargetMachine().Options;
+    addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
+                                            Options.NoTrapAfterNoreturn));
+  }
 }
 
 bool NVPTXPassConfig::addInstSelector() {
