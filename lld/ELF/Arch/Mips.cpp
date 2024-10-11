@@ -480,7 +480,7 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 static std::pair<uint32_t, uint64_t>
-calculateMipsRelChain(uint8_t *loc, RelType type, uint64_t val) {
+calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
   // MIPS N64 ABI packs multiple relocations into the single relocation
   // record. In general, all up to three relocations can have arbitrary
   // types. In fact, Clang and GCC uses only a few combinations. For now,
@@ -572,7 +572,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
   RelType type = rel.type;
 
   if (ELFT::Is64Bits || ctx.arg.mipsN32Abi)
-    std::tie(type, val) = calculateMipsRelChain(loc, type, val);
+    std::tie(type, val) = calculateMipsRelChain(ctx, loc, type, val);
 
   // Detect cross-mode jump/branch and fix instruction.
   val = fixupCrossModeJump<ELFT>(loc, type, val);

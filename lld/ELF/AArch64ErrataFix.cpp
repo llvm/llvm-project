@@ -374,9 +374,9 @@ class elf::Patch843419Section final : public SyntheticSection {
 public:
   Patch843419Section(Ctx &, InputSection *p, uint64_t off);
 
-  void writeTo(Ctx &, uint8_t *buf) override;
+  void writeTo(uint8_t *buf) override;
 
-  size_t getSize(Ctx &) const override { return 8; }
+  size_t getSize() const override { return 8; }
 
   uint64_t getLDSTAddr() const;
 
@@ -393,13 +393,13 @@ public:
 };
 
 Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
+    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
                        ".text.patch"),
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(
       saver().save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC,
-      0, getSize(ctx), *this);
+      0, getSize(), *this);
   addSyntheticLocal(saver().save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
@@ -407,7 +407,7 @@ uint64_t Patch843419Section::getLDSTAddr() const {
   return patchee->getVA(patcheeOffset);
 }
 
-void Patch843419Section::writeTo(Ctx &ctx, uint8_t *buf) {
+void Patch843419Section::writeTo(uint8_t *buf) {
   // Copy the instruction that we will be replacing with a branch in the
   // patchee Section.
   write32le(buf, read32le(patchee->content().begin() + patcheeOffset));

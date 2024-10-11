@@ -406,6 +406,8 @@ private:
   void writeModuleConstants();
   bool pushValueAndType(const Value *V, unsigned InstID,
                         SmallVectorImpl<unsigned> &Vals);
+  bool pushValueOrMetadata(const Value *V, unsigned InstID,
+                           SmallVectorImpl<unsigned> &Vals);
   void writeOperandBundles(const CallBase &CB, unsigned InstID);
   void pushValue(const Value *V, unsigned InstID,
                  SmallVectorImpl<unsigned> &Vals);
@@ -3059,6 +3061,19 @@ bool ModuleBitcodeWriter::pushValueAndType(const Value *V, unsigned InstID,
   return false;
 }
 
+bool ModuleBitcodeWriter::pushValueOrMetadata(const Value *V, unsigned InstID,
+                                              SmallVectorImpl<unsigned> &Vals) {
+  bool IsMetadata = V->getType()->isMetadataTy();
+  if (IsMetadata) {
+    Vals.push_back(bitc::OB_METADATA);
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    unsigned ValID = VE.getMetadataID(MD);
+    Vals.push_back(InstID - ValID);
+    return false;
+  }
+  return pushValueAndType(V, InstID, Vals);
+}
+
 void ModuleBitcodeWriter::writeOperandBundles(const CallBase &CS,
                                               unsigned InstID) {
   SmallVector<unsigned, 64> Record;
@@ -3069,7 +3084,7 @@ void ModuleBitcodeWriter::writeOperandBundles(const CallBase &CS,
     Record.push_back(C.getOperandBundleTagID(Bundle.getTagName()));
 
     for (auto &Input : Bundle.Inputs)
-      pushValueAndType(Input, InstID, Record);
+      pushValueOrMetadata(Input, InstID, Record);
 
     Stream.EmitRecord(bitc::FUNC_CODE_OPERAND_BUNDLE, Record);
     Record.clear();
