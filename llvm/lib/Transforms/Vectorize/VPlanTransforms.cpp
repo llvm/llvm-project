@@ -381,6 +381,8 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
         dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
     if (!PredVPBB || PredVPBB->getNumSuccessors() != 1)
       continue;
+    if (isa<VPIRBasicBlock>(PredVPBB))
+      continue;
     WorkList.push_back(VPBB);
   }
 

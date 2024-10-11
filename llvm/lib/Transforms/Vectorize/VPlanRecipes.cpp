@@ -627,11 +627,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
         Builder.CreatePHI(IncomingFromOtherPreds->getType(), 2, Name);
     BasicBlock *VPlanPred =
         State.CFG
-            .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getSinglePredecessor())];
+            .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getPredecessors()[0])];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
     for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
-      assert(OtherPred != VPlanPred &&
-             "VPlan predecessors should not be connected yet");
+      if (OtherPred == VPlanPred)
+        continue;
       NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
     }
     return NewPhi;
@@ -3235,13 +3235,17 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "cannot be used in per-lane");
+  if (State.ExpandedSCEVs.contains(Expr)) {
+    State.Builder.SetInsertPoint(State.CFG.VPBB2IRBB[getParent()]);
+    return;
+  }
+
   const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
   SCEVExpander Exp(SE, DL, "induction");
-
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
                                  &*State.Builder.GetInsertPoint());
-  assert(!State.ExpandedSCEVs.contains(Expr) &&
-         "Same SCEV expanded multiple times");
+  /*  assert(!State.ExpandedSCEVs.contains(Expr) &&*/
+  /*"Same SCEV expanded multiple times");*/
   State.ExpandedSCEVs[Expr] = Res;
   State.set(this, Res, VPLane(0));
 }
