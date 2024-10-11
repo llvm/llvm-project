@@ -11,6 +11,8 @@
 
 #include <__config>
 #include <__iterator/access.h> // begin
+#include <__iterator/distance.h>
+#include <__iterator/next.h>
 #include <__memory/addressof.h>
 #include <__ranges/concepts.h> // forward_range, view, range_size_t, sized_range, ...
 #include <__ranges/zip_view.h> // tuple_transform
@@ -155,7 +157,7 @@ public:
   constexpr iterator& operator-=(difference_type x)
     requires cartesian_product_is_random_access<Const, First, Vs...>
   {
-    advance(x);
+    *this += -x;
     return *this;
   }
 
@@ -201,25 +203,30 @@ private:
     const auto sz    = static_cast<difference_type>(std::ranges::size(v));
     const auto first = begin(v);
 
-    const auto idx = static_cast<difference_type>(it - first);
-    x += idx;
+    if (sz > 0) {
+      const auto idx = static_cast<difference_type>(std::distance(first, it));
+      x += idx;
 
-    auto div = sz ? x / sz : 0;
-    auto mod = sz ? x % sz : 0;
-
-    if constexpr (N != 0) {
-      if (mod < 0) {
-        mod += sz;
-        div--;
+      difference_type mod;
+      if constexpr (N > 0) {
+        difference_type div = x / sz;
+        mod                 = x % sz;
+        if (mod < 0) {
+          mod += sz;
+          div--;
+        }
+        advance<N - 1>(div);
+      } else {
+        mod = (x >= 0 && x < sz) ? x : sz;
       }
-      advance<N - 1>(div);
+      it = std::next(first, mod);
+
     } else {
-      if (div > 0) {
-        mod = sz;
+      if constexpr (N > 0) {
+        advance<N - 1>(x);
       }
+      it = first;
     }
-    using D = std::iter_difference_t<decltype(first)>;
-    it      = first + static_cast<D>(mod);
   }
 };
 
