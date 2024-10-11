@@ -1252,15 +1252,11 @@ public:
                         llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
                         bool Local = false, bool AssumeConvergent = false);
 
-  /// Same as above except that argument extension attributes are passed in
-  /// which are added in a target-dependent way before proceeding.
-  using AttrIndex = llvm::AttributeList::AttrIndex;
+  /// Return the extension attributes as an AttributeList after any needed
+  /// adjustments for target. The \Param Extensions list begins with the
+  /// return value and then continues with the arguments.
   using AttrKind = llvm::Attribute::AttrKind;
-  typedef std::pair<unsigned, AttrKind> ArgExtAttr;
-  llvm::FunctionCallee
-  CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
-                        ArrayRef<ArgExtAttr> ArgAttrs,
-                        bool Local = false, bool AssumeConvergent = false);
+  llvm::AttributeList getTargetExtAttrs(ArrayRef<AttrKind> Extensions);
 
   /// Create a new runtime global variable with the specified type and name.
   llvm::Constant *CreateRuntimeVariable(llvm::Type *Ty,

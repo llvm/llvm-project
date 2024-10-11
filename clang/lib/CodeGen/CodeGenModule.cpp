@@ -4947,25 +4947,38 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
   return {FTy, C};
 }
 
-llvm::FunctionCallee
-CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
-                                     ArrayRef<ArgExtAttr> ArgAttrs,
-                                     bool Local, bool AssumeConvergent) {
+llvm::AttributeList
+CodeGenModule::getTargetExtAttrs(ArrayRef<AttrKind> Extensions) {
+  using AttrIndex = llvm::AttributeList::AttrIndex;
+  assert(Extensions.size() && "Empty array not expected.");
   const auto &T = getTarget().getTriple();
   llvm::AttributeList AL;
-  for (auto &A : ArgAttrs) {
-    bool Signed = (A.second == AttrKind::SExt);
-    AttrKind AK;
-    if (A.first == AttrIndex::ReturnIndex)
-      AK = llvm::TargetLibraryInfo::getExtAttrForI32Return(T, Signed);
-    else if (A.first >= AttrIndex::FirstArgIndex)
-      AK = llvm::TargetLibraryInfo::getExtAttrForI32Param(T, Signed);
-    else
-      llvm_unreachable("Only expecting return or argument indices.");
-    AL = AL.addAttributeAtIndex(getLLVMContext(), A.first, AK);
-  }
 
-  return CreateRuntimeFunction(Ty, Name, AL, Local, AssumeConvergent);
+  bool IsSigned;
+  auto isExtension = [&IsSigned](AttrKind AK) -> bool {
+    assert((AK == AttrKind::None || AK == AttrKind::SExt ||
+            AK == AttrKind::ZExt) &&
+           "Unhandled extension attribute.");
+    if (AK != AttrKind::SExt && AK != AttrKind::ZExt)
+      return false;
+    IsSigned = (AK == AttrKind::SExt);
+    return true;
+  };
+
+  if (isExtension(Extensions[0])) { // Returned value at index 0.
+    AttrKind AK = llvm::TargetLibraryInfo::getExtAttrForI32Return(T, IsSigned);
+    if (AK != AttrKind::None)
+      AL = AL.addAttributeAtIndex(getLLVMContext(), AttrIndex::ReturnIndex, AK);
+  }
+  for (unsigned i = 1; i < Extensions.size(); ++i)
+    if (isExtension(Extensions[i])) {
+      AttrKind AK = llvm::TargetLibraryInfo::getExtAttrForI32Param(T, IsSigned);
+      if (AK != AttrKind::None)
+        AL = AL.addAttributeAtIndex(getLLVMContext(),
+                                    AttrIndex::FirstArgIndex + i - 1, AK);
+    }
+
+  return AL;
 }
 
 /// GetOrCreateLLVMGlobal - If the specified mangled name is not in the module,
