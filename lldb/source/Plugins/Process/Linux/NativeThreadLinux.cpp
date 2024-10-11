@@ -82,9 +82,6 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
   case eStopReasonProcessorTrace:
     log.Printf("%s: %s processor trace", __FUNCTION__, header);
     return;
-  case eStopReasonHistoryBoundary:
-    log.Printf("%s: %s history boundary", __FUNCTION__, header);
-    return;
   default:
     log.Printf("%s: %s invalid stop reason %" PRIu32, __FUNCTION__, header,
                static_cast<uint32_t>(stop_info.reason));
