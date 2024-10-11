@@ -912,6 +912,16 @@ public:
   /// Determine if this is an equals/not equals predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
+  /// Determine if this is an equals predicate that is also an equivalence. This
+  /// is useful in GVN-like transformations, where we can replace RHS by LHS in
+  /// the true branch of the CmpInst.
+  bool isEqEquivalence() const;
+
+  /// Determine if this is a not-equals predicate that is also an equivalence.
+  /// This is useful in GVN-like transformations, where we can replace RHS by
+  /// LHS in the false branch of the CmpInst.
+  bool isNeEquivalence() const;
+
   /// Return true if the predicate is relational (not EQ or NE).
   static bool isRelational(Predicate P) { return !isEquality(P); }
 
