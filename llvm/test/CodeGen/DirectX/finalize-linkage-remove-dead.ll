@@ -1,4 +1,5 @@
 ; RUN: opt -S -dxil-finalize-linkage -mtriple=dxil-unknown-shadermodel6.5-compute %s | FileCheck %s
+; RUN: opt -S -dxil-finalize-linkage -mtriple=dxil-unknown-shadermodel6.5-library %s | FileCheck %s
 ; RUN: llc %s --filetype=asm -o - | FileCheck %s
 
 target triple = "dxilv1.5-pc-shadermodel6.5-compute"
