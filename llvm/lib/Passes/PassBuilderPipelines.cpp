@@ -300,8 +300,6 @@ extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
-
-extern cl::opt<bool> EnableInferAlignmentPass;
 } // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions() {
@@ -1250,8 +1248,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
-  if (EnableInferAlignmentPass)
-    FPM.addPass(InferAlignmentPass());
+  FPM.addPass(InferAlignmentPass());
   if (IsFullLTO) {
     // The vectorizer may have significantly shortened a loop body; unroll
     // again. Unroll small loops to hide loop backedge latency and saturate any
@@ -1369,8 +1366,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
   }
 
-  if (EnableInferAlignmentPass)
-    FPM.addPass(InferAlignmentPass());
+  FPM.addPass(InferAlignmentPass());
   FPM.addPass(InstCombinePass());
 
   // This is needed for two reasons:
