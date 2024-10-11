@@ -135,6 +135,11 @@ if is_configured("llvm_use_sanitizer"):
         config.environment[
             "ASAN_OPTIONS"
         ] = "detect_container_overflow=0:detect_stack_use_after_return=1"
+        # FIXME: This is the wrong place to disable this. This is working
+        # around the fact that the ci.swift.org scripts build only LLDB with
+        # asan and this creates an ODR violation in Allocator.h that breaks
+        # poisoning.
+        config.environment['ASAN_OPTIONS'] += ':' + 'allow_user_poisoning=0'
         # End Swift mod.
         if "Darwin" in config.host_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
