@@ -2666,8 +2666,8 @@ are grouped into a single :ref:`attribute group <attrgrp>`.
 Operand Bundles
 ---------------
 
-Operand bundles are tagged sets of SSA values that can be associated
-with certain LLVM instructions (currently only ``call`` s and
+Operand bundles are tagged sets of SSA values or metadata strings that can be
+associated with certain LLVM instructions (currently only ``call`` s and
 ``invoke`` s).  In a way they are like metadata, but dropping them is
 incorrect and will change program semantics.
 
@@ -2675,7 +2675,7 @@ Syntax::
 
     operand bundle set ::= '[' operand bundle (, operand bundle )* ']'
     operand bundle ::= tag '(' [ bundle operand ] (, bundle operand )* ')'
-    bundle operand ::= SSA value
+    bundle operand ::= SSA value | metadata string
     tag ::= string constant
 
 Operand bundles are **not** part of a function's signature, and a
