@@ -292,7 +292,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
     KI.LaunchBounds.push_back({"OmpTargetNumTeams", *Val});
   if (auto Val = parseFnAttrAsInteger(F, "omp_target_thread_limit"))
     KI.LaunchBounds.push_back({"OmpTargetThreadLimit", *Val});
-  TheTTI.collectLaunchBounds(F, KI.LaunchBounds);
+  TheTTI.collectKernelLaunchBounds(F, KI.LaunchBounds);
 
   const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);

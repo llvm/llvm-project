@@ -444,7 +444,7 @@ void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-void NVPTXTTIImpl::collectLaunchBounds(
+void NVPTXTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
   if (auto Val = getMaxClusterRank(F))

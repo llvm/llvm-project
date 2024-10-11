@@ -1815,10 +1815,10 @@ public:
 
   /// @}
 
-  /// Collect launch bounds for \p F into \p LB.
-  void
-  collectLaunchBounds(const Function &F,
-                      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+  /// Collect kernel launch bounds for \p F into \p LB.
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
 
 private:
   /// The abstract base class used to type erase specific TTI
@@ -2220,7 +2220,7 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
-  virtual void collectLaunchBounds(
+  virtual void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const = 0;
 };
@@ -3020,10 +3020,10 @@ public:
     return Impl.getMaxNumArgs();
   }
 
-  void collectLaunchBounds(
+  void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override {
-    Impl.collectLaunchBounds(F, LB);
+    Impl.collectKernelLaunchBounds(F, LB);
   }
 };
 

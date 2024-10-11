@@ -1001,7 +1001,7 @@ public:
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
-  void collectLaunchBounds(
+  void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 

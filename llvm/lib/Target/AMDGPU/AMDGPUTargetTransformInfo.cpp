@@ -1411,7 +1411,7 @@ bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
   return AMDGPU::isFlatGlobalAddrSpace(AS);
 }
 
-void GCNTTIImpl::collectLaunchBounds(
+void GCNTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
   auto AmdgpuMaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
