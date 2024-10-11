@@ -198,6 +198,7 @@ struct IndirectLocalPathEntry {
     GslReferenceInit,
     GslPointerInit,
     GslPointerAssignment,
+    DefaultArg,
   } Kind;
   Expr *E;
   union {
@@ -609,15 +610,22 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
   for (unsigned I = 0,
                 N = std::min<unsigned>(Callee->getNumParams(), Args.size());
        I != N; ++I) {
+    Expr *Arg = Args[I];
+    RevertToOldSizeRAII RAII(Path);
+    if (auto *DAE = dyn_cast<CXXDefaultArgExpr>(Arg)) {
+      Path.push_back(
+          {IndirectLocalPathEntry::DefaultArg, DAE, DAE->getParam()});
+      Arg = DAE->getExpr();
+    }
     if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
-      VisitLifetimeBoundArg(Callee->getParamDecl(I), Args[I]);
+      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument
       if (shouldTrackFirstArgument(Callee)) {
-        VisitGSLPointerArg(Callee, Args[0]);
+        VisitGSLPointerArg(Callee, Arg);
       } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call);
                  Ctor && shouldTrackFirstArgumentForConstructor(Ctor)) {
-        VisitGSLPointerArg(Ctor->getConstructor(), Args[0]);
+        VisitGSLPointerArg(Ctor->getConstructor(), Arg);
       }
     }
   }
@@ -1060,6 +1068,9 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
       if (!Path[I].Capture->capturesVariable())
         continue;
       return Path[I].E->getSourceRange();
+
+    case IndirectLocalPathEntry::DefaultArg:
+      return cast<CXXDefaultArgExpr>(Path[I].E)->getUsedLocation();
     }
   }
   return E->getSourceRange();
@@ -1370,7 +1381,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         break;
       }
 
-      case IndirectLocalPathEntry::LambdaCaptureInit:
+      case IndirectLocalPathEntry::LambdaCaptureInit: {
         if (!Elem.Capture->capturesVariable())
           break;
         // FIXME: We can't easily tell apart an init-capture from a nested
@@ -1382,6 +1393,16 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
             << (Elem.Capture->getCaptureKind() == LCK_ByRef) << VD
             << nextPathEntryRange(Path, I + 1, L);
         break;
+      }
+
+      case IndirectLocalPathEntry::DefaultArg: {
+        const auto *DAE = cast<CXXDefaultArgExpr>(Elem.E);
+        const ParmVarDecl *Param = DAE->getParam();
+        SemaRef.Diag(Param->getDefaultArgRange().getBegin(),
+                     diag::note_init_with_default_argument)
+            << Param << nextPathEntryRange(Path, I + 1, L);
+        break;
+      }
       }
     }
 
