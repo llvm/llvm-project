@@ -2078,18 +2078,21 @@ public:
         std::get<std::optional<std::list<OmpMapClause::TypeModifier>>>(x.t);
     auto &type = std::get<std::optional<OmpMapClause::Type>>(x.t);
     Walk(typeMod);
-    if (typeMod.has_value() && type.has_value())
+    if (typeMod.has_value() && type.has_value()) {
       Put(", ");
+    }
     Walk(type);
-    if (typeMod.has_value() || type.has_value())
+    if (typeMod.has_value() || type.has_value()) {
       Put(": ");
+    }
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpMapClause::TypeModifier &x) {
-    if (x == OmpMapClause::TypeModifier::OmpxHold)
+    if (x == OmpMapClause::TypeModifier::OmpxHold) {
       Word("OMPX_HOLD");
-    else
+    } else {
       Word(OmpMapClause::EnumToString(x));
+    }
   }
   void Unparse(const OmpScheduleModifier &x) {
     Walk(std::get<OmpScheduleModifier::Modifier1>(x.t));
