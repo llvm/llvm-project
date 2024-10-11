@@ -124,8 +124,8 @@ class FileManager : public RefCountedBase<FileManager> {
   std::unique_ptr<FileSystemStatCache> StatCache;
 
   std::error_code getStatValue(StringRef Path, llvm::vfs::Status &Status,
-                               bool isFile,
-                               std::unique_ptr<llvm::vfs::File> *F);
+                               bool isFile, std::unique_ptr<llvm::vfs::File> *F,
+                               bool IsText = true);
 
   /// Add all ancestors of the given path (pointing to either a file
   /// or a directory) as virtual directories.
@@ -230,7 +230,8 @@ public:
   /// the failure to find this file.
   llvm::Expected<FileEntryRef> getFileRef(StringRef Filename,
                                           bool OpenFile = false,
-                                          bool CacheFailure = true);
+                                          bool CacheFailure = true,
+                                          bool IsText = true);
 
   /// Get the FileEntryRef for stdin, returning an error if stdin cannot be
   /// read.
