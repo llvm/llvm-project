@@ -208,33 +208,37 @@ void CommandObjectMultiword::Execute(const char *args_string,
       error_msg.append(match);
     }
   } else {
-    // Rather than simply complaining about the invalid (sub) command,
-    // try to offer some alternatives.
-    // This is especially useful for cases where the user types something
-    // seamingly trivial, such as `breakpoint foo`.
+    // Try to offer some alternatives to help correct the command.
     error_msg.assign(
         llvm::Twine("'" + sub_command + "' is not a valid subcommand of \"" +
-                    GetCommandName() + "\". Valid subcommands are " +
-                    GetTopSubcommands(/*count=*/5) + ". Use \"help " +
-                    GetCommandName() + "\" to find out more.")
+                    GetCommandName() + "\"." + GetSubcommandsHintText() +
+                    " Use \"help " + GetCommandName() + "\" to find out more.")
             .str());
   }
   error_msg.append("\n");
   result.AppendRawError(error_msg.c_str());
 }
 
-std::string CommandObjectMultiword::GetTopSubcommands(int count) {
+std::string CommandObjectMultiword::GetSubcommandsHintText() {
   if (m_subcommand_dict.empty())
-    return "<NONE>";
-  std::string buffer = "{";
+    return "";
+  const size_t maxCount = 5;
+  size_t i = 0;
+  std::string buffer = " Valid subcommand";
+  buffer.append(m_subcommand_dict.size() > 1 ? "s are:" : "is");
   CommandMap::iterator pos;
   for (pos = m_subcommand_dict.begin();
-       pos != m_subcommand_dict.end() && count > 0; ++pos, --count) {
-    buffer.append("'");
+       pos != m_subcommand_dict.end() && i < maxCount; ++pos, ++i) {
+    buffer.append(" ");
     buffer.append(pos->first);
-    buffer.append("',");
+    buffer.append(",");
   }
-  buffer.append("...}");
+  if (i < m_subcommand_dict.size())
+    buffer.append(" and others");
+  else
+    buffer.pop_back();
+
+  buffer.append(".");
   return buffer;
 }
 

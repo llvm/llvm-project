@@ -70,7 +70,7 @@ protected:
     return m_subcommand_dict;
   }
 
-  std::string GetTopSubcommands(int count);
+  std::string GetSubcommandsHintText();
 
   CommandObject::CommandMap m_subcommand_dict;
   bool m_can_be_removed;
