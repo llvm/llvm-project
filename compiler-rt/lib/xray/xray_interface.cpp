@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "xray_interface_internal.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #include <cinttypes>
 #include <cstdio>
@@ -411,9 +410,9 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
         CombinedStatus = NOT_INITIALIZED;
       break;
     case ONGOING:
-      llvm_unreachable("Status ONGOING should not appear at this point");
+      UNREACHABLE("Status ONGOING should not appear at this point");
     default:
-      llvm_unreachable("Unhandled patching status");
+      UNREACHABLE("Unhandled patching status");
     }
   }
   return CombinedStatus;
