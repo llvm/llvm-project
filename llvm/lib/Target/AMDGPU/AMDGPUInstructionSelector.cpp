@@ -6009,14 +6009,15 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   Register M0Val;
   Register TmpReg0;
 
-  // For S_BARRIER_INIT, member count will always be read from M0[16:22]
+  // For S_BARRIER_INIT, member count will always be read from M0
   if (IntrID == Intrinsic::amdgcn_s_barrier_init) {
     Register MemberCount = I.getOperand(2).getReg();
     TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     // TODO: This should be expanded during legalization so that the the S_LSHL
     // and S_OR can be constant-folded
+    unsigned ShAmt = Subtarget->getBarrierMemberCountShift();
     BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_LSHL_B32), TmpReg0)
-        .addImm(16)
+        .addImm(ShAmt)
         .addReg(MemberCount);
     M0Val = TmpReg0;
   }
