@@ -861,12 +861,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP_ROUND, MVT::v4bf16, Custom);
 
   // AArch64 has implementations of a lot of rounding-like FP operations.
+  // clang-format off
   for (auto Op :
        {ISD::FFLOOR,          ISD::FNEARBYINT,      ISD::FCEIL,
         ISD::FRINT,           ISD::FTRUNC,          ISD::FROUND,
         ISD::FROUNDEVEN,      ISD::FMINNUM,         ISD::FMAXNUM,
         ISD::FMINIMUM,        ISD::FMAXIMUM,        ISD::LROUND,
         ISD::LLROUND,         ISD::LRINT,           ISD::LLRINT,
+        ISD::FMINNUM_IEEE,    ISD::FMAXNUM_IEEE,
         ISD::STRICT_FFLOOR,   ISD::STRICT_FCEIL,    ISD::STRICT_FNEARBYINT,
         ISD::STRICT_FRINT,    ISD::STRICT_FTRUNC,   ISD::STRICT_FROUNDEVEN,
         ISD::STRICT_FROUND,   ISD::STRICT_FMINNUM,  ISD::STRICT_FMAXNUM,
@@ -877,6 +879,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasFullFP16())
       setOperationAction(Op, MVT::f16, Legal);
   }
+  // clang-format on
 
   // Basic strict FP operations are legal
   for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
@@ -1194,6 +1197,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
           ISD::FROUNDEVEN,        ISD::FTRUNC,         ISD::FMINNUM,
           ISD::FMAXNUM,           ISD::FMINIMUM,       ISD::FMAXIMUM,
+          ISD::FMAXNUM_IEEE,      ISD::FMINNUM_IEEE,
           ISD::STRICT_FADD,       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,
           ISD::STRICT_FDIV,       ISD::STRICT_FMA,     ISD::STRICT_FCEIL,
           ISD::STRICT_FFLOOR,     ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,
@@ -1202,6 +1206,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::STRICT_FMINIMUM,   ISD::STRICT_FMAXIMUM})
       setOperationAction(Op, MVT::v1f64, Expand);
     // clang-format on
+
     for (auto Op :
          {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP, ISD::UINT_TO_FP,
           ISD::FP_ROUND, ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT, ISD::MUL,
@@ -1345,12 +1350,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    // AArch64 has implementations of a lot of rounding-like FP operations.
     for (auto Op :
          {ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT, ISD::FTRUNC,
-          ISD::FROUND, ISD::FROUNDEVEN, ISD::STRICT_FFLOOR,
-          ISD::STRICT_FNEARBYINT, ISD::STRICT_FCEIL, ISD::STRICT_FRINT,
-          ISD::STRICT_FTRUNC, ISD::STRICT_FROUND, ISD::STRICT_FROUNDEVEN}) {
+          ISD::FROUND, ISD::FROUNDEVEN, ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE,
+          ISD::STRICT_FFLOOR, ISD::STRICT_FNEARBYINT, ISD::STRICT_FCEIL,
+          ISD::STRICT_FRINT, ISD::STRICT_FTRUNC, ISD::STRICT_FROUND,
+          ISD::STRICT_FROUNDEVEN}) {
       for (MVT Ty : {MVT::v2f32, MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, Ty, Legal);
       if (Subtarget->hasFullFP16())
@@ -1961,10 +1966,10 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
       (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16()))
     for (unsigned Opcode :
          {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM, ISD::FMAXNUM,
-          ISD::STRICT_FMINIMUM, ISD::STRICT_FMAXIMUM, ISD::STRICT_FMINNUM,
-          ISD::STRICT_FMAXNUM, ISD::STRICT_FADD, ISD::STRICT_FSUB,
-          ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FMA,
-          ISD::STRICT_FSQRT})
+          ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::STRICT_FMINIMUM,
+          ISD::STRICT_FMAXIMUM, ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM,
+          ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+          ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
       setOperationAction(Opcode, VT, Legal);
 
   // Strict fp extend and trunc are legal
