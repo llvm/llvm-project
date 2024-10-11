@@ -103,7 +103,7 @@ uint32_t BPFCoreSharedInfo::SeqNum;
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
                                                   Instruction *Input,
                                                   Instruction *Before) {
-  Function *Fn = Intrinsic::getDeclaration(
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::bpf_passthrough, {Input->getType(), Input->getType()});
   Constant *SeqNumVal = ConstantInt::get(Type::getInt32Ty(BB->getContext()),
                                          BPFCoreSharedInfo::SeqNum++);

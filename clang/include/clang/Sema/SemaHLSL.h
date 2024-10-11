@@ -63,6 +63,11 @@ public:
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
+  QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
+                                       QualType LHSType, QualType RHSType,
+                                       bool IsCompAssign);
+  void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
+
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);

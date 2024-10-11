@@ -28,7 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X) DEBUG_WITH_TYPE(TYPE, X)
 #else
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X)
@@ -49,6 +49,7 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
   Exact = false;
   Disjoint = false;
   NNeg = false;
+  GEPNW = GEPNoWrapFlags::none();
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I)) {
     NUW = OBO->hasNoUnsignedWrap();
     NSW = OBO->hasNoSignedWrap();
@@ -63,6 +64,8 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
     NUW = TI->hasNoUnsignedWrap();
     NSW = TI->hasNoSignedWrap();
   }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    GEPNW = GEP->getNoWrapFlags();
 }
 
 void PoisonFlags::apply(Instruction *I) {
@@ -80,6 +83,8 @@ void PoisonFlags::apply(Instruction *I) {
     I->setHasNoUnsignedWrap(NUW);
     I->setHasNoSignedWrap(NSW);
   }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    GEP->setNoWrapFlags(GEPNW);
 }
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
@@ -347,16 +352,19 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
 /// loop-invariant portions of expressions, after considering what
 /// can be folded using target addressing modes.
 ///
-Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
+Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V,
+                                    SCEV::NoWrapFlags Flags) {
   assert(!isa<Instruction>(V) ||
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
   Value *Idx = expand(Offset);
+  GEPNoWrapFlags NW = (Flags & SCEV::FlagNUW) ? GEPNoWrapFlags::noUnsignedWrap()
+                                              : GEPNoWrapFlags::none();
 
   // Fold a GEP with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(V))
     if (Constant *CRHS = dyn_cast<Constant>(Idx))
-      return Builder.CreatePtrAdd(CLHS, CRHS);
+      return Builder.CreatePtrAdd(CLHS, CRHS, "", NW);
 
   // Do a quick scan to see if we have this GEP nearby.  If so, reuse it.
   unsigned ScanLimit = 6;
@@ -370,11 +378,15 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
       // generated code.
       if (isa<DbgInfoIntrinsic>(IP))
         ScanLimit++;
-      if (IP->getOpcode() == Instruction::GetElementPtr &&
-          IP->getOperand(0) == V && IP->getOperand(1) == Idx &&
-          cast<GEPOperator>(&*IP)->getSourceElementType() ==
-              Builder.getInt8Ty())
-        return &*IP;
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(IP)) {
+        if (GEP->getPointerOperand() == V &&
+            GEP->getSourceElementType() == Builder.getInt8Ty() &&
+            GEP->getOperand(1) == Idx) {
+          rememberFlags(GEP);
+          GEP->setNoWrapFlags(GEP->getNoWrapFlags() & NW);
+          return &*IP;
+        }
+      }
       if (IP == BlockBegin) break;
     }
   }
@@ -393,7 +405,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
   }
 
   // Emit a GEP.
-  return Builder.CreatePtrAdd(V, Idx, "scevgep");
+  return Builder.CreatePtrAdd(V, Idx, "scevgep", NW);
 }
 
 /// PickMostRelevantLoop - Given two loops pick the one that's most relevant for
@@ -540,7 +552,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
             X = SE.getSCEV(U->getValue());
         NewOps.push_back(X);
       }
-      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Sum);
+      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Sum, S->getNoWrapFlags());
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expand(SE.getNegativeSCEV(Op));
@@ -1242,7 +1254,8 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   if (!S->getStart()->isZero()) {
     if (isa<PointerType>(S->getType())) {
       Value *StartV = expand(SE.getPointerBase(S));
-      return expandAddToGEP(SE.removePointerBase(S), StartV);
+      return expandAddToGEP(SE.removePointerBase(S), StartV,
+                            S->getNoWrapFlags(SCEV::FlagNUW));
     }
 
     SmallVector<const SCEV *, 4> NewOps(S->operands());
@@ -2121,8 +2134,8 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
       MulV = TruncTripCount;
       OfMul = ConstantInt::getFalse(MulV->getContext());
     } else {
-      auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
-                                             Intrinsic::umul_with_overflow, Ty);
+      auto *MulF = Intrinsic::getOrInsertDeclaration(
+          Loc->getModule(), Intrinsic::umul_with_overflow, Ty);
       CallInst *Mul =
           Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
       MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");

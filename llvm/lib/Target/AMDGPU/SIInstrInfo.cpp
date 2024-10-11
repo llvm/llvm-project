@@ -528,13 +528,13 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
   if (!MI1.hasOneMemOperand() || !MI2.hasOneMemOperand())
     return false;
 
-  auto MO1 = *MI1.memoperands_begin();
-  auto MO2 = *MI2.memoperands_begin();
+  auto *MO1 = *MI1.memoperands_begin();
+  auto *MO2 = *MI2.memoperands_begin();
   if (MO1->getAddrSpace() != MO2->getAddrSpace())
     return false;
 
-  auto Base1 = MO1->getValue();
-  auto Base2 = MO2->getValue();
+  const auto *Base1 = MO1->getValue();
+  const auto *Base2 = MO2->getValue();
   if (!Base1 || !Base2)
     return false;
   Base1 = getUnderlyingObject(Base1);
@@ -2008,7 +2008,7 @@ void SIInstrInfo::insertNoops(MachineBasicBlock &MBB,
 }
 
 void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
-  auto MF = MBB.getParent();
+  auto *MF = MBB.getParent();
   SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
   assert(Info->isEntryFunction());
@@ -2787,6 +2787,9 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (CommutedMI) {
     swapSourceModifiers(MI, Src0, AMDGPU::OpName::src0_modifiers,
                         Src1, AMDGPU::OpName::src1_modifiers);
+
+    swapSourceModifiers(MI, Src0, AMDGPU::OpName::src0_sel, Src1,
+                        AMDGPU::OpName::src1_sel);
 
     CommutedMI->setDesc(get(CommutedOpcode));
   }
@@ -3819,7 +3822,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         SlotIndex NewIndex = LIS->getInstructionIndex(*MIB).getRegSlot(true);
         auto &LI = LIS->getInterval(Def.getReg());
         auto UpdateDefIndex = [&](LiveRange &LR) {
-          auto S = LR.find(OldIndex);
+          auto *S = LR.find(OldIndex);
           if (S != LR.end() && S->start == OldIndex) {
             assert(S->valno && S->valno->def == OldIndex);
             S->start = NewIndex;
@@ -5061,7 +5064,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   if (isSOPK(MI)) {
-    auto Op = getNamedOperand(MI, AMDGPU::OpName::simm16);
+    const auto *Op = getNamedOperand(MI, AMDGPU::OpName::simm16);
     if (Desc.isBranch()) {
       if (!Op->isMBB()) {
         ErrInfo = "invalid branch target for SOPK instruction";
@@ -6299,11 +6302,14 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 // Emit the actual waterfall loop, executing the wrapped instruction for each
 // unique value of \p ScalarOps across all lanes. In the best case we execute 1
 // iteration, in the worst case we execute 64 (once per lane).
-static void emitLoadScalarOpsFromVGPRLoop(
-    const SIInstrInfo &TII, MachineRegisterInfo &MRI, MachineBasicBlock &OrigBB,
-    MachineBasicBlock &LoopBB, MachineBasicBlock &BodyBB, const DebugLoc &DL,
-    ArrayRef<MachineOperand *> ScalarOps) {
-  MachineFunction &MF = *OrigBB.getParent();
+static void
+emitLoadScalarOpsFromVGPRLoop(const SIInstrInfo &TII,
+                              MachineRegisterInfo &MRI,
+                              MachineBasicBlock &LoopBB,
+                              MachineBasicBlock &BodyBB,
+                              const DebugLoc &DL,
+                              ArrayRef<MachineOperand *> ScalarOps) {
+  MachineFunction &MF = *LoopBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
@@ -6316,8 +6322,6 @@ static void emitLoadScalarOpsFromVGPRLoop(
   const auto *BoolXExecRC = TRI->getWaveMaskRegClass();
 
   MachineBasicBlock::iterator I = LoopBB.begin();
-
-  SmallVector<Register, 8> ReadlanePieces;
   Register CondReg;
 
   for (MachineOperand *ScalarOp : ScalarOps) {
@@ -6352,6 +6356,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
       ScalarOp->setReg(CurReg);
       ScalarOp->setIsKill();
     } else {
+      SmallVector<Register, 8> ReadlanePieces;
       unsigned VScalarOpUndef = getUndefRegState(ScalarOp->isUndef());
       assert(NumSubRegs % 2 == 0 && NumSubRegs <= 32 &&
              "Unhandled register size");
@@ -6402,7 +6407,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
         }
       } // End for loop.
 
-      auto SScalarOpRC =
+      const auto *SScalarOpRC =
           TRI->getEquivalentSGPRClass(MRI.getRegClass(VScalarOp));
       Register SScalarOp = MRI.createVirtualRegister(SScalarOpRC);
 
@@ -6532,7 +6537,7 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
     }
   }
 
-  emitLoadScalarOpsFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, ScalarOps);
+  emitLoadScalarOpsFromVGPRLoop(TII, MRI, *LoopBB, *BodyBB, DL, ScalarOps);
 
   MachineBasicBlock::iterator First = RemainderBB->begin();
   // Restore SCC
@@ -8899,11 +8904,10 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   }
 
   uint16_t Opcode = MI.getOpcode();
-  // FIXME: Copies inserted in the block prolog for live-range split should also
-  // be included.
   return IsNullOrVectorRegister &&
-         (isSpill(Opcode) || (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
-                              MI.modifiesRegister(AMDGPU::EXEC, &RI)));
+         (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode) ||
+          (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
+           MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
 MachineInstrBuilder

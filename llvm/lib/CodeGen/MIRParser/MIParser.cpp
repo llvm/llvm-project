@@ -2654,7 +2654,7 @@ bool MIParser::parseIntrinsicOperand(MachineOperand &Dest) {
   // Find out what intrinsic we're dealing with, first try the global namespace
   // and then the target's private intrinsics if that fails.
   const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();
-  Intrinsic::ID ID = Function::lookupIntrinsicID(Name);
+  Intrinsic::ID ID = Intrinsic::lookupIntrinsicID(Name);
   if (ID == Intrinsic::not_intrinsic && TII)
     ID = static_cast<Intrinsic::ID>(TII->lookupName(Name));
 

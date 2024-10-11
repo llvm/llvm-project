@@ -15,9 +15,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {
+
+class RegionPassManager;
 
 class BottomUpVec final : public FunctionPass {
   bool Change = false;
@@ -25,8 +28,11 @@ class BottomUpVec final : public FunctionPass {
   void vectorizeRec(ArrayRef<Value *> Bndl);
   void tryVectorize(ArrayRef<Value *> Seeds);
 
+  // The PM containing the pipeline of region passes.
+  RegionPassManager RPM;
+
 public:
-  BottomUpVec() : FunctionPass("bottom-up-vec") {}
+  BottomUpVec();
   bool runOnFunction(Function &F) final;
 };
 
