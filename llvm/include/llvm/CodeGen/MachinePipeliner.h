@@ -74,7 +74,6 @@ public:
   const InstrItineraryData *InstrItins = nullptr;
   const TargetInstrInfo *TII = nullptr;
   RegisterClassInfo RegClassInfo;
-  bool disabledByPragma = false;
   unsigned II_setByPragma = 0;
 
 #ifndef NDEBUG
@@ -104,6 +103,11 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
+  enum class EnableState {
+    Unspecified,
+    Enabled,
+    Disabled,
+  } EState;
   void preprocessPhiNodes(MachineBasicBlock &B);
   bool canPipelineLoop(MachineLoop &L);
   bool scheduleLoop(MachineLoop &L);

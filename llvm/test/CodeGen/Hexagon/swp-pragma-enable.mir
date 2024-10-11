@@ -1,0 +1,70 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner -pipeliner-apply-only-enabled-by-pragma %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test that SWP is applied when enabled by pragma.
+
+# CHECK: Schedule Found?
+
+--- |
+  define dso_local void @f(ptr nocapture noundef %a, i32 noundef %n) {
+  entry:
+    %cmp3 = icmp sgt i32 %n, 0
+    br i1 %cmp3, label %for.body, label %for.cond.cleanup
+  
+  for.cond.cleanup:
+    ret void
+  
+  for.body:
+    %lsr.iv5 = phi ptr [ %cgep, %for.body ], [ %a, %entry ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ %n, %entry ]
+    %0 = load i32, ptr %lsr.iv5, align 4, !tbaa !5
+    %add = add nsw i32 %0, 42
+    store i32 %add, ptr %lsr.iv5, align 4, !tbaa !5
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    %cgep = getelementptr i8, ptr %lsr.iv5, i32 4
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !9
+  }
+
+  !5 = !{!6, !6, i64 0}
+  !6 = !{!"int", !7, i64 0}
+  !7 = !{!"omnipotent char", !8, i64 0}
+  !8 = !{!"Simple C/C++ TBAA"}
+  !9 = distinct !{!9, !10, !11, !12}
+  !10 = !{!"llvm.loop.mustprogress"}
+  !11 = !{!"llvm.loop.unroll.disable"}
+  !12 = !{!"llvm.loop.pipeline.enable"}
+
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.3, %bb.1
+    liveins: $r0, $r1
+  
+    %5:intregs = COPY $r1
+    %4:intregs = COPY $r0
+    %6:predregs = C2_cmpgti %5, 0
+    J2_jumpf %6, %bb.1, implicit-def $pc
+  
+  bb.3:
+    %10:intregs = COPY %5
+    J2_loop0r %bb.2, %10, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.2, implicit-def $pc
+  
+  bb.1.for.cond.cleanup:
+    PS_jmpret $r31, implicit-def dead $pc
+  
+  bb.2.for.body:
+    successors: %bb.1, %bb.2
+  
+    %0:intregs = PHI %4, %bb.3, %3, %bb.2
+    %7:intregs = L2_loadri_io %0, 0 :: (load (s32) from %ir.lsr.iv5, !tbaa !5)
+    %8:intregs = nsw A2_addi killed %7, 42
+    %3:intregs = S2_storeri_pi %0, 4, killed %8 :: (store (s32) into %ir.lsr.iv5, !tbaa !5)
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.1, implicit-def $pc
+
+...
