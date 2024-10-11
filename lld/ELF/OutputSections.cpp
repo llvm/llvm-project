@@ -178,8 +178,8 @@ static MergeSyntheticSection *createMergeSynthetic(Ctx &ctx, StringRef name,
                                                    uint64_t flags,
                                                    uint32_t addralign) {
   if ((flags & SHF_STRINGS) && ctx.arg.optimize >= 2)
-    return make<MergeTailSection>(name, type, flags, addralign);
-  return make<MergeNoTailSection>(name, type, flags, addralign);
+    return make<MergeTailSection>(ctx, name, type, flags, addralign);
+  return make<MergeNoTailSection>(ctx, name, type, flags, addralign);
 }
 
 // This function scans over the InputSectionBase list sectionBases to create
