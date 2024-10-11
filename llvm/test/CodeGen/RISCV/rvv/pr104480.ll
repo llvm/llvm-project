@@ -45,9 +45,9 @@ define <vscale x 4 x i64> @test_mulhs_expand(<vscale x 4 x i64> %broadcast.splat
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    lui a0, 349525
 ; CHECK-NEXT:    addi a1, a0, 1365
-; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    addi a0, a0, 1366
 ; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vlse64.v v12, (a0), zero
@@ -73,9 +73,9 @@ define <vscale x 4 x i64> @test_mulhu_expand(<vscale x 4 x i64> %broadcast.splat
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    lui a0, 699051
 ; CHECK-NEXT:    addi a1, a0, -1366
-; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    addi a0, a0, -1365
 ; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vlse64.v v12, (a0), zero
