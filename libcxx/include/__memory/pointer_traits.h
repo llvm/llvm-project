@@ -162,6 +162,15 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*> {
   };
 #endif
 
+#if _LIBCPP_STD_VER >= 26
+  template <unsigned OverAlignment = alignof(element_type)>
+  static constexpr uintptr_t available_bits = ((1ull << OverAlignment) - 1ull);
+  
+  // what to do with upper bits we can't detect at compile-time?
+  template <unsigned OverAlignment = alignof(element_type)> 
+  static constexpr uintptr_t significant_bits = ~available_bits<OverAlignment>;
+#endif
+
 private:
   struct __nat {};
 

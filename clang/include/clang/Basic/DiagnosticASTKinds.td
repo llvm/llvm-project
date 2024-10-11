@@ -219,6 +219,12 @@ def note_constexpr_access_past_end : Note<
   "destruction of}0 "
   "dereferenced one-past-the-end pointer is not allowed "
   "in a constant expression">;
+def note_constexpr_dereferencing_tagged_pointer: Note<
+  "dereferencing tagged pointer">;
+def note_constexpr_tagging_with_shift_zero: Note<
+  "you must shift pointer at least by one bit to store a tag">;
+def note_constexpr_tagging_with_empty_mask: Note<
+  "you must provide non-zero mask for pointer tagging">;
 def note_constexpr_access_unsized_array : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|construction of|"
