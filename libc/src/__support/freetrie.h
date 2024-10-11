@@ -166,6 +166,10 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
     if (cur->size() > size && (!best_fit || cur->size() < best_fit->size())) {
       // The current node is a better fit.
       best_fit = cur;
+
+      // If there is a deferred upper subtrie, then the current node is
+      // somewhere in its lower sibiling subtire. That means that the new best
+      // fit is better than the best fit in the deferred subtrie.
       LIBC_ASSERT(
           !deferred_upper_trie ||
           deferred_upper_range.min > cur->size() &&
