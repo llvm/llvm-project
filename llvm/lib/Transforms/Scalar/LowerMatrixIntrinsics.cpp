@@ -2278,8 +2278,8 @@ public:
           return;
         }
         auto *II = cast<IntrinsicInst>(CI);
-        write(Intrinsic::getBaseName(II->getIntrinsicID())
-                  .drop_front(StringRef("llvm.matrix.").size()));
+        std::string IntName = Intrinsic::getBaseName(II->getIntrinsicID());
+        write(StringRef(IntName).drop_front(StringRef("llvm.matrix.").size()));
         write(".");
         std::string Tmp;
         raw_string_ostream SS(Tmp);

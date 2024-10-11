@@ -44,12 +44,12 @@ static constexpr const char *const IntrinsicNameTable[] = {
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
-StringRef Intrinsic::getBaseName(ID id) {
+std::string Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[id];
 }
 
-StringRef Intrinsic::getName(ID id) {
+std::string Intrinsic::getName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   assert(!Intrinsic::isOverloaded(id) &&
          "This version of getName does not support overloading");
