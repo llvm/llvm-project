@@ -24,7 +24,9 @@ from dex.utils.ReturnCode import ReturnCode
 def _load_com_module():
     try:
         return load_module(
-            "ComInterface", os.path.join(os.path.dirname(__file__), "windows")
+            "ComInterface",
+            os.path.join(os.path.dirname(__file__), "windows"),
+            "ComInterface.py",
         )
     except ImportError as e:
         raise LoadDebuggerException(e, sys.exc_info())
