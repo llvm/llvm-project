@@ -50,10 +50,10 @@ struct DependencyGraphTest : public testing::Test {
     return *AA;
   }
   /// \Returns true if there is a dependency: SrcN->DstN.
-  bool dependency(sandboxir::DGNode *SrcN, sandboxir::DGNode *DstN) {
-    const auto &Preds = DstN->memPreds();
-    auto It = find(Preds, SrcN);
-    return It != Preds.end();
+  bool memDependency(sandboxir::DGNode *SrcN, sandboxir::DGNode *DstN) {
+    if (auto *MemDstN = dyn_cast<sandboxir::MemDGNode>(DstN))
+      return MemDstN->hasMemPred(SrcN);
+    return false;
   }
 };
 
@@ -230,9 +230,10 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_EQ(Span.top(), &*BB->begin());
   EXPECT_EQ(Span.bottom(), BB->getTerminator());
 
-  sandboxir::DGNode *N0 = DAG.getNode(S0);
-  sandboxir::DGNode *N1 = DAG.getNode(S1);
-  sandboxir::DGNode *N2 = DAG.getNode(Ret);
+  auto *N0 = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
+  auto *N1 = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *N2 = DAG.getNode(Ret);
+
   // Check getInstruction().
   EXPECT_EQ(N0->getInstruction(), S0);
   EXPECT_EQ(N1->getInstruction(), S1);
@@ -240,10 +241,51 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_TRUE(N1->hasMemPred(N0));
   EXPECT_FALSE(N0->hasMemPred(N1));
 
+  // Check preds().
+  EXPECT_TRUE(N0->preds(DAG).empty());
+  EXPECT_THAT(N1->preds(DAG), testing::ElementsAre(N0));
+
   // Check memPreds().
   EXPECT_TRUE(N0->memPreds().empty());
   EXPECT_THAT(N1->memPreds(), testing::ElementsAre(N0));
-  EXPECT_TRUE(N2->memPreds().empty());
+  EXPECT_TRUE(N2->preds(DAG).empty());
+}
+
+TEST_F(DependencyGraphTest, Preds) {
+  parseIR(C, R"IR(
+declare ptr @bar(i8)
+define i8 @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v0
+  %add1 = add i8 %v1, %v1
+  %add2 = add i8 %add0, %add1
+  %ptr = call ptr @bar(i8 %add1)
+  store i8 %add2, ptr %ptr
+  ret i8 %add2
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF));
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+
+  auto *AddN0 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *AddN1 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *AddN2 = DAG.getNode(cast<sandboxir::BinaryOperator>(&*It++));
+  auto *CallN = DAG.getNode(cast<sandboxir::CallInst>(&*It++));
+  auto *StN = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
+
+  // Check preds().
+  EXPECT_THAT(AddN0->preds(DAG), testing::ElementsAre());
+  EXPECT_THAT(AddN1->preds(DAG), testing::ElementsAre());
+  EXPECT_THAT(AddN2->preds(DAG), testing::ElementsAre(AddN0, AddN1));
+  EXPECT_THAT(CallN->preds(DAG), testing::ElementsAre(AddN1));
+  EXPECT_THAT(StN->preds(DAG),
+              testing::UnorderedElementsAre(CallN, CallN, AddN2));
+  EXPECT_THAT(RetN->preds(DAG), testing::ElementsAre(AddN2));
 }
 
 TEST_F(DependencyGraphTest, MemDGNode_getPrevNode_getNextNode) {
@@ -305,6 +347,20 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S0N = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
   auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
 
+  // Check getTopMemDGNode().
+  using B = sandboxir::MemDGNodeIntervalBuilder;
+  using InstrInterval = sandboxir::Interval<sandboxir::Instruction>;
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(S0, S0), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(S0, Ret), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(Add0, Add1), DAG), S0N);
+  EXPECT_EQ(B::getTopMemDGNode(InstrInterval(Add0, Add0), DAG), nullptr);
+
+  // Check getBotMemDGNode().
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(S1, S1), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Add0, S1), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Add0, Ret), DAG), S1N);
+  EXPECT_EQ(B::getBotMemDGNode(InstrInterval(Ret, Ret), DAG), nullptr);
+
   // Check empty range.
   EXPECT_THAT(sandboxir::MemDGNodeIntervalBuilder::makeEmpty(),
               testing::ElementsAre());
@@ -358,12 +414,14 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto It = BB->begin();
-  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
-  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store0N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
+  auto *Store1N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_THAT(Store1N->memPreds(), testing::ElementsAre(Store0N));
-  EXPECT_TRUE(RetN->memPreds().empty());
+  EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, NonAliasingStores) {
@@ -381,13 +439,15 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v0, i8 %v1) {
   sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto It = BB->begin();
-  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
-  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store0N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
+  auto *Store1N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   // We expect no dependencies because the stores don't alias.
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_TRUE(Store1N->memPreds().empty());
-  EXPECT_TRUE(RetN->memPreds().empty());
+  EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, VolatileLoads) {
@@ -405,12 +465,14 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto It = BB->begin();
-  auto *Ld0N = DAG.getNode(cast<sandboxir::LoadInst>(&*It++));
-  auto *Ld1N = DAG.getNode(cast<sandboxir::LoadInst>(&*It++));
+  auto *Ld0N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::LoadInst>(&*It++)));
+  auto *Ld1N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::LoadInst>(&*It++)));
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   EXPECT_TRUE(Ld0N->memPreds().empty());
   EXPECT_THAT(Ld1N->memPreds(), testing::ElementsAre(Ld0N));
-  EXPECT_TRUE(RetN->memPreds().empty());
+  EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, VolatileSotres) {
@@ -428,12 +490,14 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v) {
   sandboxir::DependencyGraph DAG(getAA(*LLVMF));
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto It = BB->begin();
-  auto *Store0N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
-  auto *Store1N = DAG.getNode(cast<sandboxir::StoreInst>(&*It++));
+  auto *Store0N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
+  auto *Store1N = cast<sandboxir::MemDGNode>(
+      DAG.getNode(cast<sandboxir::StoreInst>(&*It++)));
   auto *RetN = DAG.getNode(cast<sandboxir::ReturnInst>(&*It++));
   EXPECT_TRUE(Store0N->memPreds().empty());
   EXPECT_THAT(Store1N->memPreds(), testing::ElementsAre(Store0N));
-  EXPECT_TRUE(RetN->memPreds().empty());
+  EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
 TEST_F(DependencyGraphTest, Call) {
@@ -457,12 +521,12 @@ define void @foo(float %v1, float %v2) {
   DAG.extend({&*BB->begin(), BB->getTerminator()->getPrevNode()});
 
   auto It = BB->begin();
-  auto *Call1N = DAG.getNode(&*It++);
+  auto *Call1N = cast<sandboxir::MemDGNode>(DAG.getNode(&*It++));
   auto *AddN = DAG.getNode(&*It++);
-  auto *Call2N = DAG.getNode(&*It++);
+  auto *Call2N = cast<sandboxir::MemDGNode>(DAG.getNode(&*It++));
 
   EXPECT_THAT(Call1N->memPreds(), testing::ElementsAre());
-  EXPECT_THAT(AddN->memPreds(), testing::ElementsAre());
+  EXPECT_THAT(AddN->preds(DAG), testing::ElementsAre());
   EXPECT_THAT(Call2N->memPreds(), testing::ElementsAre(Call1N));
 }
 
@@ -493,8 +557,8 @@ define void @foo() {
   auto *AllocaN = DAG.getNode(&*It++);
   auto *StackRestoreN = DAG.getNode(&*It++);
 
-  EXPECT_TRUE(dependency(AllocaN, StackRestoreN));
-  EXPECT_TRUE(dependency(StackSaveN, AllocaN));
+  EXPECT_TRUE(memDependency(AllocaN, StackRestoreN));
+  EXPECT_TRUE(memDependency(StackSaveN, AllocaN));
 }
 
 // Checks that stacksave and stackrestore depend on other mem instrs.
@@ -526,9 +590,9 @@ define void @foo(i8 %v0, i8 %v1, ptr %ptr) {
   auto *StackRestoreN = DAG.getNode(&*It++);
   auto *Store1N = DAG.getNode(&*It++);
 
-  EXPECT_TRUE(dependency(Store0N, StackSaveN));
-  EXPECT_TRUE(dependency(StackSaveN, StackRestoreN));
-  EXPECT_TRUE(dependency(StackRestoreN, Store1N));
+  EXPECT_TRUE(memDependency(Store0N, StackSaveN));
+  EXPECT_TRUE(memDependency(StackSaveN, StackRestoreN));
+  EXPECT_TRUE(memDependency(StackRestoreN, Store1N));
 }
 
 // Make sure there is a dependency between a stackrestore and an alloca.
@@ -555,7 +619,7 @@ define void @foo(ptr %ptr) {
   auto *StackRestoreN = DAG.getNode(&*It++);
   auto *AllocaN = DAG.getNode(&*It++);
 
-  EXPECT_TRUE(dependency(StackRestoreN, AllocaN));
+  EXPECT_TRUE(memDependency(StackRestoreN, AllocaN));
 }
 
 // Make sure there is a dependency between the alloca and stacksave
@@ -582,7 +646,7 @@ define void @foo(ptr %ptr) {
   auto *AllocaN = DAG.getNode(&*It++);
   auto *StackSaveN = DAG.getNode(&*It++);
 
-  EXPECT_TRUE(dependency(AllocaN, StackSaveN));
+  EXPECT_TRUE(memDependency(AllocaN, StackSaveN));
 }
 
 // A non-InAlloca in a stacksave-stackrestore region does not need extra
@@ -614,6 +678,6 @@ define void @foo() {
   auto *AllocaN = DAG.getNode(&*It++);
   auto *StackRestoreN = DAG.getNode(&*It++);
 
-  EXPECT_FALSE(dependency(StackSaveN, AllocaN));
-  EXPECT_FALSE(dependency(AllocaN, StackRestoreN));
+  EXPECT_FALSE(memDependency(StackSaveN, AllocaN));
+  EXPECT_FALSE(memDependency(AllocaN, StackRestoreN));
 }

@@ -103,7 +103,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX1210-NEXT:  .LBB0_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    flat_load_b128 v[2:5], v0, s[2:3] offset:-176
-; GFX1210-NEXT:    flat_prefetch_b8 v0, s[2:3]
+; GFX1210-NEXT:    flat_prefetch_b8 v0, s[2:3] scope:SCOPE_SE
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
@@ -231,7 +231,7 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX1210-NEXT:  .LBB1_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    global_load_b128 v[2:5], v0, s[2:3] offset:-176
-; GFX1210-NEXT:    global_prefetch_b8 v0, s[2:3]
+; GFX1210-NEXT:    global_prefetch_b8 v0, s[2:3] scope:SCOPE_SE
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
@@ -362,7 +362,7 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX1210-NEXT:  .LBB2_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    global_prefetch_b8 v0, s[2:3] offset:176
+; GFX1210-NEXT:    global_prefetch_b8 v0, s[2:3] offset:176 scope:SCOPE_SE
 ; GFX1210-NEXT:    s_load_b128 s[8:11], s[2:3], 0x0
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -655,7 +655,7 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX1210-NEXT:  .LBB4_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    flat_load_b128 v[4:7], v[2:3] offset:-176
-; GFX1210-NEXT:    flat_prefetch_b8 v[2:3]
+; GFX1210-NEXT:    flat_prefetch_b8 v[2:3] scope:SCOPE_SE
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_add_nc_u64_e32 v[2:3], 16, v[2:3]
 ; GFX1210-NEXT:    s_add_co_i32 s0, s0, -1
@@ -831,7 +831,7 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX1210-NEXT:  .LBB5_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:-176
-; GFX1210-NEXT:    global_prefetch_b8 v[2:3], off
+; GFX1210-NEXT:    global_prefetch_b8 v[2:3], off scope:SCOPE_SE
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
 ; GFX1210-NEXT:    v_add_nc_u64_e32 v[2:3], 16, v[2:3]
 ; GFX1210-NEXT:    s_add_co_i32 s0, s0, -1

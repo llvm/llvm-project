@@ -156,6 +156,14 @@
 // CHECK-DAG: #[[LABEL2:.*]] =  #llvm.di_label<scope = #[[BLOCK2]]>
 #label2 = #llvm.di_label<scope = #block2>
 
+// CHECK-DAG: #llvm.di_common_block<scope = #[[SP1]], name = "block", file = #[[FILE]], line = 3>
+#di_common_block = #llvm.di_common_block<scope = #sp1, name = "block", file = #file, line = 3>
+#global_var = #llvm.di_global_variable<scope = #di_common_block, name = "a",
+ file = #file, line = 2, type = #int0>
+#var_expression = #llvm.di_global_variable_expression<var = #global_var,
+ expr = <>>
+llvm.mlir.global common @block_() {dbg_expr = #var_expression} : i64
+
 // CHECK: llvm.func @addr(%[[ARG:.*]]: i64)
 llvm.func @addr(%arg: i64) {
   // CHECK: %[[ALLOC:.*]] = llvm.alloca

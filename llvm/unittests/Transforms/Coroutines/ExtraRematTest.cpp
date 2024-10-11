@@ -247,7 +247,7 @@ TEST_F(ExtraRematTest, TestCoroRematWithCustomABI) {
   ASSERT_TRUE(M);
 
   CoroSplitPass::BaseABITy GenCustomABI = [](Function &F, coro::Shape &S) {
-    return std::unique_ptr<coro::BaseABI>(new ExtraCustomABI(F, S));
+    return std::make_unique<ExtraCustomABI>(F, S);
   };
 
   CGSCCPassManager CGPM;
