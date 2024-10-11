@@ -92,7 +92,7 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   };
 
   if (!json_obj || llvm::is_contained(unsupported_type, json_obj->GetType()))
-    error.SetErrorString("Invalid Syntax");
+    error = Status::FromErrorString("Invalid Syntax");
   return error;
 }
 

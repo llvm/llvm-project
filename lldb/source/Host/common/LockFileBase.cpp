@@ -11,9 +11,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static Status AlreadyLocked() { return Status("Already locked"); }
+static Status AlreadyLocked() {
+  return Status::FromErrorString("Already locked");
+}
 
-static Status NotLocked() { return Status("Not locked"); }
+static Status NotLocked() { return Status::FromErrorString("Not locked"); }
 
 LockFileBase::LockFileBase(int fd)
     : m_fd(fd), m_locked(false), m_start(0), m_len(0) {}
@@ -62,7 +64,7 @@ bool LockFileBase::IsValidFile() const { return m_fd != -1; }
 Status LockFileBase::DoLock(const Locker &locker, const uint64_t start,
                             const uint64_t len) {
   if (!IsValidFile())
-    return Status("File is invalid");
+    return Status::FromErrorString("File is invalid");
 
   if (IsLocked())
     return AlreadyLocked();

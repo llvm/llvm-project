@@ -18,8 +18,12 @@ using namespace lldb;
 
 TEST(StatusTest, Formatv) {
   EXPECT_EQ("", llvm::formatv("{0}", Status()).str());
-  EXPECT_EQ("Hello Status", llvm::formatv("{0}", Status("Hello Status")).str());
-  EXPECT_EQ("Hello", llvm::formatv("{0:5}", Status("Hello Error")).str());
+  EXPECT_EQ(
+      "Hello Status",
+      llvm::formatv("{0}", Status::FromErrorString("Hello Status")).str());
+  EXPECT_EQ(
+      "Hello",
+      llvm::formatv("{0:5}", Status::FromErrorString("Hello Error")).str());
 }
 
 TEST(StatusTest, ErrorConstructor) {
@@ -59,7 +63,7 @@ TEST(StatusTest, ErrorConversion) {
   EXPECT_EQ(EAGAIN, ec.value());
   EXPECT_EQ(std::generic_category(), ec.category());
 
-  llvm::Error foo = Status("foo").ToError();
+  llvm::Error foo = Status::FromErrorString("foo").ToError();
   EXPECT_TRUE(bool(foo));
   EXPECT_EQ("foo", llvm::toString(std::move(foo)));
 }

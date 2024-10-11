@@ -632,12 +632,11 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
                                    size_t byte_size) {
   Status error;
   if (value_str == nullptr || value_str[0] == '\0') {
-    error.SetErrorString("Invalid c-string value string.");
-    return error;
+    return Status::FromErrorString("Invalid c-string value string.");
   }
   switch (encoding) {
   case eEncodingInvalid:
-    error.SetErrorString("Invalid encoding.");
+    return Status::FromErrorString("Invalid encoding.");
     break;
 
   case eEncodingSint:
@@ -647,7 +646,7 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     bool is_negative = is_signed && str.consume_front("-");
     APInt integer;
     if (str.getAsInteger(0, integer)) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "'{0}' is not a valid integer string value", value_str);
       break;
     }
@@ -660,7 +659,7 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     } else
       fits = integer.isIntN(byte_size * 8);
     if (!fits) {
-      error.SetErrorStringWithFormatv(
+      error = Status::FromErrorStringWithFormatv(
           "value {0} is too large to fit in a {1} byte integer value",
           value_str, byte_size);
       break;
@@ -690,7 +689,7 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
   }
 
   case eEncodingVector:
-    error.SetErrorString("vector encoding unsupported.");
+    return Status::FromErrorString("vector encoding unsupported.");
     break;
   }
   if (error.Fail())
@@ -704,15 +703,15 @@ Status Scalar::SetValueFromData(const DataExtractor &data,
   Status error;
   switch (encoding) {
   case lldb::eEncodingInvalid:
-    error.SetErrorString("invalid encoding");
+    return Status::FromErrorString("invalid encoding");
     break;
   case lldb::eEncodingVector:
-    error.SetErrorString("vector encoding unsupported");
+    return Status::FromErrorString("vector encoding unsupported");
     break;
   case lldb::eEncodingUint:
   case lldb::eEncodingSint: {
     if (data.GetByteSize() < byte_size)
-      return Status("insufficient data");
+      return Status::FromErrorString("insufficient data");
     m_type = e_int;
     m_integer =
         APSInt(APInt::getZero(8 * byte_size), encoding == eEncodingUint);
@@ -735,8 +734,8 @@ Status Scalar::SetValueFromData(const DataExtractor &data,
     else if (byte_size == sizeof(long double))
       operator=(data.GetLongDouble(&offset));
     else
-      error.SetErrorStringWithFormat("unsupported float byte size: %" PRIu64 "",
-                                     static_cast<uint64_t>(byte_size));
+      return Status::FromErrorStringWithFormatv(
+          "unsupported float byte size: {0}", static_cast<uint64_t>(byte_size));
   } break;
   }
 
@@ -775,7 +774,7 @@ size_t Scalar::GetAsMemoryData(void *dst, size_t dst_len,
   // Get a data extractor that points to the native scalar data
   DataExtractor data;
   if (!GetData(data)) {
-    error.SetErrorString("invalid scalar value");
+    error = Status::FromErrorString("invalid scalar value");
     return 0;
   }
 
@@ -789,7 +788,7 @@ size_t Scalar::GetAsMemoryData(void *dst, size_t dst_len,
                                dst_len,         // dst length
                                dst_byte_order); // dst byte order
   if (bytes_copied == 0)
-    error.SetErrorString("failed to copy data");
+    error = Status::FromErrorString("failed to copy data");
 
   return bytes_copied;
 }

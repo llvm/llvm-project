@@ -35,7 +35,7 @@ bool SaveMiniDump(const lldb::ProcessSP &process_sp,
   const llvm::UTF8 *error_ptr = nullptr;
   if (!llvm::ConvertUTF8toWide(sizeof(wchar_t), file_name, result_ptr,
                                error_ptr)) {
-    error.SetErrorString("cannot convert file name");
+    error = Status::FromErrorString("cannot convert file name");
     return false;
   }
   HANDLE file_handle =

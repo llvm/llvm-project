@@ -55,8 +55,8 @@ std::unique_ptr<Acceptor> Acceptor::Create(StringRef name,
   if (std::optional<URI> res = URI::Parse(name)) {
     if (!Socket::FindProtocolByScheme(res->scheme.str().c_str(),
                                       socket_protocol))
-      error.SetErrorStringWithFormat("Unknown protocol scheme \"%s\"",
-                                     res->scheme.str().c_str());
+      error = Status::FromErrorStringWithFormat(
+          "Unknown protocol scheme \"%s\"", res->scheme.str().c_str());
     else
       name = name.drop_front(res->scheme.size() + strlen("://"));
   } else {

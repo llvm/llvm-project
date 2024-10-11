@@ -1856,7 +1856,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
 
   const char *dwo_name = GetDWOName(*dwarf_cu, cu_die);
   if (!dwo_name) {
-    unit.SetDwoError(Status::createWithFormat(
+    unit.SetDwoError(Status::FromErrorStringWithFormatv(
         "missing DWO name in skeleton DIE {0:x16}", cu_die.GetOffset()));
     return nullptr;
   }
@@ -1989,7 +1989,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
       error_dwo_path.PrependPathComponent(comp_dir);
       FileSystem::Instance().Resolve(error_dwo_path);
     }
-    unit.SetDwoError(Status::createWithFormat(
+    unit.SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
         "{1:x16}",
         error_dwo_path.GetPath().c_str(), cu_die.GetOffset()));
@@ -2010,7 +2010,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
       FileSystem::Instance().GetByteSize(dwo_file), dwo_file_data_sp,
       dwo_file_data_offset);
   if (dwo_obj_file == nullptr) {
-    unit.SetDwoError(Status::createWithFormat(
+    unit.SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to load object file for .dwo debug file \"{0}\" for "
         "unit DIE {1:x16}",
         dwo_name, cu_die.GetOffset()));
@@ -4546,8 +4546,9 @@ Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {
   if (dwarf_cu->HasAny({DW_TAG_variable, DW_TAG_formal_parameter}))
     return Status();
 
-  return Status("no variable information is available in debug info for this "
-                "compile unit");
+  return Status::FromErrorString(
+      "no variable information is available in debug info for this "
+      "compile unit");
 }
 
 void SymbolFileDWARF::GetCompileOptions(

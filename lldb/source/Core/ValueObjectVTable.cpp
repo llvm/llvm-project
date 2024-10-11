@@ -51,25 +51,25 @@ protected:
     m_value.Clear();
     ValueObject *parent = GetParent();
     if (!parent) {
-      m_error.SetErrorString("owning vtable object not valid");
+      m_error = Status::FromErrorString("owning vtable object not valid");
       return false;
     }
 
     addr_t parent_addr = parent->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
     if (parent_addr == LLDB_INVALID_ADDRESS) {
-      m_error.SetErrorString("invalid vtable address");
+      m_error = Status::FromErrorString("invalid vtable address");
       return false;
     }
 
     ProcessSP process_sp = GetProcessSP();
     if (!process_sp) {
-      m_error.SetErrorString("no process");
+      m_error = Status::FromErrorString("no process");
       return false;
     }
 
     TargetSP target_sp = GetTargetSP();
     if (!target_sp) {
-      m_error.SetErrorString("no target");
+      m_error = Status::FromErrorString("no target");
       return false;
     }
 
@@ -78,7 +78,7 @@ protected:
     addr_t vfunc_ptr =
         process_sp->ReadPointerFromMemory(vtable_entry_addr, m_error);
     if (m_error.Fail()) {
-      m_error.SetErrorStringWithFormat(
+      m_error = Status::FromErrorStringWithFormat(
           "failed to read virtual function entry 0x%16.16" PRIx64,
           vtable_entry_addr);
       return false;
@@ -196,13 +196,13 @@ bool ValueObjectVTable::UpdateValue() {
   m_num_vtable_entries = 0;
   ValueObject *parent = GetParent();
   if (!parent) {
-    m_error.SetErrorString("no parent object");
+    m_error = Status::FromErrorString("no parent object");
     return false;
   }
 
   ProcessSP process_sp = GetProcessSP();
   if (!process_sp) {
-    m_error.SetErrorString("no process");
+    m_error = Status::FromErrorString("no process");
     return false;
   }
 
@@ -210,7 +210,7 @@ bool ValueObjectVTable::UpdateValue() {
   LanguageRuntime *language_runtime = process_sp->GetLanguageRuntime(language);
 
   if (language_runtime == nullptr) {
-    m_error.SetErrorStringWithFormat(
+    m_error = Status::FromErrorStringWithFormat(
         "no language runtime support for the language \"%s\"",
         Language::GetNameForLanguageType(language));
     return false;
@@ -230,7 +230,7 @@ bool ValueObjectVTable::UpdateValue() {
 
   m_vtable_symbol = vtable_info_or_err->symbol;
   if (!m_vtable_symbol) {
-    m_error.SetErrorStringWithFormat(
+    m_error = Status::FromErrorStringWithFormat(
         "no vtable symbol found containing 0x%" PRIx64, vtable_start_addr);
     return false;
   }
@@ -240,7 +240,7 @@ bool ValueObjectVTable::UpdateValue() {
 
   // Calculate the number of entries
   if (!m_vtable_symbol->GetByteSizeIsValid()) {
-    m_error.SetErrorStringWithFormat(
+    m_error = Status::FromErrorStringWithFormat(
         "vtable symbol \"%s\" doesn't have a valid size",
         m_vtable_symbol->GetMangled().GetDemangledName().GetCString());
     return false;
