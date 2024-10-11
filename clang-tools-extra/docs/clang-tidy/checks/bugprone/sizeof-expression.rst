@@ -311,7 +311,7 @@ Options
    idiomatic expressions that are probably intentional and correct).
    This detects occurrences of CWE 467. Default is `false`.
 
-.. option:: WarnOnArithmeticWithDivisionBySizeOWarnOnArithmeticWithDivisionBySizeOf
+.. option:: WarnOnArithmeticWithDivisionBySizeOf
 
    When `true`, the check will warn on pointer arithmetic where the
    element count is obtained from a division with ``sizeof(...)``,
