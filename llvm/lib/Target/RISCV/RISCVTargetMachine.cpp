@@ -94,9 +94,9 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool> EnableMISchedLoadClustering(
-    "riscv-misched-load-clustering", cl::Hidden,
-    cl::desc("Enable load clustering in the machine scheduler"),
+static cl::opt<bool> EnableMISchedLoadStoreClustering(
+    "riscv-misched-load-store-clustering", cl::Hidden,
+    cl::desc("Enable load and store clustering in the machine scheduler"),
     cl::init(true));
 
 static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
@@ -352,9 +352,11 @@ public:
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override {
     ScheduleDAGMILive *DAG = nullptr;
-    if (EnableMISchedLoadClustering) {
+    if (EnableMISchedLoadStoreClustering) {
       DAG = createGenericSchedLive(C);
       DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+      DAG->addMutation(createStoreClusterDAGMutation(
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
     return DAG;
