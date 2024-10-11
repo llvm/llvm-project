@@ -7,9 +7,8 @@
 define i16 @D134605() {
 ; CHECK-LABEL: @D134605(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX81:%.*]] = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 3
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX81]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr poison, align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
 ; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i16 poison, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP2]], 2
@@ -45,12 +44,10 @@ declare i16 @check_i16(i16, i16, i16)
 
 define void @PR58054() {
 ; CHECK-LABEL: @PR58054(
-; CHECK-NEXT:    [[VAL:%.*]] = add i64 poison, poison
-; CHECK-NEXT:    [[VAL2:%.*]] = add i64 poison, poison
-; CHECK-NEXT:    [[VAL3:%.*]] = mul i64 [[VAL2]], [[VAL]]
-; CHECK-NEXT:    [[VAL4:%.*]] = mul i64 [[VAL3]], [[VAL2]]
-; CHECK-NEXT:    [[VAL5:%.*]] = mul i64 [[VAL4]], [[VAL2]]
-; CHECK-NEXT:    [[VAL7:%.*]] = add i64 [[VAL]], [[VAL5]]
+; CHECK-NEXT:    [[VAL3:%.*]] = mul i64 poison, poison
+; CHECK-NEXT:    [[VAL4:%.*]] = mul i64 [[VAL3]], poison
+; CHECK-NEXT:    [[VAL5:%.*]] = mul i64 [[VAL4]], poison
+; CHECK-NEXT:    [[VAL7:%.*]] = add i64 poison, [[VAL5]]
 ; CHECK-NEXT:    [[VAL8:%.*]] = sitofp i64 [[VAL7]] to double
 ; CHECK-NEXT:    call void @wibble(i32 poison, double [[VAL8]], i64 poison)
 ; CHECK-NEXT:    unreachable

@@ -4,12 +4,16 @@
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> undef, float 0.000000e+00, i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float 0.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float 0.000000e+00, i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float 0.000000e+00, i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub float 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub float 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul float 0.000000e+00, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP2]], float 0.000000e+00, i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub float 0.000000e+00, [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub float [[TMP7]], [[TMP10]]
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP8]], i32 0
 ; CHECK-NEXT:    unreachable
 ;
 entry:
