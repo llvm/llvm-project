@@ -13,8 +13,8 @@
 #include "src/stdlib/malloc.h"
 #include "test/UnitTest/Test.h"
 
-using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::Block;
+using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
 
