@@ -43,12 +43,17 @@ protected:
       consumeError(EPC.takeError());
       GTEST_SKIP();
     }
+
+    auto DLOrErr = JTMB->getDefaultDataLayoutForTarget();
+    if (!DLOrErr) {
+      consumeError(DLOrErr.takeError());
+      GTEST_SKIP();
+    }
     ES = std::make_unique<ExecutionSession>(std::move(*EPC));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
         *ES, std::make_unique<InProcessMemoryManager>(16384));
-    DL = std::make_unique<DataLayout>(
-        cantFail(JTMB->getDefaultDataLayoutForTarget()));
+    DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
 
     auto TM = JTMB->createTargetMachine();
     if (!TM) {
