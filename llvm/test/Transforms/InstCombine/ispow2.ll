@@ -1528,7 +1528,7 @@ define <2 x i1> @not_pow2_or_z_known_bits_fail_wrong_cmp(<2 x i32> %xin) {
 define i1 @has_single_bit(i32 %x) {
 ; CHECK-LABEL: @has_single_bit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    [[SEL:%.*]] = icmp eq i32 [[POPCNT]], 1
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
@@ -1543,7 +1543,7 @@ entry:
 define i1 @has_single_bit_inv(i32 %x) {
 ; CHECK-LABEL: @has_single_bit_inv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    [[SEL:%.*]] = icmp ne i32 [[POPCNT]], 1
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
