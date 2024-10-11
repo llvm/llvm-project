@@ -2195,6 +2195,14 @@ mlir::Value buildNeonCall(unsigned int builtinID, CIRGenFunction &cgf,
   }
 }
 
+/// Get integer from a mlir::Value that is an int constant or a constant op.
+static int64_t getIntValueFromConstOp(mlir::Value val) {
+  auto constOp = mlir::cast<mlir::cir::ConstantOp>(val.getDefiningOp());
+  return (mlir::cast<mlir::cir::IntAttr>(constOp.getValue()))
+      .getValue()
+      .getSExtValue();
+}
+
 mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     unsigned builtinID, unsigned llvmIntrinsic, unsigned altLLVMIntrinsic,
     const char *nameHint, unsigned modifier, const CallExpr *e,
@@ -2238,6 +2246,18 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     // It really is truncation in this context.
     // In CIR, integral cast op supports vector of int type truncating.
     return builder.createIntCast(ops[0], ty);
+  }
+  case NEON::BI__builtin_neon_vext_v:
+  case NEON::BI__builtin_neon_vextq_v: {
+    int cv = getIntValueFromConstOp(ops[2]);
+    llvm::SmallVector<int64_t, 16> indices;
+    for (unsigned i = 0, e = vTy.getSize(); i != e; ++i)
+      indices.push_back(i + cv);
+
+    ops[0] = builder.createBitcast(ops[0], ty);
+    ops[1] = builder.createBitcast(ops[1], ty);
+    return builder.createVecShuffle(getLoc(e->getExprLoc()), ops[0], ops[1],
+                                    indices);
   }
   }
 
