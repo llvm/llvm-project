@@ -96,7 +96,7 @@ define i64 @zextw_i64(i64 %a) nounwind {
 ;
 ; RV64ZBA-LABEL: zextw_i64:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    ret
   %and = and i64 %a, 4294967295
   ret i64 %and
@@ -117,7 +117,7 @@ define i64 @zextw_demandedbits_i64(i64 %0) {
 ; RV64ZBA-LABEL: zextw_demandedbits_i64:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    li a1, -2
-; RV64ZBA-NEXT:    zext.w a1, a1
+; RV64ZBA-NEXT:    add.uw a1, a1, zero
 ; RV64ZBA-NEXT:    and a0, a0, a1
 ; RV64ZBA-NEXT:    ori a0, a0, 1
 ; RV64ZBA-NEXT:    ret
@@ -396,14 +396,14 @@ define zeroext i32 @sext_ashr_zext_i8(i8 %a) nounwind {
 ; RV64ZBANOZBB:       # %bb.0:
 ; RV64ZBANOZBB-NEXT:    slli a0, a0, 56
 ; RV64ZBANOZBB-NEXT:    srai a0, a0, 63
-; RV64ZBANOZBB-NEXT:    zext.w a0, a0
+; RV64ZBANOZBB-NEXT:    add.uw a0, a0, zero
 ; RV64ZBANOZBB-NEXT:    ret
 ;
 ; RV64ZBAZBB-LABEL: sext_ashr_zext_i8:
 ; RV64ZBAZBB:       # %bb.0:
 ; RV64ZBAZBB-NEXT:    sext.b a0, a0
 ; RV64ZBAZBB-NEXT:    srai a0, a0, 9
-; RV64ZBAZBB-NEXT:    zext.w a0, a0
+; RV64ZBAZBB-NEXT:    add.uw a0, a0, zero
 ; RV64ZBAZBB-NEXT:    ret
   %ext = sext i8 %a to i32
   %1 = ashr i32 %ext, 9
@@ -516,14 +516,14 @@ define zeroext i32 @sext_ashr_zext_i16(i16 %a) nounwind {
 ; RV64ZBANOZBB:       # %bb.0:
 ; RV64ZBANOZBB-NEXT:    slli a0, a0, 48
 ; RV64ZBANOZBB-NEXT:    srai a0, a0, 57
-; RV64ZBANOZBB-NEXT:    zext.w a0, a0
+; RV64ZBANOZBB-NEXT:    add.uw a0, a0, zero
 ; RV64ZBANOZBB-NEXT:    ret
 ;
 ; RV64ZBAZBB-LABEL: sext_ashr_zext_i16:
 ; RV64ZBAZBB:       # %bb.0:
 ; RV64ZBAZBB-NEXT:    sext.h a0, a0
 ; RV64ZBAZBB-NEXT:    srai a0, a0, 9
-; RV64ZBAZBB-NEXT:    zext.w a0, a0
+; RV64ZBAZBB-NEXT:    add.uw a0, a0, zero
 ; RV64ZBAZBB-NEXT:    ret
   %ext = sext i16 %a to i32
   %1 = ashr i32 %ext, 9
@@ -1011,7 +1011,7 @@ define i64 @pack_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV64ZBA-LABEL: pack_i64:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    slli a1, a1, 32
 ; RV64ZBA-NEXT:    or a0, a1, a0
 ; RV64ZBA-NEXT:    ret
@@ -1034,8 +1034,8 @@ define i64 @pack_i64_2(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBA-LABEL: pack_i64_2:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
-; RV64ZBA-NEXT:    zext.w a1, a1
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
+; RV64ZBA-NEXT:    add.uw a1, a1, zero
 ; RV64ZBA-NEXT:    slli a1, a1, 32
 ; RV64ZBA-NEXT:    or a0, a1, a0
 ; RV64ZBA-NEXT:    ret
@@ -1056,7 +1056,7 @@ define i64 @pack_i64_disjoint(i64 %a, i64 %b) nounwind {
 ;
 ; RV64ZBA-LABEL: pack_i64_disjoint:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    or a0, a1, a0
 ; RV64ZBA-NEXT:    ret
   %shl = and i64 %a, 4294967295
@@ -1074,7 +1074,7 @@ define i64 @pack_i64_disjoint_2(i32 signext %a, i64 %b) nounwind {
 ;
 ; RV64ZBA-LABEL: pack_i64_disjoint_2:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    or a0, a1, a0
 ; RV64ZBA-NEXT:    ret
   %zexta = zext i32 %a to i64
@@ -1450,7 +1450,7 @@ define ptr @gep_lshr_i32(ptr %0, i64 %1) {
 ; RV64ZBA-LABEL: gep_lshr_i32:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    srli a1, a1, 2
-; RV64ZBA-NEXT:    zext.w a1, a1
+; RV64ZBA-NEXT:    add.uw a1, a1, zero
 ; RV64ZBA-NEXT:    li a2, 80
 ; RV64ZBA-NEXT:    mul a1, a1, a2
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -1671,9 +1671,9 @@ define i64 @add_u32simm32_zextw(i64 %x) nounwind {
 ; RV64ZBA-LABEL: add_u32simm32_zextw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    li a1, -2
-; RV64ZBA-NEXT:    zext.w a1, a1
+; RV64ZBA-NEXT:    add.uw a1, a1, zero
 ; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add i64 %x, 4294967294

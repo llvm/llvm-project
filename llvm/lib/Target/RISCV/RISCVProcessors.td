@@ -88,7 +88,9 @@ def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                       FeatureStdExtD,
                                       FeatureStdExtC,
                                       FeatureStdExtZba,
-                                      FeatureStdExtZbb],
+                                      FeatureStdExtZbb,
+                                      FeatureMIPSCMov,
+                                      FeatureMIPSLoadStorePairs],
                                      [TuneMIPSP8700]>;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",

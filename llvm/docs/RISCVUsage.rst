@@ -426,6 +426,12 @@ The current vendor extensions supported are:
 ``Xwchc``
   LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
 
+``xmipscmove``
+  LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
+
+``xmipslsp``
+  LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
+
 Experimental C Intrinsics
 =========================
 

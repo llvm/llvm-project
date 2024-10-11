@@ -62,6 +62,15 @@ static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     "riscv-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
+static cl::opt<bool>
+    UseLoadStorePairsOpt("riscv-load-store-pairs",
+                         cl::desc("RISCV: Optimize for load-store bonding"),
+                         cl::init(false), cl::Hidden);
+
+static cl::opt<bool> UseCCMovInsn("riscv-ccmov",
+                                  cl::desc("RISCV: Use 'ccmov' instruction"),
+                                  cl::init(true), cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -206,4 +215,12 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // Spilling is generally expensive on all RISC-V cores, so always enable
   // register-pressure tracking. This will increase compile time.
   Policy.ShouldTrackPressure = true;
+}
+
+bool RISCVSubtarget::useLoadStorePairs() const {
+  return UseLoadStorePairsOpt && HasMIPSLSP;
+}
+
+bool RISCVSubtarget::useCCMovInsn() const {
+  return UseCCMovInsn && HasMIPSCMov;
 }

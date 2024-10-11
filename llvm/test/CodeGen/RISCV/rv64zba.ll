@@ -3230,7 +3230,7 @@ define i64 @add_u32simm32_zextw(i64 %x) nounwind {
 ; RV64ZBA-LABEL: add_u32simm32_zextw:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    addi a0, a0, -2
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    ret
 entry:
   %add = add i64 %x, 4294967294

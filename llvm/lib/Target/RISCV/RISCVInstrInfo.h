@@ -298,6 +298,15 @@ public:
 
   unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
+  /// Return true if pairing the given load or store may be paired with another.
+  static bool isPairableLdStInstOpc(unsigned Opc);
+
+  static bool isLdStSafeToPair(const MachineInstr &LdSt,
+                               const TargetRegisterInfo *TRI);
+
+  std::optional<std::pair<unsigned, unsigned>>
+  isRVVSpillForZvlsseg(unsigned Opcode) const;
+
 protected:
   const RISCVSubtarget &STI;
 

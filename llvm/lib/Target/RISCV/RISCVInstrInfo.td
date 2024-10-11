@@ -251,6 +251,147 @@ def simm12 : RISCVSImmLeafOp<12> {
   }];
 }
 
+// A 7-bit unsigned immediate where the least significant two bits are zero.
+def uimm7_lsb00 : RISCVOp,
+                  ImmLeaf<XLenVT, [{return isShiftedUInt<5, 2>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<7, "Lsb00">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<7>";
+  let OperandType = "OPERAND_UIMM7_LSB00";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<5, 2>(Imm);
+  }];
+}
+
+// A 7-bit unsigned immediate where the least significant three bits are zero.
+def uimm7_lsb000 : RISCVOp,
+                   ImmLeaf<XLenVT, [{return isShiftedUInt<4, 3>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<7, "Lsb000">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<7>";
+  let OperandType = "OPERAND_UIMM7_LSB000";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<4, 3>(Imm);
+  }];
+}
+
+// A 8-bit unsigned immediate where the least significant two bits are zero.
+def uimm8_lsb00 : RISCVOp,
+                  ImmLeaf<XLenVT, [{return isShiftedUInt<6, 2>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<8, "Lsb00">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<8>";
+  let OperandType = "OPERAND_UIMM8_LSB00";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<6, 2>(Imm);
+  }];
+}
+
+// A 8-bit unsigned immediate where the least significant three bits are zero.
+def uimm8_lsb000 : RISCVOp,
+                   ImmLeaf<XLenVT, [{return isShiftedUInt<5, 3>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<8, "Lsb000">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<8>";
+  let OperandType = "OPERAND_UIMM8_LSB000";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<5, 3>(Imm);
+  }];
+}
+
+// A 9-bit signed immediate where the least significant bit is zero.
+def simm9_lsb0 : Operand<OtherVT>,
+                 ImmLeaf<XLenVT, [{return isShiftedInt<8, 1>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<9, "Lsb0">;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsr1";
+  let DecoderMethod = "decodeSImmOperandAndLsl1<9>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<8, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+
+  }];
+  let OperandType = "OPERAND_PCREL";
+}
+
+// A 9-bit unsigned immediate where the least significant three bits are zero.
+def uimm9_lsb000 : RISCVOp,
+                   ImmLeaf<XLenVT, [{return isShiftedUInt<6, 3>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<9, "Lsb000">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<9>";
+  let OperandType = "OPERAND_UIMM9_LSB000";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<6, 3>(Imm);
+  }];
+}
+
+// A 10-bit unsigned immediate where the least significant two bits are zero
+// and the immediate can't be zero.
+def uimm10_lsb00nonzero : RISCVOp,
+                          ImmLeaf<XLenVT,
+                          [{return isShiftedUInt<8, 2>(Imm) && (Imm != 0);}]> {
+  let ParserMatchClass = UImmAsmOperand<10, "Lsb00NonZero">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmNonZeroOperand<10>";
+  let OperandType = "OPERAND_UIMM10_LSB00_NONZERO";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<8, 2>(Imm) && (Imm != 0);
+  }];
+}
+
+// A 10-bit signed immediate where the least significant four bits are zero.
+def simm10_lsb0000nonzero : RISCVOp,
+                            ImmLeaf<XLenVT,
+                            [{return (Imm != 0) && isShiftedInt<6, 4>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<10, "Lsb0000NonZero">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmNonZeroOperand<10>";
+  let OperandType = "OPERAND_SIMM10_LSB0000_NONZERO";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedInt<6, 4>(Imm) && (Imm != 0);
+  }];
+}
+
+// A 12-bit signed immediate where the least significant bit is zero.
+def simm12_lsb0 : Operand<XLenVT>,
+                  ImmLeaf<XLenVT, [{return isShiftedInt<11, 1>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<12, "Lsb0">;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsr1";
+  let DecoderMethod = "decodeSImmOperandAndLsl1<12>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<11, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+  let OperandType = "OPERAND_PCREL";
+}
+
 // A 12-bit signed immediate which cannot fit in 6-bit signed immediate,
 // but even negative value fit in 12-bit.
 def simm12_no6 : ImmLeaf<XLenVT, [{
@@ -401,6 +542,10 @@ def ixlenimm_li_restricted : Operand<XLenVT> {
 }
 
 // Standalone (codegen-only) immleaf patterns.
+
+// A 12-bit signed immediate plus one where the imm range will be -2047~2048.
+def simm12_plus1 : ImmLeaf<XLenVT,
+  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
@@ -799,6 +944,13 @@ def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
             Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 } // IsSignExtendingOpW = 1
 } // Predicates = [IsRV64]
+
+let Predicates = [UsesMIPSCMov], hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+def CCMOV : RVInstR4<0b11, 0b011, OPC_CUSTOM_0, (outs GPR:$rd),
+                    (ins GPR:$rs1, GPR:$rs2, GPR:$rs3),
+                    "ccmov", "$rd, $rs2, $rs1, $rs3">,
+           Sched<[]>;
+} // Predicates = [UsesMIPSCMov]
 
 //===----------------------------------------------------------------------===//
 // Privileged instructions
@@ -2017,6 +2169,74 @@ def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
 }
 
 //===----------------------------------------------------------------------===//
+
+// MIPS extensions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [UsesMIPSCMov] in {
+def : Pat<(select (XLenVT (setne (XLenVT GPR:$rs2), (XLenVT 0))),
+                  (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
+          (CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+def : Pat<(select (XLenVT (seteq (XLenVT GPR:$rs2), (XLenVT 0))),
+                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
+          (CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+def : Pat<(select (XLenVT (setne (XLenVT GPR:$x), (XLenVT simm12_plus1:$y))),
+                  (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
+          (CCMOV GPR:$rs1, (ADDI GPR:$x, (NegImm simm12_plus1:$y)), GPR:$rs3)>;
+def : Pat<(select (XLenVT (seteq (XLenVT GPR:$x), (XLenVT simm12_plus1:$y))),
+                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
+          (CCMOV GPR:$rs1, (ADDI GPR:$x, (NegImm simm12_plus1:$y)), GPR:$rs3)>;
+def : Pat<(select (XLenVT (setne (XLenVT GPR:$x), (XLenVT GPR:$y))),
+                  (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
+          (CCMOV GPR:$rs1, (XOR GPR:$x, GPR:$y), GPR:$rs3)>;
+def : Pat<(select (XLenVT (seteq (XLenVT GPR:$x), (XLenVT GPR:$y))),
+                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
+          (CCMOV GPR:$rs1, (XOR GPR:$x, GPR:$y), GPR:$rs3)>;
+def : Pat<(select (XLenVT (setuge (XLenVT GPR:$x), (XLenVT GPR:$y))),
+                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
+          (CCMOV GPR:$rs1, (SLTU GPR:$x, GPR:$y), GPR:$rs3)>;
+def : Pat<(select (XLenVT (setule (XLenVT GPR:$y), (XLenVT GPR:$x))),
+                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
+          (CCMOV GPR:$rs1, (SLTU GPR:$x, GPR:$y), GPR:$rs3)>;
+def : Pat<(select (XLenVT (setge (XLenVT GPR:$x), (XLenVT GPR:$y))),
+                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
+          (CCMOV GPR:$rs1, (SLT GPR:$x, GPR:$y), GPR:$rs3)>;
+def : Pat<(select (XLenVT (setle (XLenVT GPR:$y), (XLenVT GPR:$x))),
+                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
+          (CCMOV GPR:$rs1, (SLT GPR:$x, GPR:$y), GPR:$rs3)>;
+def : Pat<(select (XLenVT GPR:$rs2), (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
+          (CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+} // Predicates = [UsesMIPSCMov]
+
+let Predicates = [UsesMIPSLoadStorePairs], hasSideEffects = 0 in {
+def LWP : LWPFormat<(outs GPR:$rd1, GPR:$rd2), (ins GPR:$rs1, uimm7_lsb00:$imm7),
+                    "lwp", "$rd1, $rd2, ${imm7}(${rs1})">,
+                    Sched<[WriteLDW, WriteLDW, ReadMemBase]> {
+let mayLoad = 1;
+let mayStore = 0;
+}
+def LDP : LDPFormat<(outs GPR:$rd1, GPR:$rd2), (ins GPR:$rs1, uimm7_lsb000:$imm7),
+                    "ldp", "$rd1, $rd2, ${imm7}(${rs1})">,
+                    Sched<[WriteLDD, WriteLDD, ReadMemBase]> {
+let mayLoad = 1;
+let mayStore = 0;
+}
+def SWP : SWPFormat<(outs), (ins GPR:$rs2, GPR:$rs3, GPR:$rs1, uimm7_lsb00:$imm7),
+                    "swp", "$rs2, $rs3, ${imm7}(${rs1})">,
+                    Sched<[WriteSTW, ReadStoreData, ReadStoreData, ReadMemBase]> {
+let mayLoad = 0;
+let mayStore = 1;
+}
+def SDP : SDPFormat<(outs), (ins GPR:$rs2, GPR:$rs3, GPR:$rs1, uimm7_lsb000:$imm7),
+                    "sdp", "$rs2, $rs3, ${imm7}(${rs1})">,
+                    Sched<[WriteSTD, ReadStoreData, ReadStoreData, ReadMemBase]> {
+let mayLoad = 0;
+let mayStore = 1;
+}
+}
+
+//===----------------------------------------------------------------------===//
+
 // Standard extensions
 //===----------------------------------------------------------------------===//
 

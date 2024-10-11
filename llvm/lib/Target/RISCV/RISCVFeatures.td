@@ -1450,6 +1450,19 @@ def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()
 def TuneMIPSP8700
     : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "Others",
                        "MIPS p8700 processor">;
+def FeatureMIPSCMov : SubtargetFeature<"xmipscmov", "HasMIPSCMov",
+                                       "true", "Using CCMov",
+                                       [Feature64Bit]>;
+def UsesMIPSCMov
+    : Predicate<"Subtarget->useCCMovInsn()">,
+      AssemblerPredicate<(all_of FeatureMIPSCMov), "'ccmov' instruction">;
+def FeatureMIPSLoadStorePairs
+    : SubtargetFeature<"xmipslsp", "HasMIPSLSP", "true",
+                       "Optimize for hardware load-store bonding">;
+def UsesMIPSLoadStorePairs
+    : Predicate<"Subtarget->useLoadStorePairs()">,
+      AssemblerPredicate<(all_of FeatureMIPSLoadStorePairs),
+                         "load and store pair instructions">;
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors">;

@@ -515,6 +515,78 @@ class RVInstJ<RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
 }
 
 //===----------------------------------------------------------------------===//
+// MIPS custom instruction formats
+//===----------------------------------------------------------------------===//
+
+// Load double pair format.
+class LDPFormat<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<7> imm7;
+  bits<5> rs1;
+  bits<5> rd1;
+  bits<5> rd2;
+
+  let Inst{31-27} = rd2;
+  let Inst{26-23} = imm7{6-3};
+  let Inst{22-20} = 0b000;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = rd1;
+  let Inst{6-0} = 0b0001011;
+}
+
+// Load word pair format.
+class LWPFormat<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<7> imm7;
+  bits<5> rs1;
+  bits<5> rd1;
+  bits<5> rd2;
+
+  let Inst{31-27} = rd2;
+  let Inst{26-22} = imm7{6-2};
+  let Inst{21-20} = 0b01;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = rd1;
+  let Inst{6-0} = 0b0001011;
+}
+
+// Store double pair format.
+class SDPFormat<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<7> imm7;
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+
+  let Inst{31-27} = rs3;
+  let Inst{26-25} = imm7{6-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b101;
+  let Inst{11-10} = imm7{4-3};
+  let Inst{9-0} = 0b0000001011;
+}
+
+// Store word pair format.
+class SWPFormat<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<7> imm7;
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+
+  let Inst{31-27} = rs3;
+  let Inst{26-25} = imm7{6-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b101;
+  let Inst{11-9} = imm7{4-2};
+  let Inst{8-0} = 0b010001011;
+}
+
+//===----------------------------------------------------------------------===//
 // Instruction classes for .insn directives
 //===----------------------------------------------------------------------===//
 
