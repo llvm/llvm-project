@@ -35,8 +35,13 @@
 ;
 ; RUN: opt -module-summary -o %t1.bc %s
 ; RUN: opt -module-summary -o %t2.bc %S/Inputs/ditemplatevalueparameter-remap.ll
-; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t1.bc %t2.bc
-; RUN: clang -O3 -fthinlto-index=%t1.bc.thinlto.bc -x ir %t1.bc -S -emit-llvm -o - | FileCheck %s
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t3.o -save-temps \
+; RUN:   -r=%t1.bc,_Z5func1v,p    \
+; RUN:   -r=%t1.bc,_Z3bazv,       \
+; RUN:   -r=%t1.bc,_Z8thinlto1v,  \
+; RUN:   -r=%t1.bc,_Z3barv,px     \
+; RUN:   -r=%t2.bc,_Z8thinlto1v,p
+; RUN: clang -O3 -fthinlto-index=%t3.o.index.bc -x ir %t1.bc -S -emit-llvm -o - | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
