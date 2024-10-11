@@ -216,6 +216,7 @@ bool ThreadSuspender::SuspendAllThreads() {
         VReport(1, "Failed to list threads\n");
         return false;
       case ThreadLister::Incomplete:
+        VReport(1, "Incomplete list\n");
         retry = true;
         break;
       case ThreadLister::Ok:
