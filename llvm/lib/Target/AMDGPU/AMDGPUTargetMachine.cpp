@@ -825,6 +825,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
           PM.addPass(AMDGPUAttributorPass(*this));
+        if (KernelInfoEndLTO) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter(this));
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        }
       });
 
   PB.registerRegClassFilterParsingCallback(
@@ -836,14 +841,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         return nullptr;
       });
 
-  if (KernelInfoEndLTO) {
-    PB.registerFullLinkTimeOptimizationLastEPCallback(
-        [this](ModulePassManager &PM, OptimizationLevel Level) {
-          FunctionPassManager FPM;
-          FPM.addPass(KernelInfoPrinter(this));
-          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-        });
-  }
 }
 
 int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {
