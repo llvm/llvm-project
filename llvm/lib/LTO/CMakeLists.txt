@@ -28,6 +28,7 @@ add_llvm_component_library(LLVMLTO
   BitReader
   BitWriter
   CAS
+  CGData
   CodeGen
   CodeGenTypes
   Core
