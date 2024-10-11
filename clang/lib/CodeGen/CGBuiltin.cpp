@@ -18882,7 +18882,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     // for the DirectX intrinsic and the demangled builtin name
     switch (CGM.getTarget().getTriple().getArch()) {
     case llvm::Triple::dxil:
-      return EmitRuntimeCall(Intrinsic::getDeclaration(
+      return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), Intrinsic::dx_wave_getlaneindex));
     case llvm::Triple::spirv:
       return EmitRuntimeCall(CGM.CreateRuntimeFunction(
