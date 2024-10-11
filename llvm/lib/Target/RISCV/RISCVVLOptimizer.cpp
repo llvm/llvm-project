@@ -396,10 +396,6 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWSUB_VV:
   case RISCV::VWSUB_VX:
   case RISCV::VWSLL_VI:
-  // 12.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
-  // Destination EEW=2*SEW and EMUL=2*EMUL. Source EEW=SEW and EMUL=LMUL.
-  case RISCV::VSMUL_VV:
-  case RISCV::VSMUL_VX:
   // 11.12. Vector Widening Integer Multiply Instructions
   // Source and Destination EMUL=LMUL. Destination EEW=2*SEW. Source EEW=SEW.
   case RISCV::VWMUL_VV:
