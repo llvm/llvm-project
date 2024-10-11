@@ -9,7 +9,6 @@
 // RUN:   -fsanitize=memtag-globals -emit-llvm -o - %s | \
 // RUN:   FileCheck %s --check-prefix=IGNORELIST
 
-
 int global;
 int __attribute__((no_sanitize("memtag"))) attributed_global;
 int __attribute__((disable_sanitizer_instrumentation)) disable_instrumentation_global;
