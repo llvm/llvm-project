@@ -840,7 +840,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return onlyAllocateVGPRs;
         return nullptr;
       });
-
 }
 
 int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {
