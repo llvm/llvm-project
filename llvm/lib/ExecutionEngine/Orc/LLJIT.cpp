@@ -1185,8 +1185,8 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
     if (!G)
       return G.takeError();
 
-    if (auto P = ELFNixPlatform::Create(ES, *ObjLinkingLayer, PlatformJD,
-                                        std::move(*G)))
+    if (auto P =
+            ELFNixPlatform::Create(*ObjLinkingLayer, PlatformJD, std::move(*G)))
       J.getExecutionSession().setPlatform(std::move(*P));
     else
       return P.takeError();
@@ -1293,9 +1293,12 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
     return;
   }
 
+  // Create the IP Layer.
+  IPLayer = std::make_unique<IRPartitionLayer>(*ES, *InitHelperTransformLayer);
+
   // Create the COD layer.
-  CODLayer = std::make_unique<CompileOnDemandLayer>(
-      *ES, *InitHelperTransformLayer, *LCTMgr, std::move(ISMBuilder));
+  CODLayer = std::make_unique<CompileOnDemandLayer>(*ES, *IPLayer, *LCTMgr,
+                                                    std::move(ISMBuilder));
 
   if (*S.SupportConcurrentCompilation)
     CODLayer->setCloneToNewContextOnEmit(true);

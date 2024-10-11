@@ -159,7 +159,7 @@ static bool isJirl(uint32_t insn) {
   return (insn & 0xfc000000) == JIRL;
 }
 
-static void handleUleb128(uint8_t *loc, uint64_t val) {
+static void handleUleb128(Ctx &ctx, uint8_t *loc, uint64_t val) {
   const uint32_t maxcount = 1 + 64 / 7;
   uint32_t count;
   const char *error = nullptr;
@@ -700,7 +700,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, read64le(loc) + val);
     return;
   case R_LARCH_ADD_ULEB128:
-    handleUleb128(loc, val);
+    handleUleb128(ctx, loc, val);
     return;
   case R_LARCH_SUB6:
     *loc = (*loc & 0xc0) | ((*loc - val) & 0x3f);
@@ -718,7 +718,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write64le(loc, read64le(loc) - val);
     return;
   case R_LARCH_SUB_ULEB128:
-    handleUleb128(loc, -val);
+    handleUleb128(ctx, loc, -val);
     return;
 
   case R_LARCH_MARK_LA:

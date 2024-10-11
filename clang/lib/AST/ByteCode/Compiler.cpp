@@ -2869,6 +2869,11 @@ bool Compiler<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
 
+  if (!Initializing) {
+    unsigned StringIndex = P.createGlobalString(E->getFunctionName(), E);
+    return this->emitGetPtrGlobal(StringIndex, E);
+  }
+
   return this->delegate(E->getFunctionName());
 }
 
@@ -6006,6 +6011,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
+
+    if (D->getType()->isReferenceType())
+      return false; // FIXME: Do we need to emit InvalidDeclRef?
   }
 
   // In case we need to re-visit a declaration.
@@ -6042,9 +6050,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         const auto typeShouldBeVisited = [&](QualType T) -> bool {
           if (T.isConstant(Ctx.getASTContext()))
             return true;
-          if (const auto *RT = T->getAs<ReferenceType>())
-            return RT->getPointeeType().isConstQualified();
-          return false;
+          return T->isReferenceType();
         };
 
         // DecompositionDecls are just proxies for us.
@@ -6060,9 +6066,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         // other words, we're evaluating the initializer, just to know if we can
         // evaluate the initializer.
         if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
-            VD->getInit() && !VD->getInit()->isValueDependent() &&
-            VD->evaluateValue())
-          return revisit(VD);
+            VD->getInit() && !VD->getInit()->isValueDependent()) {
+
+          if (VD->evaluateValue())
+            return revisit(VD);
+          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E), E);
+        }
       }
     } else {
       if (const auto *VD = dyn_cast<VarDecl>(D);

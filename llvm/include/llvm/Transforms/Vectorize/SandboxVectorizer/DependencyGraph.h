@@ -122,6 +122,10 @@ public:
   iterator preds_end(DependencyGraph &DAG) const {
     return const_cast<DGNode *>(this)->preds_end(DAG);
   }
+  /// \Returns a range of DAG predecessors nodes. If this is a MemDGNode then
+  /// this will also include the memory dependency predecessors.
+  /// Please note that this can include the same node more than once, if for
+  /// example it's both a use-def predecessor and a mem dep predecessor.
   iterator_range<iterator> preds(DependencyGraph &DAG) const {
     return make_range(preds_begin(DAG), preds_end(DAG));
   }
@@ -231,6 +235,14 @@ public:
 /// Convenience builders for a MemDGNode interval.
 class MemDGNodeIntervalBuilder {
 public:
+  /// Scans the instruction chain in \p Intvl top-down, returning the top-most
+  /// MemDGNode, or nullptr.
+  static MemDGNode *getTopMemDGNode(const Interval<Instruction> &Intvl,
+                                    const DependencyGraph &DAG);
+  /// Scans the instruction chain in \p Intvl bottom-up, returning the
+  /// bottom-most MemDGNode, or nullptr.
+  static MemDGNode *getBotMemDGNode(const Interval<Instruction> &Intvl,
+                                    const DependencyGraph &DAG);
   /// Given \p Instrs it finds their closest mem nodes in the interval and
   /// returns the corresponding mem range. Note: BotN (or its neighboring mem
   /// node) is included in the range.
@@ -272,6 +284,10 @@ private:
   /// \p DstN.
   void scanAndAddDeps(MemDGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
 
+  /// Create DAG nodes for instrs in \p NewInterval and update the MemNode
+  /// chain.
+  void createNewNodes(const Interval<Instruction> &NewInterval);
+
 public:
   DependencyGraph(AAResults &AA)
       : BatchAA(std::make_unique<BatchAAResults>(AA)) {}
@@ -297,8 +313,10 @@ public:
     return It->second.get();
   }
   /// Build/extend the dependency graph such that it includes \p Instrs. Returns
-  /// the interval spanning \p Instrs.
+  /// the range of instructions added to the DAG.
   Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
+  /// \Returns the range of instructions included in the DAG.
+  Interval<Instruction> getInterval() const { return DAGInterval; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

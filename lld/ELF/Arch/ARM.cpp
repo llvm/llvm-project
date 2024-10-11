@@ -48,6 +48,10 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+
+private:
+void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                           int group, bool check) const;
 };
 enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 } // namespace
@@ -534,8 +538,8 @@ static std::pair<uint32_t, uint32_t> getRemAndLZForGroup(unsigned group,
   return {rem, lz};
 }
 
-static void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
-                           int group, bool check) {
+void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                           int group, bool check) const {
   // ADD/SUB (immediate) add = bit23, sub = bit22
   // immediate field carries is a 12-bit modified immediate, made up of a 4-bit
   // even rotate right and an 8-bit immediate.
@@ -1327,10 +1331,9 @@ private:
 };
 
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
-    : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
+    : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs"),
-      ctx(ctx) {
+                       /*alignment=*/32, ".gnu.sgstubs") {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
@@ -1380,7 +1383,7 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   sgVeneers.emplace_back(ss);
 }
 
-void ArmCmseSGSection::writeTo(Ctx &ctx, uint8_t *buf) {
+void ArmCmseSGSection::writeTo(uint8_t *buf) {
   for (ArmCmseSGVeneer *s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(p + 0, 0xe97f); // SG
@@ -1397,14 +1400,14 @@ void ArmCmseSGSection::addMappingSymbol() {
   addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
-size_t ArmCmseSGSection::getSize(Ctx &) const {
+size_t ArmCmseSGSection::getSize() const {
   if (sgVeneers.empty())
     return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
 
   return entries.size() * entsize;
 }
 
-void ArmCmseSGSection::finalizeContents(Ctx &) {
+void ArmCmseSGSection::finalizeContents() {
   if (sgVeneers.empty())
     return;
 
@@ -1442,10 +1445,11 @@ void ArmCmseSGSection::finalizeContents(Ctx &) {
 // https://developer.arm.com/documentation/ecm0359818/latest
 template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   StringTableSection *shstrtab =
-      make<StringTableSection>(".shstrtab", /*dynamic=*/false);
+      make<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
   StringTableSection *strtab =
-      make<StringTableSection>(".strtab", /*dynamic=*/false);
-  SymbolTableBaseSection *impSymTab = make<SymbolTableSection<ELFT>>(*strtab);
+      make<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
+  SymbolTableBaseSection *impSymTab =
+      make<SymbolTableSection<ELFT>>(ctx, *strtab);
 
   SmallVector<std::pair<OutputSection *, SyntheticSection *>, 0> osIsPairs;
   osIsPairs.emplace_back(make<OutputSection>(strtab->name, 0, 0), strtab);
@@ -1471,8 +1475,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
     osec->recordSection(isec);
     osec->finalizeInputSections(ctx);
     osec->shName = shstrtab->addString(osec->name);
-    osec->size = isec->getSize(ctx);
-    isec->finalizeContents(ctx);
+    osec->size = isec->getSize();
+    isec->finalizeContents();
     osec->offset = alignToPowerOf2(off, osec->addralign);
     off = osec->offset + osec->size;
   }
