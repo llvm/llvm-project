@@ -38,9 +38,20 @@ private:
   /// haven't had their 'parent' compute construct set yet. Entires will only be
   /// made to this list in the case where we know the loop isn't an orphan.
   llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
-  /// Whether we are inside of a compute construct, and should add loops to the
-  /// above collection.
-  bool InsideComputeConstruct = false;
+
+  struct ComputeConstructInfo {
+    /// Which type of compute construct we are inside of, which we can use to
+    /// determine whether we should add loops to the above collection.  We can
+    /// also use it to diagnose loop construct clauses.
+    OpenACCDirectiveKind Kind = OpenACCDirectiveKind::Invalid;
+    // If we have an active compute construct, stores the list of clauses we've
+    // prepared for it, so that we can diagnose limitations on child constructs.
+    ArrayRef<OpenACCClause *> Clauses;
+  } ActiveComputeConstructInfo;
+
+  bool isInComputeConstruct() const {
+    return ActiveComputeConstructInfo.Kind != OpenACCDirectiveKind::Invalid;
+  }
 
   /// Certain clauses care about the same things that aren't specific to the
   /// individual clause, but can be shared by a few, so store them here. All
@@ -99,6 +110,15 @@ private:
   } TileInfo;
 
 public:
+  ComputeConstructInfo &getActiveComputeConstructInfo() {
+    return ActiveComputeConstructInfo;
+  }
+
+  /// If there is a current 'active' loop construct with a 'gang' clause on a
+  /// 'kernel' construct, this will have the source location for it. This
+  /// permits us to implement the restriction of no further 'gang' clauses.
+  SourceLocation LoopGangClauseOnKernelLoc;
+
   // Redeclaration of the version in OpenACCClause.h.
   using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
 
@@ -149,9 +169,14 @@ public:
       Expr *LoopCount;
     };
 
+    struct GangDetails {
+      SmallVector<OpenACCGangKind> GangKinds;
+      SmallVector<Expr *> IntExprs;
+    };
+
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
                  IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails,
-                 ReductionDetails, CollapseDetails>
+                 ReductionDetails, CollapseDetails, GangDetails>
         Details = std::monostate{};
 
   public:
@@ -245,8 +270,17 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::Tile ||
+              ClauseKind == OpenACCClauseKind::Gang ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
+
+      if (ClauseKind == OpenACCClauseKind::Gang) {
+        // There might not be any gang int exprs, as this is an optional
+        // argument.
+        if (std::holds_alternative<std::monostate>(Details))
+          return {};
+        return std::get<GangDetails>(Details).IntExprs;
+      }
 
       return std::get<IntExprDetails>(Details).IntExprs;
     }
@@ -257,6 +291,16 @@ public:
 
     OpenACCReductionOperator getReductionOp() const {
       return std::get<ReductionDetails>(Details).Op;
+    }
+
+    ArrayRef<OpenACCGangKind> getGangKinds() const {
+      assert(ClauseKind == OpenACCClauseKind::Gang &&
+             "Parsed clause kind does not have gang kind");
+      // The args on gang are optional, so this might not actually hold
+      // anything.
+      if (std::holds_alternative<std::monostate>(Details))
+        return {};
+      return std::get<GangDetails>(Details).GangKinds;
     }
 
     ArrayRef<Expr *> getVarList() {
@@ -369,6 +413,25 @@ public:
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{std::move(IntExprs)};
+    }
+
+    void setGangDetails(ArrayRef<OpenACCGangKind> GKs,
+                        ArrayRef<Expr *> IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::Gang &&
+             "Parsed Clause kind does not have gang details");
+      assert(GKs.size() == IntExprs.size() && "Mismatched kind/size?");
+
+      Details = GangDetails{{GKs.begin(), GKs.end()},
+                            {IntExprs.begin(), IntExprs.end()}};
+    }
+
+    void setGangDetails(llvm::SmallVector<OpenACCGangKind> &&GKs,
+                        llvm::SmallVector<Expr *> &&IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::Gang &&
+             "Parsed Clause kind does not have gang details");
+      assert(GKs.size() == IntExprs.size() && "Mismatched kind/size?");
+
+      Details = GangDetails{std::move(GKs), std::move(IntExprs)};
     }
 
     void setVarListDetails(ArrayRef<Expr *> VarList, bool IsReadOnly,
@@ -545,9 +608,11 @@ public:
                                    SourceLocation RBLoc);
   /// Checks the loop depth value for a collapse clause.
   ExprResult CheckCollapseLoopCount(Expr *LoopCount);
-  /// Checks a single size expr for a tile clause. 'gang' could possibly call
-  /// this, but has slightly stricter rules as to valid values.
+  /// Checks a single size expr for a tile clause.
   ExprResult CheckTileSizeExpr(Expr *SizeExpr);
+
+  // Check a single expression on a gang clause.
+  ExprResult CheckGangExpr(OpenACCGangKind GK, Expr *E);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
@@ -595,8 +660,9 @@ public:
   /// Loop needing its parent construct.
   class AssociatedStmtRAII {
     SemaOpenACC &SemaRef;
-    bool WasInsideComputeConstruct;
+    ComputeConstructInfo OldActiveComputeConstructInfo;
     OpenACCDirectiveKind DirKind;
+    SourceLocation OldLoopGangClauseOnKernelLoc;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
     LoopInConstructRAII LoopRAII;
 

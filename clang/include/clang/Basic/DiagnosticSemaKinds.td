@@ -12576,6 +12576,7 @@ def err_acc_duplicate_clause_disallowed
     : Error<"OpenACC '%1' clause cannot appear more than once on a '%0' "
             "directive">;
 def note_acc_previous_clause_here : Note<"previous clause is here">;
+def note_acc_previous_expr_here : Note<"previous expression is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute Construct">;
@@ -12682,6 +12683,24 @@ def err_acc_insufficient_loops
 def err_acc_intervening_code
     : Error<"inner loops must be tightly nested inside a '%0' clause on "
             "a 'loop' construct">;
+def err_acc_gang_multiple_elt
+    : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
+            "'num'|'dim'|'static'}0 argument">;
+def err_acc_gang_arg_invalid
+    : Error<"'%0' argument on 'gang' clause is not permitted on a%select{n "
+            "orphaned|||}1 'loop' construct %select{|associated with a "
+            "'parallel' compute construct|associated with a 'kernels' compute "
+            "construct|associated with a 'serial' compute construct}1">;
+def err_acc_gang_dim_value
+    : Error<"argument to 'gang' clause dimension must be %select{a constant "
+            "expression|1, 2, or 3: evaluated to %1}0">;
+def err_acc_gang_num_gangs_conflict
+    : Error<"'num' argument to 'gang' clause not allowed on a 'loop' construct "
+            "associated with a 'kernels' construct that has a 'num_gangs' "
+            "clause">;
+def err_acc_gang_inside_gang
+    : Error<"loop with a 'gang' clause may not exist in the region of a 'gang' "
+            "clause on a 'kernels' compute construct">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
