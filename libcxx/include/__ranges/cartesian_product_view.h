@@ -167,6 +167,12 @@ public:
     return *((*this) + n);
   }
 
+  friend constexpr bool operator==(const iterator& x, const iterator& y)
+    requires equality_comparable<iterator_t<__maybe_const<Const, First>>>
+  {
+    return x.current_ == y.current_;
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
