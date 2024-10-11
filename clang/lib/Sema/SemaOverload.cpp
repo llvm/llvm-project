@@ -1423,11 +1423,9 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
 
   auto NormalizeQualifiers = [&](const CXXMethodDecl *M, Qualifiers Q) {
     if (M->isExplicitObjectMemberFunction()) {
-      if (M->getNumParams() > 0) {
-        auto ThisType = M->getParamDecl(0)->getType().getCanonicalType();
-        if (ThisType.isConstQualified())
-          Q.removeConst();
-      }
+      auto ThisType = M->getFunctionObjectParameterReferenceType();
+      if (ThisType.isConstQualified())
+        Q.removeConst();
       return Q;
     }
 
