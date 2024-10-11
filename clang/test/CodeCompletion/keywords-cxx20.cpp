@@ -11,10 +11,14 @@ class co_test {};
 
 int f(){ co_test test; return 1; }
 
-// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:1:3 %s | FileCheck --check-prefix=CHECK-MODULE %s
-// CHECK-MODULE: module;
-// CHECK-MODULE: module: private;
-// CHECK-MODULE: module <#name#>;
+module: private;
+
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:1:3 %s | FileCheck --check-prefix=CHECK-MODULE1 %s
+// CHECK-MODULE1: module;
+// CHECK-MODULE1: module <#name#>;
+
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:14:3 %s | FileCheck --check-prefix=CHECK-MODULE3 %s
+// CHECK-MODULE3: module: private;
 
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:3:3 %s | FileCheck --check-prefix=CHECK-EXPORT %s
 // CHECK-EXPORT: export

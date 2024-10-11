@@ -2198,41 +2198,65 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
 
       if (SemaRef.getLangOpts().CPlusPlus20 &&
           SemaRef.getLangOpts().CPlusPlusModules) {
-        // export
-        Results.AddResult(Result("export", CodeCompletionResult::RK_Keyword));
-
+        clang::Module *CurrentModule = SemaRef.getCurrentModule();
         if (SemaRef.CurContext->isTranslationUnit()) {
-          // module;
-          Builder.AddTypedTextChunk("module");
-          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
-          Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-          Results.AddResult(Result(Builder.TakeString()));
+          /// Global module fragment can only be declared in the beginning of
+          /// the file. CurrentModule should be null in this case.
+          if (!CurrentModule) {
+            // module;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
 
-          // module: private;
-          Builder.AddTypedTextChunk("module");
-          Builder.AddChunk(CodeCompletionString::CK_Colon);
-          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-          Builder.AddTypedTextChunk("private");
-          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
-          Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-          Results.AddResult(Result(Builder.TakeString()));
+          /// Named module should be declared in the beginning of the file,
+          /// or after the global module fragment.
+          if (!CurrentModule ||
+              CurrentModule->Kind == Module::ExplicitGlobalModuleFragment ||
+              CurrentModule->Kind == Module::ImplicitGlobalModuleFragment) {
+            // export module;
+            // module name;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddPlaceholderChunk("name");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
 
-          // module name;
-          Builder.AddTypedTextChunk("module");
-          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-          Builder.AddPlaceholderChunk("name");
-          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
-          Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-          Results.AddResult(Result(Builder.TakeString()));
+          /// Import can occur in non module file or after the named module
+          /// declaration.
+          if (!CurrentModule ||
+              CurrentModule->Kind == Module::ModuleInterfaceUnit ||
+              CurrentModule->Kind == Module::ModulePartitionInterface) {
+            // import name;
+            Builder.AddTypedTextChunk("import");
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddPlaceholderChunk("name");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
 
-          // import module;
-          Builder.AddTypedTextChunk("import");
-          Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-          Builder.AddPlaceholderChunk("module");
-          Builder.AddChunk(CodeCompletionString::CK_SemiColon);
-          Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
-          Results.AddResult(Result(Builder.TakeString()));
+          if (CurrentModule &&
+              (CurrentModule->Kind == Module::ModuleInterfaceUnit ||
+               CurrentModule->Kind == Module::ModulePartitionInterface)) {
+            // module: private;
+            Builder.AddTypedTextChunk("module");
+            Builder.AddChunk(CodeCompletionString::CK_Colon);
+            Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+            Builder.AddTypedTextChunk("private");
+            Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+            Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+            Results.AddResult(Result(Builder.TakeString()));
+          }
         }
+
+        // export
+        if (!CurrentModule ||
+            CurrentModule->Kind != Module::ModuleKind::PrivateModuleFragment)
+          Results.AddResult(Result("export", CodeCompletionResult::RK_Keyword));
       }
     }
 
