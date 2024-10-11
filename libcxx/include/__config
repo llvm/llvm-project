@@ -388,7 +388,6 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN
-#    define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    define _LIBCPP_TEMPLATE_VIS
 #    define _LIBCPP_TEMPLATE_DATA_VIS
 #    define _LIBCPP_TYPE_VISIBILITY_DEFAULT
@@ -410,13 +409,6 @@ typedef __char32_t char32_t;
 // TODO: Make this a proper customization point or remove the option to override it.
 #    ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
-#    endif
-
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-// The inline should be removed once PR32114 is resolved
-#      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS inline _LIBCPP_HIDDEN
-#    else
-#      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    endif
 
 // GCC doesn't support the type_visibility attribute, so we have to keep the visibility attribute on templates
