@@ -2320,9 +2320,8 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
 
     if (SemaRef.getLangOpts().CPlusPlus20 &&
         (CCC == SemaCodeCompletion::PCC_Template ||
-         CCC == SemaCodeCompletion::PCC_MemberTemplate)) {
+         CCC == SemaCodeCompletion::PCC_MemberTemplate))
       Results.AddResult(Result("requires", CCP_Keyword));
-    }
 
     AddStorageSpecifiers(CCC, SemaRef.getLangOpts(), Results);
     AddFunctionSpecifiers(CCC, SemaRef.getLangOpts(), Results);
