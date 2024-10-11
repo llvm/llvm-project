@@ -1044,8 +1044,9 @@ namespace {
 // extension.
 class RISCVAttributesSection final : public SyntheticSection {
 public:
-  RISCVAttributesSection()
-      : SyntheticSection(0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {}
+  RISCVAttributesSection(Ctx &ctx)
+      : SyntheticSection(ctx, 0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {
+  }
 
   size_t getSize(Ctx &) const override { return size; }
   void writeTo(Ctx &, uint8_t *buf) override;
@@ -1179,7 +1180,7 @@ mergeAttributesSection(Ctx &ctx,
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
-  ctx.in.riscvAttributes = std::make_unique<RISCVAttributesSection>();
+  ctx.in.riscvAttributes = std::make_unique<RISCVAttributesSection>(ctx);
   auto &merged = static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
 
   // Collect all tags values from attributes section.
