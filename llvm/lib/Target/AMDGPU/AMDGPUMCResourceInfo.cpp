@@ -175,7 +175,10 @@ void MCResourceInfo::assignResourceInfoExpr(
         continue;
       MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
       bool CalleeIsVar = CalleeValSym->isVariable();
-      if (!CalleeIsVar || (CalleeIsVar && !foundRecursiveSymbolDef(Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
+      if (!CalleeIsVar ||
+          (CalleeIsVar &&
+           !foundRecursiveSymbolDef(
+               Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
       }
     }
@@ -236,7 +239,10 @@ void MCResourceInfo::gatherResourceInfo(
         MCSymbol *CalleeValSym =
             getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
         bool CalleeIsVar = CalleeValSym->isVariable();
-        if (!CalleeIsVar || (CalleeIsVar && !foundRecursiveSymbolDef(Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
+        if (!CalleeIsVar ||
+            (CalleeIsVar &&
+             !foundRecursiveSymbolDef(
+                 Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
         }
       }
