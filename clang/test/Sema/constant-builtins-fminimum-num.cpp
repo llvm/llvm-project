@@ -6,11 +6,11 @@ constexpr double NaN = __builtin_nan("");
 constexpr double Inf = __builtin_inf();
 constexpr double NegInf = -__builtin_inf();
 
-#define FMAXIMUMNUM_TEST_SIMPLE(T, FUNC)                           \
+#define FMINIMUMNUM_TEST_SIMPLE(T, FUNC)                           \
     static_assert(T(1.2345) == FUNC(T(1.2345), T(6.7890))); \
     static_assert(T(1.2345) == FUNC(T(6.7890), T(1.2345)));
 
-#define FMAXIMUMNUM_TEST_NAN(T, FUNC)                          \
+#define FMINIMUMNUM_TEST_NAN(T, FUNC)                          \
     static_assert(Inf == FUNC(NaN, Inf));               \
     static_assert(NegInf == FUNC(NegInf, NaN));         \
     static_assert(0.0 == FUNC(NaN, 0.0));               \
@@ -19,37 +19,37 @@ constexpr double NegInf = -__builtin_inf();
     static_assert(T(1.2345) == FUNC(T(1.2345), NaN));   \
     static_assert(__builtin_isnan(FUNC(NaN, NaN)));
 
-#define FMAXIMUMNUM_TEST_INF(T, FUNC)                        \
+#define FMINIMUMNUM_TEST_INF(T, FUNC)                        \
     static_assert(NegInf == FUNC(NegInf, Inf));       \
     static_assert(0.0 == FUNC(Inf, 0.0));             \
     static_assert(-0.0 == FUNC(-0.0, Inf));           \
     static_assert(T(1.2345) == FUNC(Inf, T(1.2345))); \
     static_assert(T(-1.2345) == FUNC(T(-1.2345), Inf));
 
-#define FMAXIMUMNUM_TEST_NEG_INF(T, FUNC)                     \
+#define FMINIMUMNUM_TEST_NEG_INF(T, FUNC)                     \
     static_assert(NegInf == FUNC(Inf, NegInf));        \
     static_assert(NegInf == FUNC(NegInf, 0.0));        \
     static_assert(NegInf == FUNC(-0.0, NegInf));       \
     static_assert(NegInf == FUNC(NegInf, T(-1.2345))); \
     static_assert(NegInf == FUNC(T(1.2345), NegInf));
 
-#define FMAXIMUMNUM_TEST_BOTH_ZERO(T, FUNC)                                 \
+#define FMINIMUMNUM_TEST_BOTH_ZERO(T, FUNC)                                 \
     static_assert(__builtin_copysign(1.0, FUNC(0.0, 0.0)) == 1.0);   \
     static_assert(__builtin_copysign(1.0, FUNC(-0.0, 0.0)) == -1.0); \
     static_assert(__builtin_copysign(1.0, FUNC(0.0, -0.0)) == -1.0); \
     static_assert(__builtin_copysign(1.0, FUNC(-0.0, -0.0)) == -1.0);
 
-#define LIST_FMAXIMUMNUM_TESTS(T, FUNC) \
-    FMAXIMUMNUM_TEST_SIMPLE(T, FUNC)    \
-    FMAXIMUMNUM_TEST_NAN(T, FUNC)       \
-    FMAXIMUMNUM_TEST_INF(T, FUNC)       \
-    FMAXIMUMNUM_TEST_NEG_INF(T, FUNC)   \
-    FMAXIMUMNUM_TEST_BOTH_ZERO(T, FUNC)
+#define LIST_FMINIMUMNUM_TESTS(T, FUNC) \
+    FMINIMUMNUM_TEST_SIMPLE(T, FUNC)    \
+    FMINIMUMNUM_TEST_NAN(T, FUNC)       \
+    FMINIMUMNUM_TEST_INF(T, FUNC)       \
+    FMINIMUMNUM_TEST_NEG_INF(T, FUNC)   \
+    FMINIMUMNUM_TEST_BOTH_ZERO(T, FUNC)
 
-LIST_FMAXIMUMNUM_TESTS(double, __builtin_fminimum_num)
-LIST_FMAXIMUMNUM_TESTS(float, __builtin_fminimum_numf)
-LIST_FMAXIMUMNUM_TESTS((long double), __builtin_fminimum_numl)
-LIST_FMAXIMUMNUM_TESTS(__fp16, __builtin_fminimum_numf16)
+LIST_FMINIMUMNUM_TESTS(double, __builtin_fminimum_num)
+LIST_FMINIMUMNUM_TESTS(float, __builtin_fminimum_numf)
+LIST_FMINIMUMNUM_TESTS((long double), __builtin_fminimum_numl)
+LIST_FMINIMUMNUM_TESTS(__fp16, __builtin_fminimum_numf16)
 #ifdef __FLOAT128__
-LIST_FMAXIMUMNUM_TESTS(__float128, __builtin_fminimum_numf128)
+LIST_FMINIMUMNUM_TESTS(__float128, __builtin_fminimum_numf128)
 #endif
