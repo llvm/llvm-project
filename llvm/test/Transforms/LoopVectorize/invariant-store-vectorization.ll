@@ -401,8 +401,8 @@ define i32 @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_INC8_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[TMP4]], [[FOR_BODY3_LR_PH]] ], [ [[TMP4]], [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], [[MIDDLE_BLOCK]] ], [ [[ARRAYIDX5_PROMOTED]], [[FOR_BODY3_LR_PH]] ], [ [[ARRAYIDX5_PROMOTED]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[TMP4]], [[FOR_BODY3_LR_PH]] ], [ [[TMP4]], [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[TMP20:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP22:%.*]], [[FOR_BODY3]] ]

@@ -91,8 +91,8 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i16> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP_LATCH:.*]] ]

@@ -368,9 +368,9 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP3]], 63
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 64
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[N_VEC]], -72
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <64 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <64 x i32> [[BROADCAST_SPLATINSERT3]], <64 x i32> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -414,9 +414,9 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP3]], 7
 ; AUTOVF-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
 ; AUTOVF-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
+; AUTOVF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP3]], 1
 ; AUTOVF-NEXT:    [[TMP4:%.*]] = mul i32 [[N_VEC]], -72
 ; AUTOVF-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i32 [[TMP4]]
-; AUTOVF-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP3]], 1
 ; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
 ; AUTOVF-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AUTOVF-NEXT:    br label [[VECTOR_BODY:%.*]]

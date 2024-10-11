@@ -233,8 +233,8 @@ public:
 
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
-                                     VPCanonicalIVPHIRecipe *CanonicalIV,
-                                     VPValue *Step, const Twine &Name = "") {
+                                     VPValue *CanonicalIV, VPValue *Step,
+                                     const Twine &Name = "") {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step, Name));
   }
