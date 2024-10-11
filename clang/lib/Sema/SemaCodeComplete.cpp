@@ -1837,9 +1837,8 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
-    if (LangOpts.Char8 || LangOpts.CPlusPlus20) {
+    if (LangOpts.Char8 || LangOpts.CPlusPlus20)
       Results.AddResult(Result("char8_t", CCP_Type));
-    }
   } else
     Results.AddResult(Result("__auto_type", CCP_Type));
 
@@ -1893,9 +1892,8 @@ AddStorageSpecifiers(SemaCodeCompletion::ParserCompletionContext CCC,
     Results.AddResult(Result("thread_local"));
   }
 
-  if (LangOpts.CPlusPlus20) {
+  if (LangOpts.CPlusPlus20)
     Results.AddResult(Result("constinit"));
-  }
 }
 
 static void
