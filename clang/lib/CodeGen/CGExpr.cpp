@@ -1528,7 +1528,11 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 ///
 LValue CodeGenFunction::EmitLValue(const Expr *E,
                                    KnownNonNull_t IsKnownNonNull) {
-  LValue LV = EmitLValueHelper(E, IsKnownNonNull);
+  LValue LV;
+  CGM.runWithSufficientStackSpace(E->getExprLoc(), [&] {
+    LV = EmitLValueHelper(E, IsKnownNonNull);
+  });
+
   if (IsKnownNonNull && !LV.isKnownNonNull())
     LV.setKnownNonNull();
   return LV;
@@ -5817,10 +5821,7 @@ LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
 
 LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E,
                                            llvm::CallBase **CallOrInvoke) {
-  RValue RV;
-  CGM.runWithSufficientStackSpace(E->getExprLoc(), [&] {
-    RV = EmitCallExpr(E, ReturnValueSlot(), CallOrInvoke);
-  });
+  RValue RV = EmitCallExpr(E, ReturnValueSlot(), CallOrInvoke);
 
   if (!RV.isScalar())
     return MakeAddrLValue(RV.getAggregateAddress(), E->getType(),
