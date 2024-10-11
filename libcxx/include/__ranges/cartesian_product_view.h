@@ -46,6 +46,15 @@ concept cartesian_product_is_bidirectional =
     (bidirectional_range<__maybe_const<Const, First>> && ... &&
      (bidirectional_range<__maybe_const<Const, Vs>> && cartesian_product_common_arg<__maybe_const<Const, Vs>>));
 
+template <class... Vs>
+concept cartesian_product_is_sized = (sized_range<Vs> && ...);
+
+template <bool Const, template <class> class FirstSent, class First, class... Vs>
+concept cartesian_is_sized_sentinel =
+    (sized_sentinel_for<FirstSent<__maybe_const<Const, First>>, iterator_t<__maybe_const<Const, First>>> && ... &&
+     (sized_range<__maybe_const<Const, Vs>> &&
+      sized_sentinel_for<iterator_t<__maybe_const<Const, Vs>>, iterator_t<__maybe_const<Const, Vs>>>));
+
 template <cartesian_product_common_arg R>
 constexpr auto cartesian_common_arg_end(R& r) {
   if constexpr (common_range<R>) {
@@ -203,6 +212,12 @@ public:
     return iterator(x) -= y;
   }
 
+  friend constexpr iterator operator-(const iterator& x, const iterator& y)
+    requires cartesian_product_is_random_access<Const, First, Vs...>
+  {
+    return x.distance_from(y.current_);
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
@@ -278,6 +293,27 @@ private:
     if constexpr (N > 0)
       return at_end<N - 1>();
     return false;
+  }
+
+  template <class Tuple>
+  constexpr difference_type distance_from(const Tuple& t) const {
+    constexpr auto seq        = std::make_integer_sequence<int, sizeof...(Vs) + 1>{};
+    constexpr auto scaled_sum = [&t, this]<int... Ints>(std::integer_sequence<int, Ints...>) -> difference_type {
+      return (scaled_distance<Ints>(t) + ...);
+    };
+    return scaled_sum(seq);
+  }
+
+  template <auto N>
+  constexpr difference_type scaled_size() const {
+    if constexpr (N <= sizeof...(Vs))
+      return static_cast<difference_type>(ranges::size(std::get<N>(parent_->bases_))) * scaled_size<N + 1>();
+    return static_cast<difference_type>(1);
+  }
+
+  template <auto N, class Tuple>
+  constexpr difference_type scaled_distance(const Tuple& t) const {
+    return static_cast<difference_type>(std::get<N>(current_) - std::get<N>(t)) * scaled_size<N + 1>();
   }
 };
 
