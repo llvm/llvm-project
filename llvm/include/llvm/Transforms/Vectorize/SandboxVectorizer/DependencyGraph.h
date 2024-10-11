@@ -40,6 +40,54 @@ enum class DGNodeID {
   MemDGNode,
 };
 
+class DGNode;
+class MemDGNode;
+class DependencyGraph;
+
+/// While OpIt points to a Value that is not an Instruction keep incrementing
+/// it. \Returns the first iterator that points to an Instruction, or end.
+[[nodiscard]] static User::op_iterator skipNonInstr(User::op_iterator OpIt,
+                                                    User::op_iterator OpItE) {
+  while (OpIt != OpItE && !isa<Instruction>((*OpIt).get()))
+    ++OpIt;
+  return OpIt;
+}
+
+/// Iterate over both def-use and mem dependencies.
+class PredIterator {
+  User::op_iterator OpIt;
+  User::op_iterator OpItE;
+  DenseSet<MemDGNode *>::iterator MemIt;
+  DGNode *N = nullptr;
+  DependencyGraph *DAG = nullptr;
+
+  PredIterator(const User::op_iterator &OpIt, const User::op_iterator &OpItE,
+               const DenseSet<MemDGNode *>::iterator &MemIt, DGNode *N,
+               DependencyGraph &DAG)
+      : OpIt(OpIt), OpItE(OpItE), MemIt(MemIt), N(N), DAG(&DAG) {}
+  PredIterator(const User::op_iterator &OpIt, const User::op_iterator &OpItE,
+               DGNode *N, DependencyGraph &DAG)
+      : OpIt(OpIt), OpItE(OpItE), N(N), DAG(&DAG) {}
+  friend class DGNode;    // For constructor
+  friend class MemDGNode; // For constructor
+
+public:
+  using difference_type = std::ptrdiff_t;
+  using value_type = DGNode *;
+  using pointer = value_type *;
+  using reference = value_type &;
+  using iterator_category = std::input_iterator_tag;
+  value_type operator*();
+  PredIterator &operator++();
+  PredIterator operator++(int) {
+    auto Copy = *this;
+    ++(*this);
+    return Copy;
+  }
+  bool operator==(const PredIterator &Other) const;
+  bool operator!=(const PredIterator &Other) const { return !(*this == Other); }
+};
+
 /// A DependencyGraph Node that points to an Instruction and contains memory
 /// dependency edges.
 class DGNode {
@@ -63,6 +111,23 @@ public:
   virtual ~DGNode() = default;
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
+  using iterator = PredIterator;
+  virtual iterator preds_begin(DependencyGraph &DAG) {
+    return PredIterator(skipNonInstr(I->op_begin(), I->op_end()), I->op_end(),
+                        this, DAG);
+  }
+  virtual iterator preds_end(DependencyGraph &DAG) {
+    return PredIterator(I->op_end(), I->op_end(), this, DAG);
+  }
+  iterator preds_begin(DependencyGraph &DAG) const {
+    return const_cast<DGNode *>(this)->preds_begin(DAG);
+  }
+  iterator preds_end(DependencyGraph &DAG) const {
+    return const_cast<DGNode *>(this)->preds_end(DAG);
+  }
+  iterator_range<iterator> preds(DependencyGraph &DAG) const {
+    return make_range(preds_begin(DAG), preds_end(DAG));
+  }
 
   static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -144,6 +209,14 @@ public:
   }
   static bool classof(const DGNode *Other) {
     return Other->SubclassID == DGNodeID::MemDGNode;
+  }
+  iterator preds_begin(DependencyGraph &DAG) override {
+    auto OpEndIt = I->op_end();
+    return PredIterator(skipNonInstr(I->op_begin(), OpEndIt), OpEndIt,
+                        MemPreds.begin(), this, DAG);
+  }
+  iterator preds_end(DependencyGraph &DAG) override {
+    return PredIterator(I->op_end(), I->op_end(), MemPreds.end(), this, DAG);
   }
   /// \Returns the previous Mem DGNode in instruction order.
   MemDGNode *getPrevNode() const { return PrevMemN; }
