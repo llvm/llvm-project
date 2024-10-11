@@ -488,6 +488,7 @@ public:
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
 
     mpfr_sinpi(result.value, value, mpfr_rounding);
+    return result;
 #else
     if (mpfr_integer_p(value)) {
       mpfr_set_si(result.value, 0, mpfr_rounding);
