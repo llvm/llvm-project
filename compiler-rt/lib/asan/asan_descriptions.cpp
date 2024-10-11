@@ -20,24 +20,20 @@
 namespace __asan {
 
 AsanThreadIdAndName::AsanThreadIdAndName(AsanThreadContext *t) {
-  Init(t->tid, t->name);
-}
-
-AsanThreadIdAndName::AsanThreadIdAndName(u32 tid) {
-  if (tid == kInvalidTid) {
-    Init(tid, "");
-  } else {
-    asanThreadRegistry().CheckLocked();
-    AsanThreadContext *t = GetThreadContextByTidLocked(tid);
-    Init(tid, t->name);
+  if (!t) {
+    internal_snprintf(name, sizeof(name), "T-1");
+    return;
   }
+  int len = internal_snprintf(name, sizeof(name), "T%llu", t->unique_id);
+  CHECK(((unsigned int)len) < sizeof(name));
+  if (internal_strlen(t->name))
+    internal_snprintf(&name[len], sizeof(name) - len, " (%s)", t->name);
 }
 
-void AsanThreadIdAndName::Init(u32 tid, const char *tname) {
-  int len = internal_snprintf(name, sizeof(name), "T%d", tid);
-  CHECK(((unsigned int)len) < sizeof(name));
-  if (tname[0] != '\0')
-    internal_snprintf(&name[len], sizeof(name) - len, " (%s)", tname);
+AsanThreadIdAndName::AsanThreadIdAndName(u32 tid)
+    : AsanThreadIdAndName(
+          tid == kInvalidTid ? nullptr : GetThreadContextByTidLocked(tid)) {
+  asanThreadRegistry().CheckLocked();
 }
 
 void DescribeThread(AsanThreadContext *context) {
