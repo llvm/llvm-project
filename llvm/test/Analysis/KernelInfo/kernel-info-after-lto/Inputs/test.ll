@@ -1,4 +1,4 @@
-; CHECK: remark: test.c:10:0: in artificial function 'test', OmpTargetNumTeams = 100
+; CHECK: remark: test.c:10:0: in artificial function 'test', omp_target_num_teams = 100
 ; NONE-NOT: remark:
 define void @test() #0 !dbg !5 {
 entry:

@@ -9,12 +9,12 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-; CHECK: remark: test.c:10:0: in artificial function 'test', OmpTargetNumTeams = 100
-; CHECK: remark: test.c:10:0: in artificial function 'test', OmpTargetThreadLimit = 101
-; CHECK: remark: test.c:10:0: in artificial function 'test', Maxclusterrank = 200
-; CHECK: remark: test.c:10:0: in artificial function 'test', Maxntidx = 210
-; CHECK: remark: test.c:10:0: in artificial function 'test', Maxntidy = 211
-; CHECK: remark: test.c:10:0: in artificial function 'test', Maxntidz = 212
+; CHECK: remark: test.c:10:0: in artificial function 'test', omp_target_num_teams = 100
+; CHECK: remark: test.c:10:0: in artificial function 'test', omp_target_thread_limit = 101
+; CHECK: remark: test.c:10:0: in artificial function 'test', maxclusterrank = 200
+; CHECK: remark: test.c:10:0: in artificial function 'test', maxntidx = 210
+; CHECK: remark: test.c:10:0: in artificial function 'test', maxntidy = 211
+; CHECK: remark: test.c:10:0: in artificial function 'test', maxntidz = 212
 define void @test() #0 !dbg !5 {
 entry:
   ret void

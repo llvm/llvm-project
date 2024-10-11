@@ -9,43 +9,43 @@
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 target triple = "amdgcn-amd-amdhsa"
 
-; CHECK: remark: test.c:10:0: in artificial function 'all', OmpTargetNumTeams = 100
-; CHECK: remark: test.c:10:0: in artificial function 'all', OmpTargetThreadLimit = 101
-; CHECK: remark: test.c:10:0: in artificial function 'all', AmdgpuMaxNumWorkgroupsX = 200
-; CHECK: remark: test.c:10:0: in artificial function 'all', AmdgpuMaxNumWorkgroupsY = 201
-; CHECK: remark: test.c:10:0: in artificial function 'all', AmdgpuMaxNumWorkgroupsZ = 202
-; CHECK: remark: test.c:10:0: in artificial function 'all', AmdgpuFlatWorkGroupSizeMin = 210
-; CHECK: remark: test.c:10:0: in artificial function 'all', AmdgpuFlatWorkGroupSizeMax = 211
-; CHECK: remark: test.c:10:0: in artificial function 'all', AmdgpuWavesPerEUMin = 2
-; CHECK: remark: test.c:10:0: in artificial function 'all', AmdgpuWavesPerEUMax = 9
+; CHECK: remark: test.c:10:0: in artificial function 'all', omp_target_num_teams = 100
+; CHECK: remark: test.c:10:0: in artificial function 'all', omp_target_thread_limit = 101
+; CHECK: remark: test.c:10:0: in artificial function 'all', amdgpu-max-num-workgroups[0] = 200
+; CHECK: remark: test.c:10:0: in artificial function 'all', amdgpu-max-num-workgroups[1] = 201
+; CHECK: remark: test.c:10:0: in artificial function 'all', amdgpu-max-num-workgroups[2] = 202
+; CHECK: remark: test.c:10:0: in artificial function 'all', amdgpu-flat-work-group-size[0] = 210
+; CHECK: remark: test.c:10:0: in artificial function 'all', amdgpu-flat-work-group-size[1] = 211
+; CHECK: remark: test.c:10:0: in artificial function 'all', amdgpu-waves-per-eu[0] = 2
+; CHECK: remark: test.c:10:0: in artificial function 'all', amdgpu-waves-per-eu[1] = 9
 define void @all() #0 !dbg !5 {
 entry:
   ret void
 }
 
-; CHECK-NOT: remark: test.c:11:0: in function 'none', OmpTargetNumTeams = {{.*}}
-; CHECK-NOT: remark: test.c:11:0: in function 'none', OmpTargetThreadLimit = {{.*}}
-; CHECK: remark: test.c:11:0: in function 'none', AmdgpuMaxNumWorkgroupsX = 0
-; CHECK: remark: test.c:11:0: in function 'none', AmdgpuMaxNumWorkgroupsY = 0
-; CHECK: remark: test.c:11:0: in function 'none', AmdgpuMaxNumWorkgroupsZ = 0
-; CHECK: remark: test.c:11:0: in function 'none', AmdgpuFlatWorkGroupSizeMin = 1
-; CHECK: remark: test.c:11:0: in function 'none', AmdgpuFlatWorkGroupSizeMax = 1024
-; CHECK: remark: test.c:11:0: in function 'none', AmdgpuWavesPerEUMin = 4
-; CHECK: remark: test.c:11:0: in function 'none', AmdgpuWavesPerEUMax = 10
+; CHECK-NOT: remark: test.c:11:0: in function 'none', omp_target_num_teams = {{.*}}
+; CHECK-NOT: remark: test.c:11:0: in function 'none', omp_target_thread_limit = {{.*}}
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[0] = 0
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[1] = 0
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-max-num-workgroups[2] = 0
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-flat-work-group-size[0] = 1
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-flat-work-group-size[1] = 1024
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-waves-per-eu[0] = 4
+; CHECK: remark: test.c:11:0: in function 'none', amdgpu-waves-per-eu[1] = 10
 define void @none() !dbg !6 {
 entry:
   ret void
 }
 
-; CHECK: remark: test.c:12:0: in function 'bogus', OmpTargetNumTeams = 987654321
-; CHECK: remark: test.c:12:0: in function 'bogus', OmpTargetThreadLimit = 987654321
-; CHECK: remark: test.c:12:0: in function 'bogus', AmdgpuMaxNumWorkgroupsX = 987654321
-; CHECK: remark: test.c:12:0: in function 'bogus', AmdgpuMaxNumWorkgroupsY = 987654321
-; CHECK: remark: test.c:12:0: in function 'bogus', AmdgpuMaxNumWorkgroupsZ = 987654321
-; CHECK: remark: test.c:12:0: in function 'bogus', AmdgpuFlatWorkGroupSizeMin = 1
-; CHECK: remark: test.c:12:0: in function 'bogus', AmdgpuFlatWorkGroupSizeMax = 1024
-; CHECK: remark: test.c:12:0: in function 'bogus', AmdgpuWavesPerEUMin = 4
-; CHECK: remark: test.c:12:0: in function 'bogus', AmdgpuWavesPerEUMax = 10
+; CHECK: remark: test.c:12:0: in function 'bogus', omp_target_num_teams = 987654321
+; CHECK: remark: test.c:12:0: in function 'bogus', omp_target_thread_limit = 987654321
+; CHECK: remark: test.c:12:0: in function 'bogus', amdgpu-max-num-workgroups[0] = 987654321
+; CHECK: remark: test.c:12:0: in function 'bogus', amdgpu-max-num-workgroups[1] = 987654321
+; CHECK: remark: test.c:12:0: in function 'bogus', amdgpu-max-num-workgroups[2] = 987654321
+; CHECK: remark: test.c:12:0: in function 'bogus', amdgpu-flat-work-group-size[0] = 1
+; CHECK: remark: test.c:12:0: in function 'bogus', amdgpu-flat-work-group-size[1] = 1024
+; CHECK: remark: test.c:12:0: in function 'bogus', amdgpu-waves-per-eu[0] = 4
+; CHECK: remark: test.c:12:0: in function 'bogus', amdgpu-waves-per-eu[1] = 10
 define void @bogus() #1 !dbg !7 {
 entry:
   ret void

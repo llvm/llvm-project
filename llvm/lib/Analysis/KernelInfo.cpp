@@ -288,10 +288,10 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
 
   // Record function properties.
   KI.ExternalNotKernel = F.hasExternalLinkage() && !isKernelFunction(F);
-  if (auto Val = parseFnAttrAsInteger(F, "omp_target_num_teams"))
-    KI.LaunchBounds.push_back({"OmpTargetNumTeams", *Val});
-  if (auto Val = parseFnAttrAsInteger(F, "omp_target_thread_limit"))
-    KI.LaunchBounds.push_back({"OmpTargetThreadLimit", *Val});
+  for (StringRef Name : {"omp_target_num_teams", "omp_target_thread_limit"}) {
+    if (auto Val = parseFnAttrAsInteger(F, Name))
+      KI.LaunchBounds.push_back({Name, *Val});
+  }
   TheTTI.collectKernelLaunchBounds(F, KI.LaunchBounds);
 
   const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);

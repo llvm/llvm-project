@@ -448,11 +448,11 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
   if (auto Val = getMaxClusterRank(F))
-    LB.push_back({"Maxclusterrank", *Val});
+    LB.push_back({"maxclusterrank", *Val});
   if (auto Val = getMaxNTIDx(F))
-    LB.push_back({"Maxntidx", *Val});
+    LB.push_back({"maxntidx", *Val});
   if (auto Val = getMaxNTIDy(F))
-    LB.push_back({"Maxntidy", *Val});
+    LB.push_back({"maxntidy", *Val});
   if (auto Val = getMaxNTIDz(F))
-    LB.push_back({"Maxntidz", *Val});
+    LB.push_back({"maxntidz", *Val});
 }

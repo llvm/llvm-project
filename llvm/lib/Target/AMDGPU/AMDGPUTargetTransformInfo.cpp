@@ -1414,14 +1414,14 @@ bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
 void GCNTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
-  auto AmdgpuMaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
-  LB.push_back({"AmdgpuMaxNumWorkgroupsX", AmdgpuMaxNumWorkgroups[0]});
-  LB.push_back({"AmdgpuMaxNumWorkgroupsY", AmdgpuMaxNumWorkgroups[1]});
-  LB.push_back({"AmdgpuMaxNumWorkgroupsZ", AmdgpuMaxNumWorkgroups[2]});
-  auto AmdgpuFlatWorkGroupSize = ST->getFlatWorkGroupSizes(F);
-  LB.push_back({"AmdgpuFlatWorkGroupSizeMin", AmdgpuFlatWorkGroupSize.first});
-  LB.push_back({"AmdgpuFlatWorkGroupSizeMax", AmdgpuFlatWorkGroupSize.second});
-  auto AmdgpuWavesPerEU = ST->getWavesPerEU(F);
-  LB.push_back({"AmdgpuWavesPerEUMin", AmdgpuWavesPerEU.first});
-  LB.push_back({"AmdgpuWavesPerEUMax", AmdgpuWavesPerEU.second});
+  auto MaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
+  LB.push_back({"amdgpu-max-num-workgroups[0]", MaxNumWorkgroups[0]});
+  LB.push_back({"amdgpu-max-num-workgroups[1]", MaxNumWorkgroups[1]});
+  LB.push_back({"amdgpu-max-num-workgroups[2]", MaxNumWorkgroups[2]});
+  auto FlatWorkGroupSize = ST->getFlatWorkGroupSizes(F);
+  LB.push_back({"amdgpu-flat-work-group-size[0]", FlatWorkGroupSize.first});
+  LB.push_back({"amdgpu-flat-work-group-size[1]", FlatWorkGroupSize.second});
+  auto WavesPerEU = ST->getWavesPerEU(F);
+  LB.push_back({"amdgpu-waves-per-eu[0]", WavesPerEU.first});
+  LB.push_back({"amdgpu-waves-per-eu[1]", WavesPerEU.second});
 }
