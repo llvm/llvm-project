@@ -4,7 +4,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 // LLVM-DAG: @.str.annotation = private unnamed_addr constant [15 x i8] c"localvar_ann_0\00", section "llvm.metadata"
-// LLVM-DAG: @.str.1.annotation = private unnamed_addr constant [{{.*}} x i8] c"{{.*}}annotations-var.c\00", section "llvm.metadata"
+// LLVM-DAG: @.str.1.annotation = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}annotations-var.c\00", section "llvm.metadata"
 // LLVM-DAG: @.str.2.annotation = private unnamed_addr constant [15 x i8] c"localvar_ann_1\00", section "llvm.metadata"
 
 void local(void) {
