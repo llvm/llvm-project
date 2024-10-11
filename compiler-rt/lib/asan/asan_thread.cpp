@@ -21,7 +21,6 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_thread_history.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __asan {
@@ -554,12 +553,6 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
               tctx->os_id);
       },
       threads);
-}
-
-void PrintThreads() {
-  InternalScopedString out;
-  PrintThreadHistory(__asan::asanThreadRegistry(), out);
-  Report("%s\n", out.data());
 }
 
 }  // namespace __lsan
