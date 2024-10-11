@@ -313,6 +313,8 @@ struct Config {
   bool optEL = false;
   bool optimizeBBJumps;
   bool optRemarksWithHotness;
+  llvm::SmallVector<std::tuple<llvm::GlobPattern, uint32_t>, 0>
+      overrideSectionFlags;
   bool picThunk;
   bool pie;
   bool printGcSections;
