@@ -1053,7 +1053,7 @@ public:
   }
   const Expr *VisitCastExpr(const CastExpr *E) {
     if (E->getCastKind() == CK_LValueToRValue)
-      return E;
+      return IsExpectedRecordDecl(E) ? E : nullptr;
     return Visit(E->getSubExpr());
   }
   const Expr *VisitParenExpr(const ParenExpr *E) {
