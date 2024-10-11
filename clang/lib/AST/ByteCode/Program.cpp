@@ -33,7 +33,7 @@ const void *Program::getNativePointer(unsigned Idx) {
   return NativePointers[Idx];
 }
 
-unsigned Program::createGlobalString(const StringLiteral *S) {
+unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   const size_t CharWidth = S->getCharByteWidth();
   const size_t BitWidth = CharWidth * Ctx.getCharBit();
 
@@ -52,12 +52,15 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
     llvm_unreachable("unsupported character width");
   }
 
+  if (!Base)
+    Base = S;
+
   // Create a descriptor for the string.
-  Descriptor *Desc =
-      allocateDescriptor(S, CharType, Descriptor::GlobalMD, S->getLength() + 1,
-                         /*isConst=*/true,
-                         /*isTemporary=*/false,
-                         /*isMutable=*/false);
+  Descriptor *Desc = allocateDescriptor(Base, CharType, Descriptor::GlobalMD,
+                                        S->getLength() + 1,
+                                        /*isConst=*/true,
+                                        /*isTemporary=*/false,
+                                        /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
