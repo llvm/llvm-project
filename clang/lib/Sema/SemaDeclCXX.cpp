@@ -18296,7 +18296,7 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
                               diag::err_covariant_return_incomplete,
                               New->getDeclName()))
         return true;
-      }
+    }
 
     // Check if the new class derives from the old class.
     if (!IsDerivedFrom(New->getLocation(), NewClassTy, OldClassTy)) {
