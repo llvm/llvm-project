@@ -1,7 +1,7 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+bulk-memory | FileCheck %s --check-prefixes CHECK,BULK-MEM
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=-bulk-memory | FileCheck %s --check-prefixes CHECK,NO-BULK-MEM
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+bulk-memory-opt | FileCheck %s --check-prefixes CHECK,BULK-MEM
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=-bulk-memory-opt | FileCheck %s --check-prefixes CHECK,NO-BULK-MEM
 
-; Test that basic bulk memory codegen works correctly
+; Test that basic bulk memory opt codegen works correctly
 
 target triple = "wasm64-unknown-unknown"
 
