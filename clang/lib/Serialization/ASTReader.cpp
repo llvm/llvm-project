@@ -10281,15 +10281,18 @@ void ASTReader::finishPendingActions() {
       // For a function defined inline within a class template, force the
       // canonical definition to be the one inside the canonical definition of
       // the template. This ensures that we instantiate from a correct view
-      // of the template.
+      // of the template. This behaviour seems to be important only for inline
+      // friend functions. For normal member functions, it might results in
+      // selecting canonical decl from module A but body from module B.
       //
       // Sadly we can't do this more generally: we can't be sure that all
       // copies of an arbitrary class definition will have the same members
       // defined (eg, some member functions may not be instantiated, and some
       // special members may or may not have been implicitly defined).
-      if (auto *RD = dyn_cast<CXXRecordDecl>(FD->getLexicalParent()))
-        if (RD->isDependentContext() && !RD->isThisDeclarationADefinition())
-          continue;
+      if (FD->getFriendObjectKind())
+        if (auto *RD = dyn_cast<CXXRecordDecl>(FD->getLexicalParent()))
+          if (RD->isDependentContext() && !RD->isThisDeclarationADefinition())
+            continue;
 
       // FIXME: Check for =delete/=default?
       const FunctionDecl *Defn = nullptr;
