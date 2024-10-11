@@ -104,3 +104,17 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) {
   %result = call { fp128, fp128 } @llvm.sincos.f16(fp128 %a)
   ret { fp128, fp128 } %result
 }
+
+define { float, float } @test_sincos_f32_afn(float %a) {
+  ; CHECK-LABEL: name: test_sincos_f32_afn
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $s0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+  ; CHECK-NEXT:   [[FSINCOS:%[0-9]+]]:_(s32), [[FSINCOS1:%[0-9]+]]:_ = afn G_FSINCOS [[COPY]]
+  ; CHECK-NEXT:   $s0 = COPY [[FSINCOS]](s32)
+  ; CHECK-NEXT:   $s1 = COPY [[FSINCOS1]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0, implicit $s1
+  %result = call afn { float, float } @llvm.sincos.f32(float %a)
+  ret { float, float } %result
+}
