@@ -131,7 +131,7 @@ template <unsigned Alignment> struct custom_alignment_tag {
       _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__builtin_is_aligned(_ptr, Alignment), "Pointer must be aligned by provided alignment for tagging");
 #else
       if !consteval {
-        _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(reinterpret_cast<uintptr_t>(std::addressof(_ptr)) % Alignment == 0, "Pointer must be aligned by provided alignemt for tagging");
+        _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(reinterpret_cast<uintptr_t>(_ptr) % Alignment == 0, "Pointer must be aligned by provided alignemt for tagging");
       }
 #endif
       return _underlying_schema::encode_pointer_with_tag(_ptr, _value);
@@ -158,7 +158,7 @@ template <unsigned Bits> struct left_shift_tag {
     using tag_type = Tag;
     
     // what to do here?
-    static constexpr uintptr_t used_bits = left_shift_tag::_mask;
+    static constexpr uintptr_t used_bits = ~((~uintptr_t{0}) >> _shift);
 
     static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
 #if __has_builtin(__builtin_tag_pointer_shift_or)
@@ -267,7 +267,7 @@ template <size_t Bits> struct bits_needed_tag {
 
 
 // forward declaration
-template <typename _T, typename _Tag, typename _Schema> class tagged_ptr;
+template <typename _T, typename _Tag, typename _Schema = memory::alignment_low_bits_tag> class tagged_ptr;
 
 struct already_tagged_t {
   consteval explicit already_tagged_t(int) noexcept { }
@@ -318,7 +318,7 @@ public:
   using clean_pointer = typename schema::clean_pointer;
   
   static constexpr auto clean_pointer_free_bits = std::pointer_traits<clean_pointer>::unused_bits; 
-  static constexpr auto dirty_pointer_free_bits = clean_pointer_free_bits & schema::used_bits; 
+  static constexpr auto dirty_pointer_free_bits = clean_pointer_free_bits & ~static_cast<uintptr_t>(schema::used_bits); 
   template <uintptr_t FreeBits> static constexpr bool has_all_bits_available = (schema::used_bits & FreeBits) == schema::used_bits;
   
   using tag_type = typename schema::tag_type;
@@ -352,6 +352,13 @@ public:
   
   // construct which allows to communicate overaligned pointer to push over-aligned pointer
   template <size_t Alignment> explicit constexpr tagged_ptr(overaligned_pointer_t<Alignment>, clean_pointer _ptr, tag_type _tag) noexcept requires (has_all_bits_available<std::pointer_traits<clean_pointer>::unused_bits | (std::alignment_free_bits<Alignment>)>): _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
+#if __has_builtin(__builtin_is_aligned)
+      _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__builtin_is_aligned(_ptr, Alignment), "Pointer must be aligned by provided alignment for tagging");
+#else
+      if !consteval {
+        _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(reinterpret_cast<uintptr_t>(_ptr) % Alignment == 0, "Pointer must be aligned by provided alignemt for tagging");
+      }
+#endif
     
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(pointer() == _ptr, "pointer must be recoverable after untagging");
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(tag() == _tag, "stored tag must be recoverable and within schema provided bit capacity");
@@ -539,7 +546,7 @@ template <typename _T, typename _Tag, typename _Schema>
 struct _LIBCPP_TEMPLATE_VIS pointer_traits<tagged_ptr<_T, _Tag, _Schema>> {
   using _tagged_ptr = tagged_ptr<_T, _Tag, _Schema>;
   using pointer = _tagged_ptr::clean_pointer;
-  using element_type = _tagged_ptr::value_type;
+  using element_type = _tagged_ptr::element_type;
   using difference_type = _tagged_ptr::difference_type;
 
   template <typename _Up> using rebind = typename _tagged_ptr::template rebind<_Up>;

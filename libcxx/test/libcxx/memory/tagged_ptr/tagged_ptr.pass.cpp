@@ -75,7 +75,30 @@ HANA_TEST {
  
   uintptr_t tag = 0b11000111u;
   auto tptr = std::tagged_ptr<int64_t[3], uintptr_t, std::memory::low_byte_tag>(&a, tag);
+  
+  auto * original = tptr.pointer();
+  HANA_ASSERT(tag == tptr.tag());
+  HANA_ASSERT(original == &a);
  
+  auto [p, t] = tptr;
+  HANA_ASSERT(p == &a);
+  HANA_ASSERT(t == tag);
+ 
+  HANA_ASSERT(tptr[0] == 1);
+  HANA_ASSERT(tptr[1] == 2);
+  HANA_ASSERT(tptr[2] == 3);
+ 
+ 
+  return true;
+};
+
+HANA_TEST {
+  int64_t a[3] = {1,2,3};
+ 
+  uintptr_t tag = 0b1111u;
+  // this only works on ARM64 as it needs available bits on left position
+  auto tptr = std::tagged_ptr<int64_t[3], uintptr_t, std::memory::left_shift_tag<4>>(&a, tag);
+  
   auto * original = tptr.pointer();
   HANA_ASSERT(tag == tptr.tag());
   HANA_ASSERT(original == &a);
@@ -146,13 +169,42 @@ HANA_TEST {
 HANA_TEST {
   int a{14};
   int * b = &a;
-  auto tptr = std::tagged_ptr<int, uintptr_t, std::memory::alignment_low_bits_tag>(b);
+  auto tptr = std::tagged_ptr<int, uintptr_t, std::memory::alignment_low_bits_tag>(b, 0b1u);
   HANA_ASSERT(tptr.pointer() == &a);
   return true;
 };
 
+HANA_TEST {
+  alignas(16) int a{14};
+  int * b = &a;
+  auto tptr = std::tagged_ptr<int, uintptr_t, std::memory::custom_alignment_tag<16>>(std::overaligned_pointer<16>, b, 0b1u);
+  return true;
+};
 
+HANA_TEST {
+  int a{14};
+  int * b = &a;
+  auto tptr = std::tagged_ptr<int, uintptr_t, std::memory::bits_needed_tag<2>>(b, 0b11u);
+  return true;
+};
 
+HANA_TEST {
+  struct overaligned_int { alignas(16) int x; };
+  
+  using first_ptraits = std::pointer_traits<overaligned_int *>;
+  static_assert((first_ptraits::unused_bits & 0b1111ull) == 0b1111ull);
+  
+  auto v = overaligned_int{4};
+  auto tptr = std::tagged_ptr<overaligned_int, uintptr_t, std::memory::bitmask_tag<0b11>>(&v, 0b11u);
+  HANA_ASSERT(tptr.pointer() == &v);
+  HANA_ASSERT(tptr.tag() == 0b11u);
+  
+  using ptraits = std::pointer_traits<decltype(tptr)>;
+  
+  static_assert((ptraits::unused_bits & 0b1111ull) == 0b1100ull);
+
+  return true;
+};
   
   return 0;
 }

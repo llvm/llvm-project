@@ -168,7 +168,7 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*> {
 #else 
   static constexpr uintptr_t _upper_bits = 0ull;
 #endif
-  static constexpr uintptr_t unused_bits = ((1ull << (alignof(element_type) - 1ull)) - 1ull) | _upper_bits;
+  static constexpr uintptr_t unused_bits = (alignof(element_type) - 1ull) | _upper_bits;
 #endif
 
 private:
