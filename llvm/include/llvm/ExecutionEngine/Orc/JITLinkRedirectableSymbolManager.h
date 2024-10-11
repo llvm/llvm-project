@@ -25,10 +25,11 @@ class JITLinkRedirectableSymbolManager : public RedirectableSymbolManager,
 public:
   /// Create redirection manager that uses JITLink based implementaion.
   static Expected<std::unique_ptr<RedirectableSymbolManager>>
-  Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &JD) {
+  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+         JITDylib &JD) {
     Error Err = Error::success();
     auto RM = std::unique_ptr<RedirectableSymbolManager>(
-        new JITLinkRedirectableSymbolManager(ObjLinkingLayer, JD, Err));
+        new JITLinkRedirectableSymbolManager(ES, ObjLinkingLayer, JD, Err));
     if (Err)
       return Err;
     return std::move(RM);
@@ -52,33 +53,30 @@ private:
   constexpr static StringRef JumpStubTableName = "$IND_JUMP_";
   constexpr static StringRef StubPtrTableName = "$__IND_JUMP_PTRS";
 
-  JITLinkRedirectableSymbolManager(ObjectLinkingLayer &ObjLinkingLayer,
+  JITLinkRedirectableSymbolManager(ExecutionSession &ES,
+                                   ObjectLinkingLayer &ObjLinkingLayer,
                                    JITDylib &JD, Error &Err)
-      : ObjLinkingLayer(ObjLinkingLayer), JD(JD),
-        AnonymousPtrCreator(jitlink::getAnonymousPointerCreator(
-            ObjLinkingLayer.getExecutionSession().getTargetTriple())),
-        PtrJumpStubCreator(jitlink::getPointerJumpStubCreator(
-            ObjLinkingLayer.getExecutionSession().getTargetTriple())) {
+      : ES(ES), ObjLinkingLayer(ObjLinkingLayer), JD(JD),
+        AnonymousPtrCreator(
+            jitlink::getAnonymousPointerCreator(ES.getTargetTriple())),
+        PtrJumpStubCreator(
+            jitlink::getPointerJumpStubCreator(ES.getTargetTriple())) {
     if (!AnonymousPtrCreator || !PtrJumpStubCreator)
       Err = make_error<StringError>("Architecture not supported",
                                     inconvertibleErrorCode());
     if (Err)
       return;
-    ObjLinkingLayer.getExecutionSession().registerResourceManager(*this);
+    ES.registerResourceManager(*this);
   }
 
-  ~JITLinkRedirectableSymbolManager() {
-    ObjLinkingLayer.getExecutionSession().deregisterResourceManager(*this);
-  }
+  ~JITLinkRedirectableSymbolManager() { ES.deregisterResourceManager(*this); }
 
   StringRef JumpStubSymbolName(unsigned I) {
-    return *ObjLinkingLayer.getExecutionSession().intern(
-        (JumpStubPrefix + Twine(I)).str());
+    return *ES.intern((JumpStubPrefix + Twine(I)).str());
   }
 
   StringRef StubPtrSymbolName(unsigned I) {
-    return *ObjLinkingLayer.getExecutionSession().intern(
-        (StubPtrPrefix + Twine(I)).str());
+    return *ES.intern((StubPtrPrefix + Twine(I)).str());
   }
 
   unsigned GetNumAvailableStubs() const { return AvailableStubs.size(); }
@@ -86,6 +84,7 @@ private:
   Error redirectInner(JITDylib &TargetJD, const SymbolAddrMap &NewDests);
   Error grow(unsigned Need);
 
+  ExecutionSession &ES;
   ObjectLinkingLayer &ObjLinkingLayer;
   JITDylib &JD;
   jitlink::AnonymousPointerCreator AnonymousPtrCreator;
