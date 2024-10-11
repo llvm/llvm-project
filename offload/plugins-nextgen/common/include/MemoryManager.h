@@ -176,7 +176,7 @@ class MemoryManagerTy {
   /// be because the device is OOM. In that case, it will free all unused
   /// memory and then try again.
   OMPTARGET_INLINE void *allocateOrFreeAndAllocateOnDevice(size_t Size,
-                                                          void *HstPtr) {
+                                                           void *HstPtr) {
     void *TgtPtr = allocateOnDevice(Size, HstPtr);
     // We cannot get memory from the device. It might be due to OOM. Let's
     // free all memory in FreeLists and try again.
