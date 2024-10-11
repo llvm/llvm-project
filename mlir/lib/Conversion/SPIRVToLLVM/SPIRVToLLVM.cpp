@@ -1030,21 +1030,21 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
                                               Type resultType) {
   auto func = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(symbolTable, name));
-  if (!func) {
-    OpBuilder b(symbolTable->getRegion(0));
-    func = b.create<LLVM::LLVMFuncOp>(
-        symbolTable->getLoc(), name,
-        LLVM::LLVMFunctionType::get(resultType, paramTypes));
-    func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
-    func.setConvergent(true);
-    func.setNoUnwind(true);
-    func.setWillReturn(true);
-  }
+  if (func)
+    return func;
+
+  OpBuilder b(symbolTable->getRegion(0));
+  func = b.create<LLVM::LLVMFuncOp>(
+      symbolTable->getLoc(), name,
+      LLVM::LLVMFunctionType::get(resultType, paramTypes));
+  func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
+  func.setConvergent(true);
+  func.setNoUnwind(true);
+  func.setWillReturn(true);
   return func;
 }
 
-static LLVM::CallOp createSPIRVBuiltinCall(Location loc,
-                                           ConversionPatternRewriter &rewriter,
+static LLVM::CallOp createSPIRVBuiltinCall(Location loc, OpBuilder &rewriter,
                                            LLVM::LLVMFuncOp func,
                                            ValueRange args) {
   auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
@@ -1063,7 +1063,7 @@ public:
   LogicalResult
   matchAndRewrite(spirv::ControlBarrierOp controlBarrierOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    constexpr StringRef funcName = "_Z22__spirv_ControlBarrieriii";
+    constexpr StringLiteral funcName = "_Z22__spirv_ControlBarrieriii";
     Operation *symbolTable =
         controlBarrierOp->getParentWithTrait<OpTrait::SymbolTable>();
 
@@ -1073,7 +1073,7 @@ public:
     LLVM::LLVMFuncOp func =
         lookupOrCreateSPIRVFn(symbolTable, funcName, {i32, i32, i32}, voidTy);
 
-    auto loc = controlBarrierOp->getLoc();
+    Location loc = controlBarrierOp->getLoc();
     Value execution = rewriter.create<LLVM::ConstantOp>(
         loc, i32, static_cast<int32_t>(adaptor.getExecutionScope()));
     Value memory = rewriter.create<LLVM::ConstantOp>(
