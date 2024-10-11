@@ -707,10 +707,11 @@ bool MachineCopyPropagation::hasOverlappingMultipleDef(
   return false;
 }
 
-/// Return true if it is safe to update the users of the source register of the
-/// copy.
+/// Return true if it is safe to update all users of the \p CopySrc register
+/// in the given \p Copy instruction.
 bool MachineCopyPropagation::canUpdateSrcUsers(const MachineInstr &Copy,
                                                const MachineOperand &CopySrc) {
+  assert(CopySrc.isReg() && "Expected a register operand");
   for (auto *SrcUser : Tracker.getSrcUsers(CopySrc.getReg(), *TRI)) {
     if (hasImplicitOverlap(*SrcUser, CopySrc))
       return false;
