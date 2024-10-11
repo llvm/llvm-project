@@ -109,6 +109,10 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
       threads);
 }
 
+void PrintThreads() {
+  // TODO: implement.
+}
+
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
   GetThreadArgRetval().GetAllPtrsLocked(ptrs);
 }
