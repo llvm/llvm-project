@@ -754,10 +754,10 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %a) nounwind {
 ; RV32I-NEXT:    add a2, a2, a4
 ; RV32I-NEXT:    srli a2, a2, 24
 ; RV32I-NEXT:    add a1, a2, a1
-; RV32I-NEXT:    sw zero, 12(a0)
+; RV32I-NEXT:    sw a3, 0(a0)
 ; RV32I-NEXT:    sw zero, 4(a0)
 ; RV32I-NEXT:    sw a1, 8(a0)
-; RV32I-NEXT:    sw a3, 0(a0)
+; RV32I-NEXT:    sw zero, 12(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: ctpop_v2i64:
@@ -772,10 +772,10 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %a) nounwind {
 ; RV32ZBB-NEXT:    cpop a1, a1
 ; RV32ZBB-NEXT:    cpop a3, a4
 ; RV32ZBB-NEXT:    add a1, a3, a1
-; RV32ZBB-NEXT:    sw zero, 12(a0)
+; RV32ZBB-NEXT:    sw a2, 0(a0)
 ; RV32ZBB-NEXT:    sw zero, 4(a0)
 ; RV32ZBB-NEXT:    sw a1, 8(a0)
-; RV32ZBB-NEXT:    sw a2, 0(a0)
+; RV32ZBB-NEXT:    sw zero, 12(a0)
 ; RV32ZBB-NEXT:    ret
   %1 = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
   ret <2 x i64> %1
