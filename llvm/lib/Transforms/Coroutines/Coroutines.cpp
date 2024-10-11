@@ -73,6 +73,7 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.await.suspend.handle",
     "llvm.coro.await.suspend.void",
     "llvm.coro.begin",
+    "llvm.coro.begin.custom.abi",
     "llvm.coro.destroy",
     "llvm.coro.done",
     "llvm.coro.end",
@@ -247,7 +248,8 @@ void coro::Shape::analyze(Function &F,
         }
         break;
       }
-      case Intrinsic::coro_begin: {
+      case Intrinsic::coro_begin:
+      case Intrinsic::coro_begin_custom_abi: {
         auto CB = cast<CoroBeginInst>(II);
 
         // Ignore coro id's that aren't pre-split.
