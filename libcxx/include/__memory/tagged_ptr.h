@@ -19,27 +19,34 @@
 #include <__config>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__assert>
-#include "__bit/has_single_bit.h"
+#include <__bit/has_single_bit.h>
 #include <__type_traits/rank.h>
-#include "pointer_traits.h"
+#include <__memory/pointer_traits.h>
 #include <compare>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename T, typename Y> concept convertible_to_from = std::convertible_to<Y, T> && std::convertible_to<T, Y>;
-  
-template <typename T> concept pointer_tagging_schema = requires(T::dirty_pointer payload, T::clean_pointer clean, T::tag_type tag) {
+
+template <typename T> concept pointer_tagging_schema = 
+requires {
+  typename T::clean_pointer;
+  typename T::dirty_pointer;
+  typename T::tag_type;
+} && requires(T::dirty_pointer payload, T::clean_pointer clean, T::tag_type tag) {
   requires convertible_to_from<typename T::tag_type, uintptr_t>;
   requires std::is_pointer_v<typename T::clean_pointer>;
   
   { T::encode_pointer_with_tag(clean, tag) } noexcept -> std::same_as<typename T::dirty_pointer>;
   { T::recover_pointer(payload) } noexcept -> std::same_as<typename T::clean_pointer>;
-  { T::recover_value(payload) } noexcept -> std::same_as<typename T::tag_type>;
+  { T::recover_tag(payload) } noexcept -> std::same_as<typename T::tag_type>;
 };
 
 template <typename T> concept pointer_tagging_schema_with_aliasing = pointer_tagging_schema<T> && requires(T::dirty_pointer payload) {
   { T::recover_aliasing_pointer(payload) } noexcept -> std::same_as<typename T::clean_pointer>;
 };
+
+namespace memory {
 
 // no-op schema so I can better explain how schemas work
 struct no_tag {
@@ -47,17 +54,19 @@ struct no_tag {
     using clean_pointer = T *;
     using dirty_pointer = void *;
     using tag_type = Tag;
+    
+    static constexpr uintptr_t _mask = 0u;
 
-    [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type) noexcept {
       return (dirty_pointer)_ptr;
     }
-    [[clang::always_inline]] static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
       return (clean_pointer)_ptr;
     }
-    [[clang::always_inline]] static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
       return (clean_pointer)_ptr;
     }
-    [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr tag_type recover_tag(dirty_pointer) noexcept {
       return {};
     }
   };
@@ -66,28 +75,28 @@ struct no_tag {
 // most basic schema for tagging
 // it lets user to provide their own mask
 template <uintptr_t Mask> struct bitmask_tag {
-  static constexpr uintptr_t _mask = Mask;
-
   template <typename T, typename Tag> struct schema {
     using clean_pointer = T *;
     using dirty_pointer = void *;
     using tag_type = Tag;
+    
+    static constexpr uintptr_t _mask = Mask;
 
-    [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
 #if __has_builtin(__builtin_tag_pointer_mask_or)
       return static_cast<dirty_pointer>(__builtin_tag_pointer_mask_or((void *)(_ptr), static_cast<uintptr_t>(_value), _mask));
 #else
       return reinterpret_cast<dirty_pointer>((reinterpret_cast<uintptr_t>(_ptr) & static_cast<uintptr_t>(_mask)) | (static_cast<uintptr_t>(_value) & ~static_cast<uintptr_t>(_mask)));
 #endif
     }
-    [[clang::always_inline]] static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
 #if __has_builtin(__builtin_tag_pointer_mask)
       return static_cast<clean_pointer>(__builtin_tag_pointer_mask((void *)_ptr, ~_mask));
 #else
       return reinterpret_cast<clean_pointer>(reinterpret_cast<uintptr_t>(_ptr) & ~static_cast<uintptr_t>(_mask));
 #endif
     }
-    [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer _ptr) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
 #if __has_builtin(__builtin_tag_pointer_mask_as_int)
       return static_cast<tag_type>(__builtin_tag_pointer_mask_as_int((void *)_ptr, _mask));
 #else
@@ -100,15 +109,17 @@ template <uintptr_t Mask> struct bitmask_tag {
 // schema which allows only pointer of custom provided minimal alignment 
 // otherwise it behaves as custom mask schema
 template <unsigned Alignment> struct custom_alignment_tag {
-  static constexpr uintptr_t mask = (static_cast<uintptr_t>(1u) << static_cast<uintptr_t>(Alignment)) - 1ull;
+  static_assert(std::has_single_bit(Alignment), "alignment must be power of 2");
+  static constexpr uintptr_t mask = static_cast<uintptr_t>(Alignment) - 1ull;
+  
   template <typename T, typename Tag> struct schema: bitmask_tag<mask>::template schema<T, Tag> {
-    using _underlying_schema =bitmask_tag<mask>::template schema<T, Tag>;
+    using _underlying_schema = bitmask_tag<mask>::template schema<T, Tag>;
   
     using clean_pointer = _underlying_schema::clean_pointer;
     using dirty_pointer = _underlying_schema::dirty_pointer;
     using tag_type = _underlying_schema::tag_type;
     
-    [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
 #if __has_builtin(__builtin_is_aligned)
       _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__builtin_is_aligned(_ptr, Alignment), "Pointer must be aligned by provided alignemt for tagging");
 #else
@@ -120,18 +131,17 @@ template <unsigned Alignment> struct custom_alignment_tag {
     }
     
     using _underlying_schema::recover_pointer;
-    using _underlying_schema::recover_value;
+    using _underlying_schema::recover_tag;
   };
 };
 
 // default scheme which gives only bits from alignment
 struct alignment_low_bits_tag {
-  template <typename T> static constexpr unsigned alignment = alignof(T);
-  template <typename T, typename Tag> using schema = typename custom_alignment_tag<alignment<T>>::template schema<T, Tag>;
+  template <typename T, typename Tag> using schema = typename custom_alignment_tag<alignof(T)>::template schema<T, Tag>;
 };
 
 // scheme which shifts bits to left by Bits bits and gives the space for tagging
-template <unsigned Bits> struct shift_tag {
+template <unsigned Bits> struct left_shift_tag {
   static constexpr unsigned _shift = Bits;
   static constexpr uintptr_t _mask = (uintptr_t{1u} << _shift) - 1u;
 
@@ -139,22 +149,24 @@ template <unsigned Bits> struct shift_tag {
     using clean_pointer = T *;
     using dirty_pointer = void *;
     using tag_type = Tag;
+    
+    static constexpr uintptr_t _mask = left_shift_tag::_mask;
 
-    [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
 #if __has_builtin(__builtin_tag_pointer_shift_or)
       return static_cast<dirty_pointer>(__builtin_tag_pointer_shift_or((void *)(_ptr), (uintptr_t)_value, _shift));
 #else
       return reinterpret_cast<dirty_pointer>((reinterpret_cast<uintptr_t>(_ptr) << _shift) | (static_cast<uintptr_t>(_value) & ((1ull << static_cast<uintptr_t>(_shift)) - 1ull)));
 #endif
     }
-    [[clang::always_inline]] static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_pointer(dirty_pointer _ptr) noexcept {
 #if __has_builtin(__builtin_tag_pointer_unshift)
       return static_cast<clean_pointer>(__builtin_tag_pointer_unshift((void *)_ptr, _shift));
 #else
       return reinterpret_cast<clean_pointer>(reinterpret_cast<uintptr_t>(_ptr) >> _shift);
 #endif
     }
-    [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer _ptr) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
 #if __has_builtin(__builtin_tag_pointer_mask_as_int)
       return static_cast<tag_type>(__builtin_tag_pointer_mask_as_int((void *)_ptr, _mask));
 #else
@@ -166,7 +178,7 @@ template <unsigned Bits> struct shift_tag {
 
 // scheme which shifts pointer to left by 8 bits and give this space as guaranteed space for tagging
 struct low_byte_tag {
-  template <typename T, typename Tag> using schema = typename shift_tag<8>::template schema<T, Tag>;
+  template <typename T, typename Tag> using schema = typename left_shift_tag<8>::template schema<T, Tag>;
 };
 
 // this will give user access to upper byte of pointer on aarch64
@@ -182,13 +194,13 @@ struct upper_byte_tag {
     using dirty_pointer = _underlying_schema::dirty_pointer;
     using tag_type = _underlying_schema::tag_type;
   
-    [[clang::always_inline]] static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr clean_pointer recover_aliasing_pointer(dirty_pointer _ptr) noexcept {
       return (clean_pointer)_ptr;
     }
     
     using _underlying_schema::encode_pointer_with_tag;
     using _underlying_schema::recover_pointer;
-    using _underlying_schema::recover_value;
+    using _underlying_schema::recover_tag;
   };
 };
 
@@ -202,11 +214,11 @@ struct upper_byte_shifted_tag: upper_byte_tag {
     using dirty_pointer = _underlying_schema::dirty_pointer;
     using tag_type = Tag;
   
-    [[clang::always_inline]] static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
+    _LIBCPP_ALWAYS_INLINE static constexpr dirty_pointer encode_pointer_with_tag(clean_pointer _ptr, tag_type _value) noexcept {
       return _underlying_schema::encode_pointer_with_tag(_ptr, static_cast<uintptr_t>(_value) << upper_byte_tag::_shift<T>);
     }
-    [[clang::always_inline]] static constexpr tag_type recover_value(dirty_pointer _ptr) noexcept {
-      return static_cast<tag_type>(_underlying_schema::recover_value(_ptr) >> upper_byte_tag::_shift<T>);
+    _LIBCPP_ALWAYS_INLINE static constexpr tag_type recover_tag(dirty_pointer _ptr) noexcept {
+      return static_cast<tag_type>(_underlying_schema::recover_tag(_ptr) >> upper_byte_tag::_shift<T>);
     }
     
     using _underlying_schema::recover_pointer;
@@ -214,18 +226,23 @@ struct upper_byte_shifted_tag: upper_byte_tag {
   };
 };
 
+template <unsigned Bits> struct bits_needed {
+  template <typename _T, typename _Tag> struct schema {
+    // we can automatically choose suitable schema
+  };
+};
+
+}
+
+
 // forward declaration
-template <typename _T, typename _Tag = uintptr_t, typename _Schema = alignment_low_bits_tag> class tagged_ptr;
+template <typename _T, typename _Tag, typename _Schema> class tagged_ptr;
 
+struct already_tagged_t {
+  consteval explicit already_tagged_t(int) noexcept { }
+};
 
-template <typename _Schema, typename _T, typename _Tag = uintptr_t> constexpr auto tag_ptr(_T * _ptr, _Tag _tag = {}) noexcept {
-  return tagged_ptr<_T, _Tag, _Schema>{_ptr, _tag};
-}
-
-template <typename _T, typename _Tag, typename _Schema = alignment_low_bits_tag> constexpr auto tagged_pointer_cast(typename _Schema::template schema<_T, _Tag>::dirty_pointer _ptr) noexcept -> tagged_ptr<_T, _Tag, _Schema> {
-  using result_type = tagged_ptr<_T, _Tag, _Schema>;
-  return result_type{typename result_type::already_tagged_tag{_ptr}};
-}
+constexpr auto already_tagged = already_tagged_t{0};
 
 template <typename _Schema2, typename _T, typename _Tag, typename _Schema> constexpr auto scheme_pointer_cast(tagged_ptr<_T, _Tag, _Schema> in) noexcept {
   return tagged_ptr<_T, _Tag, _Schema2>{in.pointer(), in.tag()};
@@ -257,7 +274,7 @@ public:
   using clean_pointer = typename schema::clean_pointer;
   using tag_type = typename schema::tag_type;
   
-  using value_type = std::remove_cvref_t<decltype(*std::declval<clean_pointer>())>;
+  using element_type = typename std::pointer_traits<clean_pointer>::element_type;
   using difference_type = typename std::pointer_traits<clean_pointer>::difference_type;
   
   
@@ -267,125 +284,102 @@ private:
   
   dirty_pointer _pointer{nullptr};
   
-  friend constexpr auto tagged_pointer_cast<_T, _Tag, _Schema>(typename _Schema::template schema<_T, _Tag>::dirty_pointer ptr) noexcept -> tagged_ptr<_T, _Tag, _Schema>;
-  
-  struct already_tagged_tag {
-    dirty_pointer _ptr;
-  };
- 
-  // special hidden constructor to allow constructing unsafely
-  [[clang::always_inline]] constexpr tagged_ptr(already_tagged_tag _in) noexcept: _pointer{_in._ptr} { }
-  
   template <typename _Y, typename _T2, typename _Tag2, typename _Schema2> constexpr auto const_pointer_cast(tagged_ptr<_T2, _Tag2, _Schema2> in) noexcept -> rebind<_T>;
   
 public:
   tagged_ptr() = default;
-  consteval tagged_ptr(nullptr_t) noexcept: _pointer{nullptr} { }
+  constexpr tagged_ptr(nullptr_t) noexcept: _pointer{nullptr} { }
   tagged_ptr(const tagged_ptr &) = default;
   tagged_ptr(tagged_ptr &&) = default;
   ~tagged_ptr() = default;
   tagged_ptr & operator=(const tagged_ptr &) = default;
   tagged_ptr & operator=(tagged_ptr &&) = default;
   
-  [[clang::always_inline]] explicit constexpr tagged_ptr(clean_pointer _ptr, tag_type _tag = {}) noexcept: _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
+  explicit constexpr tagged_ptr(already_tagged_t, dirty_pointer _ptr) noexcept: _pointer{_ptr} { }
+  
+  _LIBCPP_ALWAYS_INLINE explicit constexpr tagged_ptr(clean_pointer _ptr, tag_type _tag = {}) noexcept: _pointer{schema::encode_pointer_with_tag(_ptr, _tag)} {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(pointer() == _ptr, "pointer must be recoverable after untagging");
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(tag() == _tag, "stored tag must be recoverable and within schema provided bit capacity");
   } 
 
   // accessors
-  [[clang::always_inline]] constexpr decltype(auto) operator*() const noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr decltype(auto) operator*() const noexcept {
     return *pointer();
   }
   
-  [[clang::always_inline]] constexpr clean_pointer operator->() const noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr clean_pointer operator->() const noexcept {
     return pointer();
   }
    
-  template <typename...Ts> [[clang::always_inline]] [[clang::always_inline]] constexpr decltype(auto) operator[](Ts... args) const noexcept requires std::is_array_v<value_type> && (sizeof...(Ts) == std::rank_v<value_type>) {
+  template <typename...Ts> _LIBCPP_ALWAYS_INLINE constexpr decltype(auto) operator[](Ts... args) const noexcept requires std::is_array_v<element_type> && (sizeof...(Ts) == std::rank_v<element_type>) {
     return (*pointer())[args...];
   }
   
-  [[clang::always_inline]] constexpr decltype(auto) operator[](difference_type diff) const noexcept requires (!std::is_array_v<value_type>) {
+  _LIBCPP_ALWAYS_INLINE constexpr decltype(auto) operator[](difference_type diff) const noexcept requires (!std::is_array_v<element_type>) {
     return *(pointer() + diff);
   }
   
   // swap
-  [[clang::always_inline]] friend constexpr void swap(tagged_ptr & lhs, tagged_ptr & rhs) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr void swap(tagged_ptr & lhs, tagged_ptr & rhs) noexcept {
     std::swap(lhs._pointer, rhs._pointer);
   }
   
   // modifiers for tag
-  [[clang::always_inline]] constexpr auto & set(tag_type new_tag) noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr auto & set(tag_type new_tag) noexcept {
     // this is here so I can avoid checks
     // TODO we should be able to check what bits available
     _pointer = schema::encode_pointer_with_tag(pointer(), new_tag);
     return *this;
   }
-  
-  [[clang::always_inline]] constexpr auto & set_union(tag_type addition) noexcept {
-    return set(tag() | addition);
-  }
-  
-  [[clang::always_inline]] constexpr auto & set_difference(tag_type mask) noexcept {
-    return set(tag() & (~static_cast<uintptr_t>(mask)));
-  }
-  
-  [[clang::always_inline]] constexpr auto & set_intersection(tag_type mask) noexcept {
-    return set(tag() & mask);
-  }
-  
-  [[clang::always_inline]] constexpr auto & set_all() noexcept {
-    return set(static_cast<tag_type>(0xFFFFFFFF'FFFFFFFFull));
-  }
 
   // modifiers for pointer
-  [[clang::always_inline]] constexpr auto & operator++() noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr auto & operator++() noexcept {
     _pointer = tagged_ptr{pointer()+1u, tag()}._pointer;
     return *this;
   }
   
-  [[clang::always_inline]] constexpr auto operator++(int) noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr auto operator++(int) noexcept {
     auto copy = auto(*this);
     this->operator++();
     return copy;
   }
   
-  [[clang::always_inline]] constexpr auto & operator+=(difference_type diff) noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr auto & operator+=(difference_type diff) noexcept {
     _pointer = tagged_ptr{pointer()+diff, tag()}._pointer;
     return *this;
   }
   
-  [[clang::always_inline]] friend constexpr auto operator+(tagged_ptr lhs, difference_type diff) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator+(tagged_ptr lhs, difference_type diff) noexcept {
     lhs += diff;
     return lhs;
   }
   
-  [[clang::always_inline]] friend constexpr auto operator+(difference_type diff, tagged_ptr rhs) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator+(difference_type diff, tagged_ptr rhs) noexcept {
     rhs += diff;
     return rhs;
   }
   
-  [[clang::always_inline]] friend constexpr auto operator-(tagged_ptr lhs, difference_type diff) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator-(tagged_ptr lhs, difference_type diff) noexcept {
     lhs -= diff;
     return lhs;
   }
   
-  [[clang::always_inline]] friend constexpr auto operator-(difference_type diff, tagged_ptr rhs) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator-(difference_type diff, tagged_ptr rhs) noexcept {
     rhs -= diff;
     return rhs;
   }
   
-  [[clang::always_inline]] constexpr auto & operator-=(difference_type diff) noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr auto & operator-=(difference_type diff) noexcept {
     _pointer = tagged_ptr{pointer()-diff, tag()}._pointer;
     return *this;
   }
   
-  [[clang::always_inline]] constexpr auto & operator--() noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr auto & operator--() noexcept {
     _pointer = tagged_ptr{pointer()-1u, tag()}._pointer;
     return *this;
   }
   
-  [[clang::always_inline]] constexpr auto operator--(int) noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr auto operator--(int) noexcept {
     auto copy = auto(*this);
     this->operator--();
     return copy;
@@ -400,7 +394,7 @@ public:
   
   static constexpr bool support_aliasing_masking = pointer_tagging_schema_with_aliasing<schema>;
   
-  [[clang::always_inline]] constexpr clean_pointer aliasing_pointer() const noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr clean_pointer aliasing_pointer() const noexcept {
     if constexpr (support_aliasing_masking) {
       if !consteval {
         return schema::recover_aliasing_pointer(_pointer);
@@ -410,12 +404,12 @@ public:
     return schema::recover_pointer(_pointer);
   }
   
-  [[clang::always_inline]] constexpr clean_pointer pointer() const noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr clean_pointer pointer() const noexcept {
     return schema::recover_pointer(_pointer);
   }
   
-  [[clang::always_inline]] constexpr tag_type tag() const noexcept {
-    return schema::recover_value(_pointer);
+  _LIBCPP_ALWAYS_INLINE constexpr tag_type tag() const noexcept {
+    return schema::recover_tag(_pointer);
   }
   
   template <std::size_t I> [[nodiscard, clang::always_inline]] friend constexpr decltype(auto) get(tagged_ptr _pair) noexcept {
@@ -427,16 +421,16 @@ public:
     }
   }
   
-  [[clang::always_inline]] constexpr explicit operator bool() const noexcept {
+  _LIBCPP_ALWAYS_INLINE constexpr explicit operator bool() const noexcept {
     return pointer() != nullptr;
   }
   
-  [[clang::always_inline]] friend constexpr ptrdiff_t operator-(tagged_ptr lhs, tagged_ptr rhs) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr ptrdiff_t operator-(tagged_ptr lhs, tagged_ptr rhs) noexcept {
     return lhs.pointer() - rhs.pointer();
   }
   
   // comparison operators
-  [[clang::always_inline]] friend bool operator==(tagged_ptr, tagged_ptr) = default;
+  _LIBCPP_ALWAYS_INLINE friend bool operator==(tagged_ptr, tagged_ptr) = default;
   
   struct _compare_object {
     clean_pointer pointer;
@@ -445,16 +439,16 @@ public:
     friend auto operator<=>(_compare_object, _compare_object) = default;
   };
   
-  [[clang::always_inline]] friend constexpr auto operator<=>(tagged_ptr lhs, tagged_ptr rhs) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator<=>(tagged_ptr lhs, tagged_ptr rhs) noexcept {
     return _compare_object{lhs.pointer(), lhs.tag()} <=> _compare_object{rhs.pointer(), rhs.tag()};
   }
-  [[clang::always_inline]] friend constexpr bool operator==(tagged_ptr lhs, clean_pointer rhs) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr bool operator==(tagged_ptr lhs, clean_pointer rhs) noexcept {
     return lhs.pointer() == rhs;
   }
-  [[clang::always_inline]] friend constexpr auto operator<=>(tagged_ptr lhs, clean_pointer rhs) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr auto operator<=>(tagged_ptr lhs, clean_pointer rhs) noexcept {
     return lhs.pointer() <=> rhs;
   }
-  [[clang::always_inline]] friend constexpr bool operator==(tagged_ptr lhs, nullptr_t) noexcept {
+  _LIBCPP_ALWAYS_INLINE friend constexpr bool operator==(tagged_ptr lhs, nullptr_t) noexcept {
     return lhs.pointer() == nullptr;
   }
 };
@@ -472,7 +466,7 @@ struct _LIBCPP_TEMPLATE_VIS iterator_traits<tagged_ptr<_T, _Tag, _Schema>> {
   using iterator_category = std::random_access_iterator_tag;
   using iterator_concept = std::contiguous_iterator_tag;
   
-  using value_type = _tagged_ptr::value_type;
+  using value_type = _tagged_ptr::element_type;
   using reference = value_type &;
   using pointer = _tagged_ptr::clean_pointer;
   using difference_type = _tagged_ptr::difference_type;
@@ -493,10 +487,6 @@ public:
     return _tagged_ptr{ptr};
   }
 };
-
-// we are defaulting always to low_bits schema
-template <typename _T> tagged_ptr(_T *) -> tagged_ptr<_T>;
-template <typename _T, typename _Tag> tagged_ptr(_T *, _Tag) -> tagged_ptr<_T, _Tag>;
 
 // support for tuple protocol so we can split tagged pointer to structured bindings:
 // auto [ptr, tag] = tagged_ptr

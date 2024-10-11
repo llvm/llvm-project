@@ -21081,7 +21081,7 @@ RValue CodeGenFunction::EmitBuiltinTagPointerShiftOr(const CallExpr *E) {
   auto *One = llvm::ConstantInt::get(IntType, 1);
   
   llvm::Value * Mask = Builder.CreateSub(Builder.CreateShl(One, Shift), One, "mask");
-  llvm::Value * MaskedValue = Builder.CreateAdd(Value, Mask, "masked_value");
+  llvm::Value * MaskedValue = Builder.CreateAnd(Value, Mask, "masked_value");
   llvm::Value * PointerWithTag = Builder.CreateOr(ShiftedPointerInt, MaskedValue, "pointer_with_tag_int");
   
   llvm::Value * Result = Builder.CreateBitOrPointerCast(PointerWithTag, Ptr->getType(), "result_ptr");
