@@ -2869,6 +2869,11 @@ bool Compiler<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
 
+  if (!Initializing) {
+    unsigned StringIndex = P.createGlobalString(E->getFunctionName(), E);
+    return this->emitGetPtrGlobal(StringIndex, E);
+  }
+
   return this->delegate(E->getFunctionName());
 }
 
