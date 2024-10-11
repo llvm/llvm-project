@@ -52,9 +52,9 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
                                    uint32_t link, uint32_t info,
                                    uint32_t addralign, ArrayRef<uint8_t> data,
                                    StringRef name, Kind sectionKind)
-    : SectionBase(sectionKind, name, flags, entsize, addralign, type, info,
-                  link),
-      file(file), content_(data.data()), size(data.size()) {
+    : SectionBase(sectionKind, file, name, flags, entsize, addralign, type,
+                  info, link),
+      content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
   // assumption as of 2017.
@@ -88,7 +88,7 @@ template <class ELFT>
 InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
                                    const typename ELFT::Shdr &hdr,
                                    StringRef name, Kind sectionKind)
-    : InputSectionBase(&file, getFlags(ctx, hdr.sh_flags), hdr.sh_type,
+    : InputSectionBase(&file, getFlags(file.ctx, hdr.sh_flags), hdr.sh_type,
                        hdr.sh_entsize, hdr.sh_link, hdr.sh_info,
                        hdr.sh_addralign, getSectionContents(file, hdr), name,
                        sectionKind) {
@@ -101,7 +101,7 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
 
 size_t InputSectionBase::getSize() const {
   if (auto *s = dyn_cast<SyntheticSection>(this))
-    return s->getSize(ctx);
+    return s->getSize();
   return size - bytesDropped;
 }
 
@@ -184,6 +184,8 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
   }
   return ret;
 }
+
+Ctx &SectionBase::getCtx() const { return file->ctx; }
 
 uint64_t SectionBase::getOffset(uint64_t offset) const {
   switch (kind()) {

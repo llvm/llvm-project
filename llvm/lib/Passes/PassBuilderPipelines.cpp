@@ -300,8 +300,6 @@ extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
-
-extern cl::opt<bool> EnableInferAlignmentPass;
 } // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions() {
@@ -1250,8 +1248,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
-  if (EnableInferAlignmentPass)
-    FPM.addPass(InferAlignmentPass());
+  FPM.addPass(InferAlignmentPass());
   if (IsFullLTO) {
     // The vectorizer may have significantly shortened a loop body; unroll
     // again. Unroll small loops to hide loop backedge latency and saturate any
@@ -1369,8 +1366,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
   }
 
-  if (EnableInferAlignmentPass)
-    FPM.addPass(InferAlignmentPass());
+  FPM.addPass(InferAlignmentPass());
   FPM.addPass(InstCombinePass());
 
   // This is needed for two reasons:
@@ -1830,15 +1826,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // produce the same result as if we only do promotion here.
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
-
-    // Promoting by-reference arguments to by-value exposes more constants to
-    // IPSCCP.
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-        PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true)));
-    MPM.addPass(
-        createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
-    MPM.addPass(
-        createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
 
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function

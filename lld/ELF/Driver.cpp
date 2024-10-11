@@ -2370,7 +2370,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       if (!s)
         continue;
 
-      auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
+      auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
       Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
