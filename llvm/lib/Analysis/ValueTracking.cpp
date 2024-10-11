@@ -6947,6 +6947,30 @@ bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
       V, /* AllowLifetime */ true, /* AllowDroppable */ true);
 }
 
+bool llvm::isLanewiseOperation(const Instruction *I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::ctlz:
+    case Intrinsic::cttz:
+    case Intrinsic::ctpop:
+    case Intrinsic::umin:
+    case Intrinsic::umax:
+    case Intrinsic::smin:
+    case Intrinsic::smax:
+    case Intrinsic::usub_sat:
+    case Intrinsic::uadd_sat:
+    case Intrinsic::ssub_sat:
+    case Intrinsic::sadd_sat:
+      return true;
+    default:
+      return false;
+    }
+  }
+  auto *Shuffle = dyn_cast<ShuffleVectorInst>(I);
+  return (!Shuffle || Shuffle->isIdentity() || Shuffle->isSelect()) &&
+         !isa<CallBase>(I) && !isa<BitCastInst>(I);
+}
+
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
                                         const Instruction *CtxI,
                                         AssumptionCache *AC,
