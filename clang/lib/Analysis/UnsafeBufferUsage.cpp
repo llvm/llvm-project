@@ -462,8 +462,25 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     // bug
     if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
-  }
-  return false;
+  } else if (const auto *BE = dyn_cast<BinaryOperator>(IndexExpr)) {
+    if (BE->getOpcode() != BO_And)
+      return false;
+
+    const Expr *LHS = BE->getLHS();
+    const Expr *RHS = BE->getRHS();
+
+    if ((!LHS->isValueDependent() &&
+         LHS->EvaluateAsInt(EVResult, Finder->getASTContext())) ||
+        (!RHS->isValueDependent() &&
+         RHS->EvaluateAsInt(EVResult, Finder->getASTContext()))) {
+      llvm::APSInt result = EVResult.Val.getInt();
+      if (result.isNonNegative() && result.getLimitedValue() < limit)
+        return true;
+    }
+    return false;
+
+  } else
+    return false;
 }
 
 AST_MATCHER_P(CallExpr, hasNumArgs, unsigned, Num) {
