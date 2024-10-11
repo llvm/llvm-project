@@ -122,6 +122,10 @@ public:
   iterator preds_end(DependencyGraph &DAG) const {
     return const_cast<DGNode *>(this)->preds_end(DAG);
   }
+  /// \Returns a range of DAG predecessors nodes. If this is a MemDGNode then
+  /// this will also include the memory dependency predecessors.
+  /// Please note that this can include the same node more than once, if for
+  /// example it's both a use-def predecessor and a mem dep predecessor.
   iterator_range<iterator> preds(DependencyGraph &DAG) const {
     return make_range(preds_begin(DAG), preds_end(DAG));
   }
