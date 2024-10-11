@@ -860,10 +860,10 @@ public:
   /// \see Thread:Resume()
   /// \see Thread:Step()
   /// \see Thread:Suspend()
-  Status Resume(lldb::RunDirection direction = lldb::eRunForward);
+  Status Resume();
 
   /// Resume a process, and wait for it to stop.
-  Status ResumeSynchronous(Stream *stream, lldb::RunDirection direction = lldb::eRunForward);
+  Status ResumeSynchronous(Stream *stream);
 
   /// Halts a running process.
   ///
@@ -1107,14 +1107,9 @@ public:
   /// \see Thread:Resume()
   /// \see Thread:Step()
   /// \see Thread:Suspend()
-  virtual Status DoResume(lldb::RunDirection direction) {
-    if (direction == lldb::RunDirection::eRunForward) {
-      return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support resuming processes", GetPluginName());
-    } else {
-      return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support reverse execution of processes", GetPluginName());
-    }
+  virtual Status DoResume() {
+    return Status::FromErrorStringWithFormatv(
+        "error: {0} does not support resuming processes", GetPluginName());
   }
 
   /// Called after resuming a process.
@@ -2352,8 +2347,6 @@ public:
 
   bool IsRunning() const;
 
-  lldb::RunDirection GetLastRunDirection() { return m_last_run_direction; }
-
   DynamicCheckerFunctions *GetDynamicCheckers() {
     return m_dynamic_checkers_up.get();
   }
@@ -2885,7 +2878,7 @@ protected:
   ///
   /// \return
   ///     An Status object describing the success or failure of the resume.
-  Status PrivateResume(lldb::RunDirection direction = lldb::eRunForward);
+  Status PrivateResume();
 
   // Called internally
   void CompleteAttach();
@@ -3161,8 +3154,6 @@ protected:
                            // m_currently_handling_do_on_removals are true,
                            // Resume will only request a resume, using this
                            // flag to check.
-  // The direction of execution from the last time this process was resumed.
-  lldb::RunDirection m_last_run_direction;
 
   lldb::tid_t m_interrupt_tid; /// The tid of the thread that issued the async
                                /// interrupt, used by thread plan timeout. It
