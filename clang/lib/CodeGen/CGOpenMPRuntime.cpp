@@ -1716,12 +1716,12 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
     // Copying constructor for the threadprivate variable.
     // Must be NULL - reserved by runtime, but currently it requires that this
     // parameter is always NULL. Otherwise it fires assertion.
-    CopyCtor = llvm::Constant::getNullValue(CGM.VoidPtrTy);
+    CopyCtor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
     if (Ctor == nullptr) {
-      Ctor = llvm::Constant::getNullValue(CGM.VoidPtrTy);
+      Ctor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
     }
     if (Dtor == nullptr) {
-      Dtor = llvm::Constant::getNullValue(CGM.VoidPtrTy);
+      Dtor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
     }
     if (!CGF) {
       auto *InitFunctionTy =
