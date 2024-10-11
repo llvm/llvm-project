@@ -702,10 +702,10 @@ public:
   /// Retrieve the current block, if any.
   sema::BlockScopeInfo *getCurBlock();
 
-  /// Get the innermost lambda enclosing the current location, if any. This
-  /// looks through intervening non-lambda scopes such as local functions and
-  /// blocks.
-  sema::LambdaScopeInfo *getEnclosingLambda() const;
+  /// Get the innermost lambda or block enclosing the current location, if any.
+  /// This looks through intervening non-lambda, non-block scopes such as local
+  /// functions.
+  sema::CapturingScopeInfo *getEnclosingLambdaOrBlock() const;
 
   /// Retrieve the current lambda scope info, if any.
   /// \param IgnoreNonLambdaCapturingScope true if should find the top-most
