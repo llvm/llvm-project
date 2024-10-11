@@ -103,14 +103,14 @@ C++ Specific Potentially Breaking Changes
 
   .. code-block:: c++
 
-  struct A {
-    virtual const int *f() const;
-  };
-  struct B : A {
-    // Return type has less cv-qualification but doesn't point to a class.
-    // Error will be generated.
-    int *f() const override;
-  };
+    struct A {
+      virtual const int *f() const;
+    };
+    struct B : A {
+      // Return type has less cv-qualification but doesn't point to a class.
+      // Error will be generated.
+      int *f() const override;
+    };
 
 ABI Changes in This Version
 ---------------------------
