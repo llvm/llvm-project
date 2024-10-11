@@ -1947,6 +1947,13 @@ def LLVM_CallIntrinsicOp
     attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args)>,
+    OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>,
+    OpBuilder<(ins "Type": $resultType, "StringAttr":$intrin, "ValueRange":$args)>,
+    OpBuilder<(ins "TypeRange": $resultTypes, "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>
+  ];
+
   let hasVerifier = 1;
 }
 
