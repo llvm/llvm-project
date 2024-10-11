@@ -5,13 +5,21 @@
 // could be something different, just check that whatever is printed to stderr
 // looks like timing information.
 
-// RUN: %clang -time -c -o /dev/null %s 2>&1 \
+// Ideally, this should be tested on various platforms, but that requires the
+// the full toolchain, including a linker to be present. The initial author of
+// the test only had access to Linux on x86 which is why this is only enabled
+// there. More platforms ought to be added if possible.
+
+// REQUIRES: x86-registered-target
+// REQUIRES: x86_64-linux
+
+// RUN: %clang --target=x86_64-pc-linux -time -c -o /dev/null %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-// RUN: %clang -time -S -emit-llvm -o /dev/null %s 2>&1 \
+// RUN: %clang --target=x86_64-pc-linux -time -S -emit-llvm -o /dev/null %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-// RUN: %clang -time -S -o /dev/null %s 2>&1 \
+// RUN: %clang --target=x86_64-pc-linux -time -S -o /dev/null %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-// RUN: %clang -time -o /dev/null %s 2>&1 \
+// RUN: %clang --target=x86_64-pc-linux -time -o /dev/null %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=COMPILE-AND-LINK
 
 // COMPILE-ONLY: # {{.+}} {{[0-9]+(.[0-9]+)?}} {{[0-9]+(.[0-9]+)?}}

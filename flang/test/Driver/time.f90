@@ -11,13 +11,20 @@
 ! potentially be something different, just check that whatever is printed to
 ! stderr looks like timing information.
 
-! RUN: %flang -time -c -o /dev/null %s 2>&1 \
+! Ideally, this should be tested on various platforms, but that requires the
+! the full toolchain, including a linker to be present. The initial author of
+! the test only had access to Linux on x86 which is why this is only enabled
+! there. More platforms ought to be added if possible.
+
+! REQUIRES: x86_64-linux
+
+! RUN: %flang --target=x86_64-linux -time -c -o /dev/null %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-! RUN: %flang -time -S -emit-llvm -O3 -o /dev/null %s 2>&1 \
+! RUN: %flang --target=x86_64-linux -time -S -emit-llvm -O3 -o /dev/null %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-! RUN: %flang -time -S -o /dev/null %s 2>&1 \
+! RUN: %flang --target=x86_64-linux -time -S -o /dev/null %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=COMPILE-ONLY
-! RUN: %flang -time -o /dev/null %s 2>&1 \
+! RUN: %flang --target=x86_64-linux -time -o /dev/null %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=COMPILE-AND-LINK
 
 ! COMPILE-ONLY: # {{.+}} {{[0-9]+(.[0-9]+)?}} {{[0-9]+(.[0-9]+)?}}
