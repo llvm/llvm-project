@@ -1349,7 +1349,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           .Default(Intrinsic::not_intrinsic);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
       }
     }
