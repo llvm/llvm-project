@@ -231,11 +231,7 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
   }
   // Link new MemDGNode chain with the old one, if any.
   if (!DAGInterval.empty()) {
-    // TODO: Implement Interval::comesBefore() to replace this check.
-    bool NewIsAbove = NewInterval.bottom()->comesBefore(DAGInterval.top());
-    assert(
-        (NewIsAbove || DAGInterval.bottom()->comesBefore(NewInterval.top())) &&
-        "Expected NewInterval below DAGInterval.");
+    bool NewIsAbove = NewInterval.comesBefore(DAGInterval);
     const auto &TopInterval = NewIsAbove ? NewInterval : DAGInterval;
     const auto &BotInterval = NewIsAbove ? DAGInterval : NewInterval;
     MemDGNode *LinkTopN =

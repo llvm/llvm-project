@@ -127,6 +127,12 @@ public:
   }
   /// Inequality.
   bool operator!=(const Interval &Other) const { return !(*this == Other); }
+  /// \Returns true if this interval comes before \p Other in program order.
+  /// This expects disjoint intervals.
+  bool comesBefore(const Interval &Other) const {
+    assert(disjoint(Other) && "Expect disjoint intervals!");
+    return bottom()->comesBefore(Other.top());
+  }
   /// \Returns true if this and \p Other have nothing in common.
   bool disjoint(const Interval &Other) const {
     if (Other.empty())
