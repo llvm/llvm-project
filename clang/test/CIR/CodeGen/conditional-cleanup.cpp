@@ -2,7 +2,7 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir %s -o %t.eh.cir
 // RUN: FileCheck --check-prefix=CIR_EH --input-file=%t.eh.cir %s
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir-flat %s -o %t.eh.flat.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fcxx-exceptions -fexceptions -mconstructor-aliases -fclangir -emit-cir-flat -fno-clangir-call-conv-lowering %s -o %t.eh.flat.cir
 // RUN: FileCheck --check-prefix=CIR_FLAT_EH --input-file=%t.eh.flat.cir %s
 
 typedef __typeof(sizeof(0)) size_t;

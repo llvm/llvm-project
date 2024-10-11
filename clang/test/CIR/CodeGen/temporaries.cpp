@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -fno-clangir-call-conv-lowering %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -emit-cir %s -o %t.eh.cir
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -emit-cir -fno-clangir-call-conv-lowering %s -o %t.eh.cir
 // RUN: FileCheck --input-file=%t.eh.cir %s -check-prefix=CIR_EH
-// RUN: cir-translate %t.cir -cir-to-llvmir -o %t.ll
+// RUN: cir-translate %t.cir -cir-to-llvmir --disable-cc-lowering -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 struct E {

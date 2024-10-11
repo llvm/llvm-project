@@ -29,10 +29,9 @@ class ModuleOp;
 namespace cir {
 
 namespace direct {
-std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
-                             llvm::LLVMContext &llvmCtx,
-                             bool disableVerifier = false);
+std::unique_ptr<llvm::Module> lowerDirectlyFromCIRToLLVMIR(
+    mlir::ModuleOp theModule, llvm::LLVMContext &llvmCtx,
+    bool disableVerifier = false, bool disableCCLowering = false);
 }
 
 // Lower directly from pristine CIR to LLVMIR.

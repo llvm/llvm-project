@@ -3079,10 +3079,6 @@ def fclangir_lib_opt : Flag<["-"], "fclangir-lib-opt">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   Alias<fclangir_lib_opt_EQ>,
   HelpText<"Enable C/C++ library based optimizations">;
-def fclangir_call_conv_lowering : Flag<["-"], "fclangir-call-conv-lowering">,
-  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  HelpText<"Enable ClangIR calling convention lowering">,
-  MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
 def fclangir_mem2reg : Flag<["-"], "fclangir-mem2reg">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   HelpText<"Enable mem2reg on the flat ClangIR">,
@@ -3113,6 +3109,13 @@ defm clangir_analysis_only : BoolFOption<"clangir-analysis-only",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
     "Enable CIR analysis but keep traditional LLVM codegen (not through CIR)">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],  "">>;
+// FIXME(cir): Remove this option once all pre-existing tests are compatible with
+// the calling convention lowering pass.
+defm clangir_call_conv_lowering : BoolFOption<"clangir-call-conv-lowering",
+  FrontendOpts<"ClangIRCallConvLowering">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Transform CIR to abide to calling convetions during lowering">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Ignore calling convetion during lowering">,
+  BothFlags<[], [ClangOption, CC1Option], "">>;
 
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR, emit the .cir file">;

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -fcxx-exceptions -fexceptions -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -fcxx-exceptions -fexceptions -emit-llvm -fno-clangir-call-conv-lowering %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 struct test1_D {

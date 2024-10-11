@@ -1,46 +1,46 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=basic -fclangir -clangir-disable-passes -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=basic -fclangir -clangir-disable-passes -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CLANG,CIRGEN,CIRGEN-BASIC,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=basic -fclangir -clangir-disable-passes -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=basic -fclangir -clangir-disable-passes -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CPPLANG,CIRGEN,CIRGEN-BASIC,CHECK %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=improved -fclangir -clangir-disable-passes -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=improved -fclangir -clangir-disable-passes -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CLANG,CIRGEN,CIRGEN-IMPROVED,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=improved -fclangir -clangir-disable-passes -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=improved -fclangir -clangir-disable-passes -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CPPLANG,CIRGEN,CIRGEN-IMPROVED,CHECK %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -fclangir -clangir-disable-passes -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -fclangir -clangir-disable-passes -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CLANG,CIRGEN,CIRGEN-FULL,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=full -fclangir -clangir-disable-passes -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=full -fclangir -clangir-disable-passes -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CPPLANG,CIRGEN,CIRGEN-FULL,CHECK %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=basic -fclangir -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=basic -fclangir -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CLANG,CIR,CIR-BASIC,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=basic -fclangir -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=basic -fclangir -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CPPLANG,CIR,CIR-BASIC,CHECK %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=improved -fclangir -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=improved -fclangir -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CLANG,CIR,CIR-IMPROVED,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=improved -fclangir -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=improved -fclangir -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CPPLANG,CIR,CIR-IMPROVED,CHECK %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -fclangir -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -fclangir -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CLANG,CIR,CIR-FULL,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=full -fclangir -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=full -fclangir -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --input-file=%t.cir --check-prefixes=CPPLANG,CIR,CIR-FULL,CHECK %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=basic -fclangir -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=basic -fclangir -emit-llvm -fno-clangir-call-conv-lowering -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll --check-prefixes=CLANG,LLVM,LLVM-BASIC,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=basic -fclangir -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=basic -fclangir -emit-llvm -fno-clangir-call-conv-lowering -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll --check-prefixes=CPPLANG,LLVM,LLVM-BASIC,CHECK %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=improved -fclangir -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=improved -fclangir -emit-llvm -fno-clangir-call-conv-lowering -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll --check-prefixes=CLANG,LLVM,LLVM-IMPROVED,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=improved -fclangir -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=improved -fclangir -emit-llvm -fno-clangir-call-conv-lowering -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll --check-prefixes=CPPLANG,LLVM,LLVM-IMPROVED,CHECK %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -fclangir -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -fclangir -emit-llvm -fno-clangir-call-conv-lowering -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll --check-prefixes=CLANG,LLVM,LLVM-FULL,CHECK %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=full -fclangir -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -complex-range=full -fclangir -emit-llvm -fno-clangir-call-conv-lowering -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll --check-prefixes=CPPLANG,LLVM,LLVM-FULL,CHECK %s
 
 double _Complex cd1, cd2;

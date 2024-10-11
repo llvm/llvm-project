@@ -91,14 +91,13 @@ getBackendActionFromOutputType(CIRGenAction::OutputType action) {
   }
 }
 
-static std::unique_ptr<llvm::Module>
-lowerFromCIRToLLVMIR(const clang::FrontendOptions &feOptions,
-                     mlir::ModuleOp mlirMod,
-                     std::unique_ptr<mlir::MLIRContext> mlirCtx,
-                     llvm::LLVMContext &llvmCtx, bool disableVerifier = false) {
+static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
+    const clang::FrontendOptions &feOptions, mlir::ModuleOp mlirMod,
+    std::unique_ptr<mlir::MLIRContext> mlirCtx, llvm::LLVMContext &llvmCtx,
+    bool disableVerifier = false, bool disableCCLowering = false) {
   if (feOptions.ClangIRDirectLowering)
-    return direct::lowerDirectlyFromCIRToLLVMIR(mlirMod, llvmCtx,
-                                                disableVerifier);
+    return direct::lowerDirectlyFromCIRToLLVMIR(
+        mlirMod, llvmCtx, disableVerifier, disableCCLowering);
   else
     return lowerFromCIRToMLIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
 }
@@ -201,6 +200,9 @@ public:
       if (feOptions.ClangIRLibOpt)
         libOptOpts = sanitizePassOptions(feOptions.ClangIRLibOptOpts);
 
+      bool enableCCLowering = feOptions.ClangIRCallConvLowering &&
+                              action != CIRGenAction::OutputType::EmitCIR;
+
       // Setup and run CIR pipeline.
       std::string passOptParsingFailure;
       if (runCIRToCIRPasses(
@@ -210,8 +212,7 @@ public:
               feOptions.ClangIRLibOpt, libOptOpts, passOptParsingFailure,
               codeGenOptions.OptimizationLevel > 0,
               action == CIRGenAction::OutputType::EmitCIRFlat,
-              action == CIRGenAction::OutputType::EmitMLIR,
-              feOptions.ClangIREnableCallConvLowering,
+              action == CIRGenAction::OutputType::EmitMLIR, enableCCLowering,
               feOptions.ClangIREnableMem2Reg)
               .failed()) {
         if (!passOptParsingFailure.empty())
@@ -288,7 +289,8 @@ public:
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
           lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx,
-                               feOptions.ClangIRDisableCIRVerifier);
+                               feOptions.ClangIRDisableCIRVerifier,
+                               !feOptions.ClangIRCallConvLowering);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
 
@@ -437,10 +439,12 @@ void CIRGenAction::ExecuteAction() {
   if (!mlirModule)
     return;
 
+  // FIXME(cir): This compilation path does not account for some flags.
   llvm::LLVMContext llvmCtx;
   auto llvmModule = lowerFromCIRToLLVMIR(
       ci.getFrontendOpts(), mlirModule.release(),
-      std::unique_ptr<mlir::MLIRContext>(mlirContext), llvmCtx);
+      std::unique_ptr<mlir::MLIRContext>(mlirContext), llvmCtx,
+      /*disableVerifier=*/false, /*disableCCLowering=*/true);
 
   if (outstream)
     llvmModule->print(*outstream, nullptr);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir-flat %s -o %t1.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir-flat -fno-clangir-call-conv-lowering %s -o %t1.cir
 // RUN: FileCheck --input-file=%t1.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t2.cir
 // RUN: FileCheck --input-file=%t2.cir %s -check-prefix=NOFLAT

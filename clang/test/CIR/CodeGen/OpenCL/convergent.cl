@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fclangir -triple spirv64-unknown-unknown -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -fclangir -triple spirv64-unknown-unknown -emit-cir -fno-clangir-call-conv-lowering %s -o %t.cir
 // RUN: FileCheck %s --input-file=%t.cir --check-prefix=CIR
-// RUN: %clang_cc1 -fclangir -triple spirv64-unknown-unknown -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -fclangir -triple spirv64-unknown-unknown -emit-llvm -fno-clangir-call-conv-lowering %s -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
 
 // In ClangIR for OpenCL, all functions should be marked convergent.

@@ -1,4 +1,4 @@
-// RUN: cir-translate %s -cir-to-llvmir -o -  | FileCheck %s -check-prefix=LLVM
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering -o -  | FileCheck %s -check-prefix=LLVM
 
 !u8i = !cir.int<u, 8>
 

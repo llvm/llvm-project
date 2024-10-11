@@ -26,21 +26,22 @@ bool classifyReturnType(const CIRCXXABI &CXXABI, LowerFunctionInfo &FI,
   Type Ty = FI.getReturnType();
 
   if (const auto RT = dyn_cast<StructType>(Ty)) {
-    assert(!::cir::MissingFeatures::isCXXRecordDecl());
+    cir_tl_assert(!::cir::MissingFeatures::isCXXRecordDecl());
   }
 
   return CXXABI.classifyReturnType(FI);
 }
 
 bool isAggregateTypeForABI(Type T) {
-  assert(!::cir::MissingFeatures::functionMemberPointerType());
+  cir_tl_assert(!::cir::MissingFeatures::functionMemberPointerType());
   return !LowerFunction::hasScalarEvaluationKind(T);
 }
 
 Type useFirstFieldIfTransparentUnion(Type Ty) {
   if (auto RT = dyn_cast<StructType>(Ty)) {
     if (RT.isUnion())
-      llvm_unreachable("NYI");
+      cir_assert_or_abort(
+          !::cir::MissingFeatures::ABITransparentUnionHandling(), "NYI");
   }
   return Ty;
 }

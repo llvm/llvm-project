@@ -1,4 +1,5 @@
-//===- cir-translate.cpp - CIR Translate Driver ------------------*- C++ -*-===//
+//===- cir-translate.cpp - CIR Translate Driver ------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,20 +25,25 @@
 namespace cir {
 namespace direct {
 extern void registerCIRDialectTranslation(mlir::DialectRegistry &registry);
-extern std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
-                             llvm::LLVMContext &llvmCtx,
-                             bool disableVerifier = false);
+extern std::unique_ptr<llvm::Module> lowerDirectlyFromCIRToLLVMIR(
+    mlir::ModuleOp theModule, llvm::LLVMContext &llvmCtx,
+    bool disableVerifier = false, bool disableCCLowering = false);
 } // namespace direct
-}
+} // namespace cir
 
 void registerToLLVMTranslation() {
+  static llvm::cl::opt<bool> disableCCLowering(
+      "disable-cc-lowering",
+      llvm::cl::desc("Disable calling convention lowering pass"),
+      llvm::cl::init(false));
+
   mlir::TranslateFromMLIRRegistration registration(
       "cir-to-llvmir", "Translate CIR to LLVMIR",
       [](mlir::Operation *op, mlir::raw_ostream &output) {
         llvm::LLVMContext llvmContext;
         auto llvmModule = cir::direct::lowerDirectlyFromCIRToLLVMIR(
-            llvm::dyn_cast<mlir::ModuleOp>(op), llvmContext);
+            llvm::dyn_cast<mlir::ModuleOp>(op), llvmContext,
+            /*disableVerifier=*/false, disableCCLowering);
         if (!llvmModule)
           return mlir::failure();
         llvmModule->print(output, nullptr);
@@ -52,6 +58,5 @@ void registerToLLVMTranslation() {
 
 int main(int argc, char **argv) {
   registerToLLVMTranslation();
-  return failed(
-      mlir::mlirTranslateMain(argc, argv, "CIR Translation Tool"));
+  return failed(mlir::mlirTranslateMain(argc, argv, "CIR Translation Tool"));
 }

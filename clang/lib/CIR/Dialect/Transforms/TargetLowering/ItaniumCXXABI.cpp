@@ -46,9 +46,9 @@ public:
 
   // FIXME(cir): This expects a CXXRecordDecl! Not any record type.
   RecordArgABI getRecordArgABI(const StructType RD) const override {
-    assert(!::cir::MissingFeatures::recordDeclIsCXXDecl());
+    cir_tl_assert(!::cir::MissingFeatures::recordDeclIsCXXDecl());
     // If C++ prohibits us from making a copy, pass by address.
-    assert(!::cir::MissingFeatures::recordDeclCanPassInRegisters());
+    cir_tl_assert(!::cir::MissingFeatures::recordDeclCanPassInRegisters());
     return RAA_Default;
   }
 };
@@ -76,7 +76,7 @@ CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {
   case clang::TargetCXXABI::AppleARM64:
     // TODO: this isn't quite right, clang uses AppleARM64CXXABI which inherits
     // from ARMCXXABI. We'll have to follow suit.
-    assert(!::cir::MissingFeatures::appleArm64CXXABI());
+    cir_tl_assert(!::cir::MissingFeatures::appleArm64CXXABI());
     return new ItaniumCXXABI(LM, /*UseARMMethodPtrABI=*/true,
                              /*UseARMGuardVarABI=*/true);
 

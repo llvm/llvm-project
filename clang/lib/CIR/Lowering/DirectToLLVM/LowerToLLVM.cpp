@@ -4515,8 +4515,8 @@ std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
   return std::make_unique<ConvertCIRToLLVMPass>();
 }
 
-void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
-  populateCIRPreLoweringPasses(pm);
+void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool useCCLowering) {
+  populateCIRPreLoweringPasses(pm, useCCLowering);
   pm.addPass(createConvertCIRToLLVMPass());
 }
 
@@ -4524,12 +4524,12 @@ extern void registerCIRDialectTranslation(mlir::MLIRContext &context);
 
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule, LLVMContext &llvmCtx,
-                             bool disableVerifier) {
+                             bool disableVerifier, bool disableCCLowering) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
   mlir::MLIRContext *mlirCtx = theModule.getContext();
   mlir::PassManager pm(mlirCtx);
-  populateCIRToLLVMPasses(pm);
+  populateCIRToLLVMPasses(pm, !disableCCLowering);
 
   // This is necessary to have line tables emitted and basic
   // debugger working. In the future we will add proper debug information

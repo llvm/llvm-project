@@ -21,11 +21,22 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/InitAllPasses.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassOptions.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Passes.h"
+
+struct CIRToLLVMPipelineOptions
+    : public mlir::PassPipelineOptions<CIRToLLVMPipelineOptions> {
+  // When lowering to LLVM, we should apply the CC lowering pass by default. The
+  // option below allows us to disable it for testing purposes.
+  Option<bool> disableCCLowering{
+      *this, "disable-cc-lowering",
+      llvm::cl::desc("Skips calling convetion lowering pass."),
+      llvm::cl::init(false)};
+};
 
 int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
@@ -52,9 +63,10 @@ int main(int argc, char **argv) {
     return cir::createConvertCIRToMLIRPass();
   });
 
-  mlir::PassPipelineRegistration<mlir::EmptyPipelineOptions> pipeline(
-      "cir-to-llvm", "", [](mlir::OpPassManager &pm) {
-        cir::direct::populateCIRToLLVMPasses(pm);
+  mlir::PassPipelineRegistration<CIRToLLVMPipelineOptions> pipeline(
+      "cir-to-llvm", "",
+      [](mlir::OpPassManager &pm, const CIRToLLVMPipelineOptions &options) {
+        cir::direct::populateCIRToLLVMPasses(pm, options.disableCCLowering);
       });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {

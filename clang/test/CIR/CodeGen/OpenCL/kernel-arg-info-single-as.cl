@@ -1,9 +1,9 @@
 // Test that the kernel argument info always refers to SPIR address spaces,
 // even if the target has only one address space like x86_64 does.
-// RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-cir -o - -triple x86_64-unknown-linux-gnu -o %t.cir
+// RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-cir -fno-clangir-call-conv-lowering -o - -triple x86_64-unknown-linux-gnu -o %t.cir
 // RUN: FileCheck %s --input-file=%t.cir --check-prefix=CIR
 
-// RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-llvm -o - -triple x86_64-unknown-linux-gnu -o %t.ll
+// RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-llvm -fno-clangir-call-conv-lowering -o - -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
 
 kernel void foo(__global int * G, __constant int *C, __local int *L) {

@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android24  -fclangir \
-// RUN:            -emit-cir -target-feature +neon %s -o %t.cir
+// RUN:            -emit-cir -fno-clangir-call-conv-lowering -target-feature +neon %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-android24  -fclangir \
-// RUN:            -emit-llvm -target-feature +neon %s -o %t.ll
+// RUN:            -emit-llvm -fno-clangir-call-conv-lowering -target-feature +neon %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // This test file contains tests of AArch64 NEON intrinsics 

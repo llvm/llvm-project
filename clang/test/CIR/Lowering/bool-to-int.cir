@@ -1,4 +1,4 @@
-// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering  | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 #false = #cir.bool<false> : !cir.bool

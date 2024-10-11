@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:    -fclangir -disable-O0-optnone \
-// RUN:  -flax-vector-conversions=none -emit-cir -o %t.cir %s
+// RUN:  -flax-vector-conversions=none -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:    -fclangir -disable-O0-optnone \
-// RUN:  -flax-vector-conversions=none -emit-llvm -o - %s \
+// RUN:  -flax-vector-conversions=none -emit-llvm -fno-clangir-call-conv-lowering -o - %s \
 // RUN: | opt -S -passes=mem2reg,simplifycfg -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 

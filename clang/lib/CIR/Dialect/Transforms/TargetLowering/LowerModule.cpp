@@ -199,10 +199,13 @@ LogicalResult LowerModule::rewriteFunctionDefinition(FuncOp op) {
     llvm_unreachable("ExtraAttrs are NYI");
   }
 
-  if (LowerFunction(*this, rewriter, op, newFn)
-          .generateCode(op, newFn, FI)
-          .failed())
-    return failure();
+  // Is a function definition: handle the body.
+  if (!op.isDeclaration()) {
+    if (LowerFunction(*this, rewriter, op, newFn)
+            .generateCode(op, newFn, FI)
+            .failed())
+      return failure();
+  }
 
   // Erase original ABI-agnostic function.
   rewriter.eraseOp(op);
@@ -225,6 +228,9 @@ LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp, FuncOp funcOp) {
 // TODO: not to create it every time
 std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
                                                PatternRewriter &rewriter) {
+  assert(module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()) &&
+         "Missing data layout attribute");
+
   // Fetch the LLVM data layout string.
   auto dataLayoutStr = cast<StringAttr>(
       module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()));
@@ -239,7 +245,7 @@ std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
   // FIXME(cir): This just uses the default language options. We need to account
   // for custom options.
   // Create context.
-  assert(!::cir::MissingFeatures::langOpts());
+  cir_tl_assert(!::cir::MissingFeatures::langOpts());
   clang::LangOptions langOpts;
 
   return std::make_unique<LowerModule>(langOpts, module, dataLayoutStr,

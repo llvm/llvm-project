@@ -30,7 +30,7 @@ namespace direct {
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass();
 
 /// Adds passes that fully lower CIR to the LLVMIR dialect.
-void populateCIRToLLVMPasses(mlir::OpPassManager &pm);
+void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool useCCLowering);
 
 } // namespace direct
 } // end namespace cir

@@ -1,6 +1,6 @@
 // RUN: cir-opt %s -cir-to-llvm -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s -check-prefix=MLIR
-// RUN: cir-translate %s -cir-to-llvmir -o %t.ll
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 !void = !cir.void

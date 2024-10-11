@@ -1,19 +1,19 @@
-// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-cir -O0 -cl-std=CL1.2 -o %t.cl12.cir %s
+// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-cir -fno-clangir-call-conv-lowering -O0 -cl-std=CL1.2 -o %t.cl12.cir %s
 // RUN: FileCheck %s -input-file=%t.cl12.cir -check-prefixes CIR,CIR-UNIFORM
-// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-cir -O0 -cl-std=CL2.0 -o %t.cl20.cir %s
+// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-cir -fno-clangir-call-conv-lowering -O0 -cl-std=CL2.0 -o %t.cl20.cir %s
 // RUN: FileCheck %s -input-file=%t.cl20.cir -check-prefixes CIR,CIR-NONUNIFORM
-// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-cir -O0 -cl-std=CL2.0 -cl-uniform-work-group-size -o %t.cl20.uniform1.cir %s
+// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-cir -fno-clangir-call-conv-lowering -O0 -cl-std=CL2.0 -cl-uniform-work-group-size -o %t.cl20.uniform1.cir %s
 // RUN: FileCheck %s -input-file=%t.cl20.uniform1.cir -check-prefixes CIR,CIR-UNIFORM
-// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-cir -O0 -cl-std=CL2.0 -foffload-uniform-block -o %t.cl20.uniform2.cir %s
+// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-cir -fno-clangir-call-conv-lowering -O0 -cl-std=CL2.0 -foffload-uniform-block -o %t.cl20.uniform2.cir %s
 // RUN: FileCheck %s -input-file=%t.cl20.uniform2.cir -check-prefixes CIR,CIR-UNIFORM
 
-// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-llvm -O0 -cl-std=CL1.2 -o %t.cl12.ll %s
+// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-llvm -fno-clangir-call-conv-lowering -O0 -cl-std=CL1.2 -o %t.cl12.ll %s
 // RUN: FileCheck %s -input-file=%t.cl12.ll -check-prefixes LLVM,LLVM-UNIFORM
-// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-llvm -O0 -cl-std=CL2.0 -o %t.cl20.ll %s
+// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-llvm -fno-clangir-call-conv-lowering -O0 -cl-std=CL2.0 -o %t.cl20.ll %s
 // RUN: FileCheck %s -input-file=%t.cl20.ll -check-prefixes LLVM,LLVM-NONUNIFORM
-// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-llvm -O0 -cl-std=CL2.0 -cl-uniform-work-group-size -o %t.cl20.uniform1.ll %s
+// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-llvm -fno-clangir-call-conv-lowering -O0 -cl-std=CL2.0 -cl-uniform-work-group-size -o %t.cl20.uniform1.ll %s
 // RUN: FileCheck %s -input-file=%t.cl20.uniform1.ll -check-prefixes LLVM,LLVM-UNIFORM
-// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-llvm -O0 -cl-std=CL2.0 -foffload-uniform-block -o %t.cl20.uniform2.ll %s
+// RUN: %clang_cc1 -fclangir -triple=spirv64-unknown-unknown -emit-llvm -fno-clangir-call-conv-lowering -O0 -cl-std=CL2.0 -foffload-uniform-block -o %t.cl20.uniform2.ll %s
 // RUN: FileCheck %s -input-file=%t.cl20.uniform2.ll -check-prefixes LLVM,LLVM-UNIFORM
 
 // CIR-LABEL: #fn_attr =

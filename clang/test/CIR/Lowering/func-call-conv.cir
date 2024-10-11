@@ -1,4 +1,4 @@
-// RUN: cir-translate %s -cir-to-llvmir -o %t.ll
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
 
 !s32i = !cir.int<s, 32>
