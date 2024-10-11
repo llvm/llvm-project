@@ -99,7 +99,7 @@ void Ctx::reset() {
   driver.~LinkerDriver();
   new (&driver) LinkerDriver(*this);
   script = nullptr;
-  target = nullptr;
+  target.reset();
 
   bufferStart = nullptr;
   mainPart = nullptr;
@@ -2370,7 +2370,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       if (!s)
         continue;
 
-      auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
+      auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
       Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
@@ -3126,7 +3126,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
   // values such as a default image base address.
-  ctx.target = getTarget(ctx);
+  setTarget(ctx);
 
   ctx.arg.eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that

@@ -267,10 +267,7 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *elf::getAVRTargetInfo(Ctx &ctx) {
-  static AVR target(ctx);
-  return &target;
-}
+void elf::setAVRTargetInfo(Ctx &ctx) { ctx.target.reset(new AVR(ctx)); }
 
 static uint32_t getEFlags(InputFile *file) {
   return cast<ObjFile<ELF32LE>>(file)->getObj().getHeader().e_flags;

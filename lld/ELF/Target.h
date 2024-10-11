@@ -124,20 +124,20 @@ public:
   bool gotBaseSymInGotPlt = false;
 
   static constexpr RelType noneRel = 0;
-  RelType copyRel;
-  RelType gotRel;
-  RelType pltRel;
-  RelType relativeRel;
-  RelType iRelativeRel;
-  RelType symbolicRel;
-  RelType tlsDescRel;
-  RelType tlsGotRel;
-  RelType tlsModuleIndexRel;
-  RelType tlsOffsetRel;
+  RelType copyRel = 0;
+  RelType gotRel = 0;
+  RelType pltRel = 0;
+  RelType relativeRel = 0;
+  RelType iRelativeRel = 0;
+  RelType symbolicRel = 0;
+  RelType tlsDescRel = 0;
+  RelType tlsGotRel = 0;
+  RelType tlsModuleIndexRel = 0;
+  RelType tlsOffsetRel = 0;
   unsigned gotEntrySize = ctx.arg.wordsize;
-  unsigned pltEntrySize;
-  unsigned pltHeaderSize;
-  unsigned ipltEntrySize;
+  unsigned pltEntrySize = 0;
+  unsigned pltHeaderSize = 0;
+  unsigned ipltEntrySize = 0;
 
   // At least on x86_64 positions 1 and 2 are used by the first plt entry
   // to support lazy loading.
@@ -156,7 +156,7 @@ public:
 
   // A 4-byte field corresponding to one or more trap instructions, used to pad
   // executable OutputSections.
-  std::array<uint8_t, 4> trapInstr;
+  std::array<uint8_t, 4> trapInstr = {};
 
   // Stores the NOP instructions of different sizes for the target and is used
   // to pad sections that are relaxed.
@@ -179,21 +179,21 @@ protected:
   uint64_t defaultImageBase = 0x10000;
 };
 
-TargetInfo *getAArch64TargetInfo(Ctx &);
-TargetInfo *getAMDGPUTargetInfo(Ctx &);
-TargetInfo *getARMTargetInfo(Ctx &);
-TargetInfo *getAVRTargetInfo(Ctx &);
-TargetInfo *getHexagonTargetInfo(Ctx &);
-TargetInfo *getLoongArchTargetInfo(Ctx &);
-TargetInfo *getMSP430TargetInfo(Ctx &);
-TargetInfo *getMipsTargetInfo(Ctx &);
-TargetInfo *getPPC64TargetInfo(Ctx &);
-TargetInfo *getPPCTargetInfo(Ctx &);
-TargetInfo *getRISCVTargetInfo(Ctx &);
-TargetInfo *getSPARCV9TargetInfo(Ctx &);
-TargetInfo *getSystemZTargetInfo(Ctx &);
-TargetInfo *getX86TargetInfo(Ctx &);
-TargetInfo *getX86_64TargetInfo(Ctx &);
+void setAArch64TargetInfo(Ctx &);
+void setAMDGPUTargetInfo(Ctx &);
+void setARMTargetInfo(Ctx &);
+void setAVRTargetInfo(Ctx &);
+void setHexagonTargetInfo(Ctx &);
+void setLoongArchTargetInfo(Ctx &);
+void setMSP430TargetInfo(Ctx &);
+void setMipsTargetInfo(Ctx &);
+void setPPC64TargetInfo(Ctx &);
+void setPPCTargetInfo(Ctx &);
+void setRISCVTargetInfo(Ctx &);
+void setSPARCV9TargetInfo(Ctx &);
+void setSystemZTargetInfo(Ctx &);
+void setX86TargetInfo(Ctx &);
+void setX86_64TargetInfo(Ctx &);
 
 struct ErrorPlace {
   InputSectionBase *isec;
@@ -239,7 +239,7 @@ void writePrefixedInst(Ctx &, uint8_t *loc, uint64_t insn);
 void addPPC64SaveRestore(Ctx &);
 uint64_t getPPC64TocBase(Ctx &ctx);
 uint64_t getAArch64Page(uint64_t expr);
-bool isAArch64BTILandingPad(Symbol &s, int64_t a);
+bool isAArch64BTILandingPad(Ctx &, Symbol &s, int64_t a);
 template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
@@ -251,7 +251,7 @@ void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(Ctx &);
 void initSymbolAnchors(Ctx &);
 
-TargetInfo *getTarget(Ctx &);
+void setTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 

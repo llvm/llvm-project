@@ -52,9 +52,9 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
                                    uint32_t link, uint32_t info,
                                    uint32_t addralign, ArrayRef<uint8_t> data,
                                    StringRef name, Kind sectionKind)
-    : SectionBase(sectionKind, name, flags, entsize, addralign, type, info,
-                  link),
-      file(file), content_(data.data()), size(data.size()) {
+    : SectionBase(sectionKind, file, name, flags, entsize, addralign, type,
+                  info, link),
+      content_(data.data()), size(data.size()) {
   // In order to reduce memory allocation, we assume that mergeable
   // sections are smaller than 4 GiB, which is not an unreasonable
   // assumption as of 2017.
@@ -88,7 +88,7 @@ template <class ELFT>
 InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
                                    const typename ELFT::Shdr &hdr,
                                    StringRef name, Kind sectionKind)
-    : InputSectionBase(&file, getFlags(ctx, hdr.sh_flags), hdr.sh_type,
+    : InputSectionBase(&file, getFlags(file.ctx, hdr.sh_flags), hdr.sh_type,
                        hdr.sh_entsize, hdr.sh_link, hdr.sh_info,
                        hdr.sh_addralign, getSectionContents(file, hdr), name,
                        sectionKind) {
@@ -101,7 +101,7 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
 
 size_t InputSectionBase::getSize() const {
   if (auto *s = dyn_cast<SyntheticSection>(this))
-    return s->getSize(ctx);
+    return s->getSize();
   return size - bytesDropped;
 }
 
@@ -184,6 +184,8 @@ RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
   }
   return ret;
 }
+
+Ctx &SectionBase::getCtx() const { return file->ctx; }
 
 uint64_t SectionBase::getOffset(uint64_t offset) const {
   switch (kind()) {
@@ -625,27 +627,40 @@ static uint64_t getARMStaticBase(const Symbol &sym) {
 // points the corresponding R_RISCV_PCREL_HI20 relocation, and the target VA
 // is calculated using PCREL_HI20's symbol.
 //
-// This function returns the R_RISCV_PCREL_HI20 relocation from
-// R_RISCV_PCREL_LO12's symbol and addend.
-static Relocation *getRISCVPCRelHi20(const Symbol *sym, uint64_t addend) {
+// This function returns the R_RISCV_PCREL_HI20 relocation from the
+// R_RISCV_PCREL_LO12 relocation.
+static Relocation *getRISCVPCRelHi20(const InputSectionBase *loSec,
+                                     const Relocation &loReloc) {
+  uint64_t addend = loReloc.addend;
+  Symbol *sym = loReloc.sym;
+
   const Defined *d = cast<Defined>(sym);
   if (!d->section) {
-    errorOrWarn("R_RISCV_PCREL_LO12 relocation points to an absolute symbol: " +
-                sym->getName());
+    errorOrWarn(
+        loSec->getLocation(loReloc.offset) +
+        ": R_RISCV_PCREL_LO12 relocation points to an absolute symbol: " +
+        sym->getName());
     return nullptr;
   }
-  InputSection *isec = cast<InputSection>(d->section);
+  InputSection *hiSec = cast<InputSection>(d->section);
+
+  if (hiSec != loSec)
+    errorOrWarn(loSec->getLocation(loReloc.offset) +
+                ": R_RISCV_PCREL_LO12 relocation points to a symbol '" +
+                sym->getName() + "' in a different section '" + hiSec->name +
+                "'");
 
   if (addend != 0)
-    warn("non-zero addend in R_RISCV_PCREL_LO12 relocation to " +
-         isec->getObjMsg(d->value) + " is ignored");
+    warn(loSec->getLocation(loReloc.offset) +
+         ": non-zero addend in R_RISCV_PCREL_LO12 relocation to " +
+         hiSec->getObjMsg(d->value) + " is ignored");
 
   // Relocations are sorted by offset, so we can use std::equal_range to do
   // binary search.
-  Relocation r;
-  r.offset = d->value;
+  Relocation hiReloc;
+  hiReloc.offset = d->value;
   auto range =
-      std::equal_range(isec->relocs().begin(), isec->relocs().end(), r,
+      std::equal_range(hiSec->relocs().begin(), hiSec->relocs().end(), hiReloc,
                        [](const Relocation &lhs, const Relocation &rhs) {
                          return lhs.offset < rhs.offset;
                        });
@@ -655,8 +670,9 @@ static Relocation *getRISCVPCRelHi20(const Symbol *sym, uint64_t addend) {
         it->type == R_RISCV_TLS_GD_HI20 || it->type == R_RISCV_TLS_GOT_HI20)
       return &*it;
 
-  errorOrWarn("R_RISCV_PCREL_LO12 relocation points to " +
-              isec->getObjMsg(d->value) +
+  errorOrWarn(loSec->getLocation(loReloc.offset) +
+              ": R_RISCV_PCREL_LO12 relocation points to " +
+              hiSec->getObjMsg(d->value) +
               " without an associated R_RISCV_PCREL_HI20 relocation");
   return nullptr;
 }
@@ -825,7 +841,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return getAArch64Page(val) - getAArch64Page(p);
   }
   case R_RISCV_PC_INDIRECT: {
-    if (const Relocation *hiRel = getRISCVPCRelHi20(r.sym, a))
+    if (const Relocation *hiRel = getRISCVPCRelHi20(this, r))
       return getRelocTargetVA(ctx, *hiRel, r.sym->getVA());
     return 0;
   }

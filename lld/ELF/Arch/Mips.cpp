@@ -480,7 +480,7 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 static std::pair<uint32_t, uint64_t>
-calculateMipsRelChain(uint8_t *loc, RelType type, uint64_t val) {
+calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
   // MIPS N64 ABI packs multiple relocations into the single relocation
   // record. In general, all up to three relocations can have arbitrary
   // types. In fact, Clang and GCC uses only a few combinations. For now,
@@ -572,7 +572,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
   RelType type = rel.type;
 
   if (ELFT::Is64Bits || ctx.arg.mipsN32Abi)
-    std::tie(type, val) = calculateMipsRelChain(loc, type, val);
+    std::tie(type, val) = calculateMipsRelChain(ctx, loc, type, val);
 
   // Detect cross-mode jump/branch and fix instruction.
   val = fixupCrossModeJump<ELFT>(loc, type, val);
@@ -779,23 +779,23 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
 }
 
-TargetInfo *elf::getMipsTargetInfo(Ctx &ctx) {
+void elf::setMipsTargetInfo(Ctx &ctx) {
   switch (ctx.arg.ekind) {
   case ELF32LEKind: {
-    static MIPS<ELF32LE> t(ctx);
-    return &t;
+    ctx.target.reset(new MIPS<ELF32LE>(ctx));
+    return;
   }
   case ELF32BEKind: {
-    static MIPS<ELF32BE> t(ctx);
-    return &t;
+    ctx.target.reset(new MIPS<ELF32BE>(ctx));
+    return;
   }
   case ELF64LEKind: {
-    static MIPS<ELF64LE> t(ctx);
-    return &t;
+    ctx.target.reset(new MIPS<ELF64LE>(ctx));
+    return;
   }
   case ELF64BEKind: {
-    static MIPS<ELF64BE> t(ctx);
-    return &t;
+    ctx.target.reset(new MIPS<ELF64BE>(ctx));
+    return;
   }
   default:
     llvm_unreachable("unsupported target");

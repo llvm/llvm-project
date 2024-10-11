@@ -948,6 +948,15 @@ void test_constexpr() {
   constexpr __m128 v_mm_movelh_ps = _mm_movelh_ps(k1, k2);
   static_assert(v_mm_movelh_ps[0] == +1.0f && v_mm_movelh_ps[1] == +0.0f && v_mm_movelh_ps[2] == +8.0f && v_mm_movelh_ps[3] == +4.0f);
 
+  constexpr __m128 v_mm_cvtsi32_ss = _mm_cvtsi32_ss(k1, 42);
+  static_assert(v_mm_cvtsi32_ss[0] == 42.0f && v_mm_cvtsi32_ss[1] == +0.0f && v_mm_cvtsi32_ss[2] == +2.0f && v_mm_cvtsi32_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_cvt_si2ss = _mm_cvt_si2ss(k2, -99);
+  static_assert(v_mm_cvt_si2ss[0] == -99.0f && v_mm_cvt_si2ss[1] == +4.0f && v_mm_cvt_si2ss[2] == +2.0f && v_mm_cvt_si2ss[3] == +1.0f);
+
+  constexpr __m128 v_mm_cvtsi64_ss = _mm_cvtsi64_ss(k3, 555);
+  static_assert(v_mm_cvtsi64_ss[0] == 555.0f && v_mm_cvtsi64_ss[1] == -5.0f && v_mm_cvtsi64_ss[2] == +6.0f && v_mm_cvtsi64_ss[3] == +7.0f);
+
   static_assert(_mm_cvtss_f32(k2) == +8.0f);
 }
 

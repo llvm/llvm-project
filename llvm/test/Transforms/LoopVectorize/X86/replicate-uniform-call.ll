@@ -23,10 +23,10 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_UREM_IF:.*]], label %[[PRED_UREM_CONTINUE:.*]]
 ; CHECK:       [[PRED_UREM_IF]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = urem i64 [[MUL]], [[X]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[MUL]], [[X]]
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE]]
 ; CHECK:       [[PRED_UREM_CONTINUE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_UREM_IF]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[REM]], %[[PRED_UREM_IF]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_UREM_IF1:.*]], label %[[PRED_UREM_CONTINUE2:.*]]
 ; CHECK:       [[PRED_UREM_IF1]]:
@@ -49,14 +49,14 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP4]], i64 0)
 ; CHECK-NEXT:    [[TMP13:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP9]], i64 0)
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP14]], i64 [[TMP12]], i64 1
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[TMP14]], i64 [[TMP12]], i64 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[TMP15]], i64 [[TMP13]], i64 1
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[PREDPHI]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[P]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[PREDPHI7]], 1
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP16]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[DST]], i64 [[ADD]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP17]]
-; CHECK-NEXT:    store i64 0, ptr [[TMP18]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 8
 ; CHECK-NEXT:    store i64 0, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
@@ -67,19 +67,19 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[ELSE:.*]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[MUL]], [[X]]
-; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[REM]], i64 0)
+; CHECK-NEXT:    [[REM1:%.*]] = urem i64 [[MUL]], [[X]]
+; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[REM1]], i64 0)
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 1, %[[LOOP_HEADER]] ], [ [[SMAX]], %[[ELSE]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[P]], 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[DST]], i64 [[ADD]]
-; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[LOOP_HEADER]] ], [ [[SMAX]], %[[ELSE]] ]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[DST]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    store i64 0, ptr [[GEP1]], align 8
+; CHECK-NEXT:    [[IV_NEXT1]] = add i64 [[IV1]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT1]], 0
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

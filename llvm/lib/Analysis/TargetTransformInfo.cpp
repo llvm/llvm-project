@@ -228,6 +228,10 @@ TargetTransformInfo::getInliningCostBenefitAnalysisProfitableMultiplier()
   return TTIImpl->getInliningCostBenefitAnalysisProfitableMultiplier();
 }
 
+int TargetTransformInfo::getInliningLastCallToStaticBonus() const {
+  return TTIImpl->getInliningLastCallToStaticBonus();
+}
+
 unsigned
 TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
@@ -1357,6 +1361,15 @@ bool TargetTransformInfo::enableScalableVectorization() const {
 bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
                                                 Align Alignment) const {
   return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
+}
+
+bool TargetTransformInfo::isProfitableToSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
+  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
+}
+
+bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
+  return TTIImpl->isVectorShiftByScalarCheap(Ty);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

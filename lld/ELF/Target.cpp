@@ -45,39 +45,39 @@ std::string lld::toString(RelType type) {
   return std::string(s);
 }
 
-TargetInfo *elf::getTarget(Ctx &ctx) {
+void elf::setTarget(Ctx &ctx) {
   switch (ctx.arg.emachine) {
   case EM_386:
   case EM_IAMCU:
-    return getX86TargetInfo(ctx);
+    return setX86TargetInfo(ctx);
   case EM_AARCH64:
-    return getAArch64TargetInfo(ctx);
+    return setAArch64TargetInfo(ctx);
   case EM_AMDGPU:
-    return getAMDGPUTargetInfo(ctx);
+    return setAMDGPUTargetInfo(ctx);
   case EM_ARM:
-    return getARMTargetInfo(ctx);
+    return setARMTargetInfo(ctx);
   case EM_AVR:
-    return getAVRTargetInfo(ctx);
+    return setAVRTargetInfo(ctx);
   case EM_HEXAGON:
-    return getHexagonTargetInfo(ctx);
+    return setHexagonTargetInfo(ctx);
   case EM_LOONGARCH:
-    return getLoongArchTargetInfo(ctx);
+    return setLoongArchTargetInfo(ctx);
   case EM_MIPS:
-    return getMipsTargetInfo(ctx);
+    return setMipsTargetInfo(ctx);
   case EM_MSP430:
-    return getMSP430TargetInfo(ctx);
+    return setMSP430TargetInfo(ctx);
   case EM_PPC:
-    return getPPCTargetInfo(ctx);
+    return setPPCTargetInfo(ctx);
   case EM_PPC64:
-    return getPPC64TargetInfo(ctx);
+    return setPPC64TargetInfo(ctx);
   case EM_RISCV:
-    return getRISCVTargetInfo(ctx);
+    return setRISCVTargetInfo(ctx);
   case EM_SPARCV9:
-    return getSPARCV9TargetInfo(ctx);
+    return setSPARCV9TargetInfo(ctx);
   case EM_S390:
-    return getSystemZTargetInfo(ctx);
+    return setSystemZTargetInfo(ctx);
   case EM_X86_64:
-    return getX86_64TargetInfo(ctx);
+    return setX86_64TargetInfo(ctx);
   default:
     fatal("unsupported e_machine value: " + Twine(ctx.arg.emachine));
   }
