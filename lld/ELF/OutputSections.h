@@ -150,7 +150,8 @@ struct SectionClass final : public SectionBase {
   SmallVector<InputSectionDescription *, 0> commands;
   bool assigned = false;
 
-  SectionClass(StringRef name) : SectionBase(Class, name, 0, 0, 0, 0, 0, 0) {}
+  SectionClass(StringRef name)
+      : SectionBase(Class, nullptr, name, 0, 0, 0, 0, 0, 0) {}
   static bool classof(const SectionBase *s) { return s->kind() == Class; }
 };
 
