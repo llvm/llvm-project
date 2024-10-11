@@ -2093,19 +2093,37 @@ void Verifier::verifyX86ABI(FunctionType *FT, AttributeList Attrs,
   if (!Attrs.hasFnAttr("target-features"))
     return;
 
+  bool HasSSE = true;
+  bool HasSSE2 = true;
+  bool HasAVX512 = false;
+  bool HasEVEX512 = true;
+
   StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
+  for (StringRef F : split(TF, ",")) {
+    StringRef S = F.substr(1);
+    bool Positive = F[0] == '+';
+    if (S == "sse")
+      HasSSE = Positive;
+    else if (S == "sse2")
+      HasSSE2 = Positive;
+    else if (S == "evex512")
+      HasEVEX512 = Positive;
+    else if (F == "-avx512f")
+      HasAVX512 = false;
+    else if (F.starts_with("+avx512"))
+      HasAVX512 = true;
+  }
   // Check SSE feature.
-  Check(!TT.isArch64Bit() || !TF.contains("-sse,") ||
-            !FT->getReturnType()->isFloatTy(),
+  Check(HasSSE || !TT.isArch64Bit() || !FT->getReturnType()->isFloatTy(),
         "SSE register return with SSE disabled", V);
   // Check SSE2 feature.
-  Check(!TT.isArch64Bit() || !TF.contains("-sse2") ||
+  Check(HasSSE2 || !TT.isArch64Bit() ||
             (!FT->getReturnType()->isDoubleTy() &&
              !FT->getReturnType()->is16bitFPTy()),
         "SSE2 register return with SSE2 disabled", V);
   // Check EVEX512 feature.
   if (MaxParameterWidth >= 512)
-    Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
+    Check(!HasAVX512 || HasEVEX512,
           "512-bit vector arguments require 'evex512' for AVX512", V);
 }
 
