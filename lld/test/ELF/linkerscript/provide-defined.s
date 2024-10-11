@@ -17,9 +17,11 @@ _start:
   call f3
 
 .section .text.f1,"ax"; f1:
-.section .text.f2,"ax"; f2:
-.section .text.f3,"ax"; f3:
+.section .text.f2,"ax"; f2: # referenced by another relocatable file
+.section .text.f3,"ax"; f3: # live
 .section .text.bar,"ax"; bar:
+
+.comm comm,4,4
 
 #--- b.s
   call f2
@@ -30,4 +32,5 @@ SECTIONS {
   PROVIDE(f1 = bar+1);
   PROVIDE(f2 = bar+2);
   PROVIDE(f3 = bar+3);
+  PROVIDE(f4 = comm+4);
 }
