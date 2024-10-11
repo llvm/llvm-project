@@ -1086,7 +1086,7 @@ ThreadLister::Result ThreadLister::ListThreads(
   }
 }
 
-const char *ThreadLister::LoadStatus(int tid) {
+const char *ThreadLister::LoadStatus(tid_t tid) {
   auto cleanup = at_scope_exit([&] {
     // Resize back to capacity if it is downsized by `ReadFileToVector`.
     buffer_.resize(buffer_.capacity());
@@ -1097,7 +1097,7 @@ const char *ThreadLister::LoadStatus(int tid) {
   return buffer_.data();
 }
 
-bool ThreadLister::IsAlive(int tid) {
+bool ThreadLister::IsAlive(tid_t tid) {
   // /proc/%d/task/%d/status uses same call to detect alive threads as
   // proc_task_readdir. See task_state implementation in Linux.
   static const char kPrefix[] = "\nPPid:";
