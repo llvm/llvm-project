@@ -2551,7 +2551,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         parseChildBlock();
       break;
     case tok::r_paren: {
-      const auto *Prev = LeftParen->Previous;
+      auto *Prev = LeftParen->Previous;
       if (!MightBeStmtExpr && !MightBeFoldExpr && !Line->InMacroBody &&
           Style.RemoveParentheses > FormatStyle::RPS_Leave) {
         const auto *Next = Tokens->peekNextToken();
@@ -2575,9 +2575,13 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
           FormatTok->Optional = true;
         }
       }
-      if (Prev && Prev->is(TT_TypenameMacro)) {
-        LeftParen->setFinalizedType(TT_TypeDeclarationParen);
-        FormatTok->setFinalizedType(TT_TypeDeclarationParen);
+      if (Prev) {
+        if (Prev->is(TT_TypenameMacro)) {
+          LeftParen->setFinalizedType(TT_TypeDeclarationParen);
+          FormatTok->setFinalizedType(TT_TypeDeclarationParen);
+        } else if (Prev->is(tok::greater) && FormatTok->Previous == LeftParen) {
+          Prev->setFinalizedType(TT_TemplateCloser);
+        }
       }
       nextToken();
       return SeenEqual;

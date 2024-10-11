@@ -189,25 +189,29 @@ private:
       next();
     }
 
-    for (bool SeenTernaryOperator = false; CurrentToken;) {
+    for (bool SeenTernaryOperator = false, MaybeAngles = true; CurrentToken;) {
       const bool InExpr = Contexts[Contexts.size() - 2].IsExpression;
       if (CurrentToken->is(tok::greater)) {
         const auto *Next = CurrentToken->Next;
-        // Try to do a better job at looking for ">>" within the condition of
-        // a statement. Conservatively insert spaces between consecutive ">"
-        // tokens to prevent splitting right bitshift operators and potentially
-        // altering program semantics. This check is overly conservative and
-        // will prevent spaces from being inserted in select nested template
-        // parameter cases, but should not alter program semantics.
-        if (Next && Next->is(tok::greater) &&
-            Left->ParentBracket != tok::less &&
-            CurrentToken->getStartOfNonWhitespace() ==
-                Next->getStartOfNonWhitespace().getLocWithOffset(-1)) {
-          return false;
-        }
-        if (InExpr && SeenTernaryOperator &&
-            (!Next || !Next->isOneOf(tok::l_paren, tok::l_brace))) {
-          return false;
+        if (CurrentToken->isNot(TT_TemplateCloser)) {
+          // Try to do a better job at looking for ">>" within the condition of
+          // a statement. Conservatively insert spaces between consecutive ">"
+          // tokens to prevent splitting right shift operators and potentially
+          // altering program semantics. This check is overly conservative and
+          // will prevent spaces from being inserted in select nested template
+          // parameter cases, but should not alter program semantics.
+          if (Next && Next->is(tok::greater) &&
+              Left->ParentBracket != tok::less &&
+              CurrentToken->getStartOfNonWhitespace() ==
+                  Next->getStartOfNonWhitespace().getLocWithOffset(-1)) {
+            return false;
+          }
+          if (InExpr && SeenTernaryOperator &&
+              (!Next || !Next->isOneOf(tok::l_paren, tok::l_brace))) {
+            return false;
+          }
+          if (!MaybeAngles)
+            return false;
         }
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
@@ -243,11 +247,11 @@ private:
       // operator that was misinterpreted because we are parsing template
       // parameters.
       // FIXME: This is getting out of hand, write a decent parser.
-      if (InExpr && !Line.startsWith(tok::kw_template) &&
+      if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
           Prev.is(TT_BinaryOperator)) {
         const auto Precedence = Prev.getPrecedence();
         if (Precedence > prec::Conditional && Precedence < prec::Relational)
-          return false;
+          MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
@@ -1615,7 +1619,7 @@ private:
         return false;
       break;
     case tok::greater:
-      if (Style.Language != FormatStyle::LK_TextProto)
+      if (Style.Language != FormatStyle::LK_TextProto && Tok->is(TT_Unknown))
         Tok->setType(TT_BinaryOperator);
       if (Tok->Previous && Tok->Previous->is(TT_TemplateCloser))
         Tok->SpacesRequiredBefore = 1;
