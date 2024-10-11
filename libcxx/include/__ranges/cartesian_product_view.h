@@ -161,6 +161,12 @@ public:
     return *this;
   }
 
+  constexpr reference operator[](difference_type n) const
+    requires cartesian_product_is_random_access<Const, First, Vs...>
+  {
+    return *((*this) + n);
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
