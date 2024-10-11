@@ -6950,6 +6950,7 @@ bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
 bool llvm::isLanewiseOperation(const Instruction *I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
+    // TODO: expand this list.
     case Intrinsic::ctlz:
     case Intrinsic::cttz:
     case Intrinsic::ctpop:
@@ -6967,8 +6968,8 @@ bool llvm::isLanewiseOperation(const Instruction *I) {
     }
   }
   auto *Shuffle = dyn_cast<ShuffleVectorInst>(I);
-  return (!Shuffle || Shuffle->isIdentity() || Shuffle->isSelect()) &&
-         !isa<CallBase>(I) && !isa<BitCastInst>(I);
+  return (!Shuffle || Shuffle->isSelect()) &&
+         !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,

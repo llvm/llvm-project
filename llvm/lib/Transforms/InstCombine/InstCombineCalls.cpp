@@ -3629,7 +3629,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
-  if (isLanewiseOperation(II))
+  if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
+      isLanewiseOperation(II))
     for (Value *Op : II->args())
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
