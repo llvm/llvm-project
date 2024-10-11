@@ -127,6 +127,13 @@ def : ProcessorModel<"generic", NoSchedModel,
                        FeatureMutableGlobals, FeatureNontrappingFPToInt,
                        FeatureReferenceTypes, FeatureSignExt]>;
 
+// Lime1: <https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1>
+def : ProcessorModel<"lime1", NoSchedModel,
+                      [FeatureMultivalue, FeatureMutableGlobals,
+                       FeatureCallIndirectOverlong, FeatureSignExt,
+                       FeatureBulkMemoryOpt, FeatureNontrappingFPToInt,
+                       FeatureExtendedConst]>;
+
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
                       [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,

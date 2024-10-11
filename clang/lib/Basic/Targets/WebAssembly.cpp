@@ -167,6 +167,17 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["reference-types"] = true;
     Features["sign-ext"] = true;
   };
+  auto addLime1Features = [&]() {
+    // Lime1:
+    // <https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1>
+    Features["multivalue"] = true;
+    Features["mutable-globals"] = true;
+    Features["call-indirect-overlong"] = true;
+    Features["sign-ext"] = true;
+    Features["bulk-memory-opt"] = true;
+    Features["nontrapping-fptoint"] = true;
+    Features["extended-const"] = true;
+  };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
@@ -180,6 +191,8 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   };
   if (CPU == "generic") {
     addGenericFeatures();
+  } else if (CPU == "lime1") {
+    addLime1Features();
   } else if (CPU == "bleeding-edge") {
     addBleedingEdgeFeatures();
   }
