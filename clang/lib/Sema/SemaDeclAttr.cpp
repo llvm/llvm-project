@@ -1216,6 +1216,8 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
+  if (T->isDependentType())
+    return true;
   if (RefOkay) {
     if (T->isReferenceType())
       return true;
@@ -1284,7 +1286,7 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     for (unsigned I = 0, E = getFunctionOrMethodNumParams(D);
          I != E && !AnyPointers; ++I) {
       QualType T = getFunctionOrMethodParamType(D, I);
-      if (T->isDependentType() || S.isValidPointerAttrType(T))
+      if (S.isValidPointerAttrType(T))
         AnyPointers = true;
     }
 
@@ -1409,8 +1411,7 @@ void Sema::AddAllocAlignAttr(Decl *D, const AttributeCommonInfo &CI,
   AllocAlignAttr TmpAttr(Context, CI, ParamIdx());
   SourceLocation AttrLoc = CI.getLoc();
 
-  if (!ResultType->isDependentType() &&
-      !isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
+  if (!isValidPointerAttrType(ResultType, /* RefOkay */ true)) {
     Diag(AttrLoc, diag::warn_attribute_return_pointers_refs_only)
         << &TmpAttr << CI.getRange() << getFunctionOrMethodResultSourceRange(D);
     return;
