@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: cir-opt %t.cir -cir-to-llvm -o %t.mlir
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ii
 // RUN: FileCheck --input-file=%t.mlir %s
 // XFAIL: *
 
@@ -23,7 +24,7 @@ void vector_int_test(int x) {
   // CHECK: %[[#T46:]] = llvm.load %[[#T1]] {alignment = 4 : i64} : !llvm.ptr -> i32
   // CHECK: %[[#T47:]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[#T48:]] = llvm.add %[[#T46]], %[[#T47]] overflow<nsw> : i32
-  // CHECK: %[[#T49:]] = llvm.mlir.undef : vector<4xi32>
+  // CHECK: %[[#T49:]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[#T50:]] = llvm.mlir.constant(0 : i64) : i64
   // CHECK: %[[#T51:]] = llvm.insertelement %[[#T43]], %[[#T49]][%[[#T50]] : i64] : vector<4xi32>
   // CHECK: %[[#T52:]] = llvm.mlir.constant(1 : i64) : i64
@@ -42,10 +43,10 @@ void vector_int_test(int x) {
 
   // Scalar to vector conversion, a.k.a. vector splat.
   b = a + 7;
-  // CHECK: %[[#undef:]] = llvm.mlir.undef : vector<4xi32>
+  // CHECK: %[[#poison:]] = llvm.mlir.poison : vector<4xi32>
   // CHECK: %[[#zeroInt:]] = llvm.mlir.constant(0 : i64) : i64
-  // CHECK: %[[#inserted:]] = llvm.insertelement %[[#seven:]], %[[#undef]][%[[#zeroInt]] : i64] : vector<4xi32>
-  // CHECK: %[[#shuffled:]] = llvm.shufflevector %[[#inserted]], %[[#undef]] [0, 0, 0, 0] : vector<4xi32>
+  // CHECK: %[[#inserted:]] = llvm.insertelement %[[#seven:]], %[[#poison]][%[[#zeroInt]] : i64] : vector<4xi32>
+  // CHECK: %[[#shuffled:]] = llvm.shufflevector %[[#inserted]], %[[#poison]] [0, 0, 0, 0] : vector<4xi32>
 
   // Extract element.
   int c = a[x];
@@ -234,7 +235,7 @@ void vector_double_test(int x, double y) {
   // CHECK: %[[#T30:]] = llvm.load %[[#T3]] {alignment = 8 : i64} : !llvm.ptr -> f64
   // CHECK: %[[#T31:]] = llvm.mlir.constant(1.000000e+00 : f64) : f64
   // CHECK: %[[#T32:]] = llvm.fadd %[[#T30]], %[[#T31]]  : f64
-  // CHECK: %[[#T33:]] = llvm.mlir.undef : vector<2xf64>
+  // CHECK: %[[#T33:]] = llvm.mlir.poison : vector<2xf64>
   // CHECK: %[[#T34:]] = llvm.mlir.constant(0 : i64) : i64
   // CHECK: %[[#T35:]] = llvm.insertelement %[[#T29]], %[[#T33]][%[[#T34]] : i64] : vector<2xf64>
   // CHECK: %[[#T36:]] = llvm.mlir.constant(1 : i64) : i64

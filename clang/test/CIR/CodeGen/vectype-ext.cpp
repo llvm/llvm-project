@@ -26,7 +26,7 @@ void vector_int_test(int x) {
   // LLVM:      %[[#X1:]] = load i32, ptr %{{[0-9]+}}, align 4
   // LLVM-NEXT: %[[#X2:]] = load i32, ptr %{{[0-9]+}}, align 4
   // LLVM-NEXT: %[[#SUM:]] = add nsw i32 %[[#X2]], 1
-  // LLVM-NEXT: %[[#VEC1:]] = insertelement <4 x i32> undef, i32 %[[#X1]], i64 0
+  // LLVM-NEXT: %[[#VEC1:]] = insertelement <4 x i32> poison, i32 %[[#X1]], i64 0
   // LLVM-NEXT: %[[#VEC2:]] = insertelement <4 x i32> %[[#VEC1]], i32 5, i64 1
   // LLVM-NEXT: %[[#VEC3:]] = insertelement <4 x i32> %[[#VEC2]], i32 6, i64 2
   // LLVM-NEXT: %[[#VEC4:]] = insertelement <4 x i32> %[[#VEC3]], i32 %[[#SUM]], i64 3
@@ -39,7 +39,7 @@ void vector_int_test(int x) {
   // LLVM:      %[[#X1:]] = load i32, ptr %{{[0-9]+}}, align 4
   // LLVM-NEXT: %[[#X2:]] = load i32, ptr %{{[0-9]+}}, align 4
   // LLVM-NEXT: %[[#SUM:]] = add nsw i32 %[[#X2]], 1
-  // LLVM-NEXT: %[[#VEC1:]] = insertelement <4 x i32> undef, i32 %[[#X1]], i64 0
+  // LLVM-NEXT: %[[#VEC1:]] = insertelement <4 x i32> poison, i32 %[[#X1]], i64 0
   // LLVM-NEXT: %[[#VEC2:]] = insertelement <4 x i32> %[[#VEC1]], i32 %[[#SUM]], i64 1
   // LLVM-NEXT: %[[#VEC3:]] = insertelement <4 x i32> %[[#VEC2]], i32 0, i64 2
   // LLVM-NEXT: %[[#VEC4:]] = insertelement <4 x i32> %[[#VEC3]], i32 0, i64 3
@@ -212,7 +212,7 @@ void vector_double_test(int x, double y) {
   // LLVM:      %[[#Y1:]] = load double, ptr %{{[0-9]+}}, align 8
   // LLVM-NEXT: %[[#Y2:]] = load double, ptr %{{[0-9]+}}, align 8
   // LLVM-NEXT: %[[#SUM:]] = fadd double %[[#Y2]], 1.000000e+00
-  // LLVM-NEXT: %[[#VEC1:]] = insertelement <2 x double> undef, double %[[#Y1]], i64 0
+  // LLVM-NEXT: %[[#VEC1:]] = insertelement <2 x double> poison, double %[[#Y1]], i64 0
   // LLVM-NEXT: %[[#VEC2:]] = insertelement <2 x double> %[[#VEC1]], double %[[#SUM]], i64 1
   // LLVM-NEXT: store <2 x double> %[[#VEC2]], ptr %{{[0-9]+}}, align 16
 
@@ -222,7 +222,7 @@ void vector_double_test(int x, double y) {
   // CIR: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %[[#dzero]] : !cir.double, !cir.double) : !cir.vector<!cir.double x 2>
 
   // LLVM:      %[[#Y1:]] = load double, ptr %{{[0-9]+}}, align 8
-  // LLVM-NEXT: %[[#VEC1:]] = insertelement <2 x double> undef, double %[[#Y1]], i64 0
+  // LLVM-NEXT: %[[#VEC1:]] = insertelement <2 x double> poison, double %[[#Y1]], i64 0
   // LLVM-NEXT: %[[#VEC2:]] = insertelement <2 x double> %[[#VEC1]], double 0.000000e+00, i64 1
   // LLVM-NEXT: store <2 x double> %[[#VEC2]], ptr %{{[0-9]+}}, align 16
 

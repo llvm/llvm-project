@@ -1611,7 +1611,7 @@ public:
     assert(vecTy && "result type of cir.vec.create op is not VectorType");
     auto llvmTy = typeConverter->convertType(vecTy);
     auto loc = op.getLoc();
-    mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
+    mlir::Value result = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
     assert(vecTy.getSize() == op.getElements().size() &&
            "cir.vec.create op count doesn't match vector type elements count");
     for (uint64_t i = 0; i < vecTy.getSize(); ++i) {
@@ -1676,7 +1676,7 @@ public:
     assert(vecTy && "result type of cir.vec.splat op is not VectorType");
     auto llvmTy = typeConverter->convertType(vecTy);
     auto loc = op.getLoc();
-    mlir::Value undef = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
+    mlir::Value undef = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
     mlir::Value indexValue =
         rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
     mlir::Value elementValue = adaptor.getValue();
