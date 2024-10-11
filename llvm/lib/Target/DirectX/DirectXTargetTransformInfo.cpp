@@ -18,6 +18,9 @@ using namespace llvm;
 bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                         unsigned ScalarOpdIdx) {
   switch (ID) {
+  case Intrinsic::dx_wave_active_op: {
+    return ScalarOpdIdx == 1 || ScalarOpdIdx == 2;
+  }
   default:
     return false;
   }
@@ -26,6 +29,7 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
     Intrinsic::ID ID) const {
   switch (ID) {
+  case Intrinsic::dx_wave_active_op:
   case Intrinsic::dx_frac:
   case Intrinsic::dx_rsqrt:
     return true;
