@@ -373,7 +373,7 @@ public:
       static_assert(
           (WORD_SIZE % BigIntOther::WORD_SIZE) == 0 &&
           "Word types must be multiples of each other for correct conversion.");
-      if (OtherBits >= Bits) { // truncate
+      if constexpr (OtherBits >= Bits) { // truncate
         // for each big word
         for (size_t i = 0; i < WORD_COUNT; ++i) {
           WordType cur_word = 0;
@@ -412,7 +412,7 @@ public:
         extend((i / WORD_SIZE_RATIO) + 1, should_sign_extend);
       }
     } else if constexpr (BigIntOther::WORD_SIZE == WORD_SIZE) {
-      if (OtherBits >= Bits) { // truncate
+      if constexpr (OtherBits >= Bits) { // truncate
         for (size_t i = 0; i < WORD_COUNT; ++i)
           val[i] = other[i];
       } else { // zero or sign extend
@@ -427,7 +427,7 @@ public:
       static_assert(
           (BigIntOther::WORD_SIZE % WORD_SIZE) == 0 &&
           "Word types must be multiples of each other for correct conversion.");
-      if (OtherBits >= Bits) { // truncate
+      if constexpr (OtherBits >= Bits) { // truncate
         // for each small word
         for (size_t i = 0; i < WORD_COUNT; ++i) {
           // split each big word into WORD_SIZE_RATIO small words
