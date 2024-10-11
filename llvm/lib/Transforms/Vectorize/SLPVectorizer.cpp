@@ -278,6 +278,22 @@ static unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI,
   return bit_ceil(divideCeil(Sz, NumParts)) * NumParts;
 }
 
+/// Returns the number of elements of the given type \p Ty, not greater than \p
+/// Sz, which forms type, which splits by \p TTI into whole vector types during
+/// legalization.
+static unsigned
+getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
+                                   unsigned Sz) {
+  if (!isValidElementType(Ty))
+    return bit_floor(Sz);
+  // Find the number of elements, which forms full vectors.
+  unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
+  if (NumParts == 0 || NumParts >= Sz)
+    return bit_floor(Sz);
+  unsigned RegVF = bit_ceil(divideCeil(Sz, NumParts));
+  return (Sz / RegVF) * RegVF;
+}
+
 static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
                                                    SmallVectorImpl<int> &Mask) {
   // The ShuffleBuilder implementation use shufflevector to splat an "element".
@@ -1277,8 +1293,7 @@ public:
   using InstrList = SmallVector<Instruction *, 16>;
   using ValueSet = SmallPtrSet<Value *, 16>;
   using StoreList = SmallVector<StoreInst *, 8>;
-  using ExtraValueToDebugLocsMap =
-      MapVector<Value *, SmallVector<Instruction *, 2>>;
+  using ExtraValueToDebugLocsMap = SmallDenseSet<Value *, 4>;
   using OrdersType = SmallVector<unsigned, 4>;
 
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
@@ -6306,7 +6321,7 @@ void BoUpSLP::buildExternalUses(
         continue;
 
       // Check if the scalar is externally used as an extra arg.
-      const auto *ExtI = ExternallyUsedValues.find(Scalar);
+      const auto ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
         int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
@@ -7716,7 +7731,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
     size_t NumUniqueScalarValues = UniqueValues.size();
     bool IsFullVectors = hasFullVectorsOrPowerOf2(
-        *TTI, UniqueValues.front()->getType(), NumUniqueScalarValues);
+        *TTI, getValueType(UniqueValues.front()), NumUniqueScalarValues);
     if (NumUniqueScalarValues == VL.size() &&
         (VectorizeNonPowerOf2 || IsFullVectors)) {
       ReuseShuffleIndices.clear();
@@ -15064,7 +15079,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {
-        CF = Intrinsic::getDeclaration(F->getParent(), ID, TysForDecl);
+        CF = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, TysForDecl);
       }
 
       SmallVector<OperandBundleDef, 1> OpBundles;
@@ -17466,7 +17481,11 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
   unsigned VF = Chain.size();
 
-  if (!has_single_bit(Sz) || !has_single_bit(VF) || VF < 2 || VF < MinVF) {
+  if (!has_single_bit(Sz) ||
+      !hasFullVectorsOrPowerOf2(
+          *TTI, cast<StoreInst>(Chain.front())->getValueOperand()->getType(),
+          VF) ||
+      VF < 2 || VF < MinVF) {
     // Check if vectorizing with a non-power-of-2 VF should be considered. At
     // the moment, only consider cases where VF + 1 is a power-of-2, i.e. almost
     // all vector lanes are used.
@@ -17484,10 +17503,12 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   InstructionsState S = getSameOpcode(ValOps.getArrayRef(), *TLI);
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
-    bool IsPowerOf2 =
-        has_single_bit(ValOps.size()) ||
+    bool IsAllowedSize =
+        hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(),
+                                 ValOps.size()) ||
         (VectorizeNonPowerOf2 && has_single_bit(ValOps.size() + 1));
-    if ((!IsPowerOf2 && S.getOpcode() && S.getOpcode() != Instruction::Load &&
+    if ((!IsAllowedSize && S.getOpcode() &&
+         S.getOpcode() != Instruction::Load &&
          (!S.MainOp->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
                  [&](Value *V) {
@@ -17498,7 +17519,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                            }));
                  }))) ||
         (ValOps.size() > Chain.size() / 2 && !S.getOpcode())) {
-      Size = (!IsPowerOf2 && S.getOpcode()) ? 1 : 2;
+      Size = (!IsAllowedSize && S.getOpcode()) ? 1 : 2;
       return false;
     }
   }
@@ -17626,15 +17647,11 @@ bool SLPVectorizerPass::vectorizeStores(
 
       unsigned MaxVF =
           std::min(R.getMaximumVF(EltSize, Instruction::Store), MaxElts);
-      unsigned MaxRegVF = MaxVF;
       auto *Store = cast<StoreInst>(Operands[0]);
       Type *StoreTy = Store->getValueOperand()->getType();
       Type *ValueTy = StoreTy;
       if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
         ValueTy = Trunc->getSrcTy();
-      if (ValueTy == StoreTy &&
-          R.getVectorElementSize(Store->getValueOperand()) <= EltSize)
-        MaxVF = std::min<unsigned>(MaxVF, bit_floor(Operands.size()));
       unsigned MinVF = std::max<unsigned>(
           2, PowerOf2Ceil(TTI->getStoreMinimumVF(
                  R.getMinVF(DL->getTypeStoreSizeInBits(StoreTy)), StoreTy,
@@ -17652,10 +17669,21 @@ bool SLPVectorizerPass::vectorizeStores(
         // First try vectorizing with a non-power-of-2 VF. At the moment, only
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
-        unsigned CandVF =
-            std::clamp<unsigned>(Operands.size(), MaxVF, MaxRegVF);
-        if (has_single_bit(CandVF + 1))
+        unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
+        if (has_single_bit(CandVF + 1)) {
           NonPowerOf2VF = CandVF;
+          assert(NonPowerOf2VF != MaxVF &&
+                 "Non-power-of-2 VF should not be equal to MaxVF");
+        }
+      }
+
+      unsigned MaxRegVF = MaxVF;
+      MaxVF = std::min<unsigned>(MaxVF, bit_floor(Operands.size()));
+      if (MaxVF < MinVF) {
+        LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
+                          << ") < "
+                          << "MinVF (" << MinVF << ")\n");
+        continue;
       }
 
       unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
@@ -17810,7 +17838,7 @@ bool SLPVectorizerPass::vectorizeStores(
                         std::bind(IsNotVectorized, Size >= MaxRegVF,
                                   std::placeholders::_1)));
           }
-          if (!AnyProfitableGraph && Size >= MaxRegVF)
+          if (!AnyProfitableGraph && Size >= MaxRegVF && has_single_bit(Size))
             break;
         }
         // All values vectorized - exit.
@@ -17823,7 +17851,7 @@ bool SLPVectorizerPass::vectorizeStores(
             (Repeat > 1 && (RepeatChanged || !AnyProfitableGraph)))
           break;
         constexpr unsigned StoresLimit = 64;
-        const unsigned MaxTotalNum = bit_floor(std::min<unsigned>(
+        const unsigned MaxTotalNum = std::min<unsigned>(
             Operands.size(),
             static_cast<unsigned>(
                 End -
@@ -17831,8 +17859,13 @@ bool SLPVectorizerPass::vectorizeStores(
                     RangeSizes.begin(),
                     find_if(RangeSizes, std::bind(IsNotVectorized, true,
                                                   std::placeholders::_1))) +
-                1)));
-        unsigned VF = PowerOf2Ceil(CandidateVFs.front()) * 2;
+                1));
+        unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
+        unsigned Limit =
+            getFloorFullVectorNumberOfElements(*TTI, StoreTy, MaxTotalNum);
+        CandidateVFs.clear();
+        if (bit_floor(Limit) == VF)
+          CandidateVFs.push_back(Limit);
         if (VF > MaxTotalNum || VF >= StoresLimit)
           break;
         for_each(RangeSizes, [&](std::pair<unsigned, unsigned> &P) {
@@ -17841,7 +17874,6 @@ bool SLPVectorizerPass::vectorizeStores(
         });
         // Last attempt to vectorize max number of elements, if all previous
         // attempts were unsuccessful because of the cost issues.
-        CandidateVFs.clear();
         CandidateVFs.push_back(VF);
       }
     }
@@ -18787,7 +18819,7 @@ public:
     // List of the values that were reduced in other trees as part of gather
     // nodes and thus requiring extract if fully vectorized in other trees.
     SmallPtrSet<Value *, 4> RequiredExtract;
-    Value *VectorizedTree = nullptr;
+    WeakTrackingVH VectorizedTree = nullptr;
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
@@ -18883,6 +18915,7 @@ public:
       bool SameScaleFactor = false;
       bool OptReusedScalars = IsSupportedHorRdxIdentityOp &&
                               SameValuesCounter.size() != Candidates.size();
+      BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
       if (OptReusedScalars) {
         SameScaleFactor =
             (RdxKind == RecurKind::Add || RdxKind == RecurKind::FAdd ||
@@ -18903,6 +18936,7 @@ public:
               emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
           VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
           VectorizedVals.try_emplace(OrigV, Cnt);
+          ExternallyUsedValues.insert(OrigV);
           continue;
         }
       }
@@ -18982,17 +19016,18 @@ public:
         V.reorderBottomToTop(/*IgnoreReorder=*/true);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
-        BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues;
+        BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(
+            ExternallyUsedValues);
         // The reduction root is used as the insertion point for new
         // instructions, so set it as externally used to prevent it from being
         // deleted.
-        LocalExternallyUsedValues[ReductionRoot];
+        LocalExternallyUsedValues.insert(ReductionRoot);
         for (unsigned Cnt = 0, Sz = ReducedVals.size(); Cnt < Sz; ++Cnt) {
           if (Cnt == I || (ShuffledExtracts && Cnt == I - 1))
             continue;
           for (Value *V : ReducedVals[Cnt])
             if (isa<Instruction>(V))
-              LocalExternallyUsedValues[TrackedVals[V]];
+              LocalExternallyUsedValues.insert(TrackedVals[V]);
         }
         if (!IsSupportedHorRdxIdentityOp) {
           // Number of uses of the candidates in the vector of values.
@@ -19021,21 +19056,21 @@ public:
           // Check if the scalar was vectorized as part of the vectorization
           // tree but not the top node.
           if (!VLScalars.contains(RdxVal) && V.isVectorized(RdxVal)) {
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
             continue;
           }
           Value *OrigV = TrackedToOrig.at(RdxVal);
           unsigned NumOps =
               VectorizedVals.lookup(OrigV) + At(SameValuesCounter, OrigV);
           if (NumOps != ReducedValsToOps.at(OrigV).size())
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
         }
         // Do not need the list of reused scalars in regular mode anymore.
         if (!IsSupportedHorRdxIdentityOp)
           SameValuesCounter.clear();
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))
-            LocalExternallyUsedValues[RdxVal];
+            LocalExternallyUsedValues.insert(RdxVal);
         V.buildExternalUses(LocalExternallyUsedValues);
 
         V.computeMinimumValueSizes();

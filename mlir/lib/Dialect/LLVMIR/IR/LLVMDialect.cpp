@@ -3328,6 +3328,36 @@ LogicalResult CallIntrinsicOp::verify() {
   return success();
 }
 
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::StringAttr intrin, mlir::ValueRange args) {
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        fastMathFlags,
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::Type resultType, mlir::StringAttr intrin,
+                            mlir::ValueRange args) {
+  build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::TypeRange resultTypes,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+  build(builder, state, resultTypes, intrin, args, fastMathFlags,
+        /*op_bundle_operands=*/{});
+}
+
 //===----------------------------------------------------------------------===//
 // OpAsmDialectInterface
 //===----------------------------------------------------------------------===//
@@ -3339,11 +3369,12 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
         .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
-              DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-              DIGlobalVariableExpressionAttr, DIImportedEntityAttr, DILabelAttr,
-              DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
-              DIModuleAttr, DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+              DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+              DIGlobalVariableAttr, DIGlobalVariableExpressionAttr,
+              DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+              DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+              DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
               DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
               LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
               LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,

@@ -1677,9 +1677,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
   case 'l':
-    return Name == "log" || Name == "logf" || Name == "log2" ||
-           Name == "log2f" || Name == "log10" || Name == "log10f" ||
-           Name == "logl";
+    return Name == "log" || Name == "logf" || Name == "logl" ||
+           Name == "log2" || Name == "log2f" || Name == "log10" ||
+           Name == "log10f" || Name == "logb" || Name == "logbf";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -2388,6 +2388,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
+      break;
+    case LibFunc_logb:
+    case LibFunc_logbf:
+      if (!APF.isZero() && TLI->has(Func))
+        return ConstantFoldFP(logb, APF, Ty);
       break;
     case LibFunc_logl:
       return nullptr;
