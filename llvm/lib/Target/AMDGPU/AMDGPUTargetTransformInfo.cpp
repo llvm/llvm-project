@@ -1314,6 +1314,11 @@ static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
   return AllocaSize;
 }
 
+int GCNTTIImpl::getInliningLastCallToStaticBonus() const {
+  return BaseT::getInliningLastCallToStaticBonus() *
+         getInliningThresholdMultiplier();
+}
+
 unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   unsigned Threshold = adjustInliningThresholdUsingCallee(CB, TLI, this);
 
