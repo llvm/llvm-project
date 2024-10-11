@@ -798,6 +798,24 @@ public:
   }
 };
 
+extern template LLVM_TEMPLATE_ABI GlobalIFunc &
+GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                  llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
+                                                                  &LLVMGV)
+    const;
+extern template LLVM_TEMPLATE_ABI Function &
+GlobalWithNodeAPI<Function, llvm::Function, GlobalObject, llvm::GlobalObject>::
+    LLVMGVToGV::operator()(llvm::Function &LLVMGV) const;
+
+extern template LLVM_TEMPLATE_ABI GlobalVariable &GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject,
+    llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV)
+    const;
+extern template LLVM_TEMPLATE_ABI GlobalAlias &
+GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                  llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
+                                                                 &LLVMGV) const;
+
 class GlobalIFunc final
     : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
                                llvm::GlobalObject> {
@@ -1227,15 +1245,6 @@ public:
   }
 #endif
 };
-
-extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
-    GlobalIFunc, llvm::GlobalIFunc, GlobalObject, llvm::GlobalObject>;
-extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
-    Function, llvm::Function, GlobalObject, llvm::GlobalObject>;
-extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
-    GlobalVariable, llvm::GlobalVariable, GlobalObject, llvm::GlobalObject>;
-extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
-    GlobalAlias, llvm::GlobalAlias, GlobalValue, llvm::GlobalValue>;
 
 } // namespace llvm::sandboxir
 
