@@ -128,6 +128,14 @@ public:
       return matchComplex<double>();
     else if (sizeof(T) == 2 * sizeof(long double))
       return matchComplex<long double>();
+#ifdef LIBC_TYPES_HAS_FLOAT16
+    else if (sizeof(T) == 2 * sizeof(float16))
+      return matchComplex<float16>();
+#endif
+#ifdef LIBC_TYPES_HAS_FLOAT128
+    else if (sizeof(T) == 2 * sizeof(float128))
+      return matchComplex<float128>();
+#endif
   }
 
   void explainError() override {
@@ -137,6 +145,14 @@ public:
       explainErrorComplex<double>();
     else if (sizeof(T) == 2 * sizeof(long double))
       explainErrorComplex<long double>();
+#ifdef LIBC_TYPES_HAS_FLOAT16
+    else if (sizeof(T) == 2 * sizeof(float16))
+      explainErrorComplex<float16>();
+#endif
+#ifdef LIBC_TYPES_HAS_FLOAT128
+    else if (sizeof(T) == 2 * sizeof(float128))
+      explainErrorComplex<float128>();
+#endif
   }
 };
 

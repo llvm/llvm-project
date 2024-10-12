@@ -28,7 +28,16 @@ private:
 public:
   LIBC_INLINE_VAR static constexpr bool value =
       __is_unqualified_any_of<T, _Complex float, _Complex double,
-                              _Complex long double>();
+                              _Complex long double
+#ifdef LIBC_TYPES_HAS_FLOAT16
+                              ,
+                              _Complex _Float16
+#endif
+#ifdef LIBC_TYPES_HAS_FLOAT128
+                              ,
+                              _Complex __float128
+#endif
+                              >();
 };
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_complex_v = is_complex<T>::value;
