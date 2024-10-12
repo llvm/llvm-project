@@ -592,7 +592,7 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
   return ret;
 }
 
-static uint64_t readFdeAddr(uint8_t *buf, int size) {
+static uint64_t readFdeAddr(Ctx &ctx, uint8_t *buf, int size) {
   switch (size) {
   case DW_EH_PE_udata2:
     return read16(buf);
@@ -619,7 +619,7 @@ uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
   // stored at FDE + 8 byte. And this offset is within
   // the .eh_frame section.
   size_t off = fdeOff + 8;
-  uint64_t addr = readFdeAddr(buf + off, enc & 0xf);
+  uint64_t addr = readFdeAddr(ctx, buf + off, enc & 0xf);
   if ((enc & 0x70) == DW_EH_PE_absptr)
     return ctx.arg.is64 ? addr : uint32_t(addr);
   if ((enc & 0x70) == DW_EH_PE_pcrel)
@@ -1478,7 +1478,7 @@ DynamicSection<ELFT>::computeContents() {
     if (ctx.arg.zPacPlt)
       addInt(DT_AARCH64_PAC_PLT, 0);
 
-    if (hasMemtag()) {
+    if (hasMemtag(ctx)) {
       addInt(DT_AARCH64_MEMTAG_MODE, ctx.arg.androidMemtagMode == NT_MEMTAG_LEVEL_ASYNC);
       addInt(DT_AARCH64_MEMTAG_HEAP, ctx.arg.androidMemtagHeap);
       addInt(DT_AARCH64_MEMTAG_STACK, ctx.arg.androidMemtagStack);
@@ -4359,7 +4359,7 @@ bool PPC64LongBranchTargetSection::isNeeded() const {
   return !finalized || !entries.empty();
 }
 
-static uint8_t getAbiVersion() {
+static uint8_t getAbiVersion(Ctx &ctx) {
   // MIPS non-PIC executable gets ABI version 1.
   if (ctx.arg.emachine == EM_MIPS) {
     if (!ctx.arg.isPic && !ctx.arg.relocatable &&
@@ -4388,7 +4388,7 @@ template <typename ELFT> void elf::writeEhdr(uint8_t *buf, Partition &part) {
       ELFT::Endianness == endianness::little ? ELFDATA2LSB : ELFDATA2MSB;
   eHdr->e_ident[EI_VERSION] = EV_CURRENT;
   eHdr->e_ident[EI_OSABI] = ctx.arg.osabi;
-  eHdr->e_ident[EI_ABIVERSION] = getAbiVersion();
+  eHdr->e_ident[EI_ABIVERSION] = getAbiVersion(ctx);
   eHdr->e_machine = ctx.arg.emachine;
   eHdr->e_version = EV_CURRENT;
   eHdr->e_flags = ctx.arg.eflags;
@@ -4516,7 +4516,7 @@ static bool needsInterpSection(Ctx &ctx) {
          !ctx.arg.dynamicLinker.empty() && ctx.script->needsInterpSection();
 }
 
-bool elf::hasMemtag() {
+bool elf::hasMemtag(Ctx &ctx) {
   return ctx.arg.emachine == EM_AARCH64 &&
          ctx.arg.androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE;
 }
@@ -4527,8 +4527,8 @@ bool elf::hasMemtag() {
 //   - Dynamic entries.
 // This restriction could be removed in future by re-using some of the ideas
 // that ifuncs use in fully static executables.
-bool elf::canHaveMemtagGlobals() {
-  return hasMemtag() &&
+bool elf::canHaveMemtagGlobals(Ctx &ctx) {
+  return hasMemtag(ctx) &&
          (ctx.arg.relocatable || ctx.arg.shared || needsInterpSection(ctx));
 }
 
@@ -4656,7 +4656,7 @@ static OutputSection *findSection(StringRef name) {
   return nullptr;
 }
 
-static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
+static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
                                    uint64_t val, uint8_t stOther = STV_HIDDEN) {
   Symbol *s = ctx.symtab->find(name);
   if (!s || s->isDefined() || s->isCommon())
@@ -4757,10 +4757,10 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       continue;
     part.dynamic = std::make_unique<DynamicSection<ELFT>>(ctx);
 
-    if (hasMemtag()) {
+    if (hasMemtag(ctx)) {
       part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>(ctx);
       add(*part.memtagAndroidNote);
-      if (canHaveMemtagGlobals()) {
+      if (canHaveMemtagGlobals(ctx)) {
         part.memtagGlobalDescriptors =
             std::make_unique<MemtagGlobalDescriptors>(ctx);
         add(*part.memtagGlobalDescriptors);
@@ -4840,8 +4840,8 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     add(*ctx.in.partEnd);
 
     ctx.in.partIndex = std::make_unique<PartitionIndexSection>(ctx);
-    addOptionalRegular("__part_index_begin", ctx.in.partIndex.get(), 0);
-    addOptionalRegular("__part_index_end", ctx.in.partIndex.get(),
+    addOptionalRegular(ctx, "__part_index_begin", ctx.in.partIndex.get(), 0);
+    addOptionalRegular(ctx, "__part_index_end", ctx.in.partIndex.get(),
                        ctx.in.partIndex->getSize());
     add(*ctx.in.partIndex);
   }
