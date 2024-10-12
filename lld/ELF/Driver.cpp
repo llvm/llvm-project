@@ -2975,7 +2975,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
-  ctx.out.elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
+  ctx.out.elfHeader = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!ctx.arg.relocatable)
@@ -3200,7 +3200,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // sectionBases.
     for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections(ctx);
+        osd->osec.finalizeInputSections();
   }
 
   // Two input sections with different output sections should not be folded.

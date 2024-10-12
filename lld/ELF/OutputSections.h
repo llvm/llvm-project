@@ -35,7 +35,7 @@ struct CompressedData {
 // non-overlapping file offsets and VAs.
 class OutputSection final : public SectionBase {
 public:
-  OutputSection(StringRef name, uint32_t type, uint64_t flags);
+  OutputSection(Ctx &, StringRef name, uint32_t type, uint64_t flags);
 
   static bool classof(const SectionBase *s) {
     return s->kind() == SectionBase::Output;
@@ -44,6 +44,7 @@ public:
   uint64_t getLMA() const { return ptLoad ? addr + ptLoad->lmaOffset : addr; }
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *sHdr);
 
+  Ctx &ctx;
   uint32_t sectionIndex = UINT32_MAX;
   unsigned sortRank;
 
@@ -74,8 +75,8 @@ public:
   uint32_t shName = 0;
 
   void recordSection(InputSectionBase *isec);
-  void commitSection(Ctx &ctx, InputSection *isec);
-  void finalizeInputSections(Ctx &ctx);
+  void commitSection(InputSection *isec);
+  void finalizeInputSections();
 
   // The following members are normally only used in linker scripts.
   MemoryRegion *memRegion = nullptr;
@@ -135,8 +136,8 @@ private:
 
 struct OutputDesc final : SectionCommand {
   OutputSection osec;
-  OutputDesc(StringRef name, uint32_t type, uint64_t flags)
-      : SectionCommand(OutputSectionKind), osec(name, type, flags) {}
+  OutputDesc(Ctx &ctx, StringRef name, uint32_t type, uint64_t flags)
+      : SectionCommand(OutputSectionKind), osec(ctx, name, type, flags) {}
 
   static bool classof(const SectionCommand *c) {
     return c->kind == OutputSectionKind;
