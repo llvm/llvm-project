@@ -553,7 +553,8 @@ struct MaxMin_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT))) {
+    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT)) ||
+        sd_context_match(N, Ctx, m_Opc(ISD::VSELECT))) {
       EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
       assert(EO_SELECT.Size == 3);
       SDValue Cond = N->getOperand(EO_SELECT.FirstIndex);
@@ -565,7 +566,7 @@ struct MaxMin_match {
         assert(EO_SETCC.Size == 3);
         SDValue L = Cond->getOperand(EO_SETCC.FirstIndex);
         SDValue R = Cond->getOperand(EO_SETCC.FirstIndex + 1);
-        CondCodeSDNode *CondNode =
+        auto *CondNode =
             cast<CondCodeSDNode>(Cond->getOperand(EO_SETCC.FirstIndex + 2));
 
         if ((TrueValue != L || FalseValue != R) &&
