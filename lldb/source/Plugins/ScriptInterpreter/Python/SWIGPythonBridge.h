@@ -200,6 +200,15 @@ public:
   LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
                                                    std::string &command);
 
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+      PyObject *implementor, std::vector<llvm::StringRef> &args_impl,
+      size_t args_pos, size_t pos_in_arg);
+
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+      PyObject *implementor, llvm::StringRef &long_option, size_t pos_in_arg);
+
   static bool LLDBSwigPythonCallModuleInit(const char *python_module_name,
                                            const char *session_dictionary_name,
                                            lldb::DebuggerSP debugger);

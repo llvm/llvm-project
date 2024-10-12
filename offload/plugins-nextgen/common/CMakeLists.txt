@@ -38,12 +38,6 @@ elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
   endif()
 endif()
 
-# If we have OMPT enabled include it in the list of sources.
-if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
-  target_sources(PluginCommon PRIVATE OMPT/OmptCallback.cpp)
-  target_include_directories(PluginCommon PRIVATE OMPT)
-endif()
-
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
   TARGET_NAME="PluginInterface"

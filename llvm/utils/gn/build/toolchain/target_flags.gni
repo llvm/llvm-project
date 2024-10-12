@@ -45,9 +45,10 @@ if (current_os == "android") {
     target_flags += [
       "-isysroot",
       rebase_path(mac_sdk_path, root_build_dir),
+
       # TODO(lgrey): We should be getting this from `compiler_defaults`. Why
       # aren't we?
-    "-mmacos-version-min=$mac_deployment_target",
+      "-mmacos-version-min=$mac_deployment_target",
     ]
   }
 } else if (current_os == "baremetal") {

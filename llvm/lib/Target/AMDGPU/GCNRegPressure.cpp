@@ -38,8 +38,9 @@ bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
 unsigned GCNRegPressure::getRegKind(Register Reg,
                                     const MachineRegisterInfo &MRI) {
   assert(Reg.isVirtual());
-  const auto RC = MRI.getRegClass(Reg);
-  auto STI = static_cast<const SIRegisterInfo*>(MRI.getTargetRegisterInfo());
+  const auto *const RC = MRI.getRegClass(Reg);
+  const auto *STI =
+      static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
   return STI->isSGPRClass(RC)
              ? (STI->getRegSizeInBits(*RC) == 32 ? SGPR32 : SGPR_TUPLE)
          : STI->isAGPRClass(RC)

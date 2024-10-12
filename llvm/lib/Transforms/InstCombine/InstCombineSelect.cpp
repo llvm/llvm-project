@@ -145,12 +145,15 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
       return nullptr;
 
     AndMask = *AndRHS;
-  } else if (decomposeBitTestICmp(Cmp->getOperand(0), Cmp->getOperand(1),
-                                  Pred, V, AndMask)) {
-    assert(ICmpInst::isEquality(Pred) && "Not equality test?");
-    if (!AndMask.isPowerOf2())
+  } else if (auto Res = decomposeBitTestICmp(Cmp->getOperand(0),
+                                             Cmp->getOperand(1), Pred)) {
+    assert(ICmpInst::isEquality(Res->Pred) && "Not equality test?");
+    if (!Res->Mask.isPowerOf2())
       return nullptr;
 
+    V = Res->X;
+    AndMask = Res->Mask;
+    Pred = Res->Pred;
     CreateAnd = true;
   } else {
     return nullptr;
@@ -747,12 +750,13 @@ static Value *foldSelectICmpAndBinOp(const ICmpInst *IC, Value *TrueVal,
 
     C1Log = C1->logBase2();
   } else {
-    APInt C1;
-    if (!decomposeBitTestICmp(CmpLHS, CmpRHS, Pred, CmpLHS, C1) ||
-        !C1.isPowerOf2())
+    auto Res = decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
+    if (!Res || !Res->Mask.isPowerOf2())
       return nullptr;
 
-    C1Log = C1.logBase2();
+    CmpLHS = Res->X;
+    Pred = Res->Pred;
+    C1Log = Res->Mask.logBase2();
     NeedAnd = true;
   }
 
@@ -1404,6 +1408,44 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   }
 
   return nullptr;
+}
+
+/// Fold the following code sequence:
+/// \code
+///   %XeqZ = icmp eq i64 %X, %Z
+///   %YeqZ = icmp eq i64 %Y, %Z
+///   %XeqY = icmp eq i64 %X, %Y
+///   %not.YeqZ = xor i1 %YeqZ, true
+///   %and = select i1 %not.YeqZ, i1 %XeqY, i1 false
+///   %equal = select i1 %XeqZ, i1 %YeqZ, i1 %and
+/// \code
+///
+/// into:
+///   %equal = icmp eq i64 %X, %Y
+Instruction *InstCombinerImpl::foldSelectEqualityTest(SelectInst &Sel) {
+  Value *X, *Y, *Z;
+  Value *XeqY, *XeqZ = Sel.getCondition(), *YeqZ = Sel.getTrueValue();
+
+  if (!match(XeqZ, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(X), m_Value(Z))))
+    return nullptr;
+
+  if (!match(YeqZ,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(Y), m_Specific(Z))))
+    std::swap(X, Z);
+
+  if (!match(YeqZ,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(Y), m_Specific(Z))))
+    return nullptr;
+
+  if (!match(Sel.getFalseValue(),
+             m_c_LogicalAnd(m_Not(m_Specific(YeqZ)), m_Value(XeqY))))
+    return nullptr;
+
+  if (!match(XeqY,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(X), m_Specific(Y))))
+    return nullptr;
+
+  return replaceInstUsesWith(Sel, XeqY);
 }
 
 // See if this is a pattern like:
@@ -3551,9 +3593,7 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
     Pred = ICmpInst::getSwappedPredicate(Pred);
     std::swap(LHS, RHS);
   }
-
-  Intrinsic::ID IID =
-      ICmpInst::isSigned(Pred) ? Intrinsic::scmp : Intrinsic::ucmp;
+  bool IsSigned = ICmpInst::isSigned(Pred);
 
   bool Replace = false;
   ICmpInst::Predicate ExtendedCmpPredicate;
@@ -3575,6 +3615,32 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
        ICmpInst::getSwappedPredicate(ExtendedCmpPredicate) == Pred))
     Replace = true;
 
+  // (x == y) ? 0 : (x > y ? 1 : -1)
+  ICmpInst::Predicate FalseBranchSelectPredicate;
+  const APInt *InnerTV, *InnerFV;
+  if (Pred == ICmpInst::ICMP_EQ && match(TV, m_Zero()) &&
+      match(FV, m_Select(m_c_ICmp(FalseBranchSelectPredicate, m_Specific(LHS),
+                                  m_Specific(RHS)),
+                         m_APInt(InnerTV), m_APInt(InnerFV)))) {
+    if (!ICmpInst::isGT(FalseBranchSelectPredicate)) {
+      FalseBranchSelectPredicate =
+          ICmpInst::getSwappedPredicate(FalseBranchSelectPredicate);
+      std::swap(LHS, RHS);
+    }
+
+    if (!InnerTV->isOne()) {
+      std::swap(InnerTV, InnerFV);
+      std::swap(LHS, RHS);
+    }
+
+    if (ICmpInst::isGT(FalseBranchSelectPredicate) && InnerTV->isOne() &&
+        InnerFV->isAllOnes()) {
+      IsSigned = ICmpInst::isSigned(FalseBranchSelectPredicate);
+      Replace = true;
+    }
+  }
+
+  Intrinsic::ID IID = IsSigned ? Intrinsic::scmp : Intrinsic::ucmp;
   if (Replace)
     return replaceInstUsesWith(
         SI, Builder.CreateIntrinsic(SI.getType(), IID, {LHS, RHS}));
@@ -4082,6 +4148,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return I;
 
   if (Instruction *I = foldSelectToCmp(SI))
+    return I;
+
+  if (Instruction *I = foldSelectEqualityTest(SI))
     return I;
 
   // Fold:

@@ -291,17 +291,11 @@ exit:
 define void @scalarize_ptrtoint(ptr %src, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr %src, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr %src, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 10
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], 10
-; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP8]] to ptr
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    store ptr [[TMP11]], ptr %dst, align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

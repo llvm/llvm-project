@@ -10,11 +10,16 @@
 #include "bolt/Core/BinaryContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Timer.h"
 #include <cstdint>
 #include <optional>
 
+namespace opts {
+extern llvm::cl::opt<bool> TimeDebug;
+} // namespace opts
 namespace llvm {
 namespace bolt {
 DWARF5AcceleratorTable::DWARF5AcceleratorTable(
@@ -740,6 +745,8 @@ void DWARF5AcceleratorTable::emitAugmentationString() const {
 void DWARF5AcceleratorTable::emitAccelTable() {
   if (!NeedToCreate)
     return;
+  NamedRegionTimer T("emitAccelTable", "Emit Accelerator Table",
+                     "debug", "Update Debug Info", opts::TimeDebug);
   finalize();
   populateAbbrevsMap();
   writeEntries();

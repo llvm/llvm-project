@@ -116,10 +116,9 @@ body:             |
     ; CHECK-LABEL: name: const_i192
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -214772364921
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK-NEXT: $x10 = COPY [[C]](s64)
     ; CHECK-NEXT: $x11 = COPY [[C1]](s64)
-    ; CHECK-NEXT: $x12 = COPY [[C2]](s64)
+    ; CHECK-NEXT: $x12 = COPY [[C1]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11, implicit $x12
     %0:_(s192) = G_CONSTANT i192 -214772364921
     %1:_(s64), %2:_(s64), %3:_(s64) = G_UNMERGE_VALUES %0(s192)

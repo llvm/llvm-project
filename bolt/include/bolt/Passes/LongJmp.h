@@ -63,6 +63,44 @@ class LongJmpPass : public BinaryFunctionPass {
   uint32_t NumColdStubs{0};
   uint32_t NumSharedStubs{0};
 
+  /// The shortest distance for any branch instruction on AArch64.
+  static constexpr size_t ShortestJumpBits = 16;
+  static constexpr size_t ShortestJumpSpan = 1ULL << (ShortestJumpBits - 1);
+
+  /// The longest single-instruction branch.
+  static constexpr size_t LongestJumpBits = 28;
+  static constexpr size_t LongestJumpSpan = 1ULL << (LongestJumpBits - 1);
+
+  /// Size of the instruction on AArch64.
+  static constexpr size_t InstSize = 4;
+
+  /// Relax all internal function branches including those between fragments.
+  /// Assume fragments are placed in different sections but are within 128MB
+  /// branch span ("medium" code model).
+  void relaxLocalBranches(BinaryFunction &BF);
+
+  struct FunctionCluster {
+    std::set<BinaryFunction *> Functions;
+
+    // Functions that this cluster of functions is calling. Note that it
+    // excludes all functions in the cluster itself.
+    std::set<BinaryFunction *> Callees;
+
+    uint64_t Size{0};
+
+    // Last function in the cluster.
+    BinaryFunction *LastBF{nullptr};
+  };
+
+  /// Maximum size of the function cluster. Note that it's less than 128MB
+  /// as the size of the cluster plus thunk island should be less than 128MB.
+  static constexpr uint64_t MaxClusterSize = 124 * 1024 * 1024;
+
+  /// Relax calls for medium code model where code is < 256MB.
+  /// A thunk island will be introduced between two clusters of functions to
+  /// enable calls over 128MB.
+  void relaxCalls(BinaryContext &BC);
+
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions
   /// and MCInsts -- this is an estimation. To be correct for longjmp inserter

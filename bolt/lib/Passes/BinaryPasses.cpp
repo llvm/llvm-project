@@ -1264,6 +1264,8 @@ Error AssignSections::runOnFunctions(BinaryContext &BC) {
     if (opts::isHotTextMover(Function)) {
       Function.setCodeSectionName(BC.getHotTextMoverSectionName());
       Function.setColdCodeSectionName(BC.getHotTextMoverSectionName());
+      // TODO: find a better place to mark a function as a mover.
+      Function.setHotTextMover(true);
       continue;
     }
 

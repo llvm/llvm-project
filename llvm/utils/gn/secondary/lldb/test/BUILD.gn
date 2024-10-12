@@ -164,8 +164,8 @@ group("test") {
     ":lit_unit_site_cfg",
     "//clang/tools/driver:symlinks",
     "//lld/tools/lld:symlinks",
-    "//lldb/tools/lldb-dap",
     "//lldb/tools/driver:lldb",
+    "//lldb/tools/lldb-dap",
 
     # XXX lldb-instr, darwin-debug, etc
     "//lldb/tools/lldb-server",

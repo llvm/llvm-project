@@ -71,14 +71,15 @@ struct SegmentInfo {
   uint64_t FileOffset;        /// Offset in the file.
   uint64_t FileSize;          /// Size in file.
   uint64_t Alignment;         /// Alignment of the segment.
+  bool IsExecutable;          /// Is the executable bit set on the Segment?
 
   void print(raw_ostream &OS) const {
-    OS << "SegmentInfo { Address: 0x"
-       << Twine::utohexstr(Address) << ", Size: 0x"
-       << Twine::utohexstr(Size) << ", FileOffset: 0x"
+    OS << "SegmentInfo { Address: 0x" << Twine::utohexstr(Address)
+       << ", Size: 0x" << Twine::utohexstr(Size) << ", FileOffset: 0x"
        << Twine::utohexstr(FileOffset) << ", FileSize: 0x"
        << Twine::utohexstr(FileSize) << ", Alignment: 0x"
-       << Twine::utohexstr(Alignment) << "}";
+       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : " ")
+       << "}";
   };
 };
 
@@ -227,6 +228,12 @@ class BinaryContext {
 
   /// Functions injected by BOLT
   std::vector<BinaryFunction *> InjectedBinaryFunctions;
+
+  /// Thunk functions.
+  std::vector<BinaryFunction *> ThunkBinaryFunctions;
+
+  /// Function that precedes thunks in the binary.
+  const BinaryFunction *ThunkLocation{nullptr};
 
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
@@ -538,6 +545,16 @@ public:
   std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
+
+  BinaryFunction *createThunkBinaryFunction(const std::string &Name);
+
+  std::vector<BinaryFunction *> &getThunkBinaryFunctions() {
+    return ThunkBinaryFunctions;
+  }
+
+  const BinaryFunction *getThunkLocation() const { return ThunkLocation; }
+
+  void setThunkLocation(const BinaryFunction *BF) { ThunkLocation = BF; }
 
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
@@ -1338,6 +1355,10 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
+    // FIXME: hack for faster size computation on aarch64.
+    if (isAArch64())
+      return MIB->isPseudo(Inst) ? 0 : 4;
+
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
       return *Size;
 
