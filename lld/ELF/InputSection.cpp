@@ -437,7 +437,8 @@ void InputSection::copyRelocations(uint8_t *buf) {
 template <class ELFT, class RelTy, class RelIt>
 void InputSection::copyRelocations(uint8_t *buf,
                                    llvm::iterator_range<RelIt> rels) {
-  const TargetInfo &target = *elf::ctx.target;
+  Ctx &ctx = getCtx();
+  const TargetInfo &target = *ctx.target;
   InputSectionBase *sec = getRelocatedSection();
   (void)sec->contentMaybeDecompress(); // uncompress if needed
 
