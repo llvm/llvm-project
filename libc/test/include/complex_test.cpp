@@ -14,6 +14,6 @@ TEST(LlvmLibcComplexTest, VersionMacro) {
   EXPECT_EQ(__STDC_VERSION_COMPLEX_H__, 202311L);
 }
 
-TEST(LlvmLibcComplexTest, IMacro) { EXPECT_FP_EQ(1.0fi, I); }
+TEST(LlvmLibcComplexTest, IMacro) { EXPECT_CFP_EQ(1.0fi, I); }
 
-TEST(LlvmLibcComplexTest, _Complex_IMacro) { EXPECT_FP_EQ(1.0fi, _Complex_I); }
+TEST(LlvmLibcComplexTest, _Complex_IMacro) { EXPECT_CFP_EQ(1.0fi, _Complex_I); }
