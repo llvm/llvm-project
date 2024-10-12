@@ -250,6 +250,8 @@ Non-comprehensive list of changes in this release
 - The floating point comparison builtins (``__builtin_isgreater``,
   ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
   ``__builtin_signbit`` can now be used in constant expressions.
+- Plugins can now define custom attributes that apply to statements
+  as well as declarations.
 
 New Compiler Flags
 ------------------
@@ -502,9 +504,15 @@ Bug Fixes to C++ Support
   in certain friend declarations. (#GH93099)
 - Clang now instantiates the correct lambda call operator when a lambda's class type is
   merged across modules. (#GH110401)
+- Clang now uses the correct set of template argument lists when comparing the constraints of
+  out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
+  a class template. (#GH102320)
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
   and undeclared templates. (#GH107047, #GH49093)
+- Clang no longer crashes when a lambda contains an invalid block declaration that contains an unexpanded
+  parameter pack. (#GH109148)
+- Fixed overload handling for object parameters with top-level cv-qualifiers in explicit member functions (#GH100394)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -656,6 +664,8 @@ clang-format
 - Adds ``BreakBinaryOperations`` option.
 - Adds ``TemplateNames`` option.
 - Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
+- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of multi-line comments
+  without touching their contents, renames ``false`` to ``Never``, and ``true`` to ``Always``.
 
 libclang
 --------

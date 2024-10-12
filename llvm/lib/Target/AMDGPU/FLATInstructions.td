@@ -2224,7 +2224,8 @@ foreach as = [ "private", "laneshared" ] in {
 def PrefetchLoc: SDNodeXForm<timm, [{
   uint32_t V = N->getZExtValue();
   V = (AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK)) << AMDGPU::CPol::SCOPE_SHIFT;
-  V = std::max(V, (uint32_t)AMDGPU::CPol::SCOPE_SE); // CU scope is unsafe
+  if (!Subtarget->hasSafeCUPrefetch())
+    V = std::max(V, (uint32_t)AMDGPU::CPol::SCOPE_SE); // CU scope is unsafe
   return CurDAG->getTargetConstant(V, SDLoc(N), MVT::i32);
 }]>;
 

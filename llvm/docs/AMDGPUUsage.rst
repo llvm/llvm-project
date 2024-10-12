@@ -1476,6 +1476,22 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Returns a pair for the swapped registers. The first element of the return
                                                    corresponds to the swapped element of the first argument.
 
+  :ref:`llvm.prefetch`                             Implemented on gfx121x, ignored on earlier targets.
+                                                   First argument is flat, global, or constant address space pointer.
+                                                   Any other address space is not supported.
+                                                   On gfx121x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
+                                                   Second argument is rw and currently ignored. Can be 0 or 1.
+                                                   Third argument is locality, 0-3. Translates to memory scope:
+                                                     0 - SCOPE_SYS
+                                                     1 - SCOPE_DEV
+                                                     2 - SCOPE_SE
+                                                     3 - SCOPE_SE
+                                                   Note that SCOPE_CU is not generated and not safe on an invalid address.
+                                                   Fourth argument is cache type:
+                                                     0 - Instruction cache, currently ignored and no code is generated.
+                                                     1 - Data cache.
+                                                   Instruction cache prefetches are unsafe on invalid address.
+
   llvm.amdgcn.wavegroup.id                         In a wavegroup-enabled dispatch, return the 0-based ID of the
                                                    wavegroup within the workgroup. Otherwise the return value is
                                                    undefined.
