@@ -1010,8 +1010,8 @@ NamedDecl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
   Param->setAccess(AS_public);
 
   if (Param->isParameterPack())
-    if (auto *LSI = getEnclosingLambda())
-      LSI->LocalPacks.push_back(Param);
+    if (auto *CSI = getEnclosingLambdaOrBlock())
+      CSI->LocalPacks.push_back(Param);
 
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, ParamNameLoc, ParamName);
@@ -1542,8 +1542,8 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     Param->setInvalidDecl();
 
   if (Param->isParameterPack())
-    if (auto *LSI = getEnclosingLambda())
-      LSI->LocalPacks.push_back(Param);
+    if (auto *CSI = getEnclosingLambdaOrBlock())
+      CSI->LocalPacks.push_back(Param);
 
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, D.getIdentifierLoc(),
@@ -1593,7 +1593,7 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(
   Param->setAccess(AS_public);
 
   if (Param->isParameterPack())
-    if (auto *LSI = getEnclosingLambda())
+    if (auto *LSI = getEnclosingLambdaOrBlock())
       LSI->LocalPacks.push_back(Param);
 
   // If the template template parameter has a name, then link the identifier
