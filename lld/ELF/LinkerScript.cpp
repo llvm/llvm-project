@@ -140,7 +140,7 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
     // There was a forward reference.
     sec = secRef;
   } else {
-    sec = make<OutputDesc>(name, SHT_PROGBITS, 0);
+    sec = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
     if (!secRef)
       secRef = sec;
   }
@@ -151,7 +151,7 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
 OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
   OutputDesc *&cmdRef = nameToOutputSection[CachedHashStringRef(name)];
   if (!cmdRef)
-    cmdRef = make<OutputDesc>(name, SHT_PROGBITS, 0);
+    cmdRef = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
   return cmdRef;
 }
 
@@ -830,7 +830,7 @@ void LinkerScript::processSymbolAssignments() {
   // sh_shndx should not be SHN_UNDEF or SHN_ABS. Create a dummy aether section
   // that fills the void outside a section. It has an index of one, which is
   // indistinguishable from any other regular section index.
-  aether = make<OutputSection>("", 0, SHF_ALLOC);
+  aether = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
   aether->sectionIndex = 1;
 
   // `st` captures the local AddressState and makes it accessible deliberately.
