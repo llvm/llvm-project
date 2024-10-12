@@ -61,8 +61,7 @@ template <class _Fun, class _Tuple>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tuple) {
   return std::apply(
       [&]<class... _Types>(_Types&&... __elements) {
-        return tuple<invoke_result_t<_Fun&, _Types>...>(
-            std::invoke(__f, std::forward<_Types>(__elements))...);
+        return tuple<invoke_result_t<_Fun&, _Types>...>(std::invoke(__f, std::forward<_Types>(__elements))...);
       },
       std::forward<_Tuple>(__tuple));
 }
@@ -241,8 +240,7 @@ template <bool _Const>
 class zip_view<_Views...>::__iterator : public __zip_view_iterator_category_base<_Const, _Views...> {
   tuple<iterator_t<__maybe_const<_Const, _Views>>...> __current_;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(
-      tuple<iterator_t<__maybe_const<_Const, _Views>>...> __current)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(tuple<iterator_t<__maybe_const<_Const, _Views>>...> __current)
       : __current_(std::move(__current)) {}
 
   template <bool>
@@ -393,8 +391,7 @@ template <bool _Const>
 class zip_view<_Views...>::__sentinel {
   tuple<sentinel_t<__maybe_const<_Const, _Views>>...> __end_;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(
-      tuple<sentinel_t<__maybe_const<_Const, _Views>>...> __end)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(tuple<sentinel_t<__maybe_const<_Const, _Views>>...> __end)
       : __end_(__end) {}
 
   friend class zip_view<_Views...>;
