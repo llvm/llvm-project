@@ -2,7 +2,7 @@ module;
 
 export module M;
 
-const char8_t x = 1;
+export const char8_t x = 1;
 
 template<typename T> requires true
 const int y = requires { typename T::type; requires T::value; };
@@ -17,19 +17,22 @@ module: private;
 // CHECK-MODULE1: module;
 // CHECK-MODULE1: module <#name#>;
 
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:3:11 %s | FileCheck --check-prefix=CHECK-MODULE2 %s
+// CHECK-MODULE2: module <#name#>;
+
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:14:3 %s | FileCheck --check-prefix=CHECK-MODULE3 %s
 // CHECK-MODULE3: module: private;
 
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:3:3 %s | FileCheck --check-prefix=CHECK-EXPORT %s
 // CHECK-EXPORT: export
 
-// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:5:3 %s | FileCheck --check-prefix=CHECK-CONST %s
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:5:11 %s | FileCheck --check-prefix=CHECK-CONST %s
 // CHECK-CONST: const
 // CHECK-CONST: consteval
 // CHECK-CONST: constexpr
 // CHECK-CONST: constinit
 
-// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:5:12 %s | FileCheck --check-prefix=CHECK-CHAR %s
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:5:19 %s | FileCheck --check-prefix=CHECK-CHAR %s
 // CHECK-CHAR: char8_t
 
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:8:3 %s | FileCheck --check-prefix=CHECK-CONSTRAINT %s

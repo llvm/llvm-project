@@ -460,6 +460,18 @@ Decl *Parser::ParseExportDeclaration() {
   assert(Tok.is(tok::kw_export));
   SourceLocation ExportLoc = ConsumeToken();
 
+  if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
+    SemaCodeCompletion::ParserCompletionContext PCC;
+    if (PP.isIncrementalProcessingEnabled()) {
+      PCC = SemaCodeCompletion::PCC_TopLevelOrExpression;
+    } else {
+      PCC = SemaCodeCompletion::PCC_Namespace;
+    };
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), PCC);
+    return nullptr;
+  }
+
   ParseScope ExportScope(this, Scope::DeclScope);
   Decl *ExportDecl = Actions.ActOnStartExportDecl(
       getCurScope(), ExportLoc,
