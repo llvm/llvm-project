@@ -7188,6 +7188,13 @@ void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPPermutationClause(OMPPermutationClause *C) {
+  Record.push_back(C->getNumLoops());
+  for (Expr *Size : C->getArgsRefs())
+    Record.AddStmt(Size);
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPFullClause(OMPFullClause *C) {}
 
 void OMPClauseWriter::VisitOMPPartialClause(OMPPartialClause *C) {
@@ -8175,6 +8182,16 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
       AddStmt(E);
     return;
   }
+  case OpenACCClauseKind::Gang: {
+    const auto *GC = cast<OpenACCGangClause>(C);
+    writeSourceLocation(GC->getLParenLoc());
+    writeUInt32(GC->getNumExprs());
+    for (unsigned I = 0; I < GC->getNumExprs(); ++I) {
+      writeEnum(GC->getExpr(I).first);
+      AddStmt(const_cast<Expr *>(GC->getExpr(I).second));
+    }
+    return;
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -8191,7 +8208,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

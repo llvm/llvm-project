@@ -1657,7 +1657,8 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   SDValue SignBit = DAG.getNode(ISD::AND, DL, IntVT, SignAsInt.IntValue,
                                 SignMask);
 
-  // If FABS is legal transform FCOPYSIGN(x, y) => sign(x) ? -FABS(x) : FABS(X)
+  // If FABS is legal transform
+  // FCOPYSIGN(x, y) => SignBit(y) ? -FABS(x) : FABS(x)
   EVT FloatVT = Mag.getValueType();
   if (TLI.isOperationLegalOrCustom(ISD::FABS, FloatVT) &&
       TLI.isOperationLegalOrCustom(ISD::FNEG, FloatVT)) {
