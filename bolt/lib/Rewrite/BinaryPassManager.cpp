@@ -12,6 +12,7 @@
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
+#include "bolt/Passes/ContinuityStats.h"
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Passes/FixRelaxationPass.h"
 #include "bolt/Passes/FrameOptimizer.h"
@@ -373,6 +374,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
+  Manager.registerPass(std::make_unique<PrintContinuityStats>(NeverPrint));
+
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateMemRefs>(NeverPrint));
@@ -489,9 +492,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
-  // Assign each function an output section.
-  Manager.registerPass(std::make_unique<AssignSections>());
-
   if (BC.isAArch64()) {
     Manager.registerPass(std::make_unique<ADRRelaxationPass>());
 
@@ -514,6 +514,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(
       std::make_unique<RetpolineInsertion>(PrintRetpolineInsertion));
+
+  // Assign each function an output section.
+  Manager.registerPass(std::make_unique<AssignSections>());
 
   // Patch original function entries
   if (BC.HasRelocations)

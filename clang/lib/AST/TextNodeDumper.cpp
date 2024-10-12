@@ -425,6 +425,17 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
       break;
+    case OpenACCClauseKind::Gang: {
+      OS << " clause";
+      // print the list of all GangKinds, so that there is some sort of
+      // relationship to the expressions listed afterwards.
+      auto *GC = cast<OpenACCGangClause>(C);
+
+      for (unsigned I = 0; I < GC->getNumExprs(); ++I) {
+        OS << " " << GC->getExpr(I).first;
+      }
+      break;
+    }
     case OpenACCClauseKind::Collapse:
       OS << " clause";
       if (cast<OpenACCCollapseClause>(C)->hasForce())

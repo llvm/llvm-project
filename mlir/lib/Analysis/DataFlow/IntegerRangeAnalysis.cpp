@@ -111,7 +111,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
 
     auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
-      return getLatticeElementFor(op, value)->getValue();
+      return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
     });
 
     auto joinCallback = [&](Value v, const IntegerValueRange &attrs) {
@@ -159,7 +159,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
           return bound.getValue();
       } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =
-            getLatticeElementFor(op, value);
+            getLatticeElementFor(getProgramPointAfter(op), value);
         if (lattice != nullptr && !lattice->getValue().isUninitialized())
           return getUpper ? lattice->getValue().getValue().smax()
                           : lattice->getValue().getValue().smin();

@@ -42,7 +42,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
@@ -368,11 +367,6 @@ static cl::opt<bool> AlwaysConvertToRanges(
     cl::ReallyHidden, cl::init(false), cl::cat(BoltCategory));
 
 extern cl::opt<std::string> CompDirOverride;
-
-cl::opt<bool>
-    TimeDebug("time-debug",
-              cl::desc("print time spent processing debug information"),
-              cl::Hidden, cl::cat(BoltCategory));
 } // namespace opts
 
 /// If DW_AT_low_pc exists sets LowPC and returns true.
@@ -553,8 +547,6 @@ using CUPartitionVector = std::vector<DWARFUnitVec>;
 /// cu-processing-batch-size. All the CUs that have cross CU reference reference
 /// as a source are put in to the same initial bucket.
 static CUPartitionVector partitionCUs(DWARFContext &DwCtx) {
-  NamedRegionTimer T("partitioncus", "partition cus", "debug",
-                     "update debug info", opts::TimeDebug);
   CUPartitionVector Vec(2);
   unsigned Counter = 0;
   const DWARFDebugAbbrev *Abbr = DwCtx.getDebugAbbrev();
@@ -615,9 +607,11 @@ void DWARFRewriter::updateDebugInfo() {
   }
 
   uint32_t CUIndex = 0;
+  std::mutex AccessMutex;
   // Needs to be invoked in the same order as CUs are processed.
   llvm::DenseMap<uint64_t, uint64_t> LocListWritersIndexByCU;
   auto createRangeLocListAddressWriters = [&](DWARFUnit &CU) {
+    std::lock_guard<std::mutex> Lock(AccessMutex);
     const uint16_t DwarfVersion = CU.getVersion();
     if (DwarfVersion >= 5) {
       auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
@@ -683,8 +677,6 @@ void DWARFRewriter::updateDebugInfo() {
                    GDBIndexSection, TempRangesSectionWriter);
   };
   auto processMainBinaryCU = [&](DWARFUnit &Unit, DIEBuilder &DIEBlder) {
-    NamedRegionTimer T("processmainbinarycu", "process main binary CU",
-                       "debug", "update debug info", opts::TimeDebug);
     std::optional<DWARFUnit *> SplitCU;
     std::optional<uint64_t> RangesBase;
     std::optional<uint64_t> DWOId = Unit.getDWOId();
@@ -717,11 +709,7 @@ void DWARFRewriter::updateDebugInfo() {
   };
 
   DIEBuilder DIEBlder(BC, BC.DwCtx.get(), DebugNamesTable);
-  {
-    NamedRegionTimer T("buildtypeunits", "build type units", "debug",
-                       "update debug info", opts::TimeDebug);
-    DIEBlder.buildTypeUnits(StrOffstsWriter.get());
-  }
+  DIEBlder.buildTypeUnits(StrOffstsWriter.get());
   SmallVector<char, 20> OutBuffer;
   std::unique_ptr<raw_svector_ostream> ObjOS =
       std::make_unique<raw_svector_ostream>(OutBuffer);
@@ -735,9 +723,8 @@ void DWARFRewriter::updateDebugInfo() {
   CUPartitionVector PartVec = partitionCUs(*BC.DwCtx);
   const unsigned int ThreadCount =
       std::min(opts::DebugThreadCount, opts::ThreadCount);
-  auto updateSplitCUs = [&]() {
-    NamedRegionTimer T("updatesplitcus", "update split CUs", "debug",
-                       "update debug info", opts::TimeDebug);
+  for (std::vector<DWARFUnit *> &Vec : PartVec) {
+    DIEBlder.buildCompileUnits(Vec);
     llvm::SmallVector<std::unique_ptr<DIEBuilder>, 72> DWODIEBuildersByCU;
     ThreadPoolInterface &ThreadPool =
         ParallelUtilities::getThreadPool(ThreadCount);
@@ -777,13 +764,6 @@ void DWARFRewriter::updateDebugInfo() {
       });
     }
     ThreadPool.wait();
-    return DWODIEBuildersByCU;
-  };
-
-  for (std::vector<DWARFUnit *> &Vec : PartVec) {
-    DIEBlder.buildCompileUnits(Vec);
-    llvm::SmallVector<std::unique_ptr<DIEBuilder>, 72> DWODIEBuildersByCU =
-        updateSplitCUs();
     for (std::unique_ptr<DIEBuilder> &DWODIEBuilderPtr : DWODIEBuildersByCU)
       DWODIEBuilderPtr->updateDebugNamesTable();
     for (DWARFUnit *CU : DIEBlder.getProcessedCUs())
@@ -1471,8 +1451,6 @@ void DWARFRewriter::updateLineTableOffsets(const MCAssembler &Asm) {
 CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
                                                 DIEStreamer &Streamer,
                                                 GDBIndex &GDBIndexSection) {
-  NamedRegionTimer T("finalizetypesections", "finalize type sections",
-                     "debug", "update debug info", opts::TimeDebug);
   // update TypeUnit DW_AT_stmt_list with new .debug_line information.
   auto updateLineTable = [&](const DWARFUnit &Unit) -> void {
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(Unit);
@@ -1538,8 +1516,6 @@ void DWARFRewriter::finalizeDebugSections(
     DIEBuilder &DIEBlder, DWARF5AcceleratorTable &DebugNamesTable,
     DIEStreamer &Streamer, raw_svector_ostream &ObjOS, CUOffsetMap &CUMap,
     DebugAddrWriter &FinalAddrWriter) {
-  NamedRegionTimer T("finalizedebugsections", "finalize debug sections",
-                     "debug", "update debug info", opts::TimeDebug);
   if (StrWriter->isInitialized()) {
     RewriteInstance::addToDebugSectionsToOverwrite(".debug_str");
     std::unique_ptr<DebugStrBufferVector> DebugStrSectionContents =
@@ -1652,8 +1628,6 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
                                          CUOffsetMap &CUMap,
                                          const std::list<DWARFUnit *> &CUs,
                                          DebugAddrWriter &FinalAddrWriter) {
-  NamedRegionTimer T("finalizecompileunits", "finalize compile units",
-                     "debug", "update debug info", opts::TimeDebug);
   for (DWARFUnit *CU : CUs) {
     auto AddressWriterIterator = AddressWritersByCU.find(CU->getOffset());
     assert(AddressWriterIterator != AddressWritersByCU.end() &&

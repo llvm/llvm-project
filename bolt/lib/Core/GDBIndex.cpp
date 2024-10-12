@@ -7,12 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/GDBIndex.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Timer.h"
 
-namespace opts {
-extern llvm::cl::opt<bool> TimeDebug;
-} // namespace opts
 using namespace llvm::bolt;
 using namespace llvm::support::endian;
 
@@ -28,8 +23,6 @@ void GDBIndex::updateGdbIndexSection(
     DebugARangesSectionWriter &ARangesSectionWriter) {
   if (!BC.getGdbIndexSection())
     return;
-  NamedRegionTimer T("updateGdbIndex", "Update gdb_index Section",
-                     "debug", "Update Debug Info", opts::TimeDebug);
   // See https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
   // for .gdb_index section format.
 

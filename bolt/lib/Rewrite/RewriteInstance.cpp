@@ -3557,11 +3557,9 @@ void RewriteInstance::finalizeMetadataPreEmit() {
 }
 
 void RewriteInstance::updateMetadata() {
-  {
-    NamedRegionTimer T("updatemetadata-postemit", "update metadata post-emit",
-                       TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
-    MetadataManager.runFinalizersAfterEmit();
-  }
+  NamedRegionTimer T("updatemetadata-postemit", "update metadata post-emit",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
+  MetadataManager.runFinalizersAfterEmit();
 
   if (opts::UpdateDebugSections) {
     NamedRegionTimer T("updateDebugInfo", "update debug info", TimerGroupName,
@@ -3723,41 +3721,15 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       return Address;
     };
 
-    // Try to allocate sections before the \p Address and return an address for
-    // the allocation of the first section or 0 if \p is not big enough.
-    auto allocateBefore = [&](uint64_t Address) -> uint64_t {
-      for (auto SI = CodeSections.rbegin(), SE = CodeSections.rend(); SI != SE;
-           ++SI) {
-        BinarySection *Section = *SI;
-        if (Section->getOutputSize() > Address)
-          return 0;
-        Address -= Section->getOutputSize();
-        Address = alignDown(Address, Section->getAlignment());
-        Section->setOutputAddress(Address);
-      }
-      return Address;
-    };
-
     // Check if we can fit code in the original .text
     bool AllocationDone = false;
     if (opts::UseOldText) {
-      uint64_t StartAddress;
-      uint64_t EndAddress;
-      if (opts::HotFunctionsAtEnd) {
-        EndAddress = BC->OldTextSectionAddress + BC->OldTextSectionSize;
-        StartAddress = allocateBefore(EndAddress);
-      } else {
-        StartAddress = BC->OldTextSectionAddress;
-        EndAddress = allocateAt(BC->OldTextSectionAddress);
-      }
+      const uint64_t CodeSize =
+          allocateAt(BC->OldTextSectionAddress) - BC->OldTextSectionAddress;
 
-      const uint64_t CodeSize = EndAddress - StartAddress;
       if (CodeSize <= BC->OldTextSectionSize) {
         BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
-                   << Twine::utohexstr(opts::AlignText) << " alignment";
-        if (StartAddress != BC->OldTextSectionAddress)
-          BC->outs() << " at 0x" << Twine::utohexstr(StartAddress);
-        BC->outs() << '\n';
+                   << Twine::utohexstr(opts::AlignText) << " alignment\n";
         AllocationDone = true;
       } else {
         BC->errs()
@@ -5563,8 +5535,6 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
 }
 
 void RewriteInstance::rewriteFile() {
-  NamedRegionTimer T("rewrite", "rewrite file", TimerGroupName,
-                     TimerGroupDesc, opts::TimeRewrite);
   std::error_code EC;
   Out = std::make_unique<ToolOutputFile>(opts::OutputFilename, EC,
                                          sys::fs::OF_None);

@@ -1109,7 +1109,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     // alloca. We have a special @llvm.get.dynamic.area.offset intrinsic for
     // this purpose.
     if (!isa<ReturnInst>(InstBefore)) {
-      Function *DynamicAreaOffsetFunc = Intrinsic::getDeclaration(
+      Function *DynamicAreaOffsetFunc = Intrinsic::getOrInsertDeclaration(
           InstBefore->getModule(), Intrinsic::get_dynamic_area_offset,
           {IntptrTy});
 
@@ -1867,7 +1867,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     const ASanAccessInfo AccessInfo(IsWrite, CompileKernel, AccessSizeIndex);
     Module *M = IRB.GetInsertBlock()->getParent()->getParent();
     IRB.CreateCall(
-        Intrinsic::getDeclaration(M, Intrinsic::asan_check_memaccess),
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::asan_check_memaccess),
         {IRB.CreatePointerCast(Addr, PtrTy),
          ConstantInt::get(Int32Ty, AccessInfo.Packed)});
     return;

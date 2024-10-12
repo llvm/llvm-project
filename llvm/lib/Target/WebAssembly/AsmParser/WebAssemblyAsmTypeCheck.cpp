@@ -371,11 +371,16 @@ bool WebAssemblyAsmTypeCheck::checkTryTable(SMLoc ErrorLoc,
     if (Level < BlockInfoStack.size()) {
       const auto &DestBlockInfo =
           BlockInfoStack[BlockInfoStack.size() - Level - 1];
-      if (compareTypes(SentTypes, DestBlockInfo.Sig.Returns)) {
+      ArrayRef<wasm::ValType> DestTypes;
+      if (DestBlockInfo.IsLoop)
+        DestTypes = DestBlockInfo.Sig.Params;
+      else
+        DestTypes = DestBlockInfo.Sig.Returns;
+      if (compareTypes(SentTypes, DestTypes)) {
         std::string ErrorMsg =
             ErrorMsgBase + "type mismatch, catch tag type is " +
             getTypesString(SentTypes) + ", but destination's type is " +
-            getTypesString(DestBlockInfo.Sig.Returns);
+            getTypesString(DestTypes);
         Error |= typeError(ErrorLoc, ErrorMsg);
       }
     } else {

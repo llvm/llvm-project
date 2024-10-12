@@ -47,6 +47,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -54,6 +55,7 @@
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -1991,6 +1993,25 @@ Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
   addPass(SIFixSGPRCopiesPass());
   addPass(SILowerI1CopiesPass());
   return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
+    AddMachinePass &addPass) const {
+  Base::addMachineSSAOptimization(addPass);
+
+  addPass(SIFoldOperandsPass());
+  if (EnableDPPCombine) {
+    addPass(GCNDPPCombinePass());
+  }
+  addPass(SILoadStoreOptimizerPass());
+  if (isPassEnabled(EnableSDWAPeephole)) {
+    addPass(SIPeepholeSDWAPass());
+    addPass(EarlyMachineLICMPass());
+    addPass(MachineCSEPass());
+    addPass(SIFoldOperandsPass());
+  }
+  addPass(DeadMachineInstructionElimPass());
+  addPass(SIShrinkInstructionsPass());
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,

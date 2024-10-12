@@ -536,6 +536,10 @@ endif()
 
 option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only implemented on Windows." OFF)
 
+set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
+  "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
+set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
+
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
   # Cygwin doesn't identify itself as Windows, and thus gets path::Style::posix
@@ -720,10 +724,6 @@ set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
 
 option(LLVM_USE_SPLIT_DWARF
   "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
-
-# Facebook T92898286
-option(LLVM_TEST_BOLT "Enable BOLT testing in non-BOLT tests that use clang" OFF)
-# End Facebook T92898286
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.

@@ -24,7 +24,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/Timer.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -39,8 +38,7 @@
 #define DEBUG_TYPE "bolt"
 namespace opts {
 extern cl::opt<unsigned> Verbosity;
-extern cl::opt<bool> TimeDebug;
-} // namespace opts
+}
 namespace llvm {
 namespace bolt {
 
@@ -351,8 +349,6 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
   }
 }
 void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
-  NamedRegionTimer T("buildcompileunits", "build compile units", "debug",
-                     "update debug info", opts::TimeDebug);
   BuilderState.reset(new State());
   // Allocating enough for current batch being processed.
   // In real use cases we either processing a batch of CUs with no cross
@@ -560,8 +556,6 @@ void DIEBuilder::populateDebugNamesTable(
 }
 
 void DIEBuilder::updateDebugNamesTable() {
-  NamedRegionTimer T("updatedebugnames", "update debug_names table",
-                     "debug", "update debug info", opts::TimeDebug);
   auto finalizeDebugNamesTableForCU = [&](DWARFUnit &CU,
                                           uint64_t &UnitStartOffset) -> void {
     DIE *UnitDIE = getUnitDIEbyUnit(CU);
@@ -572,14 +566,18 @@ void DIEBuilder::updateDebugNamesTable() {
     UnitStartOffset += CurUnitInfo.UnitLength;
   };
 
-  auto It = llvm::partition_point(getState().DUList, [](DWARFUnit *CU) {
-    return CU->getVersion() < 5 && CU->isTypeUnit();
-  });
   uint64_t TypeUnitStartOffset = 0;
-  for (DWARFUnit *CU : llvm::make_range(getState().DUList.begin(), It))
+  for (DWARFUnit *CU : getState().DUList) {
+    if (!(CU->getVersion() < 5 && CU->isTypeUnit()))
+      break;
     finalizeDebugNamesTableForCU(*CU, TypeUnitStartOffset);
-  for (DWARFUnit *CU : llvm::make_range(It, getState().DUList.end()))
+  }
+
+  for (DWARFUnit *CU : getState().DUList) {
+    if (CU->getVersion() < 5 && CU->isTypeUnit())
+      continue;
     finalizeDebugNamesTableForCU(*CU, DebugNamesUnitSize);
+  }
   updateReferences();
 }
 

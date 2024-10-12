@@ -65,8 +65,8 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    lw a5, -4(a4)
 ; CHECK-NEXT:    lw a6, 0(a4)
 ; CHECK-NEXT:    addi a5, a5, 4
-; CHECK-NEXT:    sw a5, -4(a4)
 ; CHECK-NEXT:    addi a6, a6, 4
+; CHECK-NEXT:    sw a5, -4(a4)
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    addi a3, a3, 2
 ; CHECK-NEXT:    addi a4, a4, 8
