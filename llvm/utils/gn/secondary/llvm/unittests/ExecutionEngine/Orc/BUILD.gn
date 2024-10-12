@@ -21,6 +21,7 @@ unittest("OrcJITTests") {
     "ExecutionSessionWrapperFunctionCallsTest.cpp",
     "ExecutorAddressTest.cpp",
     "IndirectionUtilsTest.cpp",
+    "JITLinkRedirectionManagerTest.cpp",
     "JITTargetMachineBuilderTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
     "LookupAndRecordAddrsTest.cpp",
