@@ -196,17 +196,17 @@ void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
 // Used for handling linker symbol assignments, for both finalizing
 // their values and doing early declarations. Returns true if symbol
 // should be defined from linker script.
-static bool shouldDefineSym(SymbolAssignment *cmd) {
+static bool shouldDefineSym(Ctx &ctx, SymbolAssignment *cmd) {
   if (cmd->name == ".")
     return false;
 
-  return !cmd->provide || LinkerScript::shouldAddProvideSym(cmd->name);
+  return !cmd->provide || LinkerScript::shouldAddProvideSym(ctx, cmd->name);
 }
 
 // Called by processSymbolAssignments() to assign definitions to
 // linker-script-defined symbols.
 void LinkerScript::addSymbol(SymbolAssignment *cmd) {
-  if (!shouldDefineSym(cmd))
+  if (!shouldDefineSym(ctx, cmd))
     return;
 
   // Define a symbol.
@@ -240,7 +240,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
 // This function is called from LinkerScript::declareSymbols.
 // It creates a placeholder symbol if needed.
 void LinkerScript::declareSymbol(SymbolAssignment *cmd) {
-  if (!shouldDefineSym(cmd))
+  if (!shouldDefineSym(ctx, cmd))
     return;
 
   uint8_t visibility = cmd->hidden ? STV_HIDDEN : STV_DEFAULT;
@@ -1798,7 +1798,7 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
   DenseSet<StringRef> added;
   SmallVector<const SmallVector<StringRef, 0> *, 0> symRefsVec;
   for (const auto &[name, symRefs] : provideMap)
-    if (LinkerScript::shouldAddProvideSym(name) && added.insert(name).second)
+    if (shouldAddProvideSym(ctx, name) && added.insert(name).second)
       symRefsVec.push_back(&symRefs);
   while (symRefsVec.size()) {
     for (StringRef name : *symRefsVec.pop_back_val()) {
@@ -1806,7 +1806,7 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
       // Prevent the symbol from being discarded by --gc-sections.
       referencedSymbols.push_back(name);
       auto it = provideMap.find(name);
-      if (it != provideMap.end() && shouldAddProvideSym(name) &&
+      if (it != provideMap.end() && shouldAddProvideSym(ctx, name) &&
           added.insert(name).second) {
         symRefsVec.push_back(&it->second);
       }
@@ -1814,14 +1814,14 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
   }
 }
 
-bool LinkerScript::shouldAddProvideSym(StringRef symName) {
+bool LinkerScript::shouldAddProvideSym(Ctx &ctx, StringRef symName) {
   // This function is called before and after garbage collection. To prevent
   // undefined references from the RHS, the result of this function for a
   // symbol must be the same for each call. We use isUsedInRegularObj to not
   // change the return value of a demoted symbol. The exportDynamic condition,
   // while not so accurate, allows PROVIDE to define a symbol referenced by a
   // DSO.
-  Symbol *sym = elf::ctx.symtab->find(symName);
+  Symbol *sym = ctx.symtab->find(symName);
   return sym && !sym->isDefined() && !sym->isCommon() &&
          (sym->isUsedInRegularObj || sym->exportDynamic);
 }
