@@ -1400,21 +1400,22 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       Region &allocRegion = privateDecls[i].getAllocRegion();
 
       // map allocation region block argument
-      llvm::Value *llvmArg =
+      llvm::Value *nonPrivateVar =
           moduleTranslation.lookupValue(opInst.getPrivateVars()[i]);
-      assert(llvmArg);
-      moduleTranslation.mapValue(allocRegion.getArgument(0), llvmArg);
+      assert(nonPrivateVar);
+      moduleTranslation.mapValue(allocRegion.getArgument(0), nonPrivateVar);
 
       // in-place convert the private allocation region
       SmallVector<llvm::Value *, 1> phis;
-      if (allocRegion.getArgument(0).getUses().empty())
+      if (allocRegion.getArgument(0).getUses().empty()) {
         // TODO this should use
         // allocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca() so it goes before
         // the code for fetching the thread id. Not doing this for now to avoid
         // test churn.
         builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
-      else
+      } else {
         builder.SetInsertPoint(privAllocBlock->getTerminator());
+      }
       if (failed(inlineConvertOmpRegions(allocRegion, "omp.private.alloc",
                                          builder, moduleTranslation, &phis))) {
         bodyGenStatus = failure();
@@ -1453,7 +1454,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       assert(afterAllocas->getSinglePredecessor());
       builder.SetInsertPoint(
           afterAllocas->getSinglePredecessor()->getTerminator());
-      llvm::BasicBlock *copyBlock = splitBB(builder, true, "omp.private.copy");
+      llvm::BasicBlock *copyBlock =
+          splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
       builder.SetInsertPoint(copyBlock->getFirstNonPHIOrDbgOrAlloca());
     }
     for (unsigned i = 0; i < privateBlockArgs.size(); ++i) {
@@ -1481,7 +1483,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         return;
       }
 
-      // ignore unused value yielded value from copy region
+      // ignore unused value yielded from copy region
 
       // clear copy region block argument mapping in case it needs to be
       // re-created with different sources for reuse of the same reduction
