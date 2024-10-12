@@ -290,7 +290,7 @@ Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
   return s;
 }
 
-static size_t getHashSize() {
+static size_t getHashSize(Ctx &ctx) {
   switch (ctx.arg.buildId) {
   case BuildIdKind::Fast:
     return 8;
@@ -362,7 +362,7 @@ size_t GnuPropertySection::getSize() const {
 
 BuildIdSection::BuildIdSection(Ctx &ctx)
     : SyntheticSection(ctx, SHF_ALLOC, SHT_NOTE, 4, ".note.gnu.build-id"),
-      hashSize(getHashSize()) {}
+      hashSize(getHashSize(ctx)) {}
 
 void BuildIdSection::writeTo(uint8_t *buf) {
   write32(buf, 4);                      // Name size
@@ -1208,7 +1208,7 @@ bool GotPltSection::isNeeded() const {
   return !entries.empty() || hasGotPltOffRel;
 }
 
-static StringRef getIgotPltName() {
+static StringRef getIgotPltName(Ctx &ctx) {
   // On ARM the IgotPltSection is part of the GotSection.
   if (ctx.arg.emachine == EM_ARM)
     return ".got";
@@ -1226,7 +1226,7 @@ static StringRef getIgotPltName() {
 IgotPltSection::IgotPltSection(Ctx &ctx)
     : SyntheticSection(ctx, SHF_ALLOC | SHF_WRITE,
                        ctx.arg.emachine == EM_PPC64 ? SHT_NOBITS : SHT_PROGBITS,
-                       ctx.target->gotEntrySize, getIgotPltName()) {}
+                       ctx.target->gotEntrySize, getIgotPltName(ctx)) {}
 
 void IgotPltSection::addEntry(Symbol &sym) {
   assert(ctx.symAux.back().pltIdx == entries.size());
@@ -1605,7 +1605,7 @@ uint64_t DynamicReloc::getOffset() const {
   return inputSec->getVA(offsetInSec);
 }
 
-int64_t DynamicReloc::computeAddend() const {
+int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
   switch (kind) {
   case AddendOnly:
     assert(sym == nullptr);
@@ -1704,17 +1704,18 @@ void RelocationBaseSection::finalizeContents() {
   }
 }
 
-void DynamicReloc::computeRaw(SymbolTableBaseSection *symt) {
+void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
   r_sym = getSymIndex(symt);
-  addend = computeAddend();
+  addend = computeAddend(ctx);
   kind = AddendOnly; // Catch errors
 }
 
 void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
-  parallelForEach(relocs,
-                  [symTab](DynamicReloc &rel) { rel.computeRaw(symTab); });
+  parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
+    rel.computeRaw(ctx, symTab);
+  });
 
   auto irelative = std::stable_partition(
       relocs.begin() + numRelativeRelocs, relocs.end(),
@@ -1853,7 +1854,7 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize(Ctx &ctx) {
     r.r_offset = rel.getOffset();
     r.setSymbolAndType(rel.getSymIndex(getPartition().dynSymTab.get()),
                        rel.type, false);
-    r.r_addend = ctx.arg.isRela ? rel.computeAddend() : 0;
+    r.r_addend = ctx.arg.isRela ? rel.computeAddend(ctx) : 0;
 
     if (r.getType(ctx.arg.isMips64EL) == ctx.target->relativeRel)
       relatives.push_back(r);
@@ -3438,6 +3439,7 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
 // by uniquifying them by name.
 static std::pair<SmallVector<GdbIndexSection::GdbSymbol, 0>, size_t>
 createSymbols(
+    Ctx &ctx,
     ArrayRef<SmallVector<GdbIndexSection::NameAttrEntry, 0>> nameAttrs,
     const SmallVector<GdbIndexSection::GdbChunk, 0> &chunks) {
   using GdbSymbol = GdbIndexSection::GdbSymbol;
@@ -3563,7 +3565,8 @@ std::unique_ptr<GdbIndexSection> GdbIndexSection::create(Ctx &ctx) {
 
   auto ret = std::make_unique<GdbIndexSection>(ctx);
   ret->chunks = std::move(chunks);
-  std::tie(ret->symbols, ret->size) = createSymbols(nameAttrs, ret->chunks);
+  std::tie(ret->symbols, ret->size) =
+      createSymbols(ctx, nameAttrs, ret->chunks);
 
   // Count the areas other than the constant pool.
   ret->size += sizeof(GdbIndexHeader) + ret->computeSymtabSize() * 8;
@@ -3784,9 +3787,9 @@ bool VersionTableSection::isNeeded() const {
          (getPartition().verDef || getPartition().verNeed->isNeeded());
 }
 
-void elf::addVerneed(Symbol *ss) {
-  auto &file = cast<SharedFile>(*ss->file);
-  if (ss->versionId == VER_NDX_GLOBAL)
+void elf::addVerneed(Ctx &ctx, Symbol &ss) {
+  auto &file = cast<SharedFile>(*ss.file);
+  if (ss.versionId == VER_NDX_GLOBAL)
     return;
 
   if (file.vernauxs.empty())
@@ -3796,10 +3799,10 @@ void elf::addVerneed(Symbol *ss) {
   // already allocated one. The verdef identifiers cover the range
   // [1..getVerDefNum(ctx)]; this causes the vernaux identifiers to start from
   // getVerDefNum(ctx)+1.
-  if (file.vernauxs[ss->versionId] == 0)
-    file.vernauxs[ss->versionId] = ++SharedFile::vernauxNum + getVerDefNum(ctx);
+  if (file.vernauxs[ss.versionId] == 0)
+    file.vernauxs[ss.versionId] = ++SharedFile::vernauxNum + getVerDefNum(ctx);
 
-  ss->versionId = file.vernauxs[ss->versionId];
+  ss.versionId = file.vernauxs[ss.versionId];
 }
 
 template <class ELFT>
@@ -4659,7 +4662,7 @@ size_t MemtagGlobalDescriptors::getSize() const {
   return createMemtagGlobalDescriptors(ctx, symbols);
 }
 
-static OutputSection *findSection(StringRef name) {
+static OutputSection *findSection(Ctx &ctx, StringRef name) {
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
       if (osd->osec.name == name)
@@ -4715,7 +4718,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
   // This makes sure our relro is contiguous.
   bool hasDataRelRo =
-      ctx.script->hasSectionsCommand && findSection(".data.rel.ro");
+      ctx.script->hasSectionsCommand && findSection(ctx, ".data.rel.ro");
   ctx.in.bssRelRo = std::make_unique<BssSection>(
       ctx, hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
   add(*ctx.in.bssRelRo);
