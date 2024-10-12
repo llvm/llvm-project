@@ -5406,22 +5406,46 @@ the configuration (without a prefix: ``Auto``).
 
 .. _ReflowComments:
 
-**ReflowComments** (``Boolean``) :versionbadge:`clang-format 3.8` :ref:`¶ <ReflowComments>`
-  If ``true``, clang-format will attempt to re-flow comments. That is it
-  will touch a comment and *reflow* long comments into new lines, trying to
-  obey the ``ColumnLimit``.
+**ReflowComments** (``ReflowCommentsStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <ReflowComments>`
+  Comment reformatting style.
 
-  .. code-block:: c++
+  Possible values:
 
-     false:
-     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
-     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+  * ``RCS_Never`` (in configuration: ``Never``)
+    Leave comments untouched.
 
-     true:
-     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-     // information
-     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-      * information */
+    .. code-block:: c++
+
+       // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+       /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+       /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+            * and a misaligned second line */
+
+  * ``RCS_IndentOnly`` (in configuration: ``IndentOnly``)
+    Only apply indentation rules, moving comments left or right, without
+    changing formatting inside the comments.
+
+    .. code-block:: c++
+
+       // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+       /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+       /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+        * and a misaligned second line */
+
+  * ``RCS_Always`` (in configuration: ``Always``)
+    Apply indentation rules and reflow long comments into new lines, trying
+    to obey the ``ColumnLimit``.
+
+    .. code-block:: c++
+
+       // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+       // information
+       /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+        * information */
+       /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+        * information and a misaligned second line */
+
+
 
 .. _RemoveBracesLLVM:
 
