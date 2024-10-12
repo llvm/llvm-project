@@ -14312,11 +14312,11 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
   CanQualType KernelNameType = getCanonicalType(SKEPAttr->getKernelName());
   auto IT = SYCLKernels.find(KernelNameType);
   if (IT != SYCLKernels.end()) {
-    if (!declaresSameEntity(FD, IT->second.GetKernelEntryPointDecl()))
+    if (!declaresSameEntity(FD, IT->second.getKernelEntryPointDecl()))
       llvm::report_fatal_error("SYCL kernel name conflict");
   } else {
-    SYCLKernels.insert_or_assign(
-        KernelNameType, BuildSYCLKernelInfo(*this, KernelNameType, FD));
+    SYCLKernels.insert(std::make_pair(
+        KernelNameType, BuildSYCLKernelInfo(*this, KernelNameType, FD)));
   }
 }
 

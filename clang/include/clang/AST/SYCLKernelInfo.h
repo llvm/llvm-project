@@ -26,9 +26,9 @@ public:
       : KernelNameType(KernelNameType),
         KernelEntryPointDecl(KernelEntryPointDecl) {}
 
-  CanQualType GetKernelNameType() const { return KernelNameType; }
+  CanQualType getKernelNameType() const { return KernelNameType; }
 
-  const FunctionDecl *GetKernelEntryPointDecl() const {
+  const FunctionDecl *getKernelEntryPointDecl() const {
     return KernelEntryPointDecl;
   }
 
