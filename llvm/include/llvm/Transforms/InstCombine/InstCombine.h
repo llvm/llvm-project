@@ -43,12 +43,19 @@ struct InstCombineOptions {
     MaxIterations = Value;
     return *this;
   }
+
+  /// Only enable skipping in standard optimization pipeline.
+  bool isCompatibleWith(const InstCombineOptions &LastOption) const {
+    return !VerifyFixpoint && !LastOption.VerifyFixpoint &&
+           MaxIterations == 1 && LastOption.MaxIterations == 1;
+  }
 };
 
 class InstCombinePass : public PassInfoMixin<InstCombinePass> {
 private:
   InstructionWorklist Worklist;
   InstCombineOptions Options;
+  static char ID;
 
 public:
   explicit InstCombinePass(InstCombineOptions Opts = {});
