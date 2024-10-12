@@ -505,6 +505,8 @@ Bug Fixes to C++ Support
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
   and undeclared templates. (#GH107047, #GH49093)
+- Fixed a compiler crash that occurred when processing malformed code involving `sizeof` with
+  an invalid type argument. (#GH111594)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
