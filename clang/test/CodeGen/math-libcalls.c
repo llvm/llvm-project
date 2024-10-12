@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm %s | FileCheck %s --check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 %s | FileCheck %s --check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefix=HAS_MAYTRAP
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm %s | FileCheck %s --check-prefixes=COMMON,NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefixes=COMMON,HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 %s | FileCheck %s --check-prefixes=COMMON,NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 -fmath-errno %s | FileCheck %s --check-prefixes=COMMON,HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefixes=COMMON,HAS_MAYTRAP
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
 
@@ -374,28 +374,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   fmaximum_num(*d,*d);       fmaximum_numf(f,f);      fmaximum_numl(*l,*l);
 
-// NO__ERRNO: declare double @llvm.maximumnum.f64(double, double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.maximumnum.f32(float, float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.maximumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.maximumnum.f64(double, double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.maximumnum.f32(float, float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.maximumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_MAYTRAP: declare double @llvm.maximumnum.f64(
-// HAS_MAYTRAP: declare float @llvm.maximumnum.f32(
-// HAS_MAYTRAP: declare x86_fp80 @llvm.maximumnum.f80(
+// COMMON: declare double @llvm.maximumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// COMMON: declare float @llvm.maximumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// COMMON: declare x86_fp80 @llvm.maximumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
 
   fminimum_num(*d,*d);       fminimum_numf(f,f);      fminimum_numl(*l,*l);
 
-// NO__ERRNO: declare double @llvm.minimumnum.f64(double, double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.minimumnum.f32(float, float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.minimumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.minimumnum.f64(double, double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.minimumnum.f32(float, float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.minimumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_MAYTRAP: declare double @llvm.minimumnum.f64(
-// HAS_MAYTRAP: declare float @llvm.minimumnum.f32(
-// HAS_MAYTRAP: declare x86_fp80 @llvm.minimumnum.f80(
-
+// COMMON: declare double @llvm.minimumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// COMMON: declare float @llvm.minimumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// COMMON: declare x86_fp80 @llvm.minimumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
 
   hypot(f,f);      hypotf(f,f);     hypotl(f,f);
 
