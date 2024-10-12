@@ -1452,9 +1452,11 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
       make<SymbolTableSection<ELFT>>(ctx, *strtab);
 
   SmallVector<std::pair<OutputSection *, SyntheticSection *>, 0> osIsPairs;
-  osIsPairs.emplace_back(make<OutputSection>(strtab->name, 0, 0), strtab);
-  osIsPairs.emplace_back(make<OutputSection>(impSymTab->name, 0, 0), impSymTab);
-  osIsPairs.emplace_back(make<OutputSection>(shstrtab->name, 0, 0), shstrtab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, strtab->name, 0, 0), strtab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, impSymTab->name, 0, 0),
+                         impSymTab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, shstrtab->name, 0, 0),
+                         shstrtab);
 
   std::sort(ctx.symtab->cmseSymMap.begin(), ctx.symtab->cmseSymMap.end(),
             [](const auto &a, const auto &b) -> bool {
@@ -1473,7 +1475,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   for (auto &[osec, isec] : osIsPairs) {
     osec->sectionIndex = ++idx;
     osec->recordSection(isec);
-    osec->finalizeInputSections(ctx);
+    osec->finalizeInputSections();
     osec->shName = shstrtab->addString(osec->name);
     osec->size = isec->getSize();
     isec->finalizeContents();
