@@ -36,7 +36,7 @@ func.func @unsupported_return_type(%arg0: vector<4xi64>) -> vector<4xi128> {
 
 // Unsupported function argument type.
 // expected-error@+1 {{failed to legalize operation 'func.func' that was explicitly marked illegal}}
-func.func @unsupported_return_type(%arg0: vector<4xi128>) -> vector<4xi64> {
+func.func @unsupported_argument_type(%arg0: vector<4xi128>) -> vector<4xi64> {
   %0 = arith.trunci %arg0: vector<4xi128> to vector<4xi64>
   return %0 : vector<4xi64>
 }
