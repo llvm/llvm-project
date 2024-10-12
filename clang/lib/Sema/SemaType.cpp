@@ -2447,7 +2447,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
 
 QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
                                SourceLocation AttrLoc) {
-  assert((getLangOpts().MatrixTypes || getLangOpts().HLSL) &&
+  assert(getLangOpts().MatrixTypes &&
          "Should never build a matrix type when it is disabled");
 
   // Check element type, if it is not dependent.
