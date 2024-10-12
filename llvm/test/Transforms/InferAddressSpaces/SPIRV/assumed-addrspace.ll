@@ -1,5 +1,4 @@
-; RUN: opt -S -mtriple=spirv32-- -passes=infer-address-spaces -o - %s | FileCheck %s
-; RUN: opt -S -mtriple=spirv64-- -passes=infer-address-spaces -o - %s | FileCheck %s
+; RUN: opt -S -mtriple=spirv64-amd-amdhsa -passes=infer-address-spaces -o - %s | FileCheck %s
 
 @c0 = addrspace(2) global ptr undef
 

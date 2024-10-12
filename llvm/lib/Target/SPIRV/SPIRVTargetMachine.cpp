@@ -108,6 +108,11 @@ enum AddressSpace {
 };
 
 unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
+  // TODO: we only enable this for AMDGCN flavoured SPIR-V, where we know it to
+  //       be correct; this might be relaxed in the future.
+  if (getTargetTriple().getVendor() != Triple::VendorType::AMD)
+    return UINT32_MAX;
+
   const auto *LD = dyn_cast<LoadInst>(V);
   if (!LD)
     return UINT32_MAX;
@@ -127,6 +132,13 @@ unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
 
 std::pair<const Value *, unsigned>
 SPIRVTargetMachine::getPredicatedAddrSpace(const Value *V) const {
+  // TODO: this is only enabled for AMDGCN flavoured SPIR-V at the moment, where
+  // we can rely on the intrinsics being available; we should re-implement it on
+  // top of SPIR-V specific intrinsics if/when they are added or
+  // OpGenericCastToPtrExplicit / OpGenericPtrMemSemantics directly.
+  if (getTargetTriple().getVendor() != Triple::VendorType::AMD)
+    return std::pair(nullptr, UINT32_MAX);
+
   using namespace PatternMatch;
 
   if (auto *II = dyn_cast<IntrinsicInst>(V)) {
