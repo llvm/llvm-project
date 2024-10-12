@@ -526,11 +526,9 @@ Error RewriteInstance::discoverStorage() {
       NextAvailableOffset = std::max(NextAvailableOffset,
                                      Phdr.p_offset + Phdr.p_filesz);
 
-      BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{Phdr.p_vaddr,
-                                                     Phdr.p_memsz,
-                                                     Phdr.p_offset,
-                                                     Phdr.p_filesz,
-                                                     Phdr.p_align};
+      BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{
+          Phdr.p_vaddr,  Phdr.p_memsz, Phdr.p_offset,
+          Phdr.p_filesz, Phdr.p_align, ((Phdr.p_flags & ELF::PF_X) != 0)};
       if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
           Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
         BC->IsLinuxKernel = true;
@@ -1533,7 +1531,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   MCSymbol *Symbol = Rel->Symbol;
   if (!Symbol) {
-    if (!BC->isAArch64() || !Rel->Addend || !Rel->isIRelative())
+    if (BC->isRISCV() || !Rel->Addend || !Rel->isIRelative())
       return;
 
     // IFUNC trampoline without symbol
@@ -3559,9 +3557,11 @@ void RewriteInstance::finalizeMetadataPreEmit() {
 }
 
 void RewriteInstance::updateMetadata() {
-  NamedRegionTimer T("updatemetadata-postemit", "update metadata post-emit",
-                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
-  MetadataManager.runFinalizersAfterEmit();
+  {
+    NamedRegionTimer T("updatemetadata-postemit", "update metadata post-emit",
+                       TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
+    MetadataManager.runFinalizersAfterEmit();
+  }
 
   if (opts::UpdateDebugSections) {
     NamedRegionTimer T("updateDebugInfo", "update debug info", TimerGroupName,
@@ -3723,15 +3723,41 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       return Address;
     };
 
+    // Try to allocate sections before the \p Address and return an address for
+    // the allocation of the first section or 0 if \p is not big enough.
+    auto allocateBefore = [&](uint64_t Address) -> uint64_t {
+      for (auto SI = CodeSections.rbegin(), SE = CodeSections.rend(); SI != SE;
+           ++SI) {
+        BinarySection *Section = *SI;
+        if (Section->getOutputSize() > Address)
+          return 0;
+        Address -= Section->getOutputSize();
+        Address = alignDown(Address, Section->getAlignment());
+        Section->setOutputAddress(Address);
+      }
+      return Address;
+    };
+
     // Check if we can fit code in the original .text
     bool AllocationDone = false;
     if (opts::UseOldText) {
-      const uint64_t CodeSize =
-          allocateAt(BC->OldTextSectionAddress) - BC->OldTextSectionAddress;
+      uint64_t StartAddress;
+      uint64_t EndAddress;
+      if (opts::HotFunctionsAtEnd) {
+        EndAddress = BC->OldTextSectionAddress + BC->OldTextSectionSize;
+        StartAddress = allocateBefore(EndAddress);
+      } else {
+        StartAddress = BC->OldTextSectionAddress;
+        EndAddress = allocateAt(BC->OldTextSectionAddress);
+      }
 
+      const uint64_t CodeSize = EndAddress - StartAddress;
       if (CodeSize <= BC->OldTextSectionSize) {
         BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
-                   << Twine::utohexstr(opts::AlignText) << " alignment\n";
+                   << Twine::utohexstr(opts::AlignText) << " alignment";
+        if (StartAddress != BC->OldTextSectionAddress)
+          BC->outs() << " at 0x" << Twine::utohexstr(StartAddress);
+        BC->outs() << '\n';
         AllocationDone = true;
       } else {
         BC->errs()
@@ -4247,7 +4273,6 @@ void RewriteInstance::addBoltInfoSection() {
          << "command line:";
   for (int I = 0; I < Argc; ++I)
     DescOS << " " << Argv[I];
-  DescOS.flush();
 
   // Encode as GNU GOLD VERSION so it is easily printable by 'readelf -n'
   const std::string BoltInfo =
@@ -4270,7 +4295,6 @@ void RewriteInstance::encodeBATSection() {
   raw_string_ostream DescOS(DescStr);
 
   BAT->write(*BC, DescOS);
-  DescOS.flush();
 
   const std::string BoltInfo =
       BinarySection::encodeELFNote("BOLT", DescStr, BinarySection::NT_BOLT_BAT);
@@ -5539,6 +5563,8 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
 }
 
 void RewriteInstance::rewriteFile() {
+  NamedRegionTimer T("rewrite", "rewrite file", TimerGroupName,
+                     TimerGroupDesc, opts::TimeRewrite);
   std::error_code EC;
   Out = std::make_unique<ToolOutputFile>(opts::OutputFilename, EC,
                                          sys::fs::OF_None);

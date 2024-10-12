@@ -42,33 +42,33 @@ func.func @_QPtest_real16(%arg0: !fir.ref<f128> {fir.bindc_name = "x"}) -> f128 
   %3 = fir.load %0 : !fir.ref<f128>
   return %3 : f128
 }
-func.func @_QPtest_complex4(%arg0: !fir.ref<!fir.complex<4>> {fir.bindc_name = "c"}) -> !fir.complex<4> {
-  %0 = fir.alloca !fir.complex<4> {bindc_name = "test_complex4", uniq_name = "_QFtest_complex4Etest_complex4"}
-  %1 = fir.load %arg0 : !fir.ref<!fir.complex<4>>
-  %2 = fir.extract_value %1, [0 : index] : (!fir.complex<4>) -> f32
-  %3 = fir.extract_value %1, [1 : index] : (!fir.complex<4>) -> f32
+func.func @_QPtest_complex4(%arg0: !fir.ref<complex<f32>> {fir.bindc_name = "c"}) -> complex<f32> {
+  %0 = fir.alloca complex<f32> {bindc_name = "test_complex4", uniq_name = "_QFtest_complex4Etest_complex4"}
+  %1 = fir.load %arg0 : !fir.ref<complex<f32>>
+  %2 = fir.extract_value %1, [0 : index] : (complex<f32>) -> f32
+  %3 = fir.extract_value %1, [1 : index] : (complex<f32>) -> f32
   %4 = fir.call @hypotf(%2, %3) : (f32, f32) -> f32
   %cst = arith.constant 0.000000e+00 : f32
-  %5 = fir.undefined !fir.complex<4>
-  %6 = fir.insert_value %5, %4, [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  %7 = fir.insert_value %6, %cst, [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  fir.store %7 to %0 : !fir.ref<!fir.complex<4>>
-  %8 = fir.load %0 : !fir.ref<!fir.complex<4>>
-  return %8 : !fir.complex<4>
+  %5 = fir.undefined complex<f32>
+  %6 = fir.insert_value %5, %4, [0 : index] : (complex<f32>, f32) -> complex<f32>
+  %7 = fir.insert_value %6, %cst, [1 : index] : (complex<f32>, f32) -> complex<f32>
+  fir.store %7 to %0 : !fir.ref<complex<f32>>
+  %8 = fir.load %0 : !fir.ref<complex<f32>>
+  return %8 : complex<f32>
 }
-func.func @_QPtest_complex8(%arg0: !fir.ref<!fir.complex<8>> {fir.bindc_name = "c"}) -> !fir.complex<8> {
-  %0 = fir.alloca !fir.complex<8> {bindc_name = "test_complex8", uniq_name = "_QFtest_complex8Etest_complex8"}
-  %1 = fir.load %arg0 : !fir.ref<!fir.complex<8>>
-  %2 = fir.extract_value %1, [0 : index] : (!fir.complex<8>) -> f64
-  %3 = fir.extract_value %1, [1 : index] : (!fir.complex<8>) -> f64
+func.func @_QPtest_complex8(%arg0: !fir.ref<complex<f64>> {fir.bindc_name = "c"}) -> complex<f64> {
+  %0 = fir.alloca complex<f64> {bindc_name = "test_complex8", uniq_name = "_QFtest_complex8Etest_complex8"}
+  %1 = fir.load %arg0 : !fir.ref<complex<f64>>
+  %2 = fir.extract_value %1, [0 : index] : (complex<f64>) -> f64
+  %3 = fir.extract_value %1, [1 : index] : (complex<f64>) -> f64
   %4 = fir.call @hypot(%2, %3) : (f64, f64) -> f64
   %cst = arith.constant 0.000000e+00 : f64
-  %5 = fir.undefined !fir.complex<8>
-  %6 = fir.insert_value %5, %4, [0 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
-  %7 = fir.insert_value %6, %cst, [1 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
-  fir.store %7 to %0 : !fir.ref<!fir.complex<8>>
-  %8 = fir.load %0 : !fir.ref<!fir.complex<8>>
-  return %8 : !fir.complex<8>
+  %5 = fir.undefined complex<f64>
+  %6 = fir.insert_value %5, %4, [0 : index] : (complex<f64>, f64) -> complex<f64>
+  %7 = fir.insert_value %6, %cst, [1 : index] : (complex<f64>, f64) -> complex<f64>
+  fir.store %7 to %0 : !fir.ref<complex<f64>>
+  %8 = fir.load %0 : !fir.ref<complex<f64>>
+  return %8 : complex<f64>
 }
 func.func private @hypotf(f32, f32) -> f32
 func.func private @hypot(f64, f64) -> f64
@@ -114,33 +114,33 @@ func.func @_QPtest_real16(%arg0: !fir.ref<f128> {fir.bindc_name = "x"}) -> f128 
   %3 = fir.load %0 : !fir.ref<f128>
   return %3 : f128
 }
-func.func @_QPtest_complex4(%arg0: !fir.ref<!fir.complex<4>> {fir.bindc_name = "c"}) -> !fir.complex<4> {
-  %0 = fir.alloca !fir.complex<4> {bindc_name = "test_complex4", uniq_name = "_QFtest_complex4Etest_complex4"}
-  %1 = fir.load %arg0 : !fir.ref<!fir.complex<4>>
-  %2 = fir.extract_value %1, [0 : index] : (!fir.complex<4>) -> f32
-  %3 = fir.extract_value %1, [1 : index] : (!fir.complex<4>) -> f32
+func.func @_QPtest_complex4(%arg0: !fir.ref<complex<f32>> {fir.bindc_name = "c"}) -> complex<f32> {
+  %0 = fir.alloca complex<f32> {bindc_name = "test_complex4", uniq_name = "_QFtest_complex4Etest_complex4"}
+  %1 = fir.load %arg0 : !fir.ref<complex<f32>>
+  %2 = fir.extract_value %1, [0 : index] : (complex<f32>) -> f32
+  %3 = fir.extract_value %1, [1 : index] : (complex<f32>) -> f32
   %4 = fir.call @hypotf(%2, %3) : (f32, f32) -> f32
   %cst = arith.constant 0.000000e+00 : f32
-  %5 = fir.undefined !fir.complex<4>
-  %6 = fir.insert_value %5, %4, [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  %7 = fir.insert_value %6, %cst, [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  fir.store %7 to %0 : !fir.ref<!fir.complex<4>>
-  %8 = fir.load %0 : !fir.ref<!fir.complex<4>>
-  return %8 : !fir.complex<4>
+  %5 = fir.undefined complex<f32>
+  %6 = fir.insert_value %5, %4, [0 : index] : (complex<f32>, f32) -> complex<f32>
+  %7 = fir.insert_value %6, %cst, [1 : index] : (complex<f32>, f32) -> complex<f32>
+  fir.store %7 to %0 : !fir.ref<complex<f32>>
+  %8 = fir.load %0 : !fir.ref<complex<f32>>
+  return %8 : complex<f32>
 }
-func.func @_QPtest_complex8(%arg0: !fir.ref<!fir.complex<8>> {fir.bindc_name = "c"}) -> !fir.complex<8> {
-  %0 = fir.alloca !fir.complex<8> {bindc_name = "test_complex8", uniq_name = "_QFtest_complex8Etest_complex8"}
-  %1 = fir.load %arg0 : !fir.ref<!fir.complex<8>>
-  %2 = fir.extract_value %1, [0 : index] : (!fir.complex<8>) -> f64
-  %3 = fir.extract_value %1, [1 : index] : (!fir.complex<8>) -> f64
+func.func @_QPtest_complex8(%arg0: !fir.ref<complex<f64>> {fir.bindc_name = "c"}) -> complex<f64> {
+  %0 = fir.alloca complex<f64> {bindc_name = "test_complex8", uniq_name = "_QFtest_complex8Etest_complex8"}
+  %1 = fir.load %arg0 : !fir.ref<complex<f64>>
+  %2 = fir.extract_value %1, [0 : index] : (complex<f64>) -> f64
+  %3 = fir.extract_value %1, [1 : index] : (complex<f64>) -> f64
   %4 = fir.call @hypot(%2, %3) : (f64, f64) -> f64
   %cst = arith.constant 0.000000e+00 : f64
-  %5 = fir.undefined !fir.complex<8>
-  %6 = fir.insert_value %5, %4, [0 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
-  %7 = fir.insert_value %6, %cst, [1 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
-  fir.store %7 to %0 : !fir.ref<!fir.complex<8>>
-  %8 = fir.load %0 : !fir.ref<!fir.complex<8>>
-  return %8 : !fir.complex<8>
+  %5 = fir.undefined complex<f64>
+  %6 = fir.insert_value %5, %4, [0 : index] : (complex<f64>, f64) -> complex<f64>
+  %7 = fir.insert_value %6, %cst, [1 : index] : (complex<f64>, f64) -> complex<f64>
+  fir.store %7 to %0 : !fir.ref<complex<f64>>
+  %8 = fir.load %0 : !fir.ref<complex<f64>>
+  return %8 : complex<f64>
 }
 func.func private @hypotf(f32, f32) -> f32
 func.func private @hypot(f64, f64) -> f64
@@ -186,33 +186,33 @@ func.func @_QPtest_real16(%arg0: !fir.ref<f128> {fir.bindc_name = "x"}) -> f128 
   %3 = fir.load %0 : !fir.ref<f128>
   return %3 : f128
 }
-func.func @_QPtest_complex4(%arg0: !fir.ref<!fir.complex<4>> {fir.bindc_name = "c"}) -> !fir.complex<4> {
-  %0 = fir.alloca !fir.complex<4> {bindc_name = "test_complex4", uniq_name = "_QFtest_complex4Etest_complex4"}
-  %1 = fir.load %arg0 : !fir.ref<!fir.complex<4>>
-  %2 = fir.extract_value %1, [0 : index] : (!fir.complex<4>) -> f32
-  %3 = fir.extract_value %1, [1 : index] : (!fir.complex<4>) -> f32
+func.func @_QPtest_complex4(%arg0: !fir.ref<complex<f32>> {fir.bindc_name = "c"}) -> complex<f32> {
+  %0 = fir.alloca complex<f32> {bindc_name = "test_complex4", uniq_name = "_QFtest_complex4Etest_complex4"}
+  %1 = fir.load %arg0 : !fir.ref<complex<f32>>
+  %2 = fir.extract_value %1, [0 : index] : (complex<f32>) -> f32
+  %3 = fir.extract_value %1, [1 : index] : (complex<f32>) -> f32
   %4 = fir.call @hypotf(%2, %3) : (f32, f32) -> f32
   %cst = arith.constant 0.000000e+00 : f32
-  %5 = fir.undefined !fir.complex<4>
-  %6 = fir.insert_value %5, %4, [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  %7 = fir.insert_value %6, %cst, [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  fir.store %7 to %0 : !fir.ref<!fir.complex<4>>
-  %8 = fir.load %0 : !fir.ref<!fir.complex<4>>
-  return %8 : !fir.complex<4>
+  %5 = fir.undefined complex<f32>
+  %6 = fir.insert_value %5, %4, [0 : index] : (complex<f32>, f32) -> complex<f32>
+  %7 = fir.insert_value %6, %cst, [1 : index] : (complex<f32>, f32) -> complex<f32>
+  fir.store %7 to %0 : !fir.ref<complex<f32>>
+  %8 = fir.load %0 : !fir.ref<complex<f32>>
+  return %8 : complex<f32>
 }
-func.func @_QPtest_complex8(%arg0: !fir.ref<!fir.complex<8>> {fir.bindc_name = "c"}) -> !fir.complex<8> {
-  %0 = fir.alloca !fir.complex<8> {bindc_name = "test_complex8", uniq_name = "_QFtest_complex8Etest_complex8"}
-  %1 = fir.load %arg0 : !fir.ref<!fir.complex<8>>
-  %2 = fir.extract_value %1, [0 : index] : (!fir.complex<8>) -> f64
-  %3 = fir.extract_value %1, [1 : index] : (!fir.complex<8>) -> f64
+func.func @_QPtest_complex8(%arg0: !fir.ref<complex<f64>> {fir.bindc_name = "c"}) -> complex<f64> {
+  %0 = fir.alloca complex<f64> {bindc_name = "test_complex8", uniq_name = "_QFtest_complex8Etest_complex8"}
+  %1 = fir.load %arg0 : !fir.ref<complex<f64>>
+  %2 = fir.extract_value %1, [0 : index] : (complex<f64>) -> f64
+  %3 = fir.extract_value %1, [1 : index] : (complex<f64>) -> f64
   %4 = fir.call @hypot(%2, %3) : (f64, f64) -> f64
   %cst = arith.constant 0.000000e+00 : f64
-  %5 = fir.undefined !fir.complex<8>
-  %6 = fir.insert_value %5, %4, [0 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
-  %7 = fir.insert_value %6, %cst, [1 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
-  fir.store %7 to %0 : !fir.ref<!fir.complex<8>>
-  %8 = fir.load %0 : !fir.ref<!fir.complex<8>>
-  return %8 : !fir.complex<8>
+  %5 = fir.undefined complex<f64>
+  %6 = fir.insert_value %5, %4, [0 : index] : (complex<f64>, f64) -> complex<f64>
+  %7 = fir.insert_value %6, %cst, [1 : index] : (complex<f64>, f64) -> complex<f64>
+  fir.store %7 to %0 : !fir.ref<complex<f64>>
+  %8 = fir.load %0 : !fir.ref<complex<f64>>
+  return %8 : complex<f64>
 }
 func.func private @fabsf(f32) -> f32
 func.func private @fabs(f64) -> f64

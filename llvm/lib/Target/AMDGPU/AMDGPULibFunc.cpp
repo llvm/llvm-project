@@ -953,11 +953,10 @@ static Type* getIntrinsicParamType(
   case AMDGPULibFunc::IMG1D:
   case AMDGPULibFunc::IMG2D:
   case AMDGPULibFunc::IMG3D:
-    T = StructType::create(C,"ocl_image")->getPointerTo(); break;
   case AMDGPULibFunc::SAMPLER:
-    T = StructType::create(C,"ocl_sampler")->getPointerTo(); break;
   case AMDGPULibFunc::EVENT:
-    T = StructType::create(C,"ocl_event")->getPointerTo(); break;
+    T = PointerType::getUnqual(C);
+    break;
   default:
     llvm_unreachable("Unhandled param type");
     return nullptr;
@@ -965,9 +964,8 @@ static Type* getIntrinsicParamType(
   if (P.VectorSize > 1)
     T = FixedVectorType::get(T, P.VectorSize);
   if (P.PtrKind != AMDGPULibFunc::BYVALUE)
-    T = useAddrSpace ? T->getPointerTo((P.PtrKind & AMDGPULibFunc::ADDR_SPACE)
-                                       - 1)
-                     : T->getPointerTo();
+    T = PointerType::get(
+        C, useAddrSpace ? ((P.PtrKind & AMDGPULibFunc::ADDR_SPACE) - 1) : 0);
   return T;
 }
 

@@ -9,11 +9,21 @@
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Timer.h"
 
 #define DEBUG_TYPE "bolt-bat"
+
+namespace opts {
+extern llvm::cl::OptionCategory BoltCategory;
+llvm::cl::opt<bool>
+    TimeBAT("time-bat",
+            llvm::cl::desc("print time spent processing BAT tables"),
+            llvm::cl::Hidden, llvm::cl::cat(BoltCategory));
+} // namespace opts
 
 namespace llvm {
 namespace bolt {
@@ -75,8 +85,9 @@ void BoltAddressTranslation::writeEntriesForBB(
   }
 }
 
-void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
-  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Writing BOLT Address Translation Tables\n");
+void BoltAddressTranslation::constructMaps(const BinaryContext &BC) {
+  NamedRegionTimer T("constuctmaps", "construct translation maps", "bat",
+                     "process BAT", opts::TimeBAT);
   for (auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &Function = BFI.second;
     const uint64_t InputAddress = Function.getAddress();
@@ -140,6 +151,11 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
       Maps.emplace(FF.getAddress(), std::move(Map));
     }
   }
+}
+
+void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
+  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Writing BOLT Address Translation Tables\n");
+  constructMaps(BC);
 
   // Output addresses are delta-encoded
   uint64_t PrevAddress = 0;
@@ -184,6 +200,8 @@ size_t BoltAddressTranslation::getNumEqualOffsets(const MapTy &Map,
 template <bool Cold>
 void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
                                        uint64_t &PrevAddress, raw_ostream &OS) {
+  NamedRegionTimer T("writemaps", "write translation maps", "bat",
+                     "process BAT", opts::TimeBAT);
   const uint32_t NumFuncs =
       llvm::count_if(llvm::make_first_range(Maps), [&](const uint64_t Address) {
         return Cold == ColdPartSource.count(Address);

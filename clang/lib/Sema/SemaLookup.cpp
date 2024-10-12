@@ -928,8 +928,13 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         if (II == getASTContext().getMakeIntegerSeqName()) {
           R.addDecl(getASTContext().getMakeIntegerSeqDecl());
           return true;
-        } else if (II == getASTContext().getTypePackElementName()) {
+        }
+        if (II == getASTContext().getTypePackElementName()) {
           R.addDecl(getASTContext().getTypePackElementDecl());
+          return true;
+        }
+        if (II == getASTContext().getBuiltinCommonTypeName()) {
+          R.addDecl(getASTContext().getBuiltinCommonTypeDecl());
           return true;
         }
       }
@@ -3845,8 +3850,9 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             // exports are only valid in module purview and outside of any
             // PMF (although a PMF should not even be present in a module
             // with an import).
-            assert(FM && FM->isNamedModule() && !FM->isPrivateModule() &&
-                   "bad export context");
+            assert(FM &&
+                   (FM->isNamedModule() || FM->isImplicitGlobalModule()) &&
+                   !FM->isPrivateModule() && "bad export context");
             // .. are attached to a named module M, do not appear in the
             // translation unit containing the point of the lookup..
             if (D->isInAnotherModuleUnit() &&

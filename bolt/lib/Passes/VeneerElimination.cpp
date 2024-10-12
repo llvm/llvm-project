@@ -33,26 +33,40 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
   if (!opts::EliminateVeneers || !BC.isAArch64())
     return Error::success();
 
-  std::map<uint64_t, BinaryFunction> &BFs = BC.getBinaryFunctions();
   std::unordered_map<const MCSymbol *, const MCSymbol *> VeneerDestinations;
   uint64_t VeneersCount = 0;
-  for (auto &It : BFs) {
-    BinaryFunction &VeneerFunction = It.second;
-    if (!VeneerFunction.isAArch64Veneer())
+  uint64_t NumAllVeneers = 0;
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    if (!BF.isAArch64Veneer())
       continue;
 
-    VeneersCount++;
-    VeneerFunction.setPseudo(true);
-    MCInst &FirstInstruction = *(VeneerFunction.begin()->begin());
-    const MCSymbol *VeneerTargetSymbol =
-        BC.MIB->getTargetSymbol(FirstInstruction, 1);
-    assert(VeneerTargetSymbol && "Expecting target symbol for instruction");
-    for (const MCSymbol *Symbol : VeneerFunction.getSymbols())
+    ++NumAllVeneers;
+
+    if (BF.isIgnored())
+      continue;
+
+    MCInst &FirstInstruction = *(BF.begin()->begin());
+    const MCSymbol *VeneerTargetSymbol;
+    if (BC.MIB->isTailCall(FirstInstruction)) {
+      VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction);
+    } else {
+      if (!BC.MIB->hasAnnotation(FirstInstruction, "AArch64Veneer"))
+        continue;
+      VeneerTargetSymbol = BC.MIB->getTargetSymbol(FirstInstruction, 1);
+    }
+
+    if (!VeneerTargetSymbol)
+      continue;
+
+    for (const MCSymbol *Symbol : BF.getSymbols())
       VeneerDestinations[Symbol] = VeneerTargetSymbol;
+
+    VeneersCount++;
+    BF.setPseudo(true);
   }
 
   BC.outs() << "BOLT-INFO: number of removed linker-inserted veneers: "
-            << VeneersCount << "\n";
+            << VeneersCount << ". Total veneers: " << NumAllVeneers << '\n';
 
   // Handle veneers to veneers in case they occur
   for (auto &Entry : VeneerDestinations) {
@@ -65,9 +79,8 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
   }
 
   uint64_t VeneerCallers = 0;
-  for (auto &It : BFs) {
-    BinaryFunction &Function = It.second;
-    for (BinaryBasicBlock &BB : Function) {
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    for (BinaryBasicBlock &BB : BF) {
       for (MCInst &Instr : BB) {
         if (!BC.MIB->isCall(Instr) || BC.MIB->isIndirectCall(Instr))
           continue;

@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
@@ -40,7 +41,7 @@ struct EmulateUnsupportedFloatsPass
 };
 
 struct EmulateFloatPattern final : ConversionPattern {
-  EmulateFloatPattern(TypeConverter &converter, MLIRContext *ctx)
+  EmulateFloatPattern(const TypeConverter &converter, MLIRContext *ctx)
       : ConversionPattern(converter, Pattern::MatchAnyOpTypeTag(), 1, ctx) {}
 
   LogicalResult match(Operation *op) const override;
@@ -48,29 +49,6 @@ struct EmulateFloatPattern final : ConversionPattern {
                ConversionPatternRewriter &rewriter) const override;
 };
 } // end namespace
-
-/// Map strings to float types. This function is here because no one else needs
-/// it yet, feel free to abstract it out.
-static std::optional<FloatType> parseFloatType(MLIRContext *ctx,
-                                               StringRef name) {
-  Builder b(ctx);
-  return llvm::StringSwitch<std::optional<FloatType>>(name)
-      .Case("f6E2M3FN", b.getFloat6E2M3FNType())
-      .Case("f6E3M2FN", b.getFloat6E3M2FNType())
-      .Case("f8E5M2", b.getFloat8E5M2Type())
-      .Case("f8E4M3", b.getFloat8E4M3Type())
-      .Case("f8E4M3FN", b.getFloat8E4M3FNType())
-      .Case("f8E5M2FNUZ", b.getFloat8E5M2FNUZType())
-      .Case("f8E4M3FNUZ", b.getFloat8E4M3FNUZType())
-      .Case("f8E3M4", b.getFloat8E3M4Type())
-      .Case("bf16", b.getBF16Type())
-      .Case("f16", b.getF16Type())
-      .Case("f32", b.getF32Type())
-      .Case("f64", b.getF64Type())
-      .Case("f80", b.getF80Type())
-      .Case("f128", b.getF128Type())
-      .Default(std::nullopt);
-}
 
 LogicalResult EmulateFloatPattern::match(Operation *op) const {
   if (getTypeConverter()->isLegal(op))
@@ -128,12 +106,12 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
 }
 
 void mlir::arith::populateEmulateUnsupportedFloatsPatterns(
-    RewritePatternSet &patterns, TypeConverter &converter) {
+    RewritePatternSet &patterns, const TypeConverter &converter) {
   patterns.add<EmulateFloatPattern>(converter, patterns.getContext());
 }
 
 void mlir::arith::populateEmulateUnsupportedFloatsLegality(
-    ConversionTarget &target, TypeConverter &converter) {
+    ConversionTarget &target, const TypeConverter &converter) {
   // Don't try to legalize functions and other ops that don't need expansion.
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   target.addDynamicallyLegalDialect<arith::ArithDialect>(
@@ -155,7 +133,8 @@ void EmulateUnsupportedFloatsPass::runOnOperation() {
   SmallVector<Type> sourceTypes;
   Type targetType;
 
-  std::optional<FloatType> maybeTargetType = parseFloatType(ctx, targetTypeStr);
+  std::optional<FloatType> maybeTargetType =
+      arith::parseFloatType(ctx, targetTypeStr);
   if (!maybeTargetType) {
     emitError(UnknownLoc::get(ctx), "could not map target type '" +
                                         targetTypeStr +
@@ -165,7 +144,7 @@ void EmulateUnsupportedFloatsPass::runOnOperation() {
   targetType = *maybeTargetType;
   for (StringRef sourceTypeStr : sourceTypeStrs) {
     std::optional<FloatType> maybeSourceType =
-        parseFloatType(ctx, sourceTypeStr);
+        arith::parseFloatType(ctx, sourceTypeStr);
     if (!maybeSourceType) {
       emitError(UnknownLoc::get(ctx), "could not map source type '" +
                                           sourceTypeStr +

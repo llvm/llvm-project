@@ -489,6 +489,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
+  // Assign each function an output section.
+  Manager.registerPass(std::make_unique<AssignSections>());
+
   if (BC.isAArch64()) {
     Manager.registerPass(std::make_unique<ADRRelaxationPass>());
 
@@ -511,9 +514,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(
       std::make_unique<RetpolineInsertion>(PrintRetpolineInsertion));
-
-  // Assign each function an output section.
-  Manager.registerPass(std::make_unique<AssignSections>());
 
   // Patch original function entries
   if (BC.HasRelocations)

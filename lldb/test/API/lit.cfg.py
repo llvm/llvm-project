@@ -265,6 +265,11 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
+# Facebook T92898286
+if is_configured("llvm_test_bolt"):
+    dotest_cmd += ["-E", '"--post-link-optimize"']
+# End Facebook T92898286
+
 if (
     "lldb-repro-capture" in config.available_features
     or "lldb-repro-replay" in config.available_features
@@ -302,6 +307,13 @@ if is_configured("enabled_plugins"):
 # Check them in this order, so that more specific overrides are visited last.
 # In particular, (1) is visited at the top of the file, since the script
 # derives other information from it.
+
+if is_configured("lldb_platform_url"):
+    dotest_cmd += ["--platform-url", config.lldb_platform_url]
+if is_configured("lldb_platform_working_dir"):
+    dotest_cmd += ["--platform-working-dir", config.lldb_platform_working_dir]
+if is_configured("cmake_sysroot"):
+    dotest_cmd += ["--sysroot", config.cmake_sysroot]
 
 if is_configured("dotest_user_args_str"):
     dotest_cmd.extend(config.dotest_user_args_str.split(";"))

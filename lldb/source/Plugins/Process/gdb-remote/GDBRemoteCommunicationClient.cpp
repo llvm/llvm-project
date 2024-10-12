@@ -3702,7 +3702,6 @@ GDBRemoteCommunicationClient::SendTraceStart(const llvm::json::Value &params,
   std::string json_string;
   llvm::raw_string_ostream os(json_string);
   os << params;
-  os.flush();
 
   escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 

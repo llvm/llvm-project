@@ -917,7 +917,7 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
       -data ${BOLT_FDATA}
       -reorder-blocks=ext-tsp -reorder-functions=cdsort -split-functions
       -split-all-cold -split-eh -dyno-stats -use-gnu-stack
-      -split-strategy=cdsplit -update-debug-sections
+      -update-debug-sections
       ${BOLT_NO_LBR}
     COMMENT "Optimizing Clang with BOLT"
     USES_TERMINAL

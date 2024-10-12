@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>
@@ -8,37 +10,37 @@
 
 __m128d test_mm_addsub_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_addsub_pd
-  // CHECK: call <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_addsub_pd(A, B);
 }
 
 __m128 test_mm_addsub_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_addsub_ps
-  // CHECK: call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_addsub_ps(A, B);
 }
 
 __m128d test_mm_hadd_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_hadd_pd
-  // CHECK: call <2 x double> @llvm.x86.sse3.hadd.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse3.hadd.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_hadd_pd(A, B);
 }
 
 __m128 test_mm_hadd_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_hadd_ps
-  // CHECK: call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_hadd_ps(A, B);
 }
 
 __m128d test_mm_hsub_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_hsub_pd
-  // CHECK: call <2 x double> @llvm.x86.sse3.hsub.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse3.hsub.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_hsub_pd(A, B);
 }
 
 __m128 test_mm_hsub_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_hsub_ps
-  // CHECK: call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_hsub_ps(A, B);
 }
 

@@ -317,13 +317,13 @@ if (libcxx_enable_experimental) {
     sources = [ "experimental/keep.cpp" ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [
+        # TODO TZDB The exception could be moved in chrono once the TZDB library
+        # is no longer experimental.
+        "experimental/chrono_exception.cpp",
         "experimental/include/tzdb/time_zone_private.h",
         "experimental/include/tzdb/types_private.h",
         "experimental/include/tzdb/tzdb_list_private.h",
         "experimental/include/tzdb/tzdb_private.h",
-        # TODO TZDB The exception could be moved in chrono once the TZDB library
-        # is no longer experimental.
-        "experimental/chrono_exception.cpp",
         "experimental/time_zone.cpp",
         "experimental/tzdb.cpp",
         "experimental/tzdb_list.cpp",

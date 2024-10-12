@@ -565,7 +565,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
-                       const std::vector<uint8_t> &CmdArgs) {
+                       bool CodeGenOnly, const std::vector<uint8_t> &CmdArgs) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -586,7 +586,9 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   Mod.setPartialSampleProfileRatio(CombinedIndex);
 
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
-  if (Conf.CodeGenOnly) {
+  if (CodeGenOnly) {
+    // If CodeGenOnly is set, we only perform code generation and skip
+    // optimization. This value may differ from Conf.CodeGenOnly.
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }

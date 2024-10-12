@@ -20,6 +20,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Timer.h"
 #include <memory>
 
 #undef DEBUG_TYPE
@@ -29,6 +30,10 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
+
+cl::opt<bool> TimeProbes("time-probes",
+                         cl::desc("print time spent processing pseudo probes"),
+                         cl::Hidden, cl::cat(BoltCategory));
 
 enum PrintPseudoProbesOptions {
   PPP_None = 0,
@@ -103,6 +108,9 @@ Error PseudoProbeRewriter::postEmitFinalizer() {
     parsePseudoProbe();
   updatePseudoProbes();
 
+  // encode pseudo probes with updated addresses
+  encodePseudoProbes();
+
   return Error::success();
 }
 
@@ -116,6 +124,8 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
     return;
   }
 
+  NamedRegionTimer T("parseprobes", "parse pseudo probes", "probes",
+                     "process pseudo probes", opts::TimeProbes);
   // If only one section is found, it might mean the ELF is corrupted.
   if (!PseudoProbeDescSection) {
     errs() << "BOLT-WARNING: fail in reading .pseudo_probe_desc binary\n";
@@ -196,6 +206,8 @@ void PseudoProbeRewriter::updatePseudoProbes() {
   // check if there is pseudo probe section decoded
   if (ProbeDecoder.getAddress2ProbesMap().empty())
     return;
+  NamedRegionTimer T("updateprobes", "update pseudo probes", "probes",
+                     "process pseudo probes", opts::TimeProbes);
   // input address converted to output
   AddressProbesMap &Address2ProbesMap = ProbeDecoder.getAddress2ProbesMap();
   const GUIDProbeFunctionMap &GUID2Func = ProbeDecoder.getGUID2FuncDescMap();
@@ -272,13 +284,15 @@ void PseudoProbeRewriter::updatePseudoProbes() {
     }
     outs() << "=======================================\n";
   }
-
-  // encode pseudo probes with updated addresses
-  encodePseudoProbes();
 }
 
 void PseudoProbeRewriter::encodePseudoProbes() {
   MCPseudoProbeDecoder &ProbeDecoder(*ProbeDecoderPtr);
+  // check if there is pseudo probe section decoded
+  if (ProbeDecoder.getAddress2ProbesMap().empty())
+    return;
+  NamedRegionTimer T("encodeprobes", "encode pseudo probes", "probes",
+                     "process pseudo probes", opts::TimeProbes);
   // Buffer for new pseudo probes section
   SmallString<8> Contents;
   MCDecodedPseudoProbe *LastProbe = nullptr;

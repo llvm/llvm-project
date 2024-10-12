@@ -767,7 +767,7 @@ void ARMInstPrinter::printAddrMode6OffsetOperand(const MCInst *MI,
                                                  const MCSubtargetInfo &STI,
                                                  raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
-  if (MO.getReg() == 0)
+  if (!MO.getReg())
     O << "!";
   else {
     O << ", ";

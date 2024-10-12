@@ -198,6 +198,16 @@ if(NEED_LIBC_HDRGEN)
     list(APPEND LLVM_ENABLE_PROJECTS "libc")
   endif()
 endif()
+
+foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
+  if("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
+    # The 'libc' project bootstraps a few executables via the project build and
+    # should not emit an error currently.
+    if(NOT (NEED_LIBC_HDRGEN AND "${proj}" STREQUAL "libc"))
+      message(FATAL_ERROR "Runtime project \"${proj}\" found in LLVM_ENABLE_PROJECTS and LLVM_ENABLE_RUNTIMES. It must only appear in one of them and that one should almost always be LLVM_ENABLE_RUNTIMES.")
+    endif()
+  endif()
+endforeach()
 unset(NEED_LIBC_HDRGEN)
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -710,6 +720,10 @@ set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
 
 option(LLVM_USE_SPLIT_DWARF
   "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
+
+# Facebook T92898286
+option(LLVM_TEST_BOLT "Enable BOLT testing in non-BOLT tests that use clang" OFF)
+# End Facebook T92898286
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.

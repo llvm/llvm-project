@@ -160,13 +160,14 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
 TEST_P(BinaryContextTester, BaseAddress) {
   // Check that  base address calculation is correct for a binary with the
   // following segment layout:
-  BC->SegmentMapInfo[0] = SegmentInfo{0, 0x10e8c2b4, 0, 0x10e8c2b4, 0x1000};
+  BC->SegmentMapInfo[0] =
+      SegmentInfo{0, 0x10e8c2b4, 0, 0x10e8c2b4, 0x1000, true};
   BC->SegmentMapInfo[0x10e8d2b4] =
-      SegmentInfo{0x10e8d2b4, 0x3952faec, 0x10e8c2b4, 0x3952faec, 0x1000};
+      SegmentInfo{0x10e8d2b4, 0x3952faec, 0x10e8c2b4, 0x3952faec, 0x1000, true};
   BC->SegmentMapInfo[0x4a3bddc0] =
-      SegmentInfo{0x4a3bddc0, 0x148e828, 0x4a3bbdc0, 0x148e828, 0x1000};
+      SegmentInfo{0x4a3bddc0, 0x148e828, 0x4a3bbdc0, 0x148e828, 0x1000, true};
   BC->SegmentMapInfo[0x4b84d5e8] =
-      SegmentInfo{0x4b84d5e8, 0x294f830, 0x4b84a5e8, 0x3d3820, 0x1000};
+      SegmentInfo{0x4b84d5e8, 0x294f830, 0x4b84a5e8, 0x3d3820, 0x1000, true};
 
   std::optional<uint64_t> BaseAddress =
       BC->getBaseAddressForMapping(0x7f13f5556000, 0x10e8c000);
@@ -181,13 +182,13 @@ TEST_P(BinaryContextTester, BaseAddress2) {
   // Check that base address calculation is correct for a binary if the
   // alignment in ELF file are different from pagesize.
   // The segment layout is as follows:
-  BC->SegmentMapInfo[0] = SegmentInfo{0, 0x2177c, 0, 0x2177c, 0x10000};
+  BC->SegmentMapInfo[0] = SegmentInfo{0, 0x2177c, 0, 0x2177c, 0x10000, true};
   BC->SegmentMapInfo[0x31860] =
-      SegmentInfo{0x31860, 0x370, 0x21860, 0x370, 0x10000};
+      SegmentInfo{0x31860, 0x370, 0x21860, 0x370, 0x10000, true};
   BC->SegmentMapInfo[0x41c20] =
-      SegmentInfo{0x41c20, 0x1f8, 0x21c20, 0x1f8, 0x10000};
+      SegmentInfo{0x41c20, 0x1f8, 0x21c20, 0x1f8, 0x10000, true};
   BC->SegmentMapInfo[0x54e18] =
-      SegmentInfo{0x54e18, 0x51, 0x24e18, 0x51, 0x10000};
+      SegmentInfo{0x54e18, 0x51, 0x24e18, 0x51, 0x10000, true};
 
   std::optional<uint64_t> BaseAddress =
       BC->getBaseAddressForMapping(0xaaaaea444000, 0x21000);
@@ -196,4 +197,23 @@ TEST_P(BinaryContextTester, BaseAddress2) {
 
   BaseAddress = BC->getBaseAddressForMapping(0xaaaaea444000, 0x11000);
   ASSERT_FALSE(BaseAddress.has_value());
+}
+
+TEST_P(BinaryContextTester, BaseAddressSegmentsSmallerThanAlignment) {
+  // Check that the correct segment is used to compute the base address
+  // when multiple segments are close together in the ELF file (closer
+  // than the required alignment in the process space).
+  // See https://github.com/llvm/llvm-project/issues/109384
+  BC->SegmentMapInfo[0] = SegmentInfo{0, 0x1d1c, 0, 0x1d1c, 0x10000, false};
+  BC->SegmentMapInfo[0x11d40] =
+      SegmentInfo{0x11d40, 0x11e0, 0x1d40, 0x11e0, 0x10000, true};
+  BC->SegmentMapInfo[0x22f20] =
+      SegmentInfo{0x22f20, 0x10e0, 0x2f20, 0x1f0, 0x10000, false};
+  BC->SegmentMapInfo[0x33110] =
+      SegmentInfo{0x33110, 0x89, 0x3110, 0x88, 0x10000, false};
+
+  std::optional<uint64_t> BaseAddress =
+      BC->getBaseAddressForMapping(0xaaaaaaab1000, 0x1000);
+  ASSERT_TRUE(BaseAddress.has_value());
+  ASSERT_EQ(*BaseAddress, 0xaaaaaaaa0000ULL);
 }

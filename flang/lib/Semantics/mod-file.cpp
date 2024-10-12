@@ -1482,14 +1482,16 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   if (!checkSum) {
     if (context_.ShouldWarn(common::UsageWarning::ModuleFile)) {
       Say(name, ancestorName, "File has invalid checksum: %s"_warn_en_US,
-          sourceFile->path());
+          sourceFile->path())
+          .set_usageWarning(common::UsageWarning::ModuleFile);
     }
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
     if (context_.ShouldWarn(common::UsageWarning::ModuleFile)) {
       Say(name, ancestorName,
           "File is not the right module file for %s"_warn_en_US,
-          "'"s + name.ToString() + "': "s + sourceFile->path());
+          "'"s + name.ToString() + "': "s + sourceFile->path())
+          .set_usageWarning(common::UsageWarning::ModuleFile);
     }
     return nullptr;
   }
