@@ -61,8 +61,9 @@ public:
 };
 
 template <typename T, TestCond Condition> class CFPMatcher : public Matcher<T> {
-  static_assert(cpp::is_complex_v<T>,
-                "CFPMatcher can only be used with complex floating point values.");
+  static_assert(
+      cpp::is_complex_v<T>,
+      "CFPMatcher can only be used with complex floating point values.");
   static_assert(Condition == TestCond::EQ || Condition == TestCond::NE,
                 "Unsupported CFPMatcher test condition.");
 
@@ -72,22 +73,23 @@ template <typename T, TestCond Condition> class CFPMatcher : public Matcher<T> {
 public:
   CFPMatcher(T expectedValue) : expected(expectedValue) {}
 
-  template <typename CFT>
-  bool matchComplex() {
-    CFT* actualCmplxPtr = reinterpret_cast<CFT*>(&actual);
-    CFT* expectedCmplxPtr = reinterpret_cast<CFT*>(&expected);
+  template <typename CFT> bool matchComplex() {
+    CFT *actualCmplxPtr = reinterpret_cast<CFT *>(&actual);
+    CFT *expectedCmplxPtr = reinterpret_cast<CFT *>(&expected);
     CFT actualReal = actualCmplxPtr[0];
     CFT actualImag = actualCmplxPtr[1];
     CFT expectedReal = expectedCmplxPtr[0];
     CFT expectedImag = expectedCmplxPtr[1];
-    fputil::FPBits<CFT> actualRealBits(actualReal), expectedRealBits(expectedReal);
-    fputil::FPBits<CFT> actualImagBits(actualImag), expectedImagBits(expectedImag);
+    fputil::FPBits<CFT> actualRealBits(actualReal),
+        expectedRealBits(expectedReal);
+    fputil::FPBits<CFT> actualImagBits(actualImag),
+        expectedImagBits(expectedImag);
     if (Condition == TestCond::EQ)
       return ((actualRealBits.is_nan() && expectedRealBits.is_nan()) ||
-             (actualRealBits.uintval() == expectedRealBits.uintval())) &&
+              (actualRealBits.uintval() == expectedRealBits.uintval())) &&
              ((actualImagBits.is_nan() && expectedImagBits.is_nan()) ||
               (actualImagBits.uintval() == expectedImagBits.uintval()));
-    
+
     // If condition == TestCond::NE.
     if (actualRealBits.is_nan() && expectedRealBits.is_nan())
       return !expectedRealBits.is_nan() && !expectedImagBits.is_nan();
@@ -95,35 +97,46 @@ public:
       return !expectedRealBits.is_nan();
     if (actualImagBits.is_nan())
       return !expectedImagBits.is_nan();
-    return (expectedRealBits.is_nan() || actualRealBits.uintval() != expectedRealBits.uintval()) &&
-           (expectedImagBits.is_nan() || actualImagBits.uintval() != expectedImagBits.uintval());
+    return (expectedRealBits.is_nan() ||
+            actualRealBits.uintval() != expectedRealBits.uintval()) &&
+           (expectedImagBits.is_nan() ||
+            actualImagBits.uintval() != expectedImagBits.uintval());
   }
 
-  template <typename CFT>
-  void explainErrorComplex() {
-    CFT* actualCmplxPtr = reinterpret_cast<CFT*>(&actual);
-    CFT* expectedCmplxPtr = reinterpret_cast<CFT*>(&expected);
+  template <typename CFT> void explainErrorComplex() {
+    CFT *actualCmplxPtr = reinterpret_cast<CFT *>(&actual);
+    CFT *expectedCmplxPtr = reinterpret_cast<CFT *>(&expected);
     CFT actualReal = actualCmplxPtr[0];
     CFT actualImag = actualCmplxPtr[1];
     CFT expectedReal = expectedCmplxPtr[0];
     CFT expectedImag = expectedCmplxPtr[1];
     tlog << "Expected complex floating point value: "
-        << str(fputil::FPBits<CFT>(expectedReal)) + " + " + str(fputil::FPBits<CFT>(expectedImag)) + "i" << '\n';
+         << str(fputil::FPBits<CFT>(expectedReal)) + " + " +
+                str(fputil::FPBits<CFT>(expectedImag)) + "i"
+         << '\n';
     tlog << "Actual complex floating point value: "
-        << str(fputil::FPBits<CFT>(actualReal)) + " + " + str(fputil::FPBits<CFT>(actualImag)) + "i" << '\n';
+         << str(fputil::FPBits<CFT>(actualReal)) + " + " +
+                str(fputil::FPBits<CFT>(actualImag)) + "i"
+         << '\n';
   }
 
   bool match(T actualValue) {
     actual = actualValue;
-    if (sizeof(T) == 2 * sizeof(float)) return matchComplex<float>();
-    else if (sizeof(T) == 2 * sizeof(double)) return matchComplex<double>();
-    else if (sizeof(T) == 2 * sizeof(long double)) return matchComplex<long double>();
+    if (sizeof(T) == 2 * sizeof(float))
+      return matchComplex<float>();
+    else if (sizeof(T) == 2 * sizeof(double))
+      return matchComplex<double>();
+    else if (sizeof(T) == 2 * sizeof(long double))
+      return matchComplex<long double>();
   }
 
   void explainError() override {
-    if (sizeof(T) == 2 * sizeof(float)) explainErrorComplex<float>();
-    else if (sizeof(T) == 2 * sizeof(double)) explainErrorComplex<double>();
-    else if (sizeof(T) == 2 * sizeof(long double)) explainErrorComplex<long double>();
+    if (sizeof(T) == 2 * sizeof(float))
+      explainErrorComplex<float>();
+    else if (sizeof(T) == 2 * sizeof(double))
+      explainErrorComplex<double>();
+    else if (sizeof(T) == 2 * sizeof(long double))
+      explainErrorComplex<long double>();
   }
 };
 
@@ -131,7 +144,8 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   return FPMatcher<T, C>(expectedValue);
 }
 
-template <TestCond C, typename T> CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
+template <TestCond C, typename T>
+CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
   return CFPMatcher<T, C>(expectedValue);
 }
 

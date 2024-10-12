@@ -27,11 +27,11 @@ private:
 
 public:
   LIBC_INLINE_VAR static constexpr bool value =
-      __is_unqualified_any_of<T, _Complex float, _Complex double, _Complex long double>();
+      __is_unqualified_any_of<T, _Complex float, _Complex double,
+                              _Complex long double>();
 };
 template <typename T>
-LIBC_INLINE_VAR constexpr bool is_complex_v =
-    is_complex<T>::value;
+LIBC_INLINE_VAR constexpr bool is_complex_v = is_complex<T>::value;
 
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
