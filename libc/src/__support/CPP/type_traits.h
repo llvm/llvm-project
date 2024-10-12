@@ -32,6 +32,7 @@
 #include "src/__support/CPP/type_traits/is_enum.h"
 #include "src/__support/CPP/type_traits/is_fixed_point.h"
 #include "src/__support/CPP/type_traits/is_floating_point.h"
+#include "src/__support/CPP/type_traits/is_complex.h"
 #include "src/__support/CPP/type_traits/is_function.h"
 #include "src/__support/CPP/type_traits/is_integral.h"
 #include "src/__support/CPP/type_traits/is_lvalue_reference.h"

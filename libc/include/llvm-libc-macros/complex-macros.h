@@ -14,7 +14,7 @@
 #define __STDC_VERSION_COMPLEX_H__ 202311L
 
 #define complex _Complex
-#define _Complex_I ((float _Complex)1.0fi)
+#define _Complex_I ((_Complex float)1.0fi)
 #define I _Complex_I
 
 // TODO: Add imaginary macros once GCC or Clang support them.

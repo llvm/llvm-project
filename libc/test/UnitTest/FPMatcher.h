@@ -27,8 +27,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
-  static_assert(cpp::is_floating_point_v<T>,
-                "FPMatcher can only be used with floating point values.");
+  static_assert(cpp::is_floating_point_v<T> || cpp::is_complex_v<T>,
+                "FPMatcher can only be used with floating point or complex floating point values.");
   static_assert(Condition == TestCond::EQ || Condition == TestCond::NE,
                 "Unsupported FPMatcher test condition.");
 
