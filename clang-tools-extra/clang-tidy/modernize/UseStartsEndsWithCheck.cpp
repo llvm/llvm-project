@@ -9,8 +9,10 @@
 #include "UseStartsEndsWithCheck.h"
 
 #include "../utils/ASTUtils.h"
-#include "../utils/OptionsUtils.h"
+#include "../utils/Matchers.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/ArrayRef.h"
 
 #include <string>
 
@@ -82,34 +84,25 @@ UseStartsEndsWithCheck::UseStartsEndsWithCheck(StringRef Name,
 void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   const auto ZeroLiteral = integerLiteral(equals(0));
 
-  const auto HasStartsWithMethodWithName = [](const std::string &Name) {
-    return hasMethod(
-        cxxMethodDecl(hasName(Name), isConst(), parameterCountIs(1))
-            .bind("starts_with_fun"));
-  };
-  const auto HasStartsWithMethod =
-      anyOf(HasStartsWithMethodWithName("starts_with"),
-            HasStartsWithMethodWithName("startsWith"),
-            HasStartsWithMethodWithName("startswith"));
-  const auto OnClassWithStartsWithFunction =
-      on(hasType(hasCanonicalType(hasDeclaration(cxxRecordDecl(
-          anyOf(HasStartsWithMethod,
-                hasAnyBase(hasType(hasCanonicalType(
-                    hasDeclaration(cxxRecordDecl(HasStartsWithMethod)))))))))));
+  const auto ClassTypeWithMethod =
+      [](const StringRef MethodBoundName,
+         const llvm::ArrayRef<StringRef> &Methods) {
+        const auto Method =
+            cxxMethodDecl(isConst(), parameterCountIs(1),
+                          returns(booleanType()), hasAnyName(Methods))
+                .bind(MethodBoundName);
+        return qualType(hasCanonicalType(hasDeclaration(cxxRecordDecl(
+            anyOf(hasMethod(Method),
+                  hasAnyBase(hasType(hasCanonicalType(
+                      hasDeclaration(cxxRecordDecl(hasMethod(Method)))))))))));
+      };
 
-  const auto HasEndsWithMethodWithName = [](const std::string &Name) {
-    return hasMethod(
-        cxxMethodDecl(hasName(Name), isConst(), parameterCountIs(1))
-            .bind("ends_with_fun"));
-  };
-  const auto HasEndsWithMethod = anyOf(HasEndsWithMethodWithName("ends_with"),
-                                       HasEndsWithMethodWithName("endsWith"),
-                                       HasEndsWithMethodWithName("endswith"));
+  const auto OnClassWithStartsWithFunction = on(hasType(ClassTypeWithMethod(
+      "starts_with_fun", {"starts_with", "startsWith", "startswith"})));
+
   const auto OnClassWithEndsWithFunction =
-      on(expr(hasType(hasCanonicalType(hasDeclaration(cxxRecordDecl(
-                  anyOf(HasEndsWithMethod,
-                        hasAnyBase(hasType(hasCanonicalType(hasDeclaration(
-                            cxxRecordDecl(HasEndsWithMethod)))))))))))
+      on(expr(hasType(ClassTypeWithMethod(
+                  "ends_with_fun", {"ends_with", "endsWith", "endswith"})))
              .bind("haystack"));
 
   // Case 1: X.find(Y) [!=]= 0 -> starts_with.
@@ -145,7 +138,7 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   // All cases comparing to 0.
   Finder->addMatcher(
       binaryOperator(
-          hasAnyOperatorName("==", "!="),
+          matchers::isEqualityOperator(),
           hasOperands(cxxMemberCallExpr(anyOf(FindExpr, RFindExpr, CompareExpr,
                                               CompareEndsWithExpr))
                           .bind("find_expr"),
@@ -156,7 +149,7 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   // Case 5: X.rfind(Y) [!=]= LEN(X) - LEN(Y) -> ends_with.
   Finder->addMatcher(
       binaryOperator(
-          hasAnyOperatorName("==", "!="),
+          matchers::isEqualityOperator(),
           hasOperands(
               cxxMemberCallExpr(
                   anyOf(
@@ -190,9 +183,8 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
   const CXXMethodDecl *ReplacementFunction =
       StartsWithFunction ? StartsWithFunction : EndsWithFunction;
 
-  if (ComparisonExpr->getBeginLoc().isMacroID()) {
+  if (ComparisonExpr->getBeginLoc().isMacroID())
     return;
-  }
 
   const bool Neg = ComparisonExpr->getOpcode() == BO_NE;
 
@@ -220,9 +212,8 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       (ReplacementFunction->getName() + "(").str());
 
   // Add possible negation '!'.
-  if (Neg) {
+  if (Neg)
     Diagnostic << FixItHint::CreateInsertion(FindExpr->getBeginLoc(), "!");
-  }
 }
 
 } // namespace clang::tidy::modernize

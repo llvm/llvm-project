@@ -150,8 +150,8 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-FIXES: puv.starts_with("a");
 
   puvf.find("a") == 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
-  // CHECK-FIXES: puvf.starts_with("a");
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use startsWith
+  // CHECK-FIXES: puvf.startsWith("a");
 
   // Here, the subclass has startsWith, the superclass has starts_with.
   // We prefer the version from the subclass.
