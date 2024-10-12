@@ -649,7 +649,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     // medatada, and we don't want them to end up in the output file for static
     // executables.
     if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
-        !canHaveMemtagGlobals()) {
+        !canHaveMemtagGlobals(ctx)) {
       this->sections[i] = &InputSection::discarded;
       continue;
     }
@@ -1324,8 +1324,8 @@ static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
 }
 
 template <class ELFT>
-static bool isNonCommonDef(ELFKind ekind, MemoryBufferRef mb, StringRef symName,
-                           StringRef archiveName) {
+static bool isNonCommonDef(Ctx &ctx, ELFKind ekind, MemoryBufferRef mb,
+                           StringRef symName, StringRef archiveName) {
   ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(ctx, ekind, mb, archiveName);
   obj->init();
   StringRef stringtable = obj->getStringTable();
@@ -1343,13 +1343,13 @@ static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
                            StringRef archiveName) {
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
-    return isNonCommonDef<ELF32LE>(ELF32LEKind, mb, symName, archiveName);
+    return isNonCommonDef<ELF32LE>(ctx, ELF32LEKind, mb, symName, archiveName);
   case ELF32BEKind:
-    return isNonCommonDef<ELF32BE>(ELF32BEKind, mb, symName, archiveName);
+    return isNonCommonDef<ELF32BE>(ctx, ELF32BEKind, mb, symName, archiveName);
   case ELF64LEKind:
-    return isNonCommonDef<ELF64LE>(ELF64LEKind, mb, symName, archiveName);
+    return isNonCommonDef<ELF64LE>(ctx, ELF64LEKind, mb, symName, archiveName);
   case ELF64BEKind:
-    return isNonCommonDef<ELF64BE>(ELF64BEKind, mb, symName, archiveName);
+    return isNonCommonDef<ELF64BE>(ctx, ELF64BEKind, mb, symName, archiveName);
   default:
     llvm_unreachable("getELFKind");
   }

@@ -250,6 +250,8 @@ Non-comprehensive list of changes in this release
 - The floating point comparison builtins (``__builtin_isgreater``,
   ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
   ``__builtin_signbit`` can now be used in constant expressions.
+- Plugins can now define custom attributes that apply to statements
+  as well as declarations.
 
 New Compiler Flags
 ------------------
@@ -662,6 +664,8 @@ clang-format
 - Adds ``BreakBinaryOperations`` option.
 - Adds ``TemplateNames`` option.
 - Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
+- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of multi-line comments
+  without touching their contents, renames ``false`` to ``Never``, and ``true`` to ``Always``.
 
 libclang
 --------
