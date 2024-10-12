@@ -156,7 +156,7 @@ define i32 @bcmp_size_0(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 0)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 0)
   ret i32 %bcmp
 }
 
@@ -281,7 +281,7 @@ define i32 @bcmp_size_1(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 1)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 1)
   ret i32 %bcmp
 }
 
@@ -406,7 +406,7 @@ define i32 @bcmp_size_2(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 2)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 2)
   ret i32 %bcmp
 }
 
@@ -531,7 +531,7 @@ define i32 @bcmp_size_3(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 3)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 3)
   ret i32 %bcmp
 }
 
@@ -656,7 +656,7 @@ define i32 @bcmp_size_4(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 4)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 4)
   ret i32 %bcmp
 }
 
@@ -781,7 +781,7 @@ define i32 @bcmp_size_5(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 5)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 5)
   ret i32 %bcmp
 }
 
@@ -906,7 +906,7 @@ define i32 @bcmp_size_6(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 6)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 6)
   ret i32 %bcmp
 }
 
@@ -1031,7 +1031,7 @@ define i32 @bcmp_size_7(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 7)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 7)
   ret i32 %bcmp
 }
 
@@ -1156,7 +1156,7 @@ define i32 @bcmp_size_8(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 8)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 8)
   ret i32 %bcmp
 }
 
@@ -1281,7 +1281,7 @@ define i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 15)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 15)
   ret i32 %bcmp
 }
 
@@ -1406,7 +1406,7 @@ define i32 @bcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 16)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 16)
   ret i32 %bcmp
 }
 
@@ -1531,7 +1531,7 @@ define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 31)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 31)
   ret i32 %bcmp
 }
 
@@ -1656,7 +1656,7 @@ define i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 32)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 32)
   ret i32 %bcmp
 }
 
@@ -1781,7 +1781,7 @@ define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 63)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 63)
   ret i32 %bcmp
 }
 
@@ -1906,7 +1906,7 @@ define i32 @bcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 64)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 64)
   ret i32 %bcmp
 }
 
@@ -2031,7 +2031,7 @@ define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 127)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 127)
   ret i32 %bcmp
 }
 
@@ -2156,7 +2156,7 @@ define i32 @bcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 128)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 128)
   ret i32 %bcmp
 }
 
@@ -2269,7 +2269,7 @@ define i32 @bcmp_size_runtime(ptr %s1, ptr %s2, iXLen %len) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen %len)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen %len)
   ret i32 %bcmp
 }
 
@@ -2291,7 +2291,6 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -2314,7 +2313,6 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -2337,7 +2335,6 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
@@ -2360,7 +2357,6 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -2383,7 +2379,6 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -2406,13 +2401,12 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 4)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 4)
   %ret = icmp eq i32 %bcmp, 0
   ret i1 %ret
 }
@@ -2435,7 +2429,6 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    slti a0, a0, 0
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -2458,7 +2451,6 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    slti a0, a0, 0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -2481,7 +2473,6 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    slti a0, a0, 0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
@@ -2504,7 +2495,6 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-NEXT:    slti a0, a0, 0
 ; CHECK-UNALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -2527,7 +2517,6 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    slti a0, a0, 0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -2550,13 +2539,12 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    slti a0, a0, 0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 4)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 4)
   %ret = icmp slt i32 %bcmp, 0
   ret i1 %ret
 }
@@ -2579,7 +2567,6 @@ define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    sgtz a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -2602,7 +2589,6 @@ define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sgtz a0, a0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -2625,7 +2611,6 @@ define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call bcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sgtz a0, a0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
@@ -2648,7 +2633,6 @@ define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-NEXT:    sgtz a0, a0
 ; CHECK-UNALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -2671,7 +2655,6 @@ define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sgtz a0, a0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -2694,13 +2677,12 @@ define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    call bcmp
-; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sgtz a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, iXLen 4)
+  %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 4)
   %ret = icmp sgt i32 %bcmp, 0
   ret i1 %ret
 }
@@ -2766,7 +2748,7 @@ define i32 @memcmp_size_0(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    li a0, 0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 0)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 0)
   ret i32 %memcmp
 }
 
@@ -2891,7 +2873,7 @@ define i32 @memcmp_size_1(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 1)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 1)
   ret i32 %memcmp
 }
 
@@ -3016,7 +2998,7 @@ define i32 @memcmp_size_2(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 2)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 2)
   ret i32 %memcmp
 }
 
@@ -3141,7 +3123,7 @@ define i32 @memcmp_size_3(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 3)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 3)
   ret i32 %memcmp
 }
 
@@ -3266,7 +3248,7 @@ define i32 @memcmp_size_4(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 4)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 4)
   ret i32 %memcmp
 }
 
@@ -3391,7 +3373,7 @@ define i32 @memcmp_size_5(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 5)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 5)
   ret i32 %memcmp
 }
 
@@ -3516,7 +3498,7 @@ define i32 @memcmp_size_6(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 6)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 6)
   ret i32 %memcmp
 }
 
@@ -3641,7 +3623,7 @@ define i32 @memcmp_size_7(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 7)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 7)
   ret i32 %memcmp
 }
 
@@ -3766,7 +3748,7 @@ define i32 @memcmp_size_8(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 8)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 8)
   ret i32 %memcmp
 }
 
@@ -3891,7 +3873,7 @@ define i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 15)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 15)
   ret i32 %memcmp
 }
 
@@ -4016,7 +3998,7 @@ define i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 16)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 16)
   ret i32 %memcmp
 }
 
@@ -4141,7 +4123,7 @@ define i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 31)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 31)
   ret i32 %memcmp
 }
 
@@ -4266,7 +4248,7 @@ define i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 32)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 32)
   ret i32 %memcmp
 }
 
@@ -4391,7 +4373,7 @@ define i32 @memcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 63)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 63)
   ret i32 %memcmp
 }
 
@@ -4516,7 +4498,7 @@ define i32 @memcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 64)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 64)
   ret i32 %memcmp
 }
 
@@ -4641,7 +4623,7 @@ define i32 @memcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 127)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 127)
   ret i32 %memcmp
 }
 
@@ -4766,7 +4748,7 @@ define i32 @memcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 128)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 128)
   ret i32 %memcmp
 }
 
@@ -4879,7 +4861,7 @@ define i32 @memcmp_size_runtime(ptr %s1, ptr %s2, iXLen %len) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen %len)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen %len)
   ret i32 %memcmp
 }
 
@@ -5080,7 +5062,7 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    seqz a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 4)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 4)
   %ret = icmp eq i32 %memcmp, 0
   ret i1 %ret
 }
@@ -5103,7 +5085,6 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    slti a0, a0, 0
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -5126,7 +5107,6 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    slti a0, a0, 0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -5149,7 +5129,6 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    slti a0, a0, 0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
@@ -5172,7 +5151,6 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-NEXT:    slti a0, a0, 0
 ; CHECK-UNALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -5195,7 +5173,6 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    slti a0, a0, 0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -5218,13 +5195,12 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    slti a0, a0, 0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 4)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 4)
   %ret = icmp slt i32 %memcmp, 0
   ret i1 %ret
 }
@@ -5247,7 +5223,6 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    sgtz a0, a0
 ; CHECK-ALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -5270,7 +5245,6 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    sgtz a0, a0
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -5293,7 +5267,6 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    call memcmp
-; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    sgtz a0, a0
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-ALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
@@ -5316,7 +5289,6 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-NEXT:    sgtz a0, a0
 ; CHECK-UNALIGNED-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-NEXT:    addi sp, sp, 16
@@ -5339,7 +5311,6 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    sgtz a0, a0
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBB-NEXT:    addi sp, sp, 16
@@ -5362,13 +5333,12 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind optsize {
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    li a2, 4
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    call memcmp
-; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sext.w a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    sgtz a0, a0
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    addi sp, sp, 16
 ; CHECK-UNALIGNED-RV64-ZBKB-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, iXLen 4)
+  %memcmp = call signext i32 @memcmp(ptr %s1, ptr %s2, iXLen 4)
   %ret = icmp sgt i32 %memcmp, 0
   ret i1 %ret
 }
