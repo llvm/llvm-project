@@ -255,10 +255,9 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
   // Select frecipe feature determined by -m[no-]frecipe.
   if (const Arg *A =
           Args.getLastArg(options::OPT_mfrecipe, options::OPT_mno_frecipe)) {
-    // -mno-frecipe conflicts with -mfrecipe.
-    if (A->getOption().matches(options::OPT_mfrecipe)) {
+    if (A->getOption().matches(options::OPT_mfrecipe))
       Features.push_back("+frecipe");
-    } else /*-mnofrecipe*/
+    else
       Features.push_back("-frecipe");
   }
 }

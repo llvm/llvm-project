@@ -142,20 +142,8 @@ enum NodeType : unsigned {
   VANY_NONZERO,
 
   // Floating point approximate reciprocal operation
-  FRECIPE_S,
-  FRECIPE_D,
-  FRSQRTE_S,
-  FRSQRTE_D,
-
-  VFRECIPE_S,
-  VFRECIPE_D,
-  VFRSQRTE_S,
-  VFRSQRTE_D,
-
-  XVFRECIPE_S,
-  XVFRECIPE_D,
-  XVFRSQRTE_S,
-  XVFRSQRTE_D,
+  FRECIPE,
+  FRSQRTE
 
   // Intrinsic operations end =============================================
 };

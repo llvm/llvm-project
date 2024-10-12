@@ -23,8 +23,8 @@ def SDT_LoongArchV2R : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                      SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
 def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
                                         SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
-def SDT_LoongArchVFRECIPE_S : SDTypeProfile<1, 1, [SDTCisVT<0, v4f32>, SDTCisVT<1, v4f32>]>;
-def SDT_LoongArchVFRECIPE_D : SDTypeProfile<1, 1, [SDTCisVT<0, v2f64>, SDTCisVT<1, v2f64>]>;
+def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
+def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 
 // Target nodes.
 def loongarch_vreplve : SDNode<"LoongArchISD::VREPLVE", SDT_LoongArchVreplve>;
@@ -52,10 +52,8 @@ def loongarch_vilvh: SDNode<"LoongArchISD::VILVH", SDT_LoongArchV2R>;
 
 def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
 def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
-def loongarch_vfrecipe_s: SDNode<"LoongArchISD::VFRECIPE_S", SDT_LoongArchVFRECIPE_S>;
-def loongarch_vfrecipe_d: SDNode<"LoongArchISD::VFRECIPE_D", SDT_LoongArchVFRECIPE_D>;
-def loongarch_vfrsqrte_s: SDNode<"LoongArchISD::VFRSQRTE_S", SDT_LoongArchVFRECIPE_S>;
-def loongarch_vfrsqrte_d: SDNode<"LoongArchISD::VFRSQRTE_D", SDT_LoongArchVFRECIPE_D>;
+def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
+def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
 
 def immZExt1 : ImmLeaf<i64, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<i64, [{return isUInt<2>(Imm);}]>;
@@ -2245,13 +2243,13 @@ foreach Inst = ["VFRECIPE_D", "VFRSQRTE_D"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2f64 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 
-def : Pat<(loongarch_vfrecipe_s v4f32:$src), 
+def : Pat<(loongarch_vfrecipe v4f32:$src), 
           (VFRECIPE_S v4f32:$src)>;
-def : Pat<(loongarch_vfrecipe_d v2f64:$src), 
+def : Pat<(loongarch_vfrecipe v2f64:$src), 
           (VFRECIPE_D v2f64:$src)>;
-def : Pat<(loongarch_vfrsqrte_s v4f32:$src), 
+def : Pat<(loongarch_vfrsqrte v4f32:$src), 
           (VFRSQRTE_S v4f32:$src)>;
-def : Pat<(loongarch_vfrsqrte_d v2f64:$src), 
+def : Pat<(loongarch_vfrsqrte v2f64:$src), 
           (VFRSQRTE_D v2f64:$src)>;
 }
 

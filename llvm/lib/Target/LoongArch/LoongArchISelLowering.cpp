@@ -4697,18 +4697,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VANY_ZERO)
     NODE_NAME_CASE(VALL_NONZERO)
     NODE_NAME_CASE(VANY_NONZERO)
-    NODE_NAME_CASE(FRECIPE_S)
-    NODE_NAME_CASE(FRECIPE_D)
-    NODE_NAME_CASE(FRSQRTE_S)
-    NODE_NAME_CASE(FRSQRTE_D)
-    NODE_NAME_CASE(VFRECIPE_S)
-    NODE_NAME_CASE(VFRECIPE_D)
-    NODE_NAME_CASE(VFRSQRTE_S)
-    NODE_NAME_CASE(VFRSQRTE_D)
-    NODE_NAME_CASE(XVFRECIPE_S)
-    NODE_NAME_CASE(XVFRECIPE_D)
-    NODE_NAME_CASE(XVFRSQRTE_S)
-    NODE_NAME_CASE(XVFRSQRTE_D)
+    NODE_NAME_CASE(FRECIPE)
+    NODE_NAME_CASE(FRSQRTE)
   }
 #undef NODE_NAME_CASE
   return nullptr;
@@ -5934,33 +5924,22 @@ SDValue LoongArchTargetLowering::getSqrtEstimate(SDValue Operand,
   if (Subtarget.hasFrecipe()) {
     SDLoc DL(Operand);
     EVT VT = Operand.getValueType();
-    unsigned Opcode;
 
-    if (VT == MVT::f32) {
-      Opcode = LoongArchISD::FRSQRTE_S;
-    } else if (VT == MVT::f64 && Subtarget.hasBasicD()) {
-      Opcode = LoongArchISD::FRSQRTE_D;
-    } else if (VT == MVT::v4f32 && Subtarget.hasExtLSX()) {
-      Opcode = LoongArchISD::VFRSQRTE_S;
-    } else if (VT == MVT::v2f64 && Subtarget.hasExtLSX()) {
-      Opcode = LoongArchISD::VFRSQRTE_D;
-    } else if (VT == MVT::v8f32 && Subtarget.hasExtLASX()) {
-      Opcode = LoongArchISD::XVFRSQRTE_S;
-    } else if (VT == MVT::v4f64 && Subtarget.hasExtLASX()) {
-      Opcode = LoongArchISD::XVFRSQRTE_D;
-    } else {
-      return SDValue();
+    if (VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD()) ||
+        (VT == MVT::v4f32 && Subtarget.hasExtLSX()) ||
+        (VT == MVT::v2f64 && Subtarget.hasExtLSX()) ||
+        (VT == MVT::v8f32 && Subtarget.hasExtLASX()) ||
+        (VT == MVT::v4f64 && Subtarget.hasExtLASX())) {
+
+      if (RefinementSteps == ReciprocalEstimate::Unspecified)
+        RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
+
+      SDValue Estimate = DAG.getNode(LoongArchISD::FRSQRTE, DL, VT, Operand);
+      if (Reciprocal)
+        Estimate = DAG.getNode(ISD::FMUL, DL, VT, Operand, Estimate);
+
+      return Estimate;
     }
-
-    UseOneConstNR = false;
-    if (RefinementSteps == ReciprocalEstimate::Unspecified)
-      RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
-
-    SDValue Estimate = DAG.getNode(Opcode, DL, VT, Operand);
-    if (Reciprocal) {
-      Estimate = DAG.getNode(ISD::FMUL, DL, VT, Operand, Estimate);
-    }
-    return Estimate;
   }
 
   return SDValue();
@@ -5973,28 +5952,18 @@ SDValue LoongArchTargetLowering::getRecipEstimate(SDValue Operand,
   if (Subtarget.hasFrecipe()) {
     SDLoc DL(Operand);
     EVT VT = Operand.getValueType();
-    unsigned Opcode;
 
-    if (VT == MVT::f32) {
-      Opcode = LoongArchISD::FRECIPE_S;
-    } else if (VT == MVT::f64 && Subtarget.hasBasicD()) {
-      Opcode = LoongArchISD::FRECIPE_D;
-    } else if (VT == MVT::v4f32 && Subtarget.hasExtLSX()) {
-      Opcode = LoongArchISD::VFRECIPE_S;
-    } else if (VT == MVT::v2f64 && Subtarget.hasExtLSX()) {
-      Opcode = LoongArchISD::VFRECIPE_D;
-    } else if (VT == MVT::v8f32 && Subtarget.hasExtLASX()) {
-      Opcode = LoongArchISD::XVFRECIPE_S;
-    } else if (VT == MVT::v4f64 && Subtarget.hasExtLASX()) {
-      Opcode = LoongArchISD::XVFRECIPE_D;
-    } else {
-      return SDValue();
+    if (VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD()) ||
+        (VT == MVT::v4f32 && Subtarget.hasExtLSX()) ||
+        (VT == MVT::v2f64 && Subtarget.hasExtLSX()) ||
+        (VT == MVT::v8f32 && Subtarget.hasExtLASX()) ||
+        (VT == MVT::v4f64 && Subtarget.hasExtLASX())) {
+
+      if (RefinementSteps == ReciprocalEstimate::Unspecified)
+        RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
+
+      return DAG.getNode(LoongArchISD::FRECIPE, DL, VT, Operand);
     }
-
-    if (RefinementSteps == ReciprocalEstimate::Unspecified)
-      RefinementSteps = getEstimateRefinementSteps(VT, Subtarget);
-
-    return DAG.getNode(Opcode, DL, VT, Operand);
   }
 
   return SDValue();
