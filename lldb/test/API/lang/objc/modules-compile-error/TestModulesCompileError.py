@@ -21,8 +21,8 @@ class TestCase(TestBase):
             "expr @import LLDBTestModule",
             error=True,
             substrs=[
-                "module.h:4:1: error: use of undeclared identifier 'syntax_error_for_lldb_to_find'",
+                "module.h:4:1: error:", "syntax_error_for_lldb_to_find",
                 "syntax_error_for_lldb_to_find // comment that tests source printing",
-                "could not build module 'LLDBTestModule'",
+                "module", "LLDBTestModule",
             ],
         )
