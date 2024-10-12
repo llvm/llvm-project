@@ -72,16 +72,15 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), ParentContext(nullptr) {};
+  ASTNode() : T(Type::Root), ParentContext(nullptr){};
 
   ASTNode(StringRef Body, ASTNode *Parent)
-      : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr),
-        Indentation(0) {};
+      : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr){};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        ParentContext(nullptr), Indentation(0) {};
+        ParentContext(nullptr){};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -99,19 +98,16 @@ public:
                  DenseMap<char, StringRef> &Escapes);
 
 private:
-  void renderLambdas(const llvm::json::Value &Contexts,
-                     llvm::raw_ostream &OS,
+  void renderLambdas(const llvm::json::Value &Contexts, llvm::raw_ostream &OS,
                      Lambda &L);
 
   void renderSectionLambdas(const llvm::json::Value &Contexts,
                             llvm::raw_ostream &OS, SectionLambda &L);
 
-  void renderPartial(const llvm::json::Value &Contexts, 
-                     llvm::raw_ostream &OS,
+  void renderPartial(const llvm::json::Value &Contexts, llvm::raw_ostream &OS,
                      ASTNode *Partial);
 
-  void renderChild(const llvm::json::Value &Context, 
-                   llvm::raw_ostream &OS);
+  void renderChild(const llvm::json::Value &Context, llvm::raw_ostream &OS);
 
   const llvm::json::Value *findContext();
 
@@ -121,7 +117,7 @@ private:
   StringMap<SectionLambda> *SectionLambdas;
   DenseMap<char, StringRef> *Escapes;
   Type T;
-  size_t Indentation;
+  size_t Indentation = 0;
   SmallString<0> RawBody;
   SmallString<0> Body;
   ASTNode *Parent;
@@ -135,10 +131,11 @@ class EscapeStringStream : public raw_ostream {
 public:
   explicit EscapeStringStream(llvm::raw_ostream &WrappedStream,
                               DenseMap<char, StringRef> &Escape)
-      : Escape(Escape), WrappedStream(WrappedStream) {}
-  
+      : Escape(Escape), WrappedStream(WrappedStream) {
+    SetUnbuffered();
+  }
+
 protected:
-  // This is where data gets written
   void write_impl(const char *Ptr, size_t Size) override {
     llvm::StringRef Data(Ptr, Size);
     for (char C : Data) {
@@ -150,24 +147,23 @@ protected:
     }
   }
 
-  uint64_t current_pos() const override {
-    return WrappedStream.tell();
-  }
+  uint64_t current_pos() const override { return WrappedStream.tell(); }
 
 private:
   DenseMap<char, StringRef> &Escape;
   llvm::raw_ostream &WrappedStream;
 };
 
-
+// Custom stream to add indentation used to for rendering partials
 class AddIndentationStringStream : public raw_ostream {
 public:
   explicit AddIndentationStringStream(llvm::raw_ostream &WrappedStream,
                                       size_t Indentation)
-      : Indentation(Indentation), WrappedStream(WrappedStream) {}
-  
+      : Indentation(Indentation), WrappedStream(WrappedStream) {
+    SetUnbuffered();
+  }
+
 protected:
-  // This is where data gets written
   void write_impl(const char *Ptr, size_t Size) override {
     llvm::StringRef Data(Ptr, Size);
     std::string Indent(Indentation, ' ');
@@ -177,10 +173,8 @@ protected:
         WrappedStream << Indent;
     }
   }
-  
-  uint64_t current_pos() const override {
-    return WrappedStream.tell();
-  }
+
+  uint64_t current_pos() const override { return WrappedStream.tell(); }
 
 private:
   size_t Indentation;
@@ -237,7 +231,14 @@ Token::Type Token::getTokenType(char Identifier) {
   }
 }
 
-// Function to check if there's no meaningful text behind
+// Function to check if there's no meaningful text behind.
+// We determine if a token has no meaningful text behind
+// if the right of previous token is empty spaces or tabs followed
+// by a newline
+// eg. "Other Stuff\n {{#Section}}"
+// We make an exception for when previous token is empty
+// and the current token is the second token
+// eg. " {{#Section}}"
 bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
   if (Idx == 0)
     return false;
@@ -247,17 +248,15 @@ bool noTextBehind(size_t Idx, const SmallVector<Token, 0> &Tokens) {
     return false;
 
   const Token &PrevToken = Tokens[Idx - 1];
-  StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v\t");
-  // We make an exception for when previous token is empty
-  // and the current token is the second token
-  // ex.
-  //  " {{#section}}A{{/section}}"
-  // the output of this is
-  //  "A"
+  StringRef TokenBody = PrevToken.getRawBody().rtrim(" \t\v");
   return TokenBody.ends_with("\n") || (TokenBody.empty() && Idx == 1);
 }
 
 // Function to check if there's no meaningful text ahead
+// We determine if a token has no meaningful text behind
+// if the left of previous token is empty spaces or tabs followed
+// by a newline
+// eg. "{{#Section}}  \n"
 bool noTextAhead(size_t Idx, const SmallVector<Token, 0> &Tokens) {
   if (Idx >= Tokens.size() - 1)
     return false;
@@ -298,7 +297,7 @@ void stripTokenAhead(SmallVector<Token, 0> &Tokens, size_t Idx) {
 // eg.
 //  The template string
 //  " \t{{#section}}A{{/section}}"
-// would be considered as no text ahead and should be render as
+// would be considered as having no text ahead and would be render as
 //  "A"
 // The exception for this is partial tag which requires us to
 // keep track of the indentation once it's rendered
@@ -361,9 +360,11 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
   // the surrounding whitespace.
   // For example:
   // if you have the template string
-  //  "Line 1\n {{#section}} \n Line 2 \n {{/section}} \n Line 3"
-  // The output would be
-  //  "Line 1\n Line 2\n Line 3"
+  //  {{#section}} \n Example \n{{/section}}
+  // The output should would be
+  //  Example
+  // Not:
+  //  \n Example \n
   size_t LastIdx = Tokens.size() - 1;
   for (size_t Idx = 0, End = Tokens.size(); Idx < End; ++Idx) {
     Token &CurrentToken = Tokens[Idx];
@@ -384,13 +385,11 @@ SmallVector<Token, 0> tokenize(StringRef Template) {
     bool NoTextBehind = noTextBehind(Idx, Tokens);
     bool NoTextAhead = noTextAhead(Idx, Tokens);
 
-    if ((NoTextBehind && NoTextAhead) || (NoTextAhead && Idx == 0)) {
+    if ((NoTextBehind && NoTextAhead) || (NoTextAhead && Idx == 0))
       stripTokenAhead(Tokens, Idx);
-    }
 
-    if (((NoTextBehind && NoTextAhead) || (NoTextBehind && Idx == LastIdx))) {
+    if (((NoTextBehind && NoTextAhead) || (NoTextBehind && Idx == LastIdx)))
       stripTokenBefore(Tokens, Idx, CurrentToken, CurrentType);
-    }
   }
   return Tokens;
 }
@@ -650,9 +649,8 @@ const Value *ASTNode::findContext() {
 }
 
 void ASTNode::renderChild(const Value &Contexts, llvm::raw_ostream &OS) {
-  for (ASTNode *Child : Children) {
+  for (ASTNode *Child : Children)
     Child->render(Contexts, OS);
-  }
 }
 
 void ASTNode::renderPartial(const Value &Contexts, llvm::raw_ostream &OS,
@@ -671,18 +669,18 @@ void ASTNode::renderLambdas(const Value &Contexts, llvm::raw_ostream &OS,
   ASTNode *LambdaNode = P.parse();
   LambdaNode->setUpNode(*Allocator, *Partials, *Lambdas, *SectionLambdas,
                         *Escapes);
-  
+
   EscapeStringStream ES(OS, *Escapes);
-  if (T == Variable)
+  if (T == Variable) {
     LambdaNode->render(Contexts, ES);
-  else
-    LambdaNode->render(Contexts, OS);
-  
+    return;
+  }
+  LambdaNode->render(Contexts, OS);
   return;
 }
 
-void ASTNode::renderSectionLambdas(const Value &Contexts,
-                                   llvm::raw_ostream &OS, SectionLambda &L) {
+void ASTNode::renderSectionLambdas(const Value &Contexts, llvm::raw_ostream &OS,
+                                   SectionLambda &L) {
   Value Return = L(RawBody);
   if (isFalsey(Return))
     return;

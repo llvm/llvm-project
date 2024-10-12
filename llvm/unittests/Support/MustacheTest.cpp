@@ -434,7 +434,9 @@ TEST(MustacheSections, DeeplyNestedContexts) {
       "five}}\n{{one}}{{two}}{{three}}{{four}}{{three}}{{two}}{{one}}\n{{/"
       "d}}\n{{one}}{{two}}{{three}}{{two}}{{one}}\n{{/"
       "c}}\n{{one}}{{two}}{{one}}\n{{/b}}\n{{one}}\n{{/a}}\n");
-  auto Out = T.render(D);
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
   EXPECT_EQ("1\n121\n12321\n1234321\n123454321\n12345654321\n123454321\n1234321"
             "\n12321\n121\n1\n",
             Out);
@@ -590,7 +592,9 @@ TEST(MustacheSections, InternalWhitespace) {
   Value D = Object{{"boolean", true}};
   auto T = Template(
       " | {{#boolean}} {{! Important Whitespace }}\n {{/boolean}} | \n");
-  auto Out = T.render(D);
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
   EXPECT_EQ(" |  \n  | \n", Out);
 }
 
@@ -1159,8 +1163,6 @@ TEST(MustacheComments, SurroundingWhitespace) {
   // Comment removal should preserve surrounding whitespace.
   Value D = {};
   auto T = Template("12345 {{! Comment Block! }} 67890");
-  std::string Out;
-  raw_string_ostream OS(Out);
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
