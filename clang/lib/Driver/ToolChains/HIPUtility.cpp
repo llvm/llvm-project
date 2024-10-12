@@ -346,14 +346,14 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   // Create Temp Object File Generator,
   // Offload Bundled file and Bundled Object file.
   // Keep them if save-temps is enabled.
-  const char *McinFile;
+  const char *ObjinFile;
   const char *BundleFile;
   if (C.getDriver().isSaveTempsEnabled()) {
-    McinFile = C.getArgs().MakeArgString(Name + ".mcin");
+    ObjinFile = C.getArgs().MakeArgString(Name + ".mcin");
     BundleFile = C.getArgs().MakeArgString(Name + ".hipfb");
   } else {
     auto TmpNameMcin = C.getDriver().GetTemporaryPath(Name, "mcin");
-    McinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
+    ObjinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
     auto TmpNameFb = C.getDriver().GetTemporaryPath(Name, "hipfb");
     BundleFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameFb));
   }
@@ -454,7 +454,7 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   // Open script file and write the contents.
   std::error_code EC;
-  llvm::raw_fd_ostream Objf(McinFile, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream Objf(ObjinFile, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
     C.getDriver().Diag(clang::diag::err_unable_to_make_temp) << EC.message();
@@ -463,10 +463,11 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   Objf << ObjBuffer;
 
-  ArgStringList McArgs{"-triple", Args.MakeArgString(HostTriple.normalize()),
+  ArgStringList McArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
                        "-o",      Output.getFilename(),
-                       McinFile,  "--filetype=obj"};
-  const char *Mc = Args.MakeArgString(TC.GetProgramPath("llvm-mc"));
-  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(), Mc,
-                                         McArgs, Inputs, Output));
+                       "-x",      "assembler",
+                       ObjinFile, "-c"};
+  const char *Clang = Args.MakeArgString(C.getDriver().ClangExecutable);
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         Clang, McArgs, Inputs, Output));
 }
