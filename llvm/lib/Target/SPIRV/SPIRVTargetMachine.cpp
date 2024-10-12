@@ -148,8 +148,8 @@ SPIRVTargetMachine::getPredicatedAddrSpace(const Value *V) const {
       match(
           const_cast<Value *>(V),
           m_c_And(m_Not(m_Intrinsic<Intrinsic::amdgcn_is_shared>(m_Value(Ptr))),
-                m_Not(m_Intrinsic<Intrinsic::amdgcn_is_private>(
-                    m_Deferred(Ptr))))))
+                  m_Not(m_Intrinsic<Intrinsic::amdgcn_is_private>(
+                      m_Deferred(Ptr))))))
     return std::pair(Ptr, AddressSpace::CrossWorkgroup);
 
   return std::pair(nullptr, UINT32_MAX);
