@@ -1436,7 +1436,7 @@ void combineEhSections(Ctx &);
 bool hasMemtag(Ctx &);
 bool canHaveMemtagGlobals(Ctx &);
 
-template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part);
+template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf, Partition &part);
 template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);
 
 Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
