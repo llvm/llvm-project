@@ -512,6 +512,7 @@ Bug Fixes to C++ Support
   and undeclared templates. (#GH107047, #GH49093)
 - Clang no longer crashes when a lambda contains an invalid block declaration that contains an unexpanded
   parameter pack. (#GH109148)
+- Fixed assertion failure in range calculations for conditional throw expressions (#GH111854)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
