@@ -17,6 +17,7 @@
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/enable_if.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,13 +27,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _InputIter
-prev(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n = 1) {
+prev(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n) {
   // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
   // Note that this check duplicates the similar check in `std::advance`.
   _LIBCPP_ASSERT_PEDANTIC(__n <= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
                           "Attempt to prev(it, n) with a positive n on a non-bidirectional iterator");
   std::advance(__x, -__n);
   return __x;
+}
+
+template <class _BidirectionalIterator,
+          __enable_if_t<__has_bidirectional_iterator_category<_BidirectionalIterator>::value, int> = 0>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _BidirectionalIterator
+prev(_BidirectionalIterator __it) {
+  return std::prev(std::move(__it), 1);
 }
 
 #if _LIBCPP_STD_VER >= 20
