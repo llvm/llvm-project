@@ -188,6 +188,11 @@ public:
   /// be printed.
   virtual LogicalResult printAlias(Type type);
 
+  /// Check if the given type has an alias that will be printed in the future.
+  /// Returns false if the type has an alias that's currently being printed or
+  /// has already been printed. This can aid printing mutually recursive types.
+  virtual bool hasFutureAlias(Type type) const;
+
   /// Print the given string as a keyword, or a quoted and escaped string if it
   /// has any special or non-printable characters in it.
   virtual void printKeywordOrString(StringRef keyword);

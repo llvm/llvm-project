@@ -430,6 +430,11 @@ public:
   /// be printed.
   LogicalResult printAlias(Type type);
 
+  /// Check if the given type has an alias that will be printed in the future.
+  /// Returns false if the type has an alias that's currently being printed or
+  /// has already been printed. This can aid printing mutually recursive types.
+  bool hasFutureAlias(Type type) const;
+
   /// Print the given location to the stream. If `allowAlias` is true, this
   /// allows for the internal location to use an attribute alias.
   void printLocation(LocationAttr loc, bool allowAlias = false);
@@ -547,8 +552,13 @@ private:
   bool isDeferrable : 1;
 
 public:
+  /// Used to distinguish aliases that are currently being or have previously
+  /// been printed from those that will be printed in the future, which can aid
+  /// printing mutually recursive types.
+  bool hasStartedPrinting = false;
+
   /// Used to avoid printing incomplete aliases for recursive types.
-  bool isPrinted = false;
+  bool hasFinishedPrinting = false;
 };
 
 /// This class represents a utility that initializes the set of attribute and
@@ -774,6 +784,7 @@ private:
     initializer.visit(type);
     return success();
   }
+  bool hasFutureAlias(Type) const override { return false; }
 
   /// Consider the given location to be printed for an alias.
   void printOptionalLocationSpecifier(Location loc) override {
@@ -948,6 +959,7 @@ private:
     printType(type);
     return success();
   }
+  bool hasFutureAlias(Type) const override { return false; }
 
   /// Record the alias result of a child element.
   void recordAliasResult(std::pair<size_t, size_t> aliasDepthAndIndex) {
@@ -1182,6 +1194,11 @@ public:
   /// Returns success if an alias was printed, failure otherwise.
   LogicalResult getAlias(Type ty, raw_ostream &os) const;
 
+  /// Check if the given type has an alias that will be printed in the future.
+  /// Returns false if the type has an alias that's currently being printed or
+  /// has already been printed. This can aid printing mutually recursive types.
+  bool hasFutureAlias(Type ty) const;
+
   /// Print all of the referenced aliases that can not be resolved in a deferred
   /// manner.
   void printNonDeferredAliases(AsmPrinter::Impl &p, NewLineCounter &newLine) {
@@ -1226,11 +1243,18 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
   const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
-  if (!it->second.isPrinted)
+  if (!it->second.hasFinishedPrinting)
     return failure();
 
   it->second.print(os);
   return success();
+}
+
+bool AliasState::hasFutureAlias(Type ty) const {
+  const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
+  if (it == attrTypeToAlias.end())
+    return false;
+  return !it->second.hasStartedPrinting;
 }
 
 void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
@@ -1245,8 +1269,9 @@ void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
 
     if (alias.isTypeAlias()) {
       Type type = Type::getFromOpaquePointer(opaqueSymbol);
+      alias.hasStartedPrinting = true;
       p.printTypeImpl(type);
-      alias.isPrinted = true;
+      alias.hasFinishedPrinting = true;
     } else {
       // TODO: Support nested aliases in mutable attributes.
       Attribute attr = Attribute::getFromOpaquePointer(opaqueSymbol);
@@ -2234,6 +2259,10 @@ LogicalResult AsmPrinter::Impl::printAlias(Type type) {
   return state.getAliasState().getAlias(type, os);
 }
 
+bool AsmPrinter::Impl::hasFutureAlias(Type type) const {
+  return state.getAliasState().hasFutureAlias(type);
+}
+
 void AsmPrinter::Impl::printAttribute(Attribute attr,
                                       AttrTypeElision typeElision) {
   if (!attr) {
@@ -2830,6 +2859,11 @@ LogicalResult AsmPrinter::printAlias(Attribute attr) {
 LogicalResult AsmPrinter::printAlias(Type type) {
   assert(impl && "expected AsmPrinter::printAlias to be overriden");
   return impl->printAlias(type);
+}
+
+bool AsmPrinter::hasFutureAlias(Type type) const {
+  assert(impl && "expected AsmPrinter::hasFutureAlias to be overridden");
+  return impl->hasFutureAlias(type);
 }
 
 void AsmPrinter::printAttributeWithoutType(Attribute attr) {

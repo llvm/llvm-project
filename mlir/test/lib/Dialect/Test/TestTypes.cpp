@@ -505,6 +505,10 @@ Type TestRecursiveAliasType::parse(AsmParser &parser) {
     return rec;
   }
 
+  // Allow incomplete definitions that can be completed later.
+  if (succeeded(parser.parseGreater()))
+    return rec;
+
   // Otherwise, parse the body and update the type.
   if (failed(parser.parseComma()))
     return Type();
@@ -525,7 +529,7 @@ void TestRecursiveAliasType::print(AsmPrinter &printer) const {
       printer.tryStartCyclicPrint(*this);
 
   printer << "<" << getName();
-  if (succeeded(cyclicPrint)) {
+  if (succeeded(cyclicPrint) && !printer.hasFutureAlias(*this)) {
     printer << ", ";
     printer << getBody();
   }
