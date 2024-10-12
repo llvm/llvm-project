@@ -122,36 +122,34 @@ public:
 
   bool match(T actualValue) {
     actual = actualValue;
-    if (sizeof(T) == 2 * sizeof(float))
+    if (cpp::is_complex_type_same<T, _Complex float>())
       return matchComplex<float>();
-    else if (sizeof(T) == 2 * sizeof(double))
+    else if (cpp::is_complex_type_same<T, _Complex double>())
       return matchComplex<double>();
-    else if (sizeof(T) == 2 * sizeof(long double))
+    else if (cpp::is_complex_type_same<T, _Complex long double>())
       return matchComplex<long double>();
 #ifdef LIBC_TYPES_HAS_FLOAT16
-    else if (sizeof(T) == 2 * sizeof(float16))
+    else if (cpp::is_complex_type_same<T, _Complex _Float16>())
       return matchComplex<float16>();
 #endif
 #ifdef LIBC_TYPES_HAS_FLOAT128
-    else if (sizeof(T) == 2 * sizeof(float128))
-      return matchComplex<float128>();
+    return matchComplex<float128>();
 #endif
   }
 
   void explainError() override {
-    if (sizeof(T) == 2 * sizeof(float))
-      explainErrorComplex<float>();
-    else if (sizeof(T) == 2 * sizeof(double))
-      explainErrorComplex<double>();
-    else if (sizeof(T) == 2 * sizeof(long double))
-      explainErrorComplex<long double>();
+    if (cpp::is_complex_type_same<T, _Complex float>())
+      return explainErrorComplex<float>();
+    else if (cpp::is_complex_type_same<T, _Complex double>())
+      return explainErrorComplex<double>();
+    else if (cpp::is_complex_type_same<T, _Complex long double>())
+      return explainErrorComplex<long double>();
 #ifdef LIBC_TYPES_HAS_FLOAT16
-    else if (sizeof(T) == 2 * sizeof(float16))
-      explainErrorComplex<float16>();
+    else if (cpp::is_complex_type_same<T, _Complex _Float16>())
+      return explainErrorComplex<float16>();
 #endif
 #ifdef LIBC_TYPES_HAS_FLOAT128
-    else if (sizeof(T) == 2 * sizeof(float128))
-      explainErrorComplex<float128>();
+    return explainErrorComplex<float128>();
 #endif
   }
 };

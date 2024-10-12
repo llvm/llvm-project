@@ -41,6 +41,8 @@ public:
 };
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_complex_v = is_complex<T>::value;
+template <typename T1, typename T2>
+LIBC_INLINE_VAR constexpr bool is_complex_type_same() {return is_same_v<remove_cv_t<T1>, T2>;}
 
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
