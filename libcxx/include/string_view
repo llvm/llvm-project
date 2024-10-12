@@ -913,7 +913,7 @@ struct hash<basic_string_view<char16_t, char_traits<char16_t> > > : __string_vie
 template <>
 struct hash<basic_string_view<char32_t, char_traits<char32_t> > > : __string_view_hash<char32_t> {};
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct hash<basic_string_view<wchar_t, char_traits<wchar_t> > > : __string_view_hash<wchar_t> {};
 #endif
@@ -925,7 +925,7 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char> operator""sv(cons
   return basic_string_view<char>(__str, __len);
 }
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<wchar_t>
 operator""sv(const wchar_t* __str, size_t __len) noexcept {
   return basic_string_view<wchar_t>(__str, __len);

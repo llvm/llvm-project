@@ -82,7 +82,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ValueType>
 inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_relaxed_load(_ValueType const* __value) {
-#if !defined(_LIBCPP_HAS_NO_THREADS) && defined(__ATOMIC_RELAXED) &&                                                   \
+#if _LIBCPP_HAS_THREADS && defined(__ATOMIC_RELAXED) &&                                                                \
     (__has_builtin(__atomic_load_n) || defined(_LIBCPP_COMPILER_GCC))
   return __atomic_load_n(__value, __ATOMIC_RELAXED);
 #else
@@ -92,7 +92,7 @@ inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_relaxed_load(_ValueType const* 
 
 template <class _ValueType>
 inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* __value) {
-#if !defined(_LIBCPP_HAS_NO_THREADS) && defined(__ATOMIC_ACQUIRE) &&                                                   \
+#if _LIBCPP_HAS_THREADS && defined(__ATOMIC_ACQUIRE) &&                                                                \
     (__has_builtin(__atomic_load_n) || defined(_LIBCPP_COMPILER_GCC))
   return __atomic_load_n(__value, __ATOMIC_ACQUIRE);
 #else
@@ -102,7 +102,7 @@ inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_acquire_load(_ValueType const* 
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_increment(_Tp& __t) _NOEXCEPT {
-#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && _LIBCPP_HAS_THREADS
   return __atomic_add_fetch(&__t, 1, __ATOMIC_RELAXED);
 #else
   return __t += 1;
@@ -111,7 +111,7 @@ inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_increment(_Tp& __t) _N
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_decrement(_Tp& __t) _NOEXCEPT {
-#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT && _LIBCPP_HAS_THREADS
   return __atomic_add_fetch(&__t, -1, __ATOMIC_ACQ_REL);
 #else
   return __t -= 1;
@@ -1583,7 +1583,7 @@ template <class _CharT, class _Traits, class _Yp>
 inline _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, shared_ptr<_Yp> const& __p);
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_THREADS
 
 class _LIBCPP_EXPORTED_FROM_ABI __sp_mut {
   void* __lx_;
@@ -1685,7 +1685,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
   return std::atomic_compare_exchange_weak(__p, __v, __w);
 }
 
-#endif // !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

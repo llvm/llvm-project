@@ -109,7 +109,7 @@ protected:
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__assert>
 #  include <__fwd/streambuf.h>
@@ -433,7 +433,7 @@ typename basic_streambuf<_CharT, _Traits>::int_type basic_streambuf<_CharT, _Tra
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_streambuf<char>;
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_streambuf<wchar_t>;
 #  endif
 
@@ -441,7 +441,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <cstdint>
