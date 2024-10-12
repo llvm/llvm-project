@@ -72,15 +72,15 @@ public:
     InvertSection,
   };
 
-  ASTNode() : T(Type::Root), ParentContext(nullptr){};
+  ASTNode() : T(Type::Root), ParentContext(nullptr) {};
 
   ASTNode(StringRef Body, ASTNode *Parent)
-      : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr){};
+      : T(Type::Text), Body(Body), Parent(Parent), ParentContext(nullptr) {};
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable
   ASTNode(Type T, Accessor Accessor, ASTNode *Parent)
       : T(T), Parent(Parent), Children({}), Accessor(Accessor),
-        ParentContext(nullptr){};
+        ParentContext(nullptr) {};
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
