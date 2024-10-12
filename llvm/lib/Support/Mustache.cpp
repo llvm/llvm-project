@@ -655,7 +655,7 @@ void ASTNode::renderChild(const Value &Contexts, llvm::raw_ostream &OS) {
 
 void ASTNode::renderPartial(const Value &Contexts, llvm::raw_ostream &OS,
                             ASTNode *Partial) {
-  AddIndentationStringStream IS(OS, Partial->Indentation);
+  AddIndentationStringStream IS(OS, Indentation);
   Partial->render(Contexts, IS);
 }
 
