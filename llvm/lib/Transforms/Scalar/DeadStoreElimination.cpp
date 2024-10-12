@@ -2279,11 +2279,11 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
 
     Value *CurArg = CB->getArgOperand(Idx);
     // We don't perform incorrect DSE on unwind edges in the current function,
-    // and use the "initialize" attribute to kill dead stores if :
+    // and use the "initializes" attribute to kill dead stores if:
     // - The call does not throw exceptions, "CB->doesNotThrow()".
-    // - Or the argument has "dead_on_unwind" attribute.
-    // - Or the argument is invisble to caller on unwind, and CB isa<CallInst>
-    // which means no unwind edges.
+    // - Or the callee parameter has "dead_on_unwind" attribute.
+    // - Or the argument is invisible to caller on unwind, and CB isa<CallInst>
+    // which means no unwind edges from this call in the current function.
     bool IsDeadOnUnwind =
         CB->paramHasAttr(Idx, Attribute::DeadOnUnwind) ||
         (isInvisibleToCallerOnUnwind(CurArg) && isa<CallInst>(CB));
@@ -2389,6 +2389,10 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
         cast<MemoryDef>(DeadAccess),
         getLocForInst(cast<MemoryDef>(DeadAccess)->getMemoryInst(),
                       /*ConsiderInitializesAttr=*/false));
+    // Note that we don't consider the initializes attribute for DeadAccess.
+    // The dead access would be just a regular write access, like Store
+    // instruction, and its MemoryDefWrapper would only contain one
+    // MemoryLocationWrapper.
     assert(DeadDefWrapper.DefinedLocations.size() == 1);
     MemoryLocationWrapper &DeadLocWrapper =
         DeadDefWrapper.DefinedLocations.front();

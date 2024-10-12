@@ -57,6 +57,35 @@ define i16 @p1_write_then_read_caller_with_clobber() {
   ret i16 %l
 }
 
+declare void @p1_write_then_read_raw(ptr nocapture noundef initializes((0, 2)))
+define i16 @p1_initializes_invoke() personality ptr undef {
+; CHECK-LABEL: @p1_initializes_invoke(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    store i16 0, ptr [[PTR]], align 2
+; CHECK-NEXT:    invoke void @p1_write_then_read_raw(ptr [[PTR]])
+; CHECK-NEXT:            to label [[BB1:%.*]] unwind label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    ret i16 0
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+entry:
+  %ptr = alloca i16
+  store i16 0, ptr %ptr
+  invoke void @p1_write_then_read_raw(ptr %ptr) to label %bb1 unwind label %bb2
+bb1:
+  ret i16 0
+bb2:
+  %tmp = landingpad { ptr, i32 }
+  cleanup
+  %l = load i16, ptr %ptr
+  ret i16 %l
+}
+
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p2_same_range_noalias_caller() {
 ; CHECK-LABEL: @p2_same_range_noalias_caller(
@@ -142,8 +171,8 @@ define i16 @p2_no_init_alias_caller() {
 ; the 'dead_on_unwind' attribute, it's invisble to caller on unwind.
 ; DSE still uses the 'initializes' attribute and kill the dead store.
 ; Function Attrs: mustprogress nounwind uwtable
-define i16 @p2_no_dead_on_unwind_but_invisble_to_caller_alias_caller() {
-; CHECK-LABEL: @p2_no_dead_on_unwind_but_invisble_to_caller_alias_caller(
+define i16 @p2_no_dead_on_unwind_but_invisible_to_caller_alias_caller() {
+; CHECK-LABEL: @p2_no_dead_on_unwind_but_invisible_to_caller_alias_caller(
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    call void @p2_no_dead_on_unwind(ptr [[PTR]], ptr [[PTR]])
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
