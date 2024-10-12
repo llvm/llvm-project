@@ -462,13 +462,10 @@ Decl *Parser::ParseExportDeclaration() {
 
   if (Tok.is(tok::code_completion)) {
     cutOffParsing();
-    SemaCodeCompletion::ParserCompletionContext PCC;
-    if (PP.isIncrementalProcessingEnabled()) {
-      PCC = SemaCodeCompletion::PCC_TopLevelOrExpression;
-    } else {
-      PCC = SemaCodeCompletion::PCC_Namespace;
-    };
-    Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), PCC);
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), PP.isIncrementalProcessingEnabled()
+                           ? SemaCodeCompletion::PCC_TopLevelOrExpression
+                           : SemaCodeCompletion::PCC_Namespace);
     return nullptr;
   }
 
