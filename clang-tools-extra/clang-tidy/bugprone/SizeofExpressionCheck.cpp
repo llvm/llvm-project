@@ -71,8 +71,8 @@ SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
       WarnOnSizeOfPointerToAggregate(
           Options.get("WarnOnSizeOfPointerToAggregate", true)),
       WarnOnSizeOfPointer(Options.get("WarnOnSizeOfPointer", false)),
-      WarnOnArithmeticWithDivisionBySizeOf(
-          Options.get("WarnOnArithmeticWithDivisionBySizeOf", true)) {}
+      WarnOnOffsetDividedBySizeOf(
+          Options.get("WarnOnOffsetDividedBySizeOf", true)) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);
@@ -84,8 +84,8 @@ void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfPointerToAggregate",
                 WarnOnSizeOfPointerToAggregate);
   Options.store(Opts, "WarnOnSizeOfPointer", WarnOnSizeOfPointer);
-  Options.store(Opts, "WarnOnArithmeticWithDivisionBySizeOf",
-                WarnOnArithmeticWithDivisionBySizeOf);
+  Options.store(Opts, "WarnOnOffsetDividedBySizeOf",
+                WarnOnOffsetDividedBySizeOf);
 }
 
 void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
@@ -311,9 +311,8 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
                  offsetOfExpr()))
           .bind("sizeof-in-ptr-arithmetic-scale-expr");
   const auto PtrArithmeticIntegerScaleExpr = binaryOperator(
-      WarnOnArithmeticWithDivisionBySizeOf
-          ? binaryOperator(hasAnyOperatorName("*", "/"))
-          : binaryOperator(hasOperatorName("*")),
+      WarnOnOffsetDividedBySizeOf ? binaryOperator(hasAnyOperatorName("*", "/"))
+                                  : binaryOperator(hasOperatorName("*")),
       // sizeof(...) * sizeof(...) and sizeof(...) / sizeof(...) is handled
       // by this check on another path.
       hasOperands(expr(hasType(isInteger()), unless(SizeofLikeScaleExpr)),

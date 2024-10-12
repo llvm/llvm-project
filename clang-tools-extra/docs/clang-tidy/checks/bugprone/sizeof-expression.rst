@@ -221,7 +221,7 @@ and the result is typically unintended, often out of bounds.
 ``Ptr + sizeof(T)`` will offset the pointer by ``sizeof(T)`` elements,
 effectively exponentiating the scaling factor to the power of 2.
 
-Similarly, multiplying or dividing a numeric value with the ``sizeof`` an
+Similarly, multiplying or dividing a numeric value with the ``sizeof`` of an
 element or the whole buffer is suspicious, because the dimensional connection
 between the numeric value and the actual ``sizeof`` result can not always be
 deduced.
@@ -229,7 +229,7 @@ While scaling an integer up (multiplying) with ``sizeof`` is likely **always**
 an issue, a scaling down (division) is not always inherently dangerous, in case
 the developer is aware that the division happens between an appropriate number
 of _bytes_ and a ``sizeof`` value.
-Turning :option:`WarnOnArithmeticWithDivisionBySizeOf` off will restrict the
+Turning :option:`WarnOnOffsetDividedBySizeOf` off will restrict the
 warnings to the multiplication case.
 
 This case also checks suspicious ``alignof`` and ``offsetof`` usages in
@@ -311,7 +311,7 @@ Options
    idiomatic expressions that are probably intentional and correct).
    This detects occurrences of CWE 467. Default is `false`.
 
-.. option:: WarnOnArithmeticWithDivisionBySizeOf
+.. option:: WarnOnOffsetDividedBySizeOf
 
    When `true`, the check will warn on pointer arithmetic where the
    element count is obtained from a division with ``sizeof(...)``,
