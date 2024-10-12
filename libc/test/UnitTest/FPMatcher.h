@@ -128,13 +128,6 @@ public:
       return matchComplex<double>();
     else if (cpp::is_complex_type_same<T, _Complex long double>())
       return matchComplex<long double>();
-#ifdef LIBC_TYPES_HAS_FLOAT16
-    else if (cpp::is_complex_type_same<T, _Complex _Float16>())
-      return matchComplex<float16>();
-#endif
-#ifdef LIBC_TYPES_HAS_FLOAT128
-    return matchComplex<float128>();
-#endif
   }
 
   void explainError() override {
@@ -144,13 +137,6 @@ public:
       return explainErrorComplex<double>();
     else if (cpp::is_complex_type_same<T, _Complex long double>())
       return explainErrorComplex<long double>();
-#ifdef LIBC_TYPES_HAS_FLOAT16
-    else if (cpp::is_complex_type_same<T, _Complex _Float16>())
-      return explainErrorComplex<float16>();
-#endif
-#ifdef LIBC_TYPES_HAS_FLOAT128
-    return explainErrorComplex<float128>();
-#endif
   }
 };
 
