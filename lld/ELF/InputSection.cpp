@@ -119,6 +119,7 @@ static void decompressAux(const InputSectionBase &sec, uint8_t *out,
 }
 
 void InputSectionBase::decompress() const {
+  Ctx &ctx = getCtx();
   uint8_t *uncompressedBuf;
   {
     static std::mutex mu;
