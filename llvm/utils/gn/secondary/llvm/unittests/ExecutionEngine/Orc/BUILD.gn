@@ -33,6 +33,7 @@ unittest("OrcJITTests") {
     "OrcCAPITest.cpp",
     "OrcTestCommon.cpp",
     "RTDyldObjectLinkingLayerTest.cpp",
+    "ReOptimizeLayerTest.cpp",
     "ResourceTrackerTest.cpp",
     "SharedMemoryMapperTest.cpp",
     "SimpleExecutorMemoryManagerTest.cpp",
