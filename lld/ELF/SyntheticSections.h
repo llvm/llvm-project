@@ -1429,18 +1429,19 @@ private:
 
 template <class ELFT> void createSyntheticSections(Ctx &);
 InputSection *createInterpSection(Ctx &);
-MergeInputSection *createCommentSection();
+MergeInputSection *createCommentSection(Ctx &);
 template <class ELFT> void splitSections(Ctx &);
 void combineEhSections(Ctx &);
 
 bool hasMemtag(Ctx &);
 bool canHaveMemtagGlobals(Ctx &);
 
-template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part);
+template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf, Partition &part);
 template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);
 
-Defined *addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
-                           uint64_t size, InputSectionBase &section);
+Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
+                           uint64_t value, uint64_t size,
+                           InputSectionBase &section);
 
 void addVerneed(Symbol *ss);
 
