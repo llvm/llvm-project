@@ -140,8 +140,6 @@ private:
                          uint64_t FuncInputAddress,
                          uint64_t FuncOutputAddress) const;
 
-  void constructMaps(const BinaryContext &BC);
-
   /// Write the serialized address translation table for a function.
   template <bool Cold>
   void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,

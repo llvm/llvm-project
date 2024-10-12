@@ -10,7 +10,6 @@ parsing and running the unit-testing harnesses, before calling the reequested
 subtool.
 """
 
-import imp
 import os
 import sys
 
@@ -18,6 +17,7 @@ from dex.utils import PrettyOutput, Timer
 from dex.utils import ExtArgParse as argparse
 from dex.utils import get_root_directory
 from dex.utils.Exceptions import Error, ToolArgumentError
+from dex.utils.Imports import load_module
 from dex.utils.Logging import Logger
 from dex.utils.UnitTests import unit_tests_ok
 from dex.utils.Version import version
@@ -135,9 +135,7 @@ def _import_tool_module(tool_name):
     tool_name = tool_name.replace("-", "_")
 
     tools_directory = get_tools_directory()
-    module_info = imp.find_module(tool_name, [tools_directory])
-
-    return imp.load_module(tool_name, *module_info)
+    return load_module(tool_name, tools_directory)
 
 
 def tool_main(context, tool, args):

@@ -32,7 +32,7 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
 // Target Identification has been enabled.  As linker generated branches are
 // via x16 the BTI landing pads are defined as: BTI C, BTI J, BTI JC, PACIASP,
 // PACIBSP.
-bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
+bool elf::isAArch64BTILandingPad(Ctx &ctx, Symbol &s, int64_t a) {
   // PLT entries accessed indirectly have a BTI c.
   if (s.isInPlt(ctx))
     return true;
@@ -1150,7 +1150,7 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
 void elf::createTaggedSymbols(Ctx &ctx) {
-  assert(hasMemtag());
+  assert(hasMemtag(ctx));
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.

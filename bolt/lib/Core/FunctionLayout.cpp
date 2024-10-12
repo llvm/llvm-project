@@ -33,9 +33,7 @@ FunctionFragment::const_iterator FunctionFragment::end() const {
   return const_iterator(Layout->block_begin() + StartIndex + Size);
 }
 
-BinaryBasicBlock *FunctionFragment::front() const { return *begin(); }
-
-BinaryBasicBlock *FunctionFragment::back() const { return *std::prev(end()); }
+const BinaryBasicBlock *FunctionFragment::front() const { return *begin(); }
 
 FunctionLayout::FunctionLayout() { addFragment(); }
 

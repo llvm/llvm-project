@@ -123,8 +123,7 @@ public:
   const_iterator begin() const;
   iterator end();
   const_iterator end() const;
-  BinaryBasicBlock *front() const;
-  BinaryBasicBlock *back() const;
+  const BinaryBasicBlock *front() const;
 
   friend class FunctionLayout;
 };

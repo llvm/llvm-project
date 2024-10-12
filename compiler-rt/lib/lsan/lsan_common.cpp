@@ -771,19 +771,20 @@ static bool PrintResults(LeakReport &report) {
   }
   if (common_flags()->print_suppressions)
     GetSuppressionContext()->PrintMatchedSuppressions();
-  if (unsuppressed_count > 0) {
+  if (unsuppressed_count)
     report.PrintSummary();
-    return true;
-  }
-  return false;
+  if ((unsuppressed_count && common_flags()->verbosity >= 2) ||
+      flags()->log_threads)
+    PrintThreads();
+  return unsuppressed_count;
 }
 
-static bool CheckForLeaks() {
+static bool CheckForLeaksOnce() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off()) {
-    VReport(1, "LeakSanitizer is disabled");
+    VReport(1, "LeakSanitizer is disabled\n");
     return false;
   }
-  VReport(1, "LeakSanitizer: checking for leaks");
+  VReport(1, "LeakSanitizer: checking for leaks\n");
   // Inside LockStuffAndStopTheWorld we can't run symbolizer, so we can't match
   // suppressions. However if a stack id was previously suppressed, it should be
   // suppressed in future checks as well.
@@ -828,6 +829,12 @@ static bool CheckForLeaks() {
     VReport(1, "Rerun with %zu suppressed stacks.",
             GetSuppressionContext()->GetSortedSuppressedStacks().size());
   }
+}
+
+static bool CheckForLeaks() {
+  int leaking_tries = 0;
+  for (int i = 0; i < flags()->tries; ++i) leaking_tries += CheckForLeaksOnce();
+  return leaking_tries == flags()->tries;
 }
 
 static bool has_reported_leaks = false;

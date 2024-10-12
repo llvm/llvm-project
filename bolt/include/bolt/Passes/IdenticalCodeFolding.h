@@ -20,7 +20,15 @@ namespace bolt {
 ///
 class IdenticalCodeFolding : public BinaryFunctionPass {
 protected:
-  bool shouldOptimize(const BinaryFunction &BF) const override;
+  bool shouldOptimize(const BinaryFunction &BF) const override {
+    if (BF.hasUnknownControlFlow())
+      return false;
+    if (BF.isFolded())
+      return false;
+    if (BF.hasSDTMarker())
+      return false;
+    return BinaryFunctionPass::shouldOptimize(BF);
+  }
 
 public:
   explicit IdenticalCodeFolding(const cl::opt<bool> &PrintPass)

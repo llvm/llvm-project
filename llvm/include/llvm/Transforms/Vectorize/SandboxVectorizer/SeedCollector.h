@@ -50,11 +50,6 @@ public:
   /// by symbol, symbol-offset, and program order (which depends if scheduling
   /// bottom-up or top-down).
   void insertAt(iterator Pos, Instruction *I) {
-#ifdef EXPENSIVE_CHECKS
-    for (auto Itr : Seeds) {
-      assert(*Itr != I && "Attempt to insert an instruction twice.");
-    }
-#endif
     Seeds.insert(Pos, I);
     NumUnusedBits += Utils::getNumBits(I);
   }
@@ -128,5 +123,44 @@ public:
   }
 #endif // NDEBUG
 };
+
+/// Specialization of SeedBundle for memory access instructions. Keeps
+/// seeds sorted in ascending memory order, which is convenient for slicing
+/// these bundles into vectorizable groups.
+template <typename LoadOrStoreT> class MemSeedBundle : public SeedBundle {
+public:
+  explicit MemSeedBundle(SmallVector<Instruction *> &&SV, ScalarEvolution &SE)
+      : SeedBundle(std::move(SV)) {
+    static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
+                      std::is_same<LoadOrStoreT, StoreInst>::value,
+                  "Expected LoadInst or StoreInst!");
+    assert(all_of(Seeds, [](auto *S) { return isa<LoadOrStoreT>(S); }) &&
+           "Expected Load or Store instructions!");
+    auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
+      return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
+                                   cast<LoadOrStoreT>(I1), SE);
+    };
+    std::sort(Seeds.begin(), Seeds.end(), Cmp);
+  }
+  explicit MemSeedBundle(LoadOrStoreT *MemI) : SeedBundle(MemI) {
+    static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
+                      std::is_same<LoadOrStoreT, StoreInst>::value,
+                  "Expected LoadInst or StoreInst!");
+    assert(isa<LoadOrStoreT>(MemI) && "Expected Load or Store!");
+  }
+  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) {
+    assert(isa<LoadOrStoreT>(I) && "Expected a Store or a Load!");
+    auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
+      return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
+                                   cast<LoadOrStoreT>(I1), SE);
+    };
+    // Find the first element after I in mem. Then insert I before it.
+    insertAt(std::upper_bound(begin(), end(), I, Cmp), I);
+  }
+};
+
+using StoreSeedBundle = MemSeedBundle<sandboxir::StoreInst>;
+using LoadSeedBundle = MemSeedBundle<sandboxir::LoadInst>;
+
 } // namespace llvm::sandboxir
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SEEDCOLLECTOR_H

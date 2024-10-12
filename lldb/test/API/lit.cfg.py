@@ -250,6 +250,9 @@ if is_configured("test_compiler"):
 if is_configured("dsymutil"):
     dotest_cmd += ["--dsymutil", config.dsymutil]
 
+if is_configured("make"):
+    dotest_cmd += ["--make", config.make]
+
 if is_configured("llvm_tools_dir"):
     dotest_cmd += ["--llvm-tools-dir", config.llvm_tools_dir]
 
@@ -264,11 +267,6 @@ if is_configured("lldb_libs_dir"):
 
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
-
-# Facebook T92898286
-if is_configured("llvm_test_bolt"):
-    dotest_cmd += ["-E", '"--post-link-optimize"']
-# End Facebook T92898286
 
 if (
     "lldb-repro-capture" in config.available_features

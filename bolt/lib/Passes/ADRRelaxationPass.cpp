@@ -63,6 +63,7 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
         BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
         if (TargetBF == &BF && !BB.isSplit())
           continue;
+
         // No relaxation needed if ADR references a basic block in the same
         // fragment.
         if (BinaryBasicBlock *TargetBB = BF.getBasicBlockForLabel(Symbol))
