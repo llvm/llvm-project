@@ -16,7 +16,7 @@ float fadd_placeholder_binary(double x, double y) {
 }
 
 int main() {
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, double, myFunc, fadd_placeholder_binary, DOUBLE_ROUNDS, "fadd_perf.log")
+  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, double, LIBC_NAMESPACE::fadd, fadd_placeholder_binary, DOUBLE_ROUNDS, "fadd_perf.log")
     return 0;
 }
     
