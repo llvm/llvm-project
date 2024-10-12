@@ -72,27 +72,18 @@ define amdgpu_ps i8 @s_shl_i8(i8 inreg %value, i8 inreg %amount) {
 ; GFX8-LABEL: s_shl_i8:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_and_b32 s0, s0, 0xff
-; GFX8-NEXT:    s_and_b32 s1, s1, 0xff
-; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX8-NEXT:    s_lshl_b32 s0, s0, s1
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl_i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0xff
-; GFX9-NEXT:    s_and_b32 s1, s1, 0xff
-; GFX9-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX9-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, s1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_shl_i8:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0xff
-; GFX10PLUS-NEXT:    s_and_b32 s1, s1, 0xff
-; GFX10PLUS-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX10PLUS-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, s1
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = shl i8 %value, %amount

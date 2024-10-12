@@ -241,11 +241,12 @@ define <4 x i64> @zext_v4i8_to_v4i64(<4 x i8> %v0) nounwind {
 ;
 ; CHECK-GI-LABEL: zext_v4i8_to_v4i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and.8b v0, v0, v1
-; CHECK-GI-NEXT:    ushll.4s v1, v0, #0
-; CHECK-GI-NEXT:    ushll.2d v0, v1, #0
-; CHECK-GI-NEXT:    ushll2.2d v1, v1, #0
+; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
+; CHECK-GI-NEXT:    movi.2d v1, #0x000000000000ff
+; CHECK-GI-NEXT:    ushll.2d v2, v0, #0
+; CHECK-GI-NEXT:    ushll2.2d v3, v0, #0
+; CHECK-GI-NEXT:    and.16b v0, v2, v1
+; CHECK-GI-NEXT:    and.16b v1, v3, v1
 ; CHECK-GI-NEXT:    ret
   %r = zext <4 x i8> %v0 to <4 x i64>
   ret <4 x i64> %r

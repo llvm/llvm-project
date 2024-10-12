@@ -322,10 +322,8 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[AND]](s32)
-    ; CHECK-NEXT: $x1 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: %2:_(s64) = nneg G_ZEXT [[COPY]](s32)
+    ; CHECK-NEXT: $x1 = COPY %2(s64)
     %0:_(s32) = COPY $w0
     %2:_(s16) = nuw G_TRUNC %0
     %3:_(s64) = G_ZEXT  %2
@@ -340,10 +338,8 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
-    ; CHECK-NEXT: $w1 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = nuw G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: $w1 = COPY [[TRUNC]](s32)
     %0:_(s64) = COPY $x0
     %2:_(s16) = nuw G_TRUNC %0
     %3:_(s32) = G_ZEXT  %2

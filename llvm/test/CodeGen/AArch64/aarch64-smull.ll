@@ -1750,11 +1750,11 @@ define <8 x i16> @umull_smaller_v8i16(<8 x i4> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: umull_smaller_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.8b, #15
-; CHECK-GI-NEXT:    movi v3.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    movi v2.2d, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    movi v3.8h, #15
 ; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:

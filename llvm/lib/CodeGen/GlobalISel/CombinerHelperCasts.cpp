@@ -412,41 +412,41 @@ bool CombinerHelper::matchCombineZextTrunc(const MachineInstr &ZextMI,
     return true;
   }
 
-  if (SrcSize < DstSize) {
-    // zext(Src & mask).
+  //  if (SrcSize < DstSize) {
+  //    // zext(Src & mask).
+  //
+  //    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {SrcTy}}) ||
+  //        !isConstantLegalOrBeforeLegalizer(SrcTy) ||
+  //        !isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
+  //      return false;
+  //
+  //    APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
+  //
+  //    MatchInfo = [=](MachineIRBuilder &B) {
+  //      auto Mask = B.buildConstant(SrcTy, AndValue);
+  //      auto And = B.buildAnd(SrcTy, Src, Mask);
+  //      B.buildZExt(Dst, And);
+  //    };
+  //    return true;
+  //  }
 
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {SrcTy}}) ||
-        !isConstantLegalOrBeforeLegalizer(SrcTy) ||
-        !isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}}))
-      return false;
-
-    APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
-
-    MatchInfo = [=](MachineIRBuilder &B) {
-      auto Mask = B.buildConstant(SrcTy, AndValue);
-      auto And = B.buildAnd(SrcTy, Src, Mask);
-      B.buildZExt(Dst, And);
-    };
-    return true;
-  }
-
-  if (SrcSize > DstSize) {
-    // trunc(Src) & mask.
-
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {DstTy}}) ||
-        !isConstantLegalOrBeforeLegalizer(DstTy) ||
-        !isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
-      return false;
-
-    APInt AndValue(APInt::getLowBitsSet(DstSize, MidSize));
-
-    MatchInfo = [=](MachineIRBuilder &B) {
-      auto Mask = B.buildConstant(DstTy, AndValue);
-      auto Trunc = B.buildTrunc(DstTy, Src);
-      B.buildAnd(Dst, Trunc, Mask);
-    };
-    return true;
-  }
+  //  if (SrcSize > DstSize) {
+  //    // trunc(Src) & mask.
+  //
+  //    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {DstTy}}) ||
+  //        !isConstantLegalOrBeforeLegalizer(DstTy) ||
+  //        !isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
+  //      return false;
+  //
+  //    APInt AndValue(APInt::getLowBitsSet(DstSize, MidSize));
+  //
+  //    MatchInfo = [=](MachineIRBuilder &B) {
+  //      auto Mask = B.buildConstant(DstTy, AndValue);
+  //      auto Trunc = B.buildTrunc(DstTy, Src);
+  //      B.buildAnd(Dst, Trunc, Mask);
+  //    };
+  //    return true;
+  //  }
 
   return false;
 }

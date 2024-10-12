@@ -432,8 +432,9 @@ define void @memset_10(ptr %dst, i32 %value) {
 ;
 ; GISel-WITHOUT-MOPS-O3-LABEL: memset_10:
 ; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; GISel-WITHOUT-MOPS-O3-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; GISel-WITHOUT-MOPS-O3-NEXT:    and w9, w1, #0xff
+; GISel-WITHOUT-MOPS-O3-NEXT:    and x9, x1, #0xff
 ; GISel-WITHOUT-MOPS-O3-NEXT:    mul x8, x9, x8
 ; GISel-WITHOUT-MOPS-O3-NEXT:    str x8, [x0]
 ; GISel-WITHOUT-MOPS-O3-NEXT:    strh w8, [x0, #8]
@@ -453,8 +454,9 @@ define void @memset_10(ptr %dst, i32 %value) {
 ;
 ; GISel-MOPS-O3-LABEL: memset_10:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; GISel-MOPS-O3-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
-; GISel-MOPS-O3-NEXT:    and w9, w1, #0xff
+; GISel-MOPS-O3-NEXT:    and x9, x1, #0xff
 ; GISel-MOPS-O3-NEXT:    mul x8, x9, x8
 ; GISel-MOPS-O3-NEXT:    str x8, [x0]
 ; GISel-MOPS-O3-NEXT:    strh w8, [x0, #8]
