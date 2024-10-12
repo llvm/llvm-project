@@ -87,9 +87,9 @@ static ArrayRef<uint8_t> getVersion() {
 // With this feature, you can identify LLD-generated binaries easily
 // by "readelf --string-dump .comment <file>".
 // The returned object is a mergeable string section.
-MergeInputSection *elf::createCommentSection() {
-  auto *sec = make<MergeInputSection>(SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1,
-                                      getVersion(), ".comment");
+MergeInputSection *elf::createCommentSection(Ctx &ctx) {
+  auto *sec = make<MergeInputSection>(
+      ctx, SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1, getVersion(), ".comment");
   sec->splitIntoPieces();
   return sec;
 }
