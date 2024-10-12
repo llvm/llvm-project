@@ -20,7 +20,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 #include <iostream>
-#include <string>
 
 using namespace llvm;
 

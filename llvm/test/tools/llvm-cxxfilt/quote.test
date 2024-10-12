@@ -1,12 +1,18 @@
-// Show that llvm-cxxfilt --quote can emit quoted demangled symbols but not
-// without double-quoting in the case they are already quoted
+// Show that llvm-cxxfilt --quote can emit quoted demangled symbols (even at the
+// end of a line) but not without double-quoting in the case they are already
+// quoted.
+RUN: echo _Z3barv '"_Z3barv"' > %t
+RUN: echo '"_Z3barv"' _Z3barv >> %t
+// This is not mangled, thus it should not be quoted
+RUN: echo 'log()' >> %t
+RUN: llvm-cxxfilt --quote < %t | FileCheck --match-full-lines --check-prefix=CHECK-FILE %s
+CHECK-FILE: "bar()" "bar()"
+CHECK-FILE-NEXT: "bar()" "bar()"
+CHECK-FILE-NEXT: log()
 
-RUN: llvm-cxxfilt --quote < %s | FileCheck %s
-      cir.call @_ZN3aie4tileILi1ELi4EE7programIZ4mainE3$_0EEvOT_(%2, %7) : (!cir.ptr<!ty_aie3A3Atile3C12C_43E>, !cir.ptr<!ty_anon2E0_>) -> () loc(#loc74)
-  cir.func lambda internal private  @_ZZ4mainENK3$_1clEv(%arg0: !cir.ptr<!ty_anon2E1_> loc("example.cpp":31:26)) extra(#fn_attr) {
-module @"example.cpp" attributes {cir.global_annotations = #cir<global_annotations [["_ZN3aie6deviceILNS_3$_0E42EE4tileILi1ELi4EEENS_4tileIXT_EXT0_EEEv", #cir.annotation<name = "aie.device.tile", args = [1 : i32, 4 : i32, 42 : i8, 42 : i8]>]]}
-
-CHECK: cir.call @"void aie::tile<1, 4>::program<main::$_0>(main::$_0&&)"(%2, %7) 
-CHECK-NEXT: cir.func lambda internal private  @"main::$_1::operator()() const"(%arg0: !cir.ptr<!ty_anon2E1_>
-// \todo Is there a simpler way to escape these [[ leading to "error: invalid variable name" otherwise?
-CHECK-NEXT: module @"example.cpp" attributes {cir.global_annotations = #cir<global_annotations {{[[]}}["aie::tile<1, 4> aie::device<(aie::$_0)42>::tile<1, 4>()", #cir.annotation<name = "aie.device.tile", args = [1 : i32, 4 : i32, 42 : i8, 42 : i8]>]]}
+// Check it works with cli symbols too. Since a quoted mangled name is not a
+// mangled name, it should be unchanged
+RUN: llvm-cxxfilt --quote _Z3firv '"_Z3barv"' 'saw()' | FileCheck --match-full-lines --check-prefix=CHECK-CLI %s
+CHECK-CLI: "fir()"
+CHECK-CLI: "_Z3barv"
+CHECK-CLI: saw()
