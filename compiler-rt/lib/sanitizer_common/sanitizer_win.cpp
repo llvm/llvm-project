@@ -1033,7 +1033,45 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 }
 
 void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
+  CONTEXT *ctx = (CONTEXT *)context;
+#  if defined(__M_X64)
+  Report("Register values:\n");
+  Printf("rax = %llx  ", ctx->Rax);
+  Printf("rbx = %llx  ", ctx->Rbx);
+  Printf("rcx = %llx  ", ctx->Rcx);
+  Printf("rdx = %llx  ", ctx->Rdx);
+  Printf("\n");
+  Printf("rdi = %llx  ", ctx->Rdi);
+  Printf("rsi = %llx  ", ctx->Rsi);
+  Printf("rbp = %llx  ", ctx->Rbp);
+  Printf("rsp = %llx  ", ctx->Rsp);
+  Printf("\n");
+  Printf("r8  = %llx  ", ctx->R8);
+  Printf("r9  = %llx  ", ctx->R9);
+  Printf("r10 = %llx  ", ctx->R10);
+  Printf("r11 = %llx  ", ctx->R11);
+  Printf("\n");
+  Printf("r12 = %llx  ", ctx->R12);
+  Printf("r13 = %llx  ", ctx->R13);
+  Printf("r14 = %llx  ", ctx->R14);
+  Printf("r15 = %llx  ", ctx->R15);
+  Printf("\n");
+#  elif defined(_M_IX86)
+  Report("Register values:\n");
+  Printf("eax = %lx  ", ctx->Eax);
+  Printf("ebx = %lx  ", ctx->Ebx);
+  Printf("ecx = %lx  ", ctx->Ecx);
+  Printf("edx = %lx  ", ctx->Edx);
+  Printf("\n");
+  Printf("edi = %lx  ", ctx->Edi);
+  Printf("esi = %lx  ", ctx->Esi);
+  Printf("ebp = %lx  ", ctx->Ebp);
+  Printf("esp = %lx  ", ctx->Esp);
+  Printf("\n");
+#  else
+  // TODO
+  (void)ctx;
+#  endif
 }
 
 int SignalContext::GetType() const {
