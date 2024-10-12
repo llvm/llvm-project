@@ -82,12 +82,14 @@ void runThroughTest(StringRef InputFile) {
         T.registerPartial(Str, Partial);
       }
     }
-    StringRef ActualStr = T.render(*Data);
-    if (ExpectedStr == ActualStr) {
+    std::string ActualStr;
+    llvm::raw_string_ostream Stream(ActualStr);
+    T.render(*Data, Stream);
+    if (ExpectedStr == ActualStr)
       Success++;
-    } else {
+    else
       llvm::outs() << "Test Failed: " << Name << "\n";
-    }
+    
     Total++;
   }
 
