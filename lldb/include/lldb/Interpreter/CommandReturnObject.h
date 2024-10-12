@@ -30,16 +30,17 @@ public:
 
   ~CommandReturnObject() = default;
 
-  llvm::StringRef GetInlineDiagnosticsData(unsigned indent);
+  /// Format any inline diagnostics with an indentation of \c indent.
+  llvm::StringRef GetInlineDiagnosticString(unsigned indent);
 
-  llvm::StringRef GetOutputData() {
+  llvm::StringRef GetOutputString() {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
     if (stream_sp)
       return std::static_pointer_cast<StreamString>(stream_sp)->GetString();
     return llvm::StringRef();
   }
 
-  llvm::StringRef GetErrorData();
+  llvm::StringRef GetErrorString();
 
   Stream &GetOutputStream() {
     // Make sure we at least have our normal string stream output stream
