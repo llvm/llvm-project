@@ -84,51 +84,53 @@ UseStartsEndsWithCheck::UseStartsEndsWithCheck(StringRef Name,
 void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   const auto ZeroLiteral = integerLiteral(equals(0));
 
-  const auto ClassTypeWithMethod =
-      [](const StringRef MethodBoundName,
-         const llvm::ArrayRef<StringRef> &Methods) {
-        const auto Method =
-            cxxMethodDecl(isConst(), parameterCountIs(1),
-                          returns(booleanType()), hasAnyName(Methods))
-                .bind(MethodBoundName);
-        return qualType(hasCanonicalType(hasDeclaration(cxxRecordDecl(
-            anyOf(hasMethod(Method),
-                  hasAnyBase(hasType(hasCanonicalType(
-                      hasDeclaration(cxxRecordDecl(hasMethod(Method)))))))))));
-      };
+  const auto ClassTypeWithMethod = [](const StringRef MethodBoundName,
+                                      const auto... Methods) {
+    return cxxRecordDecl(anyOf(
+        hasMethod(cxxMethodDecl(isConst(), parameterCountIs(1),
+                                returns(booleanType()), hasAnyName(Methods))
+                      .bind(MethodBoundName))...));
+  };
 
-  const auto OnClassWithStartsWithFunction = on(hasType(ClassTypeWithMethod(
-      "starts_with_fun", {"starts_with", "startsWith", "startswith"})));
+  const auto OnClassWithStartsWithFunction =
+      ClassTypeWithMethod("starts_with_fun", "starts_with", "startsWith",
+                          "startswith", "StartsWith");
 
-  const auto OnClassWithEndsWithFunction =
-      on(expr(hasType(ClassTypeWithMethod(
-                  "ends_with_fun", {"ends_with", "endsWith", "endswith"})))
-             .bind("haystack"));
+  const auto OnClassWithEndsWithFunction = ClassTypeWithMethod(
+      "ends_with_fun", "ends_with", "endsWith", "endswith", "EndsWith");
 
   // Case 1: X.find(Y) [!=]= 0 -> starts_with.
   const auto FindExpr = cxxMemberCallExpr(
       anyOf(argumentCountIs(1), hasArgument(1, ZeroLiteral)),
-      callee(cxxMethodDecl(hasName("find")).bind("find_fun")),
-      OnClassWithStartsWithFunction, hasArgument(0, expr().bind("needle")));
+      callee(
+          cxxMethodDecl(hasName("find"), ofClass(OnClassWithStartsWithFunction))
+              .bind("find_fun")),
+      hasArgument(0, expr().bind("needle")));
 
   // Case 2: X.rfind(Y, 0) [!=]= 0 -> starts_with.
   const auto RFindExpr = cxxMemberCallExpr(
       hasArgument(1, ZeroLiteral),
-      callee(cxxMethodDecl(hasName("rfind")).bind("find_fun")),
-      OnClassWithStartsWithFunction, hasArgument(0, expr().bind("needle")));
+      callee(cxxMethodDecl(hasName("rfind"),
+                           ofClass(OnClassWithStartsWithFunction))
+                 .bind("find_fun")),
+      hasArgument(0, expr().bind("needle")));
 
   // Case 3: X.compare(0, LEN(Y), Y) [!=]= 0 -> starts_with.
   const auto CompareExpr = cxxMemberCallExpr(
       argumentCountIs(3), hasArgument(0, ZeroLiteral),
-      callee(cxxMethodDecl(hasName("compare")).bind("find_fun")),
-      OnClassWithStartsWithFunction, hasArgument(2, expr().bind("needle")),
+      callee(cxxMethodDecl(hasName("compare"),
+                           ofClass(OnClassWithStartsWithFunction))
+                 .bind("find_fun")),
+      hasArgument(2, expr().bind("needle")),
       hasArgument(1, lengthExprForStringNode("needle")));
 
   // Case 4: X.compare(LEN(X) - LEN(Y), LEN(Y), Y) [!=]= 0 -> ends_with.
   const auto CompareEndsWithExpr = cxxMemberCallExpr(
       argumentCountIs(3),
-      callee(cxxMethodDecl(hasName("compare")).bind("find_fun")),
-      OnClassWithEndsWithFunction, hasArgument(2, expr().bind("needle")),
+      callee(cxxMethodDecl(hasName("compare"),
+                           ofClass(OnClassWithEndsWithFunction))
+                 .bind("find_fun")),
+      on(expr().bind("haystack")), hasArgument(2, expr().bind("needle")),
       hasArgument(1, lengthExprForStringNode("needle")),
       hasArgument(0,
                   binaryOperator(hasOperatorName("-"),
@@ -159,8 +161,10 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
                                 1,
                                 anyOf(declRefExpr(to(varDecl(hasName("npos")))),
                                       memberExpr(member(hasName("npos"))))))),
-                  callee(cxxMethodDecl(hasName("rfind")).bind("find_fun")),
-                  OnClassWithEndsWithFunction,
+                  callee(cxxMethodDecl(hasName("rfind"),
+                                       ofClass(OnClassWithEndsWithFunction))
+                             .bind("find_fun")),
+                  on(expr().bind("haystack")),
                   hasArgument(0, expr().bind("needle")))
                   .bind("find_expr"),
               binaryOperator(hasOperatorName("-"),
