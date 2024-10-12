@@ -340,7 +340,6 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 void HIP::constructGenerateObjFileFromHIPFatBinary(
     Compilation &C, const InputInfo &Output, const InputInfoList &Inputs,
     const ArgList &Args, const JobAction &JA, const Tool &T) {
-  const ToolChain &TC = T.getToolChain();
   std::string Name = std::string(llvm::sys::path::stem(Output.getFilename()));
 
   // Create Temp Object File Generator,
