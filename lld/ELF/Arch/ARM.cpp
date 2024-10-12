@@ -300,11 +300,11 @@ void ARM::writePltHeader(uint8_t *buf) const {
 
 void ARM::addPltHeaderSymbols(InputSection &isec) const {
   if (useThumbPLTs(ctx)) {
-    addSyntheticLocal("$t", STT_NOTYPE, 0, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, 12, 0, isec);
+    addSyntheticLocal(ctx, "$t", STT_NOTYPE, 0, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, 12, 0, isec);
   } else {
-    addSyntheticLocal("$a", STT_NOTYPE, 0, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, 16, 0, isec);
+    addSyntheticLocal(ctx, "$a", STT_NOTYPE, 0, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, 16, 0, isec);
   }
 }
 
@@ -377,10 +377,10 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
 
 void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
   if (useThumbPLTs(ctx)) {
-    addSyntheticLocal("$t", STT_NOTYPE, off, 0, isec);
+    addSyntheticLocal(ctx, "$t", STT_NOTYPE, off, 0, isec);
   } else {
-    addSyntheticLocal("$a", STT_NOTYPE, off, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, off + 12, 0, isec);
+    addSyntheticLocal(ctx, "$a", STT_NOTYPE, off, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, off + 12, 0, isec);
   }
 }
 
@@ -1397,7 +1397,7 @@ void ArmCmseSGSection::writeTo(uint8_t *buf) {
 }
 
 void ArmCmseSGSection::addMappingSymbol() {
-  addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
+  addSyntheticLocal(ctx, "$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
 size_t ArmCmseSGSection::getSize() const {
