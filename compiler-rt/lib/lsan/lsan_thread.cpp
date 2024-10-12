@@ -18,6 +18,7 @@
 #include "lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_thread_history.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
@@ -110,7 +111,9 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
 }
 
 void PrintThreads() {
-  // TODO: implement.
+  InternalScopedString out;
+  PrintThreadHistory(*thread_registry, out);
+  Report("%s\n", out.data());
 }
 
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
