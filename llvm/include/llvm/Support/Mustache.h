@@ -83,7 +83,7 @@ class Template {
 public:
   Template(StringRef TemplateStr);
 
-  StringRef render(llvm::json::Value &Data);
+  void render(llvm::json::Value &Data, llvm::raw_ostream &OS);
 
   void registerPartial(StringRef Name, StringRef Partial);
 
