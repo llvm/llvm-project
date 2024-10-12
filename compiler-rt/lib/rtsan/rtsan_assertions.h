@@ -15,6 +15,7 @@
 #include "rtsan/rtsan.h"
 #include "rtsan/rtsan_context.h"
 #include "rtsan/rtsan_diagnostics.h"
+#include "rtsan/rtsan_suppressions.h"
 
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
@@ -33,6 +34,9 @@ void ExpectNotRealtime(Context &context, const DiagnosticsInfo &info,
     // sanitizers, this action is not necessarily fatal if halt_on_error=false
     stack.Unwind(info.pc, info.bp, nullptr,
                  __sanitizer::common_flags()->fast_unwind_on_fatal);
+
+    if (IsStackTraceSuppressed(stack))
+      return;
 
     OnViolation(stack, info);
   }
