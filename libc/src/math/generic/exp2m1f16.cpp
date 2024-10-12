@@ -116,10 +116,9 @@ LLVM_LIBC_FUNCTION(float16, exp2m1f16, (float16 x)) {
         return FPBits::one(Sign::NEG).get_val();
 
       // When -12 < x < -11, round(2^x - 1, HP, RN) = -0x1.ffcp-1.
-      if (x_u < 0xca00U) {
+      if (x_u < 0xca00U)
         return fputil::round_result_slightly_down(
             fputil::cast<float16>(-0x1.ffcp-1));
-      }
 
       // When x <= -12, round(2^x - 1, HP, RN) = -1.
       switch (fputil::quick_get_round()) {
