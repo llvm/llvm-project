@@ -17,7 +17,6 @@
 namespace __rtsan {
 
 void InitializeSuppressions();
-bool HasSuppressions();
 bool IsStackTraceSuppressed(const __sanitizer::StackTrace &stack);
 
 } // namespace __rtsan

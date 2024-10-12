@@ -35,7 +35,7 @@ void ExpectNotRealtime(Context &context, const DiagnosticsInfo &info,
     stack.Unwind(info.pc, info.bp, nullptr,
                  __sanitizer::common_flags()->fast_unwind_on_fatal);
 
-    if (HasSuppressions() && IsStackTraceSuppressed(stack))
+    if (IsStackTraceSuppressed(stack))
       return;
 
     OnViolation(stack, info);
