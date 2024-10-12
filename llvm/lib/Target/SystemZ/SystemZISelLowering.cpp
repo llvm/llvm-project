@@ -8340,11 +8340,11 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
     if (MI->getOperand(4).getImm() == (CCValid ^ CCMask))
       std::swap(TrueReg, FalseReg);
 
-    if (RegRewriteTable.contains(TrueReg))
-      TrueReg = RegRewriteTable[TrueReg].first;
+    if (auto It = RegRewriteTable.find(TrueReg); It != RegRewriteTable.end())
+      TrueReg = It->second.first;
 
-    if (RegRewriteTable.contains(FalseReg))
-      FalseReg = RegRewriteTable[FalseReg].second;
+    if (auto It = RegRewriteTable.find(FalseReg); It != RegRewriteTable.end())
+      FalseReg = It->second.second;
 
     DebugLoc DL = MI->getDebugLoc();
     BuildMI(*SinkMBB, SinkInsertionPoint, DL, TII->get(SystemZ::PHI), DestReg)
