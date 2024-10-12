@@ -468,6 +468,6 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
                        "-x",      "assembler",
                        ObjinFile, "-c"};
   const char *Clang = Args.MakeArgString(C.getDriver().ClangExecutable);
-  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(), Clang,
-                                         McArgs, Inputs, Output));
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         Clang, McArgs, Inputs, Output));
 }
