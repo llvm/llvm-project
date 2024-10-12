@@ -538,9 +538,6 @@ public:
 protected:
   friend class LoopVectorizationPlanner;
 
-  /// A small list of PHINodes.
-  using PhiVector = SmallVector<PHINode *, 4>;
-
   /// Set up the values of the IVs correctly when exiting the vector loop.
   void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
                     Value *VectorTripCount, Value *EndValue,
