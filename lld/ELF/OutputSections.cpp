@@ -529,7 +529,7 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
       if (auto *s = dyn_cast<SyntheticSection>(isec))
         s->writeTo(buf + isec->outSecOff);
       else
-        isec->writeTo<ELFT>(buf + isec->outSecOff);
+        isec->writeTo<ELFT>(ctx, buf + isec->outSecOff);
 
       // When in Arm BE8 mode, the linker has to convert the big-endian
       // instructions to little-endian, leaving the data big-endian.
