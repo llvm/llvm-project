@@ -2082,6 +2082,12 @@ example:
     function call, use of ``longjmp``, or other means. It is a compiler hint that
     is used at module level to improve dataflow analysis, dropped during linking,
     and has no effect on functions defined in the current module.
+``nodivergencesource``
+    A call to this function is not a source of divergence. In uniformity
+    analysis, a *source of divergence* is an instruction that generates
+    divergence even if its inputs are uniform. A call with no further information
+    would normally be considered a source of divergence; setting this attribute
+    on a function means that a call to it is not a source of divergence.
 ``noduplicate``
     This attribute indicates that calls to the function cannot be
     duplicated. A call to a ``noduplicate`` function may be moved
