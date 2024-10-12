@@ -4,84 +4,81 @@
 target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32"
 target triple = "powerpc-unknown-linux-gnu"
 
+; Previously we checked that loops that used CTR would not be used around a libm call to copysignl
+; but now that copysignl is no longer emitted by LLVM in most cases, this stands as a tombstone.
+; It has mtctr right in the middle, but we don't care because copysignl is nowhere to be found.
+
 define ppc_fp128 @foo(ptr nocapture %n, ppc_fp128 %d) nounwind readonly {
 ; CHECK-LABEL: foo:
 ; CHECK-NOT: mtctr
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stwu 1, -176(1)
-; CHECK-NEXT:    stw 0, 180(1)
-; CHECK-NEXT:    stfd 2, 128(1)
-; CHECK-NEXT:    lwz 3, 132(1)
-; CHECK-NEXT:    stfd 1, 136(1)
-; CHECK-NEXT:    stw 3, 148(1)
-; CHECK-NEXT:    lwz 3, 128(1)
-; CHECK-NEXT:    stfd 31, 168(1) # 8-byte Folded Spill
-; CHECK-NEXT:    stw 3, 144(1)
-; CHECK-NEXT:    lwz 3, 140(1)
-; CHECK-NEXT:    lfd 0, 144(1)
-; CHECK-NEXT:    stw 3, 156(1)
-; CHECK-NEXT:    lwz 3, 136(1)
-; CHECK-NEXT:    stw 30, 160(1) # 4-byte Folded Spill
-; CHECK-NEXT:    li 30, 2048
-; CHECK-NEXT:    stw 3, 152(1)
-; CHECK-NEXT:    lfd 31, 152(1)
-; CHECK-NEXT:    fmr 1, 31
+; CHECK-NEXT:    stwu 1, -112(1)
+; CHECK-NEXT:    stfd 2, 80(1)
+; CHECK-NEXT:    li 3, 2048
+; CHECK-NEXT:    lwz 4, 84(1)
+; CHECK-NEXT:    stfd 1, 88(1)
+; CHECK-NEXT:    stw 4, 100(1)
+; CHECK-NEXT:    lwz 4, 80(1)
+; CHECK-NEXT:    stw 4, 96(1)
+; CHECK-NEXT:    lwz 4, 92(1)
+; CHECK-NEXT:    lfd 1, 96(1)
+; CHECK-NEXT:    stw 4, 108(1)
+; CHECK-NEXT:    lwz 4, 88(1)
+; CHECK-NEXT:    stw 4, 104(1)
+; CHECK-NEXT:    lfd 0, 104(1)
+; CHECK-NEXT:    mtctr 3
+; CHECK-NEXT:    fmr 2, 0
+; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stfd 1, 64(1)
-; CHECK-NEXT:    lwz 3, 68(1)
-; CHECK-NEXT:    stfd 31, 88(1)
-; CHECK-NEXT:    stw 3, 84(1)
-; CHECK-NEXT:    lwz 3, 64(1)
-; CHECK-NEXT:    stfd 0, 56(1)
-; CHECK-NEXT:    stw 3, 80(1)
-; CHECK-NEXT:    lwz 3, 92(1)
-; CHECK-NEXT:    lfd 4, 96(1)
-; CHECK-NEXT:    stw 3, 108(1)
-; CHECK-NEXT:    lwz 3, 88(1)
-; CHECK-NEXT:    lfd 1, 80(1)
-; CHECK-NEXT:    stw 3, 104(1)
 ; CHECK-NEXT:    lwz 3, 60(1)
-; CHECK-NEXT:    lfd 3, 104(1)
+; CHECK-NEXT:    stfd 1, 48(1)
 ; CHECK-NEXT:    stw 3, 76(1)
 ; CHECK-NEXT:    lwz 3, 56(1)
 ; CHECK-NEXT:    stw 3, 72(1)
-; CHECK-NEXT:    lfd 2, 72(1)
-; CHECK-NEXT:    bl copysignl
-; CHECK-NEXT:    stfd 2, 48(1)
-; CHECK-NEXT:    addi 30, 30, -1
 ; CHECK-NEXT:    lwz 3, 52(1)
-; CHECK-NEXT:    cmplwi 30, 0
-; CHECK-NEXT:    stfd 1, 40(1)
-; CHECK-NEXT:    stw 3, 116(1)
+; CHECK-NEXT:    lfd 2, 72(1)
+; CHECK-NEXT:    stw 3, 68(1)
 ; CHECK-NEXT:    lwz 3, 48(1)
-; CHECK-NEXT:    stw 3, 112(1)
-; CHECK-NEXT:    lwz 3, 44(1)
-; CHECK-NEXT:    lfd 0, 112(1)
-; CHECK-NEXT:    stw 3, 124(1)
-; CHECK-NEXT:    lwz 3, 40(1)
-; CHECK-NEXT:    stw 3, 120(1)
-; CHECK-NEXT:    lfd 1, 120(1)
-; CHECK-NEXT:    bc 12, 1, .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %for.end
-; CHECK-NEXT:    stfd 1, 16(1)
+; CHECK-NEXT:    stw 3, 64(1)
+; CHECK-NEXT:    lfd 1, 64(1)
+; CHECK-NEXT:    bdz .LBB0_7
+; CHECK-NEXT:  .LBB0_2: # %for.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    stfd 0, 40(1)
+; CHECK-NEXT:    lbz 3, 40(1)
+; CHECK-NEXT:    srwi 3, 3, 7
+; CHECK-NEXT:    andi. 3, 3, 1
+; CHECK-NEXT:    bc 12, 1, .LBB0_4
+; CHECK-NEXT:  # %bb.3: # %for.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    fabs 3, 2
+; CHECK-NEXT:    b .LBB0_5
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    fnabs 3, 2
+; CHECK-NEXT:  .LBB0_5: # %for.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    fcmpu 0, 2, 3
+; CHECK-NEXT:    stfd 3, 56(1)
+; CHECK-NEXT:    beq 0, .LBB0_1
+; CHECK-NEXT:  # %bb.6: # %for.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    fneg 1, 1
+; CHECK-NEXT:    b .LBB0_1
+; CHECK-NEXT:  .LBB0_7: # %for.end
+; CHECK-NEXT:    stfd 2, 16(1)
 ; CHECK-NEXT:    lwz 3, 20(1)
-; CHECK-NEXT:    stfd 0, 8(1)
+; CHECK-NEXT:    stfd 1, 8(1)
 ; CHECK-NEXT:    stw 3, 36(1)
 ; CHECK-NEXT:    lwz 3, 16(1)
-; CHECK-NEXT:    lfd 31, 168(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stw 3, 32(1)
 ; CHECK-NEXT:    lwz 3, 12(1)
 ; CHECK-NEXT:    lfd 1, 32(1)
 ; CHECK-NEXT:    stw 3, 28(1)
 ; CHECK-NEXT:    lwz 3, 8(1)
-; CHECK-NEXT:    lwz 30, 160(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    stw 3, 24(1)
 ; CHECK-NEXT:    lfd 2, 24(1)
-; CHECK-NEXT:    lwz 0, 180(1)
-; CHECK-NEXT:    addi 1, 1, 176
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    addi 1, 1, 112
 ; CHECK-NEXT:    blr
 entry:
   br label %for.body
@@ -103,4 +100,3 @@ for.end:                                          ; preds = %for.body
 declare ppc_fp128 @copysignl(ppc_fp128, ppc_fp128) #0
 
 ; CHECK-NOT: mtctr
-
