@@ -401,7 +401,7 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
   static ShellDescriptor g_Shells[] = {{"bash", " '\"<>()&;"},
                                        {"fish", " '\"<>()&\\|;"},
                                        {"tcsh", " '\"<>()&;"},
-                                       {"zsh", " '\"<>()&;\\|"},
+                                       {"zsh", " '\"<>()&;\\|?"},
                                        {"sh", " '\"<>()&;"}};
 
   // safe minimal set
