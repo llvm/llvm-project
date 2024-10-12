@@ -1433,8 +1433,8 @@ MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections(Ctx &);
 void combineEhSections(Ctx &);
 
-bool hasMemtag();
-bool canHaveMemtagGlobals();
+bool hasMemtag(Ctx &);
+bool canHaveMemtagGlobals(Ctx &);
 
 template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part);
 template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);
@@ -1446,6 +1446,7 @@ void addVerneed(Symbol *ss);
 
 // Linker generated per-partition sections.
 struct Partition {
+  Ctx &ctx;
   StringRef name;
   uint64_t nameStrTab;
 
@@ -1472,6 +1473,7 @@ struct Partition {
   std::unique_ptr<SyntheticSection> verNeed;
   std::unique_ptr<VersionTableSection> verSym;
 
+  Partition(Ctx &ctx) : ctx(ctx) {}
   unsigned getNumber() const { return this - &ctx.partitions[0] + 1; }
 };
 
