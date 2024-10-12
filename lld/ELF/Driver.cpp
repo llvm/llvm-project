@@ -2186,7 +2186,7 @@ static void handleUndefined(Ctx &ctx, Symbol *sym, const char *option) {
 
   if (!sym->isLazy())
     return;
-  sym->extract();
+  sym->extract(ctx);
   if (!ctx.arg.whyExtract.empty())
     ctx.whyExtractRecords.emplace_back(option, sym->file, *sym);
 }
@@ -2217,7 +2217,7 @@ static void handleLibcall(Ctx &ctx, StringRef name) {
   if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file)) {
     if (!ctx.arg.whyExtract.empty())
       ctx.whyExtractRecords.emplace_back("<libcall>", sym->file, *sym);
-    sym->extract();
+    sym->extract(ctx);
   }
 }
 
@@ -2416,7 +2416,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   // or DSOs, so we conservatively mark them as address-significant.
   bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym())
+    if (sym->includeInDynsym(ctx))
       markAddrsig(icfSafe, sym);
 
   // Visit the address-significance table in each object file and mark each
@@ -2465,7 +2465,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
     sym = readEntry(s->file, rels.rels);
   else
     sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym())
+  if (!isa_and_nonnull<Defined>(sym) || !sym->includeInDynsym(ctx))
     return;
 
   StringRef partName = reinterpret_cast<const char *>(s->content().data());
@@ -2551,7 +2551,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     if (!ctx.arg.relocatable)
       for (Symbol *sym : obj->getGlobalSymbols())
         if (sym->hasVersionSuffix)
-          sym->parseSymbolVersion();
+          sym->parseSymbolVersion(ctx);
     ctx.objectFiles.push_back(obj);
   }
 }
@@ -2648,12 +2648,12 @@ static void combineVersionedSymbol(Ctx &ctx, Symbol &sym,
     // If both foo@v1 and foo@@v1 are defined and non-weak, report a
     // duplicate definition error.
     if (sym.isDefined()) {
-      sym2->checkDuplicate(cast<Defined>(sym));
-      sym2->resolve(cast<Defined>(sym));
+      sym2->checkDuplicate(ctx, cast<Defined>(sym));
+      sym2->resolve(ctx, cast<Defined>(sym));
     } else if (sym.isUndefined()) {
-      sym2->resolve(cast<Undefined>(sym));
+      sym2->resolve(ctx, cast<Undefined>(sym));
     } else {
-      sym2->resolve(cast<SharedSymbol>(sym));
+      sym2->resolve(ctx, cast<SharedSymbol>(sym));
     }
     // Eliminate foo@v1 from the symbol table.
     sym.symbolKind = Symbol::PlaceholderKind;

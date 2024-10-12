@@ -1156,14 +1156,14 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
         fatal(toString(this) + ": common symbol '" + sym->getName() +
               "' has invalid alignment: " + Twine(value));
       hasCommonSyms = true;
-      sym->resolve(
-          CommonSymbol{this, StringRef(), binding, stOther, type, value, size});
+      sym->resolve(ctx, CommonSymbol{this, StringRef(), binding, stOther, type,
+                                     value, size});
       continue;
     }
 
     // Handle global defined symbols. Defined::section will be set in postParse.
-    sym->resolve(Defined{this, StringRef(), binding, stOther, type, value, size,
-                         nullptr});
+    sym->resolve(ctx, Defined{this, StringRef(), binding, stOther, type, value,
+                              size, nullptr});
   }
 
   // Undefined symbols (excluding those defined relative to non-prevailing
@@ -1175,8 +1175,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   for (unsigned i : undefineds) {
     const Elf_Sym &eSym = eSyms[i];
     Symbol *sym = symbols[i];
-    sym->resolve(Undefined{this, StringRef(), eSym.getBinding(), eSym.st_other,
-                           eSym.getType()});
+    sym->resolve(ctx, Undefined{this, StringRef(), eSym.getBinding(),
+                                eSym.st_other, eSym.getType()});
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
   }
@@ -1759,20 +1759,20 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   int c = objSym.getComdatIndex();
   if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
     Undefined newSym(&f, StringRef(), binding, visibility, type);
-    sym->resolve(newSym);
+    sym->resolve(ctx, newSym);
     sym->referenced = true;
     return;
   }
 
   if (objSym.isCommon()) {
-    sym->resolve(CommonSymbol{&f, StringRef(), binding, visibility, STT_OBJECT,
-                              objSym.getCommonAlignment(),
-                              objSym.getCommonSize()});
+    sym->resolve(ctx, CommonSymbol{&f, StringRef(), binding, visibility,
+                                   STT_OBJECT, objSym.getCommonAlignment(),
+                                   objSym.getCommonSize()});
   } else {
     Defined newSym(&f, StringRef(), binding, visibility, type, 0, 0, nullptr);
     if (objSym.canBeOmittedFromSymbolTable())
       newSym.exportDynamic = false;
-    sym->resolve(newSym);
+    sym->resolve(ctx, newSym);
   }
 }
 
@@ -1813,7 +1813,7 @@ void BitcodeFile::parseLazy() {
     irSym.Name = uniqueSaver().save(irSym.getName());
     if (!irSym.isUndefined()) {
       auto *sym = ctx.symtab->insert(irSym.getName());
-      sym->resolve(LazySymbol{*this});
+      sym->resolve(ctx, LazySymbol{*this});
       symbols[i] = sym;
     }
   }
@@ -1849,15 +1849,15 @@ void BinaryFile::parse() {
 
   llvm::StringSaver &saver = lld::saver();
 
-  ctx.symtab->addAndCheckDuplicate(Defined{this, saver.save(s + "_start"),
-                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                           0, 0, section});
-  ctx.symtab->addAndCheckDuplicate(Defined{this, saver.save(s + "_end"),
-                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                           data.size(), 0, section});
-  ctx.symtab->addAndCheckDuplicate(Defined{this, saver.save(s + "_size"),
-                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                           data.size(), 0, nullptr});
+  ctx.symtab->addAndCheckDuplicate(ctx, Defined{this, saver.save(s + "_start"),
+                                                STB_GLOBAL, STV_DEFAULT,
+                                                STT_OBJECT, 0, 0, section});
+  ctx.symtab->addAndCheckDuplicate(
+      ctx, Defined{this, saver.save(s + "_end"), STB_GLOBAL, STV_DEFAULT,
+                   STT_OBJECT, data.size(), 0, section});
+  ctx.symtab->addAndCheckDuplicate(
+      ctx, Defined{this, saver.save(s + "_size"), STB_GLOBAL, STV_DEFAULT,
+                   STT_OBJECT, data.size(), 0, nullptr});
 }
 
 InputFile *elf::createInternalFile(Ctx &ctx, StringRef name) {
@@ -1906,7 +1906,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
     symbols[i] = symtab->insert(CHECK(eSyms[i].getName(stringTable), this));
-    symbols[i]->resolve(LazySymbol{*this});
+    symbols[i]->resolve(ctx, LazySymbol{*this});
     if (!lazy)
       break;
   }

@@ -145,9 +145,9 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
-  s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
-                     STT_NOTYPE, val,
-                     /*size=*/0, sec});
+  s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
+                          STT_NOTYPE, val,
+                          /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);
 }
@@ -211,7 +211,8 @@ void elf::addReservedSymbols(Ctx &ctx) {
     if (ctx.arg.emachine == EM_PPC64)
       gotOff = 0x8000;
 
-    s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, STV_HIDDEN,
+    s->resolve(ctx,
+               Defined{ctx.internalFile, StringRef(), STB_GLOBAL, STV_HIDDEN,
                        STT_NOTYPE, gotOff, /*size=*/0, ctx.out.elfHeader});
     ctx.sym.globalOffsetTable = cast<Defined>(s);
   }
@@ -1774,9 +1775,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // define _TLS_MODULE_BASE_ relative to the first TLS section.
       Symbol *s = ctx.symtab->find("_TLS_MODULE_BASE_");
       if (s && s->isUndefined()) {
-        s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
-                           STV_HIDDEN, STT_TLS, /*value=*/0, 0,
-                           /*section=*/nullptr});
+        s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
+                                STV_HIDDEN, STT_TLS, /*value=*/0, 0,
+                                /*section=*/nullptr});
         ctx.sym.tlsModuleBase = cast<Defined>(s);
       }
     }
@@ -1851,7 +1852,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
             diagnose("undefined reference: " + toString(*sym) +
                      "\n>>> referenced by " + toString(file) +
                      " (disallowed by --no-allow-shlib-undefined)");
-          } else if (sym->isDefined() && sym->computeBinding() == STB_LOCAL) {
+          } else if (sym->isDefined() &&
+                     sym->computeBinding(ctx) == STB_LOCAL) {
             diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
                      toString(sym->file) + "' is referenced by DSO '" +
                      toString(file) + "'");
@@ -1869,11 +1871,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (!sym->isUsedInRegularObj || !includeInSymtab(ctx, *sym))
         continue;
       if (!ctx.arg.relocatable)
-        sym->binding = sym->computeBinding();
+        sym->binding = sym->computeBinding(ctx);
       if (ctx.in.symTab)
         ctx.in.symTab->addSymbol(sym);
 
-      if (sym->includeInDynsym()) {
+      if (sym->includeInDynsym(ctx)) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast_or_null<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())
