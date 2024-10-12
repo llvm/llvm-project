@@ -599,6 +599,11 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     convertBranchData(Function);
   }
 
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    readSampleData(BF);
+  }
+
   if (opts::AggregateOnly) {
     if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
       if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
