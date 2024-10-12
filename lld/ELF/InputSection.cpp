@@ -299,10 +299,6 @@ std::string InputSectionBase::getLocation(uint64_t offset) const {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
-  // We don't have file for synthetic sections.
-  if (file == nullptr)
-    return (ctx.arg.outputFile + ":(" + secAndOffset).str();
-
   std::string filename = toString(file);
   if (Defined *d = getEnclosingFunction(offset))
     return filename + ":(function " + toString(*d) + ": " + secAndOffset;
@@ -1430,11 +1426,12 @@ MergeInputSection::MergeInputSection(ObjFile<ELFT> &f,
                                      StringRef name)
     : InputSectionBase(f, header, name, InputSectionBase::Merge) {}
 
-MergeInputSection::MergeInputSection(uint64_t flags, uint32_t type,
+MergeInputSection::MergeInputSection(Ctx &ctx, uint64_t flags, uint32_t type,
                                      uint64_t entsize, ArrayRef<uint8_t> data,
                                      StringRef name)
-    : InputSectionBase(nullptr, flags, type, entsize, /*Link*/ 0, /*Info*/ 0,
-                       /*Alignment*/ entsize, data, name, SectionBase::Merge) {}
+    : InputSectionBase(ctx.internalFile, flags, type, entsize, /*link=*/0,
+                       /*info=*/0,
+                       /*alignment=*/entsize, data, name, SectionBase::Merge) {}
 
 // This function is called after we obtain a complete list of input sections
 // that need to be linked. This is responsible to split section contents

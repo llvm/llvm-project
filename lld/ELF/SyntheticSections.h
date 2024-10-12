@@ -1429,7 +1429,7 @@ private:
 
 template <class ELFT> void createSyntheticSections(Ctx &);
 InputSection *createInterpSection(Ctx &);
-MergeInputSection *createCommentSection();
+MergeInputSection *createCommentSection(Ctx &);
 template <class ELFT> void splitSections(Ctx &);
 void combineEhSections(Ctx &);
 

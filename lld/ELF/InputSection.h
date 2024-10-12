@@ -316,7 +316,7 @@ public:
   template <class ELFT>
   MergeInputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                     StringRef name);
-  MergeInputSection(uint64_t flags, uint32_t type, uint64_t entsize,
+  MergeInputSection(Ctx &, uint64_t flags, uint32_t type, uint64_t entsize,
                     ArrayRef<uint8_t> data, StringRef name);
 
   static bool classof(const SectionBase *s) { return s->kind() == Merge; }
