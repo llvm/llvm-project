@@ -197,6 +197,8 @@ struct State {
   /// controlling the loop header.
   void addInfoForInductions(BasicBlock &BB);
 
+  void addConditionFactsIntoLoopHeader(BasicBlock &BB);
+  
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
   bool canAddSuccessor(BasicBlock &BB, BasicBlock *Succ) const {
@@ -900,7 +902,60 @@ static void dumpConstraint(ArrayRef<int64_t> C,
 }
 #endif
 
+// For monotonically decreasing/increasing variables in the loop,
+// this will insert ConditionFact PN >= StartingValue or PN <= StartingValue
+// associated with the loop header, where PN is the corresponding PHi node.
+void State::addConditionFactsIntoLoopHeader(BasicBlock &BB) {
+  auto *L = LI.getLoopFor(&BB);
+  if (!L || L->getHeader() != &BB)
+    return;
+  DomTreeNode *DTN = DT.getNode(&BB);
+  for(PHINode &PN :L->getHeader()->phis()){
+    if(PN.getNumIncomingValues() != 2 || PN.getParent() != &BB || !SE.isSCEVable(PN.getType()))
+      continue;
+    auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(&PN));
+    BasicBlock *LoopPred = L->getLoopPredecessor();
+    if (!AR || AR->getLoop() != L || !LoopPred)
+      return;
+    const SCEV *StartSCEV = AR->getStart();
+    Value *StartValue = nullptr;
+    if (auto *C = dyn_cast<SCEVConstant>(StartSCEV)) {
+      StartValue = C->getValue();
+    } else {
+      StartValue = PN.getIncomingValueForBlock(LoopPred);
+      assert(SE.getSCEV(StartValue) == StartSCEV && "inconsistent start value");
+    }
+    auto IncUnsigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
+    auto IncSigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT);
+    
+    // Monotonically Increasing 
+    bool MonotonicallyIncreasingUnsigned =
+      IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
+    bool MonotonicallyIncreasingSigned =
+        IncSigned && *IncSigned == ScalarEvolution::MonotonicallyIncreasing;
+    if (MonotonicallyIncreasingUnsigned)
+      WorkList.push_back(
+          FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE, &PN, StartValue));
+    if (MonotonicallyIncreasingSigned)
+      WorkList.push_back(
+          FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE, &PN, StartValue));
+
+    // Monotonically Decreasing
+    bool MonotonicallyDecreasingUnsigned =
+      IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyDecreasing;
+    bool MonotonicallyDecreasingSigned =
+        IncSigned && *IncSigned == ScalarEvolution::MonotonicallyDecreasing;
+    if(MonotonicallyDecreasingUnsigned)
+      WorkList.push_back(
+          FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_ULE, &PN, StartValue));
+    if(MonotonicallyDecreasingSigned)
+      WorkList.push_back(
+          FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLE, &PN, StartValue));
+  }        
+}
+
 void State::addInfoForInductions(BasicBlock &BB) {
+  addConditionFactsIntoLoopHeader(BB);
   auto *L = LI.getLoopFor(&BB);
   if (!L || L->getHeader() != &BB)
     return;
