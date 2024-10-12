@@ -1874,7 +1874,8 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
     if (II.getIntrinsicID() == Intrinsic::x86_sse4a_extrq) {
       Value *Args[] = {Op0, CILength, CIIndex};
       Module *M = II.getModule();
-      Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_extrqi);
+      Function *F =
+          Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_sse4a_extrqi);
       return Builder.CreateCall(F, Args);
     }
   }
@@ -1973,7 +1974,8 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
 
     Value *Args[] = {Op0, Op1, CILength, CIIndex};
     Module *M = II.getModule();
-    Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_insertqi);
+    Function *F =
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_sse4a_insertqi);
     return Builder.CreateCall(F, Args);
   }
 

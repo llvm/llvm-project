@@ -237,7 +237,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
       else
         NewIntrinID = Intrinsic::amdgcn_image_msaa_load_2darraymsaa;
 
-      Function *NewIntrin = Intrinsic::getDeclaration(
+      Function *NewIntrin = Intrinsic::getOrInsertDeclaration(
           IIList.front()->getModule(), NewIntrinID, OverloadTys);
       Args[ImageDimIntr->DMaskIndex] =
           ConstantInt::get(DMask->getType(), NewMaskVal);

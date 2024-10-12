@@ -31158,12 +31158,14 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   if (BitTested.second == ConstantBit || BitTested.second == NotConstantBit) {
     auto *C = cast<ConstantInt>(I->getOperand(I->getOperand(0) == AI ? 1 : 0));
 
-    BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_C, AI->getType());
+    BitTest = Intrinsic::getOrInsertDeclaration(AI->getModule(), IID_C,
+                                                AI->getType());
 
     unsigned Imm = llvm::countr_zero(C->getZExtValue());
     Result = Builder.CreateCall(BitTest, {Addr, Builder.getInt8(Imm)});
   } else {
-    BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_I, AI->getType());
+    BitTest = Intrinsic::getOrInsertDeclaration(AI->getModule(), IID_I,
+                                                AI->getType());
 
     assert(BitTested.second == ShiftBit || BitTested.second == NotShiftBit);
 
@@ -31323,7 +31325,7 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     break;
   }
   Function *CmpArith =
-      Intrinsic::getDeclaration(AI->getModule(), IID, AI->getType());
+      Intrinsic::getOrInsertDeclaration(AI->getModule(), IID, AI->getType());
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
                                           PointerType::getUnqual(Ctx));
   Value *Call = Builder.CreateCall(
@@ -31439,7 +31441,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
     return nullptr;
 
   Function *MFence =
-      llvm::Intrinsic::getDeclaration(M, Intrinsic::x86_sse2_mfence);
+      llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_sse2_mfence);
   Builder.CreateCall(MFence, {});
 
   // Finally we can emit the atomic load.
@@ -49995,6 +49997,28 @@ static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
          (VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit()));
 }
 
+/// Folds (and X, (or Y, ~Z)) --> (and X, ~(and ~Y, Z))
+/// This undoes the inverse fold performed in InstCombine
+static SDValue combineAndNotOrIntoAndNotAnd(SDNode *N, SelectionDAG &DAG) {
+
+  using namespace llvm::SDPatternMatch;
+  MVT VT = N->getSimpleValueType(0);
+  SDLoc DL(N);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.hasAndNot(SDValue(N, 0)))
+    return SDValue();
+
+  SDValue X, Y, Z;
+  if (sd_match(
+          N, m_And(m_Value(X), m_OneUse(m_Or(m_Value(Y), m_Not(m_Value(Z)))))))
+    return DAG.getNode(
+        ISD::AND, DL, VT, X,
+        DAG.getNOT(DL, DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, Y, VT), Z),
+                   VT));
+
+  return SDValue();
+}
+
 // This function recognizes cases where X86 bzhi instruction can replace and
 // 'and-load' sequence.
 // In case of loading integer value from an array of constants which is defined
@@ -50484,6 +50508,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     return ShiftRight;
 
   if (SDValue R = combineAndLoadToBZHI(N, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineAndNotOrIntoAndNotAnd(N, DAG))
     return R;
 
   // fold (and (mul x, c1), c2) -> (mul x, (and c1, c2))

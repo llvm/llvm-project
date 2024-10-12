@@ -20,7 +20,7 @@ module;
 #include <algorithm>
 #include <any>
 #include <array>
-#if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
+#if _LIBCPP_HAS_ATOMIC_HEADER
 #  include <atomic>
 #endif
 #include <barrier>

@@ -501,8 +501,8 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
 
       // Create intrinsic call.
       LLVMContext &Ctx = NewFunc->getContext();
-      Function *IFn =
-          Intrinsic::getDeclaration(NewFunc->getParent(), CIID, TParams);
+      Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(),
+                                                        CIID, TParams);
       SmallVector<Value *, 4> Args;
       unsigned NumOperands = OldInst.getNumOperands();
       if (isa<CallInst>(OldInst))

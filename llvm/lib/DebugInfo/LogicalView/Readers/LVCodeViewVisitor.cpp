@@ -173,10 +173,11 @@ class LVForwardReferences {
 
   // Update a previously recorded forward reference with its definition.
   void update(StringRef Name, TypeIndex TIReference) {
-    if (ForwardTypesNames.find(Name) != ForwardTypesNames.end()) {
+    auto It = ForwardTypesNames.find(Name);
+    if (It != ForwardTypesNames.end()) {
       // Update the recorded forward reference with its definition.
-      ForwardTypesNames[Name].second = TIReference;
-      add(ForwardTypesNames[Name].first, TIReference);
+      It->second.second = TIReference;
+      add(It->second.first, TIReference);
     } else {
       // We have not seen the forward reference. Insert the definition.
       ForwardTypesNames.emplace(
@@ -196,15 +197,14 @@ public:
   }
 
   TypeIndex find(TypeIndex TIForward) {
-    return (ForwardTypes.find(TIForward) != ForwardTypes.end())
-               ? ForwardTypes[TIForward]
-               : TypeIndex::None();
+    auto It = ForwardTypes.find(TIForward);
+    return It != ForwardTypes.end() ? It->second : TypeIndex::None();
   }
 
   TypeIndex find(StringRef Name) {
-    return (ForwardTypesNames.find(Name) != ForwardTypesNames.end())
-               ? ForwardTypesNames[Name].second
-               : TypeIndex::None();
+    auto It = ForwardTypesNames.find(Name);
+    return It != ForwardTypesNames.end() ? It->second.second
+                                         : TypeIndex::None();
   }
 
   // If the given TI corresponds to a reference, return the reference.
@@ -242,9 +242,8 @@ public:
 
   // Find the logical namespace for the 'Name' component.
   LVScope *find(StringRef Name) {
-    LVScope *Namespace = (NamespaceNames.find(Name) != NamespaceNames.end())
-                             ? NamespaceNames[Name]
-                             : nullptr;
+    auto It = NamespaceNames.find(Name);
+    LVScope *Namespace = It != NamespaceNames.end() ? It->second : nullptr;
     return Namespace;
   }
 

@@ -1016,7 +1016,7 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
   LLVMContext &Ctx = LinkedInstr->getContext();
   Module *M = LinkedInstr->getModule();
   if (!AssignFn)
-    AssignFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_assign);
+    AssignFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_assign);
 
   std::array<Value *, 6> Args = {
       MetadataAsValue::get(Ctx, ValueAsMetadata::get(Val)),
@@ -1085,7 +1085,7 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
 }
 
 static Function *getDeclareIntrin(Module &M) {
-  return Intrinsic::getDeclaration(&M, Intrinsic::dbg_declare);
+  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_declare);
 }
 
 DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
@@ -1099,7 +1099,7 @@ DbgInstPtr DIBuilder::insertDbgValueIntrinsic(
   }
 
   if (!ValueFn)
-    ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
+    ValueFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_value);
   return insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertBB,
                             InsertBefore);
 }
@@ -1200,7 +1200,7 @@ DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
   }
 
   if (!LabelFn)
-    LabelFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_label);
+    LabelFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_label);
 
   Value *Args[] = {MetadataAsValue::get(VMContext, LabelInfo)};
 
@@ -1267,7 +1267,7 @@ void DIBuilder::createComputedLifetime(DIObject *Obj, DIExpr *Loc,
 }
 
 static Function *getDefIntrin(Module &M) {
-  return Intrinsic::getDeclaration(&M, Intrinsic::dbg_def);
+  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_def);
 }
 
 Instruction *DIBuilder::insertDef(DILifetime *Lifetime, llvm::Value *Referrer,
@@ -1311,7 +1311,7 @@ Instruction *DIBuilder::insertDef(DILifetime *Lifetime, llvm::Value *Referrer,
 }
 
 static Function *getKillIntrin(Module &M) {
-  return Intrinsic::getDeclaration(&M, Intrinsic::dbg_kill);
+  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_kill);
 }
 
 Instruction *DIBuilder::insertKill(DILifetime *Lifetime, const DILocation *DL,
