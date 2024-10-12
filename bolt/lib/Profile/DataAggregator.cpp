@@ -645,6 +645,9 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   for (auto &FuncBranches : NamesToBranches)
     llvm::stable_sort(FuncBranches.second.Data);
 
+  for (auto &FuncSamples : NamesToSamples)
+    llvm::stable_sort(FuncSamples.second.Data);
+
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
 
