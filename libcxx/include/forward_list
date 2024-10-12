@@ -218,6 +218,7 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/container_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_const.h>
@@ -1543,6 +1544,17 @@ erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v) {
   return std::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
 }
 #endif
+
+template <class _Tp, class _Allocator>
+struct __container_traits<forward_list<_Tp, _Allocator> > {
+  // http://eel.is/c++draft/container.reqmts
+  // Unless otherwise specified (see [associative.reqmts.except], [unord.req.except], [deque.modifiers],
+  // [inplace.vector.modifiers], and [vector.modifiers]) all container types defined in this Clause meet the following
+  // additional requirements:
+  // - If an exception is thrown by an insert() or emplace() function while inserting a single element, that
+  // function has no effects.
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+};
 
 _LIBCPP_END_NAMESPACE_STD
 
