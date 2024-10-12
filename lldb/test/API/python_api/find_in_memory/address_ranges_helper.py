@@ -27,8 +27,8 @@ def GetStackRanges(test_base, shrink=False):
 
 
 def GetRangeFromAddrValue(test_base, addr, shrink=False):
-    """Return the address range containing 'addr'.
-    If 'shrink' is True, the size of the region will not exceed 2K.
+    """Returns a memory region containing 'addr'.
+    If 'shrink' is True, the address range will be reduced to not exceed 2K.
     """
     region = lldb.SBMemoryRegionInfo()
     test_base.assertTrue(
