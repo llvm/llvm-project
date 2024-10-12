@@ -155,8 +155,9 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
   context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
   context->e.cleanupCallback = []() {
-    elf::ctx.reset();
-    elf::ctx.partitions.emplace_back();
+    Ctx &ctx = elf::ctx;
+    ctx.reset();
+    ctx.partitions.emplace_back(ctx);
 
     SharedFile::vernauxNum = 0;
   };
@@ -165,13 +166,14 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
       "too many errors emitted, stopping now (use "
       "--error-limit=0 to see all errors)";
 
+  Ctx &ctx = elf::ctx;
   LinkerScript script(ctx);
   ctx.script = &script;
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
   ctx.partitions.clear();
-  ctx.partitions.emplace_back();
+  ctx.partitions.emplace_back(ctx);
 
   ctx.arg.progName = args[0];
 
@@ -2495,7 +2497,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   if (ctx.partitions.size() == 254)
     fatal("may not have more than 254 partitions");
 
-  ctx.partitions.emplace_back();
+  ctx.partitions.emplace_back(ctx);
   Partition &newPart = ctx.partitions.back();
   newPart.name = partName;
   sym->partition = newPart.getNumber();
@@ -3157,7 +3159,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // partition.
   copySectionsIntoPartitions(ctx);
 
-  if (canHaveMemtagGlobals()) {
+  if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx);
   }
