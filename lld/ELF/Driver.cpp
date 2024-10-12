@@ -969,7 +969,7 @@ static void readCallGraph(Ctx &ctx, MemoryBufferRef mb) {
         warn(mb.getBufferIdentifier() + ": no such symbol: " + name);
       return nullptr;
     }
-    maybeWarnUnorderableSymbol(sym);
+    maybeWarnUnorderableSymbol(ctx, sym);
 
     if (Defined *dr = dyn_cast_or_null<Defined>(sym))
       return dyn_cast_or_null<InputSectionBase>(dr->section);
@@ -2975,7 +2975,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
-  ctx.out.elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
+  ctx.out.elfHeader = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!ctx.arg.relocatable)
@@ -3147,7 +3147,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // This adds a .comment section containing a version string.
   if (!ctx.arg.relocatable)
-    ctx.inputSections.push_back(createCommentSection());
+    ctx.inputSections.push_back(createCommentSection(ctx));
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
   splitSections<ELFT>(ctx);
@@ -3200,7 +3200,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // sectionBases.
     for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections(ctx);
+        osd->osec.finalizeInputSections();
   }
 
   // Two input sections with different output sections should not be folded.
