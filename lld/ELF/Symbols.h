@@ -527,7 +527,7 @@ template <typename... T> Defined *makeDefined(T &&...args) {
 
 void reportDuplicate(Ctx &, const Symbol &sym, const InputFile *newFile,
                      InputSectionBase *errSec, uint64_t errOffset);
-void maybeWarnUnorderableSymbol(const Symbol *sym);
+void maybeWarnUnorderableSymbol(Ctx &, const Symbol *sym);
 bool computeIsPreemptible(Ctx &, const Symbol &sym);
 
 } // namespace elf

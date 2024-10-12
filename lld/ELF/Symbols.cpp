@@ -298,7 +298,7 @@ static void recordWhyExtract(const InputFile *reference,
   ctx.whyExtractRecords.emplace_back(toString(reference), &extracted, sym);
 }
 
-void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
+void elf::maybeWarnUnorderableSymbol(Ctx &ctx, const Symbol *sym) {
   if (!ctx.arg.warnSymbolOrdering)
     return;
 

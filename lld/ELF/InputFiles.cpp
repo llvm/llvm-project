@@ -1339,7 +1339,7 @@ static bool isNonCommonDef(Ctx &ctx, ELFKind ekind, MemoryBufferRef mb,
   return false;
 }
 
-static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
+static bool isNonCommonDef(Ctx &ctx, MemoryBufferRef mb, StringRef symName,
                            StringRef archiveName) {
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
@@ -1916,7 +1916,7 @@ bool InputFile::shouldExtractForCommon(StringRef name) const {
   if (isa<BitcodeFile>(this))
     return isBitcodeNonCommonDef(mb, name, archiveName);
 
-  return isNonCommonDef(mb, name, archiveName);
+  return isNonCommonDef(ctx, mb, name, archiveName);
 }
 
 std::string elf::replaceThinLTOSuffix(Ctx &ctx, StringRef path) {
