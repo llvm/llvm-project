@@ -103,9 +103,13 @@ public:
                ModuleAnalysisManager::Invalidator &));
 };
 
-struct PGOInstrumentationGenTest
-    : public Test,
-      WithParamInterface<std::tuple<StringRef, StringRef>> {
+template <typename ParamType> struct PGOTestName {
+  std::string operator()(const TestParamInfo<ParamType> &Info) const {
+    return std::get<1>(Info.param).str();
+  }
+};
+
+struct PGOInstrumentationGenTest : public Test {
   ModulePassManager MPM;
   PassBuilder PB;
   MockModuleAnalysisHandle MMAHandle;
@@ -141,31 +145,22 @@ struct PGOInstrumentationGenTest
   }
 };
 
+struct PGOInstrumentationGenInstrumentTest
+    : PGOInstrumentationGenTest,
+      WithParamInterface<std::tuple<StringRef, StringRef>> {};
+
 static constexpr StringRef CodeWithFuncDefs = R"(
   define i32 @f(i32 %n) {
   entry:
     ret i32 0
   })";
 
-static constexpr StringRef CodeWithFuncDecls = R"(
-  declare i32 @f(i32);
-)";
-
-static constexpr StringRef CodeWithGlobals = R"(
-  @foo.table = internal unnamed_addr constant [1 x ptr] [ptr @f]
-  declare i32 @f(i32);
-)";
-
 INSTANTIATE_TEST_SUITE_P(
-    PGOInstrumetationGenTestSuite, PGOInstrumentationGenTest,
-    Values(std::make_tuple(CodeWithFuncDefs, "instrument_function_defs"),
-           std::make_tuple(CodeWithFuncDecls, "instrument_function_decls"),
-           std::make_tuple(CodeWithGlobals, "instrument_globals")),
-    [](const TestParamInfo<PGOInstrumentationGenTest::ParamType> &Info) {
-      return std::get<1>(Info.param).str();
-    });
+    PGOInstrumetationGenTestSuite, PGOInstrumentationGenInstrumentTest,
+    Values(std::make_tuple(CodeWithFuncDefs, "instrument_function_defs")),
+    PGOTestName<PGOInstrumentationGenInstrumentTest::ParamType>());
 
-TEST_P(PGOInstrumentationGenTest, Instrumented) {
+TEST_P(PGOInstrumentationGenInstrumentTest, Instrumented) {
   const StringRef Code = std::get<0>(GetParam());
   parseAssembly(Code);
 
@@ -183,7 +178,44 @@ TEST_P(PGOInstrumentationGenTest, Instrumented) {
 
   const auto *IRInstrVar =
       M->getNamedGlobal(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
-  EXPECT_THAT(IRInstrVar, NotNull());
+  ASSERT_THAT(IRInstrVar, NotNull());
+  EXPECT_FALSE(IRInstrVar->isDeclaration());
+}
+
+struct PGOInstrumentationGenIgnoreTest
+    : PGOInstrumentationGenTest,
+      WithParamInterface<std::tuple<StringRef, StringRef>> {};
+
+static constexpr StringRef CodeWithFuncDecls = R"(
+  declare i32 @f(i32);
+)";
+
+static constexpr StringRef CodeWithGlobals = R"(
+  @foo.table = internal unnamed_addr constant [1 x ptr] [ptr @f]
+  declare i32 @f(i32);
+)";
+
+INSTANTIATE_TEST_SUITE_P(
+    PGOInstrumetationGenIgnoreTestSuite, PGOInstrumentationGenIgnoreTest,
+    Values(std::make_tuple(CodeWithFuncDecls, "instrument_function_decls"),
+           std::make_tuple(CodeWithGlobals, "instrument_globals")),
+    PGOTestName<PGOInstrumentationGenIgnoreTest::ParamType>());
+
+TEST_P(PGOInstrumentationGenIgnoreTest, NotInstrumented) {
+  const StringRef Code = std::get<0>(GetParam());
+
+  parseAssembly(Code);
+
+  ASSERT_THAT(M, NotNull());
+
+  EXPECT_CALL(MMAHandle, run(Ref(*M), _)).WillOnce(DoDefault());
+  EXPECT_CALL(MMAHandle, invalidate(Ref(*M), _, _)).Times(0);
+
+  MPM.run(*M, MAM);
+
+  const auto *IRInstrVar =
+      M->getNamedGlobal(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
+  ASSERT_THAT(IRInstrVar, NotNull());
   EXPECT_FALSE(IRInstrVar->isDeclaration());
 }
 
