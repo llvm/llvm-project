@@ -63,7 +63,7 @@ static uint64_t readUint(Ctx &ctx, uint8_t *buf) {
   return ctx.arg.is64 ? read64(buf) : read32(buf);
 }
 
-static void writeUint(uint8_t *buf, uint64_t val) {
+static void writeUint(Ctx &ctx, uint8_t *buf, uint64_t val) {
   if (ctx.arg.is64)
     write64(buf, val);
   else
@@ -264,7 +264,7 @@ MipsReginfoSection<ELFT>::create(Ctx &ctx) {
   return std::make_unique<MipsReginfoSection<ELFT>>(ctx, reginfo);
 }
 
-InputSection *elf::createInterpSection(Ctx &) {
+InputSection *elf::createInterpSection(Ctx &ctx) {
   // StringSaver guarantees that the returned string ends with '\0'.
   StringRef s = saver().save(ctx.arg.dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
@@ -273,8 +273,9 @@ InputSection *elf::createInterpSection(Ctx &) {
                             contents, ".interp");
 }
 
-Defined *elf::addSyntheticLocal(StringRef name, uint8_t type, uint64_t value,
-                                uint64_t size, InputSectionBase &section) {
+Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
+                                uint64_t value, uint64_t size,
+                                InputSectionBase &section) {
   Defined *s = makeDefined(section.file, name, STB_LOCAL, STV_DEFAULT, type,
                            value, size, &section);
   if (ctx.in.symTab)
@@ -1117,13 +1118,14 @@ void MipsGotSection::writeTo(uint8_t *buf) {
   // we've been doing this for years, it is probably a safe bet to
   // keep doing this for now. We really need to revisit this to see
   // if we had to do this.
-  writeUint(buf + ctx.arg.wordsize, (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
+  writeUint(ctx, buf + ctx.arg.wordsize,
+            (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
   for (const FileGot &g : gots) {
     auto write = [&](size_t i, const Symbol *s, int64_t a) {
       uint64_t va = a;
       if (s)
         va = s->getVA(a);
-      writeUint(buf + i * ctx.arg.wordsize, va);
+      writeUint(ctx, buf + i * ctx.arg.wordsize, va);
     };
     // Write 'page address' entries to the local part of the GOT.
     for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
@@ -1304,7 +1306,7 @@ DynamicSection<ELFT>::DynamicSection(Ctx &ctx)
 //   .rela.dyn
 //
 // DT_RELASZ is the total size of the included sections.
-static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
+static uint64_t addRelaSz(Ctx &ctx, const RelocationBaseSection &relaDyn) {
   size_t size = relaDyn.getSize();
   if (ctx.in.relaPlt->getParent() == relaDyn.getParent())
     size += ctx.in.relaPlt->getSize();
@@ -1315,7 +1317,7 @@ static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
 // output section. When this occurs we cannot just use the OutputSection
 // Size. Moreover the [DT_JMPREL, DT_JMPREL + DT_PLTRELSZ) is permitted to
 // overlap with the [DT_RELA, DT_RELA + DT_RELASZ).
-static uint64_t addPltRelSz() { return ctx.in.relaPlt->getSize(); }
+static uint64_t addPltRelSz(Ctx &ctx) { return ctx.in.relaPlt->getSize(); }
 
 // Add remaining entries to complete .dynamic contents.
 template <class ELFT>
@@ -1405,7 +1407,7 @@ DynamicSection<ELFT>::computeContents() {
   if (part.relaDyn->isNeeded()) {
     addInSec(part.relaDyn->dynamicTag, *part.relaDyn);
     entries.emplace_back(part.relaDyn->sizeDynamicTag,
-                         addRelaSz(*part.relaDyn));
+                         addRelaSz(ctx, *part.relaDyn));
 
     bool isRela = ctx.arg.isRela;
     addInt(isRela ? DT_RELAENT : DT_RELENT,
@@ -1437,7 +1439,7 @@ DynamicSection<ELFT>::computeContents() {
   }
   if (isMain && ctx.in.relaPlt->isNeeded()) {
     addInSec(DT_JMPREL, *ctx.in.relaPlt);
-    entries.emplace_back(DT_PLTRELSZ, addPltRelSz());
+    entries.emplace_back(DT_PLTRELSZ, addPltRelSz(ctx));
     switch (ctx.arg.emachine) {
     case EM_MIPS:
       addInSec(DT_MIPS_PLTGOT, *ctx.in.gotPlt);
@@ -2126,15 +2128,18 @@ SymbolTableBaseSection::SymbolTableBaseSection(Ctx &ctx,
 // See "Global Offset Table" in Chapter 5 in the following document
 // for detailed description:
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-static bool sortMipsSymbols(const SymbolTableEntry &l,
-                            const SymbolTableEntry &r) {
-  // Sort entries related to non-local preemptible symbols by GOT indexes.
-  // All other entries go to the beginning of a dynsym in arbitrary order.
-  if (l.sym->isInGot(ctx) && r.sym->isInGot(ctx))
-    return l.sym->getGotIdx(ctx) < r.sym->getGotIdx(ctx);
-  if (!l.sym->isInGot(ctx) && !r.sym->isInGot(ctx))
-    return false;
-  return !l.sym->isInGot(ctx);
+static void sortMipsSymbols(Ctx &ctx, SmallVector<SymbolTableEntry, 0> &syms) {
+  llvm::stable_sort(syms,
+                    [&](const SymbolTableEntry &l, const SymbolTableEntry &r) {
+                      // Sort entries related to non-local preemptible symbols
+                      // by GOT indexes. All other entries go to the beginning
+                      // of a dynsym in arbitrary order.
+                      if (l.sym->isInGot(ctx) && r.sym->isInGot(ctx))
+                        return l.sym->getGotIdx(ctx) < r.sym->getGotIdx(ctx);
+                      if (!l.sym->isInGot(ctx) && !r.sym->isInGot(ctx))
+                        return false;
+                      return !l.sym->isInGot(ctx);
+                    });
 }
 
 void SymbolTableBaseSection::finalizeContents() {
@@ -2157,7 +2162,7 @@ void SymbolTableBaseSection::finalizeContents() {
     // NB: It also sorts Symbols to meet the GNU hash table requirements.
     getPartition().gnuHashTab->addSymbols(symbols);
   } else if (ctx.arg.emachine == EM_MIPS) {
-    llvm::stable_sort(symbols, sortMipsSymbols);
+    sortMipsSymbols(ctx, symbols);
   }
 
   // Only the main partition's dynsym indexes are stored in the symbols
@@ -2440,7 +2445,7 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
     uint64_t val = readUint(ctx, buf + i * ctx.arg.wordsize);
     val |= uint64_t(1) << (sym.hash % c);
     val |= uint64_t(1) << ((sym.hash >> Shift2) % c);
-    writeUint(buf + i * ctx.arg.wordsize, val);
+    writeUint(ctx, buf + i * ctx.arg.wordsize, val);
   }
   buf += ctx.arg.wordsize * maskWords;
 

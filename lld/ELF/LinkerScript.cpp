@@ -861,7 +861,8 @@ static OutputSection *findByName(ArrayRef<SectionCommand *> vec,
   return nullptr;
 }
 
-static OutputDesc *createSection(InputSectionBase *isec, StringRef outsecName) {
+static OutputDesc *createSection(Ctx &ctx, InputSectionBase *isec,
+                                 StringRef outsecName) {
   OutputDesc *osd = ctx.script->createOutputSection(outsecName, "<internal>");
   osd->osec.recordSection(isec);
   return osd;
@@ -878,7 +879,7 @@ static OutputDesc *addInputSec(Ctx &ctx,
   // as-is because adding/removing members or merging them with other groups
   // change their semantics.
   if (isec->type == SHT_GROUP || (isec->flags & SHF_GROUP))
-    return createSection(isec, outsecName);
+    return createSection(ctx, isec, outsecName);
 
   // Imagine .zed : { *(.foo) *(.bar) } script. Both foo and bar may have
   // relocation sections .rela.foo and .rela.bar for example. Most tools do
@@ -895,7 +896,7 @@ static OutputDesc *addInputSec(Ctx &ctx,
       return nullptr;
     }
 
-    OutputDesc *osd = createSection(isec, outsecName);
+    OutputDesc *osd = createSection(ctx, isec, outsecName);
     out->relocationSection = &osd->osec;
     return osd;
   }
@@ -966,7 +967,7 @@ static OutputDesc *addInputSec(Ctx &ctx,
     return nullptr;
   }
 
-  OutputDesc *osd = createSection(isec, outsecName);
+  OutputDesc *osd = createSection(ctx, isec, outsecName);
   v.push_back(&osd->osec);
   return osd;
 }
@@ -982,7 +983,7 @@ void LinkerScript::addOrphanSections() {
 
       StringRef name = getOutputSectionName(s);
       if (ctx.arg.unique) {
-        v.push_back(createSection(s, name));
+        v.push_back(createSection(ctx, s, name));
       } else if (OutputSection *sec = findByName(sectionCommands, name)) {
         sec->recordSection(s);
       } else {
