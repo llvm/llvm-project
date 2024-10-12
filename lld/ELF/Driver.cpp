@@ -3147,7 +3147,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // This adds a .comment section containing a version string.
   if (!ctx.arg.relocatable)
-    ctx.inputSections.push_back(createCommentSection());
+    ctx.inputSections.push_back(createCommentSection(ctx));
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
   splitSections<ELFT>(ctx);
