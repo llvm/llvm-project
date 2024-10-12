@@ -498,7 +498,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     ```
       %bcast = linalg.broadcast
           ins(%input:tensor<16xf32>)
-          inits(%init:tensor<16x64xf32>)
+          outs(%init:tensor<16x64xf32>)
           dimensions = [1]
     ```
   }];
