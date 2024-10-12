@@ -172,7 +172,7 @@ Changes in existing checks
   expression.
 
 - Improved :doc:`cppcoreguidelines-init-variables
-  <clang-tidy/checks/cppcoreguidelines-init-variables>` check by fixing the
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers.
 
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
