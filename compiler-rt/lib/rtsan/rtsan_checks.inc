@@ -17,3 +17,5 @@
 // SummaryKind should be a string literal.
 
 RTSAN_CHECK(CallStackContains, "call-stack-contains")
+RTSAN_CHECK(InterceptedFnName, "intercepted-fn-name")
+RTSAN_CHECK(BlockingFnName, "blocking-fn-name")

@@ -92,3 +92,25 @@ bool __rtsan::IsStackTraceSuppressed(const StackTrace &stack) {
   }
   return false;
 }
+
+static bool IsFunctionSuppressed(const char *interceptor_name,
+                                 const char *flag_name) {
+  if (suppression_ctx == nullptr)
+    return false;
+
+  if (!suppression_ctx->HasSuppressionType(flag_name))
+    return false;
+
+  Suppression *s;
+  return suppression_ctx->Match(interceptor_name, flag_name, &s);
+}
+
+bool __rtsan::IsInterceptorSuppressed(const char *interceptor_name) {
+  return IsFunctionSuppressed(
+      interceptor_name, ConvertTypeToFlagName(ErrorType::InterceptedFnName));
+}
+
+bool __rtsan::IsBlockingFnSuppressed(const char *blocking_fn_name) {
+  return IsFunctionSuppressed(blocking_fn_name,
+                              ConvertTypeToFlagName(ErrorType::BlockingFnName));
+}

@@ -1,4 +1,5 @@
 // RUN: %clangxx -fsanitize=realtime %s -o %t
+// RUN: %env_rtsan_opts=halt_on_error=false %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NOSUPPRESSIONS
 // RUN: %env_rtsan_opts=suppressions='%s.supp' not %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: ios
 
@@ -22,13 +23,14 @@ void VectorViolations() {
   v.reserve(10);
 }
 
-void BlockFunc() [[clang::blocking]] { usleep(1); }
+void BlockFunc() [[clang::blocking]] { /* do something blocking */
+}
 
 void *process() [[clang::nonblocking]] {
-  void *ptr = MallocViolation();
-  VectorViolations();
-  BlockFunc();
-  free(ptr);
+  void *ptr = MallocViolation(); // Suppressed call-stack-contains
+  VectorViolations();            // Suppressed call-stack-contains with regex
+  BlockFunc();                   // Suppressed blocking-fn-name
+  free(ptr);                     // Suppressed intercepted-fn-name
 
   // This is the one that should abort the program
   // Everything else is suppressed
@@ -51,3 +53,9 @@ int main() {
 // CHECK-NOT: vector
 // CHECK-NOT: free
 // CHECK-NOT: BlockFunc
+
+// CHECK-NOSUPPRESSIONS: malloc
+// CHECK-NOSUPPRESSIONS: vector
+// CHECK-NOSUPPRESSIONS: free
+// CHECK-NOSUPPRESSIONS: BlockFunc
+// CHECK-NOSUPPRESSIONS: usleep
