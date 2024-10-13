@@ -94,15 +94,20 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool> EnableMISchedLoadClustering(
-    "riscv-misched-load-clustering", cl::Hidden,
-    cl::desc("Enable load clustering in the machine scheduler"),
+static cl::opt<bool> EnableMISchedLoadStoreClustering(
+    "riscv-misched-load-store-clustering", cl::Hidden,
+    cl::desc("Enable load and store clustering in the machine scheduler"),
     cl::init(true));
 
 static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
     "riscv-vsetvl-after-rvv-regalloc", cl::Hidden,
     cl::desc("Insert vsetvls after vector register allocation"),
     cl::init(true));
+
+static cl::opt<bool>
+    EnableVLOptimizer("riscv-enable-vl-optimizer",
+                      cl::desc("Enable the RISC-V VL Optimizer pass"),
+                      cl::init(false), cl::Hidden);
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
@@ -347,9 +352,11 @@ public:
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override {
     ScheduleDAGMILive *DAG = nullptr;
-    if (EnableMISchedLoadClustering) {
+    if (EnableMISchedLoadStoreClustering) {
       DAG = createGenericSchedLive(C);
       DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+      DAG->addMutation(createStoreClusterDAGMutation(
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
     return DAG;
@@ -558,8 +565,11 @@ void RISCVPassConfig::addMachineSSAOptimization() {
 
 void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
+    if (EnableVLOptimizer)
+      addPass(createRISCVVLOptimizerPass());
+  }
 
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());

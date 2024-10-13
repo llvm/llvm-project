@@ -1824,26 +1824,16 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
            Subtarget->hasUnalignedDSAccessEnabled();
   }
 
-  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
-    bool AlignedBy4 = Alignment >= Align(4);
-    if (IsFast)
-      *IsFast = AlignedBy4;
-
-    return AlignedBy4 ||
-           Subtarget->enableFlatScratch() ||
-           Subtarget->hasUnalignedScratchAccess();
-  }
-
   // FIXME: We have to be conservative here and assume that flat operations
   // will access scratch.  If we had access to the IR function, then we
   // could determine if any private memory was used in the function.
-  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS &&
-      !Subtarget->hasUnalignedScratchAccess()) {
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+      AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
     bool AlignedBy4 = Alignment >= Align(4);
     if (IsFast)
       *IsFast = AlignedBy4;
 
-    return AlignedBy4;
+    return AlignedBy4 || Subtarget->hasUnalignedScratchAccessEnabled();
   }
 
   // So long as they are correct, wide global memory operations perform better
@@ -10031,9 +10021,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         // If reference to barrier id is not an inline constant then it must be
         // referenced with M0[4:0]. Perform an OR with the member count to
         // include it in M0.
-        M0Val = SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32,
-                                           Op.getOperand(2), M0Val),
-                        0);
+        M0Val = DAG.getNode(ISD::OR, DL, MVT::i32, Op.getOperand(2), M0Val);
       }
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
     } else if (IsInlinableBarID) {

@@ -87,14 +87,15 @@ namespace Intrinsic {
   /// Return the attributes for an intrinsic.
   AttributeList getAttributes(LLVMContext &C, ID id);
 
-  /// Create or insert an LLVM Function declaration for an intrinsic, and return
-  /// it.
+  /// Look up the Function declaration of the intrinsic \p id in the Module
+  /// \p M. If it does not exist, add a declaration and return it. Otherwise,
+  /// return the existing declaration.
   ///
-  /// The Tys parameter is for intrinsics with overloaded types (e.g., those
+  /// The \p Tys parameter is for intrinsics with overloaded types (e.g., those
   /// using iAny, fAny, vAny, or iPTRAny).  For a declaration of an overloaded
   /// intrinsic, Tys must provide exactly one type for each overloaded type in
   /// the intrinsic.
-  Function *getDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {});
+  Function *getOrInsertDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {});
 
   /// Looks up Name in NameTable via binary search. NameTable must be sorted
   /// and all entries must start with "llvm.".  If NameTable contains an exact
