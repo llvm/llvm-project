@@ -744,7 +744,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-static bool relax(InputSection &sec) {
+static bool relax(Ctx &ctx, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
@@ -833,7 +833,7 @@ bool LoongArch::relaxOnce(int pass) const {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
-      changed |= relax(*sec);
+      changed |= relax(ctx, *sec);
   }
   return changed;
 }
