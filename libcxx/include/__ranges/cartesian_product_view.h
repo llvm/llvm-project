@@ -239,6 +239,13 @@ public:
     return __tuple_transform(ranges::iter_move, i.current_);
   }
 
+  friend constexpr void iter_swap(const iterator& l, const iterator& r) /*fixme: noexcept(...) */
+    requires(indirectly_swappable<iterator_t<__maybe_const<Const, First>>> && ... &&
+             indirectly_swappable<iterator_t<__maybe_const<Const, Vs>>>)
+  {
+    iter_swap_helper(l, r);
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
@@ -339,6 +346,13 @@ private:
     if constexpr (N <= sizeof...(Vs))
       return scaled_distance<N>(t) + scaled_sum<N + 1>(t);
     return static_cast<difference_type>(0);
+  }
+
+  template <auto N = sizeof...(Vs)>
+  static constexpr void iter_swap_helper(const iterator& l, const iterator& r) {
+    ranges::iter_swap(std::get<N>(l.current_), std::get<N>(r.current_));
+    if constexpr (N > 0)
+      iter_swap_helper<N - 1>(l, r);
   }
 };
 
