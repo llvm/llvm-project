@@ -12,6 +12,7 @@
 #include <__config>
 #include <__iterator/access.h> // begin
 #include <__iterator/distance.h>
+#include <__iterator/iter_move.h>
 #include <__iterator/next.h>
 #include <__memory/addressof.h>
 #include <__ranges/concepts.h> // forward_range, view, range_size_t, sized_range, ...
@@ -232,6 +233,10 @@ public:
     requires cartesian_is_sized_sentinel<Const, sentinel_t, First, Vs...>
   {
     return -(i - s);
+  }
+
+  friend constexpr auto iter_move(const iterator& i) /*fixme: noexcept(...) */ {
+    return __tuple_transform(ranges::iter_move, i.current_);
   }
 
 private:
