@@ -246,7 +246,7 @@ unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther) {
 
 void elf::writePrefixedInst(Ctx &ctx, uint8_t *loc, uint64_t insn) {
   insn = ctx.arg.isLE ? insn << 32 | insn >> 32 : insn;
-  write64(loc, insn);
+  write64(ctx, loc, insn);
 }
 
 static bool addOptional(Ctx &ctx, StringRef name, uint64_t value,
@@ -574,7 +574,7 @@ static uint32_t readFromHalf16(Ctx &ctx, const uint8_t *loc) {
 }
 
 static uint64_t readPrefixedInst(Ctx &ctx, const uint8_t *loc) {
-  uint64_t fullInstr = read64(loc);
+  uint64_t fullInstr = read64(ctx, loc);
   return ctx.arg.isLE ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
 }
 
@@ -1125,7 +1125,7 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_PPC64_DTPMOD64:
   case R_PPC64_DTPREL64:
   case R_PPC64_TPREL64:
-    return read64(buf);
+    return read64(ctx, buf);
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
@@ -1134,7 +1134,7 @@ int64_t PPC64::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void PPC64::writeGotHeader(uint8_t *buf) const {
-  write64(buf, getPPC64TocBase(ctx));
+  write64(ctx, buf, getPPC64TocBase(ctx));
 }
 
 void PPC64::writePltHeader(uint8_t *buf) const {
@@ -1157,7 +1157,7 @@ void PPC64::writePltHeader(uint8_t *buf) const {
   // following instruction ('mflr r11'). Here we store the offset from that
   // instruction  to the first entry in the GotPlt section.
   int64_t gotPltOffset = ctx.in.gotPlt->getVA() - (ctx.in.plt->getVA() + 8);
-  write64(buf + 52, gotPltOffset);
+  write64(ctx, buf + 52, gotPltOffset);
 }
 
 void PPC64::writePlt(uint8_t *buf, const Symbol &sym,
@@ -1269,12 +1269,12 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkAlignment(loc, val, 4, rel);
     // Preserve the AA/LK bits in the branch instruction
     uint8_t aalk = loc[3];
-    write16(loc + 2, (aalk & 3) | (val & 0xfffc));
+    write16(ctx, loc + 2, (aalk & 3) | (val & 0xfffc));
     break;
   }
   case R_PPC64_ADDR16:
     checkIntUInt(loc, val, 16, rel);
-    write16(loc, val);
+    write16(ctx, loc, val);
     break;
   case R_PPC64_ADDR32:
     checkIntUInt(loc, val, 32, rel);
@@ -1287,7 +1287,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // DS-form instructions only use bits 30-31.
     uint16_t mask = isDQFormInstruction(readFromHalf16(ctx, loc)) ? 0xf : 0x3;
     checkAlignment(loc, lo(val), mask + 1, rel);
-    write16(loc, (read16(loc) & mask) | lo(val));
+    write16(ctx, loc, (read16(ctx, loc) & mask) | lo(val));
   } break;
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
@@ -1296,33 +1296,33 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       writeFromHalf16(ctx, loc, NOP);
     else {
       checkInt(loc, val + 0x8000, 32, rel);
-      write16(loc, ha(val));
+      write16(ctx, loc, ha(val));
     }
     break;
   case R_PPC64_ADDR16_HI:
   case R_PPC64_REL16_HI:
   case R_PPC64_TPREL16_HI:
     checkInt(loc, val, 32, rel);
-    write16(loc, hi(val));
+    write16(ctx, loc, hi(val));
     break;
   case R_PPC64_ADDR16_HIGH:
-    write16(loc, hi(val));
+    write16(ctx, loc, hi(val));
     break;
   case R_PPC64_ADDR16_HIGHER:
   case R_PPC64_TPREL16_HIGHER:
-    write16(loc, higher(val));
+    write16(ctx, loc, higher(val));
     break;
   case R_PPC64_ADDR16_HIGHERA:
   case R_PPC64_TPREL16_HIGHERA:
-    write16(loc, highera(val));
+    write16(ctx, loc, highera(val));
     break;
   case R_PPC64_ADDR16_HIGHEST:
   case R_PPC64_TPREL16_HIGHEST:
-    write16(loc, highest(val));
+    write16(ctx, loc, highest(val));
     break;
   case R_PPC64_ADDR16_HIGHESTA:
   case R_PPC64_TPREL16_HIGHESTA:
-    write16(loc, highesta(val));
+    write16(ctx, loc, highesta(val));
     break;
   case R_PPC64_ADDR16_LO:
   case R_PPC64_REL16_LO:
@@ -1337,7 +1337,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
               "can't toc-optimize an update instruction: 0x" + utohexstr(insn));
       writeFromHalf16(ctx, loc, (insn & 0xffe00000) | 0x00020000 | lo(val));
     } else {
-      write16(loc, lo(val));
+      write16(ctx, loc, lo(val));
     }
     break;
   case R_PPC64_ADDR16_LO_DS:
@@ -1358,12 +1358,12 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       insn &= 0xffe00000 | mask;
       writeFromHalf16(ctx, loc, insn | 0x00020000 | lo(val));
     } else {
-      write16(loc, (read16(loc) & mask) | lo(val));
+      write16(ctx, loc, (read16(ctx, loc) & mask) | lo(val));
     }
   } break;
   case R_PPC64_TPREL16:
     checkInt(loc, val, 16, rel);
-    write16(loc, val);
+    write16(ctx, loc, val);
     break;
   case R_PPC64_REL32:
     checkInt(loc, val, 32, rel);
@@ -1372,7 +1372,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_ADDR64:
   case R_PPC64_REL64:
   case R_PPC64_TOC:
-    write64(loc, val);
+    write64(ctx, loc, val);
     break;
   case R_PPC64_REL14: {
     uint32_t mask = 0x0000FFFC;
@@ -1390,7 +1390,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   }
   case R_PPC64_DTPREL64:
-    write64(loc, val - dynamicThreadPointerOffset);
+    write64(ctx, loc, val - dynamicThreadPointerOffset);
     break;
   case R_PPC64_DTPREL34:
     // The Dynamic Thread Vector actually points 0x8000 bytes past the start

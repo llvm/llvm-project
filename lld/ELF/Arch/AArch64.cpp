@@ -255,14 +255,14 @@ RelType AArch64::getDynRel(RelType type) const {
 int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_AARCH64_TLSDESC:
-    return read64(buf + 8);
+    return read64(ctx, buf + 8);
   case R_AARCH64_NONE:
   case R_AARCH64_GLOB_DAT:
   case R_AARCH64_JUMP_SLOT:
     return 0;
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
-    return SignExtend64<16>(read16(buf));
+    return SignExtend64<16>(read16(ctx, buf));
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
     return SignExtend64<32>(read32(ctx, buf));
@@ -271,7 +271,7 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_RELATIVE:
   case R_AARCH64_IRELATIVE:
   case R_AARCH64_TLS_TPREL64:
-    return read64(buf);
+    return read64(ctx, buf);
 
     // The following relocation types all point at instructions, and
     // relocate an immediate field in the instruction.
@@ -355,12 +355,12 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write64(buf, ctx.in.plt->getVA());
+  write64(ctx, buf, ctx.in.plt->getVA());
 }
 
 void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (ctx.arg.writeAddends)
-    write64(buf, s.getVA());
+    write64(ctx, buf, s.getVA());
 }
 
 void AArch64::writePltHeader(uint8_t *buf) const {
@@ -485,7 +485,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
     checkIntUInt(loc, val, 16, rel);
-    write16(loc, val);
+    write16(ctx, loc, val);
     break;
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
@@ -508,12 +508,12 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     if (rel.sym && rel.sym->isTagged() &&
         (rel.addend < 0 ||
          rel.addend >= static_cast<int64_t>(rel.sym->getSize())))
-      write64(loc, -rel.addend);
+      write64(ctx, loc, -rel.addend);
     else
-      write64(loc, val);
+      write64(ctx, loc, val);
     break;
   case R_AARCH64_PREL64:
-    write64(loc, val);
+    write64(ctx, loc, val);
     break;
   case R_AARCH64_AUTH_ABS64:
     // If val is wider than 32 bits, the relocation must have been moved from
@@ -662,7 +662,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_TLSDESC:
     // For R_AARCH64_TLSDESC the addend is stored in the second 64-bit word.
-    write64(loc + 8, val);
+    write64(ctx, loc + 8, val);
     break;
   default:
     llvm_unreachable("unknown relocation");

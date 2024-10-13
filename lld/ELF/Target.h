@@ -292,7 +292,7 @@ inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
 }
 
 // Endianness-aware read/write.
-inline uint16_t read16(const void *p) {
+inline uint16_t read16(Ctx &ctx, const void *p) {
   return llvm::support::endian::read16(p, ctx.arg.endianness);
 }
 
@@ -300,11 +300,11 @@ inline uint32_t read32(Ctx &ctx, const void *p) {
   return llvm::support::endian::read32(p, ctx.arg.endianness);
 }
 
-inline uint64_t read64(const void *p) {
+inline uint64_t read64(Ctx &ctx, const void *p) {
   return llvm::support::endian::read64(p, ctx.arg.endianness);
 }
 
-inline void write16(void *p, uint16_t v) {
+inline void write16(Ctx &ctx, void *p, uint16_t v) {
   llvm::support::endian::write16(p, v, ctx.arg.endianness);
 }
 
@@ -312,7 +312,7 @@ inline void write32(Ctx &ctx, void *p, uint32_t v) {
   llvm::support::endian::write32(p, v, ctx.arg.endianness);
 }
 
-inline void write64(void *p, uint64_t v) {
+inline void write64(Ctx &ctx, void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, ctx.arg.endianness);
 }
 
