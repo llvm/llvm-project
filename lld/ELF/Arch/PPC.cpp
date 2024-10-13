@@ -326,7 +326,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (newType) {
   case R_PPC_ADDR16:
     checkIntUInt(loc, val, 16, rel);
-    write16(loc, val);
+    write16(ctx, loc, val);
     break;
   case R_PPC_GOT16:
   case R_PPC_GOT_TLSGD16:
@@ -334,7 +334,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_GOT_TPREL16:
   case R_PPC_TPREL16:
     checkInt(loc, val, 16, rel);
-    write16(loc, val);
+    write16(ctx, loc, val);
     break;
   case R_PPC_ADDR16_HA:
   case R_PPC_DTPREL16_HA:
@@ -343,7 +343,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_GOT_TPREL16_HA:
   case R_PPC_REL16_HA:
   case R_PPC_TPREL16_HA:
-    write16(loc, ha(val));
+    write16(ctx, loc, ha(val));
     break;
   case R_PPC_ADDR16_HI:
   case R_PPC_DTPREL16_HI:
@@ -352,7 +352,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_GOT_TPREL16_HI:
   case R_PPC_REL16_HI:
   case R_PPC_TPREL16_HI:
-    write16(loc, val >> 16);
+    write16(ctx, loc, val >> 16);
     break;
   case R_PPC_ADDR16_LO:
   case R_PPC_DTPREL16_LO:
@@ -361,7 +361,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_GOT_TPREL16_LO:
   case R_PPC_REL16_LO:
   case R_PPC_TPREL16_LO:
-    write16(loc, val);
+    write16(ctx, loc, val);
     break;
   case R_PPC_ADDR32:
   case R_PPC_REL32:
