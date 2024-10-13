@@ -10,9 +10,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: $x1 = COPY [[AND]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %2:_(s32) = nuw G_TRUNC %0
     %3:_(s64) = G_ZEXT  %2
@@ -27,9 +25,9 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: $x1 = COPY [[AND]](s64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = nsw G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s32)
+    ; CHECK-NEXT: $x1 = COPY [[ZEXT]](s64)
     %0:_(s64) = COPY $x0
     %2:_(s32) = nsw G_TRUNC %0
     %3:_(s64) = G_ZEXT  %2
@@ -44,9 +42,9 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: $x1 = COPY [[AND]](s64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s32)
+    ; CHECK-NEXT: $x1 = COPY [[ZEXT]](s64)
     %0:_(s64) = COPY $x0
     %2:_(s32) = G_TRUNC %0
     %3:_(s64) = G_ZEXT  %2
@@ -302,10 +300,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: %sv0:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[COPY]](s64)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[C]](s64)
-    ; CHECK-NEXT: %z:_(<vscale x 2 x s64>) = G_AND %sv0, [[SPLAT_VECTOR]]
-    ; CHECK-NEXT: $z0 = COPY %z(<vscale x 2 x s64>)
+    ; CHECK-NEXT: $z0 = COPY %sv0(<vscale x 2 x s64>)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %sv0:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR %0:_(s64)

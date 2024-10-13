@@ -413,9 +413,9 @@ body:             |
     ; GFX6: liveins: $vgpr0
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: %argument:_(s32) = COPY $vgpr0
+    ; GFX6-NEXT: %truncate:_(s16) = G_TRUNC %argument(s32)
     ; GFX6-NEXT: %shiftamt:_(s16) = G_CONSTANT i16 16
-    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX6-NEXT: %extend:_(s32) = G_AND %argument, [[C]]
+    ; GFX6-NEXT: %extend:_(s32) = G_ZEXT %truncate(s16)
     ; GFX6-NEXT: %shl:_(s32) = G_SHL %extend, %shiftamt(s16)
     ; GFX6-NEXT: $vgpr0 = COPY %shl(s32)
     ;
@@ -423,9 +423,9 @@ body:             |
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: %argument:_(s32) = COPY $vgpr0
+    ; GFX9-NEXT: %truncate:_(s16) = G_TRUNC %argument(s32)
     ; GFX9-NEXT: %shiftamt:_(s16) = G_CONSTANT i16 16
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX9-NEXT: %extend:_(s32) = G_AND %argument, [[C]]
+    ; GFX9-NEXT: %extend:_(s32) = G_ZEXT %truncate(s16)
     ; GFX9-NEXT: %shl:_(s32) = G_SHL %extend, %shiftamt(s16)
     ; GFX9-NEXT: $vgpr0 = COPY %shl(s32)
     %argument:_(s32) = COPY $vgpr0

@@ -453,8 +453,8 @@ define amdgpu_ps i32 @s_bswap_v2i16(<2 x i16> inreg %src) {
 ; GFX7-NEXT:    s_lshl_b32 s2, s1, 8
 ; GFX7-NEXT:    s_bfe_u32 s1, s1, 0x80008
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
-; GFX7-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX7-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX7-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX7-NEXT:    s_or_b32 s0, s0, s1
 ; GFX7-NEXT:    ; return to shader part epilog

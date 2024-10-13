@@ -165,9 +165,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXTLOAD]], [[C]]
-    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXT]](s32)
     ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_LOAD %0 :: (load (s8))
