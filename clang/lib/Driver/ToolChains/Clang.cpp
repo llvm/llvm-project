@@ -8079,7 +8079,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     llvm::SmallVector<StringRef> CorrectOpts = {
-        "all", "scheduler", "mbb-placement", "regalloc", "isel", "alloca"};
+        "all", "scheduler", "mbb-placement", "regalloc", "isel", "alloca", "bpu"};
 
     for (const auto &ActualOpt : ActualOpts)
       if (llvm::find(CorrectOpts, ActualOpt) == CorrectOpts.end())

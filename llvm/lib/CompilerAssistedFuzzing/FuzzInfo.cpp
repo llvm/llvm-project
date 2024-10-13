@@ -24,12 +24,13 @@ using fuzz::Component;
 
 Component fuzz::Scheduler("scheduler");
 Component fuzz::MBBPlacement("mbb-placement");
+Component fuzz::BPU("bpu");
 Component fuzz::RegAlloc("regalloc");
 Component fuzz::ISel("isel");
 Component fuzz::Alloca("alloca");
-std::array<std::reference_wrapper<Component>, 5> Components{
+std::array<std::reference_wrapper<Component>, 6> Components{
     fuzz::Scheduler, fuzz::MBBPlacement, fuzz::RegAlloc, fuzz::ISel,
-    fuzz::Alloca};
+    fuzz::Alloca, fuzz::BPU};
 
 inline bool isCompUsed(const Component &Comp) {
   if (FuzzComponents.find("all") != std::string::npos)

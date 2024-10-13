@@ -6735,7 +6735,7 @@ def fuzz_EQ : Joined<["--"], "fuzz=">,
   Flags<[NoXarchOption, HelpHidden]>, Group<f_Group>,
   HelpText<"Fuzz selected compiler components, RISC-V only."
   "Usage: --fuzz=\"<component1>[|<component2>...]\"">,
-  Values<"all, scheduler, mbb-placement, regalloc, isel, alloca">;
+  Values<"all, scheduler, mbb-placement, regalloc, isel, alloca, bpu">;
 
 def fseed_EQ : Joined<["--"], "fseed=">,
   Flags<[NoXarchOption, HelpHidden]>, Group<f_Group>,

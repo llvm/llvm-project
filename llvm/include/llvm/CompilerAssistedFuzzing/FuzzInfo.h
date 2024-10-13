@@ -32,6 +32,7 @@ extern Component MBBPlacement;
 extern Component RegAlloc;
 extern Component ISel;
 extern Component Alloca;
+extern Component BPU;
 
 bool isFuzzed(fuzz::Component &Comp, llvm::TrackingStatistic &Stat);
 int64_t fuzzedIntRange(fuzz::Component &Comp, llvm::TrackingStatistic &Stat,
