@@ -127,7 +127,7 @@ std::array<int, N> sort_reversely_swapped_sorted_ranges() {
   return array;
 }
 
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
 #  define COMPILE_OR_RUNTIME_ASSERT(func)                                                                              \
     if consteval {                                                                                                     \
       static_assert(func);                                                                                             \
@@ -148,7 +148,7 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
     COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
   }
 
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
   if !consteval
 #endif
   { // test random pattern
@@ -165,7 +165,7 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
     COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
   }
 
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
   if !consteval
 #endif
   { // test reverse sorted pattern
@@ -179,7 +179,7 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
     COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
   }
 
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
   if !consteval
 #endif
   { // test reverse swap ranges 2 pattern
@@ -202,7 +202,7 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   test_larger_sorts<N, N>();
 }
 
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
 #  define COMPILE_AND_RUNTIME_CALL(func)                                                                               \
     func;                                                                                                              \
     static_assert((func, true));
@@ -214,7 +214,7 @@ int main(int, char**) {
   { // test null range
     int d = 0;
     std::stable_sort(&d, &d);
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
     static_assert((std::stable_sort(&d, &d), true));
 #endif
   }
@@ -234,7 +234,7 @@ int main(int, char**) {
     // run- and conditionally compile-time tests
     test_larger_sorts<256>();
     test_larger_sorts<257>();
-#if _LIBCPP_STD_VER >= 26
+#if TEST_STD_VER >= 26
     static_assert((test_larger_sorts<256>(), true));
     static_assert((test_larger_sorts<257>(), true));
 #endif
