@@ -47,7 +47,8 @@ struct InstCombineOptions {
   /// Only enable skipping in standard optimization pipeline.
   bool isCompatibleWith(const InstCombineOptions &LastOption) const {
     return !VerifyFixpoint && !LastOption.VerifyFixpoint &&
-           MaxIterations == 1 && LastOption.MaxIterations == 1;
+           MaxIterations == InstCombineDefaultMaxIterations &&
+           LastOption.MaxIterations == InstCombineDefaultMaxIterations;
   }
 };
 
