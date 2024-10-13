@@ -37,22 +37,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Workaround for "constexpr placement new" bug in gcc (fixed in 14.2).
 // See https://github.com/llvm/llvm-project/pull/110320#discussion_r1788557715.
-#define __STABLE_SORT_NEW_IMPL(__placement_arg, __type, __new_initializer_func, __new_initializer_arg)                 \
-  do {                                                                                                                 \
-    ::new ((void*)__placement_arg) __type(__new_initializer_func(__new_initializer_arg));                              \
-  } while (0)
 #if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 <= 140100)
-#  define __STABLE_SORT_NEW(__placement_arg, __type, __new_initializer_func, __new_initializer_arg)                    \
-    do {                                                                                                               \
-      [__placement_arg, &__new_initializer_arg] {                                                                      \
-        __STABLE_SORT_NEW_IMPL(__placement_arg, __type, __new_initializer_func, __new_initializer_arg);                \
-      }();                                                                                                             \
-    } while (0)
+#  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter)                                             \
+    [__ptr, &__iter] { ::new ((void*)__ptr) __type(__move_func(__iter)); }()
 #else
-#  define __STABLE_SORT_NEW(__placement_arg, __type, __new_initializer_func, __new_initializer_arg)                    \
-    do {                                                                                                               \
-      __STABLE_SORT_NEW_IMPL(__placement_arg, __type, __new_initializer_func, __new_initializer_arg);                  \
-    } while (0)
+#  define _LIBCPP_MOVING_PLACEMENT_NEW(__ptr, __type, __move_func, __iter)                                             \
+    ::new ((void*)__ptr) __type(__move_func(__iter))
 #endif
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
@@ -68,7 +58,7 @@ _LIBCPP_HIDE_FROM_ABI void __insertion_sort_move(
     __destruct_n __d(0);
     unique_ptr<value_type, __destruct_n&> __h(__first2, __d);
     value_type* __last2 = __first2;
-    __STABLE_SORT_NEW(__last2, value_type, _Ops::__iter_move, __first1);
+    _LIBCPP_MOVING_PLACEMENT_NEW(__last2, value_type, _Ops::__iter_move, __first1);
     __d.template __incr<value_type>();
     for (++__last2; ++__first1 != __last1; ++__last2) {
       value_type* __j2 = __last2;
@@ -76,14 +66,14 @@ _LIBCPP_HIDE_FROM_ABI void __insertion_sort_move(
       if (__comp(*__first1, *--__i2)) {
         {
           value_type& __tmp = *__i2;
-          __STABLE_SORT_NEW(__j2, value_type, std::move, __tmp);
+          _LIBCPP_MOVING_PLACEMENT_NEW(__j2, value_type, std::move, __tmp);
         }
         __d.template __incr<value_type>();
         for (--__j2; __i2 != __first2 && __comp(*__first1, *--__i2); --__j2)
           *__j2 = std::move(*__i2);
         *__j2 = _Ops::__iter_move(__first1);
       } else {
-        __STABLE_SORT_NEW(__j2, value_type, _Ops::__iter_move, __first1);
+        _LIBCPP_MOVING_PLACEMENT_NEW(__j2, value_type, _Ops::__iter_move, __first1);
         __d.template __incr<value_type>();
       }
     }
@@ -107,27 +97,22 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __merge_move_construct(
   for (; true; ++__result) {
     if (__first1 == __last1) {
       for (; __first2 != __last2; ++__first2, (void)++__result, __d.template __incr<value_type>())
-        __STABLE_SORT_NEW(__result, value_type, _Ops::__iter_move, __first2);
+        _LIBCPP_MOVING_PLACEMENT_NEW(__result, value_type, _Ops::__iter_move, __first2);
       __h.release();
       return;
     }
     if (__first2 == __last2) {
       for (; __first1 != __last1; ++__first1, (void)++__result, __d.template __incr<value_type>())
-        __STABLE_SORT_NEW(__result, value_type, _Ops::__iter_move, __first1);
+        _LIBCPP_MOVING_PLACEMENT_NEW(__result, value_type, _Ops::__iter_move, __first1);
       __h.release();
       return;
     }
     if (__comp(*__first2, *__first1)) {
-      __STABLE_SORT_NEW(__result, value_type, _Ops::__iter_move, __first2);
+      _LIBCPP_MOVING_PLACEMENT_NEW(__result, value_type, _Ops::__iter_move, __first2);
       __d.template __incr<value_type>();
       ++__first2;
     } else {
-// __STABLE_SORT_NEW(__result, value_type, _Ops::__iter_move, __first1);
-#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 <= 140100)
-      [__result, &__first1] { ::new ((void*)__result) value_type(_Ops::__iter_move(__first1)); }();
-#else
-      ::new ((void*)__result) value_type(_Ops::__iter_move(__first1));
-#endif
+      _LIBCPP_MOVING_PLACEMENT_NEW(__result, value_type, _Ops::__iter_move, __first1);
       __d.template __incr<value_type>();
       ++__first1;
     }
@@ -185,21 +170,21 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort_move(
   case 0:
     return;
   case 1:
-    __STABLE_SORT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
+    _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
     return;
   case 2:
     __destruct_n __d(0);
     unique_ptr<value_type, __destruct_n&> __h2(__first2, __d);
     if (__comp(*--__last1, *__first1)) {
-      __STABLE_SORT_NEW(__first2, value_type, _Ops::__iter_move, __last1);
+      _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __last1);
       __d.template __incr<value_type>();
       ++__first2;
-      __STABLE_SORT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
+      _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
     } else {
-      __STABLE_SORT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
+      _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __first1);
       __d.template __incr<value_type>();
       ++__first2;
-      __STABLE_SORT_NEW(__first2, value_type, _Ops::__iter_move, __last1);
+      _LIBCPP_MOVING_PLACEMENT_NEW(__first2, value_type, _Ops::__iter_move, __last1);
     }
     __h2.release();
     return;
@@ -297,8 +282,7 @@ stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   std::stable_sort(__first, __last, __less<>());
 }
 
-#undef __STABLE_SORT_NEW
-#undef __STABLE_SORT_NEW_IMPL
+#undef _LIBCPP_MOVING_PLACEMENT_NEW
 _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
