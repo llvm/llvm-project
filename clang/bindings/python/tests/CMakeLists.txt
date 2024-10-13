@@ -51,7 +51,7 @@ endif()
 # to use the host Python3_EXECUTABLE and make FFI calls to functions in target
 # libraries.
 if(CMAKE_CROSSCOMPILING)
-  message(WARNING "check-clang-python-tests not added to check-all as they fail in a cross-build setup")
+  message(WARNING "check-clang-python not added to check-all as these tests fail in a cross-build setup")
   set(RUN_PYTHON_TESTS FALSE)
 endif()
 
