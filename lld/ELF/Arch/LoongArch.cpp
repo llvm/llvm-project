@@ -552,7 +552,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
                          uint64_t val) const {
   switch (rel.type) {
   case R_LARCH_32_PCREL:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     [[fallthrough]];
   case R_LARCH_32:
   case R_LARCH_TLS_DTPREL32:
@@ -569,26 +569,26 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_LD_PCREL20_S2:
   case R_LARCH_TLS_GD_PCREL20_S2:
   case R_LARCH_TLS_DESC_PCREL20_S2:
-    checkInt(loc, val, 22, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 22, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setJ20(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B16:
-    checkInt(loc, val, 18, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 18, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setK16(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B21:
-    checkInt(loc, val, 23, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 23, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setD5k16(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B26:
-    checkInt(loc, val, 28, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 28, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32le(loc, setD10k16(read32le(loc), val >> 2));
     return;
 
@@ -600,7 +600,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     if (((int64_t)val + 0x20000) != llvm::SignExtend64(val + 0x20000, 38))
       reportRangeError(ctx, loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
                        llvm::maxIntN(38) - 0x20000);
-    checkAlignment(loc, val, 4, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     // Since jirl performs sign extension on the offset immediate, adds (1<<17)
     // to original val to get the correct hi20.
     uint32_t hi20 = extractBits(val + (1 << 17), 37, 18);
@@ -620,7 +620,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     // In this case, process like an R_LARCH_B16, but without overflow checking
     // and only taking the value's lowest 12 bits.
     if (isJirl(read32le(loc))) {
-      checkAlignment(loc, val, 4, rel);
+      checkAlignment(ctx, loc, val, 4, rel);
       val = SignExtend64<12>(val);
       write32le(loc, setK16(read32le(loc), val >> 2));
       return;

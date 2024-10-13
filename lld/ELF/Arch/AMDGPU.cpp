@@ -167,7 +167,7 @@ void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_AMDGPU_REL16: {
     int64_t simm = (static_cast<int64_t>(val) - 4) / 4;
-    checkInt(loc, simm, 16, rel);
+    checkInt(ctx, loc, simm, 16, rel);
     write16le(loc, simm);
     break;
   }

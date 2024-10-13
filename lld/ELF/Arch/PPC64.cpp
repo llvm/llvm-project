@@ -1267,27 +1267,27 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   switch (type) {
   case R_PPC64_ADDR14: {
-    checkAlignment(loc, val, 4, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     // Preserve the AA/LK bits in the branch instruction
     uint8_t aalk = loc[3];
     write16(ctx, loc + 2, (aalk & 3) | (val & 0xfffc));
     break;
   }
   case R_PPC64_ADDR16:
-    checkIntUInt(loc, val, 16, rel);
+    checkIntUInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
     break;
   case R_PPC64_ADDR32:
-    checkIntUInt(loc, val, 32, rel);
+    checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
   case R_PPC64_ADDR16_DS:
   case R_PPC64_TPREL16_DS: {
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     // DQ-form instructions use bits 28-31 as part of the instruction encoding
     // DS-form instructions only use bits 30-31.
     uint16_t mask = isDQFormInstruction(readFromHalf16(ctx, loc)) ? 0xf : 0x3;
-    checkAlignment(loc, lo(val), mask + 1, rel);
+    checkAlignment(ctx, loc, lo(val), mask + 1, rel);
     write16(ctx, loc, (read16(ctx, loc) & mask) | lo(val));
   } break;
   case R_PPC64_ADDR16_HA:
@@ -1296,14 +1296,14 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0)
       writeFromHalf16(ctx, loc, NOP);
     else {
-      checkInt(loc, val + 0x8000, 32, rel);
+      checkInt(ctx, loc, val + 0x8000, 32, rel);
       write16(ctx, loc, ha(val));
     }
     break;
   case R_PPC64_ADDR16_HI:
   case R_PPC64_REL16_HI:
   case R_PPC64_TPREL16_HI:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write16(ctx, loc, hi(val));
     break;
   case R_PPC64_ADDR16_HIGH:
@@ -1347,7 +1347,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // DS-form instructions only use bits 30-31.
     uint32_t insn = readFromHalf16(ctx, loc);
     uint16_t mask = isDQFormInstruction(insn) ? 0xf : 0x3;
-    checkAlignment(loc, lo(val), mask + 1, rel);
+    checkAlignment(ctx, loc, lo(val), mask + 1, rel);
     if (ctx.arg.tocOptimize && shouldTocOptimize && ha(val) == 0) {
       // When the high-adjusted part of a toc relocation evaluates to 0, it is
       // changed into a nop. The lo part then needs to be updated to use the toc
@@ -1363,11 +1363,11 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
   } break;
   case R_PPC64_TPREL16:
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
     break;
   case R_PPC64_REL32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
   case R_PPC64_ADDR64:
@@ -1377,16 +1377,16 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_PPC64_REL14: {
     uint32_t mask = 0x0000FFFC;
-    checkInt(loc, val, 16, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 16, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
   case R_PPC64_REL24:
   case R_PPC64_REL24_NOTOC: {
     uint32_t mask = 0x03FFFFFC;
-    checkInt(loc, val, 26, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 26, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
@@ -1408,7 +1408,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     const uint64_t si0Mask = 0x00000003ffff0000;
     const uint64_t si1Mask = 0x000000000000ffff;
     const uint64_t fullMask = 0x0003ffff0000ffff;
-    checkInt(loc, val, 34, rel);
+    checkInt(ctx, loc, val, 34, rel);
 
     uint64_t instr = readPrefixedInst(ctx, loc) & ~fullMask;
     writePrefixedInst(ctx, loc,
