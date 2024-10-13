@@ -156,7 +156,7 @@ define amdgpu_kernel void @global_atomic_fsub_uni_value(ptr addrspace(1) %ptr) #
 ; IR-DPP:       14:
 ; IR-DPP-NEXT:    ret void
 ;
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 seq_cst
+  %result = atomicrmw fsub ptr addrspace(1) %ptr, float 4.0 seq_cst
   ret void
 }
 
