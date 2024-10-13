@@ -498,7 +498,7 @@ public:
     MPFRNumber value_mul_two(*this);
     mpfr_mul_si(value_mul_two.value, value, 2, MPFR_RNDN);
 
-    if (mpfr_integer_p(value_mul_two.value) != 0) {
+    if (mpfr_integer_p(value_mul_two.value)) {
       auto d = mpfr_get_si(value, MPFR_RNDD);
       mpfr_set_si(result.value, (d & 1) ? -1 : 1, mpfr_rounding);
       return result;

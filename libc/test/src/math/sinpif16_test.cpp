@@ -1,4 +1,5 @@
-//===-- Exhaustive test for sinpif16---------------------------------------===//
+//===-- Exhaustive test for sinpif16
+//---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +28,7 @@ TEST_F(LlvmLibcSinpif16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, x,
-                                   LIBC_NAMESPACE::sinpif16(x), 1);
+                                   LIBC_NAMESPACE::sinpif16(x), 0.5);
   }
 }
 
@@ -35,6 +36,6 @@ TEST_F(LlvmLibcSinpif16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, x,
-                                   LIBC_NAMESPACE::sinpif16(x), 1);
+                                   LIBC_NAMESPACE::sinpif16(x), 0.5);
   }
 }

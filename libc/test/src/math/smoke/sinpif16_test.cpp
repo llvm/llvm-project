@@ -4,7 +4,6 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//
 // ===----------------------------------------------------------------------==//
 
 #include "src/errno/libc_errno.h"
@@ -20,10 +19,10 @@ TEST_F(LlvmLibcSinpif16Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::sinpif16(0.0f));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::sinpif16(-0.0f));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif16(inf));
@@ -34,10 +33,10 @@ TEST_F(LlvmLibcSinpif16Test, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcSinpif16Test, Integers) {
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::sinpif16(-0x420));
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::sinpif16(-0x1p+10));
-  EXPECT_FP_EQ(-0.0, LIBC_NAMESPACE::sinpif16(-0x1.4p+14));
-  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::sinpif16(0x420));
-  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::sinpif16(0x1.cp+15));
-  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::sinpif16(0x1.cp+7));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(-0x420));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(-0x1p+10));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(-0x1.4p+14));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(0x420));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(0x1.cp+15));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(0x1.cp+7));
 }
