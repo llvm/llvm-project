@@ -13,9 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "last-run-tracking"
+STATISTIC(NumSkippedPasses, "Number of skipped passes");
+STATISTIC(NumLRTQueries, "Number of LastRunTracking queries");
 
 static cl::opt<bool>
     DisableLastRunTracking("disable-last-run-tracking", cl::Hidden,
@@ -25,10 +30,15 @@ static cl::opt<bool>
 bool LastRunTrackingInfo::shouldSkipImpl(PassID ID, OptionPtr Ptr) const {
   if (DisableLastRunTracking)
     return false;
+  ++NumLRTQueries;
   auto Iter = TrackedPasses.find(ID);
   if (Iter == TrackedPasses.end())
     return false;
-  return !Iter->second || Iter->second(Ptr);
+  if (!Iter->second || Iter->second(Ptr)) {
+    ++NumSkippedPasses;
+    return true;
+  }
+  return false;
 }
 
 void LastRunTrackingInfo::updateImpl(PassID ID, bool Changed,
