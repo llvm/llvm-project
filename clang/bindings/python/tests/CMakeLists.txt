@@ -51,6 +51,11 @@ endif()
 # to use the host Python3_EXECUTABLE and make FFI calls to functions in target
 # libraries.
 if(CMAKE_CROSSCOMPILING)
+  # FIXME: Consider a solution that allows better control over these tests in
+  # a crosscompiling scenario. e.g. registering them with lit to allow them to
+  # be explicitly skipped via appropriate LIT_ARGS, or adding a mechanism to
+  # allow specifying a python interpreter compiled for the target that could
+  # be executed using qemu-user.
   message(WARNING "check-clang-python not added to check-all as these tests fail in a cross-build setup")
   set(RUN_PYTHON_TESTS FALSE)
 endif()
