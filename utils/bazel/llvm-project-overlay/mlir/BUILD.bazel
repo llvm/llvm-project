@@ -9740,6 +9740,28 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "mlir-rewrite",
+    srcs = ["tools/mlir-rewrite/mlir-rewrite.cpp"],
+    deps = [
+        ":AllExtensions",
+        ":AllPassesAndDialects",
+        ":AffineAnalysis",
+        ":Analysis",
+        ":AsmParser",
+        ":CastInterfaces",
+        ":Dialect",
+        ":Parser",
+        ":ParseUtilities",
+        ":Pass",
+        ":Transforms",
+        ":TransformUtils",
+        ":Support",
+        ":IR",
+        "//llvm:Support",
+    ]
+)
+
 cc_library(
     name = "MlirJitRunner",
     srcs = ["lib/ExecutionEngine/JitRunner.cpp"],
