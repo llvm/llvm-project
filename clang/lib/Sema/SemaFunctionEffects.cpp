@@ -1133,6 +1133,13 @@ private:
       return true;
     }
 
+    bool VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *Finally) {
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
+                                ViolationID::ThrowsOrCatchesExceptions,
+                                Finally->getAtFinallyLoc());
+      return true;
+    }
+
     bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
                                 ViolationID::AccessesObjCMethodOrProperty,
@@ -1147,6 +1154,16 @@ private:
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
                                 ViolationID::AccessesObjCMethodOrProperty,
                                 ARP->getBeginLoc());
+      return true;
+    }
+
+    bool VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Sync) {
+      // Under the hood, this calls objc_sync_enter and objc_sync_exit, wrapped
+      // in a @try/@finally block. Diagnose this somewhat generically as "ObjC"
+      // messaging.
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
+                                ViolationID::AccessesObjCMethodOrProperty,
+                                Sync->getBeginLoc());
       return true;
     }
 
