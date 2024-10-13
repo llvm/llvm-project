@@ -12,7 +12,6 @@
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
