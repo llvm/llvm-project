@@ -918,8 +918,7 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   SmallVector<llvm::DIGlobalVariableExpression *> globalExpressions;
   globalVar->getDebugInfo(globalExpressions);
 
-  // There should only be a single global expression.
-  for (Attribute expr : globalExpressions) {
+  for (llvm::DIGlobalVariableExpression *expr : globalExpressions) {
     DIGlobalVariableExpressionAttr globalExpressionAttr =
         debugImporter->translateGlobalVariableExpression(expr);
     globalExpressionAttrs.push_back(globalExpressionAttr);
