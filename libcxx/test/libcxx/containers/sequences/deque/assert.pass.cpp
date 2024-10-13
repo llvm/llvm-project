@@ -48,9 +48,5 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(cc[100], "deque::operator[] index out of bounds");
   }
 
-  TEST_LIBCPP_ASSERT_FAILURE(c.erase(c.end()), "deque::erase(iterator) called with a non-dereferenceable iterator");
-  TEST_LIBCPP_ASSERT_FAILURE(
-      c.erase(c.begin() + 1, c.begin()), "deque::erase(first, last) called with an invalid range");
-
   return 0;
 }

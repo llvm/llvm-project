@@ -1584,7 +1584,8 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __position) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-      __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
+      std::__is_pointer_in_range(std::__to_address(begin()), std::__to_address(end()), std::__to_address(__position)),
+      "vector::erase(iterator) called with an iterator that isn't a valid iterator into this vector");
   difference_type __ps = __position - cbegin();
   pointer __p          = this->__begin_ + __ps;
   this->__destruct_at_end(std::move(__p + 1, this->__end_, __p));
@@ -1594,6 +1595,13 @@ vector<_Tp, _Allocator>::erase(const_iterator __position) {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      std::__is_pointer_in_range(std::__to_address(begin()), std::__to_address(end()), std::__to_address(__first)),
+      "vector::erase(first, last) called with an iterator range that doesn't belong to this vector");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      std::__is_pointer_in_range(std::__to_address(begin()), std::__to_address(end()), std::__to_address(__last)) ||
+          __last == end(),
+      "vector::erase(first, last) called with a last iterator that doesn't fall within the vector");
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector::erase(first, last) called with invalid range");
   pointer __p = this->__begin_ + (__first - begin());
   if (__first != __last) {
