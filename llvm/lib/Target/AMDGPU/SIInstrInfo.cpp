@@ -6302,11 +6302,14 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 // Emit the actual waterfall loop, executing the wrapped instruction for each
 // unique value of \p ScalarOps across all lanes. In the best case we execute 1
 // iteration, in the worst case we execute 64 (once per lane).
-static void emitLoadScalarOpsFromVGPRLoop(
-    const SIInstrInfo &TII, MachineRegisterInfo &MRI, MachineBasicBlock &OrigBB,
-    MachineBasicBlock &LoopBB, MachineBasicBlock &BodyBB, const DebugLoc &DL,
-    ArrayRef<MachineOperand *> ScalarOps) {
-  MachineFunction &MF = *OrigBB.getParent();
+static void
+emitLoadScalarOpsFromVGPRLoop(const SIInstrInfo &TII,
+                              MachineRegisterInfo &MRI,
+                              MachineBasicBlock &LoopBB,
+                              MachineBasicBlock &BodyBB,
+                              const DebugLoc &DL,
+                              ArrayRef<MachineOperand *> ScalarOps) {
+  MachineFunction &MF = *LoopBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
@@ -6319,8 +6322,6 @@ static void emitLoadScalarOpsFromVGPRLoop(
   const auto *BoolXExecRC = TRI->getWaveMaskRegClass();
 
   MachineBasicBlock::iterator I = LoopBB.begin();
-
-  SmallVector<Register, 8> ReadlanePieces;
   Register CondReg;
 
   for (MachineOperand *ScalarOp : ScalarOps) {
@@ -6355,6 +6356,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
       ScalarOp->setReg(CurReg);
       ScalarOp->setIsKill();
     } else {
+      SmallVector<Register, 8> ReadlanePieces;
       unsigned VScalarOpUndef = getUndefRegState(ScalarOp->isUndef());
       assert(NumSubRegs % 2 == 0 && NumSubRegs <= 32 &&
              "Unhandled register size");
@@ -6535,7 +6537,7 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
     }
   }
 
-  emitLoadScalarOpsFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, ScalarOps);
+  emitLoadScalarOpsFromVGPRLoop(TII, MRI, *LoopBB, *BodyBB, DL, ScalarOps);
 
   MachineBasicBlock::iterator First = RemainderBB->begin();
   // Restore SCC
