@@ -55,6 +55,60 @@ define double @log1p_zero() {
   ret double %r
 }
 
+define float @log1pf_neg_zero() {
+; CHECK-LABEL: define float @log1pf_neg_zero() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -0.000000e+00)
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %r = call float @log1pf(float -0.000000e+00)
+  ret float %r
+}
+
+define double @log1p_neg_zero() {
+; CHECK-LABEL: define double @log1p_neg_zero() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -0.000000e+00)
+; CHECK-NEXT:    ret double -0.000000e+00
+;
+  %r = call double @log1p(double -0.000000e+00)
+  ret double %r
+}
+
+define float @log1pf_neg1() {
+; CHECK-LABEL: define float @log1pf_neg1() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -7.000000e+00)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @log1pf(float -7.000000e+00)
+  ret float %r
+}
+
+define double @log1p_neg1() {
+; CHECK-LABEL: define double @log1p_neg1() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -7.000000e+00)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @log1p(double -7.000000e+00)
+  ret double %r
+}
+
+define float @log1pf_neg2() {
+; CHECK-LABEL: define float @log1pf_neg2() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -5.000000e-01)
+; CHECK-NEXT:    ret float 0xBFE62E4300000000
+;
+  %r = call float @log1pf(float -5.000000e-01)
+  ret float %r
+}
+
+define double @log1p_neg2() {
+; CHECK-LABEL: define double @log1p_neg2() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -5.000000e-01)
+; CHECK-NEXT:    ret double 0xBFE62E42FEFA39EF
+;
+  %r = call double @log1p(double -5.000000e-01)
+  ret double %r
+}
+
 define float @log1pf_inf() {
 ; CHECK-LABEL: define float @log1pf_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0x7FF0000000000000)
@@ -70,6 +124,24 @@ define double @log1p_inf() {
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @log1p(double 0x7FF0000000000000)
+  ret double %r
+}
+
+define float @log1pf_neg_inf() {
+; CHECK-LABEL: define float @log1pf_neg_inf() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0xFFF0000000000000)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @log1pf(float 0xFFF0000000000000)
+  ret float %r
+}
+
+define double @log1p_neg_inf() {
+; CHECK-LABEL: define double @log1p_neg_inf() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0xFFF0000000000000)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @log1p(double 0xFFF0000000000000)
   ret double %r
 }
 
