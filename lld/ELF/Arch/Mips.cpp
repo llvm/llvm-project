@@ -249,10 +249,10 @@ static void writeShuffleValue(uint8_t *loc, uint64_t v, uint8_t bitsSize,
 template <endianness E>
 static void writeMicroRelocation16(uint8_t *loc, uint64_t v, uint8_t bitsSize,
                                    uint8_t shift) {
-  uint16_t instr = read16(loc);
+  uint16_t instr = read16(ctx, loc);
   uint16_t mask = 0xffff >> (16 - bitsSize);
   uint16_t data = (instr & ~mask) | ((v >> shift) & mask);
-  write16(loc, data);
+  write16(ctx, loc, data);
 }
 
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
@@ -262,22 +262,23 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(buf, 0, pltHeaderSize);
 
-    write16(buf, isMipsR6(ctx) ? 0x7860 : 0x7980); // addiupc v1, (GOTPLT) - .
-    write16(buf + 4, 0xff23);    // lw      $25, 0($3)
-    write16(buf + 8, 0x0535);    // subu16  $2,  $2, $3
-    write16(buf + 10, 0x2525);   // srl16   $2,  $2, 2
-    write16(buf + 12, 0x3302);   // addiu   $24, $2, -2
-    write16(buf + 14, 0xfffe);
-    write16(buf + 16, 0x0dff);   // move    $15, $31
+    write16(ctx, buf,
+            isMipsR6(ctx) ? 0x7860 : 0x7980); // addiupc v1, (GOTPLT) - .
+    write16(ctx, buf + 4, 0xff23);            // lw      $25, 0($3)
+    write16(ctx, buf + 8, 0x0535);            // subu16  $2,  $2, $3
+    write16(ctx, buf + 10, 0x2525);           // srl16   $2,  $2, 2
+    write16(ctx, buf + 12, 0x3302);           // addiu   $24, $2, -2
+    write16(ctx, buf + 14, 0xfffe);
+    write16(ctx, buf + 16, 0x0dff); // move    $15, $31
     if (isMipsR6(ctx)) {
-      write16(buf + 18, 0x0f83); // move    $28, $3
-      write16(buf + 20, 0x472b); // jalrc   $25
-      write16(buf + 22, 0x0c00); // nop
+      write16(ctx, buf + 18, 0x0f83); // move    $28, $3
+      write16(ctx, buf + 20, 0x472b); // jalrc   $25
+      write16(ctx, buf + 22, 0x0c00); // nop
       relocateNoSym(buf, R_MICROMIPS_PC19_S2, gotPlt - plt);
     } else {
-      write16(buf + 18, 0x45f9); // jalrc   $25
-      write16(buf + 20, 0x0f83); // move    $28, $3
-      write16(buf + 22, 0x0c00); // nop
+      write16(ctx, buf + 18, 0x45f9); // jalrc   $25
+      write16(ctx, buf + 20, 0x0f83); // move    $28, $3
+      write16(ctx, buf + 22, 0x0c00); // nop
       relocateNoSym(buf, R_MICROMIPS_PC23_S2, gotPlt - plt);
     }
     return;
@@ -325,16 +326,16 @@ void MIPS<ELFT>::writePlt(uint8_t *buf, const Symbol &sym,
     memset(buf, 0, pltEntrySize);
 
     if (isMipsR6(ctx)) {
-      write16(buf, 0x7840);      // addiupc $2, (GOTPLT) - .
-      write16(buf + 4, 0xff22);  // lw $25, 0($2)
-      write16(buf + 8, 0x0f02);  // move $24, $2
-      write16(buf + 10, 0x4723); // jrc $25 / jr16 $25
+      write16(ctx, buf, 0x7840);      // addiupc $2, (GOTPLT) - .
+      write16(ctx, buf + 4, 0xff22);  // lw $25, 0($2)
+      write16(ctx, buf + 8, 0x0f02);  // move $24, $2
+      write16(ctx, buf + 10, 0x4723); // jrc $25 / jr16 $25
       relocateNoSym(buf, R_MICROMIPS_PC19_S2, gotPltEntryAddr - pltEntryAddr);
     } else {
-      write16(buf, 0x7900);      // addiupc $2, (GOTPLT) - .
-      write16(buf + 4, 0xff22);  // lw $25, 0($2)
-      write16(buf + 8, 0x4599);  // jrc $25 / jr16 $25
-      write16(buf + 10, 0x0f02); // move $24, $2
+      write16(ctx, buf, 0x7900);      // addiupc $2, (GOTPLT) - .
+      write16(ctx, buf + 4, 0xff22);  // lw $25, 0($2)
+      write16(ctx, buf + 8, 0x4599);  // jrc $25 / jr16 $25
+      write16(ctx, buf + 10, 0x0f02); // move $24, $2
       relocateNoSym(buf, R_MICROMIPS_PC23_S2, gotPltEntryAddr - pltEntryAddr);
     }
     return;
@@ -444,9 +445,9 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_MICROMIPS_26_S1:
     return SignExtend64<27>(readShuffle<e>(buf) << 1);
   case R_MICROMIPS_PC7_S1:
-    return SignExtend64<8>(read16(buf) << 1);
+    return SignExtend64<8>(read16(ctx, buf) << 1);
   case R_MICROMIPS_PC10_S1:
-    return SignExtend64<11>(read16(buf) << 1);
+    return SignExtend64<11>(read16(ctx, buf) << 1);
   case R_MICROMIPS_PC16_S1:
     return SignExtend64<17>(readShuffle<e>(buf) << 1);
   case R_MICROMIPS_PC18_S3:
@@ -464,9 +465,9 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_MIPS_TLS_DTPREL64:
   case R_MIPS_TLS_TPREL64:
   case (R_MIPS_64 << 8) | R_MIPS_REL32:
-    return read64(buf);
+    return read64(ctx, buf);
   case R_MIPS_COPY:
-    return ctx.arg.is64 ? read64(buf) : read32(ctx, buf);
+    return ctx.arg.is64 ? read64(ctx, buf) : read32(ctx, buf);
   case R_MIPS_NONE:
   case R_MIPS_JUMP_SLOT:
   case R_MIPS_JALR:
@@ -596,7 +597,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
   case R_MIPS_64:
   case R_MIPS_TLS_DTPREL64:
   case R_MIPS_TLS_TPREL64:
-    write64(loc, val);
+    write64(ctx, loc, val);
     break;
   case R_MIPS_26:
     writeValue(loc, val, 26, 2);

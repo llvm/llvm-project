@@ -60,12 +60,12 @@ using llvm::support::endian::write64le;
 constexpr size_t MergeNoTailSection::numShards;
 
 static uint64_t readUint(Ctx &ctx, uint8_t *buf) {
-  return ctx.arg.is64 ? read64(buf) : read32(ctx, buf);
+  return ctx.arg.is64 ? read64(ctx, buf) : read32(ctx, buf);
 }
 
 static void writeUint(Ctx &ctx, uint8_t *buf, uint64_t val) {
   if (ctx.arg.is64)
-    write64(buf, val);
+    write64(ctx, buf, val);
   else
     write32(ctx, buf, val);
 }
@@ -596,16 +596,16 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
 static uint64_t readFdeAddr(Ctx &ctx, uint8_t *buf, int size) {
   switch (size) {
   case DW_EH_PE_udata2:
-    return read16(buf);
+    return read16(ctx, buf);
   case DW_EH_PE_sdata2:
-    return (int16_t)read16(buf);
+    return (int16_t)read16(ctx, buf);
   case DW_EH_PE_udata4:
     return read32(ctx, buf);
   case DW_EH_PE_sdata4:
     return (int32_t)read32(ctx, buf);
   case DW_EH_PE_udata8:
   case DW_EH_PE_sdata8:
-    return read64(buf);
+    return read64(ctx, buf);
   case DW_EH_PE_absptr:
     return readUint(ctx, buf);
   }
@@ -3725,10 +3725,10 @@ void VersionDefinitionSection::writeOne(uint8_t *buf, uint32_t index,
   uint16_t flags = index == 1 ? VER_FLG_BASE : 0;
 
   // Write a verdef.
-  write16(buf, 1);                  // vd_version
-  write16(buf + 2, flags);          // vd_flags
-  write16(buf + 4, index);          // vd_ndx
-  write16(buf + 6, 1);              // vd_cnt
+  write16(ctx, buf, 1);                  // vd_version
+  write16(ctx, buf + 2, flags);          // vd_flags
+  write16(ctx, buf + 4, index);          // vd_ndx
+  write16(ctx, buf + 6, 1);              // vd_cnt
   write32(ctx, buf + 8, hashSysV(name)); // vd_hash
   write32(ctx, buf + 12, 20);            // vd_aux
   write32(ctx, buf + 16, 28);            // vd_next
@@ -3778,7 +3778,7 @@ void VersionTableSection::writeTo(uint8_t *buf) {
     // For an unextracted lazy symbol (undefined weak), it must have been
     // converted to Undefined and have VER_NDX_GLOBAL version here.
     assert(!s.sym->isLazy());
-    write16(buf, s.sym->versionId);
+    write16(ctx, buf, s.sym->versionId);
     buf += 2;
   }
 }
@@ -4358,8 +4358,9 @@ void PPC64LongBranchTargetSection::writeTo(uint8_t *buf) {
     assert(sym->getVA());
     // Need calls to branch to the local entry-point since a long-branch
     // must be a local-call.
-    write64(buf, sym->getVA(addend) +
-                     getPPC64GlobalEntryToLocalEntryOffset(sym->stOther));
+    write64(ctx, buf,
+            sym->getVA(addend) +
+                getPPC64GlobalEntryToLocalEntryOffset(sym->stOther));
     buf += 8;
   }
 }

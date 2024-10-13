@@ -462,11 +462,11 @@ static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {
   if (size == 1)
     *buf = data;
   else if (size == 2)
-    write16(buf, data);
+    write16(ctx, buf, data);
   else if (size == 4)
     write32(ctx, buf, data);
   else if (size == 8)
-    write64(buf, data);
+    write64(ctx, buf, data);
   else
     llvm_unreachable("unsupported Size argument");
 }
