@@ -346,6 +346,7 @@ public:
           if (flag == 0)
             continue;
           execute_service(service_id, buffer->device_id, payload->slots[wi]);
+          std::this_thread::sleep_for(std::chrono::nanoseconds(1));
         }
       }
       __atomic_store_n(&header->control, reset_ready_flag(header->control),
