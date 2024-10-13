@@ -484,17 +484,17 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
-    checkIntUInt(loc, val, 16, rel);
+    checkIntUInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
     break;
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
-    checkIntUInt(loc, val, 32, rel);
+    checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
   case R_AARCH64_ABS64:
@@ -535,13 +535,13 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
-    checkInt(loc, val, 33, rel);
+    checkInt(ctx, loc, val, 33, rel);
     [[fallthrough]];
   case R_AARCH64_ADR_PREL_PG_HI21_NC:
     write32AArch64Addr(loc, val >> 12);
     break;
   case R_AARCH64_ADR_PREL_LO21:
-    checkInt(loc, val, 21, rel);
+    checkInt(ctx, loc, val, 21, rel);
     write32AArch64Addr(loc, val);
     break;
   case R_AARCH64_JUMP26:
@@ -555,14 +555,14 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32le(loc, 0x14000000);
     [[fallthrough]];
   case R_AARCH64_CALL26:
-    checkInt(loc, val, 28, rel);
+    checkInt(ctx, loc, val, 28, rel);
     writeMaskedBits32le(loc, (val & 0x0FFFFFFC) >> 2, 0x0FFFFFFC >> 2);
     break;
   case R_AARCH64_CONDBR19:
   case R_AARCH64_LD_PREL_LO19:
   case R_AARCH64_GOT_LD_PREL19:
-    checkAlignment(loc, val, 4, rel);
-    checkInt(loc, val, 21, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
+    checkInt(ctx, loc, val, 21, rel);
     writeMaskedBits32le(loc, (val & 0x1FFFFC) << 3, 0x1FFFFC << 3);
     break;
   case R_AARCH64_LDST8_ABS_LO12_NC:
@@ -571,12 +571,12 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
-    checkAlignment(loc, val, 2, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     write32Imm12(loc, getBits(val, 1, 11));
     break;
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
-    checkAlignment(loc, val, 4, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32Imm12(loc, getBits(val, 2, 11));
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
@@ -584,32 +584,32 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_LD64_LO12:
-    checkAlignment(loc, val, 8, rel);
+    checkAlignment(ctx, loc, val, 8, rel);
     write32Imm12(loc, getBits(val, 3, 11));
     break;
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
-    checkAlignment(loc, val, 16, rel);
+    checkAlignment(ctx, loc, val, 16, rel);
     write32Imm12(loc, getBits(val, 4, 11));
     break;
   case R_AARCH64_LD64_GOTPAGE_LO15:
-    checkAlignment(loc, val, 8, rel);
+    checkAlignment(ctx, loc, val, 8, rel);
     write32Imm12(loc, getBits(val, 3, 14));
     break;
   case R_AARCH64_MOVW_UABS_G0:
-    checkUInt(loc, val, 16, rel);
+    checkUInt(ctx, loc, val, 16, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G0_NC:
     writeMaskedBits32le(loc, (val & 0xFFFF) << 5, 0xFFFF << 5);
     break;
   case R_AARCH64_MOVW_UABS_G1:
-    checkUInt(loc, val, 32, rel);
+    checkUInt(ctx, loc, val, 32, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G1_NC:
     writeMaskedBits32le(loc, (val & 0xFFFF0000) >> 11, 0xFFFF0000 >> 11);
     break;
   case R_AARCH64_MOVW_UABS_G2:
-    checkUInt(loc, val, 48, rel);
+    checkUInt(ctx, loc, val, 48, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G2_NC:
     writeMaskedBits32le(loc, (val & 0xFFFF00000000) >> 27,
@@ -622,7 +622,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_PREL_G0:
   case R_AARCH64_MOVW_SABS_G0:
   case R_AARCH64_TLSLE_MOVW_TPREL_G0:
-    checkInt(loc, val, 17, rel);
+    checkInt(ctx, loc, val, 17, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G0_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
@@ -631,7 +631,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_PREL_G1:
   case R_AARCH64_MOVW_SABS_G1:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1:
-    checkInt(loc, val, 33, rel);
+    checkInt(ctx, loc, val, 33, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G1_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
@@ -640,7 +640,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_PREL_G2:
   case R_AARCH64_MOVW_SABS_G2:
   case R_AARCH64_TLSLE_MOVW_TPREL_G2:
-    checkInt(loc, val, 49, rel);
+    checkInt(ctx, loc, val, 49, rel);
     [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G2_NC:
     writeSMovWImm(loc, val >> 32);
@@ -649,11 +649,11 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     writeSMovWImm(loc, val >> 48);
     break;
   case R_AARCH64_TSTBR14:
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     writeMaskedBits32le(loc, (val & 0xFFFC) << 3, 0xFFFC << 3);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
-    checkUInt(loc, val, 24, rel);
+    checkUInt(ctx, loc, val, 24, rel);
     write32Imm12(loc, val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
@@ -682,7 +682,7 @@ void AArch64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
   //   movk    x0, #0x10
   //   nop
   //   nop
-  checkUInt(loc, val, 32, rel);
+  checkUInt(ctx, loc, val, 32, rel);
 
   switch (rel.type) {
   case R_AARCH64_TLSDESC_ADD_LO12:
@@ -734,7 +734,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
 
 void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
                              uint64_t val) const {
-  checkUInt(loc, val, 32, rel);
+  checkUInt(ctx, loc, val, 32, rel);
 
   if (rel.type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21) {
     // Generate MOVZ.
