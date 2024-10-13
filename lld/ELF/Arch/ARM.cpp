@@ -1103,10 +1103,11 @@ static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
 // [$t, non $t) and convert these to little endian a word or half word at a
 // time respectively.
 void elf::convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf) {
-  if (!sectionMap.contains(sec))
+  auto it = sectionMap.find(sec);
+  if (it == sectionMap.end())
     return;
 
-  SmallVector<const Defined *, 0> &mapSyms = sectionMap[sec];
+  SmallVector<const Defined *, 0> &mapSyms = it->second;
 
   if (mapSyms.empty())
     return;
