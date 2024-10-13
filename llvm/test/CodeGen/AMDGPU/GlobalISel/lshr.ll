@@ -1764,8 +1764,7 @@ define amdgpu_ps i65 @s_lshr_i65(i65 inreg %value, i65 inreg %amount) {
 ; GCN-NEXT:    s_and_b32 s7, s11, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s7, 0
 ; GCN-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
-; GCN-NEXT:    s_and_b32 s4, s12, 1
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    s_cmp_lg_u32 s12, 0
 ; GCN-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GCN-NEXT:    s_cmp_lg_u32 s7, 0
 ; GCN-NEXT:    s_cselect_b32 s2, s6, 0
@@ -1788,8 +1787,7 @@ define amdgpu_ps i65 @s_lshr_i65(i65 inreg %value, i65 inreg %amount) {
 ; GFX10PLUS-NEXT:    s_lshr_b64 s[4:5], s[4:5], s10
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[4:5], s[6:7], s[4:5]
-; GFX10PLUS-NEXT:    s_and_b32 s6, s12, 1
-; GFX10PLUS-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX10PLUS-NEXT:    s_cmp_lg_u32 s12, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s2, s2, 0

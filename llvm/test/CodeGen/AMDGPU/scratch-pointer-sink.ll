@@ -22,10 +22,6 @@ define amdgpu_gfx i32 @sink_scratch_pointer(ptr addrspace(5) %stack, i32 inreg %
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GISEL-NEXT:    s_and_b32 s0, s0, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GISEL-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GISEL-NEXT:  ; %bb.1: ; %bb2
 ; GISEL-NEXT:    scratch_load_b32 v0, v0, off offset:-4

@@ -8,9 +8,6 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX10-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX10-NEXT:    s_and_b32 s0, s0, 1
-; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX10-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX10-NEXT:  ; %bb.1: ; %mid
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
@@ -30,9 +27,6 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX11-NEXT:    s_and_b32 s0, s0, 1
 ; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX11-NEXT:  ; %bb.1: ; %mid

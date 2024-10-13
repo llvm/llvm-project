@@ -915,9 +915,12 @@ public:
   bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Transform zext of truncate to x or and(x, mask).
+  /// Transform zext of truncate to x.
   bool matchCombineZextTrunc(const MachineInstr &ZextMI,
                              const MachineInstr &TruncMI, BuildFnTy &MatchInfo);
+
+  /// Transform zext(trunc(x)) to x.
+  bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

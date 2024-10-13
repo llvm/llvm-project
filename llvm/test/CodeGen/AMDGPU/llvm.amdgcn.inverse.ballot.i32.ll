@@ -96,34 +96,18 @@ entry:
 
 ; Test ballot after phi
 define amdgpu_cs void @phi_uniform(i32 inreg %s0_1, i32 inreg %s2, ptr addrspace(1) %out) {
-; GISEL-LABEL: phi_uniform:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_lg_u32 s1, 0
-; GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GISEL-NEXT:    s_and_b32 s1, s1, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s1, 0
-; GISEL-NEXT:    s_cbranch_scc1 .LBB5_2
-; GISEL-NEXT:  ; %bb.1: ; %if
-; GISEL-NEXT:    s_add_i32 s0, s0, 1
-; GISEL-NEXT:  .LBB5_2: ; %endif
-; GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
-; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GISEL-NEXT:    s_endpgm
-;
-; SDAG-LABEL: phi_uniform:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_lg_u32 s1, 0
-; SDAG-NEXT:    s_cbranch_scc1 .LBB5_2
-; SDAG-NEXT:  ; %bb.1: ; %if
-; SDAG-NEXT:    s_add_i32 s0, s0, 1
-; SDAG-NEXT:  .LBB5_2: ; %endif
-; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
-; SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; SDAG-NEXT:    s_endpgm
+; GFX11-LABEL: phi_uniform:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-NEXT:    s_cbranch_scc1 .LBB5_2
+; GFX11-NEXT:  ; %bb.1: ; %if
+; GFX11-NEXT:    s_add_i32 s0, s0, 1
+; GFX11-NEXT:  .LBB5_2: ; %endif
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
+; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
 entry:
   %cc = icmp ne i32 %s2, 0
   br i1 %cc, label %endif, label %if

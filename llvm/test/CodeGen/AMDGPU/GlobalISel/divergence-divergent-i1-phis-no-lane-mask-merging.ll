@@ -28,9 +28,6 @@ define amdgpu_ps void @divergent_i1_phi_uniform_branch(ptr addrspace(1) %out, i3
 ; GFX10-LABEL: divergent_i1_phi_uniform_branch:
 ; GFX10:       ; %bb.0: ; %A
 ; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX10-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX10-NEXT:    s_and_b32 s0, s0, 1
-; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX10-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX10-NEXT:  ; %bb.1:
 ; GFX10-NEXT:    v_cmp_le_u32_e64 s0, 6, v2
@@ -68,19 +65,16 @@ exit:
 define amdgpu_ps void @divergent_i1_phi_uniform_branch_simple(ptr addrspace(1) %out, i32 %tid, i32 inreg %cond) {
 ; GFX10-LABEL: divergent_i1_phi_uniform_branch_simple:
 ; GFX10:       ; %bb.0: ; %A
+; GFX10-NEXT:    v_cmp_le_u32_e64 s1, 6, v2
 ; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX10-NEXT:    v_cmp_le_u32_e64 s0, 6, v2
-; GFX10-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX10-NEXT:    s_and_b32 s1, s1, 1
-; GFX10-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX10-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX10-NEXT:  ; %bb.1: ; %B
 ; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 1, v2
-; GFX10-NEXT:    s_andn2_b32 s0, s0, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s0, s1, exec_lo
 ; GFX10-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
-; GFX10-NEXT:    s_or_b32 s0, s0, s1
+; GFX10-NEXT:    s_or_b32 s1, s0, s1
 ; GFX10-NEXT:  .LBB1_2: ; %exit
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s0
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v2, 2, v2
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX10-NEXT:    s_endpgm

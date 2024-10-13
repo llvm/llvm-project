@@ -431,15 +431,9 @@ define amdgpu_kernel void @repeat_successor(i32 %in, ptr addrspace(1) %src1, ptr
 ; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x2c
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    s_cmp_lt_i32 s0, 3
-; GFX906-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX906-NEXT:    s_and_b32 s1, s1, 1
-; GFX906-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX906-NEXT:    s_cbranch_scc0 .LBB7_3
 ; GFX906-NEXT:  ; %bb.1: ; %LeafBlock
 ; GFX906-NEXT:    s_cmp_ge_i32 s0, 1
-; GFX906-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX906-NEXT:    s_and_b32 s0, s0, 1
-; GFX906-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX906-NEXT:    s_cbranch_scc0 .LBB7_6
 ; GFX906-NEXT:  ; %bb.2:
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -447,9 +441,6 @@ define amdgpu_kernel void @repeat_successor(i32 %in, ptr addrspace(1) %src1, ptr
 ; GFX906-NEXT:    s_branch .LBB7_5
 ; GFX906-NEXT:  .LBB7_3: ; %LeafBlock5
 ; GFX906-NEXT:    s_cmp_eq_u32 s0, 3
-; GFX906-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX906-NEXT:    s_and_b32 s0, s0, 1
-; GFX906-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX906-NEXT:    s_cbranch_scc0 .LBB7_6
 ; GFX906-NEXT:  ; %bb.4: ; %sw.bb5
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v0, 2, v0

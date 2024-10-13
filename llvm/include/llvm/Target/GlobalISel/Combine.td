@@ -1791,6 +1791,16 @@ def zext_of_truncate : GICombineRule <
   (apply [{ Helper.applyBuildFn(*${ZextMI}, ${matchinfo}); }])>;
 
 
+// Fold (zext (trunc x)) -> x if the source type is same as the destination type
+// and truncated bits are known to be zero.
+def zext_trunc_fold: GICombineRule <
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_TRUNC $trunc, $src):$TruncMI,
+         (G_ZEXT $root, $trunc):$ZextMI,
+         [{ return Helper.matchCombineZextTrunc(*${ZextMI}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${ZextMI}, ${matchinfo}); }])
+>;
+
 def cast_combines: GICombineGroup<[
   truncate_of_zext,
   truncate_of_sext,
@@ -1813,7 +1823,8 @@ def cast_combines: GICombineGroup<[
   narrow_binop_or,
   narrow_binop_xor,
   integer_of_truncate,
-  zext_of_truncate
+  zext_of_truncate,
+  zext_trunc_fold
 ]>;
 
 def canonicalize_icmp : GICombineRule<

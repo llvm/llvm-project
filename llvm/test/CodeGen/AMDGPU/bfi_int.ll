@@ -1457,9 +1457,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX8-GISEL-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[4:5]
 ; GFX8-GISEL-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; GFX8-GISEL-NEXT:    s_add_u32 s0, s0, 10
-; GFX8-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX8-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -1476,9 +1473,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-GISEL-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[4:5]
 ; GFX10-GISEL-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; GFX10-GISEL-NEXT:    s_add_u32 s0, s0, 10
-; GFX10-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX10-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX10-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -1551,9 +1545,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 ; GFX8-GISEL-NEXT:    s_and_b64 s[2:3], s[2:3], s[6:7]
 ; GFX8-GISEL-NEXT:    s_xor_b64 s[0:1], s[2:3], s[0:1]
 ; GFX8-GISEL-NEXT:    s_add_u32 s0, s0, 10
-; GFX8-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX8-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -1570,9 +1561,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-GISEL-NEXT:    s_and_b64 s[2:3], s[2:3], s[6:7]
 ; GFX10-GISEL-NEXT:    s_xor_b64 s[0:1], s[2:3], s[0:1]
 ; GFX10-GISEL-NEXT:    s_add_u32 s0, s0, 10
-; GFX10-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX10-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX10-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -1645,9 +1633,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
 ; GFX8-GISEL-NEXT:    s_and_b64 s[2:3], s[2:3], s[6:7]
 ; GFX8-GISEL-NEXT:    s_xor_b64 s[0:1], s[2:3], s[0:1]
 ; GFX8-GISEL-NEXT:    s_add_u32 s0, s0, 10
-; GFX8-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX8-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -1664,9 +1649,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-GISEL-NEXT:    s_and_b64 s[2:3], s[2:3], s[6:7]
 ; GFX10-GISEL-NEXT:    s_xor_b64 s[0:1], s[2:3], s[0:1]
 ; GFX10-GISEL-NEXT:    s_add_u32 s0, s0, 10
-; GFX10-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX10-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX10-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -1743,9 +1725,6 @@ define amdgpu_kernel void @s_bfi_sha256_ma_i64(i64 %x, i64 %y, i64 %z) {
 ; GFX8-GISEL-NEXT:    s_and_b64 s[0:1], s[6:7], s[0:1]
 ; GFX8-GISEL-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; GFX8-GISEL-NEXT:    s_add_u32 s0, s0, 10
-; GFX8-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX8-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX8-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -1763,9 +1742,6 @@ define amdgpu_kernel void @s_bfi_sha256_ma_i64(i64 %x, i64 %y, i64 %z) {
 ; GFX10-GISEL-NEXT:    s_and_b64 s[2:3], s[6:7], s[2:3]
 ; GFX10-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; GFX10-GISEL-NEXT:    s_add_u32 s0, s0, 10
-; GFX10-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX10-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX10-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1

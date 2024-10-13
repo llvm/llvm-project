@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
@@ -24,6 +25,7 @@
 #define DEBUG_TYPE "gi-combiner"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) {
@@ -378,12 +380,58 @@ bool CombinerHelper::matchCombineZextTrunc(const MachineInstr &ZextMI,
 
   unsigned DstSize = DstTy.getScalarSizeInBits();
   unsigned MidSize = MRI.getType(Mid).getScalarSizeInBits();
+  unsigned SrcSize = SrcTy.getScalarSizeInBits();
 
   // Are the truncated bits known to be zero?
   if (DstTy == SrcTy &&
       (KB->getKnownBits(Src).countMinLeadingZeros() >= DstSize - MidSize)) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
     return true;
+  }
+
+  // If the sizes are just right we can convert this into a logical
+  // 'and', which will be much cheaper than the pair of casts.
+
+  // If we're actually extending zero bits, then if
+  // SrcSize <  DstSize: zext(Src & mask)
+  // SrcSize == DstSize: Src & mask
+  // SrcSize  > DstSize: trunc(Src) & mask
+
+  if (DstSize == SrcSize) {
+    // Src & mask.
+
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {DstTy}}) ||
+        !isConstantLegalOrBeforeLegalizer(DstTy))
+      return false;
+
+    // build mask.
+    APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      auto Mask = B.buildConstant(DstTy, AndValue);
+      B.buildAnd(Dst, Src, Mask);
+    };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchCombineZextTrunc(MachineInstr &MI, Register &Reg) {
+  GZext *Zext = cast<GZext>(&MI);
+
+  Register DstReg = Zext->getReg(0);
+  Register SrcReg = Zext->getSrcReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (!MRI.hasOneNonDBGUse(SrcReg))
+    return false;
+
+  if (mi_match(SrcReg, MRI,
+               m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))))) {
+    unsigned DstSize = DstTy.getScalarSizeInBits();
+    unsigned SrcSize = MRI.getType(SrcReg).getScalarSizeInBits();
+    return KB->getKnownBits(Reg).countMinLeadingZeros() >= DstSize - SrcSize;
   }
 
   return false;

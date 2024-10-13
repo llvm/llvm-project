@@ -1735,8 +1735,7 @@ define amdgpu_ps i65 @s_shl_i65(i65 inreg %value, i65 inreg %amount) {
 ; GCN-NEXT:    s_cmp_lg_u32 s3, 0
 ; GCN-NEXT:    s_cselect_b64 s[0:1], s[4:5], 0
 ; GCN-NEXT:    s_cselect_b32 s3, s6, s8
-; GCN-NEXT:    s_and_b32 s4, s12, 1
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    s_cmp_lg_u32 s12, 0
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s3
 ; GCN-NEXT:    ; return to shader part epilog
 ;
@@ -1757,8 +1756,7 @@ define amdgpu_ps i65 @s_shl_i65(i65 inreg %value, i65 inreg %amount) {
 ; GFX10PLUS-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX10PLUS-NEXT:    s_cselect_b64 s[0:1], s[8:9], 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s3, s4, s6
-; GFX10PLUS-NEXT:    s_and_b32 s4, s12, 1
-; GFX10PLUS-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX10PLUS-NEXT:    s_cmp_lg_u32 s12, 0
 ; GFX10PLUS-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = shl i65 %value, %amount
