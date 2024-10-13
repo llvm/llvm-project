@@ -6947,7 +6947,7 @@ bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
       V, /* AllowLifetime */ true, /* AllowDroppable */ true);
 }
 
-bool llvm::isLanewiseOperation(const Instruction *I) {
+bool llvm::isNotCrossLaneOperation(const Instruction *I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     // TODO: expand this list.
@@ -6967,9 +6967,7 @@ bool llvm::isLanewiseOperation(const Instruction *I) {
       return false;
     }
   }
-  auto *Shuffle = dyn_cast<ShuffleVectorInst>(I);
-  return (!Shuffle || Shuffle->isSelect()) &&
-         !isa<CallBase, BitCastInst, ExtractElementInst>(I);
+  return !isa<CallBase, BitCastInst, ShuffleVectorInst, ExtractElementInst>(I);
 }
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,

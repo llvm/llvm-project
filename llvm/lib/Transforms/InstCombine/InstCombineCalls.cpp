@@ -3630,7 +3630,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
   if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
-      isLanewiseOperation(II))
+      isNotCrossLaneOperation(II))
     for (Value *Op : II->args())
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))

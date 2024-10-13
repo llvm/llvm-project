@@ -4343,7 +4343,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (isa<PHINode>(I))
     return nullptr;
 
-  if (Op->getType()->isVectorTy() && !isLanewiseOperation(I))
+  if (Op->getType()->isVectorTy() && !isNotCrossLaneOperation(I))
     // For vector types, the simplification must hold per-lane, so forbid
     // potentially cross-lane operations like shufflevector.
     return nullptr;
