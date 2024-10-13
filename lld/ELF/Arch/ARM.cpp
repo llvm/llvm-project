@@ -576,7 +576,7 @@ static void encodeLdrGroup(Ctx &ctx, uint8_t *loc, const Relocation &rel,
     val = -val;
   }
   uint32_t imm = getRemAndLZForGroup(group, val).first;
-  checkUInt(loc, imm, 12, rel);
+  checkUInt(ctx, loc, imm, 12, rel);
   write32(ctx, loc, (read32(ctx, loc) & 0xff7ff000) | opcode | imm);
 }
 
@@ -594,7 +594,7 @@ static void encodeLdrsGroup(Ctx &ctx, uint8_t *loc, const Relocation &rel,
     val = -val;
   }
   uint32_t imm = getRemAndLZForGroup(group, val).first;
-  checkUInt(loc, imm, 8, rel);
+  checkUInt(ctx, loc, imm, 8, rel);
   write32(ctx, loc,
           (read32(ctx, loc) & 0xff7ff0f0) | opcode | ((imm & 0xf0) << 4) |
               (imm & 0xf));
@@ -622,7 +622,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32(ctx, loc, val);
     break;
   case R_ARM_PREL31:
-    checkInt(loc, val, 31, rel);
+    checkInt(ctx, loc, val, 31, rel);
     write32(ctx, loc, (read32(ctx, loc) & 0x80000000) | (val & ~0x80000000));
     break;
   case R_ARM_CALL: {
@@ -639,7 +639,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       stateChangeWarning(ctx, loc, rel.type, *rel.sym);
     if (rel.sym->isFunc() ? bit0Thumb : isBlx) {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
-      checkInt(loc, val, 26, rel);
+      checkInt(ctx, loc, val, 26, rel);
       write32(ctx, loc,
               0xfa000000 |                    // opcode
                   ((val & 2) << 23) |         // H
@@ -655,23 +655,23 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
-    checkInt(loc, val, 26, rel);
+    checkInt(ctx, loc, val, 26, rel);
     write32(ctx, loc,
             (read32(ctx, loc) & ~0x00ffffff) | ((val >> 2) & 0x00ffffff));
     break;
   case R_ARM_THM_JUMP8:
     // We do a 9 bit check because val is right-shifted by 1 bit.
-    checkInt(loc, val, 9, rel);
+    checkInt(ctx, loc, val, 9, rel);
     write16(ctx, loc, (read32(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
     break;
   case R_ARM_THM_JUMP11:
     // We do a 12 bit check because val is right-shifted by 1 bit.
-    checkInt(loc, val, 12, rel);
+    checkInt(ctx, loc, val, 12, rel);
     write16(ctx, loc, (read32(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
-    checkInt(loc, val, 21, rel);
+    checkInt(ctx, loc, val, 21, rel);
     write16(ctx, loc,
             (read16(ctx, loc) & 0xfbc0) | // opcode cond
                 ((val >> 10) & 0x0400) |  // S
@@ -708,7 +708,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (!ctx.arg.armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
-      checkInt(loc, val, 23, rel);
+      checkInt(ctx, loc, val, 23, rel);
       write16(ctx, loc,
               0xf000 |                     // opcode
                   ((val >> 12) & 0x07ff)); // imm11
@@ -723,7 +723,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     [[fallthrough]];
   case R_ARM_THM_JUMP24:
     // Encoding B  T4, BL T1, BLX T2: Val = S:I1:I2:imm10:imm11:0
-    checkInt(loc, val, 25, rel);
+    checkInt(ctx, loc, val, 25, rel);
     write16(ctx, loc,
             0xf000 |                     // opcode
                 ((val >> 14) & 0x0400) | // S
@@ -829,7 +829,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       imm = -imm;
       sub = 0x00a0;
     }
-    checkUInt(loc, imm, 12, rel);
+    checkUInt(ctx, loc, imm, 12, rel);
     write16(ctx, loc, (read16(ctx, loc) & 0xfb0f) | sub | (imm & 0x800) >> 1);
     write16(ctx, loc + 2,
             (read16(ctx, loc + 2) & 0x8f00) | (imm & 0x700) << 4 |
@@ -843,8 +843,8 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // bottom bit to recover S + A - Pa.
     if (rel.sym->isFunc())
       val &= ~0x1;
-    checkUInt(loc, val, 10, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkUInt(ctx, loc, val, 10, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write16(ctx, loc, (read16(ctx, loc) & 0xff00) | (val & 0x3fc) >> 2);
     break;
   case R_ARM_THM_PC12: {
@@ -861,7 +861,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       imm12 = -imm12;
       u = 0;
     }
-    checkUInt(loc, imm12, 12, rel);
+    checkUInt(ctx, loc, imm12, 12, rel);
     write16(ctx, loc, read16(ctx, loc) | u);
     write16(ctx, loc + 2, (read16(ctx, loc + 2) & 0xf000) | imm12);
     break;
