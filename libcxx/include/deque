@@ -194,7 +194,6 @@ template <class T, class Allocator, class Predicate>
 #include <__assert>
 #include <__config>
 #include <__debug_utils/sanitizers.h>
-#include <__flat_map/container_traits.h>
 #include <__format/enable_insertable.h>
 #include <__fwd/deque.h>
 #include <__iterator/distance.h>

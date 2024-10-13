@@ -39,8 +39,8 @@ int main(int, char**) {
 
     assert(mo.empty());
     assert(mo.key_comp() == C(5));
-    assert(mo.keys().get_allocator() == A(test_alloc_base::moved_value));
-    assert(mo.values().get_allocator() == A(test_alloc_base::moved_value));
+    assert(mo.keys().get_allocator().get_id() == test_alloc_base::moved_value);
+    assert(mo.values().get_allocator().get_id() == test_alloc_base::moved_value);
   }
   {
     using C = test_less<int>;
@@ -76,9 +76,9 @@ int main(int, char**) {
   {
     // moved-from object maintains invariant if one of underlying container does not clear after move
     using M = std::flat_map<int, int, std::less<>, std::vector<int>, CopyOnlyVector<int>>;
-    M m1    = M({1,2,3},{1,2,3});
-    M m2     = std::move(m1);
-    assert(m2.size()==3);
+    M m1    = M({1, 2, 3}, {1, 2, 3});
+    M m2    = std::move(m1);
+    assert(m2.size() == 3);
     assert(m1.keys().size() == m1.values().size());
     LIBCPP_ASSERT(m1.empty());
     LIBCPP_ASSERT(m1.keys().size() == 0);

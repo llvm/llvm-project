@@ -39,7 +39,6 @@ namespace std {
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <__flat_map/container_traits.h>
 #include <__flat_map/flat_map.h>
 #include <__flat_map/sorted_unique.h>
 #include <version>

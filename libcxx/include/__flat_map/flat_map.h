@@ -23,7 +23,6 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/swappable.h>
 #include <__config>
-#include <__flat_map/container_traits.h>
 #include <__flat_map/sorted_unique.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
@@ -43,6 +42,7 @@
 #include <__ranges/subrange.h>
 #include <__ranges/zip_view.h>
 #include <__type_traits/conjunction.h>
+#include <__type_traits/container_traits.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_constructible.h>
