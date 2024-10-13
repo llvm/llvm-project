@@ -48,6 +48,10 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+
+private:
+void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                           int group, bool check) const;
 };
 enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 } // namespace
@@ -296,11 +300,11 @@ void ARM::writePltHeader(uint8_t *buf) const {
 
 void ARM::addPltHeaderSymbols(InputSection &isec) const {
   if (useThumbPLTs(ctx)) {
-    addSyntheticLocal("$t", STT_NOTYPE, 0, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, 12, 0, isec);
+    addSyntheticLocal(ctx, "$t", STT_NOTYPE, 0, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, 12, 0, isec);
   } else {
-    addSyntheticLocal("$a", STT_NOTYPE, 0, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, 16, 0, isec);
+    addSyntheticLocal(ctx, "$a", STT_NOTYPE, 0, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, 16, 0, isec);
   }
 }
 
@@ -373,10 +377,10 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
 
 void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
   if (useThumbPLTs(ctx)) {
-    addSyntheticLocal("$t", STT_NOTYPE, off, 0, isec);
+    addSyntheticLocal(ctx, "$t", STT_NOTYPE, off, 0, isec);
   } else {
-    addSyntheticLocal("$a", STT_NOTYPE, off, 0, isec);
-    addSyntheticLocal("$d", STT_NOTYPE, off + 12, 0, isec);
+    addSyntheticLocal(ctx, "$a", STT_NOTYPE, off, 0, isec);
+    addSyntheticLocal(ctx, "$d", STT_NOTYPE, off + 12, 0, isec);
   }
 }
 
@@ -534,8 +538,8 @@ static std::pair<uint32_t, uint32_t> getRemAndLZForGroup(unsigned group,
   return {rem, lz};
 }
 
-static void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
-                           int group, bool check) {
+void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                           int group, bool check) const {
   // ADD/SUB (immediate) add = bit23, sub = bit22
   // immediate field carries is a 12-bit modified immediate, made up of a 4-bit
   // even rotate right and an 8-bit immediate.
@@ -1327,10 +1331,9 @@ private:
 };
 
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
-    : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
+    : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs"),
-      ctx(ctx) {
+                       /*alignment=*/32, ".gnu.sgstubs") {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
@@ -1380,7 +1383,7 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   sgVeneers.emplace_back(ss);
 }
 
-void ArmCmseSGSection::writeTo(Ctx &ctx, uint8_t *buf) {
+void ArmCmseSGSection::writeTo(uint8_t *buf) {
   for (ArmCmseSGVeneer *s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(p + 0, 0xe97f); // SG
@@ -1394,17 +1397,17 @@ void ArmCmseSGSection::writeTo(Ctx &ctx, uint8_t *buf) {
 }
 
 void ArmCmseSGSection::addMappingSymbol() {
-  addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
+  addSyntheticLocal(ctx, "$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
-size_t ArmCmseSGSection::getSize(Ctx &) const {
+size_t ArmCmseSGSection::getSize() const {
   if (sgVeneers.empty())
     return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
 
   return entries.size() * entsize;
 }
 
-void ArmCmseSGSection::finalizeContents(Ctx &) {
+void ArmCmseSGSection::finalizeContents() {
   if (sgVeneers.empty())
     return;
 
@@ -1442,15 +1445,18 @@ void ArmCmseSGSection::finalizeContents(Ctx &) {
 // https://developer.arm.com/documentation/ecm0359818/latest
 template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   StringTableSection *shstrtab =
-      make<StringTableSection>(".shstrtab", /*dynamic=*/false);
+      make<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
   StringTableSection *strtab =
-      make<StringTableSection>(".strtab", /*dynamic=*/false);
-  SymbolTableBaseSection *impSymTab = make<SymbolTableSection<ELFT>>(*strtab);
+      make<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
+  SymbolTableBaseSection *impSymTab =
+      make<SymbolTableSection<ELFT>>(ctx, *strtab);
 
   SmallVector<std::pair<OutputSection *, SyntheticSection *>, 0> osIsPairs;
-  osIsPairs.emplace_back(make<OutputSection>(strtab->name, 0, 0), strtab);
-  osIsPairs.emplace_back(make<OutputSection>(impSymTab->name, 0, 0), impSymTab);
-  osIsPairs.emplace_back(make<OutputSection>(shstrtab->name, 0, 0), shstrtab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, strtab->name, 0, 0), strtab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, impSymTab->name, 0, 0),
+                         impSymTab);
+  osIsPairs.emplace_back(make<OutputSection>(ctx, shstrtab->name, 0, 0),
+                         shstrtab);
 
   std::sort(ctx.symtab->cmseSymMap.begin(), ctx.symtab->cmseSymMap.end(),
             [](const auto &a, const auto &b) -> bool {
@@ -1460,7 +1466,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
-        ctx.internalFile, d->getName(), d->computeBinding(),
+        ctx.internalFile, d->getName(), d->computeBinding(ctx),
         /*stOther=*/0, STT_FUNC, d->getVA(), d->getSize(), nullptr));
   }
 
@@ -1469,10 +1475,10 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   for (auto &[osec, isec] : osIsPairs) {
     osec->sectionIndex = ++idx;
     osec->recordSection(isec);
-    osec->finalizeInputSections(ctx);
+    osec->finalizeInputSections();
     osec->shName = shstrtab->addString(osec->name);
-    osec->size = isec->getSize(ctx);
-    isec->finalizeContents(ctx);
+    osec->size = isec->getSize();
+    isec->finalizeContents();
     osec->offset = alignToPowerOf2(off, osec->addralign);
     off = osec->offset + osec->size;
   }

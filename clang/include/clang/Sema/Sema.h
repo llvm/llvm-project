@@ -702,10 +702,10 @@ public:
   /// Retrieve the current block, if any.
   sema::BlockScopeInfo *getCurBlock();
 
-  /// Get the innermost lambda enclosing the current location, if any. This
-  /// looks through intervening non-lambda scopes such as local functions and
-  /// blocks.
-  sema::LambdaScopeInfo *getEnclosingLambda() const;
+  /// Get the innermost lambda or block enclosing the current location, if any.
+  /// This looks through intervening non-lambda, non-block scopes such as local
+  /// functions.
+  sema::CapturingScopeInfo *getEnclosingLambdaOrBlock() const;
 
   /// Retrieve the current lambda scope info, if any.
   /// \param IgnoreNonLambdaCapturingScope true if should find the top-most
@@ -4453,9 +4453,10 @@ public:
                                       SourceLocation *ArgLocation = nullptr);
 
   /// Determine if type T is a valid subject for a nonnull and similar
-  /// attributes. By default, we look through references (the behavior used by
-  /// nonnull), but if the second parameter is true, then we treat a reference
-  /// type as valid.
+  /// attributes. Dependent types are considered valid so they can be checked
+  /// during instantiation time. By default, we look through references (the
+  /// behavior used by nonnull), but if the second parameter is true, then we
+  /// treat a reference type as valid.
   bool isValidPointerAttrType(QualType T, bool RefOkay = false);
 
   /// AddAssumeAlignedAttr - Adds an assume_aligned attribute to a particular
@@ -4527,9 +4528,10 @@ public:
   /// declaration.
   void AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E);
 
-  /// AddAnnotationAttr - Adds an annotation Annot with Args arguments to D.
-  void AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
-                         StringRef Annot, MutableArrayRef<Expr *> Args);
+  /// CreateAnnotationAttr - Creates an annotation Annot with Args arguments.
+  Attr *CreateAnnotationAttr(const AttributeCommonInfo &CI, StringRef Annot,
+                             MutableArrayRef<Expr *> Args);
+  Attr *CreateAnnotationAttr(const ParsedAttr &AL);
 
   bool checkMSInheritanceAttrOnDefinition(CXXRecordDecl *RD, SourceRange Range,
                                           bool BestCase,
@@ -13014,12 +13016,6 @@ public:
   /// arguments on an enclosing class template.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
-      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
-      bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
-
-  void getTemplateInstantiationArgs(
-      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
-      const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
 
