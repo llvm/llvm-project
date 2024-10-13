@@ -393,12 +393,11 @@ Log *GetLLDBErrorLog();
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     ::llvm::Error error_private = (error);                                     \
+    if (!log_private)                                                          \
+      log_private = lldb_private::GetLLDBErrorLog();                           \
     if (log_private && error_private) {                                        \
       log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
                                __VA_ARGS__);                                   \
-    } else if (::lldb_private::Log *log_error = GetLLDBErrorLog()) {           \
-      log_error->FormatError(::std::move(error_private), __FILE__, __func__,   \
-                             __VA_ARGS__);                                     \
     } else                                                                     \
       ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
@@ -413,9 +412,6 @@ Log *GetLLDBErrorLog();
     if (log_private && log_private->GetVerbose() && error_private) {           \
       log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
                                __VA_ARGS__);                                   \
-    } else if (::lldb_private::Log *log_error = GetLLDBErrorLog()) {           \
-      log_error->FormatError(::std::move(error_private), __FILE__, __func__,   \
-                             __VA_ARGS__);                                     \
     } else                                                                     \
       ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
