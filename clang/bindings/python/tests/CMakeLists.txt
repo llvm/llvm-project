@@ -50,7 +50,7 @@ endif()
 # Tests will fail if cross-compiling for a different target, as tests will try
 # to use the host Python3_EXECUTABLE and make FFI calls to functions in target
 # libraries.
-if(CMAKE_CROSS_COMPILING)
+if(CMAKE_CROSSCOMPILING)
   message(WARNING "check-clang-python-tests not added to check-all as they fail in a cross-build setup")
   set(RUN_PYTHON_TESTS FALSE)
 endif()
