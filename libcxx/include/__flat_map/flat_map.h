@@ -142,8 +142,12 @@ private:
     friend flat_map;
 
   public:
-    using iterator_concept  = random_access_iterator_tag;
-    using iterator_category = input_iterator_tag;
+    using iterator_concept = random_access_iterator_tag;
+    // `flat_map::iterator` only satisfy "Cpp17InputIterator" named requirements, because
+    // its `reference` is not a reference type.
+    // However, to avoid surprising runtime behaviour when it is used with the
+    // Cpp17 algorithms or operations, iterator_category is set to random_access_iterator_tag.
+    using iterator_category = random_access_iterator_tag;
     using value_type        = flat_map::value_type;
     using difference_type   = flat_map::difference_type;
 
@@ -482,7 +486,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI flat_map& operator=(flat_map&& __other) noexcept(
       is_nothrow_move_assignable_v<_KeyContainer> && is_nothrow_move_assignable_v<_MappedContainer> &&
       is_nothrow_move_assignable_v<_Compare>) {
-    auto __clear_other_guard = std::__make_scoped_guard([&]() noexcept { __other.clear() /* noexcept */; });
+    auto __clear_other_guard = std::__make_scope_guard([&]() noexcept { __other.clear() /* noexcept */; });
     auto __clear_self_guard  = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     __containers_            = std::move(__other.__containers_);
     __compare_               = std::move(__other.__compare_);
@@ -660,7 +664,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI containers extract() && {
-    auto __guard = std::__make_scoped_guard([&]() noexcept { clear() /* noexcept */; });
+    auto __guard = std::__make_scope_guard([&]() noexcept { clear() /* noexcept */; });
     auto __ret   = std::move(__containers_);
     return __ret;
   }
