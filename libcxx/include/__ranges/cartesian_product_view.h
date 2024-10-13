@@ -297,11 +297,7 @@ private:
 
   template <class Tuple>
   constexpr difference_type distance_from(const Tuple& t) const {
-    constexpr auto seq        = std::make_integer_sequence<int, sizeof...(Vs) + 1>{};
-    constexpr auto scaled_sum = [&t, this]<int... Ints>(std::integer_sequence<int, Ints...>) -> difference_type {
-      return (scaled_distance<Ints>(t) + ...);
-    };
-    return scaled_sum(seq);
+    return scaled_sum(t);
   }
 
   template <auto N>
@@ -311,9 +307,16 @@ private:
     return static_cast<difference_type>(1);
   }
 
-  template <auto N, class Tuple>
-  constexpr difference_type scaled_distance(const Tuple& t) const {
+  template <auto N>
+  constexpr difference_type scaled_distance(const auto& t) const {
     return static_cast<difference_type>(std::get<N>(current_) - std::get<N>(t)) * scaled_size<N + 1>();
+  }
+
+  template <auto N = 0>
+  constexpr difference_type scaled_sum(const auto& t) const {
+    if constexpr (N <= sizeof...(Vs))
+      return scaled_distance<N>(t) + scaled_sum<N + 1>(t);
+    return static_cast<difference_type>(0);
   }
 };
 
