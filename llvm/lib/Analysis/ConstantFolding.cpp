@@ -2397,7 +2397,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
     case LibFunc_log1p:
     case LibFunc_log1pf:
-      if (APF > APFloat::getOne(APF.getSemantics(), true) && TLI->has(Func))
+      if (APF > APFloat(APF.getSemantics(), "-1") && TLI->has(Func))
         return ConstantFoldFP(log1p, APF, Ty);
       break;
     case LibFunc_logl:
