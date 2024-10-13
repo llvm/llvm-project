@@ -919,7 +919,7 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   globalVar->getDebugInfo(globalExpressions);
 
   // There should only be a single global expression.
-  for (auto expr : globalExpressions) {
+  for (Attribute expr : globalExpressions) {
     DIGlobalVariableExpressionAttr globalExpressionAttr =
         debugImporter->translateGlobalVariableExpression(expr);
     globalExpressionAttrs.push_back(globalExpressionAttr);
