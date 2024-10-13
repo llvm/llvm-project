@@ -899,6 +899,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (CodeGenOpts.PointerAuth.IndirectGotos)
     Fn->addFnAttr("ptrauth-indirect-gotos");
 
+  // Add return control flow integrity attributes.
+  if (CodeGenOpts.CFProtectionReturn)
+    Fn->addFnAttr("hw-shadow-stack");
+
   // Apply xray attributes to the function (as a string, for now)
   bool AlwaysXRayAttr = false;
   if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
