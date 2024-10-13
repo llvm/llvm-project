@@ -465,6 +465,6 @@ void TeeLogHandler::Emit(llvm::StringRef message) {
   m_second_log_handler->Emit(message);
 }
 
-void lldb_private::SetLLDBErrorLog(Log *log) { g_error_log.exchange(log); }
+void lldb_private::SetLLDBErrorLog(Log *log) { g_error_log.store(log); }
 
 Log *lldb_private::GetLLDBErrorLog() { return g_error_log; }
