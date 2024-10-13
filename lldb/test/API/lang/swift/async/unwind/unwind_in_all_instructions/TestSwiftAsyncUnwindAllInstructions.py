@@ -62,26 +62,7 @@ class TestCase(lldbtest.TestBase):
                 breakpoints.add(bp.GetID())
         return breakpoints
 
-    # FIXME: there are challenges when unwinding Q funclets ("await resume"),
-    # see rdar://137048317. For now, we only know how to unwind during and
-    # shortly after the prologue. This function returns "should skip" if we're
-    # at a PC that is too far from the prologue (~16 bytes). This is a
-    # rough approximation that seems to work for both x86 and arm.
-    def should_skip_Q_funclet(self, thread):
-        current_frame = thread.frames[0]
-        function = current_frame.GetFunction()
-        if "await resume" not in function.GetName():
-            return False
-
-        max_prologue_offset = 16
-        prologue_end = function.GetStartAddress()
-        prologue_end.OffsetAddress(function.GetPrologueByteSize() + max_prologue_offset)
-        current_pc = current_frame.GetPCAddress()
-        return current_pc.GetFileAddress() >= prologue_end.GetFileAddress()
-
     def check_unwind_ok(self, thread, bpid):
-        if self.should_skip_Q_funclet(thread):
-            return
         # Check that we see the virtual backtrace:
         expected_funcnames = [
             "ASYNC___1___",
