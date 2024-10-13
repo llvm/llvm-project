@@ -90,10 +90,6 @@ public:
   using key_compare     = __type_identity_t<_Compare>;
   using reference       = pair<const key_type&, mapped_type&>;
   using const_reference = pair<const key_type&, const mapped_type&>;
-  // TODO : to support vector<bool> in the future, the following typedefs need to replace the above
-  // using reference = pair<ranges::range_reference_t<const _KeyContainer>,
-  // ranges::range_reference_t<_MappedContainer>>; using const_reference =
-  //    pair<ranges::range_reference_t<const _KeyContainer>, ranges::range_reference_t<const _MappedContainer>>;
   using size_type              = size_t;
   using difference_type        = ptrdiff_t;
   using iterator               = __iterator<false>; // see [container.requirements]
@@ -985,7 +981,7 @@ private:
         ranges::stable_sort(__zv.begin() + __append_start_offset, __end, __compare_key);
       } else {
         _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-            __is_sorted_and_unique(__containers_.keys | views::drop(__append_start_offset)),
+            __is_sorted_and_unique(__containers_.keys | ranges::views::drop(__append_start_offset)),
             "Either the key container is not sorted or it contains duplicates");
       }
       ranges::inplace_merge(__zv.begin(), __zv.begin() + __append_start_offset, __end, __compare_key);
@@ -1074,14 +1070,6 @@ private:
 
   template <class _Kp>
   _LIBCPP_HIDE_FROM_ABI bool __is_hint_correct(const_iterator __hint, _Kp&& __key) {
-    // todo
-    // note that we have very fragile std::prev in our library
-    // for non LegacyBidirectional iterator, std::prev(it) is well formed and a no-op
-    // here we cannot use std::prev because our iterator is not legacy bidirectional
-    // since its reference type is not a reference
-    // note that user can also attempt to use std::prev on the flat_map::iterator
-    // and it would result in a no-op.
-    // we should probably ban std::prev(LegacyInputIterator)
     if (__hint != cbegin() && !__compare_((__hint - 1)->first, __key)) {
       return false;
     }

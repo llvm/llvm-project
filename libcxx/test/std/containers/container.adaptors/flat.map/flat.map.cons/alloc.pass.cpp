@@ -37,7 +37,6 @@ int main(int, char**) {
     using M1 = std::flat_map<int, int, C, V1, V1>;
     using M2 = std::flat_map<int, int, C, V1, V2>;
     using M3 = std::flat_map<int, int, C, V2, V1>;
-    using IL = std::initializer_list<std::pair<int, int>>;
     static_assert(std::is_constructible_v<M1, const A1&>);
     static_assert(!std::is_constructible_v<M1, const A2&>);
     static_assert(!std::is_constructible_v<M2, const A2&>);

@@ -39,7 +39,7 @@ int main(int, char**) {
     using M1 = std::flat_map<int, int, C, V1, V1>;
     using M2 = std::flat_map<int, int, C, V1, V2>;
     using M3 = std::flat_map<int, int, C, V2, V1>;
-    static_assert( std::is_constructible_v<M1, M1&&, const A1&>);
+    static_assert(std::is_constructible_v<M1, M1&&, const A1&>);
     static_assert(!std::is_constructible_v<M1, M1&&, const A2&>);
     static_assert(!std::is_constructible_v<M2, M2&&, const A2&>);
     static_assert(!std::is_constructible_v<M3, M3&&, const A2&>);
@@ -100,9 +100,9 @@ int main(int, char**) {
   {
     // moved-from object maintains invariant if one of underlying container does not clear after move
     using M = std::flat_map<int, int, std::less<>, std::vector<int>, CopyOnlyVector<int>>;
-    M m1    = M({1,2,3},{1,2,3});
-    M m2 (std::move(m1), std::allocator<int>{});
-    assert(m2.size()==3);
+    M m1    = M({1, 2, 3}, {1, 2, 3});
+    M m2(std::move(m1), std::allocator<int>{});
+    assert(m2.size() == 3);
     assert(m1.keys().size() == m1.values().size());
     LIBCPP_ASSERT(m1.empty());
     LIBCPP_ASSERT(m1.keys().size() == 0);
