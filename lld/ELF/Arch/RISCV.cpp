@@ -1282,14 +1282,14 @@ void RISCVAttributesSection::writeTo(uint8_t *buf) {
   const size_t size = getSize();
   uint8_t *const end = buf + size;
   *buf = ELFAttrs::Format_Version;
-  write32(buf + 1, size - 1);
+  write32(ctx, buf + 1, size - 1);
   buf += 5;
 
   memcpy(buf, vendor.data(), vendor.size());
   buf += vendor.size() + 1;
 
   *buf = ELFAttrs::File;
-  write32(buf + 1, end - buf);
+  write32(ctx, buf + 1, end - buf);
   buf += 5;
 
   for (auto &attr : intAttr) {

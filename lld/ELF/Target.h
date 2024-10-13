@@ -296,7 +296,7 @@ inline uint16_t read16(const void *p) {
   return llvm::support::endian::read16(p, ctx.arg.endianness);
 }
 
-inline uint32_t read32(const void *p) {
+inline uint32_t read32(Ctx &ctx, const void *p) {
   return llvm::support::endian::read32(p, ctx.arg.endianness);
 }
 
@@ -308,7 +308,7 @@ inline void write16(void *p, uint16_t v) {
   llvm::support::endian::write16(p, v, ctx.arg.endianness);
 }
 
-inline void write32(void *p, uint32_t v) {
+inline void write32(Ctx &ctx, void *p, uint32_t v) {
   llvm::support::endian::write32(p, v, ctx.arg.endianness);
 }
 
