@@ -186,9 +186,12 @@ struct State {
   LoopInfo &LI;
   ScalarEvolution &SE;
   SmallVector<FactOrCheck, 64> WorkList;
+  bool AddInductionInfoIntoHeader = false;
 
-  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE)
-      : DT(DT), LI(LI), SE(SE) {}
+  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
+        bool AddInductionInfoIntoHeader = false)
+      : DT(DT), LI(LI), SE(SE),
+        AddInductionInfoIntoHeader(AddInductionInfoIntoHeader) {}
 
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
@@ -198,7 +201,7 @@ struct State {
   void addInfoForInductions(BasicBlock &BB);
 
   void addConditionFactsIntoLoopHeader(BasicBlock &BB);
-  
+
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
   bool canAddSuccessor(BasicBlock &BB, BasicBlock *Succ) const {
@@ -910,8 +913,9 @@ void State::addConditionFactsIntoLoopHeader(BasicBlock &BB) {
   if (!L || L->getHeader() != &BB)
     return;
   DomTreeNode *DTN = DT.getNode(&BB);
-  for(PHINode &PN :L->getHeader()->phis()){
-    if(PN.getNumIncomingValues() != 2 || PN.getParent() != &BB || !SE.isSCEVable(PN.getType()))
+  for (PHINode &PN : L->getHeader()->phis()) {
+    if (PN.getNumIncomingValues() != 2 || PN.getParent() != &BB ||
+        !SE.isSCEVable(PN.getType()))
       continue;
     auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(&PN));
     BasicBlock *LoopPred = L->getLoopPredecessor();
@@ -927,35 +931,36 @@ void State::addConditionFactsIntoLoopHeader(BasicBlock &BB) {
     }
     auto IncUnsigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
     auto IncSigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT);
-    
-    // Monotonically Increasing 
+
+    // Monotonically Increasing
     bool MonotonicallyIncreasingUnsigned =
-      IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
+        IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
     bool MonotonicallyIncreasingSigned =
         IncSigned && *IncSigned == ScalarEvolution::MonotonicallyIncreasing;
     if (MonotonicallyIncreasingUnsigned)
-      WorkList.push_back(
-          FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE, &PN, StartValue));
+      WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE,
+                                                       &PN, StartValue));
     if (MonotonicallyIncreasingSigned)
-      WorkList.push_back(
-          FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE, &PN, StartValue));
+      WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE,
+                                                       &PN, StartValue));
 
     // Monotonically Decreasing
     bool MonotonicallyDecreasingUnsigned =
-      IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyDecreasing;
+        IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyDecreasing;
     bool MonotonicallyDecreasingSigned =
         IncSigned && *IncSigned == ScalarEvolution::MonotonicallyDecreasing;
-    if(MonotonicallyDecreasingUnsigned)
-      WorkList.push_back(
-          FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_ULE, &PN, StartValue));
-    if(MonotonicallyDecreasingSigned)
-      WorkList.push_back(
-          FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLE, &PN, StartValue));
-  }        
+    if (MonotonicallyDecreasingUnsigned)
+      WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_ULE,
+                                                       &PN, StartValue));
+    if (MonotonicallyDecreasingSigned)
+      WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLE,
+                                                       &PN, StartValue));
+  }
 }
 
 void State::addInfoForInductions(BasicBlock &BB) {
-  addConditionFactsIntoLoopHeader(BB);
+  if (AddInductionInfoIntoHeader)
+    addConditionFactsIntoLoopHeader(BB);
   auto *L = LI.getLoopFor(&BB);
   if (!L || L->getHeader() != &BB)
     return;
@@ -1413,7 +1418,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (R.empty() || !R.isValid(Info)){
+  if (R.empty() || !R.isValid(Info)) {
     LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
     return std::nullopt;
   }
@@ -1726,6 +1731,16 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   return Changed;
 }
 
+static unsigned int getNumConditionalBranches(Function &F) {
+  unsigned int NumCondBranches = 0;
+  for (BasicBlock &BB : F) {
+    BranchInst *BranchInstr = dyn_cast_or_null<BranchInst>(BB.getTerminator());
+    if (BranchInstr && BranchInstr->isConditional())
+      NumCondBranches++;
+  }
+  return NumCondBranches;
+}
+
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution &SE,
                                  OptimizationRemarkEmitter &ORE) {
@@ -1735,7 +1750,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   for (Value &Arg : F.args())
     FunctionArgs.push_back(&Arg);
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
-  State S(DT, LI, SE);
+  unsigned int NumCondBranches = getNumConditionalBranches(F);
+  State S(DT, LI, SE,
+          /* AddInductionInfoIntoHeader= */ NumCondBranches < MaxRows / 5);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
 
