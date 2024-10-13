@@ -248,8 +248,8 @@ static void writeShuffle(Ctx &ctx, uint8_t *loc, uint64_t v, uint8_t bitsSize,
 }
 
 template <endianness E>
-static void writeMicroRelocation16(uint8_t *loc, uint64_t v, uint8_t bitsSize,
-                                   uint8_t shift) {
+static void writeMicroRelocation16(Ctx &ctx, uint8_t *loc, uint64_t v,
+                                   uint8_t bitsSize, uint8_t shift) {
   uint16_t instr = read16(ctx, loc);
   uint16_t mask = 0xffff >> (16 - bitsSize);
   uint16_t data = (instr & ~mask) | ((v >> shift) & mask);
@@ -519,7 +519,8 @@ static bool isMicroBranchReloc(RelType type) {
 }
 
 template <class ELFT>
-static uint64_t fixupCrossModeJump(uint8_t *loc, RelType type, uint64_t val) {
+static uint64_t fixupCrossModeJump(Ctx &ctx, uint8_t *loc, RelType type,
+                                   uint64_t val) {
   // Here we need to detect jump/branch from regular MIPS code
   // to a microMIPS target and vice versa. In that cases jump
   // instructions need to be replaced by their "cross-mode"
@@ -577,7 +578,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     std::tie(type, val) = calculateMipsRelChain(ctx, loc, type, val);
 
   // Detect cross-mode jump/branch and fix instruction.
-  val = fixupCrossModeJump<ELFT>(loc, type, val);
+  val = fixupCrossModeJump<ELFT>(ctx, loc, type, val);
 
   // Thread pointer and DRP offsets from the start of TLS data area.
   // https://www.linux-mips.org/wiki/NPTL
@@ -727,11 +728,11 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_MICROMIPS_PC7_S1:
     checkInt(loc, val, 8, rel);
-    writeMicroRelocation16<e>(loc, val, 7, 1);
+    writeMicroRelocation16<e>(ctx, loc, val, 7, 1);
     break;
   case R_MICROMIPS_PC10_S1:
     checkInt(loc, val, 11, rel);
-    writeMicroRelocation16<e>(loc, val, 10, 1);
+    writeMicroRelocation16<e>(ctx, loc, val, 10, 1);
     break;
   case R_MICROMIPS_PC16_S1:
     checkInt(loc, val, 17, rel);

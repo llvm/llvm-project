@@ -458,7 +458,7 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
   flags |= SHF_COMPRESSED;
 }
 
-static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {
+static void writeInt(Ctx &ctx, uint8_t *buf, uint64_t data, uint64_t size) {
   if (size == 1)
     *buf = data;
   else if (size == 2)
@@ -563,7 +563,8 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
     if (auto *data = dyn_cast<ByteCommand>(cmd)) {
       if (!std::exchange(written, true))
         fn(0, numSections);
-      writeInt(buf + data->offset, data->expression().getValue(), data->size);
+      writeInt(ctx, buf + data->offset, data->expression().getValue(),
+               data->size);
     }
   if (written || !numSections)
     return;

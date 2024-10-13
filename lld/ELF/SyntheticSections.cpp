@@ -506,7 +506,7 @@ void EhFrameSection::iterateFDEWithLSDA(
   }
 }
 
-static void writeCieFde(uint8_t *buf, ArrayRef<uint8_t> d) {
+static void writeCieFde(Ctx &ctx, uint8_t *buf, ArrayRef<uint8_t> d) {
   memcpy(buf, d.data(), d.size());
   // Fix the size field. -4 since size does not include the size field itself.
   write32(ctx, buf, d.size() - 4);
@@ -632,11 +632,11 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   // Write CIE and FDE records.
   for (CieRecord *rec : cieRecords) {
     size_t cieOffset = rec->cie->outputOff;
-    writeCieFde(buf + cieOffset, rec->cie->data());
+    writeCieFde(ctx, buf + cieOffset, rec->cie->data());
 
     for (EhSectionPiece *fde : rec->fdes) {
       size_t off = fde->outputOff;
-      writeCieFde(buf + off, fde->data());
+      writeCieFde(ctx, buf + off, fde->data());
 
       // FDE's second word should have the offset to an associated CIE.
       // Write it.
@@ -4077,7 +4077,8 @@ static bool isExtabRef(uint32_t unwind) {
 // unwinding instructions in Cur are identical to Prev. Linker generated
 // EXIDX_CANTUNWIND entries are represented by nullptr as they do not have an
 // InputSection.
-static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
+static bool isDuplicateArmExidxSec(Ctx &ctx, InputSection *prev,
+                                   InputSection *cur) {
   // Get the last table Entry from the previous .ARM.exidx section. If Prev is
   // nullptr then it will be a synthesized EXIDX_CANTUNWIND entry.
   uint32_t prevUnwind = 1;
@@ -4166,7 +4167,7 @@ void ARMExidxSyntheticSection::finalizeContents() {
     for (size_t i = 1; i < executableSections.size(); ++i) {
       InputSection *ex1 = findExidxSection(executableSections[prev]);
       InputSection *ex2 = findExidxSection(executableSections[i]);
-      if (!isDuplicateArmExidxSec(ex1, ex2)) {
+      if (!isDuplicateArmExidxSec(ctx, ex1, ex2)) {
         selectedSections.push_back(executableSections[i]);
         prev = i;
       }
