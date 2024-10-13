@@ -22,7 +22,7 @@ template <class Iter>
 std::false_type prev_test(...);
 
 template <class Iter>
-decltype((void) std::prev(std::declval<Iter>()), std::true_type()) prev_test(int);
+decltype((void)std::prev(std::declval<Iter>()), std::true_type()) prev_test(int);
 
 template <class Iter>
 using CanPrev = decltype(prev_test<Iter>(0));
@@ -30,7 +30,7 @@ using CanPrev = decltype(prev_test<Iter>(0));
 static_assert(!CanPrev<cpp17_input_iterator<int*> >::value, "");
 static_assert(CanPrev<bidirectional_iterator<int*> >::value, "");
 #if TEST_STD_VER >= 20
-    static_assert(!CanPrev<cpp20_random_access_iterator<int*> >::value);
+static_assert(!CanPrev<cpp20_random_access_iterator<int*> >::value);
 #endif
 
 template <class It>
