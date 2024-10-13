@@ -310,7 +310,7 @@ void ARM::addPltHeaderSymbols(InputSection &isec) const {
 
 // Long form PLT entries that do not have any restrictions on the displacement
 // of the .plt from the .got.plt.
-static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
+static void writePltLong(Ctx &ctx, uint8_t *buf, uint64_t gotPltEntryAddr,
                          uint64_t pltEntryAddr) {
   write32(ctx, buf + 0, 0xe59fc004);  //     ldr ip, L2
   write32(ctx, buf + 4, 0xe08cc00f);  // L1: add ip, ip, pc
@@ -339,7 +339,7 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
     };
     if (!llvm::isUInt<27>(offset)) {
       // We cannot encode the Offset, use the long form.
-      writePltLong(buf, sym.getGotPltVA(ctx), pltEntryAddr);
+      writePltLong(ctx, buf, sym.getGotPltVA(ctx), pltEntryAddr);
       return;
     }
     write32(ctx, buf + 0, pltData[0] | ((offset >> 20) & 0xff));
@@ -562,8 +562,8 @@ void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
           (read32(ctx, loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
 
-static void encodeLdrGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
-                           int group) {
+static void encodeLdrGroup(Ctx &ctx, uint8_t *loc, const Relocation &rel,
+                           uint64_t val, int group) {
   // R_ARM_LDR_PC_Gn is S + A - P, we have ((S + A) | T) - P, if S is a
   // function then addr is 0 (modulo 2) and Pa is 0 (modulo 4) so we can clear
   // bottom bit to recover S + A - P.
@@ -580,8 +580,8 @@ static void encodeLdrGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
   write32(ctx, loc, (read32(ctx, loc) & 0xff7ff000) | opcode | imm);
 }
 
-static void encodeLdrsGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
-                            int group) {
+static void encodeLdrsGroup(Ctx &ctx, uint8_t *loc, const Relocation &rel,
+                            uint64_t val, int group) {
   // R_ARM_LDRS_PC_Gn is S + A - P, we have ((S + A) | T) - P, if S is a
   // function then addr is 0 (modulo 2) and Pa is 0 (modulo 4) so we can clear
   // bottom bit to recover S + A - P.
@@ -804,22 +804,22 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     encodeAluGroup(loc, rel, val, 2, true);
     break;
   case R_ARM_LDR_PC_G0:
-    encodeLdrGroup(loc, rel, val, 0);
+    encodeLdrGroup(ctx, loc, rel, val, 0);
     break;
   case R_ARM_LDR_PC_G1:
-    encodeLdrGroup(loc, rel, val, 1);
+    encodeLdrGroup(ctx, loc, rel, val, 1);
     break;
   case R_ARM_LDR_PC_G2:
-    encodeLdrGroup(loc, rel, val, 2);
+    encodeLdrGroup(ctx, loc, rel, val, 2);
     break;
   case R_ARM_LDRS_PC_G0:
-    encodeLdrsGroup(loc, rel, val, 0);
+    encodeLdrsGroup(ctx, loc, rel, val, 0);
     break;
   case R_ARM_LDRS_PC_G1:
-    encodeLdrsGroup(loc, rel, val, 1);
+    encodeLdrsGroup(ctx, loc, rel, val, 1);
     break;
   case R_ARM_LDRS_PC_G2:
-    encodeLdrsGroup(loc, rel, val, 2);
+    encodeLdrsGroup(ctx, loc, rel, val, 2);
     break;
   case R_ARM_THM_ALU_PREL_11_0: {
     // ADR encoding T2 (sub), T3 (add) i:imm3:imm8
@@ -1096,11 +1096,11 @@ static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
   CodeState curState = static_cast<CodeState>(width);
   if (curState == CodeState::Arm)
     for (uint64_t i = start; i < end; i += width)
-      write32le(buf + i, read32(ctx, buf + i));
+      write32le(buf + i, read32be(buf + i));
 
   if (curState == CodeState::Thumb)
     for (uint64_t i = start; i < end; i += width)
-      write16le(buf + i, read16(ctx, buf + i));
+      write16le(buf + i, read16be(buf + i));
 }
 
 // Arm BE8 big endian format requires instructions to be little endian, with
