@@ -312,75 +312,37 @@ int main(int argc, const char **argv) {
   // CDBToAbsPaths is a map from the path in the compilation database to the
   // writable absolute path of the file.
   std::map<std::string, std::string> CDBToAbsPaths;
-  if (Edit) {
-    // if Edit is enabled, `Factory.editedFiles()` will contain the final code,
-    // along with the path given in the compilation database. That path can be
-    // absolute or relative, and if it is relative, it is relative to the
-    // "Directory" field in the compilation database. We need to make it
-    // absolute to write the final code to the correct path.
-    // There are several cases to consider:
-    // 1. The "Directory" field isn't same as the current working directory.
-    // 2. The file path resolved from the "Directory" field is not writable.
-    // For these cases, we need to find a writable path for the file.
-    // To effectively handle these cases, we only need to consider
-    // the files from `getSourcePathList()` that are present in the compilation
-    // database.
-    for (auto &Source : OptionsParser->getSourcePathList()) {
-      llvm::SmallString<256> AbsPath(Source);
-      if (auto Err = VFS->makeAbsolute(AbsPath)) {
-        llvm::errs() << "Failed to get absolute path for " << Source << " : "
-                     << Err.message() << '\n';
+  // if Edit is enabled, `Factory.editedFiles()` will contain the final code,
+  // along with the path given in the compilation database. That path can be
+  // absolute or relative, and if it is relative, it is relative to the
+  // "Directory" field in the compilation database. We need to make it
+  // absolute to write the final code to the correct path.
+  for (auto &Source : OptionsParser->getSourcePathList()) {
+    llvm::SmallString<256> AbsPath(Source);
+    if (auto Err = VFS->makeAbsolute(AbsPath)) {
+      llvm::errs() << "Failed to get absolute path for " << Source << " : "
+                   << Err.message() << '\n';
+      return 1;
+    }
+    std::vector<clang::tooling::CompileCommand> Cmds =
+        CDB.getCompileCommands(AbsPath);
+    if (Cmds.empty()) {
+      // Try with the original path.
+      Cmds = CDB.getCompileCommands(Source);
+      if (Cmds.empty()) {
+        // It should be found in the compilation database, even user didn't
+        // specify the compilation database, the `FixedCompilationDatabase` will
+        // create an entry from the arguments. So it is an error if we can't
+        // find the compile commands.
+        llvm::errs() << "No compile commands found for " << Source << '\n';
         return 1;
       }
-      std::vector<clang::tooling::CompileCommand> Cmds =
-          CDB.getCompileCommands(AbsPath);
-      if (Cmds.empty()) {
-        // Try with the original path.
-        Cmds = CDB.getCompileCommands(Source);
-        if (Cmds.empty()) {
-          continue;
-        }
-      }
-      // We only need the first command to get the directory.
-      auto Cmd = Cmds[0];
+    }
+    for (const auto &Cmd : Cmds) {
       llvm::SmallString<256> CDBPath(Cmd.Filename);
       std::string Directory(Cmd.Directory);
-
-      if (llvm::sys::path::is_absolute(CDBPath)) {
-        // If the path in the compilation database is already absolute, we don't
-        // need to do anything.
-        CDBToAbsPaths[static_cast<std::string>(CDBPath)] =
-            static_cast<std::string>(AbsPath);
-      } else {
-        auto Sept = llvm::sys::path::get_separator();
-        // First, try to find the file based on the compilation database.
-        llvm::Twine FilePathTwine = Directory + Sept + CDBPath;
-        llvm::SmallString<256> FilePath;
-        FilePathTwine.toVector(FilePath);
-        // Check if it is writable.
-        if (llvm::sys::fs::access(FilePath, llvm::sys::fs::AccessMode::Write) !=
-            std::error_code()) {
-          // If not, try to find the file based on the current working
-          // directory, as some Bazel invocations may not set the compilation
-          // invocation's filesystem as non-writable. In such cases, we can
-          // find the file based on the current working directory.
-          FilePath = Source;
-          if (auto EC = VFS->makeAbsolute(CDBPath)) {
-            llvm::errs() << "Failed to get absolute path for " << CDBPath
-                         << " : " << EC.message() << '\n';
-            return 1;
-          }
-          if (llvm::sys::fs::access(FilePath,
-                                    llvm::sys::fs::AccessMode::Write) !=
-              std::error_code()) {
-            llvm::errs() << "Failed to find a writable path for " << Source
-                         << '\n';
-            return 1;
-          }
-        }
-        CDBToAbsPaths[static_cast<std::string>(CDBPath)] =
-            static_cast<std::string>(FilePath);
-      }
+      llvm::sys::fs::make_absolute(Cmd.Directory, CDBPath);
+      CDBToAbsPaths[std::string(CDBPath)] = std::string(AbsPath);
     }
   }
 
