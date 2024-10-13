@@ -7494,12 +7494,12 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
-// Check if \p RedResult is a ComputeReductionResult instruction, and if it is
-// create a merge phi node for it and add incoming values from the main vector
-// loop.
-static void updateAndCollectMergePhiForReductionForEpilogueVectorization(
+// If \p RedResult is a ComputeReductionResult when vectorizing the epilog loop,
+// update the reduction's scalar PHI node by adding the incoming value from the
+// main vector loop.
+static void updateMergePhiForReductionForEpilogueVectorization(
     VPInstruction *RedResult, VPTransformState &State, Loop *OrigLoop,
-    BasicBlock *LoopMiddleBlock, bool VectorizingEpilogue) {
+    BasicBlock *LoopMiddleBlock) {
   if (!RedResult ||
       RedResult->getOpcode() != VPInstruction::ComputeReductionResult)
     return;
@@ -7510,12 +7510,11 @@ static void updateAndCollectMergePhiForReductionForEpilogueVectorization(
         return match(U, m_VPInstruction<VPInstruction::ResumePhi>(m_VPValue(),
                                                                   m_VPValue()));
       }));
+  assert(ResumePhiVPV->getNumUsers() == 1 &&
+         "ResumePhi must have a single user");
   auto *BCBlockPhi = cast<PHINode>(State.get(ResumePhiVPV, true));
   auto *PhiR = cast<VPReductionPHIRecipe>(RedResult->getOperand(0));
   const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-  if (!VectorizingEpilogue)
-    return;
-
   auto *ResumePhi =
       dyn_cast<PHINode>(PhiR->getStartValue()->getUnderlyingValue());
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
@@ -7525,16 +7524,16 @@ static void updateAndCollectMergePhiForReductionForEpilogueVectorization(
     assert(Cmp->getOperand(1) == RdxDesc.getRecurrenceStartValue());
     ResumePhi = cast<PHINode>(Cmp->getOperand(0));
   }
-  assert((!VectorizingEpilogue || ResumePhi) &&
+  assert(ResumePhi &&
          "when vectorizing the epilogue loop, we need a resume phi from main "
          "vector loop");
 
   BasicBlock *LoopScalarPreHeader = OrigLoop->getLoopPreheader();
-  // If we are fixing reductions in the epilogue loop then we should already
-  // have created a bc.merge.rdx Phi after the main vector body. Ensure that
-  // we carry over the incoming values correctly.
+  // When fixing reductions in the epilogue loop then we should already have
+  // created a bc.merge.rdx Phi after the main vector body. Ensure that we carry
+  // over the incoming values correctly.
   for (auto *Incoming : predecessors(LoopScalarPreHeader)) {
-    if (ResumePhi && is_contained(ResumePhi->blocks(), Incoming))
+    if (is_contained(ResumePhi->blocks(), Incoming))
       BCBlockPhi->setIncomingValueForBlock(
           Incoming, ResumePhi->getIncomingValueForBlock(Incoming));
   }
@@ -7628,11 +7627,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 2.5 Collect reduction resume values.
   auto *ExitVPBB =
       cast<VPBasicBlock>(BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
-  if (IsEpilogueVectorization)
+  if (IsEpilogueVectorization && ExpandedSCEVs)
     for (VPRecipeBase &R : *ExitVPBB) {
-      updateAndCollectMergePhiForReductionForEpilogueVectorization(
+      updateMergePhiForReductionForEpilogueVectorization(
           dyn_cast<VPInstruction>(&R), State, OrigLoop,
-          State.CFG.VPBB2IRBB[ExitVPBB], ExpandedSCEVs);
+          State.CFG.VPBB2IRBB[ExitVPBB]);
     }
 
   // 2.6. Maintain Loop Hints
