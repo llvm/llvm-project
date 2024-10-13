@@ -1,0 +1,52 @@
+
+add_header_library(
+  core_structs
+  HDRS
+    core_structs.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  parser
+  HDRS
+    parser.h
+  DEPENDS
+    .core_structs
+    libc.src.__support.arg_list
+    libc.src.__support.ctype_utils
+    libc.src.__support.str_to_integer
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.common
+)
+
+
+add_object_library(
+  converter
+  SRCS
+    converter.cpp
+  HDRS
+    converter.h
+  DEPENDS
+    .core_structs
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.big_int
+    libc.src.math.log10
+    libc.src.__support.common
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.float_to_string
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.integer_to_string
+    libc.src.__support.libc_assert
+    libc.src.__support.uint128
+    libc.src.__support.StringUtil.error_to_string
+)
