@@ -92,7 +92,7 @@ __to_chars_itoa(char* __first, char* __last, __uint128_t __value, false_type) {
 }
 #  endif
 
-template <class _Tp>
+template <class _Tp, bool _UseExternalToChars = true>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base, false_type);
 
@@ -234,11 +234,59 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_widt
   return std::__to_chars_integral_width<_Base>(static_cast<unsigned>(__value));
 }
 
+// Don't return the pointer so we don't capture `__first` or `__last`.
+struct __to_chars_offset_result {
+  int32_t __offset_;
+  errc __ec_;
+};
+
+template <unsigned _Base, class _Tp>
+[[__gnu__::__noinline__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral(_LIBCPP_NOESCAPE char* __first, _LIBCPP_NOESCAPE char* __last, _Tp __value) {
+  auto __result = __itoa::__integral<_Base>::__to_chars(__first, __last, __value);
+  return {static_cast<int32_t>(__result.ptr - __first), __result.ec};
+}
+
 template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) >= sizeof(unsigned)), int> = 0>
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value) {
+  if (!__builtin_constant_p(__value)) {
+    auto __result = std::__external_to_chars_integral<_Base, _Tp>(__first, __last, __value);
+    return {__first + __result.__offset_, __result.__ec_};
+  }
   return __itoa::__integral<_Base>::__to_chars(__first, __last, __value);
 }
+
+#  if _LIBCPP_AVAILABILITY_HAS_EXTERNAL_TO_CHARS
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<2, uint32_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint32_t);
+
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<8, uint32_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint32_t);
+
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<16, uint32_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint32_t);
+
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<2, uint64_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint64_t);
+
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<8, uint64_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint64_t);
+
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<16, uint64_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, uint64_t);
+
+#    ifndef _LIBCPP_HAS_NO_INT128
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<2, __uint128_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, __uint128_t);
+
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<8, __uint128_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, __uint128_t);
+
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<16, __uint128_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, __uint128_t);
+#    endif // _LIBCPP_HAS_NO_INT128
+#  endif   // _LIBCPP_AVAILABILITY_HAS_EXTERNAL_TO_CHARS
 
 template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) < sizeof(unsigned)), int> = 0>
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
@@ -272,9 +320,35 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_widt
   __libcpp_unreachable();
 }
 
-template <typename _Tp>
+template <class _Tp>
+[[__gnu__::__noinline__]] __to_chars_offset_result
+__external_to_chars_integral(_LIBCPP_NOESCAPE char* __first, _LIBCPP_NOESCAPE char* __last, int __base, _Tp __value) {
+  static_assert(is_unsigned_v<_Tp>);
+  auto __result = std::__to_chars_integral<_Tp, false>(__first, __last, __value, __base, false_type());
+  return {static_cast<int32_t>(__result.ptr - __first), __result.ec};
+}
+
+#  if _LIBCPP_AVAILABILITY_HAS_EXTERNAL_TO_CHARS
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<uint32_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, int, uint32_t);
+
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<uint64_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, int, uint64_t);
+
+#    ifndef _LIBCPP_HAS_NO_INT128
+extern template _LIBCPP_EXPORTED_FROM_ABI __to_chars_offset_result
+__external_to_chars_integral<__uint128_t>(_LIBCPP_NOESCAPE char*, _LIBCPP_NOESCAPE char*, int, __uint128_t);
+#    endif
+#  endif // _LIBCPP_AVAILABILITY_HAS_EXTERNAL_TO_CHARS
+
+template <typename _Tp, bool _UseExternalToChars>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base, false_type) {
+  if (_UseExternalToChars && !__builtin_constant_p(__base)) {
+    auto __result = std::__external_to_chars_integral(__first, __last, __base, __value);
+    return {__first + __result.__offset_, __result.__ec_};
+  }
+
   if (__base == 10) [[likely]]
     return std::__to_chars_itoa(__first, __last, __value, false_type());
 
@@ -285,6 +359,11 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base, false_
     return std::__to_chars_integral<8>(__first, __last, __value);
   case 16:
     return std::__to_chars_integral<16>(__first, __last, __value);
+  }
+
+  if (_UseExternalToChars && !__builtin_constant_p(__value)) {
+    auto __result = std::__external_to_chars_integral(__first, __last, __base, __value);
+    return {__first + __result.__offset_, __result.__ec_};
   }
 
   ptrdiff_t __cap = __last - __first;

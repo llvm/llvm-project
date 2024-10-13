@@ -87,6 +87,9 @@
 // in all versions of the library are available.
 #if defined(_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_20 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_19 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE /* nothing */
 
@@ -317,6 +320,9 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
+
+// This macro controls whether the external instantiations for integral to_chars are available
+#define _LIBCPP_AVAILABILITY_HAS_EXTERNAL_TO_CHARS _LIBCPP_INTRODUCED_IN_LLVM_20
 
 // These macros control the availability of std::bad_optional_access and
 // other exception types. These were put in the shared library to prevent
