@@ -218,10 +218,21 @@ public:
     return x.distance_from(y.current_);
   }
 
+  friend constexpr difference_type operator-(const iterator& i, default_sentinel_t)
+    requires cartesian_is_sized_sentinel<Const, sentinel_t, First, Vs...>
+  {
+    MultiIterator end_tuple;
+    std::get<0>(end_tuple) = ranges::end(std::get<0>(i.parent_->bases_));
+    for (int N = 1; N <= sizeof...(Vs); N++)
+      std::get<N>(end_tuple) = ranges::begin(std::get<N>(i.parent_->bases_));
+    return i.distance_from(end_tuple);
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
-  tuple<iterator_t<__maybe_const<Const, First>>, iterator_t<__maybe_const<Const, Vs>>...> current_;
+  using MultiIterator = tuple<iterator_t<__maybe_const<Const, First>>, iterator_t<__maybe_const<Const, Vs>>...>;
+  MultiIterator current_;
 
   constexpr iterator(Parent& parent, decltype(current_) current)
       : parent_(std::addressof(parent)), current_(std::move(current)) {}
