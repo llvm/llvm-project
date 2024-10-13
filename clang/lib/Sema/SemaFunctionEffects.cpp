@@ -1140,6 +1140,16 @@ private:
       return true;
     }
 
+    bool VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *ARP) {
+      // Under the hood, @autorelease (potentially?) allocates memory and
+      // invokes ObjC methods. We don't currently have memory allocation as
+      // a "language construct" but we do have ObjC messaging, so diagnose that.
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
+                                ViolationID::AccessesObjCMethodOrProperty,
+                                ARP->getBeginLoc());
+      return true;
+    }
+
     bool VisitSEHExceptStmt(SEHExceptStmt *Exc) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
                                 ViolationID::ThrowsOrCatchesExceptions,

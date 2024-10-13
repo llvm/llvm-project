@@ -24,3 +24,8 @@ void nb4() [[clang::nonblocking]] {
 	@catch (...) { // expected-warning {{function with 'nonblocking' attribute must not throw or catch exceptions}}
 	}
 }
+
+void nb5() [[clang::nonblocking]] {
+	@autoreleasepool { // expected-warning {{function with 'nonblocking' attribute must not access ObjC methods or properties}}
+	}
+}
