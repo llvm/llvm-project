@@ -4343,9 +4343,9 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (isa<PHINode>(I))
     return nullptr;
 
+  // For vector types, the simplification must hold per-lane, so forbid
+  // potentially cross-lane operations like shufflevector.
   if (Op->getType()->isVectorTy() && !isNotCrossLaneOperation(I))
-    // For vector types, the simplification must hold per-lane, so forbid
-    // potentially cross-lane operations like shufflevector.
     return nullptr;
 
   // Don't fold away llvm.is.constant checks based on assumptions.
