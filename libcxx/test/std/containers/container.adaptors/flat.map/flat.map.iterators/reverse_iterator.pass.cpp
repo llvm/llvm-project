@@ -49,7 +49,9 @@ int main(int, char**) {
     static_assert(noexcept(m.crend()));
     assert(m.size() == 4);
     assert(std::distance(m.rbegin(), m.rend()) == 4);
+    assert(std::distance(cm.rbegin(), cm.rend()) == 4);
     assert(std::distance(m.crbegin(), m.crend()) == 4);
+    assert(std::distance(cm.crbegin(), cm.crend()) == 4);
     M::reverse_iterator i; // default-construct
     ASSERT_SAME_TYPE(decltype(i->first), const int&);
     ASSERT_SAME_TYPE(decltype(i->second), char&);

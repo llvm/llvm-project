@@ -58,6 +58,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 23
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -289,7 +292,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI flat_map(
       key_container_type __key_cont, mapped_container_type __mapped_cont, const key_compare& __comp = key_compare())
       : __containers_{.keys = std::move(__key_cont), .values = std::move(__mapped_cont)}, __compare_(__comp) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers_.keys.size() == __containers_.values.size(),
                                      "flat_map keys and mapped containers have different size");
     __sort_and_unique();
   }
@@ -299,7 +302,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   flat_map(const key_container_type& __key_cont, const mapped_container_type& __mapped_cont, const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers_.keys.size() == __containers_.values.size(),
                                      "flat_map keys and mapped containers have different size");
     __sort_and_unique();
   }
@@ -312,7 +315,7 @@ public:
            const key_compare& __comp,
            const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont, __comp) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers_.keys.size() == __containers_.values.size(),
                                      "flat_map keys and mapped containers have different size");
     __sort_and_unique();
   }
@@ -323,10 +326,10 @@ public:
            mapped_container_type __mapped_cont,
            const key_compare& __comp = key_compare())
       : __containers_{.keys = std::move(__key_cont), .values = std::move(__mapped_cont)}, __compare_(__comp) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers_.keys.size() == __containers_.values.size(),
                                      "flat_map keys and mapped containers have different size");
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-        __is_sorted_and_unique(__containers.keys), "Either the key container is not sorted or it contains duplicates");
+        __is_sorted_and_unique(__containers_.keys), "Either the key container is not sorted or it contains duplicates");
   }
 
   template <class _Allocator>
@@ -337,10 +340,10 @@ public:
            const mapped_container_type& __mapped_cont,
            const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers_.keys.size() == __containers_.values.size(),
                                      "flat_map keys and mapped containers have different size");
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-        __is_sorted_and_unique(__containers.keys), "Either the key container is not sorted or it contains duplicates");
+        __is_sorted_and_unique(__containers_.keys), "Either the key container is not sorted or it contains duplicates");
   }
 
   template <class _Allocator>
@@ -352,10 +355,10 @@ public:
            const key_compare& __comp,
            const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_tag{}, __alloc, __key_cont, __mapped_cont, __comp) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers.keys.size() == __containers.values.size(),
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__containers_.keys.size() == __containers_.values.size(),
                                      "flat_map keys and mapped containers have different size");
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-        __is_sorted_and_unique(__containers.keys), "Either the key container is not sorted or it contains duplicates");
+        __is_sorted_and_unique(__containers_.keys), "Either the key container is not sorted or it contains duplicates");
   }
 
   _LIBCPP_HIDE_FROM_ABI explicit flat_map(const key_compare& __comp) : __containers_(), __compare_(__comp) {}
@@ -512,7 +515,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
-  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept { const_reverse_iterator(end()); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
   _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
   _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
 
@@ -982,7 +985,7 @@ private:
         ranges::stable_sort(__zv.begin() + __append_start_offset, __end, __compare_key);
       } else {
         _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-            __is_sorted_and_unique(__containers.keys | views::drop(__append_start_offset)),
+            __is_sorted_and_unique(__containers_.keys | views::drop(__append_start_offset)),
             "Either the key container is not sorted or it contains duplicates");
       }
       ranges::inplace_merge(__zv.begin(), __zv.begin() + __append_start_offset, __end, __compare_key);
@@ -1343,5 +1346,7 @@ erase_if(flat_map<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>& __flat_
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FLAT_MAP_FLAT_MAP_H
