@@ -60,14 +60,14 @@ using llvm::support::endian::write64le;
 constexpr size_t MergeNoTailSection::numShards;
 
 static uint64_t readUint(Ctx &ctx, uint8_t *buf) {
-  return ctx.arg.is64 ? read64(buf) : read32(buf);
+  return ctx.arg.is64 ? read64(buf) : read32(ctx, buf);
 }
 
 static void writeUint(Ctx &ctx, uint8_t *buf, uint64_t val) {
   if (ctx.arg.is64)
     write64(buf, val);
   else
-    write32(buf, val);
+    write32(ctx, buf, val);
 }
 
 // Returns an LLD version string.
@@ -323,9 +323,9 @@ GnuPropertySection::GnuPropertySection(Ctx &ctx)
                        ctx.arg.wordsize, ".note.gnu.property") {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
-  write32(buf, 4);                          // Name size
-  write32(buf + 4, getSize() - 16);         // Content size
-  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
+  write32(ctx, buf, 4);                          // Name size
+  write32(ctx, buf + 4, getSize() - 16);         // Content size
+  write32(ctx, buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
   memcpy(buf + 12, "GNU", 4);               // Name string
 
   uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
@@ -334,17 +334,17 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
 
   unsigned offset = 16;
   if (ctx.arg.andFeatures != 0) {
-    write32(buf + offset + 0, featureAndType);      // Feature type
-    write32(buf + offset + 4, 4);                   // Feature size
-    write32(buf + offset + 8, ctx.arg.andFeatures); // Feature flags
+    write32(ctx, buf + offset + 0, featureAndType);      // Feature type
+    write32(ctx, buf + offset + 4, 4);                   // Feature size
+    write32(ctx, buf + offset + 8, ctx.arg.andFeatures); // Feature flags
     if (ctx.arg.is64)
-      write32(buf + offset + 12, 0); // Padding
+      write32(ctx, buf + offset + 12, 0); // Padding
     offset += 16;
   }
 
   if (!ctx.aarch64PauthAbiCoreInfo.empty()) {
-    write32(buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
-    write32(buf + offset + 4, ctx.aarch64PauthAbiCoreInfo.size());
+    write32(ctx, buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
+    write32(ctx, buf + offset + 4, ctx.aarch64PauthAbiCoreInfo.size());
     memcpy(buf + offset + 8, ctx.aarch64PauthAbiCoreInfo.data(),
            ctx.aarch64PauthAbiCoreInfo.size());
   }
@@ -365,9 +365,9 @@ BuildIdSection::BuildIdSection(Ctx &ctx)
       hashSize(getHashSize(ctx)) {}
 
 void BuildIdSection::writeTo(uint8_t *buf) {
-  write32(buf, 4);                      // Name size
-  write32(buf + 4, hashSize);           // Content size
-  write32(buf + 8, NT_GNU_BUILD_ID);    // Type
+  write32(ctx, buf, 4);                   // Name size
+  write32(ctx, buf + 4, hashSize);        // Content size
+  write32(ctx, buf + 8, NT_GNU_BUILD_ID); // Type
   memcpy(buf + 12, "GNU", 4);           // Name string
   hashBuf = buf + 16;
 }
@@ -509,7 +509,7 @@ void EhFrameSection::iterateFDEWithLSDA(
 static void writeCieFde(uint8_t *buf, ArrayRef<uint8_t> d) {
   memcpy(buf, d.data(), d.size());
   // Fix the size field. -4 since size does not include the size field itself.
-  write32(buf, d.size() - 4);
+  write32(ctx, buf, d.size() - 4);
 }
 
 void EhFrameSection::finalizeContents() {
@@ -600,9 +600,9 @@ static uint64_t readFdeAddr(Ctx &ctx, uint8_t *buf, int size) {
   case DW_EH_PE_sdata2:
     return (int16_t)read16(buf);
   case DW_EH_PE_udata4:
-    return read32(buf);
+    return read32(ctx, buf);
   case DW_EH_PE_sdata4:
-    return (int32_t)read32(buf);
+    return (int32_t)read32(ctx, buf);
   case DW_EH_PE_udata8:
   case DW_EH_PE_sdata8:
     return read64(buf);
@@ -640,7 +640,7 @@ void EhFrameSection::writeTo(uint8_t *buf) {
 
       // FDE's second word should have the offset to an associated CIE.
       // Write it.
-      write32(buf + off + 4, off + 4 - cieOffset);
+      write32(ctx, buf + off + 4, off + 4 - cieOffset);
     }
   }
 
@@ -2355,7 +2355,7 @@ void SymtabShndxSection::writeTo(uint8_t *buf) {
   for (const SymbolTableEntry &entry : ctx.in.symTab->getSymbols()) {
     if (!getCommonSec(relocatable, entry.sym) &&
         getSymSectionIndex(entry.sym) == SHN_XINDEX)
-      write32(buf, entry.sym->getOutputSection()->sectionIndex);
+      write32(ctx, buf, entry.sym->getOutputSection()->sectionIndex);
     buf += 4;
   }
 }
@@ -2436,10 +2436,11 @@ void GnuHashTableSection::finalizeContents() {
 
 void GnuHashTableSection::writeTo(uint8_t *buf) {
   // Write a header.
-  write32(buf, nBuckets);
-  write32(buf + 4, getPartition().dynSymTab->getNumSymbols() - symbols.size());
-  write32(buf + 8, maskWords);
-  write32(buf + 12, Shift2);
+  write32(ctx, buf, nBuckets);
+  write32(ctx, buf + 4,
+          getPartition().dynSymTab->getNumSymbols() - symbols.size());
+  write32(ctx, buf + 8, maskWords);
+  write32(ctx, buf + 12, Shift2);
   buf += 16;
 
   // Write the 2-bit bloom filter.
@@ -2466,13 +2467,13 @@ void GnuHashTableSection::writeTo(uint8_t *buf) {
     uint32_t hash = i->hash;
     bool isLastInChain = (i + 1) == e || i->bucketIdx != (i + 1)->bucketIdx;
     hash = isLastInChain ? hash | 1 : hash & ~1;
-    write32(values++, hash);
+    write32(ctx, values++, hash);
 
     if (i->bucketIdx == oldBucket)
       continue;
     // Write a hash bucket. Hash buckets contain indices in the following hash
     // value table.
-    write32(buckets + i->bucketIdx,
+    write32(ctx, buckets + i->bucketIdx,
             getPartition().dynSymTab->getSymbolIndex(*i->sym));
     oldBucket = i->bucketIdx;
   }
@@ -2544,8 +2545,8 @@ void HashTableSection::writeTo(uint8_t *buf) {
   unsigned numSymbols = symTab->getNumSymbols();
 
   uint32_t *p = reinterpret_cast<uint32_t *>(buf);
-  write32(p++, numSymbols); // nbucket
-  write32(p++, numSymbols); // nchain
+  write32(ctx, p++, numSymbols); // nbucket
+  write32(ctx, p++, numSymbols); // nchain
 
   uint32_t *buckets = p;
   uint32_t *chains = p + numSymbols;
@@ -2556,7 +2557,7 @@ void HashTableSection::writeTo(uint8_t *buf) {
     unsigned i = sym->dynsymIndex;
     uint32_t hash = hashSysV(name) % numSymbols;
     chains[i] = buckets[hash];
-    write32(buckets + hash, i);
+    write32(ctx, buckets + hash, i);
   }
 }
 
@@ -3672,14 +3673,14 @@ void EhFrameHeader::write() {
   buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
   buf[2] = DW_EH_PE_udata4;
   buf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
-  write32(buf + 4,
+  write32(ctx, buf + 4,
           getPartition().ehFrame->getParent()->addr - this->getVA() - 4);
-  write32(buf + 8, fdes.size());
+  write32(ctx, buf + 8, fdes.size());
   buf += 12;
 
   for (FdeData &fde : fdes) {
-    write32(buf, fde.pcRel);
-    write32(buf + 4, fde.fdeVARel);
+    write32(ctx, buf, fde.pcRel);
+    write32(ctx, buf + 4, fde.fdeVARel);
     buf += 8;
   }
 }
@@ -3728,13 +3729,13 @@ void VersionDefinitionSection::writeOne(uint8_t *buf, uint32_t index,
   write16(buf + 2, flags);          // vd_flags
   write16(buf + 4, index);          // vd_ndx
   write16(buf + 6, 1);              // vd_cnt
-  write32(buf + 8, hashSysV(name)); // vd_hash
-  write32(buf + 12, 20);            // vd_aux
-  write32(buf + 16, 28);            // vd_next
+  write32(ctx, buf + 8, hashSysV(name)); // vd_hash
+  write32(ctx, buf + 12, 20);            // vd_aux
+  write32(ctx, buf + 16, 28);            // vd_next
 
   // Write a veraux.
-  write32(buf + 20, nameOff); // vda_name
-  write32(buf + 24, 0);       // vda_next
+  write32(ctx, buf + 20, nameOff); // vda_name
+  write32(ctx, buf + 24, 0);       // vda_next
 }
 
 void VersionDefinitionSection::writeTo(uint8_t *buf) {
@@ -3747,7 +3748,7 @@ void VersionDefinitionSection::writeTo(uint8_t *buf) {
   }
 
   // Need to terminate the last version definition.
-  write32(buf + 16, 0); // vd_next
+  write32(ctx, buf + 16, 0); // vd_next
 }
 
 size_t VersionDefinitionSection::getSize() const {
@@ -4081,7 +4082,8 @@ static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
   // nullptr then it will be a synthesized EXIDX_CANTUNWIND entry.
   uint32_t prevUnwind = 1;
   if (prev)
-    prevUnwind = read32(prev->content().data() + prev->content().size() - 4);
+    prevUnwind =
+        read32(ctx, prev->content().data() + prev->content().size() - 4);
   if (isExtabRef(prevUnwind))
     return false;
 
@@ -4098,7 +4100,7 @@ static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
     return prevUnwind == 1;
 
   for (uint32_t offset = 4; offset < (uint32_t)cur->content().size(); offset +=8) {
-    uint32_t curUnwind = read32(cur->content().data() + offset);
+    uint32_t curUnwind = read32(ctx, cur->content().data() + offset);
     if (isExtabRef(curUnwind) || curUnwind != prevUnwind)
       return false;
   }
@@ -4211,8 +4213,8 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
     if (InputSection *d = findExidxSection(isec)) {
       for (int dataOffset = 0; dataOffset != (int)d->content().size();
            dataOffset += 4)
-        write32(buf + offset + dataOffset,
-                read32(d->content().data() + dataOffset));
+        write32(ctx, buf + offset + dataOffset,
+                read32(ctx, d->content().data() + dataOffset));
       // Recalculate outSecOff as finalizeAddressDependentContent()
       // may have altered syntheticSection outSecOff.
       d->outSecOff = offset + outSecOff;
@@ -4220,8 +4222,8 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
       offset += d->getSize();
     } else {
       // A Linker generated CANTUNWIND section.
-      write32(buf + offset + 0, 0x0);
-      write32(buf + offset + 4, 0x1);
+      write32(ctx, buf + offset + 0, 0x0);
+      write32(ctx, buf + offset + 4, 0x1);
       uint64_t s = isec->getVA();
       uint64_t p = getVA() + offset;
       ctx.target->relocateNoSym(buf + offset, R_ARM_PREL31, s - p);
@@ -4229,8 +4231,8 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
     }
   }
   // Write Sentinel CANTUNWIND entry.
-  write32(buf + offset + 0, 0x0);
-  write32(buf + offset + 4, 0x1);
+  write32(ctx, buf + offset + 0, 0x0);
+  write32(ctx, buf + offset + 4, 0x1);
   uint64_t s = sentinel->getVA(sentinel->getSize());
   uint64_t p = getVA() + offset;
   ctx.target->relocateNoSym(buf + offset, R_ARM_PREL31, s - p);
@@ -4480,14 +4482,15 @@ void PartitionIndexSection::finalizeContents() {
 void PartitionIndexSection::writeTo(uint8_t *buf) {
   uint64_t va = getVA();
   for (size_t i = 1; i != ctx.partitions.size(); ++i) {
-    write32(buf, ctx.mainPart->dynStrTab->getVA() +
-                     ctx.partitions[i].nameStrTab - va);
-    write32(buf + 4, ctx.partitions[i].elfHeader->getVA() - (va + 4));
+    write32(ctx, buf,
+            ctx.mainPart->dynStrTab->getVA() + ctx.partitions[i].nameStrTab -
+                va);
+    write32(ctx, buf + 4, ctx.partitions[i].elfHeader->getVA() - (va + 4));
 
     SyntheticSection *next = i == ctx.partitions.size() - 1
                                  ? ctx.in.partEnd.get()
                                  : ctx.partitions[i + 1].elfHeader.get();
-    write32(buf + 8, next->getVA() - ctx.partitions[i].elfHeader->getVA());
+    write32(ctx, buf + 8, next->getVA() - ctx.partitions[i].elfHeader->getVA());
 
     va += 12;
     buf += 12;
@@ -4553,9 +4556,9 @@ void MemtagAndroidNote::writeTo(uint8_t *buf) {
       "Android 11 & 12 have an ABI that the note name is 8 bytes long. Keep it "
       "that way for backwards compatibility.");
 
-  write32(buf, sizeof(kMemtagAndroidNoteName));
-  write32(buf + 4, sizeof(uint32_t));
-  write32(buf + 8, ELF::NT_ANDROID_TYPE_MEMTAG);
+  write32(ctx, buf, sizeof(kMemtagAndroidNoteName));
+  write32(ctx, buf + 4, sizeof(uint32_t));
+  write32(ctx, buf + 8, ELF::NT_ANDROID_TYPE_MEMTAG);
   memcpy(buf + 12, kMemtagAndroidNoteName, sizeof(kMemtagAndroidNoteName));
   buf += 12 + alignTo(sizeof(kMemtagAndroidNoteName), 4);
 
@@ -4567,7 +4570,7 @@ void MemtagAndroidNote::writeTo(uint8_t *buf) {
   // binary on Android 11 or 12 will result in a checkfail in the loader.
   if (ctx.arg.androidMemtagStack)
     value |= ELF::NT_MEMTAG_STACK;
-  write32(buf, value); // note value
+  write32(ctx, buf, value); // note value
 }
 
 size_t MemtagAndroidNote::getSize() const {
@@ -4577,9 +4580,9 @@ size_t MemtagAndroidNote::getSize() const {
 }
 
 void PackageMetadataNote::writeTo(uint8_t *buf) {
-  write32(buf, 4);
-  write32(buf + 4, ctx.arg.packageMetadata.size() + 1);
-  write32(buf + 8, FDO_PACKAGING_METADATA);
+  write32(ctx, buf, 4);
+  write32(ctx, buf + 4, ctx.arg.packageMetadata.size() + 1);
+  write32(ctx, buf + 8, FDO_PACKAGING_METADATA);
   memcpy(buf + 12, "FDO", 4);
   memcpy(buf + 16, ctx.arg.packageMetadata.data(),
          ctx.arg.packageMetadata.size());
