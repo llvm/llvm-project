@@ -265,7 +265,7 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return SignExtend64<16>(read16(buf));
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
-    return SignExtend64<32>(read32(buf));
+    return SignExtend64<32>(read32(ctx, buf));
   case R_AARCH64_ABS64:
   case R_AARCH64_PREL64:
   case R_AARCH64_RELATIVE:
@@ -490,12 +490,12 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
     checkIntUInt(loc, val, 32, rel);
-    write32(loc, val);
+    write32(ctx, loc, val);
     break;
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:
     checkInt(loc, val, 32, rel);
-    write32(loc, val);
+    write32(ctx, loc, val);
     break;
   case R_AARCH64_ABS64:
     // AArch64 relocations to tagged symbols have extended semantics, as
@@ -526,7 +526,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     //   finalizeAddressDependentContent(). Writing the value is harmless
     //   because dynamic linking ignores it.
     if (isInt<32>(val))
-      write32(loc, val);
+      write32(ctx, loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
     write32Imm12(loc, val);

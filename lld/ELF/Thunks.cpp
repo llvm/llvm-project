@@ -570,7 +570,7 @@ void AArch64Thunk::writeTo(uint8_t *buf) {
   }
   uint64_t s = getAArch64ThunkDestVA(ctx, destination, addend);
   uint64_t p = getThunkTargetSym()->getVA();
-  write32(buf, 0x14000000); // b S
+  write32(ctx, buf, 0x14000000); // b S
   ctx.target->relocateNoSym(buf, R_AARCH64_CALL26, s - p);
 }
 
@@ -647,7 +647,7 @@ void AArch64BTILandingPadThunk::writeTo(uint8_t *buf) {
     writeLong(buf);
     return;
   }
-  write32(buf, 0xd503245f); // BTI c
+  write32(ctx, buf, 0xd503245f); // BTI c
   // Control falls through to target in following section.
 }
 
@@ -672,8 +672,8 @@ bool AArch64BTILandingPadThunk::getMayUseShortThunk() {
 void AArch64BTILandingPadThunk::writeLong(uint8_t *buf) {
   uint64_t s = destination.getVA(addend);
   uint64_t p = getThunkTargetSym()->getVA() + 4;
-  write32(buf, 0xd503245f);     // BTI c
-  write32(buf + 4, 0x14000000); // B S
+  write32(ctx, buf, 0xd503245f);     // BTI c
+  write32(ctx, buf + 4, 0x14000000); // B S
   ctx.target->relocateNoSym(buf + 4, R_AARCH64_CALL26, s - p);
 }
 
@@ -708,7 +708,7 @@ void ARMThunk::writeTo(uint8_t *buf) {
   uint64_t s = getARMThunkDestVA(ctx, destination);
   uint64_t p = getThunkTargetSym()->getVA();
   int64_t offset = s - p - 8;
-  write32(buf, 0xea000000); // b S
+  write32(ctx, buf, 0xea000000); // b S
   ctx.target->relocateNoSym(buf, R_ARM_JUMP24, offset);
 }
 
@@ -767,9 +767,9 @@ bool ThumbThunk::isCompatibleWith(const InputSection &isec,
 }
 
 void ARMV7ABSLongThunk::writeLong(uint8_t *buf) {
-  write32(buf + 0, 0xe300c000); // movw ip,:lower16:S
-  write32(buf + 4, 0xe340c000); // movt ip,:upper16:S
-  write32(buf + 8, 0xe12fff1c); // bx   ip
+  write32(ctx, buf + 0, 0xe300c000); // movw ip,:lower16:S
+  write32(ctx, buf + 4, 0xe340c000); // movt ip,:upper16:S
+  write32(ctx, buf + 8, 0xe12fff1c); // bx   ip
   uint64_t s = getARMThunkDestVA(ctx, destination);
   ctx.target->relocateNoSym(buf, R_ARM_MOVW_ABS_NC, s);
   ctx.target->relocateNoSym(buf + 4, R_ARM_MOVT_ABS, s);
@@ -799,10 +799,12 @@ void ThumbV7ABSLongThunk::addSymbols(ThunkSection &isec) {
 }
 
 void ARMV7PILongThunk::writeLong(uint8_t *buf) {
-  write32(buf + 0, 0xe30fcff0);   // P:  movw ip,:lower16:S - (P + (L1-P) + 8)
-  write32(buf + 4, 0xe340c000);   //     movt ip,:upper16:S - (P + (L1-P) + 8)
-  write32(buf + 8, 0xe08cc00f);   // L1: add  ip, ip, pc
-  write32(buf + 12, 0xe12fff1c);  //     bx   ip
+  write32(ctx, buf + 0,
+          0xe30fcff0); // P:  movw ip,:lower16:S - (P + (L1-P) + 8)
+  write32(ctx, buf + 4,
+          0xe340c000); //     movt ip,:upper16:S - (P + (L1-P) + 8)
+  write32(ctx, buf + 8, 0xe08cc00f);  // L1: add  ip, ip, pc
+  write32(ctx, buf + 12, 0xe12fff1c); //     bx   ip
   uint64_t s = getARMThunkDestVA(ctx, destination);
   uint64_t p = getThunkTargetSym()->getVA();
   int64_t offset = s - p - 16;
@@ -845,7 +847,7 @@ void ThumbV6MABSLongThunk::writeLong(uint8_t *buf) {
   write16(buf + 2, 0x4801);   // ldr r0, [pc, #4] ; L1
   write16(buf + 4, 0x9001);   // str r0, [sp, #4] ; SP + 4 = S
   write16(buf + 6, 0xbd01);   // pop {r0, pc} ; restore r0 and branch to dest
-  write32(buf + 8, 0x00000000);   // L1: .word S
+  write32(ctx, buf + 8, 0x00000000); // L1: .word S
   uint64_t s = getARMThunkDestVA(ctx, destination);
   ctx.target->relocateNoSym(buf + 8, R_ARM_ABS32, s);
 }
@@ -896,7 +898,7 @@ void ThumbV6MPILongThunk::writeLong(uint8_t *buf) {
   write16(buf + 6, 0xbc01);   //     pop {r0}         ; restore scratch register
   write16(buf + 8, 0x44e7);   // L1: add pc, ip       ; transfer control
   write16(buf + 10, 0x46c0);  //     nop              ; pad to 4-byte boundary
-  write32(buf + 12, 0x00000000);  // L2: .word S - (P + (L1 - P) + 4)
+  write32(ctx, buf + 12, 0x00000000); // L2: .word S - (P + (L1 - P) + 4)
   uint64_t s = getARMThunkDestVA(ctx, destination);
   uint64_t p = getThunkTargetSym()->getVA() & ~0x1;
   ctx.target->relocateNoSym(buf + 12, R_ARM_REL32, s - p - 12);
@@ -911,8 +913,8 @@ void ThumbV6MPILongThunk::addSymbols(ThunkSection &isec) {
 }
 
 void ARMV5LongLdrPcThunk::writeLong(uint8_t *buf) {
-  write32(buf + 0, 0xe51ff004); // ldr pc, [pc,#-4] ; L1
-  write32(buf + 4, 0x00000000); // L1: .word S
+  write32(ctx, buf + 0, 0xe51ff004); // ldr pc, [pc,#-4] ; L1
+  write32(ctx, buf + 4, 0x00000000); // L1: .word S
   ctx.target->relocateNoSym(buf + 4, R_ARM_ABS32,
                             getARMThunkDestVA(ctx, destination));
 }
@@ -926,9 +928,9 @@ void ARMV5LongLdrPcThunk::addSymbols(ThunkSection &isec) {
 }
 
 void ARMV4ABSLongBXThunk::writeLong(uint8_t *buf) {
-  write32(buf + 0, 0xe59fc000); // ldr r12, [pc] ; L1
-  write32(buf + 4, 0xe12fff1c); // bx r12
-  write32(buf + 8, 0x00000000); // L1: .word S
+  write32(ctx, buf + 0, 0xe59fc000); // ldr r12, [pc] ; L1
+  write32(ctx, buf + 4, 0xe12fff1c); // bx r12
+  write32(ctx, buf + 8, 0x00000000); // L1: .word S
   ctx.target->relocateNoSym(buf + 8, R_ARM_ABS32,
                             getARMThunkDestVA(ctx, destination));
 }
@@ -944,8 +946,8 @@ void ARMV4ABSLongBXThunk::addSymbols(ThunkSection &isec) {
 void ThumbV4ABSLongBXThunk::writeLong(uint8_t *buf) {
   write16(buf + 0, 0x4778); // bx pc
   write16(buf + 2, 0xe7fd); // b #-6 ; Arm recommended sequence to follow bx pc
-  write32(buf + 4, 0xe51ff004); // ldr pc, [pc, #-4] ; L1
-  write32(buf + 8, 0x00000000); // L1: .word S
+  write32(ctx, buf + 4, 0xe51ff004); // ldr pc, [pc, #-4] ; L1
+  write32(ctx, buf + 8, 0x00000000); // L1: .word S
   ctx.target->relocateNoSym(buf + 8, R_ARM_ABS32,
                             getARMThunkDestVA(ctx, destination));
 }
@@ -962,9 +964,9 @@ void ThumbV4ABSLongBXThunk::addSymbols(ThunkSection &isec) {
 void ThumbV4ABSLongThunk::writeLong(uint8_t *buf) {
   write16(buf + 0, 0x4778); // bx pc
   write16(buf + 2, 0xe7fd); // b #-6 ; Arm recommended sequence to follow bx pc
-  write32(buf + 4, 0xe59fc000); // ldr r12, [pc] ; L1
-  write32(buf + 8, 0xe12fff1c); // bx r12
-  write32(buf + 12, 0x00000000); // L1: .word S
+  write32(ctx, buf + 4, 0xe59fc000);  // ldr r12, [pc] ; L1
+  write32(ctx, buf + 8, 0xe12fff1c);  // bx r12
+  write32(ctx, buf + 12, 0x00000000); // L1: .word S
   ctx.target->relocateNoSym(buf + 12, R_ARM_ABS32,
                             getARMThunkDestVA(ctx, destination));
 }
@@ -979,10 +981,10 @@ void ThumbV4ABSLongThunk::addSymbols(ThunkSection &isec) {
 }
 
 void ARMV4PILongBXThunk::writeLong(uint8_t *buf) {
-  write32(buf + 0, 0xe59fc004); // P:  ldr ip, [pc,#4] ; L2
-  write32(buf + 4, 0xe08fc00c);	// L1: add ip, pc, ip
-  write32(buf + 8, 0xe12fff1c);	//     bx ip
-  write32(buf + 12, 0x00000000); // L2: .word S - (P + (L1 - P) + 8)
+  write32(ctx, buf + 0, 0xe59fc004);  // P:  ldr ip, [pc,#4] ; L2
+  write32(ctx, buf + 4, 0xe08fc00c);  // L1: add ip, pc, ip
+  write32(ctx, buf + 8, 0xe12fff1c);  //     bx ip
+  write32(ctx, buf + 12, 0x00000000); // L2: .word S - (P + (L1 - P) + 8)
   uint64_t s = getARMThunkDestVA(ctx, destination);
   uint64_t p = getThunkTargetSym()->getVA() & ~0x1;
   ctx.target->relocateNoSym(buf + 12, R_ARM_REL32, s - p - 12);
@@ -997,9 +999,9 @@ void ARMV4PILongBXThunk::addSymbols(ThunkSection &isec) {
 }
 
 void ARMV4PILongThunk::writeLong(uint8_t *buf) {
-  write32(buf + 0, 0xe59fc000); // P:  ldr ip, [pc] ; L2
-  write32(buf + 4, 0xe08ff00c); // L1: add pc, pc, r12
-  write32(buf + 8, 0x00000000); // L2: .word S - (P + (L1 - P) + 8)
+  write32(ctx, buf + 0, 0xe59fc000); // P:  ldr ip, [pc] ; L2
+  write32(ctx, buf + 4, 0xe08ff00c); // L1: add pc, pc, r12
+  write32(ctx, buf + 8, 0x00000000); // L2: .word S - (P + (L1 - P) + 8)
   uint64_t s = getARMThunkDestVA(ctx, destination);
   uint64_t p = getThunkTargetSym()->getVA() & ~0x1;
   ctx.target->relocateNoSym(buf + 8, R_ARM_REL32, s - p - 12);
@@ -1016,9 +1018,9 @@ void ARMV4PILongThunk::addSymbols(ThunkSection &isec) {
 void ThumbV4PILongBXThunk::writeLong(uint8_t *buf) {
   write16(buf + 0, 0x4778); // P:  bx pc
   write16(buf + 2, 0xe7fd); //     b #-6 ; Arm recommended sequence to follow bx pc
-  write32(buf + 4, 0xe59fc000); //     ldr r12, [pc] ; L2
-  write32(buf + 8, 0xe08cf00f); // L1: add pc, r12, pc
-  write32(buf + 12, 0x00000000); // L2: .word S - (P + (L1 - P) + 8)
+  write32(ctx, buf + 4, 0xe59fc000);  //     ldr r12, [pc] ; L2
+  write32(ctx, buf + 8, 0xe08cf00f);  // L1: add pc, r12, pc
+  write32(ctx, buf + 12, 0x00000000); // L2: .word S - (P + (L1 - P) + 8)
   uint64_t s = getARMThunkDestVA(ctx, destination);
   uint64_t p = getThunkTargetSym()->getVA() & ~0x1;
   ctx.target->relocateNoSym(buf + 12, R_ARM_REL32, s - p - 16);
@@ -1036,10 +1038,10 @@ void ThumbV4PILongBXThunk::addSymbols(ThunkSection &isec) {
 void ThumbV4PILongThunk::writeLong(uint8_t *buf) {
   write16(buf + 0, 0x4778); // P:  bx pc
   write16(buf + 2, 0xe7fd); //     b #-6 ; Arm recommended sequence to follow bx pc
-  write32(buf + 4, 0xe59fc004); //     ldr ip, [pc,#4] ; L2
-  write32(buf + 8, 0xe08fc00c); // L1: add ip, pc, ip
-  write32(buf + 12, 0xe12fff1c); //     bx ip
-  write32(buf + 16, 0x00000000); // L2: .word S - (P + (L1 - P) + 8)
+  write32(ctx, buf + 4, 0xe59fc004);  //     ldr ip, [pc,#4] ; L2
+  write32(ctx, buf + 8, 0xe08fc00c);  // L1: add ip, pc, ip
+  write32(ctx, buf + 12, 0xe12fff1c); //     bx ip
+  write32(ctx, buf + 16, 0x00000000); // L2: .word S - (P + (L1 - P) + 8)
   uint64_t s = getARMThunkDestVA(ctx, destination);
   uint64_t p = getThunkTargetSym()->getVA() & ~0x1;
   ctx.target->relocateNoSym(buf + 16, R_ARM_REL32, s - p - 16);
@@ -1056,7 +1058,7 @@ void ThumbV4PILongThunk::addSymbols(ThunkSection &isec) {
 
 // Use the long jump which covers a range up to 8MiB.
 void AVRThunk::writeTo(uint8_t *buf) {
-  write32(buf, 0x940c); // jmp func
+  write32(ctx, buf, 0x940c); // jmp func
   ctx.target->relocateNoSym(buf, R_AVR_CALL, destination.getVA());
 }
 
@@ -1068,10 +1070,10 @@ void AVRThunk::addSymbols(ThunkSection &isec) {
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
 void MipsThunk::writeTo(uint8_t *buf) {
   uint64_t s = destination.getVA();
-  write32(buf, 0x3c190000); // lui   $25, %hi(func)
-  write32(buf + 4, 0x08000000 | (s >> 2)); // j     func
-  write32(buf + 8, 0x27390000); // addiu $25, $25, %lo(func)
-  write32(buf + 12, 0x00000000); // nop
+  write32(ctx, buf, 0x3c190000);                // lui   $25, %hi(func)
+  write32(ctx, buf + 4, 0x08000000 | (s >> 2)); // j     func
+  write32(ctx, buf + 8, 0x27390000);            // addiu $25, $25, %lo(func)
+  write32(ctx, buf + 12, 0x00000000);           // nop
   ctx.target->relocateNoSym(buf, R_MIPS_HI16, s);
   ctx.target->relocateNoSym(buf + 8, R_MIPS_LO16, s);
 }
@@ -1139,10 +1141,10 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
 void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t gotPltVA,
                                 const InputFile *file, int64_t addend) {
   if (!ctx.arg.isPic) {
-    write32(buf + 0, 0x3d600000 | (gotPltVA + 0x8000) >> 16); // lis r11,ha
-    write32(buf + 4, 0x816b0000 | (uint16_t)gotPltVA);        // lwz r11,l(r11)
-    write32(buf + 8, 0x7d6903a6);                             // mtctr r11
-    write32(buf + 12, 0x4e800420);                            // bctr
+    write32(ctx, buf + 0, 0x3d600000 | (gotPltVA + 0x8000) >> 16); // lis r11,ha
+    write32(ctx, buf + 4, 0x816b0000 | (uint16_t)gotPltVA); // lwz r11,l(r11)
+    write32(ctx, buf + 8, 0x7d6903a6);                      // mtctr r11
+    write32(ctx, buf + 12, 0x4e800420);                     // bctr
     return;
   }
   uint32_t offset;
@@ -1160,15 +1162,15 @@ void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t gotPltVA,
   }
   uint16_t ha = (offset + 0x8000) >> 16, l = (uint16_t)offset;
   if (ha == 0) {
-    write32(buf + 0, 0x817e0000 | l); // lwz r11,l(r30)
-    write32(buf + 4, 0x7d6903a6);     // mtctr r11
-    write32(buf + 8, 0x4e800420);     // bctr
-    write32(buf + 12, 0x60000000);    // nop
+    write32(ctx, buf + 0, 0x817e0000 | l); // lwz r11,l(r30)
+    write32(ctx, buf + 4, 0x7d6903a6);     // mtctr r11
+    write32(ctx, buf + 8, 0x4e800420);     // bctr
+    write32(ctx, buf + 12, 0x60000000);    // nop
   } else {
-    write32(buf + 0, 0x3d7e0000 | ha); // addis r11,r30,ha
-    write32(buf + 4, 0x816b0000 | l);  // lwz r11,l(r11)
-    write32(buf + 8, 0x7d6903a6);      // mtctr r11
-    write32(buf + 12, 0x4e800420);     // bctr
+    write32(ctx, buf + 0, 0x3d7e0000 | ha); // addis r11,r30,ha
+    write32(ctx, buf + 4, 0x816b0000 | l);  // lwz r11,l(r11)
+    write32(ctx, buf + 8, 0x7d6903a6);      // mtctr r11
+    write32(ctx, buf + 12, 0x4e800420);     // bctr
   }
 }
 
@@ -1206,36 +1208,36 @@ void PPC32LongThunk::writeTo(uint8_t *buf) {
   uint32_t d = destination.getVA(addend);
   if (ctx.arg.isPic) {
     uint32_t off = d - (getThunkTargetSym()->getVA() + 8);
-    write32(buf + 0, 0x7c0802a6);            // mflr r12,0
-    write32(buf + 4, 0x429f0005);            // bcl r20,r31,.+4
-    write32(buf + 8, 0x7d8802a6);            // mtctr r12
-    write32(buf + 12, 0x3d8c0000 | ha(off)); // addis r12,r12,off@ha
-    write32(buf + 16, 0x398c0000 | lo(off)); // addi r12,r12,off@l
-    write32(buf + 20, 0x7c0803a6);           // mtlr r0
+    write32(ctx, buf + 0, 0x7c0802a6);            // mflr r12,0
+    write32(ctx, buf + 4, 0x429f0005);            // bcl r20,r31,.+4
+    write32(ctx, buf + 8, 0x7d8802a6);            // mtctr r12
+    write32(ctx, buf + 12, 0x3d8c0000 | ha(off)); // addis r12,r12,off@ha
+    write32(ctx, buf + 16, 0x398c0000 | lo(off)); // addi r12,r12,off@l
+    write32(ctx, buf + 20, 0x7c0803a6);           // mtlr r0
     buf += 24;
   } else {
-    write32(buf + 0, 0x3d800000 | ha(d));    // lis r12,d@ha
-    write32(buf + 4, 0x398c0000 | lo(d));    // addi r12,r12,d@l
+    write32(ctx, buf + 0, 0x3d800000 | ha(d)); // lis r12,d@ha
+    write32(ctx, buf + 4, 0x398c0000 | lo(d)); // addi r12,r12,d@l
     buf += 8;
   }
-  write32(buf + 0, 0x7d8903a6);              // mtctr r12
-  write32(buf + 4, 0x4e800420);              // bctr
+  write32(ctx, buf + 0, 0x7d8903a6); // mtctr r12
+  write32(ctx, buf + 4, 0x4e800420); // bctr
 }
 
 void elf::writePPC64LoadAndBranch(uint8_t *buf, int64_t offset) {
   uint16_t offHa = (offset + 0x8000) >> 16;
   uint16_t offLo = offset & 0xffff;
 
-  write32(buf + 0, 0x3d820000 | offHa); // addis r12, r2, OffHa
-  write32(buf + 4, 0xe98c0000 | offLo); // ld    r12, OffLo(r12)
-  write32(buf + 8, 0x7d8903a6);         // mtctr r12
-  write32(buf + 12, 0x4e800420);        // bctr
+  write32(ctx, buf + 0, 0x3d820000 | offHa); // addis r12, r2, OffHa
+  write32(ctx, buf + 4, 0xe98c0000 | offLo); // ld    r12, OffLo(r12)
+  write32(ctx, buf + 8, 0x7d8903a6);         // mtctr r12
+  write32(ctx, buf + 12, 0x4e800420);        // bctr
 }
 
 void PPC64PltCallStub::writeTo(uint8_t *buf) {
   int64_t offset = destination.getGotPltVA(ctx) - getPPC64TocBase(ctx);
   // Save the TOC pointer to the save-slot reserved in the call frame.
-  write32(buf + 0, 0xf8410018); // std     r2,24(r1)
+  write32(ctx, buf + 0, 0xf8410018); // std     r2,24(r1)
   writePPC64LoadAndBranch(buf + 4, offset);
 }
 
@@ -1253,10 +1255,10 @@ bool PPC64PltCallStub::isCompatibleWith(const InputSection &isec,
 
 void PPC64R2SaveStub::writeTo(uint8_t *buf) {
   const int64_t offset = computeOffset();
-  write32(buf + 0, 0xf8410018); // std  r2,24(r1)
+  write32(ctx, buf + 0, 0xf8410018); // std  r2,24(r1)
   // The branch offset needs to fit in 26 bits.
   if (getMayUseShortThunk()) {
-    write32(buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
+    write32(ctx, buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
   } else if (isInt<34>(offset)) {
     int nextInstOffset;
     uint64_t tocOffset = destination.getVA() - getPPC64TocBase(ctx);
@@ -1264,16 +1266,16 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
       const uint64_t addi = ADDI_R12_TO_R12_NO_DISP | (tocOffset & 0xffff);
       const uint64_t addis =
           ADDIS_R12_TO_R2_NO_DISP | ((tocOffset >> 16) & 0xffff);
-      write32(buf + 4, addis); // addis r12, r2 , top of offset
-      write32(buf + 8, addi);  // addi  r12, r12, bottom of offset
+      write32(ctx, buf + 4, addis); // addis r12, r2 , top of offset
+      write32(ctx, buf + 8, addi);  // addi  r12, r12, bottom of offset
       nextInstOffset = 12;
     } else {
       const uint64_t addi = ADDI_R12_TO_R2_NO_DISP | (tocOffset & 0xffff);
-      write32(buf + 4, addi); // addi r12, r2, offset
+      write32(ctx, buf + 4, addi); // addi r12, r2, offset
       nextInstOffset = 8;
     }
-    write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
-    write32(buf + nextInstOffset + 4, BCTR);  // bctr
+    write32(ctx, buf + nextInstOffset, MTCTR_R12); // mtctr r12
+    write32(ctx, buf + nextInstOffset + 4, BCTR);  // bctr
   } else {
     ctx.in.ppc64LongBranchTarget->addEntry(&destination, addend);
     const int64_t offsetFromTOC =
@@ -1311,20 +1313,20 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
     nextInstOffset = 8;
   } else {
     uint32_t off = offset - 8;
-    write32(buf + 0, 0x7d8802a6);                     // mflr 12
-    write32(buf + 4, 0x429f0005);                     // bcl 20,31,.+4
-    write32(buf + 8, 0x7d6802a6);                     // mflr 11
-    write32(buf + 12, 0x7d8803a6);                    // mtlr 12
-    write32(buf + 16,
-            0x3d8b0000 | ((off + 0x8000) >> 16));     // addis 12,11,off@ha
+    write32(ctx, buf + 0, 0x7d8802a6);  // mflr 12
+    write32(ctx, buf + 4, 0x429f0005);  // bcl 20,31,.+4
+    write32(ctx, buf + 8, 0x7d6802a6);  // mflr 11
+    write32(ctx, buf + 12, 0x7d8803a6); // mtlr 12
+    write32(ctx, buf + 16,
+            0x3d8b0000 | ((off + 0x8000) >> 16)); // addis 12,11,off@ha
     if (gotPlt)
-      write32(buf + 20, 0xe98c0000 | (off & 0xffff)); // ld 12, off@l(12)
+      write32(ctx, buf + 20, 0xe98c0000 | (off & 0xffff)); // ld 12, off@l(12)
     else
-      write32(buf + 20, 0x398c0000 | (off & 0xffff)); // addi 12,12,off@l
+      write32(ctx, buf + 20, 0x398c0000 | (off & 0xffff)); // addi 12,12,off@l
     nextInstOffset = 24;
   }
-  write32(buf + nextInstOffset, MTCTR_R12); // mtctr r12
-  write32(buf + nextInstOffset + 4, BCTR);  // bctr
+  write32(ctx, buf + nextInstOffset, MTCTR_R12); // mtctr r12
+  write32(ctx, buf + nextInstOffset + 4, BCTR);  // bctr
 }
 
 void PPC64R12SetupStub::addSymbols(ThunkSection &isec) {

@@ -208,28 +208,28 @@ RelType ARM::getDynRel(RelType type) const {
 }
 
 void ARM::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write32(buf, ctx.in.plt->getVA());
+  write32(ctx, buf, ctx.in.plt->getVA());
 }
 
 void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An ARM entry is the address of the ifunc resolver function.
-  write32(buf, s.getVA());
+  write32(ctx, buf, s.getVA());
 }
 
 // Long form PLT Header that does not have any restrictions on the displacement
 // of the .plt from the .got.plt.
 static void writePltHeaderLong(Ctx &ctx, uint8_t *buf) {
-  write32(buf + 0, 0xe52de004);   //     str lr, [sp,#-4]!
-  write32(buf + 4, 0xe59fe004);   //     ldr lr, L2
-  write32(buf + 8, 0xe08fe00e);   // L1: add lr, pc, lr
-  write32(buf + 12, 0xe5bef008);  //     ldr pc, [lr, #8]
-  write32(buf + 16, 0x00000000);  // L2: .word   &(.got.plt) - L1 - 8
-  write32(buf + 20, 0xd4d4d4d4);  //     Pad to 32-byte boundary
-  write32(buf + 24, 0xd4d4d4d4);  //     Pad to 32-byte boundary
-  write32(buf + 28, 0xd4d4d4d4);
+  write32(ctx, buf + 0, 0xe52de004);  //     str lr, [sp,#-4]!
+  write32(ctx, buf + 4, 0xe59fe004);  //     ldr lr, L2
+  write32(ctx, buf + 8, 0xe08fe00e);  // L1: add lr, pc, lr
+  write32(ctx, buf + 12, 0xe5bef008); //     ldr pc, [lr, #8]
+  write32(ctx, buf + 16, 0x00000000); // L2: .word   &(.got.plt) - L1 - 8
+  write32(ctx, buf + 20, 0xd4d4d4d4); //     Pad to 32-byte boundary
+  write32(ctx, buf + 24, 0xd4d4d4d4); //     Pad to 32-byte boundary
+  write32(ctx, buf + 28, 0xd4d4d4d4);
   uint64_t gotPlt = ctx.in.gotPlt->getVA();
   uint64_t l1 = ctx.in.plt->getVA() + 8;
-  write32(buf + 16, gotPlt - l1 - 8);
+  write32(ctx, buf + 16, gotPlt - l1 - 8);
 }
 
 // True if we should use Thumb PLTs, which currently require Thumb2, and are
@@ -263,7 +263,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
     // Split into two halves to support endianness correctly.
     write16(buf + 8, 0xf85e);
     write16(buf + 10, 0xff08);
-    write32(buf + 12, offset);
+    write32(ctx, buf + 12, offset);
 
     memcpy(buf + 16, trapInstr.data(), 4);  // Pad to 32-byte boundary
     memcpy(buf + 20, trapInstr.data(), 4);
@@ -287,10 +287,10 @@ void ARM::writePltHeader(uint8_t *buf) const {
       writePltHeaderLong(ctx, buf);
       return;
     }
-    write32(buf + 0, pltData[0]);
-    write32(buf + 4, pltData[1] | ((offset >> 20) & 0xff));
-    write32(buf + 8, pltData[2] | ((offset >> 12) & 0xff));
-    write32(buf + 12, pltData[3] | (offset & 0xfff));
+    write32(ctx, buf + 0, pltData[0]);
+    write32(ctx, buf + 4, pltData[1] | ((offset >> 20) & 0xff));
+    write32(ctx, buf + 8, pltData[2] | ((offset >> 12) & 0xff));
+    write32(ctx, buf + 12, pltData[3] | (offset & 0xfff));
     memcpy(buf + 16, trapInstr.data(), 4); // Pad to 32-byte boundary
     memcpy(buf + 20, trapInstr.data(), 4);
     memcpy(buf + 24, trapInstr.data(), 4);
@@ -312,12 +312,12 @@ void ARM::addPltHeaderSymbols(InputSection &isec) const {
 // of the .plt from the .got.plt.
 static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
                          uint64_t pltEntryAddr) {
-  write32(buf + 0, 0xe59fc004);   //     ldr ip, L2
-  write32(buf + 4, 0xe08cc00f);   // L1: add ip, ip, pc
-  write32(buf + 8, 0xe59cf000);   //     ldr pc, [ip]
-  write32(buf + 12, 0x00000000);  // L2: .word   Offset(&(.got.plt) - L1 - 8
+  write32(ctx, buf + 0, 0xe59fc004);  //     ldr ip, L2
+  write32(ctx, buf + 4, 0xe08cc00f);  // L1: add ip, ip, pc
+  write32(ctx, buf + 8, 0xe59cf000);  //     ldr pc, [ip]
+  write32(ctx, buf + 12, 0x00000000); // L2: .word   Offset(&(.got.plt) - L1 - 8
   uint64_t l1 = pltEntryAddr + 4;
-  write32(buf + 12, gotPltEntryAddr - l1 - 8);
+  write32(ctx, buf + 12, gotPltEntryAddr - l1 - 8);
 }
 
 // The default PLT entries require the .got.plt to be within 128 Mb of the
@@ -342,9 +342,9 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
       writePltLong(buf, sym.getGotPltVA(ctx), pltEntryAddr);
       return;
     }
-    write32(buf + 0, pltData[0] | ((offset >> 20) & 0xff));
-    write32(buf + 4, pltData[1] | ((offset >> 12) & 0xff));
-    write32(buf + 8, pltData[2] | (offset & 0xfff));
+    write32(ctx, buf + 0, pltData[0] | ((offset >> 20) & 0xff));
+    write32(ctx, buf + 4, pltData[1] | ((offset >> 12) & 0xff));
+    write32(ctx, buf + 8, pltData[2] | (offset & 0xfff));
     memcpy(buf + 12, trapInstr.data(), 4); // Pad to 16-byte boundary
   } else {
     uint64_t offset = sym.getGotPltVA(ctx) - pltEntryAddr - 12;
@@ -558,7 +558,8 @@ void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
   if (check && imm > 0xff)
     error(getErrorLoc(ctx, loc) + "unencodeable immediate " + Twine(val).str() +
           " for relocation " + toString(rel.type));
-  write32(loc, (read32(loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
+  write32(ctx, loc,
+          (read32(ctx, loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
 
 static void encodeLdrGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
@@ -576,7 +577,7 @@ static void encodeLdrGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
   }
   uint32_t imm = getRemAndLZForGroup(group, val).first;
   checkUInt(loc, imm, 12, rel);
-  write32(loc, (read32(loc) & 0xff7ff000) | opcode | imm);
+  write32(ctx, loc, (read32(ctx, loc) & 0xff7ff000) | opcode | imm);
 }
 
 static void encodeLdrsGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
@@ -594,8 +595,9 @@ static void encodeLdrsGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
   }
   uint32_t imm = getRemAndLZForGroup(group, val).first;
   checkUInt(loc, imm, 8, rel);
-  write32(loc, (read32(loc) & 0xff7ff0f0) | opcode | ((imm & 0xf0) << 4) |
-                     (imm & 0xf));
+  write32(ctx, loc,
+          (read32(ctx, loc) & 0xff7ff0f0) | opcode | ((imm & 0xf0) << 4) |
+              (imm & 0xf));
 }
 
 void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -617,11 +619,11 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_TLS_LE32:
   case R_ARM_TLS_TPOFF32:
   case R_ARM_TLS_DTPOFF32:
-    write32(loc, val);
+    write32(ctx, loc, val);
     break;
   case R_ARM_PREL31:
     checkInt(loc, val, 31, rel);
-    write32(loc, (read32(loc) & 0x80000000) | (val & ~0x80000000));
+    write32(ctx, loc, (read32(ctx, loc) & 0x80000000) | (val & ~0x80000000));
     break;
   case R_ARM_CALL: {
     // R_ARM_CALL is used for BL and BLX instructions, for symbols of type
@@ -630,7 +632,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // not of type STT_FUNC then we must preserve the original instruction.
     assert(rel.sym); // R_ARM_CALL is always reached via relocate().
     bool bit0Thumb = val & 1;
-    bool isBlx = (read32(loc) & 0xfe000000) == 0xfa000000;
+    bool isBlx = (read32(ctx, loc) & 0xfe000000) == 0xfa000000;
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && isBlx != bit0Thumb)
@@ -638,14 +640,15 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (rel.sym->isFunc() ? bit0Thumb : isBlx) {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
-      write32(loc, 0xfa000000 |                    // opcode
-                         ((val & 2) << 23) |         // H
-                         ((val >> 2) & 0x00ffffff)); // imm24
+      write32(ctx, loc,
+              0xfa000000 |                    // opcode
+                  ((val & 2) << 23) |         // H
+                  ((val >> 2) & 0x00ffffff)); // imm24
       break;
     }
     // BLX (always unconditional) instruction to an ARM Target, select an
     // unconditional BL.
-    write32(loc, 0xeb000000 | (read32(loc) & 0x00ffffff));
+    write32(ctx, loc, 0xeb000000 | (read32(ctx, loc) & 0x00ffffff));
     // fall through as BL encoding is shared with B
   }
     [[fallthrough]];
@@ -653,17 +656,18 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_PC24:
   case R_ARM_PLT32:
     checkInt(loc, val, 26, rel);
-    write32(loc, (read32(loc) & ~0x00ffffff) | ((val >> 2) & 0x00ffffff));
+    write32(ctx, loc,
+            (read32(ctx, loc) & ~0x00ffffff) | ((val >> 2) & 0x00ffffff));
     break;
   case R_ARM_THM_JUMP8:
     // We do a 9 bit check because val is right-shifted by 1 bit.
     checkInt(loc, val, 9, rel);
-    write16(loc, (read32(loc) & 0xff00) | ((val >> 1) & 0x00ff));
+    write16(loc, (read32(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
     break;
   case R_ARM_THM_JUMP11:
     // We do a 12 bit check because val is right-shifted by 1 bit.
     checkInt(loc, val, 12, rel);
-    write16(loc, (read32(loc) & 0xf800) | ((val >> 1) & 0x07ff));
+    write16(loc, (read32(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
@@ -733,14 +737,16 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_MOVW_ABS_NC:
   case R_ARM_MOVW_PREL_NC:
   case R_ARM_MOVW_BREL_NC:
-    write32(loc, (read32(loc) & ~0x000f0fff) | ((val & 0xf000) << 4) |
-                       (val & 0x0fff));
+    write32(ctx, loc,
+            (read32(ctx, loc) & ~0x000f0fff) | ((val & 0xf000) << 4) |
+                (val & 0x0fff));
     break;
   case R_ARM_MOVT_ABS:
   case R_ARM_MOVT_PREL:
   case R_ARM_MOVT_BREL:
-    write32(loc, (read32(loc) & ~0x000f0fff) |
-                       (((val >> 16) & 0xf000) << 4) | ((val >> 16) & 0xfff));
+    write32(ctx, loc,
+            (read32(ctx, loc) & ~0x000f0fff) | (((val >> 16) & 0xf000) << 4) |
+                ((val >> 16) & 0xfff));
     break;
   case R_ARM_THM_MOVT_ABS:
   case R_ARM_THM_MOVT_PREL:
@@ -890,14 +896,14 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_TLS_LE32:
   case R_ARM_TLS_LDO32:
   case R_ARM_TLS_TPOFF32:
-    return SignExtend64<32>(read32(buf));
+    return SignExtend64<32>(read32(ctx, buf));
   case R_ARM_PREL31:
-    return SignExtend64<31>(read32(buf));
+    return SignExtend64<31>(read32(ctx, buf));
   case R_ARM_CALL:
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
-    return SignExtend64<26>(read32(buf) << 2);
+    return SignExtend64<26>(read32(ctx, buf) << 2);
   case R_ARM_THM_JUMP8:
     return SignExtend64<9>(read16(buf) << 1);
   case R_ARM_THM_JUMP11:
@@ -942,7 +948,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_MOVT_PREL:
   case R_ARM_MOVW_BREL_NC:
   case R_ARM_MOVT_BREL: {
-    uint64_t val = read32(buf) & 0x000f0fff;
+    uint64_t val = read32(ctx, buf) & 0x000f0fff;
     return SignExtend64<16>(((val & 0x000f0000) >> 4) | (val & 0x00fff));
   }
   case R_ARM_THM_MOVW_ABS_NC:
@@ -973,7 +979,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // right rotation and 8-bit constant. After the rotation the value
     // is zero-extended. When bit 23 is set the instruction is an add, when
     // bit 22 is set it is a sub.
-    uint32_t instr = read32(buf);
+    uint32_t instr = read32(ctx, buf);
     uint32_t val = rotr32(instr & 0xff, ((instr & 0xf00) >> 8) * 2);
     return (instr & 0x00400000) ? -val : val;
   }
@@ -982,15 +988,15 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_LDR_PC_G2: {
     // ADR (literal) add = bit23, sub = bit22
     // LDR (literal) u = bit23 unsigned imm12
-    bool u = read32(buf) & 0x00800000;
-    uint32_t imm12 = read32(buf) & 0xfff;
+    bool u = read32(ctx, buf) & 0x00800000;
+    uint32_t imm12 = read32(ctx, buf) & 0xfff;
     return u ? imm12 : -imm12;
   }
   case R_ARM_LDRS_PC_G0:
   case R_ARM_LDRS_PC_G1:
   case R_ARM_LDRS_PC_G2: {
     // LDRD/LDRH/LDRSB/LDRSH (literal) u = bit23 unsigned imm8
-    uint32_t opcode = read32(buf);
+    uint32_t opcode = read32(ctx, buf);
     bool u = opcode & 0x00800000;
     uint32_t imm4l = opcode & 0xf;
     uint32_t imm4h = (opcode & 0xf00) >> 4;
@@ -1089,7 +1095,7 @@ static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
   CodeState curState = static_cast<CodeState>(width);
   if (curState == CodeState::Arm)
     for (uint64_t i = start; i < end; i += width)
-      write32le(buf + i, read32(buf + i));
+      write32le(buf + i, read32(ctx, buf + i));
 
   if (curState == CodeState::Thumb)
     for (uint64_t i = start; i < end; i += width)
