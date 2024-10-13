@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
@@ -21,6 +22,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceManager.h"
@@ -29,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -372,6 +375,435 @@ maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   return Params;
 }
 
+class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
+  QualType CurrentType;
+  NestedNameSpecifier *CurrentNestedNameSpecifier;
+  ASTContext &Context;
+  StringRef MainFilePath;
+  const PrintingPolicy &PP;
+  SourceManager &SM;
+  std::vector<InlayHintLabelPart> LabelChunks;
+  bool AppendTrailingSpaceBeforeRightQual = true;
+
+  void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
+                SourceLocation Location = SourceLocation()) {
+    std::string Label;
+    llvm::raw_string_ostream OS(Label);
+    NamePrinter(OS);
+    if (!Location.isValid())
+      return addLabel(std::move(Label));
+    auto &Name = LabelChunks.emplace_back();
+    Name.value = std::move(Label);
+    Name.location = makeLocation(Context, Location, MainFilePath);
+  }
+
+  void addLabel(std::string Label) {
+    if (LabelChunks.empty()) {
+      LabelChunks.emplace_back(std::move(Label));
+      return;
+    }
+    auto &Back = LabelChunks.back();
+    if (Back.location) {
+      LabelChunks.emplace_back(std::move(Label));
+      return;
+    }
+    // Let's combine the "unclickable" pieces together.
+    Back.value += std::move(Label);
+  }
+
+  void printTemplateArgumentList(llvm::ArrayRef<TemplateArgument> Args) {
+    unsigned Size = Args.size();
+    for (unsigned I = 0; I < Size; ++I) {
+      auto &TA = Args[I];
+      if (PP.SuppressDefaultTemplateArgs && TA.getIsDefaulted())
+        continue;
+      if (I)
+        addLabel(", ");
+      printTemplateArgument(TA);
+    }
+  }
+
+  void printTemplateArgument(const TemplateArgument &TA) {
+    switch (TA.getKind()) {
+    case TemplateArgument::Pack:
+      return printTemplateArgumentList(TA.pack_elements());
+    case TemplateArgument::Type:
+      return VisitQualType(TA.getAsType());
+    // TODO: Add support for NTTP arguments.
+    case TemplateArgument::Expression:
+    case TemplateArgument::StructuralValue:
+    case TemplateArgument::Null:
+    case TemplateArgument::Declaration:
+    case TemplateArgument::NullPtr:
+    case TemplateArgument::Integral:
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      break;
+    }
+    std::string Label;
+    llvm::raw_string_ostream OS(Label);
+    TA.print(PP, OS, /*IncludeType=*/true);
+    addLabel(std::move(Label));
+  }
+
+  void handleTemplateSpecialization(llvm::StringRef TemplateId,
+                                    llvm::ArrayRef<TemplateArgument> Args,
+                                    SourceLocation Location) {
+    addLabel([&](llvm::raw_ostream &OS) { OS << TemplateId; }, Location);
+    addLabel("<");
+    printTemplateArgumentList(Args);
+    addLabel(">");
+  }
+
+  void maybeAddQualifiers(bool AppendSpaceToQuals) {
+    addLabel([&](llvm::raw_ostream &OS) {
+      CurrentType.split().Quals.print(
+          OS, PP, /*appendSpaceIfNonEmpty=*/AppendSpaceToQuals);
+    });
+  }
+
+  // When printing a reference, the referenced type might also be a reference.
+  // If so, we want to skip that before printing the inner type.
+  static QualType skipTopLevelReferences(QualType T) {
+    if (auto *Ref = T->getAs<ReferenceType>())
+      return skipTopLevelReferences(Ref->getPointeeTypeAsWritten());
+    return T;
+  }
+
+  static SourceLocation nameLocation(Decl *D, const SourceManager &SM) {
+    // If this is a definition, find its *forward declaration* if possible.
+    //
+    // Per LSP specification, code actions, e.g., hover/go-to-def on the type
+    // link, would be performed as if at the location we have given.
+    //
+    // Therefore, we should provide the type part with a location that points to
+    // its declaration because we would otherwise take users to the
+    // *declaration* if they're at the definition.
+    if (auto *TD = dyn_cast<TemplateDecl>(D))
+      D = TD->getTemplatedDecl();
+    bool IsDefinition =
+        isa<TagDecl>(D) && cast<TagDecl>(D)->isThisDeclarationADefinition();
+    if (IsDefinition) {
+      // Happy path: if the canonical declaration is a forward declaration.
+      if (!cast<TagDecl>(D)->getCanonicalDecl()->isThisDeclarationADefinition())
+        D = D->getCanonicalDecl();
+      else {
+        // Otherwise, look through the redeclarations.
+        for (auto *Redecl : D->redecls())
+          if (!cast<TagDecl>(Redecl)->isThisDeclarationADefinition()) {
+            D = Redecl;
+            break;
+          }
+      }
+    }
+    return ::clang::clangd::nameLocation(*D, SM);
+  }
+
+  // CanPrefixQualifiers - We prefer to print type qualifiers
+  // before the type, so that we get "const int" instead of "int const", but we
+  // can't do this if the type is complex.  For example if the type is "int*",
+  // we *must* print "int * const", printing "const int *" is different.  Only
+  // do this when the type expands to a simple string.
+  // This is similar to the private function \p
+  // TypePrinter::canPrefixQualifiers().
+  // FIXME: Refactor and share the same implementation.
+  static bool canPrefixQualifiers(const Type *T) {
+    bool CanPrefixQualifiers = false;
+    const Type *UnderlyingType = T;
+    if (const auto *AT = dyn_cast<AutoType>(T))
+      UnderlyingType = AT->desugar().getTypePtr();
+    if (const auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T))
+      UnderlyingType = Subst->getReplacementType().getTypePtr();
+    Type::TypeClass TC = UnderlyingType->getTypeClass();
+
+    switch (TC) {
+    case Type::Adjusted:
+    case Type::Decayed:
+    case Type::ArrayParameter:
+    case Type::Pointer:
+    case Type::BlockPointer:
+    case Type::LValueReference:
+    case Type::RValueReference:
+    case Type::MemberPointer:
+    case Type::DependentAddressSpace:
+    case Type::DependentVector:
+    case Type::DependentSizedExtVector:
+    case Type::Vector:
+    case Type::ExtVector:
+    case Type::ConstantMatrix:
+    case Type::DependentSizedMatrix:
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+    case Type::Paren:
+    case Type::PackExpansion:
+    case Type::SubstTemplateTypeParm:
+    case Type::MacroQualified:
+    case Type::CountAttributed:
+      CanPrefixQualifiers = false;
+      break;
+    default:
+      CanPrefixQualifiers = true;
+    }
+
+    return CanPrefixQualifiers;
+  }
+
+  SourceLocation getPreferredLocationFromSpecialization(
+      ClassTemplateSpecializationDecl *Specialization) const {
+    SourceLocation Location;
+    // Quirk as it is, the Specialization might have no associated forward
+    // declarations. So we have to find them through the Pattern.
+    if (!Specialization->isExplicitInstantiationOrSpecialization()) {
+      auto Pattern = Specialization->getSpecializedTemplateOrPartial();
+      if (auto *Template = Pattern.dyn_cast<ClassTemplateDecl *>())
+        Location = nameLocation(Template, SM);
+      if (auto *Template =
+              Pattern.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+        Location = nameLocation(Template, SM);
+    } else
+      Location = nameLocation(Specialization, SM);
+    return Location;
+  }
+
+public:
+  TypeHintBuilder(ASTContext &Context, StringRef MainFilePath,
+                  const PrintingPolicy &PP, llvm::StringRef Prefix)
+      : CurrentNestedNameSpecifier(nullptr), Context(Context),
+        MainFilePath(MainFilePath), PP(PP), SM(Context.getSourceManager()) {
+    LabelChunks.reserve(16);
+    if (!Prefix.empty())
+      addLabel(Prefix.str());
+  }
+
+  void VisitType(const Type *T) {
+    // We should have handled qualifiers in VisitQualType(). Don't print them
+    // twice.
+    addLabel(QualType(T, /*Quals=*/0).getAsString());
+  }
+
+  void VisitQualType(QualType Q, bool AppendSpaceToTopLevelQuals = true,
+                     NestedNameSpecifier *NNS = nullptr) {
+    QualType PreviousType = CurrentType;
+    NestedNameSpecifier *PreviousNNS = CurrentNestedNameSpecifier;
+
+    CurrentType = Q;
+    CurrentNestedNameSpecifier = NNS;
+    bool CanPrefixQualifiers = canPrefixQualifiers(CurrentType.getTypePtr());
+    bool PrevAppendTrailingSpaceBeforeRightQual =
+        AppendTrailingSpaceBeforeRightQual;
+    if (CanPrefixQualifiers)
+      maybeAddQualifiers(/*AppendSpaceToQuals=*/true);
+
+    TypeVisitor::Visit(Q.getTypePtr());
+
+    bool HaveTrailingQuals =
+        !CanPrefixQualifiers && !CurrentType.split().Quals.empty();
+    if (AppendTrailingSpaceBeforeRightQual && HaveTrailingQuals)
+      addLabel(" ");
+    if (HaveTrailingQuals) {
+      maybeAddQualifiers(/*AppendSpaceToQuals=*/AppendSpaceToTopLevelQuals);
+      AppendTrailingSpaceBeforeRightQual =
+          PrevAppendTrailingSpaceBeforeRightQual;
+    }
+
+    CurrentType = PreviousType;
+    CurrentNestedNameSpecifier = PreviousNNS;
+  }
+
+  void VisitTagType(const TagType *TT) {
+    auto *CXXRD = dyn_cast<CXXRecordDecl>(TT->getDecl());
+    if (!CXXRD) {
+      // This might be a C TagDecl.
+      if (auto *RD = dyn_cast<RecordDecl>(TT->getDecl())) {
+        // FIXME: Respect SuppressTagKeyword in other cases.
+        if (!PP.SuppressTagKeyword && !RD->getTypedefNameForAnonDecl())
+          addLabel(
+              [&](llvm::raw_ostream &OS) { OS << RD->getKindName() << " "; });
+        return addLabel(
+            [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
+            nameLocation(RD, SM));
+      }
+      return VisitType(TT);
+    }
+    // Note that we have cases where the type of a template specialization is
+    // modeled as a RecordType rather than a TemplateSpecializationType. (Type
+    // sugars are not preserved?)
+    // Example:
+    //
+    // template <typename, typename = int>
+    // struct A {};
+    // A<float> bar[1];
+    //
+    // auto [value] = bar;
+    //
+    // The type of value is modeled as a RecordType here.
+
+    // The ClassTemplateSpecializationDecl could be of TSK_Undeclared
+    // kind. So handle the ClassTemplateSpecializationDecl case first for
+    // template arguments.
+    // E.g. when we're inside a range-based for loop:
+    //   template <class T, class U> struct Pair;
+    //   for (auto p : SmallVector<Pair<SourceLocation, SourceRange>>()) {}
+    // (Pair is of TSK_Undeclared kind here.)
+    // FIXME: Do we have other kinds of specializations?
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD)) {
+      std::string TemplateId;
+      llvm::raw_string_ostream OS(TemplateId);
+      CTSD->printName(OS);
+      return handleTemplateSpecialization(
+          TemplateId, CTSD->getTemplateArgs().asArray(),
+          getPreferredLocationFromSpecialization(CTSD));
+    }
+
+    // We don't have a template arguments now. Find the name and its location.
+    if (!CXXRD->getTemplateSpecializationKind())
+      return addLabel(
+          [&](llvm::raw_ostream &OS) { return CXXRD->printName(OS, PP); },
+          nameLocation(CXXRD, SM));
+
+    return VisitType(TT);
+  }
+
+  void VisitEnumType(const EnumType *ET) {
+    return addLabel(
+        [&](llvm::raw_ostream &OS) { return ET->getDecl()->printName(OS, PP); },
+        nameLocation(ET->getDecl(), SM));
+  }
+
+  void VisitAutoType(const AutoType *AT) {
+    if (!AT->isDeduced() || AT->getDeducedType()->isDecltypeType())
+      return VisitType(AT);
+    return VisitQualType(AT->getDeducedType());
+  }
+
+  void VisitElaboratedType(const ElaboratedType *ET) {
+    if (auto *NNS = ET->getQualifier()) {
+      switch (NNS->getKind()) {
+      case NestedNameSpecifier::Identifier:
+      case NestedNameSpecifier::Namespace:
+      case NestedNameSpecifier::NamespaceAlias:
+      case NestedNameSpecifier::Global:
+      case NestedNameSpecifier::Super: {
+        if (PP.SuppressScope)
+          break;
+        std::string Label;
+        llvm::raw_string_ostream OS(Label);
+        NNS->print(OS, PP);
+        addLabel(std::move(Label));
+        break;
+      }
+      case NestedNameSpecifier::TypeSpec:
+      case NestedNameSpecifier::TypeSpecWithTemplate:
+        if (PP.SuppressScope)
+          break;
+        // Do we need cv-qualifiers on type specifiers?
+        VisitQualType(QualType(NNS->getAsType(), /*Quals=*/0));
+        addLabel("::");
+        break;
+      }
+    }
+    return VisitQualType(ET->getNamedType(),
+                         /*AppendSpaceToTopLevelQuals=*/true,
+                         ET->getQualifier());
+  }
+
+  void VisitReferenceType(const ReferenceType *RT) {
+    QualType Next = skipTopLevelReferences(RT->getPointeeTypeAsWritten());
+    VisitQualType(Next);
+    if (Next->getPointeeType().isNull())
+      addLabel(" ");
+    if (RT->isLValueReferenceType())
+      addLabel("&");
+    if (RT->isRValueReferenceType())
+      addLabel("&&");
+  }
+
+  void VisitPointerType(const PointerType *PT) {
+    // We don't want a trailing space after the last asterisk, if it is followed
+    // by a qualifier. E.g. 'int *const' rather than 'int * const'.
+    AppendTrailingSpaceBeforeRightQual = false;
+    QualType Next = PT->getPointeeType();
+    VisitQualType(Next);
+    if (Next->getPointeeType().isNull())
+      addLabel(" ");
+    addLabel("*");
+  }
+
+  void VisitUsingType(const UsingType *UT) {
+    addLabel([&](llvm::raw_ostream &OS) { UT->getFoundDecl()->printName(OS); },
+             nameLocation(UT->getFoundDecl()->getIntroducer(), SM));
+  }
+
+  void VisitTypedefType(const TypedefType *TT) {
+    addLabel([&](llvm::raw_ostream &OS) { TT->getDecl()->printName(OS); },
+             nameLocation(TT->getDecl(), SM));
+  }
+
+  void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
+    SourceLocation Location;
+    TemplateName Name = TST->getTemplateName();
+    TemplateName::Qualified PrintQual = TemplateName::Qualified::AsWritten;
+    switch (Name.getKind()) {
+    case TemplateName::Template:
+    case TemplateName::QualifiedTemplate: {
+      if (QualifiedTemplateName *Qual = Name.getAsQualifiedTemplateName();
+          Qual && Qual->getQualifier() == CurrentNestedNameSpecifier) {
+        // We have handled the NNS in VisitElaboratedType(). Avoid printing it
+        // twice.
+        Name = Qual->getUnderlyingTemplate();
+        PrintQual = TemplateName::Qualified::None;
+      }
+      [[fallthrough]];
+    }
+    case TemplateName::SubstTemplateTemplateParm:
+    case TemplateName::UsingTemplate:
+      Location = Name.getAsTemplateDecl()->getLocation();
+      break;
+    case TemplateName::OverloadedTemplate:
+    case TemplateName::AssumedTemplate:
+    case TemplateName::DependentTemplate:
+    case TemplateName::SubstTemplateTemplateParmPack:
+      // FIXME: Handle these cases.
+      return VisitType(TST);
+    }
+    // Special case the ClassTemplateSpecializationDecl because
+    // we want the location of an explicit specialization, if present.
+    // FIXME: In practice, populating the location with that of the
+    // specialization would still take us to the primary template because we're
+    // actually sending a go-to-def request from the explicit specialization.
+    if (auto *Specialization =
+            dyn_cast_if_present<ClassTemplateSpecializationDecl>(
+                TST->desugar().getCanonicalType()->getAsCXXRecordDecl()))
+      Location = getPreferredLocationFromSpecialization(Specialization);
+    std::string TemplateId;
+    llvm::raw_string_ostream OS(TemplateId);
+    Name.print(OS, PP, PrintQual);
+    return handleTemplateSpecialization(TemplateId, TST->template_arguments(),
+                                        Location);
+  }
+
+  void VisitDeducedTemplateSpecializationType(
+      const DeducedTemplateSpecializationType *TST) {
+    // FIXME: The TST->getTemplateName() might differ from the name of
+    // DeducedType, e.g. when the deduction guide is formed against a type alias
+    // Decl.
+    return VisitQualType(TST->getDeducedType());
+  }
+
+  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
+    return VisitQualType(ST->getReplacementType());
+  }
+
+  std::vector<InlayHintLabelPart> take() { return std::move(LabelChunks); }
+};
+
+unsigned lengthOfInlayHintLabel(llvm::ArrayRef<InlayHintLabelPart> Labels) {
+  unsigned Size = 0;
+  for (auto &P : Labels)
+    Size += P.value.size();
+  return Size;
+}
+
 struct Callee {
   // Only one of Decl or Loc is set.
   // Loc is for calls through function pointers.
@@ -386,7 +818,7 @@ public:
       : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
-        Resolver(AST.getHeuristicResolver()),
+        MainFilePath(AST.tuPath()), Resolver(AST.getHeuristicResolver()),
         TypeHintPolicy(this->AST.getPrintingPolicy()) {
     bool Invalid = false;
     llvm::StringRef Buf =
@@ -949,9 +1381,30 @@ private:
     addInlayHint(*LSPRange, Side, Kind, Prefix, Label, Suffix);
   }
 
+  void addInlayHint(SourceRange R, HintSide Side, InlayHintKind Kind,
+                    llvm::StringRef Prefix,
+                    std::vector<InlayHintLabelPart> Labels,
+                    llvm::StringRef Suffix) {
+    auto LSPRange = getHintRange(R);
+    if (!LSPRange)
+      return;
+
+    addInlayHint(*LSPRange, Side, Kind, Prefix, std::move(Labels), Suffix);
+  }
+
   void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
                     llvm::StringRef Prefix, llvm::StringRef Label,
                     llvm::StringRef Suffix) {
+    return addInlayHint(LSPRange, Side, Kind, Prefix,
+                        /*Labels=*/std::vector<InlayHintLabelPart>{Label.str()},
+                        Suffix);
+  }
+
+  void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
+                    llvm::StringRef Prefix,
+                    std::vector<InlayHintLabelPart> Labels,
+                    llvm::StringRef Suffix) {
+    assert(!Labels.empty() && "Expected non-empty labels");
     // We shouldn't get as far as adding a hint if the category is disabled.
     // We'd like to disable as much of the analysis as possible above instead.
     // Assert in debug mode but add a dynamic check in production.
@@ -977,9 +1430,21 @@ private:
       return;
     bool PadLeft = Prefix.consume_front(" ");
     bool PadRight = Suffix.consume_back(" ");
+    if (!Prefix.empty()) {
+      if (auto &Label = Labels.front(); !Label.location)
+        Label.value = Prefix.str() + Label.value;
+      else
+        Labels.insert(Labels.begin(), InlayHintLabelPart(Prefix.str()));
+    }
+    if (!Suffix.empty()) {
+      if (auto &Label = Labels.back(); !Label.location)
+        Label.value += Suffix.str();
+      else
+        Labels.push_back(InlayHintLabelPart(Suffix.str()));
+    }
     Results.push_back(InlayHint{LSPPos,
-                                /*label=*/{(Prefix + Label + Suffix).str()},
-                                Kind, PadLeft, PadRight, LSPRange});
+                                /*label=*/std::move(Labels), Kind, PadLeft,
+                                PadRight, LSPRange});
   }
 
   // Get the range of the main file that *exactly* corresponds to R.
@@ -998,6 +1463,13 @@ private:
                  sourceLocToPosition(SM, Spelled->back().endLocation())};
   }
 
+  std::vector<InlayHintLabelPart> buildTypeHint(QualType T,
+                                                llvm::StringRef Prefix) {
+    TypeHintBuilder Builder(AST, MainFilePath, TypeHintPolicy, Prefix);
+    Builder.VisitQualType(T, /*AppendSpaceToTopLevelQuals=*/false);
+    return Builder.take();
+  }
+
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
     if (!Cfg.InlayHints.DeducedTypes || T.isNull())
       return;
@@ -1005,14 +1477,23 @@ private:
     // The sugared type is more useful in some cases, and the canonical
     // type in other cases.
     auto Desugared = maybeDesugar(AST, T);
-    std::string TypeName = Desugared.getAsString(TypeHintPolicy);
-    if (T != Desugared && !shouldPrintTypeHint(TypeName)) {
+    auto Chunks = buildTypeHint(Desugared, Prefix);
+    if (T != Desugared) {
+      if (shouldPrintTypeHint(Chunks)) {
+        addInlayHint(R, HintSide::Right, InlayHintKind::Type,
+                     /*Prefix=*/"", // We have handled prefixes in the builder.
+                     std::move(Chunks),
+                     /*Suffix=*/"");
+        return;
+      }
       // If the desugared type is too long to display, fallback to the sugared
       // type.
-      TypeName = T.getAsString(TypeHintPolicy);
+      Chunks = buildTypeHint(T, Prefix);
     }
-    if (shouldPrintTypeHint(TypeName))
-      addInlayHint(R, HintSide::Right, InlayHintKind::Type, Prefix, TypeName,
+    if (shouldPrintTypeHint(Chunks))
+      addInlayHint(R, HintSide::Right, InlayHintKind::Type,
+                   /*Prefix=*/"", // We have handled prefixes in the builder.
+                   std::move(Chunks),
                    /*Suffix=*/"");
   }
 
@@ -1021,9 +1502,10 @@ private:
                  /*Prefix=*/"", Text, /*Suffix=*/"=");
   }
 
-  bool shouldPrintTypeHint(llvm::StringRef TypeName) const noexcept {
+  bool shouldPrintTypeHint(
+      llvm::ArrayRef<InlayHintLabelPart> TypeLabels) const noexcept {
     return Cfg.InlayHints.TypeNameLimit == 0 ||
-           TypeName.size() < Cfg.InlayHints.TypeNameLimit;
+           lengthOfInlayHintLabel(TypeLabels) < Cfg.InlayHints.TypeNameLimit;
   }
 
   void addBlockEndHint(SourceRange BraceRange, StringRef DeclPrefix,
@@ -1109,6 +1591,7 @@ private:
   std::optional<Range> RestrictRange;
   FileID MainFileID;
   StringRef MainFileBuf;
+  StringRef MainFilePath;
   const HeuristicResolver *Resolver;
   PrintingPolicy TypeHintPolicy;
 };

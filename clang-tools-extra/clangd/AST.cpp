@@ -9,6 +9,7 @@
 #include "AST.h"
 
 #include "SourceCode.h"
+#include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
@@ -172,6 +173,27 @@ SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM) {
   if (isSpelledInSource(L, SM))
     return SM.getSpellingLoc(L);
   return SM.getExpansionLoc(L);
+}
+
+std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
+                                     llvm::StringRef TUPath) {
+  const auto &SM = AST.getSourceManager();
+  const auto F = SM.getFileEntryRefForID(SM.getFileID(Loc));
+  if (!F)
+    return std::nullopt;
+  auto FilePath = getCanonicalPath(*F, SM.getFileManager());
+  if (!FilePath) {
+    log("failed to get path!");
+    return std::nullopt;
+  }
+  Location L;
+  L.uri = URIForFile::canonicalize(*FilePath, TUPath);
+  // We call MeasureTokenLength here as TokenBuffer doesn't store spelled tokens
+  // outside the main file.
+  auto TokLen = Lexer::MeasureTokenLength(Loc, SM, AST.getLangOpts());
+  L.range = halfOpenToRange(
+      SM, CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(TokLen)));
+  return L;
 }
 
 std::string printQualifiedName(const NamedDecl &ND) {

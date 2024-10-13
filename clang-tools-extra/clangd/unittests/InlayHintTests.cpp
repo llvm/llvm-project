@@ -55,6 +55,20 @@ struct ExpectedHint {
   }
 };
 
+struct ExpectedHintLabelPiece {
+  std::string Label;
+  // Stores the name of a range annotation
+  std::optional<std::string> PointsTo = std::nullopt;
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                                       const ExpectedHintLabelPiece &Hint) {
+    Stream << Hint.Label;
+    if (Hint.PointsTo)
+      Stream << " that points to $" << Hint.PointsTo;
+    return Stream;
+  }
+};
+
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   llvm::StringRef ExpectedView(Expected.Label);
   std::string ResultLabel = arg.joinLabels();
@@ -68,6 +82,33 @@ MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
     *result_listener << "range is " << llvm::to_string(arg.range) << " but $"
                      << Expected.RangeName << " is "
                      << llvm::to_string(Code.range(Expected.RangeName));
+    return false;
+  }
+  return true;
+}
+
+MATCHER_P2(HintLabelPieceMatcher, Expected, Code, llvm::to_string(Expected)) {
+  std::string ResultLabel = arg.value;
+  if (ResultLabel != Expected.Label) {
+    *result_listener << "label is '" << ResultLabel << "'";
+    return false;
+  }
+  if (!Expected.PointsTo && !arg.location)
+    return true;
+  if (Expected.PointsTo && !arg.location) {
+    *result_listener << " range " << *Expected.PointsTo
+                     << " is expected, but we have nothing.";
+    return false;
+  }
+  if (!Expected.PointsTo && arg.location) {
+    *result_listener << " the link points to " << llvm::to_string(arg.location)
+                     << ", but we expect nothing.";
+    return false;
+  }
+  if (arg.location->range != Code.range(*Expected.PointsTo)) {
+    *result_listener << "range is " << llvm::to_string(arg.location->range)
+                     << " but $" << *Expected.PointsTo << " points to "
+                     << llvm::to_string(Code.range(*Expected.PointsTo));
     return false;
   }
   return true;
@@ -1253,7 +1294,7 @@ TEST(TypeHints, DecltypeAuto) {
                   ExpectedHint{": int &", "z"});
 }
 
-TEST(TypeHints, NoQualifiers) {
+TEST(TypeHints, NoNNS) {
   assertTypeHints(R"cpp(
     namespace A {
       namespace B {
@@ -1270,14 +1311,7 @@ TEST(TypeHints, NoQualifiers) {
       }
     }
   )cpp",
-                  ExpectedHint{": S1", "x"},
-                  // FIXME: We want to suppress scope specifiers
-                  //        here because we are into the whole
-                  //        brevity thing, but the ElaboratedType
-                  //        printer does not honor the SuppressScope
-                  //        flag by design, so we need to extend the
-                  //        PrintingPolicy to support this use case.
-                  ExpectedHint{": S2::Inner<int>", "y"});
+                  ExpectedHint{": S1", "x"}, ExpectedHint{": Inner<int>", "y"});
 }
 
 TEST(TypeHints, Lambda) {
@@ -1635,6 +1669,312 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
   assertHintsWithHeader(InlayHintKind::Type, TypeAlias, Header,
                         ExpectedHint{": Short", "short_name"},
                         ExpectedHint{": static_vector<int>", "vector_name"});
+}
+
+enum struct Language {
+  CXX26 = 1,
+  C23 = 2,
+};
+
+template <Language L = Language::CXX26, typename... Labels>
+void assertTypeLinkHints(StringRef Code, StringRef HintRange,
+                         Labels... ExpectedLabels) {
+  Annotations Source(Code);
+
+  TestTU TU = TestTU::withCode(Source.code());
+  if constexpr (L == Language::CXX26) {
+    TU.ExtraArgs.push_back("-std=c++2c");
+  } else if constexpr (L == Language::C23) {
+    TU.ExtraArgs.push_back("-xc");
+    TU.ExtraArgs.push_back("-std=c23");
+  }
+  auto AST = TU.build();
+
+  Config C;
+  C.InlayHints.TypeNameLimit = 0;
+  WithContextValue WithCfg(Config::Key, std::move(C));
+
+  auto Hints = hintsOfKind(AST, InlayHintKind::Type);
+  auto Hint = llvm::find_if(Hints, [&](const InlayHint &InlayHint) {
+    return InlayHint.range == Source.range(HintRange);
+  });
+  ASSERT_TRUE(Hint != Hints.end()) << "No hint was found at " << HintRange;
+  EXPECT_THAT(Hint->label,
+              ElementsAre(HintLabelPieceMatcher(ExpectedLabels, Source)...));
+}
+
+TEST(TypeHints, Links) {
+  StringRef Source(R"cpp(
+    template <class T, class U>
+    struct $Package[[Package]] {};
+
+    template <>
+    struct $SpecializationOfPackage[[Package]]<float, const int> {};
+
+    template <class... T>
+    struct $Container[[Container]] {};
+
+    template <auto... T>
+    struct $NttpContainer[[NttpContainer]] {};
+
+    enum struct $ScopedEnum[[ScopedEnum]] {
+      X = 1,
+    };
+
+    enum $Enum[[Enum]] {
+      E = 2,
+    };
+
+    namespace ns {
+      template <class T>
+      struct $Nested[[Nested]] {
+        template <class U>
+        struct $NestedClass[[Class]] {
+        };
+      };
+
+      using $NestedInt[[NestedInt]] = Nested<int>;
+    }
+
+    void basic() {
+      auto $1[[C]] = Container<Package<char, int>>();
+      auto $2[[D]] = Container<Package<float, const int>>();
+      auto $3[[E]] = Container<Container<int, int>, long>();
+      auto $4[[F]] = NttpContainer<D, E, ScopedEnum::X, Enum::E>();
+      auto $5[[G]] = ns::Nested<Container<int>>::Class<Package<char, int>>();
+    }
+
+    void compounds() {
+      auto $6[[A]] = Container<ns::Nested<int>::Class<float>&>();
+      auto $7[[B]] = Container<ns::Nested<int>::Class<float>&&>();
+      auto $8[[C]] = Container<ns::Nested<int>::Class<const Container<int>> *>();
+    }
+
+    namespace nns {
+      using ns::$UsingShadow[[NestedInt]];
+
+      void aliases() {
+        auto $9[[A]] = Container<NestedInt>();
+        auto $10[[B]] = Container<ns::NestedInt>();
+      }
+    }
+
+    auto $11[[A]] = Container<Enum, ScopedEnum>();
+
+  )cpp");
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Package", "Package"},
+                      ExpectedHintLabelPiece{"<char, int>>"});
+
+  assertTypeLinkHints(
+      Source, "2", ExpectedHintLabelPiece{": "},
+      ExpectedHintLabelPiece{"Container", "Container"},
+      ExpectedHintLabelPiece{"<"},
+      ExpectedHintLabelPiece{"Package", "SpecializationOfPackage"},
+      ExpectedHintLabelPiece{"<float, const int>>"});
+
+  assertTypeLinkHints(Source, "3", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<int, int>, long>"});
+
+  // TODO: Support links on NTTP arguments.
+  assertTypeLinkHints(Source, "4", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"NttpContainer", "NttpContainer"},
+                      ExpectedHintLabelPiece{"<D, E, ScopedEnum::X, Enum::E>"});
+
+  assertTypeLinkHints(Source, "5", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Class", "NestedClass"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Package", "Package"},
+                      ExpectedHintLabelPiece{"<char, int>>"});
+
+  assertTypeLinkHints(Source, "6", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Class", "NestedClass"},
+                      ExpectedHintLabelPiece{"<float> &>"});
+
+  assertTypeLinkHints(Source, "7", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Class", "NestedClass"},
+                      ExpectedHintLabelPiece{"<float> &&>"});
+
+  assertTypeLinkHints(Source, "8", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Class", "NestedClass"},
+                      ExpectedHintLabelPiece{"<const "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<int>> *>"});
+
+  assertTypeLinkHints(Source, "9", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"NestedInt", "UsingShadow"},
+                      ExpectedHintLabelPiece{">"});
+
+  assertTypeLinkHints(Source, "10", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"NestedInt", "NestedInt"},
+                      ExpectedHintLabelPiece{">"});
+
+  assertTypeLinkHints(Source, "11", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Enum", "Enum"},
+                      ExpectedHintLabelPiece{", "},
+                      ExpectedHintLabelPiece{"ScopedEnum", "ScopedEnum"},
+                      ExpectedHintLabelPiece{">"});
+}
+
+TEST(TypeHints, LinksForForwardDeclarations) {
+  // Test that we always prefer the location of the forward declaration in the
+  // presence of it. This way, the LSP client would take us to the definition.
+  StringRef Source(R"cpp(
+    template <class... T>
+    struct Container {};
+
+    template <class... T>
+    struct $Container[[Container]];
+
+    // The order of occurrence matters.
+    template <class>
+    struct $optional[[optional]];
+
+    template <class>
+    struct optional {};
+
+    // FIXME: go-to-def on `optional<int>` would take us to its primary template.
+    template <>
+    struct optional<int> {};
+
+    template <>
+    struct optional<int>;
+
+    struct S {};
+
+    struct $S[[S]];
+
+    struct $W[[W]];
+
+    struct W {};
+
+    auto $1[[Use]] = Container<optional<S>, W>();
+  )cpp");
+
+  assertTypeLinkHints(
+      Source, "1", ExpectedHintLabelPiece{": "},
+      ExpectedHintLabelPiece{"Container", "Container"},
+      ExpectedHintLabelPiece{"<"},
+      ExpectedHintLabelPiece{"optional", "optional"},
+      ExpectedHintLabelPiece{"<"}, ExpectedHintLabelPiece{"S", "S"},
+      ExpectedHintLabelPiece{">, "}, ExpectedHintLabelPiece{"W", "W"},
+      ExpectedHintLabelPiece{">"});
+}
+
+TEST(TypeHints, LinksForStructureBindings) {
+  StringRef Source(R"cpp(
+  template <typename>
+  struct $A[[A]] {};
+  A<float> bar[1];
+
+  auto [$1[[value]]] = bar;
+  )cpp");
+
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"A", "A"},
+                      ExpectedHintLabelPiece{"<float>"});
+}
+
+TEST(TypeHints, LinksForDeductionGuides) {
+  StringRef Source(R"cpp(
+  template <class T>
+  struct S { S(T); };
+
+  template <>
+  struct $S[[S]]<int> { S(int); };
+
+  template <class U>
+  using SS = S<U>;
+
+  // FIXME: Would better be SS<int>.
+  // (However, TypePrinter doesn't print SS<int> either.)
+  const auto $1[[w]] = S(42);
+  )cpp");
+
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": const "},
+                      ExpectedHintLabelPiece{"S", "S"},
+                      ExpectedHintLabelPiece{"<int>"});
+}
+
+TEST(TypeHints, LinksWithQualifiers) {
+  StringRef Source(R"cpp(
+  struct Base { virtual ~Base() = default; };
+
+  struct $Derived[[Derived]] : virtual Base {};
+
+  Base *make();
+
+  const auto $1[[ptr]] = dynamic_cast<const Derived *>(make());
+
+  const Derived *volatile const *volatile *const *volatile p = nullptr;
+  
+  volatile auto $2[[paranoid]] = p;
+  )cpp");
+
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": const "},
+                      ExpectedHintLabelPiece{"Derived", "Derived"},
+                      ExpectedHintLabelPiece{" *const"});
+  assertTypeLinkHints(
+      Source, "2", ExpectedHintLabelPiece{": const "},
+      ExpectedHintLabelPiece{"Derived", "Derived"},
+      ExpectedHintLabelPiece{" *const volatile *volatile *const *volatile"});
+}
+
+TEST(TypeHints, LinksWithRangeBasedForLoop) {
+  StringRef Source(R"cpp(
+    template <class T>
+    struct vector {
+      struct iterator {
+        T operator *() {}
+        bool operator==(iterator) const;
+        bool operator!=(iterator) const;
+        iterator operator++();
+      };
+
+      iterator begin();
+      iterator end();
+    };
+
+    void foo() {
+      struct $S[[S]] {};
+      for (const auto $1[[i]] : vector<S>()) {
+      }
+    }
+  )cpp");
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"S", "S"},
+                      ExpectedHintLabelPiece{" const"});
+}
+
+TEST(TypeHints, TypeDeductionForC) {
+  StringRef Source(R"cpp(
+    struct $Waldo[[Waldo]] {};
+    struct Waldo foo();
+    int main() {
+      auto $theres[[w]] /*: struct Waldo */ = foo();
+    }
+  )cpp");
+
+  assertTypeLinkHints<Language::C23>(Source, "theres",
+                                     ExpectedHintLabelPiece{": struct "},
+                                     ExpectedHintLabelPiece{"Waldo", "Waldo"});
 }
 
 TEST(DesignatorHints, Basic) {
