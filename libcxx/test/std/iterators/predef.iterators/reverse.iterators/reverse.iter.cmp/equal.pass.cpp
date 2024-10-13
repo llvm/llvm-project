@@ -35,7 +35,7 @@ TEST_CONSTEXPR_CXX17 bool tests() {
     test(random_access_iterator<const char*>(s), random_access_iterator<const char*>(s+1), false);
 #if TEST_STD_VER >= 20
     test(cpp20_random_access_iterator<const char*>(s), cpp20_random_access_iterator<const char*>(s), true);
-    test(cpp20_random_access_iterator<const char*>(s), cpp20_random_access_iterator<const char*>(s+1), false);
+    test(cpp20_random_access_iterator<const char*>(s), cpp20_random_access_iterator<const char*>(s + 1), false);
 #endif
     test(s, s, true);
     test(s, s+1, false);

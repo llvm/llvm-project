@@ -23,33 +23,33 @@
 
 template <class It>
 TEST_CONSTEXPR_CXX17 void test_one(It i) {
-    const std::reverse_iterator<It> r = std::make_reverse_iterator(i);
-    assert(r.base() == i);
+  const std::reverse_iterator<It> r = std::make_reverse_iterator(i);
+  assert(r.base() == i);
 }
 
 template <class It>
 TEST_CONSTEXPR_CXX17 void test() {
-    const char* s = "1234567890";
-    It b(s);
-    It e(s+10);
-    while (b != e)
-        test_one (b++);
+  const char* s = "1234567890";
+  It b(s);
+  It e(s + 10);
+  while (b != e)
+    test_one(b++);
 }
 
 TEST_CONSTEXPR_CXX17 bool tests() {
-    test<const char*>();
-    test<bidirectional_iterator<const char*>>();
-    test<random_access_iterator<const char*>>();
+  test<const char*>();
+  test<bidirectional_iterator<const char*>>();
+  test<random_access_iterator<const char*>>();
 #if TEST_STD_VER >= 20
-    test<cpp20_random_access_iterator<const char*>>();
+  test<cpp20_random_access_iterator<const char*>>();
 #endif
-    return true;
+  return true;
 }
 
 int main(int, char**) {
-    tests();
+  tests();
 #if TEST_STD_VER > 14
-    static_assert(tests(), "");
+  static_assert(tests(), "");
 #endif
-    return 0;
+  return 0;
 }

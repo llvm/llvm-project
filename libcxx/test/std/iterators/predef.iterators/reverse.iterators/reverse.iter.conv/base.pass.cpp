@@ -20,26 +20,26 @@
 
 template <class Iter>
 TEST_CONSTEXPR_CXX17 void test() {
-    int i = 0;
-    Iter iter(&i);
-    std::reverse_iterator<Iter> const reverse(iter);
-    typename std::reverse_iterator<Iter>::iterator_type base = reverse.base();
-    assert(base == Iter(&i));
+  int i = 0;
+  Iter iter(&i);
+  std::reverse_iterator<Iter> const reverse(iter);
+  typename std::reverse_iterator<Iter>::iterator_type base = reverse.base();
+  assert(base == Iter(&i));
 }
 
 TEST_CONSTEXPR_CXX17 bool tests() {
-    test<bidirectional_iterator<int*> >();
-    test<random_access_iterator<int*> >();
+  test<bidirectional_iterator<int*> >();
+  test<random_access_iterator<int*> >();
 #if TEST_STD_VER >= 20
-    test<cpp20_random_access_iterator<int*>>();
+  test<cpp20_random_access_iterator<int*>>();
 #endif
-    return true;
+  return true;
 }
 
 int main(int, char**) {
-    tests();
+  tests();
 #if TEST_STD_VER > 14
-    static_assert(tests(), "");
+  static_assert(tests(), "");
 #endif
-    return 0;
+  return 0;
 }

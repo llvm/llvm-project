@@ -49,7 +49,6 @@ TEST_CONSTEXPR_CXX17 void test_one(It1 l, It2 r, std::ptrdiff_t x) {
 template <class Iter>
 TEST_CONSTEXPR_CXX17 void test() {
   // Test same base iterator type
-  using PC  = const char*;
   char s[3] = {0};
 
   test_one(Iter(s), Iter(s), 0);

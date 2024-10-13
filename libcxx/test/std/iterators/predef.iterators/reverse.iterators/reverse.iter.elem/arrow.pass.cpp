@@ -31,7 +31,7 @@ class cpp20_bidirectional_iterator_with_arrow {
 
 public:
   using iterator_category = std::input_iterator_tag;
-  using iterator_concept = std::bidirectional_iterator_tag;
+  using iterator_concept  = std::bidirectional_iterator_tag;
   using value_type        = std::iterator_traits<It>::value_type;
   using difference_type   = std::iterator_traits<It>::difference_type;
 
@@ -68,7 +68,7 @@ public:
     return x.it_ != y.it_;
   }
 
-  friend  It base(const cpp20_bidirectional_iterator_with_arrow& i) { return i.it_; }
+  friend It base(const cpp20_bidirectional_iterator_with_arrow& i) { return i.it_; }
 };
 #endif
 
