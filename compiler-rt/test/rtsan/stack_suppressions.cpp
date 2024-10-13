@@ -9,7 +9,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <vector>
+
+std::atomic<int> cas_atomic{0};
 
 void *MallocViolation() { return malloc(10); }
 
@@ -23,7 +26,11 @@ void VectorViolations() {
   v.reserve(10);
 }
 
-void BlockFunc() [[clang::blocking]] { /* do something blocking */
+void BlockFunc() [[clang::blocking]] {
+  int expected = 0;
+  while (!cas_atomic.compare_exchange_weak(expected, 1)) {
+    expected = cas_atomic.load();
+  }
 }
 
 void *process() [[clang::nonblocking]] {
