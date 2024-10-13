@@ -228,6 +228,12 @@ public:
     return i.distance_from(end_tuple);
   }
 
+  friend constexpr difference_type operator-(default_sentinel_t s, const iterator& i)
+    requires cartesian_is_sized_sentinel<Const, sentinel_t, First, Vs...>
+  {
+    return -(i - s);
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
