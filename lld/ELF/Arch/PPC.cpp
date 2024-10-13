@@ -325,7 +325,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   std::tie(newType, val) = fromDTPREL(rel.type, val);
   switch (newType) {
   case R_PPC_ADDR16:
-    checkIntUInt(loc, val, 16, rel);
+    checkIntUInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
     break;
   case R_PPC_GOT16:
@@ -333,7 +333,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_GOT_TLSLD16:
   case R_PPC_GOT_TPREL16:
   case R_PPC_TPREL16:
-    checkInt(loc, val, 16, rel);
+    checkInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
     break;
   case R_PPC_ADDR16_HA:
@@ -369,8 +369,8 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_PPC_REL14: {
     uint32_t mask = 0x0000FFFC;
-    checkInt(loc, val, 16, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 16, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
@@ -379,8 +379,8 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC_LOCAL24PC:
   case R_PPC_PLTREL24: {
     uint32_t mask = 0x03FFFFFC;
-    checkInt(loc, val, 26, rel);
-    checkAlignment(loc, val, 4, rel);
+    checkInt(ctx, loc, val, 26, rel);
+    checkAlignment(ctx, loc, val, 4, rel);
     write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
