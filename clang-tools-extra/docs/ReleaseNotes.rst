@@ -177,7 +177,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static`` keyword
-  before type qualifier such as ``const``, ``volatile``.
+  before type qualifiers such as ``const`` and ``volatile``.
 
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
