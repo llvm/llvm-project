@@ -276,30 +276,44 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
 
   // Create the dependencies.
   //
-  // 1. DAGInterval empty      2. New is below Old     3. New is above old
-  // ------------------------  -------------------      -------------------
-  //                                         Scan:           DstN:    Scan:
-  //                           +---+         -ScanTopN  +---+DstTopN  -ScanTopN
-  //                           |   |         |          |New|         |
-  //                           |Old|         |          +---+         -ScanBotN
-  //                           |   |         |          +---+
-  //      DstN:    Scan:       +---+DstN:    |          |   |
-  // +---+DstTopN  -ScanTopN   +---+DstTopN  |          |Old|
-  // |New|         |           |New|         |          |   |
-  // +---+DstBotN  -ScanBotN   +---+DstBotN  -ScanBotN  +---+DstBotN
-
-  // 1. This is a new DAG.
-  if (DAGInterval.empty()) {
-    assert(NewInterval == InstrsInterval && "Expected empty DAGInterval!");
-    auto DstRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
+  // 1. This is a new DAG, DAGInterval is empty. Fully scan the whole interval.
+  // +---+       -             -
+  // |   | SrcN  |             |
+  // |   |  |    | SrcRange    |
+  // |New|  v    |             | DstRange
+  // |   | DstN  -             |
+  // |   |                     |
+  // +---+                     -
+  // We are scanning for deps with destination in NewInterval and sources in
+  // NewInterval until DstN, for each DstN.
+  auto FullScan = [this](const Interval<Instruction> Intvl) {
+    auto DstRange = MemDGNodeIntervalBuilder::make(Intvl, *this);
     if (!DstRange.empty()) {
       for (MemDGNode &DstN : drop_begin(DstRange)) {
         auto SrcRange = Interval<MemDGNode>(DstRange.top(), DstN.getPrevNode());
         scanAndAddDeps(DstN, SrcRange);
       }
     }
+  };
+  if (DAGInterval.empty()) {
+    assert(NewInterval == InstrsInterval && "Expected empty DAGInterval!");
+    FullScan(NewInterval);
   }
   // 2. The new section is below the old section.
+  // +---+       -
+  // |   |       |
+  // |Old| SrcN  |
+  // |   |  |    |
+  // +---+  |    | SrcRange
+  // +---+  |    |             -
+  // |   |  |    |             |
+  // |New|  v    |             | DstRange
+  // |   | DstN  -             |
+  // |   |                     |
+  // +---+                     -
+  // We are scanning for deps with destination in NewInterval because the deps
+  // in DAGInterval have already been computed. We consider sources in the whole
+  // range including both NewInterval and DAGInterval until DstN, for each DstN.
   else if (DAGInterval.bottom()->comesBefore(NewInterval.top())) {
     auto DstRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
     auto SrcRangeFull = MemDGNodeIntervalBuilder::make(
@@ -312,16 +326,39 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   }
   // 3. The new section is above the old section.
   else if (NewInterval.bottom()->comesBefore(DAGInterval.top())) {
-    auto DstRange = MemDGNodeIntervalBuilder::make(
-        NewInterval.getUnionInterval(DAGInterval), *this);
-    auto SrcRangeFull = MemDGNodeIntervalBuilder::make(NewInterval, *this);
-    if (!DstRange.empty()) {
-      for (MemDGNode &DstN : drop_begin(DstRange)) {
-        auto SrcRange =
-            Interval<MemDGNode>(SrcRangeFull.top(), DstN.getPrevNode());
-        scanAndAddDeps(DstN, SrcRange);
-      }
-    }
+    // +---+       -             -
+    // |   | SrcN  |             |
+    // |New|  |    | SrcRange    | DstRange
+    // |   |  v    |             |
+    // |   | DstN  -             |
+    // |   |                     |
+    // +---+                     -
+    // +---+
+    // |Old|
+    // |   |
+    // +---+
+    // When scanning for deps with destination in NewInterval we need to fully
+    // scan the interval. This is the same as the scanning for a new DAG.
+    FullScan(NewInterval);
+
+    // +---+       -
+    // |   |       |
+    // |New| SrcN  | SrcRange
+    // |   |  |    |
+    // |   |  |    |
+    // |   |  |    |
+    // +---+  |    -
+    // +---+  |                  -
+    // |Old|  v                  | DstRange
+    // |   | DstN                |
+    // +---+                     -
+    // When scanning for deps with destination in DAGInterval we need to
+    // consider sources from the NewInterval only, because all intra-DAGInterval
+    // dependencies have already been created.
+    auto DstRangeOld = MemDGNodeIntervalBuilder::make(DAGInterval, *this);
+    auto SrcRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
+    for (MemDGNode &DstN : DstRangeOld)
+      scanAndAddDeps(DstN, SrcRange);
   } else {
     llvm_unreachable("We don't expect extending in both directions!");
   }
