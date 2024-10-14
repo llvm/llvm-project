@@ -329,8 +329,7 @@ public:
     NxNoRedVar,
     NxMultRedVar,
     NxUnsupportedRedExpr,
-    NxUnsupportedXteamRedThreadLimit,
-    NxNonRectangularLoopCollapse
+    NxUnsupportedXteamRedThreadLimit
   };
 
   using Stmt2StmtMap = llvm::DenseMap<const Stmt *, const Stmt *>;
@@ -1812,9 +1811,6 @@ public:
   /// For a captured statement, get the single For statement, if it exists,
   /// otherwise return nullptr.
   const ForStmt *getSingleForStmt(const Stmt *S);
-
-  /// Does the loop have a non-rectangular collapse?
-  bool hasNonRectangularLoopCollapse(const OMPLoopDirective &LD);
 
   /// Does the loop init qualify for a NoLoop kernel?
   const VarDecl *checkLoopInit(const OMPLoopDirective &LD);

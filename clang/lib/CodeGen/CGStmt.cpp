@@ -410,8 +410,20 @@ void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
   JumpDest Continue = getJumpDestInCurrentScope(DoneBB);
   BreakContinueStack.push_back(BreakContinue(Continue, Continue));
 
-  // Emit the kernel body block
   EmitBlock(ExecBB);
+
+  for (const Expr *E : LD.finals_conditions()) {
+    if (!E)
+      continue;
+    // Check that loop counter in non-rectangular nest fits into the iteration
+    // space.
+    llvm::BasicBlock *NextBB = createBasicBlock("omp.body.next");
+    EmitBranchOnBoolExpr(E, NextBB, Continue.getBlock(),
+                         getProfileCount(LD.getBody()));
+    EmitBlock(NextBB);
+  }
+
+  // Emit the kernel body block
   EmitOMPNoLoopBody(LD);
   EmitBranch(DoneBB);
 
@@ -1955,6 +1967,16 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
     if (CGM.getLangOpts().OpenMPIsTargetDevice &&
         (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
       EmitBigJumpLoopUpdates(S);
+      for (auto C : BigJumpLoopLD->finals_conditions()) {
+        if (!C)
+          continue;
+        // Check that loop counter in non-rectangular nest fits into the
+        // iteration space.
+        llvm::BasicBlock *NextBB = createBasicBlock("omp.body.next");
+        EmitBranchOnBoolExpr(C, NextBB, Continue.getBlock(),
+                             getProfileCount(BigJumpLoopLD->getBody()));
+        EmitBlock(NextBB);
+      }
       EmitOMPNoLoopBody(*BigJumpLoopLD);
     } else {
       EmitStmt(S.getBody());
