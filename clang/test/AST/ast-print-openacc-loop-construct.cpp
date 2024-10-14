@@ -177,4 +177,43 @@ void foo() {
 #pragma acc serial
 #pragma acc loop gang
   for(;;);
+
+// CHECK: #pragma acc loop worker
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc parallel
+#pragma acc loop worker
+  for(;;);
+
+// CHECK: #pragma acc parallel
+// CHECK-NEXT: #pragma acc loop worker
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc parallel
+#pragma acc loop worker
+  for(;;);
+
+// CHECK: #pragma acc serial
+// CHECK-NEXT: #pragma acc loop worker
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc serial
+#pragma acc loop worker
+  for(;;);
+
+// CHECK: #pragma acc kernels
+// CHECK-NEXT: #pragma acc loop worker(num: 5)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc kernels
+#pragma acc loop worker(5)
+  for(;;);
+
+// CHECK: #pragma acc kernels
+// CHECK-NEXT: #pragma acc loop worker(num: 5)
+// CHECK-NEXT: for (;;)
+// CHECK-NEXT: ;
+#pragma acc kernels
+#pragma acc loop worker(num:5)
+  for(;;);
 }
