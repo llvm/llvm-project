@@ -367,6 +367,10 @@ public:
     using BigIntOther = BigInt<OtherBits, OtherSigned, OtherWordType>;
     const bool should_sign_extend = Signed && other.is_neg();
 
+    static_assert(!(Bits == OtherBits && WORD_SIZE != BigIntOther::WORD_SIZE) &&
+                  "This is currently untested for casting between bigints with "
+                  "the same bit width but different word sizes.");
+
     if constexpr (BigIntOther::WORD_SIZE < WORD_SIZE) {
       // OtherWordType is smaller
       constexpr size_t WORD_SIZE_RATIO = WORD_SIZE / BigIntOther::WORD_SIZE;
