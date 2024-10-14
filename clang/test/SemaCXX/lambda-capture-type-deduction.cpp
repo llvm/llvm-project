@@ -302,20 +302,20 @@ namespace GH47400 {
 
 struct Foo {};
 
-template <int, Foo f> struct Arr {};
+template <int, Foo> struct Arr {};
 
 template <int> struct S {};
 
 constexpr bool foo() {
-  constexpr Foo f; // f constitutes an ODR-use
+  constexpr Foo f;
   [&]<int is>() {
-    [&](Arr<is, f>) {}({});
+    [&](Arr<is, f>) {}({}); // f constitutes an ODR-use
   }.template operator()<42>();
 
   constexpr int C = 1;
-  []() {
-    [](S<C>) { }; // ... while C doesn't
-  };
+  [] {
+    [](S<C>) { }({}); // ... while C doesn't
+  }();
   return true;
 }
 
