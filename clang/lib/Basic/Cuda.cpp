@@ -224,7 +224,8 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
   case OffloadArch::SM_90a:
     return CudaVersion::CUDA_120;
   case OffloadArch::SM_100:
-    return CudaVersion::CUDA_126;
+    return CudaVersion::NEW; // TODO: use specific CUDA version once it's
+                             // public.
   default:
     llvm_unreachable("invalid enum");
   }
