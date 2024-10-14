@@ -4096,9 +4096,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Allocate and zero initialize a small memory pool from the coarse grained
   /// device memory of each device.
   Error preAllocateDeviceMemoryPool() {
-    Error Err = retrieveAllMemoryPools();
-    if (Err)
-      return Plugin::error("Unable to retieve all memmory pools");
 
     void *DevPtr;
     for (AMDGPUMemoryPoolTy *MemoryPool : AllMemoryPools) {
@@ -4109,7 +4106,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         DevPtr = nullptr;
         size_t PreAllocSize = hsa_utils::PER_DEVICE_PREALLOC_SIZE;
 
-        Err = MemoryPool->allocate(PreAllocSize, &DevPtr);
+        Error Err = MemoryPool->allocate(PreAllocSize, &DevPtr);
         if (Err)
           return Plugin::error("Device memory pool preallocation failed");
 
