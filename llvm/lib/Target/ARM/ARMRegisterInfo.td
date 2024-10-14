@@ -200,9 +200,9 @@ def FPEXC   : ARMReg<8,  "fpexc">;
 def FPINST  : ARMReg<9,  "fpinst">;
 def FPINST2 : ARMReg<10, "fpinst2">;
 // These encodings aren't actual instruction encodings, their encoding depends
-// on the instruction they are used in and for VPR 32 was chosen such that it
+// on the instruction they are used in and for VPR 64 was chosen such that it
 // always comes last in spr_reglist_with_vpr.
-def VPR     : ARMReg<32, "vpr">;
+def VPR     : ARMReg<64, "vpr">;
 def FPSCR_NZCVQC
             : ARMReg<2, "fpscr_nzcvqc">;
 def P0      : ARMReg<13, "p0">;

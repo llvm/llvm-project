@@ -44,8 +44,20 @@ vscclrm {d0-d31, vpr}
 // CHECK: vscclrm            {d31, vpr} @ encoding: [0xdf,0xec,0x02,0xfb]
 vscclrm {d31, vpr}
 
+// CHECK: vscclrm            {s31, d16, vpr} @ encoding: [0xdf,0xec,0x03,0xfa]
+vscclrm {s31, d16, vpr}
+
+// CHECK: vscclrm            {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, vpr} @ encoding: [0x9f,0xec,0x40,0x0a]
+vscclrm {s0-s31, d16-d31, vpr}
+
+// CHECK: vscclrm            {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, vpr} @ encoding: [0x9f,0xec,0x40,0x0a]
+vscclrm {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, vpr}
+
 // ERROR: non-contiguous register range
 vscclrm {s0, s3-s4, vpr}
+
+// ERROR: non-contiguous register range
+vscclrm {s31, d16, s30, vpr}
 
 // ERROR: register expected
 vscclrm {s32, vpr}
@@ -73,3 +85,12 @@ vscclrm {vpr, d0}
 
 // ERROR: register list not in ascending order
 vscclrm {vpr, d31}
+
+// ERROR: invalid register in register list
+vscclrm {s0, d0, vpr}
+
+// ERROR: invalid register in register list
+vscclrm {s0, d1, vpr}
+
+// ERROR: invalid register in register list
+vscclrm {d16, s31, vpr}

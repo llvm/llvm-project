@@ -1530,7 +1530,7 @@ static const uint16_t DPRDecoderTable[] = {
 
 // Does this instruction/subtarget permit use of registers d16-d31?
 static bool PermitsD32(const MCInst &Inst, const MCDisassembler *Decoder) {
-  if (Inst.getOpcode() == ARM::VSCCLRMD)
+  if (Inst.getOpcode() == ARM::VSCCLRMD || Inst.getOpcode() == ARM::VSCCLRMS)
     return true;
   const FeatureBitset &featureBits =
     ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
@@ -6461,11 +6461,21 @@ static DecodeStatus DecodeVSCCLRM(MCInst &Inst, unsigned Insn, uint64_t Address,
       return MCDisassembler::Fail;
     }
   } else {
-    unsigned reglist = regs | (fieldFromInstruction(Insn, 22, 1) << 8) |
-                       (fieldFromInstruction(Insn, 12, 4) << 9);
-    if (!Check(S, DecodeSPRRegListOperand(Inst, reglist, Address, Decoder))) {
-      return MCDisassembler::Fail;
-    }
+    unsigned Vd = (fieldFromInstruction(Insn, 12, 4) << 1) |
+                  fieldFromInstruction(Insn, 22, 1);
+    // Registers past s31 are permitted and treated as being half of a d
+    // register, though both halves of each d register must be present.
+    unsigned max_reg = Vd + regs;
+    if (max_reg > 64 || (max_reg > 32 && (max_reg & 1)))
+      S = MCDisassembler::SoftFail;
+    unsigned max_sreg = std::min(32u, max_reg);
+    unsigned max_dreg = std::min(32u, max_reg / 2);
+    for (unsigned i = Vd; i < max_sreg; ++i)
+      if (!Check(S, DecodeSPRRegisterClass(Inst, i, Address, Decoder)))
+        return MCDisassembler::Fail;
+    for (unsigned i = 16; i < max_dreg; ++i)
+      if (!Check(S, DecodeDPRRegisterClass(Inst, i, Address, Decoder)))
+        return MCDisassembler::Fail;
   }
   Inst.addOperand(MCOperand::createReg(ARM::VPR));
 
