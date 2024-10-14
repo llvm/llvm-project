@@ -9,84 +9,54 @@
 #include "IncorrectEnableSharedFromThisCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
 void IncorrectEnableSharedFromThisCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(translationUnitDecl(), this);
+  const auto EnableSharedFromThis =
+      cxxRecordDecl(hasName("enable_shared_from_this"), isInStdNamespace());
+  const auto QType = hasCanonicalType(hasDeclaration(
+      cxxRecordDecl(
+          anyOf(EnableSharedFromThis.bind("enable_rec"),
+                cxxRecordDecl(hasAnyBase(cxxBaseSpecifier(
+                    isPublic(), hasType(hasCanonicalType(
+                                    hasDeclaration(EnableSharedFromThis))))))))
+          .bind("base_rec")));
+  Finder->addMatcher(
+      cxxRecordDecl(
+          hasDirectBase(cxxBaseSpecifier(unless(isPublic()), hasType(QType))
+                            .bind("base")))
+          .bind("derived"),
+      this);
 }
 
 void IncorrectEnableSharedFromThisCheck::check(
     const MatchFinder::MatchResult &Result) {
-
-  class Visitor : public RecursiveASTVisitor<Visitor> {
-    IncorrectEnableSharedFromThisCheck &Check;
-    llvm::SmallPtrSet<const CXXRecordDecl *, 16> EnableSharedClassSet;
-
-  public:
-    explicit Visitor(IncorrectEnableSharedFromThisCheck &Check)
-        : Check(Check) {}
-
-    bool VisitCXXRecordDecl(CXXRecordDecl *RDecl) {
-      if (!RDecl->hasDefinition())
-        return true;
-
-      if (isStdEnableSharedFromThis(RDecl))
-        EnableSharedClassSet.insert(RDecl->getCanonicalDecl());
-
-      for (const CXXBaseSpecifier &Base : RDecl->bases()) {
-        const CXXRecordDecl *BaseRecord =
-            Base.getType()->getAsCXXRecordDecl()->getCanonicalDecl();
-        const bool IsStdEnableSharedFromThisBool =
-            isStdEnableSharedFromThis(BaseRecord);
-
-        if (EnableSharedClassSet.contains(BaseRecord) ||
-            IsStdEnableSharedFromThisBool) {
-
-          if (Base.getAccessSpecifier() != clang::AS_public) {
-            const SourceRange ReplacementRange = Base.getSourceRange();
-            const std::string ReplacementString =
-                // Base.getType().getAsString() results in
-                // std::enable_shared_from_this<ClassName> or
-                // alias/typedefs of std::enable_shared_from_this<ClassName>
-                "public " + Base.getType().getAsString();
-            const FixItHint Hint = FixItHint::CreateReplacement(
-                ReplacementRange, ReplacementString);
-            Check.diag(RDecl->getLocation(),
-                       "%2 is not publicly inheriting from "
-                       "%select{%1 which inherits from "
-                       "'std::enable_shared_from_this',|'std::enable_shared_"
-                       "from_this',}0 "
-                       "which will cause unintended behaviour "
-                       "when using 'shared_from_this'; make the inheritance "
-                       "public",
-                       DiagnosticIDs::Warning)
-                << IsStdEnableSharedFromThisBool << BaseRecord << RDecl << Hint;
-          }
-
-          EnableSharedClassSet.insert(RDecl->getCanonicalDecl());
-        }
-      }
-      return true;
-    }
-
-  private:
-    // FIXME: configure this for boost in the future
-    bool isStdEnableSharedFromThis(const CXXRecordDecl *RDecl) {
-      // this is the equivalent of
-      // RDecl->getQualifiedNameAsString() == "std::enable_shared_from_this"
-      return RDecl->getName() == "enable_shared_from_this" &&
-             RDecl->isInStdNamespace();
-    }
-  };
-
-  Visitor(*this).TraverseAST(*Result.Context);
+  const auto *BaseSpec = Result.Nodes.getNodeAs<CXXBaseSpecifier>("base");
+  const auto *Base = Result.Nodes.getNodeAs<CXXRecordDecl>("base_rec");
+  const auto *Derived = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
+  const bool IsEnableSharedFromThisDirectBase =
+      Result.Nodes.getNodeAs<CXXRecordDecl>("enable_rec") == Base;
+  const SourceRange ReplacementRange = BaseSpec->getSourceRange();
+  const std::string ReplacementString =
+      // BaseSpec->getType().getAsString() results in
+      // std::enable_shared_from_this<ClassName> or
+      // alias/typedefs of std::enable_shared_from_this<ClassName>
+      "public " + BaseSpec->getType().getAsString();
+  const FixItHint Hint =
+      FixItHint::CreateReplacement(ReplacementRange, ReplacementString);
+  diag(Derived->getLocation(),
+       "%2 is not publicly inheriting from "
+       "%select{%1 which inherits from |}0'std::enable_shared_"
+       "from_this', "
+       "which will cause unintended behaviour "
+       "when using 'shared_from_this'; make the inheritance "
+       "public",
+       DiagnosticIDs::Warning)
+      << IsEnableSharedFromThisDirectBase << Base << Derived << Hint;
 }
 
 } // namespace clang::tidy::bugprone
