@@ -1,4 +1,4 @@
-//===-- Implementation of issignaling function ----------------------------===//
+//===-- Implementation header for remap_file_pages function -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/issignaling.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_SYS_MMAN_REMAP_FILE_PAGES_H
+#define LLVM_LIBC_SRC_SYS_MMAN_REMAP_FILE_PAGES_H
+
 #include "src/__support/macros/config.h"
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, issignaling, (double x)) {
-  return fputil::issignaling_impl(x);
-}
+int remap_file_pages(void *addr, size_t size, int prot, size_t pgoff,
+                     int flags);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_SYS_MMAN_REMAP_FILE_PAGES_H
