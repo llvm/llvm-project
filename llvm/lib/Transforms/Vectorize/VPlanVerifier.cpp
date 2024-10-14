@@ -178,6 +178,10 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
                  return VerifyEVLUse(*I, 3);
                }
              })
+             .Case<VPWidenIntrinsicRecipe>(
+                 [&](const VPWidenIntrinsicRecipe *I) {
+                   return VerifyEVLUse(*I, I->getNumOperands() - 1);
+                 })
              .Default([&](const VPUser *U) {
                errs() << "EVL has unexpected user\n";
                return false;
