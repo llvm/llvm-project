@@ -749,6 +749,10 @@ class Base(unittest.TestCase):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
 
+    def getPlatformAvailablePorts(self):
+        """Return ports available for connection to a lldb server on the remote platform."""
+        return configuration.lldb_platform_available_ports
+
     @classmethod
     def setUpCommands(cls):
         commands = [
