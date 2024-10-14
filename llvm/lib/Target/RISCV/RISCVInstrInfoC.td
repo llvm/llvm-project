@@ -401,9 +401,11 @@ def C_SD : CStore_rri<0b111, "c.sd", GPRC, uimm8_lsb000>,
   let Inst{6-5} = imm{7-6};
 }
 
-let rd = 0, imm = 0, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_NOP : RVInst16CI<0b000, 0b01, (outs), (ins), "c.nop", "">,
             Sched<[WriteNop]> {
+  let rd = 0;
+  let imm = 0;
   let Inst{6-2} = 0;
 }
 
@@ -639,9 +641,9 @@ def C_UNIMP : RVInst16<(outs), (ins), "c.unimp", "", [], InstFormatOther>,
 let Predicates = [HasStdExtCOrZca, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
     mayStore = 0 in {
 
-let rd = 0 in
 def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
                             "c.nop", "$imm">, Sched<[WriteNop]> {
+  let rd = 0;
   let Inst{6-2} = imm{4-0};
 }
 
