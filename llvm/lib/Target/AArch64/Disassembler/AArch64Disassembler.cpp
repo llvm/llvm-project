@@ -51,7 +51,7 @@ static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
                                          const MCDisassembler *Decoder);
 static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
                              const MCDisassembler *Decoder);
-template <unsigned Min = 0, unsigned Max = 30>
+template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder);
@@ -366,7 +366,7 @@ template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
                                          uint64_t Address,
                                          const MCDisassembler *Decoder) {
-  unsigned Reg = RegNo * 2 + Min;
+  unsigned Reg = (RegNo * 2) + Min;
   if (Reg < Min || Reg > Max || (Reg & 1))
     return Fail;
   unsigned Register =
@@ -379,11 +379,12 @@ template <unsigned Min, unsigned Max>
 static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder) {
-  if ((RegNo * 2) + Min > Max)
+  unsigned Reg = (RegNo * 2) + Min;
+  if(Reg < Min || Reg > Max || (Reg & 1))
     return Fail;
+
   unsigned Register =
-      AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(RegNo * 2 +
-                                                                    Min);
+      AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(Reg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -393,8 +394,9 @@ static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
 // 111
 static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
                              const MCDisassembler *Decoder) {
-  //  (Z28 => RegNo = 4) Z28 = 4 => Z28 + 24 = 28
-  unsigned Reg = (RegNo > 3) ? (RegNo + 24) : (RegNo + 20);
+  // RegNo <  4 => Reg is in Z20-Z23 (offset 20)
+  // RegNo >= 4 => Reg is in Z28-Z31 (offset 24)
+  unsigned Reg = (RegNo < 4) ? (RegNo + 20) : (RegNo + 24);
   if (!(Reg >= 20 && Reg <= 23) && !(Reg >= 28 && Reg <= 31))
     return Fail;
   unsigned Register =

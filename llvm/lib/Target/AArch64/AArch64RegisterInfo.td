@@ -1213,11 +1213,10 @@ def ZPRMul2AsmOp64_Hi : ZPRAsmOperand<"VectorD_Hi", 64, "Mul2_Hi">;
 def ZPR_K : RegisterClass<"AArch64", [untyped], 128,
                           (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>;
 
-let EncoderMethod = "EncodeZK",
-    DecoderMethod = "DecodeZK" in {
-  def ZK : RegisterOperand<ZPR_K, "printSVERegOp<>">{
-    let ParserMatchClass = ZPRAsmOperand<"Vector_20to23or28to31", 0, "_K">;
-  }
+def ZK : RegisterOperand<ZPR_K, "printSVERegOp<>">{
+  let EncoderMethod = "EncodeZK";
+  let DecoderMethod = "DecodeZK";
+  let ParserMatchClass = ZPRAsmOperand<"Vector_20to23or28to31", 0, "_K">;
 }
 
 def ZPR8Mul2_Lo  : ZPRMul2_MinToMaxRegOp<"b", ZPRMul2AsmOp8_Lo,   0, 14, ElementSizeB, ZPRMul2_Lo>;
@@ -1379,8 +1378,8 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs, string RegClassSuffix = ""
                                  # "AArch64::ZPR" # RegClassSuffix # "RegClassID" # ">";
 }
 
-let EncoderMethod = "EncodeRegMul_MinMax<2>",
-    DecoderMethod = "DecodeZPR2Mul2RegisterClass" in {
+let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 30>",
+    DecoderMethod = "DecodeZPR2Mul2RegisterClass<0, 30>" in {
   def ZZ_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,0>"> {
     let ParserMatchClass = ZPRVectorListMul<0, 2, "Mul2">;
   }
@@ -1459,7 +1458,7 @@ let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
   }
 }
 
-let EncoderMethod = "EncodeRegMul_MinMax<2, 16>",
+let EncoderMethod = "EncodeRegMul_MinMax<2, 16, 30>",
     DecoderMethod = "DecodeZPR2Mul2RegisterClass<16, 31>" in {
   def ZZ_b_mul_r_Hi : RegisterOperand<ZPR2Mul2_Hi, "printTypedVectorList<0,'b'>"> {
     let ParserMatchClass = ZPRVectorListMul<8, 2, "Mul2_Hi">;
