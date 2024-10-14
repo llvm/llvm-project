@@ -45,6 +45,15 @@ std::string lld::toString(RelType type) {
   return std::string(s);
 }
 
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s, RelType type) {
+  StringRef buf = getELFRelocationTypeName(s.ctx.arg.emachine, type);
+  if (buf == "Unknown")
+    s << "Unknown (" << type << ')';
+  else
+    s << buf;
+  return s;
+}
+
 void elf::setTarget(Ctx &ctx) {
   switch (ctx.arg.emachine) {
   case EM_386:

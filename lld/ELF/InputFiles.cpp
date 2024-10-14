@@ -66,6 +66,12 @@ std::string lld::toString(const InputFile *f) {
   return std::string(f->toStringCache);
 }
 
+const ELFSyncStream &elf::operator<<(const ELFSyncStream &s,
+                                     const InputFile *f) {
+  s << toString(f);
+  return s;
+}
+
 static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
   unsigned char size;
   unsigned char endian;
