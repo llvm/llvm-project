@@ -9,8 +9,10 @@
 // <ciso646>
 
 // check that <ciso646> is removed in C++20
+// When built with modules, <ciso646> should be omitted.
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: clang-modules-build
 
 #include "test_macros.h"
 

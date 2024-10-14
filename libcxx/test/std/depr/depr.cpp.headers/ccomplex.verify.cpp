@@ -9,8 +9,10 @@
 // <ccomplex>
 
 // check that <ccomplex> is deprecated in C++17 and removed in C++20
+// When built with modules, <ccomplex> should be omitted.
 
 // UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: clang-modules-build
 
 #include "test_macros.h"
 
