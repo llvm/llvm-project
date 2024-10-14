@@ -228,7 +228,7 @@ public:
   /// UnscheduledSuccs counter of the predecessor if this node has not been
   /// scheduled.
   void addMemPred(MemDGNode *PredN) {
-    auto Inserted = MemPreds.insert(PredN).second;
+    [[maybe_unused]] auto Inserted = MemPreds.insert(PredN).second;
     assert(Inserted && "PredN already exists!");
     if (!Scheduled) {
       ++PredN->UnscheduledSuccs;
