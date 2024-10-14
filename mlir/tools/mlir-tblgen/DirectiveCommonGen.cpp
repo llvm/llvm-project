@@ -42,7 +42,7 @@ using llvm::RecordKeeper;
 // Clause record in OMP.td. This name can be used to specify the type of the
 // OpenMP operation's operand. The allowedClauseValues field provides the list
 // of ClauseValues which are part of the enumeration.
-static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
+static bool emitDecls(const RecordKeeper &records, llvm::StringRef dialect,
                       raw_ostream &os) {
   // A dialect must be selected for the generated attributes.
   if (dialect.empty()) {
@@ -51,10 +51,10 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
   }
 
   const auto directiveLanguages =
-      recordKeeper.getAllDerivedDefinitions("DirectiveLanguage");
+      records.getAllDerivedDefinitions("DirectiveLanguage");
   assert(!directiveLanguages.empty() && "DirectiveLanguage missing.");
 
-  for (const Clause c : recordKeeper.getAllDerivedDefinitions("Clause")) {
+  for (const Clause c : records.getAllDerivedDefinitions("Clause")) {
     const auto &clauseVals = c.getClauseVals();
     if (clauseVals.empty())
       continue;

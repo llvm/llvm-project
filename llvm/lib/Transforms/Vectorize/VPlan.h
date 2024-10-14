@@ -930,6 +930,10 @@ public:
   const Instruction *getUnderlyingInstr() const {
     return cast<Instruction>(getUnderlyingValue());
   }
+
+  /// Return the cost of this VPSingleDefRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 };
 
 /// Class to record LLVM IR flag for a recipe along with it.
@@ -958,7 +962,6 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
-protected:
   struct GEPFlagsTy {
     char IsInBounds : 1;
     GEPFlagsTy(bool IsInBounds) : IsInBounds(IsInBounds) {}
@@ -1309,6 +1312,12 @@ public:
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
 
+  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags,
+                DebugLoc DL = {}, const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC,
+                            ArrayRef<VPValue *>({Ptr, Offset}), Flags, DL),
+        Opcode(VPInstruction::PtrAdd), Name(Name.str()) {}
+
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
 
@@ -1405,6 +1414,10 @@ public:
   }
 
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPIRInstruction.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   Instruction &getInstruction() { return I; }
 
@@ -1614,32 +1627,34 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
-  /// Scalar type of the result produced by the intrinsic.
+  /// Scalar return type of the intrinsic.
   Type *ResultTy;
 
+  /// True if the intrinsic may read from memory.
+  bool MayReadFromMemory;
+
+  /// True if the intrinsic may read write to memory.
+  bool MayWriteToMemory;
+
+  /// True if the intrinsic may have side-effects.
+  bool MayHaveSideEffects;
+
 public:
-  template <typename IterT>
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
-                         iterator_range<IterT> CallArguments, Type *Ty,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
-        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {}
-  template <typename IterT>
-  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
-                         iterator_range<IterT> CallArguments, Type *Ty,
-                         DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
-        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {}
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayReadFromMemory(CI.mayReadFromMemory()),
+        MayWriteToMemory(CI.mayWriteToMemory()),
+        MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
-    return isa_and_nonnull<CallInst>(getUnderlyingValue())
-               ? new VPWidenIntrinsicRecipe(
-                     *cast<CallInst>(getUnderlyingValue()), VectorIntrinsicID,
-                     operands(), ResultTy, getDebugLoc())
-               : new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(),
-                                            ResultTy, getDebugLoc());
+    return new VPWidenIntrinsicRecipe(*cast<CallInst>(getUnderlyingValue()),
+                                      VectorIntrinsicID, {op_begin(), op_end()},
+                                      ResultTy, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
@@ -1651,10 +1666,20 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  Type *getResultTy() const { return ResultTy; }
+  /// Return the scalar return type of the intrinsic.
+  Type *getResultType() const { return ResultTy; }
 
   /// Return to name of the intrinsic as string.
   StringRef getIntrinsicName() const;
+
+  /// Returns true if the intrinsic may read from memory.
+  bool mayReadFromMemory() const { return MayReadFromMemory; }
+
+  /// Returns true if the intrinsic may write to memory.
+  bool mayWriteToMemory() const { return MayWriteToMemory; }
+
+  /// Returns true if the intrinsic may have side-effects.
+  bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1673,9 +1698,8 @@ class VPWidenCallRecipe : public VPRecipeWithIRFlags {
   Function *Variant;
 
 public:
-  template <typename IterT>
   VPWidenCallRecipe(Value *UV, Function *Variant,
-                    iterator_range<IterT> CallArguments, DebugLoc DL = {})
+                    ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
                             *cast<Instruction>(UV)),
         Variant(Variant) {
@@ -1687,8 +1711,8 @@ public:
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
-                                 getDebugLoc());
+    return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
+                                 {op_begin(), op_end()}, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -2288,6 +2312,10 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenMemoryRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2372,6 +2400,10 @@ public:
 
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPInterleaveRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2605,6 +2637,10 @@ public:
   /// Generate the extraction of the appropriate bit from the block mask and the
   /// conditional branch.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPBranchOnMaskRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

@@ -20,7 +20,7 @@ class SPIRVTypeConverter;
 namespace cf {
 /// Appends to a pattern list additional patterns for translating ControlFLow
 /// ops to SPIR-V ops.
-void populateControlFlowToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateControlFlowToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                         RewritePatternSet &patterns);
 } // namespace cf
 } // namespace mlir

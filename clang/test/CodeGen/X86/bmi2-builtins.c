@@ -71,6 +71,18 @@ char pext32_1[_pext_u32(0x89ABCDEF,  0x000000F0) == 0x0000000E ? 1 : -1];
 char pext32_2[_pext_u32(0x89ABCDEF,  0xF00000F0) == 0x0000008E ? 1 : -1];
 char pext32_3[_pext_u32(0x89ABCDEF,  0xFFFFFFFF) == 0x89ABCDEF ? 1 : -1];
 
+constexpr unsigned long long
+test_mulx_u32(unsigned int X, unsigned int Y)
+{
+  unsigned int H{};
+  return _mulx_u32(X, Y, &H) | ((unsigned long long) H << 32);
+}
+
+void mulxu32() {
+  constexpr unsigned X = 0x89ABCDEF, Y = 0x01234567;
+  static_assert(test_mulx_u32(X,Y) == ((unsigned long long)X * Y));
+}
+
 #ifdef __x86_64__
 char bzhi64_0[_bzhi_u64(0x0123456789ABCDEFULL,   0) == 0x0000000000000000ULL ? 1 : -1];
 char bzhi64_1[_bzhi_u64(0x0123456789ABCDEFULL,  32) == 0x0000000089ABCDEFULL ? 1 : -1];
@@ -86,5 +98,17 @@ char pext64_0[_pext_u64(0x0123456789ABCDEFULL, 0x0000000000000000ULL) == 0x00000
 char pext64_1[_pext_u64(0x0123456789ABCDEFULL, 0x00000000000000F0ULL) == 0x000000000000000EULL ? 1 : -1];
 char pext64_2[_pext_u64(0x0123456789ABCDEFULL, 0xF00000F0F00000F0ULL) == 0x000000000000068EULL ? 1 : -1];
 char pext64_3[_pext_u64(0x0123456789ABCDEFULL, 0xFFFFFFFFFFFFFFFFULL) == 0x0123456789ABCDEFULL ? 1 : -1];
+
+constexpr unsigned __int128
+test_mulx_u64(unsigned long long X, unsigned long long Y)
+{
+  unsigned long long H{};
+  return _mulx_u64(X, Y, &H) | ((unsigned __int128) H << 64);
+}
+
+void mulxu64() {
+  constexpr unsigned long long X = 0x0123456789ABCDEFULL, Y = 0xFEDCBA9876543210ULL;
+  static_assert(test_mulx_u64(X,Y) == ((unsigned __int128)X * Y));
+}
 #endif
 #endif
