@@ -1198,13 +1198,13 @@ def AllowRuntimeCheck : Builtin {
 
 def ShuffleVector : Builtin {
   let Spellings = ["__builtin_shufflevector"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ConvertVector : Builtin {
   let Spellings = ["__builtin_convertvector"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
