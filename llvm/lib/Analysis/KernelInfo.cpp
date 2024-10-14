@@ -80,12 +80,27 @@ static bool isKernelFunction(Function &F) {
   return F.hasFnAttribute("kernel");
 }
 
-static void identifyFunction(OptimizationRemark &R, const Function &F) {
-  if (auto *SubProgram = F.getSubprogram()) {
-    if (SubProgram->isArtificial())
-      R << "artificial ";
+static void identifyCallee(OptimizationRemark &R, const Module *M,
+                           const Value *V, StringRef Kind = "") {
+  SmallString<100> Name; // might be function name or asm expression
+  if (const Function *F = dyn_cast<Function>(V)) {
+    if (auto *SubProgram = F->getSubprogram()) {
+      if (SubProgram->isArtificial())
+        R << "artificial ";
+      Name = SubProgram->getName();
+    }
   }
-  R << "function '" << F.getName() << "'";
+  if (Name.empty()) {
+    raw_svector_ostream OS(Name);
+    V->printAsOperand(OS, /*PrintType=*/false, M);
+  }
+  if (!Kind.empty())
+    R << Kind << " ";
+  R << "'" << Name << "'";
+}
+
+static void identifyFunction(OptimizationRemark &R, const Function &F) {
+  identifyCallee(R, F.getParent(), &F, "function");
 }
 
 static void remarkAlloca(OptimizationRemarkEmitter &ORE, const Function &Caller,
@@ -132,21 +147,8 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
     OptimizationRemark R(DEBUG_TYPE, RemarkKind, &Call);
     R << "in ";
     identifyFunction(R, Caller);
-    R << ", " << CallKind << ", callee is";
-    Value *Callee = Call.getCalledOperand();
-    SmallString<100> Name; // might be function name or asm expression
-    if (const Function *FnCallee = dyn_cast<Function>(Callee)) {
-      if (auto *SubProgram = FnCallee->getSubprogram()) {
-        if (SubProgram->isArtificial())
-          R << " artificial";
-      }
-      Name = FnCallee->getName();
-    }
-    if (Name.empty()) {
-      raw_svector_ostream OS(Name);
-      Callee->printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
-    }
-    R << " '" << Name << "'";
+    R << ", " << CallKind << ", callee is ";
+    identifyCallee(R, Caller.getParent(), Call.getCalledOperand());
     return R;
   });
 }
