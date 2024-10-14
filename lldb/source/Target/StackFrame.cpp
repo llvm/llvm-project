@@ -512,8 +512,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     return ValueObjectSP();
 
   if (var_expr.empty()) {
-    error.SetErrorStringWithFormat("invalid variable path '%s'",
-                                   var_expr.str().c_str());
+    error = Status::FromErrorStringWithFormatv("invalid variable path '{0}'",
+                                               var_expr);
     return ValueObjectSP();
   }
 
@@ -614,8 +614,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       return valobj_sp;
   }
   if (!valobj_sp) {
-    error.SetErrorStringWithFormat("no variable named '%s' found in this frame",
-                                   name_const_string.GetCString());
+    error = Status::FromErrorStringWithFormatv(
+        "no variable named '{0}' found in this frame", name_const_string);
     return ValueObjectSP();
   }
 
@@ -651,21 +651,22 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         if (valobj_sp->GetCompilerType().IsReferenceType()) {
           valobj_sp = valobj_sp->GetSyntheticValue()->Dereference(deref_error);
           if (!valobj_sp || deref_error.Fail()) {
-            error.SetErrorStringWithFormatv(
-                "Failed to dereference reference type: %s", deref_error);
+            error = Status::FromErrorStringWithFormatv(
+                "Failed to dereference reference type: {0}", deref_error);
             return ValueObjectSP();
           }
         }
 
         valobj_sp = valobj_sp->Dereference(deref_error);
         if (!valobj_sp || deref_error.Fail()) {
-          error.SetErrorStringWithFormatv(
+          error = Status::FromErrorStringWithFormatv(
               "Failed to dereference sythetic value: {0}", deref_error);
           return ValueObjectSP();
         }
         // Some synthetic plug-ins fail to set the error in Dereference
         if (!valobj_sp) {
-          error.SetErrorString("Failed to dereference sythetic value");
+          error =
+              Status::FromErrorString("Failed to dereference sythetic value");
           return ValueObjectSP();
         }
         expr_is_ptr = false;
@@ -689,13 +690,13 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // class/union/struct instance or reference.
           valobj_sp->GetExpressionPath(var_expr_path_strm);
           if (actual_is_ptr)
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "\"%s\" is a pointer and . was used to attempt to access "
                 "\"%s\". Did you mean \"%s->%s\"?",
                 var_expr_path_strm.GetData(), child_name.GetCString(),
                 var_expr_path_strm.GetData(), var_expr.str().c_str());
           else
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "\"%s\" is not a pointer and -> was used to attempt to "
                 "access \"%s\". Did you mean \"%s.%s\"?",
                 var_expr_path_strm.GetData(), child_name.GetCString(),
@@ -718,20 +719,20 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
             // We added a "this->" or "self->" to the beginning of the
             // expression and this is the first pointer ivar access, so just
             // return the normal error
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "no variable or instance variable named '%s' found in "
                 "this frame",
                 name_const_string.GetCString());
           } else {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
             if (child_name) {
-              error.SetErrorStringWithFormat(
+              error = Status::FromErrorStringWithFormat(
                   "\"%s\" is not a member of \"(%s) %s\"",
                   child_name.GetCString(),
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
             } else {
-              error.SetErrorStringWithFormat(
+              error = Status::FromErrorStringWithFormat(
                   "incomplete expression path after \"%s\" in \"%s\"",
                   var_expr_path_strm.GetData(),
                   original_var_expr.str().c_str());
@@ -755,7 +756,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       // Array member access, or treating pointer as an array Need at least two
       // brackets and a number
       if (var_expr.size() <= 2) {
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "invalid square bracket encountered after \"%s\" in \"%s\"",
             var_expr_path_strm.GetData(), var_expr.str().c_str());
         return ValueObjectSP();
@@ -768,7 +769,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       // If there's no closing brace, this is an invalid expression.
       size_t end_pos = var_expr.find_first_of(']');
       if (end_pos == llvm::StringRef::npos) {
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "missing closing square bracket in expression \"%s\"",
             var_expr_path_strm.GetData());
         return ValueObjectSP();
@@ -781,8 +782,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       if (index_expr.consumeInteger(0, child_index)) {
         // If there was no integer anywhere in the index expression, this is
         // erroneous expression.
-        error.SetErrorStringWithFormat("invalid index expression \"%s\"",
-                                       index_expr.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid index expression \"%s\"", index_expr.str().c_str());
         return ValueObjectSP();
       }
 
@@ -797,7 +798,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           ValueObjectSP temp(valobj_sp->Dereference(deref_error));
           if (!temp || deref_error.Fail()) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "could not dereference \"(%s) %s\"",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
@@ -814,7 +815,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           ValueObjectSP temp(valobj_sp->GetChildAtIndex(0));
           if (!temp) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "could not get item 0 for \"(%s) %s\"",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
@@ -835,7 +836,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
             is_objc_pointer = false;
 
           if (no_synth_child && is_objc_pointer) {
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "\"(%s) %s\" is an Objective-C pointer, and cannot be "
                 "subscripted",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -851,7 +852,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                                               the original object */
             {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
-              error.SetErrorStringWithFormat(
+              error = Status::FromErrorStringWithFormat(
                   "\"(%s) %s\" is not an array type",
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
@@ -861,7 +862,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                                                                 not have that
                                                                 many values */) {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
-              error.SetErrorStringWithFormat(
+              error = Status::FromErrorStringWithFormat(
                   "array index %ld is not valid for \"(%s) %s\"", child_index,
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
@@ -869,7 +870,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
               child_valobj_sp = synthetic->GetChildAtIndex(child_index);
               if (!child_valobj_sp) {
                 valobj_sp->GetExpressionPath(var_expr_path_strm);
-                error.SetErrorStringWithFormat(
+                error = Status::FromErrorStringWithFormat(
                     "array index %ld is not valid for \"(%s) %s\"", child_index,
                     valobj_sp->GetTypeName().AsCString("<invalid type>"),
                     var_expr_path_strm.GetData());
@@ -880,7 +881,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 valobj_sp->GetSyntheticArrayMember(child_index, true);
             if (!child_valobj_sp) {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
-              error.SetErrorStringWithFormat(
+              error = Status::FromErrorStringWithFormat(
                   "failed to use pointer as array for index %ld for "
                   "\"(%s) %s\"",
                   child_index,
@@ -908,7 +909,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
           if (!child_valobj_sp) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "array index %ld is not valid for \"(%s) %s\"", child_index,
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
@@ -919,7 +920,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
               child_index, child_index, true);
           if (!child_valobj_sp) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "bitfield range %ld-%ld is not valid for \"(%s) %s\"",
                 child_index, child_index,
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -933,7 +934,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                                             original object */
           {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "\"(%s) %s\" is not an array type",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
@@ -941,7 +942,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                      synthetic->GetNumChildrenIgnoringErrors() /* synthetic
                                      does not have that many values */) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "array index %ld is not valid for \"(%s) %s\"", child_index,
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
@@ -949,7 +950,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
             child_valobj_sp = synthetic->GetChildAtIndex(child_index);
             if (!child_valobj_sp) {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
-              error.SetErrorStringWithFormat(
+              error = Status::FromErrorStringWithFormat(
                   "array index %ld is not valid for \"(%s) %s\"", child_index,
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
@@ -975,16 +976,18 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
       // this is most probably a BitField, let's take a look
       if (index_expr.front() != '-') {
-        error.SetErrorStringWithFormat("invalid range expression \"'%s'\"",
-                                       original_index_expr.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid range expression \"'%s'\"",
+            original_index_expr.str().c_str());
         return ValueObjectSP();
       }
 
       index_expr = index_expr.drop_front();
       long final_index = 0;
       if (index_expr.getAsInteger(0, final_index)) {
-        error.SetErrorStringWithFormat("invalid range expression \"'%s'\"",
-                                       original_index_expr.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid range expression \"'%s'\"",
+            original_index_expr.str().c_str());
         return ValueObjectSP();
       }
 
@@ -1004,7 +1007,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         ValueObjectSP temp(valobj_sp->Dereference(deref_error));
         if (!temp || deref_error.Fail()) {
           valobj_sp->GetExpressionPath(var_expr_path_strm);
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "could not dereference \"(%s) %s\"",
               valobj_sp->GetTypeName().AsCString("<invalid type>"),
               var_expr_path_strm.GetData());
@@ -1020,7 +1023,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         ValueObjectSP temp(valobj_sp->GetChildAtIndex(0));
         if (!temp) {
           valobj_sp->GetExpressionPath(var_expr_path_strm);
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "could not get item 0 for \"(%s) %s\"",
               valobj_sp->GetTypeName().AsCString("<invalid type>"),
               var_expr_path_strm.GetData());
@@ -1034,7 +1037,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           valobj_sp->GetSyntheticBitFieldChild(child_index, final_index, true);
       if (!child_valobj_sp) {
         valobj_sp->GetExpressionPath(var_expr_path_strm);
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "bitfield range %ld-%ld is not valid for \"(%s) %s\"", child_index,
             final_index, valobj_sp->GetTypeName().AsCString("<invalid type>"),
             var_expr_path_strm.GetData());
@@ -1059,7 +1062,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       // Failure...
       {
         valobj_sp->GetExpressionPath(var_expr_path_strm);
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "unexpected char '%c' encountered after \"%s\" in \"%s\"",
             separator_type, var_expr_path_strm.GetData(),
             var_expr.str().c_str());
@@ -1086,7 +1089,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_cfa_is_valid) {
-    m_frame_base_error.SetErrorString(
+    m_frame_base_error = Status::FromErrorString(
         "No frame base available for this historical stack frame.");
     return false;
   }
@@ -1108,11 +1111,12 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
           m_sc.function->GetFrameBaseExpression().Evaluate(
               &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr);
       if (!expr_value)
-        m_frame_base_error = expr_value.takeError();
+        m_frame_base_error = Status::FromError(expr_value.takeError());
       else
         m_frame_base = expr_value->ResolveValue(&exe_ctx);
     } else {
-      m_frame_base_error.SetErrorString("No function in symbol context.");
+      m_frame_base_error =
+          Status::FromErrorString("No function in symbol context.");
     }
   }
 
@@ -1120,14 +1124,14 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
     frame_base = m_frame_base;
 
   if (error_ptr)
-    *error_ptr = m_frame_base_error;
+    *error_ptr = m_frame_base_error.Clone();
   return m_frame_base_error.Success();
 }
 
 DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
   if (!m_sc.function) {
     if (error_ptr) {
-      error_ptr->SetErrorString("No function in symbol context.");
+      *error_ptr = Status::FromErrorString("No function in symbol context.");
     }
     return nullptr;
   }

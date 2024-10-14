@@ -550,13 +550,13 @@ void ProcessMachCore::CleanupMemoryRegionPermissions() {
 Status ProcessMachCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
-    error.SetErrorString("invalid core module");
+    error = Status::FromErrorString("invalid core module");
     return error;
   }
 
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   if (core_objfile == nullptr) {
-    error.SetErrorString("invalid core object file");
+    error = Status::FromErrorString("invalid core object file");
     return error;
   }
 
@@ -598,19 +598,19 @@ bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
-      std::set<tid_t> used_tids;
+      std::set<lldb::tid_t> used_tids;
       const uint32_t num_threads = core_objfile->GetNumThreadContexts();
-      std::vector<tid_t> tids;
+      std::vector<lldb::tid_t> tids;
       if (core_objfile->GetCorefileThreadExtraInfos(tids)) {
         assert(tids.size() == num_threads);
 
         // Find highest tid value.
-        tid_t highest_tid = 0;
+        lldb::tid_t highest_tid = 0;
         for (uint32_t i = 0; i < num_threads; i++) {
           if (tids[i] != LLDB_INVALID_THREAD_ID && tids[i] > highest_tid)
             highest_tid = tids[i];
         }
-        tid_t current_unused_tid = highest_tid + 1;
+        lldb::tid_t current_unused_tid = highest_tid + 1;
         for (uint32_t i = 0; i < num_threads; i++) {
           if (tids[i] == LLDB_INVALID_THREAD_ID) {
             tids[i] = current_unused_tid++;
@@ -701,7 +701,7 @@ size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
       } else {
         // Only set the error if we didn't read any bytes
         if (bytes_read == 0)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "core file does not contain 0x%" PRIx64, curr_addr);
         break;
       }

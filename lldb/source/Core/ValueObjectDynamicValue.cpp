@@ -130,7 +130,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
   if (!m_parent->UpdateValueIfNeeded(false)) {
     // The dynamic value failed to get an error, pass the error along
     if (m_error.Success() && m_parent->GetError().Fail())
-      m_error = m_parent->GetError();
+      m_error = m_parent->GetError().Clone();
     return false;
   }
 
@@ -256,7 +256,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
       SetValueDidChange(true);
     ClearDynamicTypeInformation();
     m_dynamic_type_info.Clear();
-    m_error.SetErrorString("no dynamic type found");
+    m_error = Status::FromErrorString("no dynamic type found");
     return false;
   }
 
@@ -328,7 +328,7 @@ bool ValueObjectDynamicValue::IsInScope() { return m_parent->IsInScope(); }
 bool ValueObjectDynamicValue::SetValueFromCString(const char *value_str,
                                                   Status &error) {
   if (!UpdateValueIfNeeded(false)) {
-    error.SetErrorString("unable to read value");
+    error = Status::FromErrorString("unable to read value");
     return false;
   }
 
@@ -336,7 +336,7 @@ bool ValueObjectDynamicValue::SetValueFromCString(const char *value_str,
   uint64_t parent_value = m_parent->GetValueAsUnsigned(UINT64_MAX);
 
   if (my_value == UINT64_MAX || parent_value == UINT64_MAX) {
-    error.SetErrorString("unable to read value");
+    error = Status::FromErrorString("unable to read value");
     return false;
   }
 
@@ -348,7 +348,7 @@ bool ValueObjectDynamicValue::SetValueFromCString(const char *value_str,
   if (my_value != parent_value) {
     // but NULL'ing out a value should always be allowed
     if (strcmp(value_str, "0")) {
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "unable to modify dynamic value, use 'expression' command");
       return false;
     }
@@ -361,7 +361,7 @@ bool ValueObjectDynamicValue::SetValueFromCString(const char *value_str,
 
 bool ValueObjectDynamicValue::SetData(DataExtractor &data, Status &error) {
   if (!UpdateValueIfNeeded(false)) {
-    error.SetErrorString("unable to read value");
+    error = Status::FromErrorString("unable to read value");
     return false;
   }
 
@@ -369,7 +369,7 @@ bool ValueObjectDynamicValue::SetData(DataExtractor &data, Status &error) {
   uint64_t parent_value = m_parent->GetValueAsUnsigned(UINT64_MAX);
 
   if (my_value == UINT64_MAX || parent_value == UINT64_MAX) {
-    error.SetErrorString("unable to read value");
+    error = Status::FromErrorString("unable to read value");
     return false;
   }
 
@@ -383,7 +383,7 @@ bool ValueObjectDynamicValue::SetData(DataExtractor &data, Status &error) {
     lldb::offset_t offset = 0;
 
     if (data.GetAddress(&offset) != 0) {
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "unable to modify dynamic value, use 'expression' command");
       return false;
     }

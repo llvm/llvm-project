@@ -186,7 +186,7 @@ void ProcessMinidump::Terminate() {
 Status ProcessMinidump::DoLoadCore() {
   auto expected_parser = MinidumpParser::Create(m_core_data);
   if (!expected_parser)
-    return Status(expected_parser.takeError());
+    return Status::FromError(expected_parser.takeError());
   m_minidump_parser = std::move(*expected_parser);
 
   Status error;
@@ -202,8 +202,8 @@ Status ProcessMinidump::DoLoadCore() {
     // ThreadMinidump::CreateRegisterContextForFrame().
     break;
   default:
-    error.SetErrorStringWithFormat("unsupported minidump architecture: %s",
-                                   arch.GetArchitectureName());
+    error = Status::FromErrorStringWithFormat(
+        "unsupported minidump architecture: %s", arch.GetArchitectureName());
     return error;
   }
   GetTarget().SetArchitecture(arch, true /*set_platform*/);
@@ -304,7 +304,7 @@ size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
 
   llvm::ArrayRef<uint8_t> mem = m_minidump_parser->GetMemory(addr, size);
   if (mem.empty()) {
-    error.SetErrorString("could not parse memory info");
+    error = Status::FromErrorString("could not parse memory info");
     return 0;
   }
 

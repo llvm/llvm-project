@@ -252,10 +252,10 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
           " exited during its execution.",
           expr_thread_id);
       return execution_result;
-    } else {
-      diagnostic_manager.Printf(
-          lldb::eSeverityError, "Couldn't execute function; result was %s",
-          Process::ExecutionResultAsCString(execution_result));
+    } else if (execution_result != lldb::eExpressionCompleted) {
+      diagnostic_manager.Printf(lldb::eSeverityError,
+                                "Couldn't execute function; result was %s",
+                                ExpressionResultAsCString(execution_result));
       return execution_result;
     }
   }

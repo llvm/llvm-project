@@ -442,7 +442,7 @@ do {
       auto c = MakeGenericSignaturesAndCalls(local_variables, generic_sig,
                                              needs_object_ptr);
       if (!c) {
-        status.SetErrorString(llvm::toString(c.takeError()));
+        status = Status::FromError(c.takeError());
         return status;
       }
       wrapped_stream.Printf(
@@ -506,7 +506,7 @@ func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
     auto c = MakeGenericSignaturesAndCalls(local_variables, generic_sig,
                                            needs_object_ptr);
     if (!c) {
-      status.SetErrorString(llvm::toString(c.takeError()));
+      status = Status::FromError(c.takeError());
       return status;
     }
     wrapped_stream.Printf(R"(
@@ -578,7 +578,7 @@ Status SwiftExpressionSourceCode::GetText(
     }
 
     if (wrapping_language.name != llvm::dwarf::DW_LNAME_Swift) {
-      status.SetErrorString("language is not Swift");
+      status = Status::FromErrorString("language is not Swift");
       return status;
     }
 
@@ -614,7 +614,7 @@ Status SwiftExpressionSourceCode::GetText(
             target->GetPersistentExpressionStateForLanguage(
                 lldb::eLanguageTypeSwift));
     if (!persistent_state) {
-      status.SetErrorString("no persistent state");
+      status = Status::FromErrorString("no persistent state");
       return status;
     }
     std::vector<CompilerDecl> persistent_results;

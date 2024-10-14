@@ -1675,6 +1675,8 @@ eSaveCoreDirtyOnly = _lldb.eSaveCoreDirtyOnly
 
 eSaveCoreStackOnly = _lldb.eSaveCoreStackOnly
 
+eSaveCoreCustomOnly = _lldb.eSaveCoreCustomOnly
+
 eTraceEventDisabledSW = _lldb.eTraceEventDisabledSW
 
 eTraceEventDisabledHW = _lldb.eTraceEventDisabledHW
@@ -4173,6 +4175,22 @@ class SBSaveCoreOptions(object):
     def GetOutputFile(self):
         r"""GetOutputFile(SBSaveCoreOptions self) -> SBFileSpec"""
         return _lldb.SBSaveCoreOptions_GetOutputFile(self)
+
+    def SetProcess(self, process):
+        r"""SetProcess(SBSaveCoreOptions self, SBProcess process) -> SBError"""
+        return _lldb.SBSaveCoreOptions_SetProcess(self, process)
+
+    def AddThread(self, thread):
+        r"""AddThread(SBSaveCoreOptions self, SBThread thread) -> SBError"""
+        return _lldb.SBSaveCoreOptions_AddThread(self, thread)
+
+    def RemoveThread(self, thread):
+        r"""RemoveThread(SBSaveCoreOptions self, SBThread thread) -> bool"""
+        return _lldb.SBSaveCoreOptions_RemoveThread(self, thread)
+
+    def AddMemoryRegionToSave(self, region):
+        r"""AddMemoryRegionToSave(SBSaveCoreOptions self, SBMemoryRegionInfo region) -> SBError"""
+        return _lldb.SBSaveCoreOptions_AddMemoryRegionToSave(self, region)
 
     def Clear(self):
         r"""Clear(SBSaveCoreOptions self)"""

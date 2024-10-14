@@ -100,15 +100,16 @@ public:
         execution_unit.GetBestExecutionContextScope();
 
     if (!exe_scope) {
-      err.SetErrorString("Couldn't dematerialize a result variable: invalid "
-                         "execution context scope");
+      err = Status::FromErrorString("Couldn't dematerialize a result variable: "
+                                    "invalid execution context scope");
       return;
     }
 
     lldb::TargetSP target_sp = exe_scope->CalculateTarget();
 
     if (!target_sp) {
-      err.SetErrorString("Couldn't dematerialize a result variable: no target");
+      err = Status::FromErrorString(
+          "Couldn't dematerialize a result variable: no target");
       return;
     }
 
@@ -121,8 +122,8 @@ public:
         target_sp->GetPersistentExpressionStateForLanguage(lang);
 
     if (!persistent_state) {
-      err.SetErrorString("Couldn't dematerialize a result variable: language "
-                         "doesn't have persistent state");
+      err = Status::FromErrorString("Couldn't dematerialize a result variable: "
+                                    "language doesn't have persistent state");
       return;
     }
 
@@ -139,9 +140,10 @@ public:
               ->shared_from_this();
 
     if (!ret) {
-      err.SetErrorStringWithFormat("couldn't dematerialize a result variable: "
-                                   "failed to make persistent variable %s",
-                                   name.AsCString());
+      err = Status::FromErrorStringWithFormatv(
+          "couldn't dematerialize a result variable: "
+          "failed to make persistent variable {0}",
+          name);
       return;
     }
 
@@ -172,8 +174,8 @@ public:
                                 read_error);
 
       if (!read_error.Success()) {
-        err.SetErrorString("Couldn't dematerialize a result variable: couldn't "
-                           "read its memory");
+        err = Status::FromErrorString("Couldn't dematerialize a result "
+                                      "variable: couldn't read its memory");
         return;
       }
     }
@@ -231,8 +233,7 @@ public:
       return;
     }
 
-    err.SetErrorToGenericError();
-    err.SetErrorStringWithFormat(
+    err = Status::FromErrorString(
         "Couldn't dematerialize result: corresponding symbol wasn't found");
   }
 
@@ -384,8 +385,9 @@ public:
             execution_unit->GetBestExecutionContextScope();
 
         if (!exe_scope) {
-          err.SetErrorString("Couldn't dematerialize a persistent variable: "
-                             "invalid execution context scope");
+          err = Status::FromErrorString(
+              "Couldn't dematerialize a persistent variable: invalid execution "
+              "context scope");
           return;
         }
 
@@ -417,10 +419,9 @@ public:
             m_persistent_variable_sp->GetByteSize().value_or(0), read_error);
 
         if (!read_error.Success()) {
-          err.SetErrorStringWithFormat(
-              "couldn't read the contents of %s from memory: %s",
-              m_persistent_variable_sp->GetName().GetCString(),
-              read_error.AsCString());
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't read the contents of {0} from memory: {1}",
+              m_persistent_variable_sp->GetName(), read_error);
           return;
         }
 
@@ -432,10 +433,9 @@ public:
       demangle_ctx.clear();
     }
 
-    err.SetErrorToGenericError();
-    err.SetErrorStringWithFormat(
-        "Couldn't dematerialize %s: corresponding symbol wasn't found",
-        m_persistent_variable_sp->GetName().GetCString());
+    err = Status::FromErrorStringWithFormatv(
+        "Couldn't dematerialize {0}: corresponding symbol wasn't found",
+        m_persistent_variable_sp->GetName());
   }
 
   void DumpToLog(IRMemoryMap &map, lldb::addr_t process_address,

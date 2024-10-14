@@ -835,7 +835,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 Status GDBRemoteCommunication::StartListenThread(const char *hostname,
                                                  uint16_t port) {
   if (m_listen_thread.IsJoinable())
-    return Status("listen thread already running");
+    return Status::FromErrorString("listen thread already running");
 
   char listen_url[512];
   if (hostname && hostname[0])
@@ -847,7 +847,7 @@ Status GDBRemoteCommunication::StartListenThread(const char *hostname,
   llvm::Expected<HostThread> listen_thread = ThreadLauncher::LaunchThread(
       listen_url, [this] { return GDBRemoteCommunication::ListenThread(); });
   if (!listen_thread)
-    return Status(listen_thread.takeError());
+    return Status::FromError(listen_thread.takeError());
   m_listen_thread = *listen_thread;
 
   return Status();
@@ -1052,10 +1052,10 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
           if (port)
             *port = port_;
         } else {
-          error.SetErrorString("failed to bind to port 0 on 127.0.0.1");
           LLDB_LOGF(log, "GDBRemoteCommunication::%s() failed: %s",
                     __FUNCTION__, error.AsCString());
-          return error;
+          return Status::FromErrorString(
+              "failed to bind to port 0 on 127.0.0.1");
         }
       }
     }
@@ -1191,7 +1191,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       JoinListenThread();
     }
   } else {
-    error.SetErrorStringWithFormat("unable to locate " DEBUGSERVER_BASENAME);
+    error = Status::FromErrorString("unable to locate " DEBUGSERVER_BASENAME);
   }
 
   if (error.Fail()) {

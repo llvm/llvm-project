@@ -1069,8 +1069,7 @@ llvm::Error SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(
       result_sp, eval_options);
 
   if (log) {
-    const char *eval_result_str
-        = m_process.ExecutionResultAsCString(eval_result);
+    const char *eval_result_str = ExpressionResultAsCString(eval_result);
     log->Printf("[RunObjectDescriptionExpr] %s", eval_result_str);
   }
 
@@ -2150,8 +2149,8 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
+        error = Status::FromErrorStringWithFormat(
+            "invalid short option character '%c'", short_option);
         break;
       }
 

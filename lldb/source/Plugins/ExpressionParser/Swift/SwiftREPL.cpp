@@ -55,7 +55,8 @@ lldb::REPLSP SwiftREPL::CreateInstance(Status &err, lldb::LanguageType language,
   }
 
   if (!target && !debugger) {
-    err.SetErrorString("must have a debugger or a target to create a REPL");
+    err = Status::FromErrorString(
+        "must have a debugger or a target to create a REPL");
     return nullptr;
   }
 
@@ -69,7 +70,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromTarget(Status &err, Target &target,
                                                  const char *repl_options) {
   // Sanity check the target to make sure a REPL would work here.
   if (!target.GetProcessSP() || !target.GetProcessSP()->IsAlive()) {
-    err.SetErrorString("can't launch a Swift REPL without a running process");
+    err = Status::FromErrorString(
+        "can't launch a Swift REPL without a running process");
     return nullptr;
   }
 
@@ -78,8 +80,9 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromTarget(Status &err, Target &target,
                                                 eSymbolTypeAny, sc_list);
 
   if (!sc_list.GetSize()) {
-    err.SetErrorString("can't launch a Swift REPL in a process that doesn't "
-                       "have the Swift standard library");
+    err = Status::FromErrorString(
+        "can't launch a Swift REPL in a process that doesn't "
+        "have the Swift standard library");
     return nullptr;
   }
 
@@ -88,8 +91,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromTarget(Status &err, Target &target,
       eLanguageTypeSwift, true, repl_options ? repl_options : "");
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
-    err.SetErrorString("Could not construct an expression "
-                       "context for the REPL.\n");
+    err = Status::FromErrorString("Could not construct an expression "
+                                  "context for the REPL.\n");
     return nullptr;
   }
 
@@ -107,7 +110,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   FileSpec repl_executable = HostInfo::GetSupportExeDir();
 
   if (!repl_executable) {
-    err.SetErrorString("unable to locate REPL executable");
+    err = Status::FromErrorString("unable to locate REPL executable");
     return nullptr;
   }
 
@@ -120,8 +123,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   std::string repl_exe_path(repl_executable.GetPath());
 
   if (!FileSystem::Instance().Exists(repl_executable)) {
-    err.SetErrorStringWithFormat("REPL executable does not exist: '%s'",
-                                 repl_exe_path.c_str());
+    err = Status::FromErrorStringWithFormatv(
+        "REPL executable does not exist: {0}'", repl_exe_path);
     return nullptr;
   }
 
@@ -143,8 +146,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
       debugger, repl_exe_path.c_str(), target_triple.getTriple(),
       eLoadDependentsYes, nullptr, target_sp);
   if (!err.Success()) {
-    err.SetErrorStringWithFormat("failed to create REPL target: %s",
-                                 err.AsCString());
+    err = Status::FromErrorStringWithFormatv(
+        "failed to create REPL target: {0}", err);
     return nullptr;
   }
 
@@ -155,7 +158,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   // Limit the breakpoint to our executable module
   ModuleSP exe_module_sp(target_sp->GetExecutableModule());
   if (!exe_module_sp) {
-    err.SetErrorString("unable to resolve REPL executable module");
+    err = Status::FromErrorString("unable to resolve REPL executable module");
     target_sp->Destroy();
     return nullptr;
   }
@@ -175,8 +178,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
       false);                // request_hardware
 
   if (main_bp_sp->GetNumLocations() == 0) {
-    err.SetErrorStringWithFormat("failed to resolve REPL breakpoint for '%s'",
-                                 bp_name);
+    err = Status::FromErrorStringWithFormatv(
+        "failed to resolve REPL breakpoint for '{0}'", bp_name);
     return nullptr;
   }
 
@@ -207,14 +210,14 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   debugger.SetAsyncExecution(true);
 
   if (!err.Success()) {
-    err.SetErrorStringWithFormat("failed to launch REPL process: %s",
-                                 err.AsCString());
+    err = Status::FromErrorStringWithFormatv(
+        "failed to launch REPL process: {0}", err);
     return nullptr;
   }
 
   ProcessSP process_sp(target_sp->GetProcessSP());
   if (!process_sp) {
-    err.SetErrorString("failed to launch REPL process");
+    err = Status::FromErrorString("failed to launch REPL process");
     return nullptr;
   }
 
@@ -230,14 +233,14 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   StateType state = process_sp->GetState();
 
   if (state != eStateStopped) {
-    err.SetErrorString("failed to stop process at REPL breakpoint");
+    err = Status::FromErrorString("failed to stop process at REPL breakpoint");
     return nullptr;
   }
 
   ThreadList &thread_list = process_sp->GetThreadList();
   const uint32_t num_threads = thread_list.GetSize();
   if (num_threads == 0) {
-    err.SetErrorString("process is not in valid state (no threads)");
+    err = Status::FromErrorString("process is not in valid state (no threads)");
     return nullptr;
   }
 
@@ -261,8 +264,8 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
       eLanguageTypeSwift, true, repl_options ? repl_options : "");
   if (!type_system_or_err) {
     llvm::consumeError(type_system_or_err.takeError());
-    err.SetErrorString("Could not construct an expression "
-                       "context for the REPL.\n");
+    err = Status::FromErrorString("Could not construct an expression "
+                                  "context for the REPL.\n");
     return nullptr;
   }
 
@@ -305,7 +308,7 @@ Status SwiftREPL::DoInitialization() {
       m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift, true,
                                                m_compiler_options.c_str());
   if (!type_system_or_err)
-    return Status(type_system_or_err.takeError());
+    return Status::FromError(type_system_or_err.takeError());
   return Status();
 }
 
