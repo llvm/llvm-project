@@ -56,7 +56,6 @@ void uses() {
   for(;;);
 #pragma acc loop device_type(*) auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) worker
   for(;;);
   // expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'loop' construct}}

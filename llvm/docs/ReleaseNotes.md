@@ -125,11 +125,6 @@ Changes to the ARM Backend
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
 
-* When using the `MOVT` or `MOVW` instructions, the Assembler will now check to
-  ensure that any addend that is used is within a 16-bit signed value range. If the
-  addend falls outside of this range, the LLVM backend will emit an error like so
-  `Relocation Not In Range`.
-
 Changes to the AVR Backend
 --------------------------
 
