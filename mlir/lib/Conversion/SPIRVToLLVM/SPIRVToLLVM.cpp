@@ -1044,10 +1044,10 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
   return func;
 }
 
-static LLVM::CallOp createSPIRVBuiltinCall(Location loc, OpBuilder &rewriter,
+static LLVM::CallOp createSPIRVBuiltinCall(Location loc, OpBuilder &builder,
                                            LLVM::LLVMFuncOp func,
                                            ValueRange args) {
-  auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
+  auto call = builder.create<LLVM::CallOp>(loc, func, args);
   call.setCConv(func.getCConv());
   call.setConvergentAttr(func.getConvergentAttr());
   call.setNoUnwindAttr(func.getNoUnwindAttr());
