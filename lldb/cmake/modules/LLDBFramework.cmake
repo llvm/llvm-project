@@ -71,7 +71,7 @@ endif()
 # At configuration time, collect headers for the framework bundle and copy them
 # into a staging directory. Later we can copy over the entire folder.
 file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
-set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
+set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/SourceLanguageNames.h)
 file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
 file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
 list(REMOVE_ITEM root_public_headers ${root_private_headers})

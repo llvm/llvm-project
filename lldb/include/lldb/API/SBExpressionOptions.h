@@ -10,7 +10,6 @@
 #define LLDB_API_SBEXPRESSIONOPTIONS_H
 
 #include "lldb/API/SBDefines.h"
-#include "lldb/API/SBLanguages.h"
 
 #include <vector>
 

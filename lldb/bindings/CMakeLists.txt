@@ -3,7 +3,7 @@ file(GLOB_RECURSE SWIG_SOURCES *.swig)
 file(GLOB SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
   ${LLDB_SOURCE_DIR}/include/lldb/*.h
-  ${LLDB_BINARY_DIR}/include/lldb/API/SBLanguages.h
+  ${LLDB_BINARY_DIR}/include/lldb/SourceLanguageNames.h
 )
 file(GLOB SWIG_PRIVATE_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h

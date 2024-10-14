@@ -324,7 +324,7 @@ public:
   /// Set the language using a pair of language code and version as
   /// defined by the DWARF 6 specification.
   /// WARNING: These codes may change until DWARF 6 is finalized.
-  void SetLanguage(uint16_t name, uint32_t version) {
+  void SetLanguage(lldb::SourceLanguageName name, uint32_t version) {
     m_language = SourceLanguage(name, version);
   }
 

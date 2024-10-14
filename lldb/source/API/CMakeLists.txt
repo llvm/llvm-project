@@ -20,24 +20,24 @@ if(LLDB_ENABLE_LUA)
   set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
-# Generate SBLanguages.h from Dwarf.def.
-set(sb_languages_file
-  ${CMAKE_CURRENT_BINARY_DIR}/../../include/lldb/API/SBLanguages.h)
-set(sb_languages_generator
+# Generate SourceLanguageNames.h from Dwarf.def.
+set(source_language_names_file
+  ${CMAKE_CURRENT_BINARY_DIR}/../../include/lldb/SourceLanguageNames.h)
+set(source_language_names_generator
   ${LLDB_SOURCE_DIR}/scripts/generate-sbapi-dwarf-enum.py)
 add_custom_command(
-  COMMENT "Generating SBLanguages.h from Dwarf.def"
+  COMMENT "Generating SourceLanguageNames.h from Dwarf.def"
   COMMAND "${Python3_EXECUTABLE}"
-      ${sb_languages_generator}
+      ${source_language_names_generator}
       ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
-      -o ${sb_languages_file}
-  OUTPUT ${sb_languages_file}
+      -o ${source_language_names_file}
+  OUTPUT ${source_language_names_file}
   DEPENDS ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
-          ${sb_languages_generator}
+          ${source_language_names_generator}
   WORKING_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
 )
 add_custom_target(lldb-sbapi-dwarf-enums
-  DEPENDS ${sb_languages_file})
+  DEPENDS ${source_language_names_file})
 set_target_properties(lldb-sbapi-dwarf-enums PROPERTIES FOLDER "LLDB/Tablegenning")
 
 add_lldb_library(liblldb SHARED ${option_framework}

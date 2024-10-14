@@ -1027,7 +1027,7 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
     SourceLanguage language = target->GetLanguage();
     if (!language)
       language = frame->GetLanguage();
-    options.SetLanguage((SBSourceLanguageName)language.name, language.version);
+    options.SetLanguage(*language.name, language.version);
     return EvaluateExpression(expr, options);
   } else {
     Status error;
@@ -1059,7 +1059,7 @@ SBFrame::EvaluateExpression(const char *expr,
     language = target->GetLanguage();
   if (!language && frame)
     language = frame->GetLanguage();
-  options.SetLanguage((SBSourceLanguageName)language.name, language.version);
+  options.SetLanguage(*language.name, language.version);
   return EvaluateExpression(expr, options);
 }
 
@@ -1082,7 +1082,7 @@ SBValue SBFrame::EvaluateExpression(const char *expr,
     language = target->GetLanguage();
   if (!language && frame)
     language = frame->GetLanguage();
-  options.SetLanguage((SBSourceLanguageName)language.name, language.version);
+  options.SetLanguage(*language.name, language.version);
   return EvaluateExpression(expr, options);
 }
 
