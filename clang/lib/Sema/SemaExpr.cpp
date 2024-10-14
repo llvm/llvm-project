@@ -18852,7 +18852,8 @@ bool Sema::tryCaptureVariable(
         LSI && !LSI->AfterParameterList)
       --FSIndex;
     assert(MaxFunctionScopesIndex <= FSIndex &&
-           "FSIndex is larger than the size of function scopes?");
+           "FunctionScopeIndexToStopAt should be no larger than FSIndex into "
+           "FunctionScopes.");
     while (FSIndex != MaxFunctionScopesIndex) {
       DC = getLambdaAwareParentOfDeclContext(DC);
       --FSIndex;
