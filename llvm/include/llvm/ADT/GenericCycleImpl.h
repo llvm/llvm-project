@@ -47,6 +47,11 @@ bool GenericCycle<ContextT>::contains(const GenericCycle *C) const {
 template <typename ContextT>
 void GenericCycle<ContextT>::getExitBlocks(
     SmallVectorImpl<BlockT *> &TmpStorage) const {
+  if (!ExitBlocksCache->empty()) {
+    TmpStorage = *ExitBlocksCache;
+    return;
+  }
+
   TmpStorage.clear();
 
   size_t NumExitBlocks = 0;
@@ -65,6 +70,7 @@ void GenericCycle<ContextT>::getExitBlocks(
 
     TmpStorage.resize(NumExitBlocks);
   }
+  ExitBlocksCache->append(TmpStorage.begin(), TmpStorage.end());
 }
 
 template <typename ContextT>

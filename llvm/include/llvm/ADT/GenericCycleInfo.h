@@ -74,12 +74,16 @@ private:
   ///       always have the same depth.
   unsigned Depth = 0;
 
+  /// Cache for the results of GetExitBlocks
+  std::unique_ptr<SmallVector<BlockT *, 4>> ExitBlocksCache;
+
   void clear() {
     Entries.clear();
     Children.clear();
     Blocks.clear();
     Depth = 0;
     ParentCycle = nullptr;
+    ExitBlocksCache->clear();
   }
 
   void appendEntry(BlockT *Block) { Entries.push_back(Block); }
@@ -91,7 +95,8 @@ private:
   GenericCycle &operator=(GenericCycle &&Rhs) = delete;
 
 public:
-  GenericCycle() = default;
+  GenericCycle()
+      : ExitBlocksCache(std::make_unique<SmallVector<BlockT *, 4>>()){};
 
   /// \brief Whether the cycle is a natural loop.
   bool isReducible() const { return Entries.size() == 1; }
