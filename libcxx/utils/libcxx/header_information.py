@@ -34,11 +34,19 @@ header_restrictions = {
 
 # Undeprecate headers that are deprecated in C++17 and removed in C++20.
 header_undeprecations = {
-    "ccomplex": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
-    "ciso646": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
-    "cstdalign": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
-    "cstdbool": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
-    "ctgmath": "#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS",
+    "ccomplex": '''#if !defined (_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+#endif''',
+    "ciso646": "#define _LIBCPP_ENABLE_REMOVED_CISO646",
+    "cstdalign": '''#if !defined (_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+#endif''',
+    "cstdbool": '''#if !defined (_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+#endif''',
+    "ctgmath": '''#if !defined (_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+#endif''',
 }
 
 lit_header_restrictions = {

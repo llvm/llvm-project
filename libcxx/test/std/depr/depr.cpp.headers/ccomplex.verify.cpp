@@ -15,11 +15,9 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 20
+#  include <ccomplex>
 // expected-warning {{'__standard_header_ccomplex' is deprecated: removed in C++20}}
-
-#  include <ccomplex>
 #else
-// expected-warning {{'__standard_header_ccomplex' is deprecated}}
-
 #  include <ccomplex>
+// expected-warning {{'__standard_header_ccomplex' is deprecated}}
 #endif
