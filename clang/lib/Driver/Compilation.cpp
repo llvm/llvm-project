@@ -202,7 +202,7 @@ int Compilation::ExecuteCommand(const Command &C,
   // us knowing about it.
   llvm::TimeRecord StartTime;
   if (getArgs().hasArg(options::OPT_time)) {
-    StartTime = llvm::TimeRecord::getCurrentTime(true);
+    StartTime = llvm::TimeRecord::getCurrentTime(/*Start=*/true);
   }
 
   std::string Error;
@@ -212,7 +212,7 @@ int Compilation::ExecuteCommand(const Command &C,
     PostCallback(C, Res);
 
   if (getArgs().hasArg(options::OPT_time)) {
-    llvm::TimeRecord Time = llvm::TimeRecord::getCurrentTime(false);
+    llvm::TimeRecord Time = llvm::TimeRecord::getCurrentTime(/*Start=*/false);
     Time -= StartTime;
     llvm::StringRef Name = llvm::sys::path::filename(C.getExecutable());
     llvm::errs() << "# " << Name << " "
