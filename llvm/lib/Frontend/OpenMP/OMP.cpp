@@ -193,6 +193,20 @@ bool isCombinedConstruct(Directive D) {
   return !getLeafConstructs(D).empty() && !isCompositeConstruct(D);
 }
 
+bool canHaveIterator(Clause C) {
+  // [5.2:67:5]
+  switch (C) {
+  case OMPC_affinity:
+  case OMPC_depend:
+  case OMPC_from:
+  case OMPC_map:
+  case OMPC_to:
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::string prettifyFunctionName(StringRef FunctionName) {
   // Internalized functions have the right name, but simply a suffix.
   if (FunctionName.ends_with(".internalized"))

@@ -132,21 +132,21 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
 !$omp target  map(to:b,c)  map(tofrom:sum)
 !$omp teams  num_teams(num_teams) thread_limit(block_threads) reduction(+:sum)
 !$omp distribute
- !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/i0 (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/i0 (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  !REF: /dotprod/n
  !REF: /dotprod/block_size
  do i0=1,n,block_size
 !$omp parallel do  reduction(+:sum)
-  !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
-  !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/i0 HostAssoc INTEGER(4)
+  !DEF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/OtherConstruct1/i0 HostAssoc INTEGER(4)
   !DEF: /dotprod/min ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
-  !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/block_size HostAssoc INTEGER(4)
-  !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/n HostAssoc INTEGER(4)
+  !DEF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/OtherConstruct1/block_size HostAssoc INTEGER(4)
+  !DEF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/OtherConstruct1/n HostAssoc INTEGER(4)
   do i=i0,min(i0+block_size, n)
-   !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/sum (OmpReduction) HostAssoc REAL(4)
-   !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/b HostAssoc REAL(4)
-   !REF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/i
-   !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/c HostAssoc REAL(4)
+   !DEF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/OtherConstruct1/sum (OmpReduction) HostAssoc REAL(4)
+   !DEF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/OtherConstruct1/b HostAssoc REAL(4)
+   !REF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/OtherConstruct1/i
+   !DEF: /dotprod/OtherConstruct1/OtherConstruct3/OtherConstruct1/OtherConstruct1/c HostAssoc REAL(4)
    sum = sum+b(i)*c(i)
   end do
  end do

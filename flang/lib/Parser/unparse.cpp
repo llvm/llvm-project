@@ -2067,6 +2067,16 @@ public:
                   },
         x.u);
   }
+  void Unparse(const OmpIteratorSpecifier &x) {
+    Walk(std::get<TypeDeclarationStmt>(x.t));
+    Put(" = ");
+    Walk(std::get<SubscriptTriplet>(x.t));
+  }
+  void Unparse(const OmpIteratorModifier &x) {
+    Word("ITERATOR(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpLastprivateClause &x) {
     Walk(
         std::get<std::optional<OmpLastprivateClause::LastprivateModifier>>(x.t),
@@ -2076,23 +2086,39 @@ public:
   void Unparse(const OmpMapClause &x) {
     auto &typeMod =
         std::get<std::optional<std::list<OmpMapClause::TypeModifier>>>(x.t);
-    auto &type = std::get<std::optional<OmpMapClause::Type>>(x.t);
-    Walk(typeMod);
-    if (typeMod.has_value() && type.has_value()) {
-      Put(", ");
-    }
-    Walk(type);
-    if (typeMod.has_value() || type.has_value()) {
+    auto &iter = std::get<std::optional<std::list<OmpIteratorModifier>>>(x.t);
+    auto &type = std::get<std::optional<std::list<OmpMapClause::Type>>>(x.t);
+
+    // For a given list of items, if the item has a value, then walk it.
+    // Print commas between items that have values.
+    // Return 'true' if something did get printed, otherwise 'false'.
+    auto join = [&](bool comma, auto &&cont, auto &&item,
+                    auto &&...items) -> bool {
+      // comma: if something needs to be walked (i.e. printed), precede it
+      // with a comma.
+      if (!item.has_value()) {
+        if constexpr (sizeof...(items) != 0) {
+          return cont(comma, cont, items...);
+        } else {
+          return false;
+        }
+      } else {
+        if (comma) {
+          Put(", ");
+        }
+        Walk(*item);
+        if constexpr (sizeof...(items) != 0) {
+          return cont(true, cont, items...) || true;
+        } else {
+          return true;
+        }
+      }
+    };
+
+    if (join(false, join, typeMod, iter, type)) {
       Put(": ");
     }
     Walk(std::get<OmpObjectList>(x.t));
-  }
-  void Unparse(const OmpMapClause::TypeModifier &x) {
-    if (x == OmpMapClause::TypeModifier::OmpxHold) {
-      Word("OMPX_HOLD");
-    } else {
-      Word(OmpMapClause::EnumToString(x));
-    }
   }
   void Unparse(const OmpScheduleModifier &x) {
     Walk(std::get<OmpScheduleModifier::Modifier1>(x.t));
@@ -2801,6 +2827,7 @@ public:
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
   WALK_NESTED_ENUM(OmpMapClause, Type) // OMP map-type
+  WALK_NESTED_ENUM(OmpMapClause, TypeModifier) // OMP map-type-modifier
 #undef WALK_NESTED_ENUM
   void Unparse(const ReductionOperator::Operator x) {
     switch (x) {
