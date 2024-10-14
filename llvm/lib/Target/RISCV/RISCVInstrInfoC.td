@@ -707,23 +707,23 @@ def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
   let Inst{12} = 0;
 }
 
-def C_SRLI64_HINT : RVInst16CI<0b100, 0b01, (outs GPRC:$rd_wb),
-                               (ins GPRC:$rd),
-                               "c.srli64", "$rd">,
+def C_SRLI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rs1_wb),
+                               (ins GPRC:$rs1),
+                               "c.srli64", "$rs1">,
                     Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rd = $rd_wb";
+  let Constraints = "$rs1 = $rs1_wb";
   let Inst{6-2} = 0;
-  let Inst{11-10} = 0;
+  let Inst{11-10} = 0b00;
   let Inst{12} = 0;
 }
 
-def C_SRAI64_HINT : RVInst16CI<0b100, 0b01, (outs GPRC:$rd_wb),
-                               (ins GPRC:$rd),
-                               "c.srai64", "$rd">,
+def C_SRAI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rs1_wb),
+                               (ins GPRC:$rs1),
+                               "c.srai64", "$rs1">,
                     Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rd = $rd_wb";
+  let Constraints = "$rs1 = $rs1_wb";
   let Inst{6-2} = 0;
-  let Inst{11-10} = 1;
+  let Inst{11-10} = 0b01;
   let Inst{12} = 0;
 }
 
