@@ -649,6 +649,8 @@ public:
       case MatchKind::TypeStr:
         return getTypeStrText(Node, EmitFailures);
       }
+
+      return std::nullopt;
     }
 
     bool isMatch(const T *const Node, const ASTContext &Context) const {
