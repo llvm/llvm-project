@@ -4419,13 +4419,6 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
       EltTySize == ElBits && NumElts == (NumEls * NF) && NumFields == 1) {     \
     return SingletonId;                                                        \
   }
-#define SVE_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls,     \
-                               ElBits, NF)                                     \
-  if (EltTy->hasIntegerRepresentation() && !EltTy->isBooleanType() &&          \
-      !EltTy->hasSignedIntegerRepresentation() && EltTySize == ElBits &&       \
-      NumElts == (NumEls * NF) && NumFields == 1) {                            \
-    return SingletonId;                                                        \
-  }
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
