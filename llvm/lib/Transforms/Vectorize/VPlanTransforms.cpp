@@ -1388,10 +1388,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
                 SmallVector<VPValue *> Ops(Sel->operands());
                 Ops.push_back(&EVL);
-                return new VPWidenIntrinsicRecipe(
-                    Intrinsic::vp_select, make_range(Ops.begin(), Ops.end()),
-
-                    TypeInfo.inferScalarType(Sel));
+                return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
+                                                  TypeInfo.inferScalarType(Sel),
+                                                  false, false, false);
               })
 
               .Default([&](VPRecipeBase *R) { return nullptr; });
