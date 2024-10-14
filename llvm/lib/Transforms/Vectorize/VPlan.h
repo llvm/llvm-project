@@ -440,6 +440,26 @@ class VPBlockBase {
     Successors.erase(Pos);
   }
 
+  /// This function replaces one predecessor with another, useful when
+  /// trying to replace an old block in the CFG with a new one.
+  void replacePredecessor(VPBlockBase *Old, VPBlockBase *New) {
+    auto I = find(Predecessors, Old);
+    assert(I != Predecessors.end());
+    assert(Old->getParent() == New->getParent() &&
+           "replaced predecessor must have the same parent");
+    *I = New;
+  }
+
+  /// This function replaces one successor with another, useful when
+  /// trying to replace an old block in the CFG with a new one.
+  void replaceSuccessor(VPBlockBase *Old, VPBlockBase *New) {
+    auto I = find(Successors, Old);
+    assert(I != Successors.end());
+    assert(Old->getParent() == New->getParent() &&
+           "replaced successor must have the same parent");
+    *I = New;
+  }
+
 protected:
   VPBlockBase(const unsigned char SC, const std::string &N)
       : SubclassID(SC), Name(N) {}
@@ -554,26 +574,6 @@ public:
   /// single hierarchical predecessor. Otherwise return a null pointer.
   VPBlockBase *getSingleHierarchicalPredecessor() {
     return getEnclosingBlockWithPredecessors()->getSinglePredecessor();
-  }
-
-  /// This function replaces one predecessor with another, useful when
-  /// trying to replace an old block in the CFG with a new one.
-  void replacePredecessor(VPBlockBase *Old, VPBlockBase *New) {
-    auto I = find(Predecessors, Old);
-    assert(I != Predecessors.end());
-    assert(Old->getParent() == New->getParent() &&
-           "replaced predecessor must have the same parent");
-    *I = New;
-  }
-
-  /// This function replaces one successor with another, useful when
-  /// trying to replace an old block in the CFG with a new one.
-  void replaceSuccessor(VPBlockBase *Old, VPBlockBase *New) {
-    auto I = find(Successors, Old);
-    assert(I != Successors.end());
-    assert(Old->getParent() == New->getParent() &&
-           "replaced successor must have the same parent");
-    *I = New;
   }
 
   /// Set a given VPBlockBase \p Successor as the single successor of this
