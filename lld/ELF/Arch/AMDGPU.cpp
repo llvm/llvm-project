@@ -167,7 +167,7 @@ void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_AMDGPU_REL16: {
     int64_t simm = (static_cast<int64_t>(val) - 4) / 4;
-    checkInt(loc, simm, 16, rel);
+    checkInt(ctx, loc, simm, 16, rel);
     write16le(loc, simm);
     break;
   }
@@ -211,7 +211,7 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return 0;
   case R_AMDGPU_ABS64:
   case R_AMDGPU_RELATIVE64:
-    return read64(buf);
+    return read64(ctx, buf);
   default:
     internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
