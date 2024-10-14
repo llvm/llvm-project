@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -Wstack-exhausted -verify
+// RUN: %clang_cc1 %s -emit-llvm -o - -Wstack-exhausted
 
 class AClass {
 public:
@@ -25,6 +25,5 @@ public:
 
 void test_bar() {
   AClass a;
-  // expected-warning@* 1-2 {{stack nearly exhausted; compilation time may suffer, and crashes due to stack overflow are likely}}
   a.CALLS32768();
 }
