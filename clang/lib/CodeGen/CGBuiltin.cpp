@@ -18813,10 +18813,27 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (auto *VecTy = Ty->getAs<VectorType>())
       Ty = VecTy->getElementType();
     IsUnsigned = Ty->isUnsignedIntegerType();
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/OpX->getType(),
-        IsUnsigned ? Intrinsic::dx_uclamp : Intrinsic::dx_clamp,
-        ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "dx.clamp");
+    switch (CGM.getTarget().getTriple().getArch()) {
+    case llvm::Triple::dxil: {
+      return Builder.CreateIntrinsic(
+          /*ReturnType=*/OpX->getType(),
+          IsUnsigned ? Intrinsic::dx_uclamp : Intrinsic::dx_clamp,
+          ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "dx.clamp");
+    } break;
+    case llvm::Triple::spirv: {
+      Intrinsic::ID Intr = Intrinsic::spv_sclamp;
+      if (Ty->isFloatingType()) {
+        Intr = Intrinsic::spv_fclamp;
+      } else if (IsUnsigned) {
+        Intr = Intrinsic::spv_uclamp;
+      }
+      return Builder.CreateIntrinsic(OpX->getType(), Intr,
+                                     ArrayRef<Value *>{OpX, OpMin, OpMax},
+                                     nullptr, "spv.clamp");
+    } break;
+    default:
+      llvm_unreachable("Intrinsic clamp not supported by target architecture");
+    }
   }
   case Builtin::BI__builtin_hlsl_cross: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
