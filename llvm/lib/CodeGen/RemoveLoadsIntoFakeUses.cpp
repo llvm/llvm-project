@@ -86,7 +86,7 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
   const TargetInstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
 
-  SmallDenseMap<MCRegUnit, SmallVector<MachineInstr *>> RegFakeUses;
+  SmallVector<MachineInstr *> RegFakeUses;
   LivePhysRegs.init(*TRI);
   SmallVector<MachineInstr *, 16> Statepoints;
   for (MachineBasicBlock *MBB : post_order(&MF)) {
@@ -101,8 +101,7 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
         // Track the Fake Uses that use these register units so that we can
         // delete them if we delete the corresponding load.
         if (FakeUseOp.isReg())
-          for (MCRegUnit Unit : TRI->regunits(FakeUseOp.getReg()))
-            RegFakeUses[Unit].push_back(&MI);
+          RegFakeUses.push_back(&MI);
         // Do not record FAKE_USE uses in LivePhysRegs so that we can recognize
         // otherwise-unused loads.
         continue;
@@ -123,12 +122,12 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
         // choose to ignore it so that this pass has no side effects unrelated
         // to fake uses.
         SmallDenseSet<MachineInstr *> FakeUsesToDelete;
-        for (MCRegUnit Unit : TRI->regunits(Reg)) {
-          if (!RegFakeUses.contains(Unit))
-            continue;
-          for (MachineInstr *FakeUse : RegFakeUses[Unit])
+        SmallVector<MachineInstr *> RemainingFakeUses;
+        for (MachineInstr *&FakeUse : reverse(RegFakeUses)) {
+          if (TRI->regsOverlap(Reg, FakeUse->getOperand(0).getReg())) {
             FakeUsesToDelete.insert(FakeUse);
-          RegFakeUses.erase(Unit);
+            RegFakeUses.erase(&FakeUse);
+          }
         }
         if (!FakeUsesToDelete.empty()) {
           LLVM_DEBUG(dbgs() << "RemoveLoadsIntoFakeUses: DELETING: " << MI);
@@ -153,14 +152,15 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
       // that register.
       if (!RegFakeUses.empty()) {
         for (const MachineOperand &MO : MI.operands()) {
-          if (MO.isReg() && MO.isDef()) {
-            Register Reg = MO.getReg();
-            // We clear RegFakeUses for this register and all subregisters,
-            // because any such FAKE_USE encountered prior applies only to this
-            // instruction.
-            for (MCRegUnit Unit : TRI->regunits(Reg))
-              RegFakeUses.erase(Unit);
-          }
+          if (!MO.isReg())
+            continue;
+          Register Reg = MO.getReg();
+          // We clear RegFakeUses for this register and all subregisters,
+          // because any such FAKE_USE encountered prior is no longer relevant
+          // for later encountered loads.
+          for (MachineInstr *&FakeUse : reverse(RegFakeUses))
+            if (!TRI->regsOverlap(Reg, FakeUse->getOperand(0).getReg()))
+              RegFakeUses.erase(&FakeUse);
         }
       }
       LivePhysRegs.stepBackward(MI);
