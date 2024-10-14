@@ -1557,7 +1557,7 @@ entry:
 
 define i1 @is_power2_or_zero_with_range(i32 %x) {
 ; CHECK-LABEL: @is_power2_or_zero_with_range(
-; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = icmp ult i32 [[CTPOP]], 2
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
@@ -1570,7 +1570,7 @@ define i1 @is_power2_or_zero_with_range(i32 %x) {
 
 define i1 @is_power2_or_zero_inv_with_range(i32 %x) {
 ; CHECK-LABEL: @is_power2_or_zero_inv_with_range(
-; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
