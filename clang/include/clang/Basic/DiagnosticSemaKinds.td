@@ -7936,8 +7936,6 @@ def err_bad_lvalue_to_rvalue_cast : Error<
 def err_bad_rvalue_to_rvalue_cast : Error<
   "cannot cast from rvalue of type %1 to rvalue reference type %2; types are "
   "not compatible">;
-def err_bad_mfloat8_cast : Error<
-  "cannot cast %0 to %1; types are not compatible">;
 def err_bad_static_cast_pointer_nonpointer : Error<
   "cannot cast from type %1 to pointer type %2">;
 def err_bad_static_cast_member_pointer_nonmp : Error<
