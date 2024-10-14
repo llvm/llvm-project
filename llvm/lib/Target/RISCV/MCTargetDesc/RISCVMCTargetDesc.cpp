@@ -31,7 +31,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <bitset>
+#include <cstdint>
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
@@ -178,6 +180,24 @@ public:
     }
 
     switch (Inst.getOpcode()) {
+      case RISCV::LUI: {
+        setGPRState(Inst.getOperand(0).getReg(), 
+                    SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
+        break;
+      }
+      case RISCV::C_LUI: {
+        MCRegister Reg = Inst.getOperand(0).getReg();
+        if (Reg == RISCV::X2)
+          break;
+        setGPRState(Reg, SignExtend64<17>(Inst.getOperand(1).getImm() << 12));
+        break;
+
+      }
+      case RISCV::AUIPC: {
+        setGPRState(Inst.getOperand(0).getReg(), 
+                    Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
+        break;
+      }
       default: {
         // Clear the state of all defined registers for instructions that we don't
         // explicitly support.
@@ -187,16 +207,6 @@ public:
           if (isGPR(DefReg))
             setGPRState(DefReg, std::nullopt);
         }
-        break;
-      }
-      case RISCV::AUIPC: {
-        setGPRState(Inst.getOperand(0).getReg(), 
-                    Addr + (Inst.getOperand(1).getImm() << 12));
-        break;
-      }
-      case RISCV::LUI: {
-        setGPRState(Inst.getOperand(0).getReg(), 
-                    Inst.getOperand(1).getImm() << 12);
         break;
       }
     }
@@ -244,34 +254,43 @@ public:
       case RISCV::ADDI:
       case RISCV::ADDIW: {
         if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
-          Target  = *TargetRegState + Inst.getOperand(2).getImm();
+          // TODO: Figure out ways to find the actual value of XLEN during analysis
+          int XLEN = 32;
+          uint64_t mask = ~(0) >> XLEN;
+          Target  = *TargetRegState + SignExtend64<12>(Inst.getOperand(2).getImm());
+          Target &= mask;
+          Target = SignExtend64<32>(Target);
           return true;
         }
         break;
       }
       case RISCV::LB:
       case RISCV::LH:
+      case RISCV::LD:
       case RISCV::LW:
       case RISCV::LBU:
       case RISCV::LHU:
       case RISCV::LWU:
-      case RISCV::LD:
-      case RISCV::FLW:
-      case RISCV::FLD:
       case RISCV::SB:
       case RISCV::SH:
       case RISCV::SW:
-      case RISCV::FSW:
       case RISCV::SD:
+      case RISCV::FLH:
+      case RISCV::FLW:
+      case RISCV::FLD:
+      case RISCV::FSH:
+      case RISCV::FSW:
       case RISCV::FSD: {
-        int64_t Offset = Inst.getOperand(2).getImm();
+        int64_t Offset = SignExtend64<12>(Inst.getOperand(2).getImm());
         if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg()))
           Target = *TargetRegState + Offset;
         else
           Target = Offset;
         return true;
       }
+      // TODO: Add cases for compressed load and store instructions
     }
+    return false;
   }
 
   bool isTerminator(const MCInst &Inst) const override {
