@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime//random.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/type-code.h"
+#include "flang/Runtime/random.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/type-code.h"
 #include "gtest/gtest.h"
 #include <cmath>
 

@@ -35,7 +35,7 @@ if(FLANG_VENDOR)
 endif()
 
 
-add_flang_library(FortranCommon
+add_flang_library(FortranCommon PARTIAL_SOURCES_INTENDED
   ../Support/Fortran.cpp
   ../Support/Fortran-features.cpp
   ../Support/default-kinds.cpp

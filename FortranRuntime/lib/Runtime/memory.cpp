@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/memory.h"
-#include "flang/Runtime/freestanding-tools.h"
+#include "FortranRuntime/Runtime/memory.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cstdlib>
 
 namespace Fortran::runtime {

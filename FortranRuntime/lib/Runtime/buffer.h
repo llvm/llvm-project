@@ -11,9 +11,9 @@
 #ifndef FORTRAN_RUNTIME_BUFFER_H_
 #define FORTRAN_RUNTIME_BUFFER_H_
 
-#include "flang/Runtime/freestanding-tools.h"
-#include "flang/Runtime/memory.h"
+#include "FortranRuntime/Runtime/memory.h"
 #include "io-error.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>

@@ -9,10 +9,10 @@
 #ifndef FORTRAN_RUNTIME_RANDOM_TEMPLATES_H_
 #define FORTRAN_RUNTIME_RANDOM_TEMPLATES_H_
 
-#include "flang/Common/optional.h"
-#include "flang/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "lock.h"
 #include "numeric-templates.h"
+#include "flang/Common/optional.h"
 #include <algorithm>
 #include <random>
 

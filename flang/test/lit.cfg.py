@@ -169,7 +169,7 @@ else:
 if config.cc:
     libruntime = os.path.join(config.flang_lib_dir, "libFortranRuntime.a")
     libdecimal = os.path.join(config.flang_lib_dir, "libFortranDecimal.a")
-    include = os.path.join(config.flang_src_dir, "..", "FortranRuntime", "include")
+    include = os.path.join(config.flang_src_dir, "include")
 
     if (
         os.path.isfile(libruntime)

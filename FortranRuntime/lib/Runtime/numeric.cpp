@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/numeric.h"
-#include "flang/Common/float128.h"
 #include "numeric-templates.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/float128.h"
 #include <cfloat>
 #include <climits>
 #include <cmath>

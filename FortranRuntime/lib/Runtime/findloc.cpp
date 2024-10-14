@@ -9,9 +9,9 @@
 // Implements FINDLOC for all required operand types and shapes and result
 // integer kinds.
 
+#include "reduction-templates.h"
 #include "flang/Runtime/character.h"
 #include "flang/Runtime/reduction.h"
-#include "reduction-templates.h"
 #include <cinttypes>
 #include <complex>
 

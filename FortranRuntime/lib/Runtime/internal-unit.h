@@ -11,8 +11,8 @@
 #ifndef FORTRAN_RUNTIME_INTERNAL_UNIT_H_
 #define FORTRAN_RUNTIME_INTERNAL_UNIT_H_
 
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "connection.h"
-#include "flang/Runtime/descriptor.h"
 #include <cinttypes>
 #include <type_traits>
 

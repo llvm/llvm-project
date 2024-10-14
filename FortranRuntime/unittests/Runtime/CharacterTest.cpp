@@ -10,7 +10,7 @@
 // in Fortran.
 
 #include "flang/Runtime/character.h"
-#include "flang/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "gtest/gtest.h"
 #include <cstring>
 #include <functional>

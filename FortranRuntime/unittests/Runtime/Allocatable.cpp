@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/allocatable.h"
-#include "tools.h"
 #include "gtest/gtest.h"
+#include "tools.h"
 
 using namespace Fortran::runtime;
 

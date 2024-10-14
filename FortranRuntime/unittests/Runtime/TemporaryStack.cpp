@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/type-code.h"
+#include "gtest/gtest.h"
+#include "tools.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/temporary-stack.h"
-#include "flang/Runtime/type-code.h"
-#include "tools.h"
-#include "gtest/gtest.h"
 #include <vector>
 
 using namespace Fortran::runtime;

@@ -257,8 +257,7 @@ set(LLVM_BUILD_TOOLS ON)
 
 include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
-  ${FLANG_SOURCE_DIR}/include
-  ${FLANG_SOURCE_DIR}/../FortranRuntime/include)
+  ${FLANG_SOURCE_DIR}/include)
 
 # Add Flang-centric modules to cmake path.
 list(INSERT CMAKE_MODULE_PATH 0

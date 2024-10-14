@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "stat.h"
-#include "flang/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 

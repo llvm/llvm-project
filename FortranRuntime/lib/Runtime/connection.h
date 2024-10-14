@@ -11,8 +11,8 @@
 #ifndef FORTRAN_RUNTIME_CONNECTION_H_
 #define FORTRAN_RUNTIME_CONNECTION_H_
 
-#include "flang/Common/optional.h"
 #include "format.h"
+#include "flang/Common/optional.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {

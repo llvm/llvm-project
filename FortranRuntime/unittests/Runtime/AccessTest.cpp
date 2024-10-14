@@ -10,9 +10,9 @@
 #ifndef _WIN32
 
 #include "CrashHandlerFixture.h"
+#include "gtest/gtest.h"
 #include "flang/Runtime/extensions.h"
 #include "llvm/ADT/Twine.h"
-#include "gtest/gtest.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>

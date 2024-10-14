@@ -9,10 +9,10 @@
 // Implements time-related intrinsic subroutines.
 
 #include "flang/Runtime/time-intrinsic.h"
-#include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/cpp-type.h"
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>

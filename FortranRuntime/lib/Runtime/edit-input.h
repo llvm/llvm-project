@@ -9,9 +9,9 @@
 #ifndef FORTRAN_RUNTIME_EDIT_INPUT_H_
 #define FORTRAN_RUNTIME_EDIT_INPUT_H_
 
-#include "flang/Common/decimal.h"
 #include "format.h"
 #include "io-stmt.h"
+#include "flang/Common/decimal.h"
 
 namespace Fortran::runtime::io {
 

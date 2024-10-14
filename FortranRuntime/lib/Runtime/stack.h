@@ -13,7 +13,7 @@
 #ifndef FORTRAN_RUNTIME_STACK_H_
 #define FORTRAN_RUNTIME_STACK_H_
 
-#include "flang/Runtime/memory.h"
+#include "FortranRuntime/Runtime/memory.h"
 #include "terminator.h"
 
 namespace Fortran::runtime {

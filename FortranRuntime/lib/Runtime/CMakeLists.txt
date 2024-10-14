@@ -45,8 +45,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
   endif ()
   include_directories(BEFORE
-    ${FLANG_SOURCE_DIR}/include
-    ${FLANG_SOURCE_DIR}/../FortranRuntime/include)
+    ${FLANG_SOURCE_DIR}/include)
 
   # The out of tree builds of the compiler and the Fortran runtime
   # must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
@@ -59,6 +58,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     is mapped to long double, etc."
     )
 endif()
+
+include_directories(BEFORE ../../include)
 
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)

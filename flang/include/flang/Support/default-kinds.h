@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_DEFAULT_KINDS_H_
-#define FORTRAN_COMMON_DEFAULT_KINDS_H_
+#ifndef FORTRAN_SUPPORT_DEFAULT_KINDS_H_
+#define FORTRAN_SUPPORT_DEFAULT_KINDS_H_
 
 #include "flang/Support/Fortran.h"
 #include <cstdint>
@@ -58,4 +58,4 @@ private:
   int defaultLogicalKind_{defaultIntegerKind_};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_DEFAULT_KINDS_H_
+#endif /* FORTRAN_SUPPORT_DEFAULT_KINDS_H_ */

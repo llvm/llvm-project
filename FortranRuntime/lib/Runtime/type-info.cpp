@@ -84,10 +84,14 @@ RT_API_ATTRS std::size_t Component::SizeInBytes(
     return GetElementByteSize(instance) * GetElements(instance);
   } else if (category() == TypeCategory::Derived) {
     const DerivedType *type{derivedType()};
-    return Descriptor::SizeInBytes(
-        rank_, true, type ? type->LenParameters() : 0);
+    auto bytes {Descriptor::SizeInBytes(
+        rank_, true, type ? type->LenParameters() : 0)};
+    assert(bytes <=  MaxDescriptorSizeInBytes(  rank_, true, type ? type->LenParameters() : 0));
+    return bytes;
   } else {
-    return Descriptor::SizeInBytes(rank_);
+    auto bytes{ Descriptor::SizeInBytes(rank_)};
+        assert(bytes <=  MaxDescriptorSizeInBytes(  rank_));
+        return bytes;
   }
 }
 

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "flang/Runtime/stop.h"
-#include "../../lib/Runtime/environment.h"
 #include "CrashHandlerFixture.h"
+#include "../../lib/Runtime/environment.h"
 #include <cstdlib>
 #include <gtest/gtest.h>
 

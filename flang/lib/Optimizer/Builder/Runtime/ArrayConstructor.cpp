@@ -9,7 +9,7 @@
 #include "flang/Optimizer/Builder/Runtime/ArrayConstructor.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Runtime/array-constructor.h"
+#include "flang/Runtime/array-constructor-consts.h"
 
 using namespace Fortran::runtime;
 
@@ -29,8 +29,8 @@ mlir::Value fir::runtime::genInitArrayConstructorVector(
   // the target. The "cookieSize" argument is used to validate this wild
   // assumption until runtime interfaces are improved.
   std::size_t arrayVectorStructBitSize =
-      2 * sizeof(Fortran::runtime::ArrayConstructorVector) * 8;
-  std::size_t alignLike = alignof(Fortran::runtime::ArrayConstructorVector) * 8;
+      MaxArrayConstructorVectorSizeInBytes * 8;
+  std::size_t alignLike = MaxArrayConstructorVectorAlignInBytes * 8;
   fir::SequenceType::Extent numElem =
       (arrayVectorStructBitSize + alignLike - 1) / alignLike;
   mlir::Type intType = builder.getIntegerType(alignLike);

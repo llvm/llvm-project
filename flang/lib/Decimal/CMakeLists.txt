@@ -37,8 +37,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
   endif ()
   include_directories(BEFORE
-    ${FLANG_SOURCE_DIR}/include
-    ${FLANG_SOURCE_DIR}/../FortranRuntime/include)
+    ${FLANG_SOURCE_DIR}/include)
 endif()
 
 check_cxx_compiler_flag(-fno-lto FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
@@ -51,8 +50,8 @@ endif()
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 
 set(sources
-  ../../../FortranRuntime/lib/Common/binary-to-decimal.cpp
-  ../../../FortranRuntime/lib/Common/decimal-to-binary.cpp
+  ../Common/binary-to-decimal.cpp
+  ../Common/decimal-to-binary.cpp
 )
 
 include(AddFlangOffloadRuntime)
@@ -64,23 +63,23 @@ add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN ${sources})
 if (DEFINED MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
   add_flang_library(FortranDecimal.static INSTALL_WITH_TOOLCHAIN
-          ../../../FortranRuntime/lib/Common/binary-to-decimal.cpp
-          ../../../FortranRuntime/lib/Common/decimal-to-binary.cpp
+          ../Common/binary-to-decimal.cpp
+          ../Common/decimal-to-binary.cpp
   )
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
   add_flang_library(FortranDecimal.dynamic INSTALL_WITH_TOOLCHAIN
-    ../../../FortranRuntime/lib/Common/binary-to-decimal.cpp
-    ../../../FortranRuntime/lib/Common/decimal-to-binary.cpp
+    ../Common/binary-to-decimal.cpp
+    ../Common/decimal-to-binary.cpp
   )
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
   add_flang_library(FortranDecimal.static_dbg INSTALL_WITH_TOOLCHAIN
-          ../../../FortranRuntime/lib/Common/binary-to-decimal.cpp
-          ../../../FortranRuntime/lib/Common/decimal-to-binary.cpp
+          ../Common/binary-to-decimal.cpp
+          ../Common/decimal-to-binary.cpp
   )
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
   add_flang_library(FortranDecimal.dynamic_dbg INSTALL_WITH_TOOLCHAIN
-    ../../../FortranRuntime/lib/Common/binary-to-decimal.cpp
-    ../../../FortranRuntime/lib/Common/decimal-to-binary.cpp
+    ../Common/binary-to-decimal.cpp
+    ../Common/decimal-to-binary.cpp
   )
   add_dependencies(FortranDecimal FortranDecimal.static FortranDecimal.dynamic
     FortranDecimal.static_dbg FortranDecimal.dynamic_dbg)

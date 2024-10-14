@@ -11,8 +11,8 @@
 #ifndef FORTRAN_RUNTIME_NAMELIST_H_
 #define FORTRAN_RUNTIME_NAMELIST_H_
 
-#include "flang/Common/api-attrs.h"
 #include "non-tbp-dio.h"
+#include "flang/Common/api-attrs.h"
 
 #include <cstddef>
 

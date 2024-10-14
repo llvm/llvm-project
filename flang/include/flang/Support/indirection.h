@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_INDIRECTION_H_
-#define FORTRAN_COMMON_INDIRECTION_H_
+#ifndef FORTRAN_SUPPORT_INDIRECTION_H_
+#define FORTRAN_SUPPORT_INDIRECTION_H_
 
 // Define a smart pointer class template that is rather like
 // non-nullable std::unique_ptr<>.  Indirection<> is, like a C++ reference
@@ -171,4 +171,4 @@ private:
   void (*deleter_)(A *){nullptr};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_INDIRECTION_H_
+#endif /* FORTRAN_SUPPORT_INDIRECTION_H_ */

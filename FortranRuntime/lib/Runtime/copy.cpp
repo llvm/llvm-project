@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "copy.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "stack.h"
 #include "terminator.h"
 #include "type-info.h"
+#include "flang/Runtime/allocatable.h"
 #include <cstring>
 
 namespace Fortran::runtime {

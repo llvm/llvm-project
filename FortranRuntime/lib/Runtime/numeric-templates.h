@@ -18,10 +18,10 @@
 #ifndef FORTRAN_RUNTIME_NUMERIC_TEMPLATES_H_
 #define FORTRAN_RUNTIME_NUMERIC_TEMPLATES_H_
 
-#include "flang/Common/api-attrs.h"
-#include "flang/Common/float128.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/api-attrs.h"
+#include "flang/Common/float128.h"
 #include <cstdint>
 #include <limits>
 

@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "internal-unit.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/freestanding-tools.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "io-error.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <type_traits>
 
@@ -36,6 +36,8 @@ RT_API_ATTRS InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
   Descriptor &d{descriptor()};
   RUNTIME_CHECK(
       terminator, that.SizeInBytes() <= d.SizeInBytes(maxRank, true, 0));
+  RUNTIME_CHECK(terminator,
+      that.SizeInBytes() <= MaxDescriptorSizeInBytes(maxRank, true, 0));
   new (&d) Descriptor{that};
   d.Check();
   internalIoCharKind = thatType->second;

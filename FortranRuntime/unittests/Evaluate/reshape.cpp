@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "flang/Runtime/transformational.h"
 #include "flang/Testing/testing.h"
 #include <cinttypes>

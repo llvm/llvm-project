@@ -20,12 +20,12 @@
 // Places where BLAS routines could be called are marked as TODO items.
 
 #include "flang/Runtime/matmul.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "terminator.h"
+#include "tools.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
-#include "terminator.h"
-#include "tools.h"
 #include <cstring>
 
 namespace {

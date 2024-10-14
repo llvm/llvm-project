@@ -10,11 +10,11 @@
 // temporaries. For use in HLFIR lowering.
 
 #include "flang/Runtime/temporary-stack.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/memory.h"
+#include "terminator.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/memory.h"
-#include "terminator.h"
 
 namespace {
 

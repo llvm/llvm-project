@@ -1,7 +1,7 @@
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 add_library(FortranEvaluateTesting
-  ../../../FortranRuntime/lib/Testing/testing.cpp
-  ../../../FortranRuntime/lib/Testing/fp-testing.cpp
+  ../../lib/Testing/testing.cpp
+  ../../lib/Testing/fp-testing.cpp
 )
 set_target_properties(FortranEvaluateTesting PROPERTIES FOLDER "Flang/Tests")
 if (LLVM_LINK_LLVM_DYLIB)

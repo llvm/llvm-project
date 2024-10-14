@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../lib/Runtime/io-error.h"
 #include "CrashHandlerFixture.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/io-api.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/io-api-funcs.h"
+#include "../../lib/Runtime/io-error.h"
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;

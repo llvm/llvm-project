@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_FORTRAN_FEATURES_H_
-#define FORTRAN_COMMON_FORTRAN_FEATURES_H_
+#ifndef FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
+#define FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
 
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
@@ -191,4 +191,4 @@ private:
   bool warnAllUsage_{false};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_FORTRAN_FEATURES_H_
+#endif /* FORTRAN_SUPPORT_FORTRAN_FEATURES_H_ */

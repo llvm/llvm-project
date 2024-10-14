@@ -8,10 +8,10 @@
 
 #ifndef FORTRAN_RUNTIME_FLOAT128MATH_MATH_ENTRIES_H_
 #define FORTRAN_RUNTIME_FLOAT128MATH_MATH_ENTRIES_H_
-#include "flang/Common/float128.h"
-#include "flang/Runtime/entry-names.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/float128.h"
+#include "flang/Runtime/entry-names.h"
 #include <cfloat>
 #include <cmath>
 #include <type_traits>

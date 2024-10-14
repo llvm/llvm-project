@@ -15,8 +15,8 @@
 #ifndef FORTRAN_RUNTIME_IO_ERROR_H_
 #define FORTRAN_RUNTIME_IO_ERROR_H_
 
-#include "flang/Runtime/iostat.h"
-#include "flang/Runtime/memory.h"
+#include "FortranRuntime/Runtime/iostat-funcs.h"
+#include "FortranRuntime/Runtime/memory.h"
 #include "terminator.h"
 #include <cinttypes>
 

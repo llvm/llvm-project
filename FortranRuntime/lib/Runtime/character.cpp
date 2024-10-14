@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/character.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "terminator.h"
+#include "tools.h"
 #include "flang/Common/bit-population-count.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/character.h"
 #include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
-#include "terminator.h"
-#include "tools.h"
 #include <algorithm>
 #include <cstring>
 

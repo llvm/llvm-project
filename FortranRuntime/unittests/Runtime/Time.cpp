@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/time-intrinsic.h"
 #include "gtest/gtest.h"
+#include "flang/Runtime/time-intrinsic.h"
 #include <algorithm>
 #include <cctype>
 #include <cerrno>

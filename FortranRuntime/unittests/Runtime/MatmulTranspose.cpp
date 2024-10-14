@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/type-code.h"
+#include "gtest/gtest.h"
+#include "tools.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/matmul-transpose.h"
-#include "flang/Runtime/type-code.h"
-#include "tools.h"
-#include "gtest/gtest.h"
 
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;

@@ -18,10 +18,10 @@
 // Drives the same fast binary-to-decimal formatting templates used
 // in the f18 front-end.
 
-#include "flang/Common/decimal.h"
-#include "flang/Common/uint128.h"
 #include "format.h"
 #include "io-stmt.h"
+#include "flang/Common/decimal.h"
+#include "flang/Common/uint128.h"
 
 namespace Fortran::runtime::io {
 

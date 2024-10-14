@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/assign.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "assign-impl.h"
 #include "derived.h"
-#include "flang/Runtime/descriptor.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"

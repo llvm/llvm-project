@@ -9,7 +9,7 @@
 #include "io-error.h"
 #include "config.h"
 #include "tools.h"
-#include "flang/Common/magic-numbers.h"
+#include "flang/Runtime/magic-numbers.h"
 #include <cerrno>
 #include <cstdarg>
 #include <cstdio>

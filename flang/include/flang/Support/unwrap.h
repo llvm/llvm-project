@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_UNWRAP_H_
-#define FORTRAN_COMMON_UNWRAP_H_
+#ifndef FORTRAN_SUPPORT_UNWRAP_H_
+#define FORTRAN_SUPPORT_UNWRAP_H_
 
 #include "indirection.h"
 #include "reference-counted.h"
@@ -155,4 +155,4 @@ template <typename A, typename B> std::optional<A> UnwrapCopy(const B &x) {
   }
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_UNWRAP_H_
+#endif /* FORTRAN_SUPPORT_UNWRAP_H_ */

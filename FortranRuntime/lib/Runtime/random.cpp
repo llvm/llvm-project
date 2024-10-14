@@ -10,14 +10,14 @@
 // RANDOM_SEED.
 
 #include "flang/Runtime/random.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "lock.h"
+#include "random-templates.h"
+#include "terminator.h"
 #include "flang/Common/float128.h"
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
-#include "lock.h"
-#include "random-templates.h"
-#include "terminator.h"
 #include <cmath>
 #include <cstdint>
 #include <limits>

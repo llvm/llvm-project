@@ -10,6 +10,8 @@ endif()
 add_custom_target(FlangUnitTests)
 set_target_properties(FlangUnitTests PROPERTIES FOLDER "Flang/Tests")
 
+include_directories("../../FortranRuntime/include")
+
 function(add_flang_unittest_offload_properties target)
   # Set CUDA_RESOLVE_DEVICE_SYMBOLS.
   if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
@@ -72,8 +74,8 @@ function(add_flang_nongtest_unittest test_name)
 endfunction()
 
 add_subdirectory(Optimizer)
-add_subdirectory(../../FortranRuntime/unittests/Common Common)
-add_subdirectory(../../FortranRuntime/unittests/Decimal Decimal)
+add_subdirectory(Common)
+add_subdirectory(Decimal)
 add_subdirectory(Evaluate)
 add_subdirectory(../../FortranRuntime/unittests/Runtime Runtime)
 add_subdirectory(Frontend)
