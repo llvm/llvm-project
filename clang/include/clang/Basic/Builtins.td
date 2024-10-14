@@ -215,6 +215,18 @@ def FminF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T, T)";
 }
 
+def FmaximumNumF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_fmaximum_num"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
+  let Prototype = "T(T, T)";
+}
+
+def FminimumNumF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_fminimum_num"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
+  let Prototype = "T(T, T)";
+}
+
 def Atan2F128 : Builtin {
   let Spellings = ["__builtin_atan2f128"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
@@ -3722,6 +3734,22 @@ def Fmax : FPMathTemplate, LibBuiltin<"math.h"> {
 
 def Fmin : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["fmin"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "T(T, T)";
+  let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+}
+
+def FmaximumNum : FPMathTemplate, LibBuiltin<"math.h"> {
+  let Spellings = ["fmaximum_num"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "T(T, T)";
+  let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+}
+
+def FminimumNum : FPMathTemplate, LibBuiltin<"math.h"> {
+  let Spellings = ["fminimum_num"];
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
