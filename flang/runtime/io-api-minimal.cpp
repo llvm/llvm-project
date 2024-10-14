@@ -16,7 +16,7 @@
 #include "terminator.h"
 #include "tools.h"
 #include "unit.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-funcs.h"
 
 namespace Fortran::runtime::io {
 RT_EXT_API_GROUP_BEGIN

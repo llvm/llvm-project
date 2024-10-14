@@ -14,7 +14,7 @@
 #include "unit.h"
 #include "flang/Common/api-attrs.h"
 #include "flang/Common/optional.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-funcs.h"
 
 namespace Fortran::runtime::io {
 

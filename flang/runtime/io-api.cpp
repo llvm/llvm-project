@@ -13,7 +13,6 @@
 // OutputReal{32,64}, OutputComplex{32,64}, OutputAscii, & EndIoStatement()
 // are in runtime/io-api-minimal.cpp.
 
-#include "flang/Runtime/io-api.h"
 #include "descriptor-io.h"
 #include "edit-input.h"
 #include "edit-output.h"
@@ -26,6 +25,7 @@
 #include "unit.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/io-api-funcs.h"
 #include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <memory>

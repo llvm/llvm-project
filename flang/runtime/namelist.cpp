@@ -10,7 +10,7 @@
 #include "descriptor-io.h"
 #include "emit-encoded.h"
 #include "io-stmt.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-funcs.h"
 #include <algorithm>
 #include <cstring>
 #include <limits>

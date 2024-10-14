@@ -15,7 +15,7 @@
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-funcs.h"
 #include <chrono>
 #include <cstring>
 #include <ctime>

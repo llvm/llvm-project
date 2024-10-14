@@ -20,7 +20,7 @@
 #include "flang/Common/reference-wrapper.h"
 #include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-funcs.h"
 #include <flang/Common/variant.h>
 #include <functional>
 #include <type_traits>

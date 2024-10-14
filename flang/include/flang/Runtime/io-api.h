@@ -51,9 +51,6 @@ constexpr InquiryKeywordHash HashInquiryKeyword(const char *p) {
   return hash;
 }
 
-RT_API_ATTRS const char *InquiryKeywordHashDecode(
-    char *buffer, std::size_t, InquiryKeywordHash);
-
 extern "C" {
 
 #define IONAME(name) RTNAME(io##name)
