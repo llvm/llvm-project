@@ -1159,7 +1159,7 @@ TEST_F(PatternMatchTest, FloatingPointMax) {
 
   // [OU]LE with inverted select.
   EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
-                   .match(IRB.CreateSelect(IRB.CreateFCmpOLE(L, R), R, L)));
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOLE(L, R), R, L)));
   EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpULE(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
@@ -1167,7 +1167,7 @@ TEST_F(PatternMatchTest, FloatingPointMax) {
 
   // [OUT]LT with inverted select.
   EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
-                   .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), R, L)));
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), R, L)));
   EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpULT(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
