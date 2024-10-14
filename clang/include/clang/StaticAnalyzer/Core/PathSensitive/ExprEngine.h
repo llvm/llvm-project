@@ -583,13 +583,13 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
-  /// evalEagerlyAssumeOpBifurcation - Given the nodes in 'Src', eagerly assume
-  /// concrete boolean valuse for 'Ex', storing the resulting nodes in 'Dst'.
-  void evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
-                                      ExplodedNodeSet &Src, const Expr *Ex);
+  /// evalEagerlyAssumeBifurcation - Given the nodes in 'Src', eagerly assume
+  /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.
+  void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
+                                    const Expr *Ex);
 
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
-  getEagerlyAssumeOpBifurcationTags();
+  getEagerlyAssumeBifurcationTags();
 
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const LocationContext *LCtx, QualType T,

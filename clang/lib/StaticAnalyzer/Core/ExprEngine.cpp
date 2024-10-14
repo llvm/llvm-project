@@ -2129,7 +2129,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
           (B->isRelationalOp() || B->isEqualityOp())) {
         ExplodedNodeSet Tmp;
         VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Tmp);
-        evalEagerlyAssumeOpBifurcation(Dst, Tmp, cast<Expr>(S));
+        evalEagerlyAssumeBifurcation(Dst, Tmp, cast<Expr>(S));
       }
       else
         VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Dst);
@@ -2402,7 +2402,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
         ExplodedNodeSet Tmp;
         VisitUnaryOperator(U, Pred, Tmp);
-        evalEagerlyAssumeOpBifurcation(Dst, Tmp, U);
+        evalEagerlyAssumeBifurcation(Dst, Tmp, U);
       }
       else
         VisitUnaryOperator(U, Pred, Dst);
@@ -3743,20 +3743,19 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
 }
 
 std::pair<const ProgramPointTag *, const ProgramPointTag *>
-ExprEngine::getEagerlyAssumeOpBifurcationTags() {
-  static SimpleProgramPointTag eagerlyAssumeOpBifurcationTrue(
-      TagProviderName, "Eagerly Assume True"),
-      eagerlyAssumeOpBifurcationFalse(TagProviderName, "Eagerly Assume False");
-  return std::make_pair(&eagerlyAssumeOpBifurcationTrue,
-                        &eagerlyAssumeOpBifurcationFalse);
+ExprEngine::getEagerlyAssumeBifurcationTags() {
+  static SimpleProgramPointTag TrueTag(TagProviderName, "Eagerly Assume True"),
+      FalseTag(TagProviderName, "Eagerly Assume False");
+
+  return std::make_pair(&TrueTag, &FalseTag);
 }
 
-void ExprEngine::evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
-                                                ExplodedNodeSet &Src,
-                                                const Expr *Ex) {
+void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
+                                              ExplodedNodeSet &Src,
+                                              const Expr *Ex) {
   StmtNodeBuilder Bldr(Src, Dst, *currBldrCtx);
 
-  for (const auto Pred : Src) {
+  for (ExplodedNode *Pred : Src) {
     // Test if the previous node was as the same expression.  This can happen
     // when the expression fails to evaluate to anything meaningful and
     // (as an optimization) we don't generate a node.
@@ -3769,8 +3768,7 @@ void ExprEngine::evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
     SVal V = State->getSVal(Ex, Pred->getLocationContext());
     std::optional<nonloc::SymbolVal> SEV = V.getAs<nonloc::SymbolVal>();
     if (SEV && SEV->isExpression()) {
-      const std::pair<const ProgramPointTag *, const ProgramPointTag *> &Tags =
-          getEagerlyAssumeOpBifurcationTags();
+      auto [TrueTag, FalseTag] = getEagerlyAssumeBifurcationTags();
 
       auto [StateTrue, StateFalse] = State->assume(*SEV);
 
@@ -3778,14 +3776,14 @@ void ExprEngine::evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
       if (StateTrue) {
         SVal Val = svalBuilder.makeIntVal(1U, Ex->getType());
         StateTrue = StateTrue->BindExpr(Ex, Pred->getLocationContext(), Val);
-        Bldr.generateNode(Ex, Pred, StateTrue, Tags.first);
+        Bldr.generateNode(Ex, Pred, StateTrue, TrueTag);
       }
 
       // Next, assume that the condition is false.
       if (StateFalse) {
         SVal Val = svalBuilder.makeIntVal(0U, Ex->getType());
         StateFalse = StateFalse->BindExpr(Ex, Pred->getLocationContext(), Val);
-        Bldr.generateNode(Ex, Pred, StateFalse, Tags.second);
+        Bldr.generateNode(Ex, Pred, StateFalse, FalseTag);
       }
     }
   }
