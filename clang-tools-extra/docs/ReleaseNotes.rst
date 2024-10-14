@@ -244,6 +244,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
 
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/readability-identifier-naming>` check to
+  validate ``namespace`` aliases.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
