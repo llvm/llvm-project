@@ -1406,10 +1406,9 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   // compiler-rt uses linker support to get data/counters/name start/end for
-  // ELF, COFF, Mach-O, XCOFF, and Wasm.
+  // ELF, COFF, Mach-O and XCOFF.
   if (TT.isOSBinFormatELF() || TT.isOSBinFormatCOFF() ||
-      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF() ||
-      TT.isOSBinFormatWasm())
+      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF())
     return false;
 
   return true;

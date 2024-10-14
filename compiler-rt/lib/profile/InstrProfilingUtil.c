@@ -152,10 +152,8 @@ COMPILER_RT_VISIBILITY int lprofLockFd(int fd) {
     }
   }
   return 0;
-#elif defined(COMPILER_RT_HAS_FLOCK)
-  flock(fd, LOCK_EX);
-  return 0;
 #else
+  flock(fd, LOCK_EX);
   return 0;
 #endif
 }
@@ -179,10 +177,8 @@ COMPILER_RT_VISIBILITY int lprofUnlockFd(int fd) {
     }
   }
   return 0;
-#elif defined(COMPILER_RT_HAS_FLOCK)
-  flock(fd, LOCK_UN);
-  return 0;
 #else
+  flock(fd, LOCK_UN);
   return 0;
 #endif
 }
@@ -357,8 +353,8 @@ COMPILER_RT_VISIBILITY void lprofRestoreSigKill(void) {
 
 COMPILER_RT_VISIBILITY int lprofReleaseMemoryPagesToOS(uintptr_t Begin,
                                                        uintptr_t End) {
-#if defined(__ve__) || defined(__wasi__)
-  // VE and WASI doesn't support madvise.
+#if defined(__ve__)
+  // VE doesn't support madvise.
   return 0;
 #else
   size_t PageSize = getpagesize();

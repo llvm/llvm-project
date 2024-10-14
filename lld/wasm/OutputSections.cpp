@@ -244,7 +244,6 @@ void CustomSection::finalizeContents() {
 
   for (InputChunk *section : inputSections) {
     assert(!section->discarded);
-    payloadSize = alignTo(payloadSize, section->alignment);
     section->outSecOff = payloadSize;
     payloadSize += section->getSize();
   }

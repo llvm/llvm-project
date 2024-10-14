@@ -584,7 +584,7 @@ void llvm_reset_counters(void) {
   }
 }
 
-#if !defined(_WIN32) && !defined(__wasm__)
+#if !defined(_WIN32)
 COMPILER_RT_VISIBILITY
 pid_t __gcov_fork() {
   pid_t parent_pid = getpid();

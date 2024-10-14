@@ -2171,11 +2171,7 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
   // This could be avoided if all data segements (the wasm sense) were
   // represented as their own sections (in the llvm sense).
   // TODO(sbc): https://github.com/WebAssembly/tool-conventions/issues/138
-  if (Name == getInstrProfSectionName(IPSK_covmap, Triple::Wasm,
-                                      /*AddSegmentInfo=*/false) ||
-      Name == getInstrProfSectionName(IPSK_covfun, Triple::Wasm,
-                                      /*AddSegmentInfo=*/false) ||
-      Name == ".llvmbc" || Name == ".llvmcmd")
+  if (Name == ".llvmcmd" || Name == ".llvmbc")
     Kind = SectionKind::getMetadata();
 
   StringRef Group = "";

@@ -18,7 +18,6 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Wasm.h"
-#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -452,18 +451,6 @@ void SharedFile::parse() {
   }
 }
 
-// Returns the alignment for a custom section. This is used to concatenate
-// custom sections with the same name into a single custom section.
-static uint32_t getCustomSectionAlignment(const WasmSection &sec) {
-  // TODO: Add a section attribute for alignment in the linking spec.
-  if (sec.Name == getInstrProfSectionName(IPSK_covfun, Triple::Wasm) ||
-      sec.Name == getInstrProfSectionName(IPSK_covmap, Triple::Wasm)) {
-    // llvm-cov assumes that coverage metadata sections are 8-byte aligned.
-    return 8;
-  }
-  return 1;
-}
-
 WasmFileBase::WasmFileBase(Kind k, MemoryBufferRef m) : InputFile(k, m) {
   // Parse a memory buffer as a wasm file.
   LLVM_DEBUG(dbgs() << "Reading object: " << toString(this) << "\n");
@@ -533,11 +520,10 @@ void ObjFile::parse(bool ignoreComdats) {
       dataSection = &section;
     } else if (section.Type == WASM_SEC_CUSTOM) {
       InputChunk *customSec;
-      uint32_t alignment = getCustomSectionAlignment(section);
       if (shouldMerge(section))
-        customSec = make<MergeInputChunk>(section, this, alignment);
+        customSec = make<MergeInputChunk>(section, this);
       else
-        customSec = make<InputSection>(section, this, alignment);
+        customSec = make<InputSection>(section, this);
       customSec->discarded = isExcludedByComdat(customSec);
       customSections.emplace_back(customSec);
       customSections.back()->setRelocations(section.Relocations);
