@@ -11,7 +11,7 @@
 	movt	r2, :upper16:L1
   movw	r12, :lower16:L2
 	movt	r12, :upper16:L2
-  .space 70000
+  .space 16382
   
   .data
 L1: .long 0
@@ -30,7 +30,7 @@ L2: .long 0
 @ CHECK:       Section: __data (2)
 @ CHECK:     }
 @ CHECK:     Relocation {
-@ CHECK:       Offset: 0x1184
+@ CHECK:       Offset: 0x4012
 @ CHECK:       PCRel: 0
 @ CHECK:       Length: 3
 @ CHECK:       Type: ARM_RELOC_PAIR (1)
@@ -44,7 +44,7 @@ L2: .long 0
 @ CHECK:       Section: __data (2)
 @ CHECK:     }
 @ CHECK:     Relocation {
-@ CHECK:       Offset: 0x1
+@ CHECK:       Offset: 0x0
 @ CHECK:       PCRel: 0
 @ CHECK:       Length: 2
 @ CHECK:       Type: ARM_RELOC_PAIR (1)
@@ -58,7 +58,7 @@ L2: .long 0
 @ CHECK:       Section: __data (2)
 @ CHECK:     }
 @ CHECK:     Relocation {
-@ CHECK:       Offset: 0x1180
+@ CHECK:       Offset: 0x400E
 @ CHECK:       PCRel: 0
 @ CHECK:       Length: 3
 @ CHECK:       Type: ARM_RELOC_PAIR (1)
@@ -72,7 +72,7 @@ L2: .long 0
 @ CHECK:       Section: __data (2)
 @ CHECK:     }
 @ CHECK:     Relocation {
-@ CHECK:       Offset: 0x1
+@ CHECK:       Offset: 0x0
 @ CHECK:       PCRel: 0
 @ CHECK:       Length: 2
 @ CHECK:       Type: ARM_RELOC_PAIR (1)
