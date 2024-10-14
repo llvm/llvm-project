@@ -137,20 +137,26 @@ namespace llvm {
     };
   };
 
-  template <typename T> typename Registry<T>::node *Registry<T>::Head = nullptr;
-  template <typename T> typename Registry<T>::node *Registry<T>::Tail = nullptr;
 } // end namespace llvm
 
 #ifdef _WIN32
 /// Instantiate a registry class.
 #define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
   namespace llvm {                                                             \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Head = nullptr;                     \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Tail = nullptr;                     \
   template class LLVM_ABI_EXPORT Registry<REGISTRY_CLASS::type>;               \
   }
 #else
 #define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
   namespace llvm {                                                             \
-  template class Registry<REGISTRY_CLASS>;                                     \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Head = nullptr;                     \
+  template <typename T>                                                        \
+  typename Registry<T>::node *Registry<T>::Tail = nullptr;                     \
+  template class Registry<REGISTRY_CLASS::type>;                               \
   }
 #endif
 
