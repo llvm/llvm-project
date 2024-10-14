@@ -41,17 +41,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
-DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE"-forceexp",
+DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE "-forceexp",
               "Force emit s_waitcnt expcnt(0) instrs");
-DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE"-forcelgkm",
+DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE "-forcelgkm",
               "Force emit s_waitcnt lgkmcnt(0) instrs");
-DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE"-forcevm",
+DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE "-forcevm",
               "Force emit s_waitcnt vmcnt(0) instrs");
 
-static cl::opt<bool> ForceEmitZeroFlag(
-  "amdgpu-waitcnt-forcezero",
-  cl::desc("Force all waitcnt instrs to be emitted as s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
-  cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    ForceEmitZeroFlag("amdgpu-waitcnt-forcezero",
+                      cl::desc("Force all waitcnt instrs to be emitted as "
+                               "s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
+                      cl::init(false), cl::Hidden);
 
 namespace {
 // Class of object that encapsulates latest instruction counter score
@@ -611,9 +612,6 @@ private:
 
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
 
-  // ForceEmitZeroWaitcnts: force all waitcnts insts to be s_waitcnt 0
-  // because of amdgpu-waitcnt-forcezero flag
-  bool ForceEmitZeroWaitcnts;
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
   // In any given run of this pass, WCG will point to one of these two
@@ -1599,9 +1597,7 @@ static bool callWaitsOnFunctionEntry(const MachineInstr &MI) {
 
 /// \returns true if the callee is expected to wait for any outstanding waits
 /// before returning.
-static bool callWaitsOnFunctionReturn(const MachineInstr &MI) {
-  return true;
-}
+static bool callWaitsOnFunctionReturn(const MachineInstr &MI) { return true; }
 
 ///  Generate s_waitcnt instruction to be placed before cur_Inst.
 ///  Instructions of a given type are returned in order,
@@ -1828,7 +1824,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
-  if (ForceEmitZeroWaitcnts)
+  if (ForceEmitZeroFlag)
     Wait = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
 
   if (ForceEmitWaitcnt[LOAD_CNT])
@@ -2409,7 +2405,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  if (auto AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
+  if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
 
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
@@ -2424,7 +2420,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     WCG = &WCGPreGFX12;
   }
 
-  ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
@@ -2538,7 +2533,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       if (Brackets->hasPendingEvent()) {
         BlockInfo *MoveBracketsToSucc = nullptr;
         for (MachineBasicBlock *Succ : MBB->successors()) {
-          auto SuccBII = BlockInfos.find(Succ);
+          auto *SuccBII = BlockInfos.find(Succ);
           BlockInfo &SuccBI = SuccBII->second;
           if (!SuccBI.Incoming) {
             SuccBI.Dirty = true;

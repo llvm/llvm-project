@@ -772,11 +772,11 @@ bool Attribute::canUseAsRetAttr(AttrKind Kind) {
 
 static bool hasIntersectProperty(Attribute::AttrKind Kind,
                                  AttributeProperty Prop) {
-  assert(Prop == AttributeProperty::IntersectPreserve ||
-         Prop == AttributeProperty::IntersectAnd ||
-         Prop == AttributeProperty::IntersectMin ||
-         Prop == AttributeProperty::IntersectCustom &&
-             "Unknown intersect property");
+  assert((Prop == AttributeProperty::IntersectPreserve ||
+          Prop == AttributeProperty::IntersectAnd ||
+          Prop == AttributeProperty::IntersectMin ||
+          Prop == AttributeProperty::IntersectCustom) &&
+         "Unknown intersect property");
   return (getAttributeProperties(Kind) &
           AttributeProperty::IntersectPropertyMask) == Prop;
 }
@@ -1800,12 +1800,10 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
   if (*this == Other)
     return *this;
 
-  // At least for now, only intersect lists with same number of params.
-  if (getNumAttrSets() != Other.getNumAttrSets())
-    return std::nullopt;
-
   SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
-  for (unsigned Idx : indexes()) {
+  auto IndexIt =
+      index_iterator(std::max(getNumAttrSets(), Other.getNumAttrSets()));
+  for (unsigned Idx : IndexIt) {
     auto IntersectedAS =
         getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
     // If any index fails to intersect, fail.

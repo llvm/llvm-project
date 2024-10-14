@@ -1,5 +1,5 @@
-! Test that flang-new forwards Flang frontend
-! options to flang-new -fc1 as expected.
+! Test that flang forwards Flang frontend
+! options to flang -fc1 as expected.
 
 ! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     -finput-charset=utf-8 \

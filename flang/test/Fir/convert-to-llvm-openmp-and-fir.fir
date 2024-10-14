@@ -793,9 +793,9 @@ func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> 
 // CHECK: llvm.func @_QPs
 // CHECK: omp.atomic.read %{{.*}} = %{{.*}}   : !llvm.ptr, !llvm.struct<(f32, f32)>
 
-func.func @_QPs(%arg0: !fir.ref<!fir.complex<4>> {fir.bindc_name = "x"}) {
-  %0 = fir.alloca !fir.complex<4> {bindc_name = "v", uniq_name = "_QFsEv"}
-  omp.atomic.read %0 = %arg0   : !fir.ref<!fir.complex<4>>, !fir.complex<4>
+func.func @_QPs(%arg0: !fir.ref<complex<f32>> {fir.bindc_name = "x"}) {
+  %0 = fir.alloca complex<f32> {bindc_name = "v", uniq_name = "_QFsEv"}
+  omp.atomic.read %0 = %arg0   : !fir.ref<complex<f32>>, complex<f32>
   return
 }
 

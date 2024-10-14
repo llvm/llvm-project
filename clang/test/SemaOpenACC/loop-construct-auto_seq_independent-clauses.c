@@ -165,10 +165,9 @@ void uses() {
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}
 #pragma acc loop auto async
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
-#pragma acc loop auto tile(Var, 1)
-  for(;;);
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented}}
+#pragma acc loop auto tile(1+2, 1)
+  for(;;)
+    for(;;);
 #pragma acc loop auto gang
   for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}
@@ -303,10 +302,9 @@ void uses() {
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}
 #pragma acc loop async auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
-#pragma acc loop tile(Var, 1) auto
-  for(;;);
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented}}
+#pragma acc loop tile(1+2, 1) auto
+  for(;;)
+    for(;;);
 #pragma acc loop gang auto
   for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}
@@ -442,10 +440,9 @@ void uses() {
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}
 #pragma acc loop independent async
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
-#pragma acc loop independent tile(Var, 1)
-  for(;;);
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented}}
+#pragma acc loop independent tile(1+2, 1)
+  for(;;)
+    for(;;);
 #pragma acc loop independent gang
   for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}
@@ -580,10 +577,9 @@ void uses() {
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}
 #pragma acc loop async independent
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
-#pragma acc loop tile(Var, 1) independent
-  for(;;);
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented}}
+#pragma acc loop tile(1+2, 1) independent
+  for(;;)
+    for(;;);
 #pragma acc loop gang independent
   for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}
@@ -591,9 +587,8 @@ void uses() {
   for(;;);
 
   // 'seq' cannot be combined with 'gang', 'worker' or 'vector'
-  // expected-error@+3{{OpenACC clause 'gang' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'gang' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop seq gang
   for(;;);
   // expected-error@+3{{OpenACC clause 'worker' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
@@ -728,17 +723,15 @@ void uses() {
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}
 #pragma acc loop seq async
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
-#pragma acc loop seq tile(Var, 1)
-  for(;;);
+#pragma acc loop seq tile(1+2, 1)
+  for(;;)
+    for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}
 #pragma acc loop seq wait
   for(;;);
 
-  // TODO OpenACC: when 'gang' is implemented and makes it to the AST, this should diagnose because of a conflict with 'seq'.
-  // TODOexpected-error@+3{{OpenACC clause 'gang' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // TODOexpected-note@+2{{previous clause is here}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'gang' clause on a 'loop' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc loop gang seq
   for(;;);
   // TODO OpenACC: when 'worker' is implemented and makes it to the AST, this should diagnose because of a conflict with 'seq'.
@@ -875,9 +868,9 @@ void uses() {
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}
 #pragma acc loop async seq
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented}}
-#pragma acc loop tile(Var, 1) seq
-  for(;;);
+#pragma acc loop tile(1+2, 1) seq
+  for(;;)
+    for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}
 #pragma acc loop wait seq
   for(;;);
