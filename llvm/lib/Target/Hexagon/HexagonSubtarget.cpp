@@ -493,7 +493,7 @@ void HexagonSubtarget::adjustSchedDependency(
         break;
       }
     }
-    Dep.setLatency(DLatency ? *DLatency : 0);
+    Dep.setLatency(DLatency.value_or(0));
   }
 
   // Try to schedule uses near definitions to generate .cur.

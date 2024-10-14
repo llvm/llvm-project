@@ -15,6 +15,7 @@
 namespace llvm::sandboxir {
 
 class Function;
+class Region;
 
 /// The base class of a Sandbox IR Pass.
 class Pass {
@@ -24,6 +25,7 @@ protected:
   const std::string Name;
 
 public:
+  /// \p Name can't contain any spaces or start with '-'.
   Pass(StringRef Name) : Name(Name) {
     assert(!Name.contains(' ') &&
            "A pass name should not contain whitespaces!");
@@ -40,14 +42,26 @@ public:
   virtual void print(raw_ostream &OS) const { OS << Name; }
   LLVM_DUMP_METHOD virtual void dump() const;
 #endif
+  /// Similar to print() but adds a newline. Used for testing.
+  void printPipeline(raw_ostream &OS) const { OS << Name << "\n"; }
 };
 
 /// A pass that runs on a sandbox::Function.
 class FunctionPass : public Pass {
 public:
+  /// \p Name can't contain any spaces or start with '-'.
   FunctionPass(StringRef Name) : Pass(Name) {}
   /// \Returns true if it modifies \p F.
   virtual bool runOnFunction(Function &F) = 0;
+};
+
+/// A pass that runs on a sandbox::Region.
+class RegionPass : public Pass {
+public:
+  /// \p Name can't contain any spaces or start with '-'.
+  RegionPass(StringRef Name) : Pass(Name) {}
+  /// \Returns true if it modifies \p R.
+  virtual bool runOnRegion(Region &R) = 0;
 };
 
 } // namespace llvm::sandboxir

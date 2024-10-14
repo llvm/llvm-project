@@ -1739,7 +1739,7 @@ static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Val,
   DecodeStatus S = MCDisassembler::Success;
 
   bool NeedDisjointWriteback = false;
-  unsigned WritebackReg = 0;
+  MCRegister WritebackReg;
   bool CLRM = false;
   switch (Inst.getOpcode()) {
   default:

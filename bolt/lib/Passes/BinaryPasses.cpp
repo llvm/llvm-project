@@ -223,22 +223,6 @@ static cl::opt<unsigned> TopCalledLimit(
              "functions section"),
     cl::init(100), cl::Hidden, cl::cat(BoltCategory));
 
-// Profile density options, synced with llvm-profgen/ProfileGenerator.cpp
-static cl::opt<bool> ShowDensity("show-density", cl::init(false),
-                                 cl::desc("show profile density details"),
-                                 cl::Optional);
-
-static cl::opt<int> ProfileDensityCutOffHot(
-    "profile-density-cutoff-hot", cl::init(990000),
-    cl::desc("Total samples cutoff for functions used to calculate "
-             "profile density."));
-
-static cl::opt<double> ProfileDensityThreshold(
-    "profile-density-threshold", cl::init(0),
-    cl::desc("If the profile density is below the given threshold, it "
-             "will be suggested to increase the sampling rate."),
-    cl::Optional);
-
 } // namespace opts
 
 namespace llvm {
@@ -1399,7 +1383,6 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   uint64_t StaleSampleCount = 0;
   uint64_t InferredSampleCount = 0;
   std::vector<const BinaryFunction *> ProfiledFunctions;
-  std::vector<std::pair<double, uint64_t>> FuncDensityList;
   const char *StaleFuncsHeader = "BOLT-INFO: Functions with stale profile:\n";
   for (auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &Function = BFI.second;
@@ -1457,25 +1440,6 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
       ++NumStaleProfileFunctions;
       StaleSampleCount += SampleCount;
       ++NumAllStaleFunctions;
-    }
-
-    if (opts::ShowDensity) {
-      uint64_t Size = Function.getSize();
-      // In case of BOLT split functions registered in BAT, executed traces are
-      // automatically attributed to the main fragment. Add up function sizes
-      // for all fragments.
-      if (IsHotParentOfBOLTSplitFunction)
-        for (const BinaryFunction *Fragment : Function.getFragments())
-          Size += Fragment->getSize();
-      uint64_t ExecutedBytes = Function.getSampleCountInBytes();
-      if (!ExecutedBytes && Function.isSimple() && Function.hasProfile())
-        for (const BinaryBasicBlock &BB : Function)
-          ExecutedBytes += BB.getOriginalSize() * BB.getKnownExecutionCount();
-      double Density = (double)1.0 * ExecutedBytes / Size;
-      FuncDensityList.emplace_back(Density, SampleCount);
-      LLVM_DEBUG(BC.outs() << Function << ": executed bytes " << ExecutedBytes
-                           << ", size (b) " << Size << ", density " << Density
-                           << ", sample count " << SampleCount << '\n');
     }
   }
   BC.NumProfiledFuncs = ProfiledFunctions.size();
@@ -1719,54 +1683,6 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     if (!opts::PrintUnknown)
       BC.outs() << ". Use -print-unknown to see the list.";
     BC.outs() << '\n';
-  }
-
-  if (opts::ShowDensity) {
-    double Density = 0.0;
-    llvm::sort(FuncDensityList);
-    // Find the total number of samples in non-simple functions with zero
-    // density. We fail to compute density for such functions with fdata/YAML
-    // profiles as we compute the density from CFG and the profile can't be
-    // attached to non-simple functions.
-    //
-    // Exclude those samples from the tally as otherwise we may end up with zero
-    // profile density depending on how hot non-simple functions are.
-    uint64_t NonSimpleSampleCount = 0;
-    for (const auto &[CurDensity, Samples] : FuncDensityList) {
-      if (CurDensity != 0)
-        break;
-      NonSimpleSampleCount += Samples;
-    }
-
-    uint64_t AccumulatedSamples = NonSimpleSampleCount;
-    assert(opts::ProfileDensityCutOffHot <= 1000000 &&
-           "The cutoff value is greater than 1000000(100%)");
-    for (const auto &[CurDensity, Samples] : llvm::reverse(FuncDensityList)) {
-      if (AccumulatedSamples >=
-          TotalSampleCount * static_cast<float>(opts::ProfileDensityCutOffHot) /
-              1000000)
-        break;
-      Density = CurDensity;
-      AccumulatedSamples += Samples;
-    }
-    if (Density == 0.0) {
-      BC.errs() << "BOLT-WARNING: the output profile is empty or the "
-                   "--profile-density-cutoff-hot option is "
-                   "set too low. Please check your command.\n";
-    } else if (Density < opts::ProfileDensityThreshold) {
-      BC.errs()
-          << "BOLT-WARNING: BOLT is estimated to optimize better with "
-          << format("%.1f", opts::ProfileDensityThreshold / Density)
-          << "x more samples. Please consider increasing sampling rate or "
-             "profiling for longer duration to get more samples.\n";
-    }
-
-    BC.outs() << "BOLT-INFO: Functions with density >= "
-              << format("%.1f", Density) << " account for "
-              << format("%.2f",
-                        static_cast<double>(opts::ProfileDensityCutOffHot) /
-                            10000)
-              << "% total sample counts.\n";
   }
   return Error::success();
 }

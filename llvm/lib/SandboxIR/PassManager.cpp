@@ -7,22 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/PassManager.h"
-#include "llvm/SandboxIR/SandboxIR.h"
 
-using namespace llvm::sandboxir;
+namespace llvm::sandboxir {
 
 bool FunctionPassManager::runOnFunction(Function &F) {
   bool Change = false;
-  for (FunctionPass *Pass : Passes) {
+  for (auto &Pass : Passes) {
     Change |= Pass->runOnFunction(F);
     // TODO: run the verifier.
   }
   // TODO: Check ChangeAll against hashes before/after.
   return Change;
 }
-#ifndef NDEBUG
-void PassRegistry::dump() const {
-  print(dbgs());
-  dbgs() << "\n";
+
+bool RegionPassManager::runOnRegion(Region &R) {
+  bool Change = false;
+  for (auto &Pass : Passes) {
+    Change |= Pass->runOnRegion(R);
+    // TODO: run the verifier.
+  }
+  // TODO: Check ChangeAll against hashes before/after.
+  return Change;
 }
-#endif // NDEBUG
+
+} // namespace llvm::sandboxir

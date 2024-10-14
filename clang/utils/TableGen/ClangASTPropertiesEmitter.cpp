@@ -205,8 +205,7 @@ public:
 
   void visitAllNodesWithInfo(
       HasProperties derivedNode, const NodeInfo &derivedNodeInfo,
-      llvm::function_ref<void(HasProperties node, const NodeInfo &info)>
-          visit) {
+      function_ref<void(HasProperties node, const NodeInfo &info)> visit) {
     visit(derivedNode, derivedNodeInfo);
 
     // Also walk the bases if appropriate.

@@ -44,12 +44,34 @@ class InputSectionBase;
 class EhInputSection;
 class Defined;
 class Symbol;
+class SymbolTable;
 class BitcodeCompiler;
 class OutputSection;
 class LinkerScript;
 class TargetInfo;
+struct Ctx;
 struct Partition;
 struct PhdrEntry;
+
+class BssSection;
+class GdbIndexSection;
+class GotPltSection;
+class GotSection;
+class IBTPltSection;
+class IgotPltSection;
+class InputSection;
+class IpltSection;
+class MipsGotSection;
+class MipsRldMapSection;
+class PPC32Got2Section;
+class PPC64LongBranchTargetSection;
+class PltSection;
+class RelocationBaseSection;
+class RelroPaddingSection;
+class StringTableSection;
+class SymbolTableBaseSection;
+class SymtabShndxSection;
+class SyntheticSection;
 
 enum ELFKind : uint8_t {
   ELFNoneKind,
@@ -129,11 +151,14 @@ struct VersionDefinition {
 
 class LinkerDriver {
 public:
+  LinkerDriver(Ctx &ctx);
+  LinkerDriver(LinkerDriver &) = delete;
   void linkerMain(ArrayRef<const char *> args);
   void addFile(StringRef path, bool withLOption);
   void addLibrary(StringRef name);
 
 private:
+  Ctx &ctx;
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
@@ -148,9 +173,12 @@ private:
 
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<InputFile *> files;
-  InputFile *armCmseImpLib = nullptr;
 
 public:
+  // See InputFile::groupId.
+  uint32_t nextGroupId;
+  bool isInGroup;
+  InputFile *armCmseImpLib = nullptr;
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
 };
 
@@ -460,12 +488,6 @@ struct Config {
   llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::StringRef>, 0>
       remapInputsWildcards;
 };
-struct ConfigWrapper {
-  Config c;
-  Config *operator->() { return &c; }
-};
-
-LLVM_LIBRARY_VISIBILITY extern ConfigWrapper config;
 
 // Some index properties of a symbol are stored separately in this auxiliary
 // struct to decrease sizeof(SymbolUnion) in the majority of cases.
@@ -483,10 +505,47 @@ struct DuplicateSymbol {
   uint64_t value;
 };
 
+// Linker generated sections which can be used as inputs and are not specific to
+// a partition.
+struct InStruct {
+  std::unique_ptr<InputSection> attributes;
+  std::unique_ptr<SyntheticSection> riscvAttributes;
+  std::unique_ptr<BssSection> bss;
+  std::unique_ptr<BssSection> bssRelRo;
+  std::unique_ptr<GotSection> got;
+  std::unique_ptr<GotPltSection> gotPlt;
+  std::unique_ptr<IgotPltSection> igotPlt;
+  std::unique_ptr<RelroPaddingSection> relroPadding;
+  std::unique_ptr<SyntheticSection> armCmseSGSection;
+  std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
+  std::unique_ptr<SyntheticSection> mipsAbiFlags;
+  std::unique_ptr<MipsGotSection> mipsGot;
+  std::unique_ptr<SyntheticSection> mipsOptions;
+  std::unique_ptr<SyntheticSection> mipsReginfo;
+  std::unique_ptr<MipsRldMapSection> mipsRldMap;
+  std::unique_ptr<SyntheticSection> partEnd;
+  std::unique_ptr<SyntheticSection> partIndex;
+  std::unique_ptr<PltSection> plt;
+  std::unique_ptr<IpltSection> iplt;
+  std::unique_ptr<PPC32Got2Section> ppc32Got2;
+  std::unique_ptr<IBTPltSection> ibtPlt;
+  std::unique_ptr<RelocationBaseSection> relaPlt;
+  // Non-SHF_ALLOC sections
+  std::unique_ptr<SyntheticSection> debugNames;
+  std::unique_ptr<GdbIndexSection> gdbIndex;
+  std::unique_ptr<StringTableSection> shStrTab;
+  std::unique_ptr<StringTableSection> strTab;
+  std::unique_ptr<SymbolTableBaseSection> symTab;
+  std::unique_ptr<SymtabShndxSection> symTabShndx;
+
+  void reset();
+};
+
 struct Ctx {
+  Config arg;
   LinkerDriver driver;
   LinkerScript *script;
-  TargetInfo *target;
+  std::unique_ptr<TargetInfo> target;
 
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
@@ -502,6 +561,9 @@ struct Ctx {
   };
   OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
+  std::vector<Partition> partitions;
+
+  InStruct in;
 
   // Some linker-generated symbols need to be created as
   // Defined symbols.
@@ -542,6 +604,7 @@ struct Ctx {
     Defined *tlsModuleBase;
   };
   ElfSym sym;
+  std::unique_ptr<SymbolTable> symtab;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -593,6 +656,7 @@ struct Ctx {
   // STT_SECTION symbol associated to the .toc input section.
   llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
+  Ctx();
   void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
@@ -604,8 +668,8 @@ LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.
-static inline ArrayRef<VersionDefinition> namedVersionDefs() {
-  return llvm::ArrayRef(config->versionDefinitions).slice(2);
+static inline ArrayRef<VersionDefinition> namedVersionDefs(Ctx &ctx) {
+  return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 
 void errorOrWarn(const Twine &msg);

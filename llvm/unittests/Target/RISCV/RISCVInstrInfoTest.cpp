@@ -243,8 +243,7 @@ static void expectDIEPrintResult(const DIExpression *Expr, StringRef Expected) {
   std::string Output;
   raw_string_ostream OS(Output);
   Expr->print(OS);
-  OS.flush();
-  EXPECT_EQ(OS.str(), Expected);
+  EXPECT_EQ(Output, Expected);
 }
 
 TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {

@@ -792,6 +792,24 @@ private:
     return ResVal == nullptr;
   }
 
+  bool getValueOrMetadata(const SmallVectorImpl<uint64_t> &Record,
+                          unsigned &Slot, unsigned InstNum, Value *&ResVal,
+                          BasicBlock *ConstExprInsertBB) {
+    if (Slot == Record.size())
+      return true;
+    unsigned ValID = Record[Slot++];
+    if (ValID != bitc::OB_METADATA) {
+      unsigned TypeId;
+      return getValueTypePair(Record, --Slot, InstNum, ResVal, TypeId,
+                              ConstExprInsertBB);
+    }
+    if (Slot == Record.size())
+      return true;
+    unsigned ValNo = InstNum - (unsigned)Record[Slot++];
+    ResVal = MetadataAsValue::get(Context, getFnMetadataByID(ValNo));
+    return false;
+  }
+
   /// Read a value out of the specified record from slot 'Slot'. Increment Slot
   /// past the number of slots used by the value in the record. Return true if
   /// there is an error.
@@ -2144,6 +2162,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeNumericalStability;
   case bitc::ATTR_KIND_SANITIZE_REALTIME:
     return Attribute::SanitizeRealtime;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME_UNSAFE:
+    return Attribute::SanitizeRealtimeUnsafe;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -2190,6 +2210,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Initializes;
   case bitc::ATTR_KIND_CORO_ELIDE_SAFE:
     return Attribute::CoroElideSafe;
+  case bitc::ATTR_KIND_NO_EXT:
+    return Attribute::NoExt;
   }
 }
 
@@ -6763,8 +6785,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned OpNum = 1;
       while (OpNum != Record.size()) {
         Value *Op;
-        unsigned OpTypeID;
-        if (getValueTypePair(Record, OpNum, NextValueNo, Op, OpTypeID, CurBB))
+        if (getValueOrMetadata(Record, OpNum, NextValueNo, Op, CurBB))
           return error("Invalid record");
         Inputs.push_back(Op);
       }

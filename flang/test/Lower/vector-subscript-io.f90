@@ -215,7 +215,7 @@ subroutine two_vectors(x, y1, y2)
 end subroutine
 
 ! CHECK-LABEL: func @_QPtriplets_and_vector(
-! CHECK-SAME:    %[[VAL_170:.*]]: !fir.ref<!fir.array<4x4x!fir.complex<4>>>{{.*}}, %[[VAL_166:.*]]: !fir.ref<!fir.array<3xi32>>{{.*}}) {
+! CHECK-SAME:    %[[VAL_170:.*]]: !fir.ref<!fir.array<4x4xcomplex<f32>>>{{.*}}, %[[VAL_166:.*]]: !fir.ref<!fir.array<3xi32>>{{.*}}) {
 subroutine triplets_and_vector(x, y)
   integer :: y(3)
   complex :: x(4, 4)
@@ -242,8 +242,8 @@ subroutine triplets_and_vector(x, y)
 ! CHECK:   %[[VAL_165:.*]] = fir.coordinate_of %[[VAL_166]], %[[VAL_159]] : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
 ! CHECK:   %[[VAL_167:.*]] = fir.load %[[VAL_165]] : !fir.ref<i32>
 ! CHECK:   %[[VAL_168:.*]] = fir.convert %[[VAL_167]] : (i32) -> index
-! CHECK:   %[[VAL_169:.*]] = fir.array_coor %[[VAL_170]](%[[VAL_157]]) {{\[}}%[[VAL_158]]] %[[VAL_162]], %[[VAL_168]] : (!fir.ref<!fir.array<4x4x!fir.complex<4>>>, !fir.shape<2>, !fir.slice<2>, index, index) -> !fir.ref<!fir.complex<4>>
-! CHECK:   %[[VAL_171:.*]] = fir.convert %[[VAL_169]] : (!fir.ref<!fir.complex<4>>) -> !fir.ref<f32>
+! CHECK:   %[[VAL_169:.*]] = fir.array_coor %[[VAL_170]](%[[VAL_157]]) {{\[}}%[[VAL_158]]] %[[VAL_162]], %[[VAL_168]] : (!fir.ref<!fir.array<4x4xcomplex<f32>>>, !fir.shape<2>, !fir.slice<2>, index, index) -> !fir.ref<complex<f32>>
+! CHECK:   %[[VAL_171:.*]] = fir.convert %[[VAL_169]] : (!fir.ref<complex<f32>>) -> !fir.ref<f32>
 ! CHECK:   %[[VAL_172:.*]] = fir.call @_FortranAioInputComplex32(%[[VAL_156]], %[[VAL_171]]) {{.*}}: (!fir.ref<i8>, !fir.ref<f32>) -> i1
 ! CHECK:   %[[VAL_173:.*]] = arith.addi %[[VAL_162]], %[[VAL_153]] : index
 ! CHECK:   %[[VAL_174:.*]] = arith.subi %[[VAL_163]], %[[VAL_153]] : index
@@ -342,7 +342,7 @@ subroutine substring(x, y, i, j)
 end subroutine
 
 ! CHECK-LABEL: func @_QPcomplex_part(
-! CHECK-SAME: %[[VAL_262:.*]]: !fir.box<!fir.array<?x!fir.complex<4>>>{{.*}}, %[[VAL_253:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}) {
+! CHECK-SAME: %[[VAL_262:.*]]: !fir.box<!fir.array<?xcomplex<f32>>>{{.*}}, %[[VAL_253:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}) {
 subroutine complex_part(z, y)
   integer :: y(:)
   complex :: z(:)
@@ -364,7 +364,7 @@ subroutine complex_part(z, y)
 ! CHECK:   %[[VAL_258:.*]] = fir.coordinate_of %[[VAL_253]], %[[VAL_255]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! CHECK:   %[[VAL_259:.*]] = fir.load %[[VAL_258]] : !fir.ref<i32>
 ! CHECK:   %[[VAL_260:.*]] = fir.convert %[[VAL_259]] : (i32) -> index
-! CHECK:   %[[VAL_261:.*]] = fir.array_coor %[[VAL_262]] {{\[}}%[[VAL_254]]] %[[VAL_260]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.slice<1>, index) -> !fir.ref<f32>
+! CHECK:   %[[VAL_261:.*]] = fir.array_coor %[[VAL_262]] {{\[}}%[[VAL_254]]] %[[VAL_260]] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.slice<1>, index) -> !fir.ref<f32>
 ! CHECK:   %[[VAL_263:.*]] = fir.call @_FortranAioInputReal32(%[[VAL_251]], %[[VAL_261]]) {{.*}}: (!fir.ref<i8>, !fir.ref<f32>) -> i1
 ! CHECK:   %[[VAL_264:.*]] = arith.addi %[[VAL_255]], %[[VAL_248]] : index
 ! CHECK:   %[[VAL_265:.*]] = arith.subi %[[VAL_256]], %[[VAL_248]] : index

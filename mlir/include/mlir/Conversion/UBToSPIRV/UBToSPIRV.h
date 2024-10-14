@@ -21,7 +21,7 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace ub {
-void populateUBToSPIRVConversionPatterns(SPIRVTypeConverter &converter,
+void populateUBToSPIRVConversionPatterns(const SPIRVTypeConverter &converter,
                                          RewritePatternSet &patterns);
 } // namespace ub
 } // namespace mlir

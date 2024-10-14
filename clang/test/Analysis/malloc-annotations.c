@@ -3,6 +3,7 @@
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config unix.DynamicMemoryModeling:Optimistic=true %s
 
 typedef __typeof(sizeof(int)) size_t;
@@ -23,6 +24,12 @@ void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
 void __attribute((ownership_holds(malloc, 1)))
 __attribute((ownership_holds(malloc, 1)))
 __attribute((ownership_holds(malloc, 3))) my_hold2(void *, void *, void *);
+
+__attribute((ownership_returns(user_malloc, 1))) void *user_malloc(size_t);
+__attribute((ownership_takes(user_malloc, 1))) void user_free(void *);
+
+void clang_analyzer_dump(int);
+
 void *my_malloc3(size_t);
 void *myglobalpointer;
 struct stuff {
@@ -271,5 +278,12 @@ void testMultipleFreeAnnotations(void) {
   int *p = malloc(12);
   int *q = malloc(12);
   my_freeBoth(p, q);
+}
+
+void testNoUninitAttr(void) {
+  int *p = user_malloc(sizeof(int));
+  int read = p[0]; // no-warning
+  clang_analyzer_dump(p[0]); // expected-warning{{Unknown}}
+  user_free(p);
 }
 

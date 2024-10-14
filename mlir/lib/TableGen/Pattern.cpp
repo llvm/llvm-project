@@ -136,7 +136,8 @@ int DagNode::getNumReturnsOfNativeCode() const {
 llvm::StringRef DagNode::getSymbol() const { return node->getNameStr(); }
 
 Operator &DagNode::getDialectOp(RecordOperatorMap *mapper) const {
-  llvm::Record *opDef = cast<llvm::DefInit>(node->getOperator())->getDef();
+  const llvm::Record *opDef =
+      cast<llvm::DefInit>(node->getOperator())->getDef();
   auto [it, inserted] = mapper->try_emplace(opDef);
   if (inserted)
     it->second = std::make_unique<Operator>(opDef);

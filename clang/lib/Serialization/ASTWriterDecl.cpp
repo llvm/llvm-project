@@ -1521,6 +1521,12 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
+    // For lambdas inside canonical FunctionDecl remember the mapping.
+    if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
+        FD && FD->isCanonicalDecl()) {
+      Writer.FunctionToLambdasMap[Writer.GetDeclRef(FD)].push_back(
+          Writer.GetDeclRef(D));
+    }
   } else {
     Record.push_back(CXXRecNotTemplate);
   }
@@ -1707,14 +1713,13 @@ void ASTDeclWriter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
 void ASTDeclWriter::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
   VisitRedeclarable(D);
 
+  Record.push_back(D->isMemberSpecialization());
+
   // Emit data to initialize CommonOrPrev before VisitTemplateDecl so that
   // getCommonPtr() can be used while this is still initializing.
-  if (D->isFirstDecl()) {
+  if (D->isFirstDecl())
     // This declaration owns the 'common' pointer, so serialize that data now.
     Record.AddDeclRef(D->getInstantiatedFromMemberTemplate());
-    if (D->getInstantiatedFromMemberTemplate())
-      Record.push_back(D->isMemberSpecialization());
-  }
 
   VisitTemplateDecl(D);
   Record.push_back(D->getIdentifierNamespace());
@@ -1779,6 +1784,18 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   if (ArgsWritten)
     Record.AddASTTemplateArgumentListInfo(ArgsWritten);
 
+  // Mention the implicitly generated C++ deduction guide to make sure the
+  // deduction guide will be rewritten as expected.
+  //
+  // FIXME: Would it be more efficient to add a callback register function
+  // in sema to register the deduction guide?
+  if (Writer.isWritingStdCXXNamedModules()) {
+    auto Name = Context.DeclarationNames.getCXXDeductionGuideName(
+        D->getSpecializedTemplate());
+    for (auto *DG : D->getDeclContext()->noload_lookup(Name))
+      Writer.GetDeclRef(DG->getCanonicalDecl());
+  }
+
   Code = serialization::DECL_CLASS_TEMPLATE_SPECIALIZATION;
 }
 
@@ -1788,11 +1805,10 @@ void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
 
   VisitClassTemplateSpecializationDecl(D);
 
+  Record.push_back(D->isMemberSpecialization());
   // These are read/set from/to the first declaration.
-  if (D->getPreviousDecl() == nullptr) {
+  if (D->isFirstDecl())
     Record.AddDeclRef(D->getInstantiatedFromMember());
-    Record.push_back(D->isMemberSpecialization());
-  }
 
   Code = serialization::DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
@@ -1856,12 +1872,11 @@ void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
   Record.AddTemplateParameterList(D->getTemplateParameters());
 
   VisitVarTemplateSpecializationDecl(D);
+  Record.push_back(D->isMemberSpecialization());
 
   // These are read/set from/to the first declaration.
-  if (D->getPreviousDecl() == nullptr) {
+  if (D->isFirstDecl())
     Record.AddDeclRef(D->getInstantiatedFromMember());
-    Record.push_back(D->isMemberSpecialization());
-  }
 
   Code = serialization::DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION;
 }

@@ -759,6 +759,11 @@ class TargetSpecificAttr<TargetSpec target> {
 /// redeclarations, even when it's written on a parameter.
 class InheritableParamAttr : InheritableAttr;
 
+/// A attribute that is either a declaration attribute or a statement attribute,
+/// and if used as a declaration attribute, is inherited by later
+/// redeclarations, even when it's written on a parameter.
+class InheritableParamOrStmtAttr : InheritableParamAttr;
+
 /// An attribute which changes the ABI rules for a specific parameter.
 class ParameterABIAttr : InheritableParamAttr {
   let Subjects = SubjectList<[ParmVar]>;
@@ -928,7 +933,7 @@ def AnalyzerNoReturn : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def Annotate : InheritableParamAttr {
+def Annotate : InheritableParamOrStmtAttr {
   let Spellings = [Clang<"annotate">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
   // Ensure that the annotate attribute can be used with
@@ -1255,6 +1260,14 @@ def CoroAwaitElidable : InheritableAttr {
   let Subjects = SubjectList<[CXXRecord]>;
   let LangOpts = [CPlusPlus];
   let Documentation = [CoroAwaitElidableDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroAwaitElidableArgument : InheritableAttr {
+  let Spellings = [Clang<"coro_await_elidable_argument">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroAwaitElidableArgumentDoc];
   let SimpleHandler = 1;
 }
 
@@ -4666,6 +4679,19 @@ def HLSLResourceClass : TypeAttr {
 				 ["SRV", "UAV", "CBuffer", "Sampler"],
 				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
   ];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLContainedType : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "contained_type">];
+  let LangOpts = [HLSL];
+  let Args = [TypeArgument<"Type", /*opt=*/0>];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLRawBuffer : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "raw_buffer">];
+  let LangOpts = [HLSL]; 
   let Documentation = [InternalOnly];
 }
 

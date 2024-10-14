@@ -1095,8 +1095,8 @@ def SKLWriteResGroup91 : SchedWriteRes<[SKLPort23,SKLPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SKLWriteResGroup91], (instrs VINSERTF128rm,
-                                          VINSERTI128rm,
+def: InstRW<[SKLWriteResGroup91], (instrs VINSERTF128rmi,
+                                          VINSERTI128rmi,
                                           VPBLENDDrmi)>;
 def: InstRW<[SKLWriteResGroup91, ReadAfterVecXLd],
                                   (instregex "(V?)PADD(B|D|Q|W)rm",
