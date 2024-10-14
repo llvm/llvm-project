@@ -995,7 +995,6 @@ set(files
   span
   sstream
   stack
-  stdalign.h
   stdatomic.h
   stdbool.h
   stddef.h

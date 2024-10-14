@@ -1066,7 +1066,6 @@ if (current_toolchain == default_toolchain) {
       "span",
       "sstream",
       "stack",
-      "stdalign.h",
       "stdatomic.h",
       "stdbool.h",
       "stddef.h",

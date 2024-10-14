@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // test <stdalign.h>
+//
+// Even though <stdalign.h> is not provided by libc++,
+// we still test that using it with libc++ on the search path will work.
 
 #include <stdalign.h>
 
