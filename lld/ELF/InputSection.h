@@ -245,7 +245,7 @@ public:
   // Each section knows how to relocate itself. These functions apply
   // relocations, assuming that Buf points to this section's copy in
   // the mmap'ed output buffer.
-  template <class ELFT> void relocate(uint8_t *buf, uint8_t *bufEnd);
+  template <class ELFT> void relocate(Ctx &, uint8_t *buf, uint8_t *bufEnd);
   uint64_t getRelocTargetVA(Ctx &, const Relocation &r, uint64_t p) const;
 
   // The native ELF reloc data type is not very convenient to handle.
@@ -278,8 +278,7 @@ public:
   // to relocation. See https://gcc.gnu.org/wiki/SplitStacks for more
   // information.
   template <typename ELFT>
-  void adjustSplitStackFunctionPrologues(uint8_t *buf, uint8_t *end);
-
+  void adjustSplitStackFunctionPrologues(Ctx &, uint8_t *buf, uint8_t *end);
 
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
     size_t s = content().size();
@@ -317,7 +316,7 @@ public:
   template <class ELFT>
   MergeInputSection(ObjFile<ELFT> &f, const typename ELFT::Shdr &header,
                     StringRef name);
-  MergeInputSection(uint64_t flags, uint32_t type, uint64_t entsize,
+  MergeInputSection(Ctx &, uint64_t flags, uint32_t type, uint64_t entsize,
                     ArrayRef<uint8_t> data, StringRef name);
 
   static bool classof(const SectionBase *s) { return s->kind() == Merge; }
@@ -410,7 +409,7 @@ public:
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.
-  template <class ELFT> void writeTo(uint8_t *buf);
+  template <class ELFT> void writeTo(Ctx &, uint8_t *buf);
 
   OutputSection *getParent() const {
     return reinterpret_cast<OutputSection *>(parent);
@@ -425,7 +424,7 @@ public:
   InputSectionBase *getRelocatedSection() const;
 
   template <class ELFT, class RelTy>
-  void relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels);
+  void relocateNonAlloc(Ctx &, uint8_t *buf, Relocs<RelTy> rels);
 
   // Points to the canonical section. If ICF folds two sections, repl pointer of
   // one section points to the other.
@@ -440,10 +439,10 @@ public:
   static InputSection discarded;
 
 private:
-  template <class ELFT, class RelTy> void copyRelocations(uint8_t *buf);
+  template <class ELFT, class RelTy> void copyRelocations(Ctx &, uint8_t *buf);
 
   template <class ELFT, class RelTy, class RelIt>
-  void copyRelocations(uint8_t *buf, llvm::iterator_range<RelIt> rels);
+  void copyRelocations(Ctx &, uint8_t *buf, llvm::iterator_range<RelIt> rels);
 
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
