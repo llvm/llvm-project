@@ -430,11 +430,6 @@ public:
   /// be printed.
   LogicalResult printAlias(Type type);
 
-  /// Check if the given type has an alias that will be printed in the future.
-  /// Returns false if the type has an alias that's currently being printed or
-  /// has already been printed. This can aid printing mutually recursive types.
-  bool hasFutureAlias(Type type) const;
-
   /// Print the given location to the stream. If `allowAlias` is true, this
   /// allows for the internal location to use an attribute alias.
   void printLocation(LocationAttr loc, bool allowAlias = false);
@@ -453,6 +448,8 @@ public:
   LogicalResult pushCyclicPrinting(const void *opaquePointer);
 
   void popCyclicPrinting();
+
+  bool hasFutureAlias(const void *opaquePointer) const;
 
   void printDimensionList(ArrayRef<int64_t> shape);
 
@@ -784,7 +781,6 @@ private:
     initializer.visit(type);
     return success();
   }
-  bool hasFutureAlias(Type) const override { return false; }
 
   /// Consider the given location to be printed for an alias.
   void printOptionalLocationSpecifier(Location loc) override {
@@ -959,7 +955,6 @@ private:
     printType(type);
     return success();
   }
-  bool hasFutureAlias(Type) const override { return false; }
 
   /// Record the alias result of a child element.
   void recordAliasResult(std::pair<size_t, size_t> aliasDepthAndIndex) {
@@ -985,6 +980,8 @@ private:
   }
 
   void popCyclicPrinting() override { cyclicPrintingStack.pop_back(); }
+
+  bool hasFutureAlias(const void *) const override { return false; }
 
   /// Stack of potentially cyclic mutable attributes or type currently being
   /// printed.
@@ -1194,10 +1191,11 @@ public:
   /// Returns success if an alias was printed, failure otherwise.
   LogicalResult getAlias(Type ty, raw_ostream &os) const;
 
-  /// Check if the given type has an alias that will be printed in the future.
-  /// Returns false if the type has an alias that's currently being printed or
-  /// has already been printed. This can aid printing mutually recursive types.
-  bool hasFutureAlias(Type ty) const;
+  /// Check if the given attribute or type (in the form of a type erased
+  /// pointer) will be printed as an alias in the future. Returns false if the
+  /// type has an alias that's currently being printed or has already been
+  /// printed. This enables cyclic print checking for mutual recursion.
+  bool hasFutureAlias(const void *opaquePointer) const;
 
   /// Print all of the referenced aliases that can not be resolved in a deferred
   /// manner.
@@ -1250,8 +1248,8 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
   return success();
 }
 
-bool AliasState::hasFutureAlias(Type ty) const {
-  const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
+bool AliasState::hasFutureAlias(const void *opaquePointer) const {
+  const auto *it = attrTypeToAlias.find(opaquePointer);
   if (it == attrTypeToAlias.end())
     return false;
   return !it->second.hasStartedPrinting;
@@ -2259,10 +2257,6 @@ LogicalResult AsmPrinter::Impl::printAlias(Type type) {
   return state.getAliasState().getAlias(type, os);
 }
 
-bool AsmPrinter::Impl::hasFutureAlias(Type type) const {
-  return state.getAliasState().hasFutureAlias(type);
-}
-
 void AsmPrinter::Impl::printAttribute(Attribute attr,
                                       AttrTypeElision typeElision) {
   if (!attr) {
@@ -2820,6 +2814,10 @@ LogicalResult AsmPrinter::Impl::pushCyclicPrinting(const void *opaquePointer) {
 
 void AsmPrinter::Impl::popCyclicPrinting() { state.popCyclicPrinting(); }
 
+bool AsmPrinter::Impl::hasFutureAlias(const void *opaquePointer) const {
+  return state.getAliasState().hasFutureAlias(opaquePointer);
+}
+
 void AsmPrinter::Impl::printDimensionList(ArrayRef<int64_t> shape) {
   detail::printDimensionList(os, shape);
 }
@@ -2861,11 +2859,6 @@ LogicalResult AsmPrinter::printAlias(Type type) {
   return impl->printAlias(type);
 }
 
-bool AsmPrinter::hasFutureAlias(Type type) const {
-  assert(impl && "expected AsmPrinter::hasFutureAlias to be overridden");
-  return impl->hasFutureAlias(type);
-}
-
 void AsmPrinter::printAttributeWithoutType(Attribute attr) {
   assert(impl &&
          "expected AsmPrinter::printAttributeWithoutType to be overriden");
@@ -2903,6 +2896,10 @@ LogicalResult AsmPrinter::pushCyclicPrinting(const void *opaquePointer) {
 }
 
 void AsmPrinter::popCyclicPrinting() { impl->popCyclicPrinting(); }
+
+bool AsmPrinter::hasFutureAlias(const void *opaquePointer) const {
+  return impl->hasFutureAlias(opaquePointer);
+}
 
 //===----------------------------------------------------------------------===//
 // Affine expressions and maps

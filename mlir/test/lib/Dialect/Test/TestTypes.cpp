@@ -529,7 +529,7 @@ void TestRecursiveAliasType::print(AsmPrinter &printer) const {
       printer.tryStartCyclicPrint(*this);
 
   printer << "<" << getName();
-  if (succeeded(cyclicPrint) && !printer.hasFutureAlias(*this)) {
+  if (succeeded(cyclicPrint)) {
     printer << ", ";
     printer << getBody();
   }
