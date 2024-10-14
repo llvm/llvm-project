@@ -570,6 +570,7 @@ inline StreamTy &printOpenACCGangKind(StreamTy &Out, OpenACCGangKind GK) {
   case OpenACCGangKind::Static:
     return Out << "static";
   }
+  llvm_unreachable("unknown gang kind");
 }
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
                                              OpenACCGangKind Op) {
