@@ -14,10 +14,10 @@
 
 #include "test_macros.h"
 
+#include <cstdbool>
+
 #if TEST_STD_VER >= 20
-#  include <cstdbool>
-// expected-warning {{'__standard_header_cstdbool' is deprecated: removed in C++20}}
+// expected-warning@cstdbool:* {{'__standard_header_cstdbool' is deprecated: removed in C++20}}
 #else
-#  include <cstdbool>
-// expected-warning {{'__standard_header_cstdbool' is deprecated}}
+// expected-warning@cstdbool:* {{'__standard_header_cstdbool' is deprecated}}
 #endif

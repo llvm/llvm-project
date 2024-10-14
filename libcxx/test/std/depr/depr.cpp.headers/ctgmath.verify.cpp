@@ -14,10 +14,10 @@
 
 #include "test_macros.h"
 
+#include <ctgmath>
+
 #if TEST_STD_VER >= 20
-#  include <ctgmath>
-// expected-warning {{'__standard_header_ctgmath' is deprecated: removed in C++20}}
+// expected-warning@ctgmath:* {{'__standard_header_ctgmath' is deprecated: removed in C++20}}
 #else
-#  include <ctgmath>
-// expected-warning {{'__standard_header_ctgmath' is deprecated}}
+// expected-warning@ctgmath:* {{'__standard_header_ctgmath' is deprecated}}
 #endif

@@ -14,10 +14,10 @@
 
 #include "test_macros.h"
 
+#include <cstdalign>
+
 #if TEST_STD_VER >= 20
-#  include <cstdalign>
-// expected-warning {{'__standard_header_cstdalign' is deprecated: removed in C++20}}
+// expected-warning@cstdalign:* {{'__standard_header_cstdalign' is deprecated: removed in C++20}}
 #else
-#  include <cstdalign>
-// expected-warning {{'__standard_header_cstdalign' is deprecated}}
+// expected-warning@cstdalign:* {{'__standard_header_cstdalign' is deprecated}}
 #endif
