@@ -1528,6 +1528,8 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 ///
 LValue CodeGenFunction::EmitLValue(const Expr *E,
                                    KnownNonNull_t IsKnownNonNull) {
+  // Running with sufficient stack space to avoid deeply nested expressions
+  // cause a stack overflow.
   LValue LV;
   CGM.runWithSufficientStackSpace(E->getExprLoc(), [&] {
     LV = EmitLValueHelper(E, IsKnownNonNull);
