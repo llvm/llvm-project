@@ -4,18 +4,19 @@
 
 ; Crash Test case reported on D134605
 
-define i16 @D134605() {
+define void @D134605() {
 ; CHECK-LABEL: @D134605(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARRAYIDX81:%.*]] = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 3
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX81]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr poison, align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
 ; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i16 poison, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP2]], 2
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = add i16 [[TMP3]], poison
 ; CHECK-NEXT:    [[REASS_MUL24:%.*]] = shl i16 [[OP_RDX]], 2
 ; CHECK-NEXT:    [[CALL:%.*]] = call i16 @check_i16(i16 noundef 1, i16 noundef [[REASS_MUL24]], i16 noundef 5120)
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
 entry:
   %arrayidx81 = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 3
@@ -37,20 +38,22 @@ entry:
   %add15935 = add i16 %add15534, poison
   %reass.mul24 = shl i16 %add15935, 2
   %call = call i16 @check_i16(i16 noundef 1, i16 noundef %reass.mul24, i16 noundef 5120)
-  unreachable
+  ret void
 }
 declare i16 @check_i16(i16, i16, i16)
 
 
 define void @PR58054() {
 ; CHECK-LABEL: @PR58054(
-; CHECK-NEXT:    [[VAL3:%.*]] = mul i64 poison, poison
-; CHECK-NEXT:    [[VAL4:%.*]] = mul i64 [[VAL3]], poison
-; CHECK-NEXT:    [[VAL5:%.*]] = mul i64 [[VAL4]], poison
-; CHECK-NEXT:    [[VAL7:%.*]] = add i64 poison, [[VAL5]]
+; CHECK-NEXT:    [[VAL:%.*]] = add i64 poison, poison
+; CHECK-NEXT:    [[VAL2:%.*]] = add i64 poison, poison
+; CHECK-NEXT:    [[VAL3:%.*]] = mul i64 [[VAL2]], [[VAL]]
+; CHECK-NEXT:    [[VAL4:%.*]] = mul i64 [[VAL3]], [[VAL2]]
+; CHECK-NEXT:    [[VAL5:%.*]] = mul i64 [[VAL4]], [[VAL2]]
+; CHECK-NEXT:    [[VAL7:%.*]] = add i64 [[VAL]], [[VAL5]]
 ; CHECK-NEXT:    [[VAL8:%.*]] = sitofp i64 [[VAL7]] to double
 ; CHECK-NEXT:    call void @wibble(i32 poison, double [[VAL8]], i64 poison)
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
   %val = add i64 poison, poison
   %val2 = add i64 poison, poison
@@ -60,6 +63,6 @@ define void @PR58054() {
   %val7 = add i64 %val, %val5
   %val8 = sitofp i64 %val7 to double
   call void @wibble(i32 poison, double %val8, i64 poison)
-  unreachable
+  ret void
 }
 declare void @wibble(i32, double, i64)

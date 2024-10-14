@@ -250,6 +250,8 @@ Non-comprehensive list of changes in this release
 - The floating point comparison builtins (``__builtin_isgreater``,
   ``__builtin_isgreaterequal``, ``__builtin_isless``, etc.) and
   ``__builtin_signbit`` can now be used in constant expressions.
+- Plugins can now define custom attributes that apply to statements
+  as well as declarations.
 
 New Compiler Flags
 ------------------
@@ -510,6 +512,7 @@ Bug Fixes to C++ Support
   and undeclared templates. (#GH107047, #GH49093)
 - Clang no longer crashes when a lambda contains an invalid block declaration that contains an unexpanded
   parameter pack. (#GH109148)
+- Fixed overload handling for object parameters with top-level cv-qualifiers in explicit member functions (#GH100394)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -630,6 +633,8 @@ WebAssembly Support
 AVR Support
 ^^^^^^^^^^^
 
+- Reject C/C++ compilation for avr1 devices which have no SRAM.
+
 DWARF Support in Clang
 ----------------------
 
@@ -661,6 +666,8 @@ clang-format
 - Adds ``BreakBinaryOperations`` option.
 - Adds ``TemplateNames`` option.
 - Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
+- Adds ``IndentOnly`` suboption to ``ReflowComments`` to fix the indentation of multi-line comments
+  without touching their contents, renames ``false`` to ``Never``, and ``true`` to ``Always``.
 
 libclang
 --------

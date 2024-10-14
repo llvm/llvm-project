@@ -4200,7 +4200,7 @@ bool ScalarEvolution::canReuseInstruction(
 
     // Either the value can't be poison, or the S would also be poison if it
     // is.
-    if (PoisonVals.contains(V) || isGuaranteedNotToBePoison(V))
+    if (PoisonVals.contains(V) || ::isGuaranteedNotToBePoison(V))
       continue;
 
     auto *I = dyn_cast<Instruction>(V);
@@ -4303,6 +4303,16 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   }
 
   for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
+    bool MayBeUB = SCEVExprContains(Ops[i], [this](const SCEV *S) {
+      auto *UDiv = dyn_cast<SCEVUDivExpr>(S);
+      // The UDiv may be UB if the divisor is poison or zero. Unless the divisor
+      // is a non-zero constant, we have to assume the UDiv may be UB.
+      return UDiv && (!isKnownNonZero(UDiv->getOperand(1)) ||
+                      !isGuaranteedNotToBePoison(UDiv->getOperand(1)));
+    });
+
+    if (MayBeUB)
+      continue;
     // We can replace %x umin_seq %y with %x umin %y if either:
     //  * %y being poison implies %x is also poison.
     //  * %x cannot be the saturating value (e.g. zero for umin).
@@ -7298,6 +7308,11 @@ bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
   return false;
 }
 
+bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
+  SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ true);
+  visitAll(Op, PC);
+  return PC.MaybePoison.empty();
+}
 
 bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
   // Only proceed if we can prove that I does not yield poison.
