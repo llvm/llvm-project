@@ -239,7 +239,6 @@ coroutine limits
 coroutine version
 cstddef version
 ctgmath bitset
-ctgmath ccomplex
 ctgmath cctype
 ctgmath cerrno
 ctgmath climits
