@@ -96,13 +96,13 @@ bool AliasAnalysis::Source::isBoxData() const {
          origin.isData;
 }
 
-bool AliasAnalysis::Source::aliasesLikeDummyArg() const {
+bool AliasAnalysis::Source::mayBeDummyArgOrHostAssoc() const {
   return kind != SourceKind::Allocate && kind != SourceKind::Global;
 }
 
-bool AliasAnalysis::Source::aliasesLikePtrDummyArg() const {
+bool AliasAnalysis::Source::mayBePtrDummyArgOrHostAssoc() const {
   // Must alias like dummy arg (or HostAssoc).
-  if (!aliasesLikeDummyArg())
+  if (!mayBeDummyArgOrHostAssoc())
     return false;
   // Must be address of the dummy arg not of a dummy arg component.
   if (isRecordWithPointerComponent(valueType))
@@ -111,14 +111,14 @@ bool AliasAnalysis::Source::aliasesLikePtrDummyArg() const {
   return attributes.test(Attribute::Pointer) && !isData();
 }
 
-bool AliasAnalysis::Source::canBeActualArg() const {
+bool AliasAnalysis::Source::mayBeActualArg() const {
   return kind != SourceKind::Allocate;
 }
 
-bool AliasAnalysis::Source::canBeActualArgWithPtr(
+bool AliasAnalysis::Source::mayBeActualArgWithPtr(
     const mlir::Value *val) const {
   // Must not be local.
-  if (!canBeActualArg())
+  if (!mayBeActualArg())
     return false;
   // Can be address *of* (not *in*) a pointer.
   if (attributes.test(Attribute::Pointer) && !isData())
@@ -250,8 +250,8 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // composite), so this "if" catches those cases.
   if (src1->attributes.test(Attribute::Target) &&
       src2->attributes.test(Attribute::Target) &&
-      ((src1->aliasesLikeDummyArg() && src2->canBeActualArg()) ||
-       (src2->aliasesLikeDummyArg() && src1->canBeActualArg()))) {
+      ((src1->mayBeDummyArgOrHostAssoc() && src2->mayBeActualArg()) ||
+       (src2->mayBeDummyArgOrHostAssoc() && src1->mayBeActualArg()))) {
     LLVM_DEBUG(llvm::dbgs()
                << "  aliasing between targets where one is a dummy arg\n");
     return AliasResult::MayAlias;
@@ -304,8 +304,10 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   //     print *, p
   //   end subroutine
   // end subroutine
-  if ((src1->aliasesLikePtrDummyArg() && src2->canBeActualArgWithPtr(val2)) ||
-      (src2->aliasesLikePtrDummyArg() && src1->canBeActualArgWithPtr(val1))) {
+  if ((src1->mayBePtrDummyArgOrHostAssoc() &&
+       src2->mayBeActualArgWithPtr(val2)) ||
+      (src2->mayBePtrDummyArgOrHostAssoc() &&
+       src1->mayBeActualArgWithPtr(val1))) {
     LLVM_DEBUG(llvm::dbgs()
                << "  aliasing between pointer dummy arg and either pointer or "
                << "composite with pointer component\n");
