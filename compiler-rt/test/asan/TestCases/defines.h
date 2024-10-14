@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SANITIZER_TEST_DEFINES_H
+#define SANITIZER_TEST_DEFINES_H
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #  include <intrin.h>
@@ -29,3 +30,5 @@
 #  define MULTIPLE_ATTRIBUTE_DECL(a, b) __attribute__((a, b))
 
 #endif // _MSC_VER
+
+#endif // SANITIZER_TEST_DEFINES
