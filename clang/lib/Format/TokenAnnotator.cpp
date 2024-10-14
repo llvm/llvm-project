@@ -1551,7 +1551,8 @@ private:
           // Case D.
           if (Keywords.isVerilogIdentifier(*Prev) && PrevPrev->is(tok::comma)) {
             const FormatToken *PrevParen = PrevPrev->getPreviousNonComment();
-            if (PrevParen->is(tok::r_paren) && PrevParen->MatchingParen &&
+            if (PrevParen && PrevParen->is(tok::r_paren) &&
+                PrevParen->MatchingParen &&
                 PrevParen->MatchingParen->is(TT_VerilogInstancePortLParen)) {
               return true;
             }
