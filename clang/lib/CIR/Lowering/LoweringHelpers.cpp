@@ -45,84 +45,67 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type Ty) {
   llvm_unreachable("NYI");
 }
 
-// return the nested type and quantity of elements for cir.array type.
-// e.g: for !cir.array<!cir.array<!s32i x 3> x 1>
-// it returns !s32i as return value and stores 3 to elemQuantity.
-mlir::Type getNestedTypeAndElemQuantity(mlir::Type Ty, unsigned &elemQuantity) {
-  assert(mlir::isa<mlir::cir::ArrayType>(Ty) && "expected ArrayType");
-
-  elemQuantity = 1;
-  mlir::Type nestTy = Ty;
-  while (auto ArrTy = mlir::dyn_cast<mlir::cir::ArrayType>(nestTy)) {
-    nestTy = ArrTy.getEltType();
-    elemQuantity *= ArrTy.getSize();
-  }
-
-  return nestTy;
-}
-
-template <typename StorageTy>
-void fillTrailingZeros(mlir::cir::ConstArrayAttr attr,
-                       llvm::SmallVectorImpl<StorageTy> &values) {
-  auto numTrailingZeros = attr.getTrailingZerosNum();
-  if (numTrailingZeros) {
-    auto localArrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(attr.getType());
-    assert(localArrayTy && "expected !cir.array");
-
-    auto nestTy = localArrayTy.getEltType();
-    if (!mlir::isa<mlir::cir::ArrayType>(nestTy))
-      values.insert(values.end(), numTrailingZeros,
-                    getZeroInitFromType<StorageTy>(nestTy));
-  }
-}
-
+/// \param attr the ConstArrayAttr to convert
+/// \param values the output parameter, the values array to fill
+/// \param currentDims the shpae of tensor we're going to convert to
+/// \param dimIndex the current dimension we're processing
+/// \param currentIndex the current index in the values array
 template <typename AttrTy, typename StorageTy>
-void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
-                                    llvm::SmallVectorImpl<StorageTy> &values) {
+void convertToDenseElementsAttrImpl(
+    mlir::cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
+    const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
+    int64_t currentIndex) {
   if (auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
     if (auto arrayType = mlir::dyn_cast<mlir::cir::ArrayType>(attr.getType())) {
       for (auto element : stringAttr) {
         auto intAttr = mlir::cir::IntAttr::get(arrayType.getEltType(), element);
-        values.push_back(mlir::dyn_cast<AttrTy>(intAttr).getValue());
+        values[currentIndex++] = mlir::dyn_cast<AttrTy>(intAttr).getValue();
       }
       return;
     }
   }
 
+  dimIndex++;
+  std::size_t elementsSizeInCurrentDim = 1;
+  for (std::size_t i = dimIndex; i < currentDims.size(); i++)
+    elementsSizeInCurrentDim *= currentDims[i];
+
   auto arrayAttr = mlir::cast<mlir::ArrayAttr>(attr.getElts());
   for (auto eltAttr : arrayAttr) {
     if (auto valueAttr = mlir::dyn_cast<AttrTy>(eltAttr)) {
-      values.push_back(valueAttr.getValue());
-    } else if (auto subArrayAttr =
-                   mlir::dyn_cast<mlir::cir::ConstArrayAttr>(eltAttr)) {
-      convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values);
-      if (mlir::dyn_cast<mlir::StringAttr>(subArrayAttr.getElts()))
-        fillTrailingZeros(subArrayAttr, values);
-    } else if (auto zeroAttr = mlir::dyn_cast<mlir::cir::ZeroAttr>(eltAttr)) {
-      unsigned numStoredZeros = 0;
-      auto nestTy =
-          getNestedTypeAndElemQuantity(zeroAttr.getType(), numStoredZeros);
-      values.insert(values.end(), numStoredZeros,
-                    getZeroInitFromType<StorageTy>(nestTy));
-    } else {
-      llvm_unreachable("unknown element in ConstArrayAttr");
+      values[currentIndex++] = valueAttr.getValue();
+      continue;
     }
-  }
 
-  // Only fill in trailing zeros at the local cir.array level where the element
-  // type isn't another array (for the mult-dim case).
-  fillTrailingZeros(attr, values);
+    if (auto subArrayAttr =
+            mlir::dyn_cast<mlir::cir::ConstArrayAttr>(eltAttr)) {
+      convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values, currentDims,
+                                             dimIndex, currentIndex);
+      currentIndex += elementsSizeInCurrentDim;
+      continue;
+    }
+
+    if (mlir::isa<mlir::cir::ZeroAttr>(eltAttr))
+      continue;
+
+    llvm_unreachable("unknown element in ConstArrayAttr");
+  }
 }
 
 template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr
-convertToDenseElementsAttr(mlir::cir::ConstArrayAttr attr,
-                           const llvm::SmallVectorImpl<int64_t> &dims,
-                           mlir::Type type) {
-  auto values = llvm::SmallVector<StorageTy, 8>{};
-  convertToDenseElementsAttrImpl<AttrTy>(attr, values);
-  return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(dims, type),
-                                      llvm::ArrayRef(values));
+mlir::DenseElementsAttr convertToDenseElementsAttr(
+    mlir::cir::ConstArrayAttr attr, const llvm::SmallVectorImpl<int64_t> &dims,
+    mlir::Type elementType, mlir::Type convertedElementType) {
+  unsigned vector_size = 1;
+  for (auto dim : dims)
+    vector_size *= dim;
+  auto values = llvm::SmallVector<StorageTy, 8>(
+      vector_size, getZeroInitFromType<StorageTy>(elementType));
+  convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims, /*currentDim=*/0,
+                                         /*initialIndex=*/0);
+  return mlir::DenseElementsAttr::get(
+      mlir::RankedTensorType::get(dims, convertedElementType),
+      llvm::ArrayRef(values));
 }
 
 std::optional<mlir::Attribute>
@@ -151,10 +134,10 @@ lowerConstArrayAttr(mlir::cir::ConstArrayAttr constArr,
                                                 converter->convertType(type));
   if (mlir::isa<mlir::cir::IntType>(type))
     return convertToDenseElementsAttr<mlir::cir::IntAttr, mlir::APInt>(
-        constArr, dims, converter->convertType(type));
+        constArr, dims, type, converter->convertType(type));
   if (mlir::isa<mlir::cir::CIRFPTypeInterface>(type))
     return convertToDenseElementsAttr<mlir::cir::FPAttr, mlir::APFloat>(
-        constArr, dims, converter->convertType(type));
+        constArr, dims, type, converter->convertType(type));
 
   return std::nullopt;
 }
