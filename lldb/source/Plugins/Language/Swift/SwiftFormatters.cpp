@@ -12,6 +12,7 @@
 
 #include "SwiftFormatters.h"
 #include "Plugins/Language/Swift/SwiftStringIndex.h"
+#include "Plugins/LanguageRuntime/Swift/ReflectionContextInterface.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
@@ -20,12 +21,17 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-enumerations.h"
 #include "swift/AST/Types.h"
 #include "swift/Demangling/ManglingMacros.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 // FIXME: we should not need this
@@ -721,6 +727,7 @@ bool lldb_private::formatters::swift::BuiltinObjC_SummaryProvider(
 namespace lldb_private {
 namespace formatters {
 namespace swift {
+
 class EnumSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   EnumSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
@@ -735,6 +742,112 @@ private:
   ExecutionContextRef m_exe_ctx_ref;
   ConstString m_element_name;
   size_t m_child_index;
+};
+
+/// Synthetic provider for `Swift.Task`.
+///
+/// As seen by lldb, a `Task` instance is an opaque pointer, with neither type
+/// metadata nor an AST to describe it. To implement this synthetic provider, a
+/// `Task`'s state is retrieved from a `ReflectionContext`, and that data is
+/// used to manually construct `ValueObject` children.
+class TaskSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  TaskSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+      : SyntheticChildrenFrontEnd(*valobj_sp.get()) {}
+
+  constexpr static StringLiteral TaskChildren[] = {
+      "isChildTask",    "isFuture",    "isGroupChildTask",
+      "isAsyncLetTask", "isCancelled", "isStatusRecordLocked",
+      "isEscalated",    "isEnqueued",  "isRunning",
+  };
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    auto count = ArrayRef(TaskChildren).size();
+    return m_task_info.hasIsRunning ? count : count - 1;
+  }
+
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
+    auto target_sp = m_backend.GetTargetSP();
+#define RETURN_CHILD(FIELD, NAME)                                              \
+  if (!FIELD)                                                                  \
+    FIELD = ValueObject::CreateValueObjectFromBool(target_sp,                  \
+                                                   m_task_info.NAME, #NAME);   \
+  return FIELD
+
+    switch (idx) {
+    case 0:
+      RETURN_CHILD(m_is_child_task_sp, isChildTask);
+    case 1:
+      RETURN_CHILD(m_is_future_sp, isFuture);
+    case 2:
+      RETURN_CHILD(m_is_group_child_task_sp, isGroupChildTask);
+    case 3:
+      RETURN_CHILD(m_is_async_let_task_sp, isAsyncLetTask);
+    case 4:
+      RETURN_CHILD(m_is_cancelled_sp, isCancelled);
+    case 5:
+      RETURN_CHILD(m_is_status_record_locked_sp, isStatusRecordLocked);
+    case 6:
+      RETURN_CHILD(m_is_escalated_sp, isEscalated);
+    case 7:
+      RETURN_CHILD(m_is_enqueued_sp, isEnqueued);
+    case 8:
+      RETURN_CHILD(m_is_running_sp, isRunning);
+    default:
+      return {};
+    }
+
+#undef RETURN_CHILD
+  }
+
+  lldb::ChildCacheState Update() override {
+    if (auto *runtime = SwiftLanguageRuntime::Get(m_backend.GetProcessSP())) {
+      ThreadSafeReflectionContext reflection_ctx =
+          runtime->GetReflectionContext();
+      ValueObjectSP task_obj_sp = m_backend.GetChildMemberWithName("_task");
+      uint64_t task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+      if (task_ptr != LLDB_INVALID_ADDRESS) {
+        llvm::Expected<ReflectionContextInterface::AsyncTaskInfo> task_info =
+            reflection_ctx->asyncTaskInfo(task_ptr);
+        if (auto err = task_info.takeError()) {
+          LLDB_LOG(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+                   "could not get info for async task {0:x}: {1}", task_ptr,
+                   fmt_consume(std::move(err)));
+        } else {
+          m_task_info = *task_info;
+          for (auto child :
+               {m_is_child_task_sp, m_is_future_sp, m_is_group_child_task_sp,
+                m_is_async_let_task_sp, m_is_cancelled_sp,
+                m_is_status_record_locked_sp, m_is_escalated_sp,
+                m_is_enqueued_sp, m_is_running_sp})
+            child.reset();
+        }
+      }
+    }
+    return ChildCacheState::eRefetch;
+  }
+
+  bool MightHaveChildren() override { return true; }
+
+  size_t GetIndexOfChildWithName(ConstString name) override {
+    ArrayRef children = TaskChildren;
+    auto it = llvm::find(children, name);
+    if (it == children.end())
+      return UINT32_MAX;
+    return std::distance(children.begin(), it);
+  }
+
+private:
+  ReflectionContextInterface::AsyncTaskInfo m_task_info;
+  ValueObjectSP m_is_child_task_sp;
+  ValueObjectSP m_is_future_sp;
+  ValueObjectSP m_is_group_child_task_sp;
+  ValueObjectSP m_is_async_let_task_sp;
+  ValueObjectSP m_is_cancelled_sp;
+  ValueObjectSP m_is_status_record_locked_sp;
+  ValueObjectSP m_is_escalated_sp;
+  ValueObjectSP m_is_enqueued_sp;
+  ValueObjectSP m_is_running_sp;
 };
 }
 }
@@ -792,6 +905,14 @@ lldb_private::formatters::swift::EnumSyntheticFrontEndCreator(
   if (!valobj_sp)
     return NULL;
   return (new EnumSyntheticFrontEnd(valobj_sp));
+}
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::swift::TaskSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return NULL;
+  return new TaskSyntheticFrontEnd(valobj_sp);
 }
 
 bool lldb_private::formatters::swift::ObjC_Selector_SummaryProvider(
