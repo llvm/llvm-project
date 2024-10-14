@@ -21,7 +21,7 @@ truncation:
 
 	.section .rdata,"rd"
 .Lbuffer:
-	.zero 65536
+	.zero 32767
 .Lerange:
 	.asciz "-erange"
 
@@ -32,6 +32,6 @@ truncation:
 @ CHECK-RELOCATIONS:   }
 @ CHECK-RELOCATIONS: ]
 
-@ CHECK-ENCODING:      0: f240 0000
-@ CHECK-ENCODING-NEXT: 4: f2c0 0001
+@ CHECK-ENCODING:      0: f647 70ff
+@ CHECK-ENCODING-NEXT: 4: f2c0 0000
 
