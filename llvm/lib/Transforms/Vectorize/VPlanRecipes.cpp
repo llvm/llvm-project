@@ -1468,10 +1468,9 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
       ToVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
   auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
   // Computes the CastContextHint from a VPWidenMemoryRecipe instruction.
-  auto ComputeCCH = [&](VPWidenMemoryRecipe *R) -> TTI::CastContextHint {
+  auto ComputeCCH = [&](const VPWidenMemoryRecipe *R) -> TTI::CastContextHint {
     assert((isa<VPWidenLoadRecipe>(R) || isa<VPWidenStoreRecipe>(R)) &&
            "Expected a load or a store!");
-
     if (VF.isScalar())
       return TTI::CastContextHint::Normal;
     if (!R->isConsecutive())
@@ -1485,19 +1484,31 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
 
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
   // For Trunc, the context is the only user, which must be a
-  // VPWidenStoreRecipe.
-  if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
-    if (!cast<VPValue>(this)->hasMoreThanOneUniqueUser())
-      if (VPWidenMemoryRecipe *Store =
-              dyn_cast<VPWidenMemoryRecipe>(*this->user_begin()))
-        CCH = ComputeCCH(Store);
+  // VPWidenStoreRecipe, a VPInterleaveRecipe ,a VPReplicateRecipe or a live-out
+  // value.
+  if ((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
+      !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
+    auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin());
+    if (isa<VPLiveOut>(*user_begin()) || isa<VPReplicateRecipe>(StoreRecipe))
+      CCH = TTI::CastContextHint::Normal;
+    else if (const VPWidenMemoryRecipe *MemoryStoreRecipe =
+                 dyn_cast<VPWidenMemoryRecipe>(StoreRecipe))
+      CCH = ComputeCCH(MemoryStoreRecipe);
+    else if (isa<VPInterleaveRecipe>(StoreRecipe))
+      CCH = TTI::CastContextHint::Interleave;
   }
-  // For Z/Sext, the context is the operand, which must be a VPWidenLoadRecipe.
+  // For Z/Sext, the context is the operand, which must be a VPWidenLoadRecipe,
+  // a VPInterleaveRecipe, a VPReplicateRecipe or a live-in value.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
            Opcode == Instruction::FPExt) {
-    if (VPWidenMemoryRecipe *Load = dyn_cast<VPWidenMemoryRecipe>(
-            this->getOperand(0)->getDefiningRecipe()))
-      CCH = ComputeCCH(Load);
+    const VPRecipeBase *LoadRecipe = getOperand(0)->getDefiningRecipe();
+    if (getOperand(0)->isLiveIn() || isa<VPReplicateRecipe>(LoadRecipe))
+      CCH = TTI::CastContextHint::Normal;
+    else if (const VPWidenMemoryRecipe *MemoryLoadRecipe =
+                 dyn_cast<VPWidenMemoryRecipe>(LoadRecipe))
+      CCH = ComputeCCH(MemoryLoadRecipe);
+    else if (isa<VPInterleaveRecipe>(LoadRecipe))
+      CCH = TTI::CastContextHint::Interleave;
   }
   // Arm TTI will use the underlying instruction to determine the cost.
   return Ctx.TTI.getCastInstrCost(
