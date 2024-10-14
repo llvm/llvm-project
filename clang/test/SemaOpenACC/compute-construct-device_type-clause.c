@@ -61,8 +61,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'auto' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) auto
   while(1);
-  // expected-error@+2{{OpenACC clause 'worker' may not follow a 'device_type' clause in a compute construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'worker' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) worker
   while(1);
   // expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a compute construct}}

@@ -1713,25 +1713,15 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
     if (!Ctor && !Dtor)
       return nullptr;
 
-    llvm::Type *CopyCtorTyArgs[] = {CGM.VoidPtrTy, CGM.VoidPtrTy};
-    auto *CopyCtorTy = llvm::FunctionType::get(CGM.VoidPtrTy, CopyCtorTyArgs,
-                                               /*isVarArg=*/false)
-                           ->getPointerTo();
     // Copying constructor for the threadprivate variable.
     // Must be NULL - reserved by runtime, but currently it requires that this
     // parameter is always NULL. Otherwise it fires assertion.
-    CopyCtor = llvm::Constant::getNullValue(CopyCtorTy);
+    CopyCtor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
     if (Ctor == nullptr) {
-      auto *CtorTy = llvm::FunctionType::get(CGM.VoidPtrTy, CGM.VoidPtrTy,
-                                             /*isVarArg=*/false)
-                         ->getPointerTo();
-      Ctor = llvm::Constant::getNullValue(CtorTy);
+      Ctor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
     }
     if (Dtor == nullptr) {
-      auto *DtorTy = llvm::FunctionType::get(CGM.VoidTy, CGM.VoidPtrTy,
-                                             /*isVarArg=*/false)
-                         ->getPointerTo();
-      Dtor = llvm::Constant::getNullValue(DtorTy);
+      Dtor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
     }
     if (!CGF) {
       auto *InitFunctionTy =
@@ -1817,7 +1807,7 @@ Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
               OMPBuilder.getOrCreateRuntimeFunction(
                   CGM.getModule(), OMPRTL___kmpc_threadprivate_cached),
               Args),
-          VarLVType->getPointerTo(/*AddrSpace=*/0)),
+          CGF.Builder.getPtrTy(0)),
       VarLVType, CGM.getContext().getTypeAlignInChars(VarType));
 }
 
@@ -2131,10 +2121,7 @@ static Address emitAddrOfVarFromArray(CodeGenFunction &CGF, Address Array,
   llvm::Value *Ptr = CGF.Builder.CreateLoad(PtrAddr);
 
   llvm::Type *ElemTy = CGF.ConvertTypeForMem(Var->getType());
-  return Address(
-      CGF.Builder.CreateBitCast(
-          Ptr, ElemTy->getPointerTo(Ptr->getType()->getPointerAddressSpace())),
-      ElemTy, CGF.getContext().getDeclAlign(Var));
+  return Address(Ptr, ElemTy, CGF.getContext().getDeclAlign(Var));
 }
 
 static llvm::Value *emitCopyprivateCopyFunction(
@@ -2166,11 +2153,11 @@ static llvm::Value *emitCopyprivateCopyFunction(
   // Src = (void*[n])(RHSArg);
   Address LHS(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                   CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(&LHSArg)),
-                  ArgsElemType->getPointerTo()),
+                  CGF.Builder.getPtrTy(0)),
               ArgsElemType, CGF.getPointerAlign());
   Address RHS(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                   CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(&RHSArg)),
-                  ArgsElemType->getPointerTo()),
+                  CGF.Builder.getPtrTy(0)),
               ArgsElemType, CGF.getPointerAlign());
   // *(Type0*)Dst[0] = *(Type0*)Src[0];
   // *(Type1*)Dst[1] = *(Type1*)Src[1];
@@ -3681,9 +3668,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   QualType KmpTaskTWithPrivatesQTy = C.getRecordType(KmpTaskTWithPrivatesQTyRD);
   QualType KmpTaskTWithPrivatesPtrQTy =
       C.getPointerType(KmpTaskTWithPrivatesQTy);
-  llvm::Type *KmpTaskTWithPrivatesTy = CGF.ConvertType(KmpTaskTWithPrivatesQTy);
-  llvm::Type *KmpTaskTWithPrivatesPtrTy =
-      KmpTaskTWithPrivatesTy->getPointerTo();
+  llvm::Type *KmpTaskTWithPrivatesPtrTy = CGF.Builder.getPtrTy(0);
   llvm::Value *KmpTaskTWithPrivatesTySize =
       CGF.getTypeSize(KmpTaskTWithPrivatesQTy);
   QualType SharedsPtrTy = C.getPointerType(SharedsTy);
@@ -4399,7 +4384,7 @@ Address CGOpenMPRuntime::emitDepobjDependClause(
                           Args, ".dep.arr.addr");
   llvm::Type *KmpDependInfoLlvmTy = CGF.ConvertTypeForMem(KmpDependInfoTy);
   Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      Addr, KmpDependInfoLlvmTy->getPointerTo());
+      Addr, CGF.Builder.getPtrTy(0));
   DependenciesArray = Address(Addr, KmpDependInfoLlvmTy, Align);
   // Write number of elements in the first element of array for depobj.
   LValue Base = CGF.MakeAddrLValue(DependenciesArray, KmpDependInfoTy);
@@ -4841,11 +4826,11 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
   // Src = (void*[n])(RHSArg);
   Address LHS(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                   CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(&LHSArg)),
-                  ArgsElemType->getPointerTo()),
+                  CGF.Builder.getPtrTy(0)),
               ArgsElemType, CGF.getPointerAlign());
   Address RHS(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                   CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(&RHSArg)),
-                  ArgsElemType->getPointerTo()),
+                  CGF.Builder.getPtrTy(0)),
               ArgsElemType, CGF.getPointerAlign());
 
   //  ...
@@ -5277,8 +5262,7 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
   QualType PrivateType = RCG.getPrivateType(N);
   Address PrivateAddr = CGF.EmitLoadOfPointer(
-      CGF.GetAddrOfLocalVar(&Param).withElementType(
-          CGF.ConvertTypeForMem(PrivateType)->getPointerTo()),
+      CGF.GetAddrOfLocalVar(&Param).withElementType(CGF.Builder.getPtrTy(0)),
       C.getPointerType(PrivateType)->castAs<PointerType>());
   llvm::Value *Size = nullptr;
   // If the size of the reduction item is non-constant, load it from global
@@ -5366,15 +5350,14 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
       // Pull out the pointer to the variable.
       CGF.EmitLoadOfPointer(
           CGF.GetAddrOfLocalVar(&ParamInOut)
-              .withElementType(
-                  CGF.ConvertTypeForMem(LHSVD->getType())->getPointerTo()),
+              .withElementType(CGF.Builder.getPtrTy(0)),
           C.getPointerType(LHSVD->getType())->castAs<PointerType>()));
   PrivateScope.addPrivate(
       RHSVD,
       // Pull out the pointer to the variable.
       CGF.EmitLoadOfPointer(
           CGF.GetAddrOfLocalVar(&ParamIn).withElementType(
-              CGF.ConvertTypeForMem(RHSVD->getType())->getPointerTo()),
+              CGF.Builder.getPtrTy(0)),
           C.getPointerType(RHSVD->getType())->castAs<PointerType>()));
   PrivateScope.Privatize();
   // Emit the combiner body:
