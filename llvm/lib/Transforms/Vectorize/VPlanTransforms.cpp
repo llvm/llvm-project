@@ -1443,7 +1443,9 @@ void VPlanTransforms::addActiveLaneMask(
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   using namespace llvm::VPlanPatternMatch;
-  LLVMContext &Ctx = Plan.getCanonicalIV()->getScalarType()->getContext();
+  Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
+  LLVMContext &Ctx = CanonicalIVType->getContext();
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
@@ -1491,9 +1493,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 // limited to selects whose condition is a header mask.
                 VPValue *AllTrue =
                     Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
-                return new VPInstruction(VPInstruction::MergeUntilPivot,
-                                         {AllTrue, LHS, RHS, &EVL},
-                                         VPI->getDebugLoc());
+                return new VPWidenIntrinsicRecipe(
+                    Intrinsic::vp_merge, {AllTrue, LHS, RHS, &EVL},
+                    TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
               })
               .Default([&](VPRecipeBase *R) { return nullptr; });
 

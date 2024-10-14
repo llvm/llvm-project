@@ -1677,6 +1677,21 @@ public:
                          !Attrs.hasFnAttr(Attribute::WillReturn);
   }
 
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         std::initializer_list<VPValue *> CallArguments,
+                         Type *Ty, DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
+    LLVMContext &Ctx = Ty->getContext();
+    AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
+    MemoryEffects ME = Attrs.getMemoryEffects();
+    MayReadFromMemory = ME.onlyWritesMemory();
+    MayWriteToMemory = ME.onlyReadsMemory();
+    MayHaveSideEffects = MayWriteToMemory ||
+                         Attrs.hasFnAttr(Attribute::NoUnwind) ||
+                         !Attrs.hasFnAttr(Attribute::WillReturn);
+  }
+
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
