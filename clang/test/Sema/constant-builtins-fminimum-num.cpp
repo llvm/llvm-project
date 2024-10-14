@@ -3,6 +3,7 @@
 // expected-no-diagnostics
 
 constexpr double NaN = __builtin_nan("");
+constexpr double SNaN = __builtin_nans("");
 constexpr double Inf = __builtin_inf();
 constexpr double NegInf = -__builtin_inf();
 
@@ -18,6 +19,18 @@ constexpr double NegInf = -__builtin_inf();
     static_assert(T(-1.2345) == FUNC(NaN, T(-1.2345))); \
     static_assert(T(1.2345) == FUNC(T(1.2345), NaN));   \
     static_assert(__builtin_isnan(FUNC(NaN, NaN)));
+
+#define FMINIMUMNUM_TEST_SNAN(T, FUNC)                          \
+    static_assert(Inf == FUNC(SNaN, Inf));               \
+    static_assert(NegInf == FUNC(NegInf, SNaN));         \
+    static_assert(0.0 == FUNC(SNaN, 0.0));               \
+    static_assert(-0.0 == FUNC(-0.0, SNaN));             \
+    static_assert(T(-1.2345) == FUNC(SNaN, T(-1.2345))); \
+    static_assert(T(1.2345) == FUNC(T(1.2345), SNaN));   \
+    static_assert(__builtin_isnan(FUNC(SNaN, SNaN)));    \
+    static_assert(__builtin_isnan(FUNC(NaN, SNaN)));    \
+    static_assert(!__builtin_issignaling(FUNC(SNaN, SNaN)));  \
+    static_assert(!__builtin_issignaling(FUNC(NaN, SNaN)));
 
 #define FMINIMUMNUM_TEST_INF(T, FUNC)                        \
     static_assert(NegInf == FUNC(NegInf, Inf));       \
@@ -42,6 +55,7 @@ constexpr double NegInf = -__builtin_inf();
 #define LIST_FMINIMUMNUM_TESTS(T, FUNC) \
     FMINIMUMNUM_TEST_SIMPLE(T, FUNC)    \
     FMINIMUMNUM_TEST_NAN(T, FUNC)       \
+    FMINIMUMNUM_TEST_SNAN(T, FUNC)      \
     FMINIMUMNUM_TEST_INF(T, FUNC)       \
     FMINIMUMNUM_TEST_NEG_INF(T, FUNC)   \
     FMINIMUMNUM_TEST_BOTH_ZERO(T, FUNC)
