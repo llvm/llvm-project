@@ -111,17 +111,7 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
   syslog(level, "%s", message.data());
 }
 #else
-void Host::SystemLog(Severity severity, llvm::StringRef message) {
-  switch (severity) {
-  case lldb::eSeverityInfo:
-  case lldb::eSeverityWarning:
-    llvm::outs() << message;
-    break;
-  case lldb::eSeverityError:
-    llvm::errs() << message;
-    break;
-  }
-}
+void Host::SystemLog(Severity severity, llvm::StringRef message) {}
 #endif
 #endif
 
