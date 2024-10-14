@@ -11,7 +11,7 @@ Introduction
 This document aims to provide a high-level overview of the design and API
 of the JITLink library. It assumes some familiarity with linking and
 relocatable object files, but should not require deep expertise. If you know
-what a section, symbol, and relocation are you should find this document
+what a section, symbol, and relocation are then you should find this document
 accessible. If it is not, please submit a patch (:doc:`Contributing`) or file a
 bug (:doc:`HowToSubmitABug`).
 
@@ -56,7 +56,7 @@ and optimizations that were not possible under MCJIT or RuntimeDyld.
 ObjectLinkingLayer Plugins
 --------------------------
 
-The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
+The ``ObjectLinkingLayer::Plugin`` class provides the following methods:
 
 * ``modifyPassConfig`` is called each time a LinkGraph is about to be linked. It
   can be overridden to install JITLink *Passes* to run during the link process.
@@ -64,7 +64,7 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
   .. code-block:: c++
 
     void modifyPassConfig(MaterializationResponsibility &MR,
-                          const Triple &TT,
+                          jitlink::LinkGraph &G,
                           jitlink::PassConfiguration &Config)
 
 * ``notifyLoaded`` is called before the link begins, and can be overridden to
@@ -97,7 +97,7 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
 
   .. code-block:: c++
 
-    Error notifyRemovingResources(ResourceKey K)
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K)
 
 * ``notifyTransferringResources`` is called if/when a request is made to
   transfer tracking of any resources associated with ``ResourceKey``
@@ -105,7 +105,7 @@ The ``ObjectLinkingLayer::Plugin`` class  provides the following  methods:
 
   .. code-block:: c++
 
-    void notifyTransferringResources(ResourceKey DstKey,
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                      ResourceKey SrcKey)
 
 Plugin authors are required to implement the ``notifyFailed``,
@@ -126,7 +126,7 @@ calling the ``addPlugin`` method [1]_. E.g.
 
     // Add passes to print the set of defined symbols after dead-stripping.
     void modifyPassConfig(MaterializationResponsibility &MR,
-                          const Triple &TT,
+                          jitlink::LinkGraph &G,
                           jitlink::PassConfiguration &Config) override {
       Config.PostPrunePasses.push_back([this](jitlink::LinkGraph &G) {
         return printAllSymbols(G);
@@ -137,10 +137,10 @@ calling the ``addPlugin`` method [1]_. E.g.
     Error notifyFailed(MaterializationResponsibility &MR) override {
       return Error::success();
     }
-    Error notifyRemovingResources(ResourceKey K) override {
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
       return Error::success();
     }
-    void notifyTransferringResources(ResourceKey DstKey,
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                      ResourceKey SrcKey) override {}
 
     // JITLink pass to print all defined symbols in G.
@@ -407,7 +407,7 @@ and utilities relevant to the linking process:
   * ``getPointerSize`` returns the size of a pointer (in bytes) in the executor
     process.
 
-  * ``getEndinaness`` returns the endianness of the executor process.
+  * ``getEndianness`` returns the endianness of the executor process.
 
   * ``allocateString`` copies data from a given ``llvm::Twine`` into the
     link graph's internal allocator. This can be used to ensure that content
@@ -802,7 +802,7 @@ for them by an ``ObjectLinkingLayer`` instance, but they can be created manually
    ``ObjectLinkingLayer`` usually creates ``LinkGraphs``.
 
   #. ``createLinkGraph_<Object-Format>_<Architecture>`` can be used when
-      both the object format and architecture are known ahead of time.
+     both the object format and architecture are known ahead of time.
 
   #. ``createLinkGraph_<Object-Format>`` can be used when the object format is
      known ahead of time, but the architecture is not. In this case the

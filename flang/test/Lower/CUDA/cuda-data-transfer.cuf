@@ -354,12 +354,23 @@ end subroutine
 ! CHECK: cuf.kernel<<<*, *>>>
 ! CHECK-NOT: cuf.data_transfer
 
-subroutine sub18()
+subroutine sub18(o)
+  integer, device, optional, allocatable :: o(:)
   integer, device, allocatable :: a(:)
-  integer :: isz
+  integer, device, pointer :: p(:)
+  integer :: b
+  integer :: s(1)
+  logical :: l
 
-  isz = size(a)
+  b = size(a)
+  b = lbound(a, dim=1)
+  b = ubound(a, dim=1)
+  s = shape(a)
+  l = allocated(a)
+  l = associated(p)
+  b = kind(a)
+  l = present(o)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPsub18()
+! CHECK-LABEL: func.func @_QPsub18
 ! CHECK-NOT: cuf.data_transfer

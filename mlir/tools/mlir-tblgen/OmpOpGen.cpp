@@ -72,7 +72,7 @@ static StringRef extractOmpClauseName(const Record *clause) {
   assert(ompClause && "base OpenMP records expected to be defined");
 
   StringRef clauseClassName;
-  SmallVector<Record *, 1> clauseSuperClasses;
+  SmallVector<const Record *, 1> clauseSuperClasses;
   clause->getDirectSuperClasses(clauseSuperClasses);
 
   // Check if OpenMP_Clause is a direct superclass.
@@ -210,7 +210,7 @@ static void verifyClause(const Record *op, const Record *clause) {
 ///         type.
 static StringRef translateArgumentType(ArrayRef<SMLoc> loc, StringInit *name,
                                        Init *init, int &nest, int &rank) {
-  Record *def = cast<DefInit>(init)->getDef();
+  const Record *def = cast<DefInit>(init)->getDef();
 
   llvm::StringSet<> superClasses;
   for (auto [sc, _] : def->getSuperClasses())
@@ -318,7 +318,7 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
     return;
 
   SmallVector<std::string> clauseNames;
-  for (Record *clause : op->getValueAsListOfDefs("clauseList"))
+  for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
     clauseNames.push_back((extractOmpClauseName(clause) + "ClauseOps").str());
 
   StringRef opName = stripPrefixAndSuffix(
@@ -328,8 +328,8 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
 
 /// Verify that all properties of `OpenMP_Clause`s of records deriving from
 /// `OpenMP_Op`s have been inherited by the latter.
-static bool verifyDecls(const RecordKeeper &recordKeeper, raw_ostream &) {
-  for (const Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op")) {
+static bool verifyDecls(const RecordKeeper &records, raw_ostream &) {
+  for (const Record *op : records.getAllDerivedDefinitions("OpenMP_Op")) {
     for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
       verifyClause(op, clause);
   }
@@ -341,16 +341,15 @@ static bool verifyDecls(const RecordKeeper &recordKeeper, raw_ostream &) {
 /// `OpenMP_Clause` definitions and aggregate them into operation-specific
 /// structures according to the `clauses` argument of each definition deriving
 /// from `OpenMP_Op`.
-static bool genClauseOps(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static bool genClauseOps(const RecordKeeper &records, raw_ostream &os) {
   mlir::tblgen::NamespaceEmitter ns(os, "mlir::omp");
-  for (const Record *clause :
-       recordKeeper.getAllDerivedDefinitions("OpenMP_Clause"))
+  for (const Record *clause : records.getAllDerivedDefinitions("OpenMP_Clause"))
     genClauseOpsStruct(clause, os);
 
   // Produce base mixin class.
   os << baseMixinClass;
 
-  for (const Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op"))
+  for (const Record *op : records.getAllDerivedDefinitions("OpenMP_Op"))
     genOperandsDef(op, os);
 
   return false;

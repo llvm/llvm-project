@@ -13,23 +13,23 @@ namespace hlsl {
 
 namespace __detail {
 
-#define _HLSL_INLINE                                                           \
-  __attribute__((__always_inline__, __nodebug__)) static inline
-
 template <bool B, typename T> struct enable_if {};
 
 template <typename T> struct enable_if<true, T> {
   using Type = T;
 };
 
+template <bool B, class T = void>
+using enable_if_t = typename enable_if<B, T>::Type;
+
 template <typename U, typename T, int N>
-_HLSL_INLINE typename enable_if<sizeof(U) == sizeof(T), vector<U, N> >::Type
+constexpr enable_if_t<sizeof(U) == sizeof(T), vector<U, N>>
 bit_cast(vector<T, N> V) {
   return __builtin_bit_cast(vector<U, N>, V);
 }
 
 template <typename U, typename T>
-_HLSL_INLINE typename enable_if<sizeof(U) == sizeof(T), U>::Type bit_cast(T F) {
+constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
   return __builtin_bit_cast(U, F);
 }
 

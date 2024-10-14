@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
+#include <unordered_map>
 
 namespace lldb_dap {
 
@@ -159,6 +160,27 @@ DecodeMemoryReference(llvm::StringRef memoryReference);
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,
                                     llvm::StringRef key);
 
+/// Extract an object of key value strings for the specified key from an object.
+///
+/// String values in the object will be extracted without any quotes
+/// around them. Numbers and Booleans will be converted into
+/// strings. Any NULL, array or objects values in the array will be
+/// ignored.
+///
+/// \param[in] obj
+///     A JSON object that we will attempt to extract the array from
+///
+/// \param[in] key
+///     The key to use when extracting the value
+///
+/// \return
+///     An object of key value strings for the specified \a key, or
+///     \a fail_value if there is no key that matches or if the
+///     value is not an object or key and values in the object are not
+///     strings, numbers or booleans.
+std::unordered_map<std::string, std::string>
+GetStringMap(const llvm::json::Object &obj, llvm::StringRef key);
+
 /// Fill a response object given the request object.
 ///
 /// The \a response object will get its "type" set to "response",
@@ -291,14 +313,24 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 
 /// Create a "Source" JSON object as described in the debug adaptor definition.
 ///
+/// \param[in] file
+///     The SBFileSpec to use when populating out the "Source" object
+///
+/// \return
+///     A "Source" JSON object that follows the formal JSON
+///     definition outlined by Microsoft.
+llvm::json::Value CreateSource(const lldb::SBFileSpec &file);
+
+/// Create a "Source" JSON object as described in the debug adaptor definition.
+///
 /// \param[in] line_entry
 ///     The LLDB line table to use when populating out the "Source"
 ///     object
 ///
 /// \return
-///     A "Source" JSON object with that follows the formal JSON
+///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry);
+llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry);
 
 /// Create a "Source" object for a given source path.
 ///
@@ -448,6 +480,16 @@ struct VariableDescription {
   std::string GetResult(llvm::StringRef context);
 };
 
+/// Does the given variable have an associated value location?
+bool ValuePointsToCode(lldb::SBValue v);
+
+/// Pack a location into a single integer which we can send via
+/// the debug adapter protocol.
+int64_t PackLocation(int64_t var_ref, bool is_value_location);
+
+/// Reverse of `PackLocation`
+std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
+
 /// Create a "Variable" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
@@ -470,15 +512,10 @@ struct VariableDescription {
 ///     The LLDB value to use when populating out the "Variable"
 ///     object.
 ///
-/// \param[in] variablesReference
-///     The variable reference. Zero if this value isn't structured
-///     and has no children, non-zero if it does have children and
-///     might be asked to expand itself.
-///
-/// \param[in] varID
-///     A unique variable identifier to help in properly identifying
-///     variables with the same name. This is an extension to the
-///     VS protocol.
+/// \param[in] var_ref
+///     The variable reference. Used to identify the value, e.g.
+///     in the `variablesReference` or `declarationLocationReference`
+///     properties.
 ///
 /// \param[in] format_hex
 ///     It set to true the variable will be formatted as hex in
@@ -499,8 +536,8 @@ struct VariableDescription {
 /// \return
 ///     A "Variable" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
-                                 int64_t varID, bool format_hex,
+llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
+                                 bool format_hex,
                                  bool is_name_duplicated = false,
                                  std::optional<std::string> custom_name = {});
 

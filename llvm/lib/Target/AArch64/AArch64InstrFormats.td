@@ -177,6 +177,11 @@ def dup_v4f32 :
              [(v2f32 (extract_subvector (v4f32 (AArch64duplane32 (v4f32 node:$LHS), node:$RHS)), (i64 0))),
               (v2f32 (AArch64duplane32 (v4f32 node:$LHS), node:$RHS))]>;
 
+// Match either a scalar_to_vector (from SDAG) or a vector_insert of undef (from GISel)
+def vec_ins_or_scal_vec : PatFrags<(ops node:$src),
+                          [(vector_insert undef, node:$src, (i64 0)),
+                           (scalar_to_vector node:$src)]>;
+
 //===----------------------------------------------------------------------===//
 // Asm Operand Classes.
 //
@@ -6236,6 +6241,26 @@ multiclass SIMDThreeSameVectorDOT4<string asm> {
                                           V64, v2f32, v8i8, null_frag>;
    def v4f32 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1111, asm, ".4s", ".16b",
                                           V128, v4f32, v16i8, null_frag>;
+}
+
+let mayRaiseFPException = 1, Uses = [FPCR] in
+multiclass SIMDThreeVectorFscale<bit U, bit S, bits<3> opc,
+                                 string asm, SDPatternOperator OpNode> {
+  def v4f16 : BaseSIMDThreeSameVector<0, U, {S,0b10}, {0b00,opc}, V64,
+                                      asm, ".4h",
+        [(set (v4f16 V64:$Rd), (OpNode (v4f16 V64:$Rn), (v4i16 V64:$Rm)))]>;
+  def v8f16 : BaseSIMDThreeSameVector<1, U, {S,0b10}, {0b00,opc}, V128,
+                                      asm, ".8h",
+        [(set (v8f16 V128:$Rd), (OpNode (v8f16 V128:$Rn), (v8i16 V128:$Rm)))]>;
+  def v2f32 : BaseSIMDThreeSameVector<0, U, {S,0b01}, {0b11,opc}, V64,
+                                      asm, ".2s",
+        [(set (v2f32 V64:$Rd), (OpNode (v2f32 V64:$Rn), (v2i32 V64:$Rm)))]>;
+  def v4f32 : BaseSIMDThreeSameVector<1, U, {S,0b01}, {0b11,opc}, V128,
+                                      asm, ".4s",
+        [(set (v4f32 V128:$Rd), (OpNode (v4f32 V128:$Rn), (v4i32 V128:$Rm)))]>;
+  def v2f64 : BaseSIMDThreeSameVector<1, U, {S,0b11}, {0b11,opc}, V128,
+                                      asm, ".2d",
+        [(set (v2f64 V128:$Rd), (OpNode (v2f64 V128:$Rn), (v2i64 V128:$Rm)))]>;
 }
 
 //----------------------------------------------------------------------------

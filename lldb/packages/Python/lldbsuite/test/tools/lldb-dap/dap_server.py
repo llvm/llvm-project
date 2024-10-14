@@ -778,7 +778,7 @@ class DebugCommunication(object):
         runInTerminal=False,
         postRunCommands=None,
         enableAutoVariableSummaries=False,
-        enableDisplayExtendedBacktrace=False,
+        displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -831,7 +831,7 @@ class DebugCommunication(object):
 
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
-        args_dict["enableDisplayExtendedBacktrace"] = enableDisplayExtendedBacktrace
+        args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
         args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)
@@ -1006,7 +1006,7 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text)}
+        args_dict = {"text": text, "column": len(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {
@@ -1104,6 +1104,17 @@ class DebugCommunication(object):
             args_dict["id"] = id
         command_dict = {
             "command": "setVariable",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
+    def request_locations(self, locationReference):
+        args_dict = {
+            "locationReference": locationReference,
+        }
+        command_dict = {
+            "command": "locations",
             "type": "request",
             "arguments": args_dict,
         }

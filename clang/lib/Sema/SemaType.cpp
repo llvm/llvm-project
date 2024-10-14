@@ -3035,7 +3035,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
             AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
-            InventedTemplateParam, D.getEllipsisLoc());
+            InventedTemplateParam,
+            S.Context.getTypeDeclType(InventedTemplateParam),
+            D.getEllipsisLoc());
       }
     } else {
       // The 'auto' appears in the decl-specifiers; we've not finished forming
@@ -3072,7 +3074,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             /*FoundDecl=*/
             USD ? cast<NamedDecl>(USD) : CD,
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
-            InventedTemplateParam, D.getEllipsisLoc());
+            InventedTemplateParam,
+            S.Context.getTypeDeclType(InventedTemplateParam),
+            D.getEllipsisLoc());
       }
     }
   }
@@ -5165,6 +5169,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               // Reject, but continue to parse 'float(const void)'.
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
+
+              // Reject, but continue to parse 'float(this void)' as
+              // 'float(void)'.
+              if (Param->isExplicitObjectParameter()) {
+                S.Diag(Param->getLocation(),
+                       diag::err_void_explicit_object_param);
+                Param->setExplicitObjectParameterLoc(SourceLocation());
+              }
 
               // Do not add 'void' to the list.
               break;
@@ -8846,12 +8858,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
     case ParsedAttr::AT_HLSLResourceClass:
     case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLContainedType: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those
       // that get to slide after declaration name.
       if (TAL == TAL_DeclSpec &&
-          state.getSema().HLSL().handleResourceTypeAttr(attr))
+          state.getSema().HLSL().handleResourceTypeAttr(type, attr))
         attr.setUsedAsTypeAttr();
       break;
     }

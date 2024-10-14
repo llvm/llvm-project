@@ -510,12 +510,11 @@ private:
   };
 
   /// Different types of X86-64 PLT sections.
-  const PLTSectionInfo X86_64_PLTSections[4] = {
-      { ".plt", 16 },
-      { ".plt.got", 8 },
-      { ".plt.sec", 8 },
-      { nullptr, 0 }
-  };
+  const PLTSectionInfo X86_64_PLTSections[5] = {{".plt", 16},
+                                                {".plt.got", 8},
+                                                {".plt.sec", 8},
+                                                {".iplt", 16},
+                                                {nullptr, 0}};
 
   /// AArch64 PLT sections.
   const PLTSectionInfo AArch64_PLTSections[4] = {

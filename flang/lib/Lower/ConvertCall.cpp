@@ -366,7 +366,11 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
       resultLengths = lengths;
     }
 
-    if (!extents.empty() || !lengths.empty()) {
+    if ((!extents.empty() || !lengths.empty()) && !isElemental) {
+      // Note: in the elemental context, the alloca ownership inside the
+      // elemental region is implicit, and later pass in lowering (stack
+      // reclaim) fir.do_loop will be in charge of emitting any stack
+      // save/restore if needed.
       auto *bldr = &converter.getFirOpBuilder();
       mlir::Value sp = bldr->genStackSave(loc);
       stmtCtx.attachCleanup(
@@ -519,6 +523,8 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
 
   mlir::Value callResult;
   unsigned callNumResults;
+  fir::FortranProcedureFlagsEnumAttr procAttrs =
+      caller.getProcedureAttrs(builder.getContext());
 
   if (!caller.getCallDescription().chevrons().empty()) {
     // A call to a CUDA kernel with the chevron syntax.
@@ -606,7 +612,7 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
           caller.getInputs()[*passArg], operands,
-          builder.getI32IntegerAttr(*passArg));
+          builder.getI32IntegerAttr(*passArg), procAttrs);
     } else {
       // NOPASS
       const Fortran::evaluate::Component *component =
@@ -621,18 +627,12 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
         passObject = builder.create<fir::LoadOp>(loc, passObject);
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
-          passObject, operands, nullptr);
+          passObject, operands, nullptr, procAttrs);
     }
     callNumResults = dispatch.getNumResults();
     if (callNumResults != 0)
       callResult = dispatch.getResult(0);
   } else {
-    // TODO: gather other procedure attributes.
-    fir::FortranProcedureFlagsEnumAttr procAttrs;
-    if (caller.characterize().IsBindC())
-      procAttrs = fir::FortranProcedureFlagsEnumAttr::get(
-          builder.getContext(), fir::FortranProcedureFlagsEnum::bind_c);
-
     // Standard procedure call with fir.call.
     auto call = builder.create<fir::CallOp>(
         loc, funcType.getResults(), funcSymbolAttr, operands, procAttrs);
@@ -2570,9 +2570,26 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
           hlfir::Entity{*var}, /*isPresent=*/std::nullopt});
       continue;
     }
+    // arguments of bitwise comparison functions may not have nsw flag
+    // even if -fno-wrapv is enabled
+    mlir::arith::IntegerOverflowFlags iofBackup{};
+    auto isBitwiseComparison = [](const std::string intrinsicName) -> bool {
+      if (intrinsicName == "bge" || intrinsicName == "bgt" ||
+          intrinsicName == "ble" || intrinsicName == "blt")
+        return true;
+      return false;
+    };
+    if (isBitwiseComparison(callContext.getProcedureName())) {
+      iofBackup = callContext.getBuilder().getIntegerOverflowFlags();
+      callContext.getBuilder().setIntegerOverflowFlags(
+          mlir::arith::IntegerOverflowFlags::none);
+    }
     auto loweredActual = Fortran::lower::convertExprToHLFIR(
         loc, callContext.converter, *expr, callContext.symMap,
         callContext.stmtCtx);
+    if (isBitwiseComparison(callContext.getProcedureName()))
+      callContext.getBuilder().setIntegerOverflowFlags(iofBackup);
+
     std::optional<mlir::Value> isPresent;
     if (argLowering) {
       fir::ArgLoweringRule argRules =

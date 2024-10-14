@@ -11,7 +11,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -526,9 +527,9 @@ define void @foo(ptr %ptr) {
 
   Ctx.save();
   // Check create(InsertBefore) with tracking enabled.
-  sandboxir::LoadInst *NewLd =
-      sandboxir::LoadInst::create(Ld->getType(), Ptr, Align(8),
-                                  /*InsertBefore=*/Ld, Ctx, "NewLd");
+  sandboxir::LoadInst *NewLd = sandboxir::LoadInst::create(
+      Ld->getType(), Ptr, Align(8),
+      /*InsertBefore=*/Ld->getIterator(), Ctx, "NewLd");
   It = BB->begin();
   EXPECT_EQ(&*It++, NewLd);
   EXPECT_EQ(&*It++, Ld);
@@ -1588,6 +1589,85 @@ define void @foo() {
   EXPECT_EQ(IFunc->getResolver(), NewResolver);
   Ctx.revert();
   EXPECT_EQ(IFunc->getResolver(), OrigResolver);
+}
+
+TEST_F(TrackerTest, GlobalVariableSetters) {
+  parseIR(C, R"IR(
+@glob0 = global i32 42
+@glob1 = global i32 43
+define void @foo() {
+  %ld0 = load i32, ptr @glob0
+  %ld1 = load i32, ptr @glob1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+  // Check classof(), creation.
+  auto *GV0 = cast<sandboxir::GlobalVariable>(Ld0->getPointerOperand());
+  auto *GV1 = cast<sandboxir::GlobalVariable>(Ld1->getPointerOperand());
+  // Check setInitializer().
+  auto *OrigInitializer = GV0->getInitializer();
+  auto *NewInitializer = GV1->getInitializer();
+  EXPECT_NE(NewInitializer, OrigInitializer);
+  Ctx.save();
+  GV0->setInitializer(NewInitializer);
+  EXPECT_EQ(GV0->getInitializer(), NewInitializer);
+  Ctx.revert();
+  EXPECT_EQ(GV0->getInitializer(), OrigInitializer);
+  // Check setConstant().
+  bool OrigIsConstant = GV0->isConstant();
+  bool NewIsConstant = !OrigIsConstant;
+  Ctx.save();
+  GV0->setConstant(NewIsConstant);
+  EXPECT_EQ(GV0->isConstant(), NewIsConstant);
+  Ctx.revert();
+  EXPECT_EQ(GV0->isConstant(), OrigIsConstant);
+  // Check setExternallyInitialized().
+  bool OrigIsExtInit = GV0->isExternallyInitialized();
+  bool NewIsExtInit = !OrigIsExtInit;
+  Ctx.save();
+  GV0->setExternallyInitialized(NewIsExtInit);
+  EXPECT_EQ(GV0->isExternallyInitialized(), NewIsExtInit);
+  Ctx.revert();
+  EXPECT_EQ(GV0->isExternallyInitialized(), OrigIsExtInit);
+}
+
+TEST_F(TrackerTest, GlobalAliasSetters) {
+  parseIR(C, R"IR(
+@alias = dso_local alias void(), ptr @foo
+declare void @bar();
+define void @foo() {
+  call void @alias()
+  call void @bar()
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = BB->begin();
+  auto *Call0 = cast<sandboxir::CallInst>(&*It++);
+  auto *Call1 = cast<sandboxir::CallInst>(&*It++);
+  auto *Callee1 = cast<sandboxir::Constant>(Call1->getCalledOperand());
+  auto *Alias = cast<sandboxir::GlobalAlias>(Call0->getCalledOperand());
+  // Check setAliasee().
+  auto *OrigAliasee = Alias->getAliasee();
+  auto *NewAliasee = Callee1;
+  EXPECT_NE(NewAliasee, OrigAliasee);
+  Ctx.save();
+  Alias->setAliasee(NewAliasee);
+  EXPECT_EQ(Alias->getAliasee(), NewAliasee);
+  Ctx.revert();
+  EXPECT_EQ(Alias->getAliasee(), OrigAliasee);
 }
 
 TEST_F(TrackerTest, SetVolatile) {

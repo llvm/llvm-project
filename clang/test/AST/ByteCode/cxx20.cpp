@@ -99,7 +99,7 @@ constexpr int f() {
 static_assert(f());
 #endif
 
-/// Distinct literals have disctinct addresses.
+/// Distinct literals have distinct addresses.
 /// see https://github.com/llvm/llvm-project/issues/58754
 constexpr auto foo(const char *p) { return p; }
 constexpr auto p1 = "test1";
@@ -114,8 +114,8 @@ static_assert(!b2);
 constexpr auto name1() { return "name1"; }
 constexpr auto name2() { return "name2"; }
 
-constexpr auto b3 = name1() == name1();
-static_assert(b3);
+constexpr auto b3 = name1() == name1(); // ref-error {{must be initialized by a constant expression}} \
+                                        // ref-note {{comparison of addresses of literals}}
 constexpr auto b4 = name1() == name2();
 static_assert(!b4);
 
@@ -590,8 +590,6 @@ namespace ImplicitFunction {
                                     // both-note {{in call to 'callMe()'}}
 }
 
-/// FIXME: Unfortunately, the similar tests in test/SemaCXX/{compare-cxx2a.cpp use member pointers,
-/// which we don't support yet.
 namespace std {
   class strong_ordering {
   public:

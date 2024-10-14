@@ -60,7 +60,8 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // example, we should probably enable PrintCanonicalTypes and
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
-  Policy.SuppressInlineNamespace = false;
+  Policy.SuppressInlineNamespace =
+      PrintingPolicy::SuppressInlineNamespaceMode::None;
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -558,8 +559,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       llvm_unreachable("Unexpected wasm reference builtin type!");             \
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
-                               SingletonId)                                    \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
   case BuiltinType::Id:                                                        \
     return llvm::PointerType::get(getLLVMContext(), AS);
 #include "clang/Basic/AMDGPUTypes.def"

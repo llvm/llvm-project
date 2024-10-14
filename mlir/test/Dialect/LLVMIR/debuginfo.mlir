@@ -116,10 +116,11 @@
   apinotes = "/", line = 42, isDecl = true
 >
 
-// CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[MODULE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]]>
+// CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[MODULE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]], annotations = #llvm.di_annotation<name = "foo", value = "bar">
 #sp2 = #llvm.di_subprogram<
   compileUnit = #cu, scope = #module, name = "value",
-  file = #file, subprogramFlags = "Definition", type = #spType2
+  file = #file, subprogramFlags = "Definition", type = #spType2,
+  annotations = #llvm.di_annotation<name = "foo", value = "bar">
 >
 
 // CHECK-DAG: #[[BLOCK0:.*]] = #llvm.di_lexical_block<scope = #[[SP0]], line = 1, column = 2>
@@ -154,6 +155,25 @@
 
 // CHECK-DAG: #[[LABEL2:.*]] =  #llvm.di_label<scope = #[[BLOCK2]]>
 #label2 = #llvm.di_label<scope = #block2>
+
+// CHECK-DAG: #llvm.di_common_block<scope = #[[SP1]], name = "block", file = #[[FILE]], line = 3>
+#di_common_block = #llvm.di_common_block<scope = #sp1, name = "block", file = #file, line = 3>
+#global_var = #llvm.di_global_variable<scope = #di_common_block, name = "a",
+ file = #file, line = 2, type = #int0>
+#var_expression = #llvm.di_global_variable_expression<var = #global_var,
+ expr = <>>
+#global_var1 = #llvm.di_global_variable<scope = #di_common_block, name = "b",
+ file = #file, line = 3, type = #int0>
+#var_expression1 = #llvm.di_global_variable_expression<var = #global_var1,
+ expr = <>>
+llvm.mlir.global @data() {dbg_exprs = [#var_expression, #var_expression1]} : i64
+
+// CHECK-DAG: llvm.mlir.global external @data() {{{.*}}dbg_exprs = [#[[EXP1:.*]], #[[EXP2:.*]]]} : i64
+// CHECK-DAG: #[[EXP1]] = #llvm.di_global_variable_expression<var = #[[GV1:.*]], expr = <>>
+// CHECK-DAG: #[[EXP2]] = #llvm.di_global_variable_expression<var = #[[GV2:.*]], expr = <>>
+// CHECK-DAG: #[[GV1]] = #llvm.di_global_variable<{{.*}}name = "a"{{.*}}>
+// CHECK-DAG: #[[GV2]] = #llvm.di_global_variable<{{.*}}name = "b"{{.*}}>
+
 
 // CHECK: llvm.func @addr(%[[ARG:.*]]: i64)
 llvm.func @addr(%arg: i64) {

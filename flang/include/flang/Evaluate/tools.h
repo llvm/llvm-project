@@ -1259,7 +1259,7 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool CanCUDASymbolHasSave(const Symbol &sym) {
+inline bool CanCUDASymbolHaveSaveAttr(const Symbol &sym) {
   if (const auto *details =
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
     if (details->cudaDataAttr() &&
