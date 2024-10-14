@@ -201,23 +201,6 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue UMax = DAG->getNode(ISD::UMAX, DL, Int32VT, Op0, Op1);
   SDValue UMin = DAG->getNode(ISD::UMIN, DL, Int32VT, Op1, Op0);
 
-  SDValue ICMP_GT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGT);
-  SDValue ICMP_GE = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGE);
-  SDValue ICMP_UGT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETUGT);
-  SDValue ICMP_UGE = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETUGE);
-  SDValue ICMP_LT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETLT);
-  SDValue ICMP_LE = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETLE);
-  SDValue ICMP_ULT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETULT);
-  SDValue ICMP_ULE = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETULE);
-  SDValue SMaxLikeGT = DAG->getSelect(DL, MVT::i32, ICMP_GT, Op0, Op1);
-  SDValue SMaxLikeGE = DAG->getSelect(DL, MVT::i32, ICMP_GE, Op0, Op1);
-  SDValue UMaxLikeUGT = DAG->getSelect(DL, MVT::i32, ICMP_UGT, Op0, Op1);
-  SDValue UMaxLikeUGE = DAG->getSelect(DL, MVT::i32, ICMP_UGE, Op0, Op1);
-  SDValue SMinLikeLT = DAG->getSelect(DL, MVT::i32, ICMP_LT, Op0, Op1);
-  SDValue SMinLikeLE = DAG->getSelect(DL, MVT::i32, ICMP_LE, Op0, Op1);
-  SDValue UMinLikeULT = DAG->getSelect(DL, MVT::i32, ICMP_ULT, Op0, Op1);
-  SDValue UMinLikeULE = DAG->getSelect(DL, MVT::i32, ICMP_ULE, Op0, Op1);
-
   SDValue SFAdd = DAG->getNode(ISD::STRICT_FADD, DL, {Float32VT, MVT::Other},
                                {DAG->getEntryNode(), Op2, Op2});
 
@@ -248,24 +231,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
 
   EXPECT_TRUE(sd_match(SMax, m_c_BinOp(ISD::SMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMax, m_SMax(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMax, m_SMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMaxLikeGT, m_SMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMaxLikeGE, m_SMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_c_BinOp(ISD::SMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_SMin(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMin, m_SMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMinLikeLT, m_SMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMinLikeLE, m_SMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_c_BinOp(ISD::UMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_UMax(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMax, m_UMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMaxLikeUGT, m_UMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMaxLikeUGE, m_UMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_c_BinOp(ISD::UMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_UMin(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMin, m_UMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMinLikeULT, m_UMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMinLikeULE, m_UMinLike(m_Value(), m_Value())));
 
   SDValue BindVal;
   EXPECT_TRUE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_Value(BindVal),
