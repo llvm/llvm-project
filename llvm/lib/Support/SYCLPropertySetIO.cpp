@@ -20,13 +20,9 @@
 using namespace llvm::util;
 using namespace llvm;
 
-namespace {
-
-::llvm::Error makeError(const Twine &Msg) {
+static llvm::Error makeError(const Twine &Msg) {
   return createStringError(std::error_code{}, Msg);
 }
-
-} // anonymous namespace
 
 Expected<std::unique_ptr<SYCLPropertySetRegistry>>
 SYCLPropertySetRegistry::read(const MemoryBuffer *Buf) {
@@ -37,7 +33,7 @@ SYCLPropertySetRegistry::read(const MemoryBuffer *Buf) {
     // See if this line starts a new property set
     if (LI->starts_with("[")) {
       // Parse the category (property name)
-      auto EndPos = LI->rfind(']');
+      size_t EndPos = LI->rfind(']');
       if (EndPos == StringRef::npos)
         return makeError("invalid line: " + *LI);
       StringRef Category = LI->substr(1, EndPos - 1);
@@ -47,49 +43,46 @@ SYCLPropertySetRegistry::read(const MemoryBuffer *Buf) {
     if (!CurPropSet)
       return makeError("property category missing");
     // Parse name and type+value
-    auto Parts = LI->split('=');
+    auto [PropName, PropTypeAndValue] = LI->split('=');
 
-    if (Parts.first.empty() || Parts.second.empty())
+    if (PropName.empty() || PropTypeAndValue.empty())
       return makeError("invalid property line: " + *LI);
-    auto TypeVal = Parts.second.split('|');
+    auto [PropType, PropVal] = PropTypeAndValue.split('|');
 
-    if (TypeVal.first.empty() || TypeVal.second.empty())
-      return makeError("invalid property value: " + Parts.second);
+    if (PropType.empty() || PropVal.empty())
+      return makeError("invalid property value: " + PropTypeAndValue);
     APInt Tint;
 
     // Parse type
-    if (TypeVal.first.getAsInteger(10, Tint))
-      return makeError("invalid property type: " + TypeVal.first);
+    if (PropType.getAsInteger(10, Tint))
+      return makeError("invalid property type: " + PropType);
     Expected<SYCLPropertyValue::Type> Ttag =
         SYCLPropertyValue::getTypeTag(static_cast<int>(Tint.getSExtValue()));
-    StringRef Val = TypeVal.second;
+    StringRef Val = PropVal;
 
     if (!Ttag)
       return Ttag.takeError();
     SYCLPropertyValue Prop(Ttag.get());
 
     // Parse value depending on its type
-    switch (Ttag.get()) {
-    case SYCLPropertyValue::Type::UINT32: {
+    if (Prop.getType() == SYCLPropertyValue::Type::UInt32) {
       APInt ValV;
       if (Val.getAsInteger(10, ValV))
         return createStringError(std::error_code{},
                                  "invalid property value: ", Val.data());
       Prop.set(static_cast<uint32_t>(ValV.getZExtValue()));
-      break;
-    }
-    case SYCLPropertyValue::Type::BYTE_ARRAY: {
+    } else if (Prop.getType() == SYCLPropertyValue::Type::ByteArray) {
       std::vector<char> Output;
+      // Output resized to maximum output size for base64 decoding
+      Output.resize(((Val.size() + 3) / 4) * 3);
       if (Error Err = decodeBase64(Val, Output))
         return std::move(Err);
       Prop.set(reinterpret_cast<std::byte *>(Output.data()), Output.size());
-      break;
-    }
-    default:
+    } else {
       return createStringError(std::error_code{},
-                               "unsupported property type: ", Ttag.get());
+                               "unsupported property type\n");
     }
-    (*CurPropSet)[Parts.first] = std::move(Prop);
+    (*CurPropSet)[PropName] = std::move(Prop);
   }
   if (!CurPropSet)
     return makeError("invalid property set registry");
@@ -101,50 +94,36 @@ namespace llvm {
 // Output a property to a stream
 raw_ostream &operator<<(raw_ostream &Out, const SYCLPropertyValue &Prop) {
   Out << static_cast<int>(Prop.getType()) << '|';
-  switch (Prop.getType()) {
-  case SYCLPropertyValue::Type::UINT32:
+  if (Prop.getType() == SYCLPropertyValue::Type::UInt32) {
     Out << Prop.asUint32();
-    break;
-  case SYCLPropertyValue::Type::BYTE_ARRAY: {
-    auto PropArr = Prop.asByteArray();
+    return Out;
+  }
+  if (Prop.getType() == SYCLPropertyValue::Type::ByteArray) {
+    const std::byte *PropArr = Prop.asByteArray();
     std::vector<std::byte> V(PropArr, PropArr + Prop.getByteArraySize() /
                                                     sizeof(std::byte));
     Out << encodeBase64(V);
-    break;
+    return Out;
   }
-  default:
-    llvm_unreachable(
-        ("unsupported property type: " + utostr(Prop.getType())).c_str());
-  }
-  return Out;
+  llvm_unreachable("unsupported property type");
 }
 } // namespace llvm
 
 void SYCLPropertySetRegistry::write(raw_ostream &Out) const {
-  for (const auto &PropSet : PropSetMap) {
-    Out << '[' << PropSet.first << "]\n";
+  for (const auto &[PropCategory, Props] : PropSetMap) {
+    Out << '[' << PropCategory << "]\n";
 
-    for (const auto &Props : PropSet.second)
-      Out << Props.first << '=' << Props.second << '\n';
+    for (const auto &[PropName, PropVal] : Props)
+      Out << PropName << '=' << PropVal << '\n';
   }
 }
 
 namespace llvm {
 namespace util {
 
-template <> SYCLPropertyValue::Type SYCLPropertyValue::getTypeTag<uint32_t>() {
-  return UINT32;
-}
-
-template <>
-SYCLPropertyValue::Type SYCLPropertyValue::getTypeTag<std::byte *>() {
-  return BYTE_ARRAY;
-}
-
-SYCLPropertyValue::SYCLPropertyValue(const std::byte *Data, SizeTy DataBitSize)
-    : Ty(BYTE_ARRAY) {
-  constexpr int ByteSizeInBits = 8;
-  SizeTy DataSize = (DataBitSize + (ByteSizeInBits - 1)) / ByteSizeInBits;
+SYCLPropertyValue::SYCLPropertyValue(const std::byte *Data,
+                                     SizeTy DataBitSize) {
+  SizeTy DataSize = (DataBitSize + (CHAR_BIT - 1)) / CHAR_BIT;
   constexpr size_t SizeFieldSize = sizeof(SizeTy);
 
   // Allocate space for size and data.
@@ -154,7 +133,7 @@ SYCLPropertyValue::SYCLPropertyValue(const std::byte *Data, SizeTy DataBitSize)
   for (size_t I = 0; I < SizeFieldSize; ++I) {
     auto ByteArrayVal = std::get<std::byte *>(Val);
     ByteArrayVal[I] = (std::byte)DataBitSize;
-    DataBitSize >>= ByteSizeInBits;
+    DataBitSize >>= CHAR_BIT;
   }
   // Append data.
   auto ByteArrayVal = std::get<std::byte *>(Val);
@@ -170,38 +149,20 @@ SYCLPropertyValue::SYCLPropertyValue(SYCLPropertyValue &&P) {
 SYCLPropertyValue &SYCLPropertyValue::operator=(SYCLPropertyValue &&P) {
   copy(P);
 
-  if (P.getType() == BYTE_ARRAY)
+  if (std::holds_alternative<std::byte *>(Val))
     P.Val = nullptr;
-  P.Ty = NONE;
   return *this;
 }
 
 SYCLPropertyValue &SYCLPropertyValue::operator=(const SYCLPropertyValue &P) {
-  if (P.getType() == BYTE_ARRAY)
+  if (std::holds_alternative<std::byte *>(Val))
     *this = SYCLPropertyValue(P.asByteArray(), P.getByteArraySizeInBits());
   else
     copy(P);
   return *this;
 }
 
-void SYCLPropertyValue::copy(const SYCLPropertyValue &P) {
-  Ty = P.Ty;
-  Val = P.Val;
-}
-
-constexpr char SYCLPropertySetRegistry::SYCL_SPECIALIZATION_CONSTANTS[];
-constexpr char SYCLPropertySetRegistry::SYCL_DEVICELIB_REQ_MASK[];
-constexpr char SYCLPropertySetRegistry::SYCL_SPEC_CONSTANTS_DEFAULT_VALUES[];
-constexpr char SYCLPropertySetRegistry::SYCL_KERNEL_PARAM_OPT_INFO[];
-constexpr char SYCLPropertySetRegistry::SYCL_PROGRAM_METADATA[];
-constexpr char SYCLPropertySetRegistry::SYCL_MISC_PROP[];
-constexpr char SYCLPropertySetRegistry::SYCL_ASSERT_USED[];
-constexpr char SYCLPropertySetRegistry::SYCL_EXPORTED_SYMBOLS[];
-constexpr char SYCLPropertySetRegistry::SYCL_IMPORTED_SYMBOLS[];
-constexpr char SYCLPropertySetRegistry::SYCL_DEVICE_GLOBALS[];
-constexpr char SYCLPropertySetRegistry::SYCL_DEVICE_REQUIREMENTS[];
-constexpr char SYCLPropertySetRegistry::SYCL_HOST_PIPES[];
-constexpr char SYCLPropertySetRegistry::SYCL_VIRTUAL_FUNCTIONS[];
+void SYCLPropertyValue::copy(const SYCLPropertyValue &P) { Val = P.Val; }
 
 } // namespace util
 } // namespace llvm

@@ -54,7 +54,7 @@ public:
   using SizeTy = uint64_t;
 
   // Defines supported property types
-  enum Type { first = 0, NONE = first, UINT32, BYTE_ARRAY, last = BYTE_ARRAY };
+  enum Type { first = 0, None = first, UInt32, ByteArray, last = ByteArray };
 
   // Translates C++ type to the corresponding type tag.
   template <typename T> static Type getTypeTag();
@@ -69,9 +69,16 @@ public:
   ~SYCLPropertyValue() {}
 
   SYCLPropertyValue() = default;
-  SYCLPropertyValue(Type T) : Ty(T) {}
 
-  SYCLPropertyValue(uint32_t Val) : Ty(UINT32), Val({Val}) {}
+  SYCLPropertyValue(Type Ty) {
+    if (Ty == UInt32)
+      Val = (uint32_t)0;
+    else if (Ty == ByteArray)
+      Val = (std::byte *)(0);
+    else
+      llvm_unreachable_internal("unsupported SYCL property type");
+  }
+  SYCLPropertyValue(uint32_t Val) : Val({Val}) {}
   SYCLPropertyValue(const std::byte *Data, SizeTy DataBitSize);
   template <typename C, typename T = typename C::value_type>
   SYCLPropertyValue(const C &Data)
@@ -79,8 +86,7 @@ public:
                           Data.size() * sizeof(T) * CHAR_BIT) {}
   SYCLPropertyValue(const llvm::StringRef &Str)
       : SYCLPropertyValue(reinterpret_cast<const std::byte *>(Str.data()),
-                          Str.size() * sizeof(char) *
-                              /* bits in one byte */ 8) {}
+                          Str.size() * sizeof(char) * CHAR_BIT) {}
   SYCLPropertyValue(const SYCLPropertyValue &P);
   SYCLPropertyValue(SYCLPropertyValue &&P);
 
@@ -90,13 +96,14 @@ public:
 
   // Get property value as unsigned 32-bit integer
   uint32_t asUint32() const {
-    assert((Ty == UINT32) && "must be UINT32 value");
+    assert(std::holds_alternative<uint32_t>(Val) && "must be a uint32_t value");
     return std::get<uint32_t>(Val);
   }
 
   // Get raw data size in bits.
   SizeTy getByteArraySizeInBits() const {
-    assert((Ty == BYTE_ARRAY) && "must be BYTE_ARRAY value");
+    assert(std::holds_alternative<std::byte *>(Val) &&
+           "must be a byte array value");
     SizeTy Res = 0;
 
     for (size_t I = 0; I < sizeof(SizeTy); ++I) {
@@ -121,30 +128,33 @@ public:
 
   // Get byte array data including the leading bytes encoding the size.
   const std::byte *asRawByteArray() const {
-    assert((Ty == BYTE_ARRAY) && "must be BYTE_ARRAY value");
+    assert(std::holds_alternative<std::byte *>(Val) &&
+           "must be a byte array value");
     auto *ByteArrayVal = std::get<std::byte *>(Val);
     return ByteArrayVal;
   }
 
   // Get byte array data excluding the leading bytes encoding the size.
   const std::byte *asByteArray() const {
-    assert((Ty == BYTE_ARRAY) && "must be BYTE_ARRAY value");
+    assert(std::holds_alternative<std::byte *>(Val) &&
+           "must be a byte array value");
 
     auto ByteArrayVal = std::get<std::byte *>(Val);
     return ByteArrayVal + sizeof(SizeTy);
   }
 
-  bool isValid() const { return getType() != NONE; }
+  bool isValid() const { return getType() != None; }
 
-  // Set property value when data type is UINT32_T
+  // Set property value when data type is uint32_t
   void set(uint32_t V) {
-    assert((Ty == UINT32) && "must be UINT32 value");
+    assert(std::holds_alternative<uint32_t>(Val) && "must be a uint32_t value");
     Val = V;
   }
 
-  // Set property value when data type is BYTE_ARRAY
+  // Set property value when data type is 'std::byte *'
   void set(std::byte *V, int DataSize) {
-    assert((Ty == BYTE_ARRAY) && "must be BYTE_ARRAY value");
+    assert(std::holds_alternative<std::byte *>(Val) &&
+           "must be a byte array value");
     size_t DataBitSize = DataSize * CHAR_BIT;
     constexpr size_t SizeFieldSize = sizeof(SizeTy);
     // Allocate space for size and data.
@@ -161,23 +171,25 @@ public:
     std::memcpy(ByteArrayVal + SizeFieldSize, V, DataSize);
   }
 
-  Type getType() const { return Ty; }
+  Type getType() const {
+    if (std::holds_alternative<uint32_t>(Val))
+      return UInt32;
+    if (std::holds_alternative<std::byte *>(Val))
+      return ByteArray;
+    return None;
+  }
 
   SizeTy size() const {
-    switch (Ty) {
-    case UINT32:
+    if (std::holds_alternative<uint32_t>(Val))
       return sizeof(uint32_t);
-    case BYTE_ARRAY:
+    if (std::holds_alternative<std::byte *>(Val))
       return getRawByteArraySize();
-    default:
-      llvm_unreachable_internal("unsupported SYCL property type");
-    }
+    llvm_unreachable_internal("unsupported SYCL property type");
   }
 
 private:
   void copy(const SYCLPropertyValue &P);
 
-  Type Ty = NONE;
   std::variant<uint32_t, std::byte *> Val;
 };
 
@@ -207,21 +219,21 @@ public:
   using MapTy = MapVector<SmallString<16>, SYCLPropertySet, SYCLPropertyMapTy>;
 
   // Specific property category names used by tools.
-  static constexpr char SYCL_SPECIALIZATION_CONSTANTS[] =
+  static constexpr char SYCLSpecializationConstants[] =
       "SYCL/specialization constants";
-  static constexpr char SYCL_SPEC_CONSTANTS_DEFAULT_VALUES[] =
+  static constexpr char SYCLSpecConstantsDefaultValues[] =
       "SYCL/specialization constants default values";
-  static constexpr char SYCL_DEVICELIB_REQ_MASK[] = "SYCL/devicelib req mask";
-  static constexpr char SYCL_KERNEL_PARAM_OPT_INFO[] = "SYCL/kernel param opt";
-  static constexpr char SYCL_PROGRAM_METADATA[] = "SYCL/program metadata";
-  static constexpr char SYCL_MISC_PROP[] = "SYCL/misc properties";
-  static constexpr char SYCL_ASSERT_USED[] = "SYCL/assert used";
-  static constexpr char SYCL_EXPORTED_SYMBOLS[] = "SYCL/exported symbols";
-  static constexpr char SYCL_IMPORTED_SYMBOLS[] = "SYCL/imported symbols";
-  static constexpr char SYCL_DEVICE_GLOBALS[] = "SYCL/device globals";
-  static constexpr char SYCL_DEVICE_REQUIREMENTS[] = "SYCL/device requirements";
-  static constexpr char SYCL_HOST_PIPES[] = "SYCL/host pipes";
-  static constexpr char SYCL_VIRTUAL_FUNCTIONS[] = "SYCL/virtual functions";
+  static constexpr char SYCLDeviceLibReqMask[] = "SYCL/devicelib req mask";
+  static constexpr char SYCLKernelParamOptInfo[] = "SYCL/kernel param opt";
+  static constexpr char SYCLProgramMetadata[] = "SYCL/program metadata";
+  static constexpr char SYCLMiscProp[] = "SYCL/misc properties";
+  static constexpr char SYCLAssertUsed[] = "SYCL/assert used";
+  static constexpr char SYCLExportedSymbols[] = "SYCL/exported symbols";
+  static constexpr char SYCLImportedSymbols[] = "SYCL/imported symbols";
+  static constexpr char SYCLDeviceGlobals[] = "SYCL/device globals";
+  static constexpr char SYCLDeviceRequirements[] = "SYCL/device requirements";
+  static constexpr char SYCLHostPipes[] = "SYCL/host pipes";
+  static constexpr char SYCLVirtualFunctions[] = "SYCL/virtual functions";
 
   /// Function for bulk addition of an entire property set in the given
   /// \p Category .

@@ -59,7 +59,7 @@ TEST(SYCLPropertySet, IncorrectValuesIO) {
       << "Invalid property type";
 
   Content = "[Staff/Ages]\n"
-            "person1=2|10\n";
+            "person1=1|IAQ\n";
   MemBuf = MemoryBuffer::getMemBuffer(Content);
   // Parse a property set registry
   PropSetsPtr = SYCLPropertySetRegistry::read(MemBuf.get());
