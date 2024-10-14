@@ -3636,26 +3636,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   //  * The intrinsic is speculatable.
   //  * The select condition is not a vector, or the intrinsic does not
   //    perform cross-lane operations.
-  switch (IID) {
-  case Intrinsic::ctlz:
-  case Intrinsic::cttz:
-  case Intrinsic::ctpop:
-  case Intrinsic::umin:
-  case Intrinsic::umax:
-  case Intrinsic::smin:
-  case Intrinsic::smax:
-  case Intrinsic::usub_sat:
-  case Intrinsic::uadd_sat:
-  case Intrinsic::ssub_sat:
-  case Intrinsic::sadd_sat:
+  if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
+      isNotCrossLaneOperation(II))
     for (Value *Op : II->args())
       if (auto *Sel = dyn_cast<SelectInst>(Op))
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
-    [[fallthrough]];
-  default:
-    break;
-  }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II, Builder))
     return Shuf;

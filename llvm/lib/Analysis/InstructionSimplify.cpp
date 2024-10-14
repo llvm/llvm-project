@@ -4343,13 +4343,10 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (isa<PHINode>(I))
     return nullptr;
 
-  if (Op->getType()->isVectorTy()) {
-    // For vector types, the simplification must hold per-lane, so forbid
-    // potentially cross-lane operations like shufflevector.
-    if (!I->getType()->isVectorTy() || isa<ShuffleVectorInst>(I) ||
-        isa<CallBase>(I) || isa<BitCastInst>(I))
-      return nullptr;
-  }
+  // For vector types, the simplification must hold per-lane, so forbid
+  // potentially cross-lane operations like shufflevector.
+  if (Op->getType()->isVectorTy() && !isNotCrossLaneOperation(I))
+    return nullptr;
 
   // Don't fold away llvm.is.constant checks based on assumptions.
   if (match(I, m_Intrinsic<Intrinsic::is_constant>()))
