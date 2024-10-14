@@ -1528,6 +1528,8 @@ public:
 
   bool hasGFX1210Insts() const { return GFX1210Insts; }
 
+  bool hasGFX13Insts() const { return GFX13Insts; }
+
   bool hasVOPD3() const { return GFX1210Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.

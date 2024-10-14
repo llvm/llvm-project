@@ -173,8 +173,6 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    scratch_load_b32 v1, off, s2 scope:SCOPE_SYS
-; GFX1210-NEXT:    s_wait_bvhcnt 0x0
-; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1210-NEXT:    s_endpgm
@@ -386,8 +384,6 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX1210-NEXT:    v_and_b32_e64 v1, v1, s3
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    scratch_load_b32 v1, v1, s2 scale_offset scope:SCOPE_SYS
-; GFX1210-NEXT:    s_wait_bvhcnt 0x0
-; GFX1210-NEXT:    s_wait_samplecnt 0x0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1210-NEXT:    s_endpgm

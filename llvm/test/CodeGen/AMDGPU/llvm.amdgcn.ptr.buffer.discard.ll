@@ -37,7 +37,6 @@ define amdgpu_ps void @raw_ptr_buffer_discard_offen(ptr addrspace(8) inreg, i32)
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    buffer_discard_b32 v0, s[0:3], null offen
 ; GFX13-NEXT:    buffer_discard_b128 v0, s[0:3], null offen th:TH_STORE_NT_HT
-; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    buffer_discard_b1024 v0, s[0:3], null offen scope:SCOPE_SYS
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-NEXT:    s_endpgm
@@ -69,7 +68,6 @@ define amdgpu_ps void @struct_ptr_buffer_discard_immoffs(ptr addrspace(8) inreg,
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    buffer_discard_b32 v0, s[0:3], null idxen offset:42 scope:SCOPE_DEV
-; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    buffer_discard_b128 v0, s[0:3], null idxen offset:8388607 scope:SCOPE_SYS
 ; GFX13-NEXT:    buffer_discard_b1024 v0, s[0:3], null idxen offset:84 scope:SCOPE_SE
 ; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
