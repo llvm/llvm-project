@@ -28,6 +28,7 @@ class DerivedType;
 
 namespace Fortran::runtime {
 class Descriptor;
+using SubscriptValue = ISO::CFI_index_t;
 
 /// Returns size in bytes of the descriptor (not the data)
 /// This must be at least as large as the largest descriptor of any target
