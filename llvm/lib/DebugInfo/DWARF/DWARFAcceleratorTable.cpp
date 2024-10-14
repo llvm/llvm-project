@@ -665,7 +665,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUOffset() const {
 }
 
 std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
-  std::optional<uint64_t> Index = getLocalTUIndex();
+  std::optional<uint64_t> Index = getTUIndex();
   if (!Index || *Index >= NameIdx->getLocalTUCount())
     return std::nullopt;
   return NameIdx->getLocalTUOffset(*Index);
@@ -673,7 +673,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
 
 std::optional<uint64_t>
 DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
-  std::optional<uint64_t> Index = getLocalTUIndex();
+  std::optional<uint64_t> Index = getTUIndex();
   const uint32_t NumLocalTUs = NameIdx->getLocalTUCount();
   if (!Index || *Index < NumLocalTUs)
     return std::nullopt; // Invalid TU index or TU index is for a local TU
@@ -684,7 +684,7 @@ DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
   return NameIdx->getForeignTUSignature(ForeignTUIndex);
 }
 
-std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
+std::optional<uint64_t> DWARFDebugNames::Entry::getTUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_type_unit))
     return Off->getAsUnsignedConstant();
   return std::nullopt;

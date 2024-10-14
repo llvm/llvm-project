@@ -1587,7 +1587,7 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
                                 EntryOr = NI.getEntry(&NextEntryID)) {
 
     std::optional<uint64_t> CUIndex = EntryOr->getRelatedCUIndex();
-    std::optional<uint64_t> TUIndex = EntryOr->getLocalTUIndex();
+    std::optional<uint64_t> TUIndex = EntryOr->getTUIndex();
     if (CUIndex && *CUIndex >= NI.getCUCount()) {
       ErrorCategory.Report("Name Index entry contains invalid CU index", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
@@ -1677,7 +1677,7 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
     DWARFUnit *NonSkeletonUnit = nullptr;
     if (TUIndex && *TUIndex >= NumLocalTUs) {
       // We have a foreign TU index, which either means we have a .dwo file
-      // that has one or more type units, or we have a .dwp file with on or
+      // that has one or more type units, or we have a .dwp file with one or
       // more type units. We need to get the type unit from the DWARFContext
       // of the .dwo. We got the NonSkeletonUnitDie above that has the .dwo
       // or .dwp DWARF context, so we have to get the type unit from that file.

@@ -468,12 +468,13 @@ public:
     /// index for an entry that is a type unit.
     std::optional<uint64_t> getRelatedCUIndex() const;
 
-    /// Returns the Index into the Local Type Unit list of the owning Name
+    /// Returns the index of the Type Unit of the owning
+    /// Name
     /// Index or std::nullopt if this Accelerator Entry does not have an
     /// associated Type Unit. It is up to the user to verify that the
-    /// returned Index is valid in the owning NameIndex (or use
+    /// returned Index is a valid index in the owning NameIndex (or use
     /// getLocalTUOffset(), which will handle that check itself).
-    std::optional<uint64_t> getLocalTUIndex() const;
+    std::optional<uint64_t> getTUIndex() const;
 
     /// .debug_names-specific getter, which always succeeds (DWARF v5 index
     /// entries always have a tag).
