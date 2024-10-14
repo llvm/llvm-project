@@ -30143,6 +30143,39 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getVectorShuffle(VT, dl, R01, R23, {0, 3, 4, 7});
   }
 
+  // If we're shifting (per-lane) uniform vXi8 constants, we can use PSHUFB to
+  // look up the pre-computed shift values.
+  if ((VT == MVT::v16i8 && Subtarget.hasSSSE3()) ||
+      (VT == MVT::v32i8 && Subtarget.hasInt256()) ||
+      (VT == MVT::v64i8 && Subtarget.hasBWI())) {
+    unsigned NumElts = VT.getVectorNumElements();
+    unsigned NumLanes = VT.getSizeInBits() / 128u;
+    unsigned NumEltsPerLane = NumElts / NumLanes;
+    SmallVector<APInt, 16> LUT;
+    for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+      unsigned LoElt = Lane * NumEltsPerLane;
+      APInt EltMask = APInt::getBitsSet(NumElts, LoElt, LoElt + NumEltsPerLane);
+      KnownBits KnownLane = DAG.computeKnownBits(R, EltMask);
+      if (!KnownLane.isConstant())
+        break;
+      const APInt &LaneSplat = KnownLane.getConstant();
+      for (unsigned I = 0; I != 8; ++I) {
+        if (Opc == ISD::SHL)
+          LUT.push_back(LaneSplat.shl(I));
+        else if (Opc == ISD::SRL)
+          LUT.push_back(LaneSplat.lshr(I));
+        else if (Opc == ISD::SRA)
+          LUT.push_back(LaneSplat.ashr(I));
+      }
+      LUT.append(8, APInt::getZero(8));
+    }
+    if (LUT.size() == NumElts) {
+      APInt Undefs = APInt::getSplat(NumElts, APInt(16, 0xFF00));
+      SDValue Mask = getConstVector(LUT, Undefs, VT, DAG, dl);
+      return DAG.getNode(X86ISD::PSHUFB, dl, VT, Mask, Amt);
+    }
+  }
+
   // It's worth extending once and using the vXi16/vXi32 shifts for smaller
   // types, but without AVX512 the extra overheads to get from vXi8 to vXi32
   // make the existing SSE solution better.
