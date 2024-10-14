@@ -152,6 +152,7 @@ MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
                       RequireAllMachineFunctionPropertiesPass())
+MACHINE_FUNCTION_PASS("stack-coloring", StackColoringPass())
 MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MACHINE_FUNCTION_PASS("two-address-instruction", TwoAddressInstructionPass())
 MACHINE_FUNCTION_PASS("verify", MachineVerifierPass())
@@ -255,7 +256,6 @@ DUMMY_MACHINE_FUNCTION_PASS("rename-independent-subregs", RenameIndependentSubre
 DUMMY_MACHINE_FUNCTION_PASS("reset-machine-function", ResetMachineFunctionPass)
 DUMMY_MACHINE_FUNCTION_PASS("shrink-wrap", ShrinkWrapPass)
 DUMMY_MACHINE_FUNCTION_PASS("simple-register-coalescing", RegisterCoalescerPass)
-DUMMY_MACHINE_FUNCTION_PASS("stack-coloring", StackColoringPass)
 DUMMY_MACHINE_FUNCTION_PASS("stack-frame-layout", StackFrameLayoutAnalysisPass)
 DUMMY_MACHINE_FUNCTION_PASS("stack-slot-coloring", StackSlotColoringPass)
 DUMMY_MACHINE_FUNCTION_PASS("stackmap-liveness", StackMapLivenessPass)
