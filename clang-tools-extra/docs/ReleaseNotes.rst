@@ -243,8 +243,8 @@ Changes in existing checks
   remove `->`, when redundant `get()` is removed.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/readability-identifier-naming>` check support
-  ``namespace`` aliases.
+  <clang-tidy/checks/readability/readability-identifier-naming>` check to
+  validate ``namespace`` aliases.
 
 Removed checks
 ^^^^^^^^^^^^^^
