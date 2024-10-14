@@ -371,8 +371,8 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-// Looks up from the operation from and returns the PrivateClauseOp with
-// name symbolName
+/// Looks up from the operation from and returns the PrivateClauseOp with
+/// name symbolName
 static omp::PrivateClauseOp findPrivatizer(Operation *from,
                                            SymbolRefAttr symbolName) {
   omp::PrivateClauseOp privatizer =
@@ -382,7 +382,7 @@ static omp::PrivateClauseOp findPrivatizer(Operation *from,
   return privatizer;
 }
 
-/// Populates `privatizations` with privatisation declarations used for the
+/// Populates `privatizations` with privatization declarations used for the
 /// given op.
 /// TODO: generalise beyond ParallelOp
 static void collectPrivatizationDecls(
@@ -1356,7 +1356,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   LogicalResult bodyGenStatus = success();
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
-  // Collect delayed privatisation declarations
+  // Collect delayed privatization declarations
   MutableArrayRef<BlockArgument> privateBlockArgs =
       cast<omp::BlockArgOpenMPOpInterface>(*opInst).getPrivateBlockArgs();
   SmallVector<llvm::Value *> llvmPrivateVars;

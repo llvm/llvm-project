@@ -1,6 +1,7 @@
 ! RUN: %flang_fc1 -fopenmp -emit-llvm %s -o - | FileCheck %s
 
-! stress test cfg and builder insertion points in mlir-to-llvm conversion:
+! Compinational testing of control flow graph and builder insertion points
+! in mlir-to-llvm conversion:
 !   - mixing multiple delayed privatisations and multiple reductions
 !   - multiple blocks in the private alloc region
 !   - private alloc region has to read from the mold variable
