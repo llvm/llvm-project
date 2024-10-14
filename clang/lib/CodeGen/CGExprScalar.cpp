@@ -29,6 +29,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -56,7 +57,7 @@ using llvm::Value;
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
+CLANG_ABI extern cl::opt<bool> EnableSingleByteCoverage;
 } // namespace llvm
 
 namespace {
