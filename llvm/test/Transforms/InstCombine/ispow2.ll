@@ -977,11 +977,7 @@ define i1 @is_pow2or0_ctpop_wrong_pred2_logical(i32 %x) {
 
 define <2 x i1> @is_pow2or0_ctpop_commute_vec_wrong_pred3(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_commute_vec_wrong_pred3(
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i8 0, 9) <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[T0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP]], [[ISZERO]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp eq <2 x i8> %t0, <i8 1, i8 1>
@@ -1174,11 +1170,7 @@ define i1 @isnot_pow2nor0_ctpop_wrong_pred2_logical(i32 %x) {
 
 define <2 x i1> @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i8 0, 9) <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[T0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP]], [[NOTZERO]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp ne <2 x i8> %t0, <i8 1, i8 1>
