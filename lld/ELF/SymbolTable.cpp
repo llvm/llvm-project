@@ -98,11 +98,11 @@ Symbol *SymbolTable::insert(StringRef name) {
 
 // This variant of addSymbol is used by BinaryFile::parse to check duplicate
 // symbol errors.
-Symbol *SymbolTable::addAndCheckDuplicate(const Defined &newSym) {
+Symbol *SymbolTable::addAndCheckDuplicate(Ctx &ctx, const Defined &newSym) {
   Symbol *sym = insert(newSym.getName());
   if (sym->isDefined())
-    sym->checkDuplicate(newSym);
-  sym->resolve(newSym);
+    sym->checkDuplicate(ctx, newSym);
+  sym->resolve(ctx, newSym);
   sym->isUsedInRegularObj = true;
   return sym;
 }
@@ -227,7 +227,7 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
   for (Symbol *sym : syms) {
     // For a non-local versionId, skip symbols containing version info because
     // symbol versions specified by symbol names take precedence over version
-    // scripts. See parseSymbolVersion().
+    // scripts. See parseSymbolVersion(ctx).
     if (!includeNonDefault && versionId != VER_NDX_LOCAL &&
         sym->getName().contains('@'))
       continue;
@@ -353,10 +353,10 @@ void SymbolTable::scanVersionScript() {
   // Let them parse and update their names to exclude version suffix.
   for (Symbol *sym : symVector)
     if (sym->hasVersionSuffix)
-      sym->parseSymbolVersion();
+      sym->parseSymbolVersion(ctx);
 
   // isPreemptible is false at this point. To correctly compute the binding of a
-  // Defined (which is used by includeInDynsym()), we need to know if it is
+  // Defined (which is used by includeInDynsym(ctx)), we need to know if it is
   // VER_NDX_LOCAL or not. Compute symbol versions before handling
   // --dynamic-list.
   handleDynamicList();

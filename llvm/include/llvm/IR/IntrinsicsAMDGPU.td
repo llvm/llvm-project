@@ -2086,6 +2086,8 @@ def int_amdgcn_fcmp :
             [IntrNoMem, IntrConvergent,
              ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// Returns a bitfield(i32 or i64) containing the result of its i1 argument
+// in all active lanes, and zero in all inactive lanes.
 def int_amdgcn_ballot :
   Intrinsic<[llvm_anyint_ty], [llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
