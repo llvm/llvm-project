@@ -1159,8 +1159,8 @@ private:
 
     bool VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Sync) {
       // Under the hood, this calls objc_sync_enter and objc_sync_exit, wrapped
-      // in a @try/@finally block. Diagnose this somewhat generically as "ObjC"
-      // messaging.
+      // in a @try/@finally block. Diagnose this generically as "ObjC
+      // messaging".
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
                                 ViolationID::AccessesObjCMethodOrProperty,
                                 Sync->getBeginLoc());
