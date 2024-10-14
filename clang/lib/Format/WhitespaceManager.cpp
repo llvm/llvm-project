@@ -1020,7 +1020,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
             return true;
         }
         if (C.Tok->is(TT_FunctionDeclarationName))
-          return true;
+          return Style.AlignConsecutiveDeclarations.AlignFunctionDeclarations;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
         if (C.Tok->Previous &&

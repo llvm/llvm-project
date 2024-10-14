@@ -358,11 +358,10 @@ def main():
     gh = github.Github(login_or_token=token)
     org = gh.get_organization("llvm")
     repo = org.get_repo("llvm-project")
-    team = org.get_team_by_slug("llvm-committers")
     one_year_ago = datetime.datetime.now() - datetime.timedelta(days=365)
     triage_list = {}
-    for member in team.get_members():
-        triage_list[member.login] = User(member.login, triage_list)
+    for collaborator in repo.get_collaborators(permission="push"):
+        triage_list[collaborator.login] = User(collaborator.login, triage_list)
 
     print("Start:", len(triage_list), "triagers")
     # Step 0 Check if users have requested commit access in the last year.

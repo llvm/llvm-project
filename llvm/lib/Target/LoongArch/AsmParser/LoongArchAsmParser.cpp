@@ -47,10 +47,10 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -65,7 +65,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
                                   const Twine &Msg);
 
   /// Helper for processing MC instructions that have been successfully matched
-  /// by MatchAndEmitInstruction.
+  /// by matchAndEmitInstruction.
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, OperandVector &Operands,
                           MCStreamer &Out);
 
@@ -559,10 +559,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<LoongArchOperand> createReg(unsigned RegNo, SMLoc S,
+  static std::unique_ptr<LoongArchOperand> createReg(MCRegister Reg, SMLoc S,
                                                      SMLoc E) {
     auto Op = std::make_unique<LoongArchOperand>(KindTy::Register);
-    Op->Reg.RegNum = RegNo;
+    Op->Reg.RegNum = Reg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -793,7 +793,7 @@ bool LoongArchAsmParser::parseOperand(OperandVector &Operands,
   return Error(getLoc(), "unknown operand");
 }
 
-bool LoongArchAsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool LoongArchAsmParser::parseInstruction(ParseInstructionInfo &Info,
                                           StringRef Name, SMLoc NameLoc,
                                           OperandVector &Operands) {
   // First operand in MCInst is instruction mnemonic.
@@ -1424,9 +1424,9 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   switch (Opc) {
   default:
     if (Opc >= LoongArch::AMADD_D && Opc <= LoongArch::AMXOR_W) {
-      unsigned Rd = Inst.getOperand(0).getReg();
-      unsigned Rk = Inst.getOperand(1).getReg();
-      unsigned Rj = Inst.getOperand(2).getReg();
+      MCRegister Rd = Inst.getOperand(0).getReg();
+      MCRegister Rk = Inst.getOperand(1).getReg();
+      MCRegister Rj = Inst.getOperand(2).getReg();
       if ((Rd == Rk || Rd == Rj) && Rd != LoongArch::R0)
         return Match_RequiresAMORdDifferRkRj;
     }
@@ -1435,7 +1435,7 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   case LoongArch::PseudoLA_TLS_DESC_ABS_LARGE:
   case LoongArch::PseudoLA_TLS_DESC_PC:
   case LoongArch::PseudoLA_TLS_DESC_PC_LARGE: {
-    unsigned Rd = Inst.getOperand(0).getReg();
+    MCRegister Rd = Inst.getOperand(0).getReg();
     if (Rd != LoongArch::R4)
       return Match_RequiresLAORdR4;
     break;
@@ -1445,15 +1445,15 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   case LoongArch::PseudoLA_TLS_IE_LARGE:
   case LoongArch::PseudoLA_TLS_LD_LARGE:
   case LoongArch::PseudoLA_TLS_GD_LARGE: {
-    unsigned Rd = Inst.getOperand(0).getReg();
-    unsigned Rj = Inst.getOperand(1).getReg();
+    MCRegister Rd = Inst.getOperand(0).getReg();
+    MCRegister Rj = Inst.getOperand(1).getReg();
     if (Rd == Rj)
       return Match_RequiresLAORdDifferRj;
     break;
   }
   case LoongArch::CSRXCHG:
   case LoongArch::GCSRXCHG: {
-    unsigned Rj = Inst.getOperand(2).getReg();
+    MCRegister Rj = Inst.getOperand(2).getReg();
     if (Rj == LoongArch::R0 || Rj == LoongArch::R1)
       return Match_RequiresOpnd2NotR0R1;
     return Match_Success;
@@ -1506,7 +1506,7 @@ bool LoongArchAsmParser::generateImmOutOfRangeError(
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
 
-bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool LoongArchAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                  OperandVector &Operands,
                                                  MCStreamer &Out,
                                                  uint64_t &ErrorInfo,

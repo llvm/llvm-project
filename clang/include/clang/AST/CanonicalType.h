@@ -299,6 +299,7 @@ public:
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isDependentType)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isOverloadableType)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isArrayType)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isConstantArrayType)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, hasPointerRepresentation)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, hasObjCPointerRepresentation)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, hasIntegerRepresentation)

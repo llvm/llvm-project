@@ -5,8 +5,8 @@
 #define TEST_HPP
 
 #include <charconv>
+#include <cstddef>
 #include <limits>
-#include <stddef.h>
 #include <system_error>
 using namespace std;
 

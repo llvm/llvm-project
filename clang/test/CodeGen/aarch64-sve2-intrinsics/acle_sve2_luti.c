@@ -248,17 +248,13 @@ svbfloat16_t test_svluti4_lane_bf16(svbfloat16_t table, svuint8_t indices) MODE_
 // SME-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 // CHECK-LABEL: @test_svluti4_lane_s16_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[TABLE:%.*]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[TABLE]], i64 8)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti4.lane.x2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]], i32 0)
-// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti4.lane.x2.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]], i32 0)
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svluti4_lane_s16_x211svint16x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[TABLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[TABLE]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti4.lane.x2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]], i32 0)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti4.lane.x2.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]], i32 0)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svluti4_lane_s16_x2(svint16x2_t table, svuint8_t indices) MODE_ATTR{
     return SVE_ACLE_FUNC(svluti4_lane,_s16,_x2)(table, indices, 0);
@@ -272,17 +268,13 @@ svint16_t test_svluti4_lane_s16_x2(svint16x2_t table, svuint8_t indices) MODE_AT
 // SME-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 // CHECK-LABEL: @test_svluti4_lane_u16_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[TABLE:%.*]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[TABLE]], i64 8)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti4.lane.x2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]], i32 3)
-// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti4.lane.x2.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]], i32 3)
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svluti4_lane_u16_x212svuint16x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[TABLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[TABLE]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti4.lane.x2.nxv8i16(<vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]], i32 3)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti4.lane.x2.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]], i32 3)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svluti4_lane_u16_x2(svuint16x2_t table, svuint8_t indices) MODE_ATTR{
     return SVE_ACLE_FUNC(svluti4_lane,_u16,_x2)(table, indices, 3);
@@ -296,17 +288,13 @@ svuint16_t test_svluti4_lane_u16_x2(svuint16x2_t table, svuint8_t indices) MODE_
 // SME-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
 // CHECK-LABEL: @test_svluti4_lane_f16_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[TABLE:%.*]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[TABLE]], i64 8)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti4.lane.x2.nxv8f16(<vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]], i32 2)
-// CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti4.lane.x2.nxv8f16(<vscale x 8 x half> [[TABLE_COERCE0:%.*]], <vscale x 8 x half> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]], i32 2)
+// CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svluti4_lane_f16_x213svfloat16x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[TABLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.vector.extract.nxv8f16.nxv16f16(<vscale x 16 x half> [[TABLE]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti4.lane.x2.nxv8f16(<vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]], i32 2)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti4.lane.x2.nxv8f16(<vscale x 8 x half> [[TABLE_COERCE0:%.*]], <vscale x 8 x half> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]], i32 2)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_svluti4_lane_f16_x2(svfloat16x2_t table, svuint8_t indices) MODE_ATTR{
     return SVE_ACLE_FUNC(svluti4_lane,_f16,_x2)(table, indices, 2);
@@ -320,17 +308,13 @@ svfloat16_t test_svluti4_lane_f16_x2(svfloat16x2_t table, svuint8_t indices) MOD
 // SME-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 // CHECK-LABEL: @test_svluti4_lane_bf16_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[TABLE:%.*]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[TABLE]], i64 8)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.luti4.lane.x2.nxv8bf16(<vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]], i32 1)
-// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.luti4.lane.x2.nxv8bf16(<vscale x 8 x bfloat> [[TABLE_COERCE0:%.*]], <vscale x 8 x bfloat> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]], i32 1)
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z25test_svluti4_lane_bf16_x214svbfloat16x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[TABLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[TABLE]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.luti4.lane.x2.nxv8bf16(<vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 16 x i8> [[INDICES:%.*]], i32 1)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.luti4.lane.x2.nxv8bf16(<vscale x 8 x bfloat> [[TABLE_COERCE0:%.*]], <vscale x 8 x bfloat> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]], i32 1)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 svbfloat16_t test_svluti4_lane_bf16_x2(svbfloat16x2_t table, svuint8_t indices) MODE_ATTR{
     return SVE_ACLE_FUNC(svluti4_lane,_bf16,_x2)(table, indices, 1);

@@ -315,5 +315,5 @@ std::string mlir::tblgen::escapeString(StringRef value) {
   std::string ret;
   llvm::raw_string_ostream os(ret);
   os.write_escaped(value);
-  return os.str();
+  return ret;
 }

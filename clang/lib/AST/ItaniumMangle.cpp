@@ -464,7 +464,7 @@ public:
   void mangleSeqID(unsigned SeqID);
   void mangleName(GlobalDecl GD);
   void mangleType(QualType T);
-  void mangleNameOrStandardSubstitution(const NamedDecl *ND);
+  void mangleCXXRecordDecl(const CXXRecordDecl *Record);
   void mangleLambdaSig(const CXXRecordDecl *Lambda);
   void mangleModuleNamePrefix(StringRef Name, bool IsPartition = false);
   void mangleVendorQualifier(StringRef Name);
@@ -693,7 +693,10 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
     if (VD->isExternC())
       return getASTContext().getTranslationUnitDecl();
 
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+  if (const auto *FD = getASTContext().getLangOpts().getClangABICompat() >
+                               LangOptions::ClangABI::Ver19
+                           ? D->getAsFunction()
+                           : dyn_cast<FunctionDecl>(D)) {
     if (FD->isExternC())
       return getASTContext().getTranslationUnitDecl();
     // Member-like constrained friends are mangled as if they were members of
@@ -1161,8 +1164,25 @@ void CXXNameMangler::mangleUnscopedName(GlobalDecl GD, const DeclContext *DC,
   //                  ::= St <unqualified-name>   # ::std::
 
   assert(!isa<LinkageSpecDecl>(DC) && "unskipped LinkageSpecDecl");
-  if (isStdNamespace(DC))
+  if (isStdNamespace(DC)) {
+    if (getASTContext().getTargetInfo().getTriple().isOSSolaris()) {
+      const NamedDecl *ND = cast<NamedDecl>(GD.getDecl());
+      if (const RecordDecl *RD = dyn_cast<RecordDecl>(ND)) {
+        // Issue #33114: Need non-standard mangling of std::tm etc. for
+        // Solaris ABI compatibility.
+        //
+        // <substitution> ::= tm # ::std::tm, same for the others
+        if (const IdentifierInfo *II = RD->getIdentifier()) {
+          StringRef type = II->getName();
+          if (llvm::is_contained({"div_t", "ldiv_t", "lconv", "tm"}, type)) {
+            Out << type.size() << type;
+            return;
+          }
+        }
+      }
+    }
     Out << "St";
+  }
 
   mangleUnqualifiedName(GD, DC, AdditionalAbiTags);
 }
@@ -3029,9 +3049,13 @@ void CXXNameMangler::mangleType(QualType T) {
     addSubstitution(T);
 }
 
-void CXXNameMangler::mangleNameOrStandardSubstitution(const NamedDecl *ND) {
-  if (!mangleStandardSubstitution(ND))
-    mangleName(ND);
+void CXXNameMangler::mangleCXXRecordDecl(const CXXRecordDecl *Record) {
+  if (mangleSubstitution(Record))
+    return;
+  mangleName(Record);
+  if (isCompatibleWith(LangOptions::ClangABI::Ver19))
+    return;
+  addSubstitution(Record);
 }
 
 void CXXNameMangler::mangleType(const BuiltinType *T) {
@@ -3426,7 +3450,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'u' << type_name.size() << type_name;                               \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   case BuiltinType::Id:                                                        \
     type_name = Name;                                                          \
     Out << 'u' << type_name.size() << type_name;                               \
@@ -5738,6 +5762,15 @@ recurse:
   case Expr::HLSLOutArgExprClass:
     llvm_unreachable(
         "cannot mangle hlsl temporary value; mangling wrong thing?");
+  case Expr::OpenACCAsteriskSizeExprClass: {
+    // We shouldn't ever be able to get here, but diagnose anyway.
+    DiagnosticsEngine &Diags = Context.getDiags();
+    unsigned DiagID = Diags.getCustomDiagID(
+        DiagnosticsEngine::Error,
+        "cannot yet mangle OpenACC Asterisk Size expression");
+    Diags.Report(DiagID);
+    return;
+  }
   }
 
   if (AsTemplateArg && !IsPrimaryExpr)
@@ -7309,7 +7342,7 @@ void ItaniumMangleContextImpl::mangleCXXVTable(const CXXRecordDecl *RD,
   // <special-name> ::= TV <type>  # virtual table
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTV";
-  Mangler.mangleNameOrStandardSubstitution(RD);
+  Mangler.mangleCXXRecordDecl(RD);
 }
 
 void ItaniumMangleContextImpl::mangleCXXVTT(const CXXRecordDecl *RD,
@@ -7317,7 +7350,7 @@ void ItaniumMangleContextImpl::mangleCXXVTT(const CXXRecordDecl *RD,
   // <special-name> ::= TT <type>  # VTT structure
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTT";
-  Mangler.mangleNameOrStandardSubstitution(RD);
+  Mangler.mangleCXXRecordDecl(RD);
 }
 
 void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
@@ -7327,10 +7360,10 @@ void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
   // <special-name> ::= TC <type> <offset number> _ <base type>
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTC";
-  Mangler.mangleNameOrStandardSubstitution(RD);
+  Mangler.mangleCXXRecordDecl(RD);
   Mangler.getStream() << Offset;
   Mangler.getStream() << '_';
-  Mangler.mangleNameOrStandardSubstitution(Type);
+  Mangler.mangleCXXRecordDecl(Type);
 }
 
 void ItaniumMangleContextImpl::mangleCXXRTTI(QualType Ty, raw_ostream &Out) {

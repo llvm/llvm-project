@@ -341,31 +341,45 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
   return true;
 }
 
+static void inferAttribute(Function *F, unsigned AttrIndex,
+                           const ValueLatticeElement &Val) {
+  // If there is a known constant range for the value, add range attribute.
+  if (Val.isConstantRange() && !Val.getConstantRange().isSingleElement()) {
+    // Do not add range attribute if the value may include undef.
+    if (Val.isConstantRangeIncludingUndef())
+      return;
+
+    // Take the intersection of the existing attribute and the inferred range.
+    Attribute OldAttr = F->getAttributeAtIndex(AttrIndex, Attribute::Range);
+    ConstantRange CR = Val.getConstantRange();
+    if (OldAttr.isValid())
+      CR = CR.intersectWith(OldAttr.getRange());
+    F->addAttributeAtIndex(
+        AttrIndex, Attribute::get(F->getContext(), Attribute::Range, CR));
+    return;
+  }
+  // Infer nonnull attribute.
+  if (Val.isNotConstant() && Val.getNotConstant()->getType()->isPointerTy() &&
+      Val.getNotConstant()->isNullValue() &&
+      !F->hasAttributeAtIndex(AttrIndex, Attribute::NonNull)) {
+    F->addAttributeAtIndex(AttrIndex,
+                           Attribute::get(F->getContext(), Attribute::NonNull));
+  }
+}
+
 void SCCPSolver::inferReturnAttributes() const {
-  for (const auto &[F, ReturnValue] : getTrackedRetVals()) {
+  for (const auto &[F, ReturnValue] : getTrackedRetVals())
+    inferAttribute(F, AttributeList::ReturnIndex, ReturnValue);
+}
 
-    // If there is a known constant range for the return value, add range
-    // attribute to the return value.
-    if (ReturnValue.isConstantRange() &&
-        !ReturnValue.getConstantRange().isSingleElement()) {
-      // Do not add range metadata if the return value may include undef.
-      if (ReturnValue.isConstantRangeIncludingUndef())
-        continue;
-
-      // Take the intersection of the existing attribute and the inferred range.
-      ConstantRange CR = ReturnValue.getConstantRange();
-      if (F->hasRetAttribute(Attribute::Range))
-        CR = CR.intersectWith(F->getRetAttribute(Attribute::Range).getRange());
-      F->addRangeRetAttr(CR);
+void SCCPSolver::inferArgAttributes() const {
+  for (Function *F : getArgumentTrackedFunctions()) {
+    if (!isBlockExecutable(&F->front()))
       continue;
-    }
-    // Infer nonnull return attribute.
-    if (F->getReturnType()->isPointerTy() && ReturnValue.isNotConstant() &&
-        ReturnValue.getNotConstant()->isNullValue() &&
-        !F->hasRetAttribute(Attribute::NonNull)) {
-      F->addRetAttr(Attribute::NonNull);
-      continue;
-    }
+    for (Argument &A : F->args())
+      if (!A.getType()->isStructTy())
+        inferAttribute(F, AttributeList::FirstArgIndex + A.getArgNo(),
+                       getLatticeValueFor(&A));
   }
 }
 
@@ -764,6 +778,10 @@ public:
 
   bool isArgumentTrackedFunction(Function *F) {
     return TrackingIncomingArguments.count(F);
+  }
+
+  const SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() const {
+    return TrackingIncomingArguments;
   }
 
   void solve();
@@ -2138,6 +2156,11 @@ void SCCPSolver::addArgumentTrackedFunction(Function *F) {
 
 bool SCCPSolver::isArgumentTrackedFunction(Function *F) {
   return Visitor->isArgumentTrackedFunction(F);
+}
+
+const SmallPtrSetImpl<Function *> &
+SCCPSolver::getArgumentTrackedFunctions() const {
+  return Visitor->getArgumentTrackedFunctions();
 }
 
 void SCCPSolver::solve() { Visitor->solve(); }

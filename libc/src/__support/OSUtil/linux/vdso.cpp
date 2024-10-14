@@ -57,7 +57,9 @@ struct Verdef {
 // https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symversion.html#SYMVERTBL
 cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
                               const char *strtab, size_t idx) {
+#ifndef VER_FLG_BASE
   constexpr ElfW(Half) VER_FLG_BASE = 0x1;
+#endif
   if (!versym)
     return "";
   ElfW(Half) identifier = versym[idx] & 0x7FFF;

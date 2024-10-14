@@ -395,12 +395,12 @@ public:
   }
 
   uint64_t getRVA() { return data->getRVA(); }
-  Chunk *getChunk() { return data; }
+  ImportThunkChunk *getChunk() const { return data; }
 
   DefinedImportData *wrappedSym;
 
 private:
-  Chunk *data;
+  ImportThunkChunk *data;
 };
 
 // If you have a symbol "foo" in your object file, a symbol name
