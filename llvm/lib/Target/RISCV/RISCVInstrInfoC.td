@@ -279,9 +279,9 @@ class Bcz<bits<3> funct3, string OpcodeStr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class Shift_right<bits<2> funct2, string OpcodeStr, RegisterClass cls,
                   Operand ImmOpnd>
-    : RVInst16CB<0b100, 0b01, (outs cls:$rs1_wb), (ins cls:$rs1, ImmOpnd:$imm),
+    : RVInst16CB<0b100, 0b01, (outs cls:$rd), (ins cls:$rs1, ImmOpnd:$imm),
                  OpcodeStr, "$rs1, $imm"> {
-  let Constraints = "$rs1 = $rs1_wb";
+  let Constraints = "$rs1 = $rd";
   let Inst{12} = imm{5};
   let Inst{11-10} = funct2;
   let Inst{6-2} = imm{4-0};
@@ -477,10 +477,10 @@ def C_SRAI : Shift_right<0b01, "c.srai", GPRC, uimmlog2xlennonzero>,
              Sched<[WriteShiftImm, ReadShiftImm]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_ANDI : RVInst16CB<0b100, 0b01, (outs GPRC:$rs1_wb), (ins GPRC:$rs1, simm6:$imm),
+def C_ANDI : RVInst16CB<0b100, 0b01, (outs GPRC:$rd), (ins GPRC:$rs1, simm6:$imm),
                         "c.andi", "$rs1, $imm">,
              Sched<[WriteIALU, ReadIALU]> {
-  let Constraints = "$rs1 = $rs1_wb";
+  let Constraints = "$rs1 = $rd";
   let Inst{12} = imm{5};
   let Inst{11-10} = 0b10;
   let Inst{6-2} = imm{4-0};
@@ -580,11 +580,11 @@ def C_JALR : RVInst16CR<0b1001, 0b10, (outs), (ins GPRNoX0:$rs1),
                         "c.jalr", "$rs1">, Sched<[WriteJalr, ReadJalr]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPRNoX0:$rs1_wb),
+def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPRNoX0:$rd),
                        (ins GPRNoX0:$rs1, GPRNoX0:$rs2),
                        "c.add", "$rs1, $rs2">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]> {
-  let Constraints = "$rs1 = $rs1_wb";
+  let Constraints = "$rs1 = $rd";
 }
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
@@ -678,11 +678,11 @@ def C_MV_HINT : RVInst16CR<0b1000, 0b10, (outs GPRX0:$rs1), (ins GPRNoX0:$rs2),
   let DecoderMethod = "decodeRVCInstrRdRs2";
 }
 
-def C_ADD_HINT : RVInst16CR<0b1001, 0b10, (outs GPRX0:$rs1_wb),
+def C_ADD_HINT : RVInst16CR<0b1001, 0b10, (outs GPRX0:$rd),
                             (ins GPRX0:$rs1, GPRNoX0:$rs2),
                             "c.add", "$rs1, $rs2">,
                  Sched<[WriteIALU, ReadIALU, ReadIALU]> {
-  let Constraints = "$rs1 = $rs1_wb";
+  let Constraints = "$rs1 = $rd";
   let Inst{11-7} = 0;
   let DecoderMethod = "decodeRVCInstrRdRs1Rs2";
 }
