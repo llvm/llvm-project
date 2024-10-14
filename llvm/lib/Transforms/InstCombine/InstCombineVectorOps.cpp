@@ -2456,8 +2456,8 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
     if (IsFNeg)
       return UnaryOperator::CreateFNegFMF(NewShuf, S0);
 
-    Function *FAbs = Intrinsic::getDeclaration(Shuf.getModule(),
-                                               Intrinsic::fabs, Shuf.getType());
+    Function *FAbs = Intrinsic::getOrInsertDeclaration(
+        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
     CallInst *NewF = CallInst::Create(FAbs, {NewShuf});
     NewF->setFastMathFlags(S0->getFastMathFlags());
     return NewF;
@@ -2477,8 +2477,8 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
   if (IsFNeg) {
     NewF = UnaryOperator::CreateFNeg(NewShuf);
   } else {
-    Function *FAbs = Intrinsic::getDeclaration(Shuf.getModule(),
-                                               Intrinsic::fabs, Shuf.getType());
+    Function *FAbs = Intrinsic::getOrInsertDeclaration(
+        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
     NewF = CallInst::Create(FAbs, {NewShuf});
   }
   NewF->copyIRFlags(S0);

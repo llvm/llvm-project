@@ -2084,8 +2084,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     if (auto *BO = dyn_cast<BinaryOperator>(V))
       BO->copyIRFlags(&Inst);
     Module *M = Inst.getModule();
-    Function *F =
-        Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vector_reverse, V->getType());
     return CallInst::Create(F, V);
   };
 
@@ -3355,7 +3355,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(&MI)) {
       // Replace invoke with a NOP intrinsic to maintain the original CFG
       Module *M = II->getModule();
-      Function *F = Intrinsic::getDeclaration(M, Intrinsic::donothing);
+      Function *F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::donothing);
       InvokeInst::Create(F, II->getNormalDest(), II->getUnwindDest(), {}, "",
                          II->getParent());
     }

@@ -133,7 +133,10 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
-  // 'unreachable' instructions which is meant for that case.
+  // 'unreachable' instructions which is meant for that case. Formerly, we also
+  // needed to add checks to SP failure emission in the instruction selection
+  // backends, but this has since been tied to TrapUnreachable and is no longer
+  // necessary.
   this->Options.TrapUnreachable = true;
   this->Options.NoTrapAfterNoreturn = false;
 
