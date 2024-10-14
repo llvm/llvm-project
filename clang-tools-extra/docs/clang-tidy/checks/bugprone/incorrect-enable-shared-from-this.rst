@@ -17,7 +17,7 @@ Consider the following code:
     class BadExample : std::enable_shared_from_this<BadExample> {
     
     // ``shared_from_this``` unintended behaviour
-    // libstd implementation returns uninitialized ``weak_ptr``
+    // `libstdc++` implementation returns uninitialized ``weak_ptr``
         public:
         BadExample* foo() { return shared_from_this().get(); }
         void bar() { return; }
