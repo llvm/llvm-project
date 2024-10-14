@@ -10,6 +10,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
@@ -129,7 +130,7 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
 
   // Since, cosm1_y = cos_y - 1, therefore:
   // 	sin(x * pi) = cos_k * sin_y + sin_k + (cosm1_y * sin_k)
-  return static_cast<float16>(fputil::multiply_add(
+  return fputil::cast<float16>(fputil::multiply_add(
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
 }
 } // namespace LIBC_NAMESPACE_DECL

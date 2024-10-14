@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// ===----------------------------------------------------------------------==//
+//===----------------------------------------------------------------------===//
 
 #include "src/errno/libc_errno.h"
 #include "src/math/sinpif16.h"
@@ -19,10 +19,10 @@ TEST_F(LlvmLibcSinpif16Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(0.0f));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(zero));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(-0.0f));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(neg_zero));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif16(inf));
