@@ -492,6 +492,28 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     return OperandInfo(EMUL, Log2EEW);
   }
 
+  // 15. Vector Mask Instructions
+  // 15.1. Vector Mask-Register Logical Instructions
+  // 15.4. vmsbf.m set-before-first mask bit
+  // 15.6. vmsof.m set-only-first mask bit
+  // EEW=1 and EMUL=(EEW/SEW)*LMUL
+  // We handle the cases when operand is a v0 mask operand above the switch,
+  // but these instructions may use non-v0 mask operands and need to be handled
+  // specifically.
+  case RISCV::VMAND_MM:
+  case RISCV::VMNAND_MM:
+  case RISCV::VMANDN_MM:
+  case RISCV::VMXOR_MM:
+  case RISCV::VMOR_MM:
+  case RISCV::VMNOR_MM:
+  case RISCV::VMORN_MM:
+  case RISCV::VMXNOR_MM:
+  case RISCV::VMSBF_M:
+  case RISCV::VMSIF_M:
+  case RISCV::VMSOF_M: {
+    return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
+  }
+
   default:
     return {};
   }
@@ -632,6 +654,22 @@ static bool isSupportedInstr(const MachineInstr &MI) {
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
+
+  // 15. Vector Mask Instructions
+  // 15.1. Vector Mask-Register Logical Instructions
+  // 15.4. vmsbf.m set-before-first mask bit
+  // 15.6. vmsof.m set-only-first mask bit
+  case RISCV::VMAND_MM:
+  case RISCV::VMNAND_MM:
+  case RISCV::VMANDN_MM:
+  case RISCV::VMXOR_MM:
+  case RISCV::VMOR_MM:
+  case RISCV::VMNOR_MM:
+  case RISCV::VMORN_MM:
+  case RISCV::VMXNOR_MM:
+  case RISCV::VMSBF_M:
+  case RISCV::VMSIF_M:
+  case RISCV::VMSOF_M:
     return true;
   }
 
