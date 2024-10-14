@@ -152,7 +152,7 @@ function(_get_common_compile_options output_var flags)
     endif()
     list(APPEND compile_options "-Wconversion")
     list(APPEND compile_options "-Wno-sign-conversion")
-    # silencing this warning because _Complex is part of C99.
+    # Silence this warning because _Complex is a part of C99.
     list(APPEND compile_options "-Wno-c99-extensions")
     list(APPEND compile_options "-Wimplicit-fallthrough")
     list(APPEND compile_options "-Wwrite-strings")
@@ -229,7 +229,7 @@ function(_get_common_test_compile_options output_var c_test flags)
     # list(APPEND compile_options "-Wimplicit-fallthrough")
     # list(APPEND compile_options "-Wwrite-strings")
     # list(APPEND compile_options "-Wextra-semi")
-    # silencing this warning because _Complex is part of C99.
+    # Silence this warning because _Complex is a part of C99.
     list(APPEND compile_options "-Wno-c99-extensions")
     # if(NOT CMAKE_COMPILER_IS_GNUCXX)
     #   list(APPEND compile_options "-Wnewline-eof")
