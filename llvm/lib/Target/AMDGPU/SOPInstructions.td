@@ -534,6 +534,7 @@ def S_BARRIER_INIT_M0 : SOP1_Pseudo <"s_barrier_init m0", (outs), (ins),
   let isConvergent = 1;
 }
 
+let SubtargetPredicate = isGFX12Only in
 def S_BARRIER_INIT_IMM : SOP1_Pseudo <"s_barrier_init", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];

@@ -285,7 +285,7 @@ namespace llvm {
 
   /// StackSlotColoring - This pass performs stack coloring and merging.
   /// It merges disjoint allocas to reduce the stack size.
-  extern char &StackColoringID;
+  extern char &StackColoringLegacyID;
 
   /// StackFramePrinter - This pass prints the stack frame layout and variable
   /// mappings.

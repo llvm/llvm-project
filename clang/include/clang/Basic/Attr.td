@@ -759,6 +759,11 @@ class TargetSpecificAttr<TargetSpec target> {
 /// redeclarations, even when it's written on a parameter.
 class InheritableParamAttr : InheritableAttr;
 
+/// A attribute that is either a declaration attribute or a statement attribute,
+/// and if used as a declaration attribute, is inherited by later
+/// redeclarations, even when it's written on a parameter.
+class InheritableParamOrStmtAttr : InheritableParamAttr;
+
 /// An attribute which changes the ABI rules for a specific parameter.
 class ParameterABIAttr : InheritableParamAttr {
   let Subjects = SubjectList<[ParmVar]>;
@@ -928,7 +933,7 @@ def AnalyzerNoReturn : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def Annotate : InheritableParamAttr {
+def Annotate : InheritableParamOrStmtAttr {
   let Spellings = [Clang<"annotate">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
   // Ensure that the annotate attribute can be used with

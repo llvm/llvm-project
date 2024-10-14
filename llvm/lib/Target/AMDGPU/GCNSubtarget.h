@@ -242,6 +242,7 @@ protected:
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
   bool HasSafeSmemPrefetch = false;
+  bool HasSafeCUPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -629,6 +630,10 @@ public:
     return UnalignedScratchAccess;
   }
 
+  bool hasUnalignedScratchAccessEnabled() const {
+    return UnalignedScratchAccess && UnalignedAccessMode;
+  }
+
   bool hasUnalignedAccessMode() const {
     return UnalignedAccessMode;
   }
@@ -999,6 +1004,8 @@ public:
   bool hasVectorPrefetch() const { return GFX1210Insts; }
 
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
+
+  bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -1523,6 +1530,8 @@ public:
 
   bool hasGFX1210Insts() const { return GFX1210Insts; }
 
+  bool hasGFX13Insts() const { return GFX13Insts; }
+
   bool hasVOPD3() const { return GFX1210Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
@@ -1786,6 +1795,9 @@ public:
   unsigned getBarrierMemberCountShift() const {
     return getGeneration() >= GFX13 ? 12 : 16;
   }
+
+  /// \returns true if the operand of s_barrier_init can be an immediate.
+  bool hasSBarrierInitImm() const { return getGeneration() == GFX12; }
 };
 
 class GCNUserSGPRUsageInfo {

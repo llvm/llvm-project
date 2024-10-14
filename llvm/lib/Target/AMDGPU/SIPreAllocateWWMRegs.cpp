@@ -48,7 +48,7 @@ private:
 
   std::vector<Register> RegsToRewrite;
   SmallSet<SlotIndex, 4> CallIndexes;
-  SmallSetVector<MCRegister, 16> PhysUsed;
+  SmallMapVector<MCRegister, bool, 16> PhysUsed;
   DenseMap<MCRegister, SmallVector<Register>> Assignments;
 
 #ifndef NDEBUG
@@ -98,6 +98,9 @@ FunctionPass *llvm::createSIPreAllocateWWMRegsPass() {
 }
 
 bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO, bool CanReallocate) {
+  LLVM_DEBUG(dbgs() << "Processing " << MO
+                    << ", CanReallocate = " << CanReallocate << "\n");
+
   Register Reg = MO.getReg();
   if (Reg.isPhysical())
     return false;
@@ -118,7 +121,10 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO, bool CanReallocate) {
       RegsToRewrite.push_back(Reg);
       if (CanReallocate) {
         Assignments[PhysReg].push_back(Reg);
-        PhysUsed.insert(PhysReg);
+        PhysUsed.insert({PhysReg, true});
+      } else {
+        // Block reallocation if any defs cannot be reallocated.
+        PhysUsed[PhysReg] = false;
       }
       return true;
     }
@@ -138,8 +144,11 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   // For each used PhysReg, see if we can use a single virtual reg instead.
   DenseMap<Register, Register> Reassign;
   SmallVector<Register> NewRegisters;
-  for (MCRegister PhysReg : PhysUsed) {
-    bool CanMerge = true;
+  for (auto &Entry : PhysUsed) {
+    MCRegister PhysReg = Entry.first;
+    bool CanMerge = Entry.second;
+    if (!CanMerge)
+      continue;
 
     LLVM_DEBUG(dbgs() << "Try to change " << printReg(PhysReg, TRI)
                       << " to virtual\n");
@@ -386,9 +395,9 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
       }
 
       if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR) {
-        if (!PreallocateSGPRSpillVGPRs)
-          continue;
-        RegsAssigned |= processDef(MI.getOperand(0), false);
+        if (PreallocateSGPRSpillVGPRs)
+          RegsAssigned |= processDef(MI.getOperand(0), false);
+        continue;
       }
 
       if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||

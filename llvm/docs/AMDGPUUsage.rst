@@ -1447,6 +1447,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    sign-extended from the width of the underlying PC hardware register even on
                                                    processors where the s_getpc_b64 instruction returns a zero-extended value.
 
+  llvm.amdgcn.ballot                               Returns a bitfield(i32 or i64) containing the result of its i1 argument
+                                                   in all active lanes, and zero in all inactive lanes.
+                                                   Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield
+                                                   used by hardware to control active lanes when used in EXEC register.
+                                                   For example, ballot(i1 true) return EXEC mask.
+
   llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4      Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor. The
                                                    last 4 operands correspond to the scale inputs.
                                                      2-bit byte index to use for each lane for matrix A
@@ -1469,6 +1475,22 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
                                                    Returns a pair for the swapped registers. The first element of the return
                                                    corresponds to the swapped element of the first argument.
+
+  :ref:`llvm.prefetch`                             Implemented on gfx121x, ignored on earlier targets.
+                                                   First argument is flat, global, or constant address space pointer.
+                                                   Any other address space is not supported.
+                                                   On gfx121x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
+                                                   Second argument is rw and currently ignored. Can be 0 or 1.
+                                                   Third argument is locality, 0-3. Translates to memory scope:
+                                                     0 - SCOPE_SYS
+                                                     1 - SCOPE_DEV
+                                                     2 - SCOPE_SE
+                                                     3 - SCOPE_SE
+                                                   Note that SCOPE_CU is not generated and not safe on an invalid address.
+                                                   Fourth argument is cache type:
+                                                     0 - Instruction cache, currently ignored and no code is generated.
+                                                     1 - Data cache.
+                                                   Instruction cache prefetches are unsafe on invalid address.
 
   llvm.amdgcn.wavegroup.id                         In a wavegroup-enabled dispatch, return the 0-based ID of the
                                                    wavegroup within the workgroup. Otherwise the return value is

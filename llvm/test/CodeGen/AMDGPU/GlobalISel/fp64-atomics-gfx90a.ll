@@ -1686,6 +1686,7 @@ define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
 ; GFX1210-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
 ; GFX1210-NEXT:    s_set_pc_i64 s[30:31]

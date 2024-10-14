@@ -263,6 +263,12 @@ def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
   "SMEM prefetches do not fail on illegal address"
 >;
 
+def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
+  "HasSafeCUPrefetch",
+  "true",
+  "VMEM CU scope prefetches do not fail on illegal address"
+>;
+
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
   "HasVcmpxExecWARHazard",
   "true",
@@ -1448,9 +1454,9 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureNegativeScratchOffsetBug, FeatureGWS, FeatureDefaultComponentZero,
-   FeatureVmemWriteVgprInOrder
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
+   FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
+   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder
   ]
 >;
 
@@ -1469,9 +1475,9 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
-   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
-   FeatureMaxHardClauseLength63,
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
+   FeatureUnalignedDSAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
+   FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureVmemWriteVgprInOrder
@@ -1493,9 +1499,9 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureDefaultComponentZero,
-   FeatureMaxHardClauseLength32,
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
+   FeatureUnalignedDSAccess, FeatureGDS, FeatureGWS,
+   FeatureDefaultComponentZero, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureVmemWriteVgprInOrder
   ]
@@ -1516,9 +1522,9 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureMaxHardClauseLength32,
+   FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
+   FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
+   FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics

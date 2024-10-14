@@ -971,16 +971,15 @@ define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ;
 ; GFX13-SDAG-LABEL: test1_s_barrier_init:
 ; GFX13-SDAG:       ; %bb.0: ; %entry
-; GFX13-SDAG-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
+; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX13-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX13-SDAG-NEXT:    s_mov_b32 m0, -1
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_sub_nc_u32 v1, v1, v0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    s_lshl_b32 s2, s2, 12
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
-; GFX13-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX13-SDAG-NEXT:    s_barrier_init -1
+; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
@@ -993,9 +992,10 @@ define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-GISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_sub_nc_u32 v1, v1, v0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    s_lshl_b32 m0, 12, s2
+; GFX13-GISEL-NEXT:    s_lshl_b32 s2, 12, s2
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_barrier_init -1
+; GFX13-GISEL-NEXT:    s_or_b32 m0, -1, s2
+; GFX13-GISEL-NEXT:    s_barrier_init m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
@@ -1056,8 +1056,10 @@ define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_lshl_b32 s2, s2, 12
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
+; GFX13-SDAG-NEXT:    s_or_b32 s2, s2, 1
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX13-SDAG-NEXT:    s_barrier_init 1
+; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
@@ -1070,9 +1072,10 @@ define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-GISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_sub_nc_u32 v1, v1, v0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    s_lshl_b32 m0, 12, s2
+; GFX13-GISEL-NEXT:    s_lshl_b32 s2, 12, s2
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_barrier_init 1
+; GFX13-GISEL-NEXT:    s_or_b32 m0, 1, s2
+; GFX13-GISEL-NEXT:    s_barrier_init m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
@@ -1134,7 +1137,7 @@ define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-SDAG-NEXT:    s_lshl_b32 s2, s2, 12
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX13-SDAG-NEXT:    s_barrier_init 0
+; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GFX13-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-SDAG-NEXT:    s_endpgm
@@ -1147,9 +1150,10 @@ define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ; GFX13-GISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_sub_nc_u32 v1, v1, v0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    s_lshl_b32 m0, 12, s2
+; GFX13-GISEL-NEXT:    s_lshl_b32 s2, 12, s2
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
-; GFX13-GISEL-NEXT:    s_barrier_init 0
+; GFX13-GISEL-NEXT:    s_or_b32 m0, 0, s2
+; GFX13-GISEL-NEXT:    s_barrier_init m0
 ; GFX13-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GFX13-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX13-GISEL-NEXT:    s_endpgm
@@ -1255,11 +1259,9 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX12-SDAG-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX12-SDAG-NEXT:    s_barrier_init m0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
@@ -1289,11 +1291,9 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 12, v1
+; GFX13-SDAG-NEXT:    v_lshl_or_b32 v0, v1, 12, v0
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX13-SDAG-NEXT:    s_barrier_init m0
 ; GFX13-SDAG-NEXT:    s_set_pc_i64 s[30:31]
