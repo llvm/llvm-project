@@ -43,7 +43,7 @@
 "","","","","",""
 "`P0032R3 <https://wg21.link/P0032R3>`__","Homogeneous interface for variant, any and optional","2016-06 (Oulu)","|Complete|","4.0",""
 "`P0040R3 <https://wg21.link/P0040R3>`__","Extending memory management tools","2016-06 (Oulu)","|Complete|","4.0",""
-"`P0063R3 <https://wg21.link/P0063R3>`__","C++17 should refer to C11 instead of C99","2016-06 (Oulu)","|Complete|","7.0","``<ccomplex>``, ``<cstdalign>``, ``<cstdbool>``, and ``<ctgmath>`` are deprecated since LLVM 20."
+"`P0063R3 <https://wg21.link/P0063R3>`__","C++17 should refer to C11 instead of C99","2016-06 (Oulu)","|Complete|","7.0",""
 "`P0067R3 <https://wg21.link/P0067R3>`__","Elementary string conversions","2016-06 (Oulu)","|Nothing To Do|","n/a","Resolved by `P0067R5 <https://wg21.link/P0067R5>`__"
 "`P0083R3 <https://wg21.link/P0083R3>`__","Splicing Maps and Sets","2016-06 (Oulu)","|Complete|","8.0",""
 "`P0084R2 <https://wg21.link/P0084R2>`__","Emplace Return Type","2016-06 (Oulu)","|Complete|","4.0",""
