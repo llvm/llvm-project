@@ -538,7 +538,7 @@ getLocOfTagDeclFromType(const Type *const Node) {
   return std::nullopt;
 }
 inline std::optional<SourceLocation>
-getLocOfTagDeclFromType(const void *const Node) {
+getLocOfTagDeclFromType(const void *const) {
   return std::nullopt;
 }
 
@@ -619,7 +619,7 @@ public:
         : Kind(Kind), MatchString(std::move(MatchString)),
           RemainingMatches(MatchCount) {}
 
-    bool shouldRemoveMatched(const T *const Node) {
+    bool shouldRemoveMatched() {
       --RemainingMatches;
       return RemainingMatches == 0U;
     }
@@ -752,7 +752,7 @@ public:
       return true;
     }
 
-    if (Iter->shouldRemoveMatched(Node)) {
+    if (Iter->shouldRemoveMatched()) {
       FoundMatches.push_back(*Iter);
       Matches.erase(Iter);
     }
