@@ -584,8 +584,7 @@ public:
                                 ExplodedNodeSet &Dst);
 
   /// evalEagerlyAssumeOpBifurcation - Given the nodes in 'Src', eagerly assume
-  /// comparison operator expressions like 'x != 0' or logical negation like
-  /// '!foo' and generate new nodes (stored in Dst) with those assumptions.
+  /// concrete boolean valuse for 'Ex', storing the resulting nodes in 'Dst'.
   void evalEagerlyAssumeOpBifurcation(ExplodedNodeSet &Dst,
                                       ExplodedNodeSet &Src, const Expr *Ex);
 
