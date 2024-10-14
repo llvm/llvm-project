@@ -17156,7 +17156,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPHasDeviceAddrClause(VarList, Locs);
     break;
   case OMPC_allocate:
-    Res = ActOnOpenMPAllocateClause(Data.DepModOrTailExpr, VarList, StartLoc,
+    Res = ActOnOpenMPAllocateClause(Data.DepModOrTailExpr,
+                                    Data.AllocClauseModifier, VarList, StartLoc,
                                     LParenLoc, ColonLoc, EndLoc);
     break;
   case OMPC_nontemporal:
@@ -23162,9 +23163,17 @@ SemaOpenMP::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
-    Expr *Allocator, ArrayRef<Expr *> VarList, SourceLocation StartLoc,
-    SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation EndLoc) {
+    Expr *Allocator, OpenMPAllocateClauseModifier AllocClauseModifier,
+    ArrayRef<Expr *> VarList, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation ColonLoc, SourceLocation EndLoc) {
+
   if (Allocator) {
+    // Allocator expression is dependent - skip it for now and build the
+    // allocator when instantiated.
+    if (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
+        Allocator->isInstantiationDependent() ||
+        Allocator->containsUnexpandedParameterPack())
+      return nullptr;
     // OpenMP [2.11.4 allocate Clause, Description]
     // allocator is an expression of omp_allocator_handle_t type.
     if (!findOMPAllocatorHandleT(SemaRef, Allocator->getExprLoc(), DSAStack))
@@ -23220,8 +23229,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
 
   if (Allocator)
     DSAStack->addInnerAllocatorExpr(Allocator);
+
+  OpenMPAllocateClauseModifier AllocatorModifier = AllocClauseModifier;
+  SourceLocation AllocatorModifierLoc;
   return OMPAllocateClause::Create(getASTContext(), StartLoc, LParenLoc,
-                                   Allocator, ColonLoc, EndLoc, Vars);
+                                   Allocator, ColonLoc, AllocatorModifier,
+                                   AllocatorModifierLoc, EndLoc, Vars);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
