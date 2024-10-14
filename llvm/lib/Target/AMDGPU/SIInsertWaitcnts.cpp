@@ -611,9 +611,6 @@ private:
 
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
 
-  // ForceEmitZeroWaitcnts: force all waitcnts insts to be s_waitcnt 0
-  // because of amdgpu-waitcnt-forcezero flag
-  bool ForceEmitZeroWaitcnts;
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
   // In any given run of this pass, WCG will point to one of these two
@@ -1828,7 +1825,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
-  if (ForceEmitZeroWaitcnts)
+  if (ForceEmitZeroFlag)
     Wait = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
 
   if (ForceEmitWaitcnt[LOAD_CNT])
@@ -2424,7 +2421,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     WCG = &WCGPreGFX12;
   }
 
-  ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
