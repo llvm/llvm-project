@@ -12,7 +12,7 @@
 # If %t_foo.o is not included in the link we get an undefined symbol reported
 # to the dependency of memcpy on the foo export:
 
-# RUN: not wasm-ld %t_main.o %t_libcall.o %p/Inputs/stub.so -o %t.wasm 2>&1 | FileCheck --check-prefix=MISSING %s
+# RUN: not wasm-ld -mllvm -mattr=-bulk-memory %t_main.o %t_libcall.o %p/Inputs/stub.so -o %t.wasm 2>&1 | FileCheck --check-prefix=MISSING %s
 # MISSING: stub.so: undefined symbol: foo. Required by memcpy
 
 #--- main.s
