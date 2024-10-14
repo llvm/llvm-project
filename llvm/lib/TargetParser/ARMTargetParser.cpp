@@ -554,7 +554,9 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   switch (TT.getEnvironment()) {
   case Triple::Android:
   case Triple::GNUEABI:
+  case Triple::GNUEABIT64:
   case Triple::GNUEABIHF:
+  case Triple::GNUEABIHFT64:
   case Triple::MuslEABI:
   case Triple::MuslEABIHF:
   case Triple::OpenHOS:
@@ -635,6 +637,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
       return "arm1176jzf-s";
     default:
