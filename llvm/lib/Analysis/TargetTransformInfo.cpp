@@ -525,6 +525,13 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
+bool TargetTransformInfo::isLegalInterleavedAccessType(
+    VectorType *VTy, unsigned Factor, Align Alignment,
+    unsigned AddrSpace) const {
+  return TTIImpl->isLegalInterleavedAccessType(VTy, Factor, Alignment,
+                                               AddrSpace);
+}
+
 bool TargetTransformInfo::isLegalMaskedVectorHistogram(Type *AddrType,
                                                        Type *DataType) const {
   return TTIImpl->isLegalMaskedVectorHistogram(AddrType, DataType);
