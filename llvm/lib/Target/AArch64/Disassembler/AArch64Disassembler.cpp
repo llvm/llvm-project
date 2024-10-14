@@ -380,7 +380,7 @@ static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder) {
   unsigned Reg = (RegNo * 2) + Min;
-  if(Reg < Min || Reg > Max || (Reg & 1))
+  if (Reg < Min || Reg > Max || (Reg & 1))
     return Fail;
 
   unsigned Register =
