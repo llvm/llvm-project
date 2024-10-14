@@ -348,6 +348,12 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (D->isConstexpr())
     return true;
 
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(S.EvaluatingDecl);
+      VD && VD->isConstexpr() && S.getLangOpts().C23) {
+    S.FFDiag(S.Current->getExpr(OpPC));
+    return false;
+  }
+
   QualType T = D->getType();
   bool IsConstant = T.isConstant(S.getASTContext());
   if (T->isIntegralOrEnumerationType()) {
