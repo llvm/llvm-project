@@ -1497,6 +1497,47 @@ TEST(DefaultArguments, Smoke) {
               ExpectedHint{"A: ", "explicit", Left});
 }
 
+TEST(DefaultArguments, WithoutParameterNames) {
+  Config Cfg;
+  Cfg.InlayHints.Parameters = false; // To test just default args this time
+  Cfg.InlayHints.DeducedTypes = false;
+  Cfg.InlayHints.Designators = false;
+  Cfg.InlayHints.BlockEnd = false;
+
+  Cfg.InlayHints.DefaultArguments = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  const auto *Code = R"cpp(
+    struct Baz {
+      Baz(float a = 3 //
+                    + 2);
+    };
+    struct Foo {
+      Foo(int, Baz baz = //
+              Baz{$unnamed[[}]]
+
+          //
+      ) {}
+    };
+
+    int main() {
+      Foo foo1(1$paren[[)]];
+      Foo foo2{2$brace1[[}]];
+      Foo foo3 = {3$brace2[[}]];
+      auto foo4 = Foo{4$brace3[[}]];
+    }
+  )cpp";
+
+  assertHints(InlayHintKind::DefaultArgument, Code,
+              ExpectedHint{"...", "unnamed", Left},
+              ExpectedHint{", Baz{}", "paren", Left},
+              ExpectedHint{", Baz{}", "brace1", Left},
+              ExpectedHint{", Baz{}", "brace2", Left},
+              ExpectedHint{", Baz{}", "brace3", Left});
+
+  assertHints(InlayHintKind::Parameter, Code);
+}
+
 TEST(TypeHints, Deduplication) {
   assertTypeHints(R"cpp(
     template <typename T>

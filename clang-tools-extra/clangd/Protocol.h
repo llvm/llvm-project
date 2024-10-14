@@ -1686,7 +1686,7 @@ enum class InlayHintKind {
   /// An example of a parameter hint for a default argument:
   ///    void foo(bool A = true);
   ///    foo(^);
-  /// Adds an inlay hint "A = true".
+  /// Adds an inlay hint "A: true".
   /// This is a clangd extension.
   DefaultArgument = 6,
 

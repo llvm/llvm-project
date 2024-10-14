@@ -381,20 +381,18 @@ maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   return Params;
 }
 
-template <typename R, typename P>
-std::string joinAndTruncate(R &&Range, size_t MaxLength,
-                            P &&GetAsStringFunction) {
+template <typename R>
+std::string joinAndTruncate(const R &Range, size_t MaxLength) {
   std::string Out;
   llvm::raw_string_ostream OS(Out);
   llvm::ListSeparator Sep(", ");
   for (auto &&Element : Range) {
     OS << Sep;
-    auto AsString = GetAsStringFunction(Element);
-    if (Out.size() + AsString.size() >= MaxLength) {
+    if (Out.size() + Element.size() >= MaxLength) {
       OS << "...";
       break;
     }
-    OS << AsString;
+    OS << Element;
   }
   OS.flush();
   return Out;
@@ -738,11 +736,12 @@ public:
 private:
   using NameVec = SmallVector<StringRef, 8>;
 
-  void processCall(Callee Callee, SourceRange RParenOrBraceRange,
+  void processCall(Callee Callee, SourceLocation RParenOrBraceLoc,
                    llvm::ArrayRef<const Expr *> Args) {
     assert(Callee.Decl || Callee.Loc);
 
-    if (!Cfg.InlayHints.Parameters || Args.size() == 0)
+    if ((!Cfg.InlayHints.Parameters && !Cfg.InlayHints.DefaultArguments) ||
+        Args.size() == 0)
       return;
 
     // The parameter name of a move or copy constructor is not very interesting.
@@ -785,9 +784,11 @@ private:
       }
 
       StringRef Name = ParameterNames[I];
-      const bool NameHint = shouldHintName(Args[I], Name);
+      const bool NameHint =
+          shouldHintName(Args[I], Name) && Cfg.InlayHints.Parameters;
       const bool ReferenceHint =
-          shouldHintReference(Params[I], ForwardedParams[I]);
+          shouldHintReference(Params[I], ForwardedParams[I]) &&
+          Cfg.InlayHints.Parameters;
 
       const bool IsDefault = isa<CXXDefaultArgExpr>(Args[I]);
       HasNonDefaultArgs |= !IsDefault;
@@ -796,9 +797,11 @@ private:
           const auto SourceText = Lexer::getSourceText(
               CharSourceRange::getTokenRange(Params[I]->getDefaultArgRange()),
               AST.getSourceManager(), AST.getLangOpts());
-          const auto Abbrev = SourceText.size() > Cfg.InlayHints.TypeNameLimit
-                                  ? "..."
-                                  : SourceText;
+          const auto Abbrev =
+              (SourceText.size() > Cfg.InlayHints.TypeNameLimit ||
+               SourceText.contains("\n"))
+                  ? "..."
+                  : SourceText;
           if (NameHint)
             FormattedDefaultArgs.emplace_back(
                 llvm::formatv("{0}: {1}", Name, Abbrev));
@@ -814,9 +817,8 @@ private:
 
     if (!FormattedDefaultArgs.empty()) {
       std::string Hint =
-          joinAndTruncate(FormattedDefaultArgs, Cfg.InlayHints.TypeNameLimit,
-                          [](const auto &E) { return E; });
-      addInlayHint(RParenOrBraceRange, HintSide::Left,
+          joinAndTruncate(FormattedDefaultArgs, Cfg.InlayHints.TypeNameLimit);
+      addInlayHint(SourceRange{RParenOrBraceLoc}, HintSide::Left,
                    InlayHintKind::DefaultArgument,
                    HasNonDefaultArgs ? ", " : "", Hint, "");
     }
