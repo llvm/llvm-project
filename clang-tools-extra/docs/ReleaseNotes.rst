@@ -88,6 +88,8 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- The DefineOutline tweak now handles member functions of class templates.
+
 Improvements to clang-doc
 -------------------------
 
@@ -120,6 +122,12 @@ New checks
 
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
+
+- New :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check.
+
+  Finds cases when an uninstantiated virtual member function in a template class 
+  causes cross-compiler incompatibility.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -195,6 +203,10 @@ Changes in existing checks
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
   ``NULL``/``__null`` (but not ``0``) when used with a templated type.
+
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two cases
+  that can be replaced with ``ends_with``
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
