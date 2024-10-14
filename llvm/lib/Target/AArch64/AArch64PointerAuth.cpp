@@ -224,13 +224,15 @@ void AArch64PointerAuth::authenticateLR(
               TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
           .addSym(PACSym)
           .setMIFlag(MachineInstr::FrameDestroy);
-      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy, EmitAsyncCFI);
+      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy,
+                 EmitAsyncCFI);
     } else {
       BuildPACM(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy, PACSym);
       BuildMI(MBB, MBBI, DL,
               TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
           .setMIFlag(MachineInstr::FrameDestroy);
-      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy, EmitAsyncCFI);
+      emitPACCFI(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy,
+                 EmitAsyncCFI);
     }
 
     if (NeedsWinCFI) {

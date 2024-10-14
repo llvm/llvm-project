@@ -649,7 +649,6 @@ public:
     return MCCFIInstruction(OpNegateRAStateWithPC, L, 0, INT64_C(0), Loc);
   }
 
-
   /// .cfi_restore says that the rule for Register is now the same as it
   /// was at the beginning of the function, after all initial instructions added
   /// by .cfi_startproc were executed.
