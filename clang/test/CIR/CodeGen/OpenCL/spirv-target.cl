@@ -1,5 +1,5 @@
 // See also: clang/test/CodeGenOpenCL/spirv_target.cl
-// RUN: %clang_cc1 -cl-std=CL3.0 -fclangir -emit-cir -fno-clangir-call-conv-lowering -triple spirv64-unknown-unknown %s -o %t_64.cir
+// RUN: %clang_cc1 -cl-std=CL3.0 -fclangir -emit-cir -triple spirv64-unknown-unknown %s -o %t_64.cir
 // RUN: FileCheck --input-file=%t_64.cir %s --check-prefix=CIR-SPIRV64
 // RUN: %clang_cc1 -cl-std=CL3.0 -fclangir -emit-llvm -fno-clangir-call-conv-lowering -triple spirv64-unknown-unknown %s -o %t_64.ll
 // RUN: FileCheck --input-file=%t_64.ll %s --check-prefix=LLVM-SPIRV64

@@ -1,7 +1,7 @@
 // See also clang/test/CodeGenOpenCL/kernel-arg-info.cl
-// RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-cir -fno-clangir-call-conv-lowering -o - -triple spirv64-unknown-unknown -o %t.cir
+// RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-cir -o - -triple spirv64-unknown-unknown -o %t.cir
 // RUN: FileCheck %s --input-file=%t.cir --check-prefix=CIR
-// RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-cir -fno-clangir-call-conv-lowering -o - -triple spirv64-unknown-unknown -cl-kernel-arg-info -o %t.arginfo.cir
+// RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-cir -o - -triple spirv64-unknown-unknown -cl-kernel-arg-info -o %t.arginfo.cir
 // RUN: FileCheck %s --input-file=%t.arginfo.cir --check-prefix=CIR-ARGINFO
 
 // RUN: %clang_cc1 -fclangir %s -cl-std=CL2.0 -emit-llvm -fno-clangir-call-conv-lowering -o - -triple spirv64-unknown-unknown -o %t.ll

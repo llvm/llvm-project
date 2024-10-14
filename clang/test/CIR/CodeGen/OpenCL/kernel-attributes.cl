@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fclangir -emit-cir -fno-clangir-call-conv-lowering -triple spirv64-unknown-unknown %s -o %t.cir
+// RUN: %clang_cc1 -fclangir -emit-cir -triple spirv64-unknown-unknown %s -o %t.cir
 // RUN: FileCheck %s --input-file=%t.cir --check-prefix=CIR
 // RUN: %clang_cc1 -fclangir -emit-llvm -fno-clangir-call-conv-lowering -triple spirv64-unknown-unknown %s -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM

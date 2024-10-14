@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -fno-clangir-call-conv-lowering %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir --check-prefix=CIR %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm -fno-clangir-call-conv-lowering %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll --check-prefix=LLVM %s

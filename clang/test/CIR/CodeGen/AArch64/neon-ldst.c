@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android24 -target-feature +neon \
 // RUN:    -fclangir -disable-O0-optnone \
-// RUN:  -flax-vector-conversions=none -emit-cir -fno-clangir-call-conv-lowering -o %t.cir %s
+// RUN:  -flax-vector-conversions=none -emit-cir -o %t.cir %s
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 // RUN: %clang_cc1 -triple aarch64-none-linux-android24 -target-feature +neon \
