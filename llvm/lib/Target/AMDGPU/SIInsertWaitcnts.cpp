@@ -912,7 +912,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   if (T == EXP_CNT) {
     // Put score on the source vgprs. If this is a store, just use those
     // specific register(s).
-    if (TII->isDS(Inst) && (Inst.mayStore() || Inst.mayLoad())) {
+    if (TII->isDS(Inst) && Inst.mayLoadOrStore()) {
       // All GDS operations must protect their address register (same as
       // export.)
       if (const auto *AddrOp = TII->getNamedOperand(Inst, AMDGPU::OpName::addr))
@@ -2105,7 +2105,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   ScoreBrackets.clearRedundantVmVsrcWait(Wait);
 
 #endif /* LLPC_BUILD_GFX12 */
-  if (ForceEmitZeroFlag)
+  // When forcing emit, we need to skip terminators because that would break the
+  // terminators of the MBB if we emit a waitcnt between terminators.
+  if (ForceEmitZeroFlag && !MI.isTerminator())
     Wait = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
 
   if (ForceEmitWaitcnt[LOAD_CNT])
