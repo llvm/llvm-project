@@ -490,6 +490,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   // Emit open brace for function body.
   OutStreamer->emitRawText(StringRef("{\n"));
   setAndEmitFunctionVirtualRegisters(*MF);
+  encodeDebugInfoRegisterNumbers(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
   if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
     assert(SP->getUnit());
@@ -963,8 +964,8 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   // Close the last emitted section
   if (hasDebugInfo()) {
     TS->closeLastSection();
-    // Emit empty .debug_loc section for better support of the empty files.
-    OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");
+    // Emit empty .debug_macinfo section for better support of the empty files.
+    OutStreamer->emitRawText("\t.section\t.debug_macinfo\t{\t}");
   }
 
   // Output last DWARF .file directives, if any.
@@ -1144,13 +1145,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   const Function *demotedFunc = nullptr;
   if (!processDemoted && canDemoteGlobalVar(GVar, demotedFunc)) {
     O << "// " << GVar->getName() << " has been demoted\n";
-    if (localDecls.find(demotedFunc) != localDecls.end())
-      localDecls[demotedFunc].push_back(GVar);
-    else {
-      std::vector<const GlobalVariable *> temp;
-      temp.push_back(GVar);
-      localDecls[demotedFunc] = temp;
-    }
+    localDecls[demotedFunc].push_back(GVar);
     return;
   }
 
@@ -1367,10 +1362,11 @@ void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {
-  if (localDecls.find(f) == localDecls.end())
+  auto It = localDecls.find(f);
+  if (It == localDecls.end())
     return;
 
-  std::vector<const GlobalVariable *> &gvars = localDecls[f];
+  std::vector<const GlobalVariable *> &gvars = It->second;
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI =
@@ -1790,6 +1786,26 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   }
 
   OutStreamer->emitRawText(O.str());
+}
+
+/// Translate virtual register numbers in DebugInfo locations to their printed
+/// encodings, as used by CUDA-GDB.
+void NVPTXAsmPrinter::encodeDebugInfoRegisterNumbers(
+    const MachineFunction &MF) {
+  const NVPTXSubtarget &STI = MF.getSubtarget<NVPTXSubtarget>();
+  const NVPTXRegisterInfo *registerInfo = STI.getRegisterInfo();
+
+  // Clear the old mapping, and add the new one.  This mapping is used after the
+  // printing of the current function is complete, but before the next function
+  // is printed.
+  registerInfo->clearDebugRegisterMap();
+
+  for (auto &classMap : VRegMapping) {
+    for (auto &registerMapping : classMap.getSecond()) {
+      auto reg = registerMapping.getFirst();
+      registerInfo->addToDebugRegisterMap(reg, getVirtualRegisterName(reg));
+    }
+  }
 }
 
 void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp, raw_ostream &O) {

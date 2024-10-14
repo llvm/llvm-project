@@ -40,6 +40,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <optional>
@@ -65,8 +66,8 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
                                 bool defaultColor = true) {
   // Color diagnostics default to auto ("on" if terminal supports) in the
-  // compiler driver `flang-new` but default to off in the frontend driver
-  // `flang-new -fc1`, needing an explicit OPT_fdiagnostics_color.
+  // compiler driver `flang` but default to off in the frontend driver
+  // `flang -fc1`, needing an explicit OPT_fdiagnostics_color.
   // Support both clang's -f[no-]color-diagnostics and gcc's
   // -f[no-]diagnostics-colors[=never|always|auto].
   enum {
@@ -819,6 +820,8 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
             : PPMacrosFlag::Exclude;
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
+  opts.preprocessIncludeLines =
+      args.hasArg(clang::driver::options::OPT_fpreprocess_include_lines);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
   opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
 }
@@ -830,14 +833,20 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
 
   // -J/module-dir option
-  auto moduleDirList =
+  std::vector<std::string> moduleDirList =
       args.getAllArgValues(clang::driver::options::OPT_module_dir);
-  // User can only specify -J/-module-dir once
+  // User can only specify one -J/-module-dir directory, but may repeat
+  // -J/-module-dir as long as the directory is the same each time.
   // https://gcc.gnu.org/onlinedocs/gfortran/Directory-Options.html
+  std::sort(moduleDirList.begin(), moduleDirList.end());
+  moduleDirList.erase(std::unique(moduleDirList.begin(), moduleDirList.end()),
+                      moduleDirList.end());
   if (moduleDirList.size() > 1) {
     const unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                              "Only one '-module-dir/-J' option allowed");
+                              "Only one '-module-dir/-J' directory allowed. "
+                              "'-module-dir/-J' may be given multiple times "
+                              "but the directory must be the same each time.");
     diags.Report(diagID);
   }
   if (moduleDirList.size() == 1)
@@ -891,7 +900,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
-  // Default to off for `flang-new -fc1`.
+  // Default to off for `flang -fc1`.
   res.getFrontendOpts().showColors =
       parseShowColorsArgs(args, /*defaultDiagColor=*/false);
 
@@ -1478,6 +1487,10 @@ void CompilerInvocation::setFortranOpts() {
         frontendOptions.fortranForm == FortranForm::FixedForm;
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
+
+  // -E
+  fortranOptions.prescanAndReformat =
+      frontendOptions.programAction == PrintPreprocessedInput;
 
   fortranOptions.features = frontendOptions.features;
   fortranOptions.encoding = frontendOptions.encoding;

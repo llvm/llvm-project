@@ -17,7 +17,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movw $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $65537, {{[0-9]+}}(%esp) # imm = 0x10001
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %forcond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax

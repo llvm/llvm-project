@@ -44,7 +44,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
 
 // CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<{{.*}}>
 // CHECK-DAG: #[[MOD:.*]] = #llvm.di_module<{{.*}}scope = #[[CU]]{{.*}}name = "example"{{.*}}>
-// CHECK-DAG: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "_QQmain"{{.*}}>
+// CHECK-DAG: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
 // CHECK-DAG: #[[MOD_SP:.*]] = #llvm.di_subprogram<{{.*}}name = "mod_sub"{{.*}}retainedNodes = {{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<scope = #[[SP]], name = "arr"{{.*}}line = 22{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<scope = #[[SP]], name = "s"{{.*}}line = 23{{.*}}>

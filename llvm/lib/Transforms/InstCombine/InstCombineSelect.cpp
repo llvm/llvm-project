@@ -1148,8 +1148,8 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
   if (!match(II->getOperand(0), m_c_And(m_Specific(X), m_Neg(m_Specific(X)))))
     return nullptr;
 
-  Function *F = Intrinsic::getDeclaration(II->getModule(), Intrinsic::cttz,
-                                          II->getType());
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      II->getModule(), Intrinsic::cttz, II->getType());
   return CallInst::Create(F, {X, II->getArgOperand(1)});
 }
 
@@ -1408,6 +1408,44 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   }
 
   return nullptr;
+}
+
+/// Fold the following code sequence:
+/// \code
+///   %XeqZ = icmp eq i64 %X, %Z
+///   %YeqZ = icmp eq i64 %Y, %Z
+///   %XeqY = icmp eq i64 %X, %Y
+///   %not.YeqZ = xor i1 %YeqZ, true
+///   %and = select i1 %not.YeqZ, i1 %XeqY, i1 false
+///   %equal = select i1 %XeqZ, i1 %YeqZ, i1 %and
+/// \code
+///
+/// into:
+///   %equal = icmp eq i64 %X, %Y
+Instruction *InstCombinerImpl::foldSelectEqualityTest(SelectInst &Sel) {
+  Value *X, *Y, *Z;
+  Value *XeqY, *XeqZ = Sel.getCondition(), *YeqZ = Sel.getTrueValue();
+
+  if (!match(XeqZ, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(X), m_Value(Z))))
+    return nullptr;
+
+  if (!match(YeqZ,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(Y), m_Specific(Z))))
+    std::swap(X, Z);
+
+  if (!match(YeqZ,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(Y), m_Specific(Z))))
+    return nullptr;
+
+  if (!match(Sel.getFalseValue(),
+             m_c_LogicalAnd(m_Not(m_Specific(YeqZ)), m_Value(XeqY))))
+    return nullptr;
+
+  if (!match(XeqY,
+             m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(X), m_Specific(Y))))
+    return nullptr;
+
+  return replaceInstUsesWith(Sel, XeqY);
 }
 
 // See if this is a pattern like:
@@ -2204,8 +2242,8 @@ foldOverflowingAddSubSelect(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
   else
     return nullptr;
 
-  Function *F =
-      Intrinsic::getDeclaration(SI.getModule(), NewIntrinsicID, SI.getType());
+  Function *F = Intrinsic::getOrInsertDeclaration(SI.getModule(),
+                                                  NewIntrinsicID, SI.getType());
   return CallInst::Create(F, {X, Y});
 }
 
@@ -2499,7 +2537,8 @@ static Instruction *foldSelectFunnelShift(SelectInst &Sel,
   // This is a funnel/rotate that avoids shift-by-bitwidth UB in a suboptimal way.
   // Convert to funnel shift intrinsic.
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
-  Function *F = Intrinsic::getDeclaration(Sel.getModule(), IID, Sel.getType());
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(Sel.getModule(), IID, Sel.getType());
   ShAmt = Builder.CreateZExt(ShAmt, Sel.getType());
   return CallInst::Create(F, { SV0, SV1, ShAmt });
 }
@@ -2542,8 +2581,8 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   // Canonicalize the magnitude argument as the positive constant since we do
   // not care about its sign.
   Value *MagArg = ConstantFP::get(SelType, abs(*TC));
-  Function *F = Intrinsic::getDeclaration(Sel.getModule(), Intrinsic::copysign,
-                                          Sel.getType());
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      Sel.getModule(), Intrinsic::copysign, Sel.getType());
   return CallInst::Create(F, { MagArg, X });
 }
 
@@ -2562,8 +2601,8 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
       if (auto *I = dyn_cast<Instruction>(V))
         I->copyIRFlags(&Sel);
       Module *M = Sel.getModule();
-      Function *F =
-          Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
+      Function *F = Intrinsic::getOrInsertDeclaration(
+          M, Intrinsic::vector_reverse, V->getType());
       return CallInst::Create(F, V);
     };
 
@@ -4110,6 +4149,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return I;
 
   if (Instruction *I = foldSelectToCmp(SI))
+    return I;
+
+  if (Instruction *I = foldSelectEqualityTest(SI))
     return I;
 
   // Fold:
