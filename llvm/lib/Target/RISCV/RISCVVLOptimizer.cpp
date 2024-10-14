@@ -554,7 +554,14 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMULHSU_VV:
   case RISCV::VMULHSU_VX:
   // 11.11. Vector Integer Divide Instructions
-  // FIXME: Add support for 11.11 instructions
+  case RISCV::VDIVU_VV:
+  case RISCV::VDIVU_VX:
+  case RISCV::VDIV_VV:
+  case RISCV::VDIV_VX:
+  case RISCV::VREMU_VV:
+  case RISCV::VREMU_VX:
+  case RISCV::VREM_VV:
+  case RISCV::VREM_VX:
   // 11.12. Vector Widening Integer Multiply Instructions
   // FIXME: Add support for 11.12 instructions
   // 11.13. Vector Single-Width Integer Multiply-Add Instructions
