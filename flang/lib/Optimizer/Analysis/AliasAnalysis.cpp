@@ -257,6 +257,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
     llvm::TypeSwitch<Operation *>(defOp)
+        .Case<hlfir::AsExprOp>([&](auto op) {
+          v = op.getVar();
+          defOp = v.getDefiningOp();
+        })
         .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
           // Unique memory allocation.
           type = SourceKind::Allocate;
