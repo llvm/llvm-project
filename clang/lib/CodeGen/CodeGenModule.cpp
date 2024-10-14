@@ -44,6 +44,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
@@ -1591,6 +1592,19 @@ void CodeGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
                                                "cannot compile this %0 yet");
   std::string Msg = Type;
   getDiags().Report(Context.getFullLoc(D->getLocation()), DiagID) << Msg;
+}
+
+void CodeGenModule::warnStackExhausted(SourceLocation Loc) {
+  // Only warn about this once.
+  if (!WarnedStackExhausted) {
+    getDiags().Report(Loc, diag::warn_stack_exhausted);
+    WarnedStackExhausted = true;
+  }
+}
+
+void CodeGenModule::runWithSufficientStackSpace(SourceLocation Loc,
+                                                llvm::function_ref<void()> Fn) {
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
 }
 
 llvm::ConstantInt *CodeGenModule::getSize(CharUnits size) {
