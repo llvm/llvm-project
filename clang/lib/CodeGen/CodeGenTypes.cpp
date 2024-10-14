@@ -477,6 +477,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                                     Context.getFloatTypeSemantics(T),
                                     /* UseNativeHalf = */ false);
       break;
+
     case BuiltinType::NullPtr:
       // Model std::nullptr_t as i8*
       ResultType = llvm::PointerType::getUnqual(getLLVMContext());
@@ -504,8 +505,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:
-#define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
-                            ElBits, NF)
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
   case BuiltinType::Id:

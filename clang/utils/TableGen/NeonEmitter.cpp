@@ -929,10 +929,6 @@ void Type::applyModifiers(StringRef Mods) {
       Kind = BFloat16;
       ElementBitwidth = 16;
       break;
-    case 'M':
-      Kind = MFloat8;
-      ElementBitwidth = 8;
-      break;
     case 'F':
       Kind = Float;
       break;

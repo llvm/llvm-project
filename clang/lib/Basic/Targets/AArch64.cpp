@@ -576,9 +576,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_BF16_SCALAR_ARITHMETIC", "1");
   }
 
-  if (HasMFloat8) {
-    Builder.defineMacro("__ARM_FEATURE_FP8", "1");
-  }
   if ((FPU & SveMode) && HasBFloat16) {
     Builder.defineMacro("__ARM_FEATURE_SVE_BF16", "1");
   }
@@ -760,7 +757,6 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sha3", HasSHA3)
       .Cases("aes", "pmull", HasAES)
       .Cases("fp16", "fullfp16", HasFullFP16)
-      .Case("fp8", HasMFloat8)
       .Case("dit", HasDIT)
       .Case("dpb", HasCCPP)
       .Case("dpb2", HasCCDP)
@@ -1007,9 +1003,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+sm4") {
       FPU |= NeonMode;
       HasSM4 = true;
-    }
-    if (Feature == "+fp8") {
-      HasMFloat8 = true;
     }
     if (Feature == "+strict-align")
       HasUnalignedAccess = false;

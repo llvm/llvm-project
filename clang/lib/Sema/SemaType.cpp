@@ -1375,6 +1375,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = Context.SingletonId;                                              \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
   case DeclSpec::TST_error:
     Result = Context.IntTy;
     declarator.setInvalidType(true);

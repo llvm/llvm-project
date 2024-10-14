@@ -97,7 +97,6 @@ bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   case tok::kw___bf16:
   case tok::kw__Float16:
   case tok::kw___float128:
-  case tok::kw___mfp8:
   case tok::kw___ibm128:
   case tok::kw_wchar_t:
   case tok::kw_bool:

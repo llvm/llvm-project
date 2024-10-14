@@ -4373,8 +4373,6 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
     return {getIntTypeForBitwidth(ElBits, false),                              \
             llvm::ElementCount::getFixed(NumEls), NF};
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
-#define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
-                            ElBits, NF)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \

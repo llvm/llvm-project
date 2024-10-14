@@ -60,7 +60,6 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   NoAsmVariants = false;
   HasLegalHalfType = false;
   HalfArgsAndReturns = false;
-  HasMFloat8 = false;
   HasFloat128 = false;
   HasIbm128 = false;
   HasFloat16 = false;
