@@ -4199,7 +4199,7 @@ AST_MATCHER_P_OVERLOAD(QualType, references, internal::Matcher<Decl>,
 ///     cxxRecordDecl(hasName("Y")))))
 ///   matches `y.m()`, `x.m()` and (g()).m(), but not `x.g()`.
 /// cxxMemberCallExpr(on(callExpr()))
-///   does not match `(g()).m()`, because the parens are not ignored.
+///   does match `(g()).m()`, because the parens are ignored.
 ///
 /// FIXME: Overload to allow directly matching types?
 AST_MATCHER_P(CXXMemberCallExpr, onImplicitObjectArgument,
