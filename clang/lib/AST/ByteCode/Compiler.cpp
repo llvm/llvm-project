@@ -3416,6 +3416,9 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
+  if (DiscardResult)
+    return true;
+
   const Function *Func = nullptr;
   if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
     Func = F;
