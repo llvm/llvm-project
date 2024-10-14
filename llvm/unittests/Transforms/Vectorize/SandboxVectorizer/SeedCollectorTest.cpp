@@ -40,6 +40,15 @@ struct SeedBundleTest : public testing::Test {
   }
 };
 
+// Stub class to make the abstract base class testable.
+class SeedBundleForTest : public sandboxir::SeedBundle {
+public:
+  using sandboxir::SeedBundle::SeedBundle;
+  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
+    insertAt(Seeds.end(), I);
+  }
+};
+
 TEST_F(SeedBundleTest, SeedBundle) {
   parseIR(C, R"IR(
 define void @foo(float %v0, i32 %i0, i16 %i1, i8 %i2) {
@@ -66,7 +75,7 @@ bb:
   // Assume first two instructions are identical in the number of bits.
   const unsigned IOBits = sandboxir::Utils::getNumBits(I0, DL);
   // Constructor
-  sandboxir::SeedBundle SBO(I0);
+  SeedBundleForTest SBO(I0);
   EXPECT_EQ(*SBO.begin(), I0);
   // getNumUnusedBits after constructor
   EXPECT_EQ(SBO.getNumUnusedBits(), IOBits);
@@ -103,7 +112,7 @@ bb:
   EXPECT_EQ(BundleBits, 88u);
   auto Seeds = Insts;
   // Constructor
-  sandboxir::SeedBundle SB1(std::move(Seeds));
+  SeedBundleForTest SB1(std::move(Seeds));
   // getNumUnusedBits after constructor
   EXPECT_EQ(SB1.getNumUnusedBits(), BundleBits);
   // setUsed with index

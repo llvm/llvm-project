@@ -54,9 +54,7 @@ public:
     NumUnusedBits += Utils::getNumBits(I);
   }
 
-  virtual void insert(Instruction *I, ScalarEvolution &SE) {
-    llvm_unreachable("Subclasses must override this function.");
-  }
+  virtual void insert(Instruction *I, ScalarEvolution &SE) = 0;
 
   unsigned getFirstUnusedElementIdx() const {
     for (unsigned ElmIdx : seq<unsigned>(0, Seeds.size()))
@@ -169,7 +167,7 @@ public:
 using StoreSeedBundle = MemSeedBundle<sandboxir::StoreInst>;
 using LoadSeedBundle = MemSeedBundle<sandboxir::LoadInst>;
 
-/// Class to conveniently track Seeds within Seedbundles. Saves newly collected
+/// Class to conveniently track Seeds within SeedBundles. Saves newly collected
 /// seeds in the proper bundle. Supports constant-time removal, as seeds and
 /// entire bundles are vectorized and marked used to signify removal. Iterators
 /// skip bundles that are completely used.
@@ -177,7 +175,7 @@ class SeedContainer {
   // Use the same key for different seeds if they are the same type and
   // reference the same pointer, even if at different offsets. This directs
   // potentially vectorizable seeds into the same bundle.
-  using KeyT = std::tuple<Value *, Type *, sandboxir::Instruction::Opcode>;
+  using KeyT = std::tuple<Value *, Type *, Instruction::Opcode>;
   // Trying to vectorize too many seeds at once is expensive in
   // compilation-time. Use a vector of bundles (all with the same key) to
   // partition the candidate set into more manageable units. Each bundle is
@@ -188,7 +186,7 @@ class SeedContainer {
   // Map from {pointer, Type, Opcode} to a vector of bundles.
   BundleMapT Bundles;
   // Allows finding a particular Instruction's bundle.
-  DenseMap<sandboxir::Instruction *, SeedBundle *> SeedLookupMap;
+  DenseMap<Instruction *, SeedBundle *> SeedLookupMap;
 
   ScalarEvolution &SE;
 
@@ -210,6 +208,21 @@ public:
     using reference = value_type &;
     using iterator_category = std::input_iterator_tag;
 
+    /// Iterates over the \p Map of SeedBundle Vectors, starting at \p MapIt,
+    /// and \p Vec at \p VecIdx, skipping vectors that are completely
+    /// used. Iteration order over the keys {Pointer, Type, Opcode} follows
+    /// DenseMap iteration order. For a given key, the vectors of
+    /// SeedBundles will be returned in insertion order. As in the
+    /// pseudo code below:
+    ///
+    /// for Key,Value in Bundles
+    ///   for SeedBundleVector in Value
+    ///     for SeedBundle in SeedBundleVector
+    ///        if !SeedBundle.allUsed() ...
+    ///
+    /// Note that the bundles themselves may have additional ordering, created
+    /// by the subclasses by insertAt. The bundles themselves may also have used
+    /// instructions.
     iterator(BundleMapT &Map, BundleMapT::iterator MapIt, ValT *Vec, int VecIdx)
         : Map(&Map), MapIt(MapIt), Vec(Vec), VecIdx(VecIdx) {}
     value_type &operator*() {
@@ -221,6 +234,7 @@ public:
       while (Vec && VecIdx < Vec->size() && this->operator*().allUsed())
         ++(*this);
     }
+    // Iterators iterate over the bundles
     iterator &operator++() {
       assert(VecIdx >= 0 && "Already at end!");
       ++VecIdx;
@@ -252,7 +266,7 @@ public:
   template <typename LoadOrStoreT> void insert(LoadOrStoreT *LSI);
   // To support constant-time erase, these just mark the element used, rather
   // than actually removing them from the bundle.
-  bool erase(sandboxir::Instruction *I);
+  bool erase(Instruction *I);
   bool erase(const KeyT &Key) { return Bundles.erase(Key); }
   iterator begin() {
     if (Bundles.empty())
