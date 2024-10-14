@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Intrinsics.h"
+#include "llvm-c/Core.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
@@ -125,6 +126,50 @@ TEST(IntrinsicNameLookup, MSBuiltinLookup) {
   };
   for (const auto &[Builtin, Target, ID] : MSTests)
     EXPECT_EQ(ID, getIntrinsicForMSBuiltin(Target, Builtin));
+}
+
+// Test C API to get/copy LLVM intrinsic name.
+TEST(IntrinsicNameLookup, LLVMIntrinsicGetCopyNameSimple) {
+  static constexpr struct {
+    Intrinsic::ID ID;
+    const char *Name;
+  } Tests[] = {{Intrinsic::not_intrinsic, "not_intrinsic"},
+               {Intrinsic::assume, "llvm.assume"},
+               {Intrinsic::coro_free, "llvm.coro.free"},
+               {Intrinsic::aarch64_break, "llvm.aarch64.break"},
+               {Intrinsic::x86_int, "llvm.x86.int"}};
+
+  for (auto [ID, ExpectedName] : Tests) {
+    size_t NameSize = 0;
+    const char *CName = LLVMIntrinsicGetName(ID, &NameSize);
+    StringRef Name(CName, NameSize);
+
+    // Verify we get correct name.
+    EXPECT_EQ(Name, ExpectedName);
+    const char *CName1 = LLVMIntrinsicGetName(ID, &NameSize);
+
+    // Verify we get the same pointer and length the second time.
+    EXPECT_EQ(CName, CName1);
+    EXPECT_EQ(NameSize, Name.size());
+  }
+
+  // Now test the copy API.
+  for (auto [ID, ExpectedName] : Tests) {
+    size_t NameSize = 0;
+    char *CName = LLVMIntrinsicCopyName(ID, &NameSize);
+    StringRef Name(CName, NameSize);
+
+    // Verify we get correct name.
+    EXPECT_EQ(Name, ExpectedName);
+
+    // Verify we get the different pointer and same length the second time.
+    char *CName1 = LLVMIntrinsicCopyName(ID, &NameSize);
+    EXPECT_NE(CName, CName1);
+    EXPECT_EQ(NameSize, Name.size());
+
+    free(CName);
+    free(CName1);
+  }
 }
 
 TEST_F(IntrinsicsTest, InstrProfInheritance) {
