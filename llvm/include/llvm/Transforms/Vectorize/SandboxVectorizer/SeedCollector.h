@@ -55,7 +55,7 @@ public:
   }
 
   virtual void insert(Instruction *I, ScalarEvolution &SE) {
-    assert("Subclasses must override this function.");
+    llvm_unreachable("Subclasses must override this function.");
   }
 
   unsigned getFirstUnusedElementIdx() const {
