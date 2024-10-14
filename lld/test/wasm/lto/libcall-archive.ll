@@ -2,7 +2,7 @@
 ; RUN: llvm-as -o %t.o %s
 ; RUN: llvm-as -o %t2.o %S/Inputs/libcall-archive.ll
 ; RUN: llvm-ar rcs %t.a %t2.o
-; RUN: wasm-ld -o %t %t.o %t.a
+; RUN: wasm-ld -mllvm -mattr=-bulk-memory -o %t %t.o %t.a
 ; RUN: obj2yaml %t | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"

@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t_main.o %t/main.s
 # RUN: llvm-as %S/Inputs/foo.ll -o %t_foo.o
 # RUN: llvm-as %S/Inputs/libcall.ll -o %t_libcall.o
-# RUN: wasm-ld %t_main.o %t_libcall.o %t_foo.o %p/Inputs/stub.so -o %t.wasm
+# RUN: wasm-ld -mllvm -mattr=-bulk-memory %t_main.o %t_libcall.o %t_foo.o %p/Inputs/stub.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # The function `func_with_libcall` will generate an undefined reference to
