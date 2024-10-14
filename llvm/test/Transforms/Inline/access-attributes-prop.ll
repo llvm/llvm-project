@@ -594,7 +594,7 @@ define dso_local void @foo_byval_readonly2(ptr readonly %p) {
 define void @prop_byval_readonly2(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_byval_readonly2
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar4(ptr readonly [[P]])
+; CHECK-NEXT:    call void @bar4(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo_byval_readonly2(ptr %p)
