@@ -3456,7 +3456,11 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   }
   case NEON::BI__builtin_neon_vld1_dup_v:
   case NEON::BI__builtin_neon_vld1q_dup_v: {
-    llvm_unreachable("NYI");
+    cir::Address ptrAddr = PtrOp0.withElementType(vTy.getEltType());
+    mlir::Value val = builder.createLoad(getLoc(E->getExprLoc()), ptrAddr);
+    mlir::cir::VecSplatOp vecSplat = builder.create<mlir::cir::VecSplatOp>(
+        getLoc(E->getExprLoc()), vTy, val);
+    return vecSplat;
   }
   case NEON::BI__builtin_neon_vst1_lane_v:
   case NEON::BI__builtin_neon_vst1q_lane_v: {
