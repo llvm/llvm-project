@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #if 0
   // [stacktrace.entry], class stacktrace_­entry
   using std::stacktrace_entry;

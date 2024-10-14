@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
   using ::lconv _LIBCPP_USING_IF_EXISTS;
 
   using ::localeconv _LIBCPP_USING_IF_EXISTS;
   using ::setlocale _LIBCPP_USING_IF_EXISTS;
 #endif // _LIBCPP_HAS_NO_LOCALIZATION
-} // export
+} // _LIBCPP_MODULE_EXPORT

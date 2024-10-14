@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [func.invoke], invoke
   using std::invoke;
 #if _LIBCPP_STD_VER >= 23

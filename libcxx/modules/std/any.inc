@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-
+_LIBCPP_MODULE_EXPORT namespace std {
   // [any.bad.any.cast], class bad_any_cast
   using std::bad_any_cast;
 

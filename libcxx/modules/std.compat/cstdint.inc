@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   // signed
   using ::int8_t _LIBCPP_USING_IF_EXISTS;
   using ::int16_t _LIBCPP_USING_IF_EXISTS;
@@ -47,4 +47,4 @@ export {
   using ::uintmax_t _LIBCPP_USING_IF_EXISTS;
 
   using ::uintptr_t _LIBCPP_USING_IF_EXISTS;
-} // export
+} // _LIBCPP_MODULE_EXPORT

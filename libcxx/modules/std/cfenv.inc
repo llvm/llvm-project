@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // types
   using std::fenv_t _LIBCPP_USING_IF_EXISTS;
   using std::fexcept_t _LIBCPP_USING_IF_EXISTS;

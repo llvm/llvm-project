@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std::filesystem {
+_LIBCPP_MODULE_EXPORT namespace std::filesystem {
   // [fs.class.path], paths
   using std::filesystem::path;
 
@@ -109,11 +109,9 @@ export namespace std::filesystem {
 } // namespace std::filesystem
 
 // [fs.path.hash], hash support
-export namespace std {
-  using std::hash;
-}
+_LIBCPP_MODULE_EXPORT namespace std { using std::hash; }
 
-export namespace std::ranges {
+_LIBCPP_MODULE_EXPORT namespace std::ranges {
 #ifndef _LIBCPP_HAS_NO_FILESYSTEM
   using std::ranges::enable_borrowed_range;
   using std::ranges::enable_view;

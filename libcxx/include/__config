@@ -607,6 +607,17 @@ typedef __char32_t char32_t;
 
 // clang-format on
 
+// Named declarations included in the headers are part of the global module
+// fragment. These declarations are attached to the global module. The using
+// declarations in the module should also attach their declarations to the
+// global module. This is done by using a linkage specification.
+#  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1800
+// Clang-17 does not support extern "C++" export
+#    define _LIBCPP_MODULE_EXPORT export
+#  else
+#    define _LIBCPP_MODULE_EXPORT extern "C++" export
+#  endif
+
 #  if __has_attribute(__enable_if__)
 #    define _LIBCPP_PREFERRED_OVERLOAD __attribute__((__enable_if__(true, "")))
 #  endif

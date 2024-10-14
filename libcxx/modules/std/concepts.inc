@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-
+_LIBCPP_MODULE_EXPORT namespace std {
   // [concepts.lang], language-related concepts
   // [concept.same], concept same_as
   using std::same_as;

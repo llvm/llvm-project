@@ -7,4 +7,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-export { using ::va_list _LIBCPP_USING_IF_EXISTS; } // export
+_LIBCPP_MODULE_EXPORT { using ::va_list _LIBCPP_USING_IF_EXISTS; } // _LIBCPP_MODULE_EXPORT

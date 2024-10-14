@@ -122,6 +122,9 @@ class module_test_generator:
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
 
+// Clang 17 does not attach the declarations to the global module.
+// UNSUPPORTED: clang-17
+
 // MODULE_DEPENDENCIES: {self.module}
 
 // RUN: echo -n > {self.tmp_prefix}.all_partitions

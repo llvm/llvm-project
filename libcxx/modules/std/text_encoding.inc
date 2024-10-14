@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #if 0
 #  if _LIBCPP_STD_VER >= 23
   using std::text_encoding;

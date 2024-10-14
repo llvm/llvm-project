@@ -7,6 +7,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-  using std::source_location;
-} // namespace std
+_LIBCPP_MODULE_EXPORT namespace std { using std::source_location; } // namespace std

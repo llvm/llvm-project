@@ -7,6 +7,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-  using std::va_list _LIBCPP_USING_IF_EXISTS;
-} // namespace std
+_LIBCPP_MODULE_EXPORT namespace std { using std::va_list _LIBCPP_USING_IF_EXISTS; } // namespace std

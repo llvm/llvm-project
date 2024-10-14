@@ -7,6 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // This module exports nothing.
 } // namespace std

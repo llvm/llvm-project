@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #ifndef _LIBCPP_HAS_NO_THREADS
   // [thread.sharedmutex.class], class shared_­mutex
   using std::shared_mutex;

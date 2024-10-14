@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-
+_LIBCPP_MODULE_EXPORT namespace std {
   using std::double_t _LIBCPP_USING_IF_EXISTS;
   using std::float_t _LIBCPP_USING_IF_EXISTS;
 

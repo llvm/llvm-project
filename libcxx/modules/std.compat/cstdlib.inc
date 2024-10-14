@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::div_t _LIBCPP_USING_IF_EXISTS;
   using ::ldiv_t _LIBCPP_USING_IF_EXISTS;
   using ::lldiv_t _LIBCPP_USING_IF_EXISTS;
@@ -69,4 +69,4 @@ export {
   using ::ldiv _LIBCPP_USING_IF_EXISTS;
   using ::lldiv _LIBCPP_USING_IF_EXISTS;
 
-} // export
+} // _LIBCPP_MODULE_EXPORT

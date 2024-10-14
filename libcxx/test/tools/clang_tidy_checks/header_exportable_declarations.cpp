@@ -263,9 +263,16 @@ void header_exportable_declarations::check(const clang::ast_matchers::MatchFinde
       return;
 
     // For modules only take the declarations exported.
-    if (is_module(file_type_))
+    if (is_module(file_type_)) {
       if (decl->getModuleOwnershipKind() != clang::Decl::ModuleOwnershipKind::VisibleWhenImported)
         return;
+
+      // The named declarations included in the global module fragment are
+      // attached to the global module. The exported named declarations should
+      // also be attached to the global module.
+      if (!decl->getOwningModule()->isGlobalModule())
+        return;
+    }
 
     if (!is_valid_declaration_context(*decl, name, file_type_))
       return;

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // signed
   using std::int8_t _LIBCPP_USING_IF_EXISTS;
   using std::int16_t _LIBCPP_USING_IF_EXISTS;
