@@ -30,12 +30,23 @@
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 
 #define DEBUG_TYPE "clang-dataflow"
+
+namespace clang {
+namespace dataflow {
+class NoopLattice;
+}
+} // namespace clang
+
+namespace llvm {
+template struct CLANG_EXPORT_TEMPLATE Any::TypeId<clang::dataflow::NoopLattice>;
+}
 
 namespace clang {
 namespace dataflow {
