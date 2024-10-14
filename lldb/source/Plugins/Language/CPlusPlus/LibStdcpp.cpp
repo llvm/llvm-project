@@ -16,9 +16,12 @@
 #include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-types.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 using namespace lldb;
@@ -254,13 +257,13 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
   } else
     addr_of_string =
         valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
+
   if (addr_of_string != LLDB_INVALID_ADDRESS) {
     switch (addr_type) {
     case eAddressTypeLoad: {
       ProcessSP process_sp(valobj.GetProcessSP());
       if (!process_sp)
         return false;
-
       StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
       Status error;
       lldb::addr_t addr_of_data =
@@ -277,6 +280,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
           addr_of_string + process_sp->GetAddressByteSize(), error);
       if (error.Fail())
         return false;
+
       options.SetSourceSize(size_of_data);
       options.SetHasSourceSize(true);
 
@@ -287,8 +291,36 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
       } else
         return true;
     } break;
-    case eAddressTypeHost:
-      break;
+    case eAddressTypeHost: {
+      // For std::strings created as data, the valueobject points to char *
+      // pointer so we can get the address of our pointer from the value object
+      // and then just read the char* as the summary value
+      ProcessSP process_sp(valobj.GetProcessSP());
+      if (!process_sp)
+        return false;
+      StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
+      DataExtractor data = DataExtractor((void *)addr_of_string,
+                                         process_sp->GetAddressByteSize(),
+                                         process_sp->GetByteOrder(), 8);
+      Status error;
+      lldb::offset_t offset = 0;
+      lldb::addr_t addr_of_string_from_data = data.GetAddress(&offset);
+      if (error.Fail() || addr_of_string_from_data == 0 ||
+          addr_of_string_from_data == LLDB_INVALID_ADDRESS)
+        return false;
+      options.SetLocation(addr_of_string_from_data);
+      options.SetTargetSP(valobj.GetTargetSP());
+      options.SetStream(&stream);
+      options.SetNeedsZeroTermination(true);
+      options.SetBinaryZeroIsTerminator(true);
+
+      if (!StringPrinter::ReadStringAndDumpToStream<
+              StringPrinter::StringElementType::UTF8>(options)) {
+        stream.Printf("Summary Unavailable");
+        return true;
+      } else
+        return true;
+    } break;
     case eAddressTypeInvalid:
     case eAddressTypeFile:
       break;

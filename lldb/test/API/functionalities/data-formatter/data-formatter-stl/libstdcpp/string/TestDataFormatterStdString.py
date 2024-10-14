@@ -17,6 +17,15 @@ class StdStringDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
+    # This is the function to remove the custom formats in order to have a
+    # clean slate for the next test case.
+    def cleanup(self):
+        self.runCmd("type format clear", check=False)
+        self.runCmd("type summary clear", check=False)
+        self.runCmd("type filter clear", check=False)
+        self.runCmd("type synth clear", check=False)
+        self.runCmd("settings set target.max-children-count 256", check=False)
+
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_with_run_command(self):
@@ -37,17 +46,8 @@ class StdStringDataFormatterTestCase(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
-        # This is the function to remove the custom formats in order to have a
-        # clean slate for the next test case.
-        def cleanup():
-            self.runCmd("type format clear", check=False)
-            self.runCmd("type summary clear", check=False)
-            self.runCmd("type filter clear", check=False)
-            self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
-
         # Execute the cleanup function during test case tear down.
-        self.addTearDownHook(cleanup)
+        self.addTearDownHook(self.cleanup())
 
         var_wempty = self.frame().FindVariable("wempty")
         var_s = self.frame().FindVariable("s")
@@ -92,3 +92,60 @@ class StdStringDataFormatterTestCase(TestBase):
         self.runCmd("next")
 
         self.assertEqual(var_S.GetSummary(), 'L"!!!!!"', "new S summary wrong")
+
+    @add_test_categories(["libstdcxx"])
+    @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
+    def test_std_string_as_data(self):
+        """Test that strings created via SBValue::CreateFromData display correctly."""
+        self.build()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=-1
+        )
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.runCmd("command script import ./ConvertToDataFormatter.py", check=True)
+
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(self.cleanup())
+
+        var_str_container = self.frame().FindVariable("sc")
+
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(0).GetSummary(),
+            '"u22"',
+            "string container child wrong",
+        )
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(1).GetSummary(),
+            '"quite a long std::string with lots of info inside it inside a struct"',
+            "string container child wrong",
+        )
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(2).GetSummary(),
+            '"u22"',
+            "string container child wrong",
+        )
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(3).GetSummary(),
+            '"quite a long std::string with lots of info inside it inside a struct"',
+            "string container child wrong",
+        )
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(4).GetSummary(),
+            '"u22"',
+            "string container child wrong",
+        )
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(5).GetSummary(),
+            '"quite a long std::string with lots of info inside it inside a struct"',
+            "string container child wrong",
+        )

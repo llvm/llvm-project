@@ -1605,7 +1605,7 @@ addr_t ValueObject::GetAddressOf(bool scalar_is_load_address,
   case Value::ValueType::HostAddress: {
     if (address_type)
       *address_type = m_value.GetValueAddressType();
-    return LLDB_INVALID_ADDRESS;
+    return m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
   } break;
   }
   if (address_type)
@@ -2955,7 +2955,7 @@ ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   // Only allow casts if the original type is equal or larger than the cast
   // type, unless we know this is a load address.  Getting the size wrong for
-  // a host side storage could leak lldb memory, so we absolutely want to 
+  // a host side storage could leak lldb memory, so we absolutely want to
   // prevent that.  We may not always get the right value, for instance if we
   // have an expression result value that's copied into a storage location in
   // the target may not have copied enough memory.  I'm not trying to fix that
@@ -2973,10 +2973,10 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   ExecutionContextScope *exe_scope
       = ExecutionContext(GetExecutionContextRef())
           .GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope)
-      <= GetCompilerType().GetByteSize(exe_scope) 
-      || m_value.GetValueType() == Value::ValueType::LoadAddress)
-        return DoCast(compiler_type);
+  if (compiler_type.GetByteSize(exe_scope) <=
+          GetCompilerType().GetByteSize(exe_scope) ||
+      m_value.GetValueType() == Value::ValueType::LoadAddress)
+    return DoCast(compiler_type);
 
   error = Status::FromErrorString(
       "Can only cast to a type that is equal to or smaller "
