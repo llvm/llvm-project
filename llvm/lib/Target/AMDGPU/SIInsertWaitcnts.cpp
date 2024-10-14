@@ -823,7 +823,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   if (T == EXP_CNT) {
     // Put score on the source vgprs. If this is a store, just use those
     // specific register(s).
-    if (TII->isDS(Inst) && (Inst.mayStore() || Inst.mayLoad())) {
+    if (TII->isDS(Inst) && Inst.mayLoadOrStore()) {
       // All GDS operations must protect their address register (same as
       // export.)
       if (const auto *AddrOp = TII->getNamedOperand(Inst, AMDGPU::OpName::addr))
