@@ -31,7 +31,6 @@
 
 namespace Fortran::runtime {
 
-using SubscriptValue = ISO::CFI_index_t;
 class Terminator;
 
 RT_VAR_GROUP_BEGIN
