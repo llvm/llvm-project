@@ -930,6 +930,10 @@ public:
   const Instruction *getUnderlyingInstr() const {
     return cast<Instruction>(getUnderlyingValue());
   }
+
+  /// Return the cost of this VPSingleDefRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 };
 
 /// Class to record LLVM IR flag for a recipe along with it.
@@ -1410,6 +1414,10 @@ public:
   }
 
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPIRInstruction.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   Instruction &getInstruction() { return I; }
 
@@ -2391,6 +2399,10 @@ public:
   /// Generate the wide load or store, and shuffles.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPInterleaveRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2623,6 +2635,10 @@ public:
   /// Generate the extraction of the appropriate bit from the block mask and the
   /// conditional branch.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPBranchOnMaskRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

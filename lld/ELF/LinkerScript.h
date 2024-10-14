@@ -389,7 +389,7 @@ public:
   // Returns true if the PROVIDE symbol should be added to the link.
   // A PROVIDE symbol is added to the link only if it satisfies an
   // undefined reference.
-  static bool shouldAddProvideSym(StringRef symName);
+  static bool shouldAddProvideSym(Ctx &, StringRef symName);
 
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;

@@ -176,3 +176,53 @@ namespace Defined {
   static_assert(A<short>::B<int>::y == 1);
   static_assert(A<short>::B<int*>::y == 2);
 } // namespace Defined
+
+namespace Dependent {
+  template<int I>
+  struct A {
+    template<int J>
+    static constexpr int f();
+
+    template<int J>
+    static const int x;
+
+    template<int J>
+    struct B;
+  };
+
+  template<>
+  template<int J>
+  constexpr int A<0>::f() {
+    return A<1>::f<J>();
+  }
+
+  template<>
+  template<int J>
+  constexpr int A<1>::f() {
+    return J;
+  }
+
+  template<>
+  template<int J>
+  constexpr int A<0>::x = A<1>::x<J>;
+
+  template<>
+  template<int J>
+  constexpr int A<1>::x = J;
+
+  template<>
+  template<int J>
+  struct A<0>::B {
+    static constexpr int y = A<1>::B<J>::y;
+  };
+
+  template<>
+  template<int J>
+  struct A<1>::B {
+    static constexpr int y = J;
+  };
+
+  static_assert(A<0>::f<2>() == 2);
+  static_assert(A<0>::x<2> == 2);
+  static_assert(A<0>::B<2>::y == 2);
+} // namespace Dependent

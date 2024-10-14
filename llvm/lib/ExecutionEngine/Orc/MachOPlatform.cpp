@@ -329,7 +329,7 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<MachOPlatform>(new MachOPlatform(
-      ES, ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
+      ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
       std::move(PlatformJDOpts), std::move(BuildMachOHeaderMU), Err));
   if (Err)
     return std::move(Err);
@@ -473,12 +473,12 @@ MachOPlatform::flagsForSymbol(jitlink::Symbol &Sym) {
 }
 
 MachOPlatform::MachOPlatform(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD,
+    ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
     HeaderOptions PlatformJDOpts, MachOHeaderMUBuilder BuildMachOHeaderMU,
     Error &Err)
-    : ES(ES), PlatformJD(PlatformJD), ObjLinkingLayer(ObjLinkingLayer),
+    : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
+      ObjLinkingLayer(ObjLinkingLayer),
       BuildMachOHeaderMU(std::move(BuildMachOHeaderMU)) {
   ErrorAsOutParameter _(&Err);
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
