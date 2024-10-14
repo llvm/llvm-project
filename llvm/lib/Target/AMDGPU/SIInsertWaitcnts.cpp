@@ -41,17 +41,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
-DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE"-forceexp",
+DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE "-forceexp",
               "Force emit s_waitcnt expcnt(0) instrs");
-DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE"-forcelgkm",
+DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE "-forcelgkm",
               "Force emit s_waitcnt lgkmcnt(0) instrs");
-DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE"-forcevm",
+DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE "-forcevm",
               "Force emit s_waitcnt vmcnt(0) instrs");
 
-static cl::opt<bool> ForceEmitZeroFlag(
-  "amdgpu-waitcnt-forcezero",
-  cl::desc("Force all waitcnt instrs to be emitted as s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
-  cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    ForceEmitZeroFlag("amdgpu-waitcnt-forcezero",
+                      cl::desc("Force all waitcnt instrs to be emitted as "
+                               "s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
+                      cl::init(false), cl::Hidden);
 
 namespace {
 // Class of object that encapsulates latest instruction counter score
@@ -1596,9 +1597,7 @@ static bool callWaitsOnFunctionEntry(const MachineInstr &MI) {
 
 /// \returns true if the callee is expected to wait for any outstanding waits
 /// before returning.
-static bool callWaitsOnFunctionReturn(const MachineInstr &MI) {
-  return true;
-}
+static bool callWaitsOnFunctionReturn(const MachineInstr &MI) { return true; }
 
 ///  Generate s_waitcnt instruction to be placed before cur_Inst.
 ///  Instructions of a given type are returned in order,
