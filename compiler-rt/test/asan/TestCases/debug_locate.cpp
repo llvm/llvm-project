@@ -1,10 +1,9 @@
-// UNSUPPORTED: MSVC
 // Checks the ASan memory address type debugging API, makes sure it returns
 // the correct memory type for heap, stack, global and shadow addresses and
 // that it correctly finds out which region (and name and size) the address
 // belongs to.
 // RUN: %clangxx_asan -O0 %s -o %t && %run %t 2>&1
-
+// UNSUPPORTED: MSVC
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
 #include <stdio.h>
