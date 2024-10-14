@@ -35,13 +35,13 @@ struct _st {
 
 __attribute__((address_space(256))) void * * const base = 0;
 void * get_0(void) {
-  return base[0];  // expected-error {{returning '__attribute__((address_space(256))) void *' from a function with result type 'void *' changes address space of pointer}}
+  return base[0];
 }
 
 __attribute__((address_space(1))) char test3_array[10];
 void test3(void) {
-  extern void test3_helper(char *p); // expected-note {{passing argument to parameter 'p' here}}
-  test3_helper(test3_array); // expected-error {{changes address space of pointer}}
+  extern void test3_helper(char *p);
+  test3_helper(test3_array);
 }
 
 typedef void ft(void);

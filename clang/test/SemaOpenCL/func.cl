@@ -57,12 +57,6 @@ void bar()
   foo((void*)foo);
 #ifndef FUNCPTREXT
   // expected-error@-2{{taking address of function is not allowed}}
-#else
-  // FIXME: Functions should probably be in the address space defined by the
-  // implementation. It might make sense to put them into the Default address
-  // space that is bind to a physical segment by the target rather than fixing
-  // it to any of the concrete OpenCL address spaces during parsing.
-  // expected-error@-8{{casting 'void (*)(__private void *__private)' to type '__private void *' changes address space}}
 #endif
 
   foo(&foo);

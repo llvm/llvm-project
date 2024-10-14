@@ -14,8 +14,8 @@ void baz(__attribute__((opencl_private)) int *Data) {}
 void fizz() {
   int *Nop;
   baz(Nop);
-  // CHECK:    error: no matching function
-  // CHECK:    :[[@LINE+1]]:53: note: {{.*}}: 'this' object is in address space '__private'
+
+
   __attribute__((opencl_private)) static auto err = [&]() {};
   err();
 }

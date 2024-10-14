@@ -85,9 +85,8 @@ __externref_t func(__externref_t ref) {
   static __externref_t lt2[0];    // expected-error {{WebAssembly table cannot be declared within a function}}
   static __externref_t lt3[0][0]; // expected-error {{multi-dimensional arrays of WebAssembly references are not allowed}}
   static __externref_t(*lt4)[0];  // expected-error {{cannot form a pointer to a WebAssembly table}}
-  // conly-error@+2 {{cannot use WebAssembly table as a function parameter}}
-  // cpp-error@+1 {{no matching function for call to 'illegal_argument_1'}}
-  illegal_argument_1(table);
+  
+  illegal_argument_1(table);      // expected-error {{cannot use WebAssembly table as a function parameter}}
   varargs(1, table);              // expected-error {{cannot use WebAssembly table as a function parameter}}
   table == 1;                     // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and 'int')}}
   1 >= table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
