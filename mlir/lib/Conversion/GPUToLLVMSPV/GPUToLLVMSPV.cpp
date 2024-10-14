@@ -274,14 +274,21 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   /// Get the subgroup size from the target or return a default.
   static std::optional<uint32_t> getSubgroupSize(Operation *op) {
     // TODO check for intel_reqd_sub_group_size
-    return op->getParentOfType<gpu::GPUFuncOp>().getKnownSubgroupSize();
+
+    FunctionOpInterface func = op->getParentOfType<FunctionOpInterface>();
+    if (!func)
+      return {};
+
+    Attribute knownSubgroupSizeAttr = func->getAttr("gpu.known_subgroup_size");
+    if (!knownSubgroupSizeAttr)
+      return {};
+    return cast<IntegerAttr>(knownSubgroupSizeAttr).getInt();
   }
 
   static bool hasValidWidth(gpu::ShuffleOp op, uint32_t subgroupSize) {
     llvm::APInt val;
     Value width = op.getWidth();
-    return matchPattern(width, m_ConstantInt(&val)) &&
-           val == subgroupSize;
+    return matchPattern(width, m_ConstantInt(&val)) && val == subgroupSize;
   }
 
   LogicalResult
@@ -290,7 +297,8 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     auto maybeSubgroupSize = getSubgroupSize(op);
     if (!maybeSubgroupSize)
       return rewriter.notifyMatchFailure(
-          op, "subgroup size not specified. Should be specified with known_subgroup_size.");
+          op, "subgroup size not specified. Should be specified with "
+              "known_subgroup_size.");
     if (!hasValidWidth(op, maybeSubgroupSize.value()))
       return rewriter.notifyMatchFailure(
           op, "shuffle width and subgroup size mismatch");

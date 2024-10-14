@@ -260,7 +260,7 @@ gpu.module @shuffles {
   func.func @gpu_shuffles(%val0: i32, %id: i32,
                           %val1: i64, %mask: i32,
                           %val2: f32, %delta_up: i32,
-                          %val3: f64, %delta_down: i32) {
+                          %val3: f64, %delta_down: i32) attributes {gpu.known_subgroup_size = 32 : i32} {
     %width = arith.constant 32 : i32
     // CHECK:         llvm.call spir_funccc @_Z17sub_group_shuffleij(%[[VAL_0]], %[[VAL_1]]) {
     // CHECK-SAME-DAG:  no_unwind
@@ -302,9 +302,7 @@ gpu.module @shuffles {
 
 // Check `gpu.shuffle` conversion with explicit subgroup size.
 
-gpu.module @shuffles attributes {
-  gpu.known_subgroup_size = 16 : i32
-} {
+gpu.module @shuffles {
   // CHECK:           llvm.func spir_funccc @_Z22sub_group_shuffle_downdj(f64, i32) -> f64 attributes {
   // CHECK-SAME-DAG:  no_unwind
   // CHECK-SAME-DAG:  convergent
@@ -352,7 +350,7 @@ gpu.module @shuffles attributes {
   // CHECK-SAME:              (%[[I8_VAL:.*]]: i8, %[[I16_VAL:.*]]: i16,
   // CHECK-SAME:               %[[I32_VAL:.*]]: i32, %[[I64_VAL:.*]]: i64,
   // CHECK-SAME:               %[[F16_VAL:.*]]: f16, %[[F32_VAL:.*]]: f32,
-  // CHECK-SAME:               %[[F64_VAL:.*]]: f64,  %[[OFFSET:.*]]: i32) {
+  // CHECK-SAME:               %[[F64_VAL:.*]]: f64,  %[[OFFSET:.*]]: i32)
   func.func @gpu_shuffles(%i8_val: i8,
                           %i16_val: i16,
                           %i32_val: i32,
@@ -360,7 +358,7 @@ gpu.module @shuffles attributes {
                           %f16_val: f16,
                           %f32_val: f32,
                           %f64_val: f64,
-                          %offset: i32) {
+                          %offset: i32) attributes {gpu.known_subgroup_size = 16 : i32} {
     %width = arith.constant 16 : i32
     // CHECK:         llvm.call spir_funccc @_Z17sub_group_shufflecj(%[[I8_VAL]], %[[OFFSET]])
     // CHECK:         llvm.mlir.constant(true) : i1
