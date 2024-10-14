@@ -1410,6 +1410,15 @@ bool fir::ConvertOp::areVectorsCompatible(mlir::Type inTy, mlir::Type outTy) {
   return true;
 }
 
+static bool areRecordsCompatible(mlir::Type inTy, mlir::Type outTy) {
+  // Both records must have the same field types.
+  // Trust frontend semantics for in-depth checks, such as if both records
+  // have the BIND(C) attribute.
+  auto inRecTy = mlir::dyn_cast<fir::RecordType>(inTy);
+  auto outRecTy = mlir::dyn_cast<fir::RecordType>(outTy);
+  return inRecTy && outRecTy && inRecTy.getTypeList() == outRecTy.getTypeList();
+}
+
 bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
   if (inType == outType)
     return true;
@@ -1428,7 +1437,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
          (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
          (fir::isPolymorphicType(inType) && mlir::isa<BoxType>(outType)) ||
-         areVectorsCompatible(inType, outType);
+         areVectorsCompatible(inType, outType) ||
+         areRecordsCompatible(inType, outType);
 }
 
 llvm::LogicalResult fir::ConvertOp::verify() {

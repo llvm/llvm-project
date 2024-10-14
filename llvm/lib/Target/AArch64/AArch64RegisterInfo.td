@@ -30,7 +30,7 @@ let Namespace = "AArch64" in {
   def sube64 : SubRegIndex<64>;
   def subo64 : SubRegIndex<64>;
   // SVE
-  def qsub    : SubRegIndex<128>;
+  def zsub    : SubRegIndex<128>;
   // Note: Code depends on these having consecutive numbers
   def dsub0 : SubRegIndex<64>;
   def dsub1 : SubRegIndex<64>;
@@ -857,7 +857,7 @@ let SubRegIndices = [psub] in {
 }
 
 // SVE variable-size vector registers
-let SubRegIndices = [qsub] in {
+let SubRegIndices = [zsub] in {
 def Z0    : AArch64Reg<0,   "z0",  [Q0]>, DwarfRegNum<[96]>;
 def Z1    : AArch64Reg<1,   "z1",  [Q1]>, DwarfRegNum<[97]>;
 def Z2    : AArch64Reg<2,   "z2",  [Q2]>, DwarfRegNum<[98]>;

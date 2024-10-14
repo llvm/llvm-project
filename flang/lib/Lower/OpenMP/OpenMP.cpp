@@ -612,7 +612,8 @@ static mlir::Block *genEntryBlock(lower::AbstractConverter &converter,
   unsigned numVars = args.inReduction.vars.size() + args.map.vars.size() +
                      args.priv.vars.size() + args.reduction.vars.size() +
                      args.taskReduction.vars.size() +
-                     args.useDeviceAddr.vars.size();
+                     args.useDeviceAddr.vars.size() +
+                     args.useDevicePtr.vars.size();
   types.reserve(numVars);
   locs.reserve(numVars);
 
@@ -1309,8 +1310,8 @@ static void genTaskClauses(lower::AbstractConverter &converter,
   cp.processUntied(clauseOps);
   // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Affinity, clause::Detach, clause::InReduction>(
-      loc, llvm::omp::Directive::OMPD_task);
+  cp.processTODO<clause::Affinity, clause::Detach, clause::InReduction,
+                 clause::Mergeable>(loc, llvm::omp::Directive::OMPD_task);
 }
 
 static void genTaskgroupClauses(lower::AbstractConverter &converter,
@@ -2072,9 +2073,7 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
                      loopNestClauseOps, iv);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
-  simdArgs.reduction.syms = simdReductionSyms;
-  simdArgs.reduction.vars = simdClauseOps.reductionVars;
+  // TODO: Add private, reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
 
@@ -2232,9 +2231,7 @@ static void genCompositeDistributeParallelDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
-  simdArgs.reduction.syms = simdReductionSyms;
-  simdArgs.reduction.vars = simdClauseOps.reductionVars;
+  // TODO: Add private, reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2291,9 +2288,7 @@ static void genCompositeDistributeSimd(lower::AbstractConverter &converter,
   distributeOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
-  simdArgs.reduction.syms = simdReductionSyms;
-  simdArgs.reduction.vars = simdClauseOps.reductionVars;
+  // TODO: Add private, reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2350,9 +2345,7 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
-  simdArgs.reduction.syms = simdReductionSyms;
-  simdArgs.reduction.vars = simdClauseOps.reductionVars;
+  // TODO: Add private, reduction syms and vars.
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
@@ -2787,7 +2780,10 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::ThreadLimit>(clause.u) &&
         !std::holds_alternative<clause::Threads>(clause.u) &&
         !std::holds_alternative<clause::UseDeviceAddr>(clause.u) &&
-        !std::holds_alternative<clause::UseDevicePtr>(clause.u)) {
+        !std::holds_alternative<clause::UseDevicePtr>(clause.u) &&
+        !std::holds_alternative<clause::InReduction>(clause.u) &&
+        !std::holds_alternative<clause::Mergeable>(clause.u) &&
+        !std::holds_alternative<clause::TaskReduction>(clause.u)) {
       TODO(clauseLocation, "OpenMP Block construct clause");
     }
   }
