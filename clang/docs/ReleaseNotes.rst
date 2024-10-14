@@ -598,7 +598,7 @@ WebAssembly Support
 AVR Support
 ^^^^^^^^^^^
 
-- Reject C/C++ compilation for avr1 devices which has no SRAM.
+- Reject C/C++ compilation for avr1 devices which have no SRAM.
 
 DWARF Support in Clang
 ----------------------
