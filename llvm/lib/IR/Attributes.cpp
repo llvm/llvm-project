@@ -1932,8 +1932,8 @@ AttributeList::getParamDereferenceableOrNullBytes(unsigned Index) const {
 }
 
 std::optional<ConstantRange>
-AttributeList::getParamRange(unsigned Index) const {
-  auto RangeAttr = getParamAttrs(Index).getAttribute(Attribute::Range);
+AttributeList::getParamRange(unsigned ArgNo) const {
+  auto RangeAttr = getParamAttrs(ArgNo).getAttribute(Attribute::Range);
   if (RangeAttr.isValid())
     return RangeAttr.getRange();
   return std::nullopt;
