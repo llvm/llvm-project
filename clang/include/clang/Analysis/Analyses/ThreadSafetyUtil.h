@@ -15,6 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
@@ -75,7 +76,7 @@ inline void *operator new(size_t Sz,
 namespace clang {
 namespace threadSafety {
 
-std::string getSourceLiteralString(const Expr *CE);
+CLANG_ABI std::string getSourceLiteralString(const Expr *CE);
 
 namespace til {
 

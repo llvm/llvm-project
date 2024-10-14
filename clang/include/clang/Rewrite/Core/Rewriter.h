@@ -16,6 +16,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/StringRef.h"
 #include <map>
@@ -29,7 +30,7 @@ class SourceManager;
 /// Rewriter - This is the main interface to the rewrite buffers.  Its primary
 /// job is to dispatch high-level requests to the low-level RewriteBuffers that
 /// are involved.
-class Rewriter {
+class CLANG_ABI Rewriter {
   SourceManager *SourceMgr = nullptr;
   const LangOptions *LangOpts = nullptr;
   std::map<FileID, llvm::RewriteBuffer> RewriteBuffers;

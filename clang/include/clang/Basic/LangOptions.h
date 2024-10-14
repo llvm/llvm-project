@@ -22,6 +22,7 @@
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/Visibility.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
@@ -496,7 +497,7 @@ protected:
 
 /// Keeps track of the various options that can be
 /// enabled, which controls the dialect of C or C++ that is accepted.
-class LangOptions : public LangOptionsBase {
+class CLANG_ABI LangOptions : public LangOptionsBase {
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -815,7 +816,7 @@ public:
 
 /// Floating point control options
 class FPOptionsOverride;
-class FPOptions {
+class CLANG_ABI FPOptions {
 public:
   // We start by defining the layout.
   using storage_type = uint32_t;
@@ -967,7 +968,7 @@ public:
 ///
 /// The is implemented as a value of the new FPOptions plus a mask showing which
 /// fields are actually set in it.
-class FPOptionsOverride {
+class CLANG_ABI FPOptionsOverride {
   FPOptions Options = FPOptions::getFromOpaqueInt(0);
   FPOptions::storage_type OverrideMask = 0;
 

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_COMMENTBRIEFPARSER_H
 
 #include "clang/AST/CommentLexer.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace comments {
@@ -26,7 +27,7 @@ namespace comments {
 /// \li a \or \\short command,
 /// \li the first paragraph,
 /// \li a \\result or \\return or \\returns paragraph.
-class BriefParser {
+class CLANG_ABI BriefParser {
   Lexer &L;
 
   const CommandTraits &Traits;

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_TOOLING_ALLTUSEXECUTION_H
 #define LLVM_CLANG_TOOLING_ALLTUSEXECUTION_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
 #include <optional>
@@ -23,7 +24,7 @@ namespace tooling {
 
 /// Executes given frontend actions on all files/TUs in the compilation
 /// database.
-class AllTUsToolExecutor : public ToolExecutor {
+class CLANG_ABI AllTUsToolExecutor : public ToolExecutor {
 public:
   static const char *ExecutorName;
 
@@ -70,8 +71,8 @@ private:
   unsigned ThreadCount;
 };
 
-extern llvm::cl::opt<unsigned> ExecutorConcurrency;
-extern llvm::cl::opt<std::string> Filter;
+CLANG_ABI extern llvm::cl::opt<unsigned> ExecutorConcurrency;
+CLANG_ABI extern llvm::cl::opt<std::string> Filter;
 
 } // end namespace tooling
 } // end namespace clang

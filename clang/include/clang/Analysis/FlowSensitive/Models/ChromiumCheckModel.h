@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace clang {
@@ -22,7 +23,7 @@ namespace dataflow {
 
 /// Models the behavior of Chromium's CHECK, DCHECK, etc. macros, so that code
 /// after a call to `*CHECK` can rely on the condition being true.
-class ChromiumCheckModel : public DataflowModel {
+class CLANG_ABI ChromiumCheckModel : public DataflowModel {
 public:
   ChromiumCheckModel() = default;
   bool transfer(const CFGElement &Element, Environment &Env) override;

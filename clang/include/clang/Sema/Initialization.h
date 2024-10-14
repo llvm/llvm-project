@@ -27,6 +27,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -44,7 +45,7 @@ class ObjCMethodDecl;
 class Sema;
 
 /// Describes an entity that is being initialized.
-class alignas(8) InitializedEntity {
+class CLANG_ABI alignas(8) InitializedEntity {
 public:
   /// Specifies the kind of entity being initialized.
   enum EntityKind {
@@ -799,7 +800,7 @@ public:
 
 /// Describes the sequence of initializations required to initialize
 /// a given object or reference with a set of arguments.
-class InitializationSequence {
+class CLANG_ABI InitializationSequence {
 public:
   /// Describes the kind of initialization sequence computed.
   enum SequenceKind {
@@ -945,7 +946,7 @@ public:
   };
 
   /// A single step in the initialization sequence.
-  class Step {
+  class CLANG_ABI Step {
   public:
     /// The kind of conversion or initialization step we are taking.
     StepKind Kind;

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_MANGLENUMBERINGCONTEXT_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace clang {
@@ -26,7 +27,7 @@ class VarDecl;
 
 /// Keeps track of the mangled names of lambda expressions and block
 /// literals within a particular context.
-class MangleNumberingContext {
+class CLANG_ABI MangleNumberingContext {
   // The index of the next lambda we encounter in this context.
   unsigned LambdaIndex = 0;
 

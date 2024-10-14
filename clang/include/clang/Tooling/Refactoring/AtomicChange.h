@@ -16,6 +16,7 @@
 
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,7 +35,7 @@ namespace tooling {
 ///
 /// Calling setError on an AtomicChange stores the error message and marks it as
 /// bad, i.e. none of its source edits will be applied.
-class AtomicChange {
+class CLANG_ABI AtomicChange {
 public:
   /// Creates an atomic change around \p KeyPosition with the key being a
   /// concatenation of the file name and the offset of \p KeyPosition.
@@ -181,7 +182,7 @@ struct ApplyChangesSpec {
 /// otherwise, an llvm::Error carrying llvm::StringError is returned (the Error
 /// message can be converted to string with `llvm::toString()` and the
 /// error_code should be ignored).
-llvm::Expected<std::string>
+CLANG_ABI llvm::Expected<std::string>
 applyAtomicChanges(llvm::StringRef FilePath, llvm::StringRef Code,
                    llvm::ArrayRef<AtomicChange> Changes,
                    const ApplyChangesSpec &Spec);

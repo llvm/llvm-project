@@ -25,6 +25,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -63,7 +64,7 @@ class ExplodedGraph;
 // ExplodedNode is not constified all over the engine because we need to add
 // successors to it at any time after creating it.
 
-class ExplodedNode : public llvm::FoldingSetNode {
+class CLANG_ABI ExplodedNode : public llvm::FoldingSetNode {
   friend class BranchNodeBuilder;
   friend class CoreEngine;
   friend class EndOfFunctionNodeBuilder;
@@ -81,7 +82,7 @@ class ExplodedNode : public llvm::FoldingSetNode {
   /// store a flag rather than a node list, which ExplodedNode uses to mark
   /// whether a node is a sink. If the flag is set, the group is implicitly
   /// empty and no nodes may be added.
-  class NodeGroup {
+  class CLANG_ABI NodeGroup {
     // Conceptually a discriminated union. If the low bit is set, the node is
     // a sink. If the low bit is not set, the pointer refers to the storage
     // for the nodes in the group.
@@ -300,7 +301,7 @@ private:
 using InterExplodedGraphMap =
     llvm::DenseMap<const ExplodedNode *, const ExplodedNode *>;
 
-class ExplodedGraph {
+class CLANG_ABI ExplodedGraph {
 protected:
   friend class CoreEngine;
 

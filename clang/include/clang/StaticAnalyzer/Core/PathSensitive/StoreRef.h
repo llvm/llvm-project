@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_STOREREF_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_STOREREF_H
 
+#include "clang/Support/Compiler.h"
 #include <cassert>
 
 namespace clang {
@@ -26,7 +27,7 @@ class StoreManager;
 ///  different types to represent the locations and values.
 using Store = const void *;
 
-class StoreRef {
+class CLANG_ABI StoreRef {
   Store store;
   StoreManager &mgr;
 

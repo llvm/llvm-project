@@ -17,6 +17,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/CodeGenOptions.h"
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -33,7 +34,7 @@ class MLIRContext;
 namespace cir {
 class CIRGenModule;
 
-class CIRGenerator : public clang::ASTConsumer {
+class CLANG_ABI CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
   clang::DiagnosticsEngine &diags;
   clang::ASTContext *astCtx;

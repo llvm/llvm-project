@@ -15,12 +15,13 @@
 #ifndef LLVM_CLANG_CODEGEN_CONSTANTINITBUILDER_H
 #define LLVM_CLANG_CODEGEN_CONSTANTINITBUILDER_H
 
+#include "clang/AST/CharUnits.h"
+#include "clang/CodeGen/ConstantInitFuture.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
-#include "clang/AST/CharUnits.h"
-#include "clang/CodeGen/ConstantInitFuture.h"
 
 #include <vector>
 
@@ -51,7 +52,7 @@ class CodeGenModule;
 ///    widgetArray.finishAndAddTo(toplevel);
 ///    auto global = toplevel.finishAndCreateGlobal("WIDGET_LIST", Align,
 ///                                                 /*constant*/ true);
-class ConstantInitBuilderBase {
+class CLANG_ABI ConstantInitBuilderBase {
   struct SelfReference {
     llvm::GlobalVariable *Dummy;
     llvm::SmallVector<llvm::Constant*, 4> Indices;
@@ -97,7 +98,7 @@ private:
 
 /// A concrete base class for struct and array aggregate
 /// initializer builders.
-class ConstantAggregateBuilderBase {
+class CLANG_ABI ConstantAggregateBuilderBase {
 protected:
   ConstantInitBuilderBase &Builder;
   ConstantAggregateBuilderBase *Parent;

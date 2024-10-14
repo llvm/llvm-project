@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTIONVISITOR_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include <optional>
 #include <type_traits>
 
@@ -23,7 +24,7 @@ class RefactoringOption;
 ///
 /// A valid refactoring option type must have a corresponding \c visit
 /// declaration in this interface.
-class RefactoringOptionVisitor {
+class CLANG_ABI RefactoringOptionVisitor {
 public:
   virtual ~RefactoringOptionVisitor() {}
 

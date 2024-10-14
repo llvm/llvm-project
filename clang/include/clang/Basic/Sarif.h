@@ -33,6 +33,7 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Version.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -377,7 +378,7 @@ public:
 /// 2. If SarifDocumentWriter::endRun is called, callers MUST call
 ///    SarifDocumentWriter::createRun, before invoking any of the result
 ///    aggregation methods such as SarifDocumentWriter::appendResult etc.
-class SarifDocumentWriter {
+class CLANG_ABI SarifDocumentWriter {
 private:
   const llvm::StringRef SchemaURI{
       "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/"

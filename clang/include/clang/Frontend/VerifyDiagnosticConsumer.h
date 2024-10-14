@@ -14,6 +14,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
@@ -35,12 +36,12 @@ class TextDiagnosticBuffer;
 /// those expected. See clang/docs/InternalsManual.rst for details about how to
 /// write tests to verify diagnostics.
 ///
-class VerifyDiagnosticConsumer: public DiagnosticConsumer,
+class CLANG_ABI VerifyDiagnosticConsumer: public DiagnosticConsumer,
                                 public CommentHandler {
 public:
   /// Directive - Abstract class representing a parsed verify directive.
   ///
-  class Directive {
+  class CLANG_ABI Directive {
   public:
     static std::unique_ptr<Directive>
     create(bool RegexKind, SourceLocation DirectiveLoc,

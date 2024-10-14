@@ -16,6 +16,7 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -45,7 +46,7 @@ namespace clang {
 /// ExternalASTMerger's job is to maintain the data structures necessary to
 /// allow this.  The data structures themselves can be extracted (read-only) and
 /// copied for re-use.
-class ExternalASTMerger : public ExternalASTSource {
+class CLANG_ABI ExternalASTMerger : public ExternalASTSource {
 public:
   /// A single origin for a DeclContext.  Unlike Decls, DeclContexts do
   /// not allow their containing ASTContext to be determined in all cases.

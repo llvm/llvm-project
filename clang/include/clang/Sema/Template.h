@@ -18,6 +18,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -362,7 +363,7 @@ enum class TemplateSubstitutionKind : char {
   /// A new instance of this class type will be created whenever we
   /// instantiate a new function declaration, which will have its own
   /// set of parameter declarations.
-  class LocalInstantiationScope {
+  class CLANG_ABI LocalInstantiationScope {
   public:
     /// A set of declarations.
     using DeclArgumentPack = SmallVector<VarDecl *, 4>;
@@ -565,7 +566,7 @@ enum class TemplateSubstitutionKind : char {
     bool isLambdaOrBlock() const { return InstantiatingLambdaOrBlock; }
   };
 
-  class TemplateDeclInstantiator
+  class CLANG_ABI TemplateDeclInstantiator
     : public DeclVisitor<TemplateDeclInstantiator, Decl *>
   {
     Sema &SemaRef;

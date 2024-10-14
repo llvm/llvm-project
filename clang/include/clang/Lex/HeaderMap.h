@@ -16,6 +16,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/HeaderMapTypes.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -28,7 +29,7 @@ struct HMapBucket;
 struct HMapHeader;
 
 /// Implementation for \a HeaderMap that doesn't depend on \a FileManager.
-class HeaderMapImpl {
+class CLANG_ABI HeaderMapImpl {
   std::unique_ptr<const llvm::MemoryBuffer> FileBuffer;
   bool NeedsBSwap;
   mutable llvm::StringMap<StringRef> ReverseMap;
@@ -81,7 +82,7 @@ private:
 /// \#include file resolution process, it basically acts like a directory of
 /// symlinks to files.  Its advantages are that it is dense and more efficient
 /// to create and process than a directory of symlinks.
-class HeaderMap : private HeaderMapImpl {
+class CLANG_ABI HeaderMap : private HeaderMapImpl {
   HeaderMap(std::unique_ptr<const llvm::MemoryBuffer> File, bool BSwap)
       : HeaderMapImpl(std::move(File), BSwap) {}
 

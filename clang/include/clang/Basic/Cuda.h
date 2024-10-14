@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_BASIC_CUDA_H
 #define LLVM_CLANG_BASIC_CUDA_H
 
+#include "clang/Support/Compiler.h"
 namespace llvm {
 class StringRef;
 class Twine;
@@ -48,9 +49,9 @@ enum class CudaVersion {
       CUDA_125, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
-const char *CudaVersionToString(CudaVersion V);
+CLANG_ABI const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
-CudaVersion CudaStringToVersion(const llvm::Twine &S);
+CLANG_ABI CudaVersion CudaStringToVersion(const llvm::Twine &S);
 
 enum class OffloadArch {
   UNUSED,
@@ -154,17 +155,17 @@ static inline bool IsAMDOffloadArch(OffloadArch A) {
   return A >= OffloadArch::GFX600 && A < OffloadArch::Generic;
 }
 
-const char *OffloadArchToString(OffloadArch A);
-const char *OffloadArchToVirtualArchString(OffloadArch A);
+CLANG_ABI const char *OffloadArchToString(OffloadArch A);
+CLANG_ABI const char *OffloadArchToVirtualArchString(OffloadArch A);
 
 // The input should have the form "sm_20".
-OffloadArch StringToOffloadArch(llvm::StringRef S);
+CLANG_ABI OffloadArch StringToOffloadArch(llvm::StringRef S);
 
 /// Get the earliest CudaVersion that supports the given OffloadArch.
-CudaVersion MinVersionForOffloadArch(OffloadArch A);
+CLANG_ABI CudaVersion MinVersionForOffloadArch(OffloadArch A);
 
 /// Get the latest CudaVersion that supports the given OffloadArch.
-CudaVersion MaxVersionForOffloadArch(OffloadArch A);
+CLANG_ABI CudaVersion MaxVersionForOffloadArch(OffloadArch A);
 
 //  Various SDK-dependent features that affect CUDA compilation
 enum class CudaFeature {
@@ -174,9 +175,9 @@ enum class CudaFeature {
   CUDA_USES_FATBIN_REGISTER_END,
 };
 
-CudaVersion ToCudaVersion(llvm::VersionTuple);
-bool CudaFeatureEnabled(llvm::VersionTuple, CudaFeature);
-bool CudaFeatureEnabled(CudaVersion, CudaFeature);
+CLANG_ABI CudaVersion ToCudaVersion(llvm::VersionTuple);
+CLANG_ABI bool CudaFeatureEnabled(llvm::VersionTuple, CudaFeature);
+CLANG_ABI bool CudaFeatureEnabled(CudaVersion, CudaFeature);
 
 } // namespace clang
 

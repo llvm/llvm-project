@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_OPENCLOPTIONS_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang {
@@ -66,7 +67,7 @@ static inline bool isOpenCLVersionContainedInMask(const LangOptions &LO,
 } // end anonymous namespace
 
 /// OpenCL supported extensions and optional core features
-class OpenCLOptions {
+class CLANG_ABI OpenCLOptions {
 
 public:
   // OpenCL C v1.2 s6.5 - All program scope variables must be declared in the

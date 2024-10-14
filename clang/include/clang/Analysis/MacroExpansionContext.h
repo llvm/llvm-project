@@ -12,6 +12,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -70,7 +71,7 @@ class MacroExpansionRangeRecorder;
 ///         variable declarations.
 /// \remark MacroExpansionContext object must outlive the Preprocessor
 ///         parameter.
-class MacroExpansionContext {
+class CLANG_ABI MacroExpansionContext {
 public:
   /// Creates a MacroExpansionContext.
   /// \remark You must call registerForPreprocessor to set the required

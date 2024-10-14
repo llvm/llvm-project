@@ -14,11 +14,12 @@
 #ifndef LLVM_CLANG_AST_ASTIMPORTERROR_H
 #define LLVM_CLANG_AST_ASTIMPORTERROR_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
 
-class ASTImportError : public llvm::ErrorInfo<ASTImportError> {
+class CLANG_ABI ASTImportError : public llvm::ErrorInfo<ASTImportError> {
 public:
   /// \brief Kind of error when importing an AST component.
   enum ErrorKind {

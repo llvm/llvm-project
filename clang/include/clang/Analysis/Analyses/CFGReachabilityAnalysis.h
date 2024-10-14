@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_CFGREACHABILITYANALYSIS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_CFGREACHABILITYANALYSIS_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -28,7 +29,7 @@ class CFGBlock;
 // tend to have a common destination, so we lazily do a predecessor search
 // from the destination node and cache the results to prevent work
 // duplication.
-class CFGReverseBlockReachabilityAnalysis {
+class CLANG_ABI CFGReverseBlockReachabilityAnalysis {
   using ReachableSet = llvm::BitVector;
   using ReachableMap = llvm::DenseMap<unsigned, ReachableSet>;
 

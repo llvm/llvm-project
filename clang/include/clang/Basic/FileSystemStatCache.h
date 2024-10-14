@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_FILESYSTEMSTATCACHE_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
@@ -32,7 +33,7 @@ namespace clang {
 /// Abstract interface for introducing a FileManager cache for 'stat'
 /// system calls, which is used by precompiled and pretokenized headers to
 /// improve performance.
-class FileSystemStatCache {
+class CLANG_ABI FileSystemStatCache {
   virtual void anchor();
 
 public:
@@ -66,7 +67,7 @@ protected:
 /// A stat "cache" that can be used by FileManager to keep
 /// track of the results of stat() calls that occur throughout the
 /// execution of the front end.
-class MemorizeStatCalls : public FileSystemStatCache {
+class CLANG_ABI MemorizeStatCalls : public FileSystemStatCache {
 public:
   /// The set of stat() calls that have been seen.
   llvm::StringMap<llvm::vfs::Status, llvm::BumpPtrAllocator> StatCalls;

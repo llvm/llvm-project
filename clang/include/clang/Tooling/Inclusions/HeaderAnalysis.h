@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_INCLUSIONS_HEADER_ANALYSIS_H
 
 #include "clang/Basic/FileEntry.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
@@ -27,18 +28,18 @@ namespace tooling {
 ///
 /// This function can be expensive as it may scan the source code to find out
 /// dont-include-me pattern heuristically.
-bool isSelfContainedHeader(FileEntryRef FE, const SourceManager &SM,
+CLANG_ABI bool isSelfContainedHeader(FileEntryRef FE, const SourceManager &SM,
                            const HeaderSearch &HeaderInfo);
 
 /// This scans the given source code to see if it contains #import(s).
-bool codeContainsImports(llvm::StringRef Code);
+CLANG_ABI bool codeContainsImports(llvm::StringRef Code);
 
 /// If Text begins an Include-What-You-Use directive, returns it.
 /// Given "// IWYU pragma: keep", returns "keep".
 /// Input is a null-terminated char* as provided by SM.getCharacterData().
 /// (This should not be StringRef as we do *not* want to scan for its length).
 /// For multi-line comments, we return only the first line.
-std::optional<llvm::StringRef> parseIWYUPragma(const char *Text);
+CLANG_ABI std::optional<llvm::StringRef> parseIWYUPragma(const char *Text);
 
 } // namespace tooling
 } // namespace clang

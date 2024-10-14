@@ -15,6 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ImmutableSet.h"
 
 namespace clang {
@@ -25,9 +26,9 @@ class Stmt;
 class DeclRefExpr;
 class SourceManager;
 
-class LiveVariables : public ManagedAnalysis {
+class CLANG_ABI LiveVariables : public ManagedAnalysis {
 public:
-  class LivenessValues {
+  class CLANG_ABI LivenessValues {
   public:
 
     llvm::ImmutableSet<const Expr *> liveExprs;
@@ -51,7 +52,7 @@ public:
     friend class LiveVariables;
   };
 
-  class Observer {
+  class CLANG_ABI Observer {
     virtual void anchor();
   public:
     virtual ~Observer() {}
@@ -109,7 +110,7 @@ private:
   void *impl;
 };
 
-class RelaxedLiveVariables : public LiveVariables {
+class CLANG_ABI RelaxedLiveVariables : public LiveVariables {
 public:
   static std::unique_ptr<LiveVariables>
   create(AnalysisDeclContext &analysisContext) {

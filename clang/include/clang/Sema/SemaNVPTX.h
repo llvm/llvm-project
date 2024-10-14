@@ -15,11 +15,12 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class TargetInfo;
 
-class SemaNVPTX : public SemaBase {
+class CLANG_ABI SemaNVPTX : public SemaBase {
 public:
   SemaNVPTX(Sema &S);
 

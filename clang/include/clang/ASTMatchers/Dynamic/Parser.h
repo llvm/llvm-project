@@ -38,6 +38,7 @@
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -52,7 +53,7 @@ namespace dynamic {
 class Diagnostics;
 
 /// Matcher expression parser.
-class Parser {
+class CLANG_ABI Parser {
 public:
   /// Interface to connect the parser with the registry and more.
   ///
@@ -64,7 +65,7 @@ public:
   /// creation and do some extra work. For example, it could apply some
   /// transformation to the matcher by adding some id() nodes, or could detect
   /// specific matcher nodes for more efficient lookup.
-  class Sema {
+  class CLANG_ABI Sema {
   public:
     virtual ~Sema();
 
@@ -134,7 +135,7 @@ public:
 
   /// Sema implementation that uses the matcher registry to process the
   ///   tokens.
-  class RegistrySema : public Parser::Sema {
+  class CLANG_ABI RegistrySema : public Parser::Sema {
   public:
     ~RegistrySema() override;
 

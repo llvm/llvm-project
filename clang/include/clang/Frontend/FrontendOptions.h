@@ -14,6 +14,7 @@
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -276,7 +277,7 @@ public:
 };
 
 /// FrontendOptions - Options for controlling the behavior of the frontend.
-class FrontendOptions {
+class CLANG_ABI FrontendOptions {
 public:
   /// Disable memory freeing on exit.
   LLVM_PREFERRED_TYPE(bool)

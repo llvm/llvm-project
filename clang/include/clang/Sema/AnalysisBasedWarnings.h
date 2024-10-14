@@ -14,6 +14,7 @@
 #define LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include <memory>
 
@@ -29,9 +30,9 @@ namespace sema {
 
 namespace sema {
 
-class AnalysisBasedWarnings {
+class CLANG_ABI AnalysisBasedWarnings {
 public:
-  class Policy {
+  class CLANG_ABI Policy {
     friend class AnalysisBasedWarnings;
     // The warnings to run.
     LLVM_PREFERRED_TYPE(bool)

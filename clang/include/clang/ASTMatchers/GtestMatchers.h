@@ -16,6 +16,7 @@
 
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -42,42 +43,42 @@ enum class MockArgs {
 
 /// Matcher for gtest's ASSERT comparison macros including ASSERT_EQ, ASSERT_NE,
 /// ASSERT_GE, ASSERT_GT, ASSERT_LE and ASSERT_LT.
-internal::BindableMatcher<Stmt> gtestAssert(GtestCmp Cmp, StatementMatcher Left,
+CLANG_ABI internal::BindableMatcher<Stmt> gtestAssert(GtestCmp Cmp, StatementMatcher Left,
                                             StatementMatcher Right);
 
 /// Matcher for gtest's ASSERT_THAT macro.
-internal::BindableMatcher<Stmt> gtestAssertThat(StatementMatcher Actual,
+CLANG_ABI internal::BindableMatcher<Stmt> gtestAssertThat(StatementMatcher Actual,
                                                 StatementMatcher Matcher);
 
 /// Matcher for gtest's EXPECT comparison macros including EXPECT_EQ, EXPECT_NE,
 /// EXPECT_GE, EXPECT_GT, EXPECT_LE and EXPECT_LT.
-internal::BindableMatcher<Stmt> gtestExpect(GtestCmp Cmp, StatementMatcher Left,
+CLANG_ABI internal::BindableMatcher<Stmt> gtestExpect(GtestCmp Cmp, StatementMatcher Left,
                                             StatementMatcher Right);
 
 /// Matcher for gtest's EXPECT_THAT macro.
-internal::BindableMatcher<Stmt> gtestExpectThat(StatementMatcher Actual,
+CLANG_ABI internal::BindableMatcher<Stmt> gtestExpectThat(StatementMatcher Actual,
                                                 StatementMatcher Matcher);
 
 /// Matcher for gtest's EXPECT_CALL macro. `MockObject` matches the mock
 /// object and `MockMethodName` is the name of the method invoked on the mock
 /// object.
-internal::BindableMatcher<Stmt> gtestExpectCall(StatementMatcher MockObject,
+CLANG_ABI internal::BindableMatcher<Stmt> gtestExpectCall(StatementMatcher MockObject,
                                                 llvm::StringRef MockMethodName,
                                                 MockArgs Args);
 
 /// Matcher for gtest's EXPECT_CALL macro. `MockCall` matches the whole mock
 /// member method call. This API is more flexible but requires more knowledge of
 /// the AST structure of EXPECT_CALL macros.
-internal::BindableMatcher<Stmt> gtestExpectCall(StatementMatcher MockCall,
+CLANG_ABI internal::BindableMatcher<Stmt> gtestExpectCall(StatementMatcher MockCall,
                                                 MockArgs Args);
 
 /// Like the first `gtestExpectCall` overload but for `ON_CALL`.
-internal::BindableMatcher<Stmt> gtestOnCall(StatementMatcher MockObject,
+CLANG_ABI internal::BindableMatcher<Stmt> gtestOnCall(StatementMatcher MockObject,
                                             llvm::StringRef MockMethodName,
                                             MockArgs Args);
 
 /// Like the second `gtestExpectCall` overload but for `ON_CALL`.
-internal::BindableMatcher<Stmt> gtestOnCall(StatementMatcher MockCall,
+CLANG_ABI internal::BindableMatcher<Stmt> gtestOnCall(StatementMatcher MockCall,
                                             MockArgs Args);
 
 } // namespace ast_matchers

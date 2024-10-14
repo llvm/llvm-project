@@ -25,6 +25,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -55,11 +56,11 @@ class TypeSourceInfo;
   // previous decl and the next item is actually the previous item in the order
   // of source locations.  Thus, `Decl::redecls()` gives different lists for
   // the different entries in a given redecl chain.
-  llvm::SmallVector<Decl*, 2> getCanonicalForwardRedeclChain(Decl* D);
+  CLANG_ABI llvm::SmallVector<Decl*, 2> getCanonicalForwardRedeclChain(Decl* D);
 
   /// Imports selected nodes from one AST context into another context,
   /// merging AST nodes where appropriate.
-  class ASTImporter {
+  class CLANG_ABI ASTImporter {
     friend class ASTNodeImporter;
   public:
     using NonEquivalentDeclSet = llvm::DenseSet<std::pair<Decl *, Decl *>>;

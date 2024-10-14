@@ -12,10 +12,11 @@
 #include "clang/AST/ASTNodeTraverser.h"
 #include "clang/AST/TextNodeDumper.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
-class ASTDumper : public ASTNodeTraverser<ASTDumper, TextNodeDumper> {
+class CLANG_ABI ASTDumper : public ASTNodeTraverser<ASTDumper, TextNodeDumper> {
 
   TextNodeDumper NodeDumper;
 

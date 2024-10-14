@@ -17,6 +17,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -25,7 +26,7 @@ class VarDecl;
 
 /// CXXCatchStmt - This represents a C++ catch block.
 ///
-class CXXCatchStmt : public Stmt {
+class CLANG_ABI CXXCatchStmt : public Stmt {
   SourceLocation CatchLoc;
   /// The exception-declaration of the type.
   VarDecl *ExceptionDecl;
@@ -65,7 +66,7 @@ public:
 
 /// CXXTryStmt - A C++ try block, including all handlers.
 ///
-class CXXTryStmt final : public Stmt,
+class CLANG_ABI CXXTryStmt final : public Stmt,
                          private llvm::TrailingObjects<CXXTryStmt, Stmt *> {
 
   friend TrailingObjects;
@@ -132,7 +133,7 @@ public:
 /// This is stored in a partially-desugared form to allow full semantic
 /// analysis of the constituent components. The original syntactic components
 /// can be extracted using getLoopVariable and getRangeInit.
-class CXXForRangeStmt : public Stmt {
+class CLANG_ABI CXXForRangeStmt : public Stmt {
   SourceLocation ForLoc;
   enum { INIT, RANGE, BEGINSTMT, ENDSTMT, COND, INC, LOOPVAR, BODY, END };
   // SubExprs[RANGE] is an expression or declstmt.
@@ -315,7 +316,7 @@ public:
 /// Represents the body of a coroutine. This wraps the normal function
 /// body and holds the additional semantic context required to set up and tear
 /// down the coroutine frame.
-class CoroutineBodyStmt final
+class CLANG_ABI CoroutineBodyStmt final
     : public Stmt,
       private llvm::TrailingObjects<CoroutineBodyStmt, Stmt *> {
   enum SubStmt {

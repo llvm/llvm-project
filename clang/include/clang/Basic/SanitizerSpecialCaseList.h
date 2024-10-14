@@ -16,6 +16,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include <memory>
@@ -29,7 +30,7 @@ class FileSystem;
 
 namespace clang {
 
-class SanitizerSpecialCaseList : public llvm::SpecialCaseList {
+class CLANG_ABI SanitizerSpecialCaseList : public llvm::SpecialCaseList {
 public:
   static std::unique_ptr<SanitizerSpecialCaseList>
   create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &VFS,

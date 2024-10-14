@@ -11,6 +11,7 @@
 
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,7 +30,7 @@ namespace clang {
 
 namespace arcmt {
 
-class FileRemapper {
+class CLANG_ABI FileRemapper {
   // FIXME: Reuse the same FileManager for multiple ASTContexts.
   std::unique_ptr<FileManager> FileMgr;
 

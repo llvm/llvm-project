@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_SYNTAX_TOKEN_BUFFER_TOKEN_MANAGER_H
 #define LLVM_CLANG_TOOLING_SYNTAX_TOKEN_BUFFER_TOKEN_MANAGER_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Syntax/TokenManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 
@@ -17,7 +18,7 @@ namespace syntax {
 
 /// A TokenBuffer-powered token manager.
 /// It tracks the underlying token buffers, source manager, etc.
-class TokenBufferTokenManager : public TokenManager {
+class CLANG_ABI TokenBufferTokenManager : public TokenManager {
 public:
   TokenBufferTokenManager(const TokenBuffer &Tokens,
                           const LangOptions &LangOpts, SourceManager &SourceMgr)

@@ -22,6 +22,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Casting.h"
@@ -49,7 +50,7 @@ class ASTContext;
 /// @endcode
 ///
 /// The semantic context of a friend decl is its declaring class.
-class FriendDecl final
+class CLANG_ABI FriendDecl final
     : public Decl,
       private llvm::TrailingObjects<FriendDecl, TemplateParameterList *> {
   virtual void anchor();

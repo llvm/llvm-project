@@ -23,6 +23,7 @@
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <iterator>
 
@@ -33,7 +34,7 @@ class CXXRecordDecl;
 class NamedDecl;
 
 /// A dependently-generated diagnostic.
-class DependentDiagnostic {
+class CLANG_ABI DependentDiagnostic {
 public:
   enum AccessNonce { Access = 0 };
 

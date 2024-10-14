@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTION_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 #include <type_traits>
 
@@ -23,7 +24,7 @@ class RefactoringOptionVisitor;
 ///
 /// Refactoring options can be specified using command-line arguments when
 /// the clang-refactor tool is used.
-class RefactoringOption {
+class CLANG_ABI RefactoringOption {
 public:
   virtual ~RefactoringOption() {}
 

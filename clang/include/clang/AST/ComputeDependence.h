@@ -15,6 +15,7 @@
 
 #include "clang/AST/DependenceFlags.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace clang {
@@ -111,101 +112,101 @@ class OpenACCAsteriskSizeExpr;
 
 // The following functions are called from constructors of `Expr`, so they
 // should not access anything beyond basic
-ExprDependence computeDependence(FullExpr *E);
-ExprDependence computeDependence(OpaqueValueExpr *E);
-ExprDependence computeDependence(ParenExpr *E);
-ExprDependence computeDependence(UnaryOperator *E, const ASTContext &Ctx);
-ExprDependence computeDependence(UnaryExprOrTypeTraitExpr *E);
-ExprDependence computeDependence(ArraySubscriptExpr *E);
-ExprDependence computeDependence(MatrixSubscriptExpr *E);
-ExprDependence computeDependence(CompoundLiteralExpr *E);
-ExprDependence computeDependence(ImplicitCastExpr *E);
-ExprDependence computeDependence(ExplicitCastExpr *E);
-ExprDependence computeDependence(BinaryOperator *E);
-ExprDependence computeDependence(ConditionalOperator *E);
-ExprDependence computeDependence(BinaryConditionalOperator *E);
-ExprDependence computeDependence(StmtExpr *E, unsigned TemplateDepth);
-ExprDependence computeDependence(ConvertVectorExpr *E);
-ExprDependence computeDependence(VAArgExpr *E);
-ExprDependence computeDependence(ChooseExpr *E);
-ExprDependence computeDependence(NoInitExpr *E);
-ExprDependence computeDependence(ArrayInitLoopExpr *E);
-ExprDependence computeDependence(ImplicitValueInitExpr *E);
-ExprDependence computeDependence(InitListExpr *E);
-ExprDependence computeDependence(ExtVectorElementExpr *E);
-ExprDependence computeDependence(BlockExpr *E,
+CLANG_ABI ExprDependence computeDependence(FullExpr *E);
+CLANG_ABI ExprDependence computeDependence(OpaqueValueExpr *E);
+CLANG_ABI ExprDependence computeDependence(ParenExpr *E);
+CLANG_ABI ExprDependence computeDependence(UnaryOperator *E, const ASTContext &Ctx);
+CLANG_ABI ExprDependence computeDependence(UnaryExprOrTypeTraitExpr *E);
+CLANG_ABI ExprDependence computeDependence(ArraySubscriptExpr *E);
+CLANG_ABI ExprDependence computeDependence(MatrixSubscriptExpr *E);
+CLANG_ABI ExprDependence computeDependence(CompoundLiteralExpr *E);
+CLANG_ABI ExprDependence computeDependence(ImplicitCastExpr *E);
+CLANG_ABI ExprDependence computeDependence(ExplicitCastExpr *E);
+CLANG_ABI ExprDependence computeDependence(BinaryOperator *E);
+CLANG_ABI ExprDependence computeDependence(ConditionalOperator *E);
+CLANG_ABI ExprDependence computeDependence(BinaryConditionalOperator *E);
+CLANG_ABI ExprDependence computeDependence(StmtExpr *E, unsigned TemplateDepth);
+CLANG_ABI ExprDependence computeDependence(ConvertVectorExpr *E);
+CLANG_ABI ExprDependence computeDependence(VAArgExpr *E);
+CLANG_ABI ExprDependence computeDependence(ChooseExpr *E);
+CLANG_ABI ExprDependence computeDependence(NoInitExpr *E);
+CLANG_ABI ExprDependence computeDependence(ArrayInitLoopExpr *E);
+CLANG_ABI ExprDependence computeDependence(ImplicitValueInitExpr *E);
+CLANG_ABI ExprDependence computeDependence(InitListExpr *E);
+CLANG_ABI ExprDependence computeDependence(ExtVectorElementExpr *E);
+CLANG_ABI ExprDependence computeDependence(BlockExpr *E,
                                  bool ContainsUnexpandedParameterPack);
-ExprDependence computeDependence(AsTypeExpr *E);
-ExprDependence computeDependence(DeclRefExpr *E, const ASTContext &Ctx);
-ExprDependence computeDependence(RecoveryExpr *E);
-ExprDependence computeDependence(CXXRewrittenBinaryOperator *E);
-ExprDependence computeDependence(CXXStdInitializerListExpr *E);
-ExprDependence computeDependence(CXXTypeidExpr *E);
-ExprDependence computeDependence(MSPropertyRefExpr *E);
-ExprDependence computeDependence(MSPropertySubscriptExpr *E);
-ExprDependence computeDependence(CXXUuidofExpr *E);
-ExprDependence computeDependence(CXXThisExpr *E);
-ExprDependence computeDependence(CXXThrowExpr *E);
-ExprDependence computeDependence(CXXBindTemporaryExpr *E);
-ExprDependence computeDependence(CXXScalarValueInitExpr *E);
-ExprDependence computeDependence(CXXDeleteExpr *E);
-ExprDependence computeDependence(ArrayTypeTraitExpr *E);
-ExprDependence computeDependence(ExpressionTraitExpr *E);
-ExprDependence computeDependence(CXXNoexceptExpr *E, CanThrowResult CT);
-ExprDependence computeDependence(PackExpansionExpr *E);
-ExprDependence computeDependence(PackIndexingExpr *E);
-ExprDependence computeDependence(SubstNonTypeTemplateParmExpr *E);
-ExprDependence computeDependence(CoroutineSuspendExpr *E);
-ExprDependence computeDependence(DependentCoawaitExpr *E);
-ExprDependence computeDependence(CXXNewExpr *E);
-ExprDependence computeDependence(CXXPseudoDestructorExpr *E);
-ExprDependence computeDependence(OverloadExpr *E, bool KnownDependent,
+CLANG_ABI ExprDependence computeDependence(AsTypeExpr *E);
+CLANG_ABI ExprDependence computeDependence(DeclRefExpr *E, const ASTContext &Ctx);
+CLANG_ABI ExprDependence computeDependence(RecoveryExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXRewrittenBinaryOperator *E);
+CLANG_ABI ExprDependence computeDependence(CXXStdInitializerListExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXTypeidExpr *E);
+CLANG_ABI ExprDependence computeDependence(MSPropertyRefExpr *E);
+CLANG_ABI ExprDependence computeDependence(MSPropertySubscriptExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXUuidofExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXThisExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXThrowExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXBindTemporaryExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXScalarValueInitExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXDeleteExpr *E);
+CLANG_ABI ExprDependence computeDependence(ArrayTypeTraitExpr *E);
+CLANG_ABI ExprDependence computeDependence(ExpressionTraitExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXNoexceptExpr *E, CanThrowResult CT);
+CLANG_ABI ExprDependence computeDependence(PackExpansionExpr *E);
+CLANG_ABI ExprDependence computeDependence(PackIndexingExpr *E);
+CLANG_ABI ExprDependence computeDependence(SubstNonTypeTemplateParmExpr *E);
+CLANG_ABI ExprDependence computeDependence(CoroutineSuspendExpr *E);
+CLANG_ABI ExprDependence computeDependence(DependentCoawaitExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXNewExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXPseudoDestructorExpr *E);
+CLANG_ABI ExprDependence computeDependence(OverloadExpr *E, bool KnownDependent,
                                  bool KnownInstantiationDependent,
                                  bool KnownContainsUnexpandedParameterPack);
-ExprDependence computeDependence(DependentScopeDeclRefExpr *E);
-ExprDependence computeDependence(CXXConstructExpr *E);
-ExprDependence computeDependence(CXXTemporaryObjectExpr *E);
-ExprDependence computeDependence(CXXDefaultInitExpr *E);
-ExprDependence computeDependence(CXXDefaultArgExpr *E);
-ExprDependence computeDependence(LambdaExpr *E,
+CLANG_ABI ExprDependence computeDependence(DependentScopeDeclRefExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXConstructExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXTemporaryObjectExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXDefaultInitExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXDefaultArgExpr *E);
+CLANG_ABI ExprDependence computeDependence(LambdaExpr *E,
                                  bool ContainsUnexpandedParameterPack);
-ExprDependence computeDependence(CXXUnresolvedConstructExpr *E);
-ExprDependence computeDependence(CXXDependentScopeMemberExpr *E);
-ExprDependence computeDependence(MaterializeTemporaryExpr *E);
-ExprDependence computeDependence(CXXFoldExpr *E);
-ExprDependence computeDependence(CXXParenListInitExpr *E);
-ExprDependence computeDependence(TypeTraitExpr *E);
-ExprDependence computeDependence(ConceptSpecializationExpr *E,
+CLANG_ABI ExprDependence computeDependence(CXXUnresolvedConstructExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXDependentScopeMemberExpr *E);
+CLANG_ABI ExprDependence computeDependence(MaterializeTemporaryExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXFoldExpr *E);
+CLANG_ABI ExprDependence computeDependence(CXXParenListInitExpr *E);
+CLANG_ABI ExprDependence computeDependence(TypeTraitExpr *E);
+CLANG_ABI ExprDependence computeDependence(ConceptSpecializationExpr *E,
                                  bool ValueDependent);
 
-ExprDependence computeDependence(SYCLUniqueStableNameExpr *E);
-ExprDependence computeDependence(PredefinedExpr *E);
-ExprDependence computeDependence(CallExpr *E, llvm::ArrayRef<Expr *> PreArgs);
-ExprDependence computeDependence(OffsetOfExpr *E);
-ExprDependence computeDependence(MemberExpr *E);
-ExprDependence computeDependence(ShuffleVectorExpr *E);
-ExprDependence computeDependence(GenericSelectionExpr *E,
+CLANG_ABI ExprDependence computeDependence(SYCLUniqueStableNameExpr *E);
+CLANG_ABI ExprDependence computeDependence(PredefinedExpr *E);
+CLANG_ABI ExprDependence computeDependence(CallExpr *E, llvm::ArrayRef<Expr *> PreArgs);
+CLANG_ABI ExprDependence computeDependence(OffsetOfExpr *E);
+CLANG_ABI ExprDependence computeDependence(MemberExpr *E);
+CLANG_ABI ExprDependence computeDependence(ShuffleVectorExpr *E);
+CLANG_ABI ExprDependence computeDependence(GenericSelectionExpr *E,
                                  bool ContainsUnexpandedPack);
-ExprDependence computeDependence(DesignatedInitExpr *E);
-ExprDependence computeDependence(ParenListExpr *E);
-ExprDependence computeDependence(PseudoObjectExpr *E);
-ExprDependence computeDependence(AtomicExpr *E);
+CLANG_ABI ExprDependence computeDependence(DesignatedInitExpr *E);
+CLANG_ABI ExprDependence computeDependence(ParenListExpr *E);
+CLANG_ABI ExprDependence computeDependence(PseudoObjectExpr *E);
+CLANG_ABI ExprDependence computeDependence(AtomicExpr *E);
 
-ExprDependence computeDependence(ArraySectionExpr *E);
-ExprDependence computeDependence(OMPArrayShapingExpr *E);
-ExprDependence computeDependence(OMPIteratorExpr *E);
+CLANG_ABI ExprDependence computeDependence(ArraySectionExpr *E);
+CLANG_ABI ExprDependence computeDependence(OMPArrayShapingExpr *E);
+CLANG_ABI ExprDependence computeDependence(OMPIteratorExpr *E);
 
-ExprDependence computeDependence(ObjCArrayLiteral *E);
-ExprDependence computeDependence(ObjCDictionaryLiteral *E);
-ExprDependence computeDependence(ObjCBoxedExpr *E);
-ExprDependence computeDependence(ObjCEncodeExpr *E);
-ExprDependence computeDependence(ObjCIvarRefExpr *E);
-ExprDependence computeDependence(ObjCPropertyRefExpr *E);
-ExprDependence computeDependence(ObjCSubscriptRefExpr *E);
-ExprDependence computeDependence(ObjCIsaExpr *E);
-ExprDependence computeDependence(ObjCIndirectCopyRestoreExpr *E);
-ExprDependence computeDependence(ObjCMessageExpr *E);
-ExprDependence computeDependence(OpenACCAsteriskSizeExpr *E);
+CLANG_ABI ExprDependence computeDependence(ObjCArrayLiteral *E);
+CLANG_ABI ExprDependence computeDependence(ObjCDictionaryLiteral *E);
+CLANG_ABI ExprDependence computeDependence(ObjCBoxedExpr *E);
+CLANG_ABI ExprDependence computeDependence(ObjCEncodeExpr *E);
+CLANG_ABI ExprDependence computeDependence(ObjCIvarRefExpr *E);
+CLANG_ABI ExprDependence computeDependence(ObjCPropertyRefExpr *E);
+CLANG_ABI ExprDependence computeDependence(ObjCSubscriptRefExpr *E);
+CLANG_ABI ExprDependence computeDependence(ObjCIsaExpr *E);
+CLANG_ABI ExprDependence computeDependence(ObjCIndirectCopyRestoreExpr *E);
+CLANG_ABI ExprDependence computeDependence(ObjCMessageExpr *E);
+CLANG_ABI ExprDependence computeDependence(OpenACCAsteriskSizeExpr *E);
 
 } // namespace clang
 #endif

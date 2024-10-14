@@ -18,6 +18,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Support/Compiler.h"
 #include <optional>
 #include <tuple>
 
@@ -30,10 +31,10 @@ class Preprocessor;
 
 namespace ento {
 
-bool containsMacro(const Stmt *S);
-bool containsEnum(const Stmt *S);
-bool containsStaticLocal(const Stmt *S);
-bool containsBuiltinOffsetOf(const Stmt *S);
+CLANG_ABI bool containsMacro(const Stmt *S);
+CLANG_ABI bool containsEnum(const Stmt *S);
+CLANG_ABI bool containsStaticLocal(const Stmt *S);
+CLANG_ABI bool containsBuiltinOffsetOf(const Stmt *S);
 template <class T> bool containsStmt(const Stmt *S) {
   if (isa<T>(S))
       return true;
@@ -45,7 +46,7 @@ template <class T> bool containsStmt(const Stmt *S) {
   return false;
 }
 
-std::pair<const clang::VarDecl *, const clang::Expr *>
+CLANG_ABI std::pair<const clang::VarDecl *, const clang::Expr *>
 parseAssignment(const Stmt *S);
 
 // Do not reorder! The getMostNullable method relies on the order.
@@ -65,13 +66,13 @@ enum class Nullability : char {
 };
 
 /// Get nullability annotation for a given type.
-Nullability getNullabilityAnnotation(QualType Type);
+CLANG_ABI Nullability getNullabilityAnnotation(QualType Type);
 
 /// Try to parse the value of a defined preprocessor macro. We can only parse
 /// simple expressions that consist of an optional minus sign token and then a
 /// token for an integer. If we cannot parse the value then std::nullopt is
 /// returned.
-std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP);
+CLANG_ABI std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP);
 
 class OperatorKind {
   union {
@@ -109,14 +110,14 @@ public:
   }
 };
 
-OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
+CLANG_ABI OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
                                                  bool IsBinary);
 
-std::optional<SVal> getPointeeVal(SVal PtrSVal, ProgramStateRef State);
+CLANG_ABI std::optional<SVal> getPointeeVal(SVal PtrSVal, ProgramStateRef State);
 
 /// Returns true if declaration \p D is in std namespace or any nested namespace
 /// or class scope.
-bool isWithinStdNamespace(const Decl *D);
+CLANG_ABI bool isWithinStdNamespace(const Decl *D);
 
 } // namespace ento
 

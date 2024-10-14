@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_EXTRACT_H
 #define LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_EXTRACT_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRules.h"
 #include <optional>
@@ -18,7 +19,7 @@ namespace tooling {
 
 /// An "Extract Function" refactoring moves code into a new function that's
 /// then called from the place where the original code was.
-class ExtractFunction final : public SourceChangeRefactoringRule {
+class CLANG_ABI ExtractFunction final : public SourceChangeRefactoringRule {
 public:
   /// Initiates the extract function refactoring operation.
   ///

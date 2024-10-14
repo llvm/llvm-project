@@ -17,6 +17,7 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 
@@ -38,7 +39,7 @@ class CGFunctionInfo;
 
 namespace swiftcall {
 
-class SwiftAggLowering {
+class CLANG_ABI SwiftAggLowering {
   CodeGenModule &CGM;
 
   struct StorageEntry {
@@ -120,29 +121,29 @@ private:
 
 /// Should an aggregate which expands to the given type sequence
 /// be passed/returned indirectly under swiftcall?
-bool shouldPassIndirectly(CodeGenModule &CGM,
+CLANG_ABI bool shouldPassIndirectly(CodeGenModule &CGM,
                           ArrayRef<llvm::Type*> types,
                           bool asReturnValue);
 
 /// Return the maximum voluntary integer size for the current target.
-CharUnits getMaximumVoluntaryIntegerSize(CodeGenModule &CGM);
+CLANG_ABI CharUnits getMaximumVoluntaryIntegerSize(CodeGenModule &CGM);
 
 /// Return the Swift CC's notion of the natural alignment of a type.
-CharUnits getNaturalAlignment(CodeGenModule &CGM, llvm::Type *type);
+CLANG_ABI CharUnits getNaturalAlignment(CodeGenModule &CGM, llvm::Type *type);
 
 /// Is the given integer type "legal" for Swift's perspective on the
 /// current platform?
-bool isLegalIntegerType(CodeGenModule &CGM, llvm::IntegerType *type);
+CLANG_ABI bool isLegalIntegerType(CodeGenModule &CGM, llvm::IntegerType *type);
 
 /// Is the given vector type "legal" for Swift's perspective on the
 /// current platform?
-bool isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
+CLANG_ABI bool isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                        llvm::VectorType *vectorTy);
-bool isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
+CLANG_ABI bool isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                        llvm::Type *eltTy, unsigned numElts);
 
 /// Minimally split a legal vector type.
-std::pair<llvm::Type*, unsigned>
+CLANG_ABI std::pair<llvm::Type*, unsigned>
 splitLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                      llvm::VectorType *vectorTy);
 
@@ -150,7 +151,7 @@ splitLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
 ///
 /// The caller may assume that the sum of the data sizes of the resulting
 /// types will equal the data size of the vector type.
-void legalizeVectorType(CodeGenModule &CGM, CharUnits vectorSize,
+CLANG_ABI void legalizeVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                         llvm::VectorType *vectorTy,
                         llvm::SmallVectorImpl<llvm::Type*> &types);
 
@@ -162,20 +163,20 @@ void legalizeVectorType(CodeGenModule &CGM, CharUnits vectorSize,
 /// references.  A record for which this returns true may still be passed
 /// indirectly for other reasons, such as being too large to fit in a
 /// reasonable number of registers.
-bool mustPassRecordIndirectly(CodeGenModule &CGM, const RecordDecl *record);
+CLANG_ABI bool mustPassRecordIndirectly(CodeGenModule &CGM, const RecordDecl *record);
 
 /// Classify the rules for how to return a particular type.
-ABIArgInfo classifyReturnType(CodeGenModule &CGM, CanQualType type);
+CLANG_ABI ABIArgInfo classifyReturnType(CodeGenModule &CGM, CanQualType type);
 
 /// Classify the rules for how to pass a particular type.
-ABIArgInfo classifyArgumentType(CodeGenModule &CGM, CanQualType type);
+CLANG_ABI ABIArgInfo classifyArgumentType(CodeGenModule &CGM, CanQualType type);
 
 /// Compute the ABI information of a swiftcall function.  This is a
 /// private interface for Clang.
-void computeABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
+CLANG_ABI void computeABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 
 /// Is swifterror lowered to a register by the target ABI?
-bool isSwiftErrorLoweredInRegister(CodeGenModule &CGM);
+CLANG_ABI bool isSwiftErrorLoweredInRegister(CodeGenModule &CGM);
 
 } // end namespace swiftcall
 } // end namespace CodeGen

@@ -16,6 +16,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include <functional>
 #include <memory>
 
@@ -27,7 +28,7 @@ namespace ento {
 class PathDiagnosticConsumer;
 class CheckerRegistry;
 
-class AnalysisASTConsumer : public ASTConsumer {
+class CLANG_ABI AnalysisASTConsumer : public ASTConsumer {
 public:
   virtual void AddDiagnosticConsumer(PathDiagnosticConsumer *Consumer) = 0;
 
@@ -48,7 +49,7 @@ public:
 /// CreateAnalysisConsumer - Creates an ASTConsumer to run various code
 /// analysis passes.  (The set of analyses run is controlled by command-line
 /// options.)
-std::unique_ptr<AnalysisASTConsumer>
+CLANG_ABI std::unique_ptr<AnalysisASTConsumer>
 CreateAnalysisConsumer(CompilerInstance &CI);
 
 } // namespace ento

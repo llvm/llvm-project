@@ -16,6 +16,7 @@
 
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include <optional>
@@ -25,7 +26,7 @@ namespace clang {
 namespace dataflow {
 
 /// An interface for a SAT solver that can be used by dataflow analyses.
-class Solver {
+class CLANG_ABI Solver {
 public:
   struct Result {
     enum class Status {
@@ -92,8 +93,8 @@ public:
   virtual bool reachedLimit() const = 0;
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Solver::Result &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, Solver::Result::Assignment);
+CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Solver::Result &);
+CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &, Solver::Result::Assignment);
 
 } // namespace dataflow
 } // namespace clang

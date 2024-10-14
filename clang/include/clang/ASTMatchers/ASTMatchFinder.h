@@ -41,6 +41,7 @@
 #define LLVM_CLANG_ASTMATCHERS_ASTMATCHFINDER_H
 
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Timer.h"
@@ -66,13 +67,13 @@ namespace ast_matchers {
 /// See ASTMatchers.h for more information about how to create matchers.
 ///
 /// Not intended to be subclassed.
-class MatchFinder {
+class CLANG_ABI MatchFinder {
 public:
   /// Contains all information for a given match.
   ///
   /// Every time a match is found, the MatchFinder will invoke the registered
   /// MatchCallback with a MatchResult containing information about the match.
-  struct MatchResult {
+  struct CLANG_ABI MatchResult {
     MatchResult(const BoundNodes &Nodes, clang::ASTContext *Context);
 
     /// Contains the nodes bound on the current match.
@@ -89,7 +90,7 @@ public:
 
   /// Called when the Match registered for it was successfully found
   /// in the AST.
-  class MatchCallback {
+  class CLANG_ABI MatchCallback {
   public:
     virtual ~MatchCallback();
 
@@ -120,7 +121,7 @@ public:
   };
 
   /// Called when parsing is finished. Intended for testing only.
-  class ParsingDoneTestCallback {
+  class CLANG_ABI ParsingDoneTestCallback {
   public:
     virtual ~ParsingDoneTestCallback();
     virtual void run() = 0;

@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/MacroInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/DataTypes.h"
 
@@ -148,28 +149,28 @@ struct SymbolInfo {
   SymbolPropertySet Properties;
 };
 
-SymbolInfo getSymbolInfo(const Decl *D);
+CLANG_ABI SymbolInfo getSymbolInfo(const Decl *D);
 
-SymbolInfo getSymbolInfoForMacro(const MacroInfo &MI);
+CLANG_ABI SymbolInfo getSymbolInfoForMacro(const MacroInfo &MI);
 
-bool isFunctionLocalSymbol(const Decl *D);
+CLANG_ABI bool isFunctionLocalSymbol(const Decl *D);
 
-void applyForEachSymbolRole(SymbolRoleSet Roles,
+CLANG_ABI void applyForEachSymbolRole(SymbolRoleSet Roles,
                             llvm::function_ref<void(SymbolRole)> Fn);
-bool applyForEachSymbolRoleInterruptible(SymbolRoleSet Roles,
+CLANG_ABI bool applyForEachSymbolRoleInterruptible(SymbolRoleSet Roles,
                             llvm::function_ref<bool(SymbolRole)> Fn);
-void printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS);
+CLANG_ABI void printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS);
 
 /// \returns true if no name was printed, false otherwise.
-bool printSymbolName(const Decl *D, const LangOptions &LO, raw_ostream &OS);
+CLANG_ABI bool printSymbolName(const Decl *D, const LangOptions &LO, raw_ostream &OS);
 
-StringRef getSymbolKindString(SymbolKind K);
-StringRef getSymbolSubKindString(SymbolSubKind K);
-StringRef getSymbolLanguageString(SymbolLanguage K);
+CLANG_ABI StringRef getSymbolKindString(SymbolKind K);
+CLANG_ABI StringRef getSymbolSubKindString(SymbolSubKind K);
+CLANG_ABI StringRef getSymbolLanguageString(SymbolLanguage K);
 
-void applyForEachSymbolProperty(SymbolPropertySet Props,
+CLANG_ABI void applyForEachSymbolProperty(SymbolPropertySet Props,
                             llvm::function_ref<void(SymbolProperty)> Fn);
-void printSymbolProperties(SymbolPropertySet Props, raw_ostream &OS);
+CLANG_ABI void printSymbolProperties(SymbolPropertySet Props, raw_ostream &OS);
 
 } // namespace index
 } // namespace clang

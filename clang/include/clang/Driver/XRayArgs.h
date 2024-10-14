@@ -10,6 +10,7 @@
 
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Driver/Types.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 
@@ -18,7 +19,7 @@ namespace driver {
 
 class ToolChain;
 
-class XRayArgs {
+class CLANG_ABI XRayArgs {
   std::vector<std::string> AlwaysInstrumentFiles;
   std::vector<std::string> NeverInstrumentFiles;
   std::vector<std::string> AttrListFiles;

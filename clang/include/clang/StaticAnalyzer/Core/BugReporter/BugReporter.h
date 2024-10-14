@@ -26,6 +26,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
@@ -74,7 +75,7 @@ using DiagnosticForConsumerMapTy =
 ///
 /// If a PathDiagnosticEvent occurs in a different frame than the final
 /// diagnostic the hints can be used to summarize the effect of the call.
-class StackHintGenerator {
+class CLANG_ABI StackHintGenerator {
 public:
   virtual ~StackHintGenerator() = 0;
 
@@ -88,7 +89,7 @@ public:
 /// traversing the CallExpr associated with the call and checking if the given
 /// symbol is returned or is one of the arguments.
 /// The hint can be customized by redefining 'getMessageForX()' methods.
-class StackHintGeneratorForSymbol : public StackHintGenerator {
+class CLANG_ABI StackHintGeneratorForSymbol : public StackHintGenerator {
 private:
   SymbolRef Sym;
   std::string Msg;
@@ -116,7 +117,7 @@ public:
 
 /// This class provides an interface through which checkers can create
 /// individual bug reports.
-class BugReport {
+class CLANG_ABI BugReport {
 public:
   enum class Kind { Basic, PathSensitive };
 
@@ -248,7 +249,7 @@ public:
   virtual void Profile(llvm::FoldingSetNodeID& hash) const = 0;
 };
 
-class BasicBugReport : public BugReport {
+class CLANG_ABI BasicBugReport : public BugReport {
   PathDiagnosticLocation Location;
   const Decl *DeclWithIssue = nullptr;
 
@@ -286,7 +287,7 @@ public:
   void Profile(llvm::FoldingSetNodeID& hash) const override;
 };
 
-class PathSensitiveBugReport : public BugReport {
+class CLANG_ABI PathSensitiveBugReport : public BugReport {
 public:
   using VisitorList = SmallVector<std::unique_ptr<BugReporterVisitor>, 8>;
   using visitor_iterator = VisitorList::iterator;
@@ -566,7 +567,7 @@ public:
 // BugReporter and friends.
 //===----------------------------------------------------------------------===//
 
-class BugReporterData {
+class CLANG_ABI BugReporterData {
 public:
   virtual ~BugReporterData() = default;
 
@@ -582,7 +583,7 @@ public:
 /// and flush the corresponding diagnostics.
 ///
 /// The base class is used for generating path-insensitive
-class BugReporter {
+class CLANG_ABI BugReporter {
 private:
   BugReporterData& D;
 
@@ -676,7 +677,7 @@ protected:
 };
 
 /// GRBugReporter is used for generating path-sensitive reports.
-class PathSensitiveBugReporter final : public BugReporter {
+class CLANG_ABI PathSensitiveBugReporter final : public BugReporter {
   ExprEngine& Eng;
 
   BugReport *findReportInEquivalenceClass(
@@ -713,7 +714,7 @@ public:
 };
 
 
-class BugReporterContext {
+class CLANG_ABI BugReporterContext {
   PathSensitiveBugReporter &BR;
 
   virtual void anchor();
@@ -776,7 +777,7 @@ protected:
 
 /// The tag upon which the TagVisitor reacts. Add these in order to display
 /// additional PathDiagnosticEventPieces along the path.
-class NoteTag : public DataTag {
+class CLANG_ABI NoteTag : public DataTag {
 public:
   using Callback = std::function<std::string(BugReporterContext &,
                                              PathSensitiveBugReport &)>;

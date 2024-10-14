@@ -16,6 +16,7 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
@@ -77,7 +78,7 @@ inline bool operator<(unsigned Offset, const LineEntry &E) {
 }
 
 /// Used to hold and unique data used to represent \#line information.
-class LineTableInfo {
+class CLANG_ABI LineTableInfo {
   /// Map used to assign unique IDs to filenames in \#line directives.
   ///
   /// This allows us to unique the filenames that

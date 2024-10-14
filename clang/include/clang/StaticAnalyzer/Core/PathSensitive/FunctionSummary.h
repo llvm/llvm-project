@@ -15,6 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -29,7 +30,7 @@ namespace ento {
 using SetOfDecls = std::deque<Decl *>;
 using SetOfConstDecls = llvm::DenseSet<const Decl *>;
 
-class FunctionSummariesTy {
+class CLANG_ABI FunctionSummariesTy {
   class FunctionSummary {
   public:
     /// Marks the IDs of the basic blocks visited during the analyzes.

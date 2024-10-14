@@ -18,6 +18,7 @@
 
 #include "clang/ASTMatchers/Dynamic/Diagnostics.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
@@ -35,7 +36,7 @@ class MatcherDescriptor;
 
 /// A smart (owning) pointer for MatcherDescriptor. We can't use unique_ptr
 /// because MatcherDescriptor is forward declared
-class MatcherDescriptorPtr {
+class CLANG_ABI MatcherDescriptorPtr {
 public:
   explicit MatcherDescriptorPtr(MatcherDescriptor *);
   ~MatcherDescriptorPtr();
@@ -79,7 +80,7 @@ struct MatcherCompletion {
   unsigned Specificity;
 };
 
-class Registry {
+class CLANG_ABI Registry {
 public:
   Registry() = delete;
 

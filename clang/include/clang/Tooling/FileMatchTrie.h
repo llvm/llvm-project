@@ -15,6 +15,7 @@
 #define LLVM_CLANG_TOOLING_FILEMATCHTRIE_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 
@@ -23,7 +24,7 @@ namespace tooling {
 
 class FileMatchTrieNode;
 
-struct PathComparator {
+struct CLANG_ABI PathComparator {
   virtual ~PathComparator() = default;
 
   virtual bool equivalent(StringRef FileA, StringRef FileB) const = 0;
@@ -53,7 +54,7 @@ struct PathComparator {
 /// 0  equivalent files: Continue with the next suffix length.
 /// 1  equivalent file:  Best match found, return it.
 /// >1 equivalent files: Match is ambiguous, return error.
-class FileMatchTrie {
+class CLANG_ABI FileMatchTrie {
 public:
   FileMatchTrie();
 

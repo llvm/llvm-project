@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_MULTILIB_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -32,7 +33,7 @@ class Driver;
 /// by a command line flag.
 /// See also MultilibBuilder for building a multilib by mutating it
 /// incrementally.
-class Multilib {
+class CLANG_ABI Multilib {
 public:
   using flags_list = std::vector<std::string>;
 
@@ -99,10 +100,10 @@ public:
   const std::string &getErrorMessage() const { return Error.value(); }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const Multilib &M);
+CLANG_ABI raw_ostream &operator<<(raw_ostream &OS, const Multilib &M);
 
 /// See also MultilibSetBuilder for combining multilibs into a set.
-class MultilibSet {
+class CLANG_ABI MultilibSet {
 public:
   using multilib_list = std::vector<Multilib>;
   using const_iterator = multilib_list::const_iterator;
@@ -174,7 +175,7 @@ public:
             void *DiagHandlerCtxt = nullptr);
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const MultilibSet &MS);
+CLANG_ABI raw_ostream &operator<<(raw_ostream &OS, const MultilibSet &MS);
 
 } // namespace driver
 } // namespace clang

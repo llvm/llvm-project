@@ -16,6 +16,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
@@ -25,7 +26,7 @@ namespace clang {
 
 class ProfileSpecialCaseList;
 
-class ProfileList {
+class CLANG_ABI ProfileList {
 public:
   /// Represents if an how something should be excluded from profiling.
   enum ExclusionType {

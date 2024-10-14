@@ -18,24 +18,25 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace ento {
 
 /// \returns The stored dynamic extent for the region \p MR.
-DefinedOrUnknownSVal getDynamicExtent(ProgramStateRef State,
+CLANG_ABI DefinedOrUnknownSVal getDynamicExtent(ProgramStateRef State,
                                       const MemRegion *MR, SValBuilder &SVB);
 
 /// \returns The element extent of the type \p Ty.
-DefinedOrUnknownSVal getElementExtent(QualType Ty, SValBuilder &SVB);
+CLANG_ABI DefinedOrUnknownSVal getElementExtent(QualType Ty, SValBuilder &SVB);
 
 /// \returns The stored element count of the region \p MR.
-DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
+CLANG_ABI DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
                                             const MemRegion *MR,
                                             SValBuilder &SVB, QualType Ty);
 
 /// Set the dynamic extent \p Extent of the region \p MR.
-ProgramStateRef setDynamicExtent(ProgramStateRef State, const MemRegion *MR,
+CLANG_ABI ProgramStateRef setDynamicExtent(ProgramStateRef State, const MemRegion *MR,
                                  DefinedOrUnknownSVal Extent);
 
 /// Get the dynamic extent for a symbolic value that represents a buffer. If
@@ -51,11 +52,11 @@ ProgramStateRef setDynamicExtent(ProgramStateRef State, const MemRegion *MR,
 ///
 ///   char *bufptr;
 ///   (bufptr) // extent is unknown
-SVal getDynamicExtentWithOffset(ProgramStateRef State, SVal BufV);
+CLANG_ABI SVal getDynamicExtentWithOffset(ProgramStateRef State, SVal BufV);
 
 /// \returns The stored element count of the region represented by a symbolic
 /// value \p BufV.
-DefinedOrUnknownSVal getDynamicElementCountWithOffset(ProgramStateRef State,
+CLANG_ABI DefinedOrUnknownSVal getDynamicElementCountWithOffset(ProgramStateRef State,
                                                       SVal BufV, QualType Ty);
 
 } // namespace ento

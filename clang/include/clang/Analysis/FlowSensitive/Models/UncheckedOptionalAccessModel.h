@@ -21,6 +21,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
@@ -42,7 +43,7 @@ struct UncheckedOptionalAccessModelOptions {
 /// Dataflow analysis that models whether optionals hold values or not.
 ///
 /// Models the `std::optional`, `absl::optional`, and `base::Optional` types.
-class UncheckedOptionalAccessModel
+class CLANG_ABI UncheckedOptionalAccessModel
     : public DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice> {
 public:
   UncheckedOptionalAccessModel(ASTContext &Ctx, dataflow::Environment &Env);
@@ -58,7 +59,7 @@ private:
   CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
 };
 
-class UncheckedOptionalAccessDiagnoser {
+class CLANG_ABI UncheckedOptionalAccessDiagnoser {
 public:
   UncheckedOptionalAccessDiagnoser(
       UncheckedOptionalAccessModelOptions Options = {});

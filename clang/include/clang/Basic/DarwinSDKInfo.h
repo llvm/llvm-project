@@ -10,6 +10,7 @@
 #define LLVM_CLANG_BASIC_DARWINSDKINFO_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -26,7 +27,7 @@ class Object;
 namespace clang {
 
 /// The information about the darwin SDK that was used during this compilation.
-class DarwinSDKInfo {
+class CLANG_ABI DarwinSDKInfo {
 public:
   /// A value that describes two os-environment pairs that can be used as a key
   /// to the version map in the SDK.
@@ -83,7 +84,7 @@ public:
   ///
   /// e.g. "macOS_iOSMac":{"10.15":"13.1"} is an example of a macOS -> Mac
   /// Catalyst version map.
-  class RelatedTargetVersionMapping {
+  class CLANG_ABI RelatedTargetVersionMapping {
   public:
     RelatedTargetVersionMapping(
         VersionTuple MinimumKeyVersion, VersionTuple MaximumKeyVersion,
@@ -189,7 +190,7 @@ private:
 ///
 /// \returns an error if the SDKSettings.json file is invalid, std::nullopt if
 /// the SDK has no SDKSettings.json, or a valid \c DarwinSDKInfo otherwise.
-Expected<std::optional<DarwinSDKInfo>>
+CLANG_ABI Expected<std::optional<DarwinSDKInfo>>
 parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath);
 
 } // end namespace clang

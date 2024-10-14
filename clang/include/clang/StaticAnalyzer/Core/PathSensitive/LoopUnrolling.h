@@ -24,22 +24,23 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_LOOPUNROLLING_H
 
 #include "clang/Analysis/CFG.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/Support/Compiler.h"
 namespace clang {
 namespace ento {
 
 /// Returns if the given State indicates that is inside a completely unrolled
 /// loop.
-bool isUnrolledState(ProgramStateRef State);
+CLANG_ABI bool isUnrolledState(ProgramStateRef State);
 
 /// Updates the stack of loops contained by the ProgramState.
-ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
+CLANG_ABI ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
                                 ExplodedNode* Pred, unsigned maxVisitOnPath);
 
 /// Updates the given ProgramState. In current implementation it removes the top
 /// element of the stack of loops.
-ProgramStateRef processLoopEnd(const Stmt *LoopStmt, ProgramStateRef State);
+CLANG_ABI ProgramStateRef processLoopEnd(const Stmt *LoopStmt, ProgramStateRef State);
 
 } // end namespace ento
 } // end namespace clang

@@ -19,6 +19,7 @@
 
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <memory>
 #include <optional>
@@ -31,7 +32,7 @@ namespace dynamic {
 /// Kind identifier.
 ///
 /// It supports all types that VariantValue can contain.
-class ArgKind {
+class CLANG_ABI ArgKind {
  public:
   enum Kind {
     AK_Matcher,
@@ -102,9 +103,9 @@ using ast_matchers::internal::DynTypedMatcher;
 ///    matcher, or a polymorphic one with only one overload.
 ///  - hasTypedMatcher<T>()/getTypedMatcher<T>(): These calls will determine if
 ///    the underlying matcher(s) can unambiguously return a Matcher<T>.
-class VariantMatcher {
+class CLANG_ABI VariantMatcher {
   /// Methods that depend on T from hasTypedMatcher/getTypedMatcher.
-  class MatcherOps {
+  class CLANG_ABI MatcherOps {
   public:
     MatcherOps(ASTNodeKind NodeKind) : NodeKind(NodeKind) {}
 
@@ -129,7 +130,7 @@ class VariantMatcher {
   /// Payload interface to be specialized by each matcher type.
   ///
   /// It follows a similar interface as VariantMatcher itself.
-  class Payload {
+  class CLANG_ABI Payload {
   public:
     virtual ~Payload();
     virtual std::optional<DynTypedMatcher> getSingleMatcher() const = 0;
@@ -251,7 +252,7 @@ private:
 ///  - \c unsigned
 ///  - \c llvm::StringRef
 ///  - \c VariantMatcher (\c DynTypedMatcher / \c Matcher<T>)
-class VariantValue {
+class CLANG_ABI VariantValue {
 public:
   VariantValue() : Type(VT_Nothing) {}
 

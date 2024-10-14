@@ -19,8 +19,9 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
-#include "llvm/IR/DerivedTypes.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 
@@ -29,7 +30,7 @@ namespace CodeGen {
 
 /// ABIArgInfo - Helper class to encapsulate information about how a
 /// specific C type should be passed to or returned from a function.
-class ABIArgInfo {
+class CLANG_ABI ABIArgInfo {
 public:
   enum Kind : uint8_t {
     /// Direct - Pass the argument directly using the normal converted LLVM
@@ -573,7 +574,7 @@ struct CGFunctionInfoArgInfo {
 
 /// CGFunctionInfo - Class to encapsulate the information about a
 /// function definition.
-class CGFunctionInfo final
+class CLANG_ABI CGFunctionInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<CGFunctionInfo, CGFunctionInfoArgInfo,
                                     FunctionProtoType::ExtParameterInfo> {

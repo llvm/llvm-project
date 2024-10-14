@@ -28,6 +28,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -45,7 +46,7 @@ class DeclGroupRef;
 class ParsedAttr;
 class Scope;
 
-class SemaOpenMP : public SemaBase {
+class CLANG_ABI SemaOpenMP : public SemaBase {
 public:
   SemaOpenMP(Sema &S);
 
@@ -1445,7 +1446,7 @@ private:
 
   /// Helper to keep information about the current `omp begin/end declare
   /// variant` nesting.
-  struct OMPDeclareVariantScope {
+  struct CLANG_ABI OMPDeclareVariantScope {
     /// The associated OpenMP context selector.
     OMPTraitInfo *TI;
 

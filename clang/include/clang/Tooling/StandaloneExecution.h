@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_TOOLING_STANDALONEEXECUTION_H
 #define LLVM_CLANG_TOOLING_STANDALONEEXECUTION_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
 #include <optional>
@@ -28,7 +29,7 @@ namespace tooling {
 ///   - `getClangStripOutputAdjuster()`
 ///   - `getClangSyntaxOnlyAdjuster()`
 ///   - `getClangStripDependencyFileAdjuster()`
-class StandaloneToolExecutor : public ToolExecutor {
+class CLANG_ABI StandaloneToolExecutor : public ToolExecutor {
 public:
   static const char *ExecutorName;
 

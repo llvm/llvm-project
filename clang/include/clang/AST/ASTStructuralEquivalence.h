@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_ASTSTRUCTURALEQUIVALENCE_H
 
 #include "clang/AST/DeclBase.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include <optional>
@@ -38,7 +39,7 @@ enum class StructuralEquivalenceKind {
   Minimal,
 };
 
-struct StructuralEquivalenceContext {
+struct CLANG_ABI StructuralEquivalenceContext {
   /// AST contexts for which we are checking structural equivalence.
   ASTContext &FromCtx, &ToCtx;
 

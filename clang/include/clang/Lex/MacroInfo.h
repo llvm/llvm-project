@@ -14,9 +14,10 @@
 #ifndef LLVM_CLANG_LEX_MACROINFO_H
 #define LLVM_CLANG_LEX_MACROINFO_H
 
-#include "clang/Lex/Token.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Token.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -36,7 +37,7 @@ class SourceManager;
 /// Encapsulates the data about a macro definition (e.g. its tokens).
 ///
 /// There's an instance of this class for every #define.
-class MacroInfo {
+class CLANG_ABI MacroInfo {
   //===--------------------------------------------------------------------===//
   // State set when the macro is defined.
 
@@ -310,7 +311,7 @@ private:
 /// history. Usually a macro definition (MacroInfo) is where a macro name
 /// becomes active (MacroDirective) but #pragma push_macro / pop_macro can
 /// create additional DefMacroDirectives for the same MacroInfo.
-class MacroDirective {
+class CLANG_ABI MacroDirective {
 public:
   enum Kind {
     MD_Define,
@@ -511,7 +512,7 @@ MacroDirective::DefInfo::getPreviousDefinition() {
 /// represent the macro override graph.
 ///
 /// These are stored in a FoldingSet in the preprocessor.
-class ModuleMacro : public llvm::FoldingSetNode {
+class CLANG_ABI ModuleMacro : public llvm::FoldingSetNode {
   friend class Preprocessor;
 
   /// The name defined by the macro.

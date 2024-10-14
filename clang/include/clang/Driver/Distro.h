@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DRIVER_DISTRO_H
 #define LLVM_CLANG_DRIVER_DISTRO_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -20,7 +21,7 @@ namespace driver {
 /// This class encapsulates the clang Linux distribution detection mechanism
 /// as well as helper functions that match the specific (versioned) results
 /// into wider distribution classes.
-class Distro {
+class CLANG_ABI Distro {
 public:
   enum DistroType {
     // Special value means that no detection was performed yet.
