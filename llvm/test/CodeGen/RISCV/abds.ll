@@ -2602,9 +2602,9 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sub a1, a4, t5
 ; RV32I-NEXT:    sub a4, a6, t6
 ; RV32I-NEXT:  .LBB38_13:
-; RV32I-NEXT:    sw a4, 8(a0)
-; RV32I-NEXT:    sw a1, 4(a0)
 ; RV32I-NEXT:    sw a3, 0(a0)
+; RV32I-NEXT:    sw a1, 4(a0)
+; RV32I-NEXT:    sw a4, 8(a0)
 ; RV32I-NEXT:    sw a2, 12(a0)
 ; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
