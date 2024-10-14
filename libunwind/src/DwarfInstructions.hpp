@@ -318,14 +318,19 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
         // We use the hint versions of the authentication instructions below to
         // ensure they're assembled by the compiler even for targets with no
         // FEAT_PAuth/FEAT_PAuth_LR support.
-        if(isReturnAddressSignedWithPC(addressSpace, registers, cfa, prolog)) {
-          register unsigned long long x15 __asm("x15") = prolog.ptrAuthDiversifier;
-          if(cieInfo.addressesSignedWithBKey) {
+        if (isReturnAddressSignedWithPC(addressSpace, registers, cfa, prolog)) {
+          register unsigned long long x15 __asm("x15") =
+              prolog.ptrAuthDiversifier;
+          if (cieInfo.addressesSignedWithBKey) {
             asm("hint 0x27\n\t" // pacm
-                "hint 0xe" : "+r"(x17) : "r"(x16),  "r"(x15)); // autib1716
+                "hint 0xe"
+                : "+r"(x17)
+                : "r"(x16), "r"(x15)); // autib1716
           } else {
             asm("hint 0x27\n\t" // pacm
-                "hint 0xc" : "+r"(x17) : "r"(x16), "r"(x15)); // autia1716
+                "hint 0xc"
+                : "+r"(x17)
+                : "r"(x16), "r"(x15)); // autia1716
           }
         } else {
           if (cieInfo.addressesSignedWithBKey)
