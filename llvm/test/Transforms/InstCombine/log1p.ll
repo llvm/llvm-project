@@ -37,6 +37,24 @@ define double @log1p_minus_one() {
   ret double %r
 }
 
+define float @log1pf_minus_one_memory_none() {
+; CHECK-LABEL: define float @log1pf_minus_one_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -1.000000e+00) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @log1pf(float -1.000000e+00) readnone
+  ret float %r
+}
+
+define double @log1p_minus_one_memory_none() {
+; CHECK-LABEL: define double @log1p_minus_one_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -1.000000e+00) #[[ATTR0]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @log1p(double -1.000000e+00) readnone
+  ret double %r
+}
+
 define float @log1pf_zero() {
 ; CHECK-LABEL: define float @log1pf_zero() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0.000000e+00)
@@ -91,6 +109,24 @@ define double @log1p_neg1() {
   ret double %r
 }
 
+define float @log1pf_neg1_memory_none() {
+; CHECK-LABEL: define float @log1pf_neg1_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -7.000000e+00) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @log1pf(float -7.000000e+00) readnone
+  ret float %r
+}
+
+define double @log1p_neg1_memory_none() {
+; CHECK-LABEL: define double @log1p_neg1_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -7.000000e+00) #[[ATTR0]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @log1p(double -7.000000e+00) readnone
+  ret double %r
+}
+
 define float @log1pf_neg2() {
 ; CHECK-LABEL: define float @log1pf_neg2() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -5.000000e-01)
@@ -127,6 +163,24 @@ define double @log1p_inf() {
   ret double %r
 }
 
+define float @log1pf_inf_memory_none() {
+; CHECK-LABEL: define float @log1pf_inf_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0x7FF0000000000000) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @log1pf(float 0x7FF0000000000000) readnone
+  ret float %r
+}
+
+define double @log1p_inf_memory_none() {
+; CHECK-LABEL: define double @log1p_inf_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0x7FF0000000000000) #[[ATTR0]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @log1p(double 0x7FF0000000000000) readnone
+  ret double %r
+}
+
 define float @log1pf_neg_inf() {
 ; CHECK-LABEL: define float @log1pf_neg_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0xFFF0000000000000)
@@ -145,6 +199,24 @@ define double @log1p_neg_inf() {
   ret double %r
 }
 
+define float @log1pf_neg_inf_memory_none() {
+; CHECK-LABEL: define float @log1pf_neg_inf_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0xFFF0000000000000) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @log1pf(float 0xFFF0000000000000) readnone
+  ret float %r
+}
+
+define double @log1p_neg_inf_memory_none() {
+; CHECK-LABEL: define double @log1p_neg_inf_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0xFFF0000000000000) #[[ATTR0]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @log1p(double 0xFFF0000000000000) readnone
+  ret double %r
+}
+
 define float @log1pf_nan() {
 ; CHECK-LABEL: define float @log1pf_nan() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0x7FF8000000000000)
@@ -160,6 +232,24 @@ define double @log1p_nan() {
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @log1p(double 0x7FF8000000000000)
+  ret double %r
+}
+
+define float @log1pf_nan_memory_none() {
+; CHECK-LABEL: define float @log1pf_nan_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float 0x7FF8000000000000) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @log1pf(float 0x7FF8000000000000) readnone
+  ret float %r
+}
+
+define double @log1p_nan_memory_none() {
+; CHECK-LABEL: define double @log1p_nan_memory_none() {
+; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double 0x7FF8000000000000) #[[ATTR0]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @log1p(double 0x7FF8000000000000) readnone
   ret double %r
 }
 
