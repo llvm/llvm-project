@@ -2718,3 +2718,17 @@ func.func @pack_dont_drop_attributes(%arg0: tensor<?x?x?xf16>, %arg1: tensor<128
   %pack = tensor.pack %arg0 padding_value(%cst : f16) outer_dims_perm = [0, 1, 2] inner_dims_pos = [1, 2] inner_tiles = [16, 1] into %arg1 {test_attr} : tensor<?x?x?xf16> -> tensor<128x?x100x16x1xf16>
   return %pack : tensor<128x?x100x16x1xf16>
 }
+
+// -----
+
+func.func @fold_expand_of_cast(%arg0 : tensor<10x10xf32>)
+    -> tensor<?x?x?xf32> {
+  %c1 = arith.constant 1 : index 
+  %c10 = arith.constant 10 : index 
+  %0 = tensor.cast %arg0 : tensor<10x10xf32> to tensor<?x?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2]] output_shape [%c10, %c1, %c10]
+      : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return %1 : tensor<?x?x?xf32>
+}
+// CHECK-LABEL:  func.func @fold_expand_of_cast
+//       CHECK:   tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] output_shape [10, 1, 10]

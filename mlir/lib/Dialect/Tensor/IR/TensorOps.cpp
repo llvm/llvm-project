@@ -1982,6 +1982,35 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
     return success();
   }
 };
+
+struct FoldExpandOfCast : public OpRewritePattern<ExpandShapeOp> {
+  using OpRewritePattern<ExpandShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExpandShapeOp expandOp,
+                                PatternRewriter &rewriter) const override {
+    auto castOp = expandOp.getSrc().getDefiningOp<CastOp>();
+    if (!canFoldIntoConsumerOp(castOp))
+      return failure();
+
+    SmallVector<OpFoldResult> outputOfr =
+        getMixedValues(expandOp.getResultType().getShape(),
+                       expandOp.getOutputShape(), rewriter);
+    std::optional<SmallVector<int64_t>> constantOutputShape =
+        getConstantIntValues(outputOfr);
+    if (!constantOutputShape.has_value()) {
+      return failure();
+    }
+    auto newType = RankedTensorType::get(
+        constantOutputShape.value(), expandOp.getSrcType().getElementType());
+
+    auto newExpand = rewriter.create<ExpandShapeOp>(
+        castOp.getLoc(), newType, castOp.getSource(),
+        expandOp.getReassociationIndices());
+    rewriter.replaceOpWithNewOp<CastOp>(expandOp, expandOp.getType(),
+                                        newExpand.getResult());
+    return success();
+  }
+};
 } // namespace
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -1989,7 +2018,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<
       ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
       ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
-      FoldReshapeWithConstant<ExpandShapeOp>,
+      FoldExpandOfCast, FoldReshapeWithConstant<ExpandShapeOp>,
       FoldReshapeWithSplat<ExpandShapeOp>,
       FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
       FoldDimOfCollapseShape>(context);
