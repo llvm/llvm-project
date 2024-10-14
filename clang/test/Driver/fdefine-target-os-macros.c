@@ -1,5 +1,5 @@
 // RUN: %clang -### --target=arm64-apple-darwin %s 2>&1 | FileCheck %s --check-prefix=DARWIN-DEFAULT
-// DARWIN-DEFAULT-NOT: "-fdefine-target-os-macros"
+// DARWIN-DEFAULT: "-fdefine-target-os-macros"
 
 // RUN: %clang -### --target=arm-none-linux-gnu %s 2>&1 | FileCheck %s --check-prefix=NON-DARWIN-DEFAULT
 // RUN: %clang -### --target=x86_64-pc-win32 %s 2>&1 | FileCheck %s --check-prefix=NON-DARWIN-DEFAULT
