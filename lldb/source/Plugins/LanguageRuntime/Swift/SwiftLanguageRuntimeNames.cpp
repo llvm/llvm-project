@@ -290,6 +290,113 @@ static ThunkAction GetThunkAction(ThunkKind kind) {
   }
 }
 
+/// A thread plan to run to a specific address on a specific async context.
+class ThreadPlanRunToAddressOnAsyncCtx : public ThreadPlan {
+public:
+  /// Creates a thread plan to run to destination_addr of an async function
+  /// whose context is async_ctx.
+  ThreadPlanRunToAddressOnAsyncCtx(Thread &thread, addr_t destination_addr,
+                                   addr_t async_ctx)
+      : ThreadPlan(eKindGeneric, "run-to-funclet", thread, eVoteNoOpinion,
+                   eVoteNoOpinion),
+        m_destination_addr(destination_addr), m_expected_async_ctx(async_ctx) {
+    auto &target = thread.GetProcess()->GetTarget();
+    m_funclet_bp = target.CreateBreakpoint(destination_addr, true, false);
+    m_funclet_bp->SetBreakpointKind("async-run-to-funclet");
+  }
+
+  bool ValidatePlan(Stream *error) override {
+    if (m_funclet_bp->HasResolvedLocations())
+      return true;
+
+    // If we failed to resolve any locations, this plan is invalid.
+    m_funclet_bp->GetTarget().RemoveBreakpointByID(m_funclet_bp->GetID());
+    return false;
+  }
+
+  void GetDescription(Stream *s, lldb::DescriptionLevel level) override {
+    s->PutCString("ThreadPlanRunToAddressOnAsyncCtx to address = ");
+    s->PutHex64(m_destination_addr);
+    s->PutCString(" with async ctx = ");
+    s->PutHex64(m_expected_async_ctx);
+  }
+
+  /// This plan explains the stop if the current async context is the async
+  /// context this plan was created with.
+  bool DoPlanExplainsStop(Event *event) override {
+    if (!HasTID())
+      return false;
+    return GetCurrentAsyncContext() == m_expected_async_ctx;
+  }
+
+  /// If this plan explained the stop, it always stops: its sole purpose is to
+  /// run to the breakpoint it set on the right async function invocation.
+  bool ShouldStop(Event *event) override {
+    SetPlanComplete();
+    return true;
+  }
+
+  /// If this plan said ShouldStop, then its job is complete.
+  bool MischiefManaged() override {
+    return IsPlanComplete();
+  }
+
+  bool WillStop() override { return false; }
+  lldb::StateType GetPlanRunState() override { return eStateRunning; }
+  bool StopOthers() override { return false; }
+  void DidPop() override {
+    m_funclet_bp->GetTarget().RemoveBreakpointByID(m_funclet_bp->GetID());
+  }
+
+private:
+  addr_t GetCurrentAsyncContext() {
+    auto frame_sp = GetThread().GetStackFrameAtIndex(0);
+    return frame_sp->GetStackID().GetCallFrameAddress();
+  }
+
+  addr_t m_destination_addr;
+  addr_t m_expected_async_ctx;
+  BreakpointSP m_funclet_bp;
+};
+
+/// Given a thread that is stopped at the start of swift_task_switch, create a
+/// thread plan that runs to the address of the resume function.
+static ThreadPlanSP CreateRunThroughTaskSwitchThreadPlan(Thread &thread) {
+  // The signature for `swift_task_switch` is as follows:
+  //   SWIFT_CC(swiftasync)
+  //   void swift_task_switch(
+  //     SWIFT_ASYNC_CONTEXT AsyncContext *resumeContext,
+  //     TaskContinuationFunction *resumeFunction,
+  //     ExecutorRef newExecutor);
+  //
+  // The async context given as the first argument is not passed using the
+  // calling convention's first register, it's passed in the platform's async
+  // context register. This means the `resumeFunction` parameter uses the
+  // first ABI register (ex: x86-64: rdi, arm64: x0).
+  RegisterContextSP reg_ctx =
+      thread.GetStackFrameAtIndex(0)->GetRegisterContext();
+  constexpr unsigned resume_fn_regnum = LLDB_REGNUM_GENERIC_ARG1;
+  unsigned resume_fn_reg = reg_ctx->ConvertRegisterKindToRegisterNumber(
+      RegisterKind::eRegisterKindGeneric, resume_fn_regnum);
+  uint64_t resume_fn_ptr = reg_ctx->ReadRegisterAsUnsigned(resume_fn_reg, 0);
+  if (!resume_fn_ptr)
+    return {};
+
+  auto arch = reg_ctx->CalculateTarget()->GetArchitecture();
+  std::optional<AsyncUnwindRegisterNumbers> async_regs =
+      GetAsyncUnwindRegisterNumbers(arch.GetMachine());
+  if (!async_regs)
+    return {};
+  unsigned async_reg_number = reg_ctx->ConvertRegisterKindToRegisterNumber(
+      async_regs->GetRegisterKind(), async_regs->async_ctx_regnum);
+  uint64_t async_ctx = reg_ctx->ReadRegisterAsUnsigned(async_reg_number, 0);
+  if (!async_ctx)
+    return {};
+
+  return std::make_shared<ThreadPlanRunToAddressOnAsyncCtx>(
+      thread, resume_fn_ptr, async_ctx);
+}
+
 static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                        bool stop_others) {
   // Here are the trampolines we have at present.
@@ -319,7 +426,11 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   if (symbol_addr != cur_addr)
     return nullptr;
 
-  const char *symbol_name = symbol->GetMangled().GetMangledName().AsCString();
+  Mangled &mangled_symbol_name = symbol->GetMangled();
+  const char *symbol_name = mangled_symbol_name.GetMangledName().AsCString();
+
+  if (mangled_symbol_name.GetDemangledName() == "swift_task_switch")
+    return CreateRunThroughTaskSwitchThreadPlan(thread);
 
   ThunkKind thunk_kind = GetThunkKind(symbol);
   ThunkAction thunk_action = GetThunkAction(thunk_kind);
