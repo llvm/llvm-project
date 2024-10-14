@@ -233,6 +233,10 @@ void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
                 const llvm::Reloc::Model &RelocationModel,
                 llvm::opt::ArgStringList &CmdArgs);
 
+/// Handle the -f{no}-color-diagnostics and -f{no}-diagnostics-colors options.
+void handleColorDiagnosticsArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs);
+
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

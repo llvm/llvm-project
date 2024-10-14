@@ -1887,7 +1887,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
   std::string command_string(command_line);
-  std::string original_command_string(command_line);
+  std::string original_command_string(command_string);
+  std::string real_original_command_string(command_string);
 
   Log *log = GetLog(LLDBLog::Commands);
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
@@ -2068,7 +2069,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         remainder.c_str());
 
     // To test whether or not transcript should be saved, `transcript_item` is
-    // used instead of `GetSaveTrasncript()`. This is because the latter will
+    // used instead of `GetSaveTranscript()`. This is because the latter will
     // fail when the command is "settings set interpreter.save-transcript true".
     if (transcript_item) {
       transcript_item->AddStringItem("commandName", cmd_obj->GetCommandName());
@@ -2076,6 +2077,13 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     }
 
     ElapsedTime elapsed(execute_time);
+    cmd_obj->SetOriginalCommandString(real_original_command_string);
+    // Set the indent to the position of the command in the command line.
+    pos = real_original_command_string.rfind(remainder);
+    std::optional<uint16_t> indent;
+    if (pos != std::string::npos)
+      indent = pos;
+    result.SetDiagnosticIndent(indent);
     cmd_obj->Execute(remainder.c_str(), result);
   }
 
@@ -2086,11 +2094,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // used instead of `GetSaveTrasncript()`. This is because the latter will
   // fail when the command is "settings set interpreter.save-transcript true".
   if (transcript_item) {
-    m_transcript_stream << result.GetOutputData();
-    m_transcript_stream << result.GetErrorData();
+    m_transcript_stream << result.GetOutputString();
+    m_transcript_stream << result.GetErrorString();
 
-    transcript_item->AddStringItem("output", result.GetOutputData());
-    transcript_item->AddStringItem("error", result.GetErrorData());
+    transcript_item->AddStringItem("output", result.GetOutputString());
+    transcript_item->AddStringItem("error", result.GetErrorString());
     transcript_item->AddFloatItem("durationInSeconds",
                                   execute_time.get().count());
   }
@@ -2624,11 +2632,11 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
 
     if (options.GetPrintResults()) {
       if (tmp_result.Succeeded())
-        result.AppendMessage(tmp_result.GetOutputData());
+        result.AppendMessage(tmp_result.GetOutputString());
     }
 
     if (!success || !tmp_result.Succeeded()) {
-      llvm::StringRef error_msg = tmp_result.GetErrorData();
+      llvm::StringRef error_msg = tmp_result.GetErrorString();
       if (error_msg.empty())
         error_msg = "<unknown error>.\n";
       if (options.GetStopOnError()) {
@@ -3178,17 +3186,28 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
   if ((result.Succeeded() &&
        io_handler.GetFlags().Test(eHandleCommandFlagPrintResult)) ||
       io_handler.GetFlags().Test(eHandleCommandFlagPrintErrors)) {
-    // Display any STDOUT/STDERR _prior_ to emitting the command result text
+    // Display any inline diagnostics first.
+    if (!result.GetImmediateErrorStream() &&
+        GetDebugger().GetShowInlineDiagnostics()) {
+      unsigned prompt_len = m_debugger.GetPrompt().size();
+      if (auto indent = result.GetDiagnosticIndent()) {
+        llvm::StringRef diags =
+            result.GetInlineDiagnosticString(prompt_len + *indent);
+        PrintCommandOutput(io_handler, diags, true);
+      }
+    }
+
+    // Display any STDOUT/STDERR _prior_ to emitting the command result text.
     GetProcessOutput();
 
     if (!result.GetImmediateOutputStream()) {
-      llvm::StringRef output = result.GetOutputData();
+      llvm::StringRef output = result.GetOutputString();
       PrintCommandOutput(io_handler, output, true);
     }
 
-    // Now emit the command error text from the command we just executed
+    // Now emit the command error text from the command we just executed.
     if (!result.GetImmediateErrorStream()) {
-      llvm::StringRef error = result.GetErrorData();
+      llvm::StringRef error = result.GetErrorString();
       PrintCommandOutput(io_handler, error, false);
     }
   }
@@ -3306,6 +3325,10 @@ bool CommandInterpreter::SaveTranscript(
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
                                  output_file->c_str());
+  if (!GetSaveTranscript())
+    result.AppendError(
+        "Note: the setting interpreter.save-transcript is set to false, so the "
+        "transcript might not have been recorded.");
 
   if (GetOpenTranscriptInEditor() && Host::IsInteractiveGraphicSession()) {
     const FileSpec file_spec;

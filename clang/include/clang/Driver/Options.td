@@ -816,6 +816,7 @@ def _DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>,
 def A : JoinedOrSeparate<["-"], "A">, Flags<[RenderJoined]>,
   Group<gfortran_Group>;
 def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<prefix>">,
+    Visibility<[ClangOption, FlangOption]>,
     HelpText<"Search $prefix$file for executables, libraries, and data files. "
     "If $prefix is a directory, search $prefix/$file">;
 def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
@@ -1055,6 +1056,7 @@ def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
 def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
+  Visibility<[ClangOption, CLOption, FlangOption, DXCOption]>,
   HelpText<"Pass <arg> to the offload linkers or the ones identified by -<triple>">,
   MetaVarName<"<triple> <arg>">, Group<Link_Group>;
 def Xpreprocessor : Separate<["-"], "Xpreprocessor">, Group<Preprocessor_Group>,
@@ -1193,10 +1195,11 @@ def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
 def c : Flag<["-"], "c">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, FlangOption]>, Group<Action_Group>,
   HelpText<"Only run preprocess, compile, and assemble steps">;
-defm convergent_functions : BoolFOption<"convergent-functions",
-  LangOpts<"ConvergentFunctions">, DefaultFalse,
-  NegFlag<SetFalse, [], [ClangOption], "Assume all functions may be convergent.">,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option]>>;
+def fconvergent_functions : Flag<["-"], "fconvergent-functions">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText< "Assume all functions may be convergent.">;
+def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
+  Visibility<[ClangOption, CC1Option]>;
 
 // Common offloading options
 let Group = offload_Group in {
@@ -1975,10 +1978,15 @@ def fno_color_diagnostics : Flag<["-"], "fno-color-diagnostics">, Group<f_Group>
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Disable colors in diagnostics">;
 def : Flag<["-"], "fdiagnostics-color">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Alias<fcolor_diagnostics>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Alias<fcolor_diagnostics>;
 def : Flag<["-"], "fno-diagnostics-color">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Alias<fno_color_diagnostics>;
-def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Alias<fno_color_diagnostics>;
+def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Values<"auto,always,never">,
+  HelpText<"When to use colors in diagnostics">;
 def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
   HelpText<"Use ANSI escape codes for diagnostics">,
@@ -2841,6 +2849,10 @@ def fcf_protection : Flag<["-"], "fcf-protection">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option]>,
   Alias<fcf_protection_EQ>, AliasArgs<["full"]>,
   HelpText<"Enable cf-protection in 'full' mode">;
+def mcf_branch_label_scheme_EQ : Joined<["-"], "mcf-branch-label-scheme=">,
+  Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
+  HelpText<"Select label scheme for branch control-flow architecture protection">,
+  Values<"unlabeled,func-sig">;
 def mfunction_return_EQ : Joined<["-"], "mfunction-return=">,
   Group<m_Group>, Visibility<[ClangOption, CLOption, CC1Option]>,
   HelpText<"Replace returns with jumps to ``__x86_return_thunk`` (x86 only, error otherwise)">,
@@ -2969,7 +2981,7 @@ def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Grou
                     "LangOptions::LaxVectorConversionKind::Integer",
                     "LangOptions::LaxVectorConversionKind::All"]>,
   MarshallingInfoEnum<LangOpts<"LaxVectorConversions">,
-                      open_cl.KeyPath #
+                      !strconcat("(", open_cl.KeyPath, " || ", hlsl.KeyPath, ")") #
                           " ? LangOptions::LaxVectorConversionKind::None" #
                           " : LangOptions::LaxVectorConversionKind::All">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>,
@@ -2984,7 +2996,7 @@ defm clangir : BoolFOption<"clangir",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
-def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
 /// ClangIR-specific options - END
 
@@ -5546,6 +5558,9 @@ def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
+def multi_lib_config : Joined<["-", "--"], "multi-lib-config=">,
+  HelpText<"Path to the YAML configuration file to be used for multilib selection">,
+  MetaVarName<"<file>">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
 def multiply__defined : Separate<["-"], "multiply_defined">;
@@ -6062,7 +6077,7 @@ def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOpti
 def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
 
 //===----------------------------------------------------------------------===//
-// pie/pic options (clang + flang-new)
+// pie/pic options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Visibility = [ClangOption, FlangOption] in {
 
@@ -6078,7 +6093,7 @@ def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
 } // let Vis = [Default, FlangOption]
 
 //===----------------------------------------------------------------------===//
-// Target Options (clang + flang-new)
+// Target Options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Flags = [TargetSpecific] in {
 let Visibility = [ClangOption, FlangOption] in {
@@ -6888,6 +6903,8 @@ def module_suffix : Separate<["-"], "module-suffix">,  Group<f_Group>, MetaVarNa
   HelpText<"Use <suffix> as the suffix for module files (the default value is `.mod`)">;
 def fno_reformat : Flag<["-"], "fno-reformat">, Group<Preprocessor_Group>,
   HelpText<"Dump the cooked character stream in -E mode">;
+def fpreprocess_include_lines : Flag<["-"], "fpreprocess-include-lines">, Group<Preprocessor_Group>,
+  HelpText<"Treat INCLUDE lines like #include directives in -E mode">;
 defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse", "", "Do not use the analyzed objects when unparsing">;
 
 def emit_fir : Flag<["-"], "emit-fir">, Group<Action_Group>,

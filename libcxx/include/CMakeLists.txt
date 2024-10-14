@@ -23,7 +23,6 @@ set(files
   __algorithm/find_if.h
   __algorithm/find_if_not.h
   __algorithm/find_segment_if.h
-  __algorithm/fold.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
   __algorithm/for_each_segment.h
@@ -98,6 +97,7 @@ set(files
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h
   __algorithm/ranges_find_last.h
+  __algorithm/ranges_fold.h
   __algorithm/ranges_for_each.h
   __algorithm/ranges_for_each_n.h
   __algorithm/ranges_generate.h
@@ -536,6 +536,7 @@ set(files
   __memory/allocator_arg_t.h
   __memory/allocator_destructor.h
   __memory/allocator_traits.h
+  __memory/array_cookie.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
   __memory/builtin_new_allocator.h
@@ -559,7 +560,6 @@ set(files
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
-  __memory/voidify.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -687,7 +687,6 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
-  __std_clang_module
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
@@ -748,6 +747,7 @@ set(files
   __type_traits/common_type.h
   __type_traits/conditional.h
   __type_traits/conjunction.h
+  __type_traits/container_traits.h
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
@@ -788,6 +788,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_implicit_lifetime.h
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
   __type_traits/is_literal_type.h

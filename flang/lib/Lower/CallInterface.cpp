@@ -582,6 +582,7 @@ mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
 
 static void addSymbolAttribute(mlir::func::FuncOp func,
                                const Fortran::semantics::Symbol &sym,
+                               fir::FortranProcedureFlagsEnumAttr procAttrs,
                                mlir::MLIRContext &mlirContext) {
   const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
   // The link between an internal procedure and its host procedure is lost
@@ -611,16 +612,8 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
     }
   }
 
-  // Set procedure attributes to the func op.
-  if (IsPureProcedure(sym))
-    func->setAttr(fir::getFuncPureAttrName(),
-                  mlir::UnitAttr::get(&mlirContext));
-  if (IsElementalProcedure(sym))
-    func->setAttr(fir::getFuncElementalAttrName(),
-                  mlir::UnitAttr::get(&mlirContext));
-  if (sym.attrs().test(Fortran::semantics::Attr::RECURSIVE))
-    func->setAttr(fir::getFuncRecursiveAttrName(),
-                  mlir::UnitAttr::get(&mlirContext));
+  if (procAttrs)
+    func->setAttr(fir::getFortranProcedureFlagsAttrName(), procAttrs);
 
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
@@ -703,6 +696,7 @@ void Fortran::lower::CallInterface<T>::declare() {
     func = fir::FirOpBuilder::getNamedFunction(module, symbolTable, name);
     if (!func) {
       mlir::Location loc = side().getCalleeLocation();
+      mlir::MLIRContext &mlirContext = converter.getMLIRContext();
       mlir::FunctionType ty = genFunctionType();
       func =
           fir::FirOpBuilder::createFunction(loc, module, name, ty, symbolTable);
@@ -712,7 +706,8 @@ void Fortran::lower::CallInterface<T>::declare() {
                         mlir::StringAttr::get(&converter.getMLIRContext(),
                                               sym->name().ToString()));
         } else {
-          addSymbolAttribute(func, *sym, converter.getMLIRContext());
+          addSymbolAttribute(func, *sym, getProcedureAttrs(&mlirContext),
+                             mlirContext);
         }
       }
       for (const auto &placeHolder : llvm::enumerate(inputs))
@@ -1550,8 +1545,8 @@ template <typename T>
 fir::FortranProcedureFlagsEnumAttr
 Fortran::lower::CallInterface<T>::getProcedureAttrs(
     mlir::MLIRContext *mlirContext) const {
+  fir::FortranProcedureFlagsEnum flags = fir::FortranProcedureFlagsEnum::none;
   if (characteristic) {
-    fir::FortranProcedureFlagsEnum flags = fir::FortranProcedureFlagsEnum::none;
     if (characteristic->IsBindC())
       flags = flags | fir::FortranProcedureFlagsEnum::bind_c;
     if (characteristic->IsPure())
@@ -1560,12 +1555,27 @@ Fortran::lower::CallInterface<T>::getProcedureAttrs(
       flags = flags | fir::FortranProcedureFlagsEnum::elemental;
     // TODO:
     // - SIMPLE: F2023, not yet handled by semantics.
-    // - NON_RECURSIVE: not part of the characteristics. Maybe this should
-    //   simply not be part of FortranProcedureFlagsEnum since cannot accurately
-    //   be known on the caller side.
-    if (flags != fir::FortranProcedureFlagsEnum::none)
-      return fir::FortranProcedureFlagsEnumAttr::get(mlirContext, flags);
   }
+
+  if constexpr (std::is_same_v<Fortran::lower::CalleeInterface, T>) {
+    // Only gather and set NON_RECURSIVE for procedure definition. It is
+    // meaningless on calls since this is not part of Fortran characteristics
+    // (Fortran 2023 15.3.1) so there is no way to always know if the procedure
+    // called is recursive or not.
+    if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
+      // Note: By default procedures are RECURSIVE unless
+      // -fno-automatic/-save/-Msave is set. NON_RECURSIVE is is made explicit
+      // in that case in FIR.
+      if (sym->attrs().test(Fortran::semantics::Attr::NON_RECURSIVE) ||
+          (sym->owner().context().languageFeatures().IsEnabled(
+               Fortran::common::LanguageFeature::DefaultSave) &&
+           !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))) {
+        flags = flags | fir::FortranProcedureFlagsEnum::non_recursive;
+      }
+    }
+  }
+  if (flags != fir::FortranProcedureFlagsEnum::none)
+    return fir::FortranProcedureFlagsEnumAttr::get(mlirContext, flags);
   return nullptr;
 }
 
