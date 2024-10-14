@@ -1,6 +1,5 @@
-#ifndef _ARM64_
-#define _ARM64_
-#endif
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include <processthreadsapi.h>
 #include <stdint.h>
 
