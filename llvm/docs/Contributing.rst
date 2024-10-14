@@ -102,9 +102,15 @@ will not be able to select reviewers in such a way, in which case you can still
 get the attention of potential reviewers by CC'ing them in a comment -- just
 @name them.
 
-If you do not have commit access, please let people know during the review and
-someone should commit it on your behalf once it has been accepted. For more
-information on LLVM's code-review process, please see :doc:`CodeReview`.
+If you have received no comments on your patch for a week, you can request a
+review by 'ping'ing the GitHub PR with "Ping". The common courtesy 'ping' rate
+is once a week. Please remember that you are asking for valuable time from
+other professional developers. Finally, if you do not have commit access,
+please let people know during the review and someone should commit it on your
+behalf once it has been accepted.
+
+For more information on LLVM's code-review process, please see
+:doc:`CodeReview`.
 
 .. _commit_from_git:
 
