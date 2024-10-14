@@ -288,6 +288,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_90:
       case OffloadArch::SM_90a:
         return "900";
+      case OffloadArch::SM_100:
+        return "1000";
       }
       llvm_unreachable("unhandled OffloadArch");
     }();
