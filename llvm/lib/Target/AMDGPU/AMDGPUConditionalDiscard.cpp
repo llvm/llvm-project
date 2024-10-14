@@ -179,7 +179,7 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
       NewKill->insertBefore(PredBranchInst);
 
       if (ConvertToDemote) {
-        NewKill->setCalledFunction(Intrinsic::getDeclaration(
+        NewKill->setCalledFunction(Intrinsic::getOrInsertDeclaration(
             KillCand->getModule(), Intrinsic::amdgcn_wqm_demote));
 
         // Only mark block for removal once

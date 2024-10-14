@@ -300,7 +300,7 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
   for (auto &B : F)
     MaxInstCount = std::max(MaxInstCount, (unsigned)B.size());
   if (MaxInstCount > 8000) {
-    Function *BufferStore = Intrinsic::getDeclaration(
+    Function *BufferStore = Intrinsic::getOrInsertDeclaration(
         F.getParent(), Intrinsic::amdgcn_raw_buffer_store,
         FixedVectorType::get(Type::getInt32Ty(F.getContext()), 4));
     unsigned BufferStoreCnt =
