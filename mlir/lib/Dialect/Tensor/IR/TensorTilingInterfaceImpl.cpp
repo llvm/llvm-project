@@ -792,10 +792,9 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     // ExtractSliceOp length will be zero in that case. (Effectively reading
     // no data from the source.)
     //
-    // Optimization: If low = 0, then the formula can be simplified.
-    OpFoldResult newOffset = hasLowPad
-                                 ? min(max(sub(offset, low), zero), srcSize)
-                                 : min(offset, srcSize);
+    // Optimization: If low = 0 / high = 0, then the formula can be simplified.
+    OpFoldResult newOffset = hasLowPad ? max(sub(offset, low), zero) : offset;
+    newOffset = hasHighPad ? min(newOffset, srcSize) : newOffset;
     newOffsets.push_back(newOffset);
 
     // The original ExtractSliceOp was reading until position `offset +
@@ -816,11 +815,14 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     //
     // The new ExtractSliceOp length is `endLoc - newOffset`.
     //
-    // Optimization: If low = 0, then the formula can be simplified.
-    OpFoldResult endLoc =
-        hasLowPad ? min(max(add(sub(offset, low), length), zero), srcSize)
-                  : min(add(offset, length), srcSize);
-    OpFoldResult newLength = sub(endLoc, newOffset);
+    // Optimization: If low = 0 / high = 0, then the formula can be simplified.
+    OpFoldResult endLoc = hasLowPad ? max(add(sub(offset, low), length), zero)
+                                    : add(offset, length);
+    endLoc = hasHighPad ? min(endLoc, srcSize) : endLoc;
+
+    // Optimization: If low = 0 and high = 0, then length is the old length.
+    OpFoldResult newLength =
+        (hasLowPad && hasHighPad) ? length : sub(endLoc, newOffset);
     newLengths.push_back(newLength);
 
     // Check if newLength is zero. In that case, no SubTensorOp should be
