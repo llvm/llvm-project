@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_FORMAT_TOKENANNOTATOR_H
 
 #include "UnwrappedLineParser.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace format {
@@ -210,7 +211,7 @@ private:
 
 /// Determines extra information about the tokens comprising an
 /// \c UnwrappedLine.
-class TokenAnnotator {
+class CLANG_ABI TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
       : Style(Style), IsCpp(Style.isCpp()),

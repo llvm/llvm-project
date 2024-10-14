@@ -41,6 +41,7 @@
 #include <list>
 
 #include "FormatToken.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
@@ -77,7 +78,7 @@ struct UnwrappedLineNode;
 /// Call      : A(id)
 /// Expansion : id+x
 ///
-class MacroExpander {
+class CLANG_ABI MacroExpander {
 public:
   using ArgsList = ArrayRef<SmallVector<FormatToken *, 8>>;
 
@@ -170,7 +171,7 @@ private:
 /// -> public:
 /// ->   void x();
 /// -> })
-class MacroCallReconstructor {
+class CLANG_ABI MacroCallReconstructor {
 public:
   /// Create an Reconstructor whose resulting \p UnwrappedLine will start at
   /// \p Level, using the map from name identifier token to the corresponding
@@ -327,7 +328,7 @@ private:
   // Stack of macro calls for which we're in the middle of an expansion.
   SmallVector<Expansion> ActiveExpansions;
 
-  struct MacroCallState {
+  struct CLANG_ABI MacroCallState {
     MacroCallState(ReconstructedLine *Line, FormatToken *ParentLastToken,
                    FormatToken *MacroCallLParen);
 

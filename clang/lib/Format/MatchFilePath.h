@@ -9,12 +9,13 @@
 #ifndef LLVM_CLANG_LIB_FORMAT_MATCHFILEPATH_H
 #define LLVM_CLANG_LIB_FORMAT_MATCHFILEPATH_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace format {
 
-bool matchFilePath(llvm::StringRef Pattern, llvm::StringRef FilePath);
+CLANG_ABI bool matchFilePath(llvm::StringRef Pattern, llvm::StringRef FilePath);
 
 } // end namespace format
 } // end namespace clang
