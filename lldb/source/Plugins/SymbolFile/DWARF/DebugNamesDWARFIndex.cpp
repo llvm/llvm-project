@@ -368,9 +368,10 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
       continue;
     }
 
-    if (SameParentChain(parent_names, *parent_chain) &&
-        !ProcessEntry(entry, callback))
-      return;
+    if (SameParentChain(parent_names, *parent_chain)) {
+      if (!ProcessEntry(entry, callback))
+        return;
+    }
   }
   m_fallback.GetFullyQualifiedType(context, callback);
 }
@@ -554,13 +555,15 @@ void DebugNamesDWARFIndex::GetTypesWithQuery(
       continue;
     }
 
-    if (WithinParentChain(parent_contexts, *parent_chain) &&
-        !ProcessEntry(entry, [&](DWARFDIE die) {
-          // After .debug_names filtering still sending to base class for
-          // further filtering before calling the callback.
-          return ProcessTypeDIEMatchQuery(query, die, callback);
-        }))
-      return;
+    if (WithinParentChain(parent_contexts, *parent_chain)) {
+      if (!ProcessEntry(entry, [&](DWARFDIE die) {
+            // After .debug_names filtering still sending to base class for
+            // further filtering before calling the callback.
+            return ProcessTypeDIEMatchQuery(query, die, callback);
+          }))
+        // If the callback returns false, we're done.
+        return;
+    }
   }
   m_fallback.GetTypesWithQuery(query, callback);
 }
@@ -570,9 +573,6 @@ void DebugNamesDWARFIndex::GetNamespacesWithParents(
     llvm::function_ref<bool(DWARFDIE die)> callback) {
   std::vector<lldb_private::CompilerContext> parent_contexts =
       parent_decl_ctx.GetCompilerContext();
-  if (parent_contexts.empty())
-    return GetNamespaces(name, callback);
-
   llvm::SmallVector<CompilerContext> parent_named_contexts;
   std::copy_if(parent_contexts.rbegin(), parent_contexts.rend(),
                std::back_inserter(parent_named_contexts),
@@ -594,14 +594,16 @@ void DebugNamesDWARFIndex::GetNamespacesWithParents(
         continue;
       }
 
-      if (WithinParentChain(parent_named_contexts, *parent_chain) &&
-          !ProcessEntry(entry, [&](DWARFDIE die) {
-            // After .debug_names filtering still sending to base class for
-            // further filtering before calling the callback.
-            return ProcessNamespaceDieMatchParents(parent_decl_ctx, die,
-                                                   callback);
-          }))
-        return;
+      if (WithinParentChain(parent_named_contexts, *parent_chain)) {
+        if (!ProcessEntry(entry, [&](DWARFDIE die) {
+              // After .debug_names filtering still sending to base class for
+              // further filtering before calling the callback.
+              return ProcessNamespaceDieMatchParents(parent_decl_ctx, die,
+                                                     callback);
+            }))
+          // If the callback returns false, we're done.
+          return;
+      }
     }
   }
   m_fallback.GetNamespacesWithParents(name, parent_decl_ctx, callback);
