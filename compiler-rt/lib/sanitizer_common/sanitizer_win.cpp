@@ -1034,7 +1034,7 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 
 void SignalContext::DumpAllRegisters(void *context) {
   CONTEXT *ctx = (CONTEXT *)context;
-#  if defined(__M_X64)
+#  if defined(_M_X64)
   Report("Register values:\n");
   Printf("rax = %llx  ", ctx->Rax);
   Printf("rbx = %llx  ", ctx->Rbx);
@@ -1067,6 +1067,41 @@ void SignalContext::DumpAllRegisters(void *context) {
   Printf("esi = %lx  ", ctx->Esi);
   Printf("ebp = %lx  ", ctx->Ebp);
   Printf("esp = %lx  ", ctx->Esp);
+  Printf("\n");
+#  elif defined(_M_ARM64)
+  Report("Register values:\n");
+  Printf("x0  = %llx  ", ctx->X0);
+  Printf("x1  = %llx  ", ctx->X1);
+  Printf("x2  = %llx  ", ctx->X2);
+  Printf("x3  = %llx  ", ctx->X3);
+  Printf("x4  = %llx  ", ctx->X4);
+  Printf("x5  = %llx  ", ctx->X5);
+  Printf("x6  = %llx  ", ctx->X6);
+  Printf("x7  = %llx  ", ctx->X7);
+  Printf("x8  = %llx  ", ctx->X8);
+  Printf("x9  = %llx  ", ctx->X9);
+  Printf("x10 = %llx  ", ctx->X10);
+  Printf("x11 = %llx  ", ctx->X11);
+  Printf("x12 = %llx  ", ctx->X12);
+  Printf("x13 = %llx  ", ctx->X13);
+  Printf("x14 = %llx  ", ctx->X14);
+  Printf("x15 = %llx  ", ctx->X15);
+  Printf("x16 = %llx  ", ctx->X16);
+  Printf("x17 = %llx  ", ctx->X17);
+  Printf("x18 = %llx  ", ctx->X18);
+  Printf("x19 = %llx  ", ctx->X19);
+  Printf("x20 = %llx  ", ctx->X20);
+  Printf("x21 = %llx  ", ctx->X21);
+  Printf("x22 = %llx  ", ctx->X22);
+  Printf("x23 = %llx  ", ctx->X23);
+  Printf("x24 = %llx  ", ctx->X24);
+  Printf("x25 = %llx  ", ctx->X25);
+  Printf("x26 = %llx  ", ctx->X26);
+  Printf("x27 = %llx  ", ctx->X27);
+  Printf("x28 = %llx  ", ctx->X28);
+  Printf("x29 = %llx  ", ctx->X29);
+  Printf("x30 = %llx  ", ctx->X30);
+  Printf("x31 = %llx  ", ctx->X31);
   Printf("\n");
 #  else
   // TODO
