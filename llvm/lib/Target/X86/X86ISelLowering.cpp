@@ -30143,6 +30143,39 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getVectorShuffle(VT, dl, R01, R23, {0, 3, 4, 7});
   }
 
+  // If we're shifting (per-lane) uniform vXi8 constants, we can use PSHUFB to
+  // look up the pre-computed shift values.
+  if ((VT == MVT::v16i8 && Subtarget.hasSSSE3()) ||
+      (VT == MVT::v32i8 && Subtarget.hasInt256()) ||
+      (VT == MVT::v64i8 && Subtarget.hasBWI())) {
+    unsigned NumElts = VT.getVectorNumElements();
+    unsigned NumLanes = VT.getSizeInBits() / 128u;
+    unsigned NumEltsPerLane = NumElts / NumLanes;
+    SmallVector<APInt, 16> LUT;
+    for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+      unsigned LoElt = Lane * NumEltsPerLane;
+      APInt EltMask = APInt::getBitsSet(NumElts, LoElt, LoElt + NumEltsPerLane);
+      KnownBits KnownLane = DAG.computeKnownBits(R, EltMask);
+      if (!KnownLane.isConstant())
+        break;
+      const APInt &LaneSplat = KnownLane.getConstant();
+      for (unsigned I = 0; I != 8; ++I) {
+        if (Opc == ISD::SHL)
+          LUT.push_back(LaneSplat.shl(I));
+        else if (Opc == ISD::SRL)
+          LUT.push_back(LaneSplat.lshr(I));
+        else if (Opc == ISD::SRA)
+          LUT.push_back(LaneSplat.ashr(I));
+      }
+      LUT.append(8, APInt::getZero(8));
+    }
+    if (LUT.size() == NumElts) {
+      APInt Undefs = APInt::getSplat(NumElts, APInt(16, 0xFF00));
+      SDValue Mask = getConstVector(LUT, Undefs, VT, DAG, dl);
+      return DAG.getNode(X86ISD::PSHUFB, dl, VT, Mask, Amt);
+    }
+  }
+
   // It's worth extending once and using the vXi16/vXi32 shifts for smaller
   // types, but without AVX512 the extra overheads to get from vXi8 to vXi32
   // make the existing SSE solution better.
@@ -43806,7 +43839,8 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
 
   switch (Op.getOpcode()) {
   case X86ISD::PSHUFD:
-  case X86ISD::VPERMILPI: {
+  case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV3: {
     SmallVector<int, 8> Mask;
     SmallVector<SDValue, 2> Ops;
     if (getTargetShuffleMask(Op, true, Ops, Mask)) {
@@ -43850,6 +43884,7 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     return false;
   case X86ISD::PSHUFD:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMV3:
   case X86ISD::UNPCKH:
   case X86ISD::UNPCKL:
     return false;
@@ -53988,6 +54023,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   MVT VT = N->getSimpleValueType(0);
   int NumElts = VT.getVectorNumElements();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
   // ANDNP(undef, x) -> 0
@@ -54010,6 +54046,18 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   // Turn ANDNP back to AND if input is inverted.
   if (SDValue Not = IsNOT(N0, DAG))
     return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
+
+  // On AVX512 targets, attempt to reverse foldVSelectToSignBitSplatMask.
+  // to make use of predicated selects.
+  // ANDN(SEXT(SETCC()),X) -> SELECT(NOT(SETCC()),X,0)
+  if (DCI.isAfterLegalizeDAG() && N0.getOpcode() == ISD::SIGN_EXTEND) {
+    SDValue Src = N0.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (Src.getOpcode() == ISD::SETCC && SrcVT.getScalarType() == MVT::i1 &&
+        TLI.isTypeLegal(SrcVT) && N0.hasOneUse() && Src.hasOneUse())
+      return DAG.getSelect(DL, VT, DAG.getNOT(DL, Src, SrcVT), N1,
+                           getZeroVector(VT, Subtarget, DAG, DL));
+  }
 
   // Constant Folding
   APInt Undefs0, Undefs1;
@@ -54077,7 +54125,6 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     std::tie(Bits0, Elts0) = GetDemandedMasks(N1);
     std::tie(Bits1, Elts1) = GetDemandedMasks(N0, true);
 
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     if (TLI.SimplifyDemandedVectorElts(N0, Elts0, DCI) ||
         TLI.SimplifyDemandedVectorElts(N1, Elts1, DCI) ||
         TLI.SimplifyDemandedBits(N0, Bits0, Elts0, DCI) ||
