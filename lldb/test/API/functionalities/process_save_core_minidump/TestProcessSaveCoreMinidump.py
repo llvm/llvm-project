@@ -473,55 +473,6 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
-    def test_save_core_one_thread_one_heap(self):
-        self.build()
-        exe = self.getBuildArtifact("a.out")
-        custom_file = self.getBuildArtifact("core.custom.dmp")
-        try:
-            target = self.dbg.CreateTarget(exe)
-            process = target.LaunchSimple(
-                None, None, self.get_process_working_directory()
-            )
-            self.assertState(process.GetState(), lldb.eStateStopped)
-            custom_file = self.getBuildArtifact("core.one_thread_one_heap.dmp")
-            options = lldb.SBSaveCoreOptions()
-            options.SetOutputFile(lldb.SBFileSpec(custom_file))
-            options.SetPluginName("minidump")
-            options.SetStyle(lldb.eSaveCoreCustomOnly)
-            thread = process.GetThreadAtIndex(0)
-            options.save_thread_with_heaps(thread, 1)
-
-            error = process.SaveCore(options)
-            self.assertTrue(error.Success())
-            core_target = self.dbg.CreateTarget(None)
-            core_proc = core_target.LoadCore(custom_file)
-            # proc/pid maps prevent us from checking the number of regions, but
-            # this is mostly a smoke test for the extension.
-            self.assertEqual(core_proc.GetNumThreads(), 1)
-            addr = (
-                process.GetThreadAtIndex(0)
-                .GetFrameAtIndex(0)
-                .FindVariable("str")
-                .Dereference()
-                .GetAddress()
-                .GetOffset()
-            )
-            core_addr = (
-                core_proc.GetThreadAtIndex(0)
-                .GetFrameAtIndex(0)
-                .FindVariable("str")
-                .Dereference()
-                .GetAddress()
-                .GetOffset()
-            )
-            self.assertEqual(addr, core_addr)
-
-        finally:
-            if os.path.isfile(custom_file):
-                os.unlink(custom_file)
-
-    @skipUnlessArch("x86_64")
-    @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style_duplicated_regions(self):
         """Test that verifies a custom and unspecified save style fails for
         containing no data to save"""

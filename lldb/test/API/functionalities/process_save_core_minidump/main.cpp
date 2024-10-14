@@ -18,7 +18,7 @@ size_t h() {
 
 int main() {
   std::thread t1(f);
-  char *str = new char[10];
+
   size_t x = h();
 
   t1.join();
