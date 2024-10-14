@@ -247,7 +247,7 @@ def HasSMEF16F16orSMEF8F16
 def HasNEONandIsStreamingSafe
     : Predicate<"Subtarget->hasNEON()">,
       AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
-// A subet of NEON instructions legal in Streaming SVE mode with +sme2p2.
+// A subset of NEON instructions legal in Streaming SVE mode with +sme2p2.
 // TODO: Change to check for hasSME2p2() once FEAT_SME2p2 is implemented.
 def HasNEONandIsSME2p2StreamingSafe
     : Predicate<"Subtarget->isNeonAvailable()">,
