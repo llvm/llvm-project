@@ -2084,9 +2084,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
       (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
-  auto *ReductionPHIRecipe = dyn_cast<VPReductionPHIRecipe>(getOperand(0));
   assert(
-      (ReductionPHIRecipe && !ReductionPHIRecipe->isInLoop() ||
+      (!cast<VPReductionPHIRecipe>(getOperand(0))->isInLoop() ||
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "In-loop reduction not implemented in VPlan-based cost model currently.");
 
