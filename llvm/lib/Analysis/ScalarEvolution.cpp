@@ -7309,7 +7309,7 @@ bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
 }
 
 bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
-  SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ false);
+  SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(Op, PC);
   return PC.MaybePoison.empty();
 }
