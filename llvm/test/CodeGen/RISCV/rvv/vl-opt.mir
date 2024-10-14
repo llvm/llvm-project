@@ -25,7 +25,7 @@ body: |
     ; CHECK: liveins: $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
-    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, %vl, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVREDSUM_VS_M1_E64 $noreg, %x, $noreg, -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0 /* tu, mu */
     %vl:gprnox0 = COPY $x1
