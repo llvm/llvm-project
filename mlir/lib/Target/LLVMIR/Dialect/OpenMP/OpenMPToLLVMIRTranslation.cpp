@@ -1449,7 +1449,12 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       bodyGenStatus = failure();
 
     // Apply copy region for firstprivate.
-    if (!privateBlockArgs.empty()) {
+    bool needsFirstprivate =
+        llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
+          return privOp.getDataSharingType() ==
+                 omp::DataSharingClauseType::FirstPrivate;
+        });
+    if (needsFirstprivate) {
       // Find the end of the allocation blocks
       assert(afterAllocas->getSinglePredecessor());
       builder.SetInsertPoint(
