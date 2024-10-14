@@ -387,8 +387,8 @@ bool GCNTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
   // them later if they may access private memory. We don't have enough context
   // here, and legalization can handle it.
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
-    return (Alignment >= 4 || ST->hasUnalignedScratchAccess()) &&
-      ChainSizeInBytes <= ST->getMaxPrivateElementSize();
+    return (Alignment >= 4 || ST->hasUnalignedScratchAccessEnabled()) &&
+           ChainSizeInBytes <= ST->getMaxPrivateElementSize();
   }
   return true;
 }
@@ -1112,8 +1112,8 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     if (!AMDGPU::isExtendedGlobalAddrSpace(NewAS))
       return nullptr;
     Module *M = II->getModule();
-    Function *NewDecl = Intrinsic::getDeclaration(M, II->getIntrinsicID(),
-                                                  {DestTy, SrcTy, DestTy});
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {DestTy, SrcTy, DestTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;
@@ -1312,6 +1312,11 @@ static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
     AllocaSize += DL.getTypeAllocSize(AI->getAllocatedType());
   }
   return AllocaSize;
+}
+
+int GCNTTIImpl::getInliningLastCallToStaticBonus() const {
+  return BaseT::getInliningLastCallToStaticBonus() *
+         getInliningThresholdMultiplier();
 }
 
 unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {

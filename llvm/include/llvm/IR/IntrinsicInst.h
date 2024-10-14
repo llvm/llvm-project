@@ -568,9 +568,9 @@ public:
   /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
   /// \p Params. Additionally, the load and gather intrinsics require
   /// \p ReturnType to be specified.
-  static Function *getDeclarationForParams(Module *M, Intrinsic::ID,
-                                           Type *ReturnType,
-                                           ArrayRef<Value *> Params);
+  static Function *getOrInsertDeclarationForParams(Module *M, Intrinsic::ID,
+                                                   Type *ReturnType,
+                                                   ArrayRef<Value *> Params);
 
   static std::optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);
   static std::optional<unsigned> getVectorLengthParamPos(

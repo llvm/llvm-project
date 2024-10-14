@@ -702,10 +702,10 @@ public:
   /// Retrieve the current block, if any.
   sema::BlockScopeInfo *getCurBlock();
 
-  /// Get the innermost lambda enclosing the current location, if any. This
-  /// looks through intervening non-lambda scopes such as local functions and
-  /// blocks.
-  sema::LambdaScopeInfo *getEnclosingLambda() const;
+  /// Get the innermost lambda or block enclosing the current location, if any.
+  /// This looks through intervening non-lambda, non-block scopes such as local
+  /// functions.
+  sema::CapturingScopeInfo *getEnclosingLambdaOrBlock() const;
 
   /// Retrieve the current lambda scope info, if any.
   /// \param IgnoreNonLambdaCapturingScope true if should find the top-most
@@ -4528,9 +4528,10 @@ public:
   /// declaration.
   void AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E);
 
-  /// AddAnnotationAttr - Adds an annotation Annot with Args arguments to D.
-  void AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
-                         StringRef Annot, MutableArrayRef<Expr *> Args);
+  /// CreateAnnotationAttr - Creates an annotation Annot with Args arguments.
+  Attr *CreateAnnotationAttr(const AttributeCommonInfo &CI, StringRef Annot,
+                             MutableArrayRef<Expr *> Args);
+  Attr *CreateAnnotationAttr(const ParsedAttr &AL);
 
   bool checkMSInheritanceAttrOnDefinition(CXXRecordDecl *RD, SourceRange Range,
                                           bool BestCase,
@@ -11326,9 +11327,9 @@ public:
       CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
       const ParsedAttributesView &Attr, TemplateParameterList *TemplateParams,
       AccessSpecifier AS, SourceLocation ModulePrivateLoc,
-      SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
-      TemplateParameterList **OuterTemplateParamLists,
-      SkipBodyInfo *SkipBody = nullptr);
+      SourceLocation FriendLoc,
+      ArrayRef<TemplateParameterList *> OuterTemplateParamLists,
+      bool IsMemberSpecialization, SkipBodyInfo *SkipBody = nullptr);
 
   /// Translates template arguments as provided by the parser
   /// into template arguments used by semantic analysis.
@@ -11367,7 +11368,8 @@ public:
   DeclResult ActOnVarTemplateSpecialization(
       Scope *S, Declarator &D, TypeSourceInfo *DI, LookupResult &Previous,
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
-      StorageClass SC, bool IsPartialSpecialization);
+      StorageClass SC, bool IsPartialSpecialization,
+      bool IsMemberSpecialization);
 
   /// Get the specialization of the given variable template corresponding to
   /// the specified argument list, or a null-but-valid result if the arguments
@@ -13008,28 +13010,14 @@ public:
   /// dealing with a specialization. This is only relevant for function
   /// template specializations.
   ///
-  /// \param Pattern If non-NULL, indicates the pattern from which we will be
-  /// instantiating the definition of the given declaration, \p ND. This is
-  /// used to determine the proper set of template instantiation arguments for
-  /// friend function template specializations.
-  ///
   /// \param ForConstraintInstantiation when collecting arguments,
   /// ForConstraintInstantiation indicates we should continue looking when
   /// encountering a lambda generic call operator, and continue looking for
   /// arguments on an enclosing class template.
-  ///
-  /// \param SkipForSpecialization when specified, any template specializations
-  /// in a traversal would be ignored.
-  /// \param ForDefaultArgumentSubstitution indicates we should continue looking
-  /// when encountering a specialized member function template, rather than
-  /// returning immediately.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
-      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
-      bool ForConstraintInstantiation = false,
-      bool SkipForSpecialization = false,
-      bool ForDefaultArgumentSubstitution = false);
+      bool RelativeToPrimary = false, bool ForConstraintInstantiation = false);
 
   /// RAII object to handle the state changes required to synthesize
   /// a function body.

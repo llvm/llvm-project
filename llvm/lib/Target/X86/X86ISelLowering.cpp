@@ -31163,12 +31163,14 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   if (BitTested.second == ConstantBit || BitTested.second == NotConstantBit) {
     auto *C = cast<ConstantInt>(I->getOperand(I->getOperand(0) == AI ? 1 : 0));
 
-    BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_C, AI->getType());
+    BitTest = Intrinsic::getOrInsertDeclaration(AI->getModule(), IID_C,
+                                                AI->getType());
 
     unsigned Imm = llvm::countr_zero(C->getZExtValue());
     Result = Builder.CreateCall(BitTest, {Addr, Builder.getInt8(Imm)});
   } else {
-    BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_I, AI->getType());
+    BitTest = Intrinsic::getOrInsertDeclaration(AI->getModule(), IID_I,
+                                                AI->getType());
 
     assert(BitTested.second == ShiftBit || BitTested.second == NotShiftBit);
 
@@ -31328,7 +31330,7 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     break;
   }
   Function *CmpArith =
-      Intrinsic::getDeclaration(AI->getModule(), IID, AI->getType());
+      Intrinsic::getOrInsertDeclaration(AI->getModule(), IID, AI->getType());
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
                                           PointerType::getUnqual(Ctx));
   Value *Call = Builder.CreateCall(
@@ -31444,7 +31446,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
     return nullptr;
 
   Function *MFence =
-      llvm::Intrinsic::getDeclaration(M, Intrinsic::x86_sse2_mfence);
+      llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_sse2_mfence);
   Builder.CreateCall(MFence, {});
 
   // Finally we can emit the atomic load.
@@ -34219,10 +34221,12 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMAXS)
   NODE_NAME_CASE(FMAX_SAE)
   NODE_NAME_CASE(FMAXS_SAE)
+  NODE_NAME_CASE(STRICT_FMAX)
   NODE_NAME_CASE(FMIN)
   NODE_NAME_CASE(FMINS)
   NODE_NAME_CASE(FMIN_SAE)
   NODE_NAME_CASE(FMINS_SAE)
+  NODE_NAME_CASE(STRICT_FMIN)
   NODE_NAME_CASE(FMAXC)
   NODE_NAME_CASE(FMINC)
   NODE_NAME_CASE(FRSQRT)
@@ -46461,17 +46465,21 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // x<=y?x:y, because of how they handle negative zero (which can be
   // ignored in unsafe-math mode).
   // We also try to create v2f32 min/max nodes, which we later widen to v4f32.
-  if (Cond.getOpcode() == ISD::SETCC && VT.isFloatingPoint() &&
-      VT != MVT::f80 && VT != MVT::f128 && !isSoftF16(VT, Subtarget) &&
-      (TLI.isTypeLegal(VT) || VT == MVT::v2f32) &&
+  if ((Cond.getOpcode() == ISD::SETCC ||
+       Cond.getOpcode() == ISD::STRICT_FSETCCS) &&
+      VT.isFloatingPoint() && VT != MVT::f80 && VT != MVT::f128 &&
+      !isSoftF16(VT, Subtarget) && (TLI.isTypeLegal(VT) || VT == MVT::v2f32) &&
       (Subtarget.hasSSE2() ||
        (Subtarget.hasSSE1() && VT.getScalarType() == MVT::f32))) {
-    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    bool IsStrict = Cond->isStrictFPOpcode();
+    ISD::CondCode CC =
+        cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
+    SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
+    SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
 
     unsigned Opcode = 0;
     // Check for x CC y ? x : y.
-    if (DAG.isEqualTo(LHS, Cond.getOperand(0)) &&
-        DAG.isEqualTo(RHS, Cond.getOperand(1))) {
+    if (DAG.isEqualTo(LHS, Op0) && DAG.isEqualTo(RHS, Op1)) {
       switch (CC) {
       default: break;
       case ISD::SETULT:
@@ -46539,8 +46547,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         break;
       }
     // Check for x CC y ? y : x -- a min/max with reversed arms.
-    } else if (DAG.isEqualTo(LHS, Cond.getOperand(1)) &&
-               DAG.isEqualTo(RHS, Cond.getOperand(0))) {
+    } else if (DAG.isEqualTo(LHS, Op1) && DAG.isEqualTo(RHS, Op0)) {
       switch (CC) {
       default: break;
       case ISD::SETOGE:
@@ -46605,8 +46612,17 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    if (Opcode)
+    if (Opcode) {
+      if (IsStrict) {
+        SDValue Ret = DAG.getNode(Opcode == X86ISD::FMIN ? X86ISD::STRICT_FMIN
+                                                         : X86ISD::STRICT_FMAX,
+                                  DL, {N->getValueType(0), MVT::Other},
+                                  {Cond.getOperand(0), LHS, RHS});
+        DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
+        return Ret;
+      }
       return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
+    }
   }
 
   // Some mask scalar intrinsics rely on checking if only one bit is set
@@ -49986,6 +50002,28 @@ static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
          (VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit()));
 }
 
+/// Folds (and X, (or Y, ~Z)) --> (and X, ~(and ~Y, Z))
+/// This undoes the inverse fold performed in InstCombine
+static SDValue combineAndNotOrIntoAndNotAnd(SDNode *N, SelectionDAG &DAG) {
+
+  using namespace llvm::SDPatternMatch;
+  MVT VT = N->getSimpleValueType(0);
+  SDLoc DL(N);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.hasAndNot(SDValue(N, 0)))
+    return SDValue();
+
+  SDValue X, Y, Z;
+  if (sd_match(
+          N, m_And(m_Value(X), m_OneUse(m_Or(m_Value(Y), m_Not(m_Value(Z)))))))
+    return DAG.getNode(
+        ISD::AND, DL, VT, X,
+        DAG.getNOT(DL, DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, Y, VT), Z),
+                   VT));
+
+  return SDValue();
+}
+
 // This function recognizes cases where X86 bzhi instruction can replace and
 // 'and-load' sequence.
 // In case of loading integer value from an array of constants which is defined
@@ -50475,6 +50513,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     return ShiftRight;
 
   if (SDValue R = combineAndLoadToBZHI(N, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineAndNotOrIntoAndNotAnd(N, DAG))
     return R;
 
   // fold (and (mul x, c1), c2) -> (mul x, (and c1, c2))
@@ -57582,6 +57623,14 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 
   if (InVec.getOpcode() == ISD::BUILD_VECTOR)
     return DAG.getBuildVector(VT, DL, InVec->ops().slice(IdxVal, NumSubElts));
+
+  // EXTRACT_SUBVECTOR(EXTRACT_SUBVECTOR(V,C1)),C2) - EXTRACT_SUBVECTOR(V,C1+C2)
+  if (IdxVal != 0 && InVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      InVec.hasOneUse() && TLI.isTypeLegal(VT) &&
+      TLI.isTypeLegal(InVec.getOperand(0).getValueType())) {
+    unsigned NewIdx = IdxVal + InVec.getConstantOperandVal(1);
+    return extractSubVector(InVec.getOperand(0), NewIdx, DAG, DL, SizeInBits);
+  }
 
   // If we are extracting from an insert into a larger vector, replace with a
   // smaller insert if we don't access less than the original subvector. Don't
