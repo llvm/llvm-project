@@ -33,12 +33,12 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # NO_AVX512F:       registers:
-# NO_AVX512F-NEXT:    - { id: 0, class: gr64, preferred-register: '' }
-# NO_AVX512F-NEXT:    - { id: 1, class: vr256, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 0, class: gr64, preferred-register: '', flags: [   ] }
+# NO_AVX512F-NEXT:    - { id: 1, class: vr256, preferred-register: '', flags: [   ] }
 #
 # AVX512ALL:        registers:
-# AVX512ALL-NEXT:     - { id: 0, class: gr64, preferred-register: '' }
-# AVX512ALL-NEXT:     - { id: 1, class: vr256x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 0, class: gr64, preferred-register: '', flags: [   ] }
+# AVX512ALL-NEXT:     - { id: 1, class: vr256x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
@@ -106,12 +106,12 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # NO_AVX512F:       registers:
-# NO_AVX512F-NEXT:    - { id: 0, class: vr256, preferred-register: '' }
-# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 0, class: vr256, preferred-register: '', flags: [   ] }
+# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 #
 # AVX512ALL:        registers:
-# AVX512ALL-NEXT:     - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 0, class: vr256x, preferred-register: '', flags: [   ] }
+# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
@@ -146,12 +146,12 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # NO_AVX512F:       registers:
-# NO_AVX512F-NEXT:    - { id: 0, class: vr256, preferred-register: '' }
-# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 0, class: vr256, preferred-register: '', flags: [   ] }
+# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 #
 # AVX512ALL:        registers:
-# AVX512ALL-NEXT:     - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 0, class: vr256x, preferred-register: '', flags: [   ] }
+# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
