@@ -50,40 +50,130 @@ public:
   }
 
   using CreatePassFunc =
-      std::function<std::unique_ptr<ContainedPass>(StringRef)>;
+      std::function<std::unique_ptr<ContainedPass>(StringRef, StringRef)>;
 
   /// Parses \p Pipeline as a comma-separated sequence of pass names and sets
   /// the pass pipeline, using \p CreatePass to instantiate passes by name.
   ///
-  /// After calling this function, the PassManager contains only the specified
-  /// pipeline, any previously added passes are cleared.
+  /// Passes can have arguments, for example:
+  ///   "pass1<arg1,arg2>,pass2,pass3<arg3,arg4>"
+  ///
+  /// The arguments between angle brackets are treated as a mostly opaque string
+  /// and each pass is responsible for parsing its arguments. The exception to
+  /// this are nested angle brackets, which must match pair-wise to allow
+  /// arguments to contain nested pipelines, like:
+  ///
+  ///   "pass1<subpass1,subpass2<arg1,arg2>,subpass3>"
+  ///
+  /// An empty args string is treated the same as no args, so "pass" and
+  /// "pass<>" are equivalent.
   void setPassPipeline(StringRef Pipeline, CreatePassFunc CreatePass) {
     static constexpr const char EndToken = '\0';
+    static constexpr const char BeginArgsToken = '<';
+    static constexpr const char EndArgsToken = '>';
     static constexpr const char PassDelimToken = ',';
 
     assert(Passes.empty() &&
            "setPassPipeline called on a non-empty sandboxir::PassManager");
+
+    // Accept an empty pipeline as a special case. This can be useful, for
+    // example, to test conversion to SandboxIR without running any passes on
+    // it.
+    if (Pipeline.empty())
+      return;
+
     // Add EndToken to the end to ease parsing.
     std::string PipelineStr = std::string(Pipeline) + EndToken;
-    int FlagBeginIdx = 0;
+    Pipeline = StringRef(PipelineStr);
 
-    for (auto [Idx, C] : enumerate(PipelineStr)) {
-      // Keep moving Idx until we find the end of the pass name.
-      bool FoundDelim = C == EndToken || C == PassDelimToken;
-      if (!FoundDelim)
-        continue;
-      unsigned Sz = Idx - FlagBeginIdx;
-      std::string PassName(&PipelineStr[FlagBeginIdx], Sz);
-      FlagBeginIdx = Idx + 1;
+    enum {
+      ScanName,  // reading a pass name
+      ScanArgs,  // reading a list of args
+      ArgsEnded, // read the last '>' in an args list, must read delimiter next
+    } State;
+    State = ScanName;
+    int PassBeginIdx = 0;
+    int ArgsBeginIdx;
+    StringRef PassName;
+    StringRef PassArgs;
+    int NestedArgs = 0;
 
+    auto AddPass = [this, CreatePass](StringRef PassName, StringRef PassArgs) {
+      if (PassName.empty()) {
+        errs() << "Found empty pass name.\n";
+        exit(1);
+      }
       // Get the pass that corresponds to PassName and add it to the pass
       // manager.
-      auto Pass = CreatePass(PassName);
+      auto Pass = CreatePass(PassName, PassArgs);
       if (Pass == nullptr) {
         errs() << "Pass '" << PassName << "' not registered!\n";
         exit(1);
       }
       addPass(std::move(Pass));
+    };
+    for (auto [Idx, C] : enumerate(Pipeline)) {
+      switch (State) {
+      case ScanName:
+        if (C == BeginArgsToken) {
+          // Save pass name for later and begin scanning args.
+          PassName = Pipeline.slice(PassBeginIdx, Idx);
+          ArgsBeginIdx = Idx + 1;
+          ++NestedArgs;
+          State = ScanArgs;
+          break;
+        }
+        if (C == EndArgsToken) {
+          errs() << "Unexpected '>' in pass pipeline.\n";
+          exit(1);
+        }
+        if (C == EndToken || C == PassDelimToken) {
+          // Delimiter found, add the pass (with empty args), stay in the
+          // ScanName state.
+          AddPass(Pipeline.slice(PassBeginIdx, Idx), StringRef());
+          PassBeginIdx = Idx + 1;
+        }
+        break;
+      case ScanArgs:
+        // While scanning args, we only care about making sure nesting of angle
+        // brackets is correct.
+        if (C == BeginArgsToken) {
+          ++NestedArgs;
+          break;
+        }
+        if (C == EndArgsToken) {
+          --NestedArgs;
+          if (NestedArgs == 0) {
+            // Done scanning args.
+            PassArgs = Pipeline.slice(ArgsBeginIdx, Idx);
+            AddPass(PassName, PassArgs);
+            State = ArgsEnded;
+          } else if (NestedArgs < 0) {
+            errs() << "Unbalanced '>' in pass pipeline.\n";
+            exit(1);
+          }
+          break;
+        }
+        if (C == EndToken) {
+          errs() << "Missing '>' in pass pipeline. End-of-string reached while "
+                    "reading arguments for pass '"
+                 << PassName << "'.\n";
+          exit(1);
+        }
+        break;
+      case ArgsEnded:
+        // Once we're done scanning args, only a delimiter is valid. This avoids
+        // accepting strings like "foo<args><more-args>" or "foo<args>bar".
+        if (C == EndToken || C == PassDelimToken) {
+          PassBeginIdx = Idx + 1;
+          State = ScanName;
+        } else {
+          errs() << "Expected delimiter or end-of-string after pass "
+                    "arguments.\n";
+          exit(1);
+        }
+        break;
+      }
     }
   }
 
@@ -101,7 +191,7 @@ public:
   }
 #endif
   /// Similar to print() but prints one pass per line. Used for testing.
-  void printPipeline(raw_ostream &OS) const {
+  void printPipeline(raw_ostream &OS) const override {
     OS << this->getName() << "\n";
     for (const auto &PassPtr : Passes)
       PassPtr->printPipeline(OS);
