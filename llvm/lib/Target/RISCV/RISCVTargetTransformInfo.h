@@ -295,6 +295,12 @@ public:
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
+    return TLI->isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace,
+                                             DL);
+  }
+
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment);
 
   bool isVScaleKnownToBeAPowerOfTwo() const {
