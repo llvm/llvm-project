@@ -20,11 +20,13 @@
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -555,6 +557,10 @@ private:
   void *ArgToStringCookie = nullptr;
   ArgToStringFnTy ArgToStringFn;
 
+  /// Whether the diagnostic should be suppressed in FilePath.
+  llvm::unique_function<bool(diag::kind, llvm::StringRef /*FilePath*/) const>
+      DiagSuppressionMapping;
+
 public:
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
                              IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
@@ -945,6 +951,13 @@ public:
   Level getDiagnosticLevel(unsigned DiagID, SourceLocation Loc) const {
     return (Level)Diags->getDiagnosticLevel(DiagID, Loc, *this);
   }
+
+  /// Diagnostic suppression mappings can be used to ignore diagnostics based on
+  /// the file they occur in.
+  /// These take presumed locations into account, and can still be overriden by
+  /// clang-diagnostics pragmas.
+  void setDiagSuppressionMapping(decltype(DiagSuppressionMapping) Mapping);
+  bool isSuppressedViaMapping(diag::kind D, llvm::StringRef FilePath) const;
 
   /// Issue the message to the client.
   ///
@@ -1759,7 +1772,7 @@ const char ToggleHighlight = 127;
 /// warning options specified on the command line.
 void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
-                           bool ReportDiags = true);
+                           llvm::vfs::FileSystem &VFS, bool ReportDiags = true);
 void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
 } // namespace clang
 

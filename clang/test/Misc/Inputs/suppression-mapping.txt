@@ -1,0 +1,4 @@
+# Suppress unused warnings in all files, apart from the ones under `foo/`.
+[unused]
+src:*
+src:*foo/*=emit

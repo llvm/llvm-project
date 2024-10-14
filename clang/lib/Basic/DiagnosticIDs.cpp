@@ -599,6 +599,18 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       SM.isInSystemMacro(Loc))
     return diag::Severity::Ignored;
 
+  // Apply suppression mappings if severity wasn't explicitly mapped with a
+  // clang-diagnostics pragma to ensure pragmas always take precedence over
+  // mappings.
+  // We also use presumed locations here to improve reproducibility for
+  // preprocessed inputs.
+  if (!Mapping.isPragma()) {
+    if (auto PLoc = SM.getPresumedLoc(Loc);
+        PLoc.isValid() &&
+        Diag.isSuppressedViaMapping(DiagID, PLoc.getFilename()))
+      return diag::Severity::Ignored;
+  }
+
   return Result;
 }
 
