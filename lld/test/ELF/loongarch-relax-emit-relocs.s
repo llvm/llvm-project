@@ -12,8 +12,10 @@
 # RUN: ld.lld -r %t.64.o -o %t.64.r
 # RUN: llvm-objdump -dr %t.64.r | FileCheck %s --check-prefix=CHECKR
 
+## --no-relax should keep original relocations.
+## TODO Due to R_LARCH_RELAX is not relaxed, it plays same as --relax now.
 # RUN: ld.lld -Ttext=0x10000 --emit-relocs --no-relax %t.64.o -o %t.64.norelax
-# RUN: llvm-objdump -dr %t.64.norelax | FileCheck %s --check-prefixes=CHECK,NORELAX
+# RUN: llvm-objdump -dr %t.64.norelax | FileCheck %s
 
 # CHECK:      00010000 <_start>:
 # CHECK-NEXT:   pcalau12i $a0, 0
@@ -25,7 +27,6 @@
 # CHECK-NEXT:   nop
 # CHECK-NEXT:     R_LARCH_ALIGN *ABS*+0xc
 # CHECK-NEXT:   nop
-# NORELAX-NEXT:   nop
 # CHECK-NEXT:   ret
 
 # CHECKR:      <_start>:

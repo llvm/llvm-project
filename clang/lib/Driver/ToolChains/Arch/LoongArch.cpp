@@ -134,7 +134,6 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       (!Args.hasArgNoClaim(clang::driver::options::OPT_march_EQ)))
     Features.push_back("+lsx");
 
-  // -mrelax is default, unless -mno-relax is specified.
   if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true)) {
     Features.push_back("+relax");
   } else {
