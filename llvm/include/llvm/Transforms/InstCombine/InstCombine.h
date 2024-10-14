@@ -44,11 +44,10 @@ struct InstCombineOptions {
     return *this;
   }
 
-  /// Only enable skipping in standard optimization pipeline.
+  /// Only enable skipping when two versions of parameters are exactly the same.
   bool isCompatibleWith(const InstCombineOptions &LastOption) const {
-    return !VerifyFixpoint && !LastOption.VerifyFixpoint &&
-           MaxIterations == InstCombineDefaultMaxIterations &&
-           LastOption.MaxIterations == InstCombineDefaultMaxIterations;
+    return VerifyFixpoint == LastOption.VerifyFixpoint &&
+           MaxIterations == LastOption.MaxIterations;
   }
 };
 
