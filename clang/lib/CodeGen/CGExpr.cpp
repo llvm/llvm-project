@@ -1531,9 +1531,8 @@ LValue CodeGenFunction::EmitLValue(const Expr *E,
   // Running with sufficient stack space to avoid deeply nested expressions
   // cause a stack overflow.
   LValue LV;
-  CGM.runWithSufficientStackSpace(E->getExprLoc(), [&] {
-    LV = EmitLValueHelper(E, IsKnownNonNull);
-  });
+  CGM.runWithSufficientStackSpace(
+      E->getExprLoc(), [&] { LV = EmitLValueHelper(E, IsKnownNonNull); });
 
   if (IsKnownNonNull && !LV.isKnownNonNull())
     LV.setKnownNonNull();
