@@ -18843,7 +18843,16 @@ bool Sema::tryCaptureVariable(
   // We need to sync up the Declaration Context with the
   // FunctionScopeIndexToStopAt
   if (FunctionScopeIndexToStopAt) {
+    assert(!FunctionScopes.empty() && "No function scopes to stop at?");
     unsigned FSIndex = FunctionScopes.size() - 1;
+    // When we're parsing the lambda parameter list, the current DeclContext is
+    // NOT the lambda but its parent. So move away the current LSI before
+    // aligning DC and FunctionScopeIndexToStopAt.
+    if (auto *LSI = dyn_cast<LambdaScopeInfo>(FunctionScopes[FSIndex]);
+        LSI && !LSI->AfterParameterList)
+      --FSIndex;
+    assert(MaxFunctionScopesIndex <= FSIndex &&
+           "FSIndex is larger than the size of function scopes?");
     while (FSIndex != MaxFunctionScopesIndex) {
       DC = getLambdaAwareParentOfDeclContext(DC);
       --FSIndex;

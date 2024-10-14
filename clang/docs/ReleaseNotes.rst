@@ -487,6 +487,8 @@ Bug Fixes to C++ Support
 - Clang now uses the correct set of template argument lists when comparing the constraints of
   out-of-line definitions and member templates explicitly specialized for a given implicit instantiation of
   a class template. (#GH102320)
+- Fixed a bug in lambda captures where ``constexpr`` class-type objects were not properly considered ODR-used in
+  certain situations. (#GH47400), (#GH90896)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
