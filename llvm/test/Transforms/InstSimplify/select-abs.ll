@@ -232,7 +232,6 @@ entry:
   ret i64 %res
 }
 
-; TODO: Handle vector cases?
 define <4 x i16> @select_v4i16_eq0_abs_t(<4 x i16> %a) {
 ; CHECK-LABEL: @select_v4i16_eq0_abs_t(
 ; CHECK-NEXT:  entry:
