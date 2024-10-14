@@ -210,7 +210,7 @@ void CommandObjectMultiword::Execute(const char *args_string,
   } else {
     // Try to offer some alternatives to help correct the command.
     error_msg.assign(
-        llvm::Twine("'" + sub_command + "' is not a valid subcommand of \"" +
+        llvm::Twine("\"" + sub_command + "\" is not a valid subcommand of \"" +
                     GetCommandName() + "\"." + GetSubcommandsHintText() +
                     " Use \"help " + GetCommandName() + "\" to find out more.")
             .str());
@@ -225,7 +225,7 @@ std::string CommandObjectMultiword::GetSubcommandsHintText() {
   const size_t maxCount = 5;
   size_t i = 0;
   std::string buffer = " Valid subcommand";
-  buffer.append(m_subcommand_dict.size() > 1 ? "s are:" : "is");
+  buffer.append(m_subcommand_dict.size() > 1 ? "s are:" : " is");
   CommandMap::iterator pos;
   for (pos = m_subcommand_dict.begin();
        pos != m_subcommand_dict.end() && i < maxCount; ++pos, ++i) {
