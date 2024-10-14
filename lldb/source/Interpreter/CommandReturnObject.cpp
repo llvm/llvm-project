@@ -123,7 +123,8 @@ void CommandReturnObject::SetError(llvm::Error error) {
   }
 }
 
-llvm::StringRef CommandReturnObject::GetInlineDiagnosticsData(unsigned indent) {
+llvm::StringRef
+CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
   RenderDiagnosticDetails(m_diag_stream, indent, true, m_diagnostics);
   // Duplex the diagnostics to the secondary stream (but not inlined).
   if (auto stream_sp = m_err_stream.GetStreamAtIndex(eStreamStringIndex))
@@ -134,7 +135,7 @@ llvm::StringRef CommandReturnObject::GetInlineDiagnosticsData(unsigned indent) {
   return m_diag_stream.GetString();
 }
 
-llvm::StringRef CommandReturnObject::GetErrorData() {
+llvm::StringRef CommandReturnObject::GetErrorString() {
   // Diagnostics haven't been fetched; render them now (not inlined).
   if (!m_diagnostics.empty()) {
     RenderDiagnosticDetails(GetErrorStream(), std::nullopt, false,

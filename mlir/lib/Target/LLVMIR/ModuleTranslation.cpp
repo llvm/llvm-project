@@ -1056,44 +1056,48 @@ LogicalResult ModuleTranslation::convertGlobals() {
     globalsMapping.try_emplace(op, var);
 
     // Add debug information if present.
-    if (op.getDbgExpr()) {
-      llvm::DIGlobalVariableExpression *diGlobalExpr =
-          debugTranslation->translateGlobalVariableExpression(op.getDbgExpr());
-      llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
-      var->addDebugInfo(diGlobalExpr);
+    if (op.getDbgExprs()) {
+      for (auto exprAttr :
+           op.getDbgExprs()->getAsRange<DIGlobalVariableExpressionAttr>()) {
+        llvm::DIGlobalVariableExpression *diGlobalExpr =
+            debugTranslation->translateGlobalVariableExpression(exprAttr);
+        llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
+        var->addDebugInfo(diGlobalExpr);
 
-      // There is no `globals` field in DICompileUnitAttr which can be directly
-      // assigned to DICompileUnit. We have to build the list by looking at the
-      // dbgExpr of all the GlobalOps. The scope of the variable is used to get
-      // the DICompileUnit in which to add it.
-      // But there are cases where the scope of a global does not
-      // directly point to the DICompileUnit and we have to do a bit more work
-      // to get to it. Some of those cases are:
-      //
-      // 1. For the languages that support modules, the scope hierarchy can be
-      // variable -> DIModule -> DICompileUnit
-      //
-      // 2. For the Fortran common block variable, the scope hierarchy can be
-      // variable -> DICommonBlock -> DISubprogram -> DICompileUnit
-      //
-      // 3. For entities like static local variables in C or variable with
-      // SAVE attribute in Fortran, the scope hierarchy can be
-      // variable -> DISubprogram -> DICompileUnit
-      llvm::DIScope *scope = diGlobalVar->getScope();
-      if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
-        scope = mod->getScope();
-      else if (auto *cb = dyn_cast_if_present<llvm::DICommonBlock>(scope)) {
-        if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(cb->getScope()))
+        // There is no `globals` field in DICompileUnitAttr which can be
+        // directly assigned to DICompileUnit. We have to build the list by
+        // looking at the dbgExpr of all the GlobalOps. The scope of the
+        // variable is used to get the DICompileUnit in which to add it. But
+        // there are cases where the scope of a global does not directly point
+        // to the DICompileUnit and we have to do a bit more work to get to
+        // it. Some of those cases are:
+        //
+        // 1. For the languages that support modules, the scope hierarchy can
+        // be variable -> DIModule -> DICompileUnit
+        //
+        // 2. For the Fortran common block variable, the scope hierarchy can
+        // be variable -> DICommonBlock -> DISubprogram -> DICompileUnit
+        //
+        // 3. For entities like static local variables in C or variable with
+        // SAVE attribute in Fortran, the scope hierarchy can be
+        // variable -> DISubprogram -> DICompileUnit
+        llvm::DIScope *scope = diGlobalVar->getScope();
+        if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
+          scope = mod->getScope();
+        else if (auto *cb = dyn_cast_if_present<llvm::DICommonBlock>(scope)) {
+          if (auto *sp =
+                  dyn_cast_if_present<llvm::DISubprogram>(cb->getScope()))
+            scope = sp->getUnit();
+        } else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
           scope = sp->getUnit();
-      } else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
-        scope = sp->getUnit();
 
-      // Get the compile unit (scope) of the the global variable.
-      if (llvm::DICompileUnit *compileUnit =
-              dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
-        // Update the compile unit with this incoming global variable expression
-        // during the finalizing step later.
-        allGVars[compileUnit].push_back(diGlobalExpr);
+        // Get the compile unit (scope) of the the global variable.
+        if (llvm::DICompileUnit *compileUnit =
+                dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
+          // Update the compile unit with this incoming global variable
+          // expression during the finalizing step later.
+          allGVars[compileUnit].push_back(diGlobalExpr);
+        }
       }
     }
   }
