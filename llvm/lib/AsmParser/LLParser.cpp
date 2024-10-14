@@ -360,7 +360,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                                               OverloadTys))
           return error(Info.second, "invalid intrinsic signature");
 
-        U.set(Intrinsic::getDeclaration(M, IID, OverloadTys));
+        U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
       }
 
       Info.first->eraseFromParent();
@@ -3202,8 +3202,14 @@ bool LLParser::parseOptionalOperandBundles(
 
       Type *Ty = nullptr;
       Value *Input = nullptr;
-      if (parseType(Ty) || parseValue(Ty, Input, PFS))
+      if (parseType(Ty))
         return true;
+      if (Ty->isMetadataTy()) {
+        if (parseMetadataAsValue(Input, PFS))
+          return true;
+      } else if (parseValue(Ty, Input, PFS)) {
+        return true;
+      }
       Inputs.push_back(Input);
     }
 
