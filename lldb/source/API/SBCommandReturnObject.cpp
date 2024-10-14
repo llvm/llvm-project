@@ -85,27 +85,27 @@ SBCommandReturnObject::operator bool() const {
 const char *SBCommandReturnObject::GetOutput() {
   LLDB_INSTRUMENT_VA(this);
 
-  ConstString output(ref().GetOutputData());
+  ConstString output(ref().GetOutputString());
   return output.AsCString(/*value_if_empty*/ "");
 }
 
 const char *SBCommandReturnObject::GetError() {
   LLDB_INSTRUMENT_VA(this);
 
-  ConstString output(ref().GetErrorData());
+  ConstString output(ref().GetErrorString());
   return output.AsCString(/*value_if_empty*/ "");
 }
 
 size_t SBCommandReturnObject::GetOutputSize() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ref().GetOutputData().size();
+  return ref().GetOutputString().size();
 }
 
 size_t SBCommandReturnObject::GetErrorSize() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ref().GetErrorData().size();
+  return ref().GetErrorString().size();
 }
 
 size_t SBCommandReturnObject::PutOutput(FILE *fh) {
