@@ -127,6 +127,16 @@ bool PerTargetMIParsingState::getRegisterByName(StringRef RegName,
   return false;
 }
 
+bool PerTargetMIParsingState::getVRegFlagValue(StringRef FlagName,
+                                               uint8_t &FlagValue) const {
+  const auto *TRI = Subtarget.getRegisterInfo();
+  std::optional<uint8_t> FV = TRI->getVRegFlagValue(FlagName);
+  if (!FV)
+    return true;
+  FlagValue = *FV;
+  return false;
+}
+
 void PerTargetMIParsingState::initNames2InstrOpCodes() {
   if (!Names2InstrOpCodes.empty())
     return;
@@ -1776,6 +1786,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
 
         MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
         MRI.setType(Reg, Ty);
+        MRI.noteNewVirtualRegister(Reg);
       }
     }
   } else if (consumeIfPresent(MIToken::lparen)) {
