@@ -22,6 +22,14 @@ Macros:
 
 #include <__config>
 
+// <stdalign.h> is not provided by libc++
+#if __has_include(<stdalign.h>)
+#  include <stdalign.h>
+#  ifdef _LIBCPP_STDALIGN_H
+#    error "If libc++ starts defining <stdalign.h>, the __has_include check should move to libc++'s <stdalign.h>"
+#  endif
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -32,17 +40,12 @@ Macros:
 #undef __alignof_is_defined
 #define __alignof_is_defined 1
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17 && defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 #  if _LIBCPP_STD_VER >= 20
-#    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED_("removed in C++20")
+#    warning <cstdalign> is removed in C++20.
 #  else
-#    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED
+#    warning <cstdalign> is deprecated.
 #  endif
-
-using __standard_header_cstdalign _DEPRECATION_ANNOTATION = void;
-using __use_standard_header_cstdalign                     = __standard_header_cstdalign;
-
-#  undef _DEPRECATION_ANNOTATION
 #endif
 
 #endif // _LIBCPP_CSTDALIGN

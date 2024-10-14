@@ -28,17 +28,12 @@ Macros:
 #undef __bool_true_false_are_defined
 #define __bool_true_false_are_defined 1
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17 && defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 #  if _LIBCPP_STD_VER >= 20
-#    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED_("removed in C++20")
+#    warning <cstdbool> is removed in C++20.
 #  else
-#    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED
+#    warning <cstdbool> is deprecated.
 #  endif
-
-using __standard_header_cstdbool _DEPRECATION_ANNOTATION = void;
-using __use_standard_header_cstdbool                     = __standard_header_cstdbool;
-
-#  undef _DEPRECATION_ANNOTATION
 #endif
 
 #endif // _LIBCPP_CSTDBOOL

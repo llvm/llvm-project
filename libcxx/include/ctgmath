@@ -32,17 +32,12 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17 && defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 #  if _LIBCPP_STD_VER >= 20
-#    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED_("removed in C++20")
+#    warning <ctgmath> is removed in C++20. Include <cmath> and <complex> instead.
 #  else
-#    define _DEPRECATION_ANNOTATION _LIBCPP_DEPRECATED
+#    warning <ctgmath> is deprecated. Include <cmath> and <complex> instead.
 #  endif
-
-using __standard_header_ctgmath _DEPRECATION_ANNOTATION = void;
-using __use_standard_header_ctgmath                     = __standard_header_ctgmath;
-
-#  undef _DEPRECATION_ANNOTATION
 #endif
 
 #endif // _LIBCPP_CTGMATH
