@@ -325,8 +325,6 @@ static Expected<StringRef> linkDeviceLibFiles(StringRef InputFile,
 
 /// Add any llvm-spirv option that relies on a specific Triple in addition
 /// to user supplied options.
-/// NOTE: Any changes made here should be reflected in the similarly named
-/// function in clang/lib/Driver/ToolChains/Clang.cpp.
 static void getSPIRVTransOpts(const ArgList &Args,
                               SmallVector<StringRef, 8> &TranslatorArgs,
                               const llvm::Triple Triple) {
