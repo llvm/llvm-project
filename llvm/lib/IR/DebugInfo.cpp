@@ -2099,10 +2099,10 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
                                     AddrExpr, VarRec.DL);
   (void)Assign;
   LLVM_DEBUG(if (!Assign.isNull()) {
-    if (Assign.is<DbgRecord *>())
-      errs() << " > INSERT: " << *Assign.get<DbgRecord *>() << "\n";
+    if (isa<DbgRecord *>(Assign))
+      errs() << " > INSERT: " << *cast<DbgRecord *>(Assign) << "\n";
     else
-      errs() << " > INSERT: " << *Assign.get<Instruction *>() << "\n";
+      errs() << " > INSERT: " << *cast<Instruction *>(Assign) << "\n";
   });
 }
 

@@ -1052,9 +1052,9 @@ public:
       if (Source.isNull())
         OS << "null";
       else if (isa<DbgAssignIntrinsic *>(Source))
-        OS << Source.get<DbgAssignIntrinsic *>();
+        OS << cast<DbgAssignIntrinsic *>(Source);
       else
-        OS << Source.get<DbgVariableRecord *>();
+        OS << cast<DbgVariableRecord *>(Source);
       OS << ")";
     }
 
