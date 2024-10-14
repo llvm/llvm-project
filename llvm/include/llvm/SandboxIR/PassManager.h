@@ -18,6 +18,8 @@
 #ifndef LLVM_SANDBOXIR_PASSMANAGER_H
 #define LLVM_SANDBOXIR_PASSMANAGER_H
 
+#include <memory>
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/SandboxIR/Pass.h"
@@ -32,25 +34,65 @@ template <typename ParentPass, typename ContainedPass>
 class PassManager : public ParentPass {
 protected:
   /// The list of passes that this pass manager will run.
-  SmallVector<ContainedPass *> Passes;
+  SmallVector<std::unique_ptr<ContainedPass>> Passes;
 
   PassManager(StringRef Name) : ParentPass(Name) {}
   PassManager(const PassManager &) = delete;
+  PassManager(PassManager &&) = default;
   virtual ~PassManager() = default;
   PassManager &operator=(const PassManager &) = delete;
 
 public:
   /// Adds \p Pass to the pass pipeline.
-  void addPass(ContainedPass *Pass) {
+  void addPass(std::unique_ptr<ContainedPass> Pass) {
     // TODO: Check that Pass's class type works with this PassManager type.
-    Passes.push_back(Pass);
+    Passes.push_back(std::move(Pass));
   }
+
+  using CreatePassFunc =
+      std::function<std::unique_ptr<ContainedPass>(StringRef)>;
+
+  /// Parses \p Pipeline as a comma-separated sequence of pass names and sets
+  /// the pass pipeline, using \p CreatePass to instantiate passes by name.
+  ///
+  /// After calling this function, the PassManager contains only the specified
+  /// pipeline, any previously added passes are cleared.
+  void setPassPipeline(StringRef Pipeline, CreatePassFunc CreatePass) {
+    static constexpr const char EndToken = '\0';
+    static constexpr const char PassDelimToken = ',';
+
+    assert(Passes.empty() &&
+           "setPassPipeline called on a non-empty sandboxir::PassManager");
+    // Add EndToken to the end to ease parsing.
+    std::string PipelineStr = std::string(Pipeline) + EndToken;
+    int FlagBeginIdx = 0;
+
+    for (auto [Idx, C] : enumerate(PipelineStr)) {
+      // Keep moving Idx until we find the end of the pass name.
+      bool FoundDelim = C == EndToken || C == PassDelimToken;
+      if (!FoundDelim)
+        continue;
+      unsigned Sz = Idx - FlagBeginIdx;
+      std::string PassName(&PipelineStr[FlagBeginIdx], Sz);
+      FlagBeginIdx = Idx + 1;
+
+      // Get the pass that corresponds to PassName and add it to the pass
+      // manager.
+      auto Pass = CreatePass(PassName);
+      if (Pass == nullptr) {
+        errs() << "Pass '" << PassName << "' not registered!\n";
+        exit(1);
+      }
+      addPass(std::move(Pass));
+    }
+  }
+
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
     OS << this->getName();
     OS << "(";
     // TODO: This should call Pass->print(OS) because Pass may be a PM.
-    interleave(Passes, OS, [&OS](auto *Pass) { OS << Pass->getName(); }, ",");
+    interleave(Passes, OS, [&OS](auto &Pass) { OS << Pass->getName(); }, ",");
     OS << ")";
   }
   LLVM_DUMP_METHOD void dump() const override {
@@ -73,36 +115,10 @@ public:
   bool runOnFunction(Function &F) final;
 };
 
-/// Owns the passes and provides an API to get a pass by its name.
-class PassRegistry {
-  SmallVector<std::unique_ptr<Pass>, 8> Passes;
-  DenseMap<StringRef, Pass *> NameToPassMap;
-
+class RegionPassManager final : public PassManager<RegionPass, RegionPass> {
 public:
-  static constexpr const char PassDelimToken = ',';
-  PassRegistry() = default;
-  /// Registers \p PassPtr and takes ownership.
-  Pass &registerPass(std::unique_ptr<Pass> &&PassPtr) {
-    auto &PassRef = *PassPtr.get();
-    NameToPassMap[PassRef.getName()] = &PassRef;
-    Passes.push_back(std::move(PassPtr));
-    return PassRef;
-  }
-  /// \Returns the pass with name \p Name, or null if not registered.
-  Pass *getPassByName(StringRef Name) const {
-    auto It = NameToPassMap.find(Name);
-    return It != NameToPassMap.end() ? It->second : nullptr;
-  }
-  /// Creates a pass pipeline and returns the first pass manager.
-  FunctionPassManager &parseAndCreatePassPipeline(StringRef Pipeline);
-
-#ifndef NDEBUG
-  void print(raw_ostream &OS) const {
-    for (const auto &PassPtr : Passes)
-      OS << PassPtr->getName() << "\n";
-  }
-  LLVM_DUMP_METHOD void dump() const;
-#endif
+  RegionPassManager(StringRef Name) : PassManager(Name) {}
+  bool runOnRegion(Region &R) final;
 };
 
 } // namespace llvm::sandboxir

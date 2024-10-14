@@ -455,7 +455,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpClause::Lastprivate &x) {
-    ResolveOmpObjectList(x.v, Symbol::Flag::OmpLastPrivate);
+    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    ResolveOmpObjectList(objList, Symbol::Flag::OmpLastPrivate);
     return false;
   }
   bool Pre(const parser::OmpClause::Copyin &x) {
@@ -590,26 +591,25 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
-    if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.t)}) {
-      using Type = parser::OmpMapType::Type;
-      const Type &type{std::get<Type>(maptype->t)};
-      switch (type) {
-      case Type::To:
+    if (const auto &mapType{
+            std::get<std::optional<parser::OmpMapClause::Type>>(x.t)}) {
+      switch (*mapType) {
+      case parser::OmpMapClause::Type::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case Type::From:
+      case parser::OmpMapClause::Type::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case Type::Tofrom:
+      case parser::OmpMapClause::Type::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case Type::Alloc:
+      case parser::OmpMapClause::Type::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case Type::Release:
+      case parser::OmpMapClause::Type::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case Type::Delete:
+      case parser::OmpMapClause::Type::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
       }
@@ -718,7 +718,7 @@ private:
   void CheckDataCopyingClause(
       const parser::Name &, const Symbol &, Symbol::Flag);
   void CheckAssocLoopLevel(std::int64_t level, const parser::OmpClause *clause);
-  void CheckObjectInNamelistOrAssociate(
+  void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
   void CheckSourceLabel(const parser::Label &);
   void CheckLabelContext(const parser::CharBlock, const parser::CharBlock,
@@ -2225,20 +2225,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         return;
     }
 
-    if (auto *stmtFunction{symbol->detailsIf<semantics::SubprogramDetails>()};
-        stmtFunction && stmtFunction->stmtFunction()) {
-      // Each non-dummy argument from a statement function must be handled too,
-      // as if it was explicitly referenced.
-      semantics::UnorderedSymbolSet symbols{
-          CollectSymbols(stmtFunction->stmtFunction().value())};
-      for (const auto &sym : symbols) {
-        if (!IsStmtFunctionDummy(sym) && !IsObjectWithDSA(*sym)) {
-          CreateImplicitSymbols(&*sym, Symbol::Flag::OmpFromStmtFunction);
-        }
-      }
-    } else {
-      CreateImplicitSymbols(symbol);
-    }
+    CreateImplicitSymbols(symbol);
   } // within OpenMP construct
 }
 
@@ -2357,7 +2344,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                     CheckMultipleAppearances(*name, *symbol, ompFlag);
                   }
                   if (privateDataSharingAttributeFlags.test(ompFlag)) {
-                    CheckObjectInNamelistOrAssociate(*name, *symbol, ompFlag);
+                    CheckObjectIsPrivatizable(*name, *symbol, ompFlag);
                   }
 
                   if (ompFlag == Symbol::Flag::OmpAllocate) {
@@ -2383,6 +2370,21 @@ void OmpAttributeVisitor::ResolveOmpObject(
                           llvm::omp::getOpenMPDirectiveName(
                               GetContext().directive)
                               .str()));
+                }
+                if (ompFlag == Symbol::Flag::OmpReduction) {
+                  const Symbol &ultimateSymbol{symbol->GetUltimate()};
+                  // Using variables inside of a namelist in OpenMP reductions
+                  // is allowed by the standard, but is not allowed for
+                  // privatisation. This looks like an oversight. If the
+                  // namelist is hoisted to a global, we cannot apply the
+                  // mapping for the reduction variable: resulting in incorrect
+                  // results. Disabling this hoisting could make some real
+                  // production code go slower. See discussion in #109303
+                  if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
+                    context_.Say(name->source,
+                        "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
+                        name->ToString());
+                  }
                 }
                 if (GetContext().directive ==
                     llvm::omp::Directive::OMPD_target_data) {
@@ -2416,10 +2418,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpShared,
                       Symbol::Flag::OmpLinear};
 
-                  for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
-                    for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
-                      checkExclusivelists(
-                          hostAssocSym, ompFlag1, symbol, ompFlag2);
+                  // For OMP TARGET TEAMS directive some sharing attribute
+                  // flags and mapping attribute flags can co-exist.
+                  if (!(llvm::omp::allTeamsSet.test(GetContext().directive) ||
+                          llvm::omp::allParallelSet.test(
+                              GetContext().directive))) {
+                    for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
+                      for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
+                        checkExclusivelists(
+                            hostAssocSym, ompFlag1, symbol, ompFlag2);
+                      }
                     }
                   }
                 }
@@ -2714,7 +2722,7 @@ void OmpAttributeVisitor::CheckDataCopyingClause(
   }
 }
 
-void OmpAttributeVisitor::CheckObjectInNamelistOrAssociate(
+void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
   const auto &ultimateSymbol{symbol.GetUltimate()};
   llvm::StringRef clauseName{"PRIVATE"};
@@ -2733,6 +2741,14 @@ void OmpAttributeVisitor::CheckObjectInNamelistOrAssociate(
   if (ultimateSymbol.has<AssocEntityDetails>()) {
     context_.Say(name.source,
         "Variable '%s' in ASSOCIATE cannot be in a %s clause"_err_en_US,
+        name.ToString(), clauseName.str());
+  }
+
+  if (stmtFunctionExprSymbols_.find(ultimateSymbol) !=
+      stmtFunctionExprSymbols_.end()) {
+    context_.Say(name.source,
+        "Variable '%s' in statement function expression cannot be in a "
+        "%s clause"_err_en_US,
         name.ToString(), clauseName.str());
   }
 }
@@ -2873,8 +2889,7 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
   default:
     warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
   }
-  if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-    context_.Say(source, "%s"_warn_en_US, warnStr);
-  }
+  context_.Warn(
+      common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US, warnStr);
 }
 } // namespace Fortran::semantics

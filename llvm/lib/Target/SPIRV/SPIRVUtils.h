@@ -134,7 +134,31 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD);
 
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
-unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
+// TODO: maybe the following two functions should be handled in the subtarget
+// to allow for different OpenCL vs Vulkan handling.
+constexpr unsigned
+storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::Function:
+    return 0;
+  case SPIRV::StorageClass::CrossWorkgroup:
+    return 1;
+  case SPIRV::StorageClass::UniformConstant:
+    return 2;
+  case SPIRV::StorageClass::Workgroup:
+    return 3;
+  case SPIRV::StorageClass::Generic:
+    return 4;
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+    return 5;
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return 6;
+  case SPIRV::StorageClass::Input:
+    return 7;
+  default:
+    report_fatal_error("Unable to get address space id");
+  }
+}
 
 // Convert an LLVM IR address space to a SPIR-V storage class.
 SPIRV::StorageClass::StorageClass

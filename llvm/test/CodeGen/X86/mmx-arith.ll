@@ -409,7 +409,7 @@ define <1 x i64> @test3(ptr %a, ptr %b, i32 %count) nounwind {
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB3_3: # %bb26
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
@@ -442,7 +442,7 @@ define <1 x i64> @test3(ptr %a, ptr %b, i32 %count) nounwind {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    je .LBB3_2
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_1: # %bb26
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movslq %ecx, %rcx

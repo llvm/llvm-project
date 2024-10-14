@@ -2800,6 +2800,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":Rewrite",
         ":SCFDialect",
         ":SCFPassIncGen",
         ":SCFUtils",
@@ -3745,11 +3746,14 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":BytecodeOpInterface",
         ":DialectUtils",
         ":IR",
+        ":MaskableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":VectorDialect",
         ":ViewLikeInterface",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
@@ -4872,6 +4876,7 @@ cc_library(
         ":NVGPUTransformOps",
         ":NVVMTarget",
         ":NVVMToLLVM",
+        ":OpenMPToLLVM",
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
         ":SCFTransformOps",
@@ -5387,6 +5392,7 @@ cc_library(
         ":MemorySlotInterfacesIncGen",
         ":SideEffectInterfaces",
         ":Support",
+        ":ViewLikeInterface",
         "//llvm:AsmParser",
         "//llvm:BinaryFormat",
         "//llvm:BitReader",
@@ -5430,6 +5436,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:BinaryFormat",
         "//llvm:Support",
     ],
@@ -5800,6 +5807,7 @@ td_library(
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -6299,11 +6307,17 @@ gentbl_cc_library(
 
 cc_library(
     name = "NVVMDialect",
-    srcs = ["lib/Dialect/LLVMIR/IR/NVVMDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/LLVMIR/NVVMDialect.h"],
+    srcs = [
+        "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
+        "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
+    ],
     includes = ["include"],
     deps = [
-        ":BasicPtxBuilderInterface",
+        ":BasicPtxBuilderIntGen",
         ":BytecodeOpInterface",
         ":ConvertToLLVMInterface",
         ":DialectUtils",
@@ -6502,21 +6516,6 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
     deps = [":NVVMOpsTdFiles"],
-)
-
-cc_library(
-    name = "BasicPtxBuilderInterface",
-    srcs = ["lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp"],
-    hdrs = [
-        "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BasicPtxBuilderIntGen",
-        ":IR",
-        ":LLVMDialect",
-        ":Support",
-    ],
 )
 
 cc_library(
@@ -7694,6 +7693,7 @@ cc_library(
         ":DialectUtils",
         ":TensorDialect",
         ":ValueBoundsOpInterface",
+        ":VectorDialect",
     ],
 )
 
@@ -9741,6 +9741,28 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "mlir-rewrite",
+    srcs = ["tools/mlir-rewrite/mlir-rewrite.cpp"],
+    deps = [
+        ":AffineAnalysis",
+        ":AllExtensions",
+        ":AllPassesAndDialects",
+        ":Analysis",
+        ":AsmParser",
+        ":CastInterfaces",
+        ":Dialect",
+        ":IR",
+        ":ParseUtilities",
+        ":Parser",
+        ":Pass",
+        ":Support",
+        ":TransformUtils",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "MlirJitRunner",
     srcs = ["lib/ExecutionEngine/JitRunner.cpp"],
@@ -10604,6 +10626,7 @@ cc_library(
         ":AtomicInterfaces",
         ":AtomicInterfacesIncGen",
         ":ControlFlowInterfaces",
+        ":ConvertToLLVMInterface",
         ":FuncDialect",
         ":IR",
         ":LLVMDialect",
@@ -10651,6 +10674,7 @@ cc_library(
         ":ArithToLLVM",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVMInterface",
         ":FuncToLLVM",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -13320,6 +13344,7 @@ cc_library(
         ":ArithUtils",
         ":MemRefDialect",
         ":VectorDialect",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -13901,6 +13926,7 @@ cc_library(
         ":BufferViewFlowOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationEnumsIncGen",
+        ":FunctionInterfaces",
         ":IR",
         ":Support",
         "//llvm:Support",

@@ -2869,6 +2869,28 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                    Intrinsic::minnum,
                                    Intrinsic::experimental_constrained_minnum));
 
+    case Builtin::BIfmaximum_num:
+    case Builtin::BIfmaximum_numf:
+    case Builtin::BIfmaximum_numl:
+    case Builtin::BI__builtin_fmaximum_num:
+    case Builtin::BI__builtin_fmaximum_numf:
+    case Builtin::BI__builtin_fmaximum_numf16:
+    case Builtin::BI__builtin_fmaximum_numl:
+    case Builtin::BI__builtin_fmaximum_numf128:
+      return RValue::get(
+          emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::maximumnum));
+
+    case Builtin::BIfminimum_num:
+    case Builtin::BIfminimum_numf:
+    case Builtin::BIfminimum_numl:
+    case Builtin::BI__builtin_fminimum_num:
+    case Builtin::BI__builtin_fminimum_numf:
+    case Builtin::BI__builtin_fminimum_numf16:
+    case Builtin::BI__builtin_fminimum_numl:
+    case Builtin::BI__builtin_fminimum_numf128:
+      return RValue::get(
+          emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::minimumnum));
+
     // fmod() is a special-case. It maps to the frem instruction rather than an
     // LLVM intrinsic.
     case Builtin::BIfmod:
@@ -3836,6 +3858,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_atan:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::atan, "elt.atan"));
+  case Builtin::BI__builtin_elementwise_atan2:
+    return RValue::get(emitBuiltinWithOneOverloadedType<2>(
+        *this, E, llvm::Intrinsic::atan2, "elt.atan2"));
   case Builtin::BI__builtin_elementwise_ceil:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::ceil, "elt.ceil"));
@@ -3961,6 +3986,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_elementwise_maximum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::maximum, Op0,
+                                                  Op1, nullptr, "elt.maximum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_minimum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::minimum, Op0,
+                                                  Op1, nullptr, "elt.minimum");
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_reduce_max: {
     auto GetIntrinsicID = [this](QualType QT) {
       if (auto *VecTy = QT->getAs<VectorType>())
@@ -4013,6 +4054,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_reduce_and:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::vector_reduce_and, "rdx.and"));
+  case Builtin::BI__builtin_reduce_maximum:
+    return RValue::get(emitBuiltinWithOneOverloadedType<1>(
+        *this, E, llvm::Intrinsic::vector_reduce_fmaximum, "rdx.maximum"));
+  case Builtin::BI__builtin_reduce_minimum:
+    return RValue::get(emitBuiltinWithOneOverloadedType<1>(
+        *this, E, llvm::Intrinsic::vector_reduce_fminimum, "rdx.minimum"));
 
   case Builtin::BI__builtin_matrix_transpose: {
     auto *MatrixTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
@@ -13623,7 +13670,7 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());
 
     // Built the IR for the preserve_field_info intrinsic.
-    llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getDeclaration(
+    llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::bpf_preserve_field_info,
         {FieldAddr->getType()});
     return Builder.CreateCall(FnGetFieldInfo, {FieldAddr, InfoKind});
@@ -13645,10 +13692,10 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
 
     llvm::Function *FnDecl;
     if (BuiltinID == BPF::BI__builtin_btf_type_id)
-      FnDecl = llvm::Intrinsic::getDeclaration(
+      FnDecl = llvm::Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), llvm::Intrinsic::bpf_btf_type_id, {});
     else
-      FnDecl = llvm::Intrinsic::getDeclaration(
+      FnDecl = llvm::Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), llvm::Intrinsic::bpf_preserve_type_info, {});
     CallInst *Fn = Builder.CreateCall(FnDecl, {SeqNumVal, FlagValue});
     Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
@@ -13683,7 +13730,7 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     Value *FlagValue = ConstantInt::get(Int64Ty, Flag->getSExtValue());
     Value *SeqNumVal = ConstantInt::get(Int32Ty, BuiltinSeqNum++);
 
-    llvm::Function *IntrinsicFn = llvm::Intrinsic::getDeclaration(
+    llvm::Function *IntrinsicFn = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::bpf_preserve_enum_value, {});
     CallInst *Fn =
         Builder.CreateCall(IntrinsicFn, {SeqNumVal, EnumStrVal, FlagValue});
@@ -18642,6 +18689,21 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         IsUnsigned ? Intrinsic::dx_uclamp : Intrinsic::dx_clamp,
         ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "dx.clamp");
   }
+  case Builtin::BI__builtin_hlsl_cross: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           "cross operands must have a float representation");
+    // make sure each vector has exactly 3 elements
+    assert(
+        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
+        E->getArg(1)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
+        "input vectors must have 3 elements each");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getCrossIntrinsic(),
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.cross");
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
@@ -18714,6 +18776,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType(),
         CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
         nullptr, "hlsl.normalize");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_degrees: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "degree operand must have a float representation");
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getDegreesIntrinsic(),
+        ArrayRef<Value *>{X}, nullptr, "hlsl.degrees");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -18827,30 +18899,59 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
-    return EmitRuntimeCall(CGM.CreateRuntimeFunction(
-        llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
-        {}, false, true));
+    // We don't define a SPIR-V intrinsic, instead it is a SPIR-V built-in
+    // defined in SPIRVBuiltins.td. So instead we manually get the matching name
+    // for the DirectX intrinsic and the demangled builtin name
+    switch (CGM.getTarget().getTriple().getArch()) {
+    case llvm::Triple::dxil:
+      return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+          &CGM.getModule(), Intrinsic::dx_wave_getlaneindex));
+    case llvm::Triple::spirv:
+      return EmitRuntimeCall(CGM.CreateRuntimeFunction(
+          llvm::FunctionType::get(IntTy, {}, false),
+          "__hlsl_wave_get_lane_index", {}, false, true));
+    default:
+      llvm_unreachable(
+          "Intrinsic WaveGetLaneIndex not supported by target architecture");
+    }
   }
   case Builtin::BI__builtin_hlsl_wave_is_first_lane: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getDeclaration(&CGM.getModule(), ID));
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    auto *Arg0 = E->getArg(0);
+    Value *Op0 = EmitScalarExpr(Arg0);
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt32Ty(this->getLLVMContext());
     if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->getAs<VectorType>();
+      auto *XVecTy = Arg0->getType()->getAs<VectorType>();
       retType = llvm::VectorType::get(
           retType, ElementCount::getFixed(XVecTy->getNumElements()));
     }
-    assert((E->getArg(0)->getType()->hasFloatingRepresentation() ||
-            E->getArg(0)->getType()->hasSignedIntegerRepresentation()) &&
+    assert((Arg0->getType()->hasFloatingRepresentation() ||
+            Arg0->getType()->hasIntegerRepresentation()) &&
            "sign operand must have a float or int representation");
+
+    if (Arg0->getType()->hasUnsignedIntegerRepresentation()) {
+      Value *Cmp = Builder.CreateICmpEQ(Op0, ConstantInt::get(Xty, 0));
+      return Builder.CreateSelect(Cmp, ConstantInt::get(retType, 0),
+                                  ConstantInt::get(retType, 1), "hlsl.sign");
+    }
 
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getSignIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.sign");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_radians: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "radians operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(),
+        CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
+        nullptr, "hlsl.radians");
   }
   }
   return nullptr;
@@ -22340,10 +22441,60 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     return Store;
   }
+  // XCValu
+  case RISCV::BI__builtin_riscv_cv_alu_addN:
+    ID = Intrinsic::riscv_cv_alu_addN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_addRN:
+    ID = Intrinsic::riscv_cv_alu_addRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_adduN:
+    ID = Intrinsic::riscv_cv_alu_adduN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_adduRN:
+    ID = Intrinsic::riscv_cv_alu_adduRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_clip:
+    ID = Intrinsic::riscv_cv_alu_clip;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_clipu:
+    ID = Intrinsic::riscv_cv_alu_clipu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_extbs:
+    return Builder.CreateSExt(Builder.CreateTrunc(Ops[0], Int8Ty), Int32Ty,
+                              "extbs");
+  case RISCV::BI__builtin_riscv_cv_alu_extbz:
+    return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int8Ty), Int32Ty,
+                              "extbz");
+  case RISCV::BI__builtin_riscv_cv_alu_exths:
+    return Builder.CreateSExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
+                              "exths");
+  case RISCV::BI__builtin_riscv_cv_alu_exthz:
+    return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
+                              "exthz");
+  case RISCV::BI__builtin_riscv_cv_alu_slet:
+    return Builder.CreateZExt(Builder.CreateICmpSLE(Ops[0], Ops[1]), Int32Ty,
+                              "sle");
+  case RISCV::BI__builtin_riscv_cv_alu_sletu:
+    return Builder.CreateZExt(Builder.CreateICmpULE(Ops[0], Ops[1]), Int32Ty,
+                              "sleu");
+  case RISCV::BI__builtin_riscv_cv_alu_subN:
+    ID = Intrinsic::riscv_cv_alu_subN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subRN:
+    ID = Intrinsic::riscv_cv_alu_subRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subuN:
+    ID = Intrinsic::riscv_cv_alu_subuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_alu_subuRN:
+    ID = Intrinsic::riscv_cv_alu_subuRN;
+    break;
 
-  // Vector builtins are handled from here.
+    // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
-  // SiFive Vector builtins are handled from here.
+
+    // SiFive Vector builtins are handled from here.
 #include "clang/Basic/riscv_sifive_vector_builtin_cg.inc"
   }
 

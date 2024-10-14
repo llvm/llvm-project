@@ -471,7 +471,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // by scanRelocations().
   if (ctx.arg.hasDynSymTab)
     for (Symbol *sym : ctx.symtab->getSymbols())
-      sym->isPreemptible = computeIsPreemptible(*sym);
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
 
   // Two text sections may have identical content and relocations but different
   // LSDA, e.g. the two functions may have catch blocks of different types. If a

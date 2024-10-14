@@ -55,11 +55,18 @@ public:
     return true;
   }
 
+  // Thunks that indirectly branch to targets may need a synthetic landing
+  // pad generated close to the target. For example AArch64 when BTI is
+  // enabled.
+  virtual bool needsSyntheticLandingPad() { return false; }
+
   Defined *getThunkTargetSym() const { return syms[0]; }
 
   Ctx &ctx;
   Symbol &destination;
   int64_t addend;
+  // Alternative target when indirect branch to destination can't be used.
+  Symbol *landingPad = nullptr;
   llvm::SmallVector<Defined *, 3> syms;
   uint64_t offset = 0;
   // The alignment requirement for this Thunk, defaults to the size of the
@@ -71,9 +78,13 @@ public:
 // ThunkSection.
 Thunk *addThunk(Ctx &, const InputSection &isec, Relocation &rel);
 
+// Create a landing pad Thunk for use when indirect branches from Thunks
+// are restricted.
+Thunk *addLandingPadThunk(Ctx &, Symbol &s, int64_t a);
+
 void writePPC32PltCallStub(Ctx &, uint8_t *buf, uint64_t gotPltVA,
                            const InputFile *file, int64_t addend);
-void writePPC64LoadAndBranch(uint8_t *buf, int64_t offset);
+void writePPC64LoadAndBranch(Ctx &, uint8_t *buf, int64_t offset);
 
 } // namespace lld::elf
 

@@ -1450,6 +1450,120 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
 
 // -----
 
+//CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
+//CHECK: {{.*}} = alloca { float, float }, i64 1, align 8
+//CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
+
+//CHECK: br label %entry
+
+//CHECK: entry:
+//CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
+//CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+//CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
+//CHECK: br label %.atomic.cont
+
+//CHECK: .atomic.cont
+//CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %entry ], [ %{{.*}}, %.atomic.cont ]
+//CHECK: %[[VAL_5:.*]] = extractvalue { float, float } %[[VAL_4]], 0
+//CHECK: %[[VAL_6:.*]] = extractvalue { float, float } %[[VAL_4]], 1
+//CHECK: %[[VAL_7:.*]] = fadd contract float %[[VAL_5]], 1.000000e+00
+//CHECK: %[[VAL_8:.*]] = fadd contract float %[[VAL_6]], 1.000000e+00
+//CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
+//CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
+//CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4
+//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+//CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
+//CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
+
+llvm.func @_QPomp_atomic_update_complex() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<(f32, f32)> {bindc_name = "ib"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x !llvm.struct<(f32, f32)> {bindc_name = "ia"} : (i64) -> !llvm.ptr
+    %4 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %5 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %6 = llvm.insertvalue %4, %5[0] : !llvm.struct<(f32, f32)>
+    %7 = llvm.insertvalue %4, %6[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.update %3 : !llvm.ptr {
+    ^bb0(%arg0: !llvm.struct<(f32, f32)>):
+      %8 = llvm.extractvalue %arg0[0] : !llvm.struct<(f32, f32)>
+      %9 = llvm.extractvalue %arg0[1] : !llvm.struct<(f32, f32)>
+      %10 = llvm.extractvalue %7[0] : !llvm.struct<(f32, f32)>
+      %11 = llvm.extractvalue %7[1] : !llvm.struct<(f32, f32)>
+      %12 = llvm.fadd %8, %10  {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %13 = llvm.fadd %9, %11  {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %14 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+      %15 = llvm.insertvalue %12, %14[0] : !llvm.struct<(f32, f32)>
+      %16 = llvm.insertvalue %13, %15[1] : !llvm.struct<(f32, f32)>
+      omp.yield(%16 : !llvm.struct<(f32, f32)>)
+    }
+   llvm.return
+}
+
+// -----
+
+//CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
+//CHECK: %[[VAL_1:.*]] = alloca { float, float }, i64 1, align 8
+//CHECK: %[[ORIG_VAL:.*]] = alloca { float, float }, i64 1, align 8
+//CHECK: store { float, float } { float 2.000000e+00, float 2.000000e+00 }, ptr %[[ORIG_VAL]], align 4
+//CHECK: br label %entry
+
+//CHECK: entry:							; preds = %0
+//CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
+//CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
+//CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
+//CHECK: br label %.atomic.cont
+
+//CHECK: .atomic.cont
+//CHECK: %[[VAL_4:.*]] = phi { float, float } [ %[[PHI_NODE_ENTRY_1]], %entry ], [ %{{.*}}, %.atomic.cont ]
+//CHECK: %[[VAL_5:.*]] = extractvalue { float, float } %[[VAL_4]], 0
+//CHECK: %[[VAL_6:.*]] = extractvalue { float, float } %[[VAL_4]], 1
+//CHECK: %[[VAL_7:.*]] = fadd contract float %[[VAL_5]], 1.000000e+00
+//CHECK: %[[VAL_8:.*]] = fadd contract float %[[VAL_6]], 1.000000e+00
+//CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
+//CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
+//CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4 
+//CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
+//CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
+//CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
+//CHECK: .atomic.exit
+//CHECK: store { float, float } %[[VAL_10]], ptr %[[VAL_1]], align 4
+
+llvm.func @_QPomp_atomic_capture_complex() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<(f32, f32)> {bindc_name = "ib"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x !llvm.struct<(f32, f32)> {bindc_name = "ia"} : (i64) -> !llvm.ptr
+    %4 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %5 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    %6 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %7 = llvm.insertvalue %5, %6[0] : !llvm.struct<(f32, f32)>
+    %8 = llvm.insertvalue %5, %7[1] : !llvm.struct<(f32, f32)>
+    llvm.store %8, %3 : !llvm.struct<(f32, f32)>, !llvm.ptr
+    %9 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %10 = llvm.insertvalue %4, %9[0] : !llvm.struct<(f32, f32)>
+    %11 = llvm.insertvalue %4, %10[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.capture {
+      omp.atomic.update %3 : !llvm.ptr {
+      ^bb0(%arg0: !llvm.struct<(f32, f32)>):
+        %12 = llvm.extractvalue %arg0[0] : !llvm.struct<(f32, f32)>
+        %13 = llvm.extractvalue %arg0[1] : !llvm.struct<(f32, f32)>
+        %14 = llvm.extractvalue %11[0] : !llvm.struct<(f32, f32)>
+        %15 = llvm.extractvalue %11[1] : !llvm.struct<(f32, f32)>
+        %16 = llvm.fadd %12, %14  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %17 = llvm.fadd %13, %15  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %18 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+        %19 = llvm.insertvalue %16, %18[0] : !llvm.struct<(f32, f32)>
+        %20 = llvm.insertvalue %17, %19[1] : !llvm.struct<(f32, f32)>
+        omp.yield(%20 : !llvm.struct<(f32, f32)>)
+      }
+      omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    }
+    llvm.return
+}
+
+// -----
+
 // Checking an order-dependent operation when the order is `expr binop x`
 // CHECK-LABEL: @omp_atomic_update_ordering
 // CHECK-SAME: (ptr %[[x:.*]], i32 %[[expr:.*]])
