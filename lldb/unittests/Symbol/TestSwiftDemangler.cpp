@@ -43,14 +43,14 @@ TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
       "$s1a8sayHelloyyYaFyypYacfU_TQ5_", "$s1a8sayHelloyyYaFyypYacfU_TY6_"};
   SmallVector<StringRef> nested2_funclets1 = {
       // Nesting level 2: a closure inside a closure.
-      // FIXME: this one doesn't work: "$s1a8sayHelloyyYaFyypYacfU_yypYacfU_",
+      "$s1a8sayHelloyyYaFyypYacfU_yypYacfU_",
       "$s1a8sayHelloyyYaFyypYacfU_yypYacfU_TY0_",
       "$s1a8sayHelloyyYaFyypYacfU_yypYacfU_TQ1_",
       "$s1a8sayHelloyyYaFyypYacfU_yypYacfU_TY2_",
   };
   SmallVector<StringRef> nested2_funclets2 = {
       // Nesting level 2: another closure, same level as the previous one.
-      // FIXME: this one doesn't work: "$s1a8sayHelloyyYaFyypYacfU_yypYacfU0_",
+      "$s1a8sayHelloyyYaFyypYacfU_yypYacfU0_",
       "$s1a8sayHelloyyYaFyypYacfU_yypYacfU0_TY0_",
       "$s1a8sayHelloyyYaFyypYacfU_yypYacfU0_TQ1_",
       "$s1a8sayHelloyyYaFyypYacfU_yypYacfU0_TY2_",
@@ -58,8 +58,7 @@ TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
   SmallVector<StringRef> nested2_funclets_top_not_async = {
       // Also nesting level 2: but this time, the top level function is _not_
       // async!
-      // FIXME: this one doesn't work:
-      // "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_",
+      "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_",
       "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_TY0_",
       "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_TQ1_",
       "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_TY2_"};

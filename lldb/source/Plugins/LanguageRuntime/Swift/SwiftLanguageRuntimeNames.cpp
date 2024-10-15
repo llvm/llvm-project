@@ -83,24 +83,26 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
     return false;
   if (hasChild(node, Node::Kind::AsyncSuspendResumePartialFunction))
     return false;
-
-  // Peel off layers over top of Function nodes.
-  switch (node->getFirstChild()->getKind()) {
-  case Node::Kind::Static:
-  case Node::Kind::ExplicitClosure:
+  // Peel off a Static node. If it exists, there will be a single instance and a
+  // top level node.
+  if (node->getFirstChild()->getKind() == Node::Kind::Static)
     node = node->getFirstChild();
-    break;
-  default:
-    break;
-  }
 
-  return childAtPath(node,
-                     {Node::Kind::Function, Node::Kind::Type,
-                      Node::Kind::FunctionType, Node::Kind::AsyncAnnotation}) ||
-         childAtPath(node,
-                     {Node::Kind::Function, Node::Kind::Type,
-                      Node::Kind::DependentGenericType, Node::Kind::Type,
-                      Node::Kind::FunctionType, Node::Kind::AsyncAnnotation});
+  // Get the ExplicitClosure or Function node.
+  // For nested closures in Swift, the demangle tree is inverted: the
+  // inner-most closure is the top-most ExplicitClosure node.
+  NodePointer func_node = [&] {
+    if (NodePointer func = childAtPath(node, Node::Kind::Function))
+      return func;
+    return childAtPath(node, Node::Kind::ExplicitClosure);
+  }();
+
+  return childAtPath(func_node, {Node::Kind::Type, Node::Kind::FunctionType,
+                                 Node::Kind::AsyncAnnotation}) ||
+         childAtPath(func_node,
+                     {Node::Kind::Type, Node::Kind::DependentGenericType,
+                      Node::Kind::Type, Node::Kind::FunctionType,
+                      Node::Kind::AsyncAnnotation});
 }
 
 bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
