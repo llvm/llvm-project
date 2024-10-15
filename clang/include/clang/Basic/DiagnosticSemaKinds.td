@@ -12429,6 +12429,13 @@ def warn_unsafe_buffer_operation : Warning<
   "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of span::data|"
   "field %1 prone to unsafe buffer manipulation}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call : Warning<
+  "function %0 is unsafe">,
+  InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
+def note_unsafe_buffer_printf_call : Note<
+  "%select{|change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"
+          "|string argument is not guaranteed to be null-terminated"
+          "|'va_list' is unsafe}0">;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<
