@@ -1546,3 +1546,29 @@ entry:
   %sel = select i1 %cmp1, i1 true, i1 %cmp2
   ret i1 %sel
 }
+
+define i1 @is_power2_or_zero_with_range(i32 %x) {
+; CHECK-LABEL: @is_power2_or_zero_with_range(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ult i32 [[CTPOP]], 2
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %ctpop = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %ctpop, 1
+  %notzero = icmp eq i32 %x, 0
+  %res = select i1 %notzero, i1 true, i1 %cmp
+  ret i1 %res
+}
+
+define i1 @is_power2_or_zero_inv_with_range(i32 %x) {
+; CHECK-LABEL: @is_power2_or_zero_inv_with_range(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %ctpop = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ne i32 %ctpop, 1
+  %notzero = icmp ne i32 %x, 0
+  %res = select i1 %notzero, i1 %cmp, i1 false
+  ret i1 %res
+}

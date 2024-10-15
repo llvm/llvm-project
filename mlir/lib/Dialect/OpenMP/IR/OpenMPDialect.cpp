@@ -1404,7 +1404,7 @@ static ParseResult parseMembersIndex(OpAsmParser &parser,
     if (parser.parseInteger(value))
       return failure();
     shapeTmp++;
-    values.push_back(APInt(32, value));
+    values.push_back(APInt(32, value, /*isSigned=*/true));
     return success();
   };
 
@@ -1924,27 +1924,23 @@ LogicalResult SingleOp::verify() {
 
 LogicalResult LoopWrapperInterface::verifyImpl() {
   Operation *op = this->getOperation();
+  if (!op->hasTrait<OpTrait::NoTerminator>() ||
+      !op->hasTrait<OpTrait::SingleBlock>())
+    return emitOpError() << "loop wrapper must also have the `NoTerminator` "
+                            "and `SingleBlock` traits";
+
   if (op->getNumRegions() != 1)
-    return emitOpError() << "loop wrapper contains multiple regions";
+    return emitOpError() << "loop wrapper does not contain exactly one region";
 
   Region &region = op->getRegion(0);
-  if (!region.hasOneBlock())
-    return emitOpError() << "loop wrapper contains multiple blocks";
-
-  if (::llvm::range_size(region.getOps()) != 2)
+  if (range_size(region.getOps()) != 1)
     return emitOpError()
-           << "loop wrapper does not contain exactly two nested ops";
+           << "loop wrapper does not contain exactly one nested op";
 
   Operation &firstOp = *region.op_begin();
-  Operation &secondOp = *(std::next(region.op_begin()));
-
-  if (!secondOp.hasTrait<OpTrait::IsTerminator>())
-    return emitOpError()
-           << "second nested op in loop wrapper is not a terminator";
-
-  if (!::llvm::isa<LoopNestOp, LoopWrapperInterface>(firstOp))
-    return emitOpError() << "first nested op in loop wrapper is not "
-                            "another loop wrapper or `omp.loop_nest`";
+  if (!isa<LoopNestOp, LoopWrapperInterface>(firstOp))
+    return emitOpError() << "op nested in loop wrapper is not another loop "
+                            "wrapper or `omp.loop_nest`";
 
   return success();
 }

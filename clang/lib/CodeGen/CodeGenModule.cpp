@@ -45,6 +45,7 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
@@ -179,10 +180,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     else if (ABIStr == "aapcs16")
       Kind = ARMABIKind::AAPCS16_VFP;
     else if (CodeGenOpts.FloatABI == "hard" ||
-             (CodeGenOpts.FloatABI != "soft" &&
-              (Triple.getEnvironment() == llvm::Triple::GNUEABIHF ||
-               Triple.getEnvironment() == llvm::Triple::MuslEABIHF ||
-               Triple.getEnvironment() == llvm::Triple::EABIHF)))
+             (CodeGenOpts.FloatABI != "soft" && Triple.isHardFloatABI()))
       Kind = ARMABIKind::AAPCS_VFP;
 
     return createARMTargetCodeGenInfo(CGM, Kind);
@@ -1604,6 +1602,19 @@ void CodeGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
                                                "cannot compile this %0 yet");
   std::string Msg = Type;
   getDiags().Report(Context.getFullLoc(D->getLocation()), DiagID) << Msg;
+}
+
+void CodeGenModule::warnStackExhausted(SourceLocation Loc) {
+  // Only warn about this once.
+  if (!WarnedStackExhausted) {
+    getDiags().Report(Loc, diag::warn_stack_exhausted);
+    WarnedStackExhausted = true;
+  }
+}
+
+void CodeGenModule::runWithSufficientStackSpace(SourceLocation Loc,
+                                                llvm::function_ref<void()> Fn) {
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
 }
 
 llvm::ConstantInt *CodeGenModule::getSize(CharUnits size) {
