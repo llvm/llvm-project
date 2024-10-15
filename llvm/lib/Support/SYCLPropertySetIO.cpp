@@ -127,17 +127,20 @@ SYCLPropertyValue::SYCLPropertyValue(const std::byte *Data,
   constexpr size_t SizeFieldSize = sizeof(SizeTy);
 
   // Allocate space for size and data.
-  Val = new std::byte[SizeFieldSize + DataSize];
+  Val = std::unique_ptr<std::byte, Deleter>(
+      new std::byte[SizeFieldSize + DataSize], Deleter{});
 
   // Write the size into first bytes.
-  for (size_t I = 0; I < SizeFieldSize; ++I) {
-    auto ByteArrayVal = std::get<std::byte *>(Val);
-    ByteArrayVal[I] = (std::byte)DataBitSize;
-    DataBitSize >>= CHAR_BIT;
-  }
-  // Append data.
-  auto ByteArrayVal = std::get<std::byte *>(Val);
-  std::memcpy(ByteArrayVal + SizeFieldSize, Data, DataSize);
+  if (auto ByteArrayVal =
+          std::get_if<std::unique_ptr<std::byte, Deleter>>(&Val)) {
+    for (size_t I = 0; I < SizeFieldSize; ++I) {
+      (*ByteArrayVal).get()[I] = (std::byte)DataBitSize;
+      DataBitSize >>= CHAR_BIT;
+    }
+    // Append data.
+    std::memcpy((*ByteArrayVal).get() + SizeFieldSize, Data, DataSize);
+  } else
+    llvm_unreachable("must be a byte array value");
 }
 
 SYCLPropertyValue::SYCLPropertyValue(const SYCLPropertyValue &P) { *this = P; }
@@ -149,20 +152,28 @@ SYCLPropertyValue::SYCLPropertyValue(SYCLPropertyValue &&P) {
 SYCLPropertyValue &SYCLPropertyValue::operator=(SYCLPropertyValue &&P) {
   copy(P);
 
-  if (std::holds_alternative<std::byte *>(Val))
+  if (std::holds_alternative<std::unique_ptr<std::byte, Deleter>>(Val))
     P.Val = nullptr;
   return *this;
 }
 
 SYCLPropertyValue &SYCLPropertyValue::operator=(const SYCLPropertyValue &P) {
-  if (std::holds_alternative<std::byte *>(Val))
-    *this = SYCLPropertyValue(P.asByteArray(), P.getByteArraySizeInBits());
-  else
-    copy(P);
+  copy(P);
   return *this;
 }
 
-void SYCLPropertyValue::copy(const SYCLPropertyValue &P) { Val = P.Val; }
+void SYCLPropertyValue::copy(const SYCLPropertyValue &P) {
+  if (std::holds_alternative<std::unique_ptr<std::byte, Deleter>>(P.Val)) {
+    // Allocate space for size and data.
+    Val = std::unique_ptr<std::byte, Deleter>(
+        new std::byte[P.getRawByteArraySize()], Deleter{});
+    if (auto ByteArrayVal =
+            std::get_if<std::unique_ptr<std::byte, Deleter>>(&Val))
+      std::memcpy((*ByteArrayVal).get(), P.asRawByteArray(),
+                  P.getRawByteArraySize());
+  } else
+    Val = P.asUint32();
+}
 
 } // namespace util
 } // namespace llvm

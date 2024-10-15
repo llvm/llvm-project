@@ -44,6 +44,10 @@
 namespace llvm {
 namespace util {
 
+typedef struct Deleter {
+  void operator()(std::byte *ptr) const { delete[] ptr; }
+} Deleter;
+
 // Represents a SYCL property value. SYCLPropertyValue name is stored in the
 // encompassing container.
 class SYCLPropertyValue {
@@ -66,20 +70,14 @@ public:
     return static_cast<Type>(T);
   }
 
-  ~SYCLPropertyValue() {
-    if (std::holds_alternative<std::byte *>(Val)) {
-      auto ByteArrayVal = std::get<std::byte *>(Val);
-      if (ByteArrayVal)
-        delete[] ByteArrayVal;
-    }
-  }
+  ~SYCLPropertyValue() {}
   SYCLPropertyValue() = default;
 
   SYCLPropertyValue(Type Ty) {
     if (Ty == UInt32)
       Val = (uint32_t)0;
     else if (Ty == ByteArray)
-      Val = (std::byte *)(0);
+      Val = std::unique_ptr<std::byte, Deleter>(new std::byte[1], Deleter{});
     else
       llvm_unreachable_internal("unsupported SYCL property type");
   }
@@ -107,14 +105,13 @@ public:
 
   // Get raw data size in bits.
   SizeTy getByteArraySizeInBits() const {
-    assert(std::holds_alternative<std::byte *>(Val) &&
-           "must be a byte array value");
     SizeTy Res = 0;
-
-    for (size_t I = 0; I < sizeof(SizeTy); ++I) {
-      auto ByteArrayVal = std::get<std::byte *>(Val);
-      Res |= (SizeTy)ByteArrayVal[I] << (8 * I);
-    }
+    if (auto ByteArrayVal =
+            std::get_if<std::unique_ptr<std::byte, Deleter>>(&Val)) {
+      for (size_t I = 0; I < sizeof(SizeTy); ++I)
+        Res |= (SizeTy)(*ByteArrayVal).get()[I] << (8 * I);
+    } else
+      llvm_unreachable("must be a byte array value");
     return Res;
   }
 
@@ -133,19 +130,20 @@ public:
 
   // Get byte array data including the leading bytes encoding the size.
   const std::byte *asRawByteArray() const {
-    assert(std::holds_alternative<std::byte *>(Val) &&
-           "must be a byte array value");
-    auto *ByteArrayVal = std::get<std::byte *>(Val);
-    return ByteArrayVal;
+    if (auto ByteArrayVal =
+            std::get_if<std::unique_ptr<std::byte, Deleter>>(&Val))
+      return (*ByteArrayVal).get();
+    else
+      llvm_unreachable("must be a byte array value");
   }
 
   // Get byte array data excluding the leading bytes encoding the size.
   const std::byte *asByteArray() const {
-    assert(std::holds_alternative<std::byte *>(Val) &&
-           "must be a byte array value");
-
-    auto ByteArrayVal = std::get<std::byte *>(Val);
-    return ByteArrayVal + sizeof(SizeTy);
+    if (auto ByteArrayVal =
+            std::get_if<std::unique_ptr<std::byte, Deleter>>(&Val))
+      return (*ByteArrayVal).get() + sizeof(SizeTy);
+    else
+      llvm_unreachable("must be a byte array value");
   }
 
   bool isValid() const { return getType() != None; }
@@ -158,28 +156,29 @@ public:
 
   // Set property value when data type is 'std::byte *'
   void set(std::byte *V, int DataSize) {
-    assert(std::holds_alternative<std::byte *>(Val) &&
-           "must be a byte array value");
     size_t DataBitSize = DataSize * CHAR_BIT;
     constexpr size_t SizeFieldSize = sizeof(SizeTy);
     // Allocate space for size and data.
-    Val = new std::byte[SizeFieldSize + DataSize];
+    Val = std::unique_ptr<std::byte, Deleter>(
+        new std::byte[SizeFieldSize + DataSize], Deleter{});
 
     // Write the size into first bytes.
-    for (size_t I = 0; I < SizeFieldSize; ++I) {
-      auto ByteArrayVal = std::get<std::byte *>(Val);
-      ByteArrayVal[I] = (std::byte)DataBitSize;
-      DataBitSize >>= CHAR_BIT;
-    }
-    // Append data.
-    auto ByteArrayVal = std::get<std::byte *>(Val);
-    std::memcpy(ByteArrayVal + SizeFieldSize, V, DataSize);
+    if (auto ByteArrayVal =
+            std::get_if<std::unique_ptr<std::byte, Deleter>>(&Val)) {
+      for (size_t I = 0; I < SizeFieldSize; ++I) {
+        (*ByteArrayVal).get()[I] = (std::byte)DataBitSize;
+        DataBitSize >>= CHAR_BIT;
+      }
+      // Append data.
+      std::memcpy((*ByteArrayVal).get() + SizeFieldSize, V, DataSize);
+    } else
+      llvm_unreachable("must be a byte array value");
   }
 
   Type getType() const {
     if (std::holds_alternative<uint32_t>(Val))
       return UInt32;
-    if (std::holds_alternative<std::byte *>(Val))
+    if (std::holds_alternative<std::unique_ptr<std::byte, Deleter>>(Val))
       return ByteArray;
     return None;
   }
@@ -187,7 +186,7 @@ public:
   SizeTy size() const {
     if (std::holds_alternative<uint32_t>(Val))
       return sizeof(uint32_t);
-    if (std::holds_alternative<std::byte *>(Val))
+    if (std::holds_alternative<std::unique_ptr<std::byte, Deleter>>(Val))
       return getRawByteArraySize();
     llvm_unreachable_internal("unsupported SYCL property type");
   }
@@ -195,7 +194,7 @@ public:
 private:
   void copy(const SYCLPropertyValue &P);
 
-  std::variant<uint32_t, std::byte *> Val;
+  std::variant<uint32_t, std::unique_ptr<std::byte, Deleter>> Val;
 };
 
 /// Structure for specialization of DenseMap in SYCLPropertySetRegistry.
