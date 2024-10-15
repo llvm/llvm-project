@@ -477,6 +477,9 @@ struct TemplateParameterListBuilder {
     DeclContext *DC = Builder.Record->getDeclContext();
     TemplateArgumentListInfo TALI(loc, loc);
 
+    TemplateTypeParmDecl *ConceptTTPD = dyn_cast<TemplateTypeParmDecl>(
+        CD->getTemplateParameters()->getParam(0));
+
     clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
         context,                          // AST context
         context.getTranslationUnitDecl(), // DeclContext
@@ -492,21 +495,31 @@ struct TemplateParameterListBuilder {
     T->setDeclContext(DC);
     T->setReferenced();
 
-    clang::QualType TType = context.getTypeDeclType(T);
+    clang::QualType TType = context.getTypeDeclType(ConceptTTPD);
 
-    ArrayRef<TemplateArgument> ConvertedArgs = {TemplateArgument(TType)};
+    TemplateArgument TA = TemplateArgument(TType);
+
+    ArrayRef<TemplateArgument> ConvertedArgs = {TA};
+
+    clang::QualType CSETType = context.getTypeDeclType(T);
+
+    TemplateArgument CSETA = TemplateArgument(CSETType);
+
+    ArrayRef<TemplateArgument> CSEConvertedArgs = {CSETA};
 
     ImplicitConceptSpecializationDecl *IDecl =
         ImplicitConceptSpecializationDecl::Create(
-            context, Builder.Record->getDeclContext(), loc, ConvertedArgs);
+            context, Builder.Record->getDeclContext(), loc, CSEConvertedArgs);
 
     const ConstraintSatisfaction CS(CD, ConvertedArgs);
-    TemplateArgumentLoc tal = S.getTrivialTemplateArgumentLoc(
-        TemplateArgument(TType), QualType(), SourceLocation());
+    TemplateArgumentLoc tal =
+        S.getTrivialTemplateArgumentLoc(TA, QualType(), SourceLocation());
 
     TALI.addArgument(tal);
     const ASTTemplateArgumentListInfo *ATALI =
         ASTTemplateArgumentListInfo::Create(context, TALI);
+
+    // In CR, ATALI is what adds the extra TemplateArgument node underneath CSE
     ConceptReference *CR = ConceptReference::Create(S.getASTContext(), NNS, loc,
                                                     DNI, CD, CD, ATALI);
 
