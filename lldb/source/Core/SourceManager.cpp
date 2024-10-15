@@ -61,6 +61,12 @@ static void resolve_tilde(FileSpec &file_spec) {
   }
 }
 
+static std::string toString(const Checksum &checksum) {
+  if (!checksum)
+    return "";
+  return std::string(llvm::formatv("{0}", checksum.digest()));
+}
+
 // SourceManager constructor
 SourceManager::SourceManager(const TargetSP &target_sp)
     : m_last_support_file_sp(std::make_shared<SupportFile>()), m_last_line(0),
@@ -302,6 +308,18 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
         break;
       }
     }
+
+    Checksum line_table_checksum =
+        last_file_sp->GetSupportFile()->GetChecksum();
+    Checksum on_disk_checksum = last_file_sp->GetChecksum();
+    if (line_table_checksum && line_table_checksum != on_disk_checksum)
+      Debugger::ReportWarning(
+          llvm::formatv(
+              "{0}: source file checksum mismatch between line table "
+              "({1}) and file on disk ({2})",
+              last_file_sp->GetSupportFile()->GetSpecOnly().GetFilename(),
+              toString(line_table_checksum), toString(on_disk_checksum)),
+          std::nullopt, &last_file_sp->GetChecksumWarningOnceFlag());
   }
   return *delta;
 }
@@ -835,12 +853,6 @@ SourceManager::FileSP SourceManager::SourceFileCache::FindSourceFile(
   if (pos != m_file_cache.end())
     return pos->second;
   return {};
-}
-
-static std::string toString(const Checksum &checksum) {
-  if (!checksum)
-    return "";
-  return std::string(llvm::formatv("{0}", checksum.digest()));
 }
 
 void SourceManager::SourceFileCache::Dump(Stream &stream) const {

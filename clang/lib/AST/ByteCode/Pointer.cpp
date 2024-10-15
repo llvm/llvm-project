@@ -204,18 +204,22 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Path.push_back(APValue::LValuePathEntry(
           {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
 
-      if (const auto *FD = dyn_cast<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
+      if (const auto *FD =
+              dyn_cast_if_present<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
         Offset += getFieldOffset(FD);
 
       Ptr = Ptr.getBase();
     } else if (Ptr.isArrayElement()) {
+      Ptr = Ptr.expand();
       unsigned Index;
       if (Ptr.isOnePastEnd())
         Index = Ptr.getArray().getNumElems();
       else
         Index = Ptr.getIndex();
 
-      Offset += (Index * ASTCtx.getTypeSizeInChars(Ptr.getType()));
+      QualType ElemType = Ptr.getFieldDesc()->getElemQualType();
+      Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
@@ -248,11 +252,6 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       llvm_unreachable("Invalid field type");
     }
   }
-
-  // FIXME(perf): We compute the lvalue path above, but we can't supply it
-  // for dummy pointers (that causes crashes later in CheckConstantExpression).
-  if (isDummy())
-    Path.clear();
 
   // We assemble the LValuePath starting from the innermost pointer to the
   // outermost one. SO in a.b.c, the first element in Path will refer to
@@ -665,5 +664,28 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
   uint64_t FieldOffset =
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
-  return IntPointer{this->Desc, this->Value + FieldOffset};
+  return IntPointer{F->Desc, this->Value + FieldOffset};
+}
+
+IntPointer IntPointer::baseCast(const ASTContext &ASTCtx,
+                                unsigned BaseOffset) const {
+  const Record *R = Desc->ElemRecord;
+  const Descriptor *BaseDesc = nullptr;
+
+  // This iterates over bases and checks for the proper offset. That's
+  // potentially slow but this case really shouldn't happen a lot.
+  for (const Record::Base &B : R->bases()) {
+    if (B.Offset == BaseOffset) {
+      BaseDesc = B.Desc;
+      break;
+    }
+  }
+  assert(BaseDesc);
+
+  // Adjust the offset value based on the information from the record layout.
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
+  CharUnits BaseLayoutOffset =
+      Layout.getBaseClassOffset(cast<CXXRecordDecl>(BaseDesc->asDecl()));
+
+  return {BaseDesc, Value + BaseLayoutOffset.getQuantity()};
 }

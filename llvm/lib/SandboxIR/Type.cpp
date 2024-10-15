@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Type.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Context.h"
 
 using namespace llvm::sandboxir;
 
@@ -101,6 +101,17 @@ VectorType *VectorType::getDoubleElementsVectorType(VectorType *VTy) {
 }
 bool VectorType::isValidElementType(Type *ElemTy) {
   return llvm::VectorType::isValidElementType(ElemTy->LLVMTy);
+}
+
+FixedVectorType *FixedVectorType::get(Type *ElementType, unsigned NumElts) {
+  return cast<FixedVectorType>(ElementType->getContext().getType(
+      llvm::FixedVectorType::get(ElementType->LLVMTy, NumElts)));
+}
+
+ScalableVectorType *ScalableVectorType::get(Type *ElementType,
+                                            unsigned NumElts) {
+  return cast<ScalableVectorType>(ElementType->getContext().getType(
+      llvm::ScalableVectorType::get(ElementType->LLVMTy, NumElts)));
 }
 
 IntegerType *IntegerType::get(Context &Ctx, unsigned NumBits) {

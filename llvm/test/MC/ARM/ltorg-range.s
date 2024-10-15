@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple armv7-unknown-linux-gnueabi -filetype obj -o - %s \
-@ RUN:   | llvm-objdump -d - | FileCheck %s
+@ RUN:   | llvm-objdump -d -z - | FileCheck %s
 
         ldr r0, =0x01020304
 @ CHECK: ldr

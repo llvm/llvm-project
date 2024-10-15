@@ -103,6 +103,7 @@
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -117,6 +118,7 @@
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
@@ -183,7 +185,6 @@
 #include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
@@ -299,6 +300,7 @@
 #include "llvm/Transforms/Utils/HelloWorld.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/InstructionNamer.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -1043,6 +1045,40 @@ Expected<IPSCCPOptions> parseIPSCCPOptions(StringRef Params) {
           formatv("invalid IPSCCP pass parameter '{0}' ", ParamName).str(),
           inconvertibleErrorCode());
   }
+  return Result;
+}
+
+Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
+  ScalarizerPassOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("min-bits=")) {
+      if (ParamName.getAsInteger(0, Result.ScalarizeMinBits)) {
+        return make_error<StringError>(
+            formatv("invalid argument to Scalarizer pass min-bits "
+                    "parameter: '{0}' ",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+      }
+
+      continue;
+    }
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "load-store")
+      Result.ScalarizeLoadStore = Enable;
+    else if (ParamName == "variable-insert-extract")
+      Result.ScalarizeVariableInsertExtract = Enable;
+    else {
+      return make_error<StringError>(
+          formatv("invalid Scalarizer pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+
   return Result;
 }
 

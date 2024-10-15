@@ -4588,6 +4588,20 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
   case LoongArch::PseudoCTPOP:
     return emitPseudoCTPOP(MI, BB, Subtarget);
+  case TargetOpcode::STATEPOINT:
+    // STATEPOINT is a pseudo instruction which has no implicit defs/uses
+    // while bl call instruction (where statepoint will be lowered at the
+    // end) has implicit def. This def is early-clobber as it will be set at
+    // the moment of the call and earlier than any use is read.
+    // Add this implicit dead def here as a workaround.
+    MI.addOperand(*MI.getMF(),
+                  MachineOperand::CreateReg(
+                      LoongArch::R1, /*isDef*/ true,
+                      /*isImp*/ true, /*isKill*/ false, /*isDead*/ true,
+                      /*isUndef*/ false, /*isEarlyClobber*/ true));
+    if (!Subtarget.is64Bit())
+      report_fatal_error("STATEPOINT is only supported on 64-bit targets");
+    return emitPatchPoint(MI, BB);
   }
 }
 
@@ -5794,7 +5808,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
   Type *Tys[] = {AlignedAddr->getType()};
   Function *MaskedCmpXchg =
-      Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
+      Intrinsic::getOrInsertDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
   Value *Result = Builder.CreateCall(
       MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
   Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
@@ -5824,7 +5838,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
   Value *Ordering =
       Builder.getIntN(GRLen, static_cast<uint64_t>(AI->getOrdering()));
   Type *Tys[] = {AlignedAddr->getType()};
-  Function *LlwOpScwLoop = Intrinsic::getDeclaration(
+  Function *LlwOpScwLoop = Intrinsic::getOrInsertDeclaration(
       AI->getModule(),
       getIntrinsicForMaskedAtomicRMWBinOp(GRLen, AI->getOperation()), Tys);
 

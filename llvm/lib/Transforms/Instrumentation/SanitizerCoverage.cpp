@@ -629,6 +629,9 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
     return;
   if (Blocklist && Blocklist->inSection("coverage", "fun", F.getName()))
     return;
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return;
   if (F.hasFnAttribute(Attribute::NoSanitizeCoverage))
     return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
@@ -996,7 +999,7 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   if (Options.StackDepth && IsEntryBB && !IsLeafFunc) {
     // Check stack depth.  If it's the deepest so far, record it.
     Module *M = F.getParent();
-    Function *GetFrameAddr = Intrinsic::getDeclaration(
+    Function *GetFrameAddr = Intrinsic::getOrInsertDeclaration(
         M, Intrinsic::frameaddress,
         IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
     auto FrameAddrPtr =

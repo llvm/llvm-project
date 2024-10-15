@@ -126,7 +126,7 @@ StringRef Attribute::getDerivedCodeBody() const {
 Dialect Attribute::getDialect() const {
   const llvm::RecordVal *record = def->getValue("dialect");
   if (record && record->getValue()) {
-    if (DefInit *init = dyn_cast<DefInit>(record->getValue()))
+    if (const DefInit *init = dyn_cast<DefInit>(record->getValue()))
       return Dialect(init->getDef());
   }
   return Dialect(nullptr);
@@ -229,7 +229,7 @@ bool EnumAttr::genSpecializedAttr() const {
   return def->getValueAsBit("genSpecializedAttr");
 }
 
-llvm::Record *EnumAttr::getBaseAttrClass() const {
+const llvm::Record *EnumAttr::getBaseAttrClass() const {
   return def->getValueAsDef("baseAttrClass");
 }
 

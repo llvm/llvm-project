@@ -22,7 +22,7 @@ using namespace mlir::tblgen;
 //===----------------------------------------------------------------------===//
 
 InterfaceMethod::InterfaceMethod(const llvm::Record *def) : def(def) {
-  llvm::DagInit *args = def->getValueAsDag("arguments");
+  const llvm::DagInit *args = def->getValueAsDag("arguments");
   for (unsigned i = 0, e = args->getNumArgs(); i != e; ++i) {
     arguments.push_back(
         {llvm::cast<llvm::StringInit>(args->getArg(i))->getValue(),
@@ -78,7 +78,7 @@ Interface::Interface(const llvm::Record *def) : def(def) {
 
   // Initialize the interface methods.
   auto *listInit = dyn_cast<llvm::ListInit>(def->getValueInit("methods"));
-  for (llvm::Init *init : listInit->getValues())
+  for (const llvm::Init *init : listInit->getValues())
     methods.emplace_back(cast<llvm::DefInit>(init)->getDef());
 
   // Initialize the interface base classes.
@@ -98,7 +98,7 @@ Interface::Interface(const llvm::Record *def) : def(def) {
         baseInterfaces.push_back(std::make_unique<Interface>(baseInterface));
         basesAdded.insert(baseInterface.getName());
       };
-  for (llvm::Init *init : basesInit->getValues())
+  for (const llvm::Init *init : basesInit->getValues())
     addBaseInterfaceFn(Interface(cast<llvm::DefInit>(init)->getDef()));
 }
 

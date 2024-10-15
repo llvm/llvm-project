@@ -3,7 +3,11 @@ add_llvm_component_library(LLVMVectorize
   LoopIdiomVectorize.cpp
   LoopVectorizationLegality.cpp
   LoopVectorize.cpp
+  SandboxVectorizer/DependencyGraph.cpp
+  SandboxVectorizer/Interval.cpp
+  SandboxVectorizer/Passes/BottomUpVec.cpp
   SandboxVectorizer/SandboxVectorizer.cpp
+  SandboxVectorizer/SeedCollector.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
   VectorCombine.cpp
@@ -13,6 +17,7 @@ add_llvm_component_library(LLVMVectorize
   VPlanRecipes.cpp
   VPlanSLP.cpp
   VPlanTransforms.cpp
+  VPlanUnroll.cpp
   VPlanVerifier.cpp
   VPlanUtils.cpp
 

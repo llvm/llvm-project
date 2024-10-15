@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <memory>
-#include <set>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -723,7 +722,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       return;
     }
     const auto &CtxMap = *Ctx;
-    DenseSet<GlobalValue::GUID> ContainedGUIDs;
+    SetVector<GlobalValue::GUID> ContainedGUIDs;
     for (const auto &[RootGuid, Root] : CtxMap) {
       // Avoid ContainedGUIDs to get in/out of scope. Reuse its memory for
       // subsequent roots, but clear its contents.
@@ -1554,20 +1553,21 @@ void llvm::gatherImportedSummariesForModule(
 }
 
 /// Emit the files \p ModulePath will import from into \p OutputFilename.
-std::error_code llvm::EmitImportsFiles(
+Error llvm::EmitImportsFiles(
     StringRef ModulePath, StringRef OutputFilename,
     const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex) {
   std::error_code EC;
   raw_fd_ostream ImportsOS(OutputFilename, EC, sys::fs::OpenFlags::OF_Text);
   if (EC)
-    return EC;
+    return createFileError("cannot open " + OutputFilename,
+                           errorCodeToError(EC));
   for (const auto &ILI : ModuleToSummariesForIndex)
     // The ModuleToSummariesForIndex map includes an entry for the current
     // Module (needed for writing out the index files). We don't want to
     // include it in the imports file, however, so filter it out.
     if (ILI.first != ModulePath)
       ImportsOS << ILI.first << "\n";
-  return std::error_code();
+  return Error::success();
 }
 
 bool llvm::convertToDeclaration(GlobalValue &GV) {

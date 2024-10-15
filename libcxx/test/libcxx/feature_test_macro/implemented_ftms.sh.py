@@ -50,5 +50,10 @@ test(
             "c++23": "202102L",
             "c++26": "202102L",
         },
+        "__cpp_lib_missing_FTM_in_older_standard": {
+            "c++17": None,
+            "c++20": None,
+            "c++26": None,
+        },
     },
 )

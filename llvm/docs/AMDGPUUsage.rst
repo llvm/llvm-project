@@ -361,7 +361,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                     - tgsplit           flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
                                                     - xnack             scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
                                                     - kernarg preload - Packed
-                                                                        work-item
+                                                      (except MI210)    work-item
                                                                         IDs
 
      ``gfx90c``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
@@ -492,6 +492,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     **GCN GFX11 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
+     -----------------------------------------------------------------------------------------------------------------------
      ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -609,9 +611,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1152``
 
                                                                                                 SALU floating point instructions
-                                                                                                and single-use VGPR hint
-                                                                                                instructions are not available
-                                                                                                on:
+                                                                                                are not available on:
 
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
@@ -1369,6 +1369,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    sign-extended from the width of the underlying PC hardware register even on
                                                    processors where the s_getpc_b64 instruction returns a zero-extended value.
 
+  llvm.amdgcn.ballot                               Returns a bitfield(i32 or i64) containing the result of its i1 argument
+                                                   in all active lanes, and zero in all inactive lanes.
+                                                   Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield
+                                                   used by hardware to control active lanes when used in EXEC register.
+                                                   For example, ballot(i1 true) return EXEC mask.
+
   ==============================================   ==========================================================
 
 .. TODO::
@@ -1639,6 +1645,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              function which requires AGPRs is reached through any function marked
                                              with this attribute.
 
+     "amdgpu-hidden-argument"                This attribute is used internally by the backend to mark function arguments
+                                             as hidden. Hidden arguments are managed by the compiler and are not part of
+                                             the explicit arguments supplied by the user.
+
      ======================================= ==========================================================
 
 Calling Conventions
@@ -1756,6 +1766,55 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target specific
                                            result of all its arguments.
 
      =================== ================= ========================================================
+
+Function Resource Usage
+-----------------------
+
+A function's resource usage depends on each of its callees' resource usage. The
+expressions used to denote resource usage reflect this by propagating each
+callees' equivalent expressions. Said expressions are emitted as symbols by the
+compiler when compiling to either assembly or object format and should not be
+overwritten or redefined.
+
+The following describes all emitted function resource usage symbols:
+
+  .. table:: Function Resource Usage:
+     :name: function-usage-table
+
+     ===================================== ========= ========================================= ===============================================================================
+     Symbol                                Type      Description                               Example
+     ===================================== ========= ========================================= ===============================================================================
+     <function_name>.num_vgpr              Integer   Number of VGPRs used by <function_name>,  .set foo.num_vgpr, max(32, bar.num_vgpr, baz.num_vgpr)
+                                                     worst case of itself and its callees'
+                                                     VGPR use
+     <function_name>.num_agpr              Integer   Number of AGPRs used by <function_name>,  .set foo.num_agpr, max(35, bar.num_agpr)
+                                                     worst case of itself and its callees'
+                                                     AGPR use
+     <function_name>.numbered_sgpr         Integer   Number of SGPRs used by <function_name>,  .set foo.num_sgpr, 21
+                                                     worst case of itself and its callees'
+                                                     SGPR use (without any of the implicitly
+                                                     used SGPRs)
+     <function_name>.private_seg_size      Integer   Total stack size required for             .set foo.private_seg_size, 16+max(bar.private_seg_size, baz.private_seg_size)
+                                                     <function_name>, expression is the
+                                                     locally used stack size + the worst case
+                                                     callee
+     <function_name>.uses_vcc              Bool      Whether <function_name>, or any of its    .set foo.uses_vcc, or(0, bar.uses_vcc)
+                                                     callees, uses vcc
+     <function_name>.uses_flat_scratch     Bool      Whether <function_name>, or any of its    .set foo.uses_flat_scratch, 1
+                                                     callees, uses flat scratch or not
+     <function_name>.has_dyn_sized_stack   Bool      Whether <function_name>, or any of its    .set foo.has_dyn_sized_stack, 1
+                                                     callees, is dynamically sized
+     <function_name>.has_recursion         Bool      Whether <function_name>, or any of its    .set foo.has_recursion, 0
+                                                     callees, contains recursion
+     <function_name>.has_indirect_call     Bool      Whether <function_name>, or any of its    .set foo.has_indirect_call, max(0, bar.has_indirect_call)
+                                                     callees, contains an indirect call
+     ===================================== ========= ========================================= ===============================================================================
+
+Futhermore, three symbols are additionally emitted describing the compilation
+unit's worst case (i.e, maxima) ``num_vgpr``, ``num_agpr``, and
+``numbered_sgpr`` which may be referenced and used by the aforementioned
+symbolic expressions. These three symbols are ``amdgcn.max_num_vgpr``,
+``amdgcn.max_num_agpr``, and ``amdgcn.max_num_sgpr``.
 
 .. _amdgpu-elf-code-object:
 
@@ -5806,6 +5865,12 @@ start of the kernel entry will be skipped. Additionally, the compiler backend
 may insert a trap instruction at the start of the kernel prologue to manage
 situations where kernarg preloading is attempted on hardware with incompatible
 firmware.
+
+With code object V5 and later, hidden kernel arguments that are normally
+accessed through the Implicit Argument Ptr, may be preloaded into User SGPRs.
+These arguments are added to the kernel function signature and are marked with
+the attributes "inreg" and "amdgpu-hidden-argument". (See
+:ref:`amdgpu-llvm-ir-attributes-table`).
 
 .. _amdgpu-amdhsa-kernel-prolog:
 
@@ -14182,8 +14247,13 @@ For GFX12:
 * ``global_inv`` invalidates caches whose scope is strictly smaller than the
   instruction's. The invalidation requests cannot be reordered with pending or
   upcoming memory operations.
-* ``global_wb`` additionally ensures that previous memory operation done at
-  a lower scope level have reached the ``SCOPE:`` of the ``global_wb``.
+* ``global_wb`` is a writeback operation that additionally ensures previous
+  memory operation done at a lower scope level have reached the ``SCOPE:``
+  of the ``global_wb``.
+
+  * ``global_wb`` can be omitted for scopes other than ``SCOPE_SYS`` in
+    gfx120x.
+
 * The vector memory operations access a vector L0 cache. There is a single L0
   cache per CU. Each SIMD of a CU accesses the same L0 cache. Therefore, no
   special action is required for coherence between the lanes of a single
@@ -14890,19 +14960,7 @@ the instruction in the code sequence that references the table.
      store atomic release      - singlethread - global   1. buffer/global/ds/flat_store
                                - wavefront    - local
                                               - generic
-     store atomic release      - workgroup    - global   1. ``global_wb scope:SCOPE_SE``
-
-                                                           - If CU wavefront execution
-                                                             mode, omit.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at workgroup
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
+     store atomic release      - workgroup    - global   1. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -14925,7 +14983,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``.
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -14945,19 +15007,7 @@ the instruction in the code sequence that references the table.
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 
-     store atomic release      - workgroup    - local    1. ``global_wb scope:SCOPE_SE``
-
-                                                           - If CU wavefront execution
-                                                             mode or OpenCL, omit.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at workgroup
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
+     store atomic release      - workgroup    - local    1. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -14980,7 +15030,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``.
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - Must happen before the
                                                              following store.
                                                            - Ensures that all
@@ -14992,16 +15046,9 @@ the instruction in the code sequence that references the table.
                                                              released.
 
                                                          3. ds_store
-     store atomic release      - agent        - global   1. ``global_wb``
+     store atomic release      - agent        - global   1. ``global_wb scope:SCOPE_SYS``
                                - system       - generic
-                                                              - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-                                                              - In combination with the waits
-                                                                below, ensures that all
-                                                                memory operations
-                                                                have completed at agent or system
-                                                                scope before performing the
-                                                                store that is being
-                                                                released.
+                                                            - If agent scope, omit.
 
                                                          2. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
@@ -15025,7 +15072,12 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``.
+                                                             ``global_wb`` if present, or
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15050,20 +15102,8 @@ the instruction in the code sequence that references the table.
      atomicrmw    release      - singlethread - global   1. buffer/global/ds/flat_atomic
                                - wavefront    - local
                                               - generic
-     atomicrmw    release      - workgroup    - global   1. ``global_wb scope:SCOPE_SE``
-                                              - generic
-                                                            - If CU wavefront execution
-                                                              mode, omit.
-                                                            - In combination with the waits
-                                                              below, ensures that all
-                                                              memory operations
-                                                              have completed at workgroup
-                                                              scope before performing the
-                                                              store that is being
-                                                              released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
+     atomicrmw    release      - workgroup    - global   1. | ``s_wait_bvhcnt 0x0``
+                                              - generic     | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
@@ -15086,15 +15126,19 @@ the instruction in the code sequence that references the table.
                                                              atomic/
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
-                                                              must happen after
-                                                              ``global_wb``.
+                                                             must happen after
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
-                                                              must happen after
-                                                              any preceding
-                                                              local/generic
-                                                              load/store/load
-                                                              atomic/store
-                                                              atomic/atomicrmw.
+                                                             must happen after
+                                                             any preceding
+                                                             local/generic
+                                                             load/store/load
+                                                             atomic/store
+                                                             atomic/atomicrmw.
                                                            - Must happen before the
                                                              following atomic.
                                                            - Ensures that all
@@ -15105,23 +15149,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         3. buffer/global/flat_atomic
+                                                         2. buffer/global/flat_atomic
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 
-     atomicrmw    release      - workgroup    - local    1. ``global_wb scope:SCOPE_SE``
-
-                                                           - If CU wavefront execution
-                                                             mode or OpenCL, omit.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at workgroup
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
+     atomicrmw    release      - workgroup    - local    1. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -15144,7 +15176,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``.
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - Must happen before the
                                                              following atomic.
                                                            - Ensures that all
@@ -15155,17 +15191,10 @@ the instruction in the code sequence that references the table.
                                                              store that is being
                                                              released.
 
-                                                         3. ds_atomic
-     atomicrmw    release      - agent        - global   1. ``global_wb scope:``
+                                                         2. ds_atomic
+     atomicrmw    release      - agent        - global   1. ``global_wb scope:SCOPE_SYS``
                                - system       - generic
-                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at agent or system
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
+                                                           - If agent scope, omit.
 
                                                          2. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
@@ -15188,7 +15217,12 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             ``global_wb`` if present, or
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15212,19 +15246,7 @@ the instruction in the code sequence that references the table.
 
      fence        release      - singlethread *none*     *none*
                                - wavefront
-     fence        release      - workgroup    *none*     1. ``global_wb scope:SCOPE_SE``
-
-                                                            - If CU wavefront execution
-                                                              mode, omit.
-                                                            - In combination with the waits
-                                                              below, ensures that all
-                                                              memory operations
-                                                              have completed at workgroup
-                                                              scope before performing the
-                                                              store that is being
-                                                              released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
+     fence        release      - workgroup    *none*     1. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -15254,7 +15276,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15280,16 +15306,9 @@ the instruction in the code sequence that references the table.
                                                              following
                                                              fence-paired-atomic.
 
-     fence        release      - agent        *none*     1. ``global_wb``
+     fence        release      - agent        *none*     1. ``global_wb scope:SCOPE_SYS``
                                - system
-                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at agent or system
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
+                                                           - If agent scope, omit.
 
                                                          2. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
@@ -15322,7 +15341,12 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             ``global_wb`` if present, or
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15353,19 +15377,7 @@ the instruction in the code sequence that references the table.
      atomicrmw    acq_rel      - singlethread - global   1. buffer/global/ds/flat_atomic
                                - wavefront    - local
                                               - generic
-     atomicrmw    acq_rel      - workgroup    - global   1. ``global_wb scope:SCOPE_SE``
-
-                                                            - If CU wavefront execution
-                                                              mode, omit.
-                                                            - In combination with the waits
-                                                              below, ensures that all
-                                                              memory operations
-                                                              have completed at workgroup
-                                                              scope before performing the
-                                                              store that is being
-                                                              released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
+     atomicrmw    acq_rel      - workgroup    - global   1. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -15394,7 +15406,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``.
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15413,13 +15429,13 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         3. buffer/global_atomic
+                                                         2. buffer/global_atomic
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - If atomic with return, use
                                                              ``th:TH_ATOMIC_RETURN``.
 
-                                                         4. | **Atomic with return:**
+                                                         3. | **Atomic with return:**
                                                             | ``s_wait_loadcnt 0x0``
                                                             | **Atomic without return:**
                                                             | ``s_wait_storecnt 0x0``
@@ -15436,7 +15452,7 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw value
                                                              being acquired.
 
-                                                         5. ``global_inv scope:SCOPE_SE``
+                                                         4. ``global_inv scope:SCOPE_SE``
 
                                                            - If CU wavefront execution
                                                              mode, omit.
@@ -15445,19 +15461,7 @@ the instruction in the code sequence that references the table.
                                                              loads will not see
                                                              stale data.
 
-     atomicrmw    acq_rel      - workgroup    - local    1. ``global_wb scope:SCOPE_SE``
-
-                                                            - If CU wavefront execution
-                                                              mode or OpenCL, omit.
-                                                            - In combination with the waits
-                                                              below, ensures that all
-                                                              memory operations
-                                                              have completed at workgroup
-                                                              scope before performing the
-                                                              store that is being
-                                                              released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
+     atomicrmw    acq_rel      - workgroup    - local    1  | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -15480,7 +15484,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - Must happen before
                                                              the following
                                                              store.
@@ -15492,8 +15500,8 @@ the instruction in the code sequence that references the table.
                                                              store that is being
                                                              released.
 
-                                                         3. ds_atomic
-                                                         4. ``s_wait_dscnt 0x0``
+                                                         2. ds_atomic
+                                                         3. ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit.
                                                            - Must happen before
@@ -15506,7 +15514,7 @@ the instruction in the code sequence that references the table.
                                                              atomic value being
                                                              acquired.
 
-                                                         5. ``global_inv scope:SCOPE_SE``
+                                                         4. ``global_inv scope:SCOPE_SE``
 
                                                            - If CU wavefront execution
                                                              mode, omit.
@@ -15516,19 +15524,7 @@ the instruction in the code sequence that references the table.
                                                              loads will not see
                                                              stale data.
 
-     atomicrmw    acq_rel      - workgroup    - generic  1. ``global_wb scope:SCOPE_SE``
-
-                                                            - If CU wavefront execution
-                                                              mode or OpenCL, omit.
-                                                            - In combination with the waits
-                                                              below, ensures that all
-                                                              memory operations
-                                                              have completed at workgroup
-                                                              scope before performing the
-                                                              store that is being
-                                                              released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
+     atomicrmw    acq_rel      - workgroup    - generic  1. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -15551,7 +15547,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15570,13 +15570,13 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         3. flat_atomic
+                                                         2. flat_atomic
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
                                                            - If atomic with return,
                                                              use ``th:TH_ATOMIC_RETURN``.
 
-                                                         4. | **Atomic without return:**
+                                                         3. | **Atomic without return:**
                                                             | ``s_wait_dscnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | **Atomic with return:**
@@ -15596,7 +15596,7 @@ the instruction in the code sequence that references the table.
                                                              atomic value being
                                                              acquired.
 
-                                                         5. ``global_inv scope:SCOPE_SE``
+                                                         4. ``global_inv scope:SCOPE_SE``
 
                                                            - If CU wavefront execution
                                                              mode, omit.
@@ -15605,16 +15605,9 @@ the instruction in the code sequence that references the table.
                                                              loads will not see
                                                              stale data.
 
-     atomicrmw    acq_rel      - agent        - global   1. ``global_wb``
+     atomicrmw    acq_rel      - agent        - global   1. ``global_wb scope:SCOPE_SYS``
                                - system
-                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at agent or system
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
+                                                           - If agent scope, omit.
 
                                                          2. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
@@ -15638,7 +15631,12 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             ``global_wb`` if present, or
+                                                             any preceding
+                                                             global/generic
+                                                             store/store
+                                                             atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15690,16 +15688,9 @@ the instruction in the code sequence that references the table.
                                                              will not see stale
                                                              global data.
 
-     atomicrmw    acq_rel      - agent        - generic  1. ``global_wb``
+     atomicrmw    acq_rel      - agent        - generic  1. ``global_wb scope:SCOPE_SYS``
                                - system
-                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at agent or system
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
+                                                           - If agent scope, omit.
 
                                                          2. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
@@ -15723,7 +15714,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             ``global_wb`` if present, or
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15782,19 +15777,7 @@ the instruction in the code sequence that references the table.
 
      fence        acq_rel      - singlethread *none*     *none*
                                - wavefront
-     fence        acq_rel      - workgroup    *none*     1. ``global_wb scope:SCOPE_SE``
-
-                                                           - If CU wavefront execution
-                                                             mode, omit.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at workgroup
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
-
-                                                         2. | ``s_wait_bvhcnt 0x0``
+     fence        acq_rel      - workgroup    *none*     1. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -15828,7 +15811,10 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -15900,7 +15886,7 @@ the instruction in the code sequence that references the table.
                                                              the
                                                              acquire-fence-paired-atomic.
 
-                                                         3. ``global_inv scope:SCOPE_SE``
+                                                         2. ``global_inv scope:SCOPE_SE``
 
                                                            - If CU wavefront execution
                                                              mode, omit.
@@ -15909,16 +15895,9 @@ the instruction in the code sequence that references the table.
                                                              loads will not see
                                                              stale data.
 
-     fence        acq_rel      - agent        *none*     1.  ``global_wb``
+     fence        acq_rel      - agent        *none*     1.  ``global_wb scope:SCOPE_SYS``
                                - system
-                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
-                                                           - In combination with the waits
-                                                             below, ensures that all
-                                                             memory operations
-                                                             have completed at agent or system
-                                                             scope before performing the
-                                                             store that is being
-                                                             released.
+                                                           - If agent scope, omit.
 
                                                          2. | ``s_wait_bvhcnt 0x0``
                                                             | ``s_wait_samplecnt 0x0``
@@ -15952,7 +15931,11 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw-with-return-value.
                                                            - ``s_wait_storecnt 0x0``
                                                              must happen after
-                                                             ``global_wb``
+                                                             ``global_wb`` if present, or
+                                                             any preceding
+                                                             global/generic
+                                                             store/store atomic/
+                                                             atomicrmw-no-return-value.
                                                            - ``s_wait_dscnt 0x0``
                                                              must happen after
                                                              any preceding
@@ -17546,8 +17529,8 @@ combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_,
 [AMD-GCN-GFX900-GFX904-VEGA]_, [AMD-GCN-GFX906-VEGA7NM]_,
 [AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
-[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_
-and [AMD-GCN-GFX11-RDNA3]_.
+[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
+[AMD-GCN-GFX11-RDNA3]_ and [AMD-GCN-GFX11-RDNA3.5]_.
 
 Operands
 ~~~~~~~~
@@ -18345,6 +18328,7 @@ Additional Documentation
 .. [AMD-GCN-GFX10-RDNA1] `AMD RDNA 1.0 Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
 .. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3] `AMD RDNA 3 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA3_Shader_ISA_December2022.pdf>`__
+.. [AMD-GCN-GFX11-RDNA3.5] `AMD RDNA 3.5 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna35_instruction_set_architecture.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__

@@ -179,6 +179,7 @@ namespace std {
 
 #include <__assert>
 #include <__compare/compare_three_way_result.h>
+#include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__concepts/invocable.h>
 #include <__config>
@@ -195,6 +196,8 @@ namespace std {
 #include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/disjunction.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
@@ -255,9 +258,9 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS void
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS void
 __throw_bad_optional_access() {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
   throw bad_optional_access();
 #  else
   _LIBCPP_VERBOSE_ABORT("bad_optional_access was thrown in -fno-exceptions mode");
@@ -284,7 +287,7 @@ struct __optional_destruct_base<_Tp, false> {
   static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
   union {
     char __null_state_;
-    value_type __val_;
+    remove_cv_t<value_type> __val_;
   };
   bool __engaged_;
 
@@ -320,7 +323,7 @@ struct __optional_destruct_base<_Tp, true> {
   static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
   union {
     char __null_state_;
-    value_type __val_;
+    remove_cv_t<value_type> __val_;
   };
   bool __engaged_;
 
@@ -374,7 +377,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from(_That&& __opt) {
     if (this->__engaged_ == __opt.has_value()) {
       if (this->__engaged_)
-        this->__val_ = std::forward<_That>(__opt).__get();
+        static_cast<_Tp&>(this->__val_) = std::forward<_That>(__opt).__get();
     } else {
       if (this->__engaged_)
         this->reset();

@@ -117,3 +117,27 @@ void d4_to_b2() {
   vector<double,4> d4 = 9.0;
   vector<bool, 2> b2 = d4;
 }
+
+// CHECK-LABEL: d4_to_d1
+// CHECK: [[d4:%.*]] = alloca <4 x double>
+// CHECK: [[d1:%.*]] = alloca <1 x double>
+// CHECK: store <4 x double> <double 9.000000e+00, double 9.000000e+00, double 9.000000e+00, double 9.000000e+00>, ptr [[d4]]
+// CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
+// CHECK: [[vecd1:%.*]] = shufflevector <4 x double> [[vecd4]], <4 x double> poison, <1 x i32> zeroinitializer
+// CHECK: store <1 x double> [[vecd1]], ptr [[d1:%.*]], align 8
+void d4_to_d1() {
+  vector<double,4> d4 = 9.0;
+  vector<double,1> d1 = d4;
+}
+
+// CHECK-LABEL: d4_to_dScalar
+// CHECK: [[d4:%.*]] = alloca <4 x double>
+// CHECK: [[d:%.*]] = alloca double
+// CHECK: store <4 x double> <double 9.000000e+00, double 9.000000e+00, double 9.000000e+00, double 9.000000e+00>, ptr [[d4]]
+// CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
+// CHECK: [[d4x:%.*]] = extractelement <4 x double> [[vecd4]], i32 0
+// CHECK: store double [[d4x]], ptr [[d]]
+void d4_to_dScalar() {
+  vector<double,4> d4 = 9.0;
+  double d = d4;
+}

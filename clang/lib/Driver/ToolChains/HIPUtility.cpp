@@ -340,21 +340,21 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 void HIP::constructGenerateObjFileFromHIPFatBinary(
     Compilation &C, const InputInfo &Output, const InputInfoList &Inputs,
     const ArgList &Args, const JobAction &JA, const Tool &T) {
-  const ToolChain &TC = T.getToolChain();
+  const Driver &D = C.getDriver();
   std::string Name = std::string(llvm::sys::path::stem(Output.getFilename()));
 
   // Create Temp Object File Generator,
   // Offload Bundled file and Bundled Object file.
   // Keep them if save-temps is enabled.
-  const char *McinFile;
+  const char *ObjinFile;
   const char *BundleFile;
-  if (C.getDriver().isSaveTempsEnabled()) {
-    McinFile = C.getArgs().MakeArgString(Name + ".mcin");
+  if (D.isSaveTempsEnabled()) {
+    ObjinFile = C.getArgs().MakeArgString(Name + ".mcin");
     BundleFile = C.getArgs().MakeArgString(Name + ".hipfb");
   } else {
-    auto TmpNameMcin = C.getDriver().GetTemporaryPath(Name, "mcin");
-    McinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
-    auto TmpNameFb = C.getDriver().GetTemporaryPath(Name, "hipfb");
+    auto TmpNameMcin = D.GetTemporaryPath(Name, "mcin");
+    ObjinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
+    auto TmpNameFb = D.GetTemporaryPath(Name, "hipfb");
     BundleFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameFb));
   }
   HIP::constructHIPFatbinCommand(C, JA, BundleFile, Inputs, Args, T);
@@ -446,7 +446,6 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   }
   if (HostTriple.isOSLinux() && HostTriple.isOSBinFormatELF())
     ObjStream << "  .section .note.GNU-stack, \"\", @progbits\n";
-  ObjStream.flush();
 
   // Dump the contents of the temp object file gen if the user requested that.
   // We support this option to enable testing of behavior with -###.
@@ -455,19 +454,20 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   // Open script file and write the contents.
   std::error_code EC;
-  llvm::raw_fd_ostream Objf(McinFile, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream Objf(ObjinFile, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
-    C.getDriver().Diag(clang::diag::err_unable_to_make_temp) << EC.message();
+    D.Diag(clang::diag::err_unable_to_make_temp) << EC.message();
     return;
   }
 
   Objf << ObjBuffer;
 
-  ArgStringList McArgs{"-triple", Args.MakeArgString(HostTriple.normalize()),
+  ArgStringList McArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
                        "-o",      Output.getFilename(),
-                       McinFile,  "--filetype=obj"};
-  const char *Mc = Args.MakeArgString(TC.GetProgramPath("llvm-mc"));
-  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(), Mc,
-                                         McArgs, Inputs, Output));
+                       "-x",      "assembler",
+                       ObjinFile, "-c"};
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         D.getClangProgramPath(), McArgs,
+                                         Inputs, Output, D.getPrependArg()));
 }

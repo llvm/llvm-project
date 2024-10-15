@@ -532,6 +532,18 @@ private:
   /// namespace as if it is not delayed.
   DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
 
+  /// Mapping from FunctionDecl IDs to the corresponding lambda IDs.
+  ///
+  /// These lambdas have to be loaded right after the function they belong to.
+  /// It is required to have canonical declaration for lambda class from the
+  /// same module as enclosing function. This is required to correctly resolve
+  /// captured variables in the lambda. Without this, due to lazy
+  /// deserialization, canonical declarations for the function and lambdas can
+  /// be selected from different modules and DeclRefExprs may refer to the AST
+  /// nodes that don't exist in the function.
+  llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>>
+      FunctionToLambdasMap;
+
   struct PendingUpdateRecord {
     Decl *D;
     GlobalDeclID ID;
@@ -972,6 +984,9 @@ private:
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<GlobalDeclID, 4> DeclsToCheckForDeferredDiags;
 
+  /// The IDs of all decls with function effects to be checked.
+  SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
+
 private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
@@ -1187,15 +1202,6 @@ private:
   /// We will check whether the corresponding declaration is in fact missing
   /// once recursing loading has been completed.
   llvm::SmallVector<NamedDecl *, 16> PendingOdrMergeChecks;
-
-  /// Lambdas that need to be loaded right after the function they belong to.
-  /// It is required to have canonical declaration for lambda class from the
-  /// same module as enclosing function. This is required to correctly resolve
-  /// captured variables in the lambda. Without this, due to lazy
-  /// deserialization canonical declarations for the function and lambdas can
-  /// be from different modules and DeclRefExprs may refer to the AST nodes
-  /// that don't exist in the function.
-  SmallVector<GlobalDeclID, 4> PendingLambdas;
 
   using DataPointers =
       std::pair<CXXRecordDecl *, struct CXXRecordDecl::DefinitionData *>;
@@ -2521,7 +2527,7 @@ private:
 
 inline bool shouldSkipCheckingODR(const Decl *D) {
   return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
-         D->isFromGlobalModule();
+         (D->isFromGlobalModule() || D->isFromHeaderUnit());
 }
 
 } // namespace clang

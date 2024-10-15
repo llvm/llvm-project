@@ -42,16 +42,10 @@ public:
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;
 
-  // Use the provided main loop instance to accept new connections. The callback
-  // will be called (from MainLoop::Run) for each new connection. This function
-  // does not block.
+  using Socket::Accept;
   llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
   Accept(MainLoopBase &loop,
-         std::function<void(std::unique_ptr<TCPSocket> socket)> sock_cb);
-
-  // Accept a single connection and "return" it in the pointer argument. This
-  // function blocks until the connection arrives.
-  Status Accept(Socket *&conn_socket) override;
+         std::function<void(std::unique_ptr<Socket> socket)> sock_cb) override;
 
   Status CreateSocket(int domain);
 

@@ -17,3 +17,10 @@ struct B {
 };
 const int A = (char *)(&( (struct B *)(16) )->b[0]) - (char *)(16);
 // CHECK: @A = constant i32 1
+
+struct X { int a[2]; };
+int test(void) {
+  static int i23 = (int) &(((struct X *)0)->a[1]);
+  return i23;
+}
+// CHECK: @test.i23 = internal global i32 4, align 4

@@ -15,9 +15,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK-NEXT: [[V_CVT_F16_F32_t16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_t16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[V_CVT_F16_F32_t16_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_t16_e64 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[V_CMP_F_F16_t16_e64_:%[0-9]+]]:sreg_32 = V_CMP_F_F16_t16_e64 0, [[V_CVT_F16_F32_t16_e64_]], 0, [[V_CVT_F16_F32_t16_e64_1]], 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_CVT_F16_F32_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_CVT_F16_F32_fake16_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_fake16_e64 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_CMP_F_F16_t16_e64_:%[0-9]+]]:sreg_32 = V_CMP_F_F16_t16_e64 0, [[V_CVT_F16_F32_fake16_e64_]], 0, [[V_CVT_F16_F32_fake16_e64_1]], 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_CMP_F_F16_t16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -41,9 +41,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK-NEXT: [[V_CVT_F16_F32_t16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_t16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[V_CVT_F16_F32_t16_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_t16_e64 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[V_CMP_TRU_F16_t16_e64_:%[0-9]+]]:sreg_32 = V_CMP_TRU_F16_t16_e64 0, [[V_CVT_F16_F32_t16_e64_]], 0, [[V_CVT_F16_F32_t16_e64_1]], 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_CVT_F16_F32_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_CVT_F16_F32_fake16_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_fake16_e64 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_CMP_TRU_F16_t16_e64_:%[0-9]+]]:sreg_32 = V_CMP_TRU_F16_t16_e64 0, [[V_CVT_F16_F32_fake16_e64_]], 0, [[V_CVT_F16_F32_fake16_e64_1]], 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_CMP_TRU_F16_t16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1

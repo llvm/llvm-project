@@ -114,6 +114,8 @@
 // using std::atomic_signal_fence                         // see below
 
 #include <stdatomic.h>
+#include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -166,7 +168,7 @@ void f() {
   static_assert(std::is_same_v<std::atomic<long long>, ::atomic_llong>);
   static_assert(std::is_same_v<std::atomic<unsigned long long>, ::atomic_ullong>);
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
   static_assert(std::is_same_v<std::atomic<char8_t>,  ::atomic_char8_t>);
 #endif
   static_assert(std::is_same_v<std::atomic<char16_t>, ::atomic_char16_t>);

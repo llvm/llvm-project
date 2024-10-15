@@ -1255,16 +1255,16 @@ bool X86InstructionSelector::selectExtract(MachineInstr &I,
 
   if (SrcTy.getSizeInBits() == 256 && DstTy.getSizeInBits() == 128) {
     if (HasVLX)
-      I.setDesc(TII.get(X86::VEXTRACTF32x4Z256rr));
+      I.setDesc(TII.get(X86::VEXTRACTF32x4Z256rri));
     else if (HasAVX)
-      I.setDesc(TII.get(X86::VEXTRACTF128rr));
+      I.setDesc(TII.get(X86::VEXTRACTF128rri));
     else
       return false;
   } else if (SrcTy.getSizeInBits() == 512 && HasAVX512) {
     if (DstTy.getSizeInBits() == 128)
-      I.setDesc(TII.get(X86::VEXTRACTF32x4Zrr));
+      I.setDesc(TII.get(X86::VEXTRACTF32x4Zrri));
     else if (DstTy.getSizeInBits() == 256)
-      I.setDesc(TII.get(X86::VEXTRACTF64x4Zrr));
+      I.setDesc(TII.get(X86::VEXTRACTF64x4Zrri));
     else
       return false;
   } else
@@ -1388,16 +1388,16 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
 
   if (DstTy.getSizeInBits() == 256 && InsertRegTy.getSizeInBits() == 128) {
     if (HasVLX)
-      I.setDesc(TII.get(X86::VINSERTF32x4Z256rr));
+      I.setDesc(TII.get(X86::VINSERTF32x4Z256rri));
     else if (HasAVX)
-      I.setDesc(TII.get(X86::VINSERTF128rr));
+      I.setDesc(TII.get(X86::VINSERTF128rri));
     else
       return false;
   } else if (DstTy.getSizeInBits() == 512 && HasAVX512) {
     if (InsertRegTy.getSizeInBits() == 128)
-      I.setDesc(TII.get(X86::VINSERTF32x4Zrr));
+      I.setDesc(TII.get(X86::VINSERTF32x4Zrri));
     else if (InsertRegTy.getSizeInBits() == 256)
-      I.setDesc(TII.get(X86::VINSERTF64x4Zrr));
+      I.setDesc(TII.get(X86::VINSERTF64x4Zrri));
     else
       return false;
   } else

@@ -9470,12 +9470,13 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   SDValue Op0 = Op->getOperand(0);
 
+  if (!Subtarget.isPPC64() || (Op0.getOpcode() != ISD::BUILD_PAIR) ||
+      (Op.getValueType() != MVT::f128))
+    return SDValue();
+
   SDValue Lo = Op0.getOperand(0);
   SDValue Hi = Op0.getOperand(1);
-
-  if ((Op.getValueType() != MVT::f128) ||
-      (Op0.getOpcode() != ISD::BUILD_PAIR) || (Lo.getValueType() != MVT::i64) ||
-      (Hi.getValueType() != MVT::i64) || !Subtarget.isPPC64())
+  if ((Lo.getValueType() != MVT::i64) || (Hi.getValueType() != MVT::i64))
     return SDValue();
 
   if (!Subtarget.isLittleEndian())
@@ -12180,7 +12181,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 
 static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Function *Func = Intrinsic::getDeclaration(M, Id);
+  Function *Func = Intrinsic::getOrInsertDeclaration(M, Id);
   return Builder.CreateCall(Func, {});
 }
 
@@ -12205,7 +12206,7 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
     if (isa<LoadInst>(Inst))
       return Builder.CreateCall(
-          Intrinsic::getDeclaration(
+          Intrinsic::getOrInsertDeclaration(
               Builder.GetInsertBlock()->getParent()->getParent(),
               Intrinsic::ppc_cfence, {Inst->getType()}),
           {Inst});
@@ -19004,7 +19005,7 @@ Value *PPCTargetLowering::emitMaskedAtomicRMWIntrinsic(
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Type *ValTy = Incr->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
-  Function *RMW = Intrinsic::getDeclaration(
+  Function *RMW = Intrinsic::getOrInsertDeclaration(
       M, getIntrinsicForAtomicRMWBinOp128(AI->getOperation()));
   Type *Int64Ty = Type::getInt64Ty(M->getContext());
   Value *IncrLo = Builder.CreateTrunc(Incr, Int64Ty, "incr_lo");
@@ -19027,7 +19028,7 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Type *ValTy = CmpVal->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
   Function *IntCmpXchg =
-      Intrinsic::getDeclaration(M, Intrinsic::ppc_cmpxchg_i128);
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::ppc_cmpxchg_i128);
   Type *Int64Ty = Type::getInt64Ty(M->getContext());
   Value *CmpLo = Builder.CreateTrunc(CmpVal, Int64Ty, "cmp_lo");
   Value *CmpHi =

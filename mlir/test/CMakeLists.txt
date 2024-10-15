@@ -115,6 +115,7 @@ set(MLIR_TEST_DEPENDS
   mlir-opt
   mlir-query
   mlir-reduce
+  mlir-rewrite
   mlir-tblgen
   mlir-translate
   tblgen-lsp-server
@@ -148,6 +149,10 @@ endif()
 
 if(MLIR_ENABLE_CUDA_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
+endif()
+
+if(MLIR_ENABLE_EXECUTION_ENGINE)
+  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)

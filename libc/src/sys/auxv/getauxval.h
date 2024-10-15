@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SYS_AUXV_GETAUXVAL_H
 #define LLVM_LIBC_SRC_SYS_AUXV_GETAUXVAL_H
 
+#include "hdr/sys_auxv_macros.h"
 #include "src/__support/macros/config.h"
-#include <sys/auxv.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

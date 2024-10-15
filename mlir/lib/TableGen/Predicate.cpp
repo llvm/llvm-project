@@ -79,7 +79,7 @@ const llvm::Record *CombinedPred::getCombinerDef() const {
   return def->getValueAsDef("kind");
 }
 
-std::vector<llvm::Record *> CombinedPred::getChildren() const {
+std::vector<const llvm::Record *> CombinedPred::getChildren() const {
   assert(def->getValue("children") &&
          "CombinedPred must have a value 'children'");
   return def->getValueAsListOfDefs("children");
@@ -301,7 +301,7 @@ static std::string combineBinary(ArrayRef<std::string> children,
   for (unsigned i = 1; i < size; ++i) {
     os << ' ' << combiner << " (" << children[i] << ')';
   }
-  return os.str();
+  return str;
 }
 
 // Prepend negation to the only condition in the predicate expression list.

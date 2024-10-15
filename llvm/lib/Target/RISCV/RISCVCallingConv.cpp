@@ -129,9 +129,43 @@ ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVABI::ABI ABI) {
   static const MCPhysReg ArgIGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                        RISCV::X13, RISCV::X14, RISCV::X15,
                                        RISCV::X16, RISCV::X17};
-  // The GPRs used for passing arguments in the ILP32E/ILP64E ABI.
+  // The GPRs used for passing arguments in the ILP32E/LP64E ABI.
   static const MCPhysReg ArgEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                        RISCV::X13, RISCV::X14, RISCV::X15};
+
+  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+    return ArrayRef(ArgEGPRs);
+
+  return ArrayRef(ArgIGPRs);
+}
+
+static ArrayRef<MCPhysReg> getArgGPR16s(const RISCVABI::ABI ABI) {
+  // The GPRs used for passing arguments in the ILP32* and LP64* ABIs, except
+  // the ILP32E ABI.
+  static const MCPhysReg ArgIGPRs[] = {RISCV::X10_H, RISCV::X11_H, RISCV::X12_H,
+                                       RISCV::X13_H, RISCV::X14_H, RISCV::X15_H,
+                                       RISCV::X16_H, RISCV::X17_H};
+  // The GPRs used for passing arguments in the ILP32E/LP64E ABI.
+  static const MCPhysReg ArgEGPRs[] = {RISCV::X10_H, RISCV::X11_H,
+                                       RISCV::X12_H, RISCV::X13_H,
+                                       RISCV::X14_H, RISCV::X15_H};
+
+  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+    return ArrayRef(ArgEGPRs);
+
+  return ArrayRef(ArgIGPRs);
+}
+
+static ArrayRef<MCPhysReg> getArgGPR32s(const RISCVABI::ABI ABI) {
+  // The GPRs used for passing arguments in the ILP32* and LP64* ABIs, except
+  // the ILP32E ABI.
+  static const MCPhysReg ArgIGPRs[] = {RISCV::X10_W, RISCV::X11_W, RISCV::X12_W,
+                                       RISCV::X13_W, RISCV::X14_W, RISCV::X15_W,
+                                       RISCV::X16_W, RISCV::X17_W};
+  // The GPRs used for passing arguments in the ILP32E/LP64E ABI.
+  static const MCPhysReg ArgEGPRs[] = {RISCV::X10_W, RISCV::X11_W,
+                                       RISCV::X12_W, RISCV::X13_W,
+                                       RISCV::X14_W, RISCV::X15_W};
 
   if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
     return ArrayRef(ArgEGPRs);
@@ -147,9 +181,49 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
       RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13, RISCV::X14, RISCV::X15,
       RISCV::X16, RISCV::X17, RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31};
 
-  // The GPRs used for passing arguments in the FastCC when using ILP32E/ILP64E.
+  // The GPRs used for passing arguments in the FastCC when using ILP32E/LP64E.
   static const MCPhysReg FastCCEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                           RISCV::X13, RISCV::X14, RISCV::X15};
+
+  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+    return ArrayRef(FastCCEGPRs);
+
+  return ArrayRef(FastCCIGPRs);
+}
+
+static ArrayRef<MCPhysReg> getFastCCArgGPRF16s(const RISCVABI::ABI ABI) {
+  // The GPRs used for passing arguments in the FastCC, X5 and X6 might be used
+  // for save-restore libcall, so we don't use them.
+  // Don't use X7 for fastcc, since Zicfilp uses X7 as the label register.
+  static const MCPhysReg FastCCIGPRs[] = {
+      RISCV::X10_H, RISCV::X11_H, RISCV::X12_H, RISCV::X13_H,
+      RISCV::X14_H, RISCV::X15_H, RISCV::X16_H, RISCV::X17_H,
+      RISCV::X28_H, RISCV::X29_H, RISCV::X30_H, RISCV::X31_H};
+
+  // The GPRs used for passing arguments in the FastCC when using ILP32E/LP64E.
+  static const MCPhysReg FastCCEGPRs[] = {RISCV::X10_H, RISCV::X11_H,
+                                          RISCV::X12_H, RISCV::X13_H,
+                                          RISCV::X14_H, RISCV::X15_H};
+
+  if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+    return ArrayRef(FastCCEGPRs);
+
+  return ArrayRef(FastCCIGPRs);
+}
+
+static ArrayRef<MCPhysReg> getFastCCArgGPRF32s(const RISCVABI::ABI ABI) {
+  // The GPRs used for passing arguments in the FastCC, X5 and X6 might be used
+  // for save-restore libcall, so we don't use them.
+  // Don't use X7 for fastcc, since Zicfilp uses X7 as the label register.
+  static const MCPhysReg FastCCIGPRs[] = {
+      RISCV::X10_W, RISCV::X11_W, RISCV::X12_W, RISCV::X13_W,
+      RISCV::X14_W, RISCV::X15_W, RISCV::X16_W, RISCV::X17_W,
+      RISCV::X28_W, RISCV::X29_W, RISCV::X30_W, RISCV::X31_W};
+
+  // The GPRs used for passing arguments in the FastCC when using ILP32E/LP64E.
+  static const MCPhysReg FastCCEGPRs[] = {RISCV::X10_W, RISCV::X11_W,
+                                          RISCV::X12_W, RISCV::X13_W,
+                                          RISCV::X14_W, RISCV::X15_W};
 
   if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
     return ArrayRef(FastCCEGPRs);
@@ -320,11 +394,24 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
+  if ((ValVT == MVT::f16 && Subtarget.hasStdExtZhinxmin())) {
+    if (MCRegister Reg = State.AllocateReg(getArgGPR16s(ABI))) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  if (ValVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
+    if (MCRegister Reg = State.AllocateReg(getArgGPR32s(ABI))) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(ABI);
 
-  // Zfinx/Zdinx use GPR without a bitcast when possible.
-  if ((LocVT == MVT::f32 && XLen == 32 && Subtarget.hasStdExtZfinx()) ||
-      (LocVT == MVT::f64 && XLen == 64 && Subtarget.hasStdExtZdinx())) {
+  // Zdinx use GPR without a bitcast when possible.
+  if (LocVT == MVT::f64 && XLen == 64 && Subtarget.hasStdExtZdinx()) {
     if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
@@ -448,8 +535,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     if (Reg) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
-      if (ValVT.isFixedLengthVector())
+      if (ValVT.isFixedLengthVector()) {
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
+        State.addLoc(
+            CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+        return false;
+      }
     } else {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
@@ -521,13 +612,6 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
   const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
 
-  if (LocVT == MVT::i32 || LocVT == MVT::i64) {
-    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
-      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-      return false;
-    }
-  }
-
   if ((LocVT == MVT::f16 && Subtarget.hasStdExtZfhmin()) ||
       (LocVT == MVT::bf16 && Subtarget.hasStdExtZfbfmin())) {
     static const MCPhysReg FPR16List[] = {
@@ -565,14 +649,29 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // Check if there is an available GPRF16 before hitting the stack.
+  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin())) {
+    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRF16s(ABI))) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  // Check if there is an available GPRF32 before hitting the stack.
+  if (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
+    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRF32s(ABI))) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
   // Check if there is an available GPR before hitting the stack.
-  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin()) ||
-      (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
-      (LocVT == MVT::f64 && Subtarget.is64Bit() &&
-       Subtarget.hasStdExtZdinx())) {
+  if (LocVT == MVT::f64 && Subtarget.is64Bit() && Subtarget.hasStdExtZdinx()) {
     if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
       if (LocVT.getSizeInBits() != Subtarget.getXLen()) {
-        LocVT = Subtarget.getXLenVT();
+        LocVT = XLenVT;
         State.addLoc(
             CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
         return false;
@@ -582,58 +681,43 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if (LocVT == MVT::f16 || LocVT == MVT::bf16) {
-    int64_t Offset2 = State.AllocateStack(2, Align(2));
-    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset2, LocVT, LocInfo));
-    return false;
-  }
-
-  if (LocVT == MVT::i32 || LocVT == MVT::f32) {
-    int64_t Offset4 = State.AllocateStack(4, Align(4));
-    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset4, LocVT, LocInfo));
-    return false;
-  }
-
-  if (LocVT == MVT::i64 || LocVT == MVT::f64) {
-    int64_t Offset5 = State.AllocateStack(8, Align(8));
-    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset5, LocVT, LocInfo));
-    return false;
-  }
+  ArrayRef<MCPhysReg> ArgGPRs = getFastCCArgGPRs(ABI);
 
   if (LocVT.isVector()) {
     if (MCRegister Reg = allocateRVVReg(ValVT, ValNo, State, TLI)) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
-      if (ValVT.isFixedLengthVector())
+      if (LocVT.isFixedLengthVector()) {
         LocVT = TLI.getContainerForFixedLengthVector(LocVT);
+        State.addLoc(
+            CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+        return false;
+      }
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
 
-    // Try and pass the address via a "fast" GPR.
-    if (MCRegister GPRReg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    // Pass scalable vectors indirectly. Pass fixed vectors indirectly if we
+    // have a free GPR.
+    if (LocVT.isScalableVector() ||
+        State.getFirstUnallocated(ArgGPRs) != ArgGPRs.size()) {
       LocInfo = CCValAssign::Indirect;
-      LocVT = Subtarget.getXLenVT();
-      State.addLoc(CCValAssign::getReg(ValNo, ValVT, GPRReg, LocVT, LocInfo));
+      LocVT = XLenVT;
+    }
+  }
+
+  if (LocVT == XLenVT) {
+    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
+  }
 
-    // Pass scalable vectors indirectly by storing the pointer on the stack.
-    if (ValVT.isScalableVector()) {
-      LocInfo = CCValAssign::Indirect;
-      LocVT = Subtarget.getXLenVT();
-      unsigned XLen = Subtarget.getXLen();
-      int64_t StackOffset = State.AllocateStack(XLen / 8, Align(XLen / 8));
-      State.addLoc(
-          CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
-      return false;
-    }
-
-    // Pass fixed-length vectors on the stack.
-    auto StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
-    int64_t StackOffset = State.AllocateStack(ValVT.getStoreSize(), StackAlign);
-    State.addLoc(
-        CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
+  if (LocVT == XLenVT || LocVT == MVT::f16 || LocVT == MVT::bf16 ||
+      LocVT == MVT::f32 || LocVT == MVT::f64 || LocVT.isFixedLengthVector()) {
+    Align StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+    int64_t Offset = State.AllocateStack(LocVT.getStoreSize(), StackAlign);
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return false;
   }
 
@@ -688,9 +772,18 @@ bool llvm::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if ((LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
-      (LocVT == MVT::f64 && Subtarget.hasStdExtZdinx() &&
-       Subtarget.is64Bit())) {
+  if (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
+    static const MCPhysReg GPR32List[] = {
+        RISCV::X9_W,  RISCV::X18_W, RISCV::X19_W, RISCV::X20_W,
+        RISCV::X21_W, RISCV::X22_W, RISCV::X23_W, RISCV::X24_W,
+        RISCV::X25_W, RISCV::X26_W, RISCV::X27_W};
+    if (MCRegister Reg = State.AllocateReg(GPR32List)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  if (LocVT == MVT::f64 && Subtarget.hasStdExtZdinx() && Subtarget.is64Bit()) {
     if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;

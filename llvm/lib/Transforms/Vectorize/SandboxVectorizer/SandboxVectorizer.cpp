@@ -8,12 +8,20 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Constant.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 
 using namespace llvm;
 
 #define SV_NAME "sandbox-vectorizer"
 #define DEBUG_TYPE SV_NAME
+
+SandboxVectorizerPass::SandboxVectorizerPass() = default;
+
+SandboxVectorizerPass::SandboxVectorizerPass(SandboxVectorizerPass &&) =
+    default;
+
+SandboxVectorizerPass::~SandboxVectorizerPass() = default;
 
 PreservedAnalyses SandboxVectorizerPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
@@ -28,24 +36,21 @@ PreservedAnalyses SandboxVectorizerPass::run(Function &F,
   return PA;
 }
 
-bool SandboxVectorizerPass::runImpl(Function &F) {
+bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
   // If the target claims to have no vector registers early return.
   if (!TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true))) {
     LLVM_DEBUG(dbgs() << "SBVec: Target has no vector registers, return.\n");
     return false;
   }
-  LLVM_DEBUG(dbgs() << "SBVec: Analyzing " << F.getName() << ".\n");
+  LLVM_DEBUG(dbgs() << "SBVec: Analyzing " << LLVMF.getName() << ".\n");
   // Early return if the attribute NoImplicitFloat is used.
-  if (F.hasFnAttribute(Attribute::NoImplicitFloat)) {
+  if (LLVMF.hasFnAttribute(Attribute::NoImplicitFloat)) {
     LLVM_DEBUG(dbgs() << "SBVec: NoImplicitFloat attribute, return.\n");
     return false;
   }
 
-  sandboxir::Context Ctx(F.getContext());
-  // Create SandboxIR for `F`.
-  sandboxir::Function &SBF = *Ctx.createFunction(&F);
-  // TODO: Initialize SBVec Pass Manager
-  (void)SBF;
-
-  return false;
+  // Create SandboxIR for LLVMF and run BottomUpVec on it.
+  sandboxir::Context Ctx(LLVMF.getContext());
+  sandboxir::Function &F = *Ctx.createFunction(&LLVMF);
+  return BottomUpVecPass.runOnFunction(F);
 }
