@@ -34,14 +34,14 @@ gpu.module @kernels {
     %sum1 = gpu.subgroup_reduce mul %arg0 uniform : (vector<5xf16>) -> (vector<5xf16>)
     "test.consume"(%sum1) : (vector<5xf16>) -> ()
 
-    // CHECK-SUB-COUNT-3: gpu.subgroup_reduce mul {{.+}} cluster_size(4)
+    // CHECK-SUB-COUNT-3: gpu.subgroup_reduce mul {{.+}} cluster(size = 4)
     // CHECK-SUB: "test.consume"
-    %sum2 = gpu.subgroup_reduce mul %arg0 cluster_size(4) : (vector<5xf16>) -> (vector<5xf16>)
+    %sum2 = gpu.subgroup_reduce mul %arg0 cluster(size = 4) : (vector<5xf16>) -> (vector<5xf16>)
     "test.consume"(%sum2) : (vector<5xf16>) -> ()
 
-    // CHECK-SUB-COUNT-3: gpu.subgroup_reduce mul {{.+}} uniform cluster_size(4)
+    // CHECK-SUB-COUNT-3: gpu.subgroup_reduce mul {{.+}} uniform cluster(size = 4, stride = 2)
     // CHECK-SUB: "test.consume"
-    %sum3 = gpu.subgroup_reduce mul %arg0 uniform cluster_size(4) : (vector<5xf16>) -> (vector<5xf16>)
+    %sum3 = gpu.subgroup_reduce mul %arg0 uniform cluster(size = 4, stride = 2) : (vector<5xf16>) -> (vector<5xf16>)
     "test.consume"(%sum3) : (vector<5xf16>) -> ()
 
     // CHECK-SUB: gpu.return
@@ -65,14 +65,15 @@ gpu.module @kernels {
     %sum1 = gpu.subgroup_reduce add %arg0 uniform : (vector<1xf32>) -> (vector<1xf32>)
     "test.consume"(%sum1) : (vector<1xf32>) -> ()
 
-    // CHECK-SUB: gpu.subgroup_reduce add {{.+}} cluster_size(8) : (f32) -> f32
+    // Note stride is dropped because it is == 1.
+    // CHECK-SUB: gpu.subgroup_reduce add {{.+}} cluster(size = 8) : (f32) -> f32
     // CHECK-SUB: "test.consume"
-    %sum2 = gpu.subgroup_reduce add %arg0 cluster_size(8) : (vector<1xf32>) -> (vector<1xf32>)
+    %sum2 = gpu.subgroup_reduce add %arg0 cluster(size = 8, stride = 1) : (vector<1xf32>) -> (vector<1xf32>)
     "test.consume"(%sum2) : (vector<1xf32>) -> ()
 
-    // CHECK-SUB: gpu.subgroup_reduce add {{.+}} uniform cluster_size(8) : (f32) -> f32
+    // CHECK-SUB: gpu.subgroup_reduce add {{.+}} uniform cluster(size = 8, stride = 4) : (f32) -> f32
     // CHECK-SUB: "test.consume"
-    %sum3 = gpu.subgroup_reduce add %arg0 uniform cluster_size(8) : (vector<1xf32>) -> (vector<1xf32>)
+    %sum3 = gpu.subgroup_reduce add %arg0 uniform cluster(size = 8, stride = 4) : (vector<1xf32>) -> (vector<1xf32>)
     "test.consume"(%sum3) : (vector<1xf32>) -> ()
 
     // CHECK-SUB: gpu.return
@@ -143,7 +144,29 @@ gpu.module @kernels {
     // CHECK-SHFL: %[[S2:.+]], %{{.+}} = gpu.shuffle xor %[[A1]], %[[C4]], %[[C32]] : i32
     // CHECK-SHFL: %[[A2:.+]] = arith.addi %[[A1]], %[[S2]] : i32
     // CHECK-SHFL: "test.consume"(%[[A2]]) : (i32) -> ()
-    %sum0 = gpu.subgroup_reduce add %arg0 cluster_size(8) : (i32) -> i32
+    %sum0 = gpu.subgroup_reduce add %arg0 cluster(size = 8) : (i32) -> i32
+    "test.consume"(%sum0) : (i32) -> ()
+
+    // CHECK-SHFL: gpu.return
+    gpu.return
+  }
+
+  // CHECK-SHFL-LABEL: gpu.func @kernel3_clustered_strided(
+  // CHECK-SHFL-SAME:    %[[ARG0:.+]]: i32)
+  gpu.func @kernel3_clustered_strided(%arg0: i32) kernel {
+    // CHECK-SHFL-DAG: %[[C1:.+]] = arith.constant 4 : i32
+    // CHECK-SHFL-DAG: %[[C2:.+]] = arith.constant 8 : i32
+    // CHECK-SHFL-DAG: %[[C4:.+]] = arith.constant 16 : i32
+    // CHECK-SHFL-DAG: %[[C32:.+]] = arith.constant 32 : i32
+
+    // CHECK-SHFL: %[[S0:.+]], %{{.+}} = gpu.shuffle xor %[[ARG0]], %[[C1]], %[[C32]] : i32
+    // CHECK-SHFL: %[[A0:.+]] = arith.addi %[[ARG0]], %[[S0]] : i32
+    // CHECK-SHFL: %[[S1:.+]], %{{.+}} = gpu.shuffle xor %[[A0]], %[[C2]], %[[C32]] : i32
+    // CHECK-SHFL: %[[A1:.+]] = arith.addi %[[A0]], %[[S1]] : i32
+    // CHECK-SHFL: %[[S2:.+]], %{{.+}} = gpu.shuffle xor %[[A1]], %[[C4]], %[[C32]] : i32
+    // CHECK-SHFL: %[[A2:.+]] = arith.addi %[[A1]], %[[S2]] : i32
+    // CHECK-SHFL: "test.consume"(%[[A2]]) : (i32) -> ()
+    %sum0 = gpu.subgroup_reduce add %arg0 cluster(size = 8, stride = 4) : (i32) -> i32
     "test.consume"(%sum0) : (i32) -> ()
 
     // CHECK-SHFL: gpu.return
@@ -194,7 +217,7 @@ gpu.module @kernels {
     // CHECK-SHFL-DAG: %[[C32:.+]] = arith.constant 32 : i32
 
     // CHECK-SHFL-COUNT-2: gpu.shuffle xor
-    %sum0 = gpu.subgroup_reduce add %arg0 cluster_size(4) : (vector<2xf16>) -> (vector<2xf16>)
+    %sum0 = gpu.subgroup_reduce add %arg0 cluster(size = 4) : (vector<2xf16>) -> (vector<2xf16>)
     "test.consume"(%sum0) : (vector<2xf16>) -> ()
 
     // CHECK-SHFL: gpu.return
@@ -234,7 +257,7 @@ gpu.module @kernels {
     // CHECK-SHFL: arith.trunci {{.+}} : i32 to i16
     // CHECK-SHFL: %[[AL:.+]] = arith.addi {{.+}} : i16
     // CHECK-SHFL: "test.consume"(%[[AL]]) : (i16) -> ()
-    %sum0 = gpu.subgroup_reduce add %arg0 cluster_size(16) : (i16) -> i16
+    %sum0 = gpu.subgroup_reduce add %arg0 cluster(size = 16) : (i16) -> i16
     "test.consume"(%sum0) : (i16) -> ()
 
     // CHECK-SHFL: gpu.return
@@ -268,7 +291,7 @@ gpu.module @kernels {
   // CHECK-SHFL-SAME:    %[[ARG0:.+]]: vector<3xi8>)
   gpu.func @kernel_cluster_size_is_subgroup_size(%arg0: vector<3xi8>) kernel {
     // CHECK-SHFL-COUNT-5: gpu.shuffle xor
-    %sum0 = gpu.subgroup_reduce add %arg0 cluster_size(32) : (vector<3xi8>) -> (vector<3xi8>)
+    %sum0 = gpu.subgroup_reduce add %arg0 cluster(size = 32) : (vector<3xi8>) -> (vector<3xi8>)
     "test.consume"(%sum0) : (vector<3xi8>) -> ()
 
     // CHECK-SHFL: gpu.return

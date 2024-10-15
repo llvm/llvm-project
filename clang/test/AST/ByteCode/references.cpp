@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -verify=ref,both %s
 
 
 constexpr int a = 10;
@@ -71,20 +71,16 @@ static_assert(testGetValue() == 30, "");
 
 constexpr const int &MCE = 20;
 static_assert(MCE == 20, "");
-static_assert(MCE == 30, ""); // expected-error {{static assertion failed}} \
-                              // expected-note {{evaluates to '20 == 30'}} \
-                              // ref-error {{static assertion failed}} \
-                              // ref-note {{evaluates to '20 == 30'}}
+static_assert(MCE == 30, ""); // both-error {{static assertion failed}} \
+                              // both-note {{evaluates to '20 == 30'}}
 
 constexpr int LocalMCE() {
   const int &m = 100;
   return m;
 }
 static_assert(LocalMCE() == 100, "");
-static_assert(LocalMCE() == 200, ""); // expected-error {{static assertion failed}} \
-                                      // expected-note {{evaluates to '100 == 200'}} \
-                                      // ref-error {{static assertion failed}} \
-                                      // ref-note {{evaluates to '100 == 200'}}
+static_assert(LocalMCE() == 200, ""); // both-error {{static assertion failed}} \
+                                      // both-note {{evaluates to '100 == 200'}}
 
 struct S {
   int i, j;
@@ -135,3 +131,12 @@ static_assert(nonextended_string_ref[2] == '\0', "");
 /// but taking its address is.
 int &&A = 12;
 int arr[!&A];
+
+namespace Temporaries {
+  struct A { int n; };
+  struct B { const A &a; };
+  const B j = {{1}}; // both-note {{temporary created here}}
+
+  static_assert(j.a.n == 1, "");  // both-error {{not an integral constant expression}} \
+                                  // both-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+}

@@ -13,6 +13,8 @@
 
 #include "LoongArchAsmPrinter.h"
 #include "LoongArch.h"
+#include "LoongArchInstrInfo.h"
+#include "LoongArchMachineFunctionInfo.h"
 #include "LoongArchTargetMachine.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
@@ -50,6 +52,9 @@ void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   switch (MI->getOpcode()) {
+  case TargetOpcode::STATEPOINT:
+    LowerSTATEPOINT(*MI);
+    return;
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
     LowerPATCHABLE_FUNCTION_ENTER(*MI);
     return;
@@ -156,6 +161,46 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
+void LoongArchAsmPrinter::LowerSTATEPOINT(const MachineInstr &MI) {
+  StatepointOpers SOpers(&MI);
+  if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
+    assert(PatchBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
+    emitNops(PatchBytes / 4);
+  } else {
+    // Lower call target and choose correct opcode.
+    const MachineOperand &CallTarget = SOpers.getCallTarget();
+    MCOperand CallTargetMCOp;
+    switch (CallTarget.getType()) {
+    case MachineOperand::MO_GlobalAddress:
+    case MachineOperand::MO_ExternalSymbol:
+      lowerOperand(CallTarget, CallTargetMCOp);
+      EmitToStreamer(*OutStreamer,
+                     MCInstBuilder(LoongArch::BL).addOperand(CallTargetMCOp));
+      break;
+    case MachineOperand::MO_Immediate:
+      CallTargetMCOp = MCOperand::createImm(CallTarget.getImm());
+      EmitToStreamer(*OutStreamer,
+                     MCInstBuilder(LoongArch::BL).addOperand(CallTargetMCOp));
+      break;
+    case MachineOperand::MO_Register:
+      CallTargetMCOp = MCOperand::createReg(CallTarget.getReg());
+      EmitToStreamer(*OutStreamer, MCInstBuilder(LoongArch::JIRL)
+                                       .addReg(LoongArch::R1)
+                                       .addOperand(CallTargetMCOp)
+                                       .addImm(0));
+      break;
+    default:
+      llvm_unreachable("Unsupported operand type in statepoint call target");
+      break;
+    }
+  }
+
+  auto &Ctx = OutStreamer->getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer->emitLabel(MILabel);
+  SM.recordStatepoint(*MILabel, MI);
+}
+
 void LoongArchAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
     const MachineInstr &MI) {
   const Function &F = MF->getFunction();
@@ -213,33 +258,28 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
 
   assert(TM.getTargetTriple().isOSBinFormatELF());
 
-  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
-  if (!MJTI)
-    return;
+  unsigned Size = getDataLayout().getPointerSize();
+  auto *LAFI = MF->getInfo<LoongArchMachineFunctionInfo>();
+  unsigned EntrySize = LAFI->getJumpInfoSize();
 
-  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  if (JT.empty())
+  if (0 == EntrySize)
     return;
 
   OutStreamer->switchSection(MMI->getContext().getELFSection(
       ".discard.tablejump_annotate", ELF::SHT_PROGBITS, 0));
 
-  unsigned Size = getDataLayout().getPointerSize();
-
-  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
-    const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
-    if (JTBBs.empty())
-      continue;
-    for (auto *Pred : JTBBs[0]->predecessors()) {
-      for (auto &MI : Pred->instrs()) {
-        if (MI.getOpcode() != LoongArch::PseudoBRIND || !MI.getPreInstrSymbol())
-          continue;
-        OutStreamer->emitValue(
-            MCSymbolRefExpr::create(MI.getPreInstrSymbol(), OutContext), Size);
-        MCSymbol *JTISymbol = GetJTISymbol(JTI);
-        OutStreamer->emitValue(MCSymbolRefExpr::create(JTISymbol, OutContext),
-                               Size);
-      }
+  for (unsigned Idx = 0; Idx < EntrySize; ++Idx) {
+    OutStreamer->emitValue(
+        MCSymbolRefExpr::create(LAFI->getJumpInfoJrMI(Idx)->getPreInstrSymbol(),
+                                OutContext),
+        Size);
+    for (auto MO : LAFI->getJumpInfoJTIMI(Idx)->operands()) {
+      if (!MO.isJTI())
+        continue;
+      OutStreamer->emitValue(
+          MCSymbolRefExpr::create(GetJTISymbol(MO.getIndex()), OutContext),
+          Size);
+      break;
     }
   }
 }

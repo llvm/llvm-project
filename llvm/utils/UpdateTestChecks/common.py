@@ -1,11 +1,8 @@
-from __future__ import print_function
-
 import argparse
 import bisect
 import collections
 import copy
 import glob
-import itertools
 import os
 import re
 import subprocess
@@ -457,7 +454,7 @@ def collect_original_check_lines(ti: TestInfo, prefix_set: set):
                     continue
 
                 if check_kind == "LABEL":
-                    m = IR_FUNCTION_RE.match(line)
+                    m = IR_FUNCTION_LABEL_RE.match(line)
                     if m is not None:
                         func_name = m.group(1)
                         if (
@@ -517,12 +514,13 @@ def invoke_tool(exe, cmd_args, ir, preprocess_cmd=None, verbose=False):
                     sep="",
                     file=sys.stderr,
                 )
-            # Python 2.7 doesn't have subprocess.DEVNULL:
-            with open(os.devnull, "w") as devnull:
-                pp = subprocess.Popen(
-                    preprocess_cmd, shell=True, stdin=devnull, stdout=subprocess.PIPE
-                )
-                ir_file = pp.stdout
+            pp = subprocess.Popen(
+                preprocess_cmd,
+                shell=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+            )
+            ir_file = pp.stdout
 
         if isinstance(cmd_args, list):
             args = [applySubstitutions(a, substitutions) for a in cmd_args]
@@ -574,8 +572,11 @@ LOOP_PASS_DEBUG_RE = re.compile(
 )
 
 IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\s*\(')
+IR_FUNCTION_LABEL_RE = re.compile(
+    r'^\s*(?:define\s+(?:internal\s+)?[^@]*)?@"?([\w.$-]+)"?\s*\('
+)
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
-TRIPLE_ARG_RE = re.compile(r"-mtriple[= ]([^ ]+)")
+TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
 
@@ -636,6 +637,7 @@ def get_triple_from_march(march):
         "amdgcn": "amdgcn",
         "r600": "r600",
         "mips": "mips",
+        "nvptx64": "nvptx64",
         "sparc": "sparc",
         "hexagon": "hexagon",
         "ve": "ve",
@@ -1535,14 +1537,58 @@ def remap_metavar_names(
 
         candidate_matches = find_diff_matching(lhs_lines, rhs_lines)
 
-        # Apply commits greedily on a match-by-match basis
-        matches = [(-1, -1)]
-        committed_anything = False
+        candidate_matches = [
+            (old_begin + lhs_idx, new_begin + rhs_idx)
+            for lhs_idx, rhs_idx in candidate_matches
+        ]
+
+        # Candidate matches may conflict if they require conflicting mappings of
+        # names. We want to determine a large set of compatible candidates,
+        # because that leads to a small diff.
+        #
+        # We think of the candidates as vertices in a conflict graph. The
+        # conflict graph has edges between incompatible candidates. We want to
+        # find a large independent set in this graph.
+        #
+        # Greedily selecting candidates and removing incompatible ones has the
+        # disadvantage that making few bad decisions early on can have huge
+        # consequences.
+        #
+        # Instead, we implicitly compute multiple independent sets by greedily
+        # assigning a *coloring* to the conflict graph. Then, we select the
+        # largest color class (which is the largest independent set we found),
+        # commit to all candidates in it, and recurse.
+        #
+        # Note that we don't actually materialize the conflict graph. Instead,
+        # each color class tracks the information needed to decide implicitly
+        # whether a vertex conflicts (has an edge to) any of the vertices added
+        # to the color class so far.
+        class Color:
+            def __init__(self):
+                # (lhs_idx, rhs_idx) of matches in this color
+                self.matches = []
+
+                # rhs_name -> lhs_name mappings required by this color
+                self.mapping = {}
+
+                # lhs_names committed for this color
+                self.committed = set()
+
+        colors = []
+
         for lhs_idx, rhs_idx in candidate_matches:
             lhs_line = old_line_infos[lhs_idx]
             rhs_line = new_line_infos[rhs_idx]
 
-            local_commits = {}
+            # We scan through the uncommitted names in the candidate line and
+            # filter out the color classes to which the candidate could be
+            # assigned.
+            #
+            # Simultaneously, we prepare a new color class in case the candidate
+            # conflicts with all colors that have been established so far.
+            compatible_colors = colors[:]
+            new_color = Color()
+            new_color.matches.append((lhs_idx, rhs_idx))
 
             for lhs_value, rhs_value in zip(lhs_line.values, rhs_line.values):
                 if new_mapping[rhs_value.name] in committed_names:
@@ -1555,39 +1601,71 @@ def remap_metavar_names(
                     else:
                         break
 
-                if rhs_value.name in local_commits:
+                if rhs_value.name in new_color.mapping:
                     # Same, but for a possible commit happening on the same line
-                    if local_commits[rhs_value.name] == lhs_value.name:
+                    if new_color.mapping[rhs_value.name] == lhs_value.name:
                         continue
                     else:
                         break
 
-                if lhs_value.name in committed_names:
-                    # We can't map this value because the name we would map it to has already been
-                    # committed for something else. Give up on this line.
+                if (
+                    lhs_value.name in committed_names
+                    or lhs_value.name in new_color.committed
+                ):
+                    # We can't map this value because the name we would map it
+                    # to has already been committed for something else. Give up
+                    # on this line.
                     break
 
-                local_commits[rhs_value.name] = lhs_value.name
+                new_color.mapping[rhs_value.name] = lhs_value.name
+                new_color.committed.add(lhs_value.name)
+
+                color_idx = 0
+                while color_idx < len(compatible_colors):
+                    color = compatible_colors[color_idx]
+                    compatible = True
+                    if rhs_value.name in color.mapping:
+                        compatible = color.mapping[rhs_value.name] == lhs_value.name
+                    else:
+                        compatible = lhs_value.name not in color.committed
+                    if compatible:
+                        color_idx += 1
+                    else:
+                        del compatible_colors[color_idx]
             else:
-                # No reason not to add any commitments for this line
-                for rhs_var, lhs_var in local_commits.items():
-                    new_mapping[rhs_var] = lhs_var
-                    committed_names.add(lhs_var)
-                    committed_anything = True
+                # We never broke out of the loop, which means that at a minimum,
+                # this line is viable standalone
+                if compatible_colors:
+                    color = max(compatible_colors, key=lambda color: len(color.matches))
+                    color.mapping.update(new_color.mapping)
+                    color.committed.update(new_color.committed)
+                    color.matches.append((lhs_idx, rhs_idx))
+                else:
+                    colors.append(new_color)
 
-                    if (
-                        lhs_var != rhs_var
-                        and lhs_var in new_mapping
-                        and new_mapping[lhs_var] == lhs_var
-                    ):
-                        new_mapping[lhs_var] = "conflict_" + lhs_var
+        if colors:
+            # Pick the largest color class. This gives us a large independent
+            # (non-conflicting) set of candidate matches. Assign all names
+            # required by the independent set and recurse.
+            max_color = max(colors, key=lambda color: len(color.matches))
 
-                matches.append((lhs_idx, rhs_idx))
+            for rhs_var, lhs_var in max_color.mapping.items():
+                new_mapping[rhs_var] = lhs_var
+                committed_names.add(lhs_var)
 
-        matches.append((old_end, new_end))
+                if (
+                    lhs_var != rhs_var
+                    and lhs_var in new_mapping
+                    and new_mapping[lhs_var] == lhs_var
+                ):
+                    new_mapping[lhs_var] = "conflict_" + lhs_var
 
-        # Recursively handle sequences between matches
-        if committed_anything:
+            matches = (
+                [(old_begin - 1, new_begin - 1)]
+                + max_color.matches
+                + [(old_end, new_end)]
+            )
+
             for (lhs_prev, rhs_prev), (lhs_next, rhs_next) in zip(matches, matches[1:]):
                 recurse(lhs_prev + 1, lhs_next, rhs_prev + 1, rhs_next)
 

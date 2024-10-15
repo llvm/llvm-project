@@ -36,8 +36,11 @@ ASAN_FLAG(int, max_redzone, 2048,
 ASAN_FLAG(
     bool, debug, false,
     "If set, prints some debugging information and does additional checks.")
-ASAN_FLAG(bool, report_globals, true,
-          "If set, detect and report errors on globals .")
+ASAN_FLAG(
+    int, report_globals, 1,
+    "Controls the way to handle globals (0 - don't detect buffer overflow on "
+    "globals, 1 - detect buffer overflow, 2 - print data about registered "
+    "globals).")
 ASAN_FLAG(bool, check_initialization_order, false,
           "If set, attempts to catch initialization order issues.")
 ASAN_FLAG(

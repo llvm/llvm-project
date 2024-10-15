@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <optional>
 
 using namespace llvm;
@@ -236,7 +237,7 @@ Value *CachingVPExpander::convertEVLToMask(IRBuilder<> &Builder,
   if (ElemCount.isScalable()) {
     auto *M = Builder.GetInsertBlock()->getModule();
     Type *BoolVecTy = VectorType::get(Builder.getInt1Ty(), ElemCount);
-    Function *ActiveMaskFunc = Intrinsic::getDeclaration(
+    Function *ActiveMaskFunc = Intrinsic::getOrInsertDeclaration(
         M, Intrinsic::get_active_lane_mask, {BoolVecTy, EVLParam->getType()});
     // `get_active_lane_mask` performs an implicit less-than comparison.
     Value *ConstZero = Builder.getInt32(0);
@@ -298,7 +299,7 @@ Value *CachingVPExpander::expandPredicationToIntCall(
   case Intrinsic::umin: {
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1}, VPI.getName());
     replaceOperation(*NewOp, VPI);
@@ -307,7 +308,7 @@ Value *CachingVPExpander::expandPredicationToIntCall(
   case Intrinsic::bswap:
   case Intrinsic::bitreverse: {
     Value *Op = VPI.getOperand(0);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op}, VPI.getName());
     replaceOperation(*NewOp, VPI);
@@ -326,7 +327,7 @@ Value *CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::fabs:
   case Intrinsic::sqrt: {
     Value *Op0 = VPI.getOperand(0);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op0}, VPI.getName());
     replaceOperation(*NewOp, VPI);
@@ -336,7 +337,7 @@ Value *CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::minnum: {
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1}, VPI.getName());
     replaceOperation(*NewOp, VPI);
@@ -349,7 +350,7 @@ Value *CachingVPExpander::expandPredicationToFPCall(
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
     Value *Op2 = VPI.getOperand(2);
-    Function *Fn = Intrinsic::getDeclaration(
+    Function *Fn = Intrinsic::getOrInsertDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp;
     if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
@@ -367,50 +368,11 @@ Value *CachingVPExpander::expandPredicationToFPCall(
 
 static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                          Type *EltTy) {
-  bool Negative = false;
-  unsigned EltBits = EltTy->getScalarSizeInBits();
-  Intrinsic::ID VID = VPI.getIntrinsicID();
-  switch (VID) {
-  default:
-    llvm_unreachable("Expecting a VP reduction intrinsic");
-  case Intrinsic::vp_reduce_add:
-  case Intrinsic::vp_reduce_or:
-  case Intrinsic::vp_reduce_xor:
-  case Intrinsic::vp_reduce_umax:
-    return Constant::getNullValue(EltTy);
-  case Intrinsic::vp_reduce_mul:
-    return ConstantInt::get(EltTy, 1, /*IsSigned*/ false);
-  case Intrinsic::vp_reduce_and:
-  case Intrinsic::vp_reduce_umin:
-    return ConstantInt::getAllOnesValue(EltTy);
-  case Intrinsic::vp_reduce_smin:
-    return ConstantInt::get(EltTy->getContext(),
-                            APInt::getSignedMaxValue(EltBits));
-  case Intrinsic::vp_reduce_smax:
-    return ConstantInt::get(EltTy->getContext(),
-                            APInt::getSignedMinValue(EltBits));
-  case Intrinsic::vp_reduce_fmax:
-  case Intrinsic::vp_reduce_fmaximum:
-    Negative = true;
-    [[fallthrough]];
-  case Intrinsic::vp_reduce_fmin:
-  case Intrinsic::vp_reduce_fminimum: {
-    bool PropagatesNaN = VID == Intrinsic::vp_reduce_fminimum ||
-                         VID == Intrinsic::vp_reduce_fmaximum;
-    FastMathFlags Flags = VPI.getFastMathFlags();
-    const fltSemantics &Semantics = EltTy->getFltSemantics();
-    return (!Flags.noNaNs() && !PropagatesNaN)
-               ? ConstantFP::getQNaN(EltTy, Negative)
-           : !Flags.noInfs()
-               ? ConstantFP::getInfinity(EltTy, Negative)
-               : ConstantFP::get(EltTy,
-                                 APFloat::getLargest(Semantics, Negative));
-  }
-  case Intrinsic::vp_reduce_fadd:
-    return ConstantFP::getNegativeZero(EltTy);
-  case Intrinsic::vp_reduce_fmul:
-    return ConstantFP::get(EltTy, 1.0);
-  }
+  Intrinsic::ID RdxID = *VPI.getFunctionalIntrinsicID();
+  FastMathFlags FMF;
+  if (isa<FPMathOperator>(VPI))
+    FMF = VPI.getFastMathFlags();
+  return getReductionIdentity(RdxID, EltTy, FMF);
 }
 
 Value *
@@ -437,69 +399,33 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
   default:
     llvm_unreachable("Impossible reduction kind");
   case Intrinsic::vp_reduce_add:
-    Reduction = Builder.CreateAddReduce(RedOp);
-    Reduction = Builder.CreateAdd(Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_mul:
-    Reduction = Builder.CreateMulReduce(RedOp);
-    Reduction = Builder.CreateMul(Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_and:
-    Reduction = Builder.CreateAndReduce(RedOp);
-    Reduction = Builder.CreateAnd(Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_or:
-    Reduction = Builder.CreateOrReduce(RedOp);
-    Reduction = Builder.CreateOr(Reduction, Start);
+  case Intrinsic::vp_reduce_xor: {
+    Intrinsic::ID RedID = *VPI.getFunctionalIntrinsicID();
+    unsigned Opc = getArithmeticReductionInstruction(RedID);
+    assert(Instruction::isBinaryOp(Opc));
+    Reduction = Builder.CreateUnaryIntrinsic(RedID, RedOp);
+    Reduction =
+        Builder.CreateBinOp((Instruction::BinaryOps)Opc, Reduction, Start);
     break;
-  case Intrinsic::vp_reduce_xor:
-    Reduction = Builder.CreateXorReduce(RedOp);
-    Reduction = Builder.CreateXor(Reduction, Start);
-    break;
+  }
   case Intrinsic::vp_reduce_smax:
-    Reduction = Builder.CreateIntMaxReduce(RedOp, /*IsSigned*/ true);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::smax, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_smin:
-    Reduction = Builder.CreateIntMinReduce(RedOp, /*IsSigned*/ true);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::smin, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_umax:
-    Reduction = Builder.CreateIntMaxReduce(RedOp, /*IsSigned*/ false);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::umax, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_umin:
-    Reduction = Builder.CreateIntMinReduce(RedOp, /*IsSigned*/ false);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::umin, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_fmax:
-    Reduction = Builder.CreateFPMaxReduce(RedOp);
-    transferDecorations(*Reduction, VPI);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_fmin:
-    Reduction = Builder.CreateFPMinReduce(RedOp);
-    transferDecorations(*Reduction, VPI);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::minnum, Reduction, Start);
-    break;
   case Intrinsic::vp_reduce_fmaximum:
-    Reduction = Builder.CreateFPMaximumReduce(RedOp);
+  case Intrinsic::vp_reduce_fminimum: {
+    Intrinsic::ID RedID = *VPI.getFunctionalIntrinsicID();
+    Intrinsic::ID ScalarID = getMinMaxReductionIntrinsicOp(RedID);
+    Reduction = Builder.CreateUnaryIntrinsic(RedID, RedOp);
     transferDecorations(*Reduction, VPI);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::maximum, Reduction, Start);
+    Reduction = Builder.CreateBinaryIntrinsic(ScalarID, Reduction, Start);
     break;
-  case Intrinsic::vp_reduce_fminimum:
-    Reduction = Builder.CreateFPMinimumReduce(RedOp);
-    transferDecorations(*Reduction, VPI);
-    Reduction =
-        Builder.CreateBinaryIntrinsic(Intrinsic::minimum, Reduction, Start);
-    break;
+  }
   case Intrinsic::vp_reduce_fadd:
     Reduction = Builder.CreateFAddReduce(Start, RedOp);
     break;
@@ -668,7 +594,7 @@ bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
     // TODO add caching
     auto *M = VPI.getModule();
     Function *VScaleFunc =
-        Intrinsic::getDeclaration(M, Intrinsic::vscale, Int32Ty);
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::vscale, Int32Ty);
     IRBuilder<> Builder(VPI.getParent(), VPI.getIterator());
     Value *FactorConst = Builder.getInt32(StaticElemCount.getKnownMinValue());
     Value *VScale = Builder.CreateCall(VScaleFunc, {}, "vscale");

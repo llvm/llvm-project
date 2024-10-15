@@ -11,7 +11,7 @@
 
 #include "Allocator.h"
 #include "Configuration.h"
-#include "Types.h"
+#include "DeviceTypes.h"
 
 #include "Debug.h"
 

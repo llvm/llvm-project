@@ -109,13 +109,16 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     default:
       return TargetTriple.str();
     case llvm::Triple::GNUSF:
+    case llvm::Triple::MuslSF:
       FPFlavor = "sf";
       break;
     case llvm::Triple::GNUF32:
+    case llvm::Triple::MuslF32:
       FPFlavor = "f32";
       break;
     case llvm::Triple::GNU:
     case llvm::Triple::GNUF64:
+    case llvm::Triple::Musl:
       // This was going to be "f64" in an earlier Toolchain Conventions
       // revision, but starting from Feb 2023 the F64 ABI variants are
       // unmarked in their canonical forms.
@@ -508,6 +511,7 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
   case llvm::Triple::thumbeb: {
     const bool HF =
         Triple.getEnvironment() == llvm::Triple::GNUEABIHF ||
+        Triple.getEnvironment() == llvm::Triple::GNUEABIHFT64 ||
         tools::arm::getARMFloatABI(*this, Args) == tools::arm::FloatABI::Hard;
 
     LibDir = "lib";
@@ -800,6 +804,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Realtime;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::KernelAddress;

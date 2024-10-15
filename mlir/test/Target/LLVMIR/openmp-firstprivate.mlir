@@ -156,3 +156,49 @@ llvm.func @foo()
 // CHECK:         %[[STR_LEN:.*]] = extractvalue { ptr, i64 } %{{.*}}, 1
 // CHECK:         %{{.*}} = alloca i8, i64 %[[STR_LEN]], align 1
 // CHECK:         call void @foo()
+
+// -----
+
+// Verifies fix for https://github.com/llvm/llvm-project/issues/102939.
+//
+// The issues occurs because the CodeExtractor component only collect inputs
+// (to the parallel regions) that are defined in the same function in which the
+// parallel regions is present. Howerver, this is problematic because if we are
+// privatizing a global value (e.g. a `target` variable which is emitted as a
+// global), then we miss finding that input and we do not privatize the
+// variable.
+
+omp.private {type = firstprivate} @global_privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x f32 {bindc_name = "global", pinned} : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  llvm.store %0, %arg1 : f32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+
+llvm.func @global_accessor() {
+  %global_addr = llvm.mlir.addressof @global : !llvm.ptr
+  omp.parallel private(@global_privatizer %global_addr -> %arg0 : !llvm.ptr) {
+    %1 = llvm.mlir.constant(3.140000e+00 : f32) : f32
+    llvm.store %1, %arg0 : f32, !llvm.ptr
+    omp.terminator
+  }
+  llvm.return
+}
+
+llvm.mlir.global internal @global() {addr_space = 0 : i32} : f32 {
+  %0 = llvm.mlir.zero : f32
+  llvm.return %0 : f32
+}
+
+// CHECK-LABEL: @global_accessor..omp_par({{.*}})
+// CHECK-NEXT:  omp.par.entry:
+// Verify that we found the privatizer by checking that we properly inlined the
+// bodies of the alloc and copy regions.
+// CHECK:         %[[PRIV_ALLOC:.*]] = alloca float, i64 1, align 4
+// CHECK:         %[[GLOB_VAL:.*]] = load float, ptr @global, align 4
+// CHECK:         store float %[[GLOB_VAL]], ptr %[[PRIV_ALLOC]], align 4

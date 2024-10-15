@@ -181,6 +181,9 @@ constexpr _Complex float getComplexFloat() {
 static_assert(__real(getComplexFloat()) == 1, "");
 static_assert(__imag(getComplexFloat()) == 2, "");
 
+constexpr auto GH55390 = 1 / 65536j; // both-note {{division by zero}} \
+                                     // both-error {{constexpr variable 'GH55390' must be initialized by a constant expression}}
+
 namespace CastToBool {
   constexpr _Complex int F = {0, 1};
   static_assert(F, "");

@@ -584,7 +584,7 @@ void llvm_reset_counters(void) {
   }
 }
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__wasm__)
 COMPILER_RT_VISIBILITY
 pid_t __gcov_fork() {
   pid_t parent_pid = getpid();
@@ -617,9 +617,9 @@ void llvm_gcov_init(fn_ptr wfn, fn_ptr rfn) {
     atexit_ran = 1;
 
     /* Make sure we write out the data and delete the data structures. */
-    atexit(llvm_delete_reset_function_list);
+    lprofAtExit(llvm_delete_reset_function_list);
 #ifdef _WIN32
-    atexit(llvm_writeout_and_clear);
+    lprofAtExit(llvm_writeout_and_clear);
 #endif
   }
 }

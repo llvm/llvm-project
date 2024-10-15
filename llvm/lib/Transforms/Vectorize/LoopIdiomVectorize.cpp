@@ -470,9 +470,7 @@ Value *LoopIdiomVectorize::createMaskedFindMismatch(
   VectorFoundIndex->addIncoming(VectorIndexPhi, VectorLoopStartBlock);
 
   Value *PredMatchCmp = Builder.CreateAnd(LastLoopPred, FoundPred);
-  Value *Ctz = Builder.CreateIntrinsic(
-      Intrinsic::experimental_cttz_elts, {ResType, PredMatchCmp->getType()},
-      {PredMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true)});
+  Value *Ctz = Builder.CreateCountTrailingZeroElems(ResType, PredMatchCmp);
   Ctz = Builder.CreateZExt(Ctz, I64Type);
   Value *VectorLoopRes64 = Builder.CreateAdd(VectorFoundIndex, Ctz, "",
                                              /*HasNUW=*/true, /*HasNSW=*/true);

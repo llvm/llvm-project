@@ -138,7 +138,8 @@ public:
   };
 
   /// Register a conversion function. A conversion function must be convertible
-  /// to any of the following forms(where `T` is a class derived from `Type`:
+  /// to any of the following forms (where `T` is a class derived from `Type`):
+  ///
   ///   * std::optional<Type>(T)
   ///     - This form represents a 1-1 type conversion. It should return nullptr
   ///       or `std::nullopt` to signify failure. If `std::nullopt` is returned,
@@ -151,15 +152,7 @@ public:
   ///       existing value are expected to be removed during conversion. If
   ///       `std::nullopt` is returned, the converter is allowed to try another
   ///       conversion function to perform the conversion.
-  ///   * std::optional<LogicalResult>(T, SmallVectorImpl<Type> &,
-  ///                                  ArrayRef<Type>)
-  ///     - This form represents a 1-N type conversion supporting recursive
-  ///       types. The first two arguments and the return value are the same as
-  ///       for the regular 1-N form. The third argument is contains is the
-  ///       "call stack" of the recursive conversion: it contains the list of
-  ///       types currently being converted, with the current type being the
-  ///       last one. If it is present more than once in the list, the
-  ///       conversion concerns a recursive type.
+  ///
   /// Note: When attempting to convert a type, e.g. via 'convertType', the
   ///       mostly recently added conversions will be invoked first.
   template <typename FnT, typename T = typename llvm::function_traits<
@@ -178,6 +171,9 @@ public:
   /// it failed but other materialization can be attempted, and `nullptr` on
   /// unrecoverable failure. Materialization functions must be provided when a
   /// type conversion may persist after the conversion has finished.
+  ///
+  /// Note: Target materializations may optionally accept an additional Type
+  /// parameter, which is the original type of the SSA value.
 
   /// This method registers a materialization that will be called when
   /// converting (potentially multiple) block arguments that were the result of
@@ -203,11 +199,22 @@ public:
 
   /// This method registers a materialization that will be called when
   /// converting an illegal (source) value to a legal (target) type.
+  ///
+  /// Note: For target materializations, users can optionally take the original
+  /// type. This type may be different from the type of the input. For example,
+  /// let's assume that a conversion pattern "P1" replaced an SSA value "v1"
+  /// (type "t1") with "v2" (type "t2"). Then a different conversion pattern
+  /// "P2" matches an op that has "v1" as an operand. Let's furthermore assume
+  /// that "P2" determines that the legalized type of "t1" is "t3", which may
+  /// be different from "t2". In this example, the target materialization
+  /// will be invoked with: outputType = "t3", inputs = "v2",
+  // originalType = "t1". Note  that the original type "t1" cannot be recovered
+  /// from just "t3" and "v2"; that's why the originalType parameter exists.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
     targetMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapTargetMaterialization<T>(std::forward<FnT>(callback)));
   }
 
   /// Register a conversion function for attributes within types. Type
@@ -303,21 +310,12 @@ public:
   /// `add*Materialization` for more information on the context for these
   /// methods.
   Value materializeArgumentConversion(OpBuilder &builder, Location loc,
-                                      Type resultType,
-                                      ValueRange inputs) const {
-    return materializeConversion(argumentMaterializations, builder, loc,
-                                 resultType, inputs);
-  }
+                                      Type resultType, ValueRange inputs) const;
   Value materializeSourceConversion(OpBuilder &builder, Location loc,
-                                    Type resultType, ValueRange inputs) const {
-    return materializeConversion(sourceMaterializations, builder, loc,
-                                 resultType, inputs);
-  }
+                                    Type resultType, ValueRange inputs) const;
   Value materializeTargetConversion(OpBuilder &builder, Location loc,
-                                    Type resultType, ValueRange inputs) const {
-    return materializeConversion(targetMaterializations, builder, loc,
-                                 resultType, inputs);
-  }
+                                    Type resultType, ValueRange inputs,
+                                    Type originalType = {}) const;
 
   /// Convert an attribute present `attr` from within the type `type` using
   /// the registered conversion functions. If no applicable conversion has been
@@ -333,20 +331,22 @@ private:
   using ConversionCallbackFn = std::function<std::optional<LogicalResult>(
       Type, SmallVectorImpl<Type> &)>;
 
-  /// The signature of the callback used to materialize a conversion.
+  /// The signature of the callback used to materialize a source/argument
+  /// conversion.
+  ///
+  /// Arguments: builder, result type, inputs, location
   using MaterializationCallbackFn = std::function<std::optional<Value>(
       OpBuilder &, Type, ValueRange, Location)>;
+
+  /// The signature of the callback used to materialize a target conversion.
+  ///
+  /// Arguments: builder, result type, inputs, location, original type
+  using TargetMaterializationCallbackFn = std::function<std::optional<Value>(
+      OpBuilder &, Type, ValueRange, Location, Type)>;
 
   /// The signature of the callback used to convert a type attribute.
   using TypeAttributeConversionCallbackFn =
       std::function<AttributeConversionResult(Type, Attribute)>;
-
-  /// Attempt to materialize a conversion using one of the provided
-  /// materialization functions.
-  Value
-  materializeConversion(ArrayRef<MaterializationCallbackFn> materializations,
-                        OpBuilder &builder, Location loc, Type resultType,
-                        ValueRange inputs) const;
 
   /// Generate a wrapper for the given callback. This allows for accepting
   /// different callback forms, that all compose into a single version.
@@ -388,9 +388,10 @@ private:
     cachedMultiConversions.clear();
   }
 
-  /// Generate a wrapper for the given materialization callback. The callback
-  /// may take any subclass of `Type` and the wrapper will check for the target
-  /// type to be of the expected class before calling the callback.
+  /// Generate a wrapper for the given argument/source materialization
+  /// callback. The callback may take any subclass of `Type` and the
+  /// wrapper will check for the target type to be of the expected class
+  /// before calling the callback.
   template <typename T, typename FnT>
   MaterializationCallbackFn wrapMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
@@ -400,6 +401,41 @@ private:
         return callback(builder, derivedType, inputs, loc);
       return std::nullopt;
     };
+  }
+
+  /// Generate a wrapper for the given target materialization callback.
+  /// The callback may take any subclass of `Type` and the wrapper will check
+  /// for the target type to be of the expected class before calling the
+  /// callback.
+  ///
+  /// With callback of form:
+  /// `Value(OpBuilder &, T, ValueRange, Location, Type)`
+  template <typename T, typename FnT>
+  std::enable_if_t<
+      std::is_invocable_v<FnT, OpBuilder &, T, ValueRange, Location, Type>,
+      TargetMaterializationCallbackFn>
+  wrapTargetMaterialization(FnT &&callback) const {
+    return [callback = std::forward<FnT>(callback)](
+               OpBuilder &builder, Type resultType, ValueRange inputs,
+               Location loc, Type originalType) -> std::optional<Value> {
+      if (T derivedType = dyn_cast<T>(resultType))
+        return callback(builder, derivedType, inputs, loc, originalType);
+      return std::nullopt;
+    };
+  }
+  /// With callback of form:
+  /// `Value(OpBuilder &, T, ValueRange, Location)`
+  template <typename T, typename FnT>
+  std::enable_if_t<
+      std::is_invocable_v<FnT, OpBuilder &, T, ValueRange, Location>,
+      TargetMaterializationCallbackFn>
+  wrapTargetMaterialization(FnT &&callback) const {
+    return wrapTargetMaterialization<T>(
+        [callback = std::forward<FnT>(callback)](
+            OpBuilder &builder, T resultType, ValueRange inputs, Location loc,
+            Type originalType) -> std::optional<Value> {
+          return callback(builder, resultType, inputs, loc);
+        });
   }
 
   /// Generate a wrapper for the given memory space conversion callback. The
@@ -434,7 +470,7 @@ private:
   /// The list of registered materialization functions.
   SmallVector<MaterializationCallbackFn, 2> argumentMaterializations;
   SmallVector<MaterializationCallbackFn, 2> sourceMaterializations;
-  SmallVector<MaterializationCallbackFn, 2> targetMaterializations;
+  SmallVector<TargetMaterializationCallbackFn, 2> targetMaterializations;
 
   /// The list of registered type attribute conversion functions.
   SmallVector<TypeAttributeConversionCallbackFn, 2> typeAttributeConversions;
@@ -1124,7 +1160,40 @@ struct ConversionConfig {
   // already been modified) and iterators into past IR state cannot be
   // represented at the moment.
   RewriterBase::Listener *listener = nullptr;
+
+  /// If set to "true", the dialect conversion attempts to build source/target/
+  /// argument materializations through the type converter API in lieu of
+  /// "builtin.unrealized_conversion_cast ops". The conversion process fails if
+  /// at least one materialization could not be built.
+  ///
+  /// If set to "false", the dialect conversion does not build any custom
+  /// materializations and instead inserts "builtin.unrealized_conversion_cast"
+  /// ops to ensure that the resulting IR is valid.
+  bool buildMaterializations = true;
 };
+
+//===----------------------------------------------------------------------===//
+// Reconcile Unrealized Casts
+//===----------------------------------------------------------------------===//
+
+/// Try to reconcile all given UnrealizedConversionCastOps and store the
+/// left-over ops in `remainingCastOps` (if provided).
+///
+/// This function processes cast ops in a worklist-driven fashion. For each
+/// cast op, if the chain of input casts eventually reaches a cast op where the
+/// input types match the output types of the matched op, replace the matched
+/// op with the inputs.
+///
+/// Example:
+/// %1 = unrealized_conversion_cast %0 : !A to !B
+/// %2 = unrealized_conversion_cast %1 : !B to !C
+/// %3 = unrealized_conversion_cast %2 : !C to !A
+///
+/// In the above example, %0 can be used instead of %3 and all cast ops are
+/// folded away.
+void reconcileUnrealizedCasts(
+    ArrayRef<UnrealizedConversionCastOp> castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points

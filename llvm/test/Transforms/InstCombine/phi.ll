@@ -1416,7 +1416,7 @@ define i1 @phi_knownnonzero_eq_oricmp_commuted(i32 %n, i32 %s, ptr %P, i32 %val)
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ORPHI:%.*]] = or i32 [[PHI]], [[VAL:%.*]]
+; CHECK-NEXT:    [[ORPHI:%.*]] = or i32 [[VAL:%.*]], [[PHI]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[ORPHI]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
@@ -1506,7 +1506,7 @@ define i1 @phi_knownnonzero_ne_oricmp_commuted(i32 %n, i32 %s, ptr %P, i32 %val)
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ORPHI:%.*]] = or i32 [[PHI]], [[VAL:%.*]]
+; CHECK-NEXT:    [[ORPHI:%.*]] = or i32 [[VAL:%.*]], [[PHI]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[ORPHI]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
@@ -1543,7 +1543,7 @@ define i1 @phi_knownnonzero_eq_multiuse_oricmp(i32 %n, i32 %s, ptr %P, i32 %val)
 ; CHECK-NEXT:    [[BOOL2:%.*]] = icmp eq i32 [[PHI]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ [[CMP1]], [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
+; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ false, [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
 ; CHECK-NEXT:    ret i1 [[FINAL]]
 ;
 entry:
@@ -1580,14 +1580,14 @@ define i1 @phi_knownnonzero_ne_multiuse_oricmp_commuted(i32 %n, i32 %s, ptr %P, 
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ORPHI:%.*]] = or i32 [[PHI]], [[VAL:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[ORPHI]], 0
-; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[CLEANUP:%.*]]
+; CHECK-NEXT:    [[ORPHI:%.*]] = or i32 [[VAL:%.*]], [[PHI]]
+; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i32 [[ORPHI]], 0
+; CHECK-NEXT:    br i1 [[CMP1_NOT]], label [[CLEANUP:%.*]], label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[BOOL2:%.*]] = icmp ne i32 [[PHI]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ [[CMP1]], [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
+; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ false, [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
 ; CHECK-NEXT:    ret i1 [[FINAL]]
 ;
 entry:
@@ -1622,7 +1622,7 @@ define i1 @phi_knownnonzero_eq_multiuse_andicmp(i32 %n, i32 %s, ptr %P, i32 %val
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LOAD]], [[N]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N]], [[LOAD]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 2
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -1634,7 +1634,7 @@ define i1 @phi_knownnonzero_eq_multiuse_andicmp(i32 %n, i32 %s, ptr %P, i32 %val
 ; CHECK-NEXT:    [[BOOL2:%.*]] = icmp eq i32 [[PHI]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ [[CMP1]], [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
+; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ false, [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
 ; CHECK-NEXT:    ret i1 [[FINAL]]
 ;
 entry:
@@ -1669,19 +1669,19 @@ define i1 @phi_knownnonzero_ne_multiuse_andicmp(i32 %n, i32 %s, ptr %P, i32 %val
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LOAD]], [[N]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N]], [[LOAD]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 2
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[SEL]], [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ANDPHI:%.*]] = and i32 [[PHI]], [[VAL:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[ANDPHI]], 0
-; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[CLEANUP:%.*]]
+; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i32 [[ANDPHI]], 0
+; CHECK-NEXT:    br i1 [[CMP1_NOT]], label [[CLEANUP:%.*]], label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[BOOL2:%.*]] = icmp ne i32 [[PHI]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ [[CMP1]], [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
+; CHECK-NEXT:    [[FINAL:%.*]] = phi i1 [ false, [[IF_END]] ], [ [[BOOL2]], [[NEXT]] ]
 ; CHECK-NEXT:    ret i1 [[FINAL]]
 ;
 entry:
@@ -2713,4 +2713,83 @@ join:
   %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
   %cmp = icmp slt i32 %13, 0
   ret i1 %cmp
+}
+
+define void @phi_op_in_loop(i1 %c, i32 %x) {
+; CHECK-LABEL: @phi_op_in_loop(
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[LOOP_LATCH:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP1]], [[IF]] ], [ 0, [[LOOP]] ]
+; CHECK-NEXT:    call void @use(i32 [[PHI]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+  br label %loop
+
+loop:
+  br i1 %c, label %if, label %loop.latch
+
+if:
+  br label %loop.latch
+
+loop.latch:
+  %phi = phi i32 [ %x, %if ], [ 0, %loop ]
+  %and = and i32 %phi, 1
+  call void @use(i32 %and)
+  br label %loop
+}
+
+define void @test_dead_phi_web(i64 %index, i1 %cond) {
+; CHECK-LABEL: @test_dead_phi_web(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB0:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    switch i64 [[INDEX:%.*]], label [[BB4:%.*]] [
+; CHECK-NEXT:      i64 0, label [[BB1:%.*]]
+; CHECK-NEXT:      i64 1, label [[BB2:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       BB1:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2]], label [[BB4]]
+; CHECK:       BB2:
+; CHECK-NEXT:    br i1 [[COND]], label [[BB3]], label [[BB4]]
+; CHECK:       BB3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       BB4:
+; CHECK-NEXT:    br i1 [[COND]], label [[BB0]], label [[BB5:%.*]]
+; CHECK:       BB5:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %BB0
+
+BB0:                                              ; preds = %BB4, %entry
+  %a = phi float [ 0.0, %entry ], [ %x, %BB4 ]
+  switch i64 %index, label %BB4 [
+  i64 0, label %BB1
+  i64 1, label %BB2
+  i64 2, label %BB3
+  ]
+
+BB1:                                              ; preds = %BB0
+  br i1 %cond, label %BB2, label %BB4
+
+BB2:                                              ; preds = %BB1, %BB0
+  %b = phi float [ 2.0, %BB0 ], [ %a, %BB1 ]
+  br i1 %cond, label %BB3, label %BB4
+
+BB3:                                              ; preds = %BB2, %BB0
+  %c = phi float [ 3.0, %BB0 ], [ %b, %BB2 ]
+  br label %BB4
+
+BB4:                                             ; preds = %BB3, %BB2, %BB1, %BB0
+  %x = phi float [ %a, %BB0 ], [ %a, %BB1 ], [ %b, %BB2 ], [ %c, %BB3 ]
+  br i1 %cond, label %BB0, label %BB5
+
+BB5:                                             ; preds = %BB4
+  ret void
 }

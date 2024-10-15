@@ -895,7 +895,12 @@ def ProcessorFeatures {
                                      FeatureLSE, FeaturePAuth, FeatureFPAC,
                                      FeatureRAS, FeatureRCPC, FeatureRDM,
                                      FeatureBF16, FeatureDotProd, FeatureMatMulInt8, FeatureSSBS];
-  list<SubtargetFeature> AppleM4 = [HasV9_2aOps, FeatureSHA2, FeatureFPARMv8,
+  // Technically apple-m4 is v9.2a, but we can't use that here.
+  // Historically, llvm defined v9.0a as requiring SVE, but it's optional
+  // according to the Arm ARM, and not supported by the core.  We decoupled the
+  // two in the clang driver and in the backend subtarget features, but it's
+  // still an issue in the clang frontend.  v8.7a is the next closest choice.
+  list<SubtargetFeature> AppleM4 = [HasV8_7aOps, FeatureSHA2, FeatureFPARMv8,
                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                     FeatureFullFP16, FeatureFP16FML,
                                     FeatureAES, FeatureBF16,
@@ -1102,7 +1107,7 @@ def : ProcessorModel<"cortex-a720", NeoverseN2Model, ProcessorFeatures.A720,
                      [TuneA720]>;
 def : ProcessorModel<"cortex-a720ae", NeoverseN2Model, ProcessorFeatures.A720AE,
                      [TuneA720AE]>;
-def : ProcessorModel<"cortex-a725", NeoverseN2Model, ProcessorFeatures.A725,
+def : ProcessorModel<"cortex-a725", NeoverseN3Model, ProcessorFeatures.A725,
                      [TuneA725]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
@@ -1127,7 +1132,7 @@ def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
 def : ProcessorModel<"neoverse-n2", NeoverseN2Model,
                      ProcessorFeatures.NeoverseN2, [TuneNeoverseN2]>;
 def : ProcessorAlias<"cobalt-100", "neoverse-n2">;
-def : ProcessorModel<"neoverse-n3", NeoverseN2Model,
+def : ProcessorModel<"neoverse-n3", NeoverseN3Model,
                      ProcessorFeatures.NeoverseN3, [TuneNeoverseN3]>;
 def : ProcessorModel<"neoverse-512tvb", NeoverseV1Model,
                      ProcessorFeatures.Neoverse512TVB, [TuneNeoverse512TVB]>;

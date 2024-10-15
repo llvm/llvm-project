@@ -241,7 +241,7 @@ static std::string constructDieID(DWARFDie Die,
 
   // Prefix + Name is enough for local variables and parameters.
   if (!Prefix.empty() && Prefix != "g")
-    return ID.str();
+    return IDStr;
 
   auto DeclFile = Die.findRecursively(dwarf::DW_AT_decl_file);
   std::string File;
@@ -256,7 +256,7 @@ static std::string constructDieID(DWARFDie Die,
   ID << ":" << (File.empty() ? "/" : File);
   ID << ":"
      << dwarf::toUnsigned(Die.findRecursively(dwarf::DW_AT_decl_line), 0);
-  return ID.str();
+  return IDStr;
 }
 
 /// Return the number of bytes in the overlap of ranges A and B.

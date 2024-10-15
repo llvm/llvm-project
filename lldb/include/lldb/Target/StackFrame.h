@@ -195,14 +195,10 @@ public:
   /// \param [out] value
   ///   The address of the CFA for this frame, if available.
   ///
-  /// \param [out] error_ptr
-  ///   If there is an error determining the CFA address, this may contain a
-  ///   string explaining the failure.
-  ///
   /// \return
-  ///   Returns true if the CFA value was successfully set in value.  Some
-  ///   frames may be unable to provide this value; they will return false.
-  bool GetFrameBaseValue(Scalar &value, Status *error_ptr);
+  ///   If there is an error determining the CFA address, return an error
+  ///   explaining the failure. Success otherwise.
+  llvm::Error GetFrameBaseValue(Scalar &value);
 
   /// Get the DWARFExpressionList corresponding to the Canonical Frame Address.
   ///
@@ -539,7 +535,7 @@ private:
   Flags m_flags;
   Scalar m_frame_base;
   Status m_frame_base_error;
-  uint16_t m_frame_recognizer_generation;
+  uint16_t m_frame_recognizer_generation = 0;
   /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
   bool m_cfa_is_valid;
   Kind m_stack_frame_kind;

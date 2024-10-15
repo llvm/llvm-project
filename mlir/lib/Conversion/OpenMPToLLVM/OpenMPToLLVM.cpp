@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
@@ -221,24 +222,23 @@ void MultiRegionOpConversion<omp::PrivateClauseOp>::forwardOpAttrs(
 } // namespace
 
 void mlir::configureOpenMPToLLVMConversionLegality(
-    ConversionTarget &target, LLVMTypeConverter &typeConverter) {
+    ConversionTarget &target, const LLVMTypeConverter &typeConverter) {
   target.addDynamicallyLegalOp<
-      mlir::omp::AtomicReadOp, mlir::omp::AtomicWriteOp, mlir::omp::FlushOp,
-      mlir::omp::ThreadprivateOp, mlir::omp::YieldOp,
-      mlir::omp::TargetEnterDataOp, mlir::omp::TargetExitDataOp,
-      mlir::omp::TargetUpdateOp, mlir::omp::MapBoundsOp, mlir::omp::MapInfoOp>(
-      [&](Operation *op) {
-        return typeConverter.isLegal(op->getOperandTypes()) &&
-               typeConverter.isLegal(op->getResultTypes());
-      });
+      omp::AtomicReadOp, omp::AtomicWriteOp, omp::CancellationPointOp,
+      omp::CancelOp, omp::CriticalDeclareOp, omp::FlushOp, omp::MapBoundsOp,
+      omp::MapInfoOp, omp::OrderedOp, omp::TargetEnterDataOp,
+      omp::TargetExitDataOp, omp::TargetUpdateOp, omp::ThreadprivateOp,
+      omp::YieldOp>([&](Operation *op) {
+    return typeConverter.isLegal(op->getOperandTypes()) &&
+           typeConverter.isLegal(op->getResultTypes());
+  });
   target.addDynamicallyLegalOp<
-      mlir::omp::AtomicUpdateOp, mlir::omp::CriticalOp, mlir::omp::TargetOp,
-      mlir::omp::TargetDataOp, mlir::omp::LoopNestOp,
-      mlir::omp::OrderedRegionOp, mlir::omp::ParallelOp, mlir::omp::WsloopOp,
-      mlir::omp::SimdOp, mlir::omp::MasterOp, mlir::omp::SectionOp,
-      mlir::omp::SectionsOp, mlir::omp::SingleOp, mlir::omp::TaskgroupOp,
-      mlir::omp::TaskOp, mlir::omp::DeclareReductionOp,
-      mlir::omp::PrivateClauseOp>([&](Operation *op) {
+      omp::AtomicUpdateOp, omp::CriticalOp, omp::DeclareReductionOp,
+      omp::DistributeOp, omp::LoopNestOp, omp::MasterOp, omp::OrderedRegionOp,
+      omp::ParallelOp, omp::PrivateClauseOp, omp::SectionOp, omp::SectionsOp,
+      omp::SimdOp, omp::SingleOp, omp::TargetDataOp, omp::TargetOp,
+      omp::TaskgroupOp, omp::TaskloopOp, omp::TaskOp, omp::TeamsOp,
+      omp::WsloopOp>([&](Operation *op) {
     return std::all_of(op->getRegions().begin(), op->getRegions().end(),
                        [&](Region &region) {
                          return typeConverter.isLegal(&region);
@@ -260,23 +260,31 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       AtomicReadOpConversion, MapInfoOpConversion,
       MultiRegionOpConversion<omp::DeclareReductionOp>,
       MultiRegionOpConversion<omp::PrivateClauseOp>,
-      RegionOpConversion<omp::CriticalOp>, RegionOpConversion<omp::LoopNestOp>,
-      RegionOpConversion<omp::MasterOp>,
-      RegionOpConversion<omp::OrderedRegionOp>,
-      RegionOpConversion<omp::ParallelOp>, RegionOpConversion<omp::WsloopOp>,
-      RegionOpConversion<omp::SectionsOp>, RegionOpConversion<omp::SectionOp>,
-      RegionOpConversion<omp::SimdOp>, RegionOpConversion<omp::SingleOp>,
-      RegionOpConversion<omp::TaskgroupOp>, RegionOpConversion<omp::TaskOp>,
-      RegionOpConversion<omp::TargetDataOp>, RegionOpConversion<omp::TargetOp>,
-      RegionLessOpWithVarOperandsConversion<omp::AtomicWriteOp>,
-      RegionOpWithVarOperandsConversion<omp::AtomicUpdateOp>,
-      RegionLessOpWithVarOperandsConversion<omp::FlushOp>,
-      RegionLessOpWithVarOperandsConversion<omp::ThreadprivateOp>,
-      RegionLessOpConversion<omp::YieldOp>,
+      RegionLessOpConversion<omp::CancellationPointOp>,
+      RegionLessOpConversion<omp::CancelOp>,
+      RegionLessOpConversion<omp::CriticalDeclareOp>,
+      RegionLessOpConversion<omp::OrderedOp>,
       RegionLessOpConversion<omp::TargetEnterDataOp>,
       RegionLessOpConversion<omp::TargetExitDataOp>,
       RegionLessOpConversion<omp::TargetUpdateOp>,
-      RegionLessOpWithVarOperandsConversion<omp::MapBoundsOp>>(converter);
+      RegionLessOpConversion<omp::YieldOp>,
+      RegionLessOpWithVarOperandsConversion<omp::AtomicWriteOp>,
+      RegionLessOpWithVarOperandsConversion<omp::FlushOp>,
+      RegionLessOpWithVarOperandsConversion<omp::MapBoundsOp>,
+      RegionLessOpWithVarOperandsConversion<omp::ThreadprivateOp>,
+      RegionOpConversion<omp::AtomicCaptureOp>,
+      RegionOpConversion<omp::CriticalOp>,
+      RegionOpConversion<omp::DistributeOp>,
+      RegionOpConversion<omp::LoopNestOp>, RegionOpConversion<omp::MaskedOp>,
+      RegionOpConversion<omp::MasterOp>,
+      RegionOpConversion<omp::OrderedRegionOp>,
+      RegionOpConversion<omp::ParallelOp>, RegionOpConversion<omp::SectionOp>,
+      RegionOpConversion<omp::SectionsOp>, RegionOpConversion<omp::SimdOp>,
+      RegionOpConversion<omp::SingleOp>, RegionOpConversion<omp::TargetDataOp>,
+      RegionOpConversion<omp::TargetOp>, RegionOpConversion<omp::TaskgroupOp>,
+      RegionOpConversion<omp::TaskloopOp>, RegionOpConversion<omp::TaskOp>,
+      RegionOpConversion<omp::TeamsOp>, RegionOpConversion<omp::WsloopOp>,
+      RegionOpWithVarOperandsConversion<omp::AtomicUpdateOp>>(converter);
 }
 
 namespace {
@@ -301,9 +309,37 @@ void ConvertOpenMPToLLVMPass::runOnOperation() {
   populateOpenMPToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addLegalOp<omp::TerminatorOp, omp::TaskyieldOp, omp::FlushOp,
-                    omp::BarrierOp, omp::TaskwaitOp>();
+  target.addLegalOp<omp::BarrierOp, omp::FlushOp, omp::TaskwaitOp,
+                    omp::TaskyieldOp, omp::TerminatorOp>();
   configureOpenMPToLLVMConversionLegality(target, converter);
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToLLVMPatternInterface implementation
+//===----------------------------------------------------------------------===//
+namespace {
+/// Implement the interface to convert OpenMP to LLVM.
+struct OpenMPToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    configureOpenMPToLLVMConversionLegality(target, typeConverter);
+    populateOpenMPToLLVMConversionPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertOpenMPToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, omp::OpenMPDialect *dialect) {
+    dialect->addInterfaces<OpenMPToLLVMDialectInterface>();
+  });
 }

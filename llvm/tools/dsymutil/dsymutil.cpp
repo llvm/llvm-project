@@ -835,7 +835,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     if (Crashed)
       (*Repro)->generate();
 
-    if (!AllOK)
+    if (!AllOK || Crashed)
       return EXIT_FAILURE;
 
     if (NeedsTempFiles) {

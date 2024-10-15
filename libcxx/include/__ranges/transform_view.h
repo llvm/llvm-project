@@ -34,6 +34,7 @@
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
@@ -397,7 +398,7 @@ struct __fn {
     requires constructible_from<decay_t<_Fn>, _Fn>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn&& __f) const
       noexcept(is_nothrow_constructible_v<decay_t<_Fn>, _Fn>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Fn>(__f)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Fn>(__f)));
   }
 };
 } // namespace __transform

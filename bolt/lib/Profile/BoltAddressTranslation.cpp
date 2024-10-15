@@ -143,8 +143,8 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
 
   // Output addresses are delta-encoded
   uint64_t PrevAddress = 0;
-  writeMaps</*Cold=*/false>(Maps, PrevAddress, OS);
-  writeMaps</*Cold=*/true>(Maps, PrevAddress, OS);
+  writeMaps</*Cold=*/false>(PrevAddress, OS);
+  writeMaps</*Cold=*/true>(PrevAddress, OS);
 
   BC.outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
   BC.outs() << "BOLT-INFO: Wrote " << FuncHashes.getNumFunctions()
@@ -182,8 +182,7 @@ size_t BoltAddressTranslation::getNumEqualOffsets(const MapTy &Map,
 }
 
 template <bool Cold>
-void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
-                                       uint64_t &PrevAddress, raw_ostream &OS) {
+void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
   const uint32_t NumFuncs =
       llvm::count_if(llvm::make_first_range(Maps), [&](const uint64_t Address) {
         return Cold == ColdPartSource.count(Address);
@@ -213,9 +212,9 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
             : 0;
     uint32_t Skew = 0;
     if (Cold) {
-      auto HotEntryIt = Maps.find(ColdPartSource[Address]);
-      assert(HotEntryIt != Maps.end());
-      size_t HotIndex = std::distance(Maps.begin(), HotEntryIt);
+      auto HotEntryIt = llvm::lower_bound(HotFuncs, ColdPartSource[Address]);
+      assert(HotEntryIt != HotFuncs.end());
+      size_t HotIndex = std::distance(HotFuncs.begin(), HotEntryIt);
       encodeULEB128(HotIndex - PrevIndex, OS);
       PrevIndex = HotIndex;
       // Skew of all input offsets for cold fragments is simply the first input
@@ -223,6 +222,7 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
       Skew = Map.begin()->second >> 1;
       encodeULEB128(Skew, OS);
     } else {
+      HotFuncs.push_back(Address);
       // Function hash
       size_t BFHash = getBFHash(HotInputAddress);
       LLVM_DEBUG(dbgs() << "Hash: " << formatv("{0:x}\n", BFHash));
@@ -311,17 +311,15 @@ std::error_code BoltAddressTranslation::parse(raw_ostream &OS, StringRef Buf) {
     return make_error_code(llvm::errc::io_error);
 
   Error Err(Error::success());
-  std::vector<uint64_t> HotFuncs;
   uint64_t PrevAddress = 0;
-  parseMaps</*Cold=*/false>(HotFuncs, PrevAddress, DE, Offset, Err);
-  parseMaps</*Cold=*/true>(HotFuncs, PrevAddress, DE, Offset, Err);
+  parseMaps</*Cold=*/false>(PrevAddress, DE, Offset, Err);
+  parseMaps</*Cold=*/true>(PrevAddress, DE, Offset, Err);
   OS << "BOLT-INFO: Parsed " << Maps.size() << " BAT entries\n";
   return errorToErrorCode(std::move(Err));
 }
 
 template <bool Cold>
-void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
-                                       uint64_t &PrevAddress, DataExtractor &DE,
+void BoltAddressTranslation::parseMaps(uint64_t &PrevAddress, DataExtractor &DE,
                                        uint64_t &Offset, Error &Err) {
   const uint32_t NumFunctions = DE.getULEB128(&Offset, &Err);
   LLVM_DEBUG(dbgs() << "Parsing " << NumFunctions << (Cold ? " cold" : "")

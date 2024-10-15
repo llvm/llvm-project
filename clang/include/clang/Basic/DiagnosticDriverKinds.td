@@ -147,6 +147,9 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
+def warn_openmp_experimental : Warning<
+  "OpenMP support in flang is still experimental">,
+  InGroup<ExperimentalOption>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -810,6 +813,8 @@ def warn_drv_missing_multilib : Warning<
   InGroup<DiagGroup<"missing-multilib">>;
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
+def err_drv_multilib_custom_error : Error<
+  "multilib configuration error: %0">;
 
 def err_drv_experimental_crel : Error<
   "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "

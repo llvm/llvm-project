@@ -13,6 +13,8 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -60,7 +62,15 @@ void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   attributes.Dump(os, EnumToString);
 }
 
-bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
+bool AliasAnalysis::isRecordWithPointerComponent(mlir::Type ty) {
+  auto eleTy = fir::dyn_cast_ptrEleTy(ty);
+  if (!eleTy)
+    return false;
+  // TO DO: Look for pointer components
+  return mlir::isa<fir::RecordType>(eleTy);
+}
+
+bool AliasAnalysis::isPointerReference(mlir::Type ty) {
   auto eleTy = fir::dyn_cast_ptrEleTy(ty);
   if (!eleTy)
     return false;
@@ -86,15 +96,7 @@ bool AliasAnalysis::Source::isBoxData() const {
          origin.isData;
 }
 
-bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
-  auto eleTy = fir::dyn_cast_ptrEleTy(valueType);
-  if (!eleTy)
-    return false;
-  // TO DO: Look for pointer components
-  return mlir::isa<fir::RecordType>(eleTy);
-}
-
-AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
+AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
@@ -111,6 +113,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // it aliases with everything
   if (lhsSrc.kind >= SourceKind::Indirect ||
       rhsSrc.kind >= SourceKind::Indirect) {
+    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of indirect access\n");
     return AliasResult::MayAlias;
   }
 
@@ -169,10 +172,12 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // Box for POINTER component inside an object of a derived type
   // may alias box of a POINTER object, as well as boxes for POINTER
   // components inside two objects of derived types may alias.
-  if ((src1->isRecordWithPointerComponent() && src2->isTargetOrPointer()) ||
-      (src2->isRecordWithPointerComponent() && src1->isTargetOrPointer()) ||
-      (src1->isRecordWithPointerComponent() &&
-       src2->isRecordWithPointerComponent())) {
+  if ((isRecordWithPointerComponent(src1->valueType) &&
+       src2->isTargetOrPointer()) ||
+      (isRecordWithPointerComponent(src2->valueType) &&
+       src1->isTargetOrPointer()) ||
+      (isRecordWithPointerComponent(src1->valueType) &&
+       isRecordWithPointerComponent(src2->valueType))) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of pointer components\n");
     return AliasResult::MayAlias;
   }
@@ -252,6 +257,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
     llvm::TypeSwitch<Operation *>(defOp)
+        .Case<hlfir::AsExprOp>([&](auto op) {
+          v = op.getVar();
+          defOp = v.getDefiningOp();
+        })
         .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
           // Unique memory allocation.
           type = SourceKind::Allocate;
@@ -293,6 +302,17 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             defOp = v.getDefiningOp();
             return;
           }
+          // If load is inside target and it points to mapped item,
+          // continue tracking.
+          Operation *loadMemrefOp = op.getMemref().getDefiningOp();
+          bool isDeclareOp = llvm::isa<fir::DeclareOp>(loadMemrefOp) ||
+                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp);
+          if (isDeclareOp &&
+              llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
+            v = op.getMemref();
+            defOp = v.getDefiningOp();
+            return;
+          }
           // No further tracking for addresses loaded from memory for now.
           type = SourceKind::Indirect;
           breakFromLoop = true;
@@ -310,12 +330,28 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
 
           // TODO: Take followBoxData into account when setting the pointer
           // attribute
-          if (Source::isPointerReference(ty))
+          if (isPointerReference(ty))
             attributes.set(Attribute::Pointer);
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          // If declare operation is inside omp target region,
+          // continue alias analysis outside the target region
+          if (auto targetOp =
+                  llvm::dyn_cast<omp::TargetOp>(op->getParentOp())) {
+            auto argIface = cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
+            for (auto [opArg, blockArg] : llvm::zip_equal(
+                     targetOp.getMapVars(), argIface.getMapBlockArgs())) {
+              if (blockArg == op.getMemref()) {
+                omp::MapInfoOp mapInfo =
+                    llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
+                v = mapInfo.getVarPtr();
+                defOp = v.getDefiningOp();
+                return;
+              }
+            }
+          }
           auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
           // While going through a declare operation collect
           // the variable attributes from it. Right now, some
@@ -387,7 +423,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       if (fir::valueHasFirAttribute(v, fir::getTargetAttrName()))
         attributes.set(Attribute::Target);
 
-      if (Source::isPointerReference(ty))
+      if (isPointerReference(ty))
         attributes.set(Attribute::Pointer);
     }
 

@@ -39,6 +39,9 @@ private:
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
 
+  /// TODO: comments, fix name?
+  SmallVector<std::pair<MachineInstr *, MachineInstr *>, 4> JumpInfos;
+
 public:
   LoongArchMachineFunctionInfo(const Function &F,
                                const TargetSubtargetInfo *STI) {}
@@ -71,6 +74,12 @@ public:
   bool isSExt32Register(Register Reg) const {
     return is_contained(SExt32Registers, Reg);
   }
+  void setJumpInfo(MachineInstr *JrMI, MachineInstr *JTIMI) {
+    JumpInfos.push_back(std::make_pair(JrMI, JTIMI));
+  }
+  unsigned getJumpInfoSize() { return JumpInfos.size(); }
+  MachineInstr *getJumpInfoJrMI(unsigned Idx) { return JumpInfos[Idx].first; }
+  MachineInstr *getJumpInfoJTIMI(unsigned Idx) { return JumpInfos[Idx].second; }
 };
 
 } // end namespace llvm

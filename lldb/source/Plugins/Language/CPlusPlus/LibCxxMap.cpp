@@ -202,6 +202,8 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
+  llvm::Expected<uint32_t> CalculateNumChildrenForOldCompressedPairLayout();
+
   /// Returns the ValueObject for the __tree_node type that
   /// holds the key/value pair of the node at index \ref idx.
   ///
@@ -254,6 +256,27 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     Update();
 }
 
+llvm::Expected<uint32_t>
+lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
+    CalculateNumChildrenForOldCompressedPairLayout() {
+  ValueObjectSP node_sp(m_tree->GetChildMemberWithName("__pair3_"));
+  if (!node_sp)
+    return 0;
+
+  if (!isOldCompressedPairLayout(*node_sp))
+    return llvm::createStringError("Unexpected std::map layout: expected "
+                                   "old __compressed_pair layout.");
+
+  node_sp = GetFirstValueOfLibCXXCompressedPair(*node_sp);
+
+  if (!node_sp)
+    return 0;
+
+  m_count = node_sp->GetValueAsUnsigned(0);
+
+  return m_count;
+}
+
 llvm::Expected<uint32_t> lldb_private::formatters::
     LibcxxStdMapSyntheticFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
@@ -262,17 +285,12 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   if (m_tree == nullptr)
     return 0;
 
-  ValueObjectSP size_node(m_tree->GetChildMemberWithName("__pair3_"));
-  if (!size_node)
-    return 0;
+  if (auto node_sp = m_tree->GetChildMemberWithName("__size_")) {
+    m_count = node_sp->GetValueAsUnsigned(0);
+    return m_count;
+  }
 
-  size_node = GetFirstValueOfLibCXXCompressedPair(*size_node);
-
-  if (!size_node)
-    return 0;
-
-  m_count = size_node->GetValueAsUnsigned(0);
-  return m_count;
+  return CalculateNumChildrenForOldCompressedPairLayout();
 }
 
 ValueObjectSP
@@ -371,6 +389,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   m_tree = m_backend.GetChildMemberWithName("__tree_").get();
   if (!m_tree)
     return lldb::ChildCacheState::eRefetch;
+
   m_root_node = m_tree->GetChildMemberWithName("__begin_node_").get();
   m_node_ptr_type =
       m_tree->GetCompilerType().GetDirectNestedTypeWithName("__node_pointer");

@@ -13,7 +13,7 @@
 namespace Fortran::runtime {
 extern "C" {
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 F128Type RTDEF(Scale16)(F128Type x, std::int64_t p) {
   auto ip{static_cast<int>(p)};
   if (ip != p) {

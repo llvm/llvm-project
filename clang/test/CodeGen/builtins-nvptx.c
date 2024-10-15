@@ -1,4 +1,7 @@
 // REQUIRES: nvptx-registered-target
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_70 -target-feature +ptx63 \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX63_SM70 -check-prefix=LP64 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
 // RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP32 %s
@@ -111,6 +114,7 @@ __device__ int read_ids() {
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.smid()
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nsmid()
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.gridid()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
   int a = __nvvm_read_ptx_sreg_laneid();
   int b = __nvvm_read_ptx_sreg_warpid();
@@ -118,8 +122,9 @@ __device__ int read_ids() {
   int d = __nvvm_read_ptx_sreg_smid();
   int e = __nvvm_read_ptx_sreg_nsmid();
   int f = __nvvm_read_ptx_sreg_gridid();
+  int g = __nvvm_read_ptx_sreg_warpsize();
 
-  return a + b + c + d + e + f;
+  return a + b + c + d + e + f + g;
 
 }
 
@@ -238,7 +243,8 @@ __shared__ long long sll;
 
 // Check for atomic intrinsics
 // CHECK-LABEL: nvvm_atom
-__device__ void nvvm_atom(float *fp, float f, double *dfp, double df, int *ip,
+__device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
+                          unsigned short *usp, unsigned short us, int *ip,
                           int i, unsigned int *uip, unsigned ui, long *lp,
                           long l, long long *llp, long long ll) {
   // CHECK: atomicrmw add ptr {{.*}} seq_cst, align 4
@@ -575,6 +581,16 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df, int *ip,
   // CHECK: call i64 @llvm.nvvm.atomic.cas.gen.i.sys.i64.p0
   // expected-error@+1 {{'__nvvm_atom_sys_cas_gen_ll' needs target feature sm_60}}
   __nvvm_atom_sys_cas_gen_ll(&sll, ll, 0);
+#endif
+
+#if __CUDA_ARCH__ >= 700
+  // CHECK_PTX63_SM70: cmpxchg ptr {{.*}} seq_cst seq_cst, align 2
+  // CHECK_PTX63_SM70-NEXT: extractvalue { i16, i1 } {{%[0-9]+}}, 0
+  __nvvm_atom_cas_gen_us(usp, 0, us);
+  // CHECK_PTX63_SM70: call i16 @llvm.nvvm.atomic.cas.gen.i.cta.i16.p0
+  __nvvm_atom_cta_cas_gen_us(usp, 0, us);
+  // CHECK_PTX63_SM70: call i16 @llvm.nvvm.atomic.cas.gen.i.sys.i16.p0
+  __nvvm_atom_sys_cas_gen_us(usp, 0, us);
 #endif
 
   // CHECK: ret

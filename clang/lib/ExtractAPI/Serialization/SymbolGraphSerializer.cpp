@@ -928,8 +928,8 @@ bool SymbolGraphSerializer::traverseObjCCategoryRecord(
     return true;
 
   auto *CurrentModule = ModuleForCurrentSymbol;
-  if (Record->isExtendingExternalModule())
-    ModuleForCurrentSymbol = &ExtendedModules[Record->Interface.Source];
+  if (auto ModuleExtendedByRecord = Record->getExtendedExternalModule())
+    ModuleForCurrentSymbol = &ExtendedModules[*ModuleExtendedByRecord];
 
   if (!walkUpFromObjCCategoryRecord(Record))
     return false;

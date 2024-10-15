@@ -71,13 +71,8 @@ static void removeLValueToRValueCast(Expr *E) {
 /// and fix the argument with removing LValueToRValue cast from the expression.
 static void emitAndFixInvalidAsmCastLValue(const Expr *LVal, Expr *BadArgument,
                                            Sema &S) {
-  if (!S.getLangOpts().HeinousExtensions) {
-    S.Diag(LVal->getBeginLoc(), diag::err_invalid_asm_cast_lvalue)
-        << BadArgument->getSourceRange();
-  } else {
-    S.Diag(LVal->getBeginLoc(), diag::warn_invalid_asm_cast_lvalue)
-        << BadArgument->getSourceRange();
-  }
+  S.Diag(LVal->getBeginLoc(), diag::warn_invalid_asm_cast_lvalue)
+      << BadArgument->getSourceRange();
   removeLValueToRValueCast(BadArgument);
 }
 

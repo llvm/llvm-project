@@ -108,9 +108,9 @@ endif()
 
 message(STATUS "Toolchain target to build: ${LLVM_TARGETS_TO_BUILD}")
 
-# Allow to override libc++ ABI version. Use 2 by default.
+# Allow to override libc++ ABI version (1 is default).
 if (NOT DEFINED LIBCXX_ABI_VERSION)
-  set(LIBCXX_ABI_VERSION 2)
+  set(LIBCXX_ABI_VERSION 1)
 endif()
 
 message(STATUS "Toolchain's Libc++ ABI version: ${LIBCXX_ABI_VERSION}")
@@ -217,6 +217,8 @@ set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_SHARED                    
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ABI_VERSION                        ${LIBCXX_ABI_VERSION} CACHE STRING "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_CXX_ABI                            "libcxxabi" CACHE STRING "")    #!!!
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS      ON CACHE BOOL "")
+# Merge libc++ and libc++abi libraries into the single libc++ library file.
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY          ON CACHE BOOL "")
 
 # Avoid searching for the python3 interpreter during the runtimes configuration for the cross builds.
 # It starts searching the python3 package using the target's sysroot path, that usually is not compatible with the build host.

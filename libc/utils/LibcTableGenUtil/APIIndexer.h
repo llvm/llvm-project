@@ -24,36 +24,38 @@ private:
   std::optional<llvm::StringRef> StdHeader;
 
   // TableGen classes in spec.td.
-  llvm::Record *NamedTypeClass;
-  llvm::Record *PtrTypeClass;
-  llvm::Record *RestrictedPtrTypeClass;
-  llvm::Record *ConstTypeClass;
-  llvm::Record *StructClass;
-  llvm::Record *StandardSpecClass;
-  llvm::Record *PublicAPIClass;
+  const llvm::Record *NamedTypeClass;
+  const llvm::Record *PtrTypeClass;
+  const llvm::Record *RestrictedPtrTypeClass;
+  const llvm::Record *ConstTypeClass;
+  const llvm::Record *StructClass;
+  const llvm::Record *StandardSpecClass;
+  const llvm::Record *PublicAPIClass;
 
-  bool isaNamedType(llvm::Record *Def);
-  bool isaStructType(llvm::Record *Def);
-  bool isaPtrType(llvm::Record *Def);
-  bool isaConstType(llvm::Record *Def);
-  bool isaRestrictedPtrType(llvm::Record *Def);
-  bool isaStandardSpec(llvm::Record *Def);
-  bool isaPublicAPI(llvm::Record *Def);
+  bool isaNamedType(const llvm::Record *Def);
+  bool isaStructType(const llvm::Record *Def);
+  bool isaPtrType(const llvm::Record *Def);
+  bool isaConstType(const llvm::Record *Def);
+  bool isaRestrictedPtrType(const llvm::Record *Def);
+  bool isaStandardSpec(const llvm::Record *Def);
+  bool isaPublicAPI(const llvm::Record *Def);
 
-  void indexStandardSpecDef(llvm::Record *StandardSpec);
-  void indexPublicAPIDef(llvm::Record *PublicAPI);
-  void index(llvm::RecordKeeper &Records);
+  void indexStandardSpecDef(const llvm::Record *StandardSpec);
+  void indexPublicAPIDef(const llvm::Record *PublicAPI);
+  void index(const llvm::RecordKeeper &Records);
 
 public:
-  using NameToRecordMapping = std::unordered_map<std::string, llvm::Record *>;
+  using NameToRecordMapping =
+      std::unordered_map<std::string, const llvm::Record *>;
   using NameSet = std::unordered_set<std::string>;
 
   // This indexes all headers, not just a specified one.
-  explicit APIIndexer(llvm::RecordKeeper &Records) : StdHeader(std::nullopt) {
+  explicit APIIndexer(const llvm::RecordKeeper &Records)
+      : StdHeader(std::nullopt) {
     index(Records);
   }
 
-  APIIndexer(llvm::StringRef Header, llvm::RecordKeeper &Records)
+  APIIndexer(llvm::StringRef Header, const llvm::RecordKeeper &Records)
       : StdHeader(Header) {
     index(Records);
   }
@@ -76,7 +78,7 @@ public:
   NameSet Objects;
   NameSet PublicHeaders;
 
-  std::string getTypeAsString(llvm::Record *TypeRecord);
+  std::string getTypeAsString(const llvm::Record *TypeRecord);
 };
 
 } // namespace llvm_libc

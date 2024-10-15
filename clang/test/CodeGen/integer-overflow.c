@@ -60,10 +60,10 @@ void test1(void) {
   // -fwrapv should turn off inbounds for GEP's, PR9256
   extern int* P;
   ++P;
-  // DEFAULT: getelementptr inbounds i32, ptr
+  // DEFAULT: getelementptr inbounds nuw i32, ptr
   // WRAPV: getelementptr i32, ptr
-  // TRAPV: getelementptr inbounds i32, ptr
-  // CATCH_UB_POINTER: getelementptr inbounds i32, ptr
+  // TRAPV: getelementptr inbounds nuw i32, ptr
+  // CATCH_UB_POINTER: getelementptr inbounds nuw i32, ptr
   // NOCATCH_UB_POINTER: getelementptr i32, ptr
 
   // PR9350: char pre-increment never overflows.

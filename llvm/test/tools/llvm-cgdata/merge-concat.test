@@ -9,10 +9,10 @@ RUN: split-file %s %t
 # Concatenate them in merge-concat.ll
 RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
 RUN: od -t x1 -j 24 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-1-bytes.txt
-RUN: sed -ie "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-concat.ll
+RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-concat-template.ll > %t/merge-concat-template-2.ll
 RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
 RUN: od -t x1 -j 24 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-2-bytes.txt
-RUN: sed -ie "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-concat.ll
+RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-concat-template-2.ll > %t/merge-concat.ll
 
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-concat.ll -o %t/merge-concat.o
 RUN: llvm-cgdata --merge %t/merge-concat.o -o %t/merge-concat.cgdata
@@ -76,7 +76,7 @@ TREE-NEXT: ...
   SuccessorIds:    [  ]
 ...
 
-;--- merge-concat.ll
+;--- merge-concat-template.ll
 
 ; In an linked executable (as opposed to an object file), cgdata in __llvm_outline might be concatenated. Although this is not a typical workflow, we simply support this case to parse cgdata that is concatenated. In other words, the following two trees are encoded back-to-back in a binary format.
 @.data1 = private unnamed_addr constant [72 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_outline"

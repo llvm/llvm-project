@@ -6,10 +6,10 @@
 # RUN: llvm-mc -triple x86_64-windows-msvc %t.dir/test.s -filetype=obj -o %t.dir/test64.obj
 
 # RUN: not lld-link -dll -noentry -out:%t32.dll %t.dir/test32.obj %t.dir/test64.lib 2>&1 | FileCheck --check-prefix=ERR32 %s
-# ERR32: error: test.dll: machine type x64 conflicts with x86
+# ERR32: error: test64.lib(test.dll): machine type x64 conflicts with x86
 
 # RUN: not lld-link -dll -noentry -out:%t64.dll %t.dir/test64.obj %t.dir/test32.lib 2>&1 | FileCheck --check-prefix=ERR64 %s
-# ERR64: error: test.dll: machine type x86 conflicts with x64
+# ERR64: error: test32.lib(test.dll): machine type x86 conflicts with x64
 
 #--- test.s
         .def     @feat.00;

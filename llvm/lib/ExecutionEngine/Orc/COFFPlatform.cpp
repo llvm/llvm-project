@@ -521,10 +521,8 @@ void COFFPlatform::pushInitializersLoop(PushInitializersSendResultFn SendResult,
       }
 
       for (auto *DepJD : JDDepMap[CurJD])
-        if (!Visited.count(DepJD)) {
+        if (Visited.insert(DepJD).second)
           Worklist.push_back(DepJD);
-          Visited.insert(DepJD);
-        }
     }
   });
 
@@ -786,20 +784,6 @@ void COFFPlatform::COFFPlatformPlugin::modifyPassConfig(
         });
 }
 
-ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
-COFFPlatform::COFFPlatformPlugin::getSyntheticSymbolDependencies(
-    MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(PluginMutex);
-  auto I = InitSymbolDeps.find(&MR);
-  if (I != InitSymbolDeps.end()) {
-    SyntheticSymbolDependenciesMap Result;
-    Result[MR.getInitializerSymbol()] = std::move(I->second);
-    InitSymbolDeps.erase(&MR);
-    return Result;
-  }
-  return SyntheticSymbolDependenciesMap();
-}
-
 Error COFFPlatform::COFFPlatformPlugin::associateJITDylibHeaderSymbol(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR,
     bool IsBootstraping) {
@@ -859,16 +843,37 @@ Error COFFPlatform::COFFPlatformPlugin::registerObjectPlatformSections(
 
 Error COFFPlatform::COFFPlatformPlugin::preserveInitializerSections(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
-  JITLinkSymbolSet InitSectionSymbols;
-  for (auto &Sec : G.sections())
-    if (isCOFFInitializerSection(Sec.getName()))
-      for (auto *B : Sec.blocks())
-        if (!B->edges_empty())
-          InitSectionSymbols.insert(
-              &G.addAnonymousSymbol(*B, 0, 0, false, true));
 
-  std::lock_guard<std::mutex> Lock(PluginMutex);
-  InitSymbolDeps[&MR] = InitSectionSymbols;
+  if (const auto &InitSymName = MR.getInitializerSymbol()) {
+
+    jitlink::Symbol *InitSym = nullptr;
+
+    for (auto &InitSection : G.sections()) {
+      // Skip non-init sections.
+      if (!isCOFFInitializerSection(InitSection.getName()) ||
+          InitSection.empty())
+        continue;
+
+      // Create the init symbol if it has not been created already and attach it
+      // to the first block.
+      if (!InitSym) {
+        auto &B = **InitSection.blocks().begin();
+        InitSym = &G.addDefinedSymbol(B, 0, *InitSymName, B.getSize(),
+                                      jitlink::Linkage::Strong,
+                                      jitlink::Scope::Default, false, true);
+      }
+
+      // Add keep-alive edges to anonymous symbols in all other init blocks.
+      for (auto *B : InitSection.blocks()) {
+        if (B == &InitSym->getBlock())
+          continue;
+
+        auto &S = G.addAnonymousSymbol(*B, 0, B->getSize(), false, true);
+        InitSym->getBlock().addEdge(jitlink::Edge::KeepAlive, 0, S, 0);
+      }
+    }
+  }
+
   return Error::success();
 }
 

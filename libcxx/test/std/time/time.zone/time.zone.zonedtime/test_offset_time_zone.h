@@ -15,6 +15,7 @@
 #include <chrono>
 #include <format>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
 
 enum class offset_time_zone_flags {
