@@ -1,4 +1,4 @@
-//=-- clang-sycl-link-wrapper/ClangSYCLLinkWrapper.cpp - SYCL linker util --=//
+//=-------- clang-sycl-linker/ClangSYCLLinker.cpp - SYCL Linker util -------=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,12 @@
 //
 //===---------------------------------------------------------------------===//
 //
-// This tool wraps around the sequence of steps required to link device code in
-// SYCL fat objects. SYCL device code linking requires a complex sequence of
-// steps that include linking of llvm bitcode files, linking device library
-// files with the fully linked source bitcode file(s), running several SYCL
-// specific post-link steps on the fully linked bitcode file(s), and finally
-// generating target-specific device code. This tool can be removed once SYCL
-// linking is ported to `ld.lld`.
-//
+// This tool executes a sequence of steps required to link device code in SYCL
+// fat objects. SYCL device code linking requires a complex sequence of steps
+// that include linking of llvm bitcode files, linking device library files
+// with the fully linked source bitcode file(s), running several SYCL specific
+// post-link steps on the fully linked bitcode file(s), and finally generating
+// target-specific device code.
 //===---------------------------------------------------------------------===//
 
 #include "clang/Basic/Version.h"
@@ -69,7 +67,7 @@ static StringRef OutputFile;
 static SmallString<128> SPIRVDumpDir;
 
 static void printVersion(raw_ostream &OS) {
-  OS << clang::getClangToolFullVersion("clang-sycl-link-wrapper") << '\n';
+  OS << clang::getClangToolFullVersion("clang-sycl-linker") << '\n';
 }
 
 /// The value of `argv[0]` when run.
@@ -213,9 +211,8 @@ Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
 /// Link all SYCL device input files into one before adding device library
 /// files. Device linking is performed using llvm-link tool.
 /// 'InputFiles' is the list of all LLVM IR device input files.
-/// 'Args' encompasses all arguments required for linking and wrapping device
-/// code and will be parsed to generate options required to be passed into the
-/// llvm-link tool.
+/// 'Args' encompasses all arguments required for linking device code and will
+/// be parsed to generate options required to be passed into llvm-link.
 Expected<StringRef> linkDeviceInputFiles(ArrayRef<std::string> InputFiles,
                                          const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("SYCL LinkDeviceInputFiles");
@@ -285,9 +282,8 @@ Expected<SmallVector<std::string>> getSYCLDeviceLibFiles(const ArgList &Args) {
 /// Link all device library files and input file into one LLVM IR file. This
 /// linking is performed using llvm-link tool.
 /// 'InputFiles' is the list of all LLVM IR device input files.
-/// 'Args' encompasses all arguments required for linking and wrapping device
-/// code and will be parsed to generate options required to be passed into the
-/// llvm-link tool.
+/// 'Args' encompasses all arguments required for linking device code and will
+/// be parsed to generate options required to be passed into llvm-link tool.
 static Expected<StringRef> linkDeviceLibFiles(StringRef InputFile,
                                               const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("LinkDeviceLibraryFiles");
@@ -391,9 +387,8 @@ static void getSPIRVTransOpts(const ArgList &Args,
 
 /// Run LLVM to SPIR-V translation.
 /// Converts 'File' from LLVM bitcode to SPIR-V format using llvm-spirv tool.
-/// 'Args' encompasses all arguments required for linking and wrapping device
-/// code and will be parsed to generate options required to be passed into the
-/// llvm-spirv tool.
+/// 'Args' encompasses all arguments required for linking device code and will
+/// be parsed to generate options required to be passed into llvm-spirv tool.
 static Expected<StringRef> runLLVMToSPIRVTranslation(StringRef File,
                                                      const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("LLVMToSPIRVTranslation");
@@ -478,7 +473,7 @@ int main(int argc, char **argv) {
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
     Tbl.printHelp(
         outs(),
-        "clang-sycl-link-wrapper [options] <options to sycl link steps>",
+        "clang-sycl-linker [options] <options to sycl link steps>",
         "A utility that wraps around several steps required to link SYCL "
         "device files.\n"
         "This enables LLVM IR linking, post-linking and code generation for "

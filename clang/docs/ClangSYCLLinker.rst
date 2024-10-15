@@ -1,24 +1,24 @@
 =======================
-Clang SYCL Link Wrapper
+Clang SYCL Linker
 =======================
 
 .. contents::
    :local:
 
-.. _clang-sycl-link-wrapper:
+.. _clang-sycl-linker:
 
 Introduction
 ============
 
 This tool works as a wrapper around the SYCL device code linking process.
-The purpose of this wrapper is to provide an interface to link SYCL device
-bitcode in LLVM IR format, SYCL device bitcode in SPIR-V IR format, and native
-binary objects, and then use the SPIR-V LLVM Translator tool on fully linked
-device objects to produce the final output.
+The purpose of this tool is to provide an interface to link SYCL device bitcode
+in LLVM IR format, SYCL device bitcode in SPIR-V IR format, and native binary
+objects, and then use the SPIR-V LLVM Translator tool on fully linked device
+objects to produce the final output.
 After the linking stage, the fully linked device code in LLVM IR format may
 undergo several SYCL-specific finalization steps before the SPIR-V code
 generation step.
-The wrapper will also support the Ahead-Of-Time (AOT) compilation flow. AOT
+The tool will also support the Ahead-Of-Time (AOT) compilation flow. AOT
 compilation is the process of invoking the back-end at compile time to produce
 the final binary, as opposed to just-in-time (JIT) compilation when final code
 generation is deferred until application runtime.
@@ -47,7 +47,7 @@ be passed down to downstream tools like 'llvm-link', 'llvm-spirv', etc.
   This enables linking and code generation for SPIR-V JIT targets and AOT
   targets.
 
-  USAGE: clang-sycl-link-wrapper [options]
+  USAGE: clang-sycl-linker [options]
 
   OPTIONS:
     --arch <value>                Specify the name of the target architecture.
@@ -77,4 +77,4 @@ generate the final executable.
 
 .. code-block:: console
 
-  clang-sycl-link-wrapper --triple spirv64 --arch native input.bc
+  clang-sycl-linker --triple spirv64 --arch native input.bc

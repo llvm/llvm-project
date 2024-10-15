@@ -95,10 +95,10 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  // Use of --sycl-link will call the clang-sycl-link-wrapper instead of
+  // Use of --sycl-link will call the clang-sycl-linker instead of
   // the default linker (spirv-link).
   if (Args.hasArg(options::OPT_sycl_link))
-    Linker = ToolChain.GetProgramPath("clang-sycl-link-wrapper");
+    Linker = ToolChain.GetProgramPath("clang-sycl-linker");
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Args.MakeArgString(Linker), CmdArgs,
                                          Inputs, Output));

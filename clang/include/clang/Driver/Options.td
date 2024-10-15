@@ -6730,7 +6730,7 @@ def fno_sycl : Flag<["-"], "fno-sycl">,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CLOption]>,
-  Group<sycl_Group>, HelpText<"Perform link through clang-sycl-link-wrapper via the target "
+  Group<sycl_Group>, HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;
 // OS-specific options
 let Flags = [TargetSpecific] in {
