@@ -161,18 +161,26 @@ config.available_features.add(compiler_id)
 
 # When LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on, the initial value of
 # config.compiler_rt_libdir (COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR) has the
-# triple as the trailing path component. The value is incorrect for -m32/-m64.
-# Adjust config.compiler_rt accordingly.
+# host triple as the trailing path component. The value is incorrect for 32-bit
+# tests on 64-bit hosts and vice versa. Adjust config.compiler_rt_libdir
+# accordingly.
 if config.enable_per_target_runtime_dir:
-    if "-m32" in shlex.split(config.target_cflags):
+    if config.target_arch == "i386":
         config.compiler_rt_libdir = re.sub(
             r"/x86_64(?=-[^/]+$)", "/i386", config.compiler_rt_libdir
         )
-    elif "-m64" in shlex.split(config.target_cflags):
+    elif config.target_arch == "x86_64":
         config.compiler_rt_libdir = re.sub(
             r"/i386(?=-[^/]+$)", "/x86_64", config.compiler_rt_libdir
         )
-
+    if config.target_arch == "sparc":
+        config.compiler_rt_libdir = re.sub(
+            r"/sparcv9(?=-[^/]+$)", "/sparc", config.compiler_rt_libdir
+        )
+    elif config.target_arch == "sparcv9":
+        config.compiler_rt_libdir = re.sub(
+            r"/sparc(?=-[^/]+$)", "/sparcv9", config.compiler_rt_libdir
+        )
 
 # Check if the test compiler resource dir matches the local build directory
 # (which happens with -DLLVM_ENABLE_PROJECTS=clang;compiler-rt) or if we are

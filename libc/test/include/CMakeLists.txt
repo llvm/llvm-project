@@ -12,6 +12,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  complex_test
+  SUITE
+    libc_include_tests
+  SRCS
+    complex_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.complex_macros
+)
+
+add_libc_test(
   sys_queue_test
   SUITE
     libc_include_tests
@@ -79,36 +89,6 @@ add_libc_test(
     stdckdint_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.stdckdint_macros
-)
-
-add_libc_test(
-  issignaling_test
-  SUITE
-    libc_include_tests
-  SRCS
-    issignaling_test.cpp
-  DEPENDS
-    libc.include.llvm-libc-macros.math_function_macros
-)
-
-add_libc_test(
-  issignalingf_test
-  SUITE
-    libc_include_tests
-  SRCS
-    issignalingf_test.cpp
-  DEPENDS
-    libc.include.llvm-libc-macros.math_function_macros
-)
-
-add_libc_test(
-  issignalingl_test
-  SUITE
-    libc_include_tests
-  SRCS
-    issignalingl_test.cpp
-  DEPENDS
-    libc.include.llvm-libc-macros.math_function_macros
 )
 
 add_libc_test(
@@ -409,6 +389,27 @@ add_libc_test(
     -Werror
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
+    libc.src.math.issignaling
+    libc.src.math.issignalingf
+    libc.src.math.issignalingl
+)
+
+add_libc_test(
+  iscanonical_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    iscanonical_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+    libc.src.math.iscanonical
+    libc.src.math.iscanonicalf
+    libc.src.math.iscanonicall
 )
 
 add_libc_test(
