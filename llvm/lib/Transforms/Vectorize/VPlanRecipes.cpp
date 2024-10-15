@@ -1826,7 +1826,7 @@ void VPReverseVectorPointerRecipe ::execute(VPTransformState &State) {
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   bool InBounds = isInBounds();
 
-  // the wide store needs to start at the last vector element.
+  // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
   if (IndexTy != RunTimeVF->getType())
     RunTimeVF = Builder.CreateZExtOrTrunc(RunTimeVF, IndexTy);
