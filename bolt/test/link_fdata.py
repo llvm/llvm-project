@@ -58,7 +58,7 @@ with open(args.input, "r") as f:
         fdata_match = fdata_pat.match(profile_line)
         preagg_match = preagg_pat.match(profile_line)
         nolbr_match = nolbr_pat.match(profile_line)
-        if fdata_match:
+        if fdata_match and not (nolbr_match and args.no_lbr):
             src_dst, execnt, mispred = fdata_match.groups()
             # Split by whitespaces not preceded by a backslash (negative lookbehind)
             chunks = re.split(r"(?<!\\) +", src_dst)
