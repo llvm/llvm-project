@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
@@ -112,11 +113,11 @@ LLVM_LIBC_FUNCTION(float16, log2f16, (float16 x)) {
 
   int m = -FPBits::EXP_BIAS;
 
-  // When x is subnormal.
+  // When x is subnormal, normalize it.
   if ((x_u & FPBits::EXP_MASK) == 0U) {
-    // Normalize x.
-    x_bits = FPBits(x_bits.get_val() *
-                    static_cast<float16>((1U << FPBits::FRACTION_LEN)));
+    // Can't pass an integer to fputil::cast directly.
+    constexpr float NORMALIZE_EXP = 1U << FPBits::FRACTION_LEN;
+    x_bits = FPBits(x_bits.get_val() * fputil::cast<float16>(NORMALIZE_EXP));
     x_u = x_bits.uintval();
     m -= FPBits::FRACTION_LEN;
   }
@@ -142,7 +143,7 @@ LLVM_LIBC_FUNCTION(float16, log2f16, (float16 x)) {
       v * fputil::polyeval(v, 0x1.715476p+0f, -0x1.71771ap-1f, 0x1.ecb38ep-2f);
   // log2(1.mant) = log2(f) + log2(1 + d/f)
   float log2_1_mant = LOG2F_F[f] + log2p1_d_over_f;
-  return static_cast<float16>(static_cast<float>(m) + log2_1_mant);
+  return fputil::cast<float16>(static_cast<float>(m) + log2_1_mant);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
