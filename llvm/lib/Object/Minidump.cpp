@@ -98,11 +98,11 @@ Expected<ArrayRef<T>> MinidumpFile::getListStream(StreamType Type) const {
 
   return getDataSliceAs<T>(*Stream, ListOffset, ListSize);
 }
-template Expected<ArrayRef<Module>>
+template LLVM_EXPORT_TEMPLATE Expected<ArrayRef<Module>>
     MinidumpFile::getListStream(StreamType) const;
-template Expected<ArrayRef<Thread>>
+template LLVM_EXPORT_TEMPLATE Expected<ArrayRef<Thread>>
     MinidumpFile::getListStream(StreamType) const;
-template Expected<ArrayRef<MemoryDescriptor>>
+template LLVM_EXPORT_TEMPLATE Expected<ArrayRef<MemoryDescriptor>>
     MinidumpFile::getListStream(StreamType) const;
 
 Expected<ArrayRef<uint8_t>> MinidumpFile::getDataSlice(ArrayRef<uint8_t> Data,

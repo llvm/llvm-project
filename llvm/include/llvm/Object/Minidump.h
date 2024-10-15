@@ -15,9 +15,15 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+namespace minidump {
+struct Module;
+struct Thread;
+struct MemoryDescriptor;
+} // namespace minidump
 namespace object {
 
 /// A class providing access to the contents of a minidump file.
@@ -370,6 +376,14 @@ Expected<ArrayRef<T>> MinidumpFile::getDataSliceAs(ArrayRef<uint8_t> Data,
 
   return ArrayRef<T>(reinterpret_cast<const T *>(Slice->data()), Count);
 }
+
+// Needed by MinidumpTest.cpp
+extern template LLVM_TEMPLATE_ABI Expected<ArrayRef<minidump::Module>>
+    MinidumpFile::getListStream(minidump::StreamType) const;
+extern template LLVM_TEMPLATE_ABI Expected<ArrayRef<minidump::Thread>>
+    MinidumpFile::getListStream(minidump::StreamType) const;
+extern template LLVM_TEMPLATE_ABI Expected<ArrayRef<minidump::MemoryDescriptor>>
+    MinidumpFile::getListStream(minidump::StreamType) const;
 
 } // end namespace object
 } // end namespace llvm
