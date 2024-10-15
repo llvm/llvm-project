@@ -364,9 +364,8 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
 //===----------------------------------------------------------------------===//
 
 def WsloopOp : OpenMP_Op<"wsloop", traits = [
-    AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_LinearClause, OpenMP_NowaitClause,
@@ -381,8 +380,8 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
     parallel region.
 
     The body region can only contain a single block which must contain a single
-    operation and a terminator. The operation must be another compatible loop
-    wrapper or an `omp.loop_nest`.
+    operation. This operation must be another compatible loop wrapper or an
+    `omp.loop_nest`.
 
     ```
     omp.wsloop <clauses> {
@@ -393,7 +392,6 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
         store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
         omp.yield
       }
-      omp.terminator
     }
     ```
   }] # clausesDescription;
@@ -417,9 +415,8 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
 //===----------------------------------------------------------------------===//
 
 def SimdOp : OpenMP_Op<"simd", traits = [
-    AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AlignedClause, OpenMP_IfClause, OpenMP_LinearClause,
@@ -433,8 +430,8 @@ def SimdOp : OpenMP_Op<"simd", traits = [
     be executed concurrently using SIMD instructions).
 
     The body region can only contain a single block which must contain a single
-    operation and a terminator. The operation must be another compatible loop
-    wrapper or an `omp.loop_nest`.
+    operation. This operation must be another compatible loop wrapper or an
+    `omp.loop_nest`.
 
     ```
     omp.simd <clauses> {
@@ -445,7 +442,6 @@ def SimdOp : OpenMP_Op<"simd", traits = [
         store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
         omp.yield
       }
-      omp.terminator
     }
     ```
 
@@ -492,9 +488,8 @@ def YieldOp : OpenMP_Op<"yield",
 // Distribute construct [2.9.4.1]
 //===----------------------------------------------------------------------===//
 def DistributeOp : OpenMP_Op<"distribute", traits = [
-    AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_DistScheduleClause, OpenMP_OrderClause,
@@ -517,8 +512,8 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
     region.
     
     The body region can only contain a single block which must contain a single
-    operation and a terminator. The operation must be another compatible loop
-    wrapper or an `omp.loop_nest`.
+    operation. This operation must be another compatible loop wrapper or an
+    `omp.loop_nest`.
 
     ```mlir
     omp.distribute <clauses> {
@@ -529,7 +524,6 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
         store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
         omp.yield
       }
-      omp.terminator
     }
     ```
   }] # clausesDescription;
@@ -595,7 +589,7 @@ def TaskOp : OpenMP_Op<"task", traits = [
 def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
     DeclareOpInterfaceMethods<ComposableOpInterface>,
-    DeclareOpInterfaceMethods<LoopWrapperInterface>,
+    DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
@@ -613,8 +607,8 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     scheduled to be executed.
 
     The body region can only contain a single block which must contain a single
-    operation and a terminator. The operation must be another compatible loop
-    wrapper or an `omp.loop_nest`.
+    operation. This operation must be another compatible loop wrapper or an
+    `omp.loop_nest`.
 
     ```
     omp.taskloop <clauses> {
@@ -625,7 +619,6 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
         store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
         omp.yield
       }
-      omp.terminator
     }
     ```
 
