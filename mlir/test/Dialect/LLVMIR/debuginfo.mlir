@@ -162,7 +162,18 @@
  file = #file, line = 2, type = #int0>
 #var_expression = #llvm.di_global_variable_expression<var = #global_var,
  expr = <>>
-llvm.mlir.global common @block_() {dbg_expr = #var_expression} : i64
+#global_var1 = #llvm.di_global_variable<scope = #di_common_block, name = "b",
+ file = #file, line = 3, type = #int0>
+#var_expression1 = #llvm.di_global_variable_expression<var = #global_var1,
+ expr = <>>
+llvm.mlir.global @data() {dbg_exprs = [#var_expression, #var_expression1]} : i64
+
+// CHECK-DAG: llvm.mlir.global external @data() {{{.*}}dbg_exprs = [#[[EXP1:.*]], #[[EXP2:.*]]]} : i64
+// CHECK-DAG: #[[EXP1]] = #llvm.di_global_variable_expression<var = #[[GV1:.*]], expr = <>>
+// CHECK-DAG: #[[EXP2]] = #llvm.di_global_variable_expression<var = #[[GV2:.*]], expr = <>>
+// CHECK-DAG: #[[GV1]] = #llvm.di_global_variable<{{.*}}name = "a"{{.*}}>
+// CHECK-DAG: #[[GV2]] = #llvm.di_global_variable<{{.*}}name = "b"{{.*}}>
+
 
 // CHECK: llvm.func @addr(%[[ARG:.*]]: i64)
 llvm.func @addr(%arg: i64) {

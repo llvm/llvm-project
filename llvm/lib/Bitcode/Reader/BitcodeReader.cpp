@@ -2066,6 +2066,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCallback;
   case bitc::ATTR_KIND_NO_CAPTURE:
     return Attribute::NoCapture;
+  case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
+    return Attribute::NoDivergenceSource;
   case bitc::ATTR_KIND_NO_DUPLICATE:
     return Attribute::NoDuplicate;
   case bitc::ATTR_KIND_NOFREE:
@@ -5469,9 +5471,6 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (IsFP && Record.size() > OpNum+1)
         FMF = getDecodedFastMathFlags(Record[++OpNum]);
 
-      if (OpNum+1 != Record.size())
-        return error("Invalid record");
-
       if (IsFP) {
         if (!CmpInst::isFPPredicate(PredVal))
           return error("Invalid fcmp predicate");
@@ -5480,7 +5479,13 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!CmpInst::isIntPredicate(PredVal))
           return error("Invalid icmp predicate");
         I = new ICmpInst(PredVal, LHS, RHS);
+        if (Record.size() > OpNum + 1 &&
+            (Record[++OpNum] & (1 << bitc::ICMP_SAME_SIGN)))
+          cast<ICmpInst>(I)->setSameSign();
       }
+
+      if (OpNum + 1 != Record.size())
+        return error("Invalid record");
 
       ResTypeID = getVirtualTypeID(I->getType()->getScalarType());
       if (LHS->getType()->isVectorTy())

@@ -2332,23 +2332,20 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // Lower non-const v4i8 vector as byte-wise constructed i32, which allows us
     // to optimize calculation of constant parts.
     if (VT == MVT::v4i8) {
-      SDValue PRMT__10 = DAG.getNode(
-          NVPTXISD::PRMT, DL, MVT::v4i8,
-          {DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32),
-           DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32),
-           DAG.getConstant(0x3340, DL, MVT::i32),
-           DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
-      SDValue PRMT32__ = DAG.getNode(
-          NVPTXISD::PRMT, DL, MVT::v4i8,
-          {DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32),
-           DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
-           DAG.getConstant(0x4033, DL, MVT::i32),
-           DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
-      SDValue PRMT3210 = DAG.getNode(
-          NVPTXISD::PRMT, DL, MVT::v4i8,
-          {PRMT__10, PRMT32__, DAG.getConstant(0x5410, DL, MVT::i32),
-           DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
-      return DAG.getNode(ISD::BITCAST, DL, VT, PRMT3210);
+      SDValue C8 = DAG.getConstant(8, DL, MVT::i32);
+      SDValue E01 = DAG.getNode(
+          NVPTXISD::BFI, DL, MVT::i32,
+          DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32),
+          DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32), C8, C8);
+      SDValue E012 =
+          DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
+                      DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32),
+                      E01, DAG.getConstant(16, DL, MVT::i32), C8);
+      SDValue E0123 =
+          DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
+                      DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
+                      E012, DAG.getConstant(24, DL, MVT::i32), C8);
+      return DAG.getNode(ISD::BITCAST, DL, VT, E0123);
     }
     return Op;
   }
