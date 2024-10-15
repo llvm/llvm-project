@@ -95,8 +95,8 @@ class VPRecipeBuilder {
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
   /// decreased to ensure same decision from \p Range.Start to \p Range.End.
-  VPSingleDefRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
-                                    VFRange &Range);
+  VPRecipeBase *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
+                               VFRange &Range);
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
@@ -181,6 +181,16 @@ public:
     if (auto *I = dyn_cast<Instruction>(V)) {
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();
+    }
+    // Ugh: Not sure where to handle this :(
+    if (auto *EVI = dyn_cast<ExtractValueInst>(V)) {
+      Value *AggOp = EVI->getAggregateOperand();
+      if (auto *R = getRecipe(cast<Instruction>(AggOp))) {
+        assert(R->getNumDefinedValues() ==
+               cast<StructType>(AggOp->getType())->getNumElements());
+        unsigned Idx = EVI->getIndices()[0];
+        return R->getVPValue(Idx);
+      }
     }
     return Plan.getOrAddLiveIn(V);
   }

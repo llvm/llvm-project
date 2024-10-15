@@ -7362,6 +7362,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
     if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
       return &WidenMem->getIngredient();
+    if (auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R))
+      return WidenCall->getUnderlyingCallInstruction();
     return nullptr;
   };
 
@@ -8337,9 +8339,9 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   return new VPBlendRecipe(Phi, OperandsWithMask);
 }
 
-VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
-                                                   ArrayRef<VPValue *> Operands,
-                                                   VFRange &Range) {
+VPRecipeBase *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
+                                              ArrayRef<VPValue *> Operands,
+                                              VFRange &Range) {
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [this, CI](ElementCount VF) {
         return CM.isScalarWithPredication(CI, VF);
@@ -9049,6 +9051,19 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // TODO: Model and preserve debug intrinsics in VPlan.
     for (Instruction &I : drop_end(BB->instructionsWithoutDebug(false))) {
       Instruction *Instr = &I;
+
+      // A special case. Mapping handled in
+      // VPRecipeBuilder::getVPValueOrAddLiveIn().
+      if (auto *ExtractValue = dyn_cast<ExtractValueInst>(Instr)) {
+        bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
+            [&](ElementCount VF) {
+              return CM.isUniformAfterVectorization(ExtractValue, VF);
+            },
+            Range);
+        if (!IsUniform)
+          continue;
+      }
+
       SmallVector<VPValue *, 4> Operands;
       auto *Phi = dyn_cast<PHINode>(Instr);
       if (Phi && Phi->getParent() == HeaderBB) {

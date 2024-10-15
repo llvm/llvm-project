@@ -907,7 +907,6 @@ public:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
-    case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
     case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
@@ -929,6 +928,7 @@ public:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
+    case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -1734,28 +1734,35 @@ public:
 };
 
 /// A recipe for widening Call instructions using library calls.
-class VPWidenCallRecipe : public VPSingleDefRecipeWithIRFlags {
+class VPWidenCallRecipe : public VPRecipeBase, public VPRecipeIRFlags {
   /// Variant stores a pointer to the chosen function. There is a 1:1 mapping
   /// between a given VF and the chosen vectorized variant, so there will be a
   /// different VPlan for each VF with a valid variant.
   Function *Variant;
 
+  CallInst *CI;
+
 public:
-  VPWidenCallRecipe(Value *UV, Function *Variant,
+  VPWidenCallRecipe(CallInst *CI, Function *Variant,
                     ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
-      : VPSingleDefRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
-                                     *cast<Instruction>(UV)),
-        Variant(Variant) {
+      : VPRecipeBase(VPDef::VPWidenCallSC, CallArguments, DL),
+        VPRecipeIRFlags(*CI), Variant(Variant), CI(CI) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
+    for (Type *Ty : getContainedTypes(CI->getType())) {
+      (void)Ty;
+      new VPValue(CI, this);
+    }
   }
+
+  CallInst *getUnderlyingCallInstruction() const { return CI; }
 
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
-                                 {op_begin(), op_end()}, getDebugLoc());
+    return new VPWidenCallRecipe(CI, Variant, {op_begin(), op_end()},
+                                 getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)

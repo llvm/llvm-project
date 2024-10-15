@@ -294,6 +294,8 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     UI = IG->getInsertPos();
   else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
     UI = &WidenMem->getIngredient();
+  else if (auto *WidenCall = dyn_cast<VPWidenCallRecipe>(this))
+    UI = WidenCall->getUnderlyingCallInstruction();
 
   InstructionCost RecipeCost;
   if (UI && Ctx.skipCostComputation(UI, VF.isVector())) {
@@ -915,7 +917,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
   assert(Variant != nullptr && "Can't create vector function.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
+  auto *CI = getUnderlyingCallInstruction();
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (CI)
     CI->getOperandBundlesAsDefs(OpBundles);
@@ -923,8 +925,16 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
   setFlags(V);
 
-  if (!V->getType()->isVoidTy())
-    State.set(this, V);
+  if (!V->getType()->isVoidTy()) {
+    if (getNumDefinedValues() > 1) {
+      for (auto [I, Def] : enumerate(definedValues())) {
+        Value *AggV = State.Builder.CreateExtractValue(V, I);
+        State.set(Def, AggV);
+      }
+    } else {
+      State.set(getVPSingleValue(), V);
+    }
+  }
   State.addMetadata(V, CI);
 }
 
@@ -945,7 +955,9 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
   if (CalledFn->getReturnType()->isVoidTy())
     O << "void ";
   else {
-    printAsOperand(O, SlotTracker);
+    interleaveComma(definedValues(), O, [&O, &SlotTracker](VPValue *Def) {
+      Def->printAsOperand(O, SlotTracker);
+    });
     O << " = ";
   }
 
