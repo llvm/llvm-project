@@ -336,6 +336,27 @@ struct TemplateParameterListBuilder {
     return *this;
   }
 
+  TemplateParameterListBuilder &
+  addTypenameTypeParameter(StringRef Name, QualType DefaultValue = QualType()) {
+    if (Builder.Record->isCompleteDefinition())
+      return *this;
+    unsigned Position = static_cast<unsigned>(Params.size());
+    auto *Decl = TemplateTypeParmDecl::Create(
+        S.Context, Builder.Record->getDeclContext(), SourceLocation(),
+        SourceLocation(), /* TemplateDepth */ 0, Position,
+        &S.Context.Idents.get(Name, tok::TokenKind::identifier),
+        /* Typename */ true,
+        /* ParameterPack */ false,
+        /* HasTypeConstraint*/ false);
+    if (!DefaultValue.isNull())
+      Decl->setDefaultArgument(
+          S.Context, S.getTrivialTemplateArgumentLoc(DefaultValue, QualType(),
+                                                     SourceLocation()));
+    Decl->setReferenced();
+    Params.emplace_back(Decl);
+    return *this;
+  }
+
   Expr *getTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
                                      TemplateTypeParmDecl *T) {
     clang::ASTContext &context = S.getASTContext();
@@ -367,7 +388,7 @@ struct TemplateParameterListBuilder {
         clang::CK_IntegralCast, // CastKind (e.g., Integral cast)
         intLiteral,             // Sub-expression being cast
         nullptr,                // Base path, usually null for implicit casts
-        clang::VK_XValue,
+        clang::VK_LValue,
         fpoo // Value kind, typically VK_RValue for implicit casts
     );
 
@@ -378,7 +399,7 @@ struct TemplateParameterListBuilder {
         implicitCastExpr,    // Right-hand side expression
         clang::BO_LE,        // Binary operator kind (<=)
         BoolTy,              // Result type (bool)
-        clang::VK_XValue,    // Value kind
+        clang::VK_LValue,    // Value kind
         clang::OK_Ordinary,  // Object kind
         NameLoc,             // Source location of operator
         fpoo);
@@ -390,7 +411,10 @@ struct TemplateParameterListBuilder {
     DeclContext *DC = S.CurContext;
     clang::ASTContext &context = S.getASTContext();
     SourceLocation NameLoc = Decl->getBeginLoc();
-    IdentifierInfo *Name = Decl->getIdentifier();
+
+    IdentifierInfo &IsValidLineVectorII =
+        context.Idents.get("is_valid_line_vector");
+    IdentifierInfo &TII = context.Idents.get("T");
 
     clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
         context,                          // AST context
@@ -399,7 +423,7 @@ struct TemplateParameterListBuilder {
         NameLoc,                          // SourceLocation of 'T' again
         /*depth=*/0,            // Depth in the template parameter list
         /*position=*/0,         // Position in the template parameter list
-        /*id=*/Name,            // Identifier for 'T'
+        /*id=*/&TII,            // Identifier for 'T'
         /*Typename=*/true,      // Indicates this is a 'typename' or 'class'
         /*ParameterPack=*/false // Not a parameter pack
     );
@@ -410,32 +434,33 @@ struct TemplateParameterListBuilder {
     // Create and Attach Template Parameter List to ConceptDecl
 
     llvm::ArrayRef<NamedDecl *> TemplateParamArrayRef = {T};
-    clang::TemplateParameterList *Params = clang::TemplateParameterList::Create(
-        context,
-        NameLoc, // Source location of the template parameter list start
-        NameLoc, // Source location of the template parameter list end
-        TemplateParamArrayRef, // Template parameter (list as an ArrayRef)
-        NameLoc, // Source location of the template parameter list within
-                 // concept
-        nullptr  // Source location of the template parameter list end within
-                 // concept
-    );
+    clang::TemplateParameterList *ConceptParams =
+        clang::TemplateParameterList::Create(
+            context,
+            NameLoc, // Source location of the template parameter list start
+            NameLoc, // Source location of the template parameter list end
+            TemplateParamArrayRef, // Template parameter (list as an ArrayRef)
+            NameLoc, // Source location of the template parameter list within
+                     // concept
+            nullptr // Source location of the template parameter list end within
+                    // concept
+        );
 
     Expr *ConstraintExpr = getTypedBufferConstraintExpr(S, NameLoc, T);
 
-    DeclarationName DeclName = DeclarationName(Name);
+    DeclarationName DeclName = DeclarationName(&IsValidLineVectorII);
     // Create a ConceptDecl
     clang::ConceptDecl *conceptDecl = clang::ConceptDecl::Create(
         context,
         context.getTranslationUnitDecl(), // DeclContext
         NameLoc,                          // Source location of start of concept
         DeclName,                         // Source location of end of concept
-        Params,                           // Template type parameter
+        ConceptParams,                    // Template type parameter
         ConstraintExpr                    // Expression defining the concept
     );
 
     // Attach the template parameter list to the ConceptDecl
-    conceptDecl->setTemplateParameters(Params);
+    conceptDecl->setTemplateParameters(ConceptParams);
 
     // Add the concept declaration to the Translation Unit Decl
     context.getTranslationUnitDecl()->addDecl(conceptDecl);
@@ -451,43 +476,43 @@ struct TemplateParameterListBuilder {
     NestedNameSpecifierLoc NNS;
     DeclContext *DC = Builder.Record->getDeclContext();
     TemplateArgumentListInfo TALI(loc, loc);
-    const ASTTemplateArgumentListInfo *ATALI =
-        ASTTemplateArgumentListInfo::Create(context, TALI);
 
-    ConceptReference *CR = ConceptReference::Create(S.getASTContext(), NNS, loc,
-                                                    DNI, CD, CD, ATALI);
-
-    clang::TemplateTypeParmDecl *T =
-        clang::TemplateTypeParmDecl::Create(
-            context,                          // AST context
-            context.getTranslationUnitDecl(), // DeclContext
-            loc,                              // SourceLocation of 'T'
-            loc,                              // SourceLocation of 'T' again
-            /*depth=*/0,            // Depth in the template parameter list
-            /*position=*/0,         // Position in the template parameter list
-            /*id=*/Builder.Record->getIdentifier(), // Identifier for 'T'
-            /*Typename=*/true,      // Indicates this is a 'typename' or 'class'
-            /*ParameterPack=*/false,// Not a parameter pack
-            /*HasTypeConstraint=*/true // Not a parameter pack
-        );
+    clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
+        context,                          // AST context
+        context.getTranslationUnitDecl(), // DeclContext
+        SourceLocation(), SourceLocation(),
+        /*depth=*/0,                // Depth in the template parameter list
+        /*position=*/0,             // Position in the template parameter list
+        /*id=*/nullptr,             // Identifier for 'T'
+        /*Typename=*/true,          // Indicates this is a 'typename' or 'class'
+        /*ParameterPack=*/false,    // Not a parameter pack
+        /*HasTypeConstraint=*/false // Not a parameter pack
+    );
 
     T->setDeclContext(DC);
     T->setReferenced();
 
     clang::QualType TType = context.getTypeDeclType(T);
 
-    ArrayRef<TemplateArgument> ConvertedArgs = {TemplateArgument(TType),
-                                                TemplateArgument(TType)};
+    ArrayRef<TemplateArgument> ConvertedArgs = {TemplateArgument(TType)};
 
     ImplicitConceptSpecializationDecl *IDecl =
         ImplicitConceptSpecializationDecl::Create(
             context, Builder.Record->getDeclContext(), loc, ConvertedArgs);
 
     const ConstraintSatisfaction CS(CD, ConvertedArgs);
+    TemplateArgumentLoc tal = S.getTrivialTemplateArgumentLoc(
+        TemplateArgument(TType), QualType(), SourceLocation());
+
+    TALI.addArgument(tal);
+    const ASTTemplateArgumentListInfo *ATALI =
+        ASTTemplateArgumentListInfo::Create(context, TALI);
+    ConceptReference *CR = ConceptReference::Create(S.getASTContext(), NNS, loc,
+                                                    DNI, CD, CD, ATALI);
 
     ConceptSpecializationExpr *CSE =
         ConceptSpecializationExpr::Create(context, CR, IDecl, &CS);
-    T->setTypeConstraint(CR, CSE);
+
     return CSE;
   }
 
@@ -517,6 +542,9 @@ struct TemplateParameterListBuilder {
     QualType T = Builder.Template->getInjectedClassNameSpecialization();
     T = S.Context.getInjectedClassNameType(Builder.Record, T);
 
+    ArrayRef<TemplateArgument> TempArgs =
+        Builder.Template->getInjectedTemplateArgs();
+
     return Builder;
   }
 };
@@ -532,7 +560,7 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(Sema &S,
                                                 ArrayRef<StringRef> Names) {
   TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
-    Builder.addTypeParameter(Name);
+    Builder.addTypenameTypeParameter(Name);
 
   return Builder.finalizeTemplateArgs();
 }
