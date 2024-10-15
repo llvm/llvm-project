@@ -24,6 +24,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -1988,20 +1989,41 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
   LogicalResult matchAndRewrite(ExpandShapeOp expandOp,
                                 PatternRewriter &rewriter) const override {
+    auto castOp = expandOp.getSrc().getDefiningOp<CastOp>();
+    if (!canFoldIntoConsumerOp(castOp))
+      return failure();
+
+    const ArrayRef<int64_t> castSrcShape =
+        castOp.getSource().getType().getShape();
+    const SmallVector<ReassociationIndices, 4> reassoc =
+        expandOp.getReassociationIndices();
+
     SmallVector<int64_t> newOutputShape(expandOp.getResultType().getShape());
     SmallVector<Value> dynamicOutputShape;
     auto outputIt = expandOp.getOutputShape().begin();
-    for (auto [i, staticShape] : llvm::enumerate(newOutputShape)) {
-      if (!ShapedType::isDynamic(staticShape))
-        continue;
 
-      APInt cst;
-      Value val = *outputIt;
-      ++outputIt;
-      if (matchPattern(val, m_ConstantInt(&cst))) {
-        newOutputShape[i] = cst.getSExtValue();
-      } else {
-        dynamicOutputShape.push_back(val);
+    for (const auto &[inputDim, innerReassoc] : llvm::enumerate(reassoc)) {
+      for (const uint64_t outDim : innerReassoc) {
+        if (!ShapedType::isDynamic(newOutputShape[outDim]))
+          continue;
+
+        // If the cast's src type is dynamic, don't infer any of the
+        // corresponding expanded dimensions. `tensor.expand_shape` requires at
+        // least one of the expanded dimensions to be dynamic if the input is
+        // dynamic.
+        Value val = *outputIt;
+        ++outputIt;
+        if (ShapedType::isDynamic(castSrcShape[inputDim])) {
+          dynamicOutputShape.push_back(val);
+          continue;
+        }
+
+        APInt cst;
+        if (matchPattern(val, m_ConstantInt(&cst))) {
+          newOutputShape[outDim] = cst.getSExtValue();
+        } else {
+          dynamicOutputShape.push_back(val);
+        }
       }
     }
 
@@ -2010,8 +2032,6 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
       return failure();
 
     // Calculate the input shape from the output
-    SmallVector<ReassociationIndices, 4> reassoc =
-        expandOp.getReassociationIndices();
     SmallVector<int64_t> newInputShape(expandOp.getSrcType().getRank(), 1l);
     for (uint64_t inDim = 0; inDim < newInputShape.size(); inDim++) {
       for (auto outDim : reassoc[inDim]) {
@@ -2024,8 +2044,6 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
       }
     }
 
-    // `inputCast` can be propagated up and the final cast can be propagated
-    // down.
     SmallVector<OpFoldResult> outputOfr =
         getMixedValues(newOutputShape, dynamicOutputShape, rewriter);
     auto inputType = RankedTensorType::get(
