@@ -64,8 +64,7 @@ enum LangFeatures {
   GNUMode = (1 << 14),
   HexFloat = (1 << 15),
   OpenCL = (1 << 16),
-  HLSL = (1 << 17),
-  MatrixTypes = (1 << 18)
+  HLSL = (1 << 17)
 };
 
 /// LangStandard - Information about the properties of a particular language
@@ -150,9 +149,6 @@ public:
 
   /// isOpenCL - Language is a OpenCL variant.
   bool isOpenCL() const { return Flags & OpenCL; }
-
-  /// hasMatrixTypes - Language supports matrix types.
-  bool hasMatrixTypes() const { return Flags & MatrixTypes; }
 
   static Kind getLangKind(StringRef Name);
   static Kind getHLSLLangKind(StringRef Name);

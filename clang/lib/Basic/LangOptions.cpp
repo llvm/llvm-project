@@ -126,7 +126,6 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.RawStringLiterals = Std.hasRawStringLiterals();
-  Opts.MatrixTypes = Std.hasMatrixTypes();
 
   Opts.HLSL = Lang == Language::HLSL;
   if (Opts.HLSL && Opts.IncludeDefaultHeader)
