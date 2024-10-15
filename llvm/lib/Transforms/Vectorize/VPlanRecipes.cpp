@@ -2090,7 +2090,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
       "In-loop reduction not implemented in VPlan-based cost model currently.");
 
   assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
-         "Infered type and recurrence type mismatch.");
+         "Inferred type and recurrence type mismatch.");
 
   // Cost = Reduction cost + BinOp cost
   InstructionCost Cost =
