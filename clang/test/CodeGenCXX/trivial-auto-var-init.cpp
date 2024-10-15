@@ -288,14 +288,14 @@ void test_huge_uninit() {
 
 // UNINIT-LABEL:  test_huge_small_init(
 // ZERO-LABEL:    test_huge_small_init(
-// ZERO: call void @llvm.memset{{.*}}, i8 0, i64 65536,
+// ZERO: call void @llvm.memset{{.*}}, i8 0, i64 65532,
 // ZERO-NOT: !annotation
 // ZERO: store i8 97,
 // ZERO: store i8 98,
 // ZERO: store i8 99,
 // ZERO: store i8 100,
 // PATTERN-LABEL: test_huge_small_init(
-// PATTERN: call void @llvm.memset{{.*}}, i8 0, i64 65536,
+// PATTERN: call void @llvm.memset{{.*}}, i8 0, i64 65532,
 // PATTERN-NOT: !annotation
 // PATTERN: store i8 97,
 // PATTERN: store i8 98,
@@ -317,6 +317,36 @@ void test_huge_larger_init() {
   char big[65536] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
   used(big);
 }
+
+// UNINIT-LABEL:  test_padded_struct_partial_init(
+// UNINIT: call void @llvm.memset{{.*}}, i8 0, i64 32, i1 false)
+// UNINIT: store i32 1,
+// UNINIT: store i8 97,
+// UNINIT: store i32 2,
+// UNINIT-NOT: !annotation
+// ZERO-LABEL:    test_padded_struct_partial_init(
+// ZERO: call void @llvm.memset{{.*}}, i8 0, i64 39, i1 false)
+// ZERO: store i32 1,
+// ZERO: store i8 97,
+// ZERO: store i32 2,
+// ZERO-NOT: !annotation
+// PATTERN-LABEL: test_padded_struct_partial_init(
+// PATTERN: call void @llvm.memset{{.*}}, i8 0, i64 39, i1 false)
+// PATTERN: store i32 1,
+// PATTERN: store i8 97,
+// PATTERN: store i32 2,
+// PATTERN-NOT: !annotation
+struct padded {
+  int i0;
+  char c;
+  int i1;
+  int d[8];
+};
+padded test_padded_struct_partial_init() {
+  padded s = {1, 'a', 2,};
+  return s;
+}
+
 
 } // extern "C"
 
