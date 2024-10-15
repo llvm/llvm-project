@@ -12,6 +12,7 @@
 
 #include <iterator>
 #include <memory>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -21,11 +22,15 @@
 // See https://github.com/llvm/llvm-project/issues/69334 for details.
 template <class Iterator>
 struct overload_compare_iterator {
+  static_assert(
+      std::is_base_of<std::forward_iterator_tag, typename std::iterator_traits<Iterator>::iterator_category>::value,
+      "overload_compare_iterator can only adapt forward iterators");
+
   using value_type        = typename std::iterator_traits<Iterator>::value_type;
   using difference_type   = typename std::iterator_traits<Iterator>::difference_type;
   using reference         = typename std::iterator_traits<Iterator>::reference;
   using pointer           = typename std::iterator_traits<Iterator>::pointer;
-  using iterator_category = typename std::iterator_traits<Iterator>::iterator_category;
+  using iterator_category = std::forward_iterator_tag;
 
   overload_compare_iterator() = default;
 
