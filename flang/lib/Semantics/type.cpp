@@ -758,12 +758,6 @@ void ParamValue::SetExplicit(SomeIntExpr &&x) {
   expr_ = std::move(x);
 }
 
-bool ParamValue::IsEquivalentInInterface(const ParamValue &that) const {
-  return (category_ == that.category_ &&
-      expr_.has_value() == that.expr_.has_value() &&
-      (!expr_ || evaluate::AreEquivalentInInterface(*expr_, *that.expr_)));
-}
-
 std::string ParamValue::AsFortran() const {
   switch (category_) {
     SWITCH_COVERS_ALL_CASES
