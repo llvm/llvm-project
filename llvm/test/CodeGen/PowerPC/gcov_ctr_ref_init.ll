@@ -8,14 +8,19 @@ target triple = "powerpc-ibm-aix"
 
 ; CHECK-RW: .csect __llvm_covinit[RW],3
 ; CHECK-RO: .csect __llvm_covinit[RO],3
-; CHECK:         .vbyte  4, __llvm_gcov_writeout[DS]
-; CHECK-NEXT:    .vbyte  4, __llvm_gcov_reset[DS]
-; CHECK: __llvm_gcov_ctr.1:
+; CHECK-NEXT:    .align  3                               # @__llvm_covinit_functions
+; CHECK-NEXT: L..__llvm_covinit_functions:
+; CHECK-NEXT:     .vbyte  4, __llvm_gcov_writeout[DS]
+; CHECK-NEXT:     .vbyte  4, __llvm_gcov_reset[DS]
+; CHECK: L.._MergedGlobals:
+; CHECK-NEXT: __llvm_gcov_ctr:
+; CHECK-NEXT:     .space  16
+; CHECK-NEXT: __llvm_gcov_ctr.1:
 ; CHECK-NEXT:     .extern .llvm_gcda_start_file[PR]
-; CHECK-NEXT:    .extern .llvm_gcda_emit_function[PR]
-; CHECK-NEXT:    .extern .llvm_gcda_emit_arcs[PR]
-; CHECK-NEXT:    .extern .llvm_gcda_summary_info[PR]
-; CHECK-NEXT:    .extern .llvm_gcda_end_file[PR]
+; CHECK-NEXT:     .extern .llvm_gcda_emit_function[PR]
+; CHECK-NEXT:     .extern .llvm_gcda_emit_arcs[PR]
+; CHECK-NEXT:     .extern .llvm_gcda_summary_info[PR]
+; CHECK-NEXT:     .extern .llvm_gcda_end_file[PR]
 ; CHECK-RW-NEXT:    .ref __llvm_covinit[RW]
 ; CHECK-RO-NEXT:    .ref __llvm_covinit[RO]
 
