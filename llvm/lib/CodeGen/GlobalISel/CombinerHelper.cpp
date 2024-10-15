@@ -7629,14 +7629,14 @@ bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
   //
   // ->
   //
-  // $any:_(s16) = G_ANY $bv[0]
-  // $any1:_(s16) = G_ANY $bv[1]
-  // $any2:_(s16) = G_ANY $bv[2]
-  // $any3:_(s16) = G_ANY $bv[3]
-  // $any4:_(s16) = G_ANY $bv[4]
-  // $any5:_(s16) = G_ANY $bv[5]
-  // $any6:_(s16) = G_ANY $bv[6]
-  // $any7:_(s16) = G_ANY $bv[7]
+  // $any:_(s16) = G_ANYEXT $bv[0]
+  // $any1:_(s16) = G_ANYEXT $bv[1]
+  // $any2:_(s16) = G_ANYEXT $bv[2]
+  // $any3:_(s16) = G_ANYEXT $bv[3]
+  // $any4:_(s16) = G_ANYEXT $bv[4]
+  // $any5:_(s16) = G_ANYEXT $bv[5]
+  // $any6:_(s16) = G_ANYEXT $bv[6]
+  // $any7:_(s16) = G_ANYEXT $bv[7]
   // $uv:_(<4 x s16>) = G_BUILD_VECTOR $any, $any1, $any2, $any3
   // $uv1:_(<4 x s16>) = G_BUILD_VECTOR $any4, $any5, $any6, $any7
 
