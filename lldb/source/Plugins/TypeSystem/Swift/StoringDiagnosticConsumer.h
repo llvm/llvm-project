@@ -207,6 +207,21 @@ public:
       }
       return;
     }
+    // FXIME: This is a heuristic.
+    uint16_t len = info.Ranges.size() ? info.Ranges.front().getByteLength() : 0;
+    bool in_user_input = false;
+    // FIXME: improve this!
+    if (buffer_name == "<REPL>" || buffer_name == "<EXPR>" ||
+        buffer_name == "repl.swift" ||
+        buffer_name.starts_with("<user expression"))
+      in_user_input = true;
+    DiagnosticDetail::SourceLocation loc = {FileSpec{buffer_name.str()},
+                                            line_col.first,
+                                            (uint16_t)line_col.second,
+                                            len,
+                                            !in_user_input,
+                                            in_user_input};
+    DiagnosticDetail detail = {loc, severity, raw_text, formatted_text};
     RawDiagnostic diagnostic(
         formatted_text, info.Kind, bufferName.str(), bufferID, line_col.first,
         line_col.second,

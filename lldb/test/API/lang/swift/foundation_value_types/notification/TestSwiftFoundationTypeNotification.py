@@ -13,7 +13,6 @@ class TestSwiftFoundationTypeNotification(lldbtest.TestBase):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
-        self.expect("log enable lldb types -v")
         # global
         self.expect("target variable -d run g_notification",
                     substrs=['name = ', '"MyNotification"',

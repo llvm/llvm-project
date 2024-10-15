@@ -15,7 +15,7 @@ let y = Bar(baz: 123)
 // CHECK: baz = 123
 
 let x = Foo(bar:42)
-// CHECK: repl.swift:{{.*}}: cannot find 'Foo' in scope
+// CHECK: error: cannot find 'Foo' in scope
 
 @testable import Test
 

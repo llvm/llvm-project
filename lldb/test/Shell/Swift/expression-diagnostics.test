@@ -1,0 +1,12 @@
+# REQUIRES: swift
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %target-swiftc -g %S/Inputs/Global.swift
+# RUN: %lldb Global -s %s | FileCheck --strict-whitespace %s
+
+b main
+run
+expr foo+bar
+#       (lldb) expr foo+bar
+# CHECK:            ^~~ ^~~
+# CHECK:            |   error: cannot find 'bar' in scope
+# CHECK:            error: cannot find 'foo' in scope
