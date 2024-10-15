@@ -19041,8 +19041,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Type *DataTy = ConvertType(E->getArg(0)->getType());
     llvm::Type *IntTy = llvm::IntegerType::get(
         Builder.getContext(), DataTy->getPrimitiveSizeInBits());
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, IntTy);
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, IntTy);
     assert(E->getNumArgs() == 5 || E->getNumArgs() == 6);
     bool InsertOld = E->getNumArgs() == 5;
     if (InsertOld)
