@@ -40,7 +40,7 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
   auto *builderList =
       dyn_cast_or_null<llvm::ListInit>(def->getValueInit("builders"));
   if (builderList && !builderList->empty()) {
-    for (llvm::Init *init : builderList->getValues()) {
+    for (const llvm::Init *init : builderList->getValues()) {
       AttrOrTypeBuilder builder(cast<llvm::DefInit>(init)->getDef(),
                                 def->getLoc());
 
@@ -58,8 +58,8 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
   if (auto *traitList = def->getValueAsListInit("traits")) {
     SmallPtrSet<const llvm::Init *, 32> traitSet;
     traits.reserve(traitSet.size());
-    llvm::unique_function<void(llvm::ListInit *)> processTraitList =
-        [&](llvm::ListInit *traitList) {
+    llvm::unique_function<void(const llvm::ListInit *)> processTraitList =
+        [&](const llvm::ListInit *traitList) {
           for (auto *traitInit : *traitList) {
             if (!traitSet.insert(traitInit).second)
               continue;
@@ -335,7 +335,9 @@ std::optional<StringRef> AttrOrTypeParameter::getDefaultValue() const {
   return result && !result->empty() ? result : std::nullopt;
 }
 
-llvm::Init *AttrOrTypeParameter::getDef() const { return def->getArg(index); }
+const llvm::Init *AttrOrTypeParameter::getDef() const {
+  return def->getArg(index);
+}
 
 std::optional<Constraint> AttrOrTypeParameter::getConstraint() const {
   if (auto *param = dyn_cast<llvm::DefInit>(getDef()))
@@ -349,7 +351,7 @@ std::optional<Constraint> AttrOrTypeParameter::getConstraint() const {
 //===----------------------------------------------------------------------===//
 
 bool AttributeSelfTypeParameter::classof(const AttrOrTypeParameter *param) {
-  llvm::Init *paramDef = param->getDef();
+  const llvm::Init *paramDef = param->getDef();
   if (auto *paramDefInit = dyn_cast<llvm::DefInit>(paramDef))
     return paramDefInit->getDef()->isSubClassOf("AttributeSelfTypeParameter");
   return false;
