@@ -2157,7 +2157,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   // Per C++0x [expr.new]p5, the type being constructed may be a
   // typedef of an array type.
-  if (!ArraySize) {
+  // Dependent case will be handled separately.
+  if (!ArraySize && !AllocType->isDependentType()) {
     if (const ConstantArrayType *Array
                               = Context.getAsConstantArrayType(AllocType)) {
       ArraySize = IntegerLiteral::Create(Context, Array->getSize(),
