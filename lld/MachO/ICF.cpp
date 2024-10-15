@@ -147,6 +147,17 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       isecB = rb.referent.get<InputSection *>();
     }
 
+    // Typically, we should not encounter sections marked with `keepUnique` at
+    // this point as they would have resulted in different hashes and therefore
+    // no need for a full comparison.
+    // However, in `safe_thunks` mode, it's possible for two different
+    // relocations to reference identical `keepUnique` functions that will be
+    // distinguished later via thunks - so we need to handle this case
+    // explicitly.
+    if ((isecA != isecB) && ((isecA->keepUnique && isCodeSection(isecA)) ||
+                             (isecB->keepUnique && isCodeSection(isecB))))
+      return false;
+
     if (isecA->parent != isecB->parent)
       return false;
     // Sections with identical parents should be of the same kind.

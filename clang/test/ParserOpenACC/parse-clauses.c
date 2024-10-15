@@ -949,7 +949,6 @@ void IntExprParsing() {
 #pragma acc loop vector(length:returns_int())
   for(;;);
 
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker
   for(;;);
   // expected-error@+1{{expected expression}}
@@ -959,8 +958,8 @@ void IntExprParsing() {
   // expected-error@+1{{expected expression}}
 #pragma acc loop worker(invalid:)
   for(;;);
-  // expected-error@+2{{invalid tag 'invalid' on 'worker' clause}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
+  // expected-error@+1{{invalid tag 'invalid' on 'worker' clause}}
 #pragma acc loop worker(invalid:5)
   for(;;);
   // expected-error@+1{{expected expression}}
@@ -983,21 +982,21 @@ void IntExprParsing() {
   // expected-note@+1{{to match this '('}}
 #pragma acc loop worker(length:6,4)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
 #pragma acc loop worker(5)
   for(;;);
-  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
+  // expected-error@+1{{invalid tag 'length' on 'worker' clause}}
 #pragma acc loop worker(length:5)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
 #pragma acc loop worker(num:5)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
 #pragma acc loop worker(returns_int())
   for(;;);
-  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
+  // expected-error@+1{{invalid tag 'length' on 'worker' clause}}
 #pragma acc loop worker(length:returns_int())
   for(;;);
 }
@@ -1153,8 +1152,7 @@ void Tile() {
   // expected-note@+1{{to match this '('}}
 #pragma acc loop tile(
   for(;;){}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop tile()
   for(;;){}
   // expected-error@+3{{expected expression}}
@@ -1162,47 +1160,47 @@ void Tile() {
   // expected-note@+1{{to match this '('}}
 #pragma acc loop tile(,
   for(;;){}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop tile(,)
   for(;;){}
-  // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc loop tile(returns_int(), *, invalid, *)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop tile(returns_int() *, Foo, *)
   for(;;){}
 
-  // expected-error@+2{{indirection requires pointer operand ('int' invalid)}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{indirection requires pointer operand ('int' invalid)}}
 #pragma acc loop tile(* returns_int() , *)
-  for(;;){}
+  for(;;){
+    for(;;);
+  }
 
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(*)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{OpenACC 'tile' clause size expression must be an asterisk or a constant expression}}
 #pragma acc loop tile(*Foo, *Foo)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(5)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(*, 5)
-  for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  for(;;){
+    for(;;);
+  }
 #pragma acc loop tile(5, *)
-  for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  for(;;){
+    for(;;);
+  }
 #pragma acc loop tile(5, *, 3, *)
-  for(;;){}
+  for(;;){
+    for(;;)
+      for(;;)
+        for(;;);
+  }
 }
 
 void Gang() {
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang
   for(;;){}
   // expected-error@+3{{expected expression}}
@@ -1210,68 +1208,58 @@ void Gang() {
   // expected-note@+1{{to match this '('}}
 #pragma acc loop gang(
   for(;;){}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang()
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang(5, *)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang(*)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang(5, num:*)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang(num:5, *)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang(num:5, num:*)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang(num:*)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-#pragma acc loop gang(dim:5)
+#pragma acc loop gang(dim:2)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang(dim:5, dim:*)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop gang(dim:*)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop gang(static:*)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+2{{OpenACC 'gang' clause may have at most one 'static' argument}}
+  // expected-note@+1{{previous expression is here}}
 #pragma acc loop gang(static:*, static:5)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+#pragma acc kernels
 #pragma acc loop gang(static:*, 5)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+#pragma acc kernels
 #pragma acc loop gang(static:45, 5)
   for(;;){}
 
@@ -1330,11 +1318,16 @@ void Gang() {
 #pragma acc loop gang(dim:45
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
-#pragma acc loop gang(static:*, dim:returns_int(), 5)
+#pragma acc kernels
+#pragma acc loop gang(static:*, 5)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  // expected-error@+1{{argument to 'gang' clause dimension must be a constant expression}}
+#pragma acc loop gang(static:*, dim:returns_int())
+  for(;;){}
+
+  // expected-error@+2 2{{'num' argument on 'gang' clause is not permitted on an orphaned 'loop' construct}}
+  // expected-error@+1{{argument to 'gang' clause dimension must be a constant expression}}
 #pragma acc loop gang(num: 32, static:*, dim:returns_int(), 5)
   for(;;){}
 

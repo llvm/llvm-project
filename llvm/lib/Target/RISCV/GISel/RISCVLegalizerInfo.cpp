@@ -833,19 +833,21 @@ static MachineInstrBuilder buildAllOnesMask(LLT VecTy, const SrcOp &VL,
 
 /// Gets the two common "VL" operands: an all-ones mask and the vector length.
 /// VecTy is a scalable vector type.
-static std::pair<MachineInstrBuilder, Register>
+static std::pair<MachineInstrBuilder, MachineInstrBuilder>
 buildDefaultVLOps(const DstOp &Dst, MachineIRBuilder &MIB,
                   MachineRegisterInfo &MRI) {
   LLT VecTy = Dst.getLLTTy(MRI);
   assert(VecTy.isScalableVector() && "Expecting scalable container type");
-  Register VL(RISCV::X0);
-  MachineInstrBuilder Mask = buildAllOnesMask(VecTy, VL, MIB, MRI);
+  const RISCVSubtarget &STI = MIB.getMF().getSubtarget<RISCVSubtarget>();
+  LLT XLenTy(STI.getXLenVT());
+  auto VL = MIB.buildConstant(XLenTy, -1);
+  auto Mask = buildAllOnesMask(VecTy, VL, MIB, MRI);
   return {Mask, VL};
 }
 
 static MachineInstrBuilder
 buildSplatPartsS64WithVL(const DstOp &Dst, const SrcOp &Passthru, Register Lo,
-                         Register Hi, Register VL, MachineIRBuilder &MIB,
+                         Register Hi, const SrcOp &VL, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI) {
   // TODO: If the Hi bits of the splat are undefined, then it's fine to just
   // splat Lo even if it might be sign extended. I don't think we have
@@ -861,7 +863,7 @@ buildSplatPartsS64WithVL(const DstOp &Dst, const SrcOp &Passthru, Register Lo,
 
 static MachineInstrBuilder
 buildSplatSplitS64WithVL(const DstOp &Dst, const SrcOp &Passthru,
-                         const SrcOp &Scalar, Register VL,
+                         const SrcOp &Scalar, const SrcOp &VL,
                          MachineIRBuilder &MIB, MachineRegisterInfo &MRI) {
   assert(Scalar.getLLTTy(MRI) == LLT::scalar(64) && "Unexpected VecTy!");
   auto Unmerge = MIB.buildUnmerge(LLT::scalar(32), Scalar);

@@ -23,6 +23,9 @@ void* dependent_param_func(T param) __attribute__((alloc_align(1)));// expected-
 template <int T>
 void* illegal_align_param(int p) __attribute__((alloc_align(T))); // expected-error {{'alloc_align' attribute requires parameter 1 to be an integer constant}}
 
+template <typename T>
+T dependent_return_type(int p) __attribute__((alloc_align(1)));
+
 void dependent_impl(int align) {
   dependent_ret<int> a; // expected-note {{in instantiation of template class 'dependent_ret<int>' requested here}}
   a.Foo(1);

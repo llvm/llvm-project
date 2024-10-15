@@ -9,6 +9,9 @@
 #ifndef LLVM_CODEGEN_SPILLER_H
 #define LLVM_CODEGEN_SPILLER_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/CodeGen/Register.h"
+
 namespace llvm {
 
 class LiveRangeEdit;

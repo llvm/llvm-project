@@ -1529,9 +1529,8 @@ createArgument(const Record &Arg, StringRef Attr,
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
-    ArrayRef<std::pair<Record*, SMRange>> Bases = Search->getSuperClasses();
-    for (const auto &Base : reverse(Bases)) {
-      if ((Ptr = createArgument(Arg, Attr, Base.first)))
+    for (const auto &[Base, _] : reverse(Search->getSuperClasses())) {
+      if ((Ptr = createArgument(Arg, Attr, Base)))
         break;
     }
   }
@@ -2744,12 +2743,11 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     if (!R.getValueAsBit("ASTNode"))
       continue;
 
-    ArrayRef<std::pair<Record *, SMRange>> Supers = R.getSuperClasses();
+    ArrayRef<std::pair<const Record *, SMRange>> Supers = R.getSuperClasses();
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
-    for (const auto &Super : reverse(Supers)) {
-      const Record *R = Super.first;
+    for (const auto &[R, _] : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = std::string(R->getName());
@@ -3284,16 +3282,16 @@ namespace {
 } // end anonymous namespace
 
 static const AttrClassDescriptor AttrClassDescriptors[] = {
-  { "ATTR", "Attr" },
-  { "TYPE_ATTR", "TypeAttr" },
-  { "STMT_ATTR", "StmtAttr" },
-  { "DECL_OR_STMT_ATTR", "DeclOrStmtAttr" },
-  { "INHERITABLE_ATTR", "InheritableAttr" },
-  { "DECL_OR_TYPE_ATTR", "DeclOrTypeAttr" },
-  { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" },
-  { "PARAMETER_ABI_ATTR", "ParameterABIAttr" },
-  { "HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"}
-};
+    {"ATTR", "Attr"},
+    {"TYPE_ATTR", "TypeAttr"},
+    {"STMT_ATTR", "StmtAttr"},
+    {"DECL_OR_STMT_ATTR", "DeclOrStmtAttr"},
+    {"INHERITABLE_ATTR", "InheritableAttr"},
+    {"DECL_OR_TYPE_ATTR", "DeclOrTypeAttr"},
+    {"INHERITABLE_PARAM_ATTR", "InheritableParamAttr"},
+    {"INHERITABLE_PARAM_OR_STMT_ATTR", "InheritableParamOrStmtAttr"},
+    {"PARAMETER_ABI_ATTR", "ParameterABIAttr"},
+    {"HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"}};
 
 static void emitDefaultDefine(raw_ostream &OS, StringRef name,
                               const char *superName) {
@@ -3434,7 +3432,7 @@ namespace {
     }
 
   private:
-    AttrClass *findClassByRecord(Record *R) const {
+    AttrClass *findClassByRecord(const Record *R) const {
       for (auto &Class : Classes) {
         if (Class->TheRecord == R)
           return Class.get();
@@ -4321,10 +4319,12 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
 
   // This means the attribute is either a statement attribute, a decl
   // attribute, or both; find out which.
-  bool CurAttrIsStmtAttr =
-      Attr.isSubClassOf("StmtAttr") || Attr.isSubClassOf("DeclOrStmtAttr");
-  bool CurAttrIsDeclAttr =
-      !CurAttrIsStmtAttr || Attr.isSubClassOf("DeclOrStmtAttr");
+  bool CurAttrIsStmtAttr = Attr.isSubClassOf("StmtAttr") ||
+                           Attr.isSubClassOf("DeclOrStmtAttr") ||
+                           Attr.isSubClassOf("InheritableParamOrStmtAttr");
+  bool CurAttrIsDeclAttr = !CurAttrIsStmtAttr ||
+                           Attr.isSubClassOf("DeclOrStmtAttr") ||
+                           Attr.isSubClassOf("InheritableParamOrStmtAttr");
 
   std::vector<std::string> DeclAttrs, StmtAttrs;
 
@@ -4739,8 +4739,8 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
       if (Arg->getValueAsBitOrUnset("Fake", UnusedUnset))
         continue;
       ArgNames.push_back(Arg->getValueAsString("Name").str());
-      for (const auto &Class : Arg->getSuperClasses()) {
-        if (Class.first->getName().starts_with("Variadic")) {
+      for (const auto &[Class, _] : Arg->getSuperClasses()) {
+        if (Class->getName().starts_with("Variadic")) {
           ArgNames.back().append("...");
           break;
         }

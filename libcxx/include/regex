@@ -984,7 +984,7 @@ public:
 
 template <regex_constants::error_type _Ev>
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_regex_error() {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   throw regex_error(_Ev);
 #else
   _LIBCPP_VERBOSE_ABORT("regex_error was thrown in -fno-exceptions mode");
