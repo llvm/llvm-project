@@ -2397,7 +2397,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
     case LibFunc_log1p:
     case LibFunc_log1pf:
-      if (APF > APFloat(APF.getSemantics(), "-1") && TLI->has(Func))
+      if (APF > APFloat::getOne(APF.getSemantics(), true) && TLI->has(Func))
         return ConstantFoldFP(log1p, APF, Ty);
       break;
     case LibFunc_logl:
@@ -3594,8 +3594,8 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_acosl:
       case LibFunc_acos:
       case LibFunc_acosf:
-        return !(Op < APFloat(Op.getSemantics(), "-1") ||
-                 Op > APFloat(Op.getSemantics(), "1"));
+        return !(Op < APFloat::getOne(Op.getSemantics(), true) ||
+                 Op > APFloat::getOne(Op.getSemantics()));
 
       case LibFunc_sinh:
       case LibFunc_cosh:
