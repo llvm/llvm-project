@@ -5,10 +5,13 @@ RUN: echo _Z3barv '"_Z3barv"' > %t
 RUN: echo '"_Z3barv"' _Z3barv >> %t
 // This is not mangled, thus it should not be quoted
 RUN: echo 'log()' >> %t
+// Check that an "import thunk for" prefix can be quoted along the demangled name
+RUN: echo __imp__ZSt6futureIvE >> %t
 RUN: llvm-cxxfilt --quote < %t | FileCheck --match-full-lines --check-prefix=CHECK-FILE %s
 CHECK-FILE: "bar()" "bar()"
 CHECK-FILE-NEXT: "bar()" "bar()"
 CHECK-FILE-NEXT: log()
+CHECK-FILE-NEXT: "import thunk for std::future<void>"
 
 // Check it works with cli symbols too. Since a quoted mangled name is not a
 // mangled name, it should be unchanged

@@ -66,7 +66,7 @@ static void error(const Twine &Message) {
 }
 
 // Quote Undecorated with "" if asked for and not already followed by a '"'
-static std::string optionalQuote(std::string Undecorated,
+static std::string optionalQuote(const std::string &Undecorated,
                                  StringRef Delimiters) {
   if (Quote && (Delimiters.empty() || Delimiters[0] != '"'))
     return '"' + Undecorated + '"';
@@ -99,7 +99,7 @@ static std::string demangle(const std::string &Mangled, StringRef Delimiters) {
   }
 
   Result =
-      Undecorated ? Prefix + optionalQuote(Undecorated, Delimiters) : Mangled;
+      Undecorated ? optionalQuote(Prefix + Undecorated, Delimiters) : Mangled;
   free(Undecorated);
   return Result;
 }
