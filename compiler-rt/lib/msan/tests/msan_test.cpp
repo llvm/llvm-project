@@ -4901,6 +4901,7 @@ TEST(MemorySanitizer, timer_create) {
   res = timer_create(INT_MAX, nullptr, &timer2);
   ASSERT_EQ(-1, res);
   EXPECT_POISONED(timer2);
+  timer_delete(timer);
 }
 #endif
 } // namespace
