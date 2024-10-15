@@ -27,6 +27,10 @@ class RegionsFromMetadata final : public FunctionPass {
 public:
   RegionsFromMetadata(StringRef Pipeline);
   bool runOnFunction(Function &F) final;
+  void printPipeline(raw_ostream &OS) const final {
+    OS << getName() << "\n";
+    RPM.printPipeline(OS);
+  }
 };
 
 } // namespace llvm::sandboxir
