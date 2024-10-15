@@ -2366,6 +2366,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   if (It->first != TargetSecAddr)
                     break;
                   TargetSectionSymbols.push_back(&AllSymbols[It->second]);
+                  if (AllSymbols[It->second].empty())
+                    TargetSecAddr = 0;
                 }
               } else {
                 TargetSectionSymbols.push_back(&Symbols);
@@ -2478,15 +2480,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               } else if (LabelAvailable) {
                 *TargetOS << " <" << AllLabels[Target] << ">";
               } 
-              // else {
-                // this case is needed because the first load in the test assembly
-                // did not have any symbols in the section nor was it caught by any of
-                // else if cases. this warrented a case where the address is printed realtive
-                // to the target section. Since no symbol was found, there is no need to handle
-                // relocations
-                // *TargetOS << " <" << 
-
-              // }
               // By convention, each record in the comment stream should be
               // terminated.
               if (TargetOS == &CommentStream)
