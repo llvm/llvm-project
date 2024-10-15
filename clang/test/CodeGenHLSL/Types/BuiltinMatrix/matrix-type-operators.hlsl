@@ -528,7 +528,7 @@ uint64_t vulli;
 // CHECK-LABEL: define {{.*}}add_matrix_scalar_uint64_short
 void add_matrix_scalar_uint64_short() {
 uint64_t4x2 b;
-short vs;
+int16_t vs;
   // NOOPT:         [[SCALAR:%.*]] = load i16, ptr %vs, align 2{{$}}
   // OPT:           [[SCALAR:%.*]] = load i16, ptr %vs, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64
@@ -545,7 +545,7 @@ short vs;
 // CHECK-LABEL: define {{.*}}add_compound_matrix_scalar_uint64_short
 void add_compound_matrix_scalar_uint64_short() {
 uint64_t4x2 b;
-short vs;
+int16_t vs;
   // NOOPT:       [[SCALAR:%.*]] = load i16, ptr %vs, align 2{{$}}
   // OPT:         [[SCALAR:%.*]] = load i16, ptr %vs, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64
@@ -562,7 +562,7 @@ short vs;
 // CHECK-LABEL: define {{.*}}subtract_compound_matrix_scalar_uint64_short
 void subtract_compound_matrix_scalar_uint64_short() {
 uint64_t4x2 b;
-short vs;
+int16_t vs;
   // NOOPT:       [[SCALAR:%.*]] = load i16, ptr %vs, align 2{{$}}
   // OPT:         [[SCALAR:%.*]] = load i16, ptr %vs, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64

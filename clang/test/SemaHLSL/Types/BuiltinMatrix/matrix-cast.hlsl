@@ -106,33 +106,33 @@ void f5() {
   matrix_3_3<float> f32_3x3;
   matrix_3_3<double> f64_3x3;
   matrix_4_4<double> f64_4x4;
-  matrix_4_4<signed int> i32_4x4;
-  matrix_3_3<unsigned int> u32_3x3;
-  matrix_4_4<unsigned int> u32_4x4;
+  matrix_4_4<int> i32_4x4;
+  matrix_3_3<uint> u32_3x3;
+  matrix_4_4<uint> u32_4x4;
   float f;
 
   f64_3x3 = (matrix_3_3<double>)f32_3x3;
   f64_4x4 = (matrix_4_4<double>)f32_3x3; // expected-error {{conversion between matrix types 'matrix_4_4<double>' (aka 'matrix<double, 4, 4>') and 'matrix<float, 3, 3>' of different size is not allowed}}
-  i32_4x4 = (matrix_4_4<signed int>)f64_4x4;
-  u32_3x3 = (matrix_4_4<unsigned int>)i32_4x4; // expected-error {{assigning to 'matrix<[...], 3, 3>' from incompatible type 'matrix<[...], 4, 4>'}}
-  u32_4x4 = (matrix_4_4<unsigned int>)i32_4x4;
-  i32_4x4 = (matrix_4_4<signed int>)u32_4x4;
+  i32_4x4 = (matrix_4_4<int>)f64_4x4;
+  u32_3x3 = (matrix_4_4<uint>)i32_4x4; // expected-error {{assigning to 'matrix<[...], 3, 3>' from incompatible type 'matrix<[...], 4, 4>'}}
+  u32_4x4 = (matrix_4_4<uint>)i32_4x4;
+  i32_4x4 = (matrix_4_4<int>)u32_4x4;
 }
 
 void f6() {
   matrix_3_3<float> f32_3x3;
   matrix_3_3<double> f64_3x3;
   matrix_4_4<double> f64_4x4;
-  matrix_4_4<signed int> i32_4x4;
-  matrix_3_3<unsigned int> u32_3x3;
-  matrix_4_4<unsigned int> u32_4x4;
+  matrix_4_4<int> i32_4x4;
+  matrix_3_3<uint> u32_3x3;
+  matrix_4_4<uint> u32_4x4;
   float f;
 
   f64_3x3 = static_cast<matrix_3_3<double>>(f32_3x3);
   f64_4x4 = static_cast<matrix_4_4<double>>(f32_3x3); // expected-error {{conversion between matrix types 'matrix_4_4<double>' (aka 'matrix<double, 4, 4>') and 'matrix<float, 3, 3>' of different size is not allowed}}
 
-  i32_4x4 = static_cast<matrix_4_4<signed int>>(f64_4x4);
-  u32_3x3 = static_cast<matrix_4_4<unsigned int>>(i32_4x4); // expected-error {{assigning to 'matrix<[...], 3, 3>' from incompatible type 'matrix<[...], 4, 4>'}}
-  u32_4x4 = static_cast<matrix_4_4<unsigned int>>(i32_4x4);
+  i32_4x4 = static_cast<matrix_4_4<int>>(f64_4x4);
+  u32_3x3 = static_cast<matrix_4_4<uint>>(i32_4x4); // expected-error {{assigning to 'matrix<[...], 3, 3>' from incompatible type 'matrix<[...], 4, 4>'}}
+  u32_4x4 = static_cast<matrix_4_4<uint>>(i32_4x4);
   i32_4x4 = static_cast<matrix_4_4<signed int>>(u32_4x4);
 }

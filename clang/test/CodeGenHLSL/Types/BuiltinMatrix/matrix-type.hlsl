@@ -139,7 +139,7 @@ float3x3 return_matrix(inout float3x3 a) {
 class MatrixClass {
   int Tmp1;
   float3x4 Data;
-  long Tmp2;
+  int64_t Tmp2;
 };
 
 // SPIRV-LABEL: define {{.*}}matrix_class_reference
@@ -165,7 +165,7 @@ class MatrixClassTemplate {
   using MatrixTy = matrix<Ty, Rows, Cols>;
   int Tmp1;
   MatrixTy Data;
-  long Tmp2;
+  int64_t Tmp2;
 };
 
 template <typename Ty, unsigned Rows, unsigned Cols>

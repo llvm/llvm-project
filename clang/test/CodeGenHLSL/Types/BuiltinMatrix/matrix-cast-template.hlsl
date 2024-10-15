@@ -38,8 +38,8 @@ void CastCharMatrixToUnsignedIntCStyle() {
   // CHECK-NEXT:  ret void
 
   matrix_4_4<int16_t> c;
-  matrix_4_4<unsigned int> u;
-  u = (matrix_4_4<unsigned int>)c;
+  matrix_4_4<uint> u;
+  u = (matrix_4_4<uint>)c;
 }
 
 // CHECK-LABEL: define {{.*}}CastCharMatrixToUnsignedIntStaticCast
@@ -50,8 +50,8 @@ void CastCharMatrixToUnsignedIntStaticCast() {
   // CHECK-NEXT:  ret void
 
   matrix_4_4<int16_t> c;
-  matrix_4_4<unsigned int> u;
-  u = static_cast<matrix_4_4<unsigned int>>(c);
+  matrix_4_4<uint> u;
+  u = static_cast<matrix_4_4<uint>>(c);
 }
 
 // CHECK-LABEL: define {{.*}}CastUnsignedLongIntMatrixToShortCStyle
@@ -61,9 +61,9 @@ void CastUnsignedLongIntMatrixToShortCStyle() {
   // CHECK-NEXT: store <16 x i16> [[CONV]], ptr {{.*}}, align 2
   // CHECK-NEXT: ret void
 
-  matrix_4_4<unsigned long int> u;
-  matrix_4_4<short int> s;
-  s = (matrix_4_4<short int>)u;
+  matrix_4_4<uint64_t> u;
+  matrix_4_4<int16_t> s;
+  s = (matrix_4_4<int16_t>)u;
 }
 
 // CHECK-LABEL: define {{.*}}CastUnsignedLongIntMatrixToShortStaticCast
@@ -73,9 +73,9 @@ void CastUnsignedLongIntMatrixToShortStaticCast() {
   // CHECK-NEXT: store <16 x i16> [[CONV]], ptr {{.*}}, align 2
   // CHECK-NEXT: ret void
 
-  matrix_4_4<unsigned long int> u;
-  matrix_4_4<short int> s;
-  s = static_cast<matrix_4_4<short int>>(u);
+  matrix_4_4<uint64_t> u;
+  matrix_4_4<int16_t> s;
+  s = static_cast<matrix_4_4<int16_t>>(u);
 }
 
 // CHECK-LABEL: define {{.*}}CastIntMatrixToShortCStyle
@@ -86,8 +86,8 @@ void CastIntMatrixToShortCStyle() {
   // CHECK-NEXT:  ret void
 
   matrix_4_4<int> i;
-  matrix_4_4<short int> s;
-  s = (matrix_4_4<short int>)i;
+  matrix_4_4<int16_t> s;
+  s = (matrix_4_4<int16_t>)i;
 }
 
 // CHECK-LABEL: define {{.*}}CastIntMatrixToShortStaticCast
@@ -98,8 +98,8 @@ void CastIntMatrixToShortStaticCast() {
   // CHECK-NEXT:  ret void
 
   matrix_4_4<int> i;
-  matrix_4_4<short int> s;
-  s = static_cast<matrix_4_4<short int>>(i);
+  matrix_4_4<int16_t> s;
+  s = static_cast<matrix_4_4<int16_t>>(i);
 }
 
 // CHECK-LABEL: define {{.*}}CastIntMatrixToFloatCStyle
@@ -133,7 +133,7 @@ void CastUnsignedIntMatrixToFloatCStyle() {
   // CHECK-NEXT:  store <16 x float> [[CONV]], ptr {{.*}}, align 4
   // CHECK-NEXT:  ret void
 
-  matrix_4_4<unsigned short int> u;
+  matrix_4_4<uint16_t> u;
   matrix_4_4<float> f;
   f = (matrix_4_4<float>)u;
 }
@@ -145,7 +145,7 @@ void CastUnsignedIntMatrixToFloatStaticCast() {
   // CHECK-NEXT:  store <16 x float> [[CONV]], ptr {{.*}}, align 4
   // CHECK-NEXT:  ret void
 
-  matrix_4_4<unsigned short int> u;
+  matrix_4_4<uint16_t> u;
   matrix_4_4<float> f;
   f = static_cast<matrix_4_4<float>>(u);
 }
@@ -182,8 +182,8 @@ void CastFloatMatrixToUnsignedShortIntCStyle() {
   // CHECK-NEXT:  ret void
 
   matrix_4_4<float> f;
-  matrix_4_4<unsigned short int> i;
-  i = (matrix_4_4<unsigned short int>)f;
+  matrix_4_4<uint16_t> i;
+  i = (matrix_4_4<uint16_t>)f;
 }
 
 // CHECK-LABEL: define {{.*}}CastFloatMatrixToUnsignedShortIntStaticCast
@@ -194,8 +194,8 @@ void CastFloatMatrixToUnsignedShortIntStaticCast() {
   // CHECK-NEXT:  ret void
 
   matrix_4_4<float> f;
-  matrix_4_4<unsigned short int> i;
-  i = static_cast<matrix_4_4<unsigned short int>>(f);
+  matrix_4_4<uint16_t> i;
+  i = static_cast<matrix_4_4<uint16_t>>(f);
 }
 
 // CHECK-LABEL: define {{.*}}CastDoubleMatrixToFloatCStyle
@@ -229,9 +229,9 @@ void CastUnsignedShortIntToUnsignedIntCStyle() {
   // CHECK-NEXT:  store <16 x i32> [[CONV]], ptr {{.*}}, align 4
   // CHECK-NEXT:  ret void
 
-  matrix_4_4<unsigned short int> s;
-  matrix_4_4<unsigned int> i;
-  i = (matrix_4_4<unsigned int>)s;
+  matrix_4_4<uint16_t> s;
+  matrix_4_4<uint> i;
+  i = (matrix_4_4<uint>)s;
 }
 
 // CHECK-LABEL: define {{.*}}CastUnsignedShortIntToUnsignedIntStaticCast
@@ -241,9 +241,9 @@ void CastUnsignedShortIntToUnsignedIntStaticCast() {
   // CHECK-NEXT:  store <16 x i32> [[CONV]], ptr {{.*}}, align 4
   // CHECK-NEXT:  ret void
 
-  matrix_4_4<unsigned short int> s;
-  matrix_4_4<unsigned int> i;
-  i = static_cast<matrix_4_4<unsigned int>>(s);
+  matrix_4_4<uint16_t> s;
+  matrix_4_4<uint> i;
+  i = static_cast<matrix_4_4<uint>>(s);
 }
 
 // CHECK-LABEL: define {{.*}}CastUnsignedLongIntToUnsignedShortIntCStyle
@@ -253,9 +253,9 @@ void CastUnsignedLongIntToUnsignedShortIntCStyle() {
   // CHECK-NEXT:  store <16 x i16> [[CONV]], ptr {{.*}}, align 2
   // CHECK-NEXT:  ret void
 
-  matrix_4_4<unsigned long int> l;
-  matrix_4_4<unsigned short int> s;
-  s = (matrix_4_4<unsigned short int>)l;
+  matrix_4_4<uint64_t> l;
+  matrix_4_4<uint16_t> s;
+  s = (matrix_4_4<uint16_t>)l;
 }
 
 // CHECK-LABEL: define {{.*}}CastUnsignedLongIntToUnsignedShortIntStaticCast
@@ -265,9 +265,9 @@ void CastUnsignedLongIntToUnsignedShortIntStaticCast() {
   // CHECK-NEXT:  store <16 x i16> [[CONV]], ptr {{.*}}, align 2
   // CHECK-NEXT:  ret void
 
-  matrix_4_4<unsigned long int> l;
-  matrix_4_4<unsigned short int> s;
-  s = static_cast<matrix_4_4<unsigned short int>>(l);
+  matrix_4_4<uint64_t> l;
+  matrix_4_4<uint16_t> s;
+  s = static_cast<matrix_4_4<uint16_t>>(l);
 }
 
 // CHECK-LABEL: define {{.*}}CastUnsignedShortIntToIntCStyle
@@ -277,7 +277,7 @@ void CastUnsignedShortIntToIntCStyle() {
   // CHECK-NEXT:  store <16 x i32> [[CONV]], ptr {{.*}}, align 4
   // CHECK-NEXT:  ret void
 
-  matrix_4_4<unsigned short int> u;
+  matrix_4_4<uint16_t> u;
   matrix_4_4<int> i;
   i = (matrix_4_4<int>)u;
 }
@@ -289,7 +289,7 @@ void CastUnsignedShortIntToIntStaticCast() {
   // CHECK-NEXT:  store <16 x i32> [[CONV]], ptr {{.*}}, align 4
   // CHECK-NEXT:  ret void
 
-  matrix_4_4<unsigned short int> u;
+  matrix_4_4<uint16_t> u;
   matrix_4_4<int> i;
   i = static_cast<matrix_4_4<int>>(u);
 }
@@ -302,8 +302,8 @@ void CastIntToUnsignedLongIntCStyle() {
   // CHECK-NEXT:  ret void
 
   matrix_4_4<int> i;
-  matrix_4_4<unsigned long int> u;
-  u = (matrix_4_4<unsigned long int>)i;
+  matrix_4_4<uint64_t> u;
+  u = (matrix_4_4<uint64_t>)i;
 }
 
 // CHECK-LABEL: define {{.*}}CastIntToUnsignedLongIntStaticCast
@@ -314,8 +314,8 @@ void CastIntToUnsignedLongIntStaticCast() {
   // CHECK-NEXT:  ret void
 
   matrix_4_4<int> i;
-  matrix_4_4<unsigned long int> u;
-  u = static_cast<matrix_4_4<unsigned long int>>(i);
+  matrix_4_4<uint64_t> u;
+  u = static_cast<matrix_4_4<uint64_t>>(i);
 }
 
 class Foo {
