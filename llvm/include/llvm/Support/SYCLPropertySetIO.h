@@ -66,8 +66,13 @@ public:
     return static_cast<Type>(T);
   }
 
-  ~SYCLPropertyValue() {}
-
+  ~SYCLPropertyValue() {
+    if (std::holds_alternative<std::byte *>(Val)) {
+      auto ByteArrayVal = std::get<std::byte *>(Val);
+      if (ByteArrayVal)
+        delete[] ByteArrayVal;
+    }
+  }
   SYCLPropertyValue() = default;
 
   SYCLPropertyValue(Type Ty) {
