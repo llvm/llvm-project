@@ -125,10 +125,9 @@ NativeRegisterContextFreeBSD_arm64::ReadRegister(const RegisterInfo *reg_info,
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status::FromErrorStringWithFormat("no lldb regnum for %s",
-                                             reg_info && reg_info->name ?
-                                             reg_info->name :
-                                             "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+	"no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   uint32_t set = GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg);
   error = ReadRegisterSet(set);
@@ -151,10 +150,9 @@ Status NativeRegisterContextFreeBSD_arm64::WriteRegister(
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status::FromErrorStringWithFormat("no lldb regnum for %s",
-                                             reg_info && reg_info->name ?
-                                             reg_info->name :
-                                             "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+	"no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   uint32_t set = GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg);
   error = ReadRegisterSet(set);
