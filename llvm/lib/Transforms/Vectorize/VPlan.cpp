@@ -1004,13 +1004,9 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
     assert(!R.isPhi() && "Tried to move phi recipe to end of block");
     R.moveBefore(*IRVPBB, IRVPBB->end());
   }
-  VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
-  VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-  VPBlockUtils::connectBlocks(PredVPBB, IRVPBB);
-  for (auto *Succ : to_vector(VPBB->getSuccessors())) {
-    VPBlockUtils::connectBlocks(IRVPBB, Succ);
-    VPBlockUtils::disconnectBlocks(VPBB, Succ);
-  }
+
+  VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
+
   delete VPBB;
 }
 
