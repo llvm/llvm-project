@@ -11,8 +11,7 @@
 int normal_fn(int);
 int vector_pcs_fn(int) __attribute__((aarch64_vector_pcs));
 
-// expected-error@+4 {{definition with same mangled name '_ZZ23function_pcs_attributesvENK3$_0clIFiiEEEDaRT_' as another definition}}
-// expected-note@+3 {{previous definition is here}}
+// expected-error@+3 {{definition with same mangled name '_ZZ23function_pcs_attributesvENK3$_0clIFiiEEEDaRT_' as another definition}}
 __attribute__((aarch64_vector_pcs))
 int function_pcs_attributes() {
   auto a = [](auto &fn) { return fn(42); };
@@ -24,8 +23,7 @@ int function_pcs_attributes() {
 int normal_fn(int);
 int streaming_fn(int) __arm_streaming;
 
-// expected-error@+3 {{definition with same mangled name '_ZZ32function_params_normal_streamingvENK3$_0clIFiiEEEDaRT_' as another definition}}
-// expected-note@+2 {{previous definition is here}}
+// expected-error@+2 {{definition with same mangled name '_ZZ32function_params_normal_streamingvENK3$_0clIFiiEEEDaRT_' as another definition}}
 int function_params_normal_streaming() {
   auto a = [](auto &fn) { return fn(42); };
   return a(normal_fn) + a(streaming_fn);
