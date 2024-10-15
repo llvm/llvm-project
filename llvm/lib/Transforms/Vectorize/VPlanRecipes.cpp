@@ -2071,6 +2071,40 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   State.set(this, NewRed, /*IsScalar*/ true);
 }
 
+InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  RecurKind RdxKind = RdxDesc.getRecurrenceKind();
+  Type *ElementTy = Ctx.Types.inferScalarType(this);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  unsigned Opcode = RdxDesc.getOpcode();
+
+  // TODO: Support any-of and in-loop reductions.
+  assert(
+      (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
+       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+      "Any-of reduction not implemented in VPlan-based cost model currently.");
+  assert(
+      (!cast<VPReductionPHIRecipe>(getOperand(0))->isInLoop() ||
+       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
+      "In-loop reduction not implemented in VPlan-based cost model currently.");
+
+  assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
+         "Inferred type and recurrence type mismatch.");
+
+  // Cost = Reduction cost + BinOp cost
+  InstructionCost Cost =
+      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, CostKind);
+  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
+    Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
+    return Cost + Ctx.TTI.getMinMaxReductionCost(
+                      Id, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+  }
+
+  return Cost + Ctx.TTI.getArithmeticReductionCost(
+                    Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
@@ -2907,7 +2941,33 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
-  return Ctx.getLegacyCost(IG->getInsertPos(), VF);
+  Instruction *I = getInsertPos();
+  Type *ValTy = Ctx.Types.inferScalarType(
+      getNumDefinedValues() > 0 ? getVPValue(0) : getStoredValues()[0]);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  unsigned AS = getLoadStoreAddressSpace(I);
+  enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  unsigned InterleaveFactor = IG->getFactor();
+  auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
+
+  // Holds the indices of existing members in the interleaved group.
+  SmallVector<unsigned, 4> Indices;
+  for (unsigned IF = 0; IF < InterleaveFactor; IF++)
+    if (IG->getMember(IF))
+      Indices.push_back(IF);
+
+  // Calculate the cost of the whole interleaved group.
+  InstructionCost Cost = Ctx.TTI.getInterleavedMemoryOpCost(
+      I->getOpcode(), WideVecTy, IG->getFactor(), Indices, IG->getAlign(), AS,
+      CostKind, getMask(), NeedsMaskForGaps);
+
+  if (!IG->isReverse())
+    return Cost;
+
+  return Cost + IG->getNumMembers() *
+                    Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                           VectorTy, std::nullopt, CostKind, 0);
 }
 
 void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {

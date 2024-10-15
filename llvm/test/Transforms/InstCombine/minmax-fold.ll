@@ -852,10 +852,8 @@ define i32 @common_factor_umax_extra_use_both(i32 %a, i32 %b, i32 %c) {
 
 define float @not_min_of_min(i8 %i, float %x) {
 ; CHECK-LABEL: @not_min_of_min(
-; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp fast oge float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[MIN1:%.*]] = select fast i1 [[CMP1_INV]], float 1.000000e+00, float [[X]]
-; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp fast oge float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[MIN2:%.*]] = select fast i1 [[CMP2_INV]], float 2.000000e+00, float [[X]]
+; CHECK-NEXT:    [[MIN1:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[MIN2:%.*]] = call fast float @llvm.minnum.f32(float [[X]], float 2.000000e+00)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[I:%.*]], 16
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP3]], float [[MIN1]], float [[MIN2]]
 ; CHECK-NEXT:    ret float [[R]]

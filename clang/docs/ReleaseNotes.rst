@@ -509,10 +509,14 @@ Bug Fixes to C++ Support
   a class template. (#GH102320)
 - Fix a crash when parsing a pseudo destructor involving an invalid type. (#GH111460)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
-  and undeclared templates. (#GH107047, #GH49093)
+  and undeclared templates. (#GH107047), (#GH49093)
 - Clang no longer crashes when a lambda contains an invalid block declaration that contains an unexpanded
   parameter pack. (#GH109148)
 - Fixed overload handling for object parameters with top-level cv-qualifiers in explicit member functions (#GH100394)
+- Fixed a bug in lambda captures where ``constexpr`` class-type objects were not properly considered ODR-used in
+  certain situations. (#GH47400), (#GH90896)
+- Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
+- During the lookup for a base class name, non-type names are ignored. (#GH16855)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -620,6 +624,8 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+- Clang now supports CUDA SDK up to 12.6
+- Added support for sm_100
 
 AIX Support
 ^^^^^^^^^^^
