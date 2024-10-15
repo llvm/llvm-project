@@ -1267,7 +1267,6 @@ define <16 x i8> @addhn2_16b_natural(<8 x i8> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr q1, [x0]
 ; CHECK-SD-NEXT:    ldr q2, [x1]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    addhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1275,7 +1274,6 @@ define <16 x i8> @addhn2_16b_natural(<8 x i8> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    ldr q2, [x1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    add v1.8h, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    shrn2 v0.16b, v1.8h, #8
 ; CHECK-GI-NEXT:    ret
@@ -1293,7 +1291,6 @@ define <8 x i16> @addhn2_8h_natural(<4 x i16> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr q1, [x0]
 ; CHECK-SD-NEXT:    ldr q2, [x1]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1301,7 +1298,6 @@ define <8 x i16> @addhn2_8h_natural(<4 x i16> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    ldr q2, [x1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    add v1.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #16
 ; CHECK-GI-NEXT:    ret
@@ -1319,7 +1315,6 @@ define <4 x i32> @addhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr q1, [x0]
 ; CHECK-SD-NEXT:    ldr q2, [x1]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    addhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1327,7 +1322,6 @@ define <4 x i32> @addhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    ldr q2, [x1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    add v1.2d, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #32
 ; CHECK-GI-NEXT:    ret
@@ -1445,7 +1439,6 @@ define <16 x i8> @subhn2_16b_natural(<8 x i8> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr q1, [x0]
 ; CHECK-SD-NEXT:    ldr q2, [x1]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    subhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1453,7 +1446,6 @@ define <16 x i8> @subhn2_16b_natural(<8 x i8> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    ldr q2, [x1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    sub v1.8h, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    shrn2 v0.16b, v1.8h, #8
 ; CHECK-GI-NEXT:    ret
@@ -1471,7 +1463,6 @@ define <8 x i16> @subhn2_8h_natural(<4 x i16> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr q1, [x0]
 ; CHECK-SD-NEXT:    ldr q2, [x1]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    subhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1479,7 +1470,6 @@ define <8 x i16> @subhn2_8h_natural(<4 x i16> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    ldr q2, [x1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    sub v1.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #16
 ; CHECK-GI-NEXT:    ret
@@ -1497,7 +1487,6 @@ define <4 x i32> @subhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr q1, [x0]
 ; CHECK-SD-NEXT:    ldr q2, [x1]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    subhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1505,7 +1494,6 @@ define <4 x i32> @subhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    ldr q2, [x1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    sub v1.2d, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #32
 ; CHECK-GI-NEXT:    ret

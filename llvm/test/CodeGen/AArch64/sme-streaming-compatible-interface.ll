@@ -139,12 +139,10 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    add x8, sp, #16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    ldr z0, [x8] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbz w19, #0, .LBB4_2
@@ -162,9 +160,7 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
