@@ -2418,10 +2418,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpShared,
                       Symbol::Flag::OmpLinear};
 
-                  for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
-                    for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
-                      checkExclusivelists(
-                          hostAssocSym, ompFlag1, symbol, ompFlag2);
+                  // For OMP TARGET TEAMS directive some sharing attribute
+                  // flags and mapping attribute flags can co-exist.
+                  if (!(llvm::omp::allTeamsSet.test(GetContext().directive) ||
+                          llvm::omp::allParallelSet.test(
+                              GetContext().directive))) {
+                    for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
+                      for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
+                        checkExclusivelists(
+                            hostAssocSym, ompFlag1, symbol, ompFlag2);
+                      }
                     }
                   }
                 }

@@ -6948,25 +6948,8 @@ bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
 }
 
 bool llvm::isNotCrossLaneOperation(const Instruction *I) {
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    // TODO: expand this list.
-    case Intrinsic::ctlz:
-    case Intrinsic::cttz:
-    case Intrinsic::ctpop:
-    case Intrinsic::umin:
-    case Intrinsic::umax:
-    case Intrinsic::smin:
-    case Intrinsic::smax:
-    case Intrinsic::usub_sat:
-    case Intrinsic::uadd_sat:
-    case Intrinsic::ssub_sat:
-    case Intrinsic::sadd_sat:
-      return true;
-    default:
-      return false;
-    }
-  }
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    return isTriviallyVectorizable(II->getIntrinsicID());
   return !isa<CallBase, BitCastInst, ShuffleVectorInst, ExtractElementInst>(I);
 }
 

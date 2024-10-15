@@ -949,7 +949,6 @@ void IntExprParsing() {
 #pragma acc loop vector(length:returns_int())
   for(;;);
 
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop worker
   for(;;);
   // expected-error@+1{{expected expression}}
@@ -959,8 +958,8 @@ void IntExprParsing() {
   // expected-error@+1{{expected expression}}
 #pragma acc loop worker(invalid:)
   for(;;);
-  // expected-error@+2{{invalid tag 'invalid' on 'worker' clause}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
+  // expected-error@+1{{invalid tag 'invalid' on 'worker' clause}}
 #pragma acc loop worker(invalid:5)
   for(;;);
   // expected-error@+1{{expected expression}}
@@ -983,21 +982,21 @@ void IntExprParsing() {
   // expected-note@+1{{to match this '('}}
 #pragma acc loop worker(length:6,4)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
 #pragma acc loop worker(5)
   for(;;);
-  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
+  // expected-error@+1{{invalid tag 'length' on 'worker' clause}}
 #pragma acc loop worker(length:5)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
 #pragma acc loop worker(num:5)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
 #pragma acc loop worker(returns_int())
   for(;;);
-  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+#pragma acc kernels
+  // expected-error@+1{{invalid tag 'length' on 'worker' clause}}
 #pragma acc loop worker(length:returns_int())
   for(;;);
 }
