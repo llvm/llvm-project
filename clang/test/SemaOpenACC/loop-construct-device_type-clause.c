@@ -38,7 +38,6 @@ void uses() {
   // Only 'collapse', 'gang', 'worker', 'vector', 'seq', 'independent', 'auto',
   // and 'tile'  allowed after 'device_type'.
 
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) vector
   for(;;);
 

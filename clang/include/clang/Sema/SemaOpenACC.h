@@ -123,6 +123,11 @@ public:
   /// permits us to implement the restriction of no further 'gang' or 'worker'
   /// clauses.
   SourceLocation LoopWorkerClauseLoc;
+  /// If there is a current 'active' loop construct with a 'vector' clause on it
+  /// (on any sort of construct), this has the source location for it.  This
+  /// permits us to implement the restriction of no further 'gang', 'vector', or
+  /// 'worker' clauses.
+  SourceLocation LoopVectorClauseLoc;
 
   // Redeclaration of the version in OpenACCClause.h.
   using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
@@ -679,6 +684,7 @@ public:
     OpenACCDirectiveKind DirKind;
     SourceLocation OldLoopGangClauseOnKernelLoc;
     SourceLocation OldLoopWorkerClauseLoc;
+    SourceLocation OldLoopVectorClauseLoc;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
     LoopInConstructRAII LoopRAII;
 
