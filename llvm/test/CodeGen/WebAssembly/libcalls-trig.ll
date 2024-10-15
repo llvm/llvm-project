@@ -10,10 +10,11 @@ declare fp128 @llvm.cos.f128(fp128)
 declare fp128 @llvm.tan.f128(fp128)
 declare fp128 @llvm.asin.f128(fp128)
 declare fp128 @llvm.acos.f128(fp128)
-declare fp128 @llvm.atan.f128.i32(fp128)
+declare fp128 @llvm.atan.f128(fp128)
 declare fp128 @llvm.sinh.f128(fp128)
 declare fp128 @llvm.cosh.f128(fp128)
 declare fp128 @llvm.tanh.f128(fp128)
+declare fp128 @llvm.atan2.f128(fp128, fp128)
 
 declare double @llvm.sin.f64(double)
 declare double @llvm.cos.f64(double)
@@ -24,6 +25,7 @@ declare double @llvm.atan.f64(double)
 declare double @llvm.sinh.f64(double)
 declare double @llvm.cosh.f64(double)
 declare double @llvm.tanh.f64(double)
+declare double @llvm.atan2.f64(double, double)
 
 declare float @llvm.sin.f32(float)
 declare float @llvm.cos.f32(float)
@@ -34,6 +36,7 @@ declare float @llvm.atan.f32(float)
 declare float @llvm.sinh.f32(float)
 declare float @llvm.cosh.f32(float)
 declare float @llvm.tanh.f32(float)
+declare float @llvm.atan2.f32(float, float)
 
 
 define fp128 @fp128libcalls(fp128 %x) {
@@ -166,13 +169,14 @@ define fp128 @fp128libcalls(fp128 %x) {
   %d = call fp128 @llvm.sin.f128(fp128 %x)
   %e = call fp128 @llvm.cos.f128(fp128 %d)
   %f = call fp128 @llvm.tan.f128(fp128 %e)
-  %g = call fp128 @llvm.asin.f128.i32(fp128 %f)
+  %g = call fp128 @llvm.asin.f128(fp128 %f)
   %h = call fp128 @llvm.acos.f128(fp128 %g)
   %i = call fp128 @llvm.atan.f128(fp128 %h)
   %a = call fp128 @llvm.sinh.f128(fp128 %i)
   %b = call fp128 @llvm.cosh.f128(fp128 %a)
   %c = call fp128 @llvm.tanh.f128(fp128 %b)
-  ret fp128 %c
+  %j = call fp128 @llvm.atan2.f128(fp128 %x, fp128 %c)
+  ret fp128 %j
 }
 
 define double @f64libcalls(double %x) {
@@ -201,7 +205,8 @@ define double @f64libcalls(double %x) {
  %f = call double @llvm.sinh.f64(double %e)
  %g = call double @llvm.cosh.f64(double %f)
  %h = call double @llvm.tanh.f64(double %g)
- ret double %h
+ %i = call double @llvm.atan2.f64(double %x, double %h)
+ ret double %i
 }
 
 define float @f32libcalls(float %x) {
@@ -230,5 +235,6 @@ define float @f32libcalls(float %x) {
  %f = call float @llvm.sinh.f32(float %e)
  %g = call float @llvm.cosh.f32(float %f)
  %h = call float @llvm.tanh.f32(float %g)
- ret float %h
+ %i = call float @llvm.atan2.f32(float %x, float %h)
+ ret float %i
 }
