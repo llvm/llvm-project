@@ -1858,7 +1858,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
   // Use i32 for the gep index type when the value is constant,
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = State.VF.isScalable() && (CurrentPart > 0)
+  Type *IndexTy = State.VF.isScalable() && CurrentPart > 0
                       ? DL.getIndexType(Builder.getPtrTy(0))
                       : Builder.getInt32Ty();
   Value *Ptr = State.get(getOperand(0), VPLane(0));
