@@ -1403,7 +1403,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       llvm::Value *nonPrivateVar =
           moduleTranslation.lookupValue(opInst.getPrivateVars()[i]);
       assert(nonPrivateVar);
-      moduleTranslation.mapValue(privateDecls[i].getAllocMoldArg(), nonPrivateVar);
+      moduleTranslation.mapValue(privateDecls[i].getAllocMoldArg(),
+                                 nonPrivateVar);
 
       // in-place convert the private allocation region
       SmallVector<llvm::Value *, 1> phis;
@@ -1475,10 +1476,12 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       llvm::Value *nonPrivateVar =
           moduleTranslation.lookupValue(opInst.getPrivateVars()[i]);
       assert(nonPrivateVar);
-      moduleTranslation.mapValue(privateDecls[i].getCopyMoldArg(), nonPrivateVar);
+      moduleTranslation.mapValue(privateDecls[i].getCopyMoldArg(),
+                                 nonPrivateVar);
 
       // map copyRegion lhs arg
-      moduleTranslation.mapValue(privateDecls[i].getCopyPrivateArg(), llvmPrivateVars[i]);
+      moduleTranslation.mapValue(privateDecls[i].getCopyPrivateArg(),
+                                 llvmPrivateVars[i]);
 
       // in-place convert copy region
       builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
