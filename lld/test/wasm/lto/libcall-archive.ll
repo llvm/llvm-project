@@ -2,19 +2,21 @@
 ; RUN: llvm-as -o %t.o %s
 ; RUN: llvm-as -o %t2.o %S/Inputs/libcall-archive.ll
 ; RUN: llvm-ar rcs %t.a %t2.o
-; RUN: wasm-ld -mllvm -mattr=-bulk-memory -o %t %t.o %t.a
+; RUN: wasm-ld -o %t %t.o %t.a
 ; RUN: obj2yaml %t | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-define void @_start(ptr %a, ptr %b) {
+define void @_start(ptr %a, ptr %b) #0 {
 entry:
   call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 1024, i1 false)
   ret void
 }
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1)
+
+attributes #0 = { "target-features"="-bulk-memory" }
 
 ; CHECK:       - Type:            CUSTOM
 ; CHECK-NEXT:    Name:            name
