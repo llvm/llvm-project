@@ -5797,6 +5797,7 @@ it cannot be applied to a declaration if a definition at that location would be
 considered inline.
 
 Not all targets support this attribute:
+
 - ELF target support depends on both the linker and runtime linker, and is
   available in at least lld 4.0 and later, binutils 2.20.1 and later, glibc
   v2.11.1 and later, and FreeBSD 9.1 and later.
