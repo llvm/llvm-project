@@ -96,7 +96,7 @@ private:
 
 public:
   GenericCycle()
-      : ExitBlocksCache(std::make_unique<SmallVector<BlockT *, 4>>()){};
+      : ExitBlocksCache(std::make_unique<SmallVector<BlockT *, 4>>()) {};
 
   /// \brief Whether the cycle is a natural loop.
   bool isReducible() const { return Entries.size() == 1; }
