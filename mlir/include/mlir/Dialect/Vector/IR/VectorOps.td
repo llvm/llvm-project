@@ -13,20 +13,21 @@
 #ifndef MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
 #define MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
 
-include "mlir/Dialect/Vector/IR/Vector.td"
-include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"
 include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"
-include "mlir/IR/EnumAttr.td"
+include "mlir/Dialect/Vector/IR/Vector.td"
+include "mlir/Dialect/Vector/IR/VectorAttributes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
+include "mlir/IR/EnumAttr.td"
 
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
@@ -627,6 +628,7 @@ def Vector_DeinterleaveOp :
 
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      TypesMatchWith<"result type matches element type of vector operand",
                     "vector", "result",
                     "::llvm::cast<VectorType>($_self).getElementType()">]>,
@@ -673,6 +675,7 @@ def Vector_ExtractElementOp :
 
 def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      InferTypeOpAdaptorWithIsCompatible]> {
@@ -2801,6 +2804,7 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
 
 def Vector_SplatOp : Vector_Op<"splat", [
     Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",
                    "::llvm::cast<VectorType>($_self).getElementType()">

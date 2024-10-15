@@ -35,10 +35,27 @@ convertArithOverflowFlags(arith::IntegerOverflowFlags flags) {
 
 void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                           SetIntRangeFn setResultRange) {
-  auto constAttr = llvm::dyn_cast_or_null<IntegerAttr>(getValue());
-  if (constAttr) {
+  if (auto constAttr = llvm::dyn_cast_or_null<IntegerAttr>(getValue())) {
     const APInt &value = constAttr.getValue();
     setResultRange(getResult(), ConstantIntRanges::constant(value));
+    return;
+  }
+  if (auto constAttr =
+          llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
+    std::optional<ConstantIntRanges> result;
+    for (APInt &&val : constAttr) {
+      auto range = ConstantIntRanges::constant(val);
+      if (!result) {
+        result = range;
+      } else {
+        result = result->rangeUnion(range);
+      }
+    }
+
+    if (result)
+      setResultRange(getResult(), *result);
+
+    return;
   }
 }
 

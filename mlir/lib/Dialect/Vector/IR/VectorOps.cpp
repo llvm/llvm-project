@@ -1221,6 +1221,11 @@ void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
+void ExtractElementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                         SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
 void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
                                      Value source) {
   result.addOperands({source});
@@ -1272,6 +1277,11 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
+
+void ExtractOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                  SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
 
 void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
                               Value source, int64_t position) {
@@ -6421,6 +6431,11 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.
   return SplatElementsAttr::get(getType(), {constOperand});
+}
+
+void SplatOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
 }
 
 //===----------------------------------------------------------------------===//
