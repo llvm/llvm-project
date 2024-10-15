@@ -936,8 +936,9 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
       continue;
 
     for (VPUser *U : collectUsersRecursively(PhiR))
-      if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(U)) {
-        RecWithFlags->dropPoisonGeneratingFlags();
+      if (auto *R = dyn_cast<VPRecipeBase>(U)) {
+        if (auto *IRFlags = R->getIRFlags())
+          IRFlags->dropPoisonGeneratingFlags();
       }
   }
 }
@@ -1182,8 +1183,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       // Any wrapping introduced by shrinking this operation shouldn't be
       // considered undefined behavior. So, we can't unconditionally copy
       // arithmetic wrapping flags to VPW.
-      if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
-        VPW->dropPoisonGeneratingFlags();
+      if (auto *Flags = R.getIRFlags())
+        Flags->dropPoisonGeneratingFlags();
 
       using namespace llvm::VPlanPatternMatch;
       if (OldResSizeInBits != NewResSizeInBits &&
@@ -1639,7 +1640,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // This recipe contributes to the address computation of a widen
       // load/store. If the underlying instruction has poison-generating flags,
       // drop them directly.
-      if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(CurRec)) {
+      if (auto *Flags = CurRec->getIRFlags()) {
         VPValue *A, *B;
         using namespace llvm::VPlanPatternMatch;
         // Dropping disjoint from an OR may yield incorrect results, as some
@@ -1647,25 +1648,25 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
         // for dependence analysis). Instead, replace it with an equivalent Add.
         // This is possible as all users of the disjoint OR only access lanes
         // where the operands are disjoint or poison otherwise.
-        if (match(RecWithFlags, m_BinaryOr(m_VPValue(A), m_VPValue(B))) &&
-            RecWithFlags->isDisjoint()) {
-          VPBuilder Builder(RecWithFlags);
+        if (match(CurRec, m_BinaryOr(m_VPValue(A), m_VPValue(B))) &&
+            Flags->isDisjoint()) {
+          VPValue *OldValue = CurRec->getVPSingleValue();
+          VPBuilder Builder(CurRec);
           VPInstruction *New = Builder.createOverflowingOp(
-              Instruction::Add, {A, B}, {false, false},
-              RecWithFlags->getDebugLoc());
-          New->setUnderlyingValue(RecWithFlags->getUnderlyingValue());
-          RecWithFlags->replaceAllUsesWith(New);
-          RecWithFlags->eraseFromParent();
+              Instruction::Add, {A, B}, {false, false}, CurRec->getDebugLoc());
+          New->setUnderlyingValue(OldValue->getUnderlyingValue());
+          OldValue->replaceAllUsesWith(New);
+          CurRec->eraseFromParent();
           CurRec = New;
         } else
-          RecWithFlags->dropPoisonGeneratingFlags();
+          Flags->dropPoisonGeneratingFlags();
       } else {
         Instruction *Instr = dyn_cast_or_null<Instruction>(
             CurRec->getVPSingleValue()->getUnderlyingValue());
         (void)Instr;
         assert((!Instr || !Instr->hasPoisonGeneratingFlags()) &&
                "found instruction with poison generating flags not covered by "
-               "VPRecipeWithIRFlags");
+               "without VPRecipeIRFlags");
       }
 
       // Add new definitions to the worklist.
