@@ -206,8 +206,8 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       // For inferred modules, the module map that allowed inferring is not
       // related to the virtual containing module map file. It did affect the
       // compilation, though.
-      if (auto F = MM.getModuleMapFileIDForUniquing(Mod); F.isValid())
-        ModuleMaps.insert(F);
+      if (auto UniqF = MM.getModuleMapFileIDForUniquing(Mod); UniqF.isValid())
+        ModuleMaps.insert(UniqF);
 
       for (auto *SubM : Mod->submodules())
         Q.push(SubM);
