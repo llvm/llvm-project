@@ -342,7 +342,6 @@ struct TemplateParameterListBuilder {
       RWBuffer<int> Buf;
   }
 
-<<<<<<< HEAD
   When dumping the AST and filtering for "RWBuffer", the resulting AST
   structure is what we're trying to construct below, specifically the
   CSE portion.
@@ -446,6 +445,9 @@ struct TemplateParameterListBuilder {
     QualType T = Builder.Template->getInjectedClassNameSpecialization();
     T = S.Context.getInjectedClassNameType(Builder.Record, T);
 
+    ArrayRef<TemplateArgument> TempArgs =
+        Builder.Template->getInjectedTemplateArgs();
+
     return Builder;
   }
 };
@@ -460,7 +462,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
     Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD = nullptr) {
   TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
-    Builder.addTypeParameter(Name);
+    Builder.addTypenameTypeParameter(Name);
 
   return Builder.finalizeTemplateArgs(CD);
 }
