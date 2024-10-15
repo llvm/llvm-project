@@ -201,9 +201,8 @@ int Compilation::ExecuteCommand(const Command &C,
   // the global static timer list which, in principle, could be cleared without
   // us knowing about it.
   llvm::TimeRecord StartTime;
-  if (getArgs().hasArg(options::OPT_time)) {
+  if (getArgs().hasArg(options::OPT_time))
     StartTime = llvm::TimeRecord::getCurrentTime(/*Start=*/true);
-  }
 
   std::string Error;
   bool ExecutionFailed;
@@ -216,8 +215,8 @@ int Compilation::ExecuteCommand(const Command &C,
     Time -= StartTime;
     llvm::StringRef Name = llvm::sys::path::filename(C.getExecutable());
     llvm::errs() << "# " << Name << " "
-                 << llvm::format("%0.5f", Time.getUserTime()) << " "
-                 << llvm::format("%0.5f", Time.getSystemTime()) << "\n";
+                 << llvm::format("%0.2f", Time.getUserTime()) << " "
+                 << llvm::format("%0.2f", Time.getSystemTime()) << "\n";
   }
 
   if (!Error.empty()) {
