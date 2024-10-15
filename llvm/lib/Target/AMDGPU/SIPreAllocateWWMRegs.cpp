@@ -108,8 +108,12 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO, bool CanReallocate) {
   if (!TRI->isVGPR(*MRI, Reg))
     return false;
 
-  if (VRM->hasPhys(Reg))
+  if (VRM->hasPhys(Reg)) {
+    // Merge CanReallocate flags.
+    MCRegister PhysReg = VRM->getPhys(Reg);
+    PhysUsed[PhysReg] = PhysUsed[PhysReg] && CanReallocate;
     return false;
+  }
 
   LiveInterval &LI = LIS->getInterval(Reg);
 
