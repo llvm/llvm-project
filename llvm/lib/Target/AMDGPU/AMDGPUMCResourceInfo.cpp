@@ -91,16 +91,12 @@ MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
 }
 
-// The (partially complete) expression should have no recursion in it. After
-// all, we're trying to avoid recursion using this codepath. Returns true if
-// Sym is found within Expr without recursing on Expr, false otherwise.
+// The expression should have no recursion in it. Test a (sub-)expression to see
+// if it needs to be further visited, or if a recursion has been found. Returns
+// true if Sym is found within Expr (i.e., has a recurrance of Sym found), false
+// otherwise.
 static bool findSymbolInExpr(MCSymbol *Sym, const MCExpr *Expr,
-                             SmallVectorImpl<const MCExpr *> &Exprs,
-                             SmallPtrSetImpl<const MCExpr *> &Visited) {
-  // Skip duplicate visits
-  if (!Visited.insert(Expr).second)
-    return false;
-
+                             SmallPtrSetImpl<const MCExpr *> &Exprs) {
   switch (Expr->getKind()) {
   default:
     return false;
@@ -110,47 +106,27 @@ static bool findSymbolInExpr(MCSymbol *Sym, const MCExpr *Expr,
     if (Sym == &SymRef)
       return true;
     if (SymRef.isVariable())
-      Exprs.push_back(SymRef.getVariableValue(/*isUsed=*/false));
+      Exprs.insert(SymRef.getVariableValue(/*isUsed=*/false));
     return false;
   }
   case MCExpr::ExprKind::Binary: {
     const MCBinaryExpr *BExpr = cast<MCBinaryExpr>(Expr);
-    Exprs.push_back(BExpr->getLHS());
-    Exprs.push_back(BExpr->getRHS());
+    Exprs.insert(BExpr->getLHS());
+    Exprs.insert(BExpr->getRHS());
     return false;
   }
   case MCExpr::ExprKind::Unary: {
     const MCUnaryExpr *UExpr = cast<MCUnaryExpr>(Expr);
-    Exprs.push_back(UExpr->getSubExpr());
+    Exprs.insert(UExpr->getSubExpr());
     return false;
   }
   case MCExpr::ExprKind::Target: {
     const AMDGPUMCExpr *AGVK = cast<AMDGPUMCExpr>(Expr);
     for (const MCExpr *E : AGVK->getArgs())
-      Exprs.push_back(E);
+      Exprs.insert(E);
     return false;
   }
   }
-}
-
-// Symbols whose values eventually are used through their defines (i.e.,
-// recursive) must be avoided. Do a walk over Expr to see if Sym will occur in
-// it. The Expr is an MCExpr given through a callee's equivalent MCSymbol so if
-// no recursion is found Sym can be safely assigned to a (sub-)expr which
-// contains the symbol Expr is associated with. Returns true if Sym exists
-// in Expr or its sub-expressions, false otherwise.
-static bool foundRecursiveSymbolDef(MCSymbol *Sym, const MCExpr *Expr) {
-  SmallVector<const MCExpr *, 8> WorkList;
-  SmallPtrSet<const MCExpr *, 8> Visited;
-  WorkList.push_back(Expr);
-
-  while (!WorkList.empty()) {
-    const MCExpr *CurExpr = WorkList.pop_back_val();
-    if (findSymbolInExpr(Sym, CurExpr, WorkList, Visited))
-      return true;
-  }
-
-  return false;
 }
 
 void MCResourceInfo::assignResourceInfoExpr(
@@ -163,23 +139,31 @@ void MCResourceInfo::assignResourceInfoExpr(
   MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
   if (!Callees.empty()) {
     SmallVector<const MCExpr *, 8> ArgExprs;
-    // Avoid recursive symbol assignment.
     SmallPtrSet<const Function *, 8> Seen;
     ArgExprs.push_back(LocalConstExpr);
-    const Function &F = MF.getFunction();
-    Seen.insert(&F);
 
     for (const Function *Callee : Callees) {
       if (!Seen.insert(Callee).second)
         continue;
+
+      SmallPtrSet<const MCExpr *, 8> WorkSet;
       MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
-      bool CalleeIsVar = CalleeValSym->isVariable();
-      if (!CalleeIsVar ||
-          (CalleeIsVar &&
-           !foundRecursiveSymbolDef(
-               Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
+      if (CalleeValSym->isVariable())
+        WorkSet.insert(CalleeValSym->getVariableValue(/*IsUsed=*/false));
+      else
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+
+      bool FoundRecursion = false;
+      while (!WorkSet.empty() && !FoundRecursion) {
+        auto It = WorkSet.begin();
+        const MCExpr *Expr = *It;
+        WorkSet.erase(Expr);
+
+        FoundRecursion = findSymbolInExpr(Sym, Expr, WorkSet);
       }
+
+      if (CalleeValSym->isVariable() && !FoundRecursion)
+        ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
     }
     if (ArgExprs.size() > 1)
       SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
@@ -235,15 +219,24 @@ void MCResourceInfo::gatherResourceInfo(
       if (!Seen.insert(Callee).second)
         continue;
       if (!Callee->isDeclaration()) {
+        SmallPtrSet<const MCExpr *, 8> WorkSet;
         MCSymbol *CalleeValSym =
             getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
-        bool CalleeIsVar = CalleeValSym->isVariable();
-        if (!CalleeIsVar ||
-            (CalleeIsVar &&
-             !foundRecursiveSymbolDef(
-                 Sym, CalleeValSym->getVariableValue(/*IsUsed=*/false)))) {
+        if (CalleeValSym->isVariable())
+          WorkSet.insert(CalleeValSym->getVariableValue(/*IsUsed=*/false));
+        else
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
+
+        bool FoundRecursion = false;
+        while (!WorkSet.empty() && !FoundRecursion) {
+          auto It = WorkSet.begin();
+          const MCExpr *Expr = *It;
+          WorkSet.erase(Expr);
+
+          FoundRecursion = findSymbolInExpr(Sym, Expr, WorkSet);
         }
+        if (CalleeValSym->isVariable() && !FoundRecursion)
+          ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
       }
     }
     const MCExpr *localConstExpr =
