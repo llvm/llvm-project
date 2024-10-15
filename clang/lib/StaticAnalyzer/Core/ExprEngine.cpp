@@ -3768,7 +3768,7 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
     SVal V = State->getSVal(Ex, Pred->getLocationContext());
     std::optional<nonloc::SymbolVal> SEV = V.getAs<nonloc::SymbolVal>();
     if (SEV && SEV->isExpression()) {
-      auto [TrueTag, FalseTag] = getEagerlyAssumeBifurcationTags();
+      const auto &[TrueTag, FalseTag] = getEagerlyAssumeBifurcationTags();
 
       auto [StateTrue, StateFalse] = State->assume(*SEV);
 
