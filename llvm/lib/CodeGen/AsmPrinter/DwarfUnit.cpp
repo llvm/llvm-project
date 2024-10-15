@@ -1104,14 +1104,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       addUInt(Buffer, dwarf::DW_AT_APPLE_num_extra_inhabitants,
             std::nullopt, NumExtraInhabitants);
 
-  } else if (Tag == dwarf::DW_TAG_variant_part) {
-    auto SpareBitsMask = CTy->getSpareBitsMask();
-    if (!SpareBitsMask.isZero())
-      addConstantValue(Buffer, SpareBitsMask, false,
-                       dwarf::DW_AT_APPLE_spare_bits_mask);
-    if (auto OffsetInBits = CTy->getOffsetInBits()) 
-      addUInt(Buffer, dwarf::DW_AT_bit_offset, std::nullopt, OffsetInBits);
-  }
+  } 
 }
 
 void DwarfUnit::constructTemplateTypeParameterDIE(

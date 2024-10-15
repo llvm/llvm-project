@@ -1923,14 +1923,9 @@ void ModuleBitcodeWriter::writeDICompositeType(
     const DICompositeType *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
 
-  APInt SpareBitsMask = N->getSpareBitsMask();
-  unsigned IsWideAPInt = 0;;
-  if (!SpareBitsMask.isZero() && SpareBitsMask.getBitWidth() > 64) 
-    IsWideAPInt = 1 << 3;
 
   const unsigned IsNotUsedInOldTypeRef = 0x2;
-  Record.push_back(IsWideAPInt | IsNotUsedInOldTypeRef |
-                   (unsigned)N->isDistinct());
+  Record.push_back(IsNotUsedInOldTypeRef | (unsigned)N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -1954,17 +1949,6 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
   Record.push_back(N->getNumExtraInhabitants());
   Record.push_back(VE.getMetadataOrNullID(N->getRawSpecificationOf()));
-
-
-  if (!SpareBitsMask.isZero()) {
-    if (IsWideAPInt) {
-      Record.push_back(SpareBitsMask.getBitWidth());
-      emitWideAPInt(Record, SpareBitsMask);
-    } else {
-        uint64_t V = SpareBitsMask.getZExtValue();
-        Record.push_back(V);
-    }
-  }
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();

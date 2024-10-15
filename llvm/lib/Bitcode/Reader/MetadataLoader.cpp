@@ -1600,13 +1600,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    // The last field is a variable sized APInt, so the metadata loader can't
-    // reliably check the end for this record.
     if (Record.size() < 16)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
-    bool IsBigInt = (Record[0] >> 3) & 1;
     // If we have a UUID and this is not a forward declaration, lookup the
     // mapping.
     IsDistinct = Record[0] & 0x1;
@@ -1688,28 +1685,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       }
     }
     DICompositeType *CT = nullptr;
-    APInt SpareBitsMask;
-    // SpareBitsMask is an optional field so the metadata loader has to check if
-    // it was emitted before accessing it.
-    if (Record.size() > 24) {
-      if (IsBigInt) {
-        const uint64_t BitWidth = Record[24];
-        const size_t NumWords = Record.size() - 3;
-        SpareBitsMask =
-            readWideAPInt(ArrayRef(&Record[25], NumWords), BitWidth);
-      } else {
-        const uint64_t IntValue = Record[24];
-        SpareBitsMask = APInt(64, IntValue);
-      }
-    }
-
     if (Identifier)
       CT = DICompositeType::buildODRType(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
           SizeInBits, AlignInBits, OffsetInBits, SpecificationOf,
-          NumExtraInhabitants, SpareBitsMask, Flags, Elements, RuntimeLang,
-          VTableHolder, TemplateParams, Discriminator, DataLocation, Associated,
-          Allocated, Rank, Annotations);
+          NumExtraInhabitants, Flags, Elements, RuntimeLang, VTableHolder,
+          TemplateParams, Discriminator, DataLocation, Associated, Allocated,
+          Rank, Annotations);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
@@ -1719,7 +1701,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
                             Identifier, Discriminator, DataLocation, Associated,
                             Allocated, Rank, Annotations, SpecificationOf,
-                            NumExtraInhabitants, SpareBitsMask));
+                            NumExtraInhabitants));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

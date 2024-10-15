@@ -533,17 +533,12 @@ namespace llvm {
     /// \param Discriminator Discriminant member
     /// \param Elements     Variant elements.
     /// \param UniqueIdentifier A unique identifier for the union.
-    /// \param OffsetInBits The offset of the variant payload in the variant
-    /// type.
-    /// \param SpareBitMask A mask of spare bits of the payload, spare bits are
-    /// bits that aren't used in any of the variant's cases.
     DICompositeType *
     createVariantPart(DIScope *Scope, StringRef Name, DIFile *File,
                       unsigned LineNumber, uint64_t SizeInBits,
                       uint32_t AlignInBits, DINode::DIFlags Flags,
                       DIDerivedType *Discriminator, DINodeArray Elements,
-                      StringRef UniqueIdentifier = "",
-                      uint64_t OffsetInBits = 0, APInt SpareBitsMask = APInt());
+                      StringRef UniqueIdentifier = "");
 
     /// Create debugging information for template
     /// type parameter.
