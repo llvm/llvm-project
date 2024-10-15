@@ -3837,11 +3837,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // minnum/maxnum intrinsics.
     if (SIFPOp->hasNoNaNs() && SIFPOp->hasNoSignedZeros()) {
       Value *X, *Y;
-      if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
+      if (match(&SI, m_OrdOrUnordFMax(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
             SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
 
-      if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
+      if (match(&SI, m_OrdOrUnordFMin(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
             SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
     }
