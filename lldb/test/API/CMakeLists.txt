@@ -96,14 +96,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   endif()
 endif()
 
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
-else()
-  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
-    --env OBJCOPY=${LLVM_TOOLS_BINARY_DIR}/llvm-objcopy${CMAKE_EXECUTABLE_SUFFIX})
-endif()
-
 if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
   if (NOT EXISTS "${LLDB_LIT_TOOLS_DIR}")
     message(WARNING "LLDB_LIT_TOOLS_DIR ${LLDB_LIT_TOOLS_DIR} does not exist.")
