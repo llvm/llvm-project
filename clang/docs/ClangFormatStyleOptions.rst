@@ -2091,8 +2091,7 @@ the configuration (without a prefix: ``Auto``).
 .. _AllowShortNamespacesOnASingleLine:
 
 **AllowShortNamespacesOnASingleLine** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <AllowShortNamespacesOnASingleLine>`
-  If ``true``, ``namespace a { class b; }`` can be put on a single a single
-  line.
+  If ``true``, ``namespace a { class b; }`` can be put on a single line.
 
 .. _AlwaysBreakAfterDefinitionReturnType:
 

@@ -383,7 +383,7 @@ private:
              ClosingLineIndex == I[J]->MatchingClosingBlockLineIndex &&
              I[J]->Last->TotalLength < Limit;
              ++J, --ClosingLineIndex) {
-          Limit -= I[J]->Last->TotalLength;
+          Limit -= I[J]->Last->TotalLength + 1;
 
           // Reduce indent level for bodies of namespaces which were compacted,
           // but only if their content was indented in the first place.
@@ -647,9 +647,10 @@ private:
     // Check if it's a namespace inside a namespace, and call recursively if so.
     // '3' is the sizes of the whitespace and closing brace for " _inner_ }".
     if (I[1]->First->is(tok::kw_namespace)) {
-      if (I[1]->Last->is(tok::comment))
+      if (I[1]->Last->is(tok::comment) || !Style.CompactNamespaces)
         return 0;
 
+      assert(Limit >= I[1]->Last->TotalLength + 3);
       const unsigned InnerLimit = Limit - I[1]->Last->TotalLength - 3;
       const unsigned MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
       if (!MergedLines)
@@ -661,7 +662,7 @@ private:
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
       if (I[N]->First->is(tok::r_brace) && !I[N]->First->MustBreakBefore &&
-          !I[MergedLines + 1]->Last->is(tok::comment) &&
+          I[MergedLines + 1]->Last->isNot(tok::comment) &&
           nextNLinesFitInto(I, I + N + 1, Limit)) {
         return N;
       }

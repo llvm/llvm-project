@@ -1122,6 +1122,8 @@ clang-format
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 - Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
 
+- Adds ``AllowShortNamespacesOnASingleLine`` option.
+
 libclang
 --------
 - Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
