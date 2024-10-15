@@ -153,6 +153,19 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
+add_entrypoint_object(
+  remap_file_pages
+  SRCS
+    remap_file_pages.cpp
+  HDRS
+    ../remap_file_pages.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
 add_header_library(
   shm_common
   HDRS
