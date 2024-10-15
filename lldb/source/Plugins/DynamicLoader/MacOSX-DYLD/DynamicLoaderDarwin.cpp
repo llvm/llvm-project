@@ -652,58 +652,30 @@ ModuleSP DynamicLoaderDarwin::GetDYLDModule() {
 
 void DynamicLoaderDarwin::ClearDYLDModule() { m_dyld_module_wp.reset(); }
 
-template <typename InputIterator, typename ResultType>
-static std::vector<ResultType> parallel_map(
-    llvm::ThreadPoolInterface &threadPool, InputIterator first,
-    InputIterator last,
-    llvm::function_ref<ResultType(
-        const typename std::iterator_traits<InputIterator>::value_type &)>
-        transform) {
-  const auto size = std::distance(first, last);
-  std::vector<ResultType> results(size);
-  if (size > 0) {
-    llvm::ThreadPoolTaskGroup taskGroup(threadPool);
-    auto it = first;
-    for (ssize_t i = 0; i < size; ++i, ++it) {
-      taskGroup.async([&, i, it]() { results[i] = transform(*it); });
-    }
-    taskGroup.wait();
-  }
-  return results;
-}
-
-template <typename InputIterator, typename ResultType>
-static std::vector<ResultType>
-map(InputIterator first, InputIterator last,
-    llvm::function_ref<ResultType(
-        const typename std::iterator_traits<InputIterator>::value_type &)>
-        transform) {
-  const auto size = std::distance(first, last);
-  std::vector<ResultType> results(size);
-  auto it = first;
-  for (ssize_t i = 0; i < size; ++i, ++it) {
-    results[i] = transform(*it);
-  }
-  return results;
-}
-
 std::vector<std::pair<DynamicLoaderDarwin::ImageInfo, ModuleSP>>
 DynamicLoaderDarwin::PreloadModulesFromImageInfos(
     const ImageInfo::collection &image_infos) {
-  auto ImageLoad = [this](const ImageInfo &image_info) {
-    return std::make_pair(
+  const auto size = image_infos.size();
+  std::vector<std::pair<DynamicLoaderDarwin::ImageInfo, ModuleSP>> images(size);
+  auto LoadImage = [&](size_t i, ImageInfo::collection::const_iterator it) {
+    const auto &image_info = *it;
+    images[i] = std::make_pair(
         image_info, FindTargetModuleForImageInfo(image_info, true, nullptr));
   };
+  auto it = image_infos.begin();
   bool is_parallel_load =
       DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
-  auto images = is_parallel_load
-                    ? parallel_map<ImageInfo::collection::const_iterator,
-                                   std::pair<ImageInfo, ModuleSP>>(
-                          Debugger::GetThreadPool(), image_infos.begin(),
-                          image_infos.end(), ImageLoad)
-                    : map<ImageInfo::collection::const_iterator,
-                          std::pair<ImageInfo, ModuleSP>>(
-                          image_infos.begin(), image_infos.end(), ImageLoad);
+  if (is_parallel_load) {
+    llvm::ThreadPoolTaskGroup taskGroup(Debugger::GetThreadPool());
+    for (size_t i = 0; i < size; ++i, ++it) {
+      taskGroup.async(LoadImage, i, it);
+    }
+    taskGroup.wait();
+  } else {
+    for (size_t i = 0; i < size; ++i, ++it) {
+      LoadImage(i, it);
+    }
+  }
   return images;
 }
 
