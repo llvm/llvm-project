@@ -611,10 +611,8 @@ static bool isVectorOpUsedAsScalarOp(MachineOperand &MO) {
   case RISCV::VFREDOSUM_VS:
   case RISCV::VFREDUSUM_VS:
   case RISCV::VFWREDOSUM_VS:
-  case RISCV::VFWREDUSUM_VS: {
-    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI->getDesc());
-    return HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 3;
-  }
+  case RISCV::VFWREDUSUM_VS:
+    return MO.getOperandNo() == 3;
   default:
     return false;
   }
