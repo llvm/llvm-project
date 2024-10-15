@@ -482,39 +482,26 @@ TEST(ZipIteratorTest, ZipEqualConstCorrectness) {
   EXPECT_THAT(first, ElementsAre(0, 0, 0));
   EXPECT_THAT(second, ElementsAre(true, true, true));
 
-  std::vector<bool> nemesis = {true, false, true};
-  const std::vector<bool> c_nemesis = nemesis;
-
-  for (auto &&[a, b, c, d] : zip_equal(first, c_first, nemesis, c_nemesis)) {
+  for (auto &&[a, b] : zip_equal(first, c_first)) {
     a = 2;
-    c = true;
     static_assert(!IsConstRef<decltype(a)>);
     static_assert(IsConstRef<decltype(b)>);
-    static_assert(!IsBoolConstRef<decltype(c)>);
-    static_assert(IsBoolConstRef<decltype(d)>);
   }
 
   EXPECT_THAT(first, ElementsAre(2, 2, 2));
-  EXPECT_THAT(nemesis, ElementsAre(true, true, true));
 
   unsigned iters = 0;
-  for (const auto &[a, b, c, d] :
-       zip_equal(first, c_first, nemesis, c_nemesis)) {
+  for (const auto &[a, b] : zip_equal(first, c_first)) {
     static_assert(!IsConstRef<decltype(a)>);
     static_assert(IsConstRef<decltype(b)>);
-    static_assert(!IsBoolConstRef<decltype(c)>);
-    static_assert(IsBoolConstRef<decltype(d)>);
     ++iters;
   }
   EXPECT_EQ(iters, 3u);
   iters = 0;
 
-  for (const auto &[a, b, c, d] :
-       MakeConst(zip_equal(first, c_first, nemesis, c_nemesis))) {
+  for (const auto &[a, b] : MakeConst(zip_equal(first, c_first))) {
     static_assert(!IsConstRef<decltype(a)>);
     static_assert(IsConstRef<decltype(b)>);
-    static_assert(!IsBoolConstRef<decltype(c)>);
-    static_assert(IsBoolConstRef<decltype(d)>);
     ++iters;
   }
   EXPECT_EQ(iters, 3u);
@@ -641,6 +628,23 @@ TEST(ZipIteratorTest, Mutability) {
   for (auto tup : zip(message, "yynyyyzip\0")) {
     EXPECT_EQ(get<0>(tup), get<1>(tup));
   }
+}
+
+TEST(ZipIteratorTest, Lifetime) {
+  SmallVector<unsigned> v1 = {1, 2, 3, 4};
+  SmallVector<unsigned> v2 = {5, 6, 7, 8};
+
+  auto zipper = zip(v1, v2);
+
+  auto zip_iter = zipper.begin();
+  EXPECT_NE(zip_iter, zipper.end());
+
+  auto *elem = &*zip_iter;
+  EXPECT_EQ(std::get<0>(*elem), 1u);
+  EXPECT_EQ(std::get<1>(*elem), 5u);
+
+  std::get<0>(*elem) = 42;
+  EXPECT_EQ(v1[0], 42u);
 }
 
 TEST(ZipIteratorTest, ZipFirstMutability) {
