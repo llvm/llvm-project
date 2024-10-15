@@ -99,18 +99,18 @@ UnwindTable::GetAddressRange(const Address &addr, const SymbolContext &sc) {
       m_object_file_unwind_up->GetAddressRange(addr, range))
     return range;
 
+  // Check the symbol context
+  if (sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
+                         false, range) &&
+      range.GetBaseAddress().IsValid())
+    return range;
+
   // Does the eh_frame unwind info has a function bounds for this addr?
   if (m_eh_frame_up && m_eh_frame_up->GetAddressRange(addr, range))
     return range;
 
   // Try debug_frame as well
   if (m_debug_frame_up && m_debug_frame_up->GetAddressRange(addr, range))
-    return range;
-
-  // Check the symbol context
-  if (sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
-                         false, range) &&
-      range.GetBaseAddress().IsValid())
     return range;
 
   return std::nullopt;
