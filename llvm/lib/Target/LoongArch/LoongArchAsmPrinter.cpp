@@ -273,14 +273,10 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
         MCSymbolRefExpr::create(LAFI->getJumpInfoJrMI(Idx)->getPreInstrSymbol(),
                                 OutContext),
         Size);
-    for (auto MO : LAFI->getJumpInfoJTIMI(Idx)->operands()) {
-      if (!MO.isJTI())
-        continue;
-      OutStreamer->emitValue(
-          MCSymbolRefExpr::create(GetJTISymbol(MO.getIndex()), OutContext),
-          Size);
-      break;
-    }
+    OutStreamer->emitValue(
+        MCSymbolRefExpr::create(
+            GetJTISymbol(LAFI->getJumpInfoJTIMO(Idx)->getIndex()), OutContext),
+        Size);
   }
 }
 

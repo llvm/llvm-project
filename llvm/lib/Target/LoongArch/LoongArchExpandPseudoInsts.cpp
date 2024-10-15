@@ -617,14 +617,14 @@ void LoongArchPreRAExpandPseudo::annotateTableJump(
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
-  bool IsFinded = false;
+  bool IsFound = false;
 
   std::function<void(MachineInstr *, int)> FindJTIMI = [&](MachineInstr *MInst,
                                                            int FindDepth) {
     if (FindDepth < 0)
       return;
     for (auto &MO : MInst->all_uses()) {
-      if (IsFinded)
+      if (IsFound)
         return;
       Register Reg = MO.getReg();
       if (!Reg.isVirtual())
@@ -633,12 +633,12 @@ void LoongArchPreRAExpandPseudo::annotateTableJump(
       if (!DefMI)
         continue;
       for (unsigned Idx = 0; Idx < DefMI->getNumOperands(); ++Idx) {
-        if (DefMI->getOperand(Idx).isJTI()) {
+        MachineOperand &MO = DefMI->getOperand(Idx);
+        if (MO.isJTI()) {
           MBBI->setPreInstrSymbol(
               *MF, MF->getContext().createNamedTempSymbol("jrtb_"));
-          MF->getInfo<LoongArchMachineFunctionInfo>()->setJumpInfo(&*MBBI,
-                                                                   DefMI);
-          IsFinded = true;
+          MF->getInfo<LoongArchMachineFunctionInfo>()->setJumpInfo(&*MBBI, &MO);
+          IsFound = true;
           return;
         }
       }
