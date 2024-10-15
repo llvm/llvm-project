@@ -1403,11 +1403,11 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       llvm::Value *nonPrivateVar =
           moduleTranslation.lookupValue(opInst.getPrivateVars()[i]);
       assert(nonPrivateVar);
-      moduleTranslation.mapValue(allocRegion.getArgument(0), nonPrivateVar);
+      moduleTranslation.mapValue(privateDecls[i].getAllocMoldArg(), nonPrivateVar);
 
       // in-place convert the private allocation region
       SmallVector<llvm::Value *, 1> phis;
-      if (allocRegion.getArgument(0).getUses().empty()) {
+      if (privateDecls[i].getAllocMoldArg().getUses().empty()) {
         // TODO this should use
         // allocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca() so it goes before
         // the code for fetching the thread id. Not doing this for now to avoid
@@ -1475,10 +1475,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       llvm::Value *nonPrivateVar =
           moduleTranslation.lookupValue(opInst.getPrivateVars()[i]);
       assert(nonPrivateVar);
-      moduleTranslation.mapValue(copyRegion.getArgument(0), nonPrivateVar);
+      moduleTranslation.mapValue(privateDecls[i].getCopyMoldArg(), nonPrivateVar);
 
       // map copyRegion lhs arg
-      moduleTranslation.mapValue(copyRegion.getArgument(1), llvmPrivateVars[i]);
+      moduleTranslation.mapValue(privateDecls[i].getCopyPrivateArg(), llvmPrivateVars[i]);
 
       // in-place convert copy region
       builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
