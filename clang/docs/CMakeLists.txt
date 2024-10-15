@@ -1,9 +1,3 @@
-add_custom_target(clang-format-style-options
-    COMMAND "${Python3_EXECUTABLE}" dump_format_style.py
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../include/clang/Format/Format.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/../include/clang/Tooling/Inclusions/IncludeStyle.h")
-add_dependencies(clang-format clang-format-style-options)
 
 if (DOXYGEN_FOUND)
 if (LLVM_ENABLE_DOXYGEN)
