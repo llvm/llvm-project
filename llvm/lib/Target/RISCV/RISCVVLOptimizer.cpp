@@ -431,7 +431,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWMACCSU_VV:
   case RISCV::VWMACCSU_VX:
   case RISCV::VWMACCUS_VX: {
-    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 1 : MO.getOperandNo() == 2;
+    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
@@ -467,7 +467,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNCLIP_WI:
   case RISCV::VNCLIP_WV:
   case RISCV::VNCLIP_WX: {
-    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 1 : MO.getOperandNo() == 2;
+    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
@@ -536,7 +536,14 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // 11.8 Vector Integer Compare Instructions
   // FIXME: Add support for 11.8 instructions
   // 11.9. Vector Integer Min/Max Instructions
-  // FIXME: Add support for 11.9 instructions
+  case RISCV::VMINU_VV:
+  case RISCV::VMINU_VX:
+  case RISCV::VMIN_VV:
+  case RISCV::VMIN_VX:
+  case RISCV::VMAXU_VV:
+  case RISCV::VMAXU_VX:
+  case RISCV::VMAX_VV:
+  case RISCV::VMAX_VX:
   // 11.10. Vector Single-Width Integer Multiply Instructions
   case RISCV::VMUL_VV:
   case RISCV::VMUL_VX:
@@ -547,7 +554,14 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMULHSU_VV:
   case RISCV::VMULHSU_VX:
   // 11.11. Vector Integer Divide Instructions
-  // FIXME: Add support for 11.11 instructions
+  case RISCV::VDIVU_VV:
+  case RISCV::VDIVU_VX:
+  case RISCV::VDIV_VV:
+  case RISCV::VDIV_VX:
+  case RISCV::VREMU_VV:
+  case RISCV::VREMU_VX:
+  case RISCV::VREM_VV:
+  case RISCV::VREM_VX:
   // 11.12. Vector Widening Integer Multiply Instructions
   // FIXME: Add support for 11.12 instructions
   // 11.13. Vector Single-Width Integer Multiply-Add Instructions
