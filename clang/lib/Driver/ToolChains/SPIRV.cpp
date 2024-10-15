@@ -107,6 +107,8 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 SPIRVToolChain::SPIRVToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
     : ToolChain(D, Triple, Args) {
+  // TODO: Revisit need/use of --sycl-link option once SYCL toolchain is
+  // available and SYCL linking support is moved there.
   NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link);
 }
 

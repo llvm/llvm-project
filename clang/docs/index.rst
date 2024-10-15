@@ -97,7 +97,7 @@ Using Clang Tools
    ClangOffloadBundler
    ClangOffloadPackager
    ClangRepl
-   ClangSYCLLinkWrapper
+   ClangSYCLLinker
 
 Design Documents
 ================

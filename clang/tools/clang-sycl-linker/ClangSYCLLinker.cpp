@@ -367,10 +367,11 @@ static void getSPIRVTransOpts(const ArgList &Args,
 static Expected<StringRef> runLLVMToSPIRVTranslation(StringRef File,
                                                      const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("LLVMToSPIRVTranslation");
-  Expected<std::string> LLVMToSPIRVPath =
-      findProgram(Args, "llvm-spirv", {getMainExecutable("llvm-spirv")});
-  if (!LLVMToSPIRVPath)
-    return LLVMToSPIRVPath.takeError();
+  StringRef LLVMSPIRVPath = Args.getLastArgValue(llvm_spirv_path_EQ);
+  Expected<std::string> LLVMToSPIRVProg =
+      findProgram(Args, "llvm-spirv", {LLVMSPIRVPath});
+  if (!LLVMToSPIRVProg)
+    return LLVMToSPIRVProg.takeError();
 
   SmallVector<StringRef, 8> CmdArgs;
   CmdArgs.push_back(*LLVMToSPIRVPath);
@@ -383,7 +384,7 @@ static Expected<StringRef> runLLVMToSPIRVTranslation(StringRef File,
                            /* KeepEmpty = */ false);
   CmdArgs.append({"-o", OutputFile});
   CmdArgs.push_back(File);
-  if (Error Err = executeCommands(*LLVMToSPIRVPath, CmdArgs))
+  if (Error Err = executeCommands(*LLVMToSPIRVProg, CmdArgs))
     return std::move(Err);
 
   if (!SPIRVDumpDir.empty()) {
