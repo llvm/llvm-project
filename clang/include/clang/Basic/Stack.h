@@ -53,29 +53,29 @@ namespace clang {
 #endif
   }
 
-class SingleWarningStackAwareExecutor {
-public:
-  SingleWarningStackAwareExecutor(DiagnosticsEngine &diags)
-      : DiagsRef(diags) {}
+  class SingleWarningStackAwareExecutor {
+  public:
+    SingleWarningStackAwareExecutor(DiagnosticsEngine &diags)
+        : DiagsRef(diags) {}
 
-  /// Run some code with "sufficient" stack space. (Currently, at least 256K
-  /// is guaranteed). Produces a warning if we're low on stack space and
-  /// allocates more in that case. Use this in code that may recurse deeply to
-  /// avoid stack overflow.
-  void runWithSufficientStackSpace(SourceLocation Loc,
-                                   llvm::function_ref<void()> Fn);
+    /// Run some code with "sufficient" stack space. (Currently, at least 256K
+    /// is guaranteed). Produces a warning if we're low on stack space and
+    /// allocates more in that case. Use this in code that may recurse deeply to
+    /// avoid stack overflow.
+    void runWithSufficientStackSpace(SourceLocation Loc,
+                                     llvm::function_ref<void()> Fn);
 
-  /// Check to see if we're low on stack space and produce a warning if we're
-  /// low on stack space (Currently, at least 256Kis guaranteed).
-  void warnOnStackNearlyExhausted(SourceLocation Loc);
+    /// Check to see if we're low on stack space and produce a warning if we're
+    /// low on stack space (Currently, at least 256Kis guaranteed).
+    void warnOnStackNearlyExhausted(SourceLocation Loc);
 
-private:
-  /// Warn that the stack is nearly exhausted.
-  void warnStackExhausted(SourceLocation Loc);
+  private:
+    /// Warn that the stack is nearly exhausted.
+    void warnStackExhausted(SourceLocation Loc);
 
-  DiagnosticsEngine &DiagsRef;
-  bool WarnedStackExhausted = false;
-};
+    DiagnosticsEngine &DiagsRef;
+    bool WarnedStackExhausted = false;
+  };
 
 } // end namespace clang
 
