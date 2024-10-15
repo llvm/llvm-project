@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime//command.h"
+#include "flang/Runtime/command.h"
 #include "FortranRuntime/Runtime/descriptor.h"
 #include "environment.h"
 #include "stat.h"

@@ -28,7 +28,9 @@ public:
     MATCH(false, std::is_const<type>::value);
     MATCH(false, std::is_volatile<type>::value);
     // suitable in size
-      MATCH(true, Descriptor::SizeInBytes(rank_, false) <= Fortran::common::MaxDescriptorSizeInBytes(  rank_, false));
+    MATCH(true,
+        Descriptor::SizeInBytes(rank_, false) <=
+            MaxDescriptorSizeInBytes(rank_, false));
     if (rank > 0) {
       MATCH(sizeof(dvStorage_), Descriptor::SizeInBytes(rank_, false));
     } else { // C++ implementation over-allocates for rank=0 by 24bytes.

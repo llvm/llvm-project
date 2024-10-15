@@ -23,3 +23,5 @@ The requirements for common code include:
 
  * Global declarations may need to be annotated using definitions from
    `api-attrs.h`.
+
+ * The `Runtime` component is header-only.

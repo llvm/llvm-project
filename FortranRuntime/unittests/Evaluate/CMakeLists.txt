@@ -12,3 +12,10 @@ add_flang_nongtest_unittest(reshape
   FortranEvaluate
   FortranRuntime
 )
+
+add_flang_nongtest_unittest(ISO-Fortran-binding
+  FortranEvaluateTesting
+  FortranEvaluate
+  FortranSemantics
+  FortranRuntime
+)
