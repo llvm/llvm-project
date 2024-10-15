@@ -1148,8 +1148,8 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
   if (!match(II->getOperand(0), m_c_And(m_Specific(X), m_Neg(m_Specific(X)))))
     return nullptr;
 
-  Function *F = Intrinsic::getDeclaration(II->getModule(), Intrinsic::cttz,
-                                          II->getType());
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      II->getModule(), Intrinsic::cttz, II->getType());
   return CallInst::Create(F, {X, II->getArgOperand(1)});
 }
 
@@ -1288,6 +1288,10 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
       !isSafeToSpeculativelyExecuteWithVariableReplaced(I))
     return false;
 
+  // Forbid potentially lane-crossing instructions.
+  if (Old->getType()->isVectorTy() && !isNotCrossLaneOperation(I))
+    return false;
+
   bool Changed = false;
   for (Use &U : I->operands()) {
     if (U == Old) {
@@ -1366,9 +1370,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // with different operands, which should not cause side-effects or trigger
     // undefined behavior). Only do this if CmpRHS is a constant, as
     // profitability is not clear for other cases.
-    // FIXME: Support vectors.
     if (OldOp == CmpLHS && match(NewOp, m_ImmConstant()) &&
-        !match(OldOp, m_Constant()) && !Cmp.getType()->isVectorTy() &&
+        !match(OldOp, m_Constant()) &&
         isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
       if (replaceInInstruction(TrueVal, OldOp, NewOp))
         return &Sel;
@@ -2242,8 +2245,8 @@ foldOverflowingAddSubSelect(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
   else
     return nullptr;
 
-  Function *F =
-      Intrinsic::getDeclaration(SI.getModule(), NewIntrinsicID, SI.getType());
+  Function *F = Intrinsic::getOrInsertDeclaration(SI.getModule(),
+                                                  NewIntrinsicID, SI.getType());
   return CallInst::Create(F, {X, Y});
 }
 
@@ -2537,7 +2540,8 @@ static Instruction *foldSelectFunnelShift(SelectInst &Sel,
   // This is a funnel/rotate that avoids shift-by-bitwidth UB in a suboptimal way.
   // Convert to funnel shift intrinsic.
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
-  Function *F = Intrinsic::getDeclaration(Sel.getModule(), IID, Sel.getType());
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(Sel.getModule(), IID, Sel.getType());
   ShAmt = Builder.CreateZExt(ShAmt, Sel.getType());
   return CallInst::Create(F, { SV0, SV1, ShAmt });
 }
@@ -2580,8 +2584,8 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   // Canonicalize the magnitude argument as the positive constant since we do
   // not care about its sign.
   Value *MagArg = ConstantFP::get(SelType, abs(*TC));
-  Function *F = Intrinsic::getDeclaration(Sel.getModule(), Intrinsic::copysign,
-                                          Sel.getType());
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      Sel.getModule(), Intrinsic::copysign, Sel.getType());
   return CallInst::Create(F, { MagArg, X });
 }
 
@@ -2600,8 +2604,8 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
       if (auto *I = dyn_cast<Instruction>(V))
         I->copyIRFlags(&Sel);
       Module *M = Sel.getModule();
-      Function *F =
-          Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
+      Function *F = Intrinsic::getOrInsertDeclaration(
+          M, Intrinsic::vector_reverse, V->getType());
       return CallInst::Create(F, V);
     };
 

@@ -25,6 +25,7 @@ target_link_libraries(bbc PRIVATE
   FIRBuilder
   HLFIRDialect
   HLFIRTransforms
+  flangFrontend
   flangPasses
   FlangOpenMPTransforms
   ${dialect_libs}
