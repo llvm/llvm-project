@@ -421,9 +421,9 @@ struct TemplateParameterListBuilder {
         context.getTranslationUnitDecl(), // DeclContext
         NameLoc,                          // SourceLocation of 'T'
         NameLoc,                          // SourceLocation of 'T' again
-        /*depth=*/0,            // Depth in the template parameter list
-        /*position=*/0,         // Position in the template parameter list
-        /*id=*/&TII,            // Identifier for 'T'
+        /*depth=*/0,    // Depth in the template parameter list
+        /*position=*/0, // Position in the template parameter list
+        /*id=*/Params[0]->getIdentifier(), // Identifier for 'T'
         /*Typename=*/true,      // Indicates this is a 'typename' or 'class'
         /*ParameterPack=*/false // Not a parameter pack
     );
