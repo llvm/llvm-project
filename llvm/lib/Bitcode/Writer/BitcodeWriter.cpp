@@ -1718,6 +1718,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= 1 << bitc::GEP_NUSW;
     if (GEP->hasNoUnsignedWrap())
       Flags |= 1 << bitc::GEP_NUW;
+  } else if (const auto *ICmp = dyn_cast<ICmpInst>(V)) {
+    if (ICmp->hasSameSign())
+      Flags |= 1 << bitc::ICMP_SAME_SIGN;
   }
 
   return Flags;
