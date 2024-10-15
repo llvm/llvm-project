@@ -72,3 +72,23 @@ void clang::runWithSufficientStackSpaceSlow(llvm::function_ref<void()> Diag,
     Fn();
   }, DesiredStackSize);
 }
+
+void clang::SingleWarningStackAwareExecutor::runWithSufficientStackSpace(
+    SourceLocation Loc, llvm::function_ref<void()> Fn) {
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(Loc); }, Fn);
+}
+
+void clang::SingleWarningStackAwareExecutor::warnOnStackNearlyExhausted(
+    SourceLocation Loc) {
+  if (isStackNearlyExhausted())
+    warnStackExhausted(Loc);
+}
+
+void clang::SingleWarningStackAwareExecutor::warnStackExhausted(
+    SourceLocation Loc) {
+  // Only warn about this once.
+  if (!WarnedStackExhausted) {
+    DiagsRef.Report(Loc, diag::warn_stack_exhausted);
+    WarnedStackExhausted = true;
+  }
+}
