@@ -1813,7 +1813,7 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPReverseVectorPointerRecipe ::execute(VPTransformState &State) {
+void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
@@ -1823,8 +1823,6 @@ void VPReverseVectorPointerRecipe ::execute(VPTransformState &State) {
   Type *IndexTy = State.VF.isScalable()
                       ? DL.getIndexType(IndexedTy->getPointerTo())
                       : Builder.getInt32Ty();
-  Value *Ptr = State.get(getOperand(0), VPLane(0));
-  bool InBounds = isInBounds();
 
   // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
@@ -1835,6 +1833,8 @@ void VPReverseVectorPointerRecipe ::execute(VPTransformState &State) {
       ConstantInt::get(IndexTy, -(int64_t)CurrentPart), RunTimeVF);
   // LastLane = 1 - RunTimeVF
   Value *LastLane = Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
+  Value *Ptr = State.get(getOperand(0), VPLane(0));
+  bool InBounds = isInBounds();
   Value *ResultPtr = Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", InBounds);
   ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "", InBounds);
 
@@ -1847,11 +1847,13 @@ void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent;
   printAsOperand(O, SlotTracker);
   O << " = reverse-vector-pointer ";
+  if (isInBounds())
+    O << "inbounds ";
   printOperands(O, SlotTracker);
 }
 #endif
 
-void VPVectorPointerRecipe ::execute(VPTransformState &State) {
+void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
