@@ -3851,13 +3851,3 @@ SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
   }
   return 0;
 }
-
-SmallVector<StringLiteral>
-SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
-                                  const MachineFunction &MF) const {
-  SmallVector<StringLiteral> RegFlags;
-  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  if (FuncInfo->checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
-    RegFlags.push_back("WWM_REG");
-  return RegFlags;
-}
