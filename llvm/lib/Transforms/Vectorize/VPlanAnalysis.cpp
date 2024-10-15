@@ -50,6 +50,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return SetResultTyFromOp();
 
   switch (Opcode) {
+  case VPInstruction::MergeUntilPivot:
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
     VPValue *OtherV = R->getOperand(2);
@@ -61,6 +62,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::ICmp:
   case VPInstruction::ActiveLaneMask:
     return inferScalarType(R->getOperand(1));
+  case VPInstruction::ExplicitVectorLength:
+    return IntegerType::get(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
     return SetResultTyFromOp();

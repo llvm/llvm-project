@@ -1269,6 +1269,11 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
+    // Selects elements from two vectors (second and third operand) based on a
+    // condition vector (first operand) and a pivot index (fourth operand). The
+    // lanes whose positions are greater than or equal to the pivot are taken
+    // from the third operand.
+    MergeUntilPivot,
   };
 
 private:
@@ -1669,6 +1674,21 @@ public:
         MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         std::initializer_list<VPValue *> CallArguments,
+                         Type *Ty, DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
+    LLVMContext &Ctx = Ty->getContext();
+    AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
+    MemoryEffects ME = Attrs.getMemoryEffects();
+    MayReadFromMemory = ME.onlyWritesMemory();
+    MayWriteToMemory = ME.onlyReadsMemory();
+    MayHaveSideEffects = MayWriteToMemory ||
+                         Attrs.hasFnAttr(Attribute::NoUnwind) ||
+                         !Attrs.hasFnAttr(Attribute::WillReturn);
+  }
+
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
@@ -1706,6 +1726,21 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    SmallVector<unsigned, 4> Idx;
+    for (const auto &I : enumerate(operands()))
+      if (Op == I.value())
+        Idx.push_back(I.index());
+
+    return all_of(Idx, [this](unsigned I) {
+      return isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I) ||
+             (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID) &&
+              I == getNumOperands() - 1);
+    });
+  }
 };
 
 /// A recipe for widening Call instructions using library calls.
