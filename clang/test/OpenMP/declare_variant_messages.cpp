@@ -133,7 +133,7 @@ int score_and_cond_const();
 template <int C>
 int score_and_cond_const_inst();
 
-__attribute__((pure)) int pure() { return 0; }
+__attribute__((pure)) int pure() { return 0; } // expected-note {{'pure' has been explicitly marked pure here}}
 
 #pragma omp declare variant(pure) match(user = {condition(1)}) // expected-warning {{ignoring return value of function declared with pure attribute}}
 int unused_warning_after_specialization() { return foo(); }

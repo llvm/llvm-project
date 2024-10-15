@@ -73,15 +73,15 @@ void t4(int a) {
   for (;;b < 1) {} // expected-warning{{relational comparison result unused}}
 }
 
-int t5f(void) __attribute__((warn_unused_result));
+int t5f(void) __attribute__((warn_unused_result)); // expected-note {{'t5f' has been explicitly marked warn_unused_result here}}
 void t5(void) {
   t5f();   // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
 }
 
 
-int fn1(void) __attribute__ ((warn_unused_result));
-int fn2() __attribute__ ((pure));
-int fn3() __attribute__ ((__const));
+int fn1(void) __attribute__ ((warn_unused_result)); // expected-note 3 {{'fn1' has been explicitly marked warn_unused_result here}}
+int fn2() __attribute__ ((pure)); // expected-note 2 {{'fn2' has been explicitly marked pure here}}
+int fn3() __attribute__ ((__const)); // expected-note {{'fn3' has been explicitly marked const here}}
 int t6(void) {
   if (fn1() < 0 || fn2(2,1) < 0 || fn3(2) < 0)  // no warnings
     return -1;
@@ -97,7 +97,7 @@ int t6(void) {
 int t7 __attribute__ ((warn_unused_result)); // expected-warning {{'warn_unused_result' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, function pointers, and typedefs}}
 
 // PR4010
-int (*fn4)(void) __attribute__ ((warn_unused_result));
+int (*fn4)(void) __attribute__ ((warn_unused_result)); // expected-note {{'fn4' has been explicitly marked warn_unused_result here}}
 void t8(void) {
   fn4(); // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
 }

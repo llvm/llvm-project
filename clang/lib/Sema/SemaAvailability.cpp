@@ -670,8 +670,12 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     S.Diag(UnknownObjCClass->getLocation(), diag::note_forward_class);
   }
 
-  S.Diag(NoteLocation, diag_available_here)
-    << OffendingDecl << available_here_select_kind;
+  if (diag_available_here == diag::note_availability_specified_here)
+    S.Diag(NoteLocation, diag_available_here)
+        << true << OffendingDecl << available_here_select_kind;
+  else
+    S.Diag(NoteLocation, diag_available_here)
+        << OffendingDecl << available_here_select_kind;
 }
 
 void Sema::handleDelayedAvailabilityCheck(DelayedDiagnostic &DD, Decl *Ctx) {

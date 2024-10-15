@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
-int f() __attribute__((warn_unused_result));
+int f() __attribute__((warn_unused_result)); // expected-note 12 {{'f' has been explicitly marked warn_unused_result here}}
 
 struct S {
   void t() const;
 };
-S g1() __attribute__((warn_unused_result));
-S *g2() __attribute__((warn_unused_result));
-S &g3() __attribute__((warn_unused_result));
+S g1() __attribute__((warn_unused_result)); // expected-note {{'g1' has been explicitly marked warn_unused_result here}}
+S *g2() __attribute__((warn_unused_result)); // expected-note {{'g2' has been explicitly marked warn_unused_result here}}
+S &g3() __attribute__((warn_unused_result)); // expected-note {{'g3' has been explicitly marked warn_unused_result here}}
 
 void test() {
   f(); // expected-warning {{ignoring return value}}
@@ -64,7 +64,7 @@ void testSubstmts(int i) {
 }
 
 struct X {
- int foo() __attribute__((warn_unused_result));
+ int foo() __attribute__((warn_unused_result)); // expected-note 2 {{'foo' has been explicitly marked warn_unused_result here}}
 };
 
 void bah() {
@@ -80,7 +80,7 @@ class Foo {
   Status doStuff();
 };
 
-struct [[clang::warn_unused_result]] Status {
+struct [[clang::warn_unused_result]] Status { // expected-note 3 {{'Status' has been explicitly marked warn_unused_result here}}
   bool ok() const;
   Status& operator=(const Status& x);
   inline void Update(const Status& new_status) {
@@ -115,7 +115,7 @@ void lazy() {
 }
 
 template <typename T>
-class [[clang::warn_unused_result]] StatusOr {
+class [[clang::warn_unused_result]] StatusOr { // expected-note {{'StatusOr<int>' has been explicitly marked warn_unused_result here}}
 };
 StatusOr<int> doit();
 void test() {
@@ -129,7 +129,7 @@ void test() {
 }
 
 namespace PR17587 {
-struct [[clang::warn_unused_result]] Status;
+struct [[clang::warn_unused_result]] Status; // expected-note {{'Status' has been explicitly marked warn_unused_result here}}
 
 struct Foo {
   Status Bar();
@@ -193,7 +193,7 @@ void g() {
 
 namespace {
 // C++ Methods should warn even in their own class.
-struct [[clang::warn_unused_result]] S {
+struct [[clang::warn_unused_result]] S { // expected-note 5 {{'S' has been explicitly marked warn_unused_result here}}
   S DoThing() { return {}; };
   S operator++(int) { return {}; };
   S operator--(int) { return {}; };
@@ -202,7 +202,7 @@ struct [[clang::warn_unused_result]] S {
   S operator--() { return {}; };
 };
 
-struct [[clang::warn_unused_result]] P {
+struct [[clang::warn_unused_result]] P { // expected-note 5 {{'P' has been explicitly marked warn_unused_result here}}
   P DoThing() { return {}; };
 };
 
@@ -238,7 +238,7 @@ void f() {
 } // namespace
 
 namespace PR39837 {
-[[clang::warn_unused_result]] int f(int);
+[[clang::warn_unused_result]] int f(int); // expected-note {{'f' has been explicitly marked warn_unused_result here}}
 
 void g() {
   int a[2];
@@ -256,7 +256,7 @@ void i([[nodiscard]] bool (*fp)()); // expected-warning {{'nodiscard' attribute 
 }
 
 namespace unused_typedef_result {
-[[clang::warn_unused_result]] typedef void *a;
+[[clang::warn_unused_result]] typedef void *a; // expected-note 3 {{'a' has been explicitly marked warn_unused_result here}}
 typedef a indirect;
 a af1();
 indirect indirectf1();
@@ -276,7 +276,7 @@ void bf2() {
   b1f1(); // no warning
   b2f1(); // no warning
 }
-__attribute__((warn_unused_result)) typedef void *c;
+__attribute__((warn_unused_result)) typedef void *c; // expected-note 2 {{'c' has been explicitly marked warn_unused_result here}}
 c cf1();
 void cf2() {
   cf1(); // expected-warning {{ignoring return value}}

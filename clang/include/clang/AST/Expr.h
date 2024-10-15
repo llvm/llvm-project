@@ -3182,11 +3182,12 @@ public:
 
   /// Returns the WarnUnusedResultAttr that is either declared on the called
   /// function, or its return type declaration.
-  const Attr *getUnusedResultAttr(const ASTContext &Ctx) const;
+  std::pair<const Decl *, const Attr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const;
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {
-    return getUnusedResultAttr(Ctx) != nullptr;
+    return getUnusedResultAttr(Ctx).second != nullptr;
   }
 
   SourceLocation getRParenLoc() const { return RParenLoc; }
