@@ -18212,13 +18212,22 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       if ((VF > MinVF && ActualVF <= VF / 2) || (VF == MinVF && ActualVF < 2))
         break;
 
-      ArrayRef<Value *> Ops = VL.slice(I, ActualVF);
-      // Check that a previous iteration of this loop did not delete the Value.
-      if (llvm::any_of(Ops, [&R](Value *V) {
-            auto *I = dyn_cast<Instruction>(V);
-            return I && R.isDeleted(I);
-          }))
-        continue;
+      SmallVector<Value *> Ops(ActualVF, nullptr);
+      unsigned Idx = 0;
+      for (Value *V : VL.drop_front(I)) {
+        // Check that a previous iteration of this loop did not delete the
+        // Value.
+        if (auto *Inst = dyn_cast<Instruction>(V);
+            !Inst || !R.isDeleted(Inst)) {
+          Ops[Idx] = V;
+          ++Idx;
+          if (Idx == ActualVF)
+            break;
+        }
+      }
+      // Not enough vectorizable instructions - exit.
+      if (Idx != ActualVF)
+        break;
 
       LLVM_DEBUG(dbgs() << "SLP: Analyzing " << ActualVF << " operations "
                         << "\n");
@@ -18286,7 +18295,8 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   // Vectorize in current basic block only.
   auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
   auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
-  if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P)
+  if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P ||
+      R.isDeleted(Op0) || R.isDeleted(Op1))
     return false;
 
   // First collect all possible candidates
@@ -18299,18 +18309,18 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   if (A && B && B->hasOneUse()) {
     auto *B0 = dyn_cast<BinaryOperator>(B->getOperand(0));
     auto *B1 = dyn_cast<BinaryOperator>(B->getOperand(1));
-    if (B0 && B0->getParent() == P)
+    if (B0 && B0->getParent() == P && !R.isDeleted(B0))
       Candidates.emplace_back(A, B0);
-    if (B1 && B1->getParent() == P)
+    if (B1 && B1->getParent() == P && !R.isDeleted(B1))
       Candidates.emplace_back(A, B1);
   }
   // Try to skip A.
   if (B && A && A->hasOneUse()) {
     auto *A0 = dyn_cast<BinaryOperator>(A->getOperand(0));
     auto *A1 = dyn_cast<BinaryOperator>(A->getOperand(1));
-    if (A0 && A0->getParent() == P)
+    if (A0 && A0->getParent() == P && !R.isDeleted(A0))
       Candidates.emplace_back(A0, B);
-    if (A1 && A1->getParent() == P)
+    if (A1 && A1->getParent() == P && !R.isDeleted(A1))
       Candidates.emplace_back(A1, B);
   }
 
@@ -19769,16 +19779,16 @@ static void findBuildAggregate_rec(Instruction *LastInsertInst,
                                    TargetTransformInfo *TTI,
                                    SmallVectorImpl<Value *> &BuildVectorOpds,
                                    SmallVectorImpl<Value *> &InsertElts,
-                                   unsigned OperandOffset) {
+                                   unsigned OperandOffset, const BoUpSLP &R) {
   do {
     Value *InsertedOperand = LastInsertInst->getOperand(1);
     std::optional<unsigned> OperandIndex =
         getElementIndex(LastInsertInst, OperandOffset);
-    if (!OperandIndex)
+    if (!OperandIndex || R.isDeleted(LastInsertInst))
       return;
     if (isa<InsertElementInst, InsertValueInst>(InsertedOperand)) {
       findBuildAggregate_rec(cast<Instruction>(InsertedOperand), TTI,
-                             BuildVectorOpds, InsertElts, *OperandIndex);
+                             BuildVectorOpds, InsertElts, *OperandIndex, R);
 
     } else {
       BuildVectorOpds[*OperandIndex] = InsertedOperand;
@@ -19807,7 +19817,8 @@ static void findBuildAggregate_rec(Instruction *LastInsertInst,
 static bool findBuildAggregate(Instruction *LastInsertInst,
                                TargetTransformInfo *TTI,
                                SmallVectorImpl<Value *> &BuildVectorOpds,
-                               SmallVectorImpl<Value *> &InsertElts) {
+                               SmallVectorImpl<Value *> &InsertElts,
+                               const BoUpSLP &R) {
 
   assert((isa<InsertElementInst>(LastInsertInst) ||
           isa<InsertValueInst>(LastInsertInst)) &&
@@ -19822,7 +19833,8 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
   BuildVectorOpds.resize(*AggregateSize);
   InsertElts.resize(*AggregateSize);
 
-  findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts, 0);
+  findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts, 0,
+                         R);
   llvm::erase(BuildVectorOpds, nullptr);
   llvm::erase(InsertElts, nullptr);
   if (BuildVectorOpds.size() >= 2)
@@ -20068,7 +20080,7 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<Value *, 16> BuildVectorInsts;
-  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts))
+  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts, R))
     return false;
 
   if (MaxVFOnly && BuildVectorOpds.size() == 2) {
@@ -20090,7 +20102,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
-  if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts) ||
+  if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts, R) ||
       (llvm::all_of(BuildVectorOpds, IsaPred<ExtractElementInst, UndefValue>) &&
        isFixedVectorShuffle(BuildVectorOpds, Mask)))
     return false;
