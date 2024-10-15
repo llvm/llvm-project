@@ -110,6 +110,7 @@ public:
     return category_ == that.category_ && expr_ == that.expr_;
   }
   bool operator!=(const ParamValue &that) const { return !(*this == that); }
+  bool IsEquivalentInInterface(const ParamValue &) const;
   std::string AsFortran() const;
 
 private:
