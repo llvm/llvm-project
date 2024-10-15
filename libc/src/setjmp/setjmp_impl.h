@@ -17,18 +17,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// TODO(https://github.com/llvm/llvm-project/issues/112427)
-// Some of the architecture-specific definitions are marked `naked`, which in
-// GCC implies `nothrow`.
-//
-// Right now, our aliases aren't marked `nothrow`, so we wind up in a situation
-// where clang will emit -Wmissing-exception-spec if we add `nothrow` here, but
-// GCC will emit -Wmissing-attributes here without `nothrow`. We need to update
-// LLVM_LIBC_FUNCTION to denote when a function throws or not.
-
-#ifdef LIBC_COMPILER_IS_GCC
-[[gnu::nothrow]]
-#endif
 int setjmp(jmp_buf buf);
 
 } // namespace LIBC_NAMESPACE_DECL
