@@ -1464,9 +1464,6 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
-  auto *SrcTy = cast<VectorType>(
-      ToVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
-  auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
   // Computes the CastContextHint from a recipes that may access memory.
   auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
     if (VF.isScalar())
@@ -1510,6 +1507,10 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
     else if (LoadRecipe)
       CCH = ComputeCCH(LoadRecipe);
   }
+
+  auto *SrcTy = cast<VectorType>(
+      ToVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
+  auto *DestTy = cast<VectorType>(ToVectorTy(getResultType(), VF));
   // Arm TTI will use the underlying instruction to determine the cost.
   return Ctx.TTI.getCastInstrCost(
       Opcode, DestTy, SrcTy, CCH, TTI::TCK_RecipThroughput,
