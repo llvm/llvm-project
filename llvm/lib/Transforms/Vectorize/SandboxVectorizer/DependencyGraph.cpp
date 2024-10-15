@@ -59,21 +59,17 @@ bool PredIterator::operator==(const PredIterator &Other) const {
 }
 
 #ifndef NDEBUG
-void DGNode::print(raw_ostream &OS, bool PrintDeps) const { I->dumpOS(OS); }
-void DGNode::dump() const {
-  print(dbgs());
-  dbgs() << "\n";
+void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
+  OS << *I << " USuccs:" << UnscheduledSuccs << "\n";
 }
+void DGNode::dump() const { print(dbgs()); }
 void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
-  I->dumpOS(OS);
+  DGNode::print(OS, false);
   if (PrintDeps) {
     // Print memory preds.
     static constexpr const unsigned Indent = 4;
-    for (auto *Pred : MemPreds) {
-      OS.indent(Indent) << "<-";
-      Pred->print(OS, false);
-      OS << "\n";
-    }
+    for (auto *Pred : MemPreds)
+      OS.indent(Indent) << "<-" << *Pred->getInstruction() << "\n";
   }
 }
 #endif // NDEBUG
@@ -215,6 +211,58 @@ void DependencyGraph::scanAndAddDeps(MemDGNode &DstN,
   }
 }
 
+void DependencyGraph::setDefUseUnscheduledSuccs(
+    const Interval<Instruction> &NewInterval) {
+  // +---+
+  // |   |  Def
+  // |   |   |
+  // |   |   v
+  // |   |  Use
+  // +---+
+  // Set the intra-interval counters in NewInterval.
+  for (Instruction &I : NewInterval) {
+    for (Value *Op : I.operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (OpI == nullptr)
+        continue;
+      if (!NewInterval.contains(OpI))
+        continue;
+      auto *OpN = getNode(OpI);
+      if (OpN == nullptr)
+        continue;
+      ++OpN->UnscheduledSuccs;
+    }
+  }
+
+  // Now handle the cross-interval edges.
+  bool NewIsAbove = DAGInterval.empty() || NewInterval.comesBefore(DAGInterval);
+  const auto &TopInterval = NewIsAbove ? NewInterval : DAGInterval;
+  const auto &BotInterval = NewIsAbove ? DAGInterval : NewInterval;
+  // +---+
+  // |Top|
+  // |   |  Def
+  // +---+   |
+  // |   |   v
+  // |Bot|  Use
+  // |   |
+  // +---+
+  // Walk over all instructions in "BotInterval" and update the counter
+  // of operands that are in "TopInterval".
+  for (Instruction &BotI : BotInterval) {
+    for (Value *Op : BotI.operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (OpI == nullptr)
+        continue;
+      if (!TopInterval.contains(OpI))
+        continue;
+      auto *OpN = getNode(OpI);
+      if (OpN == nullptr)
+        continue;
+      ++OpN->UnscheduledSuccs;
+    }
+  }
+}
+
 void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
   // Create Nodes only for the new sections of the DAG.
   DGNode *LastN = getOrCreateNode(NewInterval.top());
@@ -260,6 +308,8 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
     }
 #endif // NDEBUG
   }
+
+  setDefUseUnscheduledSuccs(NewInterval);
 }
 
 Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
