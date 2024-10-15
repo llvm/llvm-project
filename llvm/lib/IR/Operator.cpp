@@ -50,6 +50,8 @@ bool Operator::hasPoisonGeneratingFlags() const {
     if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
       return NNI->hasNonNeg();
     return false;
+  case Instruction::ICmp:
+    return cast<ICmpInst>(this)->hasSameSign();
   default:
     if (const auto *FP = dyn_cast<FPMathOperator>(this))
       return FP->hasNoNaNs() || FP->hasNoInfs();
