@@ -209,29 +209,6 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerBarrier(Function &F, Intrinsic::ID IntrId,
-                                  ArrayRef<dxil::BarrierMode> BarrierModes) {
-    unsigned BarrierMode = 0;
-    for (const dxil::BarrierMode B : BarrierModes) {
-      BarrierMode |= (unsigned)B;
-    }
-    IRBuilder<> &IRB = OpBuilder.getIRB();
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      std::array<Value *, 1> Args{IRB.getInt32(BarrierMode)};
-
-      IRB.SetInsertPoint(CI);
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::Barrier, Args, CI->getName());
-      if (Error E = OpCall.takeError())
-        return E;
-
-      CI->replaceAllUsesWith(OpCall.get());
-      CI->eraseFromParent();
-
-      return Error::success();
-    });
-  }
-
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
 
@@ -499,11 +476,6 @@ public:
     HasErrors |= replaceFunctionWithOp(F, OpCode);                             \
     break;
 #include "DXILOperation.inc"
-      case Intrinsic::dx_group_memory_barrier_with_group_sync:
-        HasErrors |= lowerBarrier(
-            F, ID,
-            {dxil::BarrierMode::TGSMFence, dxil::BarrierMode::SyncThreadGroup});
-        break;
       case Intrinsic::dx_handle_fromBinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
