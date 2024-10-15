@@ -168,7 +168,7 @@ public:
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
-                                     VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
+                                     VPRecipeIRFlags::WrapFlagsTy WrapFlags,
                                      DebugLoc DL = {}, const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
@@ -187,9 +187,9 @@ public:
   VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                     const Twine &Name = "") {
 
-    return tryInsertInstruction(new VPInstruction(
-        Instruction::BinaryOps::Or, {LHS, RHS},
-        VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::BinaryOps::Or, {LHS, RHS},
+                          VPRecipeIRFlags::DisjointFlagsTy(false), DL, Name));
   }
 
   VPValue *createLogicalAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
@@ -223,12 +223,12 @@ public:
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                               const Twine &Name = "") {
     return tryInsertInstruction(new VPInstruction(
-        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(false), DL, Name));
+        Ptr, Offset, VPRecipeIRFlags::GEPFlagsTy(false), DL, Name));
   }
   VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                                 const Twine &Name = "") {
     return tryInsertInstruction(new VPInstruction(
-        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+        Ptr, Offset, VPRecipeIRFlags::GEPFlagsTy(true), DL, Name));
   }
 
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
