@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/coshf16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -29,11 +30,11 @@ TEST_F(LlvmLibcCoshf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::coshf16(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float16>(1.0),
+  EXPECT_FP_EQ_ALL_ROUNDING(LIBC_NAMESPACE::fputil::cast<float16>(1.0),
                             LIBC_NAMESPACE::coshf16(zero));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float16>(1.0),
+  EXPECT_FP_EQ_ALL_ROUNDING(LIBC_NAMESPACE::fputil::cast<float16>(1.0),
                             LIBC_NAMESPACE::coshf16(neg_zero));
   EXPECT_MATH_ERRNO(0);
 }
@@ -50,7 +51,7 @@ TEST_F(LlvmLibcCoshf16Test, Overflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 
   // round(acosh(2^16), HP, RU);
-  float16 x = static_cast<float16>(0x1.794p+3);
+  float16 x = LIBC_NAMESPACE::fputil::cast<float16>(0x1.794p+3);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(inf, LIBC_NAMESPACE::coshf16(x),
                                                FE_OVERFLOW | FE_INEXACT);
@@ -69,7 +70,7 @@ TEST_F(LlvmLibcCoshf16Test, Overflow) {
   EXPECT_MATH_ERRNO(0);
 
   // round(-acosh(2^16), HP, RD);
-  x = static_cast<float16>(-0x1.794p+3);
+  x = LIBC_NAMESPACE::fputil::cast<float16>(-0x1.794p+3);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(inf, LIBC_NAMESPACE::coshf16(x),
                                                FE_OVERFLOW | FE_INEXACT);

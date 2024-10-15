@@ -12,6 +12,7 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/macros/attributes.h"
@@ -279,11 +280,11 @@ template <bool IsSinh> LIBC_INLINE float16 eval_sinh_or_cosh(float16 x) {
   // sinh(x) = lo * (0.5 * P_odd * (2^(hi + mid) + 2^(-(hi + mid)))) +
   //                (0.5 * P_even * (2^(hi + mid) - 2^(-(hi + mid))))
   if constexpr (IsSinh)
-    return static_cast<float16>(fputil::multiply_add(
+    return fputil::cast<float16>(fputil::multiply_add(
         lo, half_p_odd * exp2_hi_mid_sum, half_p_even * exp2_hi_mid_diff));
   // cosh(x) = lo * (0.5 * P_odd * (2^(hi + mid) - 2^(-(hi + mid)))) +
   //                (0.5 * P_even * (2^(hi + mid) + 2^(-(hi + mid))))
-  return static_cast<float16>(fputil::multiply_add(
+  return fputil::cast<float16>(fputil::multiply_add(
       lo, half_p_odd * exp2_hi_mid_diff, half_p_even * exp2_hi_mid_sum));
 }
 

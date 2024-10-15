@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/sinhf16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -48,7 +49,7 @@ TEST_F(LlvmLibcSinhf16Test, Overflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 
   // round(asinh(2^16), HP, RU);
-  float16 x = static_cast<float16>(0x1.794p+3);
+  float16 x = LIBC_NAMESPACE::fputil::cast<float16>(0x1.794p+3);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(inf, LIBC_NAMESPACE::sinhf16(x),
                                                FE_OVERFLOW | FE_INEXACT);
@@ -67,7 +68,7 @@ TEST_F(LlvmLibcSinhf16Test, Overflow) {
   EXPECT_MATH_ERRNO(0);
 
   // round(asinh(-2^16), HP, RD);
-  x = static_cast<float16>(-0x1.794p+3);
+  x = LIBC_NAMESPACE::fputil::cast<float16>(-0x1.794p+3);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
       neg_inf, LIBC_NAMESPACE::sinhf16(x), FE_OVERFLOW | FE_INEXACT);
