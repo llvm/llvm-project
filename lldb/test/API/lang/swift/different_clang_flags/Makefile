@@ -8,7 +8,7 @@ all: libmoda.dylib libmodb.dylib main
 include Makefile.rules
 
 lib%.dylib:
-	$(MAKE) -f $(MAKEFILE_RULES) VPATH=$(VPATH)/$*_dir \
+	"$(MAKE)" -f $(MAKEFILE_RULES) VPATH=$(VPATH)/$*_dir \
 		SWIFTFLAGS_EXTRAS=-I$(dir $<)/cdeps \
                 MAKE_DSYM=YES DYLIB_ONLY=YES \
 		DYLIB_NAME=$* DYLIB_SWIFT_SOURCES=$*.swift \

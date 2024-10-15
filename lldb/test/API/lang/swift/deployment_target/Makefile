@@ -12,14 +12,14 @@ a.out: main.swift libNewerTarget.dylib
 
 
 dlopen_module: dlopen_module.m libNewerTarget.dylib
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		CXX= \
 		OBJC_SOURCES=dlopen_module.m \
 		EXE=dlopen_module \
 		LD_EXTRAS="-framework Foundation -mmacos-version-min=10.8"
 
 lib%.dylib: %.swift
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=$(patsubst lib%.dylib,%,$@) \
 		DYLIB_SWIFT_SOURCES=$(patsubst lib%.dylib,%.swift,$@) \

@@ -11,7 +11,7 @@ include Makefile.rules
 objc.o: libLibrary.dylib
 
 libLibrary.dylib: Library.swift
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_SWIFT_SOURCES=Library.swift \
 		DYLIB_NAME=Library \
 		SWIFTFLAGS_EXTRAS="-emit-objc-header-path $(BUILDDIR)/include/Library-Swift.h"

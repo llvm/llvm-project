@@ -7,4 +7,4 @@ all: libFoo.dylib $(EXE)
 include Makefile.rules
 
 libFoo.dylib: Foo.swift
-	$(MAKE) MAKE_DSYM=NO VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
+	"$(MAKE)" MAKE_DSYM=NO VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
