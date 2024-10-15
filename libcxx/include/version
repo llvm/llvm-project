@@ -184,7 +184,7 @@ __cpp_lib_print                                         202207L <ostream> <print
 __cpp_lib_quoted_string_io                              201304L <iomanip>
 __cpp_lib_ranges                                        202211L <algorithm> <functional> <iterator>
                                                                 <memory> <ranges>
-                                                        202207L // C++20
+                                                        202110L // C++20
 __cpp_lib_ranges_as_const                               202207L <ranges>
 __cpp_lib_ranges_as_rvalue                              202207L <ranges>
 __cpp_lib_ranges_chunk                                  202202L <ranges>
@@ -429,7 +429,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # if _LIBCPP_AVAILABILITY_HAS_PMR
 #   define __cpp_lib_polymorphic_allocator              201902L
 # endif
-# define __cpp_lib_ranges                               202207L
+# define __cpp_lib_ranges                               202110L
 # define __cpp_lib_remove_cvref                         201711L
 # if !defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC
 #   define __cpp_lib_semaphore                          201907L
