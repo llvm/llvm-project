@@ -1398,7 +1398,7 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
       DI->EmitDeclareOfBlockLiteralArgVariable(
           *BlockInfo, D->getName(), argNum,
           cast<llvm::AllocaInst>(alloc.getPointer()->stripPointerCasts()),
-                                 Builder);
+          Builder);
     }
   }
 

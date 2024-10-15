@@ -5859,7 +5859,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       llvm::Value *TmpPtr = Tmp.getPointer();
       llvm::Value *TmpSize = EmitLifetimeStart(
           CGM.getDataLayout().getTypeAllocSize(Tmp.getElementType()),
-                                               TmpPtr->stripPointerCasts());
+          TmpPtr->stripPointerCasts());
       llvm::Value *ElemPtr;
       // Each of the following arguments specifies the size of the corresponding
       // argument passed to the enqueued block.
