@@ -308,8 +308,7 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    sd a0, 144(sp)
 ; CHECK-NEXT:    li a0, 13
-; CHECK-NEXT:    sd a0, 8(sp)
-; CHECK-NEXT:    li a0, 12
+; CHECK-NEXT:    li t0, 12
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    li a3, 3
@@ -321,7 +320,8 @@ define fastcc <32 x i32> @pass_vector_arg_direct_stack(<32 x i32> %x, <32 x i32>
 ; CHECK-NEXT:    li t4, 9
 ; CHECK-NEXT:    li t5, 10
 ; CHECK-NEXT:    li t6, 11
-; CHECK-NEXT:    sd a0, 0(sp)
+; CHECK-NEXT:    sd t0, 0(sp)
+; CHECK-NEXT:    sd a0, 8(sp)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    call vector_arg_direct_stack

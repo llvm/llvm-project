@@ -231,7 +231,10 @@ static void instantiateDependentAnnotationAttr(
     ActualArgs.insert(ActualArgs.begin(), Args.begin() + 1, Args.end());
     std::swap(Args, ActualArgs);
   }
-  S.AddAnnotationAttr(New, *Attr, Str, Args);
+  auto *AA = S.CreateAnnotationAttr(*Attr, Str, Args);
+  if (AA) {
+    New->addAttr(AA);
+  }
 }
 
 static Expr *instantiateDependentFunctionAttrCondition(
@@ -5015,6 +5018,16 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       Function->setInstantiationIsPending(true);
       PendingInstantiations.push_back(
         std::make_pair(Function, PointOfInstantiation));
+
+      if (llvm::isTimeTraceVerbose()) {
+        llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
+          std::string Name;
+          llvm::raw_string_ostream OS(Name);
+          Function->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                         /*Qualified=*/true);
+          return Name;
+        });
+      }
     } else if (TSK == TSK_ImplicitInstantiation) {
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&
           !getSourceManager().isInSystemHeader(PatternDecl->getBeginLoc())) {
@@ -5214,26 +5227,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    DeclContext *DC = Function;
-    MultiLevelTemplateArgumentList TemplateArgs;
-    if (auto *Primary = Function->getPrimaryTemplate();
-        Primary &&
-        !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function)) {
-      auto It = llvm::find_if(Primary->redecls(),
-                              [](const RedeclarableTemplateDecl *RTD) {
-                                return cast<FunctionTemplateDecl>(RTD)
-                                    ->isCompatibleWithDefinition();
-                              });
-      assert(It != Primary->redecls().end() &&
-             "Should't get here without a definition");
-      DC = (*It)->getLexicalDeclContext();
-      if (Function->getTemplateSpecializationKind() !=
-          TSK_ExplicitSpecialization)
-        TemplateArgs.addOuterTemplateArguments(
-            Function, Function->getTemplateSpecializationArgs()->asArray(),
-            /*Final=*/false);
-    }
-    getTemplateInstantiationArgs(TemplateArgs, /*D=*/nullptr, DC);
+    MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
+        Function, Function->getLexicalDeclContext());
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.

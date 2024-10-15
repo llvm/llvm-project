@@ -688,9 +688,6 @@ public:
   bool isZExtFree(EVT VT1, EVT VT2) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
 
-  bool shouldSinkOperands(Instruction *I,
-                          SmallVectorImpl<Use *> &Ops) const override;
-
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
 
@@ -849,16 +846,7 @@ public:
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
-                        const MachineFunction &MF) const override {
-    // Do not merge to float value size (128 bytes) if no implicit
-    // float attribute is set.
-
-    bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
-
-    if (NoFloat)
-      return (MemVT.getSizeInBits() <= 64);
-    return true;
-  }
+                        const MachineFunction &MF) const override;
 
   bool isCheapToSpeculateCttz(Type *) const override {
     return true;

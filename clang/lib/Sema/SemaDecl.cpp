@@ -7961,7 +7961,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       }
 
       if (!R->isIntegralType(Context) && !R->isPointerType()) {
-        Diag(TInfo->getTypeLoc().getBeginLoc(), diag::err_asm_bad_register_type)
+        Diag(TInfo->getTypeLoc().getBeginLoc(),
+             diag::err_asm_unsupported_register_type)
             << TInfo->getTypeLoc().getSourceRange();
         NewVD->setInvalidDecl(true);
       }
@@ -15161,8 +15162,8 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
   // we know that references to that pack must also be expanded within the
   // lambda scope.
   if (New->isParameterPack())
-    if (auto *LSI = getEnclosingLambda())
-      LSI->LocalPacks.push_back(New);
+    if (auto *CSI = getEnclosingLambdaOrBlock())
+      CSI->LocalPacks.push_back(New);
 
   if (New->getType().hasNonTrivialToPrimitiveDestructCUnion() ||
       New->getType().hasNonTrivialToPrimitiveCopyCUnion())
