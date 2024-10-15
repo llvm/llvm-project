@@ -1813,16 +1813,22 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
+                           unsigned CurrentPart, IRBuilderBase &Builder) {
+  // Use i32 for the gep index type when the value is constant,
+  // or query DataLayout for a more suitable index type otherwise.
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  return IsScalable && (IsReverse || CurrentPart > 0)
+             ? DL.getIndexType(Builder.getPtrTy(0))
+             : Builder.getInt32Ty();
+}
+
 void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
-  // Use i32 for the gep index type when the value is constant,
-  // or query DataLayout for a more suitable index type otherwise.
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = State.VF.isScalable()
-                      ? DL.getIndexType(IndexedTy->getPointerTo())
-                      : Builder.getInt32Ty();
+  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ true,
+                                CurrentPart, Builder);
 
   // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
@@ -1857,12 +1863,8 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
-  // Use i32 for the gep index type when the value is constant,
-  // or query DataLayout for a more suitable index type otherwise.
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = State.VF.isScalable() && CurrentPart > 0
-                      ? DL.getIndexType(Builder.getPtrTy(0))
-                      : Builder.getInt32Ty();
+  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
+                                CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   bool InBounds = isInBounds();
 
