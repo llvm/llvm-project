@@ -64,6 +64,14 @@
 #error Clang should have these constexpr builtins
 #endif
 
+#if !__has_constexpr_builtin(__builtin_convertvector)
+#error Clang should have these constexpr builtins
+#endif
+
+#if !__has_constexpr_builtin(__builtin_shufflevector)
+#error Clang should have these constexpr builtins
+#endif
+
 #if  __has_constexpr_builtin(__builtin_cbrt)
 #error This builtin should not be constexpr in Clang
 #endif
