@@ -868,42 +868,35 @@ int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
 bool StartDebuggingRequestHandler::DoExecute(
     lldb::SBDebugger debugger, char **command,
     lldb::SBCommandReturnObject &result) {
-  // Command format like: `startDebugging <launch|attach> <configuration>`
+  // Command format like: `start-debugging <launch|attach> <configuration>`
   if (!command) {
-    result.SetError("Invalid use of startDebugging");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("Invalid use of start-debugging, expected format "
+                    "`start-debugging <launch|attach> <configuration>`.");
     return false;
   }
 
   if (!command[0] || llvm::StringRef(command[0]).empty()) {
-    result.SetError("startDebugging request type missing.");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("start-debugging request type missing.");
     return false;
   }
 
   if (!command[1] || llvm::StringRef(command[1]).empty()) {
-    result.SetError("configuration missing.");
-    result.SetStatus(lldb::eReturnStatusFailed);
+    result.SetError("start-debugging debug configuration missing.");
     return false;
   }
 
   llvm::StringRef request{command[0]};
   std::string raw_configuration{command[1]};
 
-  int i = 2;
-  while (command[i]) {
-    raw_configuration.append(" ").append(command[i]);
-  }
-
   llvm::Expected<llvm::json::Value> configuration =
       llvm::json::parse(raw_configuration);
 
   if (!configuration) {
     llvm::Error err = configuration.takeError();
-    std::string msg =
-        "Failed to parse json configuration: " + llvm::toString(std::move(err));
+    std::string msg = "Failed to parse json configuration: " +
+                      llvm::toString(std::move(err)) + "\n\n" +
+                      raw_configuration;
     result.SetError(msg.c_str());
-    result.SetStatus(lldb::eReturnStatusFailed);
     return false;
   }
 
