@@ -635,11 +635,12 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     SymbolResolution Res = *ResI++;
 
     StringRef SymbolName = Sym.getName();
+    auto [It, Inserted] = GlobalResolutions->try_emplace(SymbolName);
     // Keep copies of symbols if the client of LTO says so.
-    if (GlobalResolutionSymbolSaver && !GlobalResolutions->contains(SymbolName))
+    if (GlobalResolutionSymbolSaver && Inserted)
       SymbolName = GlobalResolutionSymbolSaver->save(SymbolName);
 
-    auto &GlobalRes = (*GlobalResolutions)[SymbolName];
+    auto &GlobalRes = It->second;
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
