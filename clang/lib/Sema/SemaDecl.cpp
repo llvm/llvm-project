@@ -357,10 +357,13 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       return nullptr;
   }
 
-  // FIXME: LookupNestedNameSpecifierName isn't the right kind of
-  // lookup for class-names.
-  LookupNameKind Kind = isClassName ? LookupNestedNameSpecifierName :
-                                      LookupOrdinaryName;
+  // In the case where we know that the identifier is a class name, we know that
+  // it is a type declaration (struct, class, union or enum) so we can use tag
+  // name lookup.
+  //
+  // C++ [class.derived]p2 (wrt lookup in a base-specifier): The lookup for
+  // the component name of the type-name or simple-template-id is type-only.
+  LookupNameKind Kind = isClassName ? LookupTagName : LookupOrdinaryName;
   LookupResult Result(*this, &II, NameLoc, Kind);
   if (LookupCtx) {
     // Perform "qualified" name lookup into the declaration context we

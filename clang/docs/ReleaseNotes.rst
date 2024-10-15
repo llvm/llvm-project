@@ -516,6 +516,7 @@ Bug Fixes to C++ Support
 - Fixed a bug in lambda captures where ``constexpr`` class-type objects were not properly considered ODR-used in
   certain situations. (#GH47400), (#GH90896)
 - Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
+- During the lookup for a base class name, non-type names are ignored. (#GH16855)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
