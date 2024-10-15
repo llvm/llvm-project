@@ -48,6 +48,9 @@ void llvm::createMemCpyLoopKnownSize(
       Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
+  assert((DL.getTypeStoreSize(LoopOpType) == DL.getTypeAllocSize(LoopOpType)) &&
+         "Bytes are missed if store and alloc size of the LoopOpType do not "
+         "match");
 
   Type *Int8Type = Type::getInt8Ty(Ctx);
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
@@ -200,6 +203,9 @@ void llvm::createMemCpyLoopUnknownSize(
       Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
+  assert((DL.getTypeStoreSize(LoopOpType) == DL.getTypeAllocSize(LoopOpType)) &&
+         "Bytes are missed if store and alloc size of the LoopOpType do not "
+         "match");
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   assert((!AtomicElementSize || LoopOpSize % *AtomicElementSize == 0) &&
          "Atomic memcpy lowering is not supported for selected operand size");
@@ -414,6 +420,9 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
 
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
                                                    SrcAlign, DstAlign);
+  assert((DL.getTypeStoreSize(LoopOpType) == DL.getTypeAllocSize(LoopOpType)) &&
+         "Bytes are missed if store and alloc size of the LoopOpType do not "
+         "match");
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   Type *Int8Type = Type::getInt8Ty(Ctx);
   bool LoopOpIsInt8 = LoopOpType == Int8Type;
@@ -672,6 +681,9 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
 
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
                                                    SrcAlign, DstAlign);
+  assert((DL.getTypeStoreSize(LoopOpType) == DL.getTypeAllocSize(LoopOpType)) &&
+         "Bytes are missed if store and alloc size of the LoopOpType do not "
+         "match");
   unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   Type *Int8Type = Type::getInt8Ty(Ctx);
 

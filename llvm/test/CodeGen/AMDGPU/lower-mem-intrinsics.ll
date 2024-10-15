@@ -456,10 +456,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1028(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -479,10 +479,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1025(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -502,10 +502,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1026(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -525,10 +525,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1032(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -548,10 +548,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1034(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -575,10 +575,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1035(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -606,10 +606,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1036(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -633,10 +633,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1039(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -691,10 +691,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_1027(ptr addrspace
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -764,10 +764,10 @@ define amdgpu_kernel void @memcpy_private_align4_private_align4_1027(ptr addrspa
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[SRC:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(5) [[TMP1]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP1]], align 4
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[DST:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 4
-; OPT-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 16
+; OPT-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(5) [[TMP3]], align 4
+; OPT-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 1024
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
 ; OPT:       memcpy-split:
@@ -1194,17 +1194,10 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_16(ptr addrspace(1
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @memcpy_global_align4_global_align4_16(
-; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
-; ALL:       load-store-loop:
-; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 0
 ; ALL-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP1]], align 4
-; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 0
 ; ALL-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
-; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 16
-; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 16
-; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
-; ALL:       memcpy-split:
 ; ALL-NEXT:    ret void
 ;
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 %dst, ptr addrspace(1) align 4 %src, i64 16, i1 false)
