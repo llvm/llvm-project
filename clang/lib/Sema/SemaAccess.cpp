@@ -39,7 +39,8 @@ bool Sema::SetMemberAccessSpecifier(NamedDecl *MemberDecl,
                                     AccessSpecifier LexicalAS) {
   if (!PrevMemberDecl) {
     // Use the lexical access specifier.
-    MemberDecl->setAccess(LexicalAS);
+    if (LexicalAS != AS_none)
+      MemberDecl->setAccess(LexicalAS);
     return false;
   }
 
