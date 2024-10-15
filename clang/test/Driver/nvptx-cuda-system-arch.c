@@ -1,4 +1,5 @@
 // REQUIRES: shell
+// XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/nvptx-arch/nvptx_arch_fail %t/

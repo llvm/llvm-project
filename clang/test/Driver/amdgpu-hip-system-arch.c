@@ -1,4 +1,5 @@
 // REQUIRES: shell
+// XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/amdgpu-arch/amdgpu_arch_fail %t/
