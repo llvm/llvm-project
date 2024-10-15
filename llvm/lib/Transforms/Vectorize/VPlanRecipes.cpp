@@ -79,7 +79,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
-  case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
@@ -1040,6 +1039,14 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
 
 StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
   return Intrinsic::getBaseName(VectorIntrinsicID);
+}
+
+bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  // Vector predication intrinsics only demand the the first lane the last
+  // operand (the EVL operand).
+  return VPIntrinsic::isVPIntrinsic(VectorIntrinsicID) &&
+         Op == getOperand(getNumOperands() - 1);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
