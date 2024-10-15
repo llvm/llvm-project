@@ -7611,3 +7611,66 @@ bool CombinerHelper::matchFoldAMinusC1PlusC2(const MachineInstr &MI,
 
   return true;
 }
+
+bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
+                                                         BuildFnTy &MatchInfo) {
+  const GUnmerge *Unmerge = cast<GUnmerge>(&MI);
+
+  if (!MRI.hasOneNonDBGUse(Unmerge->getSourceReg()))
+    return false;
+
+  const MachineInstr *Source = MRI.getVRegDef(Unmerge->getSourceReg());
+
+  LLT DstTy = MRI.getType(Unmerge->getReg(0));
+
+  // We want to unmerge into vectors.
+  if (!DstTy.isFixedVector())
+    return false;
+
+  if (const GAnyExt *Any = dyn_cast<GAnyExt>(Source)) {
+    const MachineInstr *NextSource = MRI.getVRegDef(Any->getSrcReg());
+
+    if (const GBuildVector *BV = dyn_cast<GBuildVector>(NextSource)) {
+      // G_UNMERGE_VALUES G_ANYEXT G_BUILD_VECTOR
+
+      if (!MRI.hasOneNonDBGUse(BV->getReg(0)))
+        return false;
+
+      // FIXME: check element types?
+      if (BV->getNumSources() % Unmerge->getNumDefs() != 0)
+        return false;
+
+      LLT BigBvTy = MRI.getType(BV->getReg(0));
+      LLT SmallBvTy = DstTy;
+      LLT SmallBvElemenTy = SmallBvTy.getElementType();
+
+      if (!isLegalOrBeforeLegalizer(
+              {TargetOpcode::G_BUILD_VECTOR, {SmallBvTy, SmallBvElemenTy}}))
+        return false;
+
+      // check scalar anyext
+      if (!isLegalOrBeforeLegalizer(
+              {TargetOpcode::G_ANYEXT,
+               {SmallBvElemenTy, BigBvTy.getElementType()}}))
+        return false;
+
+      MatchInfo = [=](MachineIRBuilder &B) {
+        // build into each G_UNMERGE_VALUES def
+        // a small build vector with anyext from the source build vector
+        for (unsigned I = 0; I < Unmerge->getNumDefs(); ++I) {
+          SmallVector<Register> Ops;
+          for (unsigned J = 0; J < SmallBvTy.getNumElements(); ++J) {
+            auto AnyExt = B.buildAnyExt(
+                SmallBvElemenTy,
+                BV->getSourceReg(I * SmallBvTy.getNumElements() + J));
+            Ops.push_back(AnyExt.getReg(0));
+          }
+          B.buildBuildVector(Unmerge->getOperand(I).getReg(), Ops);
+        };
+      };
+      return true;
+    };
+  };
+
+  return false;
+}

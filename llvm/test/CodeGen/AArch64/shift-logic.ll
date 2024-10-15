@@ -280,7 +280,8 @@ define void @apint_type_mismatch(i16 %a, ptr %p) {
 ; CHECK-GISEL:       // %bb.0: // %entry
 ; CHECK-GISEL-NEXT:    ubfx w8, w0, #3, #13
 ; CHECK-GISEL-NEXT:    and w8, w8, #0xff
-; CHECK-GISEL-NEXT:    lsl w8, w8, #3
+; CHECK-GISEL-NEXT:    and x8, x8, #0xffff
+; CHECK-GISEL-NEXT:    lsl x8, x8, #3
 ; CHECK-GISEL-NEXT:    str w8, [x1]
 ; CHECK-GISEL-NEXT:    ret
 entry:

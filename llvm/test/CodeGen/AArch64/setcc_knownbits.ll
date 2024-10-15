@@ -57,18 +57,12 @@ land.end:                                         ; preds = %land.rhs, %entry
 
 declare i64 @llvm.ctlz.i64(i64 %in, i1)
 define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) {
-; CHECK-SD-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    clz x8, x0
-; CHECK-SD-NEXT:    lsr x0, x8, #6
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    clz x8, x0
-; CHECK-GI-NEXT:    lsr w0, w8, #6
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    clz x8, x0
+; CHECK-NEXT:    lsr x0, x8, #6
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
   %ctlz = call i64 @llvm.ctlz.i64(i64 %in, i1 -1)
   %lshr = lshr i64 %ctlz, 6
   %icmp = icmp eq i64 %lshr, 1
