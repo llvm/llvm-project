@@ -1458,10 +1458,11 @@ public:
     return getTailFoldingStyle() != TailFoldingStyle::None;
   }
 
-  /// Return maximum safe number of elements to be processed, which do not
-  /// prevent store-load forwarding and are safe with regard to the memory
-  /// dependencies. Required for EVL-based VPlans to correctly calculate AVL
-  /// (application vector length) as min(remaining AVL, MaxSafeElements).
+  /// Return maximum safe number of elements to be processed per vector
+  /// iteration, which do not prevent store-load forwarding and are safe with
+  /// regard to the memory dependencies. Required for EVL-based VPlans to
+  /// correctly calculate AVL (application vector length) as min(remaining AVL,
+  /// MaxSafeElements).
   /// TODO: need to consider adjusting cost model to use this value as a
   /// vectorization factor for EVL-based vectorization.
   std::optional<unsigned> getMaxSafeElements() const { return MaxSafeElements; }
