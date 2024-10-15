@@ -438,7 +438,7 @@ void MachineTraceMetrics::invalidate(const MachineBasicBlock *MBB) {
   BlockInfo[MBB->getNumber()].invalidate();
   for (auto &E : Ensembles)
     if (E)
-      E.get()->invalidate(MBB);
+      E->invalidate(MBB);
 }
 
 bool MachineTraceMetrics::invalidate(
@@ -459,7 +459,7 @@ void MachineTraceMetrics::verifyAnalysis() const {
   assert(BlockInfo.size() == MF->getNumBlockIDs() && "Outdated BlockInfo size");
   for (auto &E : Ensembles)
     if (E)
-      E.get()->verify();
+      E->verify();
 #endif
 }
 
