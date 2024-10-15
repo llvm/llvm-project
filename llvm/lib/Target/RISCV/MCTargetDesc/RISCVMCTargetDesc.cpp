@@ -189,7 +189,7 @@ public:
         MCRegister Reg = Inst.getOperand(0).getReg();
         if (Reg == RISCV::X2)
           break;
-        setGPRState(Reg, SignExtend64<17>(Inst.getOperand(1).getImm() << 12));
+        setGPRState(Reg, SignExtend64<18>(Inst.getOperand(1).getImm() << 12));
         break;
 
       }
@@ -247,18 +247,26 @@ public:
   }
 
   bool evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
+                           uint64_t &Target) const override {
     switch(Inst.getOpcode()) {
       default:
         return false;
-      case RISCV::ADDI:
-      case RISCV::ADDIW: {
+      case RISCV::ADDI: {
         if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
           // TODO: Figure out ways to find the actual value of XLEN during analysis
           int XLEN = 32;
-          uint64_t mask = ~(0) >> XLEN;
+          uint64_t Mask = ~((uint64_t)0) >> (64 - XLEN);
+          Target = *TargetRegState + SignExtend64<12>(Inst.getOperand(2).getImm());
+          Target &= Mask;
+          return true;
+        }
+        break;
+      }
+      case RISCV::ADDIW: {
+        if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
+          uint64_t Mask = ~((uint64_t)0) >> 32;
           Target  = *TargetRegState + SignExtend64<12>(Inst.getOperand(2).getImm());
-          Target &= mask;
+          Target &= Mask;
           Target = SignExtend64<32>(Target);
           return true;
         }
