@@ -10,8 +10,8 @@
 // we can avoid running a pass again if there is no change since the last run of
 // the pass.
 //
-// In this pass we track a set of passes S for each function with the following
-// transition rules:
+// In this analysis we track a set of passes S for each function with the
+// following transition rules:
 //   1. If pass P make changes, set S = {P}.
 //   2. If pass P doesn't make changes, set S = S + {P}.
 //
