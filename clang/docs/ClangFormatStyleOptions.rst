@@ -5518,11 +5518,11 @@ the configuration (without a prefix: ``Auto``).
 
         = a + b;
 
-    enum : unsigned        vs.        enum : unsigned
-                                      {
-    {                                   AA = 0,
-      AA = 0,                           BB
-      BB                              } myEnum;
+    enum : unsigned        vs.        enum : unsigned {
+                                        AA = 0,
+    {                                   BB
+      AA = 0,                         } myEnum;
+      BB
     } myEnum;
 
     while (                vs.        while (true) {
