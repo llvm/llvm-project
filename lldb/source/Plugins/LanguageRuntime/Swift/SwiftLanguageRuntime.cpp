@@ -2538,11 +2538,6 @@ struct AsyncUnwindRegisterNumbers {
   uint32_t async_ctx_regnum;
   uint32_t fp_regnum;
   uint32_t pc_regnum;
-  /// A register to use as a marker to indicate how the async context is passed
-  /// to the function (indirectly, or not). This needs to be communicated to the
-  /// frames below us as they need to react differently. There is no good way to
-  /// expose this, so we set another dummy register to communicate this state.
-  uint32_t dummy_regnum;
 
   RegisterKind GetRegisterKind() const { return lldb::eRegisterKindDWARF; }
 };
@@ -2556,7 +2551,6 @@ GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple) {
     regnums.async_ctx_regnum = dwarf_r14_x86_64;
     regnums.fp_regnum = dwarf_rbp_x86_64;
     regnums.pc_regnum = dwarf_rip_x86_64;
-    regnums.dummy_regnum = dwarf_r15_x86_64;
     return regnums;
   }
   case llvm::Triple::aarch64: {
@@ -2564,7 +2558,6 @@ GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple) {
     regnums.async_ctx_regnum = arm64_dwarf::x22;
     regnums.fp_regnum = arm64_dwarf::fp;
     regnums.pc_regnum = arm64_dwarf::pc;
-    regnums.dummy_regnum = arm64_dwarf::x23;
     return regnums;
   }
   default:
@@ -2810,17 +2803,10 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   // The CFA of a funclet is its own async context.
   row->GetCFAValue().SetIsConstant(*async_ctx);
 
-  // The value of the async register in the parent frame is the entry value of
-  // the async register in the current frame. This mimics a function call, as
-  // if the parent funclet had called the current funclet.
-  row->SetRegisterLocationToIsConstant(regnums->async_ctx_regnum, *async_reg,
+  // The value of the async register in the parent frame (which is the
+  // continuation funclet) is the async context of this frame.
+  row->SetRegisterLocationToIsConstant(regnums->async_ctx_regnum, *async_ctx,
                                        /*can_replace=*/false);
-
-  // The parent frame needs to know how to interpret the value it is given for
-  // its own async register. A dummy register is used to communicate that.
-  if (!indirect_context)
-    row->SetRegisterLocationToIsConstant(regnums->dummy_regnum, 0,
-                                         /*can_replace=*/false);
 
   if (std::optional<addr_t> pc_after_prologue =
           TrySkipVirtualParentProlog(*async_ctx, *process_sp))
@@ -2854,59 +2840,13 @@ UnwindPlanSP SwiftLanguageRuntime::GetFollowAsyncContextUnwindPlan(
   if (!regnums)
     return UnwindPlanSP();
 
-  const bool is_indirect =
-      regctx->ReadRegisterAsUnsigned(regnums->dummy_regnum, (uint64_t)-1ll) ==
-      (uint64_t)-1ll;
-  // In the general case, the async register setup by the frame above us
-  // should be dereferenced twice to get our context, except when the frame
-  // above us is an async frame on the OS stack that takes its context directly
-  // (see discussion in GetRuntimeUnwindPlan()). The availability of
-  // dummy_regnum is used as a marker for this situation.
-  if (!is_indirect) {
-    row->GetCFAValue().SetIsRegisterDereferenced(regnums->async_ctx_regnum);
-    row->SetRegisterLocationToSame(regnums->async_ctx_regnum, false);
-  } else {
-    static const uint8_t async_dwarf_expression_x86_64[] = {
-        llvm::dwarf::DW_OP_regx, dwarf_r14_x86_64, // DW_OP_regx, reg
-        llvm::dwarf::DW_OP_deref,                  // DW_OP_deref
-        llvm::dwarf::DW_OP_deref,                  // DW_OP_deref
-    };
-    static const uint8_t async_dwarf_expression_arm64[] = {
-        llvm::dwarf::DW_OP_regx, arm64_dwarf::x22, // DW_OP_regx, reg
-        llvm::dwarf::DW_OP_deref,                  // DW_OP_deref
-        llvm::dwarf::DW_OP_deref,                  // DW_OP_deref
-    };
+  row->GetCFAValue().SetIsRegisterDereferenced(regnums->async_ctx_regnum);
+  // The value of the async register in the parent frame (which is the
+  // continuation funclet) is the async context of this frame.
+  row->SetRegisterLocationToIsCFAPlusOffset(regnums->async_ctx_regnum,
+                                            /*offset*/ 0, false);
 
-    const unsigned expr_size = sizeof(async_dwarf_expression_x86_64);
-    static_assert(sizeof(async_dwarf_expression_x86_64) ==
-                      sizeof(async_dwarf_expression_arm64),
-                  "Expressions of different sizes");
-
-    const uint8_t *expression = nullptr;
-    if (arch.GetMachine() == llvm::Triple::x86_64)
-      expression = async_dwarf_expression_x86_64;
-    else if (arch.GetMachine() == llvm::Triple::aarch64)
-      expression = async_dwarf_expression_arm64;
-    else
-      llvm_unreachable("Unsupported architecture");
-
-    // Note how the register location gets the same expression pointer with a
-    // different size. We just skip the trailing deref for it.
-    assert(expression[expr_size - 1] == llvm::dwarf::DW_OP_deref &&
-           "Should skip a deref");
-    row->GetCFAValue().SetIsDWARFExpression(expression, expr_size);
-    row->SetRegisterLocationToIsDWARFExpression(
-        regnums->async_ctx_regnum, expression, expr_size - 1, false);
-  }
-
-  // Suppose this is unwinding frame #2 of a call stack. The value given for
-  // the async register has two possible values, depending on what frame #1
-  // expects:
-  // 1. The CFA of frame #1, direct ABI, dereferencing it once produces CFA of
-  // Frame #2.
-  // 2. The CFA of frame #0, indirect ABI, dereferencing it twice produces CFA
-  // of Frame #2.
-  const unsigned num_indirections = 1 + is_indirect;
+  const unsigned num_indirections = 1;
   if (std::optional<addr_t> pc_after_prologue = TrySkipVirtualParentProlog(
           GetAsyncContext(regctx), *process_sp, num_indirections))
     row->SetRegisterLocationToIsConstant(regnums->pc_regnum, *pc_after_prologue,

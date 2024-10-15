@@ -4,9 +4,16 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIf(archs=no_match(["arm64", "arm64e", "x86_64"]))
 class TestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
+
+    def read_ptr_from_memory(self, process, addr):
+        error = lldb.SBError()
+        value = process.ReadPointerFromMemory(addr, error)
+        self.assertSuccess(error, "Failed to read memory")
+        return value
 
     # Check that the CFA chain is correctly built
     def check_cfas(self, async_frames, process):
@@ -14,22 +21,16 @@ class TestCase(lldbtest.TestBase):
         expected_cfas = [async_cfas[0]]
         # The CFA chain ends in nullptr.
         while expected_cfas[-1] != 0:
-            error = lldb.SBError()
-            expected_cfas.append(
-                process.ReadPointerFromMemory(expected_cfas[-1], error)
-            )
-            self.assertSuccess(error, "Managed to read cfa memory")
+            expected_cfas.append(self.read_ptr_from_memory(process, expected_cfas[-1]))
 
         self.assertEqual(async_cfas, expected_cfas[:-1])
 
     def check_pcs(self, async_frames, process, target):
         for idx, frame in enumerate(async_frames[:-1]):
             # Read the continuation pointer from the second field of the CFA.
-            error = lldb.SBError()
-            continuation_ptr = process.ReadPointerFromMemory(
-                frame.GetCFA() + target.addr_size, error
+            continuation_ptr = self.read_ptr_from_memory(
+                process, frame.GetCFA() + target.addr_size
             )
-            self.assertSuccess(error, "Managed to read context memory")
 
             # The PC of the previous frame should be the continuation pointer
             # with the funclet's prologue skipped.
@@ -37,9 +38,29 @@ class TestCase(lldbtest.TestBase):
             prologue_to_skip = parent_frame.GetFunction().GetPrologueByteSize()
             self.assertEqual(continuation_ptr + prologue_to_skip, parent_frame.GetPC())
 
+    def check_async_regs_one_frame(self, frame, process):
+        async_reg_name = "r14" if self.getArchitecture() == "x86_64" else "x22"
+
+        cfa = frame.GetCFA()
+        is_indirect = "await resume" in frame.GetFunctionName()
+        async_register = frame.FindRegister(async_reg_name).GetValueAsUnsigned()
+
+        if is_indirect:
+            deref_async_reg = self.read_ptr_from_memory(process, async_register)
+            self.assertEqual(deref_async_reg, cfa)
+        else:
+            self.assertEqual(async_register, cfa)
+
+    def check_async_regs(self, async_frames, process):
+        for frame in async_frames:
+            # The frames from the implicit main function don't have a demangled
+            # name, so we can't test whether they are a Q funclet or not.
+            if "Main" in frame.GetFunctionName():
+                break
+            self.check_async_regs_one_frame(frame, process)
 
     def check_variables(self, async_frames, expected_values):
-        for (frame, expected_value) in zip(async_frames, expected_values):
+        for frame, expected_value in zip(async_frames, expected_values):
             myvar = frame.FindVariable("myvar")
             lldbutil.check_variable(self, myvar, False, value=expected_value)
 
@@ -58,6 +79,7 @@ class TestCase(lldbtest.TestBase):
         self.check_cfas(async_frames, process)
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["222", "333", "444", "555"])
+        self.check_async_regs(async_frames, process)
 
         target.DeleteAllBreakpoints()
         target.BreakpointCreateBySourceRegex("breakpoint2", source_file)
@@ -68,6 +90,7 @@ class TestCase(lldbtest.TestBase):
         self.check_cfas(async_frames, process)
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["111", "222", "333", "444", "555"])
+        self.check_async_regs(async_frames, process)
 
         # Now stop at the Q funclet right after the await to ASYNC___1
         target.DeleteAllBreakpoints()
@@ -77,6 +100,7 @@ class TestCase(lldbtest.TestBase):
         self.check_cfas(async_frames, process)
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["222", "333", "444", "555"])
+        self.check_async_regs(async_frames, process)
 
         target.DeleteAllBreakpoints()
         target.BreakpointCreateBySourceRegex("breakpoint3", source_file)
@@ -85,3 +109,4 @@ class TestCase(lldbtest.TestBase):
         self.check_cfas(async_frames, process)
         self.check_pcs(async_frames, process, target)
         self.check_variables(async_frames, ["222", "333", "444", "555"])
+        self.check_async_regs(async_frames, process)
