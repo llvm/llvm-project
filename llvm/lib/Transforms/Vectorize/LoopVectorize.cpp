@@ -1459,7 +1459,7 @@ public:
   }
 
   /// Return maximum safe number of elements to be processed, which do not
-  /// prevent store-load forwarding and safe with regard of the memory
+  /// prevent store-load forwarding and are safe with regard to the memory
   /// dependencies. Required for EVL-based VPlans to correctly calculate AVL
   /// (application vector length) as min(remaining AVL, MaxSafeElements).
   /// TODO: need to consider adjusting cost model to use this value as a
@@ -1617,10 +1617,10 @@ private:
   /// true if scalable vectorization is supported and enabled.
   std::optional<bool> IsScalableVectorizationAllowed;
 
-  /// Maximum safe number of elements to be processed, which do not
-  /// prevent store-load forwarding and safe with regard of the memory
-  /// dependencies. Required for EVL-based veectorization, where this value is
-  /// used as the upper bound of the safe AVL.
+  /// Maximum safe number of elements to be processed per vector iteration,
+  /// which do not prevent store-load forwarding and are safe with regard to the
+  /// memory dependencies. Required for EVL-based veectorization, where this
+  /// value is used as the upper bound of the safe AVL.
   std::optional<unsigned> MaxSafeElements;
 
   /// A map holding scalar costs for different vectorization factors. The
