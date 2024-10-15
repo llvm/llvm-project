@@ -7623,53 +7623,72 @@ bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
 
   LLT DstTy = MRI.getType(Unmerge->getReg(0));
 
+  // $bv:_((<8 x s8>) = G_BUILD_VECTOR ....
+  // $anyext:_(<8 x s16>) = G_ANYEXT $bv
+  // $uv:_(<4 x s16>), $uv1:_(<4 x s16>) = G_UNMERGE_VALUES $any
+  //
+  // ->
+  //
+  // $any:_(s16) = G_ANY $bv[0]
+  // $any1:_(s16) = G_ANY bv[1]
+  // $any2:_(s16) = G_ANY bv[2]
+  // $any3:_(s16) = G_ANY bv[3]
+  // $any4:_(s16) = G_ANY $bv[4]
+  // $any5:_(s16) = G_ANY $bv[5]
+  // $any6:_(s16) = G_ANY $bv[6]
+  // $any7:_(s16) = G_ANY $bv[7]
+  // $uv:_(<4 x s16>) = G_BUILD_VECTOR $any, $any1, $any2, $any3
+  // $uv1:_(<4 x s16>) = G_BUILD_VECTOR $any4, $any5, $any6, $any7
+
   // We want to unmerge into vectors.
   if (!DstTy.isFixedVector())
     return false;
 
-  if (const GAnyExt *Any = dyn_cast<GAnyExt>(Source)) {
-    const MachineInstr *NextSource = MRI.getVRegDef(Any->getSrcReg());
+  const GAnyExt *Any = dyn_cast<GAnyExt>(Source);
+  if (!Any)
+    return false;
 
-    if (const GBuildVector *BV = dyn_cast<GBuildVector>(NextSource)) {
-      // G_UNMERGE_VALUES G_ANYEXT G_BUILD_VECTOR
+  const MachineInstr *NextSource = MRI.getVRegDef(Any->getSrcReg());
 
-      if (!MRI.hasOneNonDBGUse(BV->getReg(0)))
-        return false;
+  if (const GBuildVector *BV = dyn_cast<GBuildVector>(NextSource)) {
+    // G_UNMERGE_VALUES G_ANYEXT G_BUILD_VECTOR
 
-      // FIXME: check element types?
-      if (BV->getNumSources() % Unmerge->getNumDefs() != 0)
-        return false;
+    if (!MRI.hasOneNonDBGUse(BV->getReg(0)))
+      return false;
 
-      LLT BigBvTy = MRI.getType(BV->getReg(0));
-      LLT SmallBvTy = DstTy;
-      LLT SmallBvElemenTy = SmallBvTy.getElementType();
+    // FIXME: check element types?
+    if (BV->getNumSources() % Unmerge->getNumDefs() != 0)
+      return false;
 
-      if (!isLegalOrBeforeLegalizer(
-              {TargetOpcode::G_BUILD_VECTOR, {SmallBvTy, SmallBvElemenTy}}))
-        return false;
+    LLT BigBvTy = MRI.getType(BV->getReg(0));
+    LLT SmallBvTy = DstTy;
+    LLT SmallBvElemenTy = SmallBvTy.getElementType();
 
-      // We check the legality of scalar anyext.
-      if (!isLegalOrBeforeLegalizer(
-              {TargetOpcode::G_ANYEXT,
-               {SmallBvElemenTy, BigBvTy.getElementType()}}))
-        return false;
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_BUILD_VECTOR, {SmallBvTy, SmallBvElemenTy}}))
+      return false;
 
-      MatchInfo = [=](MachineIRBuilder &B) {
-        // Build into each G_UNMERGE_VALUES def
-        // a small build vector with anyext from the source build vector.
-        for (unsigned I = 0; I < Unmerge->getNumDefs(); ++I) {
-          SmallVector<Register> Ops;
-          for (unsigned J = 0; J < SmallBvTy.getNumElements(); ++J) {
-            Register SourceArray =
-                BV->getSourceReg(I * SmallBvTy.getNumElements() + J);
-            auto AnyExt = B.buildAnyExt(SmallBvElemenTy, SourceArray);
-            Ops.push_back(AnyExt.getReg(0));
-          }
-          B.buildBuildVector(Unmerge->getOperand(I).getReg(), Ops);
-        };
+    // We check the legality of scalar anyext.
+    if (!isLegalOrBeforeLegalizer(
+            {TargetOpcode::G_ANYEXT,
+             {SmallBvElemenTy, BigBvTy.getElementType()}}))
+      return false;
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      // Build into each G_UNMERGE_VALUES def
+      // a small build vector with anyext from the source build vector.
+      for (unsigned I = 0; I < Unmerge->getNumDefs(); ++I) {
+        SmallVector<Register> Ops;
+        for (unsigned J = 0; J < SmallBvTy.getNumElements(); ++J) {
+          Register SourceArray =
+              BV->getSourceReg(I * SmallBvTy.getNumElements() + J);
+          auto AnyExt = B.buildAnyExt(SmallBvElemenTy, SourceArray);
+          Ops.push_back(AnyExt.getReg(0));
+        }
+        B.buildBuildVector(Unmerge->getOperand(I).getReg(), Ops);
       };
-      return true;
     };
+    return true;
   };
 
   return false;
