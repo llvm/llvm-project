@@ -183,7 +183,7 @@ public:
 
   virtual bool
   evaluateInstruction(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                 uint64_t &Target) const;
+                      uint64_t &Target) const;
 
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.
