@@ -772,8 +772,6 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
   LLT DstTy = Res.getLLTTy(*getMRI());
   LLT Src1Ty = Src1.getLLTTy(*getMRI());
   LLT Src2Ty = Src2.getLLTTy(*getMRI());
-  assert((size_t)(Src1Ty.getNumElements() + Src2Ty.getNumElements()) >=
-         Mask.size());
   assert(DstTy.getElementType() == Src1Ty.getElementType() &&
          DstTy.getElementType() == Src2Ty.getElementType());
   (void)DstTy;

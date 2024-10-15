@@ -38,8 +38,10 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
+#include <llvm/ADT/SmallVector.h>
 #include <optional>
 #include <tuple>
+#include <utility>
 
 #define DEBUG_TYPE "gi-combiner"
 
@@ -472,6 +474,56 @@ bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) {
   return false;
 }
 
+bool CombinerHelper::matchVectorMaskSequence(
+    MachineInstr &MI, SmallVectorImpl<Register> &Ops, const Register DstReg,
+    const std::pair<Register, Register> SrcRegs, ArrayRef<int> Mask) {
+  const LLT DstTy = MRI.getType(DstReg);
+  const LLT SrcTy = MRI.getType(SrcRegs.first);
+
+  // Check that the shuffle mask can be broken evenly between the
+  // different sources.
+  const unsigned DstNumElts = DstTy.isVector() ? DstTy.getNumElements() : 1;
+  const unsigned SrcNumElts = SrcTy.isVector() ? SrcTy.getNumElements() : 1;
+  if (DstNumElts % SrcNumElts != 0)
+    return false;
+
+  // Mask length is a multiple of the source vector length.
+  // Check if the shuffle is some kind of concatenation of the input
+  // vectors.
+  unsigned NumConcat = DstNumElts / SrcNumElts;
+  SmallVector<int, 8> ConcatSrcs(NumConcat, -1);
+  for (unsigned i = 0; i != DstNumElts; ++i) {
+    int Idx = Mask[i];
+    // Undef value.
+    if (Idx < 0)
+      continue;
+    // Ensure the indices in each SrcType sized piece are sequential and that
+    // the same source is used for the whole piece.
+    if ((Idx % SrcNumElts != (i % SrcNumElts)) ||
+        (ConcatSrcs[i / SrcNumElts] >= 0 &&
+         ConcatSrcs[i / SrcNumElts] != (int)(Idx / SrcNumElts)))
+      return false;
+    // Remember which source this index came from.
+    ConcatSrcs[i / SrcNumElts] = Idx / SrcNumElts;
+  }
+
+  // The shuffle is concatenating multiple vectors together.
+  // Collect the different operands for that.
+  Register UndefReg;
+  for (auto Src : ConcatSrcs) {
+    if (Src < 0) {
+      if (!UndefReg) {
+        Builder.setInsertPt(*MI.getParent(), MI);
+        UndefReg = Builder.buildUndef(SrcTy).getReg(0);
+      }
+      Ops.push_back(UndefReg);
+    } else if (Src == 0)
+      Ops.push_back(SrcRegs.first);
+    else
+      Ops.push_back(SrcRegs.second);
+  }
+  return true;
+}
 bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
                                                SmallVectorImpl<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
@@ -503,49 +555,10 @@ bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
   if (DstNumElts < 2 * SrcNumElts && DstNumElts != 1)
     return false;
 
-  // Check that the shuffle mask can be broken evenly between the
-  // different sources.
-  if (DstNumElts % SrcNumElts != 0)
-    return false;
-
-  // Mask length is a multiple of the source vector length.
-  // Check if the shuffle is some kind of concatenation of the input
-  // vectors.
-  unsigned NumConcat = DstNumElts / SrcNumElts;
-  SmallVector<int, 8> ConcatSrcs(NumConcat, -1);
-  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
-  for (unsigned i = 0; i != DstNumElts; ++i) {
-    int Idx = Mask[i];
-    // Undef value.
-    if (Idx < 0)
-      continue;
-    // Ensure the indices in each SrcType sized piece are sequential and that
-    // the same source is used for the whole piece.
-    if ((Idx % SrcNumElts != (i % SrcNumElts)) ||
-        (ConcatSrcs[i / SrcNumElts] >= 0 &&
-         ConcatSrcs[i / SrcNumElts] != (int)(Idx / SrcNumElts)))
-      return false;
-    // Remember which source this index came from.
-    ConcatSrcs[i / SrcNumElts] = Idx / SrcNumElts;
-  }
-
-  // The shuffle is concatenating multiple vectors together.
-  // Collect the different operands for that.
-  Register UndefReg;
-  Register Src2 = MI.getOperand(2).getReg();
-  for (auto Src : ConcatSrcs) {
-    if (Src < 0) {
-      if (!UndefReg) {
-        Builder.setInsertPt(*MI.getParent(), MI);
-        UndefReg = Builder.buildUndef(SrcType).getReg(0);
-      }
-      Ops.push_back(UndefReg);
-    } else if (Src == 0)
-      Ops.push_back(Src1);
-    else
-      Ops.push_back(Src2);
-  }
-  return true;
+  return matchVectorMaskSequence(
+      MI, Ops, MI.getOperand(0).getReg(),
+      std::make_pair(MI.getOperand(1).getReg(), MI.getOperand(2).getReg()),
+      MI.getOperand(3).getShuffleMask());
 }
 
 void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
@@ -4205,6 +4218,76 @@ void CombinerHelper::applyExtractVecEltBuildVec(MachineInstr &MI,
     return;
   }
   replaceSingleDefInstWithReg(MI, Reg);
+}
+
+bool CombinerHelper::matchCombineExtractToShuffle(
+    MachineInstr &MI, SmallVectorImpl<Register> &Ops,
+    std::pair<Register, Register> &VectorRegisters) {
+  const GBuildVector *Build = cast<GBuildVector>(&MI);
+  const unsigned SrcNumElts =
+      MRI.getType(MI.getOperand(0).getReg()).getNumElements();
+
+  // This combine tries to find all the build vectors whose source elements
+  // all originate from a G_EXTRACT_VECTOR_ELT from one or two donor vectors.
+  // One example where this may happen is for AI chips where there are a lot
+  // of matrix multiplications. Typically there vectors are disected and then
+  // rearranged into the right transformation.
+  // E.g.
+  //  %donor1(<2 x s32>) = COPY $d0
+  //  %donor2(<2 x s32>) = COPY $d1
+  //  %ext1 = G_EXTRACT_VECTOR_ELT %donor1, 0
+  //  %ext2 = G_EXTRACT_VECTOR_ELT %donor1, 1
+  //  %ext3 = G_EXTRACT_VECTOR_ELT %donor2, 0
+  //  %ext4 = G_EXTRACT_VECTOR_ELT %donor2, 1
+  /// %vector = G_BUILD_VECTOR %ext1, %ext2, %ext3, %ext4
+  // ==>
+  // replace with:
+  //   %vector = G_SHUFFLE_VECTOR %donor1, %donor2, shufflemask(0, 1, 2, 3)
+  SmallSetVector<Register, 2> RegisterVector;
+  SmallVector<int, 32> VectorMask;
+  const unsigned NumElements = Build->getNumSources();
+  for (unsigned Index = 0; Index < NumElements; Index++) {
+    Register SrcReg = peekThroughBitcast(Build->getSourceReg(Index), MRI);
+    auto *ExtractInstr = getOpcodeDef<GExtractVectorElement>(SrcReg, MRI);
+    if (!ExtractInstr)
+      return false;
+
+    RegisterVector.insert(ExtractInstr->getVectorReg());
+
+    // For shufflemasks we need to know exactly what index to place each element
+    // so if it this build vector doesn't use exclusively constants than we
+    // can't replace with a shufflevector
+    auto Cst = getIConstantVRegVal(ExtractInstr->getIndexReg(), MRI);
+    if (!Cst)
+      return false;
+
+    unsigned Idx = Cst->getZExtValue();
+    if (ExtractInstr->getVectorReg() != RegisterVector.front()) {
+      Idx += SrcNumElts;
+    }
+
+    VectorMask.emplace_back(Idx);
+  }
+
+  // Create a pair so that we don't need to look for them later. This code is
+  // incorrect if we have more than two vectors in the set. Since we can only
+  // put two vectors in a shuffle, we reject any solution with more than two
+  // anyways.
+  VectorRegisters =
+      std::make_pair(RegisterVector.front(), RegisterVector.back());
+
+  // We check that they're the same type before running. We can also grow the
+  // smaller one tro the target size, but there isn't an elegant way to do that
+  // until we have a good lowerng for G_EXTRACT_SUBVECTOR.
+  // Apparently if they are the same, they don't necessary have the same type?
+  if (MRI.getType(VectorRegisters.first) != MRI.getType(VectorRegisters.second))
+    return false;
+
+  if (RegisterVector.size() > 2)
+    return false;
+
+  return matchVectorMaskSequence(MI, Ops, MI.getOperand(0).getReg(),
+                                 VectorRegisters, VectorMask);
 }
 
 bool CombinerHelper::matchExtractAllEltsFromBuildVector(
