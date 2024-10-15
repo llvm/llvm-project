@@ -275,7 +275,12 @@ public:
 
   /// This is a wrapper around getRegForValue that also takes care of
   /// truncating or sign-extending the given getelementptr index value.
-  Register getRegForGEPIndex(const Value *Idx);
+  Register getRegForGEPIndex(MVT PtrVT, const Value *Idx);
+
+  /// Retained for ABI compatibility in release branch.
+  Register getRegForGEPIndex(const Value *Idx) {
+    return getRegForGEPIndex(TLI.getPointerTy(DL), Idx);
+  }
 
   /// We're checking to see if we can fold \p LI into \p FoldInst. Note
   /// that we could have a sequence where multiple LLVM IR instructions are
