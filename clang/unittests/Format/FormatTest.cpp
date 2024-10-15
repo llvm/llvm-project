@@ -28205,10 +28205,10 @@ TEST_F(FormatTest, RemovesEmptyLinesInUnwrappedLines) {
                Style);
 
   verifyFormat("void loooonFunctionIsVeryLongButNotAsLongAsJavaTypeNames(\n"
-               "    std::map<int, std::string> *outputMap);\n",
+               "    std::map<int, std::string> *outputMap);",
                "void loooonFunctionIsVeryLongButNotAsLongAsJavaTypeNames\n"
                "\n"
-               "    (std::map<int, std::string> *outputMap);\n",
+               "    (std::map<int, std::string> *outputMap);",
                Style);
 }
 
