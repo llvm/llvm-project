@@ -1800,16 +1800,16 @@ static LogicalResult checkAssumptionForLoop(RewriterBase &rewriter,
     };
     getBackwardSlice(operand, &slice, options);
     if (!slice.empty()) {
+      // If consumerOp has one producer, which is also the user of loopOp.
+      // E.g.
+      // ```
+      //  %0 = %loopOp
+      //  %1 = consumerOp1 ins(%0)
+      //  %2 = consumerOp2 ins(%0, %1)
+      // ```
+      // We can not fuse consumerOp2 into loopOp due to UD chain, unless
+      // consumerOp1 has already been fused into loopOp before.
       if (includeLoopOp) {
-        // If consumerOp has one producer, which is also the user of loopOp.
-        // E.g.
-        // ```
-        //  %0 = %loopOp
-        //  %1 = consumerOp1 ins(%0)
-        //  %2 = consumerOp2 ins(%0, %1)
-        // ```
-        // We can not fuse consumerOp2 into loopOp due to UD chain, unless
-        // consumerOp1 has already been fused into loopOp before.
         return rewriter.notifyMatchFailure(
             consumerOp, "could not fuse consumer due to inevitable use-def "
                         "chain violation");
@@ -1841,6 +1841,24 @@ static FailureOr<OpOperand *> getUntiledConsumerFromSlice(Operation *sliceOp) {
   } else {
     return failure();
   }
+}
+
+/// A utility to move the given operand to the end of use list.
+static void moveOperandToEndOfUseList(OpOperand *operand) {
+  Value::use_range uses = operand->get().getUses();
+  size_t numberUses = std::distance(uses.begin(), uses.end());
+  if (numberUses == 1)
+    return;
+  auto iter = llvm::find(uses, *operand);
+  if (iter == uses.end())
+    return;
+  unsigned index = std::distance(uses.begin(), iter);
+  SmallVector<unsigned> indices =
+      llvm::to_vector(llvm::seq<unsigned>(numberUses));
+  indices.push_back(indices[index]);
+  indices.erase(indices.begin() + index);
+  operand->get().shuffleUseList(indices);
+  return;
 }
 
 /// Implementation of fusing consumer of a single slice by computing the
@@ -1897,6 +1915,8 @@ mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
   Operation *firstUserOfLoop = nullptr;
   if (failed(checkAssumptionForLoop(rewriter, outerMostLoop, consumerOp,
                                     &firstUserOfLoop))) {
+    // Prepare for next consumer.
+    moveOperandToEndOfUseList(consumerOpOperand);
     return rewriter.notifyMatchFailure(
         outerMostLoop,
         "containing loop op should either yield just one value or "
