@@ -1234,6 +1234,7 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp10m1f16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(

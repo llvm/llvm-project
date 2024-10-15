@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
@@ -103,7 +104,7 @@ LLVM_LIBC_FUNCTION(float16, exp10m1f16, (float16 x)) {
       // When x >= -0x1.ce4p+1, round(10^x - 1, HP, RN) = -0x1.ffcp-1.
       if (x_u <= 0xc339U) {
         return fputil::round_result_slightly_down(
-            static_cast<float16>(-0x1.ffcp-1));
+            fputil::cast<float16>(-0x1.ffcp-1));
       }
 
       // When x < -0x1.ce4p+1, round(10^x - 1, HP, RN) = -1.
@@ -112,7 +113,7 @@ LLVM_LIBC_FUNCTION(float16, exp10m1f16, (float16 x)) {
       case FE_DOWNWARD:
         return FPBits::one(Sign::NEG).get_val();
       default:
-        return static_cast<float16>(-0x1.ffcp-1);
+        return fputil::cast<float16>(-0x1.ffcp-1);
       }
     }
 
@@ -128,7 +129,7 @@ LLVM_LIBC_FUNCTION(float16, exp10m1f16, (float16 x)) {
       //   > display = hexadecimal;
       //   > P = fpminimax((10^x - 1)/x, 4, [|SG...|], [-2^-3, 2^-3]);
       //   > x * P;
-      return static_cast<float16>(
+      return fputil::cast<float16>(
           xf * fputil::polyeval(xf, 0x1.26bb1cp+1f, 0x1.5351c8p+1f,
                                 0x1.04704p+1f, 0x1.2ce084p+0f, 0x1.14a6bep-1f));
     }
@@ -141,11 +142,11 @@ LLVM_LIBC_FUNCTION(float16, exp10m1f16, (float16 x)) {
   if (LIBC_UNLIKELY((x_u & ~(0x3c00U | 0x4000U | 0x4200U | 0x4400U)) == 0)) {
     switch (x_u) {
     case 0x3c00U: // x = 1.0f16
-      return static_cast<float16>(9.0);
+      return fputil::cast<float16>(9.0);
     case 0x4000U: // x = 2.0f16
-      return static_cast<float16>(99.0);
+      return fputil::cast<float16>(99.0);
     case 0x4200U: // x = 3.0f16
-      return static_cast<float16>(999.0);
+      return fputil::cast<float16>(999.0);
     }
   }
 
@@ -155,7 +156,7 @@ LLVM_LIBC_FUNCTION(float16, exp10m1f16, (float16 x)) {
   // exp10(x) = exp2((hi + mid) * log2(10)) * exp10(lo)
   auto [exp2_hi_mid, exp10_lo] = exp10_range_reduction(x);
   // exp10m1(x) = exp2((hi + mid) * log2(lo)) * exp10(lo) - 1
-  return static_cast<float16>(
+  return fputil::cast<float16>(
       fputil::multiply_add(exp2_hi_mid, exp10_lo, -1.0f));
 }
 
