@@ -851,7 +851,7 @@ void llvm::updateVCallVisibilityInModule(
 void llvm::updatePublicTypeTestCalls(Module &M,
                                      bool WholeProgramVisibilityEnabledInLTO) {
   Function *PublicTypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (!PublicTypeTestFunc)
     return;
   if (hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO)) {
@@ -2247,12 +2247,13 @@ bool DevirtModule::run() {
     return false;
 
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   Function *TypeCheckedLoadFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
-  Function *TypeCheckedLoadRelativeFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
-  Function *AssumeFunc = M.getFunction(Intrinsic::getName(Intrinsic::assume));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
+  Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
+      &M, Intrinsic::type_checked_load_relative);
+  Function *AssumeFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::assume);
 
   // Normally if there are no users of the devirtualization intrinsics in the
   // module, this pass has nothing to do. But if we are exporting, we also need
