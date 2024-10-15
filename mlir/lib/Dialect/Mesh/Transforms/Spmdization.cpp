@@ -438,8 +438,8 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   if (sourceSharding.equalSplitAndPartialAxes(targetSharding) &&
       sourceSharding.getPartialAxes().empty() &&
       targetSharding.getPartialAxes().empty() &&
-      sourceSharding.getStaticShardedDimsSizes().empty() &&
-      targetSharding.getStaticShardedDimsSizes().empty() &&
+      sourceSharding.getStaticShardedDimsOffsets().empty() &&
+      targetSharding.getStaticShardedDimsOffsets().empty() &&
       !sourceSharding.equalHaloSizes(targetSharding)) {
     auto srcHaloSizes = sourceSharding.getStaticHaloSizes();
     auto tgtHaloSizes = targetSharding.getStaticHaloSizes();
@@ -510,8 +510,8 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh,
 
   TypedValue<ShapedType> targetShard;
   MeshSharding actualTargetSharding;
-  if (reducedSourceSharding.getStaticShardedDimsSizes().empty() &&
-      targetSharding.getStaticShardedDimsSizes().empty() &&
+  if (reducedSourceSharding.getStaticShardedDimsOffsets().empty() &&
+      targetSharding.getStaticShardedDimsOffsets().empty() &&
       reducedSourceSharding.getStaticHaloSizes().empty() &&
       targetSharding.getStaticHaloSizes().empty()) {
     if (auto tryRes = tryMoveLastSplitAxisInResharding(
