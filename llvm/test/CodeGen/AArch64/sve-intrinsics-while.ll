@@ -128,13 +128,12 @@ define <vscale x 16 x i1> @whilele_b_ii_dont_fold_to_ptrue_overflow() {
   ret <vscale x 16 x i1> %out
 }
 
-define <vscale x 16 x i1> @whilele_b_ii_dont_fold_to_ptrue_increment_overflow() {
-; CHECK-LABEL: whilele_b_ii_dont_fold_to_ptrue_increment_overflow:
+define <vscale x 16 x i1> @whilele_b_ii_known_always_true() {
+; CHECK-LABEL: whilele_b_ii_known_always_true:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
-; CHECK-NEXT:    whilele p0.b, wzr, w8
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilele.nxv16i1.i32(i32 0, i32 2147483647)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilele.nxv16i1.i32(i32 2147483646, i32 2147483647)
   ret <vscale x 16 x i1> %out
 }
 
@@ -388,13 +387,12 @@ define <vscale x 16 x i1> @whilels_b_ii_dont_fold_to_ptrue_overflow() {
   ret <vscale x 16 x i1> %out
 }
 
-define <vscale x 16 x i1> @whilels_b_ii_dont_fold_to_ptrue_increment_overflow() {
-; CHECK-LABEL: whilels_b_ii_dont_fold_to_ptrue_increment_overflow:
+define <vscale x 16 x i1> @whilels_b_ii_known_always_true() {
+; CHECK-LABEL: whilels_b_ii_known_always_true:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    whilels p0.b, wzr, w8
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilels.nxv16i1.i32(i32 0, i32 4294967295)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilels.nxv16i1.i32(i32 4294967294, i32 4294967295)
   ret <vscale x 16 x i1> %out
 }
 
