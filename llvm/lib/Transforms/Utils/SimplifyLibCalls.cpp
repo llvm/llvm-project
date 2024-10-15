@@ -2720,6 +2720,9 @@ Value *LibCallSimplifier::mergeSqrtToExp(CallInst *CI, IRBuilderBase &B) {
       ExpLb = LibFunc_exp;
       Exp2Lb = LibFunc_exp2;
       Exp10Lb = LibFunc_exp10;
+    } else if (CI->getType()->getScalarType()->isFP128Ty()) {
+      ExpLb = LibFunc_expl;
+      Exp2Lb = LibFunc_exp2l;
     } else
       return nullptr;
   } else
