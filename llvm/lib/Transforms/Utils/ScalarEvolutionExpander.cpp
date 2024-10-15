@@ -678,9 +678,8 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
 
   const SCEV *RHSExpr = S->getRHS();
   Value *RHS = expand(RHSExpr);
-  if (SafeUDivMode &&
-      (!isa<SCEVConstant>(RHSExpr) || SE.isKnownNonZero(RHSExpr))) {
-    if (!isa<SCEVConstant>(S->getRHS()))
+  if (SafeUDivMode && !SE.isKnownNonZero(RHSExpr)) {
+    if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr))
       RHS = Builder.CreateFreeze(RHS);
     RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
                                   {RHS, ConstantInt::get(RHS->getType(), 1)});

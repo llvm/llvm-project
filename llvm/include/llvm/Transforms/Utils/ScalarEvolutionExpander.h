@@ -424,9 +424,6 @@ public:
   BasicBlock::iterator findInsertPointAfter(Instruction *I,
                                             Instruction *MustDominate) const;
 
-  static const SCEV *rewriteExpressionToRemoveUB(const SCEV *BTC, Loop *L,
-                                                 ScalarEvolution &SE);
-
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
 
