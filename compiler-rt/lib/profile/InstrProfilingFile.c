@@ -13,7 +13,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if !defined(__wasi__)
 #include <signal.h>
+#endif
 #ifdef _MSC_VER
 /* For _alloca. */
 #include <malloc.h>
