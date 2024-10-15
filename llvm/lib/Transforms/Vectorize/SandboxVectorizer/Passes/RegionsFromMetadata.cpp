@@ -14,9 +14,8 @@
 namespace llvm::sandboxir {
 
 RegionsFromMetadata::RegionsFromMetadata(StringRef Pipeline)
-    : FunctionPass("regions-from-metadata"), RPM("rpm") {
-  RPM.setPassPipeline(Pipeline, SandboxVectorizerPassBuilder::createRegionPass);
-}
+    : FunctionPass("regions-from-metadata"),
+      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
 
 bool RegionsFromMetadata::runOnFunction(Function &F) {
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =

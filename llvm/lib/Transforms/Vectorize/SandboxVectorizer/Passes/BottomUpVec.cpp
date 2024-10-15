@@ -16,9 +16,8 @@
 namespace llvm::sandboxir {
 
 BottomUpVec::BottomUpVec(StringRef Pipeline)
-    : FunctionPass("bottom-up-vec"), RPM("rpm") {
-  RPM.setPassPipeline(Pipeline, SandboxVectorizerPassBuilder::createRegionPass);
-}
+    : FunctionPass("bottom-up-vec"),
+      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
 
 // TODO: This is a temporary function that returns some seeds.
 //       Replace this with SeedCollector's function when it lands.

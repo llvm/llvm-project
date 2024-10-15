@@ -319,16 +319,27 @@ define void @f() {
                ".*not registered.*");
   EXPECT_DEATH(FPM2.setPassPipeline(",", CreatePass), ".*empty pass name.*");
   EXPECT_DEATH(FPM2.setPassPipeline("<>", CreatePass), ".*empty pass name.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("<>foo", CreatePass),
+               ".*empty pass name.*");
   EXPECT_DEATH(FPM2.setPassPipeline("foo,<>", CreatePass),
                ".*empty pass name.*");
 
   // Mismatched argument brackets.
-  EXPECT_DEATH(FPM2.setPassPipeline("foo<", CreatePass), ".*");
-  EXPECT_DEATH(FPM2.setPassPipeline("foo>", CreatePass), ".*");
-  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar<>", CreatePass), ".*");
-  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar<>>>", CreatePass), ".*");
-  EXPECT_DEATH(FPM2.setPassPipeline(">foo", CreatePass), ".*");
-  EXPECT_DEATH(FPM2.setPassPipeline("<>foo", CreatePass), ".*");
-  EXPECT_DEATH(FPM2.setPassPipeline("foo<args><more-args>", CreatePass), ".*");
-  EXPECT_DEATH(FPM2.setPassPipeline("foo<args>bar", CreatePass), ".*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<", CreatePass), ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar", CreatePass), ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar<>", CreatePass),
+               ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo>", CreatePass), ".*Unexpected '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline(">foo", CreatePass), ".*Unexpected '>'.*");
+  // Extra garbage between args and next delimiter/end-of-string.
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar<>>>", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("bar<>foo", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("bar<>foo,baz", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<args><more-args>", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<args>bar", CreatePass),
+               ".*Expected delimiter.*");
 }

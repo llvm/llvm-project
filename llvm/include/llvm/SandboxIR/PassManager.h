@@ -32,11 +32,20 @@ class Value;
 /// Base class.
 template <typename ParentPass, typename ContainedPass>
 class PassManager : public ParentPass {
+public:
+  // CreatePassFunc(StringRef PassName, StringRef PassArgs).
+  using CreatePassFunc =
+      std::function<std::unique_ptr<ContainedPass>(StringRef, StringRef)>;
+
 protected:
   /// The list of passes that this pass manager will run.
   SmallVector<std::unique_ptr<ContainedPass>> Passes;
 
   PassManager(StringRef Name) : ParentPass(Name) {}
+  PassManager(StringRef Name, StringRef Pipeline, CreatePassFunc CreatePass)
+      : ParentPass(Name) {
+    setPassPipeline(Pipeline, CreatePass);
+  }
   PassManager(const PassManager &) = delete;
   PassManager(PassManager &&) = default;
   virtual ~PassManager() = default;
@@ -48,9 +57,6 @@ public:
     // TODO: Check that Pass's class type works with this PassManager type.
     Passes.push_back(std::move(Pass));
   }
-
-  using CreatePassFunc =
-      std::function<std::unique_ptr<ContainedPass>(StringRef, StringRef)>;
 
   /// Parses \p Pipeline as a comma-separated sequence of pass names and sets
   /// the pass pipeline, using \p CreatePass to instantiate passes by name.
@@ -86,18 +92,6 @@ public:
     std::string PipelineStr = std::string(Pipeline) + EndToken;
     Pipeline = StringRef(PipelineStr);
 
-    enum {
-      ScanName,  // reading a pass name
-      ScanArgs,  // reading a list of args
-      ArgsEnded, // read the last '>' in an args list, must read delimiter next
-    } State;
-    State = ScanName;
-    int PassBeginIdx = 0;
-    int ArgsBeginIdx;
-    StringRef PassName;
-    StringRef PassArgs;
-    int NestedArgs = 0;
-
     auto AddPass = [this, CreatePass](StringRef PassName, StringRef PassArgs) {
       if (PassName.empty()) {
         errs() << "Found empty pass name.\n";
@@ -112,15 +106,25 @@ public:
       }
       addPass(std::move(Pass));
     };
+
+    enum class State {
+      ScanName,  // reading a pass name
+      ScanArgs,  // reading a list of args
+      ArgsEnded, // read the last '>' in an args list, must read delimiter next
+    } CurrentState = State::ScanName;
+    int PassBeginIdx = 0;
+    int ArgsBeginIdx;
+    StringRef PassName;
+    int NestedArgs = 0;
     for (auto [Idx, C] : enumerate(Pipeline)) {
-      switch (State) {
-      case ScanName:
+      switch (CurrentState) {
+      case State::ScanName:
         if (C == BeginArgsToken) {
           // Save pass name for later and begin scanning args.
           PassName = Pipeline.slice(PassBeginIdx, Idx);
           ArgsBeginIdx = Idx + 1;
           ++NestedArgs;
-          State = ScanArgs;
+          CurrentState = State::ScanArgs;
           break;
         }
         if (C == EndArgsToken) {
@@ -134,7 +138,7 @@ public:
           PassBeginIdx = Idx + 1;
         }
         break;
-      case ScanArgs:
+      case State::ScanArgs:
         // While scanning args, we only care about making sure nesting of angle
         // brackets is correct.
         if (C == BeginArgsToken) {
@@ -145,11 +149,10 @@ public:
           --NestedArgs;
           if (NestedArgs == 0) {
             // Done scanning args.
-            PassArgs = Pipeline.slice(ArgsBeginIdx, Idx);
-            AddPass(PassName, PassArgs);
-            State = ArgsEnded;
+            AddPass(PassName, Pipeline.slice(ArgsBeginIdx, Idx));
+            CurrentState = State::ArgsEnded;
           } else if (NestedArgs < 0) {
-            errs() << "Unbalanced '>' in pass pipeline.\n";
+            errs() << "Unexpected '>' in pass pipeline.\n";
             exit(1);
           }
           break;
@@ -161,12 +164,12 @@ public:
           exit(1);
         }
         break;
-      case ArgsEnded:
+      case State::ArgsEnded:
         // Once we're done scanning args, only a delimiter is valid. This avoids
         // accepting strings like "foo<args><more-args>" or "foo<args>bar".
         if (C == EndToken || C == PassDelimToken) {
           PassBeginIdx = Idx + 1;
-          State = ScanName;
+          CurrentState = State::ScanName;
         } else {
           errs() << "Expected delimiter or end-of-string after pass "
                     "arguments.\n";
@@ -202,12 +205,18 @@ class FunctionPassManager final
     : public PassManager<FunctionPass, FunctionPass> {
 public:
   FunctionPassManager(StringRef Name) : PassManager(Name) {}
+  FunctionPassManager(StringRef Name, StringRef Pipeline,
+                      CreatePassFunc CreatePass)
+      : PassManager(Name, Pipeline, CreatePass) {}
   bool runOnFunction(Function &F) final;
 };
 
 class RegionPassManager final : public PassManager<RegionPass, RegionPass> {
 public:
   RegionPassManager(StringRef Name) : PassManager(Name) {}
+  RegionPassManager(StringRef Name, StringRef Pipeline,
+                    CreatePassFunc CreatePass)
+      : PassManager(Name, Pipeline, CreatePass) {}
   bool runOnRegion(Region &R) final;
 };
 
