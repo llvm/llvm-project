@@ -450,31 +450,14 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
   // multiple accesses, effectively unrolling the memcpy loop. Private memory
   // also hits this, although accesses may be decomposed.
   //
-  // Don't unroll if
-  // - Length is not a constant, since unrolling leads to worse performance for
-  //   length values that are smaller or slightly larger than the total size of
-  //   the type returned here. Mitigating that would require a more complex
-  //   lowering for variable-length memcpy and memmove.
-  // - the memory operations would be split further into byte-wise accesses
-  //   because of their (mis)alignment, since that would lead to a huge code
-  //   size increase.
+  // Don't unroll if Length is not a constant, since unrolling leads to worse
+  // performance for length values that are smaller or slightly larger than the
+  // total size of the type returned here. Mitigating that would require a more
+  // complex lowering for variable-length memcpy and memmove.
   unsigned I32EltsInVector = 4;
-  if (MemcpyLoopUnroll > 0 && isa<ConstantInt>(Length)) {
-    unsigned VectorSizeBytes = I32EltsInVector * 4;
-    unsigned VectorSizeBits = VectorSizeBytes * 8;
-    unsigned UnrolledVectorBytes = VectorSizeBytes * MemcpyLoopUnroll;
-    Align PartSrcAlign(commonAlignment(SrcAlign, UnrolledVectorBytes));
-    Align PartDestAlign(commonAlignment(DestAlign, UnrolledVectorBytes));
-
-    const SITargetLowering *TLI = this->getTLI();
-    bool SrcNotSplit = TLI->allowsMisalignedMemoryAccessesImpl(
-        VectorSizeBits, SrcAddrSpace, PartSrcAlign);
-    bool DestNotSplit = TLI->allowsMisalignedMemoryAccessesImpl(
-        VectorSizeBits, DestAddrSpace, PartDestAlign);
-    if (SrcNotSplit && DestNotSplit)
-      return FixedVectorType::get(Type::getInt32Ty(Context),
-                                  MemcpyLoopUnroll * I32EltsInVector);
-  }
+  if (MemcpyLoopUnroll > 0 && isa<ConstantInt>(Length))
+    return FixedVectorType::get(Type::getInt32Ty(Context),
+                                MemcpyLoopUnroll * I32EltsInVector);
 
   return FixedVectorType::get(Type::getInt32Ty(Context), I32EltsInVector);
 }
