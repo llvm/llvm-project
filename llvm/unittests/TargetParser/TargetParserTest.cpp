@@ -490,6 +490,9 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams<uint64_t>("cortex-m33", "armv8-m.main", "fpv5-sp-d16",
                                    ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-M.Mainline"),
+        ARMCPUTestParams<uint64_t>("star-mc1", "armv8-m.main", "fpv5-sp-d16",
+                                   ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                                   "8-M.Mainline"),
         ARMCPUTestParams<uint64_t>("cortex-m35p", "armv8-m.main", "fpv5-sp-d16",
                                    ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-M.Mainline"),
@@ -518,7 +521,7 @@ INSTANTIATE_TEST_SUITE_P(
                                    "7-S")),
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
-static constexpr unsigned NumARMCPUArchs = 92;
+static constexpr unsigned NumARMCPUArchs = 93;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;

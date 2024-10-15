@@ -935,9 +935,11 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
 
 /// Fold (icmp eq ctpop(X) 1) | (icmp eq X 0) into (icmp ult ctpop(X) 2) and
 /// fold (icmp ne ctpop(X) 1) & (icmp ne X 0) into (icmp ugt ctpop(X) 1).
-/// Also used for logical and/or, must be poison safe.
+/// Also used for logical and/or, must be poison safe if range attributes are
+/// dropped.
 static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
-                                   InstCombiner::BuilderTy &Builder) {
+                                   InstCombiner::BuilderTy &Builder,
+                                   InstCombinerImpl &IC) {
   CmpInst::Predicate Pred0, Pred1;
   Value *X;
   if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
@@ -945,11 +947,19 @@ static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())))
     return nullptr;
 
-  Value *CtPop = Cmp0->getOperand(0);
-  if (IsAnd && Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_NE)
+  auto *CtPop = cast<Instruction>(Cmp0->getOperand(0));
+  if (IsAnd && Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_NE) {
+    // Drop range attributes and re-infer them in the next iteration.
+    CtPop->dropPoisonGeneratingAnnotations();
+    IC.addToWorklist(CtPop);
     return Builder.CreateICmpUGT(CtPop, ConstantInt::get(CtPop->getType(), 1));
-  if (!IsAnd && Pred0 == ICmpInst::ICMP_EQ && Pred1 == ICmpInst::ICMP_EQ)
+  }
+  if (!IsAnd && Pred0 == ICmpInst::ICMP_EQ && Pred1 == ICmpInst::ICMP_EQ) {
+    // Drop range attributes and re-infer them in the next iteration.
+    CtPop->dropPoisonGeneratingAnnotations();
+    IC.addToWorklist(CtPop);
     return Builder.CreateICmpULT(CtPop, ConstantInt::get(CtPop->getType(), 2));
+  }
 
   return nullptr;
 }
@@ -3362,9 +3372,9 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                              /*IsLogical*/ false, Builder, Q))
     return V;
 
-  if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder))
+  if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder, *this))
     return V;
-  if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder))
+  if (Value *V = foldIsPowerOf2OrZero(RHS, LHS, IsAnd, Builder, *this))
     return V;
 
   // TODO: One of these directions is fine with logical and/or, the other could

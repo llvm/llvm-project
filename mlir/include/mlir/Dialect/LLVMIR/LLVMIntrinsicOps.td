@@ -166,6 +166,9 @@ def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
+def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
+def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
+def LLVM_TanhOp : LLVM_UnaryIntrOpF<"tanh">;
 
 class LLVM_MemcpyIntrOpBase<string name> :
     LLVM_ZeroResultIntrOp<name, [0, 1, 2],
