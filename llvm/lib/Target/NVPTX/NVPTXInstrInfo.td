@@ -139,6 +139,8 @@ def hasVote : Predicate<"Subtarget->hasVote()">;
 def hasDouble : Predicate<"Subtarget->hasDouble()">;
 def hasLDG : Predicate<"Subtarget->hasLDG()">;
 def hasLDU : Predicate<"Subtarget->hasLDU()">;
+def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
+def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -3736,9 +3738,10 @@ def Callseq_End :
             [(callseq_end timm:$amt1, timm:$amt2)]>;
 
 // trap instruction
+def trapinst : NVPTXInst<(outs), (ins), "trap;", [(trap)]>, Requires<[noPTXASUnreachableBug]>;
 // Emit an `exit` as well to convey to ptxas that `trap` exits the CFG.
 // This won't be necessary in a future version of ptxas.
-def trapinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>;
+def trapexitinst : NVPTXInst<(outs), (ins), "trap; exit;", [(trap)]>, Requires<[hasPTXASUnreachableBug]>;
 // brkpt instruction
 def debugtrapinst : NVPTXInst<(outs), (ins), "brkpt;", [(debugtrap)]>;
 

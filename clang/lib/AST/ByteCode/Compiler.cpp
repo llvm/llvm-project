@@ -2728,7 +2728,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
     if (std::optional<unsigned> LocalIndex =
-            allocateLocal(Inner, E->getExtendingDecl())) {
+            allocateLocal(E, Inner->getType(), E->getExtendingDecl())) {
       InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
@@ -2868,6 +2868,11 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
   if (DiscardResult)
     return true;
+
+  if (!Initializing) {
+    unsigned StringIndex = P.createGlobalString(E->getFunctionName(), E);
+    return this->emitGetPtrGlobal(StringIndex, E);
+  }
 
   return this->delegate(E->getFunctionName());
 }
@@ -3406,7 +3411,7 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   if (!this->visit(Arg))
     return false;
 
-  return this->emitFree(E->isArrayForm(), E);
+  return this->emitFree(E->isArrayForm(), E->isGlobalDelete(), E);
 }
 
 template <class Emitter>
@@ -4029,7 +4034,8 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
 
 template <class Emitter>
 std::optional<unsigned>
-Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
+Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
+                                 const ValueDecl *ExtendingDecl) {
   // Make sure we don't accidentally register the same decl twice.
   if ([[maybe_unused]] const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
@@ -4037,7 +4043,6 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
     assert(!Locals.contains(VD));
   }
 
-  QualType Ty;
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
@@ -4050,7 +4055,8 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, const ValueDecl *ExtendingDecl) {
   }
   if (auto *E = Src.dyn_cast<const Expr *>()) {
     IsTemporary = true;
-    Ty = E->getType();
+    if (Ty.isNull())
+      Ty = E->getType();
   }
 
   Descriptor *D = P.createDescriptor(
@@ -6005,6 +6011,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
+
+    if (D->getType()->isReferenceType())
+      return false; // FIXME: Do we need to emit InvalidDeclRef?
   }
 
   // In case we need to re-visit a declaration.
@@ -6041,9 +6050,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         const auto typeShouldBeVisited = [&](QualType T) -> bool {
           if (T.isConstant(Ctx.getASTContext()))
             return true;
-          if (const auto *RT = T->getAs<ReferenceType>())
-            return RT->getPointeeType().isConstQualified();
-          return false;
+          return T->isReferenceType();
         };
 
         // DecompositionDecls are just proxies for us.
@@ -6059,9 +6066,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         // other words, we're evaluating the initializer, just to know if we can
         // evaluate the initializer.
         if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
-            VD->getInit() && !VD->getInit()->isValueDependent() &&
-            VD->evaluateValue())
-          return revisit(VD);
+            VD->getInit() && !VD->getInit()->isValueDependent()) {
+
+          if (VD->evaluateValue())
+            return revisit(VD);
+          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E), E);
+        }
       }
     } else {
       if (const auto *VD = dyn_cast<VarDecl>(D);

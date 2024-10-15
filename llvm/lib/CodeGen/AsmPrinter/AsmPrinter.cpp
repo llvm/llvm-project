@@ -772,6 +772,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // sections and expected to be contiguous (e.g. ObjC metadata).
   Align Alignment = getGVAlignment(GV, DL);
   if (GV->isTagged() && Alignment < 16) {
+    // llvm/lib/IR/Verifier.cpp makes sure tagged globals don't have section.
     assert(!GV->hasSection());
     Alignment = Align(16);
   }

@@ -78,6 +78,12 @@ public:
 
   uint8_t partition = 1;
   uint32_t type;
+
+  // The file which contains this section. For InputSectionBase, its dynamic
+  // type is usually ObjFile<ELFT>, but may be an InputFile of InternalKind
+  // (for a synthetic section).
+  InputFile *file;
+
   StringRef name;
 
   // The 1-indexed partition that this section is assigned to by the garbage
@@ -92,6 +98,7 @@ public:
   uint32_t link;
   uint32_t info;
 
+  Ctx &getCtx() const;
   OutputSection *getOutputSection();
   const OutputSection *getOutputSection() const {
     return const_cast<SectionBase *>(this)->getOutputSection();
@@ -108,12 +115,12 @@ public:
   void markDead() { partition = 0; }
 
 protected:
-  constexpr SectionBase(Kind sectionKind, StringRef name, uint64_t flags,
-                        uint32_t entsize, uint32_t addralign, uint32_t type,
-                        uint32_t info, uint32_t link)
+  constexpr SectionBase(Kind sectionKind, InputFile *file, StringRef name,
+                        uint64_t flags, uint32_t entsize, uint32_t addralign,
+                        uint32_t type, uint32_t info, uint32_t link)
       : sectionKind(sectionKind), bss(false), keepUnique(false), type(type),
-        name(name), flags(flags), addralign(addralign), entsize(entsize),
-        link(link), info(info) {}
+        file(file), name(name), flags(flags), addralign(addralign),
+        entsize(entsize), link(link), info(info) {}
 };
 
 struct SymbolAnchor {
@@ -149,11 +156,6 @@ public:
   static bool classof(const SectionBase *s) {
     return s->kind() != Output && s->kind() != Class;
   }
-
-  // The file which contains this section. Its dynamic type is usually
-  // ObjFile<ELFT>, but may be an InputFile of InternalKind (for a synthetic
-  // section).
-  InputFile *file;
 
   // Input sections are part of an output section. Special sections
   // like .eh_frame and merge sections are first combined into a
@@ -470,19 +472,21 @@ static_assert(sizeof(InputSection) <= 160, "InputSection is too big");
 
 class SyntheticSection : public InputSection {
 public:
-  SyntheticSection(uint64_t flags, uint32_t type, uint32_t addralign,
+  Ctx &ctx;
+  SyntheticSection(Ctx &ctx, uint64_t flags, uint32_t type, uint32_t addralign,
                    StringRef name)
       : InputSection(ctx.internalFile, flags, type, addralign, {}, name,
-                     InputSectionBase::Synthetic) {}
+                     InputSectionBase::Synthetic),
+        ctx(ctx) {}
 
   virtual ~SyntheticSection() = default;
-  virtual size_t getSize(Ctx &) const = 0;
+  virtual size_t getSize() const = 0;
   virtual bool updateAllocSize(Ctx &) { return false; }
   // If the section has the SHF_ALLOC flag and the size may be changed if
   // thunks are added, update the section size.
-  virtual bool isNeeded(Ctx &) const { return true; }
-  virtual void finalizeContents(Ctx &) {}
-  virtual void writeTo(Ctx &, uint8_t *buf) = 0;
+  virtual bool isNeeded() const { return true; }
+  virtual void finalizeContents() {}
+  virtual void writeTo(uint8_t *buf) = 0;
 
   static bool classof(const SectionBase *sec) {
     return sec->kind() == InputSectionBase::Synthetic;
