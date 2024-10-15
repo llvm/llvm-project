@@ -2648,20 +2648,18 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     }
 
     if (!success || !tmp_result.Succeeded()) {
-      llvm::StringRef error_msg = tmp_result.GetErrorString();
+      std::string error_msg = tmp_result.GetErrorString();
       if (error_msg.empty())
         error_msg = "<unknown error>.\n";
       if (options.GetStopOnError()) {
-        result.AppendErrorWithFormat(
-            "Aborting reading of commands after command #%" PRIu64
-            ": '%s' failed with %s",
-            (uint64_t)idx, cmd, error_msg.str().c_str());
+        result.AppendErrorWithFormatv("Aborting reading of commands after "
+                                      "command #{0}: '{1}' failed with {2}",
+                                      (uint64_t)idx, cmd, error_msg);
         m_debugger.SetAsyncExecution(old_async_execution);
         return;
       } else if (options.GetPrintResults()) {
-        result.AppendMessageWithFormat(
-            "Command #%" PRIu64 " '%s' failed with %s", (uint64_t)idx + 1, cmd,
-            error_msg.str().c_str());
+        result.AppendMessageWithFormatv("Command #{0} '{1}' failed with {2}",
+                                        (uint64_t)idx + 1, cmd, error_msg);
       }
     }
 
@@ -3199,11 +3197,12 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
        io_handler.GetFlags().Test(eHandleCommandFlagPrintResult)) ||
       io_handler.GetFlags().Test(eHandleCommandFlagPrintErrors)) {
     // Display any inline diagnostics first.
-    if (!result.GetImmediateErrorStream() &&
-        GetDebugger().GetShowInlineDiagnostics()) {
+    const bool inline_diagnostics = !result.GetImmediateErrorStream() &&
+                                    GetDebugger().GetShowInlineDiagnostics();
+    if (inline_diagnostics) {
       unsigned prompt_len = m_debugger.GetPrompt().size();
       if (auto indent = result.GetDiagnosticIndent()) {
-        llvm::StringRef diags =
+        std::string diags =
             result.GetInlineDiagnosticString(prompt_len + *indent);
         PrintCommandOutput(io_handler, diags, true);
       }
@@ -3219,7 +3218,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
     // Now emit the command error text from the command we just executed.
     if (!result.GetImmediateErrorStream()) {
-      llvm::StringRef error = result.GetErrorString();
+      std::string error = result.GetErrorString(!inline_diagnostics);
       PrintCommandOutput(io_handler, error, false);
     }
   }
