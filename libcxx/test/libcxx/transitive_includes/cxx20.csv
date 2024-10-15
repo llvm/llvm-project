@@ -2616,7 +2616,6 @@ variant typeinfo
 variant utility
 variant version
 vector algorithm
-vector array
 vector atomic
 vector bit
 vector cctype

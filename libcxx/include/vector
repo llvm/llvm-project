@@ -324,8 +324,6 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__config>
 #include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
-#include <__format/formatter.h>
-#include <__format/formatter_bool.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__fwd/vector.h>
@@ -390,6 +388,11 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 // [vector.syn]
 #include <compare>
 #include <initializer_list>
+
+#if _LIBCPP_STD_VER >= 23
+#  include <__format/formatter.h>
+#  include <__format/formatter_bool.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
