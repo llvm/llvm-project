@@ -1669,13 +1669,17 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
   let isConvergent = 1;
 }
 
-def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins), "",
-  [(set SCC, (int_amdgcn_s_barrier_leave))]> {
-  let SchedRW = [WriteBarrier];
-  let simm16 = 0;
-  let fixed_imm = 1;
-  let isConvergent = 1;
-  let Defs = [SCC];
+let SchedRW = [WriteBarrier], isConvergent = 1 in {
+  let SubtargetPredicate = isGFX12Only in
+  def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins), "",
+    [(set SCC, (int_amdgcn_s_barrier_leave))]> {
+    let simm16 = 0;
+    let fixed_imm = 1;
+    let Defs = [SCC];
+  }
+
+  def S_BARRIER_LEAVE_imm : SOPP_Pseudo <"s_barrier_leave",
+    (ins i16imm:$simm16), "$simm16">;
 }
 
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
@@ -2833,7 +2837,7 @@ defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10_gfx13<0x015>;
 // SOPP - GFX13.
 //===----------------------------------------------------------------------===//
 
-multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !tolower(NAME), bit compat_alias = 1> {
+multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME).Mnemonic, bit compat_alias = 1> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
   def _gfx13 : SOPP_Real_32<op, ps, name>,
                Select<GFX13Gen, ps.Mnemonic>,
@@ -2847,7 +2851,7 @@ defm S_MONITOR_SLEEP          : SOPP_Real_32_gfx13<0x2c>;
 defm S_SET_VGPR_FRAMES        : SOPP_Real_32_gfx13<0x1c>;
 defm S_DELAY_ALU              : SOPP_Real_32_gfx13<0x2e>;
 defm S_WAIT_EVENT             : SOPP_Real_32_gfx13<0x2f>;
-defm S_BARRIER_LEAVE          : SOPP_Real_32_gfx13<0x31>;
+defm S_BARRIER_LEAVE_imm      : SOPP_Real_32_gfx13<0x31>;
 defm S_SEMA_SIGNAL            : SOPP_Real_32_gfx13<0x32>;
 defm S_SEMA_WAIT              : SOPP_Real_32_gfx13<0x33>;
 defm S_SEMA_SET_LIMIT         : SOPP_Real_32_gfx13<0x34>;
