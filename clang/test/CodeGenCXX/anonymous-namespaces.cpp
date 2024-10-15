@@ -29,7 +29,7 @@ namespace {
   int D::d = f();
 
   // Check for generation of a VTT with internal linkage
-  // CHECK-1: @_ZTSN12_GLOBAL__N_11X1EE = internal constant
+  // CHECK-1: @_ZTSN12_GLOBAL__N_11X1EE = internal local_unnamed_addr constant
   struct X { 
     struct EBase { };
     struct E : public virtual EBase { virtual ~E() {} };
