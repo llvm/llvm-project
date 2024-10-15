@@ -701,6 +701,9 @@ New features
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
+- Check for a null ``TypeSourceInfo *`` when creating a ``UnaryExprOrTypeTraitExpr``.
+  Fixes (#GH111594)
+
 Improvements
 ^^^^^^^^^^^^
 
