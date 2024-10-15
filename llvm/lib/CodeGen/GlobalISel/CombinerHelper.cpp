@@ -7623,7 +7623,7 @@ bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
 
   LLT DstTy = MRI.getType(Unmerge->getReg(0));
 
-  // $bv:_((<8 x s8>) = G_BUILD_VECTOR ....
+  // $bv:_(<8 x s8>) = G_BUILD_VECTOR ....
   // $any:_(<8 x s16>) = G_ANYEXT $bv
   // $uv:_(<4 x s16>), $uv1:_(<4 x s16>) = G_UNMERGE_VALUES $any
   //
