@@ -4927,7 +4927,7 @@ def HLSLClip: LangBuiltin<"HLSL_LANG"> {
 def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
+  let Prototype = "void()";
 }
 
 // Builtins for XRay.
