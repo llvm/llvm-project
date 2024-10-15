@@ -12,7 +12,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "gtest/gtest.h"
-#include <fstream>
 
 using namespace clang;
 using namespace ento;
