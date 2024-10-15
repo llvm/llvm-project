@@ -5368,7 +5368,7 @@ define i1 @icmp_and_inv_pow2_or_zero_ne_0(i32 %A, i32 %B) {
 
 define i1 @icmp_samesign_logical_and(i32 %In) {
 ; CHECK-LABEL: @icmp_samesign_logical_and(
-; CHECK-NEXT:    [[C2:%.*]] = icmp samesign eq i32 [[IN:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IN:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[C2]]
 ;
   %c1 = icmp samesign sgt i32 %In, -1
