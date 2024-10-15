@@ -84,16 +84,7 @@ bool CommandObjectMultiword::LoadSubCommand(llvm::StringRef name,
     lldbassert((&GetCommandInterpreter() == &cmd_obj_sp->GetCommandInterpreter()) &&
            "tried to add a CommandObject from a different interpreter");
 
-  CommandMap::iterator pos;
-  bool success = true;
-
-  pos = m_subcommand_dict.find(std::string(name));
-  if (pos == m_subcommand_dict.end()) {
-    m_subcommand_dict[std::string(name)] = cmd_obj_sp;
-  } else
-    success = false;
-
-  return success;
+  return m_subcommand_dict.try_emplace(std::string(name), cmd_obj_sp).second;
 }
 
 llvm::Error CommandObjectMultiword::LoadUserSubcommand(
