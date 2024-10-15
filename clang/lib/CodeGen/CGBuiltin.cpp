@@ -19038,15 +19038,27 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     ASTContext::GetBuiltinTypeError Error;
     getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
     assert(Error == ASTContext::GE_None && "Should not codegen an error");
-    for (unsigned I = 0; I != E->getNumArgs(); ++I) {
-      Args.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, I, E));
-    }
-    assert(Args.size() == 5 || Args.size() == 6);
-    if (Args.size() == 5)
-      Args.insert(Args.begin(), llvm::PoisonValue::get(Args[0]->getType()));
+    llvm::Type *DataTy = ConvertType(E->getArg(0)->getType());
+    llvm::Type *IntTy = llvm::IntegerType::get(
+        Builder.getContext(), DataTy->getPrimitiveSizeInBits());
     Function *F =
-        CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, Args[0]->getType());
-    return Builder.CreateCall(F, Args);
+        CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, IntTy);
+    assert(E->getNumArgs() == 5 || E->getNumArgs() == 6);
+    bool InsertOld = E->getNumArgs() == 5;
+    if (InsertOld)
+      Args.push_back(llvm::PoisonValue::get(IntTy));
+    for (unsigned I = 0; I != E->getNumArgs(); ++I) {
+      llvm::Value *V = EmitScalarOrConstFoldImmArg(ICEArguments, I, E);
+      llvm::Type *ExpTy =
+          F->getFunctionType()->getFunctionParamType(I + InsertOld);
+      if (V->getType() != ExpTy)
+        V = Builder.CreateTruncOrBitCast(V, ExpTy);
+      Args.push_back(V);
+    }
+    llvm::Value *V = Builder.CreateCall(F, Args);
+    if (!DataTy->isIntegerTy())
+      V = Builder.CreateBitCast(V, DataTy);
+    return V;
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
   case AMDGPU::BI__builtin_amdgcn_permlanex16:
