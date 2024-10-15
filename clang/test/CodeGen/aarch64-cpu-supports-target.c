@@ -17,7 +17,7 @@ int check_all_feature() {
     return 7;
   else if (__builtin_cpu_supports("sve2-bitperm+sve2-sha3+sve2-sm4"))
     return 8;
-  else if (__builtin_cpu_supports("sme+memtag+memtag2+memtag3+sb"))
+  else if (__builtin_cpu_supports("sme+memtag+memtag3+sb"))
     return 9;
   else if (__builtin_cpu_supports("predres+ssbs+ssbs2+bti+ls64+ls64_v"))
     return 10;
