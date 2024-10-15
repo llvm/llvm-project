@@ -401,7 +401,12 @@ bool AMDGPUCodeGenPrepareImpl::isSigned(const SelectInst &I) const {
 }
 
 bool AMDGPUCodeGenPrepareImpl::needsPromotionToI32(const Type *T) const {
-  if (!Widen16BitOps)
+  // Disable i16 -> i32 widening for the DAG path only if the option is not
+  // used.
+  if (Widen16BitOps.getNumOccurrences()) {
+    if (!Widen16BitOps)
+      return false;
+  } else if (!getCGPassBuilderOption().EnableGlobalISelOption)
     return false;
 
   const IntegerType *IntTy = dyn_cast<IntegerType>(T);

@@ -6822,6 +6822,22 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   }
 }
 
+bool SITargetLowering::shouldPromoteUniformOpToI32(SDValue Op, EVT ExtTy, EVT OpTy) const {
+  switch(Op.getOpcode()) {
+    case ISD::SMIN:
+    case ISD::SMAX:
+    case ISD::UMIN:
+    case ISD::UMAX: {
+      if (!Subtarget->has16BitInsts() || OpTy.isVector())
+        return false;
+      unsigned Size = OpTy.getSizeInBits();
+      return !Op->isDivergent() && Size >= 2 && Size <= 16;
+    }
+    default:
+      return !isNarrowingProfitable(Op.getNode(), ExtTy, OpTy);
+  }
+}
+
 SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
                                                 DAGCombinerInfo &DCI) const {
   const unsigned Opc = Op.getOpcode();
@@ -6836,7 +6852,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
   auto ExtTy = OpTy.changeElementType(MVT::i32);
 
   if (DCI.isBeforeLegalizeOps() ||
-      isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
+      !shouldPromoteUniformOpToI32(Op, ExtTy, OpTy))
     return SDValue();
 
   auto &DAG = DCI.DAG;
@@ -6852,14 +6868,25 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
     RHS = Op->getOperand(1);
   }
 
-  const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
-  LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
+  // For SIGN_EXTEND, check for an existing SIGN_EXTEND_INREG and reproduce that instead.
+  // It leads to better code generation.
+  // TODO: DAGCombiner should take care of that but the combine doesn't apply all the time.
+  const auto ExtendOp = [&, ExtOp = getExtOpcodeForPromotedOp(Op)](SDValue Op){
+    if (ExtOp == ISD::SIGN_EXTEND && Op.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+      SDValue InRegSrc = DAG.getNode(ISD::ANY_EXTEND, DL, ExtTy, Op.getOperand(0));
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, ExtTy, {InRegSrc, Op->getOperand(1)});
+    }
+
+    return DAG.getNode(ExtOp, DL, ExtTy, {Op});
+  };
+
+  LHS = ExtendOp(LHS);
 
   // Special case: for shifts, the RHS always needs a zext.
   if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
     RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
   else
-    RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
+    RHS = ExtendOp(RHS);
 
   // setcc always return i1/i1 vec so no need to truncate after.
   if (Opc == ISD::SETCC) {
