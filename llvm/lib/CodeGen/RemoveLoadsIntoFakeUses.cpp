@@ -124,7 +124,7 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
         SmallDenseSet<MachineInstr *> FakeUsesToDelete;
         SmallVector<MachineInstr *> RemainingFakeUses;
         for (MachineInstr *&FakeUse : reverse(RegFakeUses)) {
-          if (TRI->regsOverlap(Reg, FakeUse->getOperand(0).getReg())) {
+          if (FakeUse->readsRegister(Reg, TRI)) {
             FakeUsesToDelete.insert(FakeUse);
             RegFakeUses.erase(&FakeUse);
           }
@@ -159,7 +159,7 @@ bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
           // because any such FAKE_USE encountered prior is no longer relevant
           // for later encountered loads.
           for (MachineInstr *&FakeUse : reverse(RegFakeUses))
-            if (!TRI->regsOverlap(Reg, FakeUse->getOperand(0).getReg()))
+            if (FakeUse->readsRegister(Reg, TRI))
               RegFakeUses.erase(&FakeUse);
         }
       }
