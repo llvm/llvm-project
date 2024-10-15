@@ -143,4 +143,18 @@ void top() {
   EXPECT_EQ(Output, "DescriptiveNameChecker: array[x]\n");
 }
 
+TEST(MemRegionDescriptiveNameTest, FieldRegWithSuperElementReg) {
+  StringRef Code = R"cpp(
+void reportDescriptiveName(int *p);
+struct val_struct { int val; };
+extern struct val_struct val_struct_array[3];
+void top() {
+  reportDescriptiveName(&val_struct_array[0].val);
+})cpp";
+
+  std::string Output;
+  ASSERT_TRUE(runChecker(Code, Output));
+  EXPECT_EQ(Output, "DescriptiveNameChecker: val_struct_array[0].val\n");
+}
+
 } // namespace

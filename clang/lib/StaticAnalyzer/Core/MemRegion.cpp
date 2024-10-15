@@ -751,12 +751,27 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
   }
 
   // Get variable name.
-  if (R && R->canPrintPrettyAsExpr()) {
-    R->printPrettyAsExpr(os);
-    if (UseQuotes)
-      return (llvm::Twine("'") + os.str() + ArrayIndices + "'").str();
-    else
+  if (R) {
+    // MemRegion can be pretty printed.
+    if (R->canPrintPrettyAsExpr()) {
+      R->printPrettyAsExpr(os);
+      if (UseQuotes)
+        return (llvm::Twine("'") + os.str() + ArrayIndices + "'").str();
       return (llvm::Twine(os.str()) + ArrayIndices).str();
+    }
+
+    // FieldRegion may have ElementRegion as SuperRegion.
+    if (const clang::ento::FieldRegion *FR =
+            R->getAs<clang::ento::FieldRegion>()) {
+      std::string Super = FR->getSuperRegion()->getDescriptiveName(false);
+      if (Super.empty())
+        return "";
+
+      if (UseQuotes)
+        return (llvm::Twine("'") + Super + "." + FR->getDecl()->getName() + "'")
+            .str();
+      return (llvm::Twine(Super) + "." + FR->getDecl()->getName()).str();
+    }
   }
 
   return VariableName;
