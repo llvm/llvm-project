@@ -289,6 +289,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GlobalAddress, {MVT::i32, MVT::i64}, Custom);
 
+  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
+
   setOperationAction(ISD::SELECT, MVT::i1, Promote);
   setOperationAction(ISD::SELECT, MVT::i64, Custom);
   setOperationAction(ISD::SELECT, MVT::f64, Promote);
@@ -6359,7 +6361,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
         bool Promotable = false;
         for (const auto *MemOp : MI.memoperands()) {
           if (AMDGPU::IsLaneSharedInVGPR(MemOp) ||
-              AMDGPU::IsPrivateInVGPR(MemOp)) {
+              AMDGPU::IsPromotablePrivate(MemOp)) {
             Promotable = true;
             break;
           }
@@ -6623,6 +6625,11 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     MachineFunction &MF = DAG.getMachineFunction();
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     return LowerGlobalAddress(MFI, Op, DAG);
+  }
+  case ISD::FrameIndex: {
+    MachineFunction &MF = DAG.getMachineFunction();
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    return lowerFrameIndex(MFI, Op, DAG);
   }
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN: return LowerINTRINSIC_W_CHAIN(Op, DAG);
@@ -8657,6 +8664,20 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), GOTAddr, PtrInfo, Alignment,
                      MachineMemOperand::MODereferenceable |
                          MachineMemOperand::MOInvariant);
+}
+
+SDValue SITargetLowering::lowerFrameIndex(AMDGPUMachineFunction *MFI,
+                                          SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  int FI = cast<FrameIndexSDNode>(Op)->getIndex();
+  if (const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI)) {
+    if (AMDGPU::IsPromotablePrivate(*Alloca)) {
+      unsigned Offset =
+          MFI->allocatePrivateInVGPR(DAG.getDataLayout(), *Alloca);
+      return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+    }
+  }
+  return SDValue();
 }
 
 SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain,
