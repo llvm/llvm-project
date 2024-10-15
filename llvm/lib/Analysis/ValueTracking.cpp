@@ -8522,12 +8522,24 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
       !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
     return false;
 
+  // If they are only differ in predicate. They must both have samesign flag or
+  // not.
   if (B == C)
-    return Pred1 == ICmpInst::getInversePredicate(Pred2);
+    return Pred1 == ICmpInst::getInversePredicate(Pred2) &&
+           (!cast<ICmpInst>(X)->hasSameSign() ||
+            cast<ICmpInst>(Y)->hasSameSign());
+  ;
 
   // Try to infer the relationship from constant ranges.
   const APInt *RHSC1, *RHSC2;
   if (!match(B, m_APInt(RHSC1)) || !match(C, m_APInt(RHSC2)))
+    return false;
+
+  // They must both have samesign flag or not. And sign bits of two RHSCs should
+  // match.
+  if (cast<ICmpInst>(X)->hasSameSign() &&
+      (!cast<ICmpInst>(Y)->hasSameSign() ||
+       RHSC1->isNonNegative() != RHSC2->isNonNegative()))
     return false;
 
   const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
