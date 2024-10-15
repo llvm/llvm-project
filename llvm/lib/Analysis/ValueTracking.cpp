@@ -6950,7 +6950,9 @@ bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
 bool llvm::isNotCrossLaneOperation(const Instruction *I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I))
     return isTriviallyVectorizable(II->getIntrinsicID());
-  return !isa<CallBase, BitCastInst, ShuffleVectorInst, ExtractElementInst>(I);
+  auto *Shuffle = dyn_cast<ShuffleVectorInst>(I);
+  return (!Shuffle || Shuffle->isSelect()) &&
+         !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
