@@ -69,7 +69,7 @@ public:
     const ::cir::ABIArgInfo &RetAI = FI.getReturnInfo();
 
     if (RetAI.getKind() == ::cir::ABIArgInfo::Indirect) {
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     }
 
     unsigned ArgNo = 0;
@@ -84,7 +84,7 @@ public:
       auto &IRArgs = ArgInfo[ArgNo];
 
       if (::cir::MissingFeatures::argumentPadding()) {
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
       }
 
       switch (AI.getKind()) {
@@ -94,14 +94,14 @@ public:
         cir_tl_assert(AI.getCoerceToType() && "Missing coerced type!!");
         StructType STy = dyn_cast<StructType>(AI.getCoerceToType());
         if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         } else {
           IRArgs.NumberOfArgs = 1;
         }
         break;
       }
       default:
-        llvm_unreachable("Missing ABIArgInfo::Kind");
+        cir_unreachable("Missing ABIArgInfo::Kind");
       }
 
       if (IRArgs.NumberOfArgs > 0) {
@@ -117,7 +117,7 @@ public:
     cir_tl_assert(ArgNo == ArgInfo.size());
 
     if (::cir::MissingFeatures::inallocaArgs()) {
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     }
 
     TotalIRArgs = IRArgNo;

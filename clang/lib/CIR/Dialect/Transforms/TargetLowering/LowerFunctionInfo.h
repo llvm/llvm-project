@@ -154,7 +154,7 @@ public:
   }
   unsigned getNumRequiredArgs() const {
     if (isVariadic())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     return arg_size();
   }
 

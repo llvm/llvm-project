@@ -57,7 +57,7 @@ public:
     case Kind::offload_generic:
       return 4;
     default:
-      llvm_unreachable("Unknown CIR address space for this target");
+      cir_unreachable("Unknown CIR address space for this target");
     }
   }
 };

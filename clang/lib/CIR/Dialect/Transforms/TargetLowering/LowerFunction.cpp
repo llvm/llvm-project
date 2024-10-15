@@ -37,7 +37,7 @@ namespace {
 Value buildAddressAtOffset(LowerFunction &LF, Value addr,
                            const ABIArgInfo &info) {
   if (unsigned offset = info.getDirectOffset()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
   return addr;
 }
@@ -50,7 +50,7 @@ Value enterStructPointerForCoercedAccess(Value SrcPtr, StructType SrcSTy,
                                          uint64_t DstSize, LowerFunction &CGF) {
   // We can't dive into a zero-element struct.
   if (SrcSTy.getNumElements() == 0)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   Type FirstElt = SrcSTy.getMembers()[0];
 
@@ -79,7 +79,7 @@ void createCoercedStore(Value Src, Value Dst, bool DstIsVolatile,
   Type SrcTy = Src.getType();
   Type DstTy = Dst.getType();
   if (SrcTy == DstTy) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // FIXME(cir): We need a better way to handle datalayout queries.
@@ -97,14 +97,14 @@ void createCoercedStore(Value Src, Value Dst, bool DstIsVolatile,
   PointerType DstPtrTy = dyn_cast<PointerType>(DstTy);
   // TODO(cir): Implement address space.
   if (SrcPtrTy && DstPtrTy && !::cir::MissingFeatures::addressSpace()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // If the source and destination are integer or pointer types, just do an
   // extension or truncation to the desired type.
   if ((isa<IntegerType>(SrcTy) || isa<PointerType>(SrcTy)) &&
       (isa<IntegerType>(DstTy) || isa<PointerType>(DstTy))) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   llvm::TypeSize DstSize = CGF.LM.getDataLayout().getTypeAllocSize(DstTy);
@@ -115,7 +115,7 @@ void createCoercedStore(Value Src, Value Dst, bool DstIsVolatile,
     // Dst = Dst.withElementType(SrcTy);
     CGF.buildAggregateStore(Src, Dst, DstIsVolatile);
   } else {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 }
 
@@ -162,7 +162,7 @@ Value createCoercedValue(Value Src, Type Ty, LowerFunction &CGF) {
   // extension or truncation to the desired type.
   if ((isa<IntType>(Ty) || isa<PointerType>(Ty)) &&
       (isa<IntType>(SrcTy) || isa<PointerType>(SrcTy))) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // If load is legal, just bitcast the src pointer.
@@ -178,13 +178,13 @@ Value createCoercedValue(Value Src, Type Ty, LowerFunction &CGF) {
     return CGF.buildAggregateBitcast(Src, Ty);
   }
 
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 Value emitAddressAtOffset(LowerFunction &LF, Value addr,
                           const ABIArgInfo &info) {
   if (unsigned offset = info.getDirectOffset()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
   return addr;
 }
@@ -218,7 +218,7 @@ Value castReturnValue(Value Src, Type Ty, LowerFunction &LF) {
 
   if ((isa<IntType>(Ty) || isa<PointerType>(Ty)) &&
       (isa<IntType>(SrcTy) || isa<PointerType>(SrcTy))) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // If load is legal, just bitcast the src pointer.
@@ -234,7 +234,7 @@ Value castReturnValue(Value Src, Type Ty, LowerFunction &LF) {
                                            Src);
   }
 
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 } // namespace
@@ -301,7 +301,7 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
     // CGFunctionInfo::ArgInfo type with subsequent argument demotion.
     Type Ty = {};
     if (isPromoted)
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     else
       Ty = Arg.getType();
     cir_tl_assert(!::cir::MissingFeatures::evaluationKind());
@@ -334,15 +334,15 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
         // ways. Copy the value into a less-restricted temporary.
         Value V = AI;
         if (::cir::MissingFeatures::extParamInfo()) {
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         }
 
         // Ensure the argument is the correct type.
         if (V.getType() != ArgI.getCoerceToType())
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
 
         if (isPromoted)
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
 
         ArgVals.push_back(V);
 
@@ -374,7 +374,7 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
       StructType STy = dyn_cast<StructType>(ArgI.getCoerceToType());
       if (ArgI.isDirect() && ArgI.getCanBeFlattened() && STy &&
           STy.getNumElements() > 1) {
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
       } else {
         // Simple case, just do a coerced store of the argument into the alloca.
         cir_tl_assert(NumIRArgs == 1);
@@ -385,7 +385,7 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
 
       // Match to what EmitParamDecl is expecting for this type.
       if (::cir::MissingFeatures::evaluationKind()) {
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
       } else {
         // FIXME(cir): Should we have an ParamValue abstraction like in the
         // original codegen?
@@ -405,12 +405,12 @@ LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
       break;
     }
     default:
-      llvm_unreachable("Unhandled ABIArgInfo::Kind");
+      cir_unreachable("Unhandled ABIArgInfo::Kind");
     }
   }
 
   if (getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   } else {
     // FIXME(cir): In the original codegen, EmitParamDecl is called here. It
     // is likely that said function considers ABI details during emission, so
@@ -444,7 +444,7 @@ LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
       // the load, zap the store, and usually zap the alloca.
       // NOTE(cir): This seems like a premature optimization case. Skipping it.
       if (::cir::MissingFeatures::returnValueDominatingStoreOptmiization()) {
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
       }
       // Otherwise, we have to do a simple load.
       else {
@@ -470,7 +470,7 @@ LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
     break;
 
   default:
-    llvm_unreachable("Unhandled ABIArgInfo::Kind");
+    cir_unreachable("Unhandled ABIArgInfo::Kind");
   }
 
   return success();
@@ -598,7 +598,7 @@ Value LowerFunction::rewriteCallOp(FuncType calleeTy, FuncOp origCallee,
   // CIRGen.
   CallArgList Args;
   if (Chain)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   // NOTE(cir): Call args were already emitted in CIRGen. Skip the evaluation
   // order done in CIRGen and just fetch the exiting arguments here.
@@ -671,7 +671,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
   // If we're using inalloca, insert the allocation after the stack save.
   // FIXME: Do this earlier rather than hacking it in here!
   if (StructType ArgStruct = CallInfo.getArgStruct()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   CIRToCIRArgMapping IRFunctionArgs(LM.getContext(), CallInfo);
@@ -680,7 +680,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
   // If the call returns a temporary with struct return, create a temporary
   // alloca to hold the result, unless one is given to us.
   if (RetAI.isIndirect() || RetAI.isCoerceAndExpand() || RetAI.isInAlloca()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   cir_tl_assert(!::cir::MissingFeatures::swift());
@@ -697,7 +697,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
     const ABIArgInfo &ArgInfo = info_it->info;
 
     if (IRFunctionArgs.hasPaddingArg(ArgNo))
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
 
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
@@ -719,23 +719,23 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
         if (!isa<StructType>(I->getType())) {
           V = *I;
         } else {
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         }
 
         if (::cir::MissingFeatures::extParamInfo()) {
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         }
 
         if (ArgInfo.getCoerceToType() != V.getType() &&
             isa<IntType>(V.getType()))
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
 
         if (FirstIRArg < IRFuncTy.getNumInputs() &&
             V.getType() != IRFuncTy.getInput(FirstIRArg))
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
 
         if (::cir::MissingFeatures::undef())
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         IRCallArgs[FirstIRArg] = V;
         break;
       }
@@ -743,7 +743,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       // FIXME: Avoid the conversion through memory if possible.
       Value Src = {};
       if (!isa<StructType>(I->getType())) {
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
       } else {
         // NOTE(cir): L/RValue stuff are left for CIRGen to handle.
         Src = *I;
@@ -757,7 +757,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       // FCAs, so we flatten them if this is safe to do for this argument.
       StructType STy = dyn_cast<StructType>(ArgInfo.getCoerceToType());
       if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
       } else {
         // In the simple case, just pass the coerced loaded value.
         cir_tl_assert(NumIRArgs == 1);
@@ -768,7 +768,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
 
         // since they are a ARM-specific feature.
         if (::cir::MissingFeatures::undef())
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         IRCallArgs[FirstIRArg] = Load;
       }
 
@@ -776,7 +776,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
     }
     default:
       llvm::outs() << "Missing ABIArgInfo::Kind: " << ArgInfo.getKind() << "\n";
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     }
   }
 
@@ -847,11 +847,11 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
           // Perhaps this section should handle CIR's boolean case.
           Value V = newCallOp.getResult();
           if (V.getType() != RetIRTy)
-            llvm_unreachable("NYI");
+            cir_unreachable("NYI");
           return V;
         }
         default:
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         }
       }
 
@@ -859,7 +859,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
       // compatibility, and the types match, use the llvm.vector.extract
       // intrinsic to perform the conversion.
       if (::cir::MissingFeatures::vectorType()) {
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
       }
 
       // FIXME(cir): Use return value slot here.
@@ -891,7 +891,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
     }
     default:
       llvm::errs() << "Unhandled ABIArgInfo kind: " << RetAI.getKind() << "\n";
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     }
   }();
 
@@ -908,7 +908,7 @@ Value LowerFunction::getUndefRValue(Type Ty) {
     return nullptr;
 
   llvm::outs() << "Missing undef handler for value type: " << Ty << "\n";
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 ::cir::TypeEvaluationKind LowerFunction::getEvaluationKind(Type type) {
@@ -918,7 +918,7 @@ Value LowerFunction::getUndefRValue(Type Ty) {
   if (isa<BoolType, IntType, SingleType, DoubleType, LongDoubleType, VectorType,
           PointerType>(type))
     return ::cir::TypeEvaluationKind::TEK_Scalar;
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 } // namespace cir

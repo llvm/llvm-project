@@ -77,7 +77,7 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
 
 bool EmptySubobjectMap::canPlaceFieldAtOffset(const Type Ty,
                                               clang::CharUnits Offset) {
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 //===-----------------------------------------------------------------------==//
@@ -257,7 +257,7 @@ void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
 
   // Honor the default struct packing maximum alignment flag.
   if (unsigned DefaultMaxFieldAlignment = Context.getLangOpts().PackStruct) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // mac68k alignment supersedes maximum field alignment and attribute aligned,
@@ -265,16 +265,16 @@ void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
   // allude to additional (more complicated) semantics, especially with regard
   // to bit-fields, but gcc appears not to follow that.
   if (::cir::MissingFeatures::declHasAlignMac68kAttr()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   } else {
     if (::cir::MissingFeatures::declHasAlignNaturalAttr())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
 
     if (::cir::MissingFeatures::declHasMaxFieldAlignmentAttr())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
 
     if (::cir::MissingFeatures::declGetMaxAlignment())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
   }
 
   HandledFirstNonOverlappingEmptyField =
@@ -283,7 +283,7 @@ void ItaniumRecordLayoutBuilder::initializeLayout(const mlir::Type Ty) {
   // If there is an external AST source, ask it for the various offsets.
   if (const auto RT = dyn_cast<StructType>(Ty)) {
     if (::cir::MissingFeatures::astContextGetExternalSource()) {
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     }
   }
 }
@@ -303,7 +303,7 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
       Context.getTargetInfo().defaultsToAIXPowerAlignment();
   bool FoundFirstNonOverlappingEmptyFieldForAIX = false;
   if (DefaultsToAIXPowerAlignment && !HandledFirstNonOverlappingEmptyField) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   cir_tl_assert(!::cir::MissingFeatures::fieldDeclIsBitfield());
@@ -335,15 +335,15 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
   };
 
   if (isa<ArrayType>(D) && cast<ArrayType>(D).getSize() == 0) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   } else {
     setDeclInfo(false /* IsIncompleteArrayType */);
 
     if (::cir::MissingFeatures::fieldDeclIsPotentiallyOverlapping())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
 
     if (IsMsStruct)
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
   }
 
   cir_tl_assert(!::cir::MissingFeatures::recordDeclIsPacked() &&
@@ -375,7 +375,7 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
   clang::CharUnits PreferredAlign = FieldAlign;
   if (DefaultsToAIXPowerAlignment && !alignedAttrCanDecreaseAIXAlignment() &&
       (FoundFirstNonOverlappingEmptyFieldForAIX || IsNaturalAlign)) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // The align if the field is not packed. This is to check if the attribute
@@ -393,15 +393,15 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
 
   // The maximum field alignment overrides the aligned attribute.
   if (!MaxFieldAlignment.isZero()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   if (!FieldPacked)
     FieldAlign = UnpackedFieldAlign;
   if (DefaultsToAIXPowerAlignment)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   if (FieldPacked) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   clang::CharUnits AlignTo =
@@ -411,13 +411,13 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
   UnpackedFieldOffset = UnpackedFieldOffset.alignTo(UnpackedFieldAlign);
 
   if (UseExternalLayout) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   } else {
     if (!IsUnion && EmptySubobjects) {
       // Check if we can place the field at this offset.
       while (/*!EmptySubobjects->CanPlaceFieldAtOffset(D, FieldOffset)*/
              false) {
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
       }
     }
   }
@@ -431,21 +431,21 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
                       Context.toBits(UnpackedFieldAlign), FieldPacked, D);
 
   if (InsertExtraPadding) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // Reserve space for this field.
   if (!IsOverlappingEmptyField) {
     // uint64_t EffectiveFieldSizeInBits = Context.toBits(EffectiveFieldSize);
     if (IsUnion)
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     else
       setDataSize(FieldOffset + EffectiveFieldSize);
 
     PaddedFieldSize = std::max(PaddedFieldSize, FieldOffset + FieldSize);
     setSize(std::max(getSizeInBits(), getDataSizeInBits()));
   } else {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // Remember max struct/class ABI-specified alignment.
@@ -461,7 +461,7 @@ void ItaniumRecordLayoutBuilder::layoutField(const Type D,
   cir_tl_assert(!::cir::MissingFeatures::fieldDeclAbstraction());
 
   if (Packed && !FieldPacked && PackedFieldAlign < FieldAlign)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 }
 
 void ItaniumRecordLayoutBuilder::layoutFields(const StructType D) {
@@ -511,7 +511,7 @@ void ItaniumRecordLayoutBuilder::checkFieldPadding(
   // We let objc ivars without warning, objc interfaces generally are not used
   // for padding tricks.
   if (::cir::MissingFeatures::objCIvarDecls())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   // FIXME(cir): Should the following be skiped in CIR?
   // Don't warn about structs created without a SourceLocation.  This can
@@ -578,10 +578,10 @@ static bool mustSkipTailPadding(clang::TargetCXXABI ABI, const StructType RD) {
     // mode; fortunately, that is true because we want to assign
     // consistently semantics to the type-traits intrinsics (or at
     // least as many of them as possible).
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
-  llvm_unreachable("bad tail-padding use kind");
+  cir_unreachable("bad tail-padding use kind");
 }
 
 } // namespace
@@ -602,7 +602,7 @@ const CIRRecordLayout &CIRLowerContext::getCIRRecordLayout(const Type D) const {
   const CIRRecordLayout *NewEntry = nullptr;
 
   if (isMsLayout(*this)) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   } else {
     // FIXME(cir): Add if-else separating C and C++ records.
     cir_tl_assert(!::cir::MissingFeatures::isCXXRecordDecl());

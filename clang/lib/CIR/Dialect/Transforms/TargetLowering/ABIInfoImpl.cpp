@@ -49,7 +49,7 @@ Type useFirstFieldIfTransparentUnion(Type Ty) {
 CIRCXXABI::RecordArgABI getRecordArgABI(const StructType RT,
                                         CIRCXXABI &CXXABI) {
   if (::cir::MissingFeatures::typeIsCXXRecordDecl()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
   return CXXABI.getRecordArgABI(RT);
 }

@@ -29,7 +29,7 @@ unsigned LowerTypes::clangCallConvToLLVMCallConv(clang::CallingConv CC) {
   case clang::CC_C:
     return llvm::CallingConv::C;
   default:
-    llvm_unreachable("calling convention NYI");
+    cir_unreachable("calling convention NYI");
   }
 }
 
@@ -53,7 +53,7 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
     resultType = VoidType::get(getMLIRContext());
     break;
   default:
-    llvm_unreachable("Missing ABIArgInfo::Kind");
+    cir_unreachable("Missing ABIArgInfo::Kind");
   }
 
   CIRToCIRArgMapping IRFunctionArgs(getContext(), FI, true);
@@ -95,7 +95,7 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
       break;
     }
     default:
-      llvm_unreachable("Missing ABIArgInfo::Kind");
+      cir_unreachable("Missing ABIArgInfo::Kind");
     }
   }
 

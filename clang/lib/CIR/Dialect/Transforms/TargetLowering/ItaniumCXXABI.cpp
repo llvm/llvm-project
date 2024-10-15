@@ -62,7 +62,7 @@ bool ItaniumCXXABI::classifyReturnType(LowerFunctionInfo &FI) const {
 
   // If C++ prohibits us from making a copy, return by address.
   if (::cir::MissingFeatures::recordDeclCanPassInRegisters())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   return false;
 }
@@ -84,12 +84,12 @@ CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {
     return new ItaniumCXXABI(LM);
 
   case clang::TargetCXXABI::Microsoft:
-    llvm_unreachable("Microsoft ABI is not Itanium-based");
+    cir_unreachable("Microsoft ABI is not Itanium-based");
   default:
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
-  llvm_unreachable("bad ABI kind");
+  cir_unreachable("bad ABI kind");
 }
 
 } // namespace cir

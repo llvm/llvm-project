@@ -40,12 +40,12 @@ private:
   mlir::Value lowerMSVAArg(cir::CIRBaseBuilderTy &builder,
                            mlir::cir::VAArgOp op,
                            const cir::CIRDataLayout &datalayout) {
-    llvm_unreachable("MSVC ABI not supported yet");
+    cir_unreachable("MSVC ABI not supported yet");
   }
   mlir::Value lowerDarwinVAArg(cir::CIRBaseBuilderTy &builder,
                                mlir::cir::VAArgOp op,
                                const cir::CIRDataLayout &datalayout) {
-    llvm_unreachable("Darwin ABI not supported yet");
+    cir_unreachable("Darwin ABI not supported yet");
   }
 };
 } // namespace
@@ -83,13 +83,13 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   auto baseTy = opResTy;
 
   if (mlir::isa<mlir::cir::ArrayType>(baseTy)) {
-    llvm_unreachable("ArrayType VAArg loweing NYI");
+    cir_unreachable("ArrayType VAArg loweing NYI");
   }
   // numRegs may not be 1 if ArrayType is supported.
   unsigned numRegs = 1;
 
   if (Kind == AArch64ABIKind::AAPCSSoft) {
-    llvm_unreachable("AAPCSSoft cir.var_arg lowering NYI");
+    cir_unreachable("AAPCSSoft cir.var_arg lowering NYI");
   }
   bool IsFPR = mlir::cir::isAnyFloatingPointType(baseTy);
 
@@ -189,7 +189,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   if (!IsFPR && !isIndirect && tyAlign.getQuantity() > 8) {
     cir_tl_assert(!cir::MissingFeatures::handleAArch64Indirect());
     cir_tl_assert(!cir::MissingFeatures::supportTyAlignQueryForAArch64());
-    llvm_unreachable("register alignment correction NYI");
+    cir_unreachable("register alignment correction NYI");
   }
 
   // Update the gr_offs/vr_offs pointer for next call to va_arg on this va_list.
@@ -225,7 +225,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
 
   if (isIndirect) {
     cir_tl_assert(!cir::MissingFeatures::handleAArch64Indirect());
-    llvm_unreachable("indirect arg passing NYI");
+    cir_unreachable("indirect arg passing NYI");
   }
 
   // TODO: isHFA, numMembers and base should be query result from query
@@ -247,7 +247,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
     // contiguously.
     cir_tl_assert(!isIndirect &&
                   "Homogeneous aggregates should be passed directly");
-    llvm_unreachable("Homogeneous aggregates NYI");
+    cir_unreachable("Homogeneous aggregates NYI");
   } else {
     cir_tl_assert(!cir::MissingFeatures::supportTyAlignQueryForAArch64());
     // TODO: slotSize should be query result about alignment.
@@ -294,7 +294,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   if (!isIndirect && tyAlign.getQuantity() > 8) {
     // TODO: this algorithm requres casting from ptr type to int type, then
     // back to ptr type thus needs careful handling. NYI now.
-    llvm_unreachable("alignment greater than 8 NYI");
+    cir_unreachable("alignment greater than 8 NYI");
   }
 
   // All stack slots are multiples of 8 bytes.

@@ -30,7 +30,7 @@ unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
   case X86AVXABILevel::None:
     return 128;
   }
-  llvm_unreachable("Unknown AVXLevel");
+  cir_unreachable("Unknown AVXLevel");
 }
 
 /// Return true if the specified [start,end) bit range is known to either be
@@ -50,7 +50,7 @@ static bool BitsContainNoUserData(Type Ty, unsigned StartBit, unsigned EndBit,
     return true;
 
   if (auto arrTy = llvm::dyn_cast<ArrayType>(Ty)) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   if (auto structTy = llvm::dyn_cast<StructType>(Ty)) {
@@ -59,7 +59,7 @@ static bool BitsContainNoUserData(Type Ty, unsigned StartBit, unsigned EndBit,
     // If this is a C++ record, check the bases first.
     if (::cir::MissingFeatures::isCXXRecordDecl() ||
         ::cir::MissingFeatures::getCXXRecordBases()) {
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     }
 
     // Verify that no field has data that overlaps the region of interest. Yes
@@ -208,7 +208,7 @@ public:
     case Kind::offload_generic:
       return 0;
     default:
-      llvm_unreachable("Unknown CIR address space for this target");
+      cir_unreachable("Unknown CIR address space for this target");
     }
   }
 };
@@ -256,17 +256,17 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
       // than eight eightbytes, ..., it has class MEMORY.
       if (Size > 512)
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
 
       // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
       // copy constructor or a non-trivial destructor, it is passed by invisible
       // reference.
       if (getRecordArgABI(RT, getCXXABI()))
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
 
       // Assume variable sized types are passed in memory.
       if (::cir::MissingFeatures::recordDeclHasFlexibleArrayMember())
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
 
       const auto &Layout = getContext().getCIRRecordLayout(Ty);
 
@@ -292,7 +292,7 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
 
         // Ignore padding bit-fields.
         if (BitField && !::cir::MissingFeatures::fieldDeclisUnnamedBitField())
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
 
         // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
         // eight eightbytes, or it contains unaligned fields, it has class
@@ -306,11 +306,11 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
         // than 128.
         if (Size > 128 && ((!IsUnion && Size != getContext().getTypeSize(FT)) ||
                            Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         }
         // Note, skip this test for bit-fields, see below.
         if (!BitField && Offset % getContext().getTypeAlign(RT)) {
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         }
 
         // Classify this field.
@@ -325,7 +325,7 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
         // structure to be passed in memory even if unaligned, and
         // therefore they can straddle an eightbyte.
         if (BitField) {
-          llvm_unreachable("NYI");
+          cir_unreachable("NYI");
         } else {
           classify(FT, Offset, FieldLo, FieldHi, isNamedArg);
         }
@@ -347,7 +347,7 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
   }
 
   llvm::outs() << "Missing X86 classification for non-builtin types\n";
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 /// Return a type that will be passed by the backend in the low 8 bytes of an
@@ -365,12 +365,12 @@ Type X86_64ABIInfo::GetSSETypeAtOffset(Type IRType, unsigned IROffset,
   Type T1 = {};
   unsigned T0Size = TD.getTypeAllocSize(T0);
   if (SourceSize > T0Size)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   if (T1 == nullptr) {
     // Check if IRType is a half/bfloat + float. float type will be in
     // IROffset+4 due to its alignment.
     if (isa<Float16Type>(T0) && SourceSize > 4)
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     // If we can't get a second FP type, return a simple half or float.
     // avx512fp16-abi.c:pr51813_2 shows it works to return float for
     // {float, i8} too.
@@ -378,7 +378,7 @@ Type X86_64ABIInfo::GetSSETypeAtOffset(Type IRType, unsigned IROffset,
       return T0;
   }
 
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 /// The ABI specifies that a value should be passed in an 8-byte GPR.  This
@@ -507,14 +507,14 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
     break;
 
   default:
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   // If a high part was specified, merge it together with the low part.  It is
   // known to pass in the high eightbyte of the result.  We do this by forming
   // a first class struct aggregate with the high and low part: {low, high}
   if (HighPart)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   return ABIArgInfo::getDirect(resType);
 }
@@ -580,11 +580,11 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(Type Ty, unsigned freeIntRegs,
   case Class::NoClass:
     break;
   default:
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   }
 
   if (HighPart)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   return ABIArgInfo::getDirect(ResType);
 }
@@ -595,7 +595,7 @@ void X86_64ABIInfo::computeInfo(LowerFunctionInfo &FI) const {
   // using __attribute__((ms_abi)). In such case to correctly emit Win64
   // compatible code delegate this call to WinX86_64ABIInfo::computeInfo.
   if (CallingConv == llvm::CallingConv::Win64) {
-    llvm_unreachable("Win64 CC is NYI");
+    cir_unreachable("Win64 CC is NYI");
   }
 
   bool IsRegCall = CallingConv == llvm::CallingConv::X86_RegCall;
@@ -607,7 +607,7 @@ void X86_64ABIInfo::computeInfo(LowerFunctionInfo &FI) const {
 
   if (!::mlir::cir::classifyReturnType(getCXXABI(), FI, *this)) {
     if (IsRegCall || ::cir::MissingFeatures::regCall()) {
-      llvm_unreachable("RegCall is NYI");
+      cir_unreachable("RegCall is NYI");
     } else
       FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   }
@@ -615,13 +615,13 @@ void X86_64ABIInfo::computeInfo(LowerFunctionInfo &FI) const {
   // If the return value is indirect, then the hidden argument is consuming
   // one integer register.
   if (FI.getReturnInfo().isIndirect())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   else if (NeededSSE && MaxVectorWidth)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   // The chain argument effectively gives us another free register.
   if (::cir::MissingFeatures::chainCall())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   unsigned NumRequiredArgs = FI.getNumRequiredArgs();
   // AMD64-ABI 3.2.3p3: Once arguments are classified, the registers
@@ -632,7 +632,7 @@ void X86_64ABIInfo::computeInfo(LowerFunctionInfo &FI) const {
     bool IsNamedArg = ArgNo < NumRequiredArgs;
 
     if (IsRegCall && ::cir::MissingFeatures::regCall())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     else
       it->info = classifyArgumentType(it->type, FreeIntRegs, NeededInt,
                                       NeededSSE, IsNamedArg);
@@ -645,9 +645,9 @@ void X86_64ABIInfo::computeInfo(LowerFunctionInfo &FI) const {
       FreeIntRegs -= NeededInt;
       FreeSSERegs -= NeededSSE;
       if (::cir::MissingFeatures::vectorType())
-        llvm_unreachable("NYI");
+        cir_unreachable("NYI");
     } else {
-      llvm_unreachable("Indirect results are NYI");
+      cir_unreachable("Indirect results are NYI");
     }
   }
 }

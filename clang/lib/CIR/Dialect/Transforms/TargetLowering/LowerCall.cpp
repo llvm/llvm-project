@@ -38,7 +38,7 @@ arrangeFreeFunctionLikeCall(LowerTypes &LT, LowerModule &LM,
       cir_assert_or_abort(!::cir::MissingFeatures::isVarArg(), "NYI");
 
     if (::cir::MissingFeatures::extParamInfo())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
   }
 
   // TODO(cir): There's some CC stuff related to no-proto functions here, but
@@ -61,7 +61,7 @@ static void appendParameterTypes(SmallVectorImpl<Type> &prefix, FuncType fnTy) {
   }
 
   cir_tl_assert(MissingFeatures::extParamInfo());
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 /// Arrange the LLVM function layout for a value of the given function
@@ -104,9 +104,9 @@ void LowerModule::constructAttributeList(StringRef Name,
   CallingConv = FI.getCallingConvention();
   // FIXME(cir): No-return should probably be set in CIRGen (ABI-agnostic).
   if (MissingFeatures::noReturn())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   if (MissingFeatures::csmeCall())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   // TODO(cir): Implement AddAttributesFromFunctionProtoType here.
   // TODO(cir): Implement AddAttributesFromOMPAssumes here.
@@ -153,23 +153,23 @@ void LowerModule::constructAttributeList(StringRef Name,
   case ABIArgInfo::Ignore:
     break;
   default:
-    llvm_unreachable("Missing ABIArgInfo::Kind");
+    cir_unreachable("Missing ABIArgInfo::Kind");
   }
 
   if (!IsThunk) {
     if (MissingFeatures::qualTypeIsReferenceType()) {
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
     }
   }
 
   // Attach attributes to sret.
   if (MissingFeatures::sretArgs()) {
-    llvm_unreachable("sret is NYI");
+    cir_unreachable("sret is NYI");
   }
 
   // Attach attributes to inalloca arguments.
   if (MissingFeatures::inallocaArgs()) {
-    llvm_unreachable("inalloca is NYI");
+    cir_unreachable("inalloca is NYI");
   }
 
   // Apply `nonnull`, `dereferencable(N)` and `align N` to the `this` argument,
@@ -177,7 +177,7 @@ void LowerModule::constructAttributeList(StringRef Name,
   // FIXME: fix this properly, https://reviews.llvm.org/D100388
   if (MissingFeatures::funcDeclIsCXXMethodDecl() ||
       MissingFeatures::inallocaArgs()) {
-    llvm_unreachable("`this` argument attributes are NYI");
+    cir_unreachable("`this` argument attributes are NYI");
   }
 
   unsigned ArgNo = 0;
@@ -190,7 +190,7 @@ void LowerModule::constructAttributeList(StringRef Name,
 
     // Add attribute for padding argument, if necessary.
     if (IRFunctionArgs.hasPaddingArg(ArgNo)) {
-      llvm_unreachable("Padding argument is NYI");
+      cir_unreachable("Padding argument is NYI");
     }
 
     // TODO(cir): Mark noundef arguments and return values. Although this
@@ -212,18 +212,18 @@ void LowerModule::constructAttributeList(StringRef Name,
       [[fallthrough]];
     case ABIArgInfo::Direct:
       if (ArgNo == 0 && ::cir::MissingFeatures::chainCall())
-        llvm_unreachable("ChainCall is NYI");
+        cir_unreachable("ChainCall is NYI");
       else if (AI.getInReg())
-        llvm_unreachable("InReg attribute is NYI");
+        cir_unreachable("InReg attribute is NYI");
       // Attrs.addStackAlignmentAttr(llvm::MaybeAlign(AI.getDirectAlign()));
       cir_tl_assert(!::cir::MissingFeatures::noFPClass());
       break;
     default:
-      llvm_unreachable("Missing ABIArgInfo::Kind");
+      cir_unreachable("Missing ABIArgInfo::Kind");
     }
 
     if (::cir::MissingFeatures::qualTypeIsReferenceType()) {
-      llvm_unreachable("Reference handling is NYI");
+      cir_unreachable("Reference handling is NYI");
     }
 
     // TODO(cir): Missing some swift and nocapture stuff here.
@@ -243,7 +243,7 @@ void LowerModule::constructAttributeList(StringRef Name,
 /// definition of the given function.
 const LowerFunctionInfo &LowerTypes::arrangeFunctionDeclaration(FuncOp fnOp) {
   if (MissingFeatures::funcDeclIsCXXMethodDecl())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   cir_tl_assert(!MissingFeatures::qualifiedTypes());
   FuncType FTy = fnOp.getFunctionType();
@@ -283,7 +283,7 @@ const LowerFunctionInfo &LowerTypes::arrangeFreeFunctionType(FuncType FTy) {
 const LowerFunctionInfo &LowerTypes::arrangeGlobalDeclaration(FuncOp fnOp) {
   if (MissingFeatures::funcDeclIsCXXConstructorDecl() ||
       MissingFeatures::funcDeclIsCXXDestructorDecl())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   return arrangeFunctionDeclaration(fnOp);
 }
@@ -316,9 +316,9 @@ LowerTypes::arrangeLLVMFunctionInfo(Type resultType, FnInfoOpts opts,
 
   // Compute ABI information.
   if (CC == llvm::CallingConv::SPIR_KERNEL) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   } else if (::cir::MissingFeatures::extParamInfo()) {
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
   } else {
     // NOTE(cir): This corects the initial function info data.
     getABIInfo().computeInfo(*FI); // FIXME(cir): Args should be set to null.

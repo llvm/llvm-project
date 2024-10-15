@@ -74,7 +74,7 @@ public:
     case Kind::offload_generic:
       return 0;
     default:
-      llvm_unreachable("Unknown CIR address space for this target");
+      cir_unreachable("Unknown CIR address space for this target");
     }
   }
 };
@@ -92,20 +92,20 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
 
   // Large vector types should be returned via memory.
   if (isa<VectorType>(RetTy) && getContext().getTypeSize(RetTy) > 128)
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   if (!isAggregateTypeForABI(RetTy)) {
     // NOTE(cir): Skip enum handling.
 
     if (MissingFeature::fixedSizeIntType())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
 
     return (isPromotableIntegerTypeForABI(RetTy) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(RetTy)
                 : ABIArgInfo::getDirect());
   }
 
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
 
 ABIArgInfo
@@ -115,13 +115,13 @@ AArch64ABIInfo::classifyArgumentType(Type Ty, bool IsVariadic,
 
   // TODO(cir): check for illegal vector types.
   if (MissingFeature::vectorType())
-    llvm_unreachable("NYI");
+    cir_unreachable("NYI");
 
   if (!isAggregateTypeForABI(Ty)) {
     // NOTE(cir): Enum is IntType in CIR. Skip enum handling here.
 
     if (MissingFeature::fixedSizeIntType())
-      llvm_unreachable("NYI");
+      cir_unreachable("NYI");
 
     return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(Ty)

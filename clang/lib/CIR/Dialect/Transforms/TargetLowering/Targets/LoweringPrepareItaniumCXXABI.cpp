@@ -169,5 +169,5 @@ mlir::Value LoweringPrepareItaniumCXXABI::lowerVAArg(
     const ::cir::CIRDataLayout &datalayout) {
   // There is no generic cir lowering for var_arg, here we fail
   // so to prevent attempt of calling lowerVAArg for ItaniumCXXABI
-  llvm_unreachable("NYI");
+  cir_unreachable("NYI");
 }
