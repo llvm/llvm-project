@@ -70,7 +70,7 @@ define <2 x i8> @select_icmp_shufflevector_lanecrossing(<2 x i8> %x, <2 x i8> %y
   ret <2 x i8> %retval
 }
 
-declare <2 x i8> @fn(<2 x i8>)
+declare <2 x i8> @fn(<2 x i8>) speculatable
 
 define <2 x i8> @select_icmp_call_possibly_lanecrossing(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i8> @select_icmp_call_possibly_lanecrossing(
