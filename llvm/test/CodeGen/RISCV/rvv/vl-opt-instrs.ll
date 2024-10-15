@@ -2343,18 +2343,18 @@ define <vscale x 1 x i1> @vmsbf_m(<vscale x 1 x i1> %a, iXLen %vl) {
 }
 
 define <vscale x 1 x i1> @vmsif_m(<vscale x 1 x i1> %a, iXLen %vl) {
-; NOVLOPT-LABEL: vmsbf_m:
+; NOVLOPT-LABEL: vmsif_m:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; NOVLOPT-NEXT:    vmsbf.m v8, v0
+; NOVLOPT-NEXT:    vmsif.m v8, v0
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vmsbf_m:
+; VLOPT-LABEL: vmsif_m:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; VLOPT-NEXT:    vmsbf.m v8, v0
+; VLOPT-NEXT:    vmsif.m v8, v0
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmsif.nxv1i1(<vscale x 1 x i1> %a, iXLen -1)
@@ -2363,18 +2363,18 @@ define <vscale x 1 x i1> @vmsif_m(<vscale x 1 x i1> %a, iXLen %vl) {
 }
 
 define <vscale x 1 x i1> @vmsof_m(<vscale x 1 x i1> %a, iXLen %vl) {
-; NOVLOPT-LABEL: vmsbf_m:
+; NOVLOPT-LABEL: vmsof_m:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; NOVLOPT-NEXT:    vmsbf.m v8, v0
+; NOVLOPT-NEXT:    vmsof.m v8, v0
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmand.mm v0, v0, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vmsbf_m:
+; VLOPT-LABEL: vmsof_m:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; VLOPT-NEXT:    vmsbf.m v8, v0
+; VLOPT-NEXT:    vmsof.m v8, v0
 ; VLOPT-NEXT:    vmand.mm v0, v0, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmsof.nxv1i1(<vscale x 1 x i1> %a, iXLen -1)
