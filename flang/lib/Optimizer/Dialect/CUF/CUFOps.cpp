@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -250,6 +251,42 @@ llvm::LogicalResult cuf::KernelOp::verify() {
         return emitOpError("expect reduce attributes to be ReduceAttr");
     }
   }
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// RegisterKernelOp
+//===----------------------------------------------------------------------===//
+
+mlir::StringAttr cuf::RegisterKernelOp::getKernelModuleName() {
+  return getName().getRootReference();
+}
+
+mlir::StringAttr cuf::RegisterKernelOp::getKernelName() {
+  return getName().getLeafReference();
+}
+
+mlir::LogicalResult cuf::RegisterKernelOp::verify() {
+  if (getKernelName() == getKernelModuleName())
+    return emitOpError("expect a module and a kernel name");
+
+  auto mod = getOperation()->getParentOfType<mlir::ModuleOp>();
+  if (!mod)
+    return emitOpError("expect to be in a module");
+
+  mlir::SymbolTable symTab(mod);
+  auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(getKernelModuleName());
+  if (!gpuMod)
+    return emitOpError("gpu module not found");
+
+  mlir::SymbolTable gpuSymTab(gpuMod);
+  auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName());
+  if (!func)
+    return emitOpError("device function not found");
+
+  if (!func.isKernel())
+    return emitOpError("only kernel gpu.func can be registered");
+
   return mlir::success();
 }
 
