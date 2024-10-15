@@ -1175,26 +1175,19 @@ private:
 
     ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);
     Contexts.back().ColonIsDictLiteral = true;
-
-    const auto *Prev = OpeningBrace.getPreviousNonComment();
-
-    if (OpeningBrace.is(BK_BracedInit)) {
+    if (OpeningBrace.is(BK_BracedInit))
       Contexts.back().IsExpression = true;
-      if (Prev) {
-        for (auto *Tok = Prev->Previous; Tok && Tok->isPointerOrReference();
-             Tok = Tok->Previous) {
-          Tok->setFinalizedType(TT_PointerOrReference);
-        }
-      }
-    }
-
-    if (Style.isJavaScript() && Prev && Prev->is(TT_JsTypeColon))
+    if (Style.isJavaScript() && OpeningBrace.Previous &&
+        OpeningBrace.Previous->is(TT_JsTypeColon)) {
       Contexts.back().IsExpression = false;
-
+    }
+    if (Style.isVerilog() &&
+        (!OpeningBrace.getPreviousNonComment() ||
+         OpeningBrace.getPreviousNonComment()->isNot(Keywords.kw_apostrophe))) {
+      Contexts.back().VerilogMayBeConcatenation = true;
+    }
     if (Style.isTableGen())
       Contexts.back().ColonIsDictLiteral = false;
-    else if (Style.isVerilog() && !(Prev && Prev->is(Keywords.kw_apostrophe)))
-      Contexts.back().VerilogMayBeConcatenation = true;
 
     unsigned CommaCount = 0;
     while (CurrentToken) {
