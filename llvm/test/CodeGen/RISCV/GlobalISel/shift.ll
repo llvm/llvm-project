@@ -5,12 +5,20 @@
 define i16 @test_lshr_i48(i48 %x) {
 ; RV32-LABEL: test_lshr_i48:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    lui a2, 16
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    and a1, a1, a2
 ; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    slli a1, a1, 16
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_lshr_i48:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srliw a0, a0, 16
+; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    srli a1, a1, 16
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    srli a0, a0, 16
 ; RV64-NEXT:    ret
   %lshr = lshr i48 %x, 16
   %trunc = trunc i48 %lshr to i16
@@ -20,12 +28,18 @@ define i16 @test_lshr_i48(i48 %x) {
 define i16 @test_ashr_i48(i48 %x) {
 ; RV32-LABEL: test_ashr_i48:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a0, 16
+; RV32-NEXT:    slli a1, a1, 16
+; RV32-NEXT:    srai a1, a1, 16
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    slli a1, a1, 16
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_ashr_i48:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sraiw a0, a0, 16
+; RV64-NEXT:    slli a0, a0, 16
+; RV64-NEXT:    srai a0, a0, 16
+; RV64-NEXT:    srai a0, a0, 16
 ; RV64-NEXT:    ret
   %ashr = ashr i48 %x, 16
   %trunc = trunc i48 %ashr to i16
@@ -40,7 +54,7 @@ define i16 @test_shl_i48(i48 %x) {
 ;
 ; RV64-LABEL: test_shl_i48:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slliw a0, a0, 8
+; RV64-NEXT:    slli a0, a0, 8
 ; RV64-NEXT:    ret
   %shl = shl i48 %x, 8
   %trunc = trunc i48 %shl to i16
@@ -51,13 +65,34 @@ define i16 @test_lshr_i48_2(i48 %x, i48 %y) {
 ; RV32-LABEL: test_lshr_i48_2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a2, a2, 15
-; RV32-NEXT:    srl a0, a0, a2
+; RV32-NEXT:    lui a3, 16
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    li a4, 32
+; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    bltu a2, a4, .LBB3_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    addi a3, a2, -32
+; RV32-NEXT:    srl a1, a1, a3
+; RV32-NEXT:    bnez a2, .LBB3_3
+; RV32-NEXT:    j .LBB3_4
+; RV32-NEXT:  .LBB3_2:
+; RV32-NEXT:    srl a3, a0, a2
+; RV32-NEXT:    neg a4, a2
+; RV32-NEXT:    sll a1, a1, a4
+; RV32-NEXT:    or a1, a3, a1
+; RV32-NEXT:    beqz a2, .LBB3_4
+; RV32-NEXT:  .LBB3_3:
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:  .LBB3_4:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_lshr_i48_2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a1, a1, 15
-; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    li a2, -1
+; RV64-NEXT:    srli a2, a2, 16
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    srl a0, a0, a1
 ; RV64-NEXT:    ret
   %and = and i48 %y, 15
   %lshr = lshr i48 %x, %and
@@ -69,13 +104,32 @@ define i16 @test_ashr_i48_2(i48 %x, i48 %y) {
 ; RV32-LABEL: test_ashr_i48_2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a2, a2, 15
-; RV32-NEXT:    sra a0, a0, a2
+; RV32-NEXT:    slli a1, a1, 16
+; RV32-NEXT:    li a3, 32
+; RV32-NEXT:    srai a1, a1, 16
+; RV32-NEXT:    bltu a2, a3, .LBB4_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    addi a3, a2, -32
+; RV32-NEXT:    sra a1, a1, a3
+; RV32-NEXT:    bnez a2, .LBB4_3
+; RV32-NEXT:    j .LBB4_4
+; RV32-NEXT:  .LBB4_2:
+; RV32-NEXT:    srl a3, a0, a2
+; RV32-NEXT:    neg a4, a2
+; RV32-NEXT:    sll a1, a1, a4
+; RV32-NEXT:    or a1, a3, a1
+; RV32-NEXT:    beqz a2, .LBB4_4
+; RV32-NEXT:  .LBB4_3:
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:  .LBB4_4:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_ashr_i48_2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a1, a1, 15
-; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 16
+; RV64-NEXT:    srai a0, a0, 16
+; RV64-NEXT:    sra a0, a0, a1
 ; RV64-NEXT:    ret
   %and = and i48 %y, 15
   %ashr = ashr i48 %x, %and
@@ -87,13 +141,19 @@ define i16 @test_shl_i48_2(i48 %x, i48 %y) {
 ; RV32-LABEL: test_shl_i48_2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a2, a2, 15
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    bltu a2, a1, .LBB5_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB5_2:
 ; RV32-NEXT:    sll a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_shl_i48_2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a1, a1, 15
-; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    sll a0, a0, a1
 ; RV64-NEXT:    ret
   %and = and i48 %y, 15
   %shl = shl i48 %x, %and
