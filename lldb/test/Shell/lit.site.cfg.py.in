@@ -22,6 +22,7 @@ config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.swiftc = "@LLDB_SWIFTC@"
+config.swift_libs_dir = '@LLDB_SWIFT_LIBS@'
 config.lldb_enable_swift = @LLDB_ENABLE_SWIFT_SUPPORT@
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.objc_gnustep_dir = "@LLDB_TEST_OBJC_GNUSTEP_DIR@"
