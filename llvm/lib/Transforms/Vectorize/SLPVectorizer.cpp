@@ -291,8 +291,6 @@ getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
   if (NumParts == 0 || NumParts >= Sz)
     return bit_floor(Sz);
   unsigned RegVF = bit_ceil(divideCeil(Sz, NumParts));
-  if (RegVF > Sz)
-    return bit_floor(Sz);
   return (Sz / RegVF) * RegVF;
 }
 
@@ -19073,8 +19071,7 @@ public:
 
       unsigned ReduxWidth = NumReducedVals;
       if (!VectorizeNonPowerOf2 || !has_single_bit(ReduxWidth + 1))
-        ReduxWidth = getFloorFullVectorNumberOfElements(
-            *TTI, Candidates.front()->getType(), ReduxWidth);
+        ReduxWidth = bit_floor(ReduxWidth);
       ReduxWidth = std::min(ReduxWidth, MaxElts);
 
       unsigned Start = 0;
@@ -19082,7 +19079,10 @@ public:
       // Restarts vectorization attempt with lower vector factor.
       unsigned PrevReduxWidth = ReduxWidth;
       bool CheckForReusedReductionOpsLocal = false;
-      auto AdjustReducedVals = [&](bool IgnoreVL = false) {
+      auto &&AdjustReducedVals = [&Pos, &Start, &ReduxWidth, NumReducedVals,
+                                  &CheckForReusedReductionOpsLocal,
+                                  &PrevReduxWidth, &V,
+                                  &IgnoreList](bool IgnoreVL = false) {
         bool IsAnyRedOpGathered = !IgnoreVL && V.isAnyGathered(IgnoreList);
         if (!CheckForReusedReductionOpsLocal && PrevReduxWidth == ReduxWidth) {
           // Check if any of the reduction ops are gathered. If so, worth
@@ -19093,10 +19093,7 @@ public:
         if (Pos < NumReducedVals - ReduxWidth + 1)
           return IsAnyRedOpGathered;
         Pos = Start;
-        --ReduxWidth;
-        if (ReduxWidth > 1)
-          ReduxWidth = getFloorFullVectorNumberOfElements(
-              *TTI, Candidates.front()->getType(), ReduxWidth);
+        ReduxWidth = bit_ceil(ReduxWidth) / 2;
         return IsAnyRedOpGathered;
       };
       bool AnyVectorized = false;
@@ -19328,10 +19325,7 @@ public:
         }
         Pos += ReduxWidth;
         Start = Pos;
-        ReduxWidth = NumReducedVals - Pos;
-        if (ReduxWidth > 1)
-          ReduxWidth = getFloorFullVectorNumberOfElements(
-              *TTI, Candidates.front()->getType(), NumReducedVals - Pos);
+        ReduxWidth = llvm::bit_floor(NumReducedVals - Pos);
         AnyVectorized = true;
       }
       if (OptReusedScalars && !AnyVectorized) {
