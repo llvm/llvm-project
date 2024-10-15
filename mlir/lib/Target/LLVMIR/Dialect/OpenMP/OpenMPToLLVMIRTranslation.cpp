@@ -480,12 +480,11 @@ makeReductionGen(omp::DeclareReductionOp decl, llvm::IRBuilderBase &builder,
       [&, decl](llvm::OpenMPIRBuilder::InsertPointTy insertPoint,
                 llvm::Value *lhs, llvm::Value *rhs,
                 llvm::Value *&result) mutable {
-        Region &reductionRegion = decl.getReductionRegion();
-        moduleTranslation.mapValue(reductionRegion.front().getArgument(0), lhs);
-        moduleTranslation.mapValue(reductionRegion.front().getArgument(1), rhs);
+        moduleTranslation.mapValue(decl.getReductionLhsArg(), lhs);
+        moduleTranslation.mapValue(decl.getReductionRhsArg(), rhs);
         builder.restoreIP(insertPoint);
         SmallVector<llvm::Value *> phis;
-        if (failed(inlineConvertOmpRegions(reductionRegion,
+        if (failed(inlineConvertOmpRegions(decl.getReductionRegion(),
                                            "omp.reduction.nonatomic.body",
                                            builder, moduleTranslation, &phis)))
           return llvm::OpenMPIRBuilder::InsertPointTy();
@@ -513,12 +512,11 @@ makeAtomicReductionGen(omp::DeclareReductionOp decl,
   OwningAtomicReductionGen atomicGen =
       [&, decl](llvm::OpenMPIRBuilder::InsertPointTy insertPoint, llvm::Type *,
                 llvm::Value *lhs, llvm::Value *rhs) mutable {
-        Region &atomicRegion = decl.getAtomicReductionRegion();
-        moduleTranslation.mapValue(atomicRegion.front().getArgument(0), lhs);
-        moduleTranslation.mapValue(atomicRegion.front().getArgument(1), rhs);
+        moduleTranslation.mapValue(decl.getAtomicReductionLhsArg(), lhs);
+        moduleTranslation.mapValue(decl.getAtomicReductionRhsArg(), rhs);
         builder.restoreIP(insertPoint);
         SmallVector<llvm::Value *> phis;
-        if (failed(inlineConvertOmpRegions(atomicRegion,
+        if (failed(inlineConvertOmpRegions(decl.getAtomicReductionRegion(),
                                            "omp.reduction.atomic.body", builder,
                                            moduleTranslation, &phis)))
           return llvm::OpenMPIRBuilder::InsertPointTy();
@@ -1674,9 +1672,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         // argument of the `alloc` region and the second argument of the `copy`
         // region to be the yielded value of the `alloc` region (this is the
         // private clone of the privatized value).
-        copyCloneBuilder.mergeBlocks(
-            &*newCopyRegionFrontBlock, &*oldAllocBackBlock,
-            {allocRegion.getArgument(0), oldAllocYieldOp.getOperand(0)});
+        copyCloneBuilder.mergeBlocks(&*newCopyRegionFrontBlock,
+                                     &*oldAllocBackBlock,
+                                     {mlirPrivatizerClone.getAllocMoldArg(),
+                                      oldAllocYieldOp.getOperand(0)});
 
         // 4. The old terminator of the `alloc` region is not needed anymore, so
         // delete it.
@@ -1686,8 +1685,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       // Replace the privatizer block argument with mlir value being privatized.
       // This way, the body of the privatizer will be changed from using the
       // region/block argument to the value being privatized.
-      auto allocRegionArg = allocRegion.getArgument(0);
-      replaceAllUsesInRegionWith(allocRegionArg, mlirPrivVar, allocRegion);
+      replaceAllUsesInRegionWith(mlirPrivatizerClone.getAllocMoldArg(),
+                                 mlirPrivVar, allocRegion);
 
       auto oldIP = builder.saveIP();
       builder.restoreIP(allocaIP);
@@ -3480,10 +3479,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                            " private allocatables is not supported yet");
           bodyGenStatus = failure();
         } else {
-          Region &allocRegion = privatizer.getAllocRegion();
-          BlockArgument allocRegionArg = allocRegion.getArgument(0);
-          moduleTranslation.mapValue(allocRegionArg,
+          moduleTranslation.mapValue(privatizer.getAllocMoldArg(),
                                      moduleTranslation.lookupValue(privVar));
+          Region &allocRegion = privatizer.getAllocRegion();
           SmallVector<llvm::Value *, 1> yieldedValues;
           if (failed(inlineConvertOmpRegions(
                   allocRegion, "omp.targetop.privatizer", builder,
