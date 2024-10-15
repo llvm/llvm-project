@@ -232,6 +232,9 @@ private:
 
   bool selectUnmergeValues(MachineInstr &I) const;
 
+  void selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
+                               MachineInstr &I) const;
+
   // Utilities
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
                             const SPIRVType *ResType = nullptr) const;
@@ -252,6 +255,9 @@ private:
                                           uint32_t Opcode) const;
   MachineInstrBuilder buildConstGenericPtr(MachineInstr &I, Register SrcPtr,
                                            SPIRVType *SrcPtrTy) const;
+  Register buildPointerToResource(const SPIRVType *ResType, uint32_t Set,
+                                  uint32_t Binding, uint32_t ArraySize,
+                                  MachineIRBuilder MIRBuilder) const;
 };
 
 } // end anonymous namespace
@@ -2507,6 +2513,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::mix, GL::FMix);
   case Intrinsic::spv_length:
     return selectExtInst(ResVReg, ResType, I, CL::length, GL::Length);
+  case Intrinsic::spv_degrees:
+    return selectExtInst(ResVReg, ResType, I, CL::degrees, GL::Degrees);
   case Intrinsic::spv_frac:
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
@@ -2537,6 +2545,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
+  case Intrinsic::spv_radians:
+    return selectExtInst(ResVReg, ResType, I, CL::radians, GL::Radians);
   // Discard intrinsics which we do not expect to actually represent code after
   // lowering or intrinsics which are not implemented but should not crash when
   // found in a customer's LLVM IR input.
@@ -2547,6 +2557,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   // Discard internal intrinsics.
   case Intrinsic::spv_value_md:
     break;
+  case Intrinsic::spv_handle_fromBinding: {
+    selectHandleFromBinding(ResVReg, ResType, I);
+    return true;
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -2556,6 +2570,34 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   }
   return true;
+}
+
+void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
+                                                       const SPIRVType *ResType,
+                                                       MachineInstr &I) const {
+
+  uint32_t Set = foldImm(I.getOperand(2), MRI);
+  uint32_t Binding = foldImm(I.getOperand(3), MRI);
+  uint32_t ArraySize = foldImm(I.getOperand(4), MRI);
+
+  MachineIRBuilder MIRBuilder(I);
+  Register VarReg =
+      buildPointerToResource(ResType, Set, Binding, ArraySize, MIRBuilder);
+
+  // TODO: For now we assume the resource is an image, which needs to be
+  // loaded to get the handle. That will not be true for storage buffers.
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(VarReg);
+}
+
+Register SPIRVInstructionSelector::buildPointerToResource(
+    const SPIRVType *ResType, uint32_t Set, uint32_t Binding,
+    uint32_t ArraySize, MachineIRBuilder MIRBuilder) const {
+  assert(ArraySize == 1 && "Resource arrays are not implemented yet.");
+  return GR.getOrCreateGlobalVariableWithBinding(ResType, Set, Binding,
+                                                 MIRBuilder);
 }
 
 bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
@@ -2861,15 +2903,7 @@ bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
   // Get Thread ID index. Expecting operand is a constant immediate value,
   // wrapped in a type assignment.
   assert(I.getOperand(2).isReg());
-  Register ThreadIdReg = I.getOperand(2).getReg();
-  SPIRVType *ConstTy = this->MRI->getVRegDef(ThreadIdReg);
-  assert(ConstTy && ConstTy->getOpcode() == SPIRV::ASSIGN_TYPE &&
-         ConstTy->getOperand(1).isReg());
-  Register ConstReg = ConstTy->getOperand(1).getReg();
-  const MachineInstr *Const = this->MRI->getVRegDef(ConstReg);
-  assert(Const && Const->getOpcode() == TargetOpcode::G_CONSTANT);
-  const llvm::APInt &Val = Const->getOperand(1).getCImm()->getValue();
-  const uint32_t ThreadId = Val.getZExtValue();
+  const uint32_t ThreadId = foldImm(I.getOperand(2), MRI);
 
   // Extract the thread ID from the loaded vector value.
   MachineBasicBlock &BB = *I.getParent();

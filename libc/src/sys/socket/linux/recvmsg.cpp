@@ -21,7 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, recvmsg,
-                   (int sockfd, const struct msghdr *msg, int flags)) {
+                   (int sockfd, struct msghdr *msg, int flags)) {
 #ifdef SYS_recvmsg
   ssize_t ret =
       LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_recvmsg, sockfd, msg, flags);

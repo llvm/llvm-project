@@ -106,12 +106,27 @@ static Type *getFloatingPointOpType(const Instruction &I) {
   return nullptr;
 }
 
-static void identifyFunction(OptimizationRemark &R, const Function &F) {
-  if (auto *SubProgram = F.getSubprogram()) {
-    if (SubProgram->isArtificial())
-      R << "artificial ";
+static void identifyCallee(OptimizationRemark &R, const Module *M,
+                           const Value *V, StringRef Kind = "") {
+  SmallString<100> Name; // might be function name or asm expression
+  if (const Function *F = dyn_cast<Function>(V)) {
+    if (auto *SubProgram = F->getSubprogram()) {
+      if (SubProgram->isArtificial())
+        R << "artificial ";
+      Name = SubProgram->getName();
+    }
   }
-  R << "function '" << F.getName() << "'";
+  if (Name.empty()) {
+    raw_svector_ostream OS(Name);
+    V->printAsOperand(OS, /*PrintType=*/false, M);
+  }
+  if (!Kind.empty())
+    R << Kind << " ";
+  R << "'" << Name << "'";
+}
+
+static void identifyFunction(OptimizationRemark &R, const Function &F) {
+  identifyCallee(R, F.getParent(), &F, "function");
 }
 
 static void identifyInstruction(OptimizationRemark &R, const Instruction &I) {
@@ -171,21 +186,8 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
     OptimizationRemark R(DEBUG_TYPE, RemarkKind, &Call);
     R << "in ";
     identifyFunction(R, Caller);
-    R << ", " << CallKind << ", callee is";
-    Value *Callee = Call.getCalledOperand();
-    SmallString<100> Name; // might be function name or asm expression
-    if (const Function *FnCallee = dyn_cast<Function>(Callee)) {
-      if (auto *SubProgram = FnCallee->getSubprogram()) {
-        if (SubProgram->isArtificial())
-          R << " artificial";
-      }
-      Name = FnCallee->getName();
-    }
-    if (Name.empty()) {
-      raw_svector_ostream OS(Name);
-      Callee->printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
-    }
-    R << " '" << Name << "'";
+    R << ", " << CallKind << ", callee is ";
+    identifyCallee(R, Caller.getParent(), Call.getCalledOperand());
     return R;
   });
 }
@@ -354,11 +356,11 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
 
   // Record function properties.
   KI.ExternalNotKernel = F.hasExternalLinkage() && !isKernelFunction(F);
-  if (auto Val = parseFnAttrAsInteger(F, "omp_target_num_teams"))
-    KI.LaunchBounds.push_back({"OmpTargetNumTeams", *Val});
-  if (auto Val = parseFnAttrAsInteger(F, "omp_target_thread_limit"))
-    KI.LaunchBounds.push_back({"OmpTargetThreadLimit", *Val});
-  TheTTI.collectLaunchBounds(F, KI.LaunchBounds);
+  for (StringRef Name : {"omp_target_num_teams", "omp_target_thread_limit"}) {
+    if (auto Val = parseFnAttrAsInteger(F, Name))
+      KI.LaunchBounds.push_back({Name, *Val});
+  }
+  TheTTI.collectKernelLaunchBounds(F, KI.LaunchBounds);
 
   const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
@@ -388,6 +390,8 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
 
 PreservedAnalyses KernelInfoPrinter::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-  KernelInfo::emitKernelInfo(F, AM, TM);
+  // Skip it if remarks are not enabled as it will do nothing useful.
+  if (F.getContext().getDiagHandlerPtr()->isPassedOptRemarkEnabled(DEBUG_TYPE))
+    KernelInfo::emitKernelInfo(F, AM, TM);
   return PreservedAnalyses::all();
 }

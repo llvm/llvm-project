@@ -210,6 +210,9 @@ public:
   }
 
   bool isSGPRReg(const MachineRegisterInfo &MRI, Register Reg) const;
+  bool isSGPRPhysReg(Register Reg) const {
+    return isSGPRClass(getPhysRegBaseClass(Reg));
+  }
 
   /// \returns true if this class contains only VGPR registers
   static bool isVGPRClass(const TargetRegisterClass *RC) {

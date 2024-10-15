@@ -360,7 +360,8 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};
     return CallInst::Create(
-        Intrinsic::getDeclaration(II->getModule(), *Action.IID, Tys), Args);
+        Intrinsic::getOrInsertDeclaration(II->getModule(), *Action.IID, Tys),
+        Args);
   }
 
   // Simplify to target-generic binary op.
@@ -443,16 +444,16 @@ void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-void NVPTXTTIImpl::collectLaunchBounds(
+void NVPTXTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
-  if (auto Val = getMaxClusterRank(F))
-    LB.push_back({"Maxclusterrank", *Val});
-  if (auto Val = getMaxNTIDx(F))
-    LB.push_back({"Maxntidx", *Val});
-  if (auto Val = getMaxNTIDy(F))
-    LB.push_back({"Maxntidy", *Val});
-  if (auto Val = getMaxNTIDz(F))
-    LB.push_back({"Maxntidz", *Val});
-  // TODO: Any others we should add?
+  std::optional<unsigned> Val;
+  if ((Val = getMaxClusterRank(F)))
+    LB.push_back({"maxclusterrank", *Val});
+  if ((Val = getMaxNTIDx(F)))
+    LB.push_back({"maxntidx", *Val});
+  if ((Val = getMaxNTIDy(F)))
+    LB.push_back({"maxntidy", *Val});
+  if ((Val = getMaxNTIDz(F)))
+    LB.push_back({"maxntidz", *Val});
 }

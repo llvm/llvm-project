@@ -380,6 +380,7 @@ bool MIRParserImpl::computeFunctionProperties(
 
   bool HasPHI = false;
   bool HasInlineAsm = false;
+  bool HasFakeUses = false;
   bool AllTiedOpsRewritten = true, HasTiedOps = false;
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
@@ -387,6 +388,8 @@ bool MIRParserImpl::computeFunctionProperties(
         HasPHI = true;
       if (MI.isInlineAsm())
         HasInlineAsm = true;
+      if (MI.isFakeUse())
+        HasFakeUses = true;
       for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
         const MachineOperand &MO = MI.getOperand(I);
         if (!MO.isReg() || !MO.getReg())
@@ -440,6 +443,16 @@ bool MIRParserImpl::computeFunctionProperties(
         MF.getName() +
         " has explicit property NoVRegs, but contains virtual registers");
   }
+
+  // For hasFakeUses we follow similar logic to the ComputedPropertyHelper,
+  // except for caring about the inverse case only, i.e. when the property is
+  // explicitly set to false and Fake Uses are present; having HasFakeUses=true
+  // on a function without fake uses is harmless.
+  if (YamlMF.HasFakeUses && !*YamlMF.HasFakeUses && HasFakeUses)
+    return error(
+        MF.getName() +
+        " has explicit property hasFakeUses=false, but contains fake uses");
+  MF.setHasFakeUses(YamlMF.HasFakeUses.value_or(HasFakeUses));
 
   return false;
 }

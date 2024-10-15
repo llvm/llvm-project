@@ -1157,8 +1157,8 @@ public:
           Inst.setOpcode(Opc64);
         }
       }
-      if (!SkipTypeCheck && TC.typeCheck(IDLoc, Inst, Operands))
-        return true;
+      if (!SkipTypeCheck)
+        TC.typeCheck(IDLoc, Inst, Operands);
       Out.emitInstruction(Inst, getSTI());
       if (CurrentState == EndFunction) {
         onEndOfFunction(IDLoc);

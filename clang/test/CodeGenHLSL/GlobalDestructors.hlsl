@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CS,NOINLINE,CHECK
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=LIB,NOINLINE,CHECK
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -O0 %s -o - | FileCheck %s --check-prefixes=INLINE,CHECK
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -emit-llvm -O0 %s -o - | FileCheck %s --check-prefixes=INLINE,CHECK
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CS,NOINLINE,CHECK
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=LIB,NOINLINE,CHECK
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -O0 %s -o - | FileCheck %s --check-prefixes=INLINE,CHECK
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -O0 %s -o - | FileCheck %s --check-prefixes=INLINE,CHECK
 
 // Tests that constructors and destructors are appropriately generated for globals
 // and that their calls are inlined when AlwaysInline is run
@@ -59,7 +59,7 @@ void main(unsigned GI : SV_GroupIndex) {
 // Verify destructor is emitted
 // NOINLINE-NEXT:   call void @_GLOBAL__sub_I_GlobalDestructors.hlsl()
 // NOINLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-// NOINLINE-NEXT:   call void @"?main@@YAXI@Z"(i32 %0)
+// NOINLINE-NEXT:   call void @_Z4mainj(i32 %0)
 // NOINLINE-NEXT:   call void @_GLOBAL__D_a()
 // NOINLINE-NEXT:   ret void
 // Verify inlining leaves only calls to "llvm." intrinsics
@@ -71,8 +71,8 @@ void main(unsigned GI : SV_GroupIndex) {
 
 // NOINLINE: define internal void @_GLOBAL__D_a() [[IntAttr:\#[0-9]+]]
 // NOINLINE-NEXT: entry:
-// NOINLINE-NEXT:   call void @"??1Tail@@QAA@XZ"(ptr @"?T@?1??Wag@@YAXXZ@4UTail@@A")
-// NOINLINE-NEXT:   call void @"??1Pupper@@QAA@XZ"(ptr @"?GlobalPup@@3UPupper@@A")
+// NOINLINE-NEXT:   call void @_ZN4TailD1Ev(ptr @_ZZ3WagvE1T)
+// NOINLINE-NEXT:   call void @_ZN6PupperD1Ev(ptr @GlobalPup)
 // NOINLINE-NEXT:   ret void
 
 // NOINLINE: attributes [[IntAttr]] = {{.*}} alwaysinline

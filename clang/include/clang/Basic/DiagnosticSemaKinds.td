@@ -439,7 +439,7 @@ def warn_reserved_extern_symbol: Warning<
   InGroup<ReservedIdentifier>, DefaultIgnore;
 def warn_deprecated_literal_operator_id: Warning<
   "identifier %0 preceded by whitespace in a literal operator declaration "
-  "is deprecated">, InGroup<DeprecatedLiteralOperator>, DefaultIgnore;
+  "is deprecated">, InGroup<DeprecatedLiteralOperator>;
 def warn_reserved_module_name : Warning<
   "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
 def warn_import_implementation_partition_unit_in_interface_unit : Warning<
@@ -5262,13 +5262,6 @@ def note_template_arg_refers_here_func : Note<
 def err_template_arg_template_params_mismatch : Error<
   "template template argument has different template parameters than its "
   "corresponding template template parameter">;
-def note_template_arg_template_params_mismatch : Note<
-  "template template argument has different template parameters than its "
-  "corresponding template template parameter">;
-def err_non_deduced_mismatch : Error<
-  "could not match %diff{$ against $|types}0,1">;
-def err_inconsistent_deduction : Error<
-  "conflicting deduction %diff{$ against $|types}0,1 for parameter">;
 def err_template_arg_not_integral_or_enumeral : Error<
   "non-type template argument of type %0 must have an integral or enumeration"
   " type">;
@@ -9386,7 +9379,8 @@ let CategoryName = "Inline Assembly Issue" in {
     "global register variables on this target">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
     "match variable size">;
-  def err_asm_bad_register_type : Error<"bad type for named register variable">;
+  def err_asm_unsupported_register_type : Error<
+    "unsupported type for named register variable">;
   def err_asm_invalid_input_size : Error<
     "invalid input size for constraint '%0'">;
   def err_asm_invalid_output_size : Error<
@@ -11708,6 +11702,10 @@ def err_omp_dispatch_statement_call
             " to a target function or an assignment to one">;
 def err_omp_unroll_full_variable_trip_count : Error<
   "loop to be fully unrolled must have a constant trip count">;
+def err_omp_interchange_permutation_value_range : Error<
+  "permutation index must be at least 1 and at most %0">;
+def err_omp_interchange_permutation_value_repeated : Error<
+  "index %0 must appear exactly once in the permutation clause">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
 def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;
@@ -12578,6 +12576,7 @@ def err_acc_duplicate_clause_disallowed
     : Error<"OpenACC '%1' clause cannot appear more than once on a '%0' "
             "directive">;
 def note_acc_previous_clause_here : Note<"previous clause is here">;
+def note_acc_previous_expr_here : Note<"previous expression is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute Construct">;
@@ -12670,20 +12669,38 @@ def err_acc_size_expr_value
     : Error<
           "OpenACC 'tile' clause size expression must be %select{an asterisk "
           "or a constant expression|positive integer value, evaluated to %1}0">;
-def err_acc_invalid_in_collapse_loop
-    : Error<"%select{OpenACC '%1' construct|while loop|do loop}0 cannot appear "
-            "in intervening code of a 'loop' with a 'collapse' clause">;
-def note_acc_collapse_clause_here
-    : Note<"active 'collapse' clause defined here">;
-def err_acc_collapse_multiple_loops
+def err_acc_invalid_in_loop
+    : Error<"%select{OpenACC '%2' construct|while loop|do loop}0 cannot appear "
+            "in intervening code of a 'loop' with a '%1' clause">;
+def note_acc_active_clause_here
+    : Note<"active '%0' clause defined here">;
+def err_acc_clause_multiple_loops
     : Error<"more than one for-loop in a loop associated with OpenACC 'loop' "
-            "construct with a 'collapse' clause">;
-def err_acc_collapse_insufficient_loops
-    : Error<"'collapse' clause specifies a loop count greater than the number "
+            "construct with a '%select{collapse|tile}0' clause">;
+def err_acc_insufficient_loops
+    : Error<"'%0' clause specifies a loop count greater than the number "
             "of available loops">;
-def err_acc_collapse_intervening_code
-    : Error<"inner loops must be tightly nested inside a 'collapse' clause on "
+def err_acc_intervening_code
+    : Error<"inner loops must be tightly nested inside a '%0' clause on "
             "a 'loop' construct">;
+def err_acc_gang_multiple_elt
+    : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
+            "'num'|'dim'|'static'}0 argument">;
+def err_acc_gang_arg_invalid
+    : Error<"'%0' argument on 'gang' clause is not permitted on a%select{n "
+            "orphaned|||}1 'loop' construct %select{|associated with a "
+            "'parallel' compute construct|associated with a 'kernels' compute "
+            "construct|associated with a 'serial' compute construct}1">;
+def err_acc_gang_dim_value
+    : Error<"argument to 'gang' clause dimension must be %select{a constant "
+            "expression|1, 2, or 3: evaluated to %1}0">;
+def err_acc_gang_num_gangs_conflict
+    : Error<"'num' argument to 'gang' clause not allowed on a 'loop' construct "
+            "associated with a 'kernels' construct that has a 'num_gangs' "
+            "clause">;
+def err_acc_gang_inside_gang
+    : Error<"loop with a 'gang' clause may not exist in the region of a 'gang' "
+            "clause on a 'kernels' compute construct">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

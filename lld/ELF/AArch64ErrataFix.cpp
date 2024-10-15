@@ -372,7 +372,7 @@ static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
 
 class elf::Patch843419Section final : public SyntheticSection {
 public:
-  Patch843419Section(InputSection *p, uint64_t off);
+  Patch843419Section(Ctx &, InputSection *p, uint64_t off);
 
   void writeTo(uint8_t *buf) override;
 
@@ -392,8 +392,8 @@ public:
   Symbol *patchSym;
 };
 
-Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
+Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
+    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
                        ".text.patch"),
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
@@ -529,7 +529,7 @@ void AArch64Err843419Patcher::insertPatches(
 // instruction that we need to patch at patcheeOffset from the start of
 // InputSection isec, create a Patch843419 Section and add it to the
 // Patches that we need to insert.
-static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
+static void implementPatch(Ctx &ctx, uint64_t adrpAddr, uint64_t patcheeOffset,
                            InputSection *isec,
                            std::vector<Patch843419Section *> &patches) {
   // There may be a relocation at the same offset that we are patching. There
@@ -556,7 +556,7 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
   log("detected cortex-a53-843419 erratum sequence starting at " +
       utohexstr(adrpAddr) + " in unpatched output.");
 
-  auto *ps = make<Patch843419Section>(isec, patcheeOffset);
+  auto *ps = make<Patch843419Section>(ctx, isec, patcheeOffset);
   patches.push_back(ps);
 
   auto makeRelToPatch = [](uint64_t offset, Symbol *patchSym) {
@@ -599,7 +599,7 @@ AArch64Err843419Patcher::patchInputSectionDescription(
         uint64_t startAddr = isec->getVA(off);
         if (uint64_t patcheeOffset =
                 scanCortexA53Errata843419(isec, off, limit))
-          implementPatch(startAddr, patcheeOffset, isec, patches);
+          implementPatch(ctx, startAddr, patcheeOffset, isec, patches);
       }
       if (dataSym == mapSyms.end())
         break;

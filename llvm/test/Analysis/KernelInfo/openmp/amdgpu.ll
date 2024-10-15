@@ -11,19 +11,19 @@
 ; CHECK-NEXT: remark: test.c:14:9: in artificial function '[[OFF_FUNC]]_debug__', alloca 'i' with static size of 4 bytes
 ; CHECK-NEXT: remark: test.c:15:9: in artificial function '[[OFF_FUNC]]_debug__', alloca 'a' with static size of 8 bytes
 ; CHECK-NEXT: remark: <unknown>:0:0: in artificial function '[[OFF_FUNC]]_debug__', 'store' accesses memory in flat address space
-; CHECK-NEXT: remark: test.c:13:3: in artificial function '[[OFF_FUNC]]_debug__', direct call, callee is '__kmpc_target_init'
-; CHECK-NEXT: remark: test.c:16:5: in artificial function '[[OFF_FUNC]]_debug__', direct call, callee is 'f'
+; CHECK-NEXT: remark: test.c:13:3: in artificial function '[[OFF_FUNC]]_debug__', direct call, callee is '@__kmpc_target_init'
+; CHECK-NEXT: remark: test.c:16:5: in artificial function '[[OFF_FUNC]]_debug__', direct call, callee is '@f'
 ; CHECK-NEXT: remark: test.c:17:5: in artificial function '[[OFF_FUNC]]_debug__', direct call to defined function, callee is 'g'
-; CHECK-NEXT: remark: test.c:18:3: in artificial function '[[OFF_FUNC]]_debug__', direct call, callee is '__kmpc_target_deinit'
+; CHECK-NEXT: remark: test.c:18:3: in artificial function '[[OFF_FUNC]]_debug__', direct call, callee is '@__kmpc_target_deinit'
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', ExternalNotKernel = 0
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', OmpTargetThreadLimit = 256
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AmdgpuMaxNumWorkgroupsX = 0
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AmdgpuMaxNumWorkgroupsY = 0
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AmdgpuMaxNumWorkgroupsZ = 0
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AmdgpuFlatWorkGroupSizeMin = 1
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AmdgpuFlatWorkGroupSizeMax = 256
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AmdgpuWavesPerEUMin = 1
-; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AmdgpuWavesPerEUMax = 10
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', omp_target_thread_limit = 256
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[0] = 0
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[1] = 0
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-max-num-workgroups[2] = 0
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-flat-work-group-size[0] = 1
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-flat-work-group-size[1] = 256
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-waves-per-eu[0] = 1
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', amdgpu-waves-per-eu[1] = 10
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', Allocas = 3
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AllocasStaticSizeSum = 20
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', AllocasDyn = 0
@@ -40,13 +40,13 @@
 ; CHECK-NEXT: remark: test.c:12:1: in artificial function '[[OFF_FUNC]]', 'load' ('%[[#]]') accesses memory in flat address space
 ; CHECK-NEXT: remark: test.c:12:1: in artificial function '[[OFF_FUNC]]', direct call to defined function, callee is artificial '[[OFF_FUNC]]_debug__'
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', ExternalNotKernel = 0
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AmdgpuMaxNumWorkgroupsX = 0
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AmdgpuMaxNumWorkgroupsY = 0
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AmdgpuMaxNumWorkgroupsZ = 0
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AmdgpuFlatWorkGroupSizeMin = 1
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AmdgpuFlatWorkGroupSizeMax = 1024
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AmdgpuWavesPerEUMin = 4
-; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AmdgpuWavesPerEUMax = 10
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[0] = 0
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[1] = 0
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-max-num-workgroups[2] = 0
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-flat-work-group-size[0] = 1
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-flat-work-group-size[1] = 1024
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-waves-per-eu[0] = 4
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', amdgpu-waves-per-eu[1] = 10
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', Allocas = 1
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AllocasStaticSizeSum = 8
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', AllocasDyn = 0
@@ -60,16 +60,16 @@
 
 ; CHECK-NEXT: remark: test.c:4:7: in function 'g', alloca 'i' with static size of 4 bytes
 ; CHECK-NEXT: remark: test.c:5:7: in function 'g', alloca 'a' with static size of 8 bytes
-; CHECK-NEXT: remark: test.c:6:3: in function 'g', direct call, callee is 'f'
+; CHECK-NEXT: remark: test.c:6:3: in function 'g', direct call, callee is '@f'
 ; CHECK-NEXT: remark: test.c:7:3: in function 'g', direct call to defined function, callee is 'g'
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', ExternalNotKernel = 1
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', AmdgpuMaxNumWorkgroupsX = 0
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', AmdgpuMaxNumWorkgroupsY = 0
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', AmdgpuMaxNumWorkgroupsZ = 0
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', AmdgpuFlatWorkGroupSizeMin = 1
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', AmdgpuFlatWorkGroupSizeMax = 1024
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', AmdgpuWavesPerEUMin = 4
-; CHECK-NEXT: remark: test.c:3:0: in function 'g', AmdgpuWavesPerEUMax = 10
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[0] = 0
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[1] = 0
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-max-num-workgroups[2] = 0
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-flat-work-group-size[0] = 1
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-flat-work-group-size[1] = 1024
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-waves-per-eu[0] = 4
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', amdgpu-waves-per-eu[1] = 10
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', Allocas = 2
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', AllocasStaticSizeSum = 12
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', AllocasDyn = 0

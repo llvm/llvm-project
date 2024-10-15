@@ -62,6 +62,8 @@ Changes to the LLVM IR
 
 * Added `usub_cond` and `usub_sat` operations to `atomicrmw`.
 
+* Introduced `noalias.addrspace` metadata.
+
 * Remove the following intrinsics which can be replaced with a `bitcast`:
 
   * `llvm.nvvm.bitcast.f2i`
@@ -86,6 +88,8 @@ Changes to the LLVM IR
   * `llvm.nvvm.ptr.shared.to.gen`
   * `llvm.nvvm.ptr.constant.to.gen`
   * `llvm.nvvm.ptr.local.to.gen`
+  
+* Operand bundle values can now be metadata strings.
 
 Changes to LLVM infrastructure
 ------------------------------

@@ -28,7 +28,7 @@
 #include <string>
 #include <utility>
 
-extern llvm::cl::opt<bool> KernelInfoEndLTO;
+extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
 
 namespace llvm {
 

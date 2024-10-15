@@ -142,8 +142,8 @@ static Status parse_listen_host_port(Socket::SocketProtocol &protocol,
       return Status::FromErrorStringWithFormat(
           "The same platform and gdb ports %u.", platform_port);
     }
-    address = llvm::formatv("{0}:{1}", hostname, platform_port).str();
-    gdb_address = llvm::formatv("{0}:{1}", hostname, gdbserver_port).str();
+    address = llvm::formatv("[{0}]:{1}", hostname, platform_port).str();
+    gdb_address = llvm::formatv("[{0}]:{1}", hostname, gdbserver_port).str();
   } else {
     if (gdbserver_port) {
       return Status::FromErrorStringWithFormat(

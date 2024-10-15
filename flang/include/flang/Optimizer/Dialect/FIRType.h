@@ -159,10 +159,8 @@ mlir::Type dyn_cast_ptrEleTy(mlir::Type t);
 /// `t` is not a memory reference or box type, then returns a null `Type`.
 mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t);
 
-/// Is `t` a FIR Real or MLIR Float type?
-inline bool isa_real(mlir::Type t) {
-  return mlir::isa<fir::RealType, mlir::FloatType>(t);
-}
+/// Is `t` a real type?
+inline bool isa_real(mlir::Type t) { return mlir::isa<mlir::FloatType>(t); }
 
 /// Is `t` an integral type?
 inline bool isa_integer(mlir::Type t) {

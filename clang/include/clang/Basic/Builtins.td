@@ -4745,6 +4745,12 @@ def HLSLCross: LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_degrees"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot"];
   let Attributes = [NoThrow, Const];
@@ -4820,6 +4826,12 @@ def HLSLSign : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLStep: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_step"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_radians"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
