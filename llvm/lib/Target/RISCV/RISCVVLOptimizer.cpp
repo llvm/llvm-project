@@ -32,40 +32,51 @@ using namespace llvm;
 namespace {
 
 struct VLInfo {
-  VLInfo(const MachineOperand &VLOp) {
-    IsImm = VLOp.isImm();
-    if (IsImm)
-      Imm = VLOp.getImm();
-    else
-      Reg = VLOp.getReg();
-  }
+  std::variant<Register, int64_t> VL;
 
-  Register Reg;
-  int64_t Imm;
-  bool IsImm;
+  VLInfo(const MachineOperand &VLOp) {
+    if (VLOp.isImm())
+      VL = VLOp.getImm();
+    else
+      VL = VLOp.getReg();
+  }
 
   bool isCompatible(const MachineOperand &VLOp) const {
-    if (IsImm != VLOp.isImm())
+    if (isImm() != VLOp.isImm())
       return false;
-    if (IsImm)
-      return Imm == VLOp.getImm();
-    return Reg == VLOp.getReg();
+    if (isImm())
+      return getImm() == VLOp.getImm();
+    return getReg() == VLOp.getReg();
   }
 
-  bool isValid() const { return IsImm || Reg.isVirtual(); }
+  bool isImm() const { return std::holds_alternative<int64_t>(VL); }
+
+  bool isReg() const { return std::holds_alternative<Register>(VL); }
+
+  bool isValid() const { return isImm() || getReg().isVirtual(); }
+
+  int64_t getImm() const {
+    assert (isImm() && "Expected VL to be an immediate");
+    return std::get<int64_t>(VL);
+  }
+
+  Register getReg() const {
+    assert (isReg() && "Expected VL to be a Register");
+    return std::get<Register>(VL);
+  }
 
   bool hasBenefit(const MachineOperand &VLOp) const {
-    if (IsImm && Imm == RISCV::VLMaxSentinel)
+    if (isImm() && getImm() == RISCV::VLMaxSentinel)
       return false;
 
-    if (!IsImm || !VLOp.isImm())
+    if (!isImm() || !VLOp.isImm())
       return true;
 
     if (VLOp.getImm() == RISCV::VLMaxSentinel)
       return true;
 
     // No benefit if the current VL is already smaller than the new one.
-    return Imm < VLOp.getImm();
+    return getImm() < VLOp.getImm();
   }
 };
 
@@ -862,20 +873,21 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
       continue;
     }
 
-    if (CommonVL->IsImm) {
+    if (CommonVL->isImm()) {
       LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                        << CommonVL->Imm << " for " << MI << "\n");
-      VLOp.ChangeToImmediate(CommonVL->Imm);
+                        << CommonVL->getImm() << " for " << MI << "\n");
+      VLOp.ChangeToImmediate(CommonVL->getImm());
     } else {
-      const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->Reg);
+      const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
       if (!MDT->dominates(VLMI, &MI))
         continue;
-      LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                        << printReg(CommonVL->Reg, MRI->getTargetRegisterInfo())
-                        << " for " << MI << "\n");
+      LLVM_DEBUG(
+          dbgs() << "  Reduce VL from " << VLOp << " to "
+                 << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
+                 << " for " << MI << "\n");
 
       // All our checks passed. We can reduce VL.
-      VLOp.ChangeToRegister(CommonVL->Reg, false);
+      VLOp.ChangeToRegister(CommonVL->getReg(), false);
     }
 
     MadeChange = true;
