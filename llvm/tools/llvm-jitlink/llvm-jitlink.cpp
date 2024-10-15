@@ -1057,9 +1057,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         return loadAndLinkDynamicLibrary(JD, DLLName);
       };
 
-      if (auto P = COFFPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                        OrcRuntime.c_str(),
-                                        std::move(LoadDynLibrary)))
+      if (auto P =
+              COFFPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str(),
+                                   std::move(LoadDynLibrary)))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();

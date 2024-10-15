@@ -1172,7 +1172,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
       StaticVCRuntime = VCRuntime->second;
     }
     if (auto P = COFFPlatform::Create(
-            ES, *ObjLinkingLayer, PlatformJD, std::move(RuntimeArchiveBuffer),
+            *ObjLinkingLayer, PlatformJD, std::move(RuntimeArchiveBuffer),
             LoadAndLinkDynLibrary(J), StaticVCRuntime, VCRuntimePath))
       J.getExecutionSession().setPlatform(std::move(*P));
     else
