@@ -34,7 +34,9 @@ typedef uint_t uint;
 #include <sys/utsname.h>
 #endif
 
+#if !defined(__wasi__)
 #include <signal.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -462,6 +464,8 @@ COMPILER_RT_VISIBILITY void lprofInstallSignalHandler(int sig,
   if (err == SIG_ERR)
     PROF_WARN("Unable to install an exit signal handler for %d (errno = %d).\n",
               sig, errno);
+#elif defined(__wasi__)
+  // WASI doesn't support signal.
 #else
   struct sigaction sigact;
   memset(&sigact, 0, sizeof(sigact));
