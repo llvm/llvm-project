@@ -1,5 +1,9 @@
 // RUN: mlir-opt %s --transform-interpreter | FileCheck %s
 
+//-----------------------------------------------------------------------------
+// [Patterns: TransferWriteDropUnitDimsPattern, TransferReadeDropUnitDimsPattern]
+//-----------------------------------------------------------------------------
+
 func.func @transfer_read_rank_reducing(
       %arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>) -> vector<3x2xi8> {
     %c0 = arith.constant 0 : index
@@ -14,7 +18,29 @@ func.func @transfer_read_rank_reducing(
 //  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
 //       CHECK:   vector.transfer_read %[[SUBVIEW]]
 
-func.func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>, %vec : vector<3x2xi8>) {
+func.func @transfer_read_rank_reducing_masked(
+      %arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>,
+      %mask: vector<3x2xi1>) -> vector<3x2xi8> {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0 : i8
+    %v = vector.mask %mask {
+      vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst :
+        memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>, vector<3x2xi8>
+    } : vector<3x2xi1> -> vector<3x2xi8>
+    return %v : vector<3x2xi8>
+}
+// CHECK-LABEL: func @transfer_read_rank_reducing_masked
+//  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2xi8
+//  CHECK-SAME:     %[[MASK:.+]]: vector<3x2xi1>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
+//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
+//       CHECK:   vector.mask %[[MASK]]
+//  CHECK-SAME:  vector.transfer_read %[[SUBVIEW]]
+
+func.func @transfer_write_rank_reducing(
+      %arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>,
+      %vec : vector<3x2xi8>) {
+
     %c0 = arith.constant 0 : index
     vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] :
       vector<3x2xi8>, memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>
@@ -25,6 +51,26 @@ func.func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, strided<[6, 6,
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
 //  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
 //       CHECK:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]
+
+func.func @transfer_write_rank_reducing_masked(
+      %arg : memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>,
+      %vec : vector<3x2xi8>,
+      %mask: vector<3x2xi1>) {
+    %c0 = arith.constant 0 : index
+    vector.mask %mask {
+      vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] :
+        vector<3x2xi8>, memref<1x1x3x2xi8, strided<[6, 6, 2, 1], offset: ?>>
+    } : vector<3x2xi1>
+    return
+}
+// CHECK-LABEL: func @transfer_write_rank_reducing_masked
+//  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2xi8
+//  CHECK-SAME:     %[[VEC:.+]]: vector<3x2xi8>
+//  CHECK-SAME:     %[[MASK:.+]]: vector<3x2xi1>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0] [1, 1, 3, 2] [1, 1, 1, 1]
+//  CHECK-SAME:     memref<1x1x3x2xi8, {{.*}}> to memref<3x2xi8, {{.*}}>
+//       CHECK:   vector.mask %[[MASK]]
+//  CHECK-SAME:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]
 
 func.func @transfer_read_and_vector_rank_reducing(
       %arg : memref<1x1x3x2x1xf32>) -> vector<3x2x1xf32> {
