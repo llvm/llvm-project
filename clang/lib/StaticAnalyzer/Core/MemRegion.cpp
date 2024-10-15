@@ -722,6 +722,13 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
   SmallString<50> buf;
   llvm::raw_svector_ostream os(buf);
 
+  // Enclose subject with single quotes if needed.
+  auto QuoteIfNeeded = [UseQuotes](const Twine &Subject) -> std::string {
+    if (UseQuotes)
+      return ("'" + Subject + "'").str();
+    return Subject.str();
+  };
+
   // Obtain array indices to add them to the variable name.
   const ElementRegion *ER = nullptr;
   while ((ER = R->getAs<ElementRegion>())) {
@@ -755,22 +762,15 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
     // MemRegion can be pretty printed.
     if (R->canPrintPrettyAsExpr()) {
       R->printPrettyAsExpr(os);
-      if (UseQuotes)
-        return (llvm::Twine("'") + os.str() + ArrayIndices + "'").str();
-      return (llvm::Twine(os.str()) + ArrayIndices).str();
+      return QuoteIfNeeded(llvm::Twine(os.str()) + ArrayIndices);
     }
 
     // FieldRegion may have ElementRegion as SuperRegion.
-    if (const clang::ento::FieldRegion *FR =
-            R->getAs<clang::ento::FieldRegion>()) {
+    if (const auto *FR = R->getAs<clang::ento::FieldRegion>()) {
       std::string Super = FR->getSuperRegion()->getDescriptiveName(false);
       if (Super.empty())
         return "";
-
-      if (UseQuotes)
-        return (llvm::Twine("'") + Super + "." + FR->getDecl()->getName() + "'")
-            .str();
-      return (llvm::Twine(Super) + "." + FR->getDecl()->getName()).str();
+      return QuoteIfNeeded(Super + "." + FR->getDecl()->getName());
     }
   }
 
