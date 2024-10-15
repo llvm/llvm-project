@@ -7648,21 +7648,21 @@ bool CombinerHelper::matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
               {TargetOpcode::G_BUILD_VECTOR, {SmallBvTy, SmallBvElemenTy}}))
         return false;
 
-      // check scalar anyext
+      // We check the legality of scalar anyext.
       if (!isLegalOrBeforeLegalizer(
               {TargetOpcode::G_ANYEXT,
                {SmallBvElemenTy, BigBvTy.getElementType()}}))
         return false;
 
       MatchInfo = [=](MachineIRBuilder &B) {
-        // build into each G_UNMERGE_VALUES def
-        // a small build vector with anyext from the source build vector
+        // Build into each G_UNMERGE_VALUES def
+        // a small build vector with anyext from the source build vector.
         for (unsigned I = 0; I < Unmerge->getNumDefs(); ++I) {
           SmallVector<Register> Ops;
           for (unsigned J = 0; J < SmallBvTy.getNumElements(); ++J) {
-            auto AnyExt = B.buildAnyExt(
-                SmallBvElemenTy,
-                BV->getSourceReg(I * SmallBvTy.getNumElements() + J));
+            Register SourceArray =
+                BV->getSourceReg(I * SmallBvTy.getNumElements() + J);
+            auto AnyExt = B.buildAnyExt(SmallBvElemenTy, SourceArray);
             Ops.push_back(AnyExt.getReg(0));
           }
           B.buildBuildVector(Unmerge->getOperand(I).getReg(), Ops);
