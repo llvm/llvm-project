@@ -536,7 +536,14 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // 11.8 Vector Integer Compare Instructions
   // FIXME: Add support for 11.8 instructions
   // 11.9. Vector Integer Min/Max Instructions
-  // FIXME: Add support for 11.9 instructions
+  case RISCV::VMINU_VV:
+  case RISCV::VMINU_VX:
+  case RISCV::VMIN_VV:
+  case RISCV::VMIN_VX:
+  case RISCV::VMAXU_VV:
+  case RISCV::VMAXU_VX:
+  case RISCV::VMAX_VV:
+  case RISCV::VMAX_VX:
   // 11.10. Vector Single-Width Integer Multiply Instructions
   case RISCV::VMUL_VV:
   case RISCV::VMUL_VX:
