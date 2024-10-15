@@ -56,12 +56,12 @@ struct VLInfo {
   bool isValid() const { return isImm() || getReg().isVirtual(); }
 
   int64_t getImm() const {
-    assert (isImm() && "Expected VL to be an immediate");
+    assert(isImm() && "Expected VL to be an immediate");
     return std::get<int64_t>(VL);
   }
 
   Register getReg() const {
-    assert (isReg() && "Expected VL to be a Register");
+    assert(isReg() && "Expected VL to be a Register");
     return std::get<Register>(VL);
   }
 
