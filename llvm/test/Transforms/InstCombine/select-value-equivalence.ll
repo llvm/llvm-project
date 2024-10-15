@@ -5,7 +5,7 @@ define <2 x i8> @select_icmp_insertelement_eq(<2 x i8> %x, <2 x i8> %y, i8 %i) {
 ; CHECK-LABEL: define <2 x i8> @select_icmp_insertelement_eq(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], i8 [[I:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[Y]], <i8 2, i8 2>
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x i8> [[Y]], i8 0, i8 [[I]]
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x i8> <i8 2, i8 2>, i8 0, i8 [[I]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[INSERT]], <2 x i8> [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[RETVAL]]
 ;
@@ -19,7 +19,7 @@ define <2 x i8> @select_icmp_insertelement_ne(<2 x i8> %x, <2 x i8> %y, i8 %i) {
 ; CHECK-LABEL: define <2 x i8> @select_icmp_insertelement_ne(
 ; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], i8 [[I:%.*]]) {
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq <2 x i8> [[Y]], <i8 2, i8 2>
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x i8> [[Y]], i8 0, i8 [[I]]
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x i8> <i8 2, i8 2>, i8 0, i8 [[I]]
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i8> [[INSERT]], <2 x i8> [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[RETVAL]]
 ;
@@ -46,7 +46,7 @@ define <4 x i8> @select_icmp_shufflevector_select(<4 x i8> %x, <4 x i8> %y, <4 x
 ; CHECK-LABEL: define <4 x i8> @select_icmp_shufflevector_select(
 ; CHECK-SAME: <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i8> [[Z:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i8> [[Y]], <i8 2, i8 2, i8 2, i8 2>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i8> [[Z]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i8> [[Z]], <4 x i8> <i8 poison, i8 2, i8 poison, i8 2>, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[RETVAL:%.*]] = select <4 x i1> [[CMP]], <4 x i8> [[SHUFFLE]], <4 x i8> [[X]]
 ; CHECK-NEXT:    ret <4 x i8> [[RETVAL]]
 ;
