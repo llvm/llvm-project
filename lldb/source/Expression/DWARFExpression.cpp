@@ -533,6 +533,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
   return true;
 }
 
+#ifdef LLDB_ENABLE_SWIFT
 /// Returns true if \c opcodes contains the opcode for the register used for the
 /// Swift Async Context (x22 for aarch64, r14 for x86-64). It must also not
 /// contain any other opcodes.
@@ -600,6 +601,7 @@ static llvm::Expected<Value> SwiftAsyncEvaluate_DW_OP_entry_value(
     current_offset = new_offset;
   return maybe_result;
 }
+#endif // LLDB_ENABLE_SWIFT
 
 static llvm::Error
 Evaluate_DW_OP_entry_value(std::vector<Value> &stack, const DWARFUnit *dwarf_cu,
@@ -698,6 +700,7 @@ Evaluate_DW_OP_entry_value(std::vector<Value> &stack, const DWARFUnit *dwarf_cu,
   if (!current_func)
     return llvm::createStringError("no current function");
 
+#ifdef LLDB_ENABLE_SWIFT
   if (llvm::Expected<Value> result = SwiftAsyncEvaluate_DW_OP_entry_value(
           *exe_ctx, *current_frame, dwarf_cu, *current_func, opcodes,
           opcode_offset)) {
@@ -705,6 +708,7 @@ Evaluate_DW_OP_entry_value(std::vector<Value> &stack, const DWARFUnit *dwarf_cu,
     return llvm::Error::success();
   } else
     LLDB_LOG_ERROR(log, result.takeError(), "{0}");
+#endif // LLDB_ENABLE_SWIFT
 
   CallEdge *call_edge = nullptr;
   ModuleList &modlist = target.GetImages();
