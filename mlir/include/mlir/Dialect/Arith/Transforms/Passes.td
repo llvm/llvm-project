@@ -50,6 +50,25 @@ def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
   ];
 }
 
+def ArithIntRangeNarrowing : Pass<"arith-int-range-narrowing"> {
+  let summary = "Reduce integer operations bitwidth based on integer range analysis";
+  let description = [{
+    This pass runs integer range analysis and tries to narrow arith ops to the
+    specified bitwidth based on its results.
+  }];
+
+  let options = [
+    Option<"targetBitwidth", "target-bitwidth", "unsigned",
+           /*default=*/"32", "Target bitwidth this pass will try to narrow to">,
+  ];
+
+  // Explicitly depend on "arith" because this pass could create operations in
+  // `arith` out of thin air in some cases.
+  let dependentDialects = [
+    "::mlir::arith::ArithDialect"
+  ];
+}
+
 def ArithEmulateUnsupportedFloats : Pass<"arith-emulate-unsupported-floats"> {
   let summary = "Emulate operations on unsupported floats with extf/truncf";
   let description = [{

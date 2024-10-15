@@ -15,14 +15,19 @@
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir::arith {
 #define GEN_PASS_DEF_ARITHINTRANGEOPTS
+#include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
+
+#define GEN_PASS_DEF_ARITHINTRANGENARROWING
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 } // namespace mlir::arith
 
@@ -190,6 +195,223 @@ private:
   DataFlowSolver &solver;
 };
 
+static Type checkArithType(Type type, unsigned targetBitwidth) {
+  type = getElementTypeOrSelf(type);
+  if (isa<IndexType>(type))
+    return type;
+
+  if (auto intType = dyn_cast<IntegerType>(type))
+    if (intType.getWidth() > targetBitwidth)
+      return type;
+
+  return nullptr;
+}
+
+static Type checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
+  if (op->getNumOperands() == 0 || op->getNumResults() == 0)
+    return nullptr;
+
+  Type type;
+  for (auto range :
+       {ValueRange(op->getOperands()), ValueRange(op->getResults())}) {
+    for (Value val : range) {
+      if (!type) {
+        type = val.getType();
+        continue;
+      } else if (type != val.getType()) {
+        return nullptr;
+      }
+    }
+  }
+
+  return checkArithType(type, targetBitwidth);
+}
+
+static std::optional<ConstantIntRanges> getOperandsRange(DataFlowSolver &solver,
+                                                         ValueRange results) {
+  std::optional<ConstantIntRanges> ret;
+  for (Value value : results) {
+    auto *maybeInferredRange =
+        solver.lookupState<IntegerValueRangeLattice>(value);
+    if (!maybeInferredRange || maybeInferredRange->getValue().isUninitialized())
+      return std::nullopt;
+
+    const ConstantIntRanges &inferredRange =
+        maybeInferredRange->getValue().getValue();
+
+    if (!ret) {
+      ret = inferredRange;
+    } else {
+      ret = ret->rangeUnion(inferredRange);
+    }
+  }
+  return ret;
+}
+
+static Type getTargetType(Type srcType, unsigned targetBitwidth) {
+  auto dstType = IntegerType::get(srcType.getContext(), targetBitwidth);
+  if (auto shaped = dyn_cast<ShapedType>(srcType))
+    return shaped.clone(dstType);
+
+  assert(srcType.isIntOrIndex() && "Invalid src type");
+  return dstType;
+}
+
+static bool checkRange(const ConstantIntRanges &range, APInt smin, APInt smax,
+                       APInt umin, APInt umax) {
+  auto sge = [](APInt val1, APInt val2) -> bool {
+    unsigned width = std::max(val1.getBitWidth(), val2.getBitWidth());
+    val1 = val1.sext(width);
+    val2 = val2.sext(width);
+    return val1.sge(val2);
+  };
+  auto sle = [](APInt val1, APInt val2) -> bool {
+    unsigned width = std::max(val1.getBitWidth(), val2.getBitWidth());
+    val1 = val1.sext(width);
+    val2 = val2.sext(width);
+    return val1.sle(val2);
+  };
+  auto uge = [](APInt val1, APInt val2) -> bool {
+    unsigned width = std::max(val1.getBitWidth(), val2.getBitWidth());
+    val1 = val1.zext(width);
+    val2 = val2.zext(width);
+    return val1.uge(val2);
+  };
+  auto ule = [](APInt val1, APInt val2) -> bool {
+    unsigned width = std::max(val1.getBitWidth(), val2.getBitWidth());
+    val1 = val1.zext(width);
+    val2 = val2.zext(width);
+    return val1.ule(val2);
+  };
+  return sge(range.smin(), smin) && sle(range.smax(), smax) &&
+         uge(range.umin(), umin) && ule(range.umax(), umax);
+}
+
+static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType) {
+  Type srcType = src.getType();
+  assert(srcType.isIntOrIndex() && "Invalid src type");
+  assert(dstType.isIntOrIndex() && "Invalid dst type");
+  if (srcType == dstType)
+    return src;
+
+  if (isa<IndexType>(srcType) || isa<IndexType>(dstType))
+    return builder.create<arith::IndexCastUIOp>(loc, dstType, src);
+
+  auto srcInt = cast<IntegerType>(srcType);
+  auto dstInt = cast<IntegerType>(dstType);
+  if (dstInt.getWidth() < srcInt.getWidth()) {
+    return builder.create<arith::TruncIOp>(loc, dstType, src);
+  } else {
+    return builder.create<arith::ExtUIOp>(loc, dstType, src);
+  }
+}
+
+struct NarrowElementwise final
+    : public OpTraitRewritePattern<OpTrait::Elementwise> {
+  NarrowElementwise(MLIRContext *context, DataFlowSolver &s, unsigned target)
+      : OpTraitRewritePattern<OpTrait::Elementwise>(context), solver(s),
+        targetBitwidth(target) {}
+
+  using OpTraitRewritePattern::OpTraitRewritePattern;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    Type srcType = checkElementwiseOpType(op, targetBitwidth);
+    if (!srcType)
+      return failure();
+
+    std::optional<ConstantIntRanges> range =
+        getOperandsRange(solver, op->getResults());
+    if (!range)
+      return failure();
+
+    // We are truncating op args to the desired bitwidth before the op and then
+    // extending op results back to the original width after.
+    // extui and exti will produce different results for negative values, so
+    // limit signed range to non-negative values.
+    auto smin = APInt::getZero(targetBitwidth);
+    auto smax = APInt::getSignedMaxValue(targetBitwidth);
+    auto umin = APInt::getMinValue(targetBitwidth);
+    auto umax = APInt::getMaxValue(targetBitwidth);
+    if (!checkRange(*range, smin, smax, umin, umax))
+      return failure();
+
+    Type targetType = getTargetType(srcType, targetBitwidth);
+    if (targetType == srcType)
+      return failure();
+
+    Location loc = op->getLoc();
+    IRMapping mapping;
+    for (Value arg : op->getOperands()) {
+      Value newArg = doCast(rewriter, loc, arg, targetType);
+      mapping.map(arg, newArg);
+    }
+
+    Operation *newOp = rewriter.clone(*op, mapping);
+    rewriter.modifyOpInPlace(newOp, [&]() {
+      for (OpResult res : newOp->getResults()) {
+        res.setType(targetType);
+      }
+    });
+    SmallVector<Value> newResults;
+    for (Value res : newOp->getResults())
+      newResults.emplace_back(doCast(rewriter, loc, res, srcType));
+
+    rewriter.replaceOp(op, newResults);
+    return success();
+  }
+
+private:
+  DataFlowSolver &solver;
+  unsigned targetBitwidth;
+};
+
+struct NarrowCmpi final : public OpRewritePattern<arith::CmpIOp> {
+  NarrowCmpi(MLIRContext *context, PatternBenefit benefit, DataFlowSolver &s,
+             unsigned target)
+      : OpRewritePattern(context, benefit), solver(s), targetBitwidth(target) {}
+
+  LogicalResult matchAndRewrite(arith::CmpIOp op,
+                                PatternRewriter &rewriter) const override {
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+
+    Type srcType = checkArithType(lhs.getType(), targetBitwidth);
+    if (!srcType)
+      return failure();
+
+    std::optional<ConstantIntRanges> range =
+        getOperandsRange(solver, {lhs, rhs});
+    if (!range)
+      return failure();
+
+    auto smin = APInt::getSignedMinValue(targetBitwidth);
+    auto smax = APInt::getSignedMaxValue(targetBitwidth);
+    auto umin = APInt::getMinValue(targetBitwidth);
+    auto umax = APInt::getMaxValue(targetBitwidth);
+    if (!checkRange(*range, smin, smax, umin, umax))
+      return failure();
+
+    Type targetType = getTargetType(srcType, targetBitwidth);
+    if (targetType == srcType)
+      return failure();
+
+    Location loc = op->getLoc();
+    IRMapping mapping;
+    for (Value arg : op->getOperands()) {
+      Value newArg = doCast(rewriter, loc, arg, targetType);
+      mapping.map(arg, newArg);
+    }
+
+    Operation *newOp = rewriter.clone(*op, mapping);
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+
+private:
+  DataFlowSolver &solver;
+  unsigned targetBitwidth;
+};
+
 struct IntRangeOptimizationsPass
     : public arith::impl::ArithIntRangeOptsBase<IntRangeOptimizationsPass> {
 
@@ -214,12 +436,50 @@ struct IntRangeOptimizationsPass
       signalPassFailure();
   }
 };
+
+struct IntRangeNarrowingPass
+    : public arith::impl::ArithIntRangeNarrowingBase<IntRangeNarrowingPass> {
+  using ArithIntRangeNarrowingBase::ArithIntRangeNarrowingBase;
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    MLIRContext *ctx = op->getContext();
+    DataFlowSolver solver;
+    solver.load<DeadCodeAnalysis>();
+    solver.load<IntegerRangeAnalysis>();
+    if (failed(solver.initializeAndRun(op)))
+      return signalPassFailure();
+
+    DataFlowListener listener(solver);
+
+    RewritePatternSet patterns(ctx);
+    populateIntRangeNarrowingPatterns(patterns, solver, this->targetBitwidth);
+
+    GreedyRewriteConfig config;
+    config.listener = &listener;
+
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+      signalPassFailure();
+  }
+};
 } // namespace
 
 void mlir::arith::populateIntRangeOptimizationsPatterns(
     RewritePatternSet &patterns, DataFlowSolver &solver) {
   patterns.add<MaterializeKnownConstantValues, DeleteTrivialRem<RemSIOp>,
                DeleteTrivialRem<RemUIOp>>(patterns.getContext(), solver);
+}
+
+void mlir::arith::populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
+                                                    DataFlowSolver &solver,
+                                                    unsigned targetBitwidth) {
+  // Cmpi uses args ranges instead of results, run it with higher benefit,
+  // as its argumens can be potentially replaced.
+  patterns.add<NarrowCmpi>(patterns.getContext(), /*benefit*/ 10, solver,
+                           targetBitwidth);
+
+  patterns.add<NarrowElementwise>(patterns.getContext(), solver,
+                                  targetBitwidth);
 }
 
 std::unique_ptr<Pass> mlir::arith::createIntRangeOptimizationsPass() {

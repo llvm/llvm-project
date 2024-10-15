@@ -77,6 +77,12 @@ void populateUnsignedWhenEquivalentPatterns(RewritePatternSet &patterns,
 /// Create a pass which do optimizations based on integer range analysis.
 std::unique_ptr<Pass> createIntRangeOptimizationsPass();
 
+/// Add patterns for int range based norrowing.
+void populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
+                                       DataFlowSolver &solver,
+                                       unsigned targetBitwidth);
+
+// TODO: merge these two narrowing passes.
 /// Add patterns for integer bitwidth narrowing.
 void populateArithIntNarrowingPatterns(RewritePatternSet &patterns,
                                        const ArithIntNarrowingOptions &options);
