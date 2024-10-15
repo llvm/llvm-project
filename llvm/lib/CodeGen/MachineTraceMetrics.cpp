@@ -97,10 +97,8 @@ MachineTraceMetrics::~MachineTraceMetrics() { clear(); }
 void MachineTraceMetrics::clear() {
   MF = nullptr;
   BlockInfo.clear();
-  for (auto &E : Ensembles) {
-    if (E)
-      E.reset();
-  }
+  for (auto &E : Ensembles)
+    E.reset();
 }
 
 //===----------------------------------------------------------------------===//
