@@ -56,6 +56,7 @@
 #include "llvm/Transforms/Yk/Stackmaps.h"
 #include "llvm/Transforms/Yk/NoCallsInEntryBlocks.h"
 #include "llvm/Transforms/Yk/BasicBlockTracer.h"
+#include "llvm/Transforms/Yk/ModuleClone.h"
 #include <cassert>
 #include <optional>
 #include <string>
@@ -297,6 +298,9 @@ static cl::opt<bool>
     YkBasicBlockTracer("yk-basicblock-tracer", cl::init(false), cl::NotHidden,
                       cl::desc("Enables YK Software Tracer capability"));
 
+static cl::opt<bool>
+    YkModuleClone("yk-module-clone", cl::init(false), cl::NotHidden,
+                  cl::desc("Enables YK Module Cloning capability"));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -1139,6 +1143,15 @@ bool TargetPassConfig::addISelPasses() {
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
+  
+  // Default number of control points in a module.
+  int numberOfControlPoints = 1;
+
+  if (YkModuleClone) {
+    numberOfControlPoints = YK_CLONE_MODULE_CP_COUNT;
+    addPass(createYkModuleClonePass());
+  }
+
   if (YkBlockDisambiguate)
     addPass(createYkBlockDisambiguatePass());
 
@@ -1166,7 +1179,7 @@ bool TargetPassConfig::addISelPasses() {
   // decomposed into scalar arguments. The JIT runtime relies on the interface
   // *not* being changed.
   if (YkPatchCtrlPoint) {
-    addPass(createYkControlPointPass());
+    addPass(createYkControlPointPass(numberOfControlPoints));
   }
 
   if (YkLinkage) {
@@ -1184,12 +1197,12 @@ bool TargetPassConfig::addISelPasses() {
   }
 
   if (YkInsertStackMaps) {
-    addPass(createYkStackmapsPass());
+    addPass(createYkStackmapsPass(numberOfControlPoints));
   }
 
   if (YkBasicBlockTracer) {
     addPass(createYkBasicBlockTracerPass());
-  }
+  }  
 
   addISelPrepare();
   return addCoreISelPasses();

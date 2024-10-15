@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMYkPasses
   NoCallsInEntryBlocks.cpp
   SplitBlocksAfterCalls.cpp
   BasicBlockTracer.cpp
+  ModuleClone.cpp
 
   DEPENDS
   intrinsics_gen
@@ -16,4 +17,6 @@ add_llvm_component_library(LLVMYkPasses
   Analysis
   Core
   Support
+  TransformUtils # Module Clone
+  Linker         # Module Linker
 )

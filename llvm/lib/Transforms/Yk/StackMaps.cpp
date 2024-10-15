@@ -18,17 +18,10 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Yk/ControlPoint.h"
 #include "llvm/Transforms/Yk/LivenessAnalysis.h"
+#include "llvm/Transforms/Yk/ModuleClone.h"
 #include <map>
 
 #define DEBUG_TYPE "yk-stackmaps"
-
-// The first stackmap ID available for use by this pass.
-//
-// It's 1 because 0 is reserved for the control point.
-// See llvm/lib/Transforms/Yk/ControlPoint.cpp
-//
-// This will have to change when we support >1 control point.
-const int NonCPStackmapIDStart = 1;
 
 using namespace llvm;
 
@@ -39,9 +32,13 @@ void initializeYkStackmapsPass(PassRegistry &);
 namespace {
 
 class YkStackmaps : public ModulePass {
+private:
+  uint64_t StackmapIDStart;
+
 public:
   static char ID;
-  YkStackmaps() : ModulePass(ID) {
+  YkStackmaps(uint64_t stackmapIDStart = 1)
+      : ModulePass(ID), StackmapIDStart(stackmapIDStart) {
     initializeYkStackmapsPass(*PassRegistry::getPassRegistry());
   }
 
@@ -59,6 +56,9 @@ public:
     for (Function &F : M) {
       if (F.empty()) // skip declarations.
         continue;
+      if (F.getName().startswith(YK_CLONE_PREFIX)) // skip cloned functions
+        continue;
+
       LivenessAnalysis LA(&F);
       for (BasicBlock &BB : F) {
         for (Instruction &I : BB) {
@@ -96,7 +96,7 @@ public:
     Function *SMFunc = Intrinsic::getDeclaration(&M, SMFuncID);
     assert(SMFunc != nullptr);
 
-    uint64_t Count = NonCPStackmapIDStart;
+    uint64_t Count = StackmapIDStart;
     Value *Shadow = ConstantInt::get(Type::getInt32Ty(Context), 0);
     for (auto It : SMCalls) {
       Instruction *I = cast<Instruction>(It.first);
@@ -135,4 +135,13 @@ public:
 char YkStackmaps::ID = 0;
 INITIALIZE_PASS(YkStackmaps, DEBUG_TYPE, "yk stackmaps", false, false)
 
-ModulePass *llvm::createYkStackmapsPass() { return new YkStackmaps(); }
+/**
+ * @brief Creates a new YkStackmaps pass.
+ *
+ * @param stackmapIDStart The first stackmap ID available for use by this pass.
+ *                        Defaults to 1 if not specified.
+ * @return ModulePass* A pointer to the newly created YkStackmaps pass.
+ */
+ModulePass *llvm::createYkStackmapsPass(uint64_t stackmapIDStart = 1) {
+  return new YkStackmaps(stackmapIDStart);
+}

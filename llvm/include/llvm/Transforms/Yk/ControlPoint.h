@@ -18,7 +18,7 @@
 #define CP_PPNAME "llvm.experimental.patchpoint.void"
 
 namespace llvm {
-ModulePass *createYkControlPointPass();
+ModulePass *createYkControlPointPass(uint64_t controlPointCount);
 } // namespace llvm
 
 #endif
