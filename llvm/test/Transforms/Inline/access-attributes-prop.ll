@@ -580,3 +580,23 @@ define ptr @callee_bad_param_prop(ptr readonly %x) {
   %r = tail call ptr @llvm.ptrmask(ptr %x, i64 -1)
   ret ptr %r
 }
+
+define dso_local void @foo_byval_readonly2(ptr readonly %p) {
+; CHECK-LABEL: define {{[^@]+}}@foo_byval_readonly2
+; CHECK-SAME: (ptr readonly [[P:%.*]]) {
+; CHECK-NEXT:    call void @bar4(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @bar4(ptr %p)
+  ret void
+}
+
+define void @prop_byval_readonly2(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@prop_byval_readonly2
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @bar4(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @foo_byval_readonly2(ptr %p)
+  ret void
+}
