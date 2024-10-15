@@ -1798,6 +1798,9 @@ public:
 
   /// \returns true if the operand of s_barrier_init can be an immediate.
   bool hasSBarrierInitImm() const { return getGeneration() == GFX12; }
+
+  /// \returns true if s_barrier_init increments KMcnt.
+  bool hasSBarrierInitKmCnt() const { return getGeneration() >= GFX13; }
 };
 
 class GCNUserSGPRUsageInfo {
