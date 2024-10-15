@@ -61,11 +61,6 @@
 #define YK_CONTROL_POINT_ARG_VARS_IDX 2
 #define YK_CONTROL_POINT_NUM_ARGS 3
 
-// Stackmap ID zero is reserved for the control point.
-//
-// This will need to change when we support >1 control point.
-const unsigned CPStackMapID = 0;
-
 // The number of shadow bytes required for the control point's patchpoint.
 //
 // This must be large enough to accommodate the call to patchpoint target
@@ -86,22 +81,28 @@ const unsigned CPShadow = 13;
 
 using namespace llvm;
 
-/// Find the call to the dummy control point that we want to patch.
-/// Returns either a pointer the call instruction, or `nullptr` if the call
-/// could not be found.
-/// YKFIXME: For now assumes there's only one control point.
-CallInst *findControlPointCall(Module &M) {
+/// @brief Locate calls to the dummy control point that we want to patch.
+///
+/// This function searches for all instances of `YK_DUMMY_CONTROL_POINT`
+/// calls within the LLVM module.
+///
+/// @return A vector of pointers to the `YK_DUMMY_CONTROL_POINT` call
+/// instructions, or an empty vector if no calls are found.
+std::vector<CallInst *> findControlPointCalls(Module &M) {
+  std::vector<CallInst *> controlPointCalls;
+
   // Find the declaration of `yk_mt_control_point()`.
   Function *CtrlPoint = M.getFunction(YK_DUMMY_CONTROL_POINT);
   if (CtrlPoint == nullptr)
-    return nullptr;
+    return controlPointCalls;
 
-  // Find the call site of `yk_mt_control_point()`.
-  const Value::user_iterator U = CtrlPoint->user_begin();
-  if (U == CtrlPoint->user_end())
-    return nullptr;
-
-  return cast<CallInst>(*U);
+  // Find all call sites of `yk_mt_control_point()`.
+  for (User *U : CtrlPoint->users()) {
+    if (CallInst *CI = dyn_cast<CallInst>(U)) {
+      controlPointCalls.insert(controlPointCalls.begin(), CI);
+    }
+  }
+  return controlPointCalls;
 }
 
 namespace llvm {
@@ -110,17 +111,22 @@ void initializeYkControlPointPass(PassRegistry &);
 
 namespace {
 class YkControlPoint : public ModulePass {
+private:
+  uint64_t controlPointCount;
+
 public:
   static char ID;
-  YkControlPoint() : ModulePass(ID) {
+  YkControlPoint(uint64_t controlPointCount)
+      : ModulePass(ID), controlPointCount(controlPointCount) {
     initializeYkControlPointPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override {
     LLVMContext &Context = M.getContext();
+    std::vector<CallInst *> ControlPointCalls = findControlPointCalls(M);
+
     // Locate the "dummy" control point provided by the user.
-    CallInst *OldCtrlPointCall = findControlPointCall(M);
-    if (OldCtrlPointCall == nullptr) {
+    if (ControlPointCalls.empty()) {
       // This program doesn't have a control point. We can't do any
       // transformations on it, but we do still want to compile it.
       Context.diagnose(DiagnosticInfoInlineAsm(
@@ -128,75 +134,86 @@ public:
           DS_Warning));
       return false;
     }
+    assert(ControlPointCalls.size() == controlPointCount &&
+           "Unexpected number of control point calls");
 
-    // Get function containing the control point.
-    Function *Caller = OldCtrlPointCall->getFunction();
+    unsigned CPStackMapID = 0;
+    Function *NF = nullptr;
 
-    // Check that the control point is inside a loop.
-    DominatorTree DT(*Caller);
-    const LoopInfo Loops(DT);
-    if (!std::any_of(Loops.begin(), Loops.end(), [OldCtrlPointCall](Loop *L) {
-          return L->contains(OldCtrlPointCall);
-        })) {
-      ;
-      Context.emitError("yk_mt_control_point() must be called inside a loop.");
-      return false;
+    for (CallInst *OldCtrlPointCall : ControlPointCalls) {
+      // Get function containing the control point.
+      Function *Caller = OldCtrlPointCall->getFunction();
+
+      // Check that the control point is inside a loop.
+      DominatorTree DT(*Caller);
+      const LoopInfo Loops(DT);
+      if (!std::any_of(Loops.begin(), Loops.end(), [OldCtrlPointCall](Loop *L) {
+            return L->contains(OldCtrlPointCall);
+          })) {
+        ;
+        Context.emitError(
+            "yk_mt_control_point() must be called inside a loop.");
+        return false;
+      }
+
+      // The old control point should be of the form:
+      //    yk_mt_control_point(YkMT*, YkLocation*)
+      assert(OldCtrlPointCall->arg_size() == YK_OLD_CONTROL_POINT_NUM_ARGS);
+      Type *YkMTTy =
+          OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX)
+              ->getType();
+      Type *YkLocTy =
+          OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX)
+              ->getType();
+
+      // Create a call to the "new" (patched) control point, but do so via a
+      // patchpoint so that we can capture the live variables at exactly the
+      // moment before the call.
+      if (NF == nullptr) {
+        Type *Int64Ty = Type::getInt64Ty(Context);
+        FunctionType *FType = FunctionType::get(
+            Type::getVoidTy(Context), {YkMTTy, YkLocTy, Int64Ty}, false);
+        NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
+                              YK_NEW_CONTROL_POINT, M);
+      }
+
+      IRBuilder<> Builder(OldCtrlPointCall);
+
+      const Intrinsic::ID SMFuncID = Function::lookupIntrinsicID(CP_PPNAME);
+      if (SMFuncID == Intrinsic::not_intrinsic) {
+        Context.emitError("can't find stackmap()");
+        return false;
+      }
+      Function *SMFunc = Intrinsic::getDeclaration(&M, SMFuncID);
+      assert(SMFunc != nullptr);
+
+      // Get live variables.
+      LivenessAnalysis LA(Caller);
+      auto Lives = LA.getLiveVarsBefore(OldCtrlPointCall);
+
+      Value *SMID = ConstantInt::get(Type::getInt64Ty(Context), CPStackMapID);
+      Value *Shadow = ConstantInt::get(Type::getInt32Ty(Context), CPShadow);
+      std::vector<Value *> Args = {
+          SMID,
+          Shadow,
+          NF,
+          ConstantInt::get(Type::getInt32Ty(Context), 3),
+          OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
+          OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
+          SMID,
+      };
+
+      for (auto *Live : Lives) {
+        Args.push_back(Live);
+      }
+
+      Builder.CreateCall(SMFunc->getFunctionType(), SMFunc,
+                         ArrayRef<Value *>(Args));
+
+      // Replace the call to the dummy control point.
+      OldCtrlPointCall->eraseFromParent();
+      ++CPStackMapID;
     }
-
-    // The old control point should be of the form:
-    //    yk_mt_control_point(YkMT*, YkLocation*)
-    assert(OldCtrlPointCall->arg_size() == YK_OLD_CONTROL_POINT_NUM_ARGS);
-    Type *YkMTTy =
-        OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX)->getType();
-    Type *YkLocTy =
-        OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX)
-            ->getType();
-
-    // Create a call to the "new" (patched) control point, but do so via a
-    // patchpoint so that we can capture the live variables at exactly the
-    // moment before the call.
-    Type *Int64Ty = Type::getInt64Ty(Context);
-    FunctionType *FType = FunctionType::get(Type::getVoidTy(Context),
-                                            {YkMTTy, YkLocTy, Int64Ty}, false);
-    Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
-                                    YK_NEW_CONTROL_POINT, M);
-
-    IRBuilder<> Builder(OldCtrlPointCall);
-
-    const Intrinsic::ID SMFuncID = Function::lookupIntrinsicID(CP_PPNAME);
-    if (SMFuncID == Intrinsic::not_intrinsic) {
-      Context.emitError("can't find stackmap()");
-      return false;
-    }
-    Function *SMFunc = Intrinsic::getDeclaration(&M, SMFuncID);
-    assert(SMFunc != nullptr);
-
-    // Get live variables.
-    LivenessAnalysis LA(Caller);
-    auto Lives = LA.getLiveVarsBefore(OldCtrlPointCall);
-
-    Value *SMID = ConstantInt::get(Type::getInt64Ty(Context), CPStackMapID);
-    Value *Shadow = ConstantInt::get(Type::getInt32Ty(Context), CPShadow);
-    std::vector<Value *> Args = {
-        SMID,
-        Shadow,
-        NF,
-        ConstantInt::get(Type::getInt32Ty(Context), 3),
-        OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
-        OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
-        SMID,
-    };
-
-    for (auto *Live : Lives) {
-      Args.push_back(Live);
-    }
-
-    Builder.CreateCall(SMFunc->getFunctionType(), SMFunc,
-                       ArrayRef<Value *>(Args));
-
-    // Replace the call to the dummy control point.
-    OldCtrlPointCall->eraseFromParent();
-
 #ifndef NDEBUG
     // Our pass runs after LLVM normally does its verify pass. In debug builds
     // we run it again to check that our pass is generating valid IR.
@@ -213,4 +230,6 @@ public:
 char YkControlPoint::ID = 0;
 INITIALIZE_PASS(YkControlPoint, DEBUG_TYPE, "yk control point", false, false)
 
-ModulePass *llvm::createYkControlPointPass() { return new YkControlPoint(); }
+ModulePass *llvm::createYkControlPointPass(uint64_t controlPointCount) {
+  return new YkControlPoint(controlPointCount);
+}
