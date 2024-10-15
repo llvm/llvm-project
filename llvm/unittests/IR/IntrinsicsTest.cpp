@@ -63,7 +63,7 @@ public:
 };
 
 TEST(IntrinsicNameLookup, Basic) {
-  static constexpr const char *const NameTable1[] = {
+  static constexpr const char *const NameTable[] = {
       "llvm.foo", "llvm.foo.a", "llvm.foo.b", "llvm.foo.b.a", "llvm.foo.c",
   };
 
@@ -74,11 +74,11 @@ TEST(IntrinsicNameLookup, Basic) {
   };
 
   for (const auto &[Name, ExpectedIdx] : Tests) {
-    int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name);
+    int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
     EXPECT_EQ(ExpectedIdx, Idx);
     if (!StringRef(Name).starts_with("llvm.foo"))
       continue;
-    Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name, "foo");
+    Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name, "foo");
     EXPECT_EQ(ExpectedIdx, Idx);
   }
 }
