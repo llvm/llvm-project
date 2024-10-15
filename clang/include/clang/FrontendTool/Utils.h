@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_FRONTENDTOOL_UTILS_H
 #define LLVM_CLANG_FRONTENDTOOL_UTILS_H
 
+#include "clang/Support/Compiler.h"
 #include <memory>
 
 namespace clang {
@@ -25,13 +26,13 @@ class FrontendAction;
 /// options specified for the compiler invocation.
 ///
 /// \return - The created FrontendAction object
-std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI);
+CLANG_ABI std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI);
 
 /// ExecuteCompilerInvocation - Execute the given actions described by the
 /// compiler invocation object in the given compiler instance.
 ///
 /// \return - True on success.
-bool ExecuteCompilerInvocation(CompilerInstance *Clang);
+CLANG_ABI bool ExecuteCompilerInvocation(CompilerInstance *Clang);
 
 }  // end namespace clang
 

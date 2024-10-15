@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DRIVER_OPTIONS_H
 #define LLVM_CLANG_DRIVER_OPTIONS_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 
@@ -50,7 +51,7 @@ enum ID {
   };
 }
 
-const llvm::opt::OptTable &getDriverOptTable();
+CLANG_ABI const llvm::opt::OptTable &getDriverOptTable();
 }
 }
 

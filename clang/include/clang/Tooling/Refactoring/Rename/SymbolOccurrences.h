@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
@@ -36,7 +37,7 @@ class SymbolName;
 ///
 /// We have to replace the text in both range 0 and range 1 when renaming the
 /// Objective-C method 'selectorPiece1:selectorPiece2'.
-class SymbolOccurrence {
+class CLANG_ABI SymbolOccurrence {
 public:
   enum OccurrenceKind {
     /// This occurrence is an exact match and can be renamed automatically.

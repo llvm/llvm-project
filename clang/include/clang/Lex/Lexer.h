@@ -19,6 +19,7 @@
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/PreprocessorLexer.h"
 #include "clang/Lex/Token.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
@@ -75,7 +76,7 @@ struct PreambleBounds {
 /// stream of tokens.  This provides no support for file reading or buffering,
 /// or buffering/seeking of tokens, only forward lexing is supported.  It relies
 /// on the specified Preprocessor object to handle preprocessor directives, etc.
-class Lexer : public PreprocessorLexer {
+class CLANG_ABI Lexer : public PreprocessorLexer {
   friend class Preprocessor;
 
   void anchor() override;

@@ -11,6 +11,7 @@
 
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Allocator.h"
@@ -29,7 +30,7 @@ namespace comments {
   class FullComment;
 } // end namespace comments
 
-class RawComment {
+class CLANG_ABI RawComment {
 public:
   enum CommentKind {
     RCK_Invalid,      ///< Invalid comment
@@ -209,7 +210,7 @@ private:
 
 /// This class represents all comments included in the translation unit,
 /// sorted in order of appearance in the translation unit.
-class RawCommentList {
+class CLANG_ABI RawCommentList {
 public:
   RawCommentList(SourceManager &SourceMgr) : SourceMgr(SourceMgr) {}
 

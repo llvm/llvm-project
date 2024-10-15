@@ -16,6 +16,7 @@
 
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -146,7 +147,7 @@ enum class CTUPhase1InliningKind { None, Small, All };
 /// and should be eventually converted into -analyzer-config flags. New analyzer
 /// options should not be implemented as frontend flags. Frontend flags still
 /// make sense for things that do not affect the actual analysis.
-class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
+class CLANG_ABI AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
 public:
   using ConfigTable = llvm::StringMap<std::string>;
 

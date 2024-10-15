@@ -15,6 +15,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Option/OptSpecifier.h"
 
 namespace llvm {
@@ -30,7 +31,7 @@ class ArgList;
 namespace clang {
 /// Return the value of the last argument as an integer, or a default. If Diags
 /// is non-null, emits an error if the argument is given, but non-integral.
-int getLastArgIntValue(const llvm::opt::ArgList &Args,
+CLANG_ABI int getLastArgIntValue(const llvm::opt::ArgList &Args,
                        llvm::opt::OptSpecifier Id, int Default,
                        DiagnosticsEngine *Diags = nullptr, unsigned Base = 0);
 
@@ -40,7 +41,7 @@ inline int getLastArgIntValue(const llvm::opt::ArgList &Args,
   return getLastArgIntValue(Args, Id, Default, &Diags, Base);
 }
 
-uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
+CLANG_ABI uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
                                llvm::opt::OptSpecifier Id, uint64_t Default,
                                DiagnosticsEngine *Diags = nullptr,
                                unsigned Base = 0);

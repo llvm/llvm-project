@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "llvm/ADT/BitmaskEnum.h"
 
@@ -71,7 +72,7 @@ enum class ScanningOptimizations {
 
 /// The dependency scanning service contains shared configuration and state that
 /// is used by the individual dependency scanning workers.
-class DependencyScanningService {
+class CLANG_ABI DependencyScanningService {
 public:
   DependencyScanningService(
       ScanningMode Mode, ScanningOutputFormat Format,

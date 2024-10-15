@@ -17,6 +17,7 @@
 #ifndef LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 #define LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
@@ -26,7 +27,7 @@
 
 namespace clang {
 
-class OffloadBundlerConfig {
+class CLANG_ABI OffloadBundlerConfig {
 public:
   OffloadBundlerConfig();
 
@@ -52,7 +53,7 @@ public:
   std::vector<std::string> OutputFileNames;
 };
 
-class OffloadBundler {
+class CLANG_ABI OffloadBundler {
 public:
   const OffloadBundlerConfig &BundlerConfig;
 
@@ -75,7 +76,7 @@ public:
 ///  * Offload Kind - Host, OpenMP, or HIP
 ///  * Triple - Standard LLVM Triple
 ///  * TargetID (Optional) - target ID, like gfx906:xnack+ or sm_30
-struct OffloadTargetInfo {
+struct CLANG_ABI OffloadTargetInfo {
   llvm::StringRef OffloadKind;
   llvm::Triple Triple;
   llvm::StringRef TargetID;
@@ -105,7 +106,7 @@ struct OffloadTargetInfo {
 // - Truncated MD5 Hash (8 bytes).
 // - Compressed Data (variable length).
 
-class CompressedOffloadBundle {
+class CLANG_ABI CompressedOffloadBundle {
 private:
   static inline const size_t MagicSize = 4;
   static inline const size_t VersionFieldSize = sizeof(uint16_t);

@@ -18,6 +18,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -185,7 +186,7 @@ struct DiagnosticStorage {
 
 /// An allocator for DiagnosticStorage objects, which uses a small cache to
 /// objects, used to reduce malloc()/free() traffic for partial diagnostics.
-class DiagStorageAllocator {
+class CLANG_ABI DiagStorageAllocator {
   static const unsigned NumCached = 16;
   DiagnosticStorage Cached[NumCached];
   DiagnosticStorage *FreeList[NumCached];
@@ -224,7 +225,7 @@ public:
 /// as errors" and passes them off to the DiagnosticConsumer for reporting to
 /// the user. DiagnosticsEngine is tied to one translation unit and one
 /// SourceManager.
-class DiagnosticsEngine : public RefCountedBase<DiagnosticsEngine> {
+class CLANG_ABI DiagnosticsEngine : public RefCountedBase<DiagnosticsEngine> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
   enum Level {
@@ -342,7 +343,7 @@ private:
   /// A new DiagState is created and kept around when diagnostic pragmas modify
   /// the state so that we know what is the diagnostic state at any given
   /// source location.
-  class DiagState {
+  class CLANG_ABI DiagState {
     llvm::DenseMap<unsigned, DiagnosticMapping> DiagMap;
 
   public:
@@ -399,7 +400,7 @@ private:
 
   /// A mapping from files to the diagnostic states for those files. Lazily
   /// built on demand for files in which the diagnostic state has not changed.
-  class DiagStateMap {
+  class CLANG_ABI DiagStateMap {
   public:
     /// Add an initial diagnostic state.
     void appendFirst(DiagState *State);
@@ -449,7 +450,7 @@ private:
 
     /// Description of the diagnostic states and state transitions for a
     /// particular FileID.
-    struct File {
+    struct CLANG_ABI File {
       /// The diagnostic state for the parent file. This is strictly redundant,
       /// as looking up the DecomposedIncludedLoc for the FileID in the Files
       /// map would give us this, but we cache it here for performance.
@@ -564,7 +565,7 @@ public:
   DiagnosticsEngine &operator=(const DiagnosticsEngine &) = delete;
   ~DiagnosticsEngine();
 
-  friend void DiagnosticsTestHelper(DiagnosticsEngine &);
+  friend CLANG_ABI void DiagnosticsTestHelper(DiagnosticsEngine &);
   LLVM_DUMP_METHOD void dump() const;
   LLVM_DUMP_METHOD void dump(StringRef DiagName) const;
 
@@ -1188,7 +1189,7 @@ protected:
 /// This ensures that compilers with somewhat reasonable optimizers will promote
 /// the common fields to registers, eliminating increments of the NumArgs field,
 /// for example.
-class DiagnosticBuilder : public StreamingDiagnostic {
+class CLANG_ABI DiagnosticBuilder : public StreamingDiagnostic {
   friend class DiagnosticsEngine;
   friend class PartialDiagnostic;
   friend class Diagnostic;
@@ -1458,7 +1459,7 @@ operator<<(const StreamingDiagnostic &DB, const std::optional<FixItHint> &Opt) {
 /// context-sensitive keyword.
 using DiagNullabilityKind = std::pair<NullabilityKind, bool>;
 
-const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+CLANG_ABI const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                       DiagNullabilityKind nullability);
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
@@ -1466,7 +1467,7 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
   return DiagnosticBuilder(this, Loc, DiagID);
 }
 
-const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+CLANG_ABI const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                       llvm::Error &&E);
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
@@ -1480,7 +1481,7 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
 /// A little helper class (which is basically a smart pointer that forwards
 /// info from DiagnosticsEngine and DiagnosticStorage) that allows clients to
 /// enquire about the diagnostic.
-class Diagnostic {
+class CLANG_ABI Diagnostic {
   const DiagnosticsEngine *DiagObj;
   SourceLocation DiagLoc;
   unsigned DiagID;
@@ -1602,7 +1603,7 @@ public:
  * Represents a diagnostic in a form that can be retained until its
  * corresponding source manager is destroyed.
  */
-class StoredDiagnostic {
+class CLANG_ABI StoredDiagnostic {
   unsigned ID;
   DiagnosticsEngine::Level Level;
   FullSourceLoc Loc;
@@ -1648,11 +1649,11 @@ public:
 };
 
 // Simple debug printing of StoredDiagnostic.
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
+CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 
 /// Abstract interface, implemented by clients of the front-end, which
 /// formats and prints fully processed diagnostics.
-class DiagnosticConsumer {
+class CLANG_ABI DiagnosticConsumer {
 protected:
   unsigned NumWarnings = 0;       ///< Number of warnings reported
   unsigned NumErrors = 0;         ///< Number of errors reported
@@ -1707,7 +1708,7 @@ public:
 };
 
 /// A diagnostic client that ignores all diagnostics.
-class IgnoringDiagConsumer : public DiagnosticConsumer {
+class CLANG_ABI IgnoringDiagConsumer : public DiagnosticConsumer {
   virtual void anchor();
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
@@ -1719,7 +1720,7 @@ class IgnoringDiagConsumer : public DiagnosticConsumer {
 /// Diagnostic consumer that forwards diagnostics along to an
 /// existing, already-initialized diagnostic consumer.
 ///
-class ForwardingDiagnosticConsumer : public DiagnosticConsumer {
+class CLANG_ABI ForwardingDiagnosticConsumer : public DiagnosticConsumer {
   DiagnosticConsumer &Target;
 
 public:
@@ -1757,10 +1758,10 @@ const char ToggleHighlight = 127;
 
 /// ProcessWarningOptions - Initialize the diagnostic client and process the
 /// warning options specified on the command line.
-void ProcessWarningOptions(DiagnosticsEngine &Diags,
+CLANG_ABI void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            bool ReportDiags = true);
-void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
+CLANG_ABI void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

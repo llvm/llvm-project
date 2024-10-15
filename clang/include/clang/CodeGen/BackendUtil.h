@@ -10,6 +10,7 @@
 #define LLVM_CLANG_CODEGEN_BACKENDUTIL_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include <memory>
 
@@ -41,7 +42,7 @@ namespace clang {
     Backend_EmitObj        ///< Emit native object files
   };
 
-  void EmitBackendOutput(DiagnosticsEngine &Diags, const HeaderSearchOptions &,
+  CLANG_ABI void EmitBackendOutput(DiagnosticsEngine &Diags, const HeaderSearchOptions &,
                          const CodeGenOptions &CGOpts,
                          const TargetOptions &TOpts, const LangOptions &LOpts,
                          StringRef TDesc, llvm::Module *M, BackendAction Action,
@@ -49,10 +50,10 @@ namespace clang {
                          std::unique_ptr<raw_pwrite_stream> OS,
                          BackendConsumer *BC = nullptr);
 
-  void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
+  CLANG_ABI void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
                     llvm::MemoryBufferRef Buf);
 
-  void EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
+  CLANG_ABI void EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
                    DiagnosticsEngine &Diags);
 }
 

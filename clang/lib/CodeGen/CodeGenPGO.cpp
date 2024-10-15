@@ -15,6 +15,7 @@
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -24,7 +25,7 @@
 #include <optional>
 
 namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
+CLANG_ABI extern cl::opt<bool> EnableSingleByteCoverage;
 } // namespace llvm
 
 static llvm::cl::opt<bool>

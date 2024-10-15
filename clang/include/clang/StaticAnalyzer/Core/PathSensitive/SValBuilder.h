@@ -27,6 +27,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ImmutableList.h"
 #include <cstdint>
 #include <optional>
@@ -50,7 +51,7 @@ class ConditionTruthVal;
 class ProgramStateManager;
 class StoreRef;
 
-class SValBuilder {
+class CLANG_ABI SValBuilder {
   virtual void anchor();
 
 protected:
@@ -410,7 +411,7 @@ public:
                                const StackFrameContext *SFC);
 };
 
-SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,
+CLANG_ABI SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,
                                      ASTContext &context,
                                      ProgramStateManager &stateMgr);
 

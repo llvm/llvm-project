@@ -14,6 +14,7 @@
 
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/Weak.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include <utility>
 
@@ -35,7 +36,7 @@ namespace clang {
 /// An abstract interface that should be implemented by
 /// external AST sources that also provide information for semantic
 /// analysis.
-class MultiplexExternalSemaSource : public ExternalSemaSource {
+class CLANG_ABI MultiplexExternalSemaSource : public ExternalSemaSource {
   /// LLVM-style RTTI.
   static char ID;
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_MODULEFILEEXTENSION_H
 #define LLVM_CLANG_SERIALIZATION_MODULEFILEEXTENSION_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/MD5.h"
@@ -62,7 +63,7 @@ class ModuleFileExtensionWriter;
 /// the module file or precompiled header is loaded.
 ///
 /// Subclasses must use LLVM RTTI for open class hierarchies.
-class ModuleFileExtension
+class CLANG_ABI ModuleFileExtension
     : public llvm::RTTIExtends<ModuleFileExtension, llvm::RTTIRoot> {
 public:
   /// Discriminator for LLVM RTTI.
@@ -108,7 +109,7 @@ public:
 
 /// Abstract base class that writes a module file extension block into
 /// a module file.
-class ModuleFileExtensionWriter {
+class CLANG_ABI ModuleFileExtensionWriter {
   ModuleFileExtension *Extension;
 
 protected:
@@ -135,7 +136,7 @@ public:
 /// a module file.
 ///
 /// Subclasses
-class ModuleFileExtensionReader {
+class CLANG_ABI ModuleFileExtensionReader {
   ModuleFileExtension *Extension;
 
 protected:

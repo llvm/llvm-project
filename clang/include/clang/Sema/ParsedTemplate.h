@@ -19,6 +19,7 @@
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <cstdlib>
@@ -26,7 +27,7 @@
 
 namespace clang {
   /// Represents the parsed form of a C++ template argument.
-  class ParsedTemplateArgument {
+  class CLANG_ABI ParsedTemplateArgument {
   public:
     /// Describes the kind of template argument that was parsed.
     enum KindType {
@@ -256,7 +257,7 @@ namespace clang {
   };
 
   /// Retrieves the range of the given template parameter lists.
-  SourceRange getTemplateParamsRange(TemplateParameterList const *const *Params,
+  CLANG_ABI SourceRange getTemplateParamsRange(TemplateParameterList const *const *Params,
                                      unsigned NumParams);
 } // end namespace clang
 

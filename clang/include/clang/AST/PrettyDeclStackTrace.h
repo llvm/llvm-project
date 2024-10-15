@@ -16,6 +16,7 @@
 #define LLVM_CLANG_AST_PRETTYDECLSTACKTRACE_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
 namespace clang {
@@ -26,7 +27,7 @@ class Decl;
 /// PrettyDeclStackTraceEntry - If a crash occurs in the parser while
 /// parsing something related to a declaration, include that
 /// declaration in the stack trace.
-class PrettyDeclStackTraceEntry : public llvm::PrettyStackTraceEntry {
+class CLANG_ABI PrettyDeclStackTraceEntry : public llvm::PrettyStackTraceEntry {
   ASTContext &Context;
   Decl *TheDecl;
   SourceLocation Loc;

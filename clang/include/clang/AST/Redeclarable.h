@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_REDECLARABLE_H
 
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/iterator_range.h"
@@ -306,7 +307,7 @@ public:
 
 /// Get the primary declaration for a declaration from an AST file. That
 /// will be the first-loaded declaration.
-Decl *getPrimaryMergedDecl(Decl *D);
+CLANG_ABI Decl *getPrimaryMergedDecl(Decl *D);
 
 /// Provides common interface for the Decls that cannot be redeclared,
 /// but can be merged if the same declaration is brought in from multiple

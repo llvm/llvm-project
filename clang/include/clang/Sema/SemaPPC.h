@@ -17,11 +17,12 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class TargetInfo;
 
-class SemaPPC : public SemaBase {
+class CLANG_ABI SemaPPC : public SemaBase {
 public:
   SemaPPC(Sema &S);
 

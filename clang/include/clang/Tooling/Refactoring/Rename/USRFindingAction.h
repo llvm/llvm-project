@@ -15,6 +15,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRFINDINGACTION_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 
 #include <string>
@@ -34,13 +35,13 @@ namespace tooling {
 ///
 /// - A constructor is canonicalized to its class.
 /// - A destructor is canonicalized to its class.
-const NamedDecl *getCanonicalSymbolDeclaration(const NamedDecl *FoundDecl);
+CLANG_ABI const NamedDecl *getCanonicalSymbolDeclaration(const NamedDecl *FoundDecl);
 
 /// Returns the set of USRs that correspond to the given declaration.
-std::vector<std::string> getUSRsForDeclaration(const NamedDecl *ND,
+CLANG_ABI std::vector<std::string> getUSRsForDeclaration(const NamedDecl *ND,
                                                ASTContext &Context);
 
-struct USRFindingAction {
+struct CLANG_ABI USRFindingAction {
   USRFindingAction(ArrayRef<unsigned> SymbolOffsets,
                    ArrayRef<std::string> QualifiedNames, bool Force)
       : SymbolOffsets(SymbolOffsets), QualifiedNames(QualifiedNames),

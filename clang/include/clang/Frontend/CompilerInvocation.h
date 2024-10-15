@@ -21,8 +21,9 @@
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <memory>
 #include <string>
 
@@ -53,7 +54,7 @@ class TargetOptions;
 
 // This lets us create the DiagnosticsEngine with a properly-filled-out
 // DiagnosticOptions instance.
-std::unique_ptr<DiagnosticOptions>
+CLANG_ABI std::unique_ptr<DiagnosticOptions>
 CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv);
 
 /// Fill out Opts based on the options given in Args.
@@ -63,7 +64,7 @@ CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv);
 ///
 /// When errors are encountered, return false and, if Diags is non-null,
 /// report the error(s).
-bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
+CLANG_ABI bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
                          bool DefaultDiagColor = true);
 
@@ -71,7 +72,7 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
 /// behind reference-counted pointers, which is useful for clients that want to
 /// keep select option objects alive (even after CompilerInvocation gets
 /// destroyed) without making a copy.
-class CompilerInvocationBase {
+class CLANG_ABI CompilerInvocationBase {
 protected:
   /// Options controlling the language variant.
   std::shared_ptr<LangOptions> LangOpts;
@@ -208,7 +209,7 @@ class CowCompilerInvocation;
 /// This class is designed to represent an abstract "invocation" of the
 /// compiler, including data such as the include paths, the code generation
 /// options, the warning flags, and so on.
-class CompilerInvocation : public CompilerInvocationBase {
+class CLANG_ABI CompilerInvocation : public CompilerInvocationBase {
 public:
   CompilerInvocation() = default;
   CompilerInvocation(const CompilerInvocation &X)
@@ -357,7 +358,7 @@ private:
 };
 
 /// Same as \c CompilerInvocation, but with copy-on-write optimization.
-class CowCompilerInvocation : public CompilerInvocationBase {
+class CLANG_ABI CowCompilerInvocation : public CompilerInvocationBase {
 public:
   CowCompilerInvocation() = default;
   CowCompilerInvocation(const CowCompilerInvocation &X)
@@ -399,15 +400,15 @@ public:
   /// @}
 };
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+CLANG_ABI IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 createVFSFromCompilerInvocation(const CompilerInvocation &CI,
                                 DiagnosticsEngine &Diags);
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
+CLANG_ABI IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+CLANG_ABI IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 createVFSFromOverlayFiles(ArrayRef<std::string> VFSOverlayFiles,
                           DiagnosticsEngine &Diags,
                           IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);

@@ -20,6 +20,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
@@ -733,362 +734,362 @@ std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
 }
 } // end namespace internal
 
-const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAutoreleasePoolStmt>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAutoreleasePoolStmt>
     autoreleasePoolStmt;
-const internal::VariadicDynCastAllOfMatcher<Decl, TranslationUnitDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, TranslationUnitDecl>
     translationUnitDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, TypedefDecl> typedefDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, TypedefNameDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, TypedefDecl> typedefDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, TypedefNameDecl>
     typedefNameDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasDecl> typeAliasDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasTemplateDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasDecl> typeAliasDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasTemplateDecl>
     typeAliasTemplateDecl;
-const internal::VariadicAllOfMatcher<Decl> decl;
-const internal::VariadicDynCastAllOfMatcher<Decl, DecompositionDecl> decompositionDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, BindingDecl> bindingDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, LinkageSpecDecl>
+CLANG_ABI const internal::VariadicAllOfMatcher<Decl> decl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, DecompositionDecl> decompositionDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, BindingDecl> bindingDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, LinkageSpecDecl>
     linkageSpecDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, NamedDecl> namedDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, LabelDecl> labelDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceDecl> namespaceDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceAliasDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, NamedDecl> namedDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, LabelDecl> labelDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceDecl> namespaceDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceAliasDecl>
     namespaceAliasDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, RecordDecl> recordDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, CXXRecordDecl> cxxRecordDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ClassTemplateDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, RecordDecl> recordDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, CXXRecordDecl> cxxRecordDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ClassTemplateDecl>
     classTemplateDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl,
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl,
                                             ClassTemplateSpecializationDecl>
     classTemplateSpecializationDecl;
-const internal::VariadicDynCastAllOfMatcher<
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<
     Decl, ClassTemplatePartialSpecializationDecl>
     classTemplatePartialSpecializationDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, DeclaratorDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, DeclaratorDecl>
     declaratorDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ParmVarDecl> parmVarDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, AccessSpecDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ParmVarDecl> parmVarDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, AccessSpecDecl>
     accessSpecDecl;
-const internal::VariadicAllOfMatcher<CXXBaseSpecifier> cxxBaseSpecifier;
-const internal::VariadicAllOfMatcher<CXXCtorInitializer> cxxCtorInitializer;
-const internal::VariadicAllOfMatcher<TemplateArgument> templateArgument;
-const internal::VariadicAllOfMatcher<TemplateArgumentLoc> templateArgumentLoc;
-const internal::VariadicAllOfMatcher<TemplateName> templateName;
-const internal::VariadicDynCastAllOfMatcher<Decl, NonTypeTemplateParmDecl>
+CLANG_ABI const internal::VariadicAllOfMatcher<CXXBaseSpecifier> cxxBaseSpecifier;
+CLANG_ABI const internal::VariadicAllOfMatcher<CXXCtorInitializer> cxxCtorInitializer;
+CLANG_ABI const internal::VariadicAllOfMatcher<TemplateArgument> templateArgument;
+CLANG_ABI const internal::VariadicAllOfMatcher<TemplateArgumentLoc> templateArgumentLoc;
+CLANG_ABI const internal::VariadicAllOfMatcher<TemplateName> templateName;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, NonTypeTemplateParmDecl>
     nonTypeTemplateParmDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTypeParmDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTypeParmDecl>
     templateTypeParmDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTemplateParmDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTemplateParmDecl>
     templateTemplateParmDecl;
 
-const internal::VariadicAllOfMatcher<LambdaCapture> lambdaCapture;
-const internal::VariadicAllOfMatcher<QualType> qualType;
-const internal::VariadicAllOfMatcher<Type> type;
-const internal::VariadicAllOfMatcher<TypeLoc> typeLoc;
+CLANG_ABI const internal::VariadicAllOfMatcher<LambdaCapture> lambdaCapture;
+CLANG_ABI const internal::VariadicAllOfMatcher<QualType> qualType;
+CLANG_ABI const internal::VariadicAllOfMatcher<Type> type;
+CLANG_ABI const internal::VariadicAllOfMatcher<TypeLoc> typeLoc;
 
-const internal::VariadicDynCastAllOfMatcher<TypeLoc, QualifiedTypeLoc>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<TypeLoc, QualifiedTypeLoc>
     qualifiedTypeLoc;
-const internal::VariadicDynCastAllOfMatcher<TypeLoc, PointerTypeLoc>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<TypeLoc, PointerTypeLoc>
     pointerTypeLoc;
-const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
     referenceTypeLoc;
-const internal::VariadicDynCastAllOfMatcher<TypeLoc,
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<TypeLoc,
                                             TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
-const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
     elaboratedTypeLoc;
 
-const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
-const internal::VariadicDynCastAllOfMatcher<Decl, ValueDecl> valueDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, CXXConstructorDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ValueDecl> valueDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, CXXConstructorDecl>
     cxxConstructorDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, CXXDestructorDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, CXXDestructorDecl>
     cxxDestructorDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, EnumDecl> enumDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, EnumConstantDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, EnumDecl> enumDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, EnumConstantDecl>
     enumConstantDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, TagDecl> tagDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, TagDecl> tagDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl> conceptDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl> conceptDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>
     indirectFieldDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, FunctionDecl> functionDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, FunctionTemplateDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, FunctionDecl> functionDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, FunctionTemplateDecl>
     functionTemplateDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, FriendDecl> friendDecl;
-const internal::VariadicAllOfMatcher<Stmt> stmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, DeclStmt> declStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, MemberExpr> memberExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedMemberExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, FriendDecl> friendDecl;
+CLANG_ABI const internal::VariadicAllOfMatcher<Stmt> stmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, DeclStmt> declStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, MemberExpr> memberExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedMemberExpr>
     unresolvedMemberExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDependentScopeMemberExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDependentScopeMemberExpr>
     cxxDependentScopeMemberExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CallExpr> callExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, LambdaExpr> lambdaExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXMemberCallExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CallExpr> callExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, LambdaExpr> lambdaExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXMemberCallExpr>
     cxxMemberCallExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCMessageExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCMessageExpr>
     objcMessageExpr;
-const internal::VariadicDynCastAllOfMatcher<Decl, ObjCInterfaceDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ObjCInterfaceDecl>
     objcInterfaceDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ObjCImplementationDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ObjCImplementationDecl>
     objcImplementationDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ObjCProtocolDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ObjCProtocolDecl>
     objcProtocolDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ObjCCategoryDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ObjCCategoryDecl>
     objcCategoryDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ObjCCategoryImplDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ObjCCategoryImplDecl>
     objcCategoryImplDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ObjCMethodDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ObjCMethodDecl>
     objcMethodDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, BlockDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, BlockDecl>
     blockDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ObjCIvarDecl> objcIvarDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, ObjCPropertyDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ObjCIvarDecl> objcIvarDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, ObjCPropertyDecl>
     objcPropertyDecl;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtThrowStmt>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtThrowStmt>
     objcThrowStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtTryStmt> objcTryStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtCatchStmt>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtTryStmt> objcTryStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtCatchStmt>
     objcCatchStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtFinallyStmt>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtFinallyStmt>
     objcFinallyStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ExprWithCleanups>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ExprWithCleanups>
     exprWithCleanups;
-const internal::VariadicDynCastAllOfMatcher<Stmt, InitListExpr> initListExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXStdInitializerListExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, InitListExpr> initListExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXStdInitializerListExpr>
     cxxStdInitializerListExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ImplicitValueInitExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ImplicitValueInitExpr>
     implicitValueInitExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ParenListExpr> parenListExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, SubstNonTypeTemplateParmExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ParenListExpr> parenListExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, SubstNonTypeTemplateParmExpr>
     substNonTypeTemplateParmExpr;
-const internal::VariadicDynCastAllOfMatcher<Decl, UsingDecl> usingDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, UsingEnumDecl> usingEnumDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, UsingDirectiveDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, UsingDecl> usingDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, UsingEnumDecl> usingEnumDecl;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, UsingDirectiveDecl>
     usingDirectiveDecl;
-const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedLookupExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedLookupExpr>
     unresolvedLookupExpr;
-const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingValueDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingValueDecl>
     unresolvedUsingValueDecl;
-const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingTypenameDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingTypenameDecl>
     unresolvedUsingTypenameDecl;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ConstantExpr> constantExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ParenExpr> parenExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstructExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ConstantExpr> constantExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ParenExpr> parenExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstructExpr>
     cxxConstructExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXUnresolvedConstructExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXUnresolvedConstructExpr>
     cxxUnresolvedConstructExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThisExpr> cxxThisExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBindTemporaryExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThisExpr> cxxThisExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBindTemporaryExpr>
     cxxBindTemporaryExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, MaterializeTemporaryExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, MaterializeTemporaryExpr>
     materializeTemporaryExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNewExpr> cxxNewExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDeleteExpr> cxxDeleteExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNewExpr> cxxNewExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDeleteExpr> cxxDeleteExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
     cxxNoexceptExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ArraySubscriptExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ArraySubscriptExpr>
     arraySubscriptExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitIndexExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitIndexExpr>
     arrayInitIndexExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitLoopExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitLoopExpr>
     arrayInitLoopExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDefaultArgExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDefaultArgExpr>
     cxxDefaultArgExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
     cxxOperatorCallExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXRewrittenBinaryOperator>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXRewrittenBinaryOperator>
     cxxRewrittenBinaryOperator;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFoldExpr> cxxFoldExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr> objcIvarRefExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, BlockExpr> blockExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, IfStmt> ifStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ForStmt> forStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXForRangeStmt>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFoldExpr> cxxFoldExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr> objcIvarRefExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, BlockExpr> blockExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, IfStmt> ifStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ForStmt> forStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXForRangeStmt>
     cxxForRangeStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, WhileStmt> whileStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, DoStmt> doStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, BreakStmt> breakStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ContinueStmt> continueStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CoreturnStmt> coreturnStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ReturnStmt> returnStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, GotoStmt> gotoStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, LabelStmt> labelStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, AddrLabelExpr> addrLabelExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, SwitchStmt> switchStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, SwitchCase> switchCase;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CaseStmt> caseStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, DefaultStmt> defaultStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundStmt> compoundStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CoroutineBodyStmt>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, WhileStmt> whileStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, DoStmt> doStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, BreakStmt> breakStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ContinueStmt> continueStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CoreturnStmt> coreturnStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ReturnStmt> returnStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, GotoStmt> gotoStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, LabelStmt> labelStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, AddrLabelExpr> addrLabelExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, SwitchStmt> switchStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, SwitchCase> switchCase;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CaseStmt> caseStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, DefaultStmt> defaultStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundStmt> compoundStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CoroutineBodyStmt>
     coroutineBodyStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXCatchStmt> cxxCatchStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTryStmt> cxxTryStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThrowExpr> cxxThrowExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBoolLiteralExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXCatchStmt> cxxCatchStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTryStmt> cxxTryStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThrowExpr> cxxThrowExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBoolLiteralExpr>
     cxxBoolLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, StringLiteral> stringLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCStringLiteral> objcStringLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CharacterLiteral>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, StringLiteral> stringLiteral;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCStringLiteral> objcStringLiteral;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CharacterLiteral>
     characterLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, IntegerLiteral>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, IntegerLiteral>
     integerLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral> floatLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral> imaginaryLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, FixedPointLiteral>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral> floatLiteral;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral> imaginaryLiteral;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, FixedPointLiteral>
     fixedPointLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, UserDefinedLiteral>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, UserDefinedLiteral>
     userDefinedLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
     compoundLiteralExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
     cxxNullPtrLiteralExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr> chooseExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ConvertVectorExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr> chooseExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ConvertVectorExpr>
     convertVectorExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CoawaitExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CoawaitExpr>
     coawaitExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, DependentCoawaitExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, DependentCoawaitExpr>
     dependentCoawaitExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CoyieldExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CoyieldExpr>
     coyieldExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr> gnuNullExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, GenericSelectionExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr> gnuNullExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, GenericSelectionExpr>
     genericSelectionExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, AtomicExpr> atomicExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, StmtExpr> stmtExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryOperator>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, AtomicExpr> atomicExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, StmtExpr> stmtExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryOperator>
     binaryOperator;
-const internal::MapAnyOfMatcher<BinaryOperator, CXXOperatorCallExpr,
+CLANG_ABI const internal::MapAnyOfMatcher<BinaryOperator, CXXOperatorCallExpr,
                                 CXXRewrittenBinaryOperator>
     binaryOperation;
-const internal::MapAnyOfMatcher<CallExpr, CXXConstructExpr> invocation;
-const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryOperator> unaryOperator;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ConditionalOperator>
+CLANG_ABI const internal::MapAnyOfMatcher<CallExpr, CXXConstructExpr> invocation;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryOperator> unaryOperator;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ConditionalOperator>
     conditionalOperator;
-const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryConditionalOperator>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryConditionalOperator>
     binaryConditionalOperator;
-const internal::VariadicDynCastAllOfMatcher<Stmt, OpaqueValueExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, OpaqueValueExpr>
     opaqueValueExpr;
-const internal::VariadicDynCastAllOfMatcher<Decl, StaticAssertDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, StaticAssertDecl>
     staticAssertDecl;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXReinterpretCastExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXReinterpretCastExpr>
     cxxReinterpretCastExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXStaticCastExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXStaticCastExpr>
     cxxStaticCastExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
     cxxDynamicCastExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CStyleCastExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CStyleCastExpr>
     cStyleCastExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ExplicitCastExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ExplicitCastExpr>
     explicitCastExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, ImplicitCastExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, ImplicitCastExpr>
     implicitCastExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CastExpr> castExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFunctionalCastExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CastExpr> castExpr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFunctionalCastExpr>
     cxxFunctionalCastExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTemporaryObjectExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTemporaryObjectExpr>
     cxxTemporaryObjectExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, PredefinedExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, PredefinedExpr>
     predefinedExpr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, DesignatedInitExpr>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, DesignatedInitExpr>
     designatedInitExpr;
-const internal::VariadicOperatorMatcherFunc<
+CLANG_ABI const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     eachOf = {internal::DynTypedMatcher::VO_EachOf};
-const internal::VariadicOperatorMatcherFunc<
+CLANG_ABI const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     anyOf = {internal::DynTypedMatcher::VO_AnyOf};
-const internal::VariadicOperatorMatcherFunc<
+CLANG_ABI const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     allOf = {internal::DynTypedMatcher::VO_AllOf};
-const internal::VariadicOperatorMatcherFunc<1, 1> optionally = {
+CLANG_ABI const internal::VariadicOperatorMatcherFunc<1, 1> optionally = {
     internal::DynTypedMatcher::VO_Optionally};
-const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
+CLANG_ABI const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
                                  internal::hasAnyNameFunc>
     hasAnyName = {};
 
-const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
+CLANG_ABI const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
                                  internal::hasAnyOperatorNameFunc>
     hasAnyOperatorName = {};
-const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
+CLANG_ABI const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
                                  internal::hasAnyOverloadedOperatorNameFunc>
     hasAnyOverloadedOperatorName = {};
-const internal::VariadicFunction<internal::Matcher<ObjCMessageExpr>, StringRef,
+CLANG_ABI const internal::VariadicFunction<internal::Matcher<ObjCMessageExpr>, StringRef,
                                  internal::hasAnySelectorFunc>
     hasAnySelector = {};
-const internal::ArgumentAdaptingMatcherFunc<internal::HasMatcher> has = {};
-const internal::ArgumentAdaptingMatcherFunc<internal::HasDescendantMatcher>
+CLANG_ABI const internal::ArgumentAdaptingMatcherFunc<internal::HasMatcher> has = {};
+CLANG_ABI const internal::ArgumentAdaptingMatcherFunc<internal::HasDescendantMatcher>
     hasDescendant = {};
-const internal::ArgumentAdaptingMatcherFunc<internal::ForEachMatcher> forEach =
+CLANG_ABI const internal::ArgumentAdaptingMatcherFunc<internal::ForEachMatcher> forEach =
     {};
-const internal::ArgumentAdaptingMatcherFunc<internal::ForEachDescendantMatcher>
+CLANG_ABI const internal::ArgumentAdaptingMatcherFunc<internal::ForEachDescendantMatcher>
     forEachDescendant = {};
-const internal::ArgumentAdaptingMatcherFunc<
+CLANG_ABI const internal::ArgumentAdaptingMatcherFunc<
     internal::HasParentMatcher,
     internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>,
     internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>>
     hasParent = {};
-const internal::ArgumentAdaptingMatcherFunc<
+CLANG_ABI const internal::ArgumentAdaptingMatcherFunc<
     internal::HasAncestorMatcher,
     internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>,
     internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>>
     hasAncestor = {};
-const internal::VariadicOperatorMatcherFunc<1, 1> unless = {
+CLANG_ABI const internal::VariadicOperatorMatcherFunc<1, 1> unless = {
     internal::DynTypedMatcher::VO_UnaryNot};
-const internal::VariadicAllOfMatcher<NestedNameSpecifier> nestedNameSpecifier;
-const internal::VariadicAllOfMatcher<NestedNameSpecifierLoc>
+CLANG_ABI const internal::VariadicAllOfMatcher<NestedNameSpecifier> nestedNameSpecifier;
+CLANG_ABI const internal::VariadicAllOfMatcher<NestedNameSpecifierLoc>
     nestedNameSpecifierLoc;
-const internal::VariadicAllOfMatcher<Attr> attr;
-const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
+CLANG_ABI const internal::VariadicAllOfMatcher<Attr> attr;
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
     cudaKernelCallExpr;
-const AstTypeMatcher<BuiltinType> builtinType;
-const AstTypeMatcher<ArrayType> arrayType;
-const AstTypeMatcher<ComplexType> complexType;
-const AstTypeMatcher<ConstantArrayType> constantArrayType;
-const AstTypeMatcher<DeducedTemplateSpecializationType>
+CLANG_ABI const AstTypeMatcher<BuiltinType> builtinType;
+CLANG_ABI const AstTypeMatcher<ArrayType> arrayType;
+CLANG_ABI const AstTypeMatcher<ComplexType> complexType;
+CLANG_ABI const AstTypeMatcher<ConstantArrayType> constantArrayType;
+CLANG_ABI const AstTypeMatcher<DeducedTemplateSpecializationType>
     deducedTemplateSpecializationType;
-const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
-const AstTypeMatcher<DependentSizedExtVectorType> dependentSizedExtVectorType;
-const AstTypeMatcher<IncompleteArrayType> incompleteArrayType;
-const AstTypeMatcher<VariableArrayType> variableArrayType;
-const AstTypeMatcher<AtomicType> atomicType;
-const AstTypeMatcher<AutoType> autoType;
-const AstTypeMatcher<DecltypeType> decltypeType;
-const AstTypeMatcher<FunctionType> functionType;
-const AstTypeMatcher<FunctionProtoType> functionProtoType;
-const AstTypeMatcher<ParenType> parenType;
-const AstTypeMatcher<BlockPointerType> blockPointerType;
-const AstTypeMatcher<MacroQualifiedType> macroQualifiedType;
-const AstTypeMatcher<MemberPointerType> memberPointerType;
-const AstTypeMatcher<PointerType> pointerType;
-const AstTypeMatcher<ObjCObjectPointerType> objcObjectPointerType;
-const AstTypeMatcher<ReferenceType> referenceType;
-const AstTypeMatcher<LValueReferenceType> lValueReferenceType;
-const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
-const AstTypeMatcher<TypedefType> typedefType;
-const AstTypeMatcher<EnumType> enumType;
-const AstTypeMatcher<TemplateSpecializationType> templateSpecializationType;
-const AstTypeMatcher<UnaryTransformType> unaryTransformType;
-const AstTypeMatcher<RecordType> recordType;
-const AstTypeMatcher<TagType> tagType;
-const AstTypeMatcher<ElaboratedType> elaboratedType;
-const AstTypeMatcher<UsingType> usingType;
-const AstTypeMatcher<SubstTemplateTypeParmType> substTemplateTypeParmType;
-const AstTypeMatcher<TemplateTypeParmType> templateTypeParmType;
-const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
-const AstTypeMatcher<DecayedType> decayedType;
+CLANG_ABI const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
+CLANG_ABI const AstTypeMatcher<DependentSizedExtVectorType> dependentSizedExtVectorType;
+CLANG_ABI const AstTypeMatcher<IncompleteArrayType> incompleteArrayType;
+CLANG_ABI const AstTypeMatcher<VariableArrayType> variableArrayType;
+CLANG_ABI const AstTypeMatcher<AtomicType> atomicType;
+CLANG_ABI const AstTypeMatcher<AutoType> autoType;
+CLANG_ABI const AstTypeMatcher<DecltypeType> decltypeType;
+CLANG_ABI const AstTypeMatcher<FunctionType> functionType;
+CLANG_ABI const AstTypeMatcher<FunctionProtoType> functionProtoType;
+CLANG_ABI const AstTypeMatcher<ParenType> parenType;
+CLANG_ABI const AstTypeMatcher<BlockPointerType> blockPointerType;
+CLANG_ABI const AstTypeMatcher<MacroQualifiedType> macroQualifiedType;
+CLANG_ABI const AstTypeMatcher<MemberPointerType> memberPointerType;
+CLANG_ABI const AstTypeMatcher<PointerType> pointerType;
+CLANG_ABI const AstTypeMatcher<ObjCObjectPointerType> objcObjectPointerType;
+CLANG_ABI const AstTypeMatcher<ReferenceType> referenceType;
+CLANG_ABI const AstTypeMatcher<LValueReferenceType> lValueReferenceType;
+CLANG_ABI const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
+CLANG_ABI const AstTypeMatcher<TypedefType> typedefType;
+CLANG_ABI const AstTypeMatcher<EnumType> enumType;
+CLANG_ABI const AstTypeMatcher<TemplateSpecializationType> templateSpecializationType;
+CLANG_ABI const AstTypeMatcher<UnaryTransformType> unaryTransformType;
+CLANG_ABI const AstTypeMatcher<RecordType> recordType;
+CLANG_ABI const AstTypeMatcher<TagType> tagType;
+CLANG_ABI const AstTypeMatcher<ElaboratedType> elaboratedType;
+CLANG_ABI const AstTypeMatcher<UsingType> usingType;
+CLANG_ABI const AstTypeMatcher<SubstTemplateTypeParmType> substTemplateTypeParmType;
+CLANG_ABI const AstTypeMatcher<TemplateTypeParmType> templateTypeParmType;
+CLANG_ABI const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
+CLANG_ABI const AstTypeMatcher<DecayedType> decayedType;
 AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasElementType,
                                  AST_POLYMORPHIC_SUPPORTED_TYPES(ArrayType,
                                                                  ComplexType));
@@ -1099,11 +1100,11 @@ AST_TYPELOC_TRAVERSE_MATCHER_DEF(
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
                                     PointerType, ReferenceType));
 
-const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
     ompExecutableDirective;
-const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPDefaultClause>
     ompDefaultClause;
-const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
+CLANG_ABI const internal::VariadicDynCastAllOfMatcher<Decl, CXXDeductionGuideDecl>
     cxxDeductionGuideDecl;
 
 } // end namespace ast_matchers

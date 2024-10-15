@@ -30,6 +30,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -123,7 +124,7 @@ private:
 
 /// A diagnostic message which has been conditionally emitted pending
 /// the complete parsing of the current declaration.
-class DelayedDiagnostic {
+class CLANG_ABI DelayedDiagnostic {
 public:
   enum DDKind : unsigned char { Availability, Access, ForbiddenType };
 

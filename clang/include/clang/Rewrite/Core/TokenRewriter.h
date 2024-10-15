@@ -16,6 +16,7 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Token.h"
+#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <list>
 #include <map>
@@ -27,7 +28,7 @@ class LangOptions;
 class ScratchBuffer;
 class SourceManager;
 
-  class TokenRewriter {
+  class CLANG_ABI TokenRewriter {
     /// TokenList - This is the list of raw tokens that make up this file.  Each
     /// of these tokens has a unique SourceLocation, which is a FileID.
     std::list<Token> TokenList;

@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
@@ -29,7 +30,7 @@ using ast_matchers::internal::DynTypedMatcher;
 
 using MatchResult = MatchFinder::MatchResult;
 
-const char transformer::RootID[] = "___root___";
+CLANG_ABI const char transformer::RootID[] = "___root___";
 
 static Expected<SmallVector<transformer::Edit, 1>>
 translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {

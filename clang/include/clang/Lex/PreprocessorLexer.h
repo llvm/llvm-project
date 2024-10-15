@@ -18,6 +18,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MultipleIncludeOpt.h"
 #include "clang/Lex/Token.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
@@ -27,7 +28,7 @@ namespace clang {
 class FileEntry;
 class Preprocessor;
 
-class PreprocessorLexer {
+class CLANG_ABI PreprocessorLexer {
   virtual void anchor();
 
 protected:

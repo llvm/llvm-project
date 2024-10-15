@@ -16,6 +16,7 @@
 #define LLVM_CLANG_APINOTES_WRITER_H
 
 #include "clang/APINotes/Types.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
@@ -29,7 +30,7 @@ namespace api_notes {
 
 /// A class that writes API notes data to a binary representation that can be
 /// read by the \c APINotesReader.
-class APINotesWriter {
+class CLANG_ABI APINotesWriter {
   class Implementation;
   std::unique_ptr<Implementation> Implementation;
 

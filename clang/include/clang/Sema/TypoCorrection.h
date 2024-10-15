@@ -20,6 +20,7 @@
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -39,7 +40,7 @@ class NestedNameSpecifier;
 class Sema;
 
 /// Simple class containing the result of Sema::CorrectTypo
-class TypoCorrection {
+class CLANG_ABI TypoCorrection {
 public:
   // "Distance" for unusable corrections
   static const unsigned InvalidDistance = std::numeric_limits<unsigned>::max();
@@ -278,7 +279,7 @@ private:
 
 /// Base class for callback objects used by Sema::CorrectTypo to check
 /// the validity of a potential typo correction.
-class CorrectionCandidateCallback {
+class CLANG_ABI CorrectionCandidateCallback {
 public:
   static const unsigned InvalidDistance = TypoCorrection::InvalidDistance;
 
@@ -380,7 +381,7 @@ public:
 // Callback class to limit the allowed keywords and to only accept typo
 // corrections that are keywords or whose decls refer to functions (or template
 // functions) that accept the given number of arguments.
-class FunctionCallFilterCCC : public CorrectionCandidateCallback {
+class CLANG_ABI FunctionCallFilterCCC : public CorrectionCandidateCallback {
 public:
   FunctionCallFilterCCC(Sema &SemaRef, unsigned NumArgs,
                         bool HasExplicitTemplateArgs,

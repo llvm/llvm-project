@@ -17,6 +17,7 @@
 
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Registry.h"
 #include <climits>
@@ -32,7 +33,7 @@ class Sema;
 class Stmt;
 class TargetInfo;
 
-struct ParsedAttrInfo {
+struct CLANG_ABI ParsedAttrInfo {
   /// Corresponds to the Kind enum.
   LLVM_PREFERRED_TYPE(AttributeCommonInfo::Kind)
   unsigned AttrKind : 16;
@@ -171,7 +172,7 @@ public:
 
 typedef llvm::Registry<ParsedAttrInfo> ParsedAttrInfoRegistry;
 
-const std::list<std::unique_ptr<ParsedAttrInfo>> &getAttributePluginInstances();
+CLANG_ABI const std::list<std::unique_ptr<ParsedAttrInfo>> &getAttributePluginInstances();
 
 } // namespace clang
 

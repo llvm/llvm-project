@@ -14,6 +14,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
@@ -26,7 +27,7 @@ namespace clang {
 
 class SourceManager;
 
-class XRayFunctionFilter {
+class CLANG_ABI XRayFunctionFilter {
   std::unique_ptr<llvm::SpecialCaseList> AlwaysInstrument;
   std::unique_ptr<llvm::SpecialCaseList> NeverInstrument;
   std::unique_ptr<llvm::SpecialCaseList> AttrList;

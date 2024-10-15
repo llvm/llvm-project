@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_TOOLING_INCLUSIONS_STANDARDLIBRARY_H
 #define LLVM_CLANG_TOOLING_INCLUSIONS_STANDARDLIBRARY_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
@@ -37,7 +38,7 @@ enum class Lang { C = 0, CXX, LastValue = CXX };
 // Lightweight class, in fact just an index into a table.
 // C++ and C Library compatibility headers are considered different: e.g.
 // "<cstdio>" and "<stdio.h>" (and their symbols) are treated differently.
-class Header {
+class CLANG_ABI Header {
 public:
   static std::vector<Header> all(Lang L = Lang::CXX);
   // Name should contain the angle brackets, e.g. "<vector>".
@@ -67,7 +68,7 @@ private:
 // and ::printf are not treated as the same symbol.
 // The symbols do not contain macros right now, we don't have a reliable index
 // for them.
-class Symbol {
+class CLANG_ABI Symbol {
 public:
   static std::vector<Symbol> all(Lang L = Lang::CXX);
   /// \p Scope should have the trailing "::", for example:
@@ -102,7 +103,7 @@ private:
 //
 // For non-top-level decls (std::vector<int>::iterator), returns the top-level
 // symbol (std::vector).
-class Recognizer {
+class CLANG_ABI Recognizer {
 public:
   Recognizer();
   std::optional<Symbol> operator()(const Decl *D);

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGRESULTCONSUMER_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolOccurrences.h"
 #include "llvm/Support/Error.h"
@@ -21,7 +22,7 @@ namespace tooling {
 /// be produced by refactoring actions.
 ///
 /// A valid refactoring result must be handled by a \c handle method.
-class RefactoringResultConsumer {
+class CLANG_ABI RefactoringResultConsumer {
 public:
   virtual ~RefactoringResultConsumer() {}
 

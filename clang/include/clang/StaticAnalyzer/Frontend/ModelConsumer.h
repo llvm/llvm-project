@@ -16,6 +16,7 @@
 #define LLVM_CLANG_STATICANALYZER_FRONTEND_MODELCONSUMER_H
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang {
@@ -28,7 +29,7 @@ namespace ento {
 ///
 /// This consumer collects the bodies of function definitions into a StringMap
 /// from a model file.
-class ModelConsumer : public ASTConsumer {
+class CLANG_ABI ModelConsumer : public ASTConsumer {
 public:
   ModelConsumer(llvm::StringMap<Stmt *> &Bodies);
 

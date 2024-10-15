@@ -11,6 +11,7 @@
 
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -21,7 +22,7 @@ namespace clang {
   /// This class is used only for testing the ability of external AST sources
   /// to override the layout of record types. Its input is the output format
   /// of the command-line argument -fdump-record-layouts.
-  class LayoutOverrideSource : public ExternalASTSource {
+  class CLANG_ABI LayoutOverrideSource : public ExternalASTSource {
     /// The layout of a given record.
     struct Layout {
       /// The size of the record.

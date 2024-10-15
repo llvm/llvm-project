@@ -15,6 +15,7 @@
 
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MD5.h"
@@ -39,7 +40,7 @@ class DeclGroupRef;
 class PCHContainerOperations;
 
 /// Runs lexer to compute suggested preamble bounds.
-PreambleBounds ComputePreambleBounds(const LangOptions &LangOpts,
+CLANG_ABI PreambleBounds ComputePreambleBounds(const LangOptions &LangOpts,
                                      const llvm::MemoryBufferRef &Buffer,
                                      unsigned MaxLines);
 
@@ -48,7 +49,7 @@ class PreambleCallbacks;
 /// A class holding a PCH and all information to check whether it is valid to
 /// reuse the PCH for the subsequent runs. Use BuildPreamble to create PCH and
 /// CanReusePreamble + AddImplicitPreamble to make use of it.
-class PrecompiledPreamble {
+class CLANG_ABI PrecompiledPreamble {
   class PCHStorage;
   struct PreambleFileHash;
 
@@ -140,7 +141,7 @@ private:
                       llvm::StringSet<> MissingFiles);
 
   /// Data used to determine if a file used in the preamble has been changed.
-  struct PreambleFileHash {
+  struct CLANG_ABI PreambleFileHash {
     /// All files have size set.
     off_t Size = 0;
 
@@ -208,7 +209,7 @@ private:
 };
 
 /// A set of callbacks to gather useful information while building a preamble.
-class PreambleCallbacks {
+class CLANG_ABI PreambleCallbacks {
 public:
   virtual ~PreambleCallbacks() = default;
 
@@ -247,13 +248,13 @@ enum class BuildPreambleError {
   BadInputs
 };
 
-class BuildPreambleErrorCategory final : public std::error_category {
+class CLANG_ABI BuildPreambleErrorCategory final : public std::error_category {
 public:
   const char *name() const noexcept override;
   std::string message(int condition) const override;
 };
 
-std::error_code make_error_code(BuildPreambleError Error);
+CLANG_ABI std::error_code make_error_code(BuildPreambleError Error);
 } // namespace clang
 
 template <>

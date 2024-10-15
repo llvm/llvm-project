@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
@@ -150,9 +151,9 @@ using CachedRealPath = llvm::ErrorOr<std::string>;
 ///
 /// It is sharded based on the hash of the key to reduce the lock contention for
 /// the worker threads.
-class DependencyScanningFilesystemSharedCache {
+class CLANG_ABI DependencyScanningFilesystemSharedCache {
 public:
-  struct CacheShard {
+  struct CLANG_ABI CacheShard {
     /// The mutex that needs to be locked before mutation of any member.
     mutable std::mutex CacheLock;
 
@@ -334,7 +335,7 @@ public:
 /// This is not a thread safe VFS. A single instance is meant to be used only in
 /// one thread. Multiple instances are allowed to service multiple threads
 /// running in parallel.
-class DependencyScanningWorkerFilesystem
+class CLANG_ABI DependencyScanningWorkerFilesystem
     : public llvm::RTTIExtends<DependencyScanningWorkerFilesystem,
                                llvm::vfs::ProxyFileSystem> {
 public:

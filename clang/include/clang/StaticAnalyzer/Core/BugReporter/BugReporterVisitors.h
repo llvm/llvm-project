@@ -18,6 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
@@ -46,7 +47,7 @@ class PathDiagnosticPiece;
 using PathDiagnosticPieceRef = std::shared_ptr<PathDiagnosticPiece>;
 
 /// BugReporterVisitors are used to add custom diagnostics along a path.
-class BugReporterVisitor : public llvm::FoldingSetNode {
+class CLANG_ABI BugReporterVisitor : public llvm::FoldingSetNode {
 public:
   BugReporterVisitor() = default;
   BugReporterVisitor(const BugReporterVisitor &) = default;
@@ -170,7 +171,7 @@ class StoreHandler;
 /// Tracker aimes at providing a sensible set of default behaviors that can be
 /// used by any checker, while providing mechanisms to hook into any part of the
 /// tracking process and insert checker-specific logic.
-class Tracker : public llvm::RefCountedBase<Tracker> {
+class CLANG_ABI Tracker : public llvm::RefCountedBase<Tracker> {
 private:
   using ExpressionHandlerPtr = std::unique_ptr<ExpressionHandler>;
   using StoreHandlerPtr = std::unique_ptr<StoreHandler>;
@@ -296,7 +297,7 @@ public:
 };
 
 /// Handles expressions during the tracking.
-class ExpressionHandler {
+class CLANG_ABI ExpressionHandler {
 private:
   Tracker &ParentTracker;
 
@@ -319,7 +320,7 @@ public:
 };
 
 /// Handles stores during the tracking.
-class StoreHandler {
+class CLANG_ABI StoreHandler {
 private:
   Tracker &ParentTracker;
 
@@ -345,7 +346,7 @@ protected:
 };
 
 /// Visitor that tracks expressions and values.
-class TrackingBugReporterVisitor : public BugReporterVisitor {
+class CLANG_ABI TrackingBugReporterVisitor : public BugReporterVisitor {
 private:
   TrackerRef ParentTracker;
 
@@ -367,7 +368,7 @@ public:
 /// \return Whether or not the function was able to add visitors for this
 ///         statement. Note that returning \c true does not actually imply
 ///         that any visitors were added.
-bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
+CLANG_ABI bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
                           PathSensitiveBugReport &R, TrackingOptions Opts = {});
 
 /// Track how the value got stored into the given region and where it came
@@ -384,15 +385,15 @@ bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
 ///        changes to its value in a nested stackframe could be pruned, and
 ///        this visitor can prevent that without polluting the bugpath too
 ///        much.
-void trackStoredValue(SVal V, const MemRegion *R,
+CLANG_ABI void trackStoredValue(SVal V, const MemRegion *R,
                       PathSensitiveBugReport &Report, TrackingOptions Opts = {},
                       const StackFrameContext *Origin = nullptr);
 
-const Expr *getDerefExpr(const Stmt *S);
+CLANG_ABI const Expr *getDerefExpr(const Stmt *S);
 
 } // namespace bugreporter
 
-class TrackConstraintBRVisitor final : public BugReporterVisitor {
+class CLANG_ABI TrackConstraintBRVisitor final : public BugReporterVisitor {
   const SmallString<64> Message;
   const DefinedSVal Constraint;
   const bool Assumption;
@@ -427,7 +428,7 @@ private:
 
 /// \class NilReceiverBRVisitor
 /// Prints path notes when a message is sent to a nil receiver.
-class NilReceiverBRVisitor final : public BugReporterVisitor {
+class CLANG_ABI NilReceiverBRVisitor final : public BugReporterVisitor {
 public:
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
@@ -444,7 +445,7 @@ public:
 };
 
 /// Visitor that tries to report interesting diagnostics from conditions.
-class ConditionBRVisitor final : public BugReporterVisitor {
+class CLANG_ABI ConditionBRVisitor final : public BugReporterVisitor {
   // FIXME: constexpr initialization isn't supported by MSVC2013.
   constexpr static llvm::StringLiteral GenericTrueMessage =
       "Assuming the condition is true";
@@ -524,7 +525,7 @@ public:
 /// Suppress reports that might lead to known false positives.
 ///
 /// Currently this suppresses reports based on locations of bugs.
-class LikelyFalsePositiveSuppressionBRVisitor final
+class CLANG_ABI LikelyFalsePositiveSuppressionBRVisitor final
     : public BugReporterVisitor {
 public:
   static void *getTag() {
@@ -550,7 +551,7 @@ public:
 ///
 /// As a result, BugReporter will not prune the path through the function even
 /// if the region's contents are not modified/accessed by the call.
-class UndefOrNullArgVisitor final : public BugReporterVisitor {
+class CLANG_ABI UndefOrNullArgVisitor final : public BugReporterVisitor {
   /// The interesting memory region this visitor is tracking.
   const MemRegion *R;
 
@@ -568,7 +569,7 @@ public:
                                    PathSensitiveBugReport &BR) override;
 };
 
-class SuppressInlineDefensiveChecksVisitor final : public BugReporterVisitor {
+class CLANG_ABI SuppressInlineDefensiveChecksVisitor final : public BugReporterVisitor {
   /// The symbolic value for which we are tracking constraints.
   /// This value is constrained to null in the end of path.
   DefinedSVal V;
@@ -598,7 +599,7 @@ public:
 };
 
 /// The visitor detects NoteTags and displays the event notes they contain.
-class TagVisitor : public BugReporterVisitor {
+class CLANG_ABI TagVisitor : public BugReporterVisitor {
 public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -620,7 +621,7 @@ class CXXConstructorCall;
 ///
 /// For a minimal example, check out
 /// clang/unittests/StaticAnalyzer/NoStateChangeFuncVisitorTest.cpp.
-class NoStateChangeFuncVisitor : public BugReporterVisitor {
+class CLANG_ABI NoStateChangeFuncVisitor : public BugReporterVisitor {
 private:
   /// Frames modifying the state as defined in \c wasModifiedBeforeCallExit.
   /// This visitor generates a note only if a function does *not* change the
@@ -722,7 +723,7 @@ public:
 /// for which  the region of interest \p RegionOfInterest was passed into,
 /// but not written inside, and it has caused an undefined read or a null
 /// pointer dereference outside.
-class NoStoreFuncVisitor final : public NoStateChangeFuncVisitor {
+class CLANG_ABI NoStoreFuncVisitor final : public NoStateChangeFuncVisitor {
   const SubRegion *RegionOfInterest;
   MemRegionManager &MmrMgr;
   const SourceManager &SM;

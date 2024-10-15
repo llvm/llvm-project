@@ -10,11 +10,12 @@
 #define LLVM_CLANG_SERIALIZATION_OBJECTFILEPCHCONTAINERREADER_H
 
 #include "clang/Serialization/PCHContainerOperations.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 /// A PCHContainerReader implementation that uses LLVM to
 /// wraps Clang modules inside a COFF, ELF, or Mach-O container.
-class ObjectFilePCHContainerReader : public PCHContainerReader {
+class CLANG_ABI ObjectFilePCHContainerReader : public PCHContainerReader {
   ArrayRef<StringRef> getFormats() const override;
 
   /// Returns the serialized AST inside the PCH container Buffer.

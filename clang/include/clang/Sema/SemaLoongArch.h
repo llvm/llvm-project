@@ -15,11 +15,12 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class TargetInfo;
 
-class SemaLoongArch : public SemaBase {
+class CLANG_ABI SemaLoongArch : public SemaBase {
 public:
   SemaLoongArch(Sema &S);
 

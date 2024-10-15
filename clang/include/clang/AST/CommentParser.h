@@ -17,6 +17,7 @@
 #include "clang/AST/CommentLexer.h"
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Allocator.h"
 
 namespace clang {
@@ -26,7 +27,7 @@ namespace comments {
 class CommandTraits;
 
 /// Doxygen comment parser.
-class Parser {
+class CLANG_ABI Parser {
   Parser(const Parser &) = delete;
   void operator=(const Parser &) = delete;
 

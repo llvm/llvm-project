@@ -27,6 +27,7 @@
 #define LLVM_CLANG_AST_DATACOLLECTION_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace data_collection {
@@ -36,7 +37,7 @@ namespace data_collection {
 ///
 /// If 'getMacroStack(A) == getMacroStack(B)' is true, then the SourceLocations
 /// A and B are expanded from the same macros in the same order.
-std::string getMacroStack(SourceLocation Loc, ASTContext &Context);
+CLANG_ABI std::string getMacroStack(SourceLocation Loc, ASTContext &Context);
 
 /// Utility functions for implementing addData() for a consumer that has a
 /// method update(StringRef)

@@ -11,6 +11,7 @@
 #ifndef LLVM_CLANG_TOOLING_SYNTAX_MUTATIONS_H
 #define LLVM_CLANG_TOOLING_SYNTAX_MUTATIONS_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/Nodes.h"
 #include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
@@ -21,7 +22,7 @@ namespace syntax {
 
 /// Computes textual replacements required to mimic the tree modifications made
 /// to the syntax tree.
-tooling::Replacements computeReplacements(const TokenBufferTokenManager &TBTM,
+CLANG_ABI tooling::Replacements computeReplacements(const TokenBufferTokenManager &TBTM,
                                           const syntax::TranslationUnit &TU);
 
 /// Removes a statement or replaces it with an empty statement where one is
@@ -30,7 +31,7 @@ tooling::Replacements computeReplacements(const TokenBufferTokenManager &TBTM,
 /// One can remove `foo();` completely and to remove `bar();` we would need to
 /// replace it with an empty statement.
 /// EXPECTS: S->canModify() == true
-void removeStatement(syntax::Arena &A, TokenBufferTokenManager &TBTM,
+CLANG_ABI void removeStatement(syntax::Arena &A, TokenBufferTokenManager &TBTM,
                      syntax::Statement *S);
 
 } // namespace syntax

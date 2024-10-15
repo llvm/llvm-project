@@ -18,6 +18,7 @@
 
 #include "Replacement.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,7 +28,7 @@ namespace clang {
 namespace tooling {
 
 /// Represents a range within a specific source file.
-struct FileByteRange {
+struct CLANG_ABI FileByteRange {
   FileByteRange() = default;
 
   FileByteRange(const SourceManager &Sources, CharSourceRange Range);
@@ -39,7 +40,7 @@ struct FileByteRange {
 
 /// Represents the diagnostic message with the error message associated
 /// and the information on the location of the problem.
-struct DiagnosticMessage {
+struct CLANG_ABI DiagnosticMessage {
   DiagnosticMessage(llvm::StringRef Message = "");
 
   /// Constructs a diagnostic message with anoffset to the diagnostic
@@ -65,7 +66,7 @@ struct DiagnosticMessage {
 
 /// Represents the diagnostic with the level of severity and possible
 /// fixes to be applied.
-struct Diagnostic {
+struct CLANG_ABI Diagnostic {
   enum Level {
     Remark = DiagnosticsEngine::Remark,
     Warning = DiagnosticsEngine::Warning,
@@ -112,7 +113,7 @@ struct TranslationUnitDiagnostics {
 
 /// Get the first fix to apply for this diagnostic.
 /// \returns nullptr if no fixes are attached to the diagnostic.
-const llvm::StringMap<Replacements> *selectFirstFix(const Diagnostic& D);
+CLANG_ABI const llvm::StringMap<Replacements> *selectFirstFix(const Diagnostic& D);
 
 } // end namespace tooling
 } // end namespace clang

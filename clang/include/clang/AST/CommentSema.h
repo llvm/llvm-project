@@ -16,6 +16,7 @@
 #include "clang/AST/Comment.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,7 +30,7 @@ class Preprocessor;
 namespace comments {
 class CommandTraits;
 
-class Sema {
+class CLANG_ABI Sema {
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
 

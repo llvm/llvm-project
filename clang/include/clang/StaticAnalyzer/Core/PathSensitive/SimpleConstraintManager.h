@@ -15,12 +15,13 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
 namespace ento {
 
-class SimpleConstraintManager : public ConstraintManager {
+class CLANG_ABI SimpleConstraintManager : public ConstraintManager {
   ExprEngine *EE;
   SValBuilder &SVB;
 

@@ -17,6 +17,7 @@
 #include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/XRayInstr.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -53,7 +54,7 @@ protected:
 
 /// CodeGenOptions - Track various options which control how the code
 /// is optimized and passed to the backend.
-class CodeGenOptions : public CodeGenOptionsBase {
+class CLANG_ABI CodeGenOptions : public CodeGenOptionsBase {
 public:
   enum InliningMethod {
     NormalInlining,     // Use the standard function inlining pass.

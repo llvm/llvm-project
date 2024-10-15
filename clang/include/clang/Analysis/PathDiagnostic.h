@@ -17,6 +17,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -89,7 +90,7 @@ struct PathDiagnosticConsumerOptions {
   bool ShouldDisplayDiagnosticName = false;
 };
 
-class PathDiagnosticConsumer {
+class CLANG_ABI PathDiagnosticConsumer {
 public:
   class PDFileEntry : public llvm::FoldingSetNode {
   public:
@@ -107,7 +108,7 @@ public:
     void Profile(llvm::FoldingSetNodeID &ID) { ID = NodeID; }
   };
 
-  class FilesMade {
+  class CLANG_ABI FilesMade {
     llvm::BumpPtrAllocator Alloc;
     llvm::FoldingSet<PDFileEntry> Set;
 
@@ -192,7 +193,7 @@ public:
 using LocationOrAnalysisDeclContext =
     llvm::PointerUnion<const LocationContext *, AnalysisDeclContext *>;
 
-class PathDiagnosticLocation {
+class CLANG_ABI PathDiagnosticLocation {
 private:
   enum Kind { RangeK, SingleLocK, StmtK, DeclK } K = SingleLocK;
 
@@ -400,7 +401,7 @@ public:
 // Path "pieces" for path-sensitive diagnostics.
 //===----------------------------------------------------------------------===//
 
-class PathDiagnosticPiece: public llvm::FoldingSetNode {
+class CLANG_ABI PathDiagnosticPiece: public llvm::FoldingSetNode {
 public:
   enum Kind { ControlFlow, Event, Macro, Call, Note, PopUp };
   enum DisplayHint { Above, Below };
@@ -491,7 +492,7 @@ public:
 
 using PathDiagnosticPieceRef = std::shared_ptr<PathDiagnosticPiece>;
 
-class PathPieces : public std::list<PathDiagnosticPieceRef> {
+class CLANG_ABI PathPieces : public std::list<PathDiagnosticPieceRef> {
   void flattenTo(PathPieces &Primary, PathPieces &Current,
                  bool ShouldFlattenMacros) const;
 
@@ -505,7 +506,7 @@ public:
   void dump() const;
 };
 
-class PathDiagnosticSpotPiece : public PathDiagnosticPiece {
+class CLANG_ABI PathDiagnosticSpotPiece : public PathDiagnosticPiece {
 private:
   PathDiagnosticLocation Pos;
 
@@ -531,7 +532,7 @@ public:
   }
 };
 
-class PathDiagnosticEventPiece : public PathDiagnosticSpotPiece {
+class CLANG_ABI PathDiagnosticEventPiece : public PathDiagnosticSpotPiece {
   std::optional<bool> IsPrunable;
 
 public:
@@ -559,7 +560,7 @@ public:
   }
 };
 
-class PathDiagnosticCallPiece : public PathDiagnosticPiece {
+class CLANG_ABI PathDiagnosticCallPiece : public PathDiagnosticPiece {
   const Decl *Caller;
   const Decl *Callee = nullptr;
 
@@ -629,7 +630,7 @@ public:
   }
 };
 
-class PathDiagnosticControlFlowPiece : public PathDiagnosticPiece {
+class CLANG_ABI PathDiagnosticControlFlowPiece : public PathDiagnosticPiece {
   std::vector<PathDiagnosticLocationPair> LPairs;
 
 public:
@@ -699,7 +700,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
-class PathDiagnosticMacroPiece : public PathDiagnosticSpotPiece {
+class CLANG_ABI PathDiagnosticMacroPiece : public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticMacroPiece(const PathDiagnosticLocation &pos)
       : PathDiagnosticSpotPiece(pos, "", Macro) {}
@@ -722,7 +723,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
-class PathDiagnosticNotePiece: public PathDiagnosticSpotPiece {
+class CLANG_ABI PathDiagnosticNotePiece: public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticNotePiece(const PathDiagnosticLocation &Pos, StringRef S,
                           bool AddPosRange = true)
@@ -738,7 +739,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
-class PathDiagnosticPopUpPiece: public PathDiagnosticSpotPiece {
+class CLANG_ABI PathDiagnosticPopUpPiece: public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticPopUpPiece(const PathDiagnosticLocation &Pos, StringRef S,
                            bool AddPosRange = true)
@@ -760,7 +761,7 @@ using FilesToLineNumsMap = std::map<FileID, std::set<unsigned>>;
 /// PathDiagnostic - PathDiagnostic objects represent a single path-sensitive
 ///  diagnostic.  It represents an ordered-collection of PathDiagnosticPieces,
 ///  each which represent the pieces of the path.
-class PathDiagnostic : public llvm::FoldingSetNode {
+class CLANG_ABI PathDiagnostic : public llvm::FoldingSetNode {
   std::string CheckerName;
   const Decl *DeclWithIssue;
   std::string BugType;

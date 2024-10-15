@@ -16,6 +16,7 @@
 
 #include <cstddef>
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 
@@ -27,12 +28,12 @@ namespace clang {
 
   /// Call this once on each thread, as soon after starting the thread as
   /// feasible, to note the approximate address of the bottom of the stack.
-  void noteBottomOfStack();
+  CLANG_ABI void noteBottomOfStack();
 
   /// Determine whether the stack is nearly exhausted.
-  bool isStackNearlyExhausted();
+  CLANG_ABI bool isStackNearlyExhausted();
 
-  void runWithSufficientStackSpaceSlow(llvm::function_ref<void()> Diag,
+  CLANG_ABI void runWithSufficientStackSpaceSlow(llvm::function_ref<void()> Diag,
                                        llvm::function_ref<void()> Fn);
 
   /// Run a given function on a stack with "sufficient" space. If stack space

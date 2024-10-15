@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_TOOLING_REFACTORING_RENAME_RENAMINGACTION_H
 #define LLVM_CLANG_TOOLING_REFACTORING_RENAME_RENAMINGACTION_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRules.h"
@@ -26,7 +27,7 @@ class ASTConsumer;
 
 namespace tooling {
 
-class RenamingAction {
+class CLANG_ABI RenamingAction {
 public:
   RenamingAction(const std::vector<std::string> &NewNames,
                  const std::vector<std::string> &PrevNames,
@@ -45,7 +46,7 @@ private:
   bool PrintLocations;
 };
 
-class RenameOccurrences final : public SourceChangeRefactoringRule {
+class CLANG_ABI RenameOccurrences final : public SourceChangeRefactoringRule {
 public:
   static Expected<RenameOccurrences> initiate(RefactoringRuleContext &Context,
                                               SourceRange SelectionRange,
@@ -66,7 +67,7 @@ private:
   std::string NewName;
 };
 
-class QualifiedRenameRule final : public SourceChangeRefactoringRule {
+class CLANG_ABI QualifiedRenameRule final : public SourceChangeRefactoringRule {
 public:
   static Expected<QualifiedRenameRule> initiate(RefactoringRuleContext &Context,
                                                 std::string OldQualifiedName,
@@ -90,12 +91,12 @@ private:
 
 /// Returns source replacements that correspond to the rename of the given
 /// symbol occurrences.
-llvm::Expected<std::vector<AtomicChange>>
+CLANG_ABI llvm::Expected<std::vector<AtomicChange>>
 createRenameReplacements(const SymbolOccurrences &Occurrences,
                          const SourceManager &SM, const SymbolName &NewName);
 
 /// Rename all symbols identified by the given USRs.
-class QualifiedRenamingAction {
+class CLANG_ABI QualifiedRenamingAction {
 public:
   QualifiedRenamingAction(
       const std::vector<std::string> &NewNames,

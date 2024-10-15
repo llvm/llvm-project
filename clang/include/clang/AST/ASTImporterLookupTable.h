@@ -16,6 +16,7 @@
 
 #include "clang/AST/DeclBase.h" // lookup_result
 #include "clang/AST/DeclarationName.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -43,7 +44,7 @@ class DeclContext;
 // holds every node and we are not interested in any C/C++ specific visibility
 // considerations. Simply, we must know if there is an existing Decl in a
 // given DC. Once we found it then we can handle any visibility related tasks.
-class ASTImporterLookupTable {
+class CLANG_ABI ASTImporterLookupTable {
 
   // We store a list of declarations for each name.
   // And we collect these lists for each DeclContext.

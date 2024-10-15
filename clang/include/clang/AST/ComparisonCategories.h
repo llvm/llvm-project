@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_COMPARISONCATEGORIES_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include <array>
@@ -58,7 +59,7 @@ inline ComparisonCategoryType commonComparisonType(ComparisonCategoryType A,
 
 /// Get the comparison category that should be used when comparing values of
 /// type \c T.
-std::optional<ComparisonCategoryType>
+CLANG_ABI std::optional<ComparisonCategoryType>
 getComparisonCategoryForBuiltinCmp(QualType T);
 
 /// An enumeration representing the possible results of a three-way
@@ -73,7 +74,7 @@ enum class ComparisonCategoryResult : unsigned char {
   Last = Unordered
 };
 
-class ComparisonCategoryInfo {
+class CLANG_ABI ComparisonCategoryInfo {
   friend class ComparisonCategories;
   friend class Sema;
 
@@ -82,7 +83,7 @@ public:
                          ComparisonCategoryType Kind)
       : Ctx(Ctx), Record(RD), Kind(Kind) {}
 
-  struct ValueInfo {
+  struct CLANG_ABI ValueInfo {
     ComparisonCategoryResult Kind;
     VarDecl *VD;
 
@@ -171,7 +172,7 @@ public:
   }
 };
 
-class ComparisonCategories {
+class CLANG_ABI ComparisonCategories {
 public:
   static StringRef getCategoryString(ComparisonCategoryType Kind);
   static StringRef getResultString(ComparisonCategoryResult Kind);

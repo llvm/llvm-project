@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_AST_APNUMERICSTORAGE_H
 #define LLVM_CLANG_AST_APNUMERICSTORAGE_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 
@@ -23,7 +24,7 @@ class ASTContext;
 /// to allocate IntegerLiteral/FloatingLiteral nodes the memory associated with
 /// the APFloat/APInt values will never get freed. APNumericStorage uses
 /// ASTContext's allocator for memory allocation.
-class APNumericStorage {
+class CLANG_ABI APNumericStorage {
   union {
     uint64_t VAL;   ///< Used to store the <= 64 bits integer value.
     uint64_t *pVal; ///< Used to store the >64 bits integer value.

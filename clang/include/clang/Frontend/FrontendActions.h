@@ -10,6 +10,7 @@
 #define LLVM_CLANG_FRONTEND_FRONTENDACTIONS_H
 
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,7 +21,7 @@ namespace clang {
 // Custom Consumer Actions
 //===----------------------------------------------------------------------===//
 
-class InitOnlyAction : public FrontendAction {
+class CLANG_ABI InitOnlyAction : public FrontendAction {
   void ExecuteAction() override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -33,7 +34,7 @@ public:
 };
 
 /// Preprocessor-based frontend action that also loads PCH files.
-class ReadPCHAndPreprocessAction : public FrontendAction {
+class CLANG_ABI ReadPCHAndPreprocessAction : public FrontendAction {
   void ExecuteAction() override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -43,7 +44,7 @@ public:
   bool usesPreprocessorOnly() const override { return false; }
 };
 
-class DumpCompilerOptionsAction : public FrontendAction {
+class CLANG_ABI DumpCompilerOptionsAction : public FrontendAction {
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
     return nullptr;
@@ -59,31 +60,31 @@ public:
 // AST Consumer Actions
 //===----------------------------------------------------------------------===//
 
-class ASTPrintAction : public ASTFrontendAction {
+class CLANG_ABI ASTPrintAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 };
 
-class ASTDumpAction : public ASTFrontendAction {
+class CLANG_ABI ASTDumpAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 };
 
-class ASTDeclListAction : public ASTFrontendAction {
+class CLANG_ABI ASTDeclListAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 };
 
-class ASTViewAction : public ASTFrontendAction {
+class CLANG_ABI ASTViewAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 };
 
-class GeneratePCHAction : public ASTFrontendAction {
+class CLANG_ABI GeneratePCHAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
@@ -113,7 +114,7 @@ public:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 };
 
-class GenerateModuleAction : public ASTFrontendAction {
+class CLANG_ABI GenerateModuleAction : public ASTFrontendAction {
   virtual std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) = 0;
 
@@ -133,7 +134,7 @@ protected:
   bool shouldEraseOutputFiles() override;
 };
 
-class GenerateInterfaceStubsAction : public ASTFrontendAction {
+class CLANG_ABI GenerateInterfaceStubsAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
@@ -144,7 +145,7 @@ protected:
   bool hasASTFileSupport() const override { return false; }
 };
 
-class GenerateModuleFromModuleMapAction : public GenerateModuleAction {
+class CLANG_ABI GenerateModuleFromModuleMapAction : public GenerateModuleAction {
 private:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 
@@ -154,7 +155,7 @@ private:
 
 /// Generates full BMI (which contains full information to generate the object
 /// files) for C++20 Named Modules.
-class GenerateModuleInterfaceAction : public GenerateModuleAction {
+class CLANG_ABI GenerateModuleInterfaceAction : public GenerateModuleAction {
 protected:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 
@@ -168,14 +169,14 @@ protected:
 };
 
 /// Only generates the reduced BMI. This action is mainly used by tests.
-class GenerateReducedModuleInterfaceAction
+class CLANG_ABI GenerateReducedModuleInterfaceAction
     : public GenerateModuleInterfaceAction {
 private:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 };
 
-class GenerateHeaderUnitAction : public GenerateModuleAction {
+class CLANG_ABI GenerateHeaderUnitAction : public GenerateModuleAction {
 
 private:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
@@ -184,7 +185,7 @@ private:
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
 };
 
-class SyntaxOnlyAction : public ASTFrontendAction {
+class CLANG_ABI SyntaxOnlyAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
@@ -196,7 +197,7 @@ public:
 
 /// Dump information about the given module file, to be used for
 /// basic debugging and discovery.
-class DumpModuleInfoAction : public ASTFrontendAction {
+class CLANG_ABI DumpModuleInfoAction : public ASTFrontendAction {
   // Allow other tools (ex lldb) to direct output for their use.
   std::shared_ptr<llvm::raw_ostream> OutputStream;
 
@@ -216,7 +217,7 @@ public:
   bool hasCodeCompletionSupport() const override { return false; }
 };
 
-class VerifyPCHAction : public ASTFrontendAction {
+class CLANG_ABI VerifyPCHAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
@@ -227,7 +228,7 @@ public:
   bool hasCodeCompletionSupport() const override { return false; }
 };
 
-class TemplightDumpAction : public ASTFrontendAction {
+class CLANG_ABI TemplightDumpAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
@@ -243,7 +244,7 @@ protected:
  * adaptor, which forwards most of its calls to another action that
  * will consume the merged context.
  */
-class ASTMergeAction : public FrontendAction {
+class CLANG_ABI ASTMergeAction : public FrontendAction {
   /// The action that the merge action adapts.
   std::unique_ptr<FrontendAction> AdaptedAction;
 
@@ -271,7 +272,7 @@ public:
   bool hasCodeCompletionSupport() const override;
 };
 
-class PrintPreambleAction : public FrontendAction {
+class CLANG_ABI PrintPreambleAction : public FrontendAction {
 protected:
   void ExecuteAction() override;
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &,
@@ -282,7 +283,7 @@ protected:
   bool usesPreprocessorOnly() const override { return true; }
 };
 
-class PrintDependencyDirectivesSourceMinimizerAction : public FrontendAction {
+class CLANG_ABI PrintDependencyDirectivesSourceMinimizerAction : public FrontendAction {
 protected:
   void ExecuteAction() override;
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &,
@@ -297,29 +298,29 @@ protected:
 // Preprocessor Actions
 //===----------------------------------------------------------------------===//
 
-class DumpRawTokensAction : public PreprocessorFrontendAction {
+class CLANG_ABI DumpRawTokensAction : public PreprocessorFrontendAction {
 protected:
   void ExecuteAction() override;
 };
 
-class DumpTokensAction : public PreprocessorFrontendAction {
+class CLANG_ABI DumpTokensAction : public PreprocessorFrontendAction {
 protected:
   void ExecuteAction() override;
 };
 
-class PreprocessOnlyAction : public PreprocessorFrontendAction {
+class CLANG_ABI PreprocessOnlyAction : public PreprocessorFrontendAction {
 protected:
   void ExecuteAction() override;
 };
 
-class PrintPreprocessedAction : public PreprocessorFrontendAction {
+class CLANG_ABI PrintPreprocessedAction : public PreprocessorFrontendAction {
 protected:
   void ExecuteAction() override;
 
   bool hasPCHSupport() const override { return true; }
 };
 
-class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
+class CLANG_ABI GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
   StringRef ModuleName;
   void ExecuteAction() override;
 

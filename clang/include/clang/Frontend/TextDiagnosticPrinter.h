@@ -16,6 +16,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <memory>
 
@@ -24,7 +25,7 @@ class DiagnosticOptions;
 class LangOptions;
 class TextDiagnostic;
 
-class TextDiagnosticPrinter : public DiagnosticConsumer {
+class CLANG_ABI TextDiagnosticPrinter : public DiagnosticConsumer {
   raw_ostream &OS;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
 

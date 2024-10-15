@@ -19,6 +19,7 @@
 #include "clang/AST/DeclID.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 
@@ -100,7 +101,7 @@ public:
 
 /// An UnresolvedSet-like class that might not have been loaded from the
 /// external AST source yet.
-class LazyASTUnresolvedSet {
+class CLANG_ABI LazyASTUnresolvedSet {
   mutable ASTUnresolvedSet Impl;
 
   void getFromExternalSource(ASTContext &C) const;

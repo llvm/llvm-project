@@ -18,6 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -55,7 +56,7 @@ class Token;
 
   /// Base class that describes a preprocessed entity, which may be a
   /// preprocessor directive or macro expansion.
-  class PreprocessedEntity {
+  class CLANG_ABI PreprocessedEntity {
   public:
     /// The kind of preprocessed entity an object describes.
     enum EntityKind {
@@ -203,7 +204,7 @@ class Token;
 
   /// Record the location of an inclusion directive, such as an
   /// \c \#include or \c \#import statement.
-  class InclusionDirective : public PreprocessingDirective {
+  class CLANG_ABI InclusionDirective : public PreprocessingDirective {
   public:
     /// The kind of inclusion directives known to the
     /// preprocessor.
@@ -276,7 +277,7 @@ class Token;
 
   /// An abstract class that should be subclassed by any external source
   /// of preprocessing record entries.
-  class ExternalPreprocessingRecordSource {
+  class CLANG_ABI ExternalPreprocessingRecordSource {
   public:
     virtual ~ExternalPreprocessingRecordSource();
 
@@ -305,7 +306,7 @@ class Token;
   /// A record of the steps taken while preprocessing a source file,
   /// including the various preprocessing directives processed, macros
   /// expanded, etc.
-  class PreprocessingRecord : public PPCallbacks {
+  class CLANG_ABI PreprocessingRecord : public PPCallbacks {
     SourceManager &SourceMgr;
 
     /// Allocator used to store preprocessing objects.

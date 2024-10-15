@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -43,7 +44,7 @@ class CXXBasePaths;
 /// a single declaration, a set of overloaded functions, or an
 /// ambiguity. Use the getKind() method to determine which of these
 /// results occurred for a given lookup.
-class LookupResult {
+class CLANG_ABI LookupResult {
 public:
   enum LookupResultKind {
     /// No entity found met the criteria.
@@ -833,7 +834,7 @@ private:
 /// This abstract class is meant to be subclassed by clients of \c
 /// Sema::LookupVisibleDecls(), each of which should override the \c
 /// FoundDecl() function to process declarations as they are found.
-class VisibleDeclConsumer {
+class CLANG_ABI VisibleDeclConsumer {
 public:
   /// Destroys the visible declaration consumer.
   virtual ~VisibleDeclConsumer();
@@ -866,7 +867,7 @@ public:
 };
 
 /// A class for storing results from argument-dependent lookup.
-class ADLResult {
+class CLANG_ABI ADLResult {
 private:
   /// A map from canonical decls to the 'most recent' decl.
   llvm::MapVector<NamedDecl*, NamedDecl*> Decls;

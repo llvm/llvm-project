@@ -16,6 +16,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRLOCFINDER_H
 
 #include "clang/AST/AST.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolOccurrences.h"
@@ -34,7 +35,7 @@ namespace tooling {
 /// \param TranslationUnitDecl The translation unit declaration.
 ///
 /// \return Atomic changes for renaming.
-std::vector<tooling::AtomicChange>
+CLANG_ABI std::vector<tooling::AtomicChange>
 createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
                           llvm::StringRef NewName, Decl *TranslationUnitDecl);
 
@@ -43,7 +44,7 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
 ///
 /// \return SymbolOccurrences that can be converted to AtomicChanges when
 /// renaming.
-SymbolOccurrences getOccurrencesOfUSRs(ArrayRef<std::string> USRs,
+CLANG_ABI SymbolOccurrences getOccurrencesOfUSRs(ArrayRef<std::string> USRs,
                                        StringRef PrevName, Decl *Decl);
 
 } // end namespace tooling

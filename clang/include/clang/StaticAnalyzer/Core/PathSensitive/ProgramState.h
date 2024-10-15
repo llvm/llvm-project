@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/Support/Allocator.h"
@@ -68,7 +69,7 @@ template <typename T> struct ProgramStateTrait {
 ///  ProgramState is intended to be used as a functional object; that is,
 ///  once it is created and made "persistent" in a FoldingSet, its
 ///  values will never change.
-class ProgramState : public llvm::FoldingSetNode {
+class CLANG_ABI ProgramState : public llvm::FoldingSetNode {
 public:
   typedef llvm::ImmutableSet<llvm::APSInt*>                IntSetTy;
   typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
@@ -484,8 +485,8 @@ public:
   void dump() const;
 
 private:
-  friend void ProgramStateRetain(const ProgramState *state);
-  friend void ProgramStateRelease(const ProgramState *state);
+  friend CLANG_ABI void ProgramStateRetain(const ProgramState *state);
+  friend CLANG_ABI void ProgramStateRelease(const ProgramState *state);
 
   SVal wrapSymbolicRegion(SVal Base) const;
 };
@@ -494,9 +495,9 @@ private:
 // ProgramStateManager - Factory object for ProgramStates.
 //===----------------------------------------------------------------------===//
 
-class ProgramStateManager {
+class CLANG_ABI ProgramStateManager {
   friend class ProgramState;
-  friend void ProgramStateRelease(const ProgramState *state);
+  friend CLANG_ABI void ProgramStateRelease(const ProgramState *state);
 private:
   /// Eng - The ExprEngine that owns this state manager.
   ExprEngine *Eng; /* Can be null. */
@@ -882,7 +883,7 @@ CB ProgramState::scanReachableSymbols(
 /// A utility class that visits the reachable symbols using a custom
 /// SymbolVisitor. Terminates recursive traversal when the visitor function
 /// returns false.
-class ScanReachableSymbols {
+class CLANG_ABI ScanReachableSymbols {
   typedef llvm::DenseSet<const void*> VisitedItems;
 
   VisitedItems visited;

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_EXPRESSIONTRAITS_H
 #define LLVM_CLANG_BASIC_EXPRESSIONTRAITS_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -27,10 +28,10 @@ enum ExpressionTrait {
 };
 
 /// Return the internal name of type trait \p T. Never null.
-const char *getTraitName(ExpressionTrait T) LLVM_READONLY;
+CLANG_ABI const char *getTraitName(ExpressionTrait T) LLVM_READONLY;
 
 /// Return the spelling of the type trait \p TT. Never null.
-const char *getTraitSpelling(ExpressionTrait T) LLVM_READONLY;
+CLANG_ABI const char *getTraitSpelling(ExpressionTrait T) LLVM_READONLY;
 
 } // namespace clang
 

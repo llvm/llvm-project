@@ -12,6 +12,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Syntax/Nodes.h"
 #include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
 #include "clang/Tooling/Syntax/Tree.h"
@@ -22,7 +23,7 @@ namespace syntax {
 /// Build a syntax tree for the main file.
 /// This usually covers the whole TranslationUnitDecl, but can be restricted by
 /// the ASTContext's traversal scope.
-syntax::TranslationUnit *
+CLANG_ABI syntax::TranslationUnit *
 buildSyntaxTree(Arena &A, TokenBufferTokenManager &TBTM, ASTContext &Context);
 
 // Create syntax trees from subtrees not backed by the source code.
@@ -30,24 +31,24 @@ buildSyntaxTree(Arena &A, TokenBufferTokenManager &TBTM, ASTContext &Context);
 // Synthesis of Leafs
 /// Create `Leaf` from token with `Spelling` and assert it has the desired
 /// `TokenKind`.
-syntax::Leaf *createLeaf(syntax::Arena &A, TokenBufferTokenManager &TBTM,
+CLANG_ABI syntax::Leaf *createLeaf(syntax::Arena &A, TokenBufferTokenManager &TBTM,
                          tok::TokenKind K, StringRef Spelling);
 
 /// Infer the token spelling from its `TokenKind`, then create `Leaf` from
 /// this token
-syntax::Leaf *createLeaf(syntax::Arena &A, TokenBufferTokenManager &TBTM,
+CLANG_ABI syntax::Leaf *createLeaf(syntax::Arena &A, TokenBufferTokenManager &TBTM,
                          tok::TokenKind K);
 
 // Synthesis of Trees
 /// Creates the concrete syntax node according to the specified `NodeKind` `K`.
 /// Returns it as a pointer to the base class `Tree`.
-syntax::Tree *
+CLANG_ABI syntax::Tree *
 createTree(syntax::Arena &A,
            ArrayRef<std::pair<syntax::Node *, syntax::NodeRole>> Children,
            syntax::NodeKind K);
 
 // Synthesis of Syntax Nodes
-syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A,
+CLANG_ABI syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A,
                                              TokenBufferTokenManager &TBTM);
 
 /// Creates a completely independent copy of `N` with its macros expanded.
@@ -56,7 +57,7 @@ syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A,
 /// * Detached, i.e. `Parent == NextSibling == nullptr` and
 /// `Role == Detached`.
 /// * Synthesized, i.e. `Original == false`.
-syntax::Node *deepCopyExpandingMacros(syntax::Arena &A,
+CLANG_ABI syntax::Node *deepCopyExpandingMacros(syntax::Arena &A,
                                       TokenBufferTokenManager &TBTM,
                                       const syntax::Node *N);
 } // namespace syntax

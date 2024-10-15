@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 
 #include "Macros.h"
+#include "clang/Support/Compiler.h"
 #include <stack>
 
 namespace clang {
@@ -89,7 +90,7 @@ struct UnwrappedLine {
 /// for each parsed unwrapped line, and then \c finishRun to indicate
 /// that the set of unwrapped lines before is one coherent view of the
 /// code snippet to be formatted.
-class UnwrappedLineConsumer {
+class CLANG_ABI UnwrappedLineConsumer {
 public:
   virtual ~UnwrappedLineConsumer() {}
   virtual void consumeUnwrappedLine(const UnwrappedLine &Line) = 0;
@@ -98,7 +99,7 @@ public:
 
 class FormatTokenSource;
 
-class UnwrappedLineParser {
+class CLANG_ABI UnwrappedLineParser {
 public:
   UnwrappedLineParser(SourceManager &SourceMgr, const FormatStyle &Style,
                       const AdditionalKeywords &Keywords,
@@ -416,7 +417,7 @@ struct UnwrappedLineNode {
   SmallVector<UnwrappedLine, 0> Children;
 };
 
-std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line);
+CLANG_ABI std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line);
 
 } // end namespace format
 } // end namespace clang

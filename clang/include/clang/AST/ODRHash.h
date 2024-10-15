@@ -16,8 +16,9 @@
 #define LLVM_CLANG_AST_ODRHASH_H
 
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/Type.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/AST/Type.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -39,7 +40,7 @@ class TemplateParameterList;
 // need to be hashed.  Then call CalculateHash to get the hash value.
 // Typically, only one Add* call is needed.  clear can be called to reuse the
 // object.
-class ODRHash {
+class CLANG_ABI ODRHash {
   // Use DenseMaps to convert from DeclarationName and Type pointers
   // to an index value.
   llvm::DenseMap<DeclarationName, unsigned> DeclNameMap;

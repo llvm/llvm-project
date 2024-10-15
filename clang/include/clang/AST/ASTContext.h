@@ -27,6 +27,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -184,7 +185,7 @@ struct TypeInfoChars {
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
-class ASTContext : public RefCountedBase<ASTContext> {
+class CLANG_ABI ASTContext : public RefCountedBase<ASTContext> {
   friend class NestedNameSpecifier;
 
   mutable SmallVector<Type *, 0> Types;
@@ -338,7 +339,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// Representation of a "canonical" template template parameter that
   /// is used in canonical template names.
-  class CanonicalTemplateTemplateParm : public llvm::FoldingSetNode {
+  class CLANG_ABI CanonicalTemplateTemplateParm : public llvm::FoldingSetNode {
     TemplateTemplateParmDecl *Parm;
 
   public:
@@ -472,7 +473,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// something that has a semantic effect on startup (such as a variable with
   /// a non-constant initializer), or an ImportDecl (which recursively triggers
   /// initialization of another module).
-  struct PerModuleInitializers {
+  struct CLANG_ABI PerModuleInitializers {
     llvm::SmallVector<Decl*, 4> Initializers;
     llvm::SmallVector<GlobalDeclID, 4> LazyInitializers;
 
@@ -3561,7 +3562,7 @@ private:
 };
 
 /// Insertion operator for diagnostics.
-const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+CLANG_ABI const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                       const ASTContext::SectionInfo &Section);
 
 /// Utility function for constructing a nullary selector.

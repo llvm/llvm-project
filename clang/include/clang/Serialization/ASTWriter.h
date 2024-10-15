@@ -25,6 +25,7 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Serialization/SourceLocationEncoding.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -85,7 +86,7 @@ class FileInfo;
 /// representation of a given abstract syntax tree and its supporting
 /// data structures. This bitstream can be de-serialized via an
 /// instance of the ASTReader class.
-class ASTWriter : public ASTDeserializationListener,
+class CLANG_ABI ASTWriter : public ASTDeserializationListener,
                   public ASTMutationListener {
 public:
   friend class ASTDeclWriter;
@@ -926,7 +927,7 @@ private:
 
 /// AST and semantic-analysis consumer that generates a
 /// precompiled header from the parsed source code.
-class PCHGenerator : public SemaConsumer {
+class CLANG_ABI PCHGenerator : public SemaConsumer {
   void anchor() override;
 
   Preprocessor &PP;
@@ -973,7 +974,7 @@ public:
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
 };
 
-class CXX20ModulesGenerator : public PCHGenerator {
+class CLANG_ABI CXX20ModulesGenerator : public PCHGenerator {
   void anchor() override;
 
 protected:
@@ -991,7 +992,7 @@ public:
   void HandleTranslationUnit(ASTContext &Ctx) override;
 };
 
-class ReducedBMIGenerator : public CXX20ModulesGenerator {
+class CLANG_ABI ReducedBMIGenerator : public CXX20ModulesGenerator {
   void anchor() override;
 
 public:
@@ -1005,7 +1006,7 @@ public:
 ///
 /// Generally, we can elide the definition of a declaration if it won't affect
 /// the ABI. e.g., the non-inline function bodies.
-bool CanElideDeclDef(const Decl *D);
+CLANG_ABI bool CanElideDeclDef(const Decl *D);
 
 /// A simple helper class to pack several bits in order into (a) 32 bit
 /// integer(s).

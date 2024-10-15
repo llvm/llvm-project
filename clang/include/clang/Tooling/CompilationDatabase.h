@@ -28,6 +28,7 @@
 #define LLVM_CLANG_TOOLING_COMPILATIONDATABASE_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -84,7 +85,7 @@ struct CompileCommand {
 /// Many implementations are enumerable, allowing all command lines to be
 /// retrieved. These can be used to run clang tools over a subset of the files
 /// in a project.
-class CompilationDatabase {
+class CLANG_ABI CompilationDatabase {
 public:
   virtual ~CompilationDatabase();
 
@@ -151,7 +152,7 @@ public:
 ///
 /// Useful when we want a tool to behave more like a compiler invocation.
 /// This compilation database is not enumerable: getAllFiles() returns {}.
-class FixedCompilationDatabase : public CompilationDatabase {
+class CLANG_ABI FixedCompilationDatabase : public CompilationDatabase {
 public:
   /// Creates a FixedCompilationDatabase from the arguments after "--".
   ///
@@ -218,31 +219,31 @@ private:
 /// to certain flags (-x, -std etc).
 ///
 /// The output command will always end in {"--", Filename}.
-tooling::CompileCommand transferCompileCommand(tooling::CompileCommand,
+CLANG_ABI tooling::CompileCommand transferCompileCommand(tooling::CompileCommand,
                                                StringRef Filename);
 
 /// Returns a wrapped CompilationDatabase that defers to the provided one,
 /// but getCompileCommands() will infer commands for unknown files.
 /// The return value of getAllFiles() or getAllCompileCommands() is unchanged.
 /// See InterpolatingCompilationDatabase.cpp for details on heuristics.
-std::unique_ptr<CompilationDatabase>
+CLANG_ABI std::unique_ptr<CompilationDatabase>
     inferMissingCompileCommands(std::unique_ptr<CompilationDatabase>);
 
 /// Returns a wrapped CompilationDatabase that will add -target and -mode flags
 /// to commandline when they can be deduced from argv[0] of commandline returned
 /// by underlying database.
-std::unique_ptr<CompilationDatabase>
+CLANG_ABI std::unique_ptr<CompilationDatabase>
 inferTargetAndDriverMode(std::unique_ptr<CompilationDatabase> Base);
 
 /// Returns a wrapped CompilationDatabase that will transform argv[0] to an
 /// absolute path, if it currently is a plain tool name, looking it up in
 /// PATH.
-std::unique_ptr<CompilationDatabase>
+CLANG_ABI std::unique_ptr<CompilationDatabase>
 inferToolLocation(std::unique_ptr<CompilationDatabase> Base);
 
 /// Returns a wrapped CompilationDatabase that will expand all rsp(response)
 /// files on commandline returned by underlying database.
-std::unique_ptr<CompilationDatabase>
+CLANG_ABI std::unique_ptr<CompilationDatabase>
 expandResponseFiles(std::unique_ptr<CompilationDatabase> Base,
                     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 

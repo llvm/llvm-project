@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class AttributeCommonInfo;
@@ -25,7 +26,7 @@ enum class ParameterABI;
 class ParsedAttr;
 class SwiftNameAttr;
 
-class SemaSwift : public SemaBase {
+class CLANG_ABI SemaSwift : public SemaBase {
 public:
   SemaSwift(Sema &S);
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/AllTUsExecution.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ToolExecutorPluginRegistry.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ThreadPool.h"
@@ -55,7 +56,7 @@ private:
 
 } // namespace
 
-llvm::cl::opt<std::string>
+CLANG_ABI llvm::cl::opt<std::string>
     Filter("filter",
            llvm::cl::desc("Only process files that match this filter. "
                           "This flag only applies to all-TUs."),
@@ -148,7 +149,7 @@ llvm::Error AllTUsToolExecutor::execute(
   return llvm::Error::success();
 }
 
-llvm::cl::opt<unsigned> ExecutorConcurrency(
+CLANG_ABI llvm::cl::opt<unsigned> ExecutorConcurrency(
     "execute-concurrency",
     llvm::cl::desc("The number of threads used to process all files in "
                    "parallel. Set to 0 for hardware concurrency. "

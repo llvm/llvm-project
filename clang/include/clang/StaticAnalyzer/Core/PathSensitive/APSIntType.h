@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_APSINTTYPE_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_APSINTTYPE_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include <tuple>
 
@@ -16,7 +17,7 @@ namespace clang {
 namespace ento {
 
 /// A record of the "type" of an APSInt, used for conversions.
-class APSIntType {
+class CLANG_ABI APSIntType {
   uint32_t BitWidth;
   bool IsUnsigned;
 

@@ -16,6 +16,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/Support/Compiler.h"
 #include <string>
 
 namespace clang {
@@ -24,7 +25,7 @@ namespace ento {
 
 class BugReporter;
 
-class BugType {
+class CLANG_ABI BugType {
 private:
   const CheckerNameRef CheckerName;
   const std::string Description;

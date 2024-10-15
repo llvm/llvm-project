@@ -26,6 +26,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -68,7 +69,7 @@ NamedDecl *getAsNamedDecl(TemplateParameter P);
 
 /// Stores a list of template parameters for a TemplateDecl and its
 /// derived classes.
-class TemplateParameterList final
+class CLANG_ABI TemplateParameterList final
     : private llvm::TrailingObjects<TemplateParameterList, NamedDecl *,
                                     Expr *> {
   /// The location of the 'template' keyword.
@@ -240,7 +241,7 @@ public:
 };
 
 /// A template argument list.
-class TemplateArgumentList final
+class CLANG_ABI TemplateArgumentList final
     : private llvm::TrailingObjects<TemplateArgumentList, TemplateArgument> {
   /// The number of template arguments in this template
   /// argument list.
@@ -285,7 +286,7 @@ public:
   }
 };
 
-void *allocateDefaultArgStorageChain(const ASTContext &C);
+CLANG_ABI void *allocateDefaultArgStorageChain(const ASTContext &C);
 
 /// Storage for a default argument. This is conceptually either empty, or an
 /// argument value, or a pointer to a previous declaration that had a default
@@ -391,7 +392,7 @@ public:
 ///
 /// The TemplateDecl class stores the list of template parameters and a
 /// reference to the templated scoped declaration: the underlying AST node.
-class TemplateDecl : public NamedDecl {
+class CLANG_ABI TemplateDecl : public NamedDecl {
   void anchor() override;
 
 protected:
@@ -461,7 +462,7 @@ public:
 /// Provides information about a function template specialization,
 /// which is a FunctionDecl that has been explicitly specialization or
 /// instantiated from a function template.
-class FunctionTemplateSpecializationInfo final
+class CLANG_ABI FunctionTemplateSpecializationInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<FunctionTemplateSpecializationInfo,
                                     MemberSpecializationInfo *> {
@@ -684,7 +685,7 @@ public:
 ///     friend void foo<>(T); // DependentFunctionTemplateSpecializationInfo
 ///   };
 /// \endcode
-class DependentFunctionTemplateSpecializationInfo final
+class CLANG_ABI DependentFunctionTemplateSpecializationInfo final
     : private llvm::TrailingObjects<DependentFunctionTemplateSpecializationInfo,
                                     FunctionTemplateDecl *> {
   friend TrailingObjects;
@@ -711,7 +712,7 @@ public:
 };
 
 /// Declaration of a redeclarable template.
-class RedeclarableTemplateDecl : public TemplateDecl,
+class CLANG_ABI RedeclarableTemplateDecl : public TemplateDecl,
                                  public Redeclarable<RedeclarableTemplateDecl>
 {
   using redeclarable_base = Redeclarable<RedeclarableTemplateDecl>;
@@ -962,7 +963,7 @@ SpecEntryTraits<FunctionTemplateSpecializationInfo> {
 };
 
 /// Declaration of a template function.
-class FunctionTemplateDecl : public RedeclarableTemplateDecl {
+class CLANG_ABI FunctionTemplateDecl : public RedeclarableTemplateDecl {
 protected:
   friend class FunctionDecl;
 
@@ -1162,7 +1163,7 @@ public:
 /// \code
 /// template<typename T> class vector;
 /// \endcode
-class TemplateTypeParmDecl final : public TypeDecl,
+class CLANG_ABI TemplateTypeParmDecl final : public TypeDecl,
     private llvm::TrailingObjects<TemplateTypeParmDecl, TypeConstraint> {
   /// Sema creates these on the stack during auto type deduction.
   friend class Sema;
@@ -1357,7 +1358,7 @@ public:
 /// @code
 /// template<int Size> class array { };
 /// @endcode
-class NonTypeTemplateParmDecl final
+class CLANG_ABI NonTypeTemplateParmDecl final
     : public DeclaratorDecl,
       protected TemplateParmPosition,
       private llvm::TrailingObjects<NonTypeTemplateParmDecl,
@@ -1578,7 +1579,7 @@ public:
 /// @endcode
 /// A template template parameter is a TemplateDecl because it defines the
 /// name of a template and the template parameters allowable for substitution.
-class TemplateTemplateParmDecl final
+class CLANG_ABI TemplateTemplateParmDecl final
     : public TemplateDecl,
       protected TemplateParmPosition,
       private llvm::TrailingObjects<TemplateTemplateParmDecl,
@@ -1757,7 +1758,7 @@ public:
 /// Represents the builtin template declaration which is used to
 /// implement __make_integer_seq and other builtin templates.  It serves
 /// no real purpose beyond existing as a place to hold template parameters.
-class BuiltinTemplateDecl : public TemplateDecl {
+class CLANG_ABI BuiltinTemplateDecl : public TemplateDecl {
   BuiltinTemplateKind BTK;
 
   BuiltinTemplateDecl(const ASTContext &C, DeclContext *DC,
@@ -1815,7 +1816,7 @@ using SpecializationOrInstantiationInfo =
 /// template<>
 /// class array<bool> { }; // class template specialization array<bool>
 /// \endcode
-class ClassTemplateSpecializationDecl : public CXXRecordDecl,
+class CLANG_ABI ClassTemplateSpecializationDecl : public CXXRecordDecl,
                                         public llvm::FoldingSetNode {
   /// Structure that stores information about a class template
   /// specialization that was instantiated from a class template partial
@@ -2082,7 +2083,7 @@ public:
   }
 };
 
-class ClassTemplatePartialSpecializationDecl
+class CLANG_ABI ClassTemplatePartialSpecializationDecl
   : public ClassTemplateSpecializationDecl {
   /// The list of template parameters
   TemplateParameterList* TemplateParams = nullptr;
@@ -2244,7 +2245,7 @@ public:
 };
 
 /// Declaration of a class template.
-class ClassTemplateDecl : public RedeclarableTemplateDecl {
+class CLANG_ABI ClassTemplateDecl : public RedeclarableTemplateDecl {
 protected:
   /// Data that is common to all of the declarations of a given
   /// class template.
@@ -2443,7 +2444,7 @@ public:
 ///
 /// \note This class is not currently in use.  All of the above
 /// will yield a FriendDecl, not a FriendTemplateDecl.
-class FriendTemplateDecl : public Decl {
+class CLANG_ABI FriendTemplateDecl : public Decl {
   virtual void anchor();
 
 public:
@@ -2519,7 +2520,7 @@ public:
 /// \code
 /// template \<typename T> using V = std::map<T*, int, MyCompare<T>>;
 /// \endcode
-class TypeAliasTemplateDecl : public RedeclarableTemplateDecl {
+class CLANG_ABI TypeAliasTemplateDecl : public RedeclarableTemplateDecl {
 protected:
   using Common = CommonBase;
 
@@ -2600,7 +2601,7 @@ public:
 /// template<>
 /// constexpr float pi<float>; // variable template specialization pi<float>
 /// \endcode
-class VarTemplateSpecializationDecl : public VarDecl,
+class CLANG_ABI VarTemplateSpecializationDecl : public VarDecl,
                                       public llvm::FoldingSetNode {
 
   /// Structure that stores information about a variable template
@@ -2851,7 +2852,7 @@ public:
   }
 };
 
-class VarTemplatePartialSpecializationDecl
+class CLANG_ABI VarTemplatePartialSpecializationDecl
     : public VarTemplateSpecializationDecl {
   /// The list of template parameters
   TemplateParameterList *TemplateParams = nullptr;
@@ -3002,7 +3003,7 @@ public:
 };
 
 /// Declaration of a variable template.
-class VarTemplateDecl : public RedeclarableTemplateDecl {
+class CLANG_ABI VarTemplateDecl : public RedeclarableTemplateDecl {
 protected:
   /// Data that is common to all of the declarations of a given
   /// variable template.
@@ -3158,7 +3159,7 @@ public:
 };
 
 /// Declaration of a C++20 concept.
-class ConceptDecl : public TemplateDecl, public Mergeable<ConceptDecl> {
+class CLANG_ABI ConceptDecl : public TemplateDecl, public Mergeable<ConceptDecl> {
 protected:
   Expr *ConstraintExpr;
 
@@ -3210,7 +3211,7 @@ public:
 // An implementation detail of ConceptSpecialicationExpr that holds the template
 // arguments, so we can later use this to reconstitute the template arguments
 // during constraint checking.
-class ImplicitConceptSpecializationDecl final
+class CLANG_ABI ImplicitConceptSpecializationDecl final
     : public Decl,
       private llvm::TrailingObjects<ImplicitConceptSpecializationDecl,
                                     TemplateArgument> {
@@ -3253,7 +3254,7 @@ public:
 /// S<A{1, 2}> s1;
 /// S<A{1, 2}> s2; // same type, argument is same TemplateParamObjectDecl.
 /// \endcode
-class TemplateParamObjectDecl : public ValueDecl,
+class CLANG_ABI TemplateParamObjectDecl : public ValueDecl,
                                 public Mergeable<TemplateParamObjectDecl>,
                                 public llvm::FoldingSetNode {
 private:
@@ -3362,7 +3363,7 @@ inline std::optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
 
 /// Internal helper used by Subst* nodes to retrieve the parameter list
 /// for their AssociatedDecl.
-TemplateParameterList *getReplacedTemplateParameterList(Decl *D);
+CLANG_ABI TemplateParameterList *getReplacedTemplateParameterList(Decl *D);
 
 } // namespace clang
 

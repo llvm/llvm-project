@@ -17,6 +17,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -34,21 +35,21 @@ class SourceManager;
 class LangOptions;
 
 /// Copy characters from Input to Buf, expanding any UCNs.
-void expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input);
+CLANG_ABI void expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input);
 
 /// Return true if the token corresponds to a function local predefined macro,
 /// which expands to a string literal, that can be concatenated with other
 /// string literals (only in Microsoft mode).
-bool isFunctionLocalStringLiteralMacro(tok::TokenKind K, const LangOptions &LO);
+CLANG_ABI bool isFunctionLocalStringLiteralMacro(tok::TokenKind K, const LangOptions &LO);
 
 /// Return true if the token is a string literal, or a function local
 /// predefined macro, which expands to a string literal.
-bool tokenIsLikeStringLiteral(const Token &Tok, const LangOptions &LO);
+CLANG_ABI bool tokenIsLikeStringLiteral(const Token &Tok, const LangOptions &LO);
 
 /// NumericLiteralParser - This performs strict semantic analysis of the content
 /// of a ppnumber, classifying it as either integer, floating, or erroneous,
 /// determines the radix of the value and can convert it to a useful value.
-class NumericLiteralParser {
+class CLANG_ABI NumericLiteralParser {
   const SourceManager &SM;
   const LangOptions &LangOpts;
   DiagnosticsEngine &Diags;
@@ -193,7 +194,7 @@ private:
 
 /// CharLiteralParser - Perform interpretation and semantic analysis of a
 /// character literal.
-class CharLiteralParser {
+class CLANG_ABI CharLiteralParser {
   uint64_t Value;
   tok::TokenKind Kind;
   bool IsMultiChar;
@@ -228,7 +229,7 @@ enum class StringLiteralEvalMethod {
 /// StringLiteralParser - This decodes string escape characters and performs
 /// wide string analysis and Translation Phase #6 (concatenation of string
 /// literals) (C99 5.1.1.2p1).
-class StringLiteralParser {
+class CLANG_ABI StringLiteralParser {
   const SourceManager &SM;
   const LangOptions &Features;
   const TargetInfo &Target;

@@ -17,6 +17,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -35,7 +36,7 @@ class CXXRecordDecl;
 /// This class is also used to contain layout information for one
 /// ObjCInterfaceDecl. FIXME - Find appropriate name.
 /// These objects are managed by ASTContext.
-class ASTRecordLayout {
+class CLANG_ABI ASTRecordLayout {
 public:
   struct VBaseInfo {
     /// The offset to this virtual base in the complete-object layout

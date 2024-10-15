@@ -14,6 +14,7 @@
 #define LLVM_CLANG_PARSE_PARSEAST_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
   class Preprocessor;
@@ -35,7 +36,7 @@ namespace clang {
   /// \param SkipFunctionBodies Whether to skip parsing of function bodies.
   /// This option can be used, for example, to speed up searches for
   /// declarations/definitions when indexing.
-  void ParseAST(Preprocessor &pp, ASTConsumer *C,
+  CLANG_ABI void ParseAST(Preprocessor &pp, ASTConsumer *C,
                 ASTContext &Ctx, bool PrintStats = false,
                 TranslationUnitKind TUKind = TU_Complete,
                 CodeCompleteConsumer *CompletionConsumer = nullptr,
@@ -43,7 +44,7 @@ namespace clang {
 
   /// Parse the main file known to the preprocessor, producing an
   /// abstract syntax tree.
-  void ParseAST(Sema &S, bool PrintStats = false,
+  CLANG_ABI void ParseAST(Sema &S, bool PrintStats = false,
                 bool SkipFunctionBodies = false);
 
 }  // end namespace clang

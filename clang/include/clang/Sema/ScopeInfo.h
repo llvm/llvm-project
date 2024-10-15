@@ -23,6 +23,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/MapVector.h"
@@ -101,7 +102,7 @@ enum class FirstCoroutineStmtKind { CoReturn, CoAwait, CoYield };
 
 /// Retains information about a function, method, or block that is
 /// currently being parsed.
-class FunctionScopeInfo {
+class CLANG_ABI FunctionScopeInfo {
 protected:
   enum ScopeKind {
     SK_Function,
@@ -268,7 +269,7 @@ public:
   ///
   /// Objects are identified with only two Decls to make it reasonably fast to
   /// compare them.
-  class WeakObjectProfileTy {
+  class CLANG_ABI WeakObjectProfileTy {
     /// The base object decl, as described in the class documentation.
     ///
     /// The extra flag is "true" if the Base and Property are enough to uniquely
@@ -556,7 +557,7 @@ public:
   bool isPlainFunction() const { return Kind == SK_Function; }
 };
 
-class Capture {
+class CLANG_ABI Capture {
   // There are three categories of capture: capturing 'this', capturing
   // local variables, and C++1y initialized captures (which can have an
   // arbitrary initializer, and don't really capture in the traditional
@@ -695,7 +696,7 @@ public:
   QualType getCaptureType() const { return CaptureType; }
 };
 
-class CapturingScopeInfo : public FunctionScopeInfo {
+class CLANG_ABI CapturingScopeInfo : public FunctionScopeInfo {
 protected:
   CapturingScopeInfo(const CapturingScopeInfo&) = default;
 
@@ -787,7 +788,7 @@ public:
 };
 
 /// Retains information about a block that is currently being parsed.
-class BlockScopeInfo final : public CapturingScopeInfo {
+class CLANG_ABI BlockScopeInfo final : public CapturingScopeInfo {
 public:
   BlockDecl *TheDecl;
 
@@ -813,7 +814,7 @@ public:
 };
 
 /// Retains information about a captured region.
-class CapturedRegionScopeInfo final : public CapturingScopeInfo {
+class CLANG_ABI CapturedRegionScopeInfo final : public CapturingScopeInfo {
 public:
   /// The CapturedDecl for this statement.
   CapturedDecl *TheCapturedDecl;
@@ -864,7 +865,7 @@ public:
   }
 };
 
-class LambdaScopeInfo final :
+class CLANG_ABI LambdaScopeInfo final :
     public CapturingScopeInfo, public InventedTemplateParameterInfo {
 public:
   /// The class that describes the lambda.

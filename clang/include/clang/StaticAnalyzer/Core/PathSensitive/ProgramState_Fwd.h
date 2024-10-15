@@ -10,14 +10,15 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_PROGRAMSTATE_FWD_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace clang {
 namespace ento {
   class ProgramState;
   class ProgramStateManager;
-  void ProgramStateRetain(const ProgramState *state);
-  void ProgramStateRelease(const ProgramState *state);
+  CLANG_ABI void ProgramStateRetain(const ProgramState *state);
+  CLANG_ABI void ProgramStateRelease(const ProgramState *state);
 }
 }
 

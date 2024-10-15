@@ -17,13 +17,14 @@
 #define LLVM_CLANG_BASIC_PRETTYSTACKTRACE_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
 namespace clang {
 
   /// If a crash happens while one of these objects are live, the message
   /// is printed out along with the specified source location.
-  class PrettyStackTraceLoc : public llvm::PrettyStackTraceEntry {
+  class CLANG_ABI PrettyStackTraceLoc : public llvm::PrettyStackTraceEntry {
     SourceManager &SM;
     SourceLocation Loc;
     const char *Message;

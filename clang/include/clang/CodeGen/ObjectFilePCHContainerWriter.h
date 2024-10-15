@@ -10,12 +10,13 @@
 #define LLVM_CLANG_CODEGEN_OBJECTFILEPCHCONTAINEROPERATIONS_H
 
 #include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
 /// A PCHContainerWriter implementation that uses LLVM to
 /// wraps Clang modules inside a COFF, ELF, or Mach-O container.
-class ObjectFilePCHContainerWriter : public PCHContainerWriter {
+class CLANG_ABI ObjectFilePCHContainerWriter : public PCHContainerWriter {
   StringRef getFormat() const override { return "obj"; }
 
   /// Return an ASTConsumer that can be chained with a

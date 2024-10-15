@@ -18,6 +18,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -76,7 +77,7 @@ enum class DisableValidationForModuleKind;
 /// in to the compiler instance for everything. When possible, utility functions
 /// come in two forms; a short form that reuses the CompilerInstance objects,
 /// and a long form that takes explicit instances of any required objects.
-class CompilerInstance : public ModuleLoader {
+class CLANG_ABI CompilerInstance : public ModuleLoader {
   /// The options used in this compiler instance.
   std::shared_ptr<CompilerInvocation> Invocation;
 

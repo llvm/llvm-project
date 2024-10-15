@@ -18,6 +18,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Transformer/MatchConsumer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
@@ -118,7 +119,7 @@ struct ASTEdit {
 };
 
 /// Generates a single (specified) edit.
-EditGenerator edit(ASTEdit E);
+CLANG_ABI EditGenerator edit(ASTEdit E);
 
 /// Lifts a list of `ASTEdit`s into an `EditGenerator`.
 ///
@@ -129,7 +130,7 @@ EditGenerator edit(ASTEdit E);
 /// fail in the case of conflicting edits -- conflict handling is left to
 /// clients.  We recommend use of the \c AtomicChange or \c Replacements classes
 /// for assistance in detecting such conflicts.
-EditGenerator editList(llvm::SmallVector<ASTEdit, 1> Edits);
+CLANG_ABI EditGenerator editList(llvm::SmallVector<ASTEdit, 1> Edits);
 
 /// Generates no edits.
 inline EditGenerator noEdits() { return editList({}); }
@@ -137,11 +138,11 @@ inline EditGenerator noEdits() { return editList({}); }
 /// Generates a single, no-op edit anchored at the start location of the
 /// specified range. A `noopEdit` may be preferred over `noEdits` to associate a
 /// diagnostic `Explanation` with the rule.
-EditGenerator noopEdit(RangeSelector Anchor);
+CLANG_ABI EditGenerator noopEdit(RangeSelector Anchor);
 
 /// Generates a single, no-op edit with the associated note anchored at the
 /// start location of the specified range.
-ASTEdit note(RangeSelector Anchor, TextGenerator Note);
+CLANG_ABI ASTEdit note(RangeSelector Anchor, TextGenerator Note);
 
 /// Version of `ifBound` specialized to `ASTEdit`.
 inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit,
@@ -158,7 +159,7 @@ inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit) {
 
 /// Flattens a list of generators into a single generator whose elements are the
 /// concatenation of the results of the argument generators.
-EditGenerator flattenVector(SmallVector<EditGenerator, 2> Generators);
+CLANG_ABI EditGenerator flattenVector(SmallVector<EditGenerator, 2> Generators);
 
 namespace detail {
 /// Helper function to construct an \c EditGenerator. Overloaded for common
@@ -176,10 +177,10 @@ template <typename... Ts> EditGenerator flatten(Ts &&...Edits) {
 // Every rewrite rule is triggered by a match against some AST node.
 // Transformer guarantees that this ID is bound to the triggering node whenever
 // a rewrite rule is applied.
-extern const char RootID[];
+CLANG_ABI extern const char RootID[];
 
 /// Replaces a portion of the source text with \p Replacement.
-ASTEdit changeTo(RangeSelector Target, TextGenerator Replacement);
+CLANG_ABI ASTEdit changeTo(RangeSelector Target, TextGenerator Replacement);
 /// DEPRECATED: use \c changeTo.
 inline ASTEdit change(RangeSelector Target, TextGenerator Replacement) {
   return changeTo(std::move(Target), std::move(Replacement));
@@ -212,11 +213,11 @@ inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
 }
 
 /// Removes the source selected by \p S.
-ASTEdit remove(RangeSelector S);
+CLANG_ABI ASTEdit remove(RangeSelector S);
 
 /// Adds an include directive for the given header to the file of `Target`. The
 /// particular location specified by `Target` is ignored.
-ASTEdit addInclude(RangeSelector Target, StringRef Header,
+CLANG_ABI ASTEdit addInclude(RangeSelector Target, StringRef Header,
                    IncludeFormat Format = IncludeFormat::Quoted);
 
 /// Adds an include directive for the given header to the file associated with
@@ -302,7 +303,7 @@ using RewriteRule = RewriteRuleWith<void>;
 
 namespace detail {
 
-RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
+CLANG_ABI RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
                      EditGenerator Edits);
 
 template <typename MetadataT>
@@ -316,8 +317,8 @@ RewriteRuleWith<MetadataT> makeRule(ast_matchers::internal::DynTypedMatcher M,
 }
 
 inline EditGenerator makeEditGenerator(EditGenerator Edits) { return Edits; }
-EditGenerator makeEditGenerator(llvm::SmallVector<ASTEdit, 1> Edits);
-EditGenerator makeEditGenerator(ASTEdit Edit);
+CLANG_ABI EditGenerator makeEditGenerator(llvm::SmallVector<ASTEdit, 1> Edits);
+CLANG_ABI EditGenerator makeEditGenerator(ASTEdit Edit);
 
 } // namespace detail
 
@@ -331,7 +332,7 @@ RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
       std::move(M), detail::makeEditGenerator(std::forward<EditsT>(Edits)));
 }
 
-RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
+CLANG_ABI RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
                      std::initializer_list<ASTEdit> Edits);
 /// @}
 
@@ -366,7 +367,7 @@ RewriteRuleWith<MetadataT> makeRule(ast_matchers::internal::DynTypedMatcher M,
 ///   addInclude(R, "path/to/bar_header.h");
 ///   addInclude(R, "vector", IncludeFormat::Angled);
 /// \endcode
-void addInclude(RewriteRuleBase &Rule, llvm::StringRef Header,
+CLANG_ABI void addInclude(RewriteRuleBase &Rule, llvm::StringRef Header,
                 IncludeFormat Format = IncludeFormat::Quoted);
 
 /// Applies the first rule whose pattern matches; other rules are ignored.  If
@@ -423,7 +424,7 @@ applyFirst(ArrayRef<RewriteRuleWith<MetadataT>> Rules) {
 }
 
 template <>
-RewriteRuleWith<void> applyFirst(ArrayRef<RewriteRuleWith<void>> Rules);
+CLANG_ABI RewriteRuleWith<void> applyFirst(ArrayRef<RewriteRuleWith<void>> Rules);
 
 template <typename MetadataT>
 RewriteRuleWith<MetadataT>
@@ -463,7 +464,7 @@ stripMetadata(RewriteRuleWith<MetadataT> Rule) {
 /// ```
 /// Here, we find the function `f`, change its name to `newName` and change all
 /// appearances of `x` in its body to `3`.
-EditGenerator rewriteDescendants(std::string NodeId, RewriteRule Rule);
+CLANG_ABI EditGenerator rewriteDescendants(std::string NodeId, RewriteRule Rule);
 
 /// The following three functions are a low-level part of the RewriteRule
 /// API. We expose them for use in implementing the fixtures that interpret
@@ -489,19 +490,19 @@ namespace detail {
 /// auto Edits = rewriteDescendants(*Node, InlineX, Results);
 /// ```
 /// @{
-llvm::Expected<SmallVector<Edit, 1>>
+CLANG_ABI llvm::Expected<SmallVector<Edit, 1>>
 rewriteDescendants(const Decl &Node, RewriteRule Rule,
                    const ast_matchers::MatchFinder::MatchResult &Result);
 
-llvm::Expected<SmallVector<Edit, 1>>
+CLANG_ABI llvm::Expected<SmallVector<Edit, 1>>
 rewriteDescendants(const Stmt &Node, RewriteRule Rule,
                    const ast_matchers::MatchFinder::MatchResult &Result);
 
-llvm::Expected<SmallVector<Edit, 1>>
+CLANG_ABI llvm::Expected<SmallVector<Edit, 1>>
 rewriteDescendants(const TypeLoc &Node, RewriteRule Rule,
                    const ast_matchers::MatchFinder::MatchResult &Result);
 
-llvm::Expected<SmallVector<Edit, 1>>
+CLANG_ABI llvm::Expected<SmallVector<Edit, 1>>
 rewriteDescendants(const DynTypedNode &Node, RewriteRule Rule,
                    const ast_matchers::MatchFinder::MatchResult &Result);
 /// @}
@@ -510,7 +511,7 @@ rewriteDescendants(const DynTypedNode &Node, RewriteRule Rule,
 /// Only supports Rules whose cases' matchers share the same base "kind"
 /// (`Stmt`, `Decl`, etc.)  Deprecated: use `buildMatchers` instead, which
 /// supports mixing matchers of different kinds.
-ast_matchers::internal::DynTypedMatcher
+CLANG_ABI ast_matchers::internal::DynTypedMatcher
 buildMatcher(const RewriteRuleBase &Rule);
 
 /// Builds a set of matchers that cover the rule.
@@ -520,18 +521,18 @@ buildMatcher(const RewriteRuleBase &Rule);
 /// nodes carry no source location information and are therefore not relevant
 /// for rewriting. If any such matchers are included, will return an empty
 /// vector.
-std::vector<ast_matchers::internal::DynTypedMatcher>
+CLANG_ABI std::vector<ast_matchers::internal::DynTypedMatcher>
 buildMatchers(const RewriteRuleBase &Rule);
 
 /// Gets the beginning location of the source matched by a rewrite rule. If the
 /// match occurs within a macro expansion, returns the beginning of the
 /// expansion point. `Result` must come from the matching of a rewrite rule.
-SourceLocation
+CLANG_ABI SourceLocation
 getRuleMatchLoc(const ast_matchers::MatchFinder::MatchResult &Result);
 
 /// Returns the index of the \c Case of \c Rule that was selected in the match
 /// result. Assumes a matcher built with \c buildMatcher.
-size_t findSelectedCase(const ast_matchers::MatchFinder::MatchResult &Result,
+CLANG_ABI size_t findSelectedCase(const ast_matchers::MatchFinder::MatchResult &Result,
                         const RewriteRuleBase &Rule);
 } // namespace detail
 } // namespace transformer

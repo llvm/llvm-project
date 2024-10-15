@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_XRAYINSTR_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -66,10 +67,10 @@ struct XRayInstrSet {
 };
 
 /// Parses a command line argument into a mask.
-XRayInstrMask parseXRayInstrValue(StringRef Value);
+CLANG_ABI XRayInstrMask parseXRayInstrValue(StringRef Value);
 
 /// Serializes a set into a list of command line arguments.
-void serializeXRayInstrValue(XRayInstrSet Set,
+CLANG_ABI void serializeXRayInstrValue(XRayInstrSet Set,
                              SmallVectorImpl<StringRef> &Values);
 
 } // namespace clang

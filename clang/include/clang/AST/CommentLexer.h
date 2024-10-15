@@ -15,6 +15,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
@@ -52,7 +53,7 @@ enum TokenKind {
 } // end namespace tok
 
 /// Comment token.
-class Token {
+class CLANG_ABI Token {
   friend class Lexer;
   friend class TextTokenRetokenizer;
 
@@ -217,7 +218,7 @@ public:
 };
 
 /// Comment lexer.
-class Lexer {
+class CLANG_ABI Lexer {
 private:
   Lexer(const Lexer &) = delete;
   void operator=(const Lexer &) = delete;

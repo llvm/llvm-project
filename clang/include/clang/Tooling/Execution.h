@@ -27,6 +27,7 @@
 #ifndef LLVM_CLANG_TOOLING_EXECUTION_H
 #define LLVM_CLANG_TOOLING_EXECUTION_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Error.h"
@@ -36,14 +37,14 @@
 namespace clang {
 namespace tooling {
 
-extern llvm::cl::opt<std::string> ExecutorName;
+CLANG_ABI extern llvm::cl::opt<std::string> ExecutorName;
 
 /// An abstraction for the result of a tool execution. For example, the
 /// underlying result can be in-memory or on-disk.
 ///
 /// Results should be string key-value pairs. For example, a refactoring tool
 /// can use source location as key and a replacement in YAML format as value.
-class ToolResults {
+class CLANG_ABI ToolResults {
 public:
   virtual ~ToolResults() = default;
   virtual void addResult(StringRef Key, StringRef Value) = 0;
@@ -56,7 +57,7 @@ public:
 /// Stores the key-value results in memory. It maintains the lifetime of
 /// the result. Clang tools using this class are expected to generate a small
 /// set of different results, or a large set of duplicated results.
-class InMemoryToolResults : public ToolResults {
+class CLANG_ABI InMemoryToolResults : public ToolResults {
 public:
   InMemoryToolResults() : Strings(Arena) {}
   void addResult(StringRef Key, StringRef Value) override;
@@ -74,7 +75,7 @@ private:
 
 /// The context of an execution, including the information about
 /// compilation and results.
-class ExecutionContext {
+class CLANG_ABI ExecutionContext {
 public:
   virtual ~ExecutionContext() {}
 
@@ -108,7 +109,7 @@ private:
 ///  `ToolExecutorPluginRegistry`. CLI tools can use
 ///  `createExecutorFromCommandLineArgs` to create a specific registered
 ///  executor according to the command-line arguments.
-class ToolExecutor {
+class CLANG_ABI ToolExecutor {
 public:
   virtual ~ToolExecutor() {}
 
@@ -148,7 +149,7 @@ public:
 
 /// Interface for factories that create specific executors. This is also
 /// used as a plugin to be registered into ToolExecutorPluginRegistry.
-class ToolExecutorPlugin {
+class CLANG_ABI ToolExecutorPlugin {
 public:
   virtual ~ToolExecutorPlugin() {}
 
@@ -168,13 +169,13 @@ public:
 ///
 /// By default, this creates a `StandaloneToolExecutor` ("standalone") if
 /// `--executor` is not provided.
-llvm::Expected<std::unique_ptr<ToolExecutor>>
+CLANG_ABI llvm::Expected<std::unique_ptr<ToolExecutor>>
 createExecutorFromCommandLineArgs(int &argc, const char **argv,
                                   llvm::cl::OptionCategory &Category,
                                   const char *Overview = nullptr);
 
 namespace internal {
-llvm::Expected<std::unique_ptr<ToolExecutor>>
+CLANG_ABI llvm::Expected<std::unique_ptr<ToolExecutor>>
 createExecutorFromCommandLineArgsImpl(int &argc, const char **argv,
                                       llvm::cl::OptionCategory &Category,
                                       const char *Overview = nullptr);

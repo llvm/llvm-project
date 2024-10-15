@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_APVALUE_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
@@ -41,7 +42,7 @@ template <typename T> class BasicReaderBase;
   class QualType;
 
 /// Symbolic representation of typeid(T) for some type T.
-class TypeInfoLValue {
+class CLANG_ABI TypeInfoLValue {
   const Type *T;
 
 public:
@@ -119,7 +120,7 @@ namespace clang {
 /// APValue - This class implements a discriminated union of [uninitialized]
 /// [APSInt] [APFloat], [Complex APSInt] [Complex APFloat], [Expr + Offset],
 /// [Vector: N * APValue], [Array: N * APValue]
-class APValue {
+class CLANG_ABI APValue {
   typedef llvm::APFixedPoint APFixedPoint;
   typedef llvm::APSInt APSInt;
   typedef llvm::APFloat APFloat;
@@ -143,7 +144,7 @@ public:
     AddrLabelDiff
   };
 
-  class LValueBase {
+  class CLANG_ABI LValueBase {
     typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue,
                                DynamicAllocLValue>
         PtrTy;
@@ -179,11 +180,11 @@ public:
 
     QualType getType() const;
 
-    friend bool operator==(const LValueBase &LHS, const LValueBase &RHS);
+    friend CLANG_ABI bool operator==(const LValueBase &LHS, const LValueBase &RHS);
     friend bool operator!=(const LValueBase &LHS, const LValueBase &RHS) {
       return !(LHS == RHS);
     }
-    friend llvm::hash_code hash_value(const LValueBase &Base);
+    friend CLANG_ABI llvm::hash_code hash_value(const LValueBase &Base);
     friend struct llvm::DenseMapInfo<LValueBase>;
 
   private:
@@ -205,7 +206,7 @@ public:
   typedef llvm::PointerIntPair<const Decl *, 1, bool> BaseOrMemberType;
 
   /// A non-discriminated union of a base, field, or array index.
-  class LValuePathEntry {
+  class CLANG_ABI LValuePathEntry {
     static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
                   "pointer doesn't fit in 64 bits?");
     uint64_t Value;
@@ -237,7 +238,7 @@ public:
       return llvm::hash_value(A.Value);
     }
   };
-  class LValuePathSerializationHelper {
+  class CLANG_ABI LValuePathSerializationHelper {
     const void *Ty;
 
   public:
@@ -274,7 +275,7 @@ private:
     Vec &operator=(const Vec &) = delete;
     ~Vec() { delete[] Elts; }
   };
-  struct Arr {
+  struct CLANG_ABI Arr {
     APValue *Elts;
     unsigned NumElts, ArrSize;
     Arr(unsigned NumElts, unsigned ArrSize);
@@ -282,7 +283,7 @@ private:
     Arr &operator=(const Arr &) = delete;
     ~Arr();
   };
-  struct StructData {
+  struct CLANG_ABI StructData {
     APValue *Elts;
     unsigned NumBases;
     unsigned NumFields;
@@ -291,7 +292,7 @@ private:
     StructData &operator=(const StructData &) = delete;
     ~StructData();
   };
-  struct UnionData {
+  struct CLANG_ABI UnionData {
     const FieldDecl *Field;
     APValue *Value;
     UnionData();
@@ -746,7 +747,7 @@ private:
 } // end namespace clang.
 
 namespace llvm {
-template<> struct DenseMapInfo<clang::APValue::LValueBase> {
+template<> struct CLANG_ABI DenseMapInfo<clang::APValue::LValueBase> {
   static clang::APValue::LValueBase getEmptyKey();
   static clang::APValue::LValueBase getTombstoneKey();
   static unsigned getHashValue(const clang::APValue::LValueBase &Base);

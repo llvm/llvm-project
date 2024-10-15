@@ -19,6 +19,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -113,7 +114,7 @@ public:
 /// -> (A,v) and (D, 0) -> (C, 0) -> (A, v), but since both of them
 /// refer to the same base class subobject of type A (the virtual
 /// one), there is no ambiguity.
-class CXXBasePaths {
+class CLANG_ABI CXXBasePaths {
   friend class CXXRecordDecl;
 
   /// The type from which this search originated.
@@ -266,7 +267,7 @@ struct UniqueVirtualMethod {
 /// overridden virtual function occurs, while the second part of the
 /// pair is the virtual method that overrides it (including the
 /// subobject in which that virtual function occurs).
-class OverridingMethods {
+class CLANG_ABI OverridingMethods {
   using ValuesT = SmallVector<UniqueVirtualMethod, 4>;
   using MapType = llvm::MapVector<unsigned, ValuesT>;
 

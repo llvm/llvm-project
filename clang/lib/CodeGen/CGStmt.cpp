@@ -24,6 +24,7 @@
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -44,7 +45,7 @@ using namespace CodeGen;
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
+CLANG_ABI extern cl::opt<bool> EnableSingleByteCoverage;
 } // namespace llvm
 
 void CodeGenFunction::EmitStopPoint(const Stmt *S) {

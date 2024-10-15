@@ -15,6 +15,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
@@ -62,7 +63,7 @@ class Token;
 /// Note that the PragmaNamespace class can be used to subdivide pragmas, e.g.
 /// we treat "\#pragma STDC" and "\#pragma GCC" as namespaces that contain other
 /// pragmas.
-class PragmaHandler {
+class CLANG_ABI PragmaHandler {
   std::string Name;
 
 public:
@@ -81,7 +82,7 @@ public:
 
 /// EmptyPragmaHandler - A pragma handler which takes no action, which can be
 /// used to ignore particular pragmas.
-class EmptyPragmaHandler : public PragmaHandler {
+class CLANG_ABI EmptyPragmaHandler : public PragmaHandler {
 public:
   explicit EmptyPragmaHandler(StringRef Name = StringRef());
 
@@ -93,7 +94,7 @@ public:
 /// allowing hierarchical pragmas to be defined.  Common examples of namespaces
 /// are "\#pragma GCC", "\#pragma STDC", and "\#pragma omp", but any namespaces
 /// may be (potentially recursively) defined.
-class PragmaNamespace : public PragmaHandler {
+class CLANG_ABI PragmaNamespace : public PragmaHandler {
   /// Handlers - This is a map of the handlers in this namespace with their name
   /// as key.
   llvm::StringMap<std::unique_ptr<PragmaHandler>> Handlers;
@@ -128,7 +129,7 @@ public:
 /// deleting the leading and trailing double-quotes, replacing each escape
 /// sequence \" by a double-quote, and replacing each escape sequence \\ by a
 /// single backslash."
-void prepare_PragmaString(SmallVectorImpl<char> &StrVal);
+CLANG_ABI void prepare_PragmaString(SmallVectorImpl<char> &StrVal);
 
 } // namespace clang
 

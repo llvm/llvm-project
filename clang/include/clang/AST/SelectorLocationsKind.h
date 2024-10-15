@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_SELECTORLOCATIONSKIND_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
   class Selector;
@@ -42,7 +43,7 @@ enum SelectorLocationsKind {
 };
 
 /// Returns true if all \p SelLocs are in a "standard" location.
-SelectorLocationsKind hasStandardSelectorLocs(Selector Sel,
+CLANG_ABI SelectorLocationsKind hasStandardSelectorLocs(Selector Sel,
                                               ArrayRef<SourceLocation> SelLocs,
                                               ArrayRef<Expr *> Args,
                                               SourceLocation EndLoc);
@@ -53,14 +54,14 @@ SelectorLocationsKind hasStandardSelectorLocs(Selector Sel,
 /// \param WithArgSpace if true the standard location is with a space apart
 /// before arguments: "[foo first: 1 second: 2]"
 /// If false: "[foo first:1 second:2]"
-SourceLocation getStandardSelectorLoc(unsigned Index,
+CLANG_ABI SourceLocation getStandardSelectorLoc(unsigned Index,
                                       Selector Sel,
                                       bool WithArgSpace,
                                       ArrayRef<Expr *> Args,
                                       SourceLocation EndLoc);
 
 /// Returns true if all \p SelLocs are in a "standard" location.
-SelectorLocationsKind hasStandardSelectorLocs(Selector Sel,
+CLANG_ABI SelectorLocationsKind hasStandardSelectorLocs(Selector Sel,
                                               ArrayRef<SourceLocation> SelLocs,
                                               ArrayRef<ParmVarDecl *> Args,
                                               SourceLocation EndLoc);
@@ -71,7 +72,7 @@ SelectorLocationsKind hasStandardSelectorLocs(Selector Sel,
 /// \param WithArgSpace if true the standard location is with a space apart
 /// before arguments: "-(id)first: (int)x second: (int)y;"
 /// If false: "-(id)first:(int)x second:(int)y;"
-SourceLocation getStandardSelectorLoc(unsigned Index,
+CLANG_ABI SourceLocation getStandardSelectorLoc(unsigned Index,
                                       Selector Sel,
                                       bool WithArgSpace,
                                       ArrayRef<ParmVarDecl *> Args,

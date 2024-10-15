@@ -18,6 +18,7 @@
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
@@ -43,7 +44,7 @@ class IncrementalExecutor;
 class IncrementalParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
-class IncrementalCompilerBuilder {
+class CLANG_ABI IncrementalCompilerBuilder {
 public:
   IncrementalCompilerBuilder() {}
 
@@ -82,7 +83,7 @@ class IncrementalAction;
 class InProcessPrintingASTConsumer;
 
 /// Provides top-level interfaces for incremental compilation and execution.
-class Interpreter {
+class CLANG_ABI Interpreter {
   friend class Value;
   friend InProcessPrintingASTConsumer;
 

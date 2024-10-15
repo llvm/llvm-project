@@ -20,6 +20,7 @@
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include <optional>
 #include <type_traits>
@@ -33,7 +34,7 @@ class DiagnosticsEngine;
 class LangOptions;
 class Sema;
 
-class SemaBase {
+class CLANG_ABI SemaBase {
 public:
   SemaBase(Sema &S);
 
@@ -52,7 +53,7 @@ public:
   /// does) and, if the diagnostic comes from inside a template
   /// instantiation, printing the template instantiation stack as
   /// well.
-  class ImmediateDiagBuilder : public DiagnosticBuilder {
+  class CLANG_ABI ImmediateDiagBuilder : public DiagnosticBuilder {
     Sema &SemaRef;
     unsigned DiagID;
 
@@ -107,7 +108,7 @@ public:
   /// diagnostic, or no diagnostic at all, according to an argument you pass to
   /// its constructor, thus simplifying the process of creating these "maybe
   /// deferred" diagnostics.
-  class SemaDiagnosticBuilder {
+  class CLANG_ABI SemaDiagnosticBuilder {
   public:
     enum Kind {
       /// Emit no diagnostics.
@@ -174,7 +175,7 @@ public:
       return *this;
     }
 
-    friend const SemaDiagnosticBuilder &
+    friend CLANG_ABI const SemaDiagnosticBuilder &
     operator<<(const SemaDiagnosticBuilder &Diag, const PartialDiagnostic &PD);
 
     void AddFixItHint(const FixItHint &Hint) const;

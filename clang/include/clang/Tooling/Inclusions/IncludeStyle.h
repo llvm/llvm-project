@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_INCLUSIONS_INCLUDESTYLE_H
 #define LLVM_CLANG_TOOLING_INCLUSIONS_INCLUDESTYLE_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <string>
 #include <vector>
@@ -177,20 +178,20 @@ namespace llvm {
 namespace yaml {
 
 template <>
-struct MappingTraits<clang::tooling::IncludeStyle::IncludeCategory> {
+struct CLANG_ABI MappingTraits<clang::tooling::IncludeStyle::IncludeCategory> {
   static void mapping(IO &IO,
                       clang::tooling::IncludeStyle::IncludeCategory &Category);
 };
 
 template <>
-struct ScalarEnumerationTraits<
+struct CLANG_ABI ScalarEnumerationTraits<
     clang::tooling::IncludeStyle::IncludeBlocksStyle> {
   static void
   enumeration(IO &IO, clang::tooling::IncludeStyle::IncludeBlocksStyle &Value);
 };
 
 template <>
-struct ScalarEnumerationTraits<
+struct CLANG_ABI ScalarEnumerationTraits<
     clang::tooling::IncludeStyle::MainIncludeCharDiscriminator> {
   static void enumeration(
       IO &IO,

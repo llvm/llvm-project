@@ -16,13 +16,14 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/InstallAPI/HeaderFile.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace clang {
 namespace installapi {
 
-class FileListReader {
+class CLANG_ABI FileListReader {
 public:
   /// Decode JSON input and append header input into destination container.
   /// Headers are loaded in the order they appear in the JSON input.

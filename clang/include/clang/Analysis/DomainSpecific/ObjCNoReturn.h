@@ -15,13 +15,14 @@
 #define LLVM_CLANG_ANALYSIS_DOMAINSPECIFIC_OBJCNORETURN_H
 
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
 class ASTContext;
 class ObjCMessageExpr;
 
-class ObjCNoReturn {
+class CLANG_ABI ObjCNoReturn {
   /// Cached "raise" selector.
   Selector RaiseSel;
 

@@ -13,6 +13,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Edit/FileOffset.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -32,7 +33,7 @@ namespace edit {
 class Commit;
 class EditsReceiver;
 
-class EditedSource {
+class CLANG_ABI EditedSource {
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
   const PPConditionalDirectiveRecord *PPRec;

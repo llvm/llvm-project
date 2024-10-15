@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_EDIT_REWRITERS_H
 #define LLVM_CLANG_EDIT_REWRITERS_H
 
+#include "clang/Support/Compiler.h"
 namespace clang {
   class ObjCMessageExpr;
   class ObjCMethodDecl;
@@ -22,14 +23,14 @@ namespace clang {
 namespace edit {
   class Commit;
 
-bool rewriteObjCRedundantCallWithLiteral(const ObjCMessageExpr *Msg,
+CLANG_ABI bool rewriteObjCRedundantCallWithLiteral(const ObjCMessageExpr *Msg,
                                          const NSAPI &NS, Commit &commit);
 
-bool rewriteToObjCLiteralSyntax(const ObjCMessageExpr *Msg,
+CLANG_ABI bool rewriteToObjCLiteralSyntax(const ObjCMessageExpr *Msg,
                                 const NSAPI &NS, Commit &commit,
                                 const ParentMap *PMap);
 
-bool rewriteToObjCSubscriptSyntax(const ObjCMessageExpr *Msg,
+CLANG_ABI bool rewriteToObjCSubscriptSyntax(const ObjCMessageExpr *Msg,
                                   const NSAPI &NS, Commit &commit);
 
 }

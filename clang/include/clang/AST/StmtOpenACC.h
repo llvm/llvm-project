@@ -17,6 +17,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 
 namespace clang {
@@ -126,7 +127,7 @@ class OpenACCLoopConstruct;
 /// those three, as they are semantically identical, and have only minor
 /// differences in the permitted list of clauses, which can be differentiated by
 /// the 'Kind'.
-class OpenACCComputeConstruct final
+class CLANG_ABI OpenACCComputeConstruct final
     : public OpenACCAssociatedStmtConstruct,
       public llvm::TrailingObjects<OpenACCComputeConstruct,
                                    const OpenACCClause *> {
@@ -194,7 +195,7 @@ public:
 /// This class represents a 'loop' construct.  The 'loop' construct applies to a
 /// 'for' loop (or range-for loop), and is optionally associated with a Compute
 /// Construct.
-class OpenACCLoopConstruct final
+class CLANG_ABI OpenACCLoopConstruct final
     : public OpenACCAssociatedStmtConstruct,
       public llvm::TrailingObjects<OpenACCLoopConstruct,
                                    const OpenACCClause *> {

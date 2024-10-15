@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -257,9 +258,9 @@ class Sema;
     ICR_HLSL_Dimension_Reduction_Conversion,
   };
 
-  ImplicitConversionRank GetConversionRank(ImplicitConversionKind Kind);
+  CLANG_ABI ImplicitConversionRank GetConversionRank(ImplicitConversionKind Kind);
 
-  ImplicitConversionRank
+  CLANG_ABI ImplicitConversionRank
   GetDimensionConversionRank(ImplicitConversionRank Base,
                              ImplicitConversionKind Dimension);
 
@@ -289,7 +290,7 @@ class Sema;
   /// contains between zero and three conversions. If a particular
   /// conversion is not needed, it will be set to the identity conversion
   /// (ICK_Identity).
-  class StandardConversionSequence {
+  class CLANG_ABI StandardConversionSequence {
   public:
     /// First -- The first conversion can be an lvalue-to-rvalue
     /// conversion, array-to-pointer conversion, or
@@ -419,7 +420,7 @@ class Sema;
 
   /// UserDefinedConversionSequence - Represents a user-defined
   /// conversion sequence (C++ 13.3.3.1.2).
-  struct UserDefinedConversionSequence {
+  struct CLANG_ABI UserDefinedConversionSequence {
     /// Represents the standard conversion that occurs before
     /// the actual user-defined conversion.
     ///
@@ -464,7 +465,7 @@ class Sema;
   };
 
   /// Represents an ambiguous user-defined conversion sequence.
-  struct AmbiguousConversionSequence {
+  struct CLANG_ABI AmbiguousConversionSequence {
     using ConversionSet =
         SmallVector<std::pair<NamedDecl *, FunctionDecl *>, 4>;
 
@@ -564,7 +565,7 @@ class Sema;
   /// sequence, which may be a standard conversion sequence
   /// (C++ 13.3.3.1.1), user-defined conversion sequence (C++ 13.3.3.1.2),
   /// or an ellipsis conversion sequence (C++ 13.3.3.1.3).
-  class ImplicitConversionSequence {
+  class CLANG_ABI ImplicitConversionSequence {
   public:
     /// Kind - The kind of implicit conversion sequence. BadConversion
     /// specifies that there is no conversion from the source type to
@@ -869,7 +870,7 @@ class Sema;
       llvm::MutableArrayRef<ImplicitConversionSequence>;
 
   /// OverloadCandidate - A single candidate in an overload set (C++ 13.3).
-  struct OverloadCandidate {
+  struct CLANG_ABI OverloadCandidate {
     /// Function - The actual function that this candidate
     /// represents. When NULL, this is a built-in candidate
     /// (C++ [over.oper]) or a surrogate for a conversion to a
@@ -1005,7 +1006,7 @@ class Sema;
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++
   /// overload resolution (C++ 13.3).
-  class OverloadCandidateSet {
+  class CLANG_ABI OverloadCandidateSet {
   public:
     enum CandidateSetKind {
       /// Normal lookup.
@@ -1035,7 +1036,7 @@ class Sema;
 
     /// Information about operator rewrites to consider when adding operator
     /// functions to a candidate set.
-    struct OperatorRewriteInfo {
+    struct CLANG_ABI OperatorRewriteInfo {
       OperatorRewriteInfo()
           : OriginalOperator(OO_None), OpLoc(), AllowRewrittenCandidates(false) {}
       OperatorRewriteInfo(OverloadedOperatorKind Op, SourceLocation OpLoc,
@@ -1254,7 +1255,7 @@ class Sema;
 
   };
 
-  bool isBetterOverloadCandidate(Sema &S,
+  CLANG_ABI bool isBetterOverloadCandidate(Sema &S,
                                  const OverloadCandidate &Cand1,
                                  const OverloadCandidate &Cand2,
                                  SourceLocation Loc,
@@ -1298,7 +1299,7 @@ class Sema;
   // type of the next argument (that the user is typing) will be, this is as
   // good candidate as we can get, despite the fact that it takes one less
   // parameter.
-  bool shouldEnforceArgLimit(bool PartialOverloading, FunctionDecl *Function);
+  CLANG_ABI bool shouldEnforceArgLimit(bool PartialOverloading, FunctionDecl *Function);
 
 } // namespace clang
 

@@ -16,6 +16,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/InstallAPI/MachO.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -49,7 +50,7 @@ inline StringRef getName(const HeaderType T) {
   llvm_unreachable("unexpected header type");
 }
 
-class HeaderFile {
+class CLANG_ABI HeaderFile {
   /// Full input path to header.
   std::string FullPath;
   /// Access level of header.
@@ -113,7 +114,7 @@ public:
 };
 
 /// Glob that represents a pattern of header files to retreive.
-class HeaderGlob {
+class CLANG_ABI HeaderGlob {
 private:
   std::string GlobString;
   llvm::Regex Rule;
@@ -146,20 +147,20 @@ public:
 ///
 /// \param FullPath Path to the header file which includes the library
 /// structure.
-std::optional<std::string> createIncludeHeaderName(const StringRef FullPath);
+CLANG_ABI std::optional<std::string> createIncludeHeaderName(const StringRef FullPath);
 using HeaderSeq = std::vector<HeaderFile>;
 
 /// Determine if Path is a header file.
 /// It does not touch the file system.
 ///
 /// \param  Path File path to file.
-bool isHeaderFile(StringRef Path);
+CLANG_ABI bool isHeaderFile(StringRef Path);
 
 /// Given input directory, collect all header files.
 ///
 /// \param FM FileManager for finding input files.
 /// \param Directory Path to directory file.
-llvm::Expected<PathSeq> enumerateFiles(clang::FileManager &FM,
+CLANG_ABI llvm::Expected<PathSeq> enumerateFiles(clang::FileManager &FM,
                                        StringRef Directory);
 
 } // namespace clang::installapi

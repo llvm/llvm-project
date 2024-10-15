@@ -18,6 +18,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,7 +33,7 @@ struct PrintingPolicy;
 
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.
-class ConstraintSatisfaction : public llvm::FoldingSetNode {
+class CLANG_ABI ConstraintSatisfaction : public llvm::FoldingSetNode {
   // The template-like entity that 'owns' the constraint checked here (can be a
   // constrained entity or a concept).
   const NamedDecl *ConstraintOwner = nullptr;
@@ -84,7 +85,7 @@ using UnsatisfiedConstraintRecord =
 /// necessary information to diagnose an unsatisfied constraint.
 ///
 /// This is safe to store in an AST node, as opposed to ConstraintSatisfaction.
-struct ASTConstraintSatisfaction final :
+struct CLANG_ABI ASTConstraintSatisfaction final :
     llvm::TrailingObjects<ASTConstraintSatisfaction,
                           UnsatisfiedConstraintRecord> {
   std::size_t NumRecords;
@@ -121,7 +122,7 @@ struct ASTConstraintSatisfaction final :
 ///
 ///   template <std::derives_from<Expr> T> void dump();
 ///             ~~~~~~~~~~~~~~~~~~~~~~~ (in TemplateTypeParmDecl)
-class ConceptReference {
+class CLANG_ABI ConceptReference {
   // \brief The optional nested name specifier used when naming the concept.
   NestedNameSpecifierLoc NestedNameSpec;
 

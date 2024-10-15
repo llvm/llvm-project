@@ -22,6 +22,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/AlignOf.h"
 
@@ -48,7 +49,7 @@ enum TraversalKind {
 /// It can be constructed from any node kind and allows for runtime type
 /// hierarchy checks.
 /// Use getFromNodeKind<T>() to construct them.
-class ASTNodeKind {
+class CLANG_ABI ASTNodeKind {
 public:
   /// Empty identifier. It matches nothing.
   constexpr ASTNodeKind() : KindId(NKI_None) {}
@@ -254,7 +255,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, ASTNodeKind K) {
 /// See \c ASTNodeKind for which node base types are currently supported;
 /// You can create DynTypedNodes for all nodes in the inheritance hierarchy of
 /// the supported base types.
-class DynTypedNode {
+class CLANG_ABI DynTypedNode {
 public:
   /// Creates a \c DynTypedNode from \c Node.
   template <typename T>

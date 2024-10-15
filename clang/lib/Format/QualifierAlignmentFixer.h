@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_FORMAT_QUALIFIERALIGNMENTFIXER_H
 
 #include "TokenAnalyzer.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace format {
@@ -24,24 +25,24 @@ typedef std::function<std::pair<tooling::Replacements, unsigned>(
     const Environment &)>
     AnalyzerPass;
 
-void addQualifierAlignmentFixerPasses(const FormatStyle &Style,
+CLANG_ABI void addQualifierAlignmentFixerPasses(const FormatStyle &Style,
                                       SmallVectorImpl<AnalyzerPass> &Passes);
 
-void prepareLeftRightOrderingForQualifierAlignmentFixer(
+CLANG_ABI void prepareLeftRightOrderingForQualifierAlignmentFixer(
     const std::vector<std::string> &Order, std::vector<std::string> &LeftOrder,
     std::vector<std::string> &RightOrder,
     std::vector<tok::TokenKind> &Qualifiers);
 
 // Is the Token a simple or qualifier type
-bool isQualifierOrType(const FormatToken *Tok, const LangOptions &LangOpts);
-bool isConfiguredQualifierOrType(const FormatToken *Tok,
+CLANG_ABI bool isQualifierOrType(const FormatToken *Tok, const LangOptions &LangOpts);
+CLANG_ABI bool isConfiguredQualifierOrType(const FormatToken *Tok,
                                  const std::vector<tok::TokenKind> &Qualifiers,
                                  const LangOptions &LangOpts);
 
 // Is the Token likely a Macro
-bool isPossibleMacro(const FormatToken *Tok);
+CLANG_ABI bool isPossibleMacro(const FormatToken *Tok);
 
-class LeftRightQualifierAlignmentFixer : public TokenAnalyzer {
+class CLANG_ABI LeftRightQualifierAlignmentFixer : public TokenAnalyzer {
   std::string Qualifier;
   bool RightAlign;
   SmallVector<tok::TokenKind, 8> QualifierTokens;

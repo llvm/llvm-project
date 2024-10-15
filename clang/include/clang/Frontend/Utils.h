@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
@@ -47,20 +48,20 @@ class CodeGenOptions;
 
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
-void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
+CLANG_ABI void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
                             const PCHContainerReader &PCHContainerRdr,
                             const FrontendOptions &FEOpts,
                             const CodeGenOptions &CodeGenOpts);
 
 /// DoPrintPreprocessedInput - Implement -E mode.
-void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
+CLANG_ABI void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
                               const PreprocessorOutputOptions &Opts);
 
 /// An interface for collecting the dependencies of a compilation. Users should
 /// use \c attachToPreprocessor and \c attachToASTReader to get all of the
 /// dependencies.
 /// FIXME: Migrate DependencyGraphGen to use this interface.
-class DependencyCollector {
+class CLANG_ABI DependencyCollector {
 public:
   virtual ~DependencyCollector();
 
@@ -101,7 +102,7 @@ private:
 /// ASTReader (for module imports), and writes it out at the end of processing
 /// a source file.  Users should attach to the ast reader whenever a module is
 /// loaded.
-class DependencyFileGenerator : public DependencyCollector {
+class CLANG_ABI DependencyFileGenerator : public DependencyCollector {
 public:
   DependencyFileGenerator(const DependencyOutputOptions &Opts);
 
@@ -133,7 +134,7 @@ private:
 
 /// Collects the dependencies for imported modules into a directory.  Users
 /// should attach to the AST reader whenever a module is loaded.
-class ModuleDependencyCollector : public DependencyCollector {
+class CLANG_ABI ModuleDependencyCollector : public DependencyCollector {
   std::string DestDir;
   bool HasErrors = false;
   llvm::StringSet<> Seen;
@@ -164,7 +165,7 @@ public:
 
 /// AttachDependencyGraphGen - Create a dependency graph generator, and attach
 /// it to the given preprocessor.
-void AttachDependencyGraphGen(Preprocessor &PP, StringRef OutputFile,
+CLANG_ABI void AttachDependencyGraphGen(Preprocessor &PP, StringRef OutputFile,
                               StringRef SysRoot);
 
 /// AttachHeaderIncludeGen - Create a header include list generator, and attach
@@ -179,7 +180,7 @@ void AttachDependencyGraphGen(Preprocessor &PP, StringRef OutputFile,
 /// information to, instead of writing to stderr.
 /// \param ShowDepth - Whether to indent to show the nesting of the includes.
 /// \param MSStyle - Whether to print in cl.exe /showIncludes style.
-void AttachHeaderIncludeGen(Preprocessor &PP,
+CLANG_ABI void AttachHeaderIncludeGen(Preprocessor &PP,
                             const DependencyOutputOptions &DepOpts,
                             bool ShowAllHeaders = false,
                             StringRef OutputPath = {},
@@ -187,7 +188,7 @@ void AttachHeaderIncludeGen(Preprocessor &PP,
 
 /// The ChainedIncludesSource class converts headers to chained PCHs in
 /// memory, mainly for testing.
-IntrusiveRefCntPtr<ExternalSemaSource>
+CLANG_ABI IntrusiveRefCntPtr<ExternalSemaSource>
 createChainedIncludesSource(CompilerInstance &CI,
                             IntrusiveRefCntPtr<ExternalSemaSource> &Reader);
 
@@ -232,7 +233,7 @@ struct CreateInvocationOptions {
 ///
 /// May return nullptr if an invocation could not be determined.
 /// See CreateInvocationOptions::ShouldRecoverOnErrors to try harder!
-std::unique_ptr<CompilerInvocation>
+CLANG_ABI std::unique_ptr<CompilerInvocation>
 createInvocation(ArrayRef<const char *> Args,
                  CreateInvocationOptions Opts = {});
 

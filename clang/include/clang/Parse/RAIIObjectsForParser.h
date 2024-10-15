@@ -19,6 +19,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
   // TODO: move ParsingClassDefinition here.
@@ -417,7 +418,7 @@ namespace clang {
 
   /// RAII class that helps handle the parsing of an open/close delimiter
   /// pair, such as braces { ... } or parentheses ( ... ).
-  class BalancedDelimiterTracker : public GreaterThanIsOperatorScope {
+  class CLANG_ABI BalancedDelimiterTracker : public GreaterThanIsOperatorScope {
     Parser& P;
     tok::TokenKind Kind, Close, FinalToken;
     SourceLocation (Parser::*Consumer)();

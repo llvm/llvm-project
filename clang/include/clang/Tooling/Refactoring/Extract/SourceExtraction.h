@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_EXTRACT_SOURCEEXTRACTION_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -21,7 +22,7 @@ class Stmt;
 namespace tooling {
 
 /// Determines which semicolons should be inserted during extraction.
-class ExtractionSemicolonPolicy {
+class CLANG_ABI ExtractionSemicolonPolicy {
 public:
   bool isNeededInExtractedFunction() const {
     return IsNeededInExtractedFunction;

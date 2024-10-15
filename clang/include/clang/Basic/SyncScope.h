@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_SYNCSCOPE_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
@@ -95,7 +96,7 @@ inline llvm::StringRef getAsString(SyncScope S) {
 enum class AtomicScopeModelKind { None, OpenCL, HIP, Generic };
 
 /// Defines the interface for synch scope model.
-class AtomicScopeModel {
+class CLANG_ABI AtomicScopeModel {
 public:
   virtual ~AtomicScopeModel() {}
   /// Maps language specific synch scope values to internal

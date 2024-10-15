@@ -10,6 +10,7 @@
 #define LLVM_CLANG_CIR_CIRGENACTION_H
 
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Support/Compiler.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
@@ -22,7 +23,7 @@ class ModuleOp;
 namespace cir {
 class CIRGenConsumer;
 
-class CIRGenAction : public clang::ASTFrontendAction {
+class CLANG_ABI CIRGenAction : public clang::ASTFrontendAction {
 public:
   enum class OutputType {
     EmitCIR,
@@ -48,7 +49,7 @@ public:
   OutputType Action;
 };
 
-class EmitCIRAction : public CIRGenAction {
+class CLANG_ABI EmitCIRAction : public CIRGenAction {
   virtual void anchor();
 
 public:

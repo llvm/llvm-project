@@ -14,14 +14,15 @@
 #ifndef LLVM_CLANG_SEMA_TEMPLATEDEDUCTION_H
 #define LLVM_CLANG_SEMA_TEMPLATEDEDUCTION_H
 
-#include "clang/Sema/Ownership.h"
-#include "clang/Sema/SemaConcept.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/DeclAccessPair.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaConcept.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <cstddef>
@@ -256,7 +257,7 @@ public:
 
 /// A structure used to record information about a failed
 /// template argument deduction, for diagnosis.
-struct DeductionFailureInfo {
+struct CLANG_ABI DeductionFailureInfo {
   /// A Sema::TemplateDeductionResult.
   unsigned Result : 8;
 
@@ -309,7 +310,7 @@ struct DeductionFailureInfo {
 /// For now, assume that the candidates are non-matching specializations.
 /// TODO: In the future, we may need to unify/generalize this with
 /// OverloadCandidate.
-struct TemplateSpecCandidate {
+struct CLANG_ABI TemplateSpecCandidate {
   /// The declaration that was looked up, together with its access.
   /// Might be a UsingShadowDecl, but usually a FunctionTemplateDecl.
   DeclAccessPair FoundDecl;
@@ -335,7 +336,7 @@ struct TemplateSpecCandidate {
 /// used in template specializations.
 /// TODO: In the future, we may need to unify/generalize this with
 /// OverloadCandidateSet.
-class TemplateSpecCandidateSet {
+class CLANG_ABI TemplateSpecCandidateSet {
   SmallVector<TemplateSpecCandidate, 16> Candidates;
   SourceLocation Loc;
 

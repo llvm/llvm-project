@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_IDENTIFIERRESOLVER_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <cstddef>
@@ -35,12 +36,12 @@ class Scope;
 /// IdentifierResolver - Keeps track of shadowed decls on enclosing
 /// scopes.  It manages the shadowing chains of declaration names and
 /// implements efficient decl lookup based on a declaration name.
-class IdentifierResolver {
+class CLANG_ABI IdentifierResolver {
   /// IdDeclInfo - Keeps track of information about decls associated
   /// to a particular declaration name. IdDeclInfos are lazily
   /// constructed and assigned to a declaration name the first time a
   /// decl with that declaration name is shadowed in some scope.
-  class IdDeclInfo {
+  class CLANG_ABI IdDeclInfo {
   public:
     using DeclsTy = SmallVector<NamedDecl *, 2>;
 
@@ -66,7 +67,7 @@ public:
   /// iterator - Iterate over the decls of a specified declaration name.
   /// It will walk or not the parent declaration contexts depending on how
   /// it was instantiated.
-  class iterator {
+  class CLANG_ABI iterator {
   public:
     friend class IdentifierResolver;
 

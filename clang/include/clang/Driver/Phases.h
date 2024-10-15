@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DRIVER_PHASES_H
 #define LLVM_CLANG_DRIVER_PHASES_H
 
+#include "clang/Support/Compiler.h"
 namespace clang {
 namespace driver {
 namespace phases {
@@ -28,7 +29,7 @@ namespace phases {
     MaxNumberOfPhases = IfsMerge + 1
   };
 
-  const char *getPhaseName(ID Id);
+  CLANG_ABI const char *getPhaseName(ID Id);
 
 } // end namespace phases
 } // end namespace driver

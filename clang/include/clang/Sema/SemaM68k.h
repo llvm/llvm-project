@@ -15,11 +15,12 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class ParsedAttr;
 
-class SemaM68k : public SemaBase {
+class CLANG_ABI SemaM68k : public SemaBase {
 public:
   SemaM68k(Sema &S);
 

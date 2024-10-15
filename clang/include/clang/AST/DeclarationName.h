@@ -19,6 +19,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -141,7 +142,7 @@ public:
 /// selectors, which make up 78% percent of all selectors in Cocoa.h),
 /// special C++ names for constructors, destructors, and conversion functions,
 /// and C++ overloaded operators.
-class DeclarationName {
+class CLANG_ABI DeclarationName {
   friend class DeclarationNameTable;
   friend class NamedDecl;
 
@@ -543,7 +544,7 @@ public:
   void dump() const;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, DeclarationName N);
+CLANG_ABI raw_ostream &operator<<(raw_ostream &OS, DeclarationName N);
 
 /// Ordering on two declaration names. If both names are identifiers,
 /// this provides a lexicographical ordering.
@@ -574,7 +575,7 @@ inline bool operator>=(DeclarationName LHS, DeclarationName RHS) {
 /// identifiers, C++ constructor names, etc. This class contains
 /// uniqued versions of each of the C++ special names, which can be
 /// retrieved using its member functions (e.g., getCXXConstructorName).
-class DeclarationNameTable {
+class CLANG_ABI DeclarationNameTable {
   /// Used to allocate elements in the FoldingSets below.
   const ASTContext &Ctx;
 
@@ -657,7 +658,7 @@ public:
 /// DeclarationNameLoc - Additional source/type location info
 /// for a declaration name. Needs a DeclarationName in order
 /// to be interpreted correctly.
-class DeclarationNameLoc {
+class CLANG_ABI DeclarationNameLoc {
   // The source location for identifier stored elsewhere.
   // struct {} Identifier;
 
@@ -765,7 +766,7 @@ public:
 
 /// DeclarationNameInfo - A collector data type for bundling together
 /// a DeclarationName and the corresponding source/type location info.
-struct DeclarationNameInfo {
+struct CLANG_ABI DeclarationNameInfo {
 private:
   /// Name - The declaration name, also encoding name kind.
   DeclarationName Name;
@@ -892,7 +893,7 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
   return PD;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, DeclarationNameInfo DNInfo);
+CLANG_ABI raw_ostream &operator<<(raw_ostream &OS, DeclarationNameInfo DNInfo);
 
 } // namespace clang
 

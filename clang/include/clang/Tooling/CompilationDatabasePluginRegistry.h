@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_COMPILATIONDATABASEPLUGINREGISTRY_H
 #define LLVM_CLANG_TOOLING_COMPILATIONDATABASEPLUGINREGISTRY_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/Registry.h"
 
@@ -25,7 +26,7 @@ namespace tooling {
 /// static CompilationDatabasePluginRegistry::Add<MyDatabasePlugin>
 /// X("my-compilation-database", "Reads my own compilation database");
 /// \endcode
-class CompilationDatabasePlugin {
+class CLANG_ABI CompilationDatabasePlugin {
 public:
   virtual ~CompilationDatabasePlugin();
 

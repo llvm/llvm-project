@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LEX_TOKENCONCATENATION_H
 
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
   class Preprocessor;
@@ -27,7 +28,7 @@ namespace clang {
   /// other would cause the lexer to produce one "foobar" token.  Emitting "1"
   /// and ")" next to each other is safe.
   ///
-  class TokenConcatenation {
+  class CLANG_ABI TokenConcatenation {
     const Preprocessor &PP;
 
     enum AvoidConcatInfo {

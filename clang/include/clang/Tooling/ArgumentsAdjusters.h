@@ -17,6 +17,7 @@
 #define LLVM_CLANG_TOOLING_ARGUMENTSADJUSTERS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <string>
@@ -37,36 +38,36 @@ using ArgumentsAdjuster = std::function<CommandLineArguments(
 
 /// Gets an argument adjuster that converts input command line arguments
 /// to the "syntax check only" variant.
-ArgumentsAdjuster getClangSyntaxOnlyAdjuster();
+CLANG_ABI ArgumentsAdjuster getClangSyntaxOnlyAdjuster();
 
 /// Gets an argument adjuster which removes output-related command line
 /// arguments.
-ArgumentsAdjuster getClangStripOutputAdjuster();
+CLANG_ABI ArgumentsAdjuster getClangStripOutputAdjuster();
 
 /// Gets an argument adjuster which removes dependency-file
 /// related command line arguments.
-ArgumentsAdjuster getClangStripDependencyFileAdjuster();
+CLANG_ABI ArgumentsAdjuster getClangStripDependencyFileAdjuster();
 
 enum class ArgumentInsertPosition { BEGIN, END };
 
 /// Gets an argument adjuster which inserts \p Extra arguments in the
 /// specified position.
-ArgumentsAdjuster getInsertArgumentAdjuster(const CommandLineArguments &Extra,
+CLANG_ABI ArgumentsAdjuster getInsertArgumentAdjuster(const CommandLineArguments &Extra,
                                             ArgumentInsertPosition Pos);
 
 /// Gets an argument adjuster which inserts an \p Extra argument in the
 /// specified position.
-ArgumentsAdjuster getInsertArgumentAdjuster(
+CLANG_ABI ArgumentsAdjuster getInsertArgumentAdjuster(
     const char *Extra,
     ArgumentInsertPosition Pos = ArgumentInsertPosition::END);
 
 /// Gets an argument adjuster which strips plugin related command line
 /// arguments.
-ArgumentsAdjuster getStripPluginsAdjuster();
+CLANG_ABI ArgumentsAdjuster getStripPluginsAdjuster();
 
 /// Gets an argument adjuster which adjusts the arguments in sequence
 /// with the \p First adjuster and then with the \p Second one.
-ArgumentsAdjuster combineAdjusters(ArgumentsAdjuster First,
+CLANG_ABI ArgumentsAdjuster combineAdjusters(ArgumentsAdjuster First,
                                    ArgumentsAdjuster Second);
 
 } // namespace tooling

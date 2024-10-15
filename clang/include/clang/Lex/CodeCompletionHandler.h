@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LEX_CODECOMPLETIONHANDLER_H
 #define LLVM_CLANG_LEX_CODECOMPLETIONHANDLER_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -22,7 +23,7 @@ class MacroInfo;
 
 /// Callback handler that receives notifications when performing code
 /// completion within the preprocessor.
-class CodeCompletionHandler {
+class CLANG_ABI CodeCompletionHandler {
 public:
   virtual ~CodeCompletionHandler();
 

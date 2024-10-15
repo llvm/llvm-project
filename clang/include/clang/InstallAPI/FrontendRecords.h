@@ -13,6 +13,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/MachO.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace installapi {
@@ -27,7 +28,7 @@ struct FrontendAttrs {
 
 // Represents a collection of frontend records for a library that are tied to a
 // darwin target triple.
-class FrontendRecordsSlice : public llvm::MachO::RecordsSlice {
+class CLANG_ABI FrontendRecordsSlice : public llvm::MachO::RecordsSlice {
 public:
   FrontendRecordsSlice(const llvm::Triple &T)
       : llvm::MachO::RecordsSlice({T}) {}

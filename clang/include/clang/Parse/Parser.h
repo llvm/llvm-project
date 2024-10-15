@@ -21,6 +21,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -55,7 +56,7 @@ namespace clang {
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
 ///
-class Parser : public CodeCompletionHandler {
+class CLANG_ABI Parser : public CodeCompletionHandler {
   friend class ColonProtectionRAIIObject;
   friend class ParsingOpenMPDirectiveRAII;
   friend class ParsingOpenACCDirectiveRAII;
@@ -1240,7 +1241,7 @@ public:
 
 private:
   /// RAII object used to modify the scope flags for the current scope.
-  class ParseScopeFlags {
+  class CLANG_ABI ParseScopeFlags {
     Scope *CurScope;
     unsigned OldFlags = 0;
     ParseScopeFlags(const ParseScopeFlags &) = delete;
@@ -1331,7 +1332,7 @@ private:
   /// (including such things in nested classes)."
   /// LateParsedDeclarations build the tree of those elements so they can
   /// be parsed after parsing the top-level class.
-  class LateParsedDeclaration {
+  class CLANG_ABI LateParsedDeclaration {
   public:
     virtual ~LateParsedDeclaration();
 
@@ -1344,7 +1345,7 @@ private:
 
   /// Inner node of the LateParsedDeclaration tree that parses
   /// all its members recursively.
-  class LateParsedClass : public LateParsedDeclaration {
+  class CLANG_ABI LateParsedClass : public LateParsedDeclaration {
   public:
     LateParsedClass(Parser *P, ParsingClass *C);
     ~LateParsedClass() override;
@@ -1370,7 +1371,7 @@ private:
   /// member declarations.
   /// FIXME: Perhaps we should change the name of LateParsedDeclaration to
   /// LateParsedTokens.
-  struct LateParsedAttribute : public LateParsedDeclaration {
+  struct CLANG_ABI LateParsedAttribute : public LateParsedDeclaration {
     Parser *Self;
     CachedTokens Toks;
     IdentifierInfo &AttrName;
@@ -1391,7 +1392,7 @@ private:
   /// may reference member variables and so need to be parsed at the
   /// end of the class declaration after parsing all other member
   /// member declarations.
-  class LateParsedPragma : public LateParsedDeclaration {
+  class CLANG_ABI LateParsedPragma : public LateParsedDeclaration {
     Parser *Self = nullptr;
     AccessSpecifier AS = AS_none;
     CachedTokens Toks;
@@ -1430,7 +1431,7 @@ private:
   /// Contains the lexed tokens of a member function definition
   /// which needs to be parsed at the end of the class declaration
   /// after parsing all other member declarations.
-  struct LexedMethod : public LateParsedDeclaration {
+  struct CLANG_ABI LexedMethod : public LateParsedDeclaration {
     Parser *Self;
     Decl *D;
     CachedTokens Toks;
@@ -1463,7 +1464,7 @@ private:
   /// contains at least one entity whose parsing needs to be delayed
   /// until the class itself is completely-defined, such as a default
   /// argument (C++ [class.mem]p2).
-  struct LateParsedMethodDeclaration : public LateParsedDeclaration {
+  struct CLANG_ABI LateParsedMethodDeclaration : public LateParsedDeclaration {
     explicit LateParsedMethodDeclaration(Parser *P, Decl *M)
         : Self(P), Method(M), ExceptionSpecTokens(nullptr) {}
 
@@ -1489,7 +1490,7 @@ private:
   /// LateParsedMemberInitializer - An initializer for a non-static class data
   /// member whose parsing must to be delayed until the class is completely
   /// defined (C++11 [class.mem]p2).
-  struct LateParsedMemberInitializer : public LateParsedDeclaration {
+  struct CLANG_ABI LateParsedMemberInitializer : public LateParsedDeclaration {
     LateParsedMemberInitializer(Parser *P, Decl *FD)
       : Self(P), Field(FD) { }
 
@@ -1576,7 +1577,7 @@ private:
   /// Contains information about any template-specific
   /// information that has been parsed prior to parsing declaration
   /// specifiers.
-  struct ParsedTemplateInfo {
+  struct CLANG_ABI ParsedTemplateInfo {
     ParsedTemplateInfo() : Kind(NonTemplate), TemplateParams(nullptr) {}
 
     ParsedTemplateInfo(TemplateParameterLists *TemplateParams,
@@ -1780,7 +1781,7 @@ private:
   DeclGroupPtrTy ParseObjCAtProtocolDeclaration(SourceLocation atLoc,
                                                 ParsedAttributes &prefixAttrs);
 
-  struct ObjCImplParsingDataRAII {
+  struct CLANG_ABI ObjCImplParsingDataRAII {
     Parser &P;
     Decl *Dcl;
     bool HasCFunction;
@@ -3935,7 +3936,7 @@ private:
   void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) override;
   void CodeCompleteNaturalLanguage() override;
 
-  class GNUAsmQualifiers {
+  class CLANG_ABI GNUAsmQualifiers {
     unsigned Qualifiers = AQ_unspecified;
 
   public:

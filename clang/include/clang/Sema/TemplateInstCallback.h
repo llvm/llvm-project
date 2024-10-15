@@ -15,12 +15,13 @@
 #define LLVM_CLANG_SEMA_TEMPLATEINSTCALLBACK_H
 
 #include "clang/Sema/Sema.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
 /// This is a base class for callbacks that will be notified at every
 /// template instantiation.
-class TemplateInstantiationCallback {
+class CLANG_ABI TemplateInstantiationCallback {
 public:
   virtual ~TemplateInstantiationCallback() = default;
 

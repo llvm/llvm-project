@@ -16,12 +16,13 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "clang/Support/Compiler.h"
 #include <optional>
 
 namespace clang {
 namespace ento {
 
-class CheckerContext {
+class CLANG_ABI CheckerContext {
   ExprEngine &Eng;
   /// The current exploded(symbolic execution) graph node.
   ExplodedNode *Pred;

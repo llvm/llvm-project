@@ -16,13 +16,14 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Lambda.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/PointerIntPair.h"
 
 namespace clang {
 
 /// Describes the capture of a variable or of \c this, or of a
 /// C++1y init-capture.
-class LambdaCapture {
+class CLANG_ABI LambdaCapture {
   enum {
     /// Flag used by the Capture class to indicate that the given
     /// capture was implicit.
