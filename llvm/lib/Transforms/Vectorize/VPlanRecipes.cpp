@@ -2941,7 +2941,33 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 
 InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
-  return Ctx.getLegacyCost(IG->getInsertPos(), VF);
+  Instruction *I = getInsertPos();
+  Type *ValTy = Ctx.Types.inferScalarType(
+      getNumDefinedValues() > 0 ? getVPValue(0) : getStoredValues()[0]);
+  auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
+  unsigned AS = getLoadStoreAddressSpace(I);
+  enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  unsigned InterleaveFactor = IG->getFactor();
+  auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
+
+  // Holds the indices of existing members in the interleaved group.
+  SmallVector<unsigned, 4> Indices;
+  for (unsigned IF = 0; IF < InterleaveFactor; IF++)
+    if (IG->getMember(IF))
+      Indices.push_back(IF);
+
+  // Calculate the cost of the whole interleaved group.
+  InstructionCost Cost = Ctx.TTI.getInterleavedMemoryOpCost(
+      I->getOpcode(), WideVecTy, IG->getFactor(), Indices, IG->getAlign(), AS,
+      CostKind, getMask(), NeedsMaskForGaps);
+
+  if (!IG->isReverse())
+    return Cost;
+
+  return Cost + IG->getNumMembers() *
+                    Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                           VectorTy, std::nullopt, CostKind, 0);
 }
 
 void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
