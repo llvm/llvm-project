@@ -34,45 +34,32 @@ cl::OptionCategory MergeFdataCategory("merge-fdata options");
 
 enum SortType : char {
   ST_NONE,
-  ST_EXEC_COUNT,      /// Sort based on function execution count.
-  ST_TOTAL_BRANCHES,  /// Sort based on all branches in the function.
+  ST_EXEC_COUNT,     /// Sort based on function execution count.
+  ST_TOTAL_BRANCHES, /// Sort based on all branches in the function.
 };
 
 static cl::list<std::string>
-InputDataFilenames(
-  cl::Positional,
-  cl::CommaSeparated,
-  cl::desc("<fdata1> [<fdata2>]..."),
-  cl::OneOrMore,
-  cl::cat(MergeFdataCategory));
+    InputDataFilenames(cl::Positional, cl::CommaSeparated,
+                       cl::desc("<fdata1> [<fdata2>]..."), cl::OneOrMore,
+                       cl::cat(MergeFdataCategory));
 
-static cl::opt<SortType>
-PrintFunctionList("print",
-  cl::desc("print the list of objects with count to stderr"),
-  cl::init(ST_NONE),
-  cl::values(clEnumValN(ST_NONE,
-      "none",
-      "do not print objects/functions"),
-    clEnumValN(ST_EXEC_COUNT,
-      "exec",
-      "print functions sorted by execution count"),
-    clEnumValN(ST_TOTAL_BRANCHES,
-      "branches",
-      "print functions sorted by total branch count")),
-  cl::cat(MergeFdataCategory));
+static cl::opt<SortType> PrintFunctionList(
+    "print", cl::desc("print the list of objects with count to stderr"),
+    cl::init(ST_NONE),
+    cl::values(clEnumValN(ST_NONE, "none", "do not print objects/functions"),
+               clEnumValN(ST_EXEC_COUNT, "exec",
+                          "print functions sorted by execution count"),
+               clEnumValN(ST_TOTAL_BRANCHES, "branches",
+                          "print functions sorted by total branch count")),
+    cl::cat(MergeFdataCategory));
 
-static cl::opt<bool>
-SuppressMergedDataOutput("q",
-  cl::desc("do not print merged data to stdout"),
-  cl::init(false),
-  cl::Optional,
-  cl::cat(MergeFdataCategory));
+static cl::opt<bool> SuppressMergedDataOutput(
+    "q", cl::desc("do not print merged data to stdout"), cl::init(false),
+    cl::Optional, cl::cat(MergeFdataCategory));
 
-static cl::opt<std::string>
-OutputFilePath("o",
-  cl::value_desc("file"),
-  cl::desc("Write output to <file>"),
-  cl::cat(MergeFdataCategory));
+static cl::opt<std::string> OutputFilePath("o", cl::value_desc("file"),
+                                           cl::desc("Write output to <file>"),
+                                           cl::cat(MergeFdataCategory));
 
 } // namespace opts
 
@@ -265,7 +252,10 @@ bool isYAML(const StringRef Filename) {
 void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   std::optional<bool> BoltedCollection;
+  std::optional<bool> NoLbr;
   std::mutex BoltedCollectionMutex;
+  std::mutex NoLbrMutex;
+  std::string NoLbrLabel;
   typedef StringMap<uint64_t> ProfileTy;
 
   auto ParseProfile = [&](const std::string &Filename, auto &Profiles) {
@@ -296,6 +286,25 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
               Filename,
               "cannot mix profile collected in BOLT and non-BOLT deployments");
         BoltedCollection = false;
+      }
+
+      std::lock_guard<std::mutex> Lock1(NoLbrMutex);
+      // Check if the string "no_lbr" is in the first line
+      if (Buf.starts_with("no_lbr")) {
+        if (!NoLbr.value_or(true))
+          report_error(
+              Filename,
+              "cannot mix profile collected on LBR and non-LBR architectures");
+        NoLbr = true;
+        size_t Pos = Buf.find("\n");
+        NoLbrLabel = Buf.substr(0, Pos).str();
+        Buf = Buf.drop_front(Pos + 1);
+      } else {
+        if (NoLbr.value_or(false))
+          report_error(
+              Filename,
+              "cannot mix profile collected on LBR and non-LBR architectures");
+        NoLbr = false;
       }
 
       Profile = &Profiles[tid];
@@ -336,6 +345,8 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
+  if (NoLbr.value_or(false))
+    output() << NoLbrLabel << "\n";
   for (const auto &[Key, Value] : MergedProfile)
     output() << Key << " " << Value << "\n";
 
