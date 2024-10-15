@@ -19050,14 +19050,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       llvm::Value *V = EmitScalarOrConstFoldImmArg(ICEArguments, I, E);
       llvm::Type *ExpTy =
           F->getFunctionType()->getFunctionParamType(I + InsertOld);
-      if (V->getType() != ExpTy)
-        V = Builder.CreateTruncOrBitCast(V, ExpTy);
-      Args.push_back(V);
+      Args.push_back(Builder.CreateTruncOrBitCast(V, ExpTy));
     }
-    llvm::Value *V = Builder.CreateCall(F, Args);
-    if (!DataTy->isIntegerTy())
-      V = Builder.CreateBitCast(V, DataTy);
-    return V;
+    return Builder.CreateBitCast(Builder.CreateCall(F, Args), DataTy);
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
   case AMDGPU::BI__builtin_amdgcn_permlanex16:
