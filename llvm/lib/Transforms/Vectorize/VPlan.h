@@ -1788,7 +1788,7 @@ public:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of IndexTy
-/// in reverse order per part.
+/// in reverse order.
 class VPReverseVectorPointerRecipe : public VPRecipeWithIRFlags,
                                      public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
