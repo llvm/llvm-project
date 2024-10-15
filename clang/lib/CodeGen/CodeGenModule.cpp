@@ -41,7 +41,9 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -54,6 +56,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/CallingConv.h"
@@ -75,6 +78,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include <cassert>
 #include <optional>
 
 using namespace clang;
@@ -2043,6 +2047,15 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
                  *this,
                  GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel),
                  ND));
+
+  if (getCodeGenOpts().DemanglingFailures &&
+      getContext().getLangOpts().getClangABICompat() >
+          LangOptions::ClangABI::Ver19) {
+    if (llvm::isMangledName(MangledName) &&
+        llvm::demangle(MangledName) == MangledName)
+      Diags.Report(ND->getLocation(), diag::warn_name_cannot_be_demangled)
+          << MangledName;
+  }
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();

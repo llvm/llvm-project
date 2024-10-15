@@ -67,6 +67,13 @@ char *dlangDemangle(std::string_view MangledName);
 /// demangling occurred.
 std::string demangle(std::string_view MangledName);
 
+/// Determines if the argument string is a valid mangled name known to the
+/// demangler.
+/// \param Name - reference to a string that is potentially a mangled name.
+/// \returns - true if the argument represents a valid mangled name, false
+/// otherwise.
+bool isMangledName(std::string_view Name);
+
 bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result,
                           bool CanHaveLeadingDot = true,
                           bool ParseParams = true);
