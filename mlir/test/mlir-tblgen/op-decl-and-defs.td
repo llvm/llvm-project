@@ -208,6 +208,11 @@ def NS_FOp : NS_Op<"op_with_all_types_constraint",
 // CHECK-LABEL: class FOp :
 // CHECK: static ::llvm::LogicalResult inferReturnTypes
 
+// DEFS: void FOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Value a) {
+// DEFS:   if (::mlir::succeeded(FOp::inferReturnTypes(odsBuilder.getContext(),
+// DEFS:   else
+// DEFS:     ::mlir::detail::reportFatalInferReturnTypesError(odsState);
+
 def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
   let arguments = (ins AnyType:$a);
   let results = (outs I32:$b);
