@@ -9,8 +9,8 @@
 // Implements the subset of the I/O statement API needed for basic
 // list-directed output (PRINT *) of intrinsic types.
 
+#include "FortranRuntime/Runtime/io-api-funcs.h"
 #include "edit-output.h"
-#include "flang/Runtime/io-api.h"
 #include "format.h"
 #include "io-api-common.h"
 #include "io-stmt.h"

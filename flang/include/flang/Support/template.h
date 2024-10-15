@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_TEMPLATE_H_
-#define FORTRAN_COMMON_TEMPLATE_H_
+#ifndef FORTRAN_SUPPORT_TEMPLATE_H_
+#define FORTRAN_SUPPORT_TEMPLATE_H_
 
 #include "flang/Common/idioms.h"
 #include "flang/Common/variant.h"
@@ -322,4 +322,4 @@ common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypes(
       std::move(visitor), std::move(defaultResult));
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_TEMPLATE_H_
+#endif /* FORTRAN_SUPPORT_TEMPLATE_H_ */

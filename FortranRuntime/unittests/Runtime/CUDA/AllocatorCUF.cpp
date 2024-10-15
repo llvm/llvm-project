@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../../lib/Runtime/terminator.h"
-#include "flang/Runtime/CUDA/allocator.h"
-#include "flang/Runtime/CUDA/descriptor.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/allocator-registry.h"
-#include "flang/Support/Fortran.h"
+#include "FortranRuntime/Runtime/CUDA/allocator.h"
+#include "FortranRuntime/Runtime/CUDA/descriptor.h"
+#include "FortranRuntime/Runtime/allocatable.h"
+#include "FortranRuntime/Runtime/allocator-registry.h"
 #include "gtest/gtest.h"
+#include "../../../runtime/terminator.h"
+#include "flang/Support/Fortran.h"
 
 #include "cuda_runtime.h"
 

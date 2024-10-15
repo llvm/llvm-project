@@ -11,9 +11,9 @@
 #ifndef FORTRAN_RUNTIME_FILE_H_
 #define FORTRAN_RUNTIME_FILE_H_
 
-#include "flang/Common/optional.h"
-#include "flang/Runtime/memory.h"
+#include "FortranRuntime/Runtime/memory.h"
 #include "io-error.h"
+#include "flang/Common/optional.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {

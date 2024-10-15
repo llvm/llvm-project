@@ -9,13 +9,13 @@
 #ifndef FORTRAN_RUNTIME_TOOLS_H_
 #define FORTRAN_RUNTIME_TOOLS_H_
 
-#include "flang/Common/optional.h"
-#include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/freestanding-tools.h"
-#include "flang/Runtime/memory.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/memory.h"
 #include "stat.h"
 #include "terminator.h"
+#include "flang/Common/optional.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cstring>
 #include <functional>
 #include <map>

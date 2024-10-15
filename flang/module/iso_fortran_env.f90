@@ -8,7 +8,7 @@
 
 ! See Fortran 2023, subclause 16.10.2
 
-#include '../../FortranRuntime/include/flang/Common/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 module iso_fortran_env
 

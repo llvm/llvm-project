@@ -12,7 +12,7 @@
 #ifndef FORTRAN_RUNTIME_COPY_H_
 #define FORTRAN_RUNTIME_COPY_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 

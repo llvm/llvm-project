@@ -8,9 +8,9 @@
 
 #include "edit-output.h"
 #include "emit-encoded.h"
+#include "utf.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
-#include "utf.h"
 #include <algorithm>
 
 namespace Fortran::runtime::io {

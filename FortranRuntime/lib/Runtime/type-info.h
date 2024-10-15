@@ -12,11 +12,11 @@
 // A C++ perspective of the derived type description schemata in
 // flang/module/__fortran_type_info.f90.
 
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "terminator.h"
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/bit-population-count.h"
 #include "flang/Common/optional.h"
-#include "flang/Runtime/descriptor.h"
-#include "terminator.h"
 #include <cinttypes>
 #include <memory>
 

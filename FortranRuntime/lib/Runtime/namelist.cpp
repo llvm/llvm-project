@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "namelist.h"
+#include "FortranRuntime/Runtime/io-api-funcs.h"
 #include "descriptor-io.h"
 #include "emit-encoded.h"
-#include "flang/Runtime/io-api.h"
 #include "io-stmt.h"
 #include <algorithm>
 #include <cstring>

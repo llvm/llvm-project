@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/allocator-registry.h"
 #include "ISO_Fortran_util.h"
 #include "derived.h"
-#include "flang/Runtime/allocator-registry.h"
 #include "memory.h"
 #include "stat.h"
 #include "terminator.h"
@@ -141,8 +141,10 @@ RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(
 
 RT_API_ATTRS std::size_t Descriptor::SizeInBytes() const {
   const DescriptorAddendum *addendum{Addendum()};
-  return sizeof *this - sizeof(Dimension) + raw_.rank * sizeof(Dimension) +
-      (addendum ? addendum->SizeInBytes() : 0);
+  std::size_t bytes{ sizeof *this - sizeof(Dimension) + raw_.rank * sizeof(Dimension) +
+      (addendum ? addendum->SizeInBytes() : 0)};
+  assert (bytes <= MaxDescriptorSizeInBytes(raw_.rank,addendum) && "Descriptor must fit compiler-allocated space");
+  return bytes;
 }
 
 RT_API_ATTRS std::size_t Descriptor::Elements() const {

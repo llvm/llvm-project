@@ -65,8 +65,8 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
-  ../Common/binary-to-decimal.cpp
-  ../Common/decimal-to-binary.cpp
+  ${FLANG_SOURCE_DIR}/lib/Common/binary-to-decimal.cpp
+  ${FLANG_SOURCE_DIR}/lib/Common/decimal-to-binary.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c

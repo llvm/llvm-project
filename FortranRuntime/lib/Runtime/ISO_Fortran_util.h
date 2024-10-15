@@ -11,10 +11,10 @@
 
 // Internal utils for establishing CFI_cdesc_t descriptors.
 
-#include "flang/Common/ISO_Fortran_binding_wrapper.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/type-code.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/type-code.h"
 #include "terminator.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include <cstdlib>
 
 namespace Fortran::ISO {

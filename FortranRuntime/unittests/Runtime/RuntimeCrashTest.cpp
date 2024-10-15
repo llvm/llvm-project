@@ -10,11 +10,11 @@
 /// runtime components and ensure the test fixture handles crashes as we expect.
 //
 //===----------------------------------------------------------------------===//
-#include "../../lib/Runtime/terminator.h"
 #include "CrashHandlerFixture.h"
+#include "tools.h"
+#include "../../lib/Runtime/terminator.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/transformational.h"
-#include "tools.h"
 #include <gtest/gtest.h>
 
 using namespace Fortran::runtime;

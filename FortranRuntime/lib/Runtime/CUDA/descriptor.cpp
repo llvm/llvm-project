@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/CUDA/descriptor.h"
-#include "flang/Runtime/CUDA/allocator.h"
+#include "FortranRuntime/Runtime/CUDA/descriptor.h"
+#include "FortranRuntime/Runtime/CUDA/allocator.h"
 
 namespace Fortran::runtime::cuda {
 extern "C" {

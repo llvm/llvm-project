@@ -12,10 +12,10 @@
 #ifndef FORTRAN_RUNTIME_UNIT_MAP_H_
 #define FORTRAN_RUNTIME_UNIT_MAP_H_
 
-#include "flang/Common/fast-int-set.h"
-#include "flang/Runtime/memory.h"
+#include "FortranRuntime/Runtime/memory.h"
 #include "lock.h"
 #include "unit.h"
+#include "flang/Common/fast-int-set.h"
 #include <cstdint>
 #include <cstdlib>
 

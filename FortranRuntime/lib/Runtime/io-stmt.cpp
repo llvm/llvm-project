@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "io-stmt.h"
+#include "FortranRuntime/Runtime/memory.h"
 #include "connection.h"
 #include "emit-encoded.h"
-#include "flang/Runtime/memory.h"
 #include "format.h"
 #include "tools.h"
 #include "unit.h"

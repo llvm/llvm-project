@@ -94,7 +94,5 @@ function(add_fortranruntime_nongtest_unittest test_name)
   add_fortranruntime_unittest_offload_properties(${test_name}${suffix})
 endfunction()
 
-add_subdirectory(Common)
-add_subdirectory(Decimal)
 add_subdirectory(Evaluate)
 add_subdirectory(Runtime)

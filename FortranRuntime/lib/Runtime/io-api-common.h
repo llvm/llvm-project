@@ -9,12 +9,12 @@
 #ifndef FORTRAN_RUNTIME_IO_API_COMMON_H_
 #define FORTRAN_RUNTIME_IO_API_COMMON_H_
 
-#include "flang/Common/api-attrs.h"
-#include "flang/Common/optional.h"
-#include "flang/Runtime/io-api.h"
+#include "FortranRuntime/Runtime/io-api-funcs.h"
 #include "io-stmt.h"
 #include "terminator.h"
 #include "unit.h"
+#include "flang/Common/api-attrs.h"
+#include "flang/Common/optional.h"
 
 namespace Fortran::runtime::io {
 

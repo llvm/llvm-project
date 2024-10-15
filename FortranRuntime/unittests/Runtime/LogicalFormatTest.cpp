@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CrashHandlerFixture.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/io-api.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/io-api-funcs.h"
 #include <algorithm>
 #include <array>
 #include <cstring>

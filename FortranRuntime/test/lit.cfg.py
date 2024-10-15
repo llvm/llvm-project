@@ -73,7 +73,7 @@ tools = [
 # Define some variables to help us test that the flang runtime doesn't depend on
 # the C++ runtime libraries. For this we need a C compiler.
 libruntime = os.path.join(config.fortranruntime_build_lib_dir, "libFortranRuntime.a")
-include = os.path.join(config.fortranruntime_source_dir, "include")
+include = os.path.join(config.flang_source_dir, "include")
 tools.append(
     ToolSubst("%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal")
 )

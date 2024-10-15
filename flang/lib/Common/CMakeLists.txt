@@ -6,7 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-add_flang_library(FortranCommon 
-  "${FORTRANRUNTIME_SOURCE_DIR}/lib/Common/binary-to-decimal.cpp"
-  "${FORTRANRUNTIME_SOURCE_DIR}/lib/Common/decimal-to-binary.cpp"
+add_flang_library(FortranCommon
+  binary-to-decimal.cpp
+  decimal-to-binary.cpp
 )

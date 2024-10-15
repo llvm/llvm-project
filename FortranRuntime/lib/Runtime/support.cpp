@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/support.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "ISO_Fortran_util.h"
-#include "flang/Runtime/descriptor.h"
 #include "type-info.h"
 
 namespace Fortran::runtime {

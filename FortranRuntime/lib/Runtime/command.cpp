@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/command.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "environment.h"
-#include "flang/Runtime/descriptor.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"

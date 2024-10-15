@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/reduction.h"
+#include "FortranRuntime/Runtime/descriptor.h"
+#include "FortranRuntime/Runtime/type-code.h"
+#include "gtest/gtest.h"
+#include "tools.h"
 #include "flang/Common/float128.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/reduce.h"
-#include "flang/Runtime/type-code.h"
-#include "tools.h"
-#include "gtest/gtest.h"
 #include <cstdint>
 #include <cstring>
 #include <string>

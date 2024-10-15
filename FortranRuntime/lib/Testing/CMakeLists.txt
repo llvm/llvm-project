@@ -8,13 +8,12 @@
 
 set(public_headers "")
 file(GLOB_RECURSE public_headers
-  "${FLANGRUNTIME_SOURCE_DIR}/lib/Testing/*.h"
+  "${FLANG_SOURCE_DIR}/lib/Testing/*.h"
 )
 
 add_fortranruntime_library(NonGTestTesting EXCLUDE_FROM_ALL LINK_TO_LLVM
-  testing.cpp
-  fp-testing.cpp
+  ${FLANG_SOURCE_DIR}/lib/Testing/testing.cpp
+  ${FLANG_SOURCE_DIR}/lib/Testing/fp-testing.cpp
  ADDITIONAL_HEADERS
    ${public_headers}
 )
-

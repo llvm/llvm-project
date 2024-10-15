@@ -17,11 +17,11 @@
 // of the standard but it more likely to conform with its intent.
 
 #include "flang/Runtime/transformational.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "copy.h"
-#include "flang/Common/float128.h"
-#include "flang/Runtime/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/float128.h"
 
 namespace Fortran::runtime {
 

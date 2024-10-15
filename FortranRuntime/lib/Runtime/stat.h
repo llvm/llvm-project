@@ -13,7 +13,7 @@
 #define FORTRAN_RUNTIME_STAT_H_
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Common/api-attrs.h"
-#include "flang/Common/magic-numbers.h"
+#include "flang/Runtime/magic-numbers.h"
 namespace Fortran::runtime {
 
 class Descriptor;

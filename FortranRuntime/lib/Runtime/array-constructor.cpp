@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/array-constructor.h"
+#include "FortranRuntime/Runtime/array-constructor.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "derived.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/assign.h"
-#include "flang/Runtime/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 #include "type-info.h"
+#include "flang/Runtime/allocatable.h"
+#include "flang/Runtime/assign.h"
 
 namespace Fortran::runtime {
 

@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/allocator-registry.h"
+#include "FortranRuntime/Runtime/allocator-registry.h"
 #include "terminator.h"
 
 namespace Fortran::runtime {
 
-#ifndef FORTRANRUNTIME_NO_GLOBAL_VAR_DEFS
+#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 RT_OFFLOAD_VAR_GROUP_BEGIN
 RT_VAR_ATTRS AllocatorRegistry allocatorRegistry;
 RT_OFFLOAD_VAR_GROUP_END
-#endif // FORTRANRUNTIME_NO_GLOBAL_VAR_DEFS
+#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
 RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS void AllocatorRegistry::Register(int pos, Allocator_t allocator) {

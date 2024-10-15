@@ -23,11 +23,11 @@ extern char **environ;
 
 namespace Fortran::runtime {
 
-#ifndef FORTRANRUNTIME_NO_GLOBAL_VAR_DEFS
+#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 RT_OFFLOAD_VAR_GROUP_BEGIN
 RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
 RT_OFFLOAD_VAR_GROUP_END
-#endif // FORTRANRUNTIME_NO_GLOBAL_VAR_DEFS
+#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {

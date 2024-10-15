@@ -14,8 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_MATHOPTIONSBASE_H
-#define FORTRAN_COMMON_MATHOPTIONSBASE_H
+#ifndef FORTRAN_SUPPORT_MATHOPTIONSBASE_H_
+#define FORTRAN_SUPPORT_MATHOPTIONSBASE_H_
 
 namespace Fortran::common {
 
@@ -41,4 +41,4 @@ private:
 
 } // namespace Fortran::common
 
-#endif // FORTRAN_COMMON_MATHOPTIONSBASE_H
+#endif /* FORTRAN_SUPPORT_MATHOPTIONSBASE_H_ */

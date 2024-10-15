@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_INTERVAL_H_
-#define FORTRAN_COMMON_INTERVAL_H_
+#ifndef FORTRAN_SUPPORT_INTERVAL_H_
+#define FORTRAN_SUPPORT_INTERVAL_H_
 
 // Defines a generalized template class Interval<A> to represent
 // the half-open interval [x .. x+n).
@@ -126,4 +126,4 @@ private:
   std::size_t size_{0};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_INTERVAL_H_
+#endif /* FORTRAN_SUPPORT_INTERVAL_H_ */

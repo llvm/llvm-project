@@ -10,8 +10,8 @@
 // inquire about shape information of arrays -- LBOUND and SIZE.
 
 #include "flang/Runtime/inquiry.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "copy.h"
-#include "flang/Runtime/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 #include <algorithm>

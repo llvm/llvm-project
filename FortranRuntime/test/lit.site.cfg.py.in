@@ -4,6 +4,7 @@ import sys
 
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.build_lib_dir = "@FORTRANRUNTIME_BUILD_LIB_DIR@"
+config.flang_source_dir = "@FLANG_SOURCE_DIR@"
 config.fortranruntime_source_dir = "@FORTRANRUNTIME_SOURCE_DIR@"
 config.fortranruntime_binary_test_dir = os.path.dirname(__file__)
 config.fortranruntime_build_lib_dir = "@FORTRANRUNTIME_BUILD_LIB_DIR@"

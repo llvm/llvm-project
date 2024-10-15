@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Runtime/derived-api.h"
-#include "flang/Runtime/descriptor.h"
-#include "tools.h"
+#include "FortranRuntime/Runtime/descriptor.h"
 #include "gtest/gtest.h"
+#include "tools.h"
+#include "flang/Runtime/derived-api.h"
 
 using namespace Fortran::runtime;
 
