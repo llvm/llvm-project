@@ -20,6 +20,10 @@ def output : Separate<["--"], "output-file">, Alias<o>, Flags<[HelpHidden]>,
 def library_path_EQ : Joined<["--", "-"], "library-path=">,
   Flags<[HelpHidden]>, HelpText<"Add <dir> to the library search path">;
 
+def device_libs_EQ : CommaJoined<["--", "-"], "device-libs=">,
+  Flags<[WrapperOnlyOption]>,
+  HelpText<"A comma separated list of device libraries that are linked during the device link.">;
+
 def triple : Joined<["--"], "triple">,
   HelpText<"The device target triple">;
 def arch : Separate<["--", "-"], "arch">,
@@ -40,6 +44,10 @@ def spirv_dump_device_code_EQ : Joined<["--", "-"], "spirv-dump-device-code=">,
 
 def is_windows_msvc_env : Flag<["--", "-"], "is-windows-msvc-env">,
   Flags<[WrapperOnlyOption, HelpHidden]>;
+
+def llvm_spirv_path_EQ : Joined<["--"], "llvm-spirv-path=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<dir>">,
+  HelpText<"Set the system llvm-spirv path">;
 
 // Options to pass to llvm-spirv tool
 def llvm_spirv_options_EQ : Joined<["--", "-"], "llvm-spirv-options=">,

@@ -56,6 +56,7 @@ be passed down to downstream tools like 'llvm-link', 'llvm-spirv', etc.
     -help-hidden                  Display all available options
     -help                         Display available options (--help-hidden for more)
     --library-path=<dir>          Set the library path for SYCL device libraries
+    --device-libs=<value>         A comma separated list of device libraries that are linked during the device link
     -o <path>                     Path to file to write output
     --save-temps                  Save intermediate results
     --triple <value>              Specify the target triple.
@@ -64,6 +65,7 @@ be passed down to downstream tools like 'llvm-link', 'llvm-spirv', etc.
     -spirv-dump-device-code=<dir> Directory to dump SPIR-V IR code into
     -is-windows-msvc-env          Specify if we are compiling under windows environment
     -llvm-spirv-options=<value>   Pass options to llvm-spirv tool
+    --llvm-spirv-path=<dir>       Set the system llvm-spirv path
 
 Example
 =======

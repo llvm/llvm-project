@@ -156,19 +156,6 @@ Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
   return *Path;
 }
 
-std::optional<std::string> findFile(StringRef Dir, StringRef Root,
-                                    const Twine &Name) {
-  SmallString<128> Path;
-  if (Dir.starts_with("="))
-    sys::path::append(Path, Root, Dir.substr(1), Name);
-  else
-    sys::path::append(Path, Dir, Name);
-
-  if (sys::fs::exists(Path))
-    return static_cast<std::string>(Path);
-  return std::nullopt;
-}
-
 void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
     return;
@@ -238,43 +225,31 @@ Expected<StringRef> linkDeviceInputFiles(ArrayRef<std::string> InputFiles,
   return *OutFileOrErr;
 }
 
-const SmallVector<std::string> SYCLDeviceLibNames = {
-    "libsycl-crt.bc",
-    "libsycl-complex.bc",
-    "libsycl-complex-fp64.bc",
-    "libsycl-cmath.bc",
-    "libsycl-cmath-fp64.bc",
-    "libsycl-imf.bc",
-    "libsycl-imf-fp64.bc",
-    "libsycl-imf-bf16.bc",
-    "libsycl-fallback-cassert.bc",
-    "libsycl-fallback-cstring.bc",
-    "libsycl-fallback-complex.bc",
-    "libsycl-fallback-complex-fp64.bc",
-    "libsycl-fallback-cmath.bc",
-    "libsycl-fallback-cmath-fp64.bc",
-    "libsycl-fallback-imf.bc",
-    "libsycl-fallback-imf-fp64.bc",
-    "libsycl-fallback-imf-bf16.bc",
-    "libsycl-fallback-bfloat16.bc",
-    "libsycl-native-bfloat16.bc",
-    "libsycl-itt-user-wrappers.bc",
-    "libsycl-itt-compiler-wrappers.bc",
-    "libsycl-itt-stubs.bc",
-    "libsycl-sanitizer.bc"};
-
-Expected<SmallVector<std::string>> getSYCLDeviceLibFiles(const ArgList &Args) {
+// This utility function is used to gather all SYCL device library files that
+// will be linked with input device files.
+// The list of files and its location are passed from driver.
+Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
   SmallVector<std::string> DeviceLibFiles;
   StringRef LibraryPath;
   if (Arg *A = Args.getLastArg(OPT_library_path_EQ))
     LibraryPath = A->getValue();
   if (LibraryPath.empty())
     return DeviceLibFiles;
-  for (auto &DeviceLibName : SYCLDeviceLibNames) {
-    std::optional<std::string> Filename =
-        findFile(LibraryPath, /*Root=*/"", DeviceLibName);
-    if (Filename)
-      DeviceLibFiles.push_back(*Filename);
+  if (Arg *A = Args.getLastArg(OPT_device_libs_EQ)) {
+    if (A->getValues().size() == 0)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Number of device library files cannot be zero.");
+    for (StringRef Val : A->getValues()) {
+      SmallString<128> LibName(LibraryPath);
+      llvm::sys::path::append(LibName, Val);
+      if (llvm::sys::fs::exists(LibName))
+        DeviceLibFiles.push_back(std::string(LibName));
+      else
+        return createStringError(inconvertibleErrorCode(),
+                                 std::string(LibName) +
+                                     " SYCL device library file is not found.");
+    }
   }
   return DeviceLibFiles;
 }
@@ -288,7 +263,7 @@ static Expected<StringRef> linkDeviceLibFiles(StringRef InputFile,
                                               const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("LinkDeviceLibraryFiles");
 
-  auto SYCLDeviceLibFiles = getSYCLDeviceLibFiles(Args);
+  auto SYCLDeviceLibFiles = getSYCLDeviceLibs(Args);
   if (!SYCLDeviceLibFiles)
     return SYCLDeviceLibFiles.takeError();
   if ((*SYCLDeviceLibFiles).empty())
@@ -472,8 +447,7 @@ int main(int argc, char **argv) {
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
     Tbl.printHelp(
-        outs(),
-        "clang-sycl-linker [options] <options to sycl link steps>",
+        outs(), "clang-sycl-linker [options] <options to sycl link steps>",
         "A utility that wraps around several steps required to link SYCL "
         "device files.\n"
         "This enables LLVM IR linking, post-linking and code generation for "
