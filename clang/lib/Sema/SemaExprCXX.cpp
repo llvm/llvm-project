@@ -8686,7 +8686,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   assert(
-      CurrentLSI->CallOperator == DC &&
+      (CurrentLSI->CallOperator == DC || !CurrentLSI->AfterParameterList) &&
       "The current call operator must be synchronized with Sema's CurContext");
 #endif // NDEBUG
 
