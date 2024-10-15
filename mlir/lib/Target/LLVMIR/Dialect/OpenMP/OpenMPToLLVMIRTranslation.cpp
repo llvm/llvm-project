@@ -3241,11 +3241,6 @@ static bool targetOpSupported(Operation &opInst) {
     return false;
   }
 
-  if (targetOp.getNowait()) {
-    opInst.emitError("Nowait clause not yet supported");
-    return false;
-  }
-
   if (!targetOp.getAllocateVars().empty() ||
       !targetOp.getAllocatorVars().empty()) {
     opInst.emitError("Allocate clause not yet supported");
@@ -3567,7 +3562,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
       ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), entryInfo,
       defaultValTeams, defaultValThreads, kernelInput, genMapInfoCB, bodyCB,
-      argAccessorCB, dds));
+      argAccessorCB, dds, targetOp.getNowait()));
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary
