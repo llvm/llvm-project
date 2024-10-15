@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/tanhf16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -23,11 +24,11 @@ TEST_F(LlvmLibcTanhf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tanhf16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float16>(1.0),
+  EXPECT_FP_EQ_ALL_ROUNDING(LIBC_NAMESPACE::fputil::cast<float16>(1.0),
                             LIBC_NAMESPACE::tanhf16(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float16>(-1.0),
+  EXPECT_FP_EQ_ALL_ROUNDING(LIBC_NAMESPACE::fputil::cast<float16>(-1.0),
                             LIBC_NAMESPACE::tanhf16(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
@@ -41,91 +42,102 @@ TEST_F(LlvmLibcTanhf16Test, SpecialNumbers) {
 TEST_F(LlvmLibcTanhf16Test, ResultNearBounds) {
   LIBC_NAMESPACE::libc_errno = 0;
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(static_cast<float16>(1.0),
+  EXPECT_FP_EQ_WITH_EXCEPTION(LIBC_NAMESPACE::fputil::cast<float16>(1.0),
                               LIBC_NAMESPACE::tanhf16(max_normal), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(static_cast<float16>(-1.0),
+  EXPECT_FP_EQ_WITH_EXCEPTION(LIBC_NAMESPACE::fputil::cast<float16>(-1.0),
                               LIBC_NAMESPACE::tanhf16(neg_max_normal),
                               FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   // round(atanh(1 - 2^-11), HP, RU);
-  float16 x = static_cast<float16>(0x1.0a4p+2);
+  float16 x = LIBC_NAMESPACE::fputil::cast<float16>(0x1.0a4p+2);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
-      static_cast<float16>(0x1.ffcp-1), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(
-      static_cast<float16>(1.0), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(1.0), LIBC_NAMESPACE::tanhf16(x),
+      FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
-      static_cast<float16>(0x1.ffcp-1), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
-      static_cast<float16>(0x1.ffcp-1), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
-  x = static_cast<float16>(0x1.208p+2);
+  x = LIBC_NAMESPACE::fputil::cast<float16>(0x1.208p+2);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
-      static_cast<float16>(1.0), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(1.0), LIBC_NAMESPACE::tanhf16(x),
+      FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(
-      static_cast<float16>(1.0), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(1.0), LIBC_NAMESPACE::tanhf16(x),
+      FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
-      static_cast<float16>(0x1.ffcp-1), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
-      static_cast<float16>(0x1.ffcp-1), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   // round(atanh(-1 + 2^-11), HP, RD);
-  x = static_cast<float16>(-0x1.0a4p+2);
+  x = LIBC_NAMESPACE::fputil::cast<float16>(-0x1.0a4p+2);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
-      static_cast<float16>(-0x1.ffcp-1), LIBC_NAMESPACE::tanhf16(x),
-      FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(-0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(static_cast<float16>(-0x1.ffcp-1),
-                                              LIBC_NAMESPACE::tanhf16(x),
-                                              FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(
+      LIBC_NAMESPACE::fputil::cast<float16>(-0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
-      static_cast<float16>(-1.0), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
-  EXPECT_MATH_ERRNO(0);
-
-  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
-      static_cast<float16>(-0x1.ffcp-1), LIBC_NAMESPACE::tanhf16(x),
+      LIBC_NAMESPACE::fputil::cast<float16>(-1.0), LIBC_NAMESPACE::tanhf16(x),
       FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
-  x = static_cast<float16>(-0x1.208p+2);
-
-  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
-      static_cast<float16>(-1.0), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
+      LIBC_NAMESPACE::fputil::cast<float16>(-0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(static_cast<float16>(-0x1.ffcp-1),
-                                              LIBC_NAMESPACE::tanhf16(x),
-                                              FE_INEXACT);
+  x = LIBC_NAMESPACE::fputil::cast<float16>(-0x1.208p+2);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
+      LIBC_NAMESPACE::fputil::cast<float16>(-1.0), LIBC_NAMESPACE::tanhf16(x),
+      FE_INEXACT);
+  EXPECT_MATH_ERRNO(0);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(
+      LIBC_NAMESPACE::fputil::cast<float16>(-0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
-      static_cast<float16>(-1.0), LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(-1.0), LIBC_NAMESPACE::tanhf16(x),
+      FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
-      static_cast<float16>(-0x1.ffcp-1), LIBC_NAMESPACE::tanhf16(x),
-      FE_INEXACT);
+      LIBC_NAMESPACE::fputil::cast<float16>(-0x1.ffcp-1),
+      LIBC_NAMESPACE::tanhf16(x), FE_INEXACT);
   EXPECT_MATH_ERRNO(0);
 }

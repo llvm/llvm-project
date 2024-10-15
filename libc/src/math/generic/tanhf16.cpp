@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
@@ -72,7 +73,7 @@ LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) {
       //   > display = hexadecimal;
       //   > // For each coefficient:
       //   > round(/* put coefficient here */, SG, RN);
-      return static_cast<float16>(
+      return fputil::cast<float16>(
           xf * fputil::polyeval(xf_sq, 0x1p+0f, -0x1.555556p-2f, 0x1.111112p-3f,
                                 -0x1.ba1ba2p-5f));
     }
@@ -91,8 +92,8 @@ LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) {
       return FPBits::one(x_bits.sign()).get_val();
     }
     if (x_bits.is_pos())
-      return static_cast<float16>(0x1.ffcp-1);
-    return static_cast<float16>(-0x1.ffcp-1);
+      return fputil::cast<float16>(0x1.ffcp-1);
+    return fputil::cast<float16>(-0x1.ffcp-1);
   }
 
   if (auto r = TANHF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
@@ -137,8 +138,8 @@ LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) {
   //   > 1 + x * P;
   float exp_2lo =
       fputil::polyeval(lo, 0x1p+0f, 0x1p+1f, 0x1.001p+1f, 0x1.555ddep+0f);
-  return static_cast<float16>((exp_2lo - exp2_hi_mid) /
-                              (exp_2lo + exp2_hi_mid));
+  return fputil::cast<float16>((exp_2lo - exp2_hi_mid) /
+                               (exp_2lo + exp2_hi_mid));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
