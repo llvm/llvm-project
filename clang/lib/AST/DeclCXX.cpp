@@ -1411,10 +1411,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         Ty = Ty->getArrayElementTypeNoTypeQual();
 
       Ty = Ty->getUnqualifiedDesugaredType();
-      if (Ty->isBuiltinType())
-        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
-      else if (const RecordType *RT = dyn_cast<RecordType>(Ty))
+      if (const RecordType *RT = dyn_cast<RecordType>(Ty))
         data().IsHLSLIntangible |= RT->getAsCXXRecordDecl()->isHLSLIntangible();
+      else
+        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
     }
   }
 
@@ -2023,10 +2023,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
     if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
-      while (true) {
-        CTD = CTD->getMostRecentDecl();
-        if (CTD->isMemberSpecialization())
-          break;
+      while (!CTD->hasMemberSpecialization()) {
         if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
           CTD = NewCTD;
         else
@@ -2036,10 +2033,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
     }
     if (auto *CTPSD =
             From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      while (true) {
-        CTPSD = CTPSD->getMostRecentDecl();
-        if (CTPSD->isMemberSpecialization())
-          break;
+      while (!CTPSD->hasMemberSpecialization()) {
         if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
           CTPSD = NewCTPSD;
         else

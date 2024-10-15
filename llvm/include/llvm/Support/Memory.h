@@ -137,7 +137,7 @@ namespace sys {
   class OwningMemoryBlock {
   public:
     OwningMemoryBlock() = default;
-    explicit OwningMemoryBlock(MemoryBlock M) : M(M) {}
+    explicit OwningMemoryBlock(MemoryBlock M) : M(std::move(M)) {}
     OwningMemoryBlock(OwningMemoryBlock &&Other) {
       M = Other.M;
       Other.M = MemoryBlock();

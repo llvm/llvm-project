@@ -211,7 +211,7 @@ system_error::system_error(int ev, const error_category& ecat)
 system_error::~system_error() noexcept {}
 
 void __throw_system_error(int ev, const char* what_arg) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   std::__throw_system_error(error_code(ev, system_category()), what_arg);
 #else
   // The above could also handle the no-exception case, but for size, avoid referencing system_category() unnecessarily.
