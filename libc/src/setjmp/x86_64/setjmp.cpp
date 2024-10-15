@@ -32,7 +32,7 @@ LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
       mov (%%rsp), %[tmp]
       mov %[tmp], %[rip]
       )"
-      : [tmp] "=r"(tmp)
+      : [tmp] "=&r"(tmp)
       : [rbx] "m"(buf->rbx), [rbp] "m"(buf->rbp), [r12] "m"(buf->r12),
         [r13] "m"(buf->r13), [r14] "m"(buf->r14), [r15] "m"(buf->r15),
         [rsp] "m"(buf->rsp), [rip] "m"(buf->rip));
