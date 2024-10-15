@@ -3,8 +3,9 @@
 
 ; Test lowering to spir-v backend for various types and scalar/vector
 
-; CHECK-DAG:   %[[#f32:]] = OpTypeFloat 32
 ; CHECK-DAG:   %[[#uint:]] = OpTypeInt 32 0
+; CHECK-DAG:   %[[#f32:]] = OpTypeFloat 32
+; CHECK-DAG:   %[[#v4_float:]] = OpTypeVector %[[#f32]] 4
 ; CHECK-DAG:   %[[#bool:]] = OpTypeBool
 ; CHECK-DAG:   %[[#v4_bool:]] = OpTypeVector %[[#bool]] 4
 ; CHECK-DAG:   %[[#scope:]] = OpConstant %[[#uint]] 3
@@ -39,6 +40,17 @@ entry:
   ret <4 x i1> %0
 }
 
+; CHECK-LABEL: Begin function test_vfloat
+; CHECK:   %[[#vfexpr:]] = OpFunctionParameter %[[#v4_float]]
+; CHECK:   %[[#idx4:]] = OpFunctionParameter %[[#uint]]
+define <4 x float> @test_vfloat(<4 x float> %vfexpr, i32 %idx) {
+entry:
+; CHECK:   %[[#vbret:]] = OpGroupNonUniformShuffle %[[#v4_float]] %[[#scope]] %[[#vfexpr]] %[[#idx4]]
+  %0 = call <4 x float> @llvm.spv.wave.readlane.v4f32(<4 x float> %vfexpr, i32 %idx)
+  ret <4 x float> %0
+}
+
 declare float @llvm.spv.wave.readlane.f32(float, i32)
 declare i32 @llvm.spv.wave.readlane.i32(i32, i32)
 declare <4 x i1> @llvm.spv.wave.readlane.v4i1(<4 x i1>, i32)
+declare <4 x float> @llvm.spv.wave.readlane.v4f32(<4 x float>, i32)
