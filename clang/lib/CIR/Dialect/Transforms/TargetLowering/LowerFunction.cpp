@@ -210,6 +210,9 @@ Value castReturnValue(Value Src, Type Ty, LowerFunction &LF) {
   if (isa<BoolType>(SrcTy) && isa<IntType>(Ty))
     return createBitcast(Src, Ty, LF);
 
+  auto intTy = dyn_cast<IntType>(Ty);
+  if (intTy && !intTy.isPrimitive())
+    cir_unreachable("non-primitive types NYI");
   llvm::TypeSize DstSize = LF.LM.getDataLayout().getTypeAllocSize(Ty);
 
   // FIXME(cir): Do we need the EnterStructPointerForCoercedAccess routine here?

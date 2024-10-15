@@ -51,7 +51,9 @@ struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
           continue;
         }
 
-        auto callOp = cast<CallOp>(call.getUser());
+        auto callOp = dyn_cast_or_null<CallOp>(call.getUser());
+        if (!callOp)
+          cir_unreachable("NYI empty callOp");
         if (lowerModule->rewriteFunctionCall(callOp, op).failed())
           return failure();
       }

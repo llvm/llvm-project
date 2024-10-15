@@ -15,6 +15,8 @@
 #ifndef CLANG_CIR_MISSINGFEATURES_H
 #define CLANG_CIR_MISSINGFEATURES_H
 
+#include <llvm/Support/raw_ostream.h>
+
 constexpr bool cirMissingFeatureAssertionMode =
     true; // Change to `false` to use llvm_unreachable
 
@@ -24,9 +26,15 @@ constexpr bool cirMissingFeatureAssertionMode =
   " point."
 
 // Special assertion to be used in the target lowering library.
-#define cir_tl_assert(cond) assert((cond) && NOTE);
+#define cir_tl_assert(cond)                                                    \
+  do {                                                                         \
+    if (!(cond))                                                               \
+      llvm::errs() << NOTE << "\n";                                            \
+    assert((cond));                                                            \
+  } while (0)
 
-// Special
+// Special version of cir_unreachable to give more info to the user on how
+// to temporaruly disable target lowering.
 #define cir_unreachable(msg)                                                   \
   do {                                                                         \
     llvm_unreachable(msg NOTE);                                                \
