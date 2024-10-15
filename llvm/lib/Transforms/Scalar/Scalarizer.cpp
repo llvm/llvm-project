@@ -197,16 +197,17 @@ struct VectorLayout {
   uint64_t SplitSize = 0;
 };
 
-static bool isStructAllVectors(Type *Ty) {
+static bool isStructOfMatchingFixedVectors(Type *Ty) {
   if (!isa<StructType>(Ty))
     return false;
-  if (Ty->getNumContainedTypes() < 1)
+  unsigned StructSize = Ty->getNumContainedTypes();
+  if (StructSize < 1)
     return false;
   FixedVectorType *VecTy = dyn_cast<FixedVectorType>(Ty->getContainedType(0));
   if (!VecTy)
     return false;
   unsigned VecSize = VecTy->getNumElements();
-  for (unsigned I = 1; I < Ty->getNumContainedTypes(); I++) {
+  for (unsigned I = 1; I < StructSize; I++) {
     VecTy = dyn_cast<FixedVectorType>(Ty->getContainedType(I));
     if (!VecTy || VecSize != VecTy->getNumElements())
       return false;
@@ -685,7 +686,8 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
 bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
   if (isTriviallyVectorizable(ID))
     return true;
-  // TODO: investigate vectorizable frexp
+  // TODO: Move frexp to isTriviallyVectorizable.
+  // https://github.com/llvm/llvm-project/issues/112408
   switch (ID) {
   case Intrinsic::frexp:
     return true;
@@ -698,7 +700,7 @@ bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
   Type *CallType = CI.getType();
-  bool AreAllVectors = isStructAllVectors(CallType);
+  bool AreAllVectors = isStructOfMatchingFixedVectors(CallType);
   std::optional<VectorSplit> VS;
   if (AreAllVectors)
     VS = getVectorSplit(CallType->getContainedType(0));
@@ -730,7 +732,6 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   if (AreAllVectors) {
     Type *PrevType = CallType->getContainedType(0);
-    Type *CallType = CI.getType();
     for (unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
       Type *CurrType = cast<FixedVectorType>(CallType->getContainedType(I));
       if (PrevType != CurrType) {
@@ -1075,7 +1076,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   Value *Op = EVI.getOperand(0);
   Type *OpTy = Op->getType();
   ValueVector Res;
-  if (!isStructAllVectors(OpTy))
+  if (!isStructOfMatchingFixedVectors(OpTy))
     return false;
   Type *VecType = cast<FixedVectorType>(OpTy->getContainedType(0));
   std::optional<VectorSplit> VS = getVectorSplit(VecType);
@@ -1262,7 +1263,7 @@ bool ScalarizerVisitor::finish() {
     if (!Op->use_empty()) {
       // The value is still needed, so recreate it using a series of
       // insertelements and/or shufflevectors.
-      Value *Res = nullptr;
+      Value *Res;
       if (auto *Ty = dyn_cast<FixedVectorType>(Op->getType())) {
         BasicBlock *BB = Op->getParent();
         IRBuilder<> Builder(Op);
@@ -1287,7 +1288,7 @@ bool ScalarizerVisitor::finish() {
         for (unsigned I = 0; I < NumOfStructElements; ++I) {
           for (auto *CVelem : CV) {
             Value *Elem = Builder.CreateExtractValue(
-                CVelem, I, Op->getName() + ".elem" + std::to_string(I));
+                CVelem, I, Op->getName() + ".elem" + Twine(I));
             ElemCV[I].push_back(Elem);
           }
         }
