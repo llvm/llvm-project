@@ -250,7 +250,12 @@ def ext_designated_init_brace_elision : ExtWarn<
 // Declarations.
 def ext_plain_complex : ExtWarn<
   "plain '_Complex' requires a type specifier; assuming '_Complex double'">;
-def ext_imaginary_constant : Extension<
+def warn_c23_compat_imaginary_constant : Warning<
+  "imaginary constants are incompatible with C standards before C2y">,
+  DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_imaginary_constant : Extension<
+  "imaginary constants are a C2y extension">, InGroup<C2y>;
+def ext_gnu_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def ext_integer_complex : Extension<
   "complex integer types are a GNU extension">, InGroup<GNUComplexInteger>;
