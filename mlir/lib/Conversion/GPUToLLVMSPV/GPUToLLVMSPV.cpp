@@ -279,10 +279,12 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     if (!func)
       return {};
 
-    Attribute knownSubgroupSizeAttr = func->getAttr("gpu.known_subgroup_size");
+    IntegerAttr knownSubgroupSizeAttr =
+        mlir::gpu::GPUDialect::KnownSubgroupSizeAttrHelper(op->getContext())
+            .getAttr(func);
     if (!knownSubgroupSizeAttr)
       return {};
-    return cast<IntegerAttr>(knownSubgroupSizeAttr).getInt();
+    return knownSubgroupSizeAttr.getInt();
   }
 
   static bool hasValidWidth(gpu::ShuffleOp op, uint32_t subgroupSize) {
