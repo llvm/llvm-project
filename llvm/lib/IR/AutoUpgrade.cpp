@@ -5577,11 +5577,24 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
+  auto AddPtr32Ptr64AddrSpaces = [&DL, &Res]() {
+    // If the datalayout matches the expected format, add pointer size address
+    // spaces to the datalayout.
+    StringRef AddrSpaces{"-p270:32:32-p271:32:32-p272:64:64"};
+    if (!DL.contains(AddrSpaces)) {
+      SmallVector<StringRef, 4> Groups;
+      Regex R("^([Ee]-m:[a-z](-p:32:32)?)(-.*)$");
+      if (R.match(Res, &Groups))
+        Res = (Groups[1] + AddrSpaces + Groups[3]).str();
+    }
+  };
+
   // AArch64 data layout upgrades.
   if (T.isAArch64()) {
     // Add "-Fn32"
     if (!DL.empty() && !DL.contains("-Fn32"))
       Res.append("-Fn32");
+    AddPtr32Ptr64AddrSpaces();
     return Res;
   }
 
@@ -5600,15 +5613,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   if (!T.isX86())
     return Res;
 
-  // If the datalayout matches the expected format, add pointer size address
-  // spaces to the datalayout.
-  std::string AddrSpaces = "-p270:32:32-p271:32:32-p272:64:64";
-  if (StringRef Ref = Res; !Ref.contains(AddrSpaces)) {
-    SmallVector<StringRef, 4> Groups;
-    Regex R("(e-m:[a-z](-p:32:32)?)(-[if]64:.*$)");
-    if (R.match(Res, &Groups))
-      Res = (Groups[1] + AddrSpaces + Groups[3]).str();
-  }
+  AddPtr32Ptr64AddrSpaces();
 
   // i128 values need to be 16-byte-aligned. LLVM already called into libgcc
   // for i128 operations prior to this being reflected in the data layout, and
