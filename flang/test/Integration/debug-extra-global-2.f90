@@ -4,5 +4,5 @@ module m
 integer XcX
 end
 
-
+! Test that global starting with 'X' don't get filtered.
 CHECK: !DIGlobalVariable(name: "xcx", linkageName: "_QMmExcx"{{.*}})
