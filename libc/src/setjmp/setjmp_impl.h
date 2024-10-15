@@ -13,9 +13,13 @@
 // public header setjmp.h which is also included. here.
 #include "hdr/types/jmp_buf.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/compiler.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifdef LIBC_COMPILER_IS_GCC
+[[gnu::nothrow]]
+#endif
 int setjmp(jmp_buf buf);
 
 } // namespace LIBC_NAMESPACE_DECL
