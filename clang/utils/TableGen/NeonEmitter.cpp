@@ -632,8 +632,6 @@ public:
   // Emit arm_bf16.h.inc
   void runBF16(raw_ostream &o);
 
-  void runMFloat8(raw_ostream &o);
-
   void runVectorTypes(raw_ostream &o);
 
   // Emit all the __builtin prototypes used in arm_neon.h, arm_fp16.h and
@@ -783,9 +781,7 @@ Type Type::fromTypedefName(StringRef Name) {
     T.Kind = Poly;
   } else if (Name.consume_front("bfloat")) {
     T.Kind = BFloat16;
-  } else if (Name.consume_front("mfp")) {
-    T.Kind = MFloat8;
-  } else {
+ else {
     assert(Name.starts_with("int"));
     Name = Name.drop_front(3);
   }
@@ -880,10 +876,6 @@ void Type::applyTypespec(bool &Quad) {
       // Poly doesn't have a 128x1 type.
       if (isPoly())
         NumVectors = 0;
-      break;
-    case 'm':
-      Kind = MFloat8;
-      ElementBitwidth = 8;
       break;
     case 'b':
       Kind = BFloat16;
