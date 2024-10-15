@@ -781,7 +781,7 @@ Type Type::fromTypedefName(StringRef Name) {
     T.Kind = Poly;
   } else if (Name.consume_front("bfloat")) {
     T.Kind = BFloat16;
- else {
+  }else {
     assert(Name.starts_with("int"));
     Name = Name.drop_front(3);
   }
