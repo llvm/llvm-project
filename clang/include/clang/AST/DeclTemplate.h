@@ -2085,7 +2085,9 @@ public:
 class ClassTemplatePartialSpecializationDecl
   : public ClassTemplateSpecializationDecl {
   /// The list of template parameters
-  TemplateParameterList* TemplateParams = nullptr;
+  TemplateParameterList *TemplateParams = nullptr;
+
+  TemplateArgument *InjectedArgs = nullptr;
 
   /// The class template partial specialization from which this
   /// class template partial specialization was instantiated.
@@ -2131,6 +2133,10 @@ public:
   TemplateParameterList *getTemplateParameters() const {
     return TemplateParams;
   }
+
+  /// Retrieve the template arguments list of the template parameter list
+  /// of this template.
+  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
   /// \brief All associated constraints of this partial specialization,
   /// including the requires clause and any constraints derived from
@@ -2856,6 +2862,8 @@ class VarTemplatePartialSpecializationDecl
   /// The list of template parameters
   TemplateParameterList *TemplateParams = nullptr;
 
+  TemplateArgument *InjectedArgs = nullptr;
+
   /// The variable template partial specialization from which this
   /// variable template partial specialization was instantiated.
   ///
@@ -2901,6 +2909,10 @@ public:
   TemplateParameterList *getTemplateParameters() const {
     return TemplateParams;
   }
+
+  /// Retrieve the template arguments list of the template parameter list
+  /// of this template.
+  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
   /// \brief All associated constraints of this partial specialization,
   /// including the requires clause and any constraints derived from
