@@ -1,6 +1,5 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck --implicit-check-not="invalid value" %s
 
-; CHECK-NOT: invalid value for 'denormal-fp-math' attribute
 define float @test_denormal_fp_math_valid() "denormal-fp-math"="ieee,ieee" {
   ret float 1.0
 }
