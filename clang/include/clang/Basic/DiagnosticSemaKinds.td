@@ -12702,7 +12702,7 @@ def err_acc_gang_dim_value
 def err_acc_num_arg_conflict
     : Error<"'num' argument to '%0' clause not allowed on a 'loop' construct "
             "associated with a 'kernels' construct that has a "
-            "'%select{num_gangs|num_workers}1' "
+            "'%select{num_gangs|num_workers|vector_length}1' "
             "clause">;
 def err_acc_clause_in_clause_region
     : Error<"loop with a '%0' clause may not exist in the region of a '%1' "
