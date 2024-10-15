@@ -862,8 +862,16 @@ should be followed to make such reports maximally useful.
 
 Fuzzer-generated issues should indicate that they are such, either in the
 issue description, or (for organization members) by applying the
-``fuzzer-generated`` label. This helps us prioritize issues. The remaining
-guidelines depend on the type of issue the fuzzer detects.
+``fuzzer-generated`` label.
+
+Issues should include a minimized reproducer (including both the necessary code
+and command line arguments) both as part of the issue description and as a
+godbolt.org link. An effort should be made to deduplicate issues that likely
+have the same root cause, and check whether a similar issue has already been
+reported. Reports should always be submitted against current LLVM ``main``,
+not a released version.
+
+The remaining guidelines depend on the type of issue the fuzzer detects.
 
 **For miscompilations:** These issues are usually detected by looking for
 different results when using ``-O0`` and ``-O2``, or similar. When reporting
