@@ -1411,10 +1411,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         Ty = Ty->getArrayElementTypeNoTypeQual();
 
       Ty = Ty->getUnqualifiedDesugaredType();
-      if (Ty->isBuiltinType())
-        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
-      else if (const RecordType *RT = dyn_cast<RecordType>(Ty))
+      if (const RecordType *RT = dyn_cast<RecordType>(Ty))
         data().IsHLSLIntangible |= RT->getAsCXXRecordDecl()->isHLSLIntangible();
+      else
+        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
     }
   }
 
