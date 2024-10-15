@@ -918,7 +918,7 @@ public:
   bool matchCanonicalizeICmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchCanonicalizeFCmp(const MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  // unmerge_values anyext build vector
+  // unmerge_values(anyext(build vector)) -> build vector(anyext)
   bool matchUnmergeValuesAnyExtBuildVector(const MachineInstr &MI,
                                            BuildFnTy &MatchInfo);
 
