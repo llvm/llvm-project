@@ -290,6 +290,30 @@ The initial repl-mode can be configured with the cli flag `--repl-mode=<mode>`
 and may also be adjusted at runtime using the lldb command
 `lldb-dap repl-mode <mode>`.
 
+#### `lldb-dap custom-event`
+
+lldb-dap includes a custom command to trigger a Debug Adapter Protocol event 
+from a script. [See the specification](https://microsoft.github.io/debug-adapter-protocol/specification#Base_Protocol_Event) 
+for more details on Debug Adapter Protocol events.
+
+This command has the format:
+
+```
+lldb-dap custom-event <name> <body>?
+```
+
+For example you can use a launch configuration hook to run the command like:
+
+```json
+{
+  "program": "exe",
+  "stopCommands": [
+    "lldb-dap custom-event MyStopEvent",
+    "lldb-dap custom-event MyStopEvent '{\"key\":321}",
+  ]
+}
+```
+
 ## Contributing
 
 `lldb-dap` and `lldb` are developed under the umbrella of the [LLVM project](https://llvm.org/).

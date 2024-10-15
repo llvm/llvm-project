@@ -1896,6 +1896,8 @@ void request_initialize(const llvm::json::Object &request) {
   cmd.AddCommand(
       "repl-mode", new ReplModeRequestHandler(),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
+  cmd.AddCommand("custom-event", new CustomDAPEventRequestHandler(),
+                 "Fires a custom lldb-dap event.");
 
   g_dap.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
