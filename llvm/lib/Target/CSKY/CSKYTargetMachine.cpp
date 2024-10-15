@@ -96,6 +96,8 @@ MachineFunctionInfo *CSKYTargetMachine::createMachineFunctionInfo(
                                                                   STI);
 }
 
+void CSKYTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+
 namespace {
 class CSKYPassConfig : public TargetPassConfig {
 public:

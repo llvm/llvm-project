@@ -348,6 +348,8 @@ MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
 
 HexagonTargetMachine::~HexagonTargetMachine() = default;
 
+void HexagonTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+
 namespace {
 /// Hexagon Code Generator Pass Configuration Options.
 class HexagonPassConfig : public TargetPassConfig {

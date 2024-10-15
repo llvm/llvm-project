@@ -640,3 +640,5 @@ bool ARMBaseTargetMachine::parseMachineFunctionInfo(
   MF.getInfo<ARMFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
   return false;
 }
+
+void ARMBaseTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }

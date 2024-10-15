@@ -29,6 +29,9 @@ class R600TargetMachine final : public AMDGPUTargetMachine {
 private:
   mutable StringMap<std::unique_ptr<R600Subtarget>> SubtargetMap;
 
+  /// clear target specific SubtargetMap.
+  void clearSubtargetMap() override;
+
 public:
   R600TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, const TargetOptions &Options,

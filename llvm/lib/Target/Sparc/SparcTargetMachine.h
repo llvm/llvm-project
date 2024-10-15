@@ -25,6 +25,9 @@ class SparcTargetMachine : public LLVMTargetMachine {
   bool is64Bit;
   mutable StringMap<std::unique_ptr<SparcSubtarget>> SubtargetMap;
 
+  /// clear target specific SubtargetMap.
+  void clearSubtargetMap() override;
+
 public:
   SparcTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,

@@ -215,6 +215,8 @@ void MipsTargetMachine::resetSubtarget(MachineFunction *MF) {
   Subtarget = &MF->getSubtarget<MipsSubtarget>();
 }
 
+void MipsTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+
 namespace {
 
 /// Mips Code Generator Pass Configuration Options.

@@ -83,6 +83,8 @@ XtensaTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+void XtensaTargetMachine::clearSubtargetMap() { SubtargetMap.clear(); }
+
 namespace {
 /// Xtensa Code Generator Pass Configuration Options.
 class XtensaPassConfig : public TargetPassConfig {
