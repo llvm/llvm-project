@@ -2143,8 +2143,7 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
         int saveErrno = errno;
         libHandle = dlopen(libcxxabi, RTLD_MEMBER | RTLD_NOW);
         if (libHandle == NULL) {
-          _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n",
-                                     errno);
+          _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n", errno);
           assert(0 && "dlopen() failed");
         }
         xlcPersonalityV0 = reinterpret_cast<__xlcxx_personality_v0_t *>(
