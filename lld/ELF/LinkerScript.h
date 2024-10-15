@@ -433,6 +433,7 @@ public:
   //
   // then provideMap should contain the mapping: 'v' -> ['a', 'b', 'c']
   llvm::MapVector<StringRef, SmallVector<StringRef, 0>> provideMap;
+  // Store defined symbols that should ignore PROVIDE commands.
   llvm::DenseSet<Symbol *> unusedProvideSyms;
 
   // List of potential spill locations (PotentialSpillSection) for an input
