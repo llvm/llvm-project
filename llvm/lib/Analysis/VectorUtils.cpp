@@ -39,6 +39,20 @@ static cl::opt<unsigned> MaxInterleaveGroupFactor(
     cl::desc("Maximum factor for an interleaved access group (default = 8)"),
     cl::init(8));
 
+/// Returns true if `Ty` can be widened by the loop vectorizer.
+bool llvm::canWidenType(Type *Ty) {
+  Type *ElTy = Ty;
+  // For now, only allow widening non-packed literal structs where all
+  // element types are the same. This simplifies the cost model and
+  // conversion between scalar and wide types.
+  if (auto *StructTy = dyn_cast<StructType>(Ty);
+      StructTy && !StructTy->isPacked() && StructTy->isLiteral() &&
+      StructTy->containsHomogeneousTypes()) {
+    ElTy = StructTy->elements().front();
+  }
+  return VectorType::isValidElementType(ElTy);
+}
+
 /// Return true if all of the intrinsic's arguments and return type are scalars
 /// for the scalar form of the intrinsic, and vectors for the vector form of the
 /// intrinsic (except operands that are marked as always being scalar by

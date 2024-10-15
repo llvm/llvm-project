@@ -18,6 +18,7 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
+#include "llvm/IR/VectorUtils.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {
@@ -127,18 +128,8 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
-/// A helper function for converting Scalar types to vector types. If
-/// the incoming type is void, we return void. If the EC represents a
-/// scalar, we return the scalar type.
-inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
-  if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
-    return Scalar;
-  return VectorType::get(Scalar, EC);
-}
-
-inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
-  return ToVectorTy(Scalar, ElementCount::getFixed(VF));
-}
+/// Returns true if `Ty` can be widened by the loop vectorizer.
+bool canWidenType(Type *Ty);
 
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
