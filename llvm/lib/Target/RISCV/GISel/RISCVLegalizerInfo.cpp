@@ -839,7 +839,7 @@ static MachineInstrBuilder buildAllOnesMask(LLT VecTy, const SrcOp &VL,
 
 /// Gets the two common "VL" operands: an all-ones mask and the vector length.
 /// VecTy is a scalable vector type.
-static std::pair<MachineInstrBuilder, Register>
+static std::pair<MachineInstrBuilder, MachineInstrBuilder>
 buildDefaultVLOps(LLT VecTy, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) {
   assert(VecTy.isScalableVector() && "Expecting scalable container type");
   const RISCVSubtarget &STI = MIB.getMF().getSubtarget<RISCVSubtarget>();
