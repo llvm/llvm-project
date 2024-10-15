@@ -10,8 +10,8 @@
 //  opcodes in DirectX Intermediate Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILConstants.h"
 #include "DXILIntrinsicExpansion.h"
+#include "DXILConstants.h"
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
