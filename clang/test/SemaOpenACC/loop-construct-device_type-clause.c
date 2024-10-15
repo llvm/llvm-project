@@ -56,7 +56,6 @@ void uses() {
   for(;;);
 #pragma acc loop device_type(*) auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'worker' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) worker
   for(;;);
   // expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'loop' construct}}
@@ -190,8 +189,9 @@ void uses() {
   for(;;);
 
 #pragma acc loop device_type(*) tile(*, 1)
-  for(;;);
-  // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
+  for(;;)
+    for(;;);
+
 #pragma acc loop dtype(*) gang
   for(;;);
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}

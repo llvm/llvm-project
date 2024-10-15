@@ -2201,6 +2201,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       for (auto VReg : getOrCreateVRegs(*Arg))
         VRegs.push_back(VReg);
     MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, {}, VRegs);
+    MF->setHasFakeUses(true);
     return true;
   }
   case Intrinsic::dbg_declare: {
@@ -3912,16 +3913,11 @@ bool IRTranslator::emitSPDescriptorFailure(StackProtectorDescriptor &SPD,
     return false;
   }
 
-  // On PS4/PS5, the "return address" must still be within the calling
-  // function, even if it's at the very end, so emit an explicit TRAP here.
-  // WebAssembly needs an unreachable instruction after a non-returning call,
-  // because the function return type can be different from __stack_chk_fail's
-  // return type (void).
-  const TargetMachine &TM = MF->getTarget();
-  if (TM.getTargetTriple().isPS() || TM.getTargetTriple().isWasm()) {
-    LLVM_DEBUG(dbgs() << "Unhandled trap emission for stack protector fail\n");
-    return false;
-  }
+  // Emit a trap instruction if we are required to do so.
+  const TargetOptions &TargetOpts = TLI->getTargetMachine().Options;
+  if (TargetOpts.TrapUnreachable && !TargetOpts.NoTrapAfterNoreturn)
+    CurBuilder->buildInstr(TargetOpcode::G_TRAP);
+
   return true;
 }
 

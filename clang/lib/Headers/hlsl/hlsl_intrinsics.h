@@ -767,6 +767,36 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
 uint64_t4 countbits(uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// degrees builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T degrees(T x)
+/// \brief Converts the specified value from radians to degrees.
+/// \param x The specified input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+half degrees(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+half2 degrees(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+half3 degrees(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+half4 degrees(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+float degrees(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+float2 degrees(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+float3 degrees(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
+float4 degrees(float4);
+
+//===----------------------------------------------------------------------===//
 // dot product builtins
 //===----------------------------------------------------------------------===//
 
@@ -2088,6 +2118,19 @@ int3 sign(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int4 sign(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(uint16_t4);
 #endif
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
@@ -2113,6 +2156,15 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int4 sign(int4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int sign(float);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int2 sign(float2);
@@ -2131,6 +2183,15 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int4 sign(int64_t4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int sign(double);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int2 sign(double2);
@@ -2138,5 +2199,35 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int3 sign(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
 int4 sign(double4);
+
+//===----------------------------------------------------------------------===//
+// radians builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T radians(T Val)
+/// \brief Converts the specified value from degrees to radians.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+half radians(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+half2 radians(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+half3 radians(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+half4 radians(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+float radians(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+float2 radians(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+float3 radians(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_radians)
+float4 radians(float4);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

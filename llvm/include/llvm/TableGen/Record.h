@@ -51,6 +51,7 @@ class RecordVal;
 class Resolver;
 class StringInit;
 class TypedInit;
+class TGTimer;
 
 //===----------------------------------------------------------------------===//
 //  Type Classes
@@ -1785,11 +1786,13 @@ public:
   }
 
   RecordVal *getValue(const Init *Name) {
-    return const_cast<RecordVal *>(static_cast<const Record *>(this)->getValue(Name));
+    return const_cast<RecordVal *>(
+        static_cast<const Record *>(this)->getValue(Name));
   }
 
   RecordVal *getValue(StringRef Name) {
-    return const_cast<RecordVal *>(static_cast<const Record *>(this)->getValue(Name));
+    return const_cast<RecordVal *>(
+        static_cast<const Record *>(this)->getValue(Name));
   }
 
   void addTemplateArg(Init *Name) {
@@ -2033,29 +2036,7 @@ public:
 
   Init *getNewAnonymousName();
 
-  /// Start phase timing; called if the --time-phases option is specified.
-  void startPhaseTiming() {
-    TimingGroup = new TimerGroup("TableGen", "TableGen Phase Timing");
-  }
-
-  /// Start timing a phase. Automatically stops any previous phase timer.
-  void startTimer(StringRef Name) const;
-
-  /// Stop timing a phase.
-  void stopTimer();
-
-  /// Start timing the overall backend. If the backend itself starts a timer,
-  /// then this timer is cleared.
-  void startBackendTimer(StringRef Name);
-
-  /// Stop timing the overall backend.
-  void stopBackendTimer();
-
-  /// Stop phase timing and print the report.
-  void stopPhaseTiming() {
-    if (TimingGroup)
-      delete TimingGroup;
-  }
+  TGTimer &getTimer() const { return *Timer; }
 
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends.
@@ -2089,16 +2070,9 @@ private:
   mutable std::map<std::string, std::vector<const Record *>> Cache;
   GlobalMap ExtraGlobals;
 
-  // TODO: Move timing related code out of RecordKeeper.
-  // These members are for the phase timing feature. We need a timer group,
-  // the last timer started, and a flag to say whether the last timer
-  // is the special "backend overall timer."
-  mutable TimerGroup *TimingGroup = nullptr;
-  mutable Timer *LastTimer = nullptr;
-  mutable bool BackendTimer = false;
-
   /// The internal uniquer implementation of the RecordKeeper.
   std::unique_ptr<detail::RecordKeeperImpl> Impl;
+  std::unique_ptr<TGTimer> Timer;
 };
 
 /// Sorting predicate to sort record pointers by name.

@@ -1430,9 +1430,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
       // If this is a shift recurrence, we know the bits being shifted in.
       // We can combine that with information about the start value of the
       // recurrence to conclude facts about the result.
-      if ((Opcode == Instruction::LShr || Opcode == Instruction::AShr ||
-           Opcode == Instruction::Shl) &&
-          BO->getOperand(0) == I) {
+      switch (Opcode) {
+      case Instruction::LShr:
+      case Instruction::AShr:
+      case Instruction::Shl: {
+        if (BO->getOperand(0) != I)
+          break;
 
         // We have matched a recurrence of the form:
         // %iv = [R, %entry], [%iv.next, %backedge]
@@ -1460,17 +1463,18 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setHighBits(Known2.countMinLeadingZeros());
           Known.One.setHighBits(Known2.countMinLeadingOnes());
           break;
-        };
+        }
+        break;
       }
 
       // Check for operations that have the property that if
       // both their operands have low zero bits, the result
       // will have low zero bits.
-      if (Opcode == Instruction::Add ||
-          Opcode == Instruction::Sub ||
-          Opcode == Instruction::And ||
-          Opcode == Instruction::Or ||
-          Opcode == Instruction::Mul) {
+      case Instruction::Add:
+      case Instruction::Sub:
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Mul: {
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
@@ -1495,37 +1499,52 @@ static void computeKnownBitsFromOperator(const Operator *I,
                                        Known3.countMinTrailingZeros()));
 
         auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(BO);
-        if (OverflowOp && Q.IIQ.hasNoSignedWrap(OverflowOp)) {
-          // If initial value of recurrence is nonnegative, and we are adding
-          // a nonnegative number with nsw, the result can only be nonnegative
-          // or poison value regardless of the number of times we execute the
-          // add in phi recurrence. If initial value is negative and we are
-          // adding a negative number with nsw, the result can only be
-          // negative or poison value. Similar arguments apply to sub and mul.
-          //
-          // (add non-negative, non-negative) --> non-negative
-          // (add negative, negative) --> negative
-          if (Opcode == Instruction::Add) {
-            if (Known2.isNonNegative() && Known3.isNonNegative())
-              Known.makeNonNegative();
-            else if (Known2.isNegative() && Known3.isNegative())
-              Known.makeNegative();
-          }
+        if (!OverflowOp || !Q.IIQ.hasNoSignedWrap(OverflowOp))
+          break;
 
-          // (sub nsw non-negative, negative) --> non-negative
-          // (sub nsw negative, non-negative) --> negative
-          else if (Opcode == Instruction::Sub && BO->getOperand(0) == I) {
-            if (Known2.isNonNegative() && Known3.isNegative())
-              Known.makeNonNegative();
-            else if (Known2.isNegative() && Known3.isNonNegative())
-              Known.makeNegative();
-          }
-
-          // (mul nsw non-negative, non-negative) --> non-negative
-          else if (Opcode == Instruction::Mul && Known2.isNonNegative() &&
-                   Known3.isNonNegative())
+        switch (Opcode) {
+        // If initial value of recurrence is nonnegative, and we are adding
+        // a nonnegative number with nsw, the result can only be nonnegative
+        // or poison value regardless of the number of times we execute the
+        // add in phi recurrence. If initial value is negative and we are
+        // adding a negative number with nsw, the result can only be
+        // negative or poison value. Similar arguments apply to sub and mul.
+        //
+        // (add non-negative, non-negative) --> non-negative
+        // (add negative, negative) --> negative
+        case Instruction::Add: {
+          if (Known2.isNonNegative() && Known3.isNonNegative())
             Known.makeNonNegative();
+          else if (Known2.isNegative() && Known3.isNegative())
+            Known.makeNegative();
+          break;
         }
+
+        // (sub nsw non-negative, negative) --> non-negative
+        // (sub nsw negative, non-negative) --> negative
+        case Instruction::Sub: {
+          if (BO->getOperand(0) != I)
+            break;
+          if (Known2.isNonNegative() && Known3.isNegative())
+            Known.makeNonNegative();
+          else if (Known2.isNegative() && Known3.isNonNegative())
+            Known.makeNegative();
+          break;
+        }
+
+        // (mul nsw non-negative, non-negative) --> non-negative
+        case Instruction::Mul:
+          if (Known2.isNonNegative() && Known3.isNonNegative())
+            Known.makeNonNegative();
+          break;
+
+        default:
+          break;
+        }
+        break;
+      }
+      default:
+        break;
       }
     }
 
@@ -6926,6 +6945,12 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
 bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
   return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
       V, /* AllowLifetime */ true, /* AllowDroppable */ true);
+}
+
+bool llvm::isNotCrossLaneOperation(const Instruction *I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    return isTriviallyVectorizable(II->getIntrinsicID());
+  return !isa<CallBase, BitCastInst, ShuffleVectorInst, ExtractElementInst>(I);
 }
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,

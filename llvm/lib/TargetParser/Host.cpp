@@ -342,6 +342,12 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x63") { // Arm China.
+    return StringSwitch<const char *>(Part)
+        .Case("0x132", "star-mc1")
+        .Default("generic");
+  }
+
   if (Implementer == "0x6d") { // Microsoft Corporation.
     // The Microsoft Azure Cobalt 100 CPU is handled as a Neoverse N2.
     return StringSwitch<const char *>(Part)
@@ -1050,6 +1056,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
     CPU = "k8";
     break;
   case 16:
+  case 18:
     CPU = "amdfam10";
     *Type = X86::AMDFAM10H; // "amdfam10"
     switch (Model) {
@@ -1998,7 +2005,8 @@ struct RISCVHwProbe {
 };
 const StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
-                       {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0}};
+                       {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},
+                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
@@ -2054,9 +2062,26 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
       ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE
+  Features["zve32x"] = ExtMask & (1ULL << 37); // RISCV_HWPROBE_EXT_ZVE32X
+  Features["zve32f"] = ExtMask & (1ULL << 38); // RISCV_HWPROBE_EXT_ZVE32F
+  Features["zve64x"] = ExtMask & (1ULL << 39); // RISCV_HWPROBE_EXT_ZVE64X
+  Features["zve64f"] = ExtMask & (1ULL << 40); // RISCV_HWPROBE_EXT_ZVE64F
+  Features["zve64d"] = ExtMask & (1ULL << 41); // RISCV_HWPROBE_EXT_ZVE64D
+  Features["zimop"] = ExtMask & (1ULL << 42);  // RISCV_HWPROBE_EXT_ZIMOP
+  Features["zca"] = ExtMask & (1ULL << 43);    // RISCV_HWPROBE_EXT_ZCA
+  Features["zcb"] = ExtMask & (1ULL << 44);    // RISCV_HWPROBE_EXT_ZCB
+  Features["zcd"] = ExtMask & (1ULL << 45);    // RISCV_HWPROBE_EXT_ZCD
+  Features["zcf"] = ExtMask & (1ULL << 46);    // RISCV_HWPROBE_EXT_ZCF
+  Features["zcmop"] = ExtMask & (1ULL << 47);  // RISCV_HWPROBE_EXT_ZCMOP
+  Features["zawrs"] = ExtMask & (1ULL << 48);  // RISCV_HWPROBE_EXT_ZAWRS
 
-  // TODO: set unaligned-scalar-mem if RISCV_HWPROBE_KEY_MISALIGNED_PERF returns
-  // RISCV_HWPROBE_MISALIGNED_FAST.
+  // Check whether the processor supports fast misaligned scalar memory access.
+  // NOTE: RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF is only available on
+  // Linux 6.11 or later. If it is not recognized, the key field will be cleared
+  // to -1.
+  if (Query[2].Key != -1 &&
+      Query[2].Value == /*RISCV_HWPROBE_MISALIGNED_SCALAR_FAST=*/3)
+    Features["unaligned-scalar-mem"] = true;
 
   return Features;
 }

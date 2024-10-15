@@ -1048,15 +1048,14 @@ private:
     }
 
     void checkIndirectCall(CallExpr *Call, QualType CalleeType) {
-      auto *FPT =
-          CalleeType->getAs<FunctionProtoType>(); // Null if FunctionType.
       FunctionEffectKindSet CalleeEffects;
-      if (FPT)
-        CalleeEffects.insert(FPT->getFunctionEffects());
+      if (FunctionEffectsRef Effects = FunctionEffectsRef::get(CalleeType);
+          !Effects.empty())
+        CalleeEffects.insert(Effects);
 
       auto Check1Effect = [&](FunctionEffect Effect, bool Inferring) {
-        if (FPT == nullptr || Effect.shouldDiagnoseFunctionCall(
-                                  /*direct=*/false, CalleeEffects))
+        if (Effect.shouldDiagnoseFunctionCall(
+                /*direct=*/false, CalleeEffects))
           addViolation(Inferring, Effect, ViolationID::CallsExprWithoutEffect,
                        Call->getBeginLoc());
       };
@@ -1134,10 +1133,37 @@ private:
       return true;
     }
 
+    bool VisitObjCAtFinallyStmt(ObjCAtFinallyStmt *Finally) {
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeCatch,
+                                ViolationID::ThrowsOrCatchesExceptions,
+                                Finally->getAtFinallyLoc());
+      return true;
+    }
+
     bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
       diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
                                 ViolationID::AccessesObjCMethodOrProperty,
                                 Msg->getBeginLoc());
+      return true;
+    }
+
+    bool VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *ARP) {
+      // Under the hood, @autorelease (potentially?) allocates memory and
+      // invokes ObjC methods. We don't currently have memory allocation as
+      // a "language construct" but we do have ObjC messaging, so diagnose that.
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
+                                ViolationID::AccessesObjCMethodOrProperty,
+                                ARP->getBeginLoc());
+      return true;
+    }
+
+    bool VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *Sync) {
+      // Under the hood, this calls objc_sync_enter and objc_sync_exit, wrapped
+      // in a @try/@finally block. Diagnose this generically as "ObjC
+      // messaging".
+      diagnoseLanguageConstruct(FunctionEffect::FE_ExcludeObjCMessageSend,
+                                ViolationID::AccessesObjCMethodOrProperty,
+                                Sync->getBeginLoc());
       return true;
     }
 

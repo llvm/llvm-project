@@ -1096,7 +1096,7 @@ public:
   }
   const Expr *VisitCastExpr(const CastExpr *E) {
     if (E->getCastKind() == CK_LValueToRValue)
-      return E;
+      return IsExpectedRecordDecl(E) ? E : nullptr;
     return Visit(E->getSubExpr());
   }
   const Expr *VisitParenExpr(const ParenExpr *E) {
@@ -1528,7 +1528,12 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 ///
 LValue CodeGenFunction::EmitLValue(const Expr *E,
                                    KnownNonNull_t IsKnownNonNull) {
-  LValue LV = EmitLValueHelper(E, IsKnownNonNull);
+  // Running with sufficient stack space to avoid deeply nested expressions
+  // cause a stack overflow.
+  LValue LV;
+  CGM.runWithSufficientStackSpace(
+      E->getExprLoc(), [&] { LV = EmitLValueHelper(E, IsKnownNonNull); });
+
   if (IsKnownNonNull && !LV.isKnownNonNull())
     LV.setKnownNonNull();
   return LV;
@@ -2366,7 +2371,7 @@ Address CodeGenFunction::EmitExtVectorElementLValue(LValue LV) {
   return VectorBasePtrPlusIx;
 }
 
-/// Load of global gamed gegisters are always calls to intrinsics.
+/// Load of global named registers are always calls to intrinsics.
 RValue CodeGenFunction::EmitLoadOfGlobalRegLValue(LValue LV) {
   assert((LV.getType()->isIntegerType() || LV.getType()->isPointerType()) &&
          "Bad type for register variable");

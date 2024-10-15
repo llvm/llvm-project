@@ -94,24 +94,6 @@ static void CheckCodeGenerationOptions(const Driver &D, const ArgList &Args) {
                                                       << "-static";
 }
 
-// Add backslashes to escape spaces and other backslashes.
-// This is used for the space-separated argument list specified with
-// the -dwarf-debug-flags option.
-static void EscapeSpacesAndBackslashes(const char *Arg,
-                                       SmallVectorImpl<char> &Res) {
-  for (; *Arg; ++Arg) {
-    switch (*Arg) {
-    default:
-      break;
-    case ' ':
-    case '\\':
-      Res.push_back('\\');
-      break;
-    }
-    Res.push_back(*Arg);
-  }
-}
-
 /// Apply \a Work on the current tool chain \a RegularToolChain and any other
 /// offloading tool chain that is associated with the current action \a JA.
 static void
@@ -5139,6 +5121,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Args.hasArg(options::OPT_fclangir))
+    CmdArgs.push_back("-fclangir");
+
   if (IsOpenMPDevice) {
     // We have to pass the triple of the host if compiling for an OpenMP device.
     std::string NormalizedTriple =
@@ -6280,8 +6265,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_unique_internal_linkage_names);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
                     options::OPT_fno_unique_basic_block_section_names);
-  Args.addOptInFlag(CmdArgs, options::OPT_fconvergent_functions,
-                    options::OPT_fno_convergent_functions);
 
   if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                options::OPT_fno_split_machine_functions)) {
@@ -6298,6 +6281,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
                   options::OPT_finstrument_functions_after_inlining,
                   options::OPT_finstrument_function_entry_bare);
+  Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
+                  options::OPT_fno_convergent_functions);
 
   // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
   // for sampling, overhead of call arc collection is way too high and there's
@@ -7721,31 +7706,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Also record command line arguments into the debug info if
   // -grecord-gcc-switches options is set on.
   // By default, -gno-record-gcc-switches is set on and no recording.
-  auto GRecordSwitches =
-      Args.hasFlag(options::OPT_grecord_command_line,
-                   options::OPT_gno_record_command_line, false);
-  auto FRecordSwitches =
-      Args.hasFlag(options::OPT_frecord_command_line,
-                   options::OPT_fno_record_command_line, false);
-  if (FRecordSwitches && !Triple.isOSBinFormatELF() &&
-      !Triple.isOSBinFormatXCOFF() && !Triple.isOSBinFormatMachO())
-    D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << Args.getLastArg(options::OPT_frecord_command_line)->getAsString(Args)
-        << TripleStr;
-  if (TC.UseDwarfDebugFlags() || GRecordSwitches || FRecordSwitches) {
-    ArgStringList OriginalArgs;
-    for (const auto &Arg : Args)
-      Arg->render(Args, OriginalArgs);
-
-    SmallString<256> Flags;
-    EscapeSpacesAndBackslashes(Exec, Flags);
-    for (const char *OriginalArg : OriginalArgs) {
-      SmallString<128> EscapedArg;
-      EscapeSpacesAndBackslashes(OriginalArg, EscapedArg);
-      Flags += " ";
-      Flags += EscapedArg;
-    }
-    auto FlagsArgString = Args.MakeArgString(Flags);
+  auto GRecordSwitches = false;
+  auto FRecordSwitches = false;
+  if (shouldRecordCommandLine(TC, Args, FRecordSwitches, GRecordSwitches)) {
+    auto FlagsArgString = renderEscapedCommandLine(TC, Args);
     if (TC.UseDwarfDebugFlags() || GRecordSwitches) {
       CmdArgs.push_back("-dwarf-debug-flags");
       CmdArgs.push_back(FlagsArgString);
@@ -8745,10 +8709,10 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
     SmallString<256> Flags;
     const char *Exec = getToolChain().getDriver().getClangProgramPath();
-    EscapeSpacesAndBackslashes(Exec, Flags);
+    escapeSpacesAndBackslashes(Exec, Flags);
     for (const char *OriginalArg : OriginalArgs) {
       SmallString<128> EscapedArg;
-      EscapeSpacesAndBackslashes(OriginalArg, EscapedArg);
+      escapeSpacesAndBackslashes(OriginalArg, EscapedArg);
       Flags += " ";
       Flags += EscapedArg;
     }
@@ -9107,13 +9071,6 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                   [](StringRef Arg) { return !Arg.starts_with("-target"); });
 
-    if (TC->getTriple().isAMDGPU()) {
-      for (StringRef Feature : llvm::split(Arch.split(':').second, ':')) {
-        FeatureArgs.emplace_back(
-            Args.MakeArgString(Feature.take_back() + Feature.drop_back()));
-      }
-    }
-
     // TODO: We need to pass in the full target-id and handle it properly in the
     // linker wrapper.
     SmallVector<std::string> Parts{
@@ -9123,7 +9080,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         "kind=" + Kind.str(),
     };
 
-    if (TC->getDriver().isUsingOffloadLTO() || TC->getTriple().isAMDGPU())
+    if (TC->getDriver().isUsingOffloadLTO())
       for (StringRef Feature : FeatureArgs)
         Parts.emplace_back("feature=" + Feature.str());
 

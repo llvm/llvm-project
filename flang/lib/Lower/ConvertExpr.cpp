@@ -5710,10 +5710,6 @@ private:
             fir::applyPathToType(seqTy.getEleTy(), components.suffixComponents);
         if (!eleTy)
           fir::emitFatalError(loc, "slicing path is ill-formed");
-        if (auto realTy = mlir::dyn_cast<fir::RealType>(eleTy))
-          eleTy = Fortran::lower::convertReal(realTy.getContext(),
-                                              realTy.getFKind());
-
         // create the type of the projected array.
         arrTy = fir::SequenceType::get(seqTy.getShape(), eleTy);
         LLVM_DEBUG(llvm::dbgs()

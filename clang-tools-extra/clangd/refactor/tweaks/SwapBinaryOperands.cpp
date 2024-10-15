@@ -126,6 +126,7 @@ BinaryOperatorKind swapOperator(const BinaryOperatorKind Opcode) {
   case BinaryOperatorKind::BO_OrAssign:
     return Opcode;
   }
+  llvm_unreachable("Unknown BinaryOperatorKind enum");
 }
 
 /// Swaps the operands to a binary operator

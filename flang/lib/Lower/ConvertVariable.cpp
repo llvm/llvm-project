@@ -46,10 +46,10 @@
 #include "llvm/Support/Debug.h"
 #include <optional>
 
-static llvm::cl::opt<bool> allowAssumedRank(
-    "allow-assumed-rank",
-    llvm::cl::desc("Enable assumed rank lowering - experimental"),
-    llvm::cl::init(false));
+static llvm::cl::opt<bool>
+    allowAssumedRank("allow-assumed-rank",
+                     llvm::cl::desc("Enable assumed rank lowering"),
+                     llvm::cl::init(true));
 
 #define DEBUG_TYPE "flang-lower-variable"
 

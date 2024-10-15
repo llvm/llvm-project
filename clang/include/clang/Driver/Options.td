@@ -1195,10 +1195,11 @@ def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
 def c : Flag<["-"], "c">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, FlangOption]>, Group<Action_Group>,
   HelpText<"Only run preprocess, compile, and assemble steps">;
-defm convergent_functions : BoolFOption<"convergent-functions",
-  LangOpts<"ConvergentFunctions">, DefaultFalse,
-  NegFlag<SetFalse, [], [ClangOption], "Assume all functions may be convergent.">,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option]>>;
+def fconvergent_functions : Flag<["-"], "fconvergent-functions">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText< "Assume all functions may be convergent.">;
+def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
+  Visibility<[ClangOption, CC1Option]>;
 
 // Common offloading options
 let Group = offload_Group in {
@@ -2001,16 +2002,18 @@ def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Grou
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
 def frecord_command_line : Flag<["-"], "frecord-command-line">,
-  DocBrief<[{Generate a section named ".GCC.command.line" containing the clang
+  DocBrief<[{Generate a section named ".GCC.command.line" containing the
 driver command-line. After linking, the section may contain multiple command
 lines, which will be individually terminated by null bytes. Separate arguments
 within a command line are combined with spaces; spaces and backslashes within an
 argument are escaped with backslashes. This format differs from the format of
 the equivalent section produced by GCC with the -frecord-gcc-switches flag.
 This option is currently only supported on ELF targets.}]>,
-  Group<f_clang_Group>;
+  Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def fno_record_command_line : Flag<["-"], "fno-record-command-line">,
-  Group<f_clang_Group>;
+  Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def : Flag<["-"], "frecord-gcc-switches">, Alias<frecord_command_line>;
 def : Flag<["-"], "fno-record-gcc-switches">, Alias<fno_record_command_line>;
 def fcommon : Flag<["-"], "fcommon">, Group<f_Group>,
@@ -2995,7 +2998,7 @@ defm clangir : BoolFOption<"clangir",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
-def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
 /// ClangIR-specific options - END
 
@@ -5557,6 +5560,9 @@ def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
+def multi_lib_config : Joined<["-", "--"], "multi-lib-config=">,
+  HelpText<"Path to the YAML configuration file to be used for multilib selection">,
+  MetaVarName<"<file>">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
 def multiply__defined : Separate<["-"], "multiply_defined">;
@@ -6073,7 +6079,7 @@ def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOpti
 def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
 
 //===----------------------------------------------------------------------===//
-// pie/pic options (clang + flang-new)
+// pie/pic options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Visibility = [ClangOption, FlangOption] in {
 
@@ -6089,7 +6095,7 @@ def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
 } // let Vis = [Default, FlangOption]
 
 //===----------------------------------------------------------------------===//
-// Target Options (clang + flang-new)
+// Target Options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Flags = [TargetSpecific] in {
 let Visibility = [ClangOption, FlangOption] in {
@@ -7162,6 +7168,9 @@ def mrelocation_model : Separate<["-"], "mrelocation-model">,
   NormalizedValues<["Static", "PIC_", "ROPI", "RWPI", "ROPI_RWPI", "DynamicNoPIC"]>,
   MarshallingInfoEnum<CodeGenOpts<"RelocationModel">, "PIC_">;
 def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">;
+def record_command_line : Separate<["-"], "record-command-line">,
+  HelpText<"The string to embed in the .LLVM.command.line section.">,
+  MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
 
 } // let Visibility = [CC1Option, CC1AsOption, FC1Option]
 
@@ -7182,9 +7191,6 @@ def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
 def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
   HelpText<"The string to embed in the Dwarf debug flags record.">,
   MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
-def record_command_line : Separate<["-"], "record-command-line">,
-  HelpText<"The string to embed in the .LLVM.command.line section.">,
-  MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zstd">,
     NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Zlib", "Zstd"]>,
