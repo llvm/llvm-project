@@ -13,7 +13,6 @@ define i16 @halfword(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK0-SDAG-LABEL: halfword:
 ; CHECK0-SDAG:       // %bb.0:
 ; CHECK0-SDAG-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK0-SDAG-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK0-SDAG-NEXT:    ubfx x8, x1, #9, #8
 ; CHECK0-SDAG-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK0-SDAG-NEXT:    mov x19, x0
@@ -43,7 +42,6 @@ define i16 @halfword(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK3-SDAG-LABEL: halfword:
 ; CHECK3-SDAG:       // %bb.0:
 ; CHECK3-SDAG-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK3-SDAG-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK3-SDAG-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK3-SDAG-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK3-SDAG-NEXT:    mov x19, x0
@@ -83,7 +81,6 @@ define i32 @word(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK0-SDAG-LABEL: word:
 ; CHECK0-SDAG:       // %bb.0:
 ; CHECK0-SDAG-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK0-SDAG-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK0-SDAG-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK0-SDAG-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK0-SDAG-NEXT:    mov x19, x0
@@ -113,7 +110,6 @@ define i32 @word(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK3-SDAG-LABEL: word:
 ; CHECK3-SDAG:       // %bb.0:
 ; CHECK3-SDAG-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK3-SDAG-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK3-SDAG-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK3-SDAG-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK3-SDAG-NEXT:    mov x19, x0
@@ -153,7 +149,6 @@ define i64 @doubleword(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK0-SDAG-LABEL: doubleword:
 ; CHECK0-SDAG:       // %bb.0:
 ; CHECK0-SDAG-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK0-SDAG-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK0-SDAG-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK0-SDAG-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK0-SDAG-NEXT:    mov x19, x0
@@ -183,7 +178,6 @@ define i64 @doubleword(ptr %ctx, i32 %xor72) nounwind {
 ; CHECK3-SDAG-LABEL: doubleword:
 ; CHECK3-SDAG:       // %bb.0:
 ; CHECK3-SDAG-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK3-SDAG-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK3-SDAG-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK3-SDAG-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK3-SDAG-NEXT:    mov x19, x0
@@ -231,7 +225,6 @@ define i16 @multi_use_half_word(ptr %ctx, i32 %xor72) {
 ; CHECK0-SDAG-NEXT:    .cfi_offset w21, -24
 ; CHECK0-SDAG-NEXT:    .cfi_offset w22, -32
 ; CHECK0-SDAG-NEXT:    .cfi_offset w30, -48
-; CHECK0-SDAG-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK0-SDAG-NEXT:    ubfx x8, x1, #9, #8
 ; CHECK0-SDAG-NEXT:    mov x19, x0
 ; CHECK0-SDAG-NEXT:    lsl x21, x8, #1
@@ -277,7 +270,6 @@ define i16 @multi_use_half_word(ptr %ctx, i32 %xor72) {
 ; CHECK3-SDAG-NEXT:    .cfi_offset w21, -24
 ; CHECK3-SDAG-NEXT:    .cfi_offset w22, -32
 ; CHECK3-SDAG-NEXT:    .cfi_offset w30, -48
-; CHECK3-SDAG-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK3-SDAG-NEXT:    ubfx x21, x1, #9, #8
 ; CHECK3-SDAG-NEXT:    mov x19, x0
 ; CHECK3-SDAG-NEXT:    ldrh w20, [x0, x21, lsl #1]
