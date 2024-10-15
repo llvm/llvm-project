@@ -647,7 +647,7 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
   // Emit different versions of the induction variable. They will be
   // removed by dead code if not used.
 
-  auto getConst = [&](int v) {
+  auto createConst = [&](int v) {
     return rewriter.create<arith::ConstantOp>(loc,
                                               rewriter.getIntegerAttr(t, v));
   };
@@ -655,12 +655,12 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
   // total_iterations = cdiv(range_diff, step);
   // - range_diff = ub - lb
   // - total_iterations = (range_diff + step + (step < 0 ? 1 : -1)) / step
-  Value zero = getConst(0);
-  Value one = getConst(1);
+  Value zero = createConst(0);
+  Value one = createConst(1);
   Value stepLessZero = rewriter.create<arith::CmpIOp>(
       loc, arith::CmpIPredicate::slt, step, zero);
   Value stepDecr =
-      rewriter.create<arith::SelectOp>(loc, stepLessZero, one, getConst(-1));
+      rewriter.create<arith::SelectOp>(loc, stepLessZero, one, createConst(-1));
 
   Value rangeDiff = rewriter.create<arith::SubIOp>(loc, ub, lb);
   Value rangeIncrStep = rewriter.create<arith::AddIOp>(loc, rangeDiff, step);
@@ -671,8 +671,8 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
   // If total_iters < max_stage, start the epilogue at zero to match the
   // ramp-up in the prologue.
   // start_iter = max(0, total_iters - max_stage)
-  Value iterI =
-      rewriter.create<arith::SubIOp>(loc, totalIterations, getConst(maxStage));
+  Value iterI = rewriter.create<arith::SubIOp>(loc, totalIterations,
+                                               createConst(maxStage));
   iterI = rewriter.create<arith::MaxSIOp>(loc, zero, iterI);
 
   // Capture predicates for dynamic loops.
@@ -692,7 +692,7 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
       // Disable stages when `i` is greater than total_iters.
       // pred = total_iters >= i
       predicates[i] = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::sge, totalIterations, getConst(i));
+          loc, arith::CmpIPredicate::sge, totalIterations, createConst(i));
     }
   }
 
