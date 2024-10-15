@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyObjCModule
+add_clang_library(clangTidyObjCModule STATIC
   AssertEquals.cpp
   AvoidNSErrorInitCheck.cpp
   DeallocInCategoryCheck.cpp

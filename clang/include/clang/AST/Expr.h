@@ -2170,11 +2170,13 @@ public:
 class ParenExpr : public Expr {
   SourceLocation L, R;
   Stmt *Val;
+
 public:
   ParenExpr(SourceLocation l, SourceLocation r, Expr *val)
       : Expr(ParenExprClass, val->getType(), val->getValueKind(),
              val->getObjectKind()),
         L(l), R(r), Val(val) {
+    ParenExprBits.ProducedByFoldExpansion = false;
     setDependence(computeDependence(this));
   }
 
@@ -2205,6 +2207,13 @@ public:
   child_range children() { return child_range(&Val, &Val+1); }
   const_child_range children() const {
     return const_child_range(&Val, &Val + 1);
+  }
+
+  bool isProducedByFoldExpansion() const {
+    return ParenExprBits.ProducedByFoldExpansion != 0;
+  }
+  void setIsProducedByFoldExpansion(bool ProducedByFoldExpansion = true) {
+    ParenExprBits.ProducedByFoldExpansion = ProducedByFoldExpansion;
   }
 };
 
@@ -6404,9 +6413,9 @@ class BlockExpr : public Expr {
 protected:
   BlockDecl *TheBlock;
 public:
-  BlockExpr(BlockDecl *BD, QualType ty)
+  BlockExpr(BlockDecl *BD, QualType ty, bool ContainsUnexpandedParameterPack)
       : Expr(BlockExprClass, ty, VK_PRValue, OK_Ordinary), TheBlock(BD) {
-    setDependence(computeDependence(this));
+    setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
   }
 
   /// Build an empty block expression.

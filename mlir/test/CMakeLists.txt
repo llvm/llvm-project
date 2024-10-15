@@ -115,6 +115,7 @@ set(MLIR_TEST_DEPENDS
   mlir-opt
   mlir-query
   mlir-reduce
+  mlir-rewrite
   mlir-tblgen
   mlir-translate
   tblgen-lsp-server

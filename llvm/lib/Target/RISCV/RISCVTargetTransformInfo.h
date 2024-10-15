@@ -55,12 +55,6 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// type.
   InstructionCost getConstantPoolLoadCost(Type *Ty,
                                           TTI::TargetCostKind CostKind);
-
-  /// Return the cost if a shufflevector can be consist of multiple vslideup.
-  /// Otherwise, return InstructionCost::getInvalid().
-  InstructionCost isMultipleInsertSubvector(VectorType *Tp, ArrayRef<int> Mask,
-                                            TTI::TargetCostKind CostKind);
-
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
@@ -301,6 +295,12 @@ public:
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
   }
 
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace) {
+    return TLI->isLegalInterleavedAccessType(VTy, Factor, Alignment, AddrSpace,
+                                             DL);
+  }
+
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment);
 
   bool isVScaleKnownToBeAPowerOfTwo() const {
@@ -418,6 +418,15 @@ public:
   shouldConsiderAddressTypePromotion(const Instruction &I,
                                      bool &AllowPromotionWithoutCommonHeader);
   std::optional<unsigned> getMinPageSize() const { return 4096; }
+  /// Return true if the (vector) instruction I will be lowered to an
+  /// instruction with a scalar splat operand for the given Operand number.
+  bool canSplatOperand(Instruction *I, int Operand) const;
+  /// Return true if a vector instruction will lower to a target instruction
+  /// able to splat the given operand.
+  bool canSplatOperand(unsigned Opcode, int Operand) const;
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
 };
 
 } // end namespace llvm

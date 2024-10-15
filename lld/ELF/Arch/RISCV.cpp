@@ -172,7 +172,7 @@ uint32_t RISCV::calcEFlags() const {
 int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   case R_RISCV_32:
@@ -247,7 +247,7 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
   // l[wd] t3, %pcrel_lo(1b)(t3)
   // jalr t1, t3
   // nop
-  uint32_t offset = sym.getGotPltVA() - pltEntryAddr;
+  uint32_t offset = sym.getGotPltVA(ctx) - pltEntryAddr;
   write32le(buf + 0, utype(AUIPC, X_T3, hi20(offset)));
   write32le(buf + 4, itype(ctx.arg.is64 ? LD : LW, X_T3, X_T3, lo12(offset)));
   write32le(buf + 8, itype(JALR, X_T1, X_T3, 0));
@@ -325,7 +325,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return R_RISCV_LEB128;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -343,8 +343,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
 
   case R_RISCV_RVC_BRANCH: {
-    checkInt(loc, val, 9, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 9, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE383;
     uint16_t imm8 = extractBits(val, 8, 8) << 12;
     uint16_t imm4_3 = extractBits(val, 4, 3) << 10;
@@ -358,8 +358,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_RVC_JUMP: {
-    checkInt(loc, val, 12, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 12, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE003;
     uint16_t imm11 = extractBits(val, 11, 11) << 12;
     uint16_t imm4 = extractBits(val, 4, 4) << 11;
@@ -377,7 +377,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case R_RISCV_RVC_LUI: {
     int64_t imm = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(loc, imm, 6, rel);
+    checkInt(ctx, loc, imm, 6, rel);
     if (imm == 0) { // `c.lui rd, 0` is illegal, convert to `c.li rd, 0`
       write16le(loc, (read16le(loc) & 0x0F83) | 0x4000);
     } else {
@@ -389,8 +389,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_JAL: {
-    checkInt(loc, val, 21, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 21, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
 
     uint32_t insn = read32le(loc) & 0xFFF;
     uint32_t imm20 = extractBits(val, 20, 20) << 31;
@@ -404,8 +404,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_BRANCH: {
-    checkInt(loc, val, 13, rel);
-    checkAlignment(loc, val, 2, rel);
+    checkInt(ctx, loc, val, 13, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
 
     uint32_t insn = read32le(loc) & 0x1FFF07F;
     uint32_t imm12 = extractBits(val, 12, 12) << 31;
@@ -422,7 +422,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_CALL:
   case R_RISCV_CALL_PLT: {
     int64_t hi = SignExtend64(val + 0x800, bits) >> 12;
-    checkInt(loc, hi, 20, rel);
+    checkInt(ctx, loc, hi, 20, rel);
     if (isInt<20>(hi)) {
       relocateNoSym(loc, R_RISCV_PCREL_HI20, val);
       relocateNoSym(loc + 4, R_RISCV_PCREL_LO12_I, val);
@@ -438,7 +438,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_TPREL_HI20:
   case R_RISCV_HI20: {
     uint64_t hi = val + 0x800;
-    checkInt(loc, SignExtend64(hi, bits) >> 12, 20, rel);
+    checkInt(ctx, loc, SignExtend64(hi, bits) >> 12, 20, rel);
     write32le(loc, (read32le(loc) & 0xFFF) | (hi & 0xFFFFF000));
     return;
   }
@@ -467,7 +467,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case INTERNAL_R_RISCV_GPREL_S: {
     Defined *gp = ctx.sym.riscvGlobalPointer;
     int64_t displace = SignExtend64(val - gp->getVA(), bits);
-    checkInt(loc, displace, 12, rel);
+    checkInt(ctx, loc, displace, 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_GP << 15);
     if (rel.type == INTERNAL_R_RISCV_GPREL_I)
       insn = setLO12_I(insn, displace);
@@ -517,7 +517,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_32_PCREL:
   case R_RISCV_PLT32:
   case R_RISCV_GOT32_PCREL:
-    checkInt(loc, val, 32, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
     return;
 
@@ -602,9 +602,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     const Relocation &rel = relocs[i];
     uint8_t *loc = buf + rel.offset;
-    uint64_t val =
-        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
-                             secAddr + rel.offset, *rel.sym, rel.expr);
+    uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 
     switch (rel.expr) {
     case R_RELAX_HINT:
@@ -739,7 +737,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
   const uint64_t dest =
-      (r.expr == R_PLT_PC ? sym.getPltVA() : sym.getVA()) + r.addend;
+      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA()) + r.addend;
   const int64_t displace = dest - loc;
 
   if (rvc && isInt<12>(displace) && rd == 0) {
@@ -833,10 +831,12 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       remove = nextLoc - ((loc + align - 1) & -align);
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLocation((const uint8_t*)loc) +
+        errorOrWarn(getErrorLoc(ctx, (const uint8_t *)loc) +
                     "insufficient padding bytes for " + lld::toString(r.type) +
-                    ": " + Twine(r.addend) + " bytes available "
-                    "for requested alignment of " + Twine(align) + " bytes");
+                    ": " + Twine(r.addend) +
+                    " bytes available "
+                    "for requested alignment of " +
+                    Twine(align) + " bytes");
         remove = 0;
       }
       break;
@@ -1044,11 +1044,12 @@ namespace {
 // extension.
 class RISCVAttributesSection final : public SyntheticSection {
 public:
-  RISCVAttributesSection()
-      : SyntheticSection(0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {}
+  RISCVAttributesSection(Ctx &ctx)
+      : SyntheticSection(ctx, 0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {
+  }
 
-  size_t getSize(Ctx &) const override { return size; }
-  void writeTo(Ctx &, uint8_t *buf) override;
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) override;
 
   static constexpr StringRef vendor = "riscv";
   DenseMap<unsigned, unsigned> intAttr;
@@ -1179,7 +1180,7 @@ mergeAttributesSection(Ctx &ctx,
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
-  ctx.in.riscvAttributes = std::make_unique<RISCVAttributesSection>();
+  ctx.in.riscvAttributes = std::make_unique<RISCVAttributesSection>(ctx);
   auto &merged = static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
 
   // Collect all tags values from attributes section.
@@ -1277,18 +1278,18 @@ mergeAttributesSection(Ctx &ctx,
   return &merged;
 }
 
-void RISCVAttributesSection::writeTo(Ctx &ctx, uint8_t *buf) {
-  const size_t size = getSize(ctx);
+void RISCVAttributesSection::writeTo(uint8_t *buf) {
+  const size_t size = getSize();
   uint8_t *const end = buf + size;
   *buf = ELFAttrs::Format_Version;
-  write32(buf + 1, size - 1);
+  write32(ctx, buf + 1, size - 1);
   buf += 5;
 
   memcpy(buf, vendor.data(), vendor.size());
   buf += vendor.size() + 1;
 
   *buf = ELFAttrs::File;
-  write32(buf + 1, end - buf);
+  write32(ctx, buf + 1, end - buf);
   buf += 5;
 
   for (auto &attr : intAttr) {
@@ -1329,7 +1330,4 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
                            mergeAttributesSection(ctx, sections));
 }
 
-TargetInfo *elf::getRISCVTargetInfo(Ctx &ctx) {
-  static RISCV target(ctx);
-  return &target;
-}
+void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }

@@ -436,7 +436,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           namespace NS = SPIRV::NonSemanticExtInst;
           static constexpr int64_t GlobalNonSemanticDITy[] = {
               NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
-              NS::DebugTypeBasic};
+              NS::DebugTypeBasic, NS::DebugTypePointer};
           bool IsGlobalDI = false;
           for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
             IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
@@ -1210,6 +1210,13 @@ void addInstrRequirements(const MachineInstr &MI,
                          false);
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence);
     Reqs.addCapability(SPIRV::Capability::ArithmeticFenceEXT);
+    break;
+  case SPIRV::OpControlBarrierArriveINTEL:
+  case SPIRV::OpControlBarrierWaitINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_split_barrier)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_split_barrier);
+      Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
+    }
     break;
   default:
     break;

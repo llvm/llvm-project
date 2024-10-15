@@ -531,9 +531,8 @@ public:
   NODE_ENUM(OmpLinearModifier, Type)
   NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
-  NODE(parser, OmpMapType)
-  NODE(OmpMapType, Always)
-  NODE_ENUM(OmpMapType, Type)
+  NODE_ENUM(OmpMapClause, TypeModifier)
+  NODE_ENUM(OmpMapClause, Type)
   static std::string GetNodeName(const llvm::omp::Clause &x) {
     return llvm::Twine(
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))

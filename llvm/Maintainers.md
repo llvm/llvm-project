@@ -16,8 +16,8 @@ assistance.
 
 The lead maintainer is responsible for all parts of LLVM not covered by somebody else.
 
-Chris Lattner \
-sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattner (Discourse)
+Nikita Popov \
+llvm@npopov.com, npopov@redhat.com (email), [nikic](https://github.com/nikic) (GitHub), nikic (Discourse)
 
 ### Transforms and analyses
 
@@ -334,12 +334,12 @@ tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) 
 
 #### Release management
 
-For x.y.0 releases:
+Odd releases:
 
-Hans Wennborg \
-hans@chromium.org (email), [zmodem](https://github.com/zmodem) (GitHub)
+Tobias Hieta \
+tobias@hieta.se (email), [tru](https://github.com/tru) (GitHub)
 
-For x.y.\[1-9\] releases:
+Even releases:
 
 Tom Stellard \
 tstellar@redhat.com (email), [tstellar](https://github.com/tstellar) (GitHub)
@@ -354,10 +354,10 @@ martin@martin.st (email), [mstrorsjo](https://github.com/mstrorsjo) (GitHub)
 Michael Spencer \
 bigcheesegs@gmail.com (email), [Bigcheese](https://github.com/Bigcheese) (GitHub)
 
-#### Sony PlayStation®4 support
+#### Sony PlayStation support
 
-Paul Robinson \
-paul.robinson@sony.com (email), [pogo59](https://github.com/pogo59) (GitHub)
+Jeremy Morse \
+jeremy.morse@sony.com (email), [jmorse](https://github.com/jmorse) (GitHub)
 
 #### Inline assembly
 
@@ -426,7 +426,12 @@ help with the success of the project!
 
 ### Emeritus lead maintainers
 
-### Inactive component maintainers
+Chris Lattner \
+sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattner (Discourse)
+
+### Inactive or former component maintainers
+
+Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management
 
 ### Former maintainers of removed components
 
