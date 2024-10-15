@@ -39,7 +39,6 @@ subroutine omp_do_lastprivate(a)
 
   ! CHECK-NEXT: omp.yield
   ! CHECK-NEXT: }
-  ! CHECK-NEXT: omp.terminator
   ! CHECK-NEXT: }
     do i=1, a
       call foo(i, a)
@@ -90,7 +89,6 @@ subroutine omp_do_lastprivate2(a, n)
   ! CHECK: }
 
   ! CHECK: omp.yield
-  ! CHECK: omp.terminator
     do i= a, n
       call foo(i, a)
     end do
@@ -148,7 +146,6 @@ subroutine omp_do_lastprivate_collapse2(a)
 
   ! CHECK-NEXT: omp.yield
   ! CHECK-NEXT: }
-  ! CHECK-NEXT: omp.terminator
   ! CHECK-NEXT: }
     do i=1, a
       do j=1, a
@@ -224,7 +221,6 @@ subroutine omp_do_lastprivate_collapse3(a)
 
   ! CHECK-NEXT: omp.yield
   ! CHECK-NEXT: }
-  ! CHECK-NEXT: omp.terminator
   ! CHECK-NEXT: }
     do i=1, a
       do j=1, a

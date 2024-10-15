@@ -18,7 +18,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
           llvm.store %loop_cnt, %gep : i32, !llvm.ptr
           omp.yield
         }
-        omp.terminator
       }
      omp.terminator
     }
