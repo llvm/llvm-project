@@ -1609,28 +1609,42 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       continue;
     }
     std::optional<uint64_t> UnitOffset;
-    if (CUIndex)
-      UnitOffset = NI.getCUOffset(*CUIndex);
-    else if (TUIndex) {
+    if (TUIndex) {
+      // We have a local or foreign type unit.
       if (*TUIndex >= NumLocalTUs) {
+        // This is a foreign type unit, we will find the right type unit by
+        // type unit signature later in this function.
+
         // Foreign type units must have a valid CU index, either from a
         // DW_IDX_comp_unit attribute value or from the .debug_names table only
         // having a single compile unit. We need the originating compile unit
         // because foreign type units can come from any .dwo file, yet only one
         // copy of the type unit will end up in the .dwp file.
-        ErrorCategory.Report(
-            "Name Index entry contains foreign TU index with invalid CU index",
-            [&]() {
-              error() << formatv(
-                  "Name Index @ {0:x}: Entry @ {1:x} contains an "
-                  "foreign TU index ({2}) with no CU index.\n",
-                  NI.getUnitOffset(), EntryID, *TUIndex);
-            });
-        ++NumErrors;
-        continue;
+        if (CUIndex) {
+          // We need the local skeleton unit offset for the code below.
+          UnitOffset = NI.getCUOffset(*CUIndex);
+        } else {
+          ErrorCategory.Report(
+              "Name Index entry contains foreign TU index with invalid CU "
+              "index",
+              [&]() {
+                error() << formatv(
+                    "Name Index @ {0:x}: Entry @ {1:x} contains an "
+                    "foreign TU index ({2}) with no CU index.\n",
+                    NI.getUnitOffset(), EntryID, *TUIndex);
+              });
+          ++NumErrors;
+          continue;
+        }
+      } else {
+        // Local type unit, get the DWARF unit offset for the type unit.
+        UnitOffset = NI.getLocalTUOffset(*TUIndex);
       }
-      UnitOffset = NI.getLocalTUOffset(*TUIndex);
+    } else if (CUIndex) {
+      // Local CU entry, get the DWARF unit offset for the CU.
+      UnitOffset = NI.getCUOffset(*CUIndex);
     }
+
     if (!UnitOffset)
       continue;
     // For split DWARF entries we need to make sure we find the non skeleton
@@ -1965,20 +1979,22 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
   for (const std::unique_ptr<DWARFUnit> &U : DCtx.info_section_units()) {
     if (const DWARFDebugNames::NameIndex *NI =
             AccelTable.getCUOrTUNameIndex(U->getOffset())) {
-      DWARFCompileUnit *CU = cast<DWARFCompileUnit>(U.get());
-      if (CU && CU->getDWOId()) {
-        DWARFDie CUDie = CU->getUnitDIE(true);
-        DWARFDie NonSkeletonUnitDie =
-            CUDie.getDwarfUnit()->getNonSkeletonUnitDIE(false);
-        if (CUDie != NonSkeletonUnitDie) {
-          for (const DWARFDebugInfoEntry &Die :
-               NonSkeletonUnitDie.getDwarfUnit()->dies())
-            NumErrors += verifyNameIndexCompleteness(
-                DWARFDie(NonSkeletonUnitDie.getDwarfUnit(), &Die), *NI);
+      DWARFCompileUnit *CU = dyn_cast<DWARFCompileUnit>(U.get());
+      if (CU) {
+        if (CU->getDWOId()) {
+          DWARFDie CUDie = CU->getUnitDIE(true);
+          DWARFDie NonSkeletonUnitDie =
+              CUDie.getDwarfUnit()->getNonSkeletonUnitDIE(false);
+          if (CUDie != NonSkeletonUnitDie) {
+            for (const DWARFDebugInfoEntry &Die :
+                 NonSkeletonUnitDie.getDwarfUnit()->dies())
+              NumErrors += verifyNameIndexCompleteness(
+                  DWARFDie(NonSkeletonUnitDie.getDwarfUnit(), &Die), *NI);
+          }
+        } else {
+          for (const DWARFDebugInfoEntry &Die : CU->dies())
+            NumErrors += verifyNameIndexCompleteness(DWARFDie(CU, &Die), *NI);
         }
-      } else {
-        for (const DWARFDebugInfoEntry &Die : CU->dies())
-          NumErrors += verifyNameIndexCompleteness(DWARFDie(CU, &Die), *NI);
       }
     }
   }
