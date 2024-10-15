@@ -1983,29 +1983,60 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
   }
 };
 
-struct FoldExpandOfCast : public OpRewritePattern<ExpandShapeOp> {
+struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
   using OpRewritePattern<ExpandShapeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ExpandShapeOp expandOp,
                                 PatternRewriter &rewriter) const override {
-    auto castOp = expandOp.getSrc().getDefiningOp<CastOp>();
-    if (!canFoldIntoConsumerOp(castOp))
-      return failure();
+    SmallVector<int64_t> newOutputShape(expandOp.getResultType().getShape());
+    SmallVector<Value> dynamicOutputShape;
+    auto outputIt = expandOp.getOutputShape().begin();
+    for (auto [i, staticShape] : llvm::enumerate(newOutputShape)) {
+      if (!ShapedType::isDynamic(staticShape))
+        continue;
 
-    SmallVector<OpFoldResult> outputOfr =
-        getMixedValues(expandOp.getResultType().getShape(),
-                       expandOp.getOutputShape(), rewriter);
-    std::optional<SmallVector<int64_t>> constantOutputShape =
-        getConstantIntValues(outputOfr);
-    if (!constantOutputShape.has_value()) {
-      return failure();
+      APInt cst;
+      Value val = *outputIt;
+      ++outputIt;
+      if (matchPattern(val, m_ConstantInt(&cst))) {
+        newOutputShape[i] = cst.getSExtValue();
+      } else {
+        dynamicOutputShape.push_back(val);
+      }
     }
-    auto newType = RankedTensorType::get(
-        constantOutputShape.value(), expandOp.getSrcType().getElementType());
 
+    // Couldn't match any values, nothing to change
+    if (expandOp.getOutputShape().size() == dynamicOutputShape.size())
+      return failure();
+
+    // Calculate the input shape from the output
+    SmallVector<ReassociationIndices, 4> reassoc =
+        expandOp.getReassociationIndices();
+    SmallVector<int64_t> newInputShape(expandOp.getSrcType().getRank(), 1l);
+    for (uint64_t inDim = 0; inDim < newInputShape.size(); inDim++) {
+      for (auto outDim : reassoc[inDim]) {
+        auto ofr = newOutputShape[outDim];
+        if (ShapedType::isDynamic(ofr)) {
+          newInputShape[inDim] = ShapedType::kDynamic;
+          break;
+        }
+        newInputShape[inDim] *= ofr;
+      }
+    }
+
+    // `inputCast` can be propagated up and the final cast can be propagated
+    // down.
+    SmallVector<OpFoldResult> outputOfr =
+        getMixedValues(newOutputShape, dynamicOutputShape, rewriter);
+    auto inputType = RankedTensorType::get(
+        newInputShape, expandOp.getSrcType().getElementType());
+    auto outputType = RankedTensorType::get(
+        newOutputShape, expandOp.getSrcType().getElementType());
+    auto inputCast = rewriter.create<CastOp>(expandOp.getLoc(), inputType,
+                                             expandOp.getSrc());
     auto newExpand = rewriter.create<ExpandShapeOp>(
-        castOp.getLoc(), newType, castOp.getSource(),
-        expandOp.getReassociationIndices());
+        expandOp.getLoc(), outputType, inputCast.getResult(),
+        expandOp.getReassociationIndices(), outputOfr);
     rewriter.replaceOpWithNewOp<CastOp>(expandOp, expandOp.getType(),
                                         newExpand.getResult());
     return success();
@@ -2018,7 +2049,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<
       ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
       ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
-      FoldExpandOfCast, FoldReshapeWithConstant<ExpandShapeOp>,
+      ConvertToStaticExpandShape, FoldReshapeWithConstant<ExpandShapeOp>,
       FoldReshapeWithSplat<ExpandShapeOp>,
       FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
       FoldDimOfCollapseShape>(context);
