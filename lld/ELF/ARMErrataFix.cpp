@@ -73,9 +73,9 @@ public:
   Patch657417Section(Ctx &, InputSection *p, uint64_t off, uint32_t instr,
                      bool isARM);
 
-  void writeTo(Ctx &, uint8_t *buf) override;
+  void writeTo(uint8_t *buf) override;
 
-  size_t getSize(Ctx &) const override { return 4; }
+  size_t getSize() const override { return 4; }
 
   // Get the virtual address of the branch instruction at patcheeOffset.
   uint64_t getBranchAddr() const;
@@ -136,14 +136,15 @@ static bool is32bitBranch(uint32_t instr) {
 
 Patch657417Section::Patch657417Section(Ctx &ctx, InputSection *p, uint64_t off,
                                        uint32_t instr, bool isARM)
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
+    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
                        ".text.patch"),
       patchee(p), patcheeOffset(off), instr(instr), isARM(isARM) {
   parent = p->getParent();
   patchSym = addSyntheticLocal(
-      saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())), STT_FUNC,
-      isARM ? 0 : 1, getSize(ctx), *this);
-  addSyntheticLocal(saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0, *this);
+      ctx, saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())),
+      STT_FUNC, isARM ? 0 : 1, getSize(), *this);
+  addSyntheticLocal(ctx, saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0,
+                    *this);
 }
 
 uint64_t Patch657417Section::getBranchAddr() const {
@@ -176,7 +177,7 @@ static uint64_t getThumbDestAddr(Ctx &ctx, uint64_t sourceAddr,
   return sourceAddr + offset + 4;
 }
 
-void Patch657417Section::writeTo(Ctx &ctx, uint8_t *buf) {
+void Patch657417Section::writeTo(uint8_t *buf) {
   // The base instruction of the patch is always a 32-bit unconditional branch.
   if (isARM)
     write32le(buf, 0xea000000);
@@ -259,6 +260,7 @@ struct ScanResult {
 // branch so the minimum offset for a patch is 4.
 static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
                                            uint64_t limit) {
+  Ctx &ctx = isec->getCtx();
   uint64_t isecAddr = isec->getVA(0);
   // Advance Off so that (isecAddr + off) modulo 0x1000 is at least 0xffa. We
   // need to check for a 32-bit instruction immediately before a 32-bit branch

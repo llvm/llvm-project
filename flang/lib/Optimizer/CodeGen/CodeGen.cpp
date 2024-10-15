@@ -2808,14 +2808,14 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
   matchAndRewrite(fir::GlobalOp global, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
-    mlir::LLVM::DIGlobalVariableExpressionAttr dbgExpr;
+    llvm::SmallVector<mlir::Attribute> dbgExprs;
 
     if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(global.getLoc())) {
       if (auto gvAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DIGlobalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
-            global.getContext(), gvAttr, mlir::LLVM::DIExpressionAttr());
+        dbgExprs.push_back(mlir::LLVM::DIGlobalVariableExpressionAttr::get(
+            global.getContext(), gvAttr, mlir::LLVM::DIExpressionAttr()));
       }
     }
 
@@ -2831,7 +2831,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     llvm::ArrayRef<mlir::NamedAttribute> attrs;
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
         loc, tyAttr, isConst, linkage, global.getSymName(), initAttr, 0, 0,
-        false, false, comdat, attrs, dbgExpr);
+        false, false, comdat, attrs, dbgExprs);
 
     if (global.getAlignment() && *global.getAlignment() > 0)
       g.setAlignment(*global.getAlignment());
