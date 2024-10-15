@@ -45,7 +45,7 @@ struct VRegInfo {
   } D;
   Register VReg;
   Register PreferredReg;
-  std::vector<uint8_t> Flags;
+  SmallVector<uint8_t> Flags;
 };
 
 using Name2RegClassMap = StringMap<const TargetRegisterClass *>;
