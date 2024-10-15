@@ -35,11 +35,11 @@
 // Contructor that replaces the ifunc runs currently with prio 10, see
 // the LowerIFuncPass. The resolver of FMV depends on the cpu features so set
 // the priority to 9.
-#define CONSTRUCTOR_PRIOTITY 9
+#define CONSTRUCTOR_PRIORITY 9
 #else
-#define CONSTRUCTOR_PRIOTITY 90
+#define CONSTRUCTOR_PRIORITY 90
 #endif
-#define CONSTRUCTOR_ATTRIBUTE __attribute__((constructor(CONSTRUCTOR_PRIOTITY)))
+#define CONSTRUCTOR_ATTRIBUTE __attribute__((constructor(CONSTRUCTOR_PRIORITY)))
 #else
 // FIXME: For MSVC, we should make a function pointer global in .CRT$X?? so that
 // this runs during initialization.
