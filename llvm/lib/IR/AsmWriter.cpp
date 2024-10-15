@@ -1433,6 +1433,9 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
       Out << " nuw";
     if (TI->hasNoSignedWrap())
       Out << " nsw";
+  } else if (const auto *ICmp = dyn_cast<ICmpInst>(U)) {
+    if (ICmp->hasSameSign())
+      Out << " samesign";
   }
 }
 
