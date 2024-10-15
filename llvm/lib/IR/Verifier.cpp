@@ -2401,6 +2401,19 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (!Info)
       CheckFailed("invalid name for a VFABI variant: " + S, V);
   }
+
+  if (auto A = Attrs.getFnAttr("denormal-fp-math"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (!parseDenormalFPAttribute(S).isValid())
+      CheckFailed("invalid value for 'denormal-fp-math' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("denormal-fp-math-f32"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (!parseDenormalFPAttribute(S).isValid())
+      CheckFailed("invalid value for 'denormal-fp-math-f32' attribute: " + S,
+                  V);
+  }
 }
 
 void Verifier::verifyFunctionMetadata(
