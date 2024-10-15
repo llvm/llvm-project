@@ -10356,7 +10356,7 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
           }
           return false;
         };
-        if (!IsCheapConcat(V1, V2))
+        if (!IsCheapConcat(peekThroughBitcasts(V1), peekThroughBitcasts(V2)))
           continue;
       }
 
