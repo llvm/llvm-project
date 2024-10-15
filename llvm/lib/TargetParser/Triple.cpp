@@ -927,7 +927,6 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::mips64:
   case Triple::mips64el:
   case Triple::mips:
-  case Triple::mipsel:
   case Triple::msp430:
   case Triple::nvptx64:
   case Triple::nvptx:
@@ -950,6 +949,11 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ve:
   case Triple::xcore:
   case Triple::xtensa:
+    return Triple::ELF;
+
+  case Triple::mipsel:
+    if (T.isOSWindows())
+      return Triple::COFF;
     return Triple::ELF;
 
   case Triple::ppc64:
