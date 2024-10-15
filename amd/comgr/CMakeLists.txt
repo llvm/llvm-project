@@ -448,6 +448,7 @@ if(BUILD_TESTING)
     set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_TARGETS check-comgr)
   endif()
   add_subdirectory(test)
+  add_subdirectory(test-lit)
 endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)

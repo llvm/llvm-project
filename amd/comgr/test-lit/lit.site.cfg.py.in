@@ -1,0 +1,15 @@
+import os
+
+config.my_src_root = r'@CMAKE_CURRENT_SOURCE_DIR@'
+config.my_obj_root = r'@CMAKE_CURRENT_BINARY_DIR@'
+
+# Needed for clang, llvm-dis, etc.
+config.environment['PATH'] = os.pathsep.join(["@LLVM_TOOLS_BINARY_DIR@",
+                                              config.environment['PATH']])
+
+# Needed for Comgr binaries
+config.environment['PATH'] = os.pathsep.join(["@CMAKE_CURRENT_BINARY_DIR@",
+                                              config.environment['PATH']])
+
+lit_config.load_config(
+      config, os.path.join(config.my_src_root, "lit.cfg.py"))
