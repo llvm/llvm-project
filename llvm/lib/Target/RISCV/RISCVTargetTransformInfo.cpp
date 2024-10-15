@@ -1132,6 +1132,11 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
   }
+  case Intrinsic::vp_merge: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    return LT.first *
+           getRISCVInstructionCost(RISCV::VMERGE_VVM, LT.second, CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
