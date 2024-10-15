@@ -51,8 +51,7 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
-  bool checkUsers(std::optional<const MachineOperand *> &CommonVL,
-                  MachineInstr &MI);
+  bool checkUsers(const MachineOperand *&CommonVL, MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
 };
@@ -669,7 +668,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
       unsigned PolicyOpNum = RISCVII::getVecPolicyOpNum(Desc);
       const MachineOperand &PolicyOp = MI.getOperand(PolicyOpNum);
       uint64_t Policy = PolicyOp.getImm();
-      UseTAPolicy = (Policy & RISCVII::TAIL_AGNOSTIC) == RISCVII::TAIL_AGNOSTIC;
+      UseTAPolicy = Policy & RISCVII::TAIL_AGNOSTIC;
       if (HasPassthru) {
         unsigned PassthruOpIdx = MI.getNumExplicitDefs();
         UseTAPolicy = UseTAPolicy || (MI.getOperand(PassthruOpIdx).getReg() ==
@@ -711,8 +710,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVLOptimizer::checkUsers(
-    std::optional<const MachineOperand *> &CommonVL, MachineInstr &MI) {
+bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
+                                  MachineInstr &MI) {
   // FIXME: Avoid visiting each user for each time we visit something on the
   // worklist, combined with an extra visit from the outer loop. Restructure
   // along lines of an instcombine style worklist which integrates the outer
@@ -757,17 +756,15 @@ bool RISCVVLOptimizer::checkUsers(
 
     unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
     const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
+
     // Looking for an immediate or a register VL that isn't X0.
-    if (VLOp.isReg() && VLOp.getReg() == RISCV::X0) {
-      LLVM_DEBUG(dbgs() << "    Abort due to user uses X0 as VL.\n");
-      CanReduceVL = false;
-      break;
-    }
+    assert(!VLOp.isReg() ||
+           VLOp.getReg() != RISCV::X0 && "Did not expect X0 VL");
 
     if (!CommonVL) {
       CommonVL = &VLOp;
       LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
-    } else if (!(*CommonVL)->isIdenticalTo(VLOp)) {
+    } else if (!CommonVL->isIdenticalTo(VLOp)) {
       LLVM_DEBUG(dbgs() << "    Abort because users have different VL\n");
       CanReduceVL = false;
       break;
@@ -804,7 +801,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     MachineInstr &MI = *Worklist.pop_back_val();
     LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-    std::optional<const MachineOperand *> CommonVL;
+    const MachineOperand *CommonVL = nullptr;
     bool CanReduceVL = true;
     if (isVectorRegClass(MI.getOperand(0).getReg(), MRI))
       CanReduceVL = checkUsers(CommonVL, MI);
@@ -812,35 +809,32 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     if (!CanReduceVL || !CommonVL)
       continue;
 
-    const MachineOperand *CommonVLMO = *CommonVL;
-    if (!CommonVLMO->isImm() && !CommonVLMO->getReg().isVirtual()) {
-      LLVM_DEBUG(dbgs() << "    Abort because common VL is not valid.\n");
-      continue;
-    }
+    assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
+           "Expected VL to be an Imm or virtual Reg");
 
     unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
     MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
-    if (!RISCV::isVLKnownLE(*CommonVLMO, VLOp)) {
+    if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
       LLVM_DEBUG(dbgs() << "    Abort due to no benefit.\n");
       continue;
     }
 
-    if (CommonVLMO->isImm()) {
+    if (CommonVL->isImm()) {
       LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                        << CommonVLMO->getImm() << " for " << MI << "\n");
-      VLOp.ChangeToImmediate(CommonVLMO->getImm());
+                        << CommonVL->getImm() << " for " << MI << "\n");
+      VLOp.ChangeToImmediate(CommonVL->getImm());
     } else {
-      const MachineInstr *VLMI = MRI->getVRegDef(CommonVLMO->getReg());
+      const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
       if (!MDT->dominates(VLMI, &MI))
         continue;
       LLVM_DEBUG(
           dbgs() << "  Reduce VL from " << VLOp << " to "
-                 << printReg(CommonVLMO->getReg(), MRI->getTargetRegisterInfo())
+                 << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
                  << " for " << MI << "\n");
 
       // All our checks passed. We can reduce VL.
-      VLOp.ChangeToRegister(CommonVLMO->getReg(), false);
+      VLOp.ChangeToRegister(CommonVL->getReg(), false);
     }
 
     MadeChange = true;
