@@ -55,8 +55,8 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
   } else if (isa<StructType>(T)) {
     typeKind = clang::Type::Record;
   } else {
-    cir_assert_or_abort(!::cir::MissingFeatures::ABIClangTypeKind(),
-                        "Unhandled type class");
+    cir_cconv_assert_or_abort(!::cir::MissingFeatures::ABIClangTypeKind(),
+                              "Unhandled type class");
     // FIXME(cir): Completely wrong. Just here to make it non-blocking.
     typeKind = clang::Type::Builtin;
   }
@@ -94,34 +94,35 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
       Align = Target->getDoubleAlign();
       break;
     }
-    cir_unreachable("Unknown builtin type!");
+    cir_cconv_unreachable("Unknown builtin type!");
     break;
   }
   case clang::Type::Record: {
     const auto RT = dyn_cast<StructType>(T);
-    cir_tl_assert(!::cir::MissingFeatures::tagTypeClassAbstraction());
+    cir_cconv_assert(!::cir::MissingFeatures::tagTypeClassAbstraction());
 
     // Only handle TagTypes (names types) for now.
-    cir_tl_assert(RT.getName() && "Anonymous record is NYI");
+    cir_cconv_assert(RT.getName() && "Anonymous record is NYI");
 
     // NOTE(cir): Clang does some hanlding of invalid tagged declarations here.
     // Not sure if this is necessary in CIR.
 
     if (::cir::MissingFeatures::typeGetAsEnumType()) {
-      cir_unreachable("NYI");
+      cir_cconv_unreachable("NYI");
     }
 
     const CIRRecordLayout &Layout = getCIRRecordLayout(RT);
     Width = toBits(Layout.getSize());
     Align = toBits(Layout.getAlignment());
-    cir_tl_assert(!::cir::MissingFeatures::recordDeclHasAlignmentAttr());
+    cir_cconv_assert(!::cir::MissingFeatures::recordDeclHasAlignmentAttr());
     break;
   }
   default:
-    cir_unreachable("Unhandled type class");
+    cir_cconv_unreachable("Unhandled type class");
   }
 
-  cir_tl_assert(llvm::isPowerOf2_32(Align) && "Alignment must be power of 2");
+  cir_cconv_assert(llvm::isPowerOf2_32(Align) &&
+                   "Alignment must be power of 2");
   return clang::TypeInfo(Width, Align, AlignRequirement);
 }
 
@@ -129,13 +130,13 @@ Type CIRLowerContext::initBuiltinType(clang::BuiltinType::Kind K) {
   Type Ty;
 
   // NOTE(cir): Clang does more stuff here. Not sure if we need to do the same.
-  cir_tl_assert(!::cir::MissingFeatures::qualifiedTypes());
+  cir_cconv_assert(!::cir::MissingFeatures::qualifiedTypes());
   switch (K) {
   case clang::BuiltinType::Char_S:
     Ty = IntType::get(getMLIRContext(), 8, true);
     break;
   default:
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
   }
 
   Types.push_back(Ty);
@@ -144,8 +145,8 @@ Type CIRLowerContext::initBuiltinType(clang::BuiltinType::Kind K) {
 
 void CIRLowerContext::initBuiltinTypes(const clang::TargetInfo &Target,
                                        const clang::TargetInfo *AuxTarget) {
-  cir_tl_assert((!this->Target || this->Target == &Target) &&
-                "Incorrect target reinitialization");
+  cir_cconv_assert((!this->Target || this->Target == &Target) &&
+                   "Incorrect target reinitialization");
   this->Target = &Target;
   this->AuxTarget = AuxTarget;
 
@@ -153,7 +154,7 @@ void CIRLowerContext::initBuiltinTypes(const clang::TargetInfo &Target,
   if (LangOpts.CharIsSigned)
     CharTy = initBuiltinType(clang::BuiltinType::Char_S);
   else
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
 }
 
 /// Convert a size in bits to a size in characters.
@@ -168,7 +169,7 @@ int64_t CIRLowerContext::toBits(clang::CharUnits CharSize) const {
 
 clang::TypeInfoChars CIRLowerContext::getTypeInfoInChars(Type T) const {
   if (auto arrTy = dyn_cast<ArrayType>(T))
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
   clang::TypeInfo Info = getTypeInfo(T);
   return clang::TypeInfoChars(toCharUnitsFromBits(Info.Width),
                               toCharUnitsFromBits(Info.Align),
@@ -179,7 +180,7 @@ bool CIRLowerContext::isPromotableIntegerType(Type T) const {
   // HLSL doesn't promote all small integer types to int, it
   // just uses the rank-based promotion rules for all types.
   if (::cir::MissingFeatures::langOpts())
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
 
   // FIXME(cir): CIR does not distinguish between char, short, etc. So we just
   // assume it is promotable if smaller than 32 bits. This is wrong since, for
@@ -198,7 +199,7 @@ bool CIRLowerContext::isPromotableIntegerType(Type T) const {
   // TODO(cir): CIR doesn't know if a integer originated from an enum. Improve
   // CIR or add an AST query here.
   if (::cir::MissingFeatures::typeGetAsEnumType()) {
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
   }
 
   return false;

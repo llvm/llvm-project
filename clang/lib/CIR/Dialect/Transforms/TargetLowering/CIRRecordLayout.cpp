@@ -38,17 +38,17 @@ CIRRecordLayout::CIRRecordLayout(
   FieldOffsets.insert(FieldOffsets.end(), fieldoffsets.begin(),
                       fieldoffsets.end());
 
-  cir_tl_assert(!PrimaryBase && "Layout for class with inheritance is NYI");
+  cir_cconv_assert(!PrimaryBase && "Layout for class with inheritance is NYI");
   // CXXInfo->PrimaryBase.setPointer(PrimaryBase);
-  cir_tl_assert(!IsPrimaryBaseVirtual &&
-                "Layout for virtual base class is NYI");
+  cir_cconv_assert(!IsPrimaryBaseVirtual &&
+                   "Layout for virtual base class is NYI");
   // CXXInfo->PrimaryBase.setInt(IsPrimaryBaseVirtual);
   CXXInfo->NonVirtualSize = nonvirtualsize;
   CXXInfo->NonVirtualAlignment = nonvirtualalignment;
   CXXInfo->PreferredNVAlignment = preferrednvalignment;
   CXXInfo->SizeOfLargestEmptySubobject = SizeOfLargestEmptySubobject;
   // FIXME(cir): Initialize base classes offsets.
-  cir_tl_assert(!::cir::MissingFeatures::getCXXRecordBases());
+  cir_cconv_assert(!::cir::MissingFeatures::getCXXRecordBases());
   CXXInfo->HasOwnVFPtr = hasOwnVFPtr;
   CXXInfo->VBPtrOffset = vbptroffset;
   CXXInfo->HasExtendableVFPtr = hasExtendableVFPtr;

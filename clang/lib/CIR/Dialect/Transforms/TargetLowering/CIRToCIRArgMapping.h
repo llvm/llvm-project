@@ -58,7 +58,7 @@ public:
   unsigned totalIRArgs() const { return TotalIRArgs; }
 
   bool hasPaddingArg(unsigned ArgNo) const {
-    cir_tl_assert(ArgNo < ArgInfo.size());
+    cir_cconv_assert(ArgNo < ArgInfo.size());
     return ArgInfo[ArgNo].PaddingArgIndex != InvalidIndex;
   }
 
@@ -69,7 +69,7 @@ public:
     const ::cir::ABIArgInfo &RetAI = FI.getReturnInfo();
 
     if (RetAI.getKind() == ::cir::ABIArgInfo::Indirect) {
-      cir_unreachable("NYI");
+      cir_cconv_unreachable("NYI");
     }
 
     unsigned ArgNo = 0;
@@ -77,31 +77,31 @@ public:
         onlyRequiredArgs ? FI.getNumRequiredArgs() : FI.arg_size();
     for (LowerFunctionInfo::const_arg_iterator I = FI.arg_begin();
          ArgNo < NumArgs; ++I, ++ArgNo) {
-      cir_tl_assert(I != FI.arg_end());
+      cir_cconv_assert(I != FI.arg_end());
       // Type ArgType = I->type;
       const ::cir::ABIArgInfo &AI = I->info;
       // Collect data about IR arguments corresponding to Clang argument ArgNo.
       auto &IRArgs = ArgInfo[ArgNo];
 
       if (::cir::MissingFeatures::argumentPadding()) {
-        cir_unreachable("NYI");
+        cir_cconv_unreachable("NYI");
       }
 
       switch (AI.getKind()) {
       case ::cir::ABIArgInfo::Extend:
       case ::cir::ABIArgInfo::Direct: {
         // FIXME(cir): handle sseregparm someday...
-        cir_tl_assert(AI.getCoerceToType() && "Missing coerced type!!");
+        cir_cconv_assert(AI.getCoerceToType() && "Missing coerced type!!");
         StructType STy = dyn_cast<StructType>(AI.getCoerceToType());
         if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
-          cir_unreachable("NYI");
+          cir_cconv_unreachable("NYI");
         } else {
           IRArgs.NumberOfArgs = 1;
         }
         break;
       }
       default:
-        cir_unreachable("Missing ABIArgInfo::Kind");
+        cir_cconv_unreachable("Missing ABIArgInfo::Kind");
       }
 
       if (IRArgs.NumberOfArgs > 0) {
@@ -114,10 +114,10 @@ public:
       if (IRArgNo == 1 && SwapThisWithSRet)
         IRArgNo++;
     }
-    cir_tl_assert(ArgNo == ArgInfo.size());
+    cir_cconv_assert(ArgNo == ArgInfo.size());
 
     if (::cir::MissingFeatures::inallocaArgs()) {
-      cir_unreachable("NYI");
+      cir_cconv_unreachable("NYI");
     }
 
     TotalIRArgs = IRArgNo;
@@ -126,7 +126,7 @@ public:
   /// Returns index of first IR argument corresponding to ArgNo, and their
   /// quantity.
   std::pair<unsigned, unsigned> getIRArgs(unsigned ArgNo) const {
-    cir_tl_assert(ArgNo < ArgInfo.size());
+    cir_cconv_assert(ArgNo < ArgInfo.size());
     return std::make_pair(ArgInfo[ArgNo].FirstArgIndex,
                           ArgInfo[ArgNo].NumberOfArgs);
   }

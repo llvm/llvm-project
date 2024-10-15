@@ -34,7 +34,7 @@ cir::LoweringPrepareCXXABI *cir::LoweringPrepareCXXABI::createItaniumABI() {
 static void buildBadCastCall(CIRBaseBuilderTy &builder, mlir::Location loc,
                              mlir::FlatSymbolRefAttr badCastFuncRef) {
   // TODO(cir): set the calling convention to __cxa_bad_cast.
-  cir_tl_assert(!MissingFeatures::setCallingConv());
+  cir_cconv_assert(!MissingFeatures::setCallingConv());
 
   builder.createCallOp(loc, badCastFuncRef, mlir::ValueRange{});
   builder.create<mlir::cir::UnreachableOp>(loc);
@@ -48,7 +48,7 @@ static mlir::Value buildDynamicCastAfterNullCheck(CIRBaseBuilderTy &builder,
   auto castInfo = op.getInfo().value();
 
   // TODO(cir): consider address space
-  cir_tl_assert(!MissingFeatures::addressSpace());
+  cir_cconv_assert(!MissingFeatures::addressSpace());
 
   auto srcPtr = builder.createBitcast(srcValue, builder.getVoidPtrTy());
   auto srcRtti = builder.getConstant(loc, castInfo.getSrcRtti());
@@ -59,15 +59,15 @@ static mlir::Value buildDynamicCastAfterNullCheck(CIRBaseBuilderTy &builder,
   mlir::Value dynCastFuncArgs[4] = {srcPtr, srcRtti, destRtti, offsetHint};
 
   // TODO(cir): set the calling convention for __dynamic_cast.
-  cir_tl_assert(!MissingFeatures::setCallingConv());
+  cir_cconv_assert(!MissingFeatures::setCallingConv());
   mlir::Value castedPtr =
       builder
           .createCallOp(loc, dynCastFuncRef, builder.getVoidPtrTy(),
                         dynCastFuncArgs)
           .getResult();
 
-  cir_tl_assert(mlir::isa<mlir::cir::PointerType>(castedPtr.getType()) &&
-                "the return value of __dynamic_cast should be a ptr");
+  cir_cconv_assert(mlir::isa<mlir::cir::PointerType>(castedPtr.getType()) &&
+                   "the return value of __dynamic_cast should be a ptr");
 
   /// C++ [expr.dynamic.cast]p9:
   ///   A failed cast to reference type throws std::bad_cast
@@ -93,7 +93,7 @@ buildDynamicCastToVoidAfterNullCheck(CIRBaseBuilderTy &builder,
   bool vtableUsesRelativeLayout = op.getRelativeLayout();
 
   // TODO(cir): consider address space in this function.
-  cir_tl_assert(!MissingFeatures::addressSpace());
+  cir_cconv_assert(!MissingFeatures::addressSpace());
 
   mlir::Type vtableElemTy;
   uint64_t vtableElemAlign;
@@ -141,7 +141,7 @@ LoweringPrepareItaniumCXXABI::lowerDynamicCast(CIRBaseBuilderTy &builder,
   auto loc = op->getLoc();
   auto srcValue = op.getSrc();
 
-  cir_tl_assert(!MissingFeatures::buildTypeCheck());
+  cir_cconv_assert(!MissingFeatures::buildTypeCheck());
 
   if (op.isRefcast())
     return buildDynamicCastAfterNullCheck(builder, op);
@@ -169,5 +169,5 @@ mlir::Value LoweringPrepareItaniumCXXABI::lowerVAArg(
     const ::cir::CIRDataLayout &datalayout) {
   // There is no generic cir lowering for var_arg, here we fail
   // so to prevent attempt of calling lowerVAArg for ItaniumCXXABI
-  cir_unreachable("NYI");
+  cir_cconv_unreachable("NYI");
 }

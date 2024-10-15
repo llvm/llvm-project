@@ -17,37 +17,37 @@
 
 #include <llvm/Support/raw_ostream.h>
 
-constexpr bool cirMissingFeatureAssertionMode =
+constexpr bool cirCConvAssertionMode =
     true; // Change to `false` to use llvm_unreachable
 
-#define NOTE                                                                   \
+#define CIR_CCONV_NOTE                                                         \
   " Target lowering is now required. To workaround use "                       \
   "-fno-clangir-call-conv-lowering. This flag is going to be removed at some"  \
   " point."
 
 // Special assertion to be used in the target lowering library.
-#define cir_tl_assert(cond)                                                    \
+#define cir_cconv_assert(cond)                                                 \
   do {                                                                         \
     if (!(cond))                                                               \
-      llvm::errs() << NOTE << "\n";                                            \
+      llvm::errs() << CIR_CCONV_NOTE << "\n";                                  \
     assert((cond));                                                            \
   } while (0)
 
-// Special version of cir_unreachable to give more info to the user on how
+// Special version of cir_cconv_unreachable to give more info to the user on how
 // to temporaruly disable target lowering.
-#define cir_unreachable(msg)                                                   \
+#define cir_cconv_unreachable(msg)                                             \
   do {                                                                         \
-    llvm_unreachable(msg NOTE);                                                \
+    llvm_unreachable(msg CIR_CCONV_NOTE);                                      \
   } while (0)
 
 // Some assertions knowingly generate incorrect code. This macro allows us to
 // switch between using `assert` and `llvm_unreachable` for these cases.
-#define cir_assert_or_abort(cond, msg)                                         \
+#define cir_cconv_assert_or_abort(cond, msg)                                   \
   do {                                                                         \
-    if (cirMissingFeatureAssertionMode) {                                      \
-      assert((cond) && msg NOTE);                                              \
+    if (cirCConvAssertionMode) {                                               \
+      assert((cond) && msg CIR_CCONV_NOTE);                                    \
     } else {                                                                   \
-      llvm_unreachable(msg NOTE);                                              \
+      llvm_unreachable(msg CIR_CCONV_NOTE);                                    \
     }                                                                          \
   } while (0)
 

@@ -36,7 +36,7 @@ public:
 
   RequiredArgs(All_t _) : NumRequired(~0U) {}
   explicit RequiredArgs(unsigned n) : NumRequired(n) {
-    cir_tl_assert(n != ~0U);
+    cir_cconv_assert(n != ~0U);
   }
 
   /// Compute the arguments required by the given formal prototype,
@@ -49,7 +49,8 @@ public:
     if (!prototype.isVarArg())
       return All;
 
-    cir_assert_or_abort(!::cir::MissingFeatures::variadicFunctions(), "NYI");
+    cir_cconv_assert_or_abort(!::cir::MissingFeatures::variadicFunctions(),
+                              "NYI");
     return All; // FIXME(cir): Temporary workaround for the assertion above.
   }
 
@@ -108,7 +109,7 @@ public:
                                    ArrayRef<mlir::Type> argTypes,
                                    RequiredArgs required) {
     // TODO(cir): Add assertions?
-    cir_tl_assert(!::cir::MissingFeatures::extParamInfo());
+    cir_cconv_assert(!::cir::MissingFeatures::extParamInfo());
     void *buffer = operator new(totalSizeToAlloc<ArgInfo>(argTypes.size() + 1));
 
     LowerFunctionInfo *FI = new (buffer) LowerFunctionInfo();
@@ -149,12 +150,12 @@ public:
   unsigned arg_size() const { return NumArgs; }
 
   bool isVariadic() const {
-    cir_tl_assert(!::cir::MissingFeatures::variadicFunctions());
+    cir_cconv_assert(!::cir::MissingFeatures::variadicFunctions());
     return false;
   }
   unsigned getNumRequiredArgs() const {
     if (isVariadic())
-      cir_unreachable("NYI");
+      cir_cconv_unreachable("NYI");
     return arg_size();
   }
 

@@ -29,7 +29,7 @@ unsigned LowerTypes::clangCallConvToLLVMCallConv(clang::CallingConv CC) {
   case clang::CC_C:
     return llvm::CallingConv::C;
   default:
-    cir_unreachable("calling convention NYI");
+    cir_cconv_unreachable("calling convention NYI");
   }
 }
 
@@ -53,17 +53,17 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
     resultType = VoidType::get(getMLIRContext());
     break;
   default:
-    cir_unreachable("Missing ABIArgInfo::Kind");
+    cir_cconv_unreachable("Missing ABIArgInfo::Kind");
   }
 
   CIRToCIRArgMapping IRFunctionArgs(getContext(), FI, true);
   SmallVector<Type, 8> ArgTypes(IRFunctionArgs.totalIRArgs());
 
   // Add type for sret argument.
-  cir_tl_assert(!::cir::MissingFeatures::sretArgs());
+  cir_cconv_assert(!::cir::MissingFeatures::sretArgs());
 
   // Add type for inalloca argument.
-  cir_tl_assert(!::cir::MissingFeatures::inallocaArgs());
+  cir_cconv_assert(!::cir::MissingFeatures::inallocaArgs());
 
   // Add in all of the required arguments.
   unsigned ArgNo = 0;
@@ -72,7 +72,7 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
   for (; it != ie; ++it, ++ArgNo) {
     const ABIArgInfo &ArgInfo = it->info;
 
-    cir_tl_assert(!::cir::MissingFeatures::argumentPadding());
+    cir_cconv_assert(!::cir::MissingFeatures::argumentPadding());
 
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
@@ -85,17 +85,17 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
       Type argType = ArgInfo.getCoerceToType();
       StructType st = dyn_cast<StructType>(argType);
       if (st && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
-        cir_tl_assert(NumIRArgs == st.getNumElements());
+        cir_cconv_assert(NumIRArgs == st.getNumElements());
         for (unsigned i = 0, e = st.getNumElements(); i != e; ++i)
           ArgTypes[FirstIRArg + i] = st.getMembers()[i];
       } else {
-        cir_tl_assert(NumIRArgs == 1);
+        cir_cconv_assert(NumIRArgs == 1);
         ArgTypes[FirstIRArg] = argType;
       }
       break;
     }
     default:
-      cir_unreachable("Missing ABIArgInfo::Kind");
+      cir_cconv_unreachable("Missing ABIArgInfo::Kind");
     }
   }
 
@@ -117,7 +117,7 @@ mlir::Type LowerTypes::convertType(Type T) {
   }
 
   llvm::outs() << "Missing default ABI-specific type for " << T << "\n";
-  cir_assert_or_abort(!::cir::MissingFeatures::X86DefaultABITypeConvertion(),
-                      "NYI");
+  cir_cconv_assert_or_abort(
+      !::cir::MissingFeatures::X86DefaultABITypeConvertion(), "NYI");
   return T;
 }

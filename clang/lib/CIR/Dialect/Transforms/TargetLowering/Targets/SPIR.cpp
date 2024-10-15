@@ -33,7 +33,7 @@ public:
 
 private:
   void computeInfo(LowerFunctionInfo &FI) const override {
-    cir_assert_or_abort(!::cir::MissingFeatures::SPIRVABI(), "NYI");
+    cir_cconv_assert_or_abort(!::cir::MissingFeatures::SPIRVABI(), "NYI");
   }
 };
 
@@ -57,7 +57,7 @@ public:
     case Kind::offload_generic:
       return 4;
     default:
-      cir_unreachable("Unknown CIR address space for this target");
+      cir_cconv_unreachable("Unknown CIR address space for this target");
     }
   }
 };

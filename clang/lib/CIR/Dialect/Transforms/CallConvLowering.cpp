@@ -47,13 +47,14 @@ struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
       for (auto call : calls.value()) {
         // FIXME(cir): Function pointers are ignored.
         if (isa<GetGlobalOp>(call.getUser())) {
-          cir_assert_or_abort(!::cir::MissingFeatures::ABIFuncPtr(), "NYI");
+          cir_cconv_assert_or_abort(!::cir::MissingFeatures::ABIFuncPtr(),
+                                    "NYI");
           continue;
         }
 
         auto callOp = dyn_cast_or_null<CallOp>(call.getUser());
         if (!callOp)
-          cir_unreachable("NYI empty callOp");
+          cir_cconv_unreachable("NYI empty callOp");
         if (lowerModule->rewriteFunctionCall(callOp, op).failed())
           return failure();
       }

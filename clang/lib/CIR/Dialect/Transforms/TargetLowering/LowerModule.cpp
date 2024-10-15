@@ -50,10 +50,10 @@ static CIRCXXABI *createCXXABI(LowerModule &CGM) {
   case clang::TargetCXXABI::XL:
     return CreateItaniumCXXABI(CGM);
   case clang::TargetCXXABI::Microsoft:
-    cir_unreachable("Windows ABI NYI");
+    cir_cconv_unreachable("Windows ABI NYI");
   }
 
-  cir_unreachable("invalid C++ ABI kind");
+  cir_cconv_unreachable("invalid C++ ABI kind");
 }
 
 static std::unique_ptr<TargetLoweringInfo>
@@ -66,18 +66,18 @@ createTargetLoweringInfo(LowerModule &LM) {
   case llvm::Triple::aarch64: {
     AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
     if (Target.getABI() == "darwinpcs")
-      cir_unreachable("DarwinPCS ABI NYI");
+      cir_cconv_unreachable("DarwinPCS ABI NYI");
     else if (Triple.isOSWindows())
-      cir_unreachable("Windows ABI NYI");
+      cir_cconv_unreachable("Windows ABI NYI");
     else if (Target.getABI() == "aapcs-soft")
-      cir_unreachable("AAPCS-soft ABI NYI");
+      cir_cconv_unreachable("AAPCS-soft ABI NYI");
 
     return createAArch64TargetLoweringInfo(LM, Kind);
   }
   case llvm::Triple::x86_64: {
     switch (Triple.getOS()) {
     case llvm::Triple::Win32:
-      cir_unreachable("Windows ABI NYI");
+      cir_cconv_unreachable("Windows ABI NYI");
     default:
       return createX86_64TargetLoweringInfo(LM, X86AVXABILevel::None);
     }
@@ -85,7 +85,7 @@ createTargetLoweringInfo(LowerModule &LM) {
   case llvm::Triple::spirv64:
     return createSPIRVTargetLoweringInfo(LM);
   default:
-    cir_unreachable("ABI NYI");
+    cir_cconv_unreachable("ABI NYI");
   }
 }
 
@@ -143,29 +143,29 @@ void LowerModule::setFunctionAttributes(FuncOp oldFn, FuncOp newFn,
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
   if (MissingFeatures::funcDeclIsInlineBuiltinDeclaration()) {
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
   }
 
   if (MissingFeatures::funcDeclIsReplaceableGlobalAllocationFunction()) {
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
   }
 
   if (MissingFeatures::funcDeclIsCXXConstructorDecl() ||
       MissingFeatures::funcDeclIsCXXDestructorDecl())
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
   else if (MissingFeatures::funcDeclIsCXXMethodDecl())
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
 
   // NOTE(cir) Skipping emissions that depend on codegen options, as well as
   // sanitizers handling here. Do this in CIRGen.
 
   if (MissingFeatures::langOpts() && MissingFeatures::openMP())
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
 
   // NOTE(cir): Skipping more things here that depend on codegen options.
 
   if (MissingFeatures::extParamInfo()) {
-    cir_unreachable("NYI");
+    cir_cconv_unreachable("NYI");
   }
 }
 
@@ -196,7 +196,7 @@ LogicalResult LowerModule::rewriteFunctionDefinition(FuncOp op) {
   // Set up ABI-specific function attributes.
   setFunctionAttributes(op, newFn, false, /*IsThunk=*/false);
   if (MissingFeatures::extParamInfo()) {
-    cir_unreachable("ExtraAttrs are NYI");
+    cir_cconv_unreachable("ExtraAttrs are NYI");
   }
 
   // Is a function definition: handle the body.
@@ -245,7 +245,7 @@ std::unique_ptr<LowerModule> createLowerModule(ModuleOp module,
   // FIXME(cir): This just uses the default language options. We need to account
   // for custom options.
   // Create context.
-  cir_tl_assert(!::cir::MissingFeatures::langOpts());
+  cir_cconv_assert(!::cir::MissingFeatures::langOpts());
   clang::LangOptions langOpts;
 
   return std::make_unique<LowerModule>(langOpts, module, dataLayoutStr,
