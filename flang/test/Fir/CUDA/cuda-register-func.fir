@@ -1,4 +1,4 @@
-// RUN: fir-opt %s | FileCheck %s
+// RUN: fir-opt --cuf-add-constructor %s | FileCheck %s
 
 module attributes {gpu.container_module} {
   gpu.module @cuda_device_mod {
@@ -9,12 +9,8 @@ module attributes {gpu.container_module} {
       gpu.return
     }
   }
-  llvm.func internal @__cudaFortranConstructor() {
-    cuf.register_kernel @cuda_device_mod::@_QPsub_device1
-    cuf.register_kernel @cuda_device_mod::@_QPsub_device2
-    llvm.return
-  }
 }
 
+// CHECK-LABEL: llvm.func internal @__cudaFortranConstructor()
 // CHECK: cuf.register_kernel @cuda_device_mod::@_QPsub_device1
 // CHECK: cuf.register_kernel @cuda_device_mod::@_QPsub_device2
