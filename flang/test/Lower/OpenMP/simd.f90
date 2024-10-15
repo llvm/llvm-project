@@ -4,6 +4,8 @@
 ! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 ! RUN: bbc -hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 
+!CHECK: omp.declare_reduction @[[REDUCER:.*]] : i32
+
 !CHECK-LABEL: func @_QPsimd()
 subroutine simd
   integer :: i
@@ -282,7 +284,7 @@ subroutine simd_with_reduction_clause
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
   ! CHECK-NEXT: %[[UB:.*]] = arith.constant 9 : i32
   ! CHECK-NEXT: %[[STEP:.*]] = arith.constant 1 : i32
-  ! CHECK-NEXT: omp.simd reduction(@{{.*}} %[[X:.*]]#0 -> %[[X_RED:.*]] : !fir.ref<i32>) {
+  ! CHECK-NEXT: omp.simd reduction(@[[REDUCER]] %[[X:.*]]#0 -> %[[X_RED:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   !$omp simd reduction(+:x)
   do i=1, 9
