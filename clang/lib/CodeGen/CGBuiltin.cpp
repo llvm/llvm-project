@@ -5858,7 +5858,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       auto Tmp = CreateMemTemp(SizeArrayTy, "block_sizes");
       llvm::Value *TmpPtr = Tmp.getPointer();
       llvm::Value *TmpSize = EmitLifetimeStart(
-          CGM.getDataLayout().getTypeAllocSize(Tmp.getElementType()), TmpPtr);
+          CGM.getDataLayout().getTypeAllocSize(Tmp.getElementType()),
+                                               TmpPtr->stripPointerCasts());
       llvm::Value *ElemPtr;
       // Each of the following arguments specifies the size of the corresponding
       // argument passed to the enqueued block.
@@ -5903,7 +5904,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       auto Call = RValue::get(
           EmitRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Args));
       if (TmpSize)
-        EmitLifetimeEnd(TmpSize, TmpPtr);
+        EmitLifetimeEnd(TmpSize, TmpPtr->stripPointerCasts());
       return Call;
     }
     // Any calls now have event arguments passed.

@@ -71,7 +71,7 @@ short2 test_flat_add_2bf16(__generic short2 *addr, short2 x) {
 // CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(1) %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX12-LABEL:  test_global_add_half2
-// GFX12:  global_atomic_pk_add_f16 v2, v[0:1], v2, off th:TH_ATOMIC_RETURN
+// GFX12:  global_atomic_pk_add_f16 v2, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off th:TH_ATOMIC_RETURN
 void test_global_add_half2(__global half2 *addr, half2 x) {
   half2 *rtn;
   *rtn = __builtin_amdgcn_global_atomic_fadd_v2f16(addr, x);
@@ -93,7 +93,7 @@ void test_global_add_half2_noret(__global half2 *addr, half2 x) {
 
 
 // GFX12-LABEL:  test_global_add_2bf16
-// GFX12: global_atomic_pk_add_bf16 v2, v[0:1], v2, off th:TH_ATOMIC_RETURN
+// GFX12: global_atomic_pk_add_bf16 v2, v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off th:TH_ATOMIC_RETURN
 void test_global_add_2bf16(__global short2 *addr, short2 x) {
   short2 *rtn;
   *rtn = __builtin_amdgcn_global_atomic_fadd_v2bf16(addr, x);
