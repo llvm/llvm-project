@@ -515,6 +515,7 @@ Bug Fixes to C++ Support
 - Fixed overload handling for object parameters with top-level cv-qualifiers in explicit member functions (#GH100394)
 - Fixed a bug in lambda captures where ``constexpr`` class-type objects were not properly considered ODR-used in
   certain situations. (#GH47400), (#GH90896)
+- Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
