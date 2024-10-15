@@ -31,55 +31,6 @@ using namespace llvm;
 
 namespace {
 
-struct VLInfo {
-  std::variant<Register, int64_t> VL;
-
-  VLInfo(const MachineOperand &VLOp) {
-    if (VLOp.isImm())
-      VL = VLOp.getImm();
-    else
-      VL = VLOp.getReg();
-  }
-
-  bool isCompatible(const MachineOperand &VLOp) const {
-    if (isImm() != VLOp.isImm())
-      return false;
-    if (isImm())
-      return getImm() == VLOp.getImm();
-    return getReg() == VLOp.getReg();
-  }
-
-  bool isImm() const { return std::holds_alternative<int64_t>(VL); }
-
-  bool isReg() const { return std::holds_alternative<Register>(VL); }
-
-  bool isValid() const { return isImm() || getReg().isVirtual(); }
-
-  int64_t getImm() const {
-    assert(isImm() && "Expected VL to be an immediate");
-    return std::get<int64_t>(VL);
-  }
-
-  Register getReg() const {
-    assert(isReg() && "Expected VL to be a Register");
-    return std::get<Register>(VL);
-  }
-
-  bool hasBenefit(const MachineOperand &VLOp) const {
-    if (isImm() && getImm() == RISCV::VLMaxSentinel)
-      return false;
-
-    if (!isImm() || !VLOp.isImm())
-      return true;
-
-    if (VLOp.getImm() == RISCV::VLMaxSentinel)
-      return true;
-
-    // No benefit if the current VL is already smaller than the new one.
-    return getImm() < VLOp.getImm();
-  }
-};
-
 class RISCVVLOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
@@ -100,7 +51,8 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
-  bool checkUsers(std::optional<VLInfo> &CommonVL, MachineInstr &MI);
+  bool checkUsers(std::optional<const MachineOperand *> &CommonVL,
+                  MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
 };
@@ -759,8 +711,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVLOptimizer::checkUsers(std::optional<VLInfo> &CommonVL,
-                                  MachineInstr &MI) {
+bool RISCVVLOptimizer::checkUsers(
+    std::optional<const MachineOperand *> &CommonVL, MachineInstr &MI) {
   // FIXME: Avoid visiting each user for each time we visit something on the
   // worklist, combined with an extra visit from the outer loop. Restructure
   // along lines of an instcombine style worklist which integrates the outer
@@ -805,17 +757,17 @@ bool RISCVVLOptimizer::checkUsers(std::optional<VLInfo> &CommonVL,
 
     unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
     const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-    // Looking for a register VL that isn't X0.
-    if (!VLOp.isReg() || VLOp.getReg() == RISCV::X0) {
+    // Looking for an immediate or a register VL that isn't X0.
+    if (VLOp.isReg() && VLOp.getReg() == RISCV::X0) {
       LLVM_DEBUG(dbgs() << "    Abort due to user uses X0 as VL.\n");
       CanReduceVL = false;
       break;
     }
 
     if (!CommonVL) {
-      CommonVL = VLInfo(VLOp);
+      CommonVL = &VLOp;
       LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
-    } else if (!CommonVL->isCompatible(VLOp)) {
+    } else if (!(*CommonVL)->isIdenticalTo(VLOp)) {
       LLVM_DEBUG(dbgs() << "    Abort because users have different VL\n");
       CanReduceVL = false;
       break;
@@ -852,7 +804,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     MachineInstr &MI = *Worklist.pop_back_val();
     LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-    std::optional<VLInfo> CommonVL;
+    std::optional<const MachineOperand *> CommonVL;
     bool CanReduceVL = true;
     if (isVectorRegClass(MI.getOperand(0).getReg(), MRI))
       CanReduceVL = checkUsers(CommonVL, MI);
@@ -860,34 +812,35 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     if (!CanReduceVL || !CommonVL)
       continue;
 
-    if (!CommonVL->isValid()) {
-      LLVM_DEBUG(dbgs() << "    Abort due to common VL is not valid.\n");
+    const MachineOperand *CommonVLMO = *CommonVL;
+    if (!CommonVLMO->isImm() && !CommonVLMO->getReg().isVirtual()) {
+      LLVM_DEBUG(dbgs() << "    Abort because common VL is not valid.\n");
       continue;
     }
 
     unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
     MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
-    if (!CommonVL->hasBenefit(VLOp)) {
+    if (!RISCV::isVLKnownLE(*CommonVLMO, VLOp)) {
       LLVM_DEBUG(dbgs() << "    Abort due to no benefit.\n");
       continue;
     }
 
-    if (CommonVL->isImm()) {
+    if (CommonVLMO->isImm()) {
       LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                        << CommonVL->getImm() << " for " << MI << "\n");
-      VLOp.ChangeToImmediate(CommonVL->getImm());
+                        << CommonVLMO->getImm() << " for " << MI << "\n");
+      VLOp.ChangeToImmediate(CommonVLMO->getImm());
     } else {
-      const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+      const MachineInstr *VLMI = MRI->getVRegDef(CommonVLMO->getReg());
       if (!MDT->dominates(VLMI, &MI))
         continue;
       LLVM_DEBUG(
           dbgs() << "  Reduce VL from " << VLOp << " to "
-                 << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
+                 << printReg(CommonVLMO->getReg(), MRI->getTargetRegisterInfo())
                  << " for " << MI << "\n");
 
       // All our checks passed. We can reduce VL.
-      VLOp.ChangeToRegister(CommonVL->getReg(), false);
+      VLOp.ChangeToRegister(CommonVLMO->getReg(), false);
     }
 
     MadeChange = true;

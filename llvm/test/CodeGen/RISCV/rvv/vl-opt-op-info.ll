@@ -9,18 +9,31 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,VLOPT
 
 define <2 x i32> @vdot_lane_s32(<2 x i32> noundef %var_1, <8 x i8> noundef %var_3, <8 x i8> noundef %var_5, <8 x i16> %x) {
-; CHECK-LABEL: vdot_lane_s32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v11, 0
-; CHECK-NEXT:    vnsrl.wi v9, v11, 16
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 0
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vnsrl.wx v9, v10, a0
-; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
+; NOVLOPT-LABEL: vdot_lane_s32:
+; NOVLOPT:       # %bb.0: # %entry
+; NOVLOPT-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; NOVLOPT-NEXT:    vnsrl.wi v8, v11, 0
+; NOVLOPT-NEXT:    vnsrl.wi v9, v11, 16
+; NOVLOPT-NEXT:    vwadd.vv v10, v8, v9
+; NOVLOPT-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; NOVLOPT-NEXT:    vnsrl.wi v8, v10, 0
+; NOVLOPT-NEXT:    li a0, 32
+; NOVLOPT-NEXT:    vnsrl.wx v9, v10, a0
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v9
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vdot_lane_s32:
+; VLOPT:       # %bb.0: # %entry
+; VLOPT-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; VLOPT-NEXT:    vnsrl.wi v8, v11, 0
+; VLOPT-NEXT:    vnsrl.wi v9, v11, 16
+; VLOPT-NEXT:    vwadd.vv v10, v8, v9
+; VLOPT-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; VLOPT-NEXT:    vnsrl.wi v8, v10, 0
+; VLOPT-NEXT:    li a0, 32
+; VLOPT-NEXT:    vnsrl.wx v9, v10, a0
+; VLOPT-NEXT:    vadd.vv v8, v8, v9
+; VLOPT-NEXT:    ret
 entry:
   %a = shufflevector <8 x i16> %x, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %b = shufflevector <8 x i16> %x, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
