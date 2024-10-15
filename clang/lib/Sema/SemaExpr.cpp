@@ -18849,10 +18849,10 @@ bool Sema::tryCaptureVariable(
     // NOT the lambda but its parent. So move away the current LSI before
     // aligning DC and FunctionScopeIndexToStopAt.
     if (auto *LSI = dyn_cast<LambdaScopeInfo>(FunctionScopes[FSIndex]);
-        LSI && !LSI->AfterParameterList)
+        FSIndex && LSI && !LSI->AfterParameterList)
       --FSIndex;
     assert(MaxFunctionScopesIndex <= FSIndex &&
-           "FunctionScopeIndexToStopAt should be no larger than FSIndex into "
+           "FunctionScopeIndexToStopAt should be no greater than FSIndex into "
            "FunctionScopes.");
     while (FSIndex != MaxFunctionScopesIndex) {
       DC = getLambdaAwareParentOfDeclContext(DC);

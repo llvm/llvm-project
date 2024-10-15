@@ -306,7 +306,7 @@ template <int, Foo> struct Arr {};
 
 template <int> struct S {};
 
-constexpr bool foo() {
+constexpr void foo() {
   constexpr Foo f;
   [&]<int is>() {
     [&](Arr<is, f>) {}({}); // f constitutes an ODR-use
@@ -316,7 +316,6 @@ constexpr bool foo() {
   [] {
     [](S<C>) { }({}); // ... while C doesn't
   }();
-  return true;
 }
 
 } // namespace GH47400
