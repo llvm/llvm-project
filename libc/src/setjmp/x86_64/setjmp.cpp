@@ -17,6 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
+  long tmp;
   asm(R"(
       mov %%rbx, %[rbx]
       mov %%rbp, %[rbp]
@@ -25,16 +26,16 @@ LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
       mov %%r14, %[r14]
       mov %%r15, %[r15]
 
-      lea 8(%%rsp), %%rax
-      mov %%rax, %[rsp]
+      lea 8(%%rsp), %[tmp]
+      mov %[tmp], %[rsp]
 
-      mov (%%rsp), %%rax
-      mov %%rax, %[rip]
-      )" ::[rbx] "m"(buf->rbx),
-      [rbp] "m"(buf->rbp), [r12] "m"(buf->r12), [r13] "m"(buf->r13),
-      [r14] "m"(buf->r14), [r15] "m"(buf->r15), [rsp] "m"(buf->rsp),
-      [rip] "m"(buf->rip)
-      : "rax");
+      mov (%%rsp), %[tmp]
+      mov %[tmp], %[rip]
+      )"
+      : [tmp] "=r"(tmp)
+      : [rbx] "m"(buf->rbx), [rbp] "m"(buf->rbp), [r12] "m"(buf->r12),
+        [r13] "m"(buf->r13), [r14] "m"(buf->r14), [r15] "m"(buf->r15),
+        [rsp] "m"(buf->rsp), [rip] "m"(buf->rip));
   return 0;
 }
 
