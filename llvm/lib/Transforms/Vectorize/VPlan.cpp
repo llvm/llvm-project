@@ -1006,10 +1006,7 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   }
 
   VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
-  IRVPBB->setPredecessors(VPBB->getPredecessors());
-  IRVPBB->setSuccessors(VPBB->getSuccessors());
 
-  // Any successor/predecessor lists will be cleared on deletion.
   delete VPBB;
 }
 

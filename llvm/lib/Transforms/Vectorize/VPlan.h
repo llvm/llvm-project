@@ -3889,6 +3889,10 @@ public:
       Pred->replaceSuccessor(Old, New);
     for (auto *Succ : to_vector(Old->getSuccessors()))
       Succ->replacePredecessor(Old, New);
+    New->setPredecessors(Old->getPredecessors());
+    New->setSuccessors(Old->getSuccessors());
+    Old->clearPredecessors();
+    Old->clearSuccessors();
   }
 
   /// Return an iterator range over \p Range which only includes \p BlockTy
