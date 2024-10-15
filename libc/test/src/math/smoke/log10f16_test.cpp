@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/log10f16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -38,10 +39,12 @@ TEST_F(LlvmLibcLog10f16Test, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(
-      zero, LIBC_NAMESPACE::log10f16(static_cast<float16>(1.0)));
+      zero,
+      LIBC_NAMESPACE::log10f16(LIBC_NAMESPACE::fputil::cast<float16>(1.0)));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(
-      aNaN, LIBC_NAMESPACE::log10f16(static_cast<float16>(-1.0)));
+      aNaN,
+      LIBC_NAMESPACE::log10f16(LIBC_NAMESPACE::fputil::cast<float16>(-1.0)));
   EXPECT_MATH_ERRNO(EDOM);
 }
