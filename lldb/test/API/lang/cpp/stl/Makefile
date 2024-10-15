@@ -1,5 +1,5 @@
 CXX_SOURCES := main.cpp
 
-USE_SYSTEM_STDLIB := 1
+USE_LIBSTDCPP := 1
 
 include Makefile.rules
