@@ -2552,6 +2552,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
       break;
+    case AMDGPU::S_BARRIER_INIT_M0:
+    case AMDGPU::S_BARRIER_INIT_IMM:
+      if (ST->hasSBarrierInitKmCnt())
+        ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
+      break;
     }
   }
 

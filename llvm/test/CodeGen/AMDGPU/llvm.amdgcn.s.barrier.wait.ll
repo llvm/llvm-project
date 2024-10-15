@@ -1296,6 +1296,7 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX13-SDAG-NEXT:    s_barrier_init m0
+; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-GISEL-LABEL: test5_s_barrier_init_m0:
@@ -1312,6 +1313,7 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_or_b32 m0, s1, s0
 ; GFX13-GISEL-NEXT:    s_barrier_init m0
+; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.amdgcn.s.barrier.init(i32 %arg1, i32 %arg2)
   ret void
