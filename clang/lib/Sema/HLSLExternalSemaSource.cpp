@@ -298,7 +298,6 @@ struct TemplateParameterListBuilder {
   BuiltinTypeDeclBuilder &Builder;
   Sema &S;
   llvm::SmallVector<NamedDecl *> Params;
-  
 
   TemplateParameterListBuilder(Sema &S, BuiltinTypeDeclBuilder &RB)
       : Builder(RB), S(S) {}
@@ -323,7 +322,7 @@ struct TemplateParameterListBuilder {
                                                      SourceLocation()));
     Params.emplace_back(Decl);
     return *this;
-  }  
+  }
 
   /*
   The concept specialization expression (CSE) constructed in
@@ -722,8 +721,7 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
 
   IdentifierInfo &IsValidLineVectorII =
       context.Idents.get("is_valid_line_vector");
-  IdentifierInfo &ElementTypeII =
-      context.Idents.get("element_type");
+  IdentifierInfo &ElementTypeII = context.Idents.get("element_type");
   clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
       context, context.getTranslationUnitDecl(), DeclLoc, DeclLoc,
       /*depth=*/0,
