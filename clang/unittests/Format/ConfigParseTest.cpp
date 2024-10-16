@@ -15,6 +15,22 @@ namespace clang {
 namespace format {
 namespace {
 
+static bool UnsetEnv(const char *Name) noexcept {
+#ifdef _WIN32
+  return _putenv_s(Name, "") == 0;
+#else
+  return unsetenv(Name) == 0;
+#endif
+}
+
+static bool SetEnv(const char *Name, const char *Value) noexcept {
+#ifdef _WIN32
+  return _putenv_s(Name, Value) == 0;
+#else
+  return setenv(Name, Value, 1 /*Overwrite*/) == 0;
+#endif
+}
+
 void dropDiagnosticHandler(const llvm::SMDiagnostic &, void *) {}
 FormatStyle getGoogleStyle() { return getGoogleStyle(FormatStyle::LK_Cpp); }
 
@@ -1233,6 +1249,8 @@ TEST(ConfigParseTest, GetStyleWithEmptyFileName) {
 
 TEST(ConfigParseTest, GetStyleOfFile) {
   llvm::vfs::InMemoryFileSystem FS;
+  FS.setCurrentWorkingDirectory("/");
+
   // Test 1: format file in the same directory.
   ASSERT_TRUE(
       FS.addFile("/a/.clang-format", 0,
@@ -1439,6 +1457,312 @@ TEST(ConfigParseTest, GetStyleOfFile) {
                     "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, SubSubStyle);
+
+  // Test 10: BasedOnStyle: file:...
+  ASSERT_TRUE(FS.addFile("/f/format/", 0, {}, std::nullopt, std::nullopt,
+                         llvm::sys::fs::file_type::directory_file));
+  ASSERT_TRUE(FS.addFile("/f/src_refs_nonexistent_env/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: "
+                             "file:$(CLANG_FORMAT_DIR)/"
+                             "nonexistent.clang-format\nColumnLimit: 25")));
+  ASSERT_TRUE(FS.addFile(
+      "/f/src_refs_nonexistent_rel/.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer(
+          "BasedOnStyle: file:../format/nonexistent.clang-format\nColumnLimit: "
+          "25")));
+
+  // Test 10.1: inheritance based on $(CLANG_FORMAT_DIR) is an error if the
+  // CLANG_FORMAT_DIR environment variable is undefined
+  ASSERT_TRUE(UnsetEnv("CLANG_FORMAT_DIR"));
+
+  // Test 10.1.1: test command-line
+  auto Style10 = getStyle(
+      "{BasedOnStyle: file:$(CLANG_FORMAT_DIR)/nonexistent.clang-format}",
+      "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style10));
+  ASSERT_EQ(llvm::toString(Style10.takeError()),
+            "<command-line>: 'BasedOnStyle: "
+            "file:$(CLANG_FORMAT_DIR)/nonexistent.clang-format' uses "
+            "$(CLANG_FORMAT_DIR), but the CLANG_FORMAT_DIR environment "
+            "variable is not defined");
+
+  // Test 10.1.2: test file
+  Style10 = getStyle("file", "/f/src_refs_nonexistent_env/code.cpp", "google",
+                     "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style10));
+  ASSERT_EQ(llvm::toString(Style10.takeError()),
+            "/f/src_refs_nonexistent_env/.clang-format: 'BasedOnStyle: "
+            "file:$(CLANG_FORMAT_DIR)/nonexistent.clang-format' uses "
+            "$(CLANG_FORMAT_DIR), but the CLANG_FORMAT_DIR environment "
+            "variable is not defined");
+
+  // Test 10.2: inheritance based on $(CLANG_FORMAT_DIR) is an error if the
+  // CLANG_FORMAT_DIR environment variable points to an invalid directory
+  ASSERT_TRUE(SetEnv("CLANG_FORMAT_DIR", "/f/nonexistent-directory"));
+
+  // Test 10.2.1: test command-line
+  Style10 = getStyle(
+      "{BasedOnStyle: file:$(CLANG_FORMAT_DIR)/nonexistent.clang-format}",
+      "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style10));
+  ASSERT_EQ(llvm::toString(Style10.takeError()),
+            "Environment variable CLANG_FORMAT_DIR = "
+            "'/f/nonexistent-directory' is not a valid, readable directory");
+
+  // Test 10.2.2: test file
+  Style10 = getStyle("file", "/f/src_refs_nonexistent_env/code.cpp", "google",
+                     "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style10));
+  ASSERT_EQ(llvm::toString(Style10.takeError()),
+            "Environment variable CLANG_FORMAT_DIR = "
+            "'/f/nonexistent-directory' is not a valid, readable directory");
+
+  // Test 10.3: file inheritance is an error if the file pointed to via
+  // BasedOnStyle does not exist
+  ASSERT_TRUE(SetEnv("CLANG_FORMAT_DIR", "/f/format"));
+
+  // Test 10.3.1: test command-line w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle(
+      "{BasedOnStyle: file:$(CLANG_FORMAT_DIR)/nonexistent.clang-format}",
+      "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style10));
+  ASSERT_EQ(
+      llvm::toString(Style10.takeError()),
+      "<command-line>: 'BasedOnStyle: "
+      "file:$(CLANG_FORMAT_DIR)/nonexistent.clang-format': "
+      "'/f/format/nonexistent.clang-format' is not a valid, readable file");
+
+  // Test 10.3.2: test file w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle("file", "/f/src_refs_nonexistent_env/code.cpp", "google",
+                     "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style10));
+  ASSERT_EQ(
+      llvm::toString(Style10.takeError()),
+      "/f/src_refs_nonexistent_env/.clang-format: 'BasedOnStyle: "
+      "file:$(CLANG_FORMAT_DIR)/nonexistent.clang-format': "
+      "'/f/format/nonexistent.clang-format' is not a valid, readable file");
+
+  // Test 10.3.3: test command-line w/ relative path
+  Style10 = getStyle("{BasedOnStyle: file:f/nonexistent.clang-format}",
+                     "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style10));
+  ASSERT_EQ(llvm::toString(Style10.takeError()),
+            "<command-line>: 'BasedOnStyle: file:f/nonexistent.clang-format': "
+            "'/f/nonexistent.clang-format' is not a valid, readable file");
+
+  // Test 10.3.4: test file w/ relative path
+  Style10 = getStyle("file", "/f/src_refs_nonexistent_rel/code.cpp", "google",
+                     "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style10));
+  ASSERT_EQ(
+      llvm::toString(Style10.takeError()),
+      "/f/src_refs_nonexistent_rel/.clang-format: 'BasedOnStyle: "
+      "file:../format/nonexistent.clang-format': "
+      "'/f/format/nonexistent.clang-format' is not a valid, readable file");
+
+  // Test 10.4: file inheritance using a BasedOnStyle file w/ a predefined base
+  // style, applying child styles on top
+  ASSERT_TRUE(FS.addFile("/f/format/predefined.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: microsoft\nIndentWidth: 10")));
+  ASSERT_TRUE(FS.addFile("/f/src_refs_predefined_env/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: "
+                             "file:$(CLANG_FORMAT_DIR)/"
+                             "predefined.clang-format\nColumnLimit: 25")));
+  ASSERT_TRUE(FS.addFile(
+      "/f/src_refs_predefined_rel/.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer(
+          "BasedOnStyle: file:../format/predefined.clang-format\nColumnLimit: "
+          "25")));
+  auto MergedStyle = getMicrosoftStyle(FormatStyle::LK_Cpp);
+  MergedStyle.IndentWidth = 10;
+  MergedStyle.ColumnLimit = 25;
+
+  // Test 10.4.1: test command-line w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle(
+      "{BasedOnStyle: file:$(CLANG_FORMAT_DIR)/predefined.clang-format, "
+      "ColumnLimit: 25}",
+      "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.4.2: test file w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle("file", "/f/src_refs_predefined_env/code.cpp", "google",
+                     "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.4.3: test command-line w/ relative path
+  Style10 = getStyle(
+      "{BasedOnStyle: file:f/format/predefined.clang-format, ColumnLimit: 25}",
+      "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.4.4: test file w/ relative path
+  Style10 = getStyle("file", "/f/src_refs_predefined_rel/code.cpp", "google",
+                     "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.5: file inheritance using a BasedOnStyle file using
+  // InheritParentConfig, applying child styles on top
+  ASSERT_TRUE(FS.addFile("/f/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: Microsoft\nTabWidth: 100")));
+  ASSERT_TRUE(
+      FS.addFile("/f/format/inherits_parent.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer(
+                     "BasedOnStyle: InheritParentConfig\nIndentWidth: 10")));
+  ASSERT_TRUE(FS.addFile("/f/src_refs_inherits_parent_env/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: "
+                             "file:$(CLANG_FORMAT_DIR)/"
+                             "inherits_parent.clang-format\nColumnLimit: 25")));
+  ASSERT_TRUE(FS.addFile(
+      "/f/src_refs_inherits_parent_rel/.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer(
+          "BasedOnStyle: "
+          "file:../format/inherits_parent.clang-format\nColumnLimit: 25")));
+  MergedStyle = getMicrosoftStyle(FormatStyle::LK_Cpp);
+  MergedStyle.TabWidth = 100;
+  MergedStyle.IndentWidth = 10;
+  MergedStyle.ColumnLimit = 25;
+
+  // Test 10.5.1: test command-line w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle(
+      "{BasedOnStyle: file:$(CLANG_FORMAT_DIR)/inherits_parent.clang-format, "
+      "ColumnLimit: 25}",
+      "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.5.2: test file w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle("file", "/f/src_refs_inherits_parent_env/code.cpp",
+                     "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.5.3: test command-line w/ relative path
+  Style10 =
+      getStyle("{BasedOnStyle: file:f/format/inherits_parent.clang-format, "
+               "ColumnLimit: 25}",
+               "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.5.4: test file w/ relative path
+  Style10 = getStyle("file", "/f/src_refs_inherits_parent_rel/code.cpp",
+                     "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.6: file inheritance using a BasedOnStyle file that uses
+  // file:$(CLANG_FORMAT_DIR) inheritance, applying child styles on top
+  ASSERT_TRUE(FS.addFile(
+      "/f/format/inherits_explicit_env.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer(
+          "BasedOnStyle: "
+          "file:$(CLANG_FORMAT_DIR)/predefined.clang-format\nTabWidth: 100")));
+  ASSERT_TRUE(
+      FS.addFile("/f/src_refs_inherits_explicit_env_env/.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer(
+                     "BasedOnStyle: "
+                     "file:$(CLANG_FORMAT_DIR)/"
+                     "inherits_explicit_env.clang-format\nColumnLimit: 25")));
+  ASSERT_TRUE(
+      FS.addFile("/f/src_refs_inherits_explicit_env_rel/.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer(
+                     "BasedOnStyle: "
+                     "file:../format/"
+                     "inherits_explicit_env.clang-format\nColumnLimit: 25")));
+  MergedStyle = getMicrosoftStyle(FormatStyle::LK_Cpp);
+  MergedStyle.TabWidth = 100;
+  MergedStyle.IndentWidth = 10;
+  MergedStyle.ColumnLimit = 25;
+
+  // Test 10.6.1: test command-line w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle("{BasedOnStyle: "
+                     "file:$(CLANG_FORMAT_DIR)/"
+                     "inherits_explicit_env.clang-format, ColumnLimit: 25}",
+                     "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.6.2: test file w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle("file", "/f/src_refs_inherits_explicit_env_env/code.cpp",
+                     "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.6.3: test command-line w/ relative path
+  Style10 = getStyle(
+      "{BasedOnStyle: file:f/format/inherits_explicit_env.clang-format, "
+      "ColumnLimit: 25}",
+      "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.6.4: test file w/ relative path
+  Style10 = getStyle("file", "/f/src_refs_inherits_explicit_env_rel/code.cpp",
+                     "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.7: file inheritance using a BasedOnStyle file that uses
+  // file:<relative-path> inheritance, applying child styles on top
+  ASSERT_TRUE(FS.addFile(
+      "/f/format/inherits_explicit_rel.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer(
+          "BasedOnStyle: file:./predefined.clang-format\nTabWidth: 100")));
+  ASSERT_TRUE(
+      FS.addFile("/f/src_refs_inherits_explicit_rel_env/.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer(
+                     "BasedOnStyle: "
+                     "file:$(CLANG_FORMAT_DIR)/"
+                     "inherits_explicit_rel.clang-format\nColumnLimit: 25")));
+  ASSERT_TRUE(
+      FS.addFile("/f/src_refs_inherits_explicit_rel_rel/.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer(
+                     "BasedOnStyle: "
+                     "file:../format/"
+                     "inherits_explicit_rel.clang-format\nColumnLimit: 25")));
+  MergedStyle = getMicrosoftStyle(FormatStyle::LK_Cpp);
+  MergedStyle.TabWidth = 100;
+  MergedStyle.IndentWidth = 10;
+  MergedStyle.ColumnLimit = 25;
+
+  // Test 10.7.1: test command-line w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle("{BasedOnStyle: "
+                     "file:$(CLANG_FORMAT_DIR)/"
+                     "inherits_explicit_rel.clang-format, ColumnLimit: 25}",
+                     "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.7.2: test file w/ $(CLANG_FORMAT_DIR)
+  Style10 = getStyle("file", "/f/src_refs_inherits_explicit_rel_env/code.cpp",
+                     "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.7.3: test command-line w/ relative path
+  Style10 = getStyle(
+      "{BasedOnStyle: file:f/format/inherits_explicit_rel.clang-format, "
+      "ColumnLimit: 25}",
+      "/f/src/code.cpp", "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  // Test 10.7.4: test file w/ relative path
+  Style10 = getStyle("file", "/f/src_refs_inherits_explicit_rel_rel/code.cpp",
+                     "google", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style10));
+  ASSERT_EQ(*Style10, MergedStyle);
+
+  UnsetEnv("CLANG_FORMAT_DIR");
 }
 
 TEST(ConfigParseTest, GetStyleOfSpecificFile) {
