@@ -324,27 +324,6 @@ struct TemplateParameterListBuilder {
         S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         SourceLocation(), /* TemplateDepth */ 0, Position,
         &S.Context.Idents.get(Name, tok::TokenKind::identifier),
-        /* Typename */ false,
-        /* ParameterPack */ false,
-        /* HasTypeConstraint*/ true);
-    if (!DefaultValue.isNull())
-      Decl->setDefaultArgument(
-          S.Context, S.getTrivialTemplateArgumentLoc(DefaultValue, QualType(),
-                                                     SourceLocation()));
-
-    Params.emplace_back(Decl);
-    return *this;
-  }
-
-  TemplateParameterListBuilder &
-  addTypenameTypeParameter(StringRef Name, QualType DefaultValue = QualType()) {
-    if (Builder.Record->isCompleteDefinition())
-      return *this;
-    unsigned Position = static_cast<unsigned>(Params.size());
-    auto *Decl = TemplateTypeParmDecl::Create(
-        S.Context, Builder.Record->getDeclContext(), SourceLocation(),
-        SourceLocation(), /* TemplateDepth */ 0, Position,
-        &S.Context.Idents.get(Name, tok::TokenKind::identifier),
         /* Typename */ true,
         /* ParameterPack */ false,
         /* HasTypeConstraint*/ false);
@@ -574,7 +553,7 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(Sema &S,
                                                 ArrayRef<StringRef> Names) {
   TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
-    Builder.addTypenameTypeParameter(Name);
+    Builder.addTypeParameter(Name);
 
   return Builder.finalizeTemplateArgs();
 }
