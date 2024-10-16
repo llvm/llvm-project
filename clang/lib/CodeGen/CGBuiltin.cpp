@@ -18905,6 +18905,24 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
   }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
+    // Due to the use of variadic arguments we must explicitly retreive them and
+    // create our function type.
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Value *OpIndex = EmitScalarExpr(E->getArg(1));
+    llvm::FunctionType *FT = llvm::FunctionType::get(
+        OpExpr->getType(), ArrayRef{OpExpr->getType(), OpIndex->getType()},
+        false);
+
+    // Get overloaded name
+    std::string Name =
+        Intrinsic::getName(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
+                           ArrayRef{OpExpr->getType()}, &CGM.getModule());
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
+                                                     /*Local=*/false,
+                                                     /*AssumeConvergent=*/true),
+                           ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);
     Value *Op0 = EmitScalarExpr(Arg0);
