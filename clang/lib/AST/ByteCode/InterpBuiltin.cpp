@@ -1822,9 +1822,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_abs:
   case Builtin::BI__builtin_labs:
   case Builtin::BI__builtin_llabs:
-  if (!interp__builtin_abs(S, OpPC, Frame, F, Call))
-    return false;
-  break;
+    if (!interp__builtin_abs(S, OpPC, Frame, F, Call))
+      return false;
+    break;
 
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
