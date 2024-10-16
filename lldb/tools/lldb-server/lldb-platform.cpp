@@ -555,9 +555,9 @@ int main_platform(int argc, char *argv[]) {
                         log_channels, &main_loop,
                         &platform_handles](std::unique_ptr<Socket> sock_up) {
               printf("Connection established.\n");
-              Status error = spawn_process(
-                  progname, sock_up.get(), gdbserver_port, inferior_arguments,
-                  log_file, log_channels, main_loop);
+              Status error = spawn_process(progname, sock_up.get(),
+                                           gdbserver_port, inferior_arguments,
+                                           log_file, log_channels, main_loop);
               if (error.Fail()) {
                 Log *log = GetLog(LLDBLog::Platform);
                 LLDB_LOGF(log, "spawn_process failed: %s", error.AsCString());
