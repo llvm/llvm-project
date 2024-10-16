@@ -5,7 +5,7 @@ USE_PRIVATE_MODULE_CACHE = YES
 .PHONY: update-module
 
 all: $(EXE)
-	$(MAKE) -f $(SRCDIR)/Makefile update-module
+	"$(MAKE)" -f $(SRCDIR)/Makefile update-module
 
 include Makefile.rules
 
