@@ -13061,7 +13061,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (Val == APSInt::getSignedMinValue(Val.getBitWidth()))
+    if (Val == APSInt(APSInt::getSignedMinValue(Val.getBitWidth()), false))
       return false;
     if (Val.isNegative())
       Val.negate();
