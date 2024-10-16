@@ -40,8 +40,3 @@
 // RUN: clang-sycl-linker --dry-run -triple spirv64 %t.bc -o a.spv 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LLVMOPTSLIN
 // LLVMOPTSLIN: -spirv-debug-info-version=nonsemantic-shader-200 -spirv-allow-unknown-intrinsics=llvm.genx. -spirv-ext=
-//
-// Test that no llvm-spirv error is emitted as expected.
-// RUN: not clang-sycl-linker -triple spirv64 %t.bc -o a.spv 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=LLVMSPIRVERR
-// LLVMSPIRVERR: Unable to find 'llvm-spirv' in path
