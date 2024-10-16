@@ -121,6 +121,12 @@ set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-te
 # Add tapi to the list of llvm projects.
 set(LLVM_ALL_PROJECTS "${LLVM_ALL_PROJECTS};tapi")
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
+  # LLVM_ENABLE_RUNTIMES.
+  list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
+endif()
+
 # The flang project is not yet part of "all" projects (see C++ requirements)
 set(LLVM_EXTRA_PROJECTS "flang")
 # List of all known projects in the mono repo
