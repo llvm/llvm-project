@@ -18,8 +18,9 @@ LLVM_LIBC_FUNCTION(int, remove, (const char *path)) {
   int ret;
   rpc::Client::Port port = rpc::client.open<RPC_REMOVE>();
   port.send_n(path, internal::string_length(path) + 1);
-  port.recv(
-      [&](rpc::Buffer *buffer) { ret = static_cast<int>(buffer->data[0]); });
+  port.recv([&](rpc::Buffer *buffer, uint32_t) {
+    ret = static_cast<int>(buffer->data[0]);
+  });
   port.close();
   return ret;
 }

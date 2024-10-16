@@ -1,5 +1,23 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
 
+// NOTE: The number in type name and whether the struct is packed or not will mostly
+// likely change once subscript operators are properly implemented (llvm/llvm-project#95956) 
+// and theinterim field of the contained type is removed.
+
+// CHECK: %"class.hlsl::StructuredBuffer" = type <{ target("dx.RawBuffer", i16, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.0" = type <{ target("dx.RawBuffer", i16, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.2" = type { target("dx.RawBuffer", i32, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.3" = type { target("dx.RawBuffer", i32, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.4" = type { target("dx.RawBuffer", i64, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.5" = type { target("dx.RawBuffer", i64, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.6" = type <{ target("dx.RawBuffer", half, 1, 0) 
+// CHECK: %"class.hlsl::StructuredBuffer.8" = type { target("dx.RawBuffer", float, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.9" = type { target("dx.RawBuffer", double, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.10" = type { target("dx.RawBuffer", <4 x i16>, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.11" = type { target("dx.RawBuffer", <3 x i32>, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.12" = type { target("dx.RawBuffer", <2 x half>, 1, 0)
+// CHECK: %"class.hlsl::StructuredBuffer.13" = type { target("dx.RawBuffer", <3 x float>, 1, 0)
+
 StructuredBuffer<int16_t> BufI16;
 StructuredBuffer<uint16_t> BufU16;
 StructuredBuffer<int> BufI32;
