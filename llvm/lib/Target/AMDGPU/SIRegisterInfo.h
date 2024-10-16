@@ -458,11 +458,6 @@ public:
   unsigned getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
                                      unsigned SubReg) const;
 
-  std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
-    return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG
-                             : std::optional<uint8_t>{};
-  }
-
   // \returns a number of registers of a given \p RC used in a function.
   // Does not go inside function calls.
   unsigned getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
