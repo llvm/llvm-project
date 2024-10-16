@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
 #define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
 
+#include <__config>
+
 #if defined(_LIBCPP_MSVCRT_LIKE)
 #  include <__locale_dir/locale_base_api/win32.h>
 #elif defined(_AIX) || defined(__MVS__)
@@ -23,7 +25,7 @@
 #  include <__locale_dir/locale_base_api/openbsd.h>
 #elif defined(__Fuchsia__)
 #  include <__locale_dir/locale_base_api/fuchsia.h>
-#elif defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC)
+#elif defined(__wasi__) || _LIBCPP_HAS_MUSL_LIBC
 #  include <__locale_dir/locale_base_api/musl.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
 #  include <xlocale.h>

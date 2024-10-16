@@ -49,7 +49,7 @@ public:
   synchronized_pool_resource& operator=(const synchronized_pool_resource&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI void release() {
-#  if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
     unique_lock<mutex> __lk(__mut_);
 #  endif
     __unsync_.release();
@@ -61,14 +61,14 @@ public:
 
 protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t __align) override {
-#  if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
     unique_lock<mutex> __lk(__mut_);
 #  endif
     return __unsync_.allocate(__bytes, __align);
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void do_deallocate(void* __p, size_t __bytes, size_t __align) override {
-#  if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
     unique_lock<mutex> __lk(__mut_);
 #  endif
     return __unsync_.deallocate(__p, __bytes, __align);
@@ -77,7 +77,7 @@ protected:
   bool do_is_equal(const memory_resource& __other) const noexcept override; // key function
 
 private:
-#  if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
   mutex __mut_;
 #  endif
   unsynchronized_pool_resource __unsync_;

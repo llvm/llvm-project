@@ -14,22 +14,22 @@ header_restrictions = {
     "stdatomic.h": "_LIBCPP_HAS_ATOMIC_HEADER",
 
     # headers with #error directives
-    "ios": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "locale.h": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+    "ios": "_LIBCPP_HAS_LOCALIZATION",
+    "locale.h": "_LIBCPP_HAS_LOCALIZATION",
     # transitive includers of the above headers
-    "clocale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "codecvt": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "fstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "iomanip": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "iostream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "istream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "locale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "ostream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "regex": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "sstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "streambuf": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "strstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+    "clocale": "_LIBCPP_HAS_LOCALIZATION",
+    "codecvt": "_LIBCPP_HAS_LOCALIZATION",
+    "fstream": "_LIBCPP_HAS_LOCALIZATION",
+    "iomanip": "_LIBCPP_HAS_LOCALIZATION",
+    "iostream": "_LIBCPP_HAS_LOCALIZATION",
+    "istream": "_LIBCPP_HAS_LOCALIZATION",
+    "locale": "_LIBCPP_HAS_LOCALIZATION",
+    "ostream": "_LIBCPP_HAS_LOCALIZATION",
+    "regex": "_LIBCPP_HAS_LOCALIZATION",
+    "sstream": "_LIBCPP_HAS_LOCALIZATION",
+    "streambuf": "_LIBCPP_HAS_LOCALIZATION",
+    "strstream": "_LIBCPP_HAS_LOCALIZATION",
+    "syncstream": "_LIBCPP_HAS_LOCALIZATION",
 }
 
 lit_header_restrictions = {

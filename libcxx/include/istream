@@ -160,7 +160,7 @@ template <class Stream, class T>
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__fwd/istream.h>
 #  include <__iterator/istreambuf_iterator.h>
@@ -1363,14 +1363,14 @@ operator>>(basic_istream<_CharT, _Traits>& __is, bitset<_Size>& __x) {
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_istream<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_istream<wchar_t>;
 #  endif
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_iostream<char>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>

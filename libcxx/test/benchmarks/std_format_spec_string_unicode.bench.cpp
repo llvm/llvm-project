@@ -4,8 +4,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_HAS_NO_UNICODE
-
 #  include <format>
 #  include <string_view>
 
@@ -14,6 +12,8 @@
 #  include "make_string.h"
 
 #  define SV(S) MAKE_STRING_VIEW(CharT, S)
+
+#if _LIBCPP_HAS_UNICODE
 
 // generated with https://generator.lorem-ipsum.info/_latin
 

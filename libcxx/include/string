@@ -648,7 +648,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <string_view>
 #include <version>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #endif
 
@@ -2263,12 +2263,12 @@ private:
 #define _LIBCPP_DECLARE(...) extern template __VA_ARGS__;
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
 _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #  endif
 #else
 _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #  endif
 #endif
@@ -4198,7 +4198,7 @@ _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
 _LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
 _LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_EXPORTED_FROM_ABI int stoi(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_EXPORTED_FROM_ABI long stol(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 _LIBCPP_EXPORTED_FROM_ABI unsigned long stoul(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
@@ -4218,7 +4218,7 @@ _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_TEMPLATE_DATA_VIS const typename basic_string<_CharT, _Traits, _Allocator>::size_type
@@ -4246,7 +4246,7 @@ struct hash<basic_string<char16_t, char_traits<char16_t>, _Allocator> > : __stri
 template <class _Allocator>
 struct hash<basic_string<char32_t, char_traits<char32_t>, _Allocator> > : __string_hash<char32_t, _Allocator> {};
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Allocator>
 struct hash<basic_string<wchar_t, char_traits<wchar_t>, _Allocator> > : __string_hash<wchar_t, _Allocator> {};
 #endif
@@ -4302,7 +4302,7 @@ operator""s(const char* __str, size_t __len) {
   return basic_string<char>(__str, __len);
 }
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<wchar_t>
 operator""s(const wchar_t* __str, size_t __len) {
   return basic_string<wchar_t>(__str, __len);
@@ -4330,7 +4330,7 @@ operator""s(const char32_t* __str, size_t __len) {
 #  if _LIBCPP_STD_VER >= 20
 template <>
 inline constexpr bool __format::__enable_insertable<std::basic_string<char>> = true;
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 inline constexpr bool __format::__enable_insertable<std::basic_string<wchar_t>> = true;
 #    endif

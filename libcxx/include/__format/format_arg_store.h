@@ -49,7 +49,7 @@ template <class _Context, same_as<typename _Context::char_type> _Tp>
 consteval __arg_t __determine_arg_t() {
   return __arg_t::__char_type;
 }
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Context, class _CharT>
   requires(same_as<typename _Context::char_type, wchar_t> && same_as<_CharT, char>)
 consteval __arg_t __determine_arg_t() {
@@ -173,7 +173,7 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
   // final else requires no adjustment.
   if constexpr (__arg == __arg_t::__char_type)
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
     if constexpr (same_as<typename _Context::char_type, wchar_t> && same_as<_Dp, char>)
       return basic_format_arg<_Context>{__arg, static_cast<wchar_t>(static_cast<unsigned char>(__value))};
     else

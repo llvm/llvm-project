@@ -26,7 +26,7 @@
 #include <__type_traits/is_trivially_lexicographically_comparable.h>
 #include <__type_traits/is_volatile.h>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #endif
 
@@ -78,14 +78,14 @@ __lexicographical_compare(_Tp* __first1, _Tp* __last1, _Tp* __first2, _Tp* __las
       return __last1 - __first1 < __last2 - __first2;
     return __res < 0;
   }
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
   else if constexpr (is_same<__remove_cv_t<_Tp>, wchar_t>::value) {
     auto __res = std::__constexpr_wmemcmp(__first1, __first2, std::min(__last1 - __first1, __last2 - __first2));
     if (__res == 0)
       return __last1 - __first1 < __last2 - __first2;
     return __res < 0;
   }
-#  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
   else {
     auto __res = std::mismatch(__first1, __last1, __first2, __last2);
     if (__res.second == __last2)

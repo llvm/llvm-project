@@ -894,7 +894,7 @@ template <class _Comp, class _RandomAccessIterator>
 void __sort(_RandomAccessIterator, _RandomAccessIterator, _Comp);
 
 extern template _LIBCPP_EXPORTED_FROM_ABI void __sort<__less<char>&, char*>(char*, char*, __less<char>&);
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template _LIBCPP_EXPORTED_FROM_ABI void __sort<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&);
 #endif
 extern template _LIBCPP_EXPORTED_FROM_ABI void
@@ -941,7 +941,7 @@ template <class _Type>
 using __sort_is_specialized_in_library = __is_any_of<
     _Type,
     char,
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
     wchar_t,
 #endif
     signed char,

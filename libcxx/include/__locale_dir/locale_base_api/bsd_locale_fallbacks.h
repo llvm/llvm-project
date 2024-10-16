@@ -18,7 +18,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #endif
 
@@ -33,7 +33,7 @@ inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __libcpp_mb_cur_max_l(locale_t
   return MB_CUR_MAX;
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI wint_t __libcpp_btowc_l(int __c, locale_t __l) {
   __libcpp_locale_guard __current(__l);
   return btowc(__c);
@@ -76,14 +76,14 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __libcpp_mbrlen_l(const char* __s, size_t __
   __libcpp_locale_guard __current(__l);
   return mbrlen(__s, __n, __ps);
 }
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 inline _LIBCPP_HIDE_FROM_ABI lconv* __libcpp_localeconv_l(locale_t __l) {
   __libcpp_locale_guard __current(__l);
   return localeconv();
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __libcpp_mbsrtowcs_l(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, locale_t __l) {
   __libcpp_locale_guard __current(__l);
