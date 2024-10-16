@@ -900,8 +900,8 @@ well-formed LLVM IR may not. For example, a target that does not support
 scalable vectors may break when provided IR using them. When fuzzing at a lower
 level, it is encouraged to verify the plausibility of the results.
 
-Fatal errors that do not generate a stack trace should not be reported. They
-indicate an incorrect use of LLVM, rather than a bug.
+When fuzzing LLVM IR, fatal errors that do not generate a stack trace should
+not be reported. They indicate an incorrect use of LLVM, rather than a bug.
 
 **For missed optimizations:** There is an infinite number of optimizations that
 *could* be implemented, but only a small subset of them is relevant for
