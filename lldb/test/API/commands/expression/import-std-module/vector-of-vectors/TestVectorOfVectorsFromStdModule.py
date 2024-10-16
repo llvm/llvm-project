@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 class TestVectorOfVectors(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIfLinux  # https://discourse.llvm.org/t/lldb-test-failures-on-linux/80095
     def test(self):
         self.build()
 
