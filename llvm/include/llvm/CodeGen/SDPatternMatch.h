@@ -760,6 +760,16 @@ inline BinaryOpc_match<LHS, RHS> m_Srl(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_Rotl(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(ISD::ROTL, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS>(ISD::ROTR, L, R);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_FAdd(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::FADD, L, R);
 }
