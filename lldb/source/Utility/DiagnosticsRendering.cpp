@@ -112,17 +112,21 @@ void RenderDiagnosticDetails(Stream &stream,
   // Print a line with caret indicator(s) below the lldb prompt + command.
   const size_t padding = *offset_in_command;
   stream << std::string(padding, ' ');
-  size_t offset = 1;
-  for (const DiagnosticDetail &detail : remaining_details) {
-    auto &loc = *detail.source_location;
+  {
+    size_t x_pos = 1;
+    for (const DiagnosticDetail &detail : remaining_details) {
+      auto &loc = *detail.source_location;
 
-    if (offset > loc.column)
-      continue;
+      if (x_pos > loc.column)
+        continue;
 
-    stream << std::string(loc.column - offset, ' ') << cursor;
-    for (unsigned i = 0; i + 1 < loc.length; ++i)
-      stream << underline;
-    offset = loc.column + 1;
+      stream << std::string(loc.column - x_pos, ' ') << cursor;
+      ++x_pos;
+      for (unsigned i = 0; i + 1 < loc.length; ++i) {
+        stream << underline;
+        ++x_pos;
+      }
+    }
   }
   stream << '\n';
 
@@ -134,19 +138,19 @@ void RenderDiagnosticDetails(Stream &stream,
     // Get the information to print this detail and remove it from the stack.
     // Print all the lines for all the other messages first.
     stream << std::string(padding, ' ');
-    size_t offset = 1;
+    size_t x_pos = 1;
     for (auto &remaining_detail :
          llvm::ArrayRef(remaining_details).drop_back(1)) {
       uint16_t column = remaining_detail.source_location->column;
-      if (offset <= column)
-        stream << std::string(column - offset, ' ') << vbar;
-      offset = column + 1;
+      if (x_pos <= column)
+        stream << std::string(column - x_pos, ' ') << vbar;
+      x_pos = column + 1;
     }
 
     // Print the line connecting the ^ with the error message.
     uint16_t column = detail->source_location->column;
-    if (offset <= column)
-      stream << std::string(column - offset, ' ') << joint << hbar << spacer;
+    if (x_pos <= column)
+      stream << std::string(column - x_pos, ' ') << joint << hbar << spacer;
 
     // Print a colorized string based on the message's severity type.
     PrintSeverity(stream, detail->severity);
