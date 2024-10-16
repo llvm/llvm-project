@@ -40,25 +40,24 @@ define void @vp_icmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT: }
 
 entry:
-  %cmp12 = icmp sgt i64 %N, 0
-  br i1 %cmp12, label %for.body, label %for.cond.cleanup
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
-  ret void
-
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
-  %arrayidx3 = getelementptr inbounds i32, ptr %c, i64 %indvars.iv
-  %1 = load i32, ptr %arrayidx3, align 4
+  %gep = getelementptr inbounds i32, ptr %c, i64 %iv
+  %1 = load i32, ptr %gep, align 4
   %cmp4 = icmp sgt i32 %0, %1
   %conv5 = zext i1 %cmp4 to i32
-  %arrayidx7 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %arrayidx7 = getelementptr inbounds i32, ptr %a, i64 %iv
   store i32 %conv5, ptr %arrayidx7, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %N
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %N
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
 }
 
 define void @vp_fcmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
@@ -96,23 +95,22 @@ define void @vp_fcmp(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT: }
 
 entry:
-  %cmp13 = icmp sgt i64 %N, 0
-  br i1 %cmp13, label %for.body, label %for.cond.cleanup
+  br label %loop
 
-for.cond.cleanup:
-  ret void
-
-for.body:
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %b, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
-  %arrayidx3 = getelementptr inbounds float, ptr %c, i64 %indvars.iv
-  %1 = load float, ptr %arrayidx3, align 4
+  %gep = getelementptr inbounds float, ptr %c, i64 %iv
+  %1 = load float, ptr %gep, align 4
   %cmp4 = fcmp ogt float %0, %1
   %conv6 = uitofp i1 %cmp4 to float
-  %arrayidx8 = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  %arrayidx8 = getelementptr inbounds float, ptr %a, i64 %iv
   store float %conv6, ptr %arrayidx8, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %N
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %N
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
 }

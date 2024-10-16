@@ -1466,19 +1466,15 @@ void VPWidenEVLRecipe::execute(VPTransformState &State) {
 
     IRBuilderBase &BuilderIR = State.Builder;
     VectorBuilder Builder(BuilderIR);
+
     Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
     Builder.setMask(Mask).setEVL(State.get(getEVL(), /*NeedsScalar=*/true));
-
-    VectorType *DataType = VectorType::get(Type::getInt1Ty(Ctx), State.VF);
-
-    Value *VPInst = Builder.createVectorInstruction(Opcode, DataType,
+    VectorType *RetType = VectorType::get(Type::getInt1Ty(Ctx), State.VF);
+    Value *VPInst = Builder.createVectorInstruction(Opcode, RetType,
                                                     {Op1, Op2, Pred}, "vp.op");
-    //  if (isa<FPMathOperator>(VPInst))
-    // setFlags(cast<Instruction>(VPInst));
-    if (VPInst) {
-      if (auto *VecOp = dyn_cast<CastInst>(VPInst))
-        VecOp->copyIRFlags(getUnderlyingInstr());
-    }
+    if (auto *VecOp = dyn_cast<CastInst>(VPInst))
+      VecOp->copyIRFlags(getUnderlyingInstr());
+
     State.set(this, VPInst, 0);
     State.addMetadata(VPInst,
                       dyn_cast_or_null<Instruction>(getUnderlyingValue()));
