@@ -1185,6 +1185,20 @@ SourceRange ClassTemplatePartialSpecializationDecl::getSourceRange() const {
   return Range;
 }
 
+ArrayRef<TemplateArgument>
+ClassTemplatePartialSpecializationDecl::getInjectedTemplateArgs() {
+  TemplateParameterList *Params = getTemplateParameters();
+  auto *First = cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
+  if (!First->InjectedArgs) {
+    auto &Context = getASTContext();
+    SmallVector<TemplateArgument, 16> TemplateArgs;
+    Context.getInjectedTemplateArgs(Params, TemplateArgs);
+    First->InjectedArgs = new (Context) TemplateArgument[TemplateArgs.size()];
+    std::copy(TemplateArgs.begin(), TemplateArgs.end(), First->InjectedArgs);
+  }
+  return llvm::ArrayRef(First->InjectedArgs, Params->size());
+}
+
 //===----------------------------------------------------------------------===//
 // FriendTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -1533,6 +1547,20 @@ SourceRange VarTemplatePartialSpecializationDecl::getSourceRange() const {
       TPL && !getNumTemplateParameterLists())
     Range.setBegin(TPL->getTemplateLoc());
   return Range;
+}
+
+ArrayRef<TemplateArgument>
+VarTemplatePartialSpecializationDecl::getInjectedTemplateArgs() {
+  TemplateParameterList *Params = getTemplateParameters();
+  auto *First = cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
+  if (!First->InjectedArgs) {
+    auto &Context = getASTContext();
+    SmallVector<TemplateArgument, 16> TemplateArgs;
+    Context.getInjectedTemplateArgs(Params, TemplateArgs);
+    First->InjectedArgs = new (Context) TemplateArgument[TemplateArgs.size()];
+    std::copy(TemplateArgs.begin(), TemplateArgs.end(), First->InjectedArgs);
+  }
+  return llvm::ArrayRef(First->InjectedArgs, Params->size());
 }
 
 static TemplateParameterList *
