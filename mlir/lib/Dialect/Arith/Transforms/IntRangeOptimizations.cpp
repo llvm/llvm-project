@@ -218,9 +218,10 @@ static Type checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
       if (!type) {
         type = val.getType();
         continue;
-      } else if (type != val.getType()) {
-        return nullptr;
       }
+
+      if (type != val.getType())
+        return nullptr;
     }
   }
 
@@ -301,13 +302,11 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType) {
   auto dstInt = cast<IntegerType>(dstType);
   if (dstInt.getWidth() < srcInt.getWidth()) {
     return builder.create<arith::TruncIOp>(loc, dstType, src);
-  } else {
-    return builder.create<arith::ExtUIOp>(loc, dstType, src);
   }
+  return builder.create<arith::ExtUIOp>(loc, dstType, src);
 }
 
-struct NarrowElementwise final
-    : public OpTraitRewritePattern<OpTrait::Elementwise> {
+struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
   NarrowElementwise(MLIRContext *context, DataFlowSolver &s,
                     ArrayRef<unsigned> target)
       : OpTraitRewritePattern<OpTrait::Elementwise>(context), solver(s),
@@ -316,7 +315,6 @@ struct NarrowElementwise final
   using OpTraitRewritePattern::OpTraitRewritePattern;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-
     std::optional<ConstantIntRanges> range =
         getOperandsRange(solver, op->getResults());
     if (!range)
@@ -370,8 +368,8 @@ private:
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
-struct NarrowCmpi final : public OpRewritePattern<arith::CmpIOp> {
-  NarrowCmpi(MLIRContext *context, PatternBenefit benefit, DataFlowSolver &s,
+struct NarrowCmpI final : OpRewritePattern<arith::CmpIOp> {
+  NarrowCmpI(MLIRContext *context, PatternBenefit benefit, DataFlowSolver &s,
              ArrayRef<unsigned> target)
       : OpRewritePattern(context, benefit), solver(s), targetBitwidths(target) {
   }
@@ -421,8 +419,8 @@ private:
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
-struct IntRangeOptimizationsPass
-    : public arith::impl::ArithIntRangeOptsBase<IntRangeOptimizationsPass> {
+struct IntRangeOptimizationsPass final
+    : arith::impl::ArithIntRangeOptsBase<IntRangeOptimizationsPass> {
 
   void runOnOperation() override {
     Operation *op = getOperation();
@@ -446,8 +444,8 @@ struct IntRangeOptimizationsPass
   }
 };
 
-struct IntRangeNarrowingPass
-    : public arith::impl::ArithIntRangeNarrowingBase<IntRangeNarrowingPass> {
+struct IntRangeNarrowingPass final
+    : arith::impl::ArithIntRangeNarrowingBase<IntRangeNarrowingPass> {
   using ArithIntRangeNarrowingBase::ArithIntRangeNarrowingBase;
 
   void runOnOperation() override {
@@ -482,9 +480,9 @@ void mlir::arith::populateIntRangeOptimizationsPatterns(
 void mlir::arith::populateIntRangeNarrowingPatterns(
     RewritePatternSet &patterns, DataFlowSolver &solver,
     ArrayRef<unsigned> bitwidthsSupported) {
-  // Cmpi uses args ranges instead of results, run it with higher benefit,
+  // CmpI uses args ranges instead of results, run it with higher benefit,
   // as its argumens can be potentially replaced.
-  patterns.add<NarrowCmpi>(patterns.getContext(), /*benefit*/ 10, solver,
+  patterns.add<NarrowCmpI>(patterns.getContext(), /*benefit*/ 10, solver,
                            bitwidthsSupported);
 
   patterns.add<NarrowElementwise>(patterns.getContext(), solver,
