@@ -683,11 +683,12 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
 
   const SCEV *RHSExpr = S->getRHS();
   Value *RHS = expand(RHSExpr);
-  if (SafeUDivMode && !SE.isKnownNonZero(RHSExpr)) {
+  if (SafeUDivMode) {
     if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr))
       RHS = Builder.CreateFreeze(RHS);
-    RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
-                                  {RHS, ConstantInt::get(RHS->getType(), 1)});
+    if (!SE.isKnownNonZero(RHSExpr))
+      RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
+                                    {RHS, ConstantInt::get(RHS->getType(), 1)});
   }
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
