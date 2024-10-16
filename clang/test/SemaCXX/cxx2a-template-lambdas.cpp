@@ -43,13 +43,11 @@ struct ShadowMe {
 #if __cplusplus >= 201102L
 template<typename T>
 constexpr T outer() {
-  // FIXME: The C++11 error seems wrong
   return []<T x>() { return x; }.template operator()<123>(); // expected-error {{no matching member function}}  \
                                                                 expected-note {{candidate template ignored}}    \
-        cxx11-note {{non-literal type '<dependent type>' cannot be used in a constant expression}} \
         cxx14-note {{non-literal type}}
 }
-static_assert(outer<int>() == 123); // cxx11-cxx14-error {{not an integral constant expression}} cxx11-cxx14-note {{in call}}
+static_assert(outer<int>() == 123); // cxx11-cxx14-error {{not an integral constant expression}} cxx14-note {{in call}}
 template int *outer<int *>(); // expected-note {{in instantiation}}
 #endif
 
