@@ -2129,12 +2129,12 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
     // libunwind on libc++abi in cases such as non-C++ applications.
 
     // Resolve the function pointer to the state table personality if it has
-    // not already done.
+    // not already been done.
     if (xlcPersonalityV0 == NULL) {
       xlcPersonalityV0InitLock.lock();
       if (xlcPersonalityV0 == NULL) {
         // Resolve __xlcxx_personality_v0 using dlopen().
-        const char libcxxabi[] = "libc++abi.a(libc++abi.so.1)";
+        const char *libcxxabi = "libc++abi.a(libc++abi.so.1)";
         void *libHandle;
         // The AIX dlopen() sets errno to 0 when it is successful, which
         // clobbers the value of errno from the user code. This is an AIX
@@ -2152,6 +2152,7 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
           _LIBUNWIND_TRACE_UNWINDING("dlsym() failed with errno=%d\n", errno);
           assert(0 && "dlsym() failed");
         }
+        dlclose(libHandle);
         errno = saveErrno;
       }
       xlcPersonalityV0InitLock.unlock();
