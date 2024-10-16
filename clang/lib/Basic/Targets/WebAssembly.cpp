@@ -164,12 +164,10 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
-    Features["bulk-memory"] = true;
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
     Features["fp16"] = true;
     Features["multimemory"] = true;
-    Features["nontrapping-fptoint"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
