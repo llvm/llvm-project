@@ -183,7 +183,7 @@ define i64 @interleave_group_load_pointer_type(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 -8
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x ptr>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x ptr> [[WIDE_VEC]], <12 x ptr> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <12 x ptr> [[WIDE_VEC]], <12 x ptr> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
