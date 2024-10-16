@@ -808,7 +808,7 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
             results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x3;
         results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
                                   initialState);
-        // When calucating the value of the PC, it is assumed that the CFI
+        // When calculating the value of the PC, it is assumed that the CFI
         // instruction is placed before the signing instruction, however it is
         // placed after. Because of this, we need to take into account the CFI
         // instruction is one instruction call later than expected, and reduce
