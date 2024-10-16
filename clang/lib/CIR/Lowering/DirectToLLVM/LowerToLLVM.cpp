@@ -825,6 +825,60 @@ public:
   }
 };
 
+static mlir::Value
+getValueForVTableSymbol(mlir::Operation *op,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        const mlir::TypeConverter *converter,
+                        mlir::FlatSymbolRefAttr nameAttr, mlir::Type &eltType) {
+  auto module = op->getParentOfType<mlir::ModuleOp>();
+  auto *symbol = mlir::SymbolTable::lookupSymbolIn(module, nameAttr);
+  if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(symbol)) {
+    eltType = llvmSymbol.getType();
+  } else if (auto cirSymbol = dyn_cast<mlir::cir::GlobalOp>(symbol)) {
+    eltType = converter->convertType(cirSymbol.getSymType());
+  }
+  return rewriter.create<mlir::LLVM::AddressOfOp>(
+      op->getLoc(), mlir::LLVM::LLVMPointerType::get(op->getContext()),
+      nameAttr.getValue());
+}
+
+class CIRVTTAddrPointOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::VTTAddrPointOp> {
+public:
+  using mlir::OpConversionPattern<
+      mlir::cir::VTTAddrPointOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VTTAddrPointOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    const mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+    llvm::SmallVector<mlir::LLVM::GEPArg> offsets;
+    mlir::Type eltType;
+    mlir::Value llvmAddr = adaptor.getSymAddr();
+
+    if (op.getSymAddr()) {
+      if (op.getOffset() == 0) {
+        rewriter.replaceAllUsesWith(op, llvmAddr);
+        rewriter.eraseOp(op);
+        return mlir::success();
+      }
+
+      offsets.push_back(adaptor.getOffset());
+      eltType = mlir::IntegerType::get(resultType.getContext(), 8,
+                                       mlir::IntegerType::Signless);
+    } else {
+      llvmAddr = getValueForVTableSymbol(op, rewriter, getTypeConverter(),
+                                         op.getNameAttr(), eltType);
+      assert(eltType && "Shouldn't ever be missing an eltType here");
+      offsets.push_back(0);
+      offsets.push_back(adaptor.getOffset());
+    }
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, resultType, eltType,
+                                                   llvmAddr, offsets, true);
+    return mlir::success();
+  }
+};
+
 class CIRBrCondOpLowering
     : public mlir::OpConversionPattern<mlir::cir::BrCondOp> {
 public:
@@ -3486,18 +3540,8 @@ public:
     llvm::SmallVector<mlir::LLVM::GEPArg> offsets;
     mlir::Type eltType;
     if (!symAddr) {
-      // Get the vtable address point from a global variable
-      auto module = op->getParentOfType<mlir::ModuleOp>();
-      auto *symbol =
-          mlir::SymbolTable::lookupSymbolIn(module, op.getNameAttr());
-      if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(symbol)) {
-        eltType = llvmSymbol.getType();
-      } else if (auto cirSymbol = dyn_cast<mlir::cir::GlobalOp>(symbol)) {
-        eltType = converter->convertType(cirSymbol.getSymType());
-      }
-      symAddr = rewriter.create<mlir::LLVM::AddressOfOp>(
-          op.getLoc(), mlir::LLVM::LLVMPointerType::get(getContext()),
-          *op.getName());
+      symAddr = getValueForVTableSymbol(op, rewriter, getTypeConverter(),
+                                        op.getNameAttr(), eltType);
       offsets = llvm::SmallVector<mlir::LLVM::GEPArg>{
           0, op.getVtableIndex(), op.getAddressPointIndex()};
     } else {
@@ -3508,11 +3552,9 @@ public:
           llvm::SmallVector<mlir::LLVM::GEPArg>{op.getAddressPointIndex()};
     }
 
-    if (eltType)
-      rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, targetType, eltType,
-                                                     symAddr, offsets, true);
-    else
-      llvm_unreachable("Shouldn't ever be missing an eltType here");
+    assert(eltType && "Shouldn't ever be missing an eltType here");
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, targetType, eltType,
+                                                   symAddr, offsets, true);
 
     return mlir::success();
   }
@@ -4087,7 +4129,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRCmpThreeWayOpLowering, CIRClearCacheOpLowering, CIRUndefOpLowering,
       CIREhTypeIdOpLowering, CIRCatchParamOpLowering, CIRResumeOpLowering,
       CIRAllocExceptionOpLowering, CIRFreeExceptionOpLowering,
-      CIRThrowOpLowering, CIRIntrinsicCallLowering, CIRBaseClassAddrOpLowering
+      CIRThrowOpLowering, CIRIntrinsicCallLowering, CIRBaseClassAddrOpLowering,
+      CIRVTTAddrPointOpLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST

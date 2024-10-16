@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -fclangir -emit-llvm -fno-clangir-call-conv-lowering %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll  %s
 
 class A {
 public:
@@ -66,6 +68,17 @@ int main() {
 // CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: }
 
+// LLVM-LABEL: @_ZN1BC2Ev
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[VTT_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
+// LLVM:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]], align 8
+// LLVM:   %[[V:.*]] = load ptr, ptr %[[VTT]], align 8
+// LLVM:   store ptr %[[V]], ptr %[[THIS]], align 8
+// LLVM:   getelementptr inbounds i8, ptr %[[VTT]], i32 1
+// LLVM:   ret void
+// LLVM: }
+
 // Class C constructor
 // CIR: cir.func linkonce_odr @_ZN1CC2Ev(%arg0: !cir.ptr<!ty_C> loc({{.*}}), %arg1: !cir.ptr<!cir.ptr<!void>> loc({{.*}})) extra(#fn_attr) {
 // CIR:   %{{[0-9]+}} = cir.vtt.address_point %{{[0-9]+}} : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
@@ -123,3 +136,16 @@ int main() {
 // CIR:   cir.store %{{[0-9]+}}, %{{[0-9]+}} : !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>>
 // CIR:   cir.return
 // CIR: }
+
+// LLVM-LABEL: @_ZN1DC1Ev
+// LLVM:   %2 = alloca ptr, i64 1, align 8
+// LLVM:   store ptr %0, ptr %2, align 8
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %2, align 8
+// LLVM:   %[[BASE_A:.*]] = getelementptr i8, ptr %[[THIS]], i32 40
+// LLVM:   call void @_ZN1AC2Ev(ptr %[[BASE_A]])
+// LLVM:   %[[BASE_B:.*]] = getelementptr i8, ptr %[[THIS]], i32 0
+// LLVM:   call void @_ZN1BC2Ev(ptr %[[BASE_B]], ptr getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i32 0, i32 1))
+// LLVM:   %[[BASE_C:.*]] = getelementptr i8, ptr %[[THIS]], i32 16
+// LLVM:   call void @_ZN1CC2Ev(ptr %[[BASE_C]], ptr getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i32 0, i32 3))
+// LLVM:   ret void
+// LLVM: }
