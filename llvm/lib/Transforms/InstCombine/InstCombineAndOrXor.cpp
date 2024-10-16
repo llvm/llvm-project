@@ -3369,8 +3369,14 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // We can convert this case to bitwise and, because both operands are used
   // on the LHS, and as such poison from both will propagate.
   if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd,
-                                             /*IsLogical*/ false, Builder, Q))
+                                             /*IsLogical=*/false, Builder, Q)) {
+    // If RHS is still used, we should drop samesign flag.
+    if (IsLogical && RHS->hasSameSign() && !RHS->use_empty()) {
+      RHS->setSameSign(false);
+      addToWorklist(RHS);
+    }
     return V;
+  }
 
   if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder, *this))
     return V;
