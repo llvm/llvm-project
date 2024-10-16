@@ -1198,13 +1198,13 @@ def AllowRuntimeCheck : Builtin {
 
 def ShuffleVector : Builtin {
   let Spellings = ["__builtin_shufflevector"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ConvertVector : Builtin {
   let Spellings = ["__builtin_convertvector"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -4759,6 +4759,12 @@ def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_is_first_lane"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool()";
+}
+
+def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_read_lane_at"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {

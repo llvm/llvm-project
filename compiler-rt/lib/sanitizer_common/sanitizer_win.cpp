@@ -1034,7 +1034,7 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 
 void SignalContext::DumpAllRegisters(void *context) {
   CONTEXT *ctx = (CONTEXT *)context;
-#  if defined(__M_X64)
+#  if defined(_M_X64)
   Report("Register values:\n");
   Printf("rax = %llx  ", ctx->Rax);
   Printf("rbx = %llx  ", ctx->Rbx);
@@ -1068,6 +1068,13 @@ void SignalContext::DumpAllRegisters(void *context) {
   Printf("ebp = %lx  ", ctx->Ebp);
   Printf("esp = %lx  ", ctx->Esp);
   Printf("\n");
+#  elif defined(_M_ARM64)
+  Report("Register values:\n");
+  for (int i = 0; i <= 30; i++) {
+    Printf("x%d%s = %llx", i < 10 ? " " : "", ctx->X[i]);
+    if (i % 4 == 3)
+      Printf("\n");
+  }
 #  else
   // TODO
   (void)ctx;

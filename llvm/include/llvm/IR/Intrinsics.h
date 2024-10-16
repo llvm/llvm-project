@@ -97,6 +97,11 @@ namespace Intrinsic {
   /// the intrinsic.
   Function *getOrInsertDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {});
 
+  LLVM_DEPRECATED("Use getOrInsertDeclaration instead",
+                  "getOrInsertDeclaration")
+  inline Function *getDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {}) {
+    return getOrInsertDeclaration(M, id, Tys);
+  }
   /// Looks up Name in NameTable via binary search. NameTable must be sorted
   /// and all entries must start with "llvm.".  If NameTable contains an exact
   /// match for Name or a prefix of Name followed by a dot, its index in

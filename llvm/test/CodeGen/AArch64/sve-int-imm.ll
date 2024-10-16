@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -use-constant-int-for-scalable-splat < %s | FileCheck %s
 
 ;
 ; SVE Arith Vector Immediate Unpredicated CodeGen

@@ -6948,26 +6948,11 @@ bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
 }
 
 bool llvm::isNotCrossLaneOperation(const Instruction *I) {
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    // TODO: expand this list.
-    case Intrinsic::ctlz:
-    case Intrinsic::cttz:
-    case Intrinsic::ctpop:
-    case Intrinsic::umin:
-    case Intrinsic::umax:
-    case Intrinsic::smin:
-    case Intrinsic::smax:
-    case Intrinsic::usub_sat:
-    case Intrinsic::uadd_sat:
-    case Intrinsic::ssub_sat:
-    case Intrinsic::sadd_sat:
-      return true;
-    default:
-      return false;
-    }
-  }
-  return !isa<CallBase, BitCastInst, ShuffleVectorInst, ExtractElementInst>(I);
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    return isTriviallyVectorizable(II->getIntrinsicID());
+  auto *Shuffle = dyn_cast<ShuffleVectorInst>(I);
+  return (!Shuffle || Shuffle->isSelect()) &&
+         !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
@@ -8263,9 +8248,7 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
   case CmpInst::FCMP_OLE:
   case CmpInst::FCMP_ULT:
   case CmpInst::FCMP_ULE:
-    if (match(FalseVal,
-              m_CombineOr(m_OrdFMin(m_Specific(CmpLHS), m_APFloat(FC2)),
-                          m_UnordFMin(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
+    if (match(FalseVal, m_OrdOrUnordFMin(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 < *FC2)
       return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
     break;
@@ -8273,9 +8256,7 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
   case CmpInst::FCMP_OGE:
   case CmpInst::FCMP_UGT:
   case CmpInst::FCMP_UGE:
-    if (match(FalseVal,
-              m_CombineOr(m_OrdFMax(m_Specific(CmpLHS), m_APFloat(FC2)),
-                          m_UnordFMax(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
+    if (match(FalseVal, m_OrdOrUnordFMax(m_Specific(CmpLHS), m_APFloat(FC2))) &&
         *FC1 > *FC2)
       return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
     break;
