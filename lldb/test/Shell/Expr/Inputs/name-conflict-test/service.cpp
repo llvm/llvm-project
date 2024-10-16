@@ -12,4 +12,3 @@ void exported() {
   Service service;
   service.start(0);
 }
-

@@ -1,5 +1,5 @@
-#include "service.h"
 #include "plugin.h"
+#include "service.h"
 
 struct Proxy : public Service {
   State *proxyState;
@@ -12,4 +12,3 @@ void plugin_init() { gProxyThis = new Proxy; }
 
 void plugin_entry() {}
 }
-

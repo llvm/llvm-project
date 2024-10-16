@@ -7,4 +7,3 @@ void plugin_init(void);
 }
 
 #endif // _H_IN
-
