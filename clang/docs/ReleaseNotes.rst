@@ -517,6 +517,7 @@ Bug Fixes to C++ Support
   certain situations. (#GH47400), (#GH90896)
 - Fix erroneous templated array size calculation leading to crashes in generated code. (#GH41441)
 - During the lookup for a base class name, non-type names are ignored. (#GH16855)
+- Fixed an assertion failure when evaluating constant expressions in value-dependent initializers (#GH112140)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
