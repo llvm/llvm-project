@@ -238,13 +238,11 @@ TEST_F(CachedConstAccessorsLatticeTest, DifferentValsFromDifferentLocs) {
             AST.context());
   ASSERT_THAT(valPropertyCalls, SizeIs(2));
 
-  const CallExpr *CE1 = selectFirst<CallExpr>(
-      "call", valPropertyCalls);
+  const CallExpr *CE1 = selectFirst<CallExpr>("call", valPropertyCalls);
   ASSERT_NE(CE1, nullptr);
 
   valPropertyCalls.erase(valPropertyCalls.begin());
-  const CallExpr *CE2 = selectFirst<CallExpr>(
-      "call", valPropertyCalls);
+  const CallExpr *CE2 = selectFirst<CallExpr>("call", valPropertyCalls);
   ASSERT_NE(CE2, nullptr);
   ASSERT_NE(CE1, CE2);
 
@@ -252,10 +250,8 @@ TEST_F(CachedConstAccessorsLatticeTest, DifferentValsFromDifferentLocs) {
   RecordStorageLocation LocS2(SType, RecordStorageLocation::FieldToLoc(), {});
 
   LatticeT Lattice;
-  Value *Val1 =
-      Lattice.getOrCreateConstMethodReturnValue(LocS1, CE1, Env);
-  Value *Val2 =
-      Lattice.getOrCreateConstMethodReturnValue(LocS2, CE2, Env);
+  Value *Val1 = Lattice.getOrCreateConstMethodReturnValue(LocS1, CE1, Env);
+  Value *Val2 = Lattice.getOrCreateConstMethodReturnValue(LocS2, CE2, Env);
 
   EXPECT_NE(Val1, Val2);
 }
