@@ -112,6 +112,7 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a1, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
@@ -149,6 +150,7 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    sw a1, -24(s0)
 ; RV64-WITHFP-NEXT:    sw a2, -20(s0)
 ; RV64-WITHFP-NEXT:    lw a0, 0(a0)
+; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 96
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
@@ -1692,7 +1694,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    lui a1, 24414
 ; RV32-WITHFP-NEXT:    addi a1, a1, -1728
 ; RV32-WITHFP-NEXT:    add sp, sp, a1
-; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; RV32-WITHFP-NEXT:    lw ra, 1996(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 1992(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
@@ -1738,7 +1740,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    lui a1, 24414
 ; RV64-WITHFP-NEXT:    addiw a1, a1, -1680
 ; RV64-WITHFP-NEXT:    add sp, sp, a1
-; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; RV64-WITHFP-NEXT:    ld ra, 1960(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 1952(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
@@ -1811,6 +1813,7 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a1, -16(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
@@ -1838,6 +1841,7 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a0, 0(a0)
+; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
@@ -1922,6 +1926,7 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
 ; RV32-WITHFP-NEXT:    call va_vprintf
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
@@ -1951,6 +1956,7 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
 ; RV64-WITHFP-NEXT:    call va_vprintf
+; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 96
 ; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra

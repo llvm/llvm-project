@@ -133,7 +133,7 @@ define void @frame_pointer() "frame-pointer"="all" {
 ; RV32I-NEXT:    lbu a0, -1960(s0)
 ; RV32I-NEXT:    sb a0, -1960(s0)
 ; RV32I-NEXT:    addi sp, sp, 480
-; RV32I-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-NEXT:    .cfi_def_cfa sp, 2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    .cfi_restore ra
@@ -157,7 +157,7 @@ define void @frame_pointer() "frame-pointer"="all" {
 ; RV64I-NEXT:    lbu a1, 0(a0)
 ; RV64I-NEXT:    sb a1, 0(a0)
 ; RV64I-NEXT:    addi sp, sp, 496
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
+; RV64I-NEXT:    .cfi_def_cfa sp, 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    .cfi_restore ra

@@ -36,6 +36,7 @@ define void @trivial() {
 ; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
@@ -54,6 +55,7 @@ define void @trivial() {
 ; RV64-WITHFP-NEXT:    .cfi_offset s0, -16
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa s0, 0
+; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
@@ -80,6 +82,7 @@ define void @trivial() {
 ; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset s0, -8
 ; RV32-WITHFP-DISABLESW-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
@@ -98,6 +101,7 @@ define void @trivial() {
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_offset s0, -16
 ; RV64-WITHFP-DISABLESW-NEXT:    addi s0, sp, 16
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
+; RV64-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-WITHFP-DISABLESW-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-DISABLESW-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
@@ -375,6 +379,7 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-WITHFP-NEXT:    call callee2
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
@@ -399,6 +404,7 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-WITHFP-NEXT:    call callee2
+; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
@@ -469,6 +475,7 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV32-WITHFP-DISABLESW-NEXT:    andi a0, a0, 1
 ; RV32-WITHFP-DISABLESW-NEXT:    beqz a0, .LBB2_2
 ; RV32-WITHFP-DISABLESW-NEXT:  # %bb.1: # %blue_pill
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
@@ -479,6 +486,7 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV32-WITHFP-DISABLESW-NEXT:  .LBB2_2: # %red_pill
 ; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore_state
 ; RV32-WITHFP-DISABLESW-NEXT:    call callee2
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
@@ -501,6 +509,7 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-WITHFP-DISABLESW-NEXT:    andi a0, a0, 1
 ; RV64-WITHFP-DISABLESW-NEXT:    beqz a0, .LBB2_2
 ; RV64-WITHFP-DISABLESW-NEXT:  # %bb.1: # %blue_pill
+; RV64-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-WITHFP-DISABLESW-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-DISABLESW-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
@@ -511,6 +520,7 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-WITHFP-DISABLESW-NEXT:  .LBB2_2: # %red_pill
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_restore_state
 ; RV64-WITHFP-DISABLESW-NEXT:    call callee2
+; RV64-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-WITHFP-DISABLESW-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-DISABLESW-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_restore ra

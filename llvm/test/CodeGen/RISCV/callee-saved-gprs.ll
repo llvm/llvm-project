@@ -2503,6 +2503,7 @@ define void @foo() {
 ; RV32I-WITH-FP-NEXT:    #APP
 ; RV32I-WITH-FP-NEXT:    li s4, 0
 ; RV32I-WITH-FP-NEXT:    #NO_APP
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32I-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
@@ -2541,6 +2542,7 @@ define void @foo() {
 ; RV32IZCMP-WITH-FP-NEXT:    #APP
 ; RV32IZCMP-WITH-FP-NEXT:    li s4, 0
 ; RV32IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
@@ -2588,6 +2590,7 @@ define void @foo() {
 ; RV64I-WITH-FP-NEXT:    #APP
 ; RV64I-WITH-FP-NEXT:    li s4, 0
 ; RV64I-WITH-FP-NEXT:    #NO_APP
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64I-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
@@ -2626,6 +2629,7 @@ define void @foo() {
 ; RV64IZCMP-WITH-FP-NEXT:    #APP
 ; RV64IZCMP-WITH-FP-NEXT:    li s4, 0
 ; RV64IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
@@ -2679,6 +2683,7 @@ define void @bar() {
 ; RV32I-WITH-FP-NEXT:    #APP
 ; RV32I-WITH-FP-NEXT:    li s11, 0
 ; RV32I-WITH-FP-NEXT:    #NO_APP
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32I-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s11, 4(sp) # 4-byte Folded Reload
@@ -2717,6 +2722,7 @@ define void @bar() {
 ; RV32IZCMP-WITH-FP-NEXT:    #APP
 ; RV32IZCMP-WITH-FP-NEXT:    li s11, 0
 ; RV32IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 16
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s11, 4(sp) # 4-byte Folded Reload
@@ -2764,6 +2770,7 @@ define void @bar() {
 ; RV64I-WITH-FP-NEXT:    #APP
 ; RV64I-WITH-FP-NEXT:    li s11, 0
 ; RV64I-WITH-FP-NEXT:    #NO_APP
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64I-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
@@ -2802,6 +2809,7 @@ define void @bar() {
 ; RV64IZCMP-WITH-FP-NEXT:    #APP
 ; RV64IZCMP-WITH-FP-NEXT:    li s11, 0
 ; RV64IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 32
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
@@ -2876,6 +2884,7 @@ define void @varargs(...) {
 ; RV32I-WITH-FP-NEXT:    sw a2, 8(s0)
 ; RV32I-WITH-FP-NEXT:    sw a3, 12(s0)
 ; RV32I-WITH-FP-NEXT:    call callee
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa sp, 48
 ; RV32I-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    .cfi_restore ra
@@ -2924,6 +2933,7 @@ define void @varargs(...) {
 ; RV32IZCMP-WITH-FP-NEXT:    sw a2, 8(s0)
 ; RV32IZCMP-WITH-FP-NEXT:    sw a3, 12(s0)
 ; RV32IZCMP-WITH-FP-NEXT:    call callee
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 48
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    .cfi_restore ra
@@ -2991,6 +3001,7 @@ define void @varargs(...) {
 ; RV64I-WITH-FP-NEXT:    sd a2, 16(s0)
 ; RV64I-WITH-FP-NEXT:    sd a3, 24(s0)
 ; RV64I-WITH-FP-NEXT:    call callee
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa sp, 80
 ; RV64I-WITH-FP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    .cfi_restore ra
@@ -3039,6 +3050,7 @@ define void @varargs(...) {
 ; RV64IZCMP-WITH-FP-NEXT:    sd a2, 16(s0)
 ; RV64IZCMP-WITH-FP-NEXT:    sd a3, 24(s0)
 ; RV64IZCMP-WITH-FP-NEXT:    call callee
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 80
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    .cfi_restore ra

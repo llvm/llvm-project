@@ -88,6 +88,7 @@ define i32 @va1(ptr %fmt, ...) {
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a4, 16(s0)
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a1, s0, 8
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a1, -12(s0)
+; ILP32-ILP32F-WITHFP-NEXT:    .cfi_def_cfa sp, 48
 ; ILP32-ILP32F-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    .cfi_restore ra
@@ -148,6 +149,7 @@ define i32 @va1(ptr %fmt, ...) {
 ; ILP32E-WITHFP-NEXT:    sw a4, 16(s0)
 ; ILP32E-WITHFP-NEXT:    addi a1, s0, 8
 ; ILP32E-WITHFP-NEXT:    sw a1, -12(s0)
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa sp, 36
 ; ILP32E-WITHFP-NEXT:    lw ra, 8(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s0, 4(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    .cfi_restore ra
@@ -194,6 +196,7 @@ define i32 @va1(ptr %fmt, ...) {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a2, 16(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a3, 24(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a4, 32(s0)
+; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_def_cfa sp, 96
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_restore ra
@@ -236,6 +239,7 @@ define i32 @va1(ptr %fmt, ...) {
 ; LP64E-WITHFP-NEXT:    sd a2, 16(s0)
 ; LP64E-WITHFP-NEXT:    sd a3, 24(s0)
 ; LP64E-WITHFP-NEXT:    sd a4, 32(s0)
+; LP64E-WITHFP-NEXT:    .cfi_def_cfa sp, 72
 ; LP64E-WITHFP-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    .cfi_restore ra
@@ -2868,7 +2872,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; ILP32-ILP32F-WITHFP-NEXT:    lui a1, 24414
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a1, a1, -1728
 ; ILP32-ILP32F-WITHFP-NEXT:    add sp, sp, a1
-; ILP32-ILP32F-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; ILP32-ILP32F-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; ILP32-ILP32F-WITHFP-NEXT:    lw ra, 1996(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    lw s0, 1992(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    .cfi_restore ra
@@ -2973,7 +2977,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; ILP32E-WITHFP-NEXT:    lui a1, 24414
 ; ILP32E-WITHFP-NEXT:    addi a1, a1, -1748
 ; ILP32E-WITHFP-NEXT:    add sp, sp, a1
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 2044
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa sp, 2044
 ; ILP32E-WITHFP-NEXT:    lw ra, 2016(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s0, 2012(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    .cfi_restore ra
@@ -3050,7 +3054,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    lui a1, 24414
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addiw a1, a1, -1680
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    add sp, sp, a1
-; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 1960(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 1952(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_restore ra
@@ -3119,7 +3123,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; LP64E-WITHFP-NEXT:    lui a1, 24414
 ; LP64E-WITHFP-NEXT:    addiw a1, a1, -1704
 ; LP64E-WITHFP-NEXT:    add sp, sp, a1
-; LP64E-WITHFP-NEXT:    .cfi_def_cfa_offset 2040
+; LP64E-WITHFP-NEXT:    .cfi_def_cfa sp, 2040
 ; LP64E-WITHFP-NEXT:    ld ra, 1984(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    ld s0, 1976(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    .cfi_restore ra

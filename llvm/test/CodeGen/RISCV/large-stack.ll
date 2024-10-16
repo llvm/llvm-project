@@ -35,7 +35,7 @@ define void @test() {
 ; RV32I-WITHFP-NEXT:    lui a0, 74565
 ; RV32I-WITHFP-NEXT:    addi a0, a0, -352
 ; RV32I-WITHFP-NEXT:    add sp, sp, a0
-; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; RV32I-WITHFP-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    .cfi_restore ra
@@ -117,7 +117,7 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP-NEXT:    lui a0, 97
 ; RV32I-WITHFP-NEXT:    addi a0, a0, 688
 ; RV32I-WITHFP-NEXT:    add sp, sp, a0
-; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; RV32I-WITHFP-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw s1, 2020(sp) # 4-byte Folded Reload

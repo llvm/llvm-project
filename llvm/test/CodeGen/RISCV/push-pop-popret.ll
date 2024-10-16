@@ -3369,6 +3369,7 @@ define i32 @use_fp(i32 %x) {
 ; RV32IZCMP-NEXT:    mv a0, s0
 ; RV32IZCMP-NEXT:    call bar
 ; RV32IZCMP-NEXT:    mv a0, s1
+; RV32IZCMP-NEXT:    .cfi_def_cfa sp, 32
 ; RV32IZCMP-NEXT:    cm.pop {ra, s0-s1}, 32
 ; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IZCMP-NEXT:    .cfi_restore ra
@@ -3390,6 +3391,7 @@ define i32 @use_fp(i32 %x) {
 ; RV64IZCMP-NEXT:    mv a0, s0
 ; RV64IZCMP-NEXT:    call bar
 ; RV64IZCMP-NEXT:    mv a0, s1
+; RV64IZCMP-NEXT:    .cfi_def_cfa sp, 48
 ; RV64IZCMP-NEXT:    cm.pop {ra, s0-s1}, 48
 ; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IZCMP-NEXT:    .cfi_restore ra
@@ -3411,6 +3413,7 @@ define i32 @use_fp(i32 %x) {
 ; RV32IZCMP-SR-NEXT:    mv a0, s0
 ; RV32IZCMP-SR-NEXT:    call bar
 ; RV32IZCMP-SR-NEXT:    mv a0, s1
+; RV32IZCMP-SR-NEXT:    .cfi_def_cfa sp, 32
 ; RV32IZCMP-SR-NEXT:    cm.pop {ra, s0-s1}, 32
 ; RV32IZCMP-SR-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IZCMP-SR-NEXT:    .cfi_restore ra
@@ -3432,6 +3435,7 @@ define i32 @use_fp(i32 %x) {
 ; RV64IZCMP-SR-NEXT:    mv a0, s0
 ; RV64IZCMP-SR-NEXT:    call bar
 ; RV64IZCMP-SR-NEXT:    mv a0, s1
+; RV64IZCMP-SR-NEXT:    .cfi_def_cfa sp, 48
 ; RV64IZCMP-SR-NEXT:    cm.pop {ra, s0-s1}, 48
 ; RV64IZCMP-SR-NEXT:    .cfi_def_cfa_offset 0
 ; RV64IZCMP-SR-NEXT:    .cfi_restore ra
@@ -3456,6 +3460,7 @@ define i32 @use_fp(i32 %x) {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call bar
 ; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    .cfi_def_cfa sp, 16
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -3483,6 +3488,7 @@ define i32 @use_fp(i32 %x) {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call bar
 ; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    .cfi_def_cfa sp, 32
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

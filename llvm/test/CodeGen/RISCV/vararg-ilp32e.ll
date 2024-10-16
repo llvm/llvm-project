@@ -49,6 +49,7 @@ define i32 @caller(i32 %a) {
 ; ILP32E-WITHFP-NEXT:    li a1, 0
 ; ILP32E-WITHFP-NEXT:    call va_double
 ; ILP32E-WITHFP-NEXT:    mv a0, s1
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa sp, 12
 ; ILP32E-WITHFP-NEXT:    lw ra, 8(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s0, 4(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
@@ -127,6 +128,7 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-WITHFP-NEXT:    call __eqdf2
 ; ILP32E-WITHFP-NEXT:    bnez a0, .LBB1_2
 ; ILP32E-WITHFP-NEXT:  # %bb.1: # %if.end
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa sp, 36
 ; ILP32E-WITHFP-NEXT:    lw ra, 8(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    lw s0, 4(sp) # 4-byte Folded Reload
 ; ILP32E-WITHFP-NEXT:    .cfi_restore ra
