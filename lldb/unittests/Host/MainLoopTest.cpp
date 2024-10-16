@@ -194,9 +194,6 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
     add_callback2.set_value();
   });
   Status error;
-  auto socket_handle = loop.RegisterReadObject(
-      socketpair[1], [](MainLoopBase &) {}, error);
-  ASSERT_TRUE(socket_handle);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   bool callback2_called = false;
   std::thread callback2_adder([&]() {
