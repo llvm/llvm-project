@@ -214,8 +214,8 @@ entry:
 
 declare i64 @llvm.lround.i64.f64(double)
 
-define dso_local i32 @test_lround32(double %d) local_unnamed_addr {
-; BE-LABEL: test_lround32:
+define dso_local i32 @test_lroundi32f64(double %d) local_unnamed_addr {
+; BE-LABEL: test_lroundi32f64:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
 ; BE-NEXT:    stdu r1, -112(r1)
@@ -229,7 +229,7 @@ define dso_local i32 @test_lround32(double %d) local_unnamed_addr {
 ; BE-NEXT:    mtlr r0
 ; BE-NEXT:    blr
 ;
-; CHECK-LABEL: test_lround32:
+; CHECK-LABEL: test_lroundi32f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
@@ -243,7 +243,7 @@ define dso_local i32 @test_lround32(double %d) local_unnamed_addr {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ;
-; FAST-LABEL: test_lround32:
+; FAST-LABEL: test_lroundi32f64:
 ; FAST:       # %bb.0: # %entry
 ; FAST-NEXT:    xsrdpi f0, f1
 ; FAST-NEXT:    fctiw f0, f0
@@ -298,8 +298,8 @@ entry:
 
 declare i64 @llvm.lround.i64.f32(float)
 
-define dso_local i32 @test_lroundf32(float %d) local_unnamed_addr {
-; BE-LABEL: test_lroundf32:
+define dso_local i32 @test_lroundi32f32(float %d) local_unnamed_addr {
+; BE-LABEL: test_lroundi32f32:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
 ; BE-NEXT:    stdu r1, -112(r1)
@@ -313,7 +313,7 @@ define dso_local i32 @test_lroundf32(float %d) local_unnamed_addr {
 ; BE-NEXT:    mtlr r0
 ; BE-NEXT:    blr
 ;
-; CHECK-LABEL: test_lroundf32:
+; CHECK-LABEL: test_lroundi32f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
@@ -327,7 +327,7 @@ define dso_local i32 @test_lroundf32(float %d) local_unnamed_addr {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ;
-; FAST-LABEL: test_lroundf32:
+; FAST-LABEL: test_lroundi32f32:
 ; FAST:       # %bb.0: # %entry
 ; FAST-NEXT:    xsrdpi f0, f1
 ; FAST-NEXT:    fctiw f0, f0
