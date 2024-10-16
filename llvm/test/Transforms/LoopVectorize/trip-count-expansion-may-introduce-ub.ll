@@ -1271,7 +1271,8 @@ define i64 @multi_exit_count_with_udiv_by_value_in_latch_different_bounds_diviso
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M_1:%.*]] = call i64 @llvm.umax.i64(i64 [[M]], i64 1)
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze i64 [[M_1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP9]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP10]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[SMAX]])

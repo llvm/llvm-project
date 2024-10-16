@@ -684,9 +684,15 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
   const SCEV *RHSExpr = S->getRHS();
   Value *RHS = expand(RHSExpr);
   if (SafeUDivMode) {
-    if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr))
+    bool GuaranteedNotPoison =
+        ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
+    if (!GuaranteedNotPoison)
       RHS = Builder.CreateFreeze(RHS);
-    if (!SE.isKnownNonZero(RHSExpr))
+
+    // We need an umax if either RHSExpr is not known to be zero, or if it is
+    // not guaranteed to be non-poison. In the later case, the frozen poison may
+    // be 0.
+    if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
       RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
                                     {RHS, ConstantInt::get(RHS->getType(), 1)});
   }
