@@ -12,7 +12,11 @@ target triple = "powerpc-ibm-aix"
 ; CHECK-NEXT: L..__llvm_covinit_functions:
 ; CHECK-NEXT:     .vbyte  4, __llvm_gcov_writeout[DS]
 ; CHECK-NEXT:     .vbyte  4, __llvm_gcov_reset[DS]
-; CHECK: L.._MergedGlobals:
+; CHECK-NEXT:    .csect __llvm_gcov_ctr_section[RW],3
+; CHECK-NEXT:    .lglobl __llvm_gcov_ctr                 # @_MergedGlobals
+; CHECK-NEXT:    .lglobl __llvm_gcov_ctr.1
+; CHECK-NEXT:    .align  3
+; CHECK-NEXT: L.._MergedGlobals:
 ; CHECK-NEXT: __llvm_gcov_ctr:
 ; CHECK-NEXT:     .space  16
 ; CHECK-NEXT: __llvm_gcov_ctr.1:
