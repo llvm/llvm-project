@@ -8867,7 +8867,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     const Module *M = MF.getFunction().getParent();
     const GlobalValue *GV =
-        M->getNamedValue(Intrinsic::getName(Intrinsic::amdgcn_groupstaticsize));
+        Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_groupstaticsize);
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0,
                                             SIInstrInfo::MO_ABS32_LO);
     return {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0};

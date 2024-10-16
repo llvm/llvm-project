@@ -21446,8 +21446,7 @@ void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
   if (!Subtarget->hasV7Ops())
     return;
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Builder.CreateCall(
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_clrex));
+  Builder.CreateIntrinsic(Intrinsic::arm_clrex, {}, {});
 }
 
 Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
