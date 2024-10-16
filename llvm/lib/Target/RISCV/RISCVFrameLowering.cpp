@@ -822,15 +822,16 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                                                 RVFI->getVarArgsSaveSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
 
-  bool RestoreFP = RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-                   !hasReservedCallFrame(MF);
+  bool RestoreSPFromFP = RI->hasStackRealignment(MF) ||
+                         MFI.hasVarSizedObjects() || !hasReservedCallFrame(MF);
   if (RVVStackSize) {
-    // If RestoreFP the stack pointer will be restored using the frame pointer
-    // value.
-    if (!RestoreFP) {
+    // If RestoreSPFromFP the stack pointer will be restored using the frame
+    // pointer value.
+    if (!RestoreSPFromFP)
       adjustStackForRVV(MF, MBB, LastFrameDestroy, DL, RVVStackSize,
                         MachineInstr::FrameDestroy);
 
+    if (!hasFP(MF)) {
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
           nullptr, RI->getDwarfRegNum(SPReg, true), RealStackSize));
       BuildMI(MBB, LastFrameDestroy, DL,
@@ -848,13 +849,14 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
 
-    // If RestoreFP the stack pointer will be restored using the frame pointer
-    // value.
-    if (!RestoreFP) {
+    // If RestoreSPFromFP the stack pointer will be restored using the frame
+    // pointer value.
+    if (!RestoreSPFromFP)
       RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg,
                     StackOffset::getFixed(SecondSPAdjustAmount),
                     MachineInstr::FrameDestroy, getStackAlign());
 
+    if (!hasFP(MF)) {
       unsigned CFIIndex = MF.addFrameInst(
           MCCFIInstruction::cfiDefCfaOffset(nullptr, FirstSPAdjustAmount));
       BuildMI(MBB, LastFrameDestroy, DL,
@@ -874,13 +876,15 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // normally it's just checking the variable sized object is present or not
   // is enough, but we also don't preserve that at prologue/epilogue when
   // have vector objects in stack.
-  if (RestoreFP) {
+  if (RestoreSPFromFP) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
 
     RI->adjustReg(MBB, LastFrameDestroy, DL, SPReg, FPReg,
                   StackOffset::getFixed(-FPOffset), MachineInstr::FrameDestroy,
                   getStackAlign());
+  }
 
+  if (hasFP(MF)) {
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
         nullptr, RI->getDwarfRegNum(SPReg, true), RealStackSize));
     BuildMI(MBB, LastFrameDestroy, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
