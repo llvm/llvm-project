@@ -702,10 +702,10 @@ public:
   /// Retrieve the current block, if any.
   sema::BlockScopeInfo *getCurBlock();
 
-  /// Get the innermost lambda enclosing the current location, if any. This
-  /// looks through intervening non-lambda scopes such as local functions and
-  /// blocks.
-  sema::LambdaScopeInfo *getEnclosingLambda() const;
+  /// Get the innermost lambda or block enclosing the current location, if any.
+  /// This looks through intervening non-lambda, non-block scopes such as local
+  /// functions.
+  sema::CapturingScopeInfo *getEnclosingLambdaOrBlock() const;
 
   /// Retrieve the current lambda scope info, if any.
   /// \param IgnoreNonLambdaCapturingScope true if should find the top-most
@@ -871,8 +871,6 @@ public:
   /// to lookup file scope declarations in the "ordinary" C decl namespace.
   /// For example, user-defined classes, built-in "id" type, etc.
   Scope *TUScope;
-
-  bool WarnedStackExhausted = false;
 
   void incrementMSManglingNumber() const {
     return CurScope->incrementMSManglingNumber();
@@ -1184,6 +1182,8 @@ protected:
 private:
   std::optional<std::unique_ptr<DarwinSDKInfo>> CachedDarwinSDKInfo;
   bool WarnedDarwinSDKInfoMissing = false;
+
+  bool WarnedStackExhausted = false;
 
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
@@ -4453,9 +4453,10 @@ public:
                                       SourceLocation *ArgLocation = nullptr);
 
   /// Determine if type T is a valid subject for a nonnull and similar
-  /// attributes. By default, we look through references (the behavior used by
-  /// nonnull), but if the second parameter is true, then we treat a reference
-  /// type as valid.
+  /// attributes. Dependent types are considered valid so they can be checked
+  /// during instantiation time. By default, we look through references (the
+  /// behavior used by nonnull), but if the second parameter is true, then we
+  /// treat a reference type as valid.
   bool isValidPointerAttrType(QualType T, bool RefOkay = false);
 
   /// AddAssumeAlignedAttr - Adds an assume_aligned attribute to a particular
@@ -4527,9 +4528,10 @@ public:
   /// declaration.
   void AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E);
 
-  /// AddAnnotationAttr - Adds an annotation Annot with Args arguments to D.
-  void AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
-                         StringRef Annot, MutableArrayRef<Expr *> Args);
+  /// CreateAnnotationAttr - Creates an annotation Annot with Args arguments.
+  Attr *CreateAnnotationAttr(const AttributeCommonInfo &CI, StringRef Annot,
+                             MutableArrayRef<Expr *> Args);
+  Attr *CreateAnnotationAttr(const ParsedAttr &AL);
 
   bool checkMSInheritanceAttrOnDefinition(CXXRecordDecl *RD, SourceRange Range,
                                           bool BestCase,
@@ -12417,9 +12419,8 @@ public:
                                     sema::TemplateDeductionInfo &Info);
 
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
-      TemplateParameterList *PParam, TemplateDecl *PArg, TemplateDecl *AArg,
-      const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
-      bool IsDeduced);
+      TemplateParameterList *PParam, TemplateDecl *AArg,
+      const DefaultArguments &DefaultArgs, SourceLocation Loc, bool IsDeduced);
 
   /// Mark which template parameters are used in a given expression.
   ///
@@ -12728,9 +12729,6 @@ public:
 
       /// We are instantiating a type alias template declaration.
       TypeAliasTemplateInstantiation,
-
-      /// We are performing partial ordering for template template parameters.
-      PartialOrderingTTP,
     } Kind;
 
     /// Was the enclosing context a non-instantiation SFINAE context?
@@ -12950,12 +12948,6 @@ public:
     /// \brief Note that we are building deduction guides.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateDecl *Entity, BuildingDeductionGuidesTag,
-                          SourceRange InstantiationRange = SourceRange());
-
-    struct PartialOrderingTTP {};
-    /// \brief Note that we are partial ordering template template parameters.
-    InstantiatingTemplate(Sema &SemaRef, SourceLocation ArgLoc,
-                          PartialOrderingTTP, TemplateDecl *PArg,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we have finished instantiating this template.

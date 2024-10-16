@@ -250,7 +250,12 @@ def ext_designated_init_brace_elision : ExtWarn<
 // Declarations.
 def ext_plain_complex : ExtWarn<
   "plain '_Complex' requires a type specifier; assuming '_Complex double'">;
-def ext_imaginary_constant : Extension<
+def warn_c23_compat_imaginary_constant : Warning<
+  "imaginary constants are incompatible with C standards before C2y">,
+  DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_imaginary_constant : Extension<
+  "imaginary constants are a C2y extension">, InGroup<C2y>;
+def ext_gnu_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def ext_integer_complex : Extension<
   "complex integer types are a GNU extension">, InGroup<GNUComplexInteger>;
@@ -439,7 +444,7 @@ def warn_reserved_extern_symbol: Warning<
   InGroup<ReservedIdentifier>, DefaultIgnore;
 def warn_deprecated_literal_operator_id: Warning<
   "identifier %0 preceded by whitespace in a literal operator declaration "
-  "is deprecated">, InGroup<DeprecatedLiteralOperator>, DefaultIgnore;
+  "is deprecated">, InGroup<DeprecatedLiteralOperator>;
 def warn_reserved_module_name : Warning<
   "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
 def warn_import_implementation_partition_unit_in_interface_unit : Warning<
@@ -5262,13 +5267,6 @@ def note_template_arg_refers_here_func : Note<
 def err_template_arg_template_params_mismatch : Error<
   "template template argument has different template parameters than its "
   "corresponding template template parameter">;
-def note_template_arg_template_params_mismatch : Note<
-  "template template argument has different template parameters than its "
-  "corresponding template template parameter">;
-def err_non_deduced_mismatch : Error<
-  "could not match %diff{$ against $|types}0,1">;
-def err_inconsistent_deduction : Error<
-  "conflicting deduction %diff{$ against $|types}0,1 for parameter">;
 def err_template_arg_not_integral_or_enumeral : Error<
   "non-type template argument of type %0 must have an integral or enumeration"
   " type">;
@@ -9232,6 +9230,8 @@ def err_typecheck_cond_incompatible_operands : Error<
 def err_typecheck_expect_scalar_or_vector : Error<
   "invalid operand of type %0 where %1 or "
   "a vector of such type is required">;
+def err_typecheck_expect_any_scalar_or_vector : Error<
+  "invalid operand of type %0 where a scalar or vector is required">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
@@ -9386,7 +9386,8 @@ let CategoryName = "Inline Assembly Issue" in {
     "global register variables on this target">;
   def err_asm_register_size_mismatch : Error<"size of register '%0' does not "
     "match variable size">;
-  def err_asm_bad_register_type : Error<"bad type for named register variable">;
+  def err_asm_unsupported_register_type : Error<
+    "unsupported type for named register variable">;
   def err_asm_invalid_input_size : Error<
     "invalid input size for constraint '%0'">;
   def err_asm_invalid_output_size : Error<
@@ -10125,6 +10126,8 @@ def note_lambda_capture_initializer : Note<
   " via initialization of lambda capture %0}1">;
 def note_init_with_default_member_initializer : Note<
   "initializing field %0 with default member initializer">;
+def note_init_with_default_argument : Note<
+  "initializing parameter %0 with default argument">;
 
 // Check for initializing a member variable with the address or a reference to
 // a constructor parameter.
@@ -11708,6 +11711,10 @@ def err_omp_dispatch_statement_call
             " to a target function or an assignment to one">;
 def err_omp_unroll_full_variable_trip_count : Error<
   "loop to be fully unrolled must have a constant trip count">;
+def err_omp_interchange_permutation_value_range : Error<
+  "permutation index must be at least 1 and at most %0">;
+def err_omp_interchange_permutation_value_repeated : Error<
+  "index %0 must appear exactly once in the permutation clause">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
 def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;
@@ -12578,6 +12585,7 @@ def err_acc_duplicate_clause_disallowed
     : Error<"OpenACC '%1' clause cannot appear more than once on a '%0' "
             "directive">;
 def note_acc_previous_clause_here : Note<"previous clause is here">;
+def note_acc_previous_expr_here : Note<"previous expression is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute Construct">;
@@ -12684,6 +12692,25 @@ def err_acc_insufficient_loops
 def err_acc_intervening_code
     : Error<"inner loops must be tightly nested inside a '%0' clause on "
             "a 'loop' construct">;
+def err_acc_gang_multiple_elt
+    : Error<"OpenACC 'gang' clause may have at most one %select{unnamed or "
+            "'num'|'dim'|'static'}0 argument">;
+def err_acc_int_arg_invalid
+    : Error<"'%1' argument on '%0' clause is not permitted on a%select{n "
+            "orphaned|||}2 'loop' construct %select{|associated with a "
+            "'parallel' compute construct|associated with a 'kernels' compute "
+            "construct|associated with a 'serial' compute construct}2">;
+def err_acc_gang_dim_value
+    : Error<"argument to 'gang' clause dimension must be %select{a constant "
+            "expression|1, 2, or 3: evaluated to %1}0">;
+def err_acc_num_arg_conflict
+    : Error<"'num' argument to '%0' clause not allowed on a 'loop' construct "
+            "associated with a 'kernels' construct that has a "
+            "'%select{num_gangs|num_workers|vector_length}1' "
+            "clause">;
+def err_acc_clause_in_clause_region
+    : Error<"loop with a '%0' clause may not exist in the region of a '%1' "
+            "clause%select{| on a 'kernels' compute construct}2">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

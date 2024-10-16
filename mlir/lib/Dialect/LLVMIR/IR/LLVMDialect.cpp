@@ -598,7 +598,7 @@ static ParseResult parseSwitchOpCases(
     int64_t value = 0;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value));
+    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -2089,7 +2089,7 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      Attribute value, uint64_t alignment, unsigned addrSpace,
                      bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
                      ArrayRef<NamedAttribute> attrs,
-                     DIGlobalVariableExpressionAttr dbgExpr) {
+                     ArrayRef<Attribute> dbgExprs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
@@ -2121,8 +2121,9 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                         builder.getI32IntegerAttr(addrSpace));
   result.attributes.append(attrs.begin(), attrs.end());
 
-  if (dbgExpr)
-    result.addAttribute(getDbgExprAttrName(result.name), dbgExpr);
+  if (!dbgExprs.empty())
+    result.addAttribute(getDbgExprsAttrName(result.name),
+                        ArrayAttr::get(builder.getContext(), dbgExprs));
 
   result.addRegion();
 }
@@ -3226,6 +3227,8 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
   return foldChainableCast(*this, adaptor);
 }
 
+Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
+
 //===----------------------------------------------------------------------===//
 // Folder for LLVM::GEPOp
 //===----------------------------------------------------------------------===//
@@ -3276,6 +3279,8 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+Value LLVM::GEPOp::getViewSource() { return getBase(); }
+
 //===----------------------------------------------------------------------===//
 // ShlOp
 //===----------------------------------------------------------------------===//
@@ -3324,6 +3329,36 @@ LogicalResult CallIntrinsicOp::verify() {
   return success();
 }
 
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::StringAttr intrin, mlir::ValueRange args) {
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+  build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
+        fastMathFlags,
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::Type resultType, mlir::StringAttr intrin,
+                            mlir::ValueRange args) {
+  build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::TypeRange resultTypes,
+                            mlir::StringAttr intrin, mlir::ValueRange args,
+                            mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
+  build(builder, state, resultTypes, intrin, args, fastMathFlags,
+        /*op_bundle_operands=*/{});
+}
+
 //===----------------------------------------------------------------------===//
 // OpAsmDialectInterface
 //===----------------------------------------------------------------------===//
@@ -3335,11 +3370,12 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
         .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
-              DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-              DIGlobalVariableExpressionAttr, DIImportedEntityAttr, DILabelAttr,
-              DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
-              DIModuleAttr, DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+              DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+              DIGlobalVariableAttr, DIGlobalVariableExpressionAttr,
+              DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+              DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+              DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
               DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
               LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
               LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,

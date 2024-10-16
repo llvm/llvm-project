@@ -284,6 +284,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: exp2m1f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: expf
     standards:
       - stdc
@@ -2290,6 +2297,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: sinpif16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: sqrt
     standards:
       - stdc

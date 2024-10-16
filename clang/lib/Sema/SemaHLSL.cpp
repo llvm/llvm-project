@@ -1708,9 +1708,9 @@ static bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
                                   checkDoubleVector);
 }
-static bool CheckFloatingOrSignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+static bool CheckFloatingOrIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllSignedTypes = [](clang::QualType PassedType) -> bool {
-    return !PassedType->hasSignedIntegerRepresentation() &&
+    return !PassedType->hasIntegerRepresentation() &&
            !PassedType->hasFloatingRepresentation();
   };
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.IntTy,
@@ -1746,6 +1746,22 @@ static bool CheckScalarOrVector(Sema *S, CallExpr *TheCall, QualType Scalar,
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
             diag::err_typecheck_expect_scalar_or_vector)
         << ArgType << Scalar;
+    return true;
+  }
+  return false;
+}
+
+static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
+                                   unsigned ArgIndex) {
+  assert(TheCall->getNumArgs() >= ArgIndex);
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
+  auto *VTy = ArgType->getAs<VectorType>();
+  // not the scalar or vector<scalar>
+  if (!(ArgType->isScalarType() ||
+        (VTy && VTy->getElementType()->isScalarType()))) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+            diag::err_typecheck_expect_any_scalar_or_vector)
+        << ArgType;
     return true;
   }
   return false;
@@ -1896,6 +1912,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_degrees:
   case Builtin::BI__builtin_hlsl_elementwise_radians:
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
@@ -1966,7 +1983,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
-    if (CheckFloatingOrSignedIntRepresentation(&SemaRef, TheCall))
+    if (CheckFloatingOrIntRepresentation(&SemaRef, TheCall))
       return true;
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
@@ -1989,6 +2006,34 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   // generation. Normal handling of these builitns will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {
     if (CheckUnsignedIntRepresentation(&SemaRef, TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    // Ensure index parameter type can be interpreted as a uint
+    ExprResult Index = TheCall->getArg(1);
+    QualType ArgTyIndex = Index.get()->getType();
+    if (!ArgTyIndex->isIntegerType()) {
+      SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyIndex << SemaRef.Context.UnsignedIntTy << 1 << 0 << 0;
+      return true;
+    }
+
+    // Ensure input expr type is a scalar/vector and the same as the return type
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
+    if (SemaRef.checkArgCount(TheCall, 0))
       return true;
     break;
   }

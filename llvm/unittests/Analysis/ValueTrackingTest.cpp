@@ -2481,8 +2481,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   Module M("", Context);
   IRBuilder<> Builder(Context);
-  Function *TheFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::vscale, {Builder.getInt32Ty()});
+  Function *TheFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::vscale,
+                                                      {Builder.getInt32Ty()});
   CallInst *CI = Builder.CreateCall(TheFn, {}, {}, "");
 
   KnownBits Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);

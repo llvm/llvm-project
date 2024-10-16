@@ -36,8 +36,7 @@ enum class CallControlFlowAction { EnterCallee, ExitCallee, ExternalCallee };
 //===----------------------------------------------------------------------===//
 
 /// This class represents a dense lattice. A dense lattice is attached to
-/// operations to represent the program state after their execution or to blocks
-/// to represent the program state at the beginning of the block. A dense
+/// program point to represent the program state at the program point.
 /// lattice is propagated through the IR by dense data-flow analysis.
 class AbstractDenseLattice : public AnalysisState {
 public:
@@ -59,15 +58,13 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// Base class for dense forward data-flow analyses. Dense data-flow analysis
-/// attaches a lattice between the execution of operations and implements a
-/// transfer function from the lattice before each operation to the lattice
-/// after. The lattice contains information about the state of the program at
-/// that point.
+/// attaches a lattice to program points and implements a transfer function from
+/// the lattice before each operation to the lattice after. The lattice contains
+/// information about the state of the program at that program point.
 ///
-/// In this implementation, a lattice attached to an operation represents the
-/// state of the program after its execution, and a lattice attached to block
-/// represents the state of the program right before it starts executing its
-/// body.
+/// Visit a program point in forward dense data-flow analysis will invoke the
+/// transfer function of the operation preceding the program point iterator.
+/// Visit a program point at the begining of block will visit the block itself.
 class AbstractDenseForwardDataFlowAnalysis : public DataFlowAnalysis {
 public:
   using DataFlowAnalysis::DataFlowAnalysis;
@@ -76,13 +73,14 @@ public:
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
 
-  /// Visit a program point that modifies the state of the program. If this is a
-  /// block, then the state is propagated from control-flow predecessors or
-  /// callsites. If this is a call operation or region control-flow operation,
-  /// then the state after the execution of the operation is set by control-flow
-  /// or the callgraph. Otherwise, this function invokes the operation transfer
-  /// function.
-  LogicalResult visit(ProgramPoint point) override;
+  /// Visit a program point that modifies the state of the program. If the
+  /// program point is at the beginning of a block, then the state is propagated
+  /// from control-flow predecessors or callsites.  If the operation before
+  /// program point iterator is a call operation or region control-flow
+  /// operation, then the state after the execution of the operation is set by
+  /// control-flow or the callgraph. Otherwise, this function invokes the
+  /// operation transfer function before the program point iterator.
+  LogicalResult visit(ProgramPoint *point) override;
 
 protected:
   /// Propagate the dense lattice before the execution of an operation to the
@@ -91,15 +89,14 @@ protected:
                                            const AbstractDenseLattice &before,
                                            AbstractDenseLattice *after) = 0;
 
-  /// Get the dense lattice after the execution of the given lattice anchor.
+  /// Get the dense lattice on the given lattice anchor.
   virtual AbstractDenseLattice *getLattice(LatticeAnchor anchor) = 0;
 
-  /// Get the dense lattice after the execution of the given program point and
-  /// add it as a dependency to a lattice anchor. That is, every time the
-  /// lattice after anchor is updated, the dependent program point must be
-  /// visited, and the newly triggered visit might update the lattice after
-  /// dependent.
-  const AbstractDenseLattice *getLatticeFor(ProgramPoint dependent,
+  /// Get the dense lattice on the given lattice anchor and add dependent as its
+  /// dependency. That is, every time the lattice after anchor is updated, the
+  /// dependent program point must be visited, and the newly triggered visit
+  /// might update the lattice on dependent.
+  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
                                             LatticeAnchor anchor);
 
   /// Set the dense lattice at control flow entry point and propagate an update
@@ -153,7 +150,7 @@ protected:
   /// Visit a program point within a region branch operation with predecessors
   /// in it. This can either be an entry block of one of the regions of the
   /// parent operation itself.
-  void visitRegionBranchOperation(ProgramPoint point,
+  void visitRegionBranchOperation(ProgramPoint *point,
                                   RegionBranchOpInterface branch,
                                   AbstractDenseLattice *after);
 
@@ -294,14 +291,12 @@ protected:
 //===----------------------------------------------------------------------===//
 
 /// Base class for dense backward dataflow analyses. Such analyses attach a
-/// lattice between the execution of operations and implement a transfer
-/// function from the lattice after the operation ot the lattice before it, thus
-/// propagating backward.
+/// lattice to program point and implement a transfer function from the lattice
+/// after the operation to the lattice before it, thus propagating backward.
 ///
-/// In this implementation, a lattice attached to an operation represents the
-/// state of the program before its execution, and a lattice attached to a block
-/// represents the state of the program before the end of the block, i.e., after
-/// its terminator.
+/// Visit a program point in dense backward data-flow analysis will invoke the
+/// transfer function of the operation following the program point iterator.
+/// Visit a program point at the end of block will visit the block itself.
 class AbstractDenseBackwardDataFlowAnalysis : public DataFlowAnalysis {
 public:
   /// Construct the analysis in the given solver. Takes a symbol table
@@ -321,9 +316,9 @@ public:
   /// operations, the state is propagated using the transfer function
   /// (visitOperation).
   ///
-  /// Note: the transfer function is currently *not* invoked for operations with
-  /// region or call interface, but *is* invoked for block terminators.
-  LogicalResult visit(ProgramPoint point) override;
+  /// Note: the transfer function is currently *not* invoked before operations
+  /// with region or call interface, but *is* invoked before block terminators.
+  LogicalResult visit(ProgramPoint *point) override;
 
 protected:
   /// Propagate the dense lattice after the execution of an operation to the
@@ -337,10 +332,11 @@ protected:
   /// block.
   virtual AbstractDenseLattice *getLattice(LatticeAnchor anchor) = 0;
 
-  /// Get the dense lattice before the execution of the program point in
-  /// `anchor` and declare that the `dependent` program point must be updated
-  /// every time `point` is.
-  const AbstractDenseLattice *getLatticeFor(ProgramPoint dependent,
+  /// Get the dense lattice on the given lattice anchor and add dependent as its
+  /// dependency. That is, every time the lattice after anchor is updated, the
+  /// dependent program point must be visited, and the newly triggered visit
+  /// might update the lattice before dependent.
+  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
                                             LatticeAnchor anchor);
 
   /// Set the dense lattice before at the control flow exit point and propagate
@@ -400,7 +396,7 @@ private:
   /// (from which the state is propagated) in or after it. `regionNo` indicates
   /// the region that contains the successor, `nullopt` indicating the successor
   /// of the branch operation itself.
-  void visitRegionBranchOperation(ProgramPoint point,
+  void visitRegionBranchOperation(ProgramPoint *point,
                                   RegionBranchOpInterface branch,
                                   RegionBranchPoint branchPoint,
                                   AbstractDenseLattice *before);

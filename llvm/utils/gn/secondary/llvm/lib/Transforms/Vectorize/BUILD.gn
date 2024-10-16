@@ -14,6 +14,7 @@ static_library("Vectorize") {
     "LoopVectorize.cpp",
     "SLPVectorizer.cpp",
     "SandboxVectorizer/DependencyGraph.cpp",
+    "SandboxVectorizer/Interval.cpp",
     "SandboxVectorizer/Passes/BottomUpVec.cpp",
     "SandboxVectorizer/SandboxVectorizer.cpp",
     "SandboxVectorizer/SeedCollector.cpp",

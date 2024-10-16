@@ -24,6 +24,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
@@ -246,7 +247,9 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     DeclareOpInterfaceMethods<PromotableOpInterface>,
     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
-    DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+    DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>
+    ]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
@@ -495,7 +498,8 @@ def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "BitCast", LLVM_AnyNonAggregate,
 def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
     LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
     LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
-    [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+    [DeclareOpInterfaceMethods<PromotableOpInterface>,
+     DeclareOpInterfaceMethods<ViewLikeOpInterface>]> {
   let hasFolder = 1;
 }
 def LLVM_IntToPtrOp : LLVM_CastOp<"inttoptr", "IntToPtr",
@@ -1164,7 +1168,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<SymbolRefAttr>:$comdat,
-    DefaultValuedAttr<LLVM_DIGlobalVariableExpressionAttr, "{}">:$dbg_expr,
+    OptionalAttr<DIGlobalVariableExpressionArrayAttr>:$dbg_exprs,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
   let summary = "LLVM dialect global.";
@@ -1275,7 +1279,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       CArg<"bool", "false">:$thread_local_,
       CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
-      CArg<"DIGlobalVariableExpressionAttr", "{}">:$dbgExpr)>
+      CArg<"ArrayRef<Attribute>", "{}">:$dbgExprs)>
   ];
 
   let extraClassDeclaration = [{
@@ -1942,6 +1946,13 @@ def LLVM_CallIntrinsicOp
     `:` functional-type($args, $results)
     attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args)>,
+    OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>,
+    OpBuilder<(ins "Type": $resultType, "StringAttr":$intrin, "ValueRange":$args)>,
+    OpBuilder<(ins "TypeRange": $resultTypes, "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>
+  ];
 
   let hasVerifier = 1;
 }
