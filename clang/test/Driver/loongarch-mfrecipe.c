@@ -26,5 +26,5 @@
 // IR-NO-FRECIPE: attributes #[[#]] ={{.*}}"target-features"="{{(.*,)?}}-frecipe{{(,.*)?}}"
 
 int foo(void) {
-    return  42;
+  return 42;
 }
