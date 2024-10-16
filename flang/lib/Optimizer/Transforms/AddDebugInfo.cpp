@@ -211,13 +211,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
     return;
 
-  // Discard entries that describe a derived type. They start with either '.' or
-  // 'X'. We filter both of them out. Note that NameUniquer makes the name lower
-  // case so user variables should be safe. It would be better if result of the
-  // deconstruct had a flag for such values so that we dont have to look at
-  // string values.
-  if (!result.second.name.empty() &&
-      (result.second.name[0] == '.' || result.second.name[0] == 'X'))
+  if (fir::NameUniquer::isSpecialSymbol(result.second.name))
     return;
 
   unsigned line = getLineFromLoc(globalOp.getLoc());
