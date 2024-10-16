@@ -46,10 +46,10 @@ using DialectFilterIterator =
 } // namespace
 
 static void populateDiscardableAttributes(
-    Dialect &dialect, const llvm::DagInit *discardableAttrDag,
+    Dialect &dialect, llvm::DagInit *discardableAttrDag,
     SmallVector<std::pair<std::string, std::string>> &discardableAttributes) {
   for (int i : llvm::seq<int>(0, discardableAttrDag->getNumArgs())) {
-    const llvm::Init *arg = discardableAttrDag->getArg(i);
+    llvm::Init *arg = discardableAttrDag->getArg(i);
 
     StringRef givenName = discardableAttrDag->getArgNameStr(i);
     if (givenName.empty())
@@ -271,8 +271,7 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     if (dialect.hasOperationInterfaceFallback())
       os << operationInterfaceFallbackDecl;
 
-    const llvm::DagInit *discardableAttrDag =
-        dialect.getDiscardableAttributes();
+    llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
     SmallVector<std::pair<std::string, std::string>> discardableAttributes;
     populateDiscardableAttributes(dialect, discardableAttrDag,
                                   discardableAttributes);
@@ -371,7 +370,7 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
   StringRef superClassName =
       dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
 
-  const llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
+  llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
   SmallVector<std::pair<std::string, std::string>> discardableAttributes;
   populateDiscardableAttributes(dialect, discardableAttrDag,
                                 discardableAttributes);
