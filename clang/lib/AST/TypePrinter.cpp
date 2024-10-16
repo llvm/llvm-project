@@ -2657,3 +2657,26 @@ raw_ostream &clang::operator<<(raw_ostream &OS, QualType QT) {
   TypePrinter(LangOptions()).print(S.Ty, S.Quals, OS, /*PlaceHolder=*/"");
   return OS;
 }
+
+std::string FunctionProtoType::getFunctionQualifiersAsString() const {
+  std::string Quals = getMethodQuals().getAsString();
+
+  switch (getRefQualifier()) {
+  case RQ_None:
+    break;
+
+  case RQ_LValue:
+    if (!Quals.empty())
+      Quals += ' ';
+    Quals += '&';
+    break;
+
+  case RQ_RValue:
+    if (!Quals.empty())
+      Quals += ' ';
+    Quals += "&&";
+    break;
+  }
+
+  return Quals;
+}
