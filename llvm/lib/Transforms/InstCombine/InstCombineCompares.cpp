@@ -4971,7 +4971,7 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
     CmpInst::Predicate NewPred;
     switch (ICmpInst::getStrictPredicate(Pred)) {
     default:
-      llvm_unreachable("not a valid predicate");
+      return nullptr;
     case ICmpInst::ICMP_SLT:
     case ICmpInst::ICMP_UGT:
       NewPred = ICmpInst::ICMP_SLT;
