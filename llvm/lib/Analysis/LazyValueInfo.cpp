@@ -1613,7 +1613,7 @@ LazyValueInfoImpl &LazyValueInfo::getOrCreateImpl(const Module *M) {
     assert(M && "getCache() called with a null Module");
     const DataLayout &DL = M->getDataLayout();
     Function *GuardDecl =
-        M->getFunction(Intrinsic::getName(Intrinsic::experimental_guard));
+        Intrinsic::getDeclarationIfExists(M, Intrinsic::experimental_guard);
     PImpl = new LazyValueInfoImpl(AC, DL, GuardDecl);
   }
   return *static_cast<LazyValueInfoImpl *>(PImpl);
