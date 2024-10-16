@@ -505,6 +505,67 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerCtpopToCBits(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+    
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      SmallVector<Value *> Args;
+      Args.append(CI->arg_begin(), CI->arg_end());
+
+      Type *RetTy = Int32Ty;
+      Type *FRT = F.getReturnType();
+      if (FRT->isVectorTy()) {
+        VectorType *VT = cast<VectorType>(FRT);
+	RetTy = VectorType::get(RetTy, VT);
+      }
+      
+      Expected<CallInst *> OpCall =
+	OpBuilder.tryCreateOp(dxil::OpCode::CBits, Args, CI->getName(), RetTy);
+      if (Error E = OpCall.takeError())
+	return E;
+
+      // If the result type is 32 bits we can do a direct replacement.
+      if (FRT->isIntOrIntVectorTy(32)) {
+        CI->replaceAllUsesWith(*OpCall);
+	CI->eraseFromParent();
+	return Error::success();
+      }
+
+      unsigned CastOp;
+      if (FRT->isIntOrIntVectorTy(16))
+	CastOp = Instruction::ZExt;
+      else // must be 64 bits
+	CastOp = Instruction::Trunc;
+
+      // It is correct to replace the ctpop with the dxil op and
+      // remove an existing cast iff the cast is the only usage of
+      // the ctpop
+      // can use hasOneUse instead of hasOneUser, because the user
+      // we care about should have one operand
+      if (CI->hasOneUse()) {
+	User *U = CI->user_back();
+	Instruction *I;
+	if (isa<Instruction>(U) && (I = cast<Instruction>(U)) &&
+	    I->getOpcode() == CastOp && I->getType() == RetTy) {
+          I->replaceAllUsesWith(*OpCall);
+	  I->eraseFromParent();
+	  CI->eraseFromParent();
+	  return Error::success();
+	  }
+      }
+
+      // It is always correct to replace a ctpop with the dxil op and
+      // a cast
+      Value *Cast = IRB.CreateZExtOrTrunc(*OpCall, F.getReturnType(),
+					  "ctpop.cast");
+      CI->replaceAllUsesWith(Cast);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -543,6 +604,9 @@ public:
               return replaceSplitDoubleCallUsages(CI, Op);
             });
         break;
+      case Intrinsic::ctpop:
+	HasErrors |= lowerCtpopToCBits(F);
+	break;
       }
       Updated = true;
     }
