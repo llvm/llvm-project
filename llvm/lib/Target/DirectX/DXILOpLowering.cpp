@@ -40,6 +40,18 @@ static bool isVectorArgExpansion(Function &F) {
   return false;
 }
 
+template <int OpcodeVal, bool SOpVal>
+static SmallVector<Value *> getWaveActiveOpArgs(Function &F,
+                                                IRBuilder<> &Builder) {
+  SmallVector<Value *, 0> Args;
+  IntegerType *IntTy = IntegerType::get(Builder.getContext(), 8);
+  Constant *Opcode = ConstantInt::get(IntTy, OpcodeVal);
+  Constant *SOp = ConstantInt::get(IntTy, SOpVal ? 0 : 1);
+  Args.push_back(Opcode);
+  Args.push_back(SOp);
+  return Args;
+}
+
 static SmallVector<Value *> populateOperands(Value *Arg, IRBuilder<> &Builder) {
   SmallVector<Value *> ExtractedElements;
   auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
@@ -106,7 +118,9 @@ public:
   }
 
   [[nodiscard]]
-  bool replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp) {
+  bool replaceFunctionWithOp(
+      Function &F, dxil::OpCode DXILOp,
+      std::optional<SmallVector<Value *>> ExtraArgs = std::nullopt) {
     bool IsVectorArgExpansion = isVectorArgExpansion(F);
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       SmallVector<Value *> Args;
@@ -116,6 +130,11 @@ public:
         Args.append(NewArgs.begin(), NewArgs.end());
       } else
         Args.append(CI->arg_begin(), CI->arg_end());
+
+      // Append any given alias arguments
+      if (ExtraArgs) {
+        Args.append(ExtraArgs->begin(), ExtraArgs->end());
+      }
 
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
@@ -488,6 +507,16 @@ public:
         break;
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      case Intrinsic::dx_wave_active_sum:
+        HasErrors |= replaceFunctionWithOp(
+            F, dxil::OpCode::WaveActiveOp,
+            getWaveActiveOpArgs<0, true>(F, OpBuilder.getIRB()));
+        break;
+      case Intrinsic::dx_wave_active_usum:
+        HasErrors |= replaceFunctionWithOp(
+            F, dxil::OpCode::WaveActiveOp,
+            getWaveActiveOpArgs<0, false>(F, OpBuilder.getIRB()));
         break;
       }
       Updated = true;
