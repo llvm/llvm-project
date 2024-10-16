@@ -357,9 +357,9 @@ struct TemplateParameterListBuilder {
     return *this;
   }
 
-  Expr *getTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
+  BinaryOperator *getSizeOfLEQ16Expr(clang::ASTContext &context,
+                                     SourceLocation NameLoc,
                                      TemplateTypeParmDecl *T) {
-    clang::ASTContext &context = S.getASTContext();
     // Obtain the QualType for 'unsigned long'
     clang::QualType unsignedLongType = context.UnsignedLongTy;
 
@@ -374,29 +374,18 @@ struct TemplateParameterListBuilder {
         clang::UnaryExprOrTypeTraitExpr(clang::UETT_SizeOf, TTypeSourceInfo,
                                         unsignedLongType, NameLoc, NameLoc);
 
-    // Create an IntegerLiteral for the value '16'
-    llvm::APInt intValue(context.getIntWidth(context.IntTy), 4);
-    clang::IntegerLiteral *intLiteral = new (context)
-        clang::IntegerLiteral(context, intValue, context.IntTy, NameLoc);
-
-    // Create an ImplicitCastExpr to cast 'int' to 'unsigned long'
-    FPOptionsOverride fpoo = FPOptionsOverride();
-    clang::ImplicitCastExpr *implicitCastExpr = clang::ImplicitCastExpr::Create(
-        context,
-        unsignedLongType, // The type we are casting to (QualType for 'unsigned
-                          // long')
-        clang::CK_IntegralCast, // CastKind (e.g., Integral cast)
-        intLiteral,             // Sub-expression being cast
-        nullptr,                // Base path, usually null for implicit casts
-        clang::VK_LValue,
-        fpoo // Value kind, typically VK_RValue for implicit casts
-    );
+    // Create an IntegerLiteral for the value '16' with size type
+    clang::QualType sizeType = context.getSizeType();
+    llvm::APInt sizeValue = llvm::APInt(context.getTypeSize(sizeType), 16);
+    clang::IntegerLiteral *sizeLiteral = new (context)
+        clang::IntegerLiteral(context, sizeValue, sizeType, NameLoc);
 
     clang::QualType BoolTy = context.BoolTy;
+    FPOptionsOverride fpoo = FPOptionsOverride();
 
     clang::BinaryOperator *binaryOperator = clang::BinaryOperator::Create(
         context, sizeofExpr, // Left-hand side expression
-        implicitCastExpr,    // Right-hand side expression
+        sizeLiteral,         // Right-hand side expression
         clang::BO_LE,        // Binary operator kind (<=)
         BoolTy,              // Result type (bool)
         clang::VK_LValue,    // Value kind
@@ -405,6 +394,18 @@ struct TemplateParameterListBuilder {
         fpoo);
 
     return binaryOperator;
+  }
+
+  Expr *getTypedBufferConstraintExpr(Sema &S, SourceLocation NameLoc,
+                                     TemplateTypeParmDecl *T) {
+    clang::ASTContext &context = S.getASTContext();
+
+    // first get the "sizeof(T) <= 16" expression, as a binary operator
+    // TODO: add the '__builtin_hlsl_is_line_vector_layout_compatible' builtin
+    // and return a binary operator that evaluates the builtin on the given
+    // template type parameter 'T'
+    BinaryOperator *sizeOfLEQ16 = getSizeOfLEQ16Expr(context, NameLoc, T);
+    return sizeOfLEQ16;
   }
 
   ConceptDecl *getTypedBufferConceptDecl(Sema &S, CXXRecordDecl *Decl) {
