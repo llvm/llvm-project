@@ -93,7 +93,7 @@ Instruction *WebAssemblyStackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Function *RdTag = Intrinsic::getDeclaration(F->getParent(),
+  Function *RdTag = Intrinsic::getOrInsertDeclaration(F->getParent(),
                                               Intrinsic::wasm_memtag_random);
   Instruction *Base =
       IRB.CreateCall(RdTag, {IRB.getInt32(0),
@@ -168,7 +168,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     Type *Int32Type = IRB.getInt32Ty();
     Type *Int64Type = IRB.getInt64Ty();
     Type *IntPtrType = iswasm32 ? Int32Type : Int64Type;
-    Function *StoreTagDecl = Intrinsic::getDeclaration(
+    Function *StoreTagDecl = Intrinsic::getOrInsertDeclaration(
         F->getParent(), Intrinsic::wasm_memtag_store, {IntPtrType});
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
@@ -180,7 +180,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
                                    3) &&
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
-      auto *HintTagDecl = Intrinsic::getDeclaration(
+      auto *HintTagDecl = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::wasm_memtag_hint, {IntPtrType});
       auto *TagPCall = IRB.CreateCall(
           HintTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI, Base,
@@ -211,7 +211,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
-      auto *HintStoreTagDecl = Intrinsic::getDeclaration(
+      auto *HintStoreTagDecl = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::wasm_memtag_hintstore,
           {IntPtrType, IntPtrType});
       auto *TagPCall = IRB.CreateCall(HintStoreTagDecl,
