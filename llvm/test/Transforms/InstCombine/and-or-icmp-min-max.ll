@@ -691,7 +691,7 @@ define i1 @sge_and_max_logical(i8 %x, i8 %y)  {
 
 define i1 @sge_and_max_logical_samesign(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sge_and_max_logical_samesign(
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp samesign eq i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X:%.*]], 127
 ; CHECK-NEXT:    ret i1 [[CMPEQ]]
 ;
   %cmp = icmp sge i8 %x, %y
