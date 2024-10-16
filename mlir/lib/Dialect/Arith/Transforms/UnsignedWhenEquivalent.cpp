@@ -30,6 +30,9 @@ using namespace mlir::dataflow;
 /// Succeeds when a value is statically non-negative in that it has a lower
 /// bound on its value (if it is treated as signed) and that bound is
 /// non-negative.
+// TODO: IntegerRangeAnalysis internally assumes index is 64bit and this pattern
+// relies on this. These transformations may not be valid for 32bit index,
+// need more investigation.
 static LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v) {
   auto *result = solver.lookupState<IntegerValueRangeLattice>(v);
   if (!result || result->getValue().isUninitialized())
