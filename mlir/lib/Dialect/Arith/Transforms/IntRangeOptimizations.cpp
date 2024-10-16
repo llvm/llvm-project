@@ -195,7 +195,8 @@ private:
   DataFlowSolver &solver;
 };
 
-static Type checkArithType(Type type, unsigned targetBitwidth) {
+/// Check if `type` is index or integer type with `getWidth() > targetBitwidth`.
+static Type checkIntType(Type type, unsigned targetBitwidth) {
   type = getElementTypeOrSelf(type);
   if (isa<IndexType>(type))
     return type;
@@ -207,6 +208,9 @@ static Type checkArithType(Type type, unsigned targetBitwidth) {
   return nullptr;
 }
 
+/// Check if op have same type for all operands and results and this type
+/// is suitable for truncation.
+/// Retuns args type or empty.
 static Type checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
   if (op->getNumOperands() == 0 || op->getNumResults() == 0)
     return nullptr;
@@ -225,13 +229,14 @@ static Type checkElementwiseOpType(Operation *op, unsigned targetBitwidth) {
     }
   }
 
-  return checkArithType(type, targetBitwidth);
+  return checkIntType(type, targetBitwidth);
 }
 
+/// Return union of all operands values ranges.
 static std::optional<ConstantIntRanges> getOperandsRange(DataFlowSolver &solver,
-                                                         ValueRange results) {
+                                                         ValueRange operands) {
   std::optional<ConstantIntRanges> ret;
-  for (Value value : results) {
+  for (Value value : operands) {
     auto *maybeInferredRange =
         solver.lookupState<IntegerValueRangeLattice>(value);
     if (!maybeInferredRange || maybeInferredRange->getValue().isUninitialized())
@@ -249,6 +254,8 @@ static std::optional<ConstantIntRanges> getOperandsRange(DataFlowSolver &solver,
   return ret;
 }
 
+/// Return int type truncated to `targetBitwidth`. If `srcType` is shaped,
+/// return shaped type as well.
 static Type getTargetType(Type srcType, unsigned targetBitwidth) {
   auto dstType = IntegerType::get(srcType.getContext(), targetBitwidth);
   if (auto shaped = dyn_cast<ShapedType>(srcType))
@@ -258,6 +265,7 @@ static Type getTargetType(Type srcType, unsigned targetBitwidth) {
   return dstType;
 }
 
+/// Check privided `range` is inside `smin, smax, umin, umax` bounds.
 static bool checkRange(const ConstantIntRanges &range, APInt smin, APInt smax,
                        APInt umin, APInt umax) {
   auto sge = [](APInt val1, APInt val2) -> bool {
@@ -300,9 +308,9 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType) {
 
   auto srcInt = cast<IntegerType>(srcType);
   auto dstInt = cast<IntegerType>(dstType);
-  if (dstInt.getWidth() < srcInt.getWidth()) {
+  if (dstInt.getWidth() < srcInt.getWidth())
     return builder.create<arith::TruncIOp>(loc, dstType, src);
-  }
+
   return builder.create<arith::ExtUIOp>(loc, dstType, src);
 }
 
@@ -385,7 +393,7 @@ struct NarrowCmpI final : OpRewritePattern<arith::CmpIOp> {
       return failure();
 
     for (unsigned targetBitwidth : targetBitwidths) {
-      Type srcType = checkArithType(lhs.getType(), targetBitwidth);
+      Type srcType = checkIntType(lhs.getType(), targetBitwidth);
       if (!srcType)
         continue;
 
