@@ -84,6 +84,23 @@ def ApplyFoldAddIntoDestPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyPadVectorizationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.pad_vectorization",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Apply patterns that take tensor.pad and rewrites it as
+    vector.transfer_read/vector.transfer_write Ops.
+
+    These patterns will either fold tensor.pad with an existing
+    vector.transfer_read or vector.transfer_write producer/consumers (requires
+    other surrounding Ops to be already vectorised) or rewrite it, together
+    with tensor.insert_slice consumer, as a vector.transfer_read +
+    vector.transfer_write pair.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
