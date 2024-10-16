@@ -119,6 +119,7 @@ static void decompressAux(const InputSectionBase &sec, uint8_t *out,
 }
 
 void InputSectionBase::decompress() const {
+  Ctx &ctx = getCtx();
   uint8_t *uncompressedBuf;
   {
     static std::mutex mu;
@@ -298,10 +299,6 @@ std::string InputSectionBase::getLocation(uint64_t offset) const {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
-  // We don't have file for synthetic sections.
-  if (file == nullptr)
-    return (ctx.arg.outputFile + ":(" + secAndOffset).str();
-
   std::string filename = toString(file);
   if (Defined *d = getEnclosingFunction(offset))
     return filename + ":(function " + toString(*d) + ": " + secAndOffset;
@@ -399,18 +396,20 @@ InputSectionBase *InputSection::getRelocatedSection() const {
 }
 
 template <class ELFT, class RelTy>
-void InputSection::copyRelocations(uint8_t *buf) {
+void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf) {
   if (ctx.arg.relax && !ctx.arg.relocatable &&
       (ctx.arg.emachine == EM_RISCV || ctx.arg.emachine == EM_LOONGARCH)) {
     // On LoongArch and RISC-V, relaxation might change relocations: copy
     // from internal ones that are updated by relaxation.
     InputSectionBase *sec = getRelocatedSection();
-    copyRelocations<ELFT, RelTy>(buf, llvm::make_range(sec->relocations.begin(),
-                                                       sec->relocations.end()));
+    copyRelocations<ELFT, RelTy>(
+        ctx, buf,
+        llvm::make_range(sec->relocations.begin(), sec->relocations.end()));
   } else {
     // Convert the raw relocations in the input section into Relocation objects
     // suitable to be used by copyRelocations below.
     struct MapRel {
+      Ctx &ctx;
       const ObjFile<ELFT> &file;
       Relocation operator()(const RelTy &rel) const {
         // RelExpr is not used so set to a dummy value.
@@ -422,11 +421,11 @@ void InputSection::copyRelocations(uint8_t *buf) {
     using RawRels = ArrayRef<RelTy>;
     using MapRelIter =
         llvm::mapped_iterator<typename RawRels::iterator, MapRel>;
-    auto mapRel = MapRel{*getFile<ELFT>()};
+    auto mapRel = MapRel{ctx, *getFile<ELFT>()};
     RawRels rawRels = getDataAs<RelTy>();
     auto rels = llvm::make_range(MapRelIter(rawRels.begin(), mapRel),
                                  MapRelIter(rawRels.end(), mapRel));
-    copyRelocations<ELFT, RelTy>(buf, rels);
+    copyRelocations<ELFT, RelTy>(ctx, buf, rels);
   }
 }
 
@@ -434,9 +433,9 @@ void InputSection::copyRelocations(uint8_t *buf) {
 // relocations because we need to update symbol table offset and section index
 // for each relocation. So we copy relocations one by one.
 template <class ELFT, class RelTy, class RelIt>
-void InputSection::copyRelocations(uint8_t *buf,
+void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
                                    llvm::iterator_range<RelIt> rels) {
-  const TargetInfo &target = *elf::ctx.target;
+  const TargetInfo &target = *ctx.target;
   InputSectionBase *sec = getRelocatedSection();
   (void)sec->contentMaybeDecompress(); // uncompress if needed
 
@@ -971,9 +970,10 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
 // So, we handle relocations for non-alloc sections directly in this
 // function as a performance optimization.
 template <class ELFT, class RelTy>
-void InputSection::relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels) {
+void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
+                                    Relocs<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
-  const TargetInfo &target = *elf::ctx.target;
+  const TargetInfo &target = *ctx.target;
   const auto emachine = ctx.arg.emachine;
   const bool isDebug = isDebugSection(*this);
   const bool isDebugLine = isDebug && name == ".debug_line";
@@ -1121,9 +1121,9 @@ void InputSection::relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels) {
 }
 
 template <class ELFT>
-void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
+void InputSectionBase::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
   if ((flags & SHF_EXECINSTR) && LLVM_UNLIKELY(getFile<ELFT>()->splitStack))
-    adjustSplitStackFunctionPrologues<ELFT>(buf, bufEnd);
+    adjustSplitStackFunctionPrologues<ELFT>(ctx, buf, bufEnd);
 
   if (flags & SHF_ALLOC) {
     ctx.target->relocateAlloc(*this, buf);
@@ -1133,13 +1133,13 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   auto *sec = cast<InputSection>(this);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
-  invokeOnRelocs(*sec, sec->relocateNonAlloc<ELFT>, buf);
+  invokeOnRelocs(*sec, sec->relocateNonAlloc<ELFT>, ctx, buf);
 }
 
 // For each function-defining prologue, find any calls to __morestack,
 // and replace them with calls to __morestack_non_split.
 static void switchMorestackCallsToMorestackNonSplit(
-    DenseSet<Defined *> &prologues,
+    Ctx &ctx, DenseSet<Defined *> &prologues,
     SmallVector<Relocation *, 0> &morestackCalls) {
 
   // If the target adjusted a function's prologue, all calls to
@@ -1187,7 +1187,7 @@ static bool enclosingPrologueAttempted(uint64_t offset,
 // adjusted to ensure that the called function will have enough stack
 // available. Find those functions, and adjust their prologues.
 template <class ELFT>
-void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
+void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
                                                          uint8_t *end) {
   DenseSet<Defined *> prologues;
   SmallVector<Relocation *, 0> morestackCalls;
@@ -1232,20 +1232,20 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
   }
 
   if (ctx.target->needsMoreStackNonSplit)
-    switchMorestackCallsToMorestackNonSplit(prologues, morestackCalls);
+    switchMorestackCallsToMorestackNonSplit(ctx, prologues, morestackCalls);
 }
 
-template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
+template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
   if (LLVM_UNLIKELY(type == SHT_NOBITS))
     return;
   // If -r or --emit-relocs is given, then an InputSection
   // may be a relocation section.
   if (LLVM_UNLIKELY(type == SHT_RELA)) {
-    copyRelocations<ELFT, typename ELFT::Rela>(buf);
+    copyRelocations<ELFT, typename ELFT::Rela>(ctx, buf);
     return;
   }
   if (LLVM_UNLIKELY(type == SHT_REL)) {
-    copyRelocations<ELFT, typename ELFT::Rel>(buf);
+    copyRelocations<ELFT, typename ELFT::Rel>(ctx, buf);
     return;
   }
 
@@ -1268,14 +1268,14 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
       fatal(toString(this) +
             ": decompress failed: " + llvm::toString(std::move(e)));
     uint8_t *bufEnd = buf + size;
-    relocate<ELFT>(buf, bufEnd);
+    relocate<ELFT>(ctx, buf, bufEnd);
     return;
   }
 
   // Copy section contents from source object file to output file
   // and then apply relocations.
   memcpy(buf, content().data(), content().size());
-  relocate<ELFT>(buf, buf + content().size());
+  relocate<ELFT>(ctx, buf, buf + content().size());
 }
 
 void InputSection::replace(InputSection *other) {
@@ -1387,7 +1387,7 @@ static size_t findNull(StringRef s, size_t entSize) {
 // Split SHF_STRINGS section. Such section is a sequence of
 // null-terminated strings.
 void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
-  const bool live = !(flags & SHF_ALLOC) || !ctx.arg.gcSections;
+  const bool live = !(flags & SHF_ALLOC) || !getCtx().arg.gcSections;
   const char *p = s.data(), *end = s.data() + s.size();
   if (!std::all_of(end - entSize, end, [](char c) { return c == 0; }))
     fatal(toString(this) + ": string is not null terminated");
@@ -1413,7 +1413,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> data,
                                         size_t entSize) {
   size_t size = data.size();
   assert((size % entSize) == 0);
-  const bool live = !(flags & SHF_ALLOC) || !ctx.arg.gcSections;
+  const bool live = !(flags & SHF_ALLOC) || !getCtx().arg.gcSections;
 
   pieces.resize_for_overwrite(size / entSize);
   for (size_t i = 0, j = 0; i != size; i += entSize, j++)
@@ -1426,11 +1426,12 @@ MergeInputSection::MergeInputSection(ObjFile<ELFT> &f,
                                      StringRef name)
     : InputSectionBase(f, header, name, InputSectionBase::Merge) {}
 
-MergeInputSection::MergeInputSection(uint64_t flags, uint32_t type,
+MergeInputSection::MergeInputSection(Ctx &ctx, uint64_t flags, uint32_t type,
                                      uint64_t entsize, ArrayRef<uint8_t> data,
                                      StringRef name)
-    : InputSectionBase(nullptr, flags, type, entsize, /*Link*/ 0, /*Info*/ 0,
-                       /*Alignment*/ entsize, data, name, SectionBase::Merge) {}
+    : InputSectionBase(ctx.internalFile, flags, type, entsize, /*link=*/0,
+                       /*info=*/0,
+                       /*alignment=*/entsize, data, name, SectionBase::Merge) {}
 
 // This function is called after we obtain a complete list of input sections
 // that need to be linked. This is responsible to split section contents
@@ -1469,10 +1470,10 @@ template InputSection::InputSection(ObjFile<ELF64LE> &, const ELF64LE::Shdr &,
 template InputSection::InputSection(ObjFile<ELF64BE> &, const ELF64BE::Shdr &,
                                     StringRef);
 
-template void InputSection::writeTo<ELF32LE>(uint8_t *);
-template void InputSection::writeTo<ELF32BE>(uint8_t *);
-template void InputSection::writeTo<ELF64LE>(uint8_t *);
-template void InputSection::writeTo<ELF64BE>(uint8_t *);
+template void InputSection::writeTo<ELF32LE>(Ctx &, uint8_t *);
+template void InputSection::writeTo<ELF32BE>(Ctx &, uint8_t *);
+template void InputSection::writeTo<ELF64LE>(Ctx &, uint8_t *);
+template void InputSection::writeTo<ELF64BE>(Ctx &, uint8_t *);
 
 template RelsOrRelas<ELF32LE>
 InputSectionBase::relsOrRelas<ELF32LE>(bool) const;

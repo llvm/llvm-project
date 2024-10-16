@@ -1094,9 +1094,6 @@ static OpTy genWrapperOp(lower::AbstractConverter &converter,
   // Create entry block with arguments.
   genEntryBlock(converter, args, op.getRegion());
 
-  firOpBuilder.setInsertionPoint(
-      lower::genOpenMPTerminator(firOpBuilder, op, loc));
-
   return op;
 }
 

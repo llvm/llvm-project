@@ -977,11 +977,7 @@ define i1 @is_pow2or0_ctpop_wrong_pred2_logical(i32 %x) {
 
 define <2 x i1> @is_pow2or0_ctpop_commute_vec_wrong_pred3(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_commute_vec_wrong_pred3(
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i8 0, 9) <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[T0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP]], [[ISZERO]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp eq <2 x i8> %t0, <i8 1, i8 1>
@@ -1174,11 +1170,7 @@ define i1 @isnot_pow2nor0_ctpop_wrong_pred2_logical(i32 %x) {
 
 define <2 x i1> @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(
-; CHECK-NEXT:    [[T0:%.*]] = tail call range(i8 0, 9) <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[T0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP]], [[NOTZERO]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp ne <2 x i8> %t0, <i8 1, i8 1>
@@ -1553,4 +1545,30 @@ entry:
   %cmp2 = icmp ugt i32 %popcnt, 1
   %sel = select i1 %cmp1, i1 true, i1 %cmp2
   ret i1 %sel
+}
+
+define i1 @is_power2_or_zero_with_range(i32 %x) {
+; CHECK-LABEL: @is_power2_or_zero_with_range(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ult i32 [[CTPOP]], 2
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %ctpop = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %ctpop, 1
+  %notzero = icmp eq i32 %x, 0
+  %res = select i1 %notzero, i1 true, i1 %cmp
+  ret i1 %res
+}
+
+define i1 @is_power2_or_zero_inv_with_range(i32 %x) {
+; CHECK-LABEL: @is_power2_or_zero_inv_with_range(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i32 [[CTPOP]], 1
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %ctpop = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ne i32 %ctpop, 1
+  %notzero = icmp ne i32 %x, 0
+  %res = select i1 %notzero, i1 %cmp, i1 false
+  ret i1 %res
 }
