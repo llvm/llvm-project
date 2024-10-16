@@ -1931,14 +1931,6 @@ AttributeList::getParamDereferenceableOrNullBytes(unsigned Index) const {
   return getParamAttrs(Index).getDereferenceableOrNullBytes();
 }
 
-std::optional<ConstantRange>
-AttributeList::getParamRange(unsigned ArgNo) const {
-  auto RangeAttr = getParamAttrs(ArgNo).getAttribute(Attribute::Range);
-  if (RangeAttr.isValid())
-    return RangeAttr.getRange();
-  return std::nullopt;
-}
-
 FPClassTest AttributeList::getRetNoFPClass() const {
   return getRetAttrs().getNoFPClass();
 }
@@ -2283,13 +2275,6 @@ Attribute AttrBuilder::getAttribute(StringRef A) const {
   if (It != Attrs.end() && It->hasAttribute(A))
     return *It;
   return {};
-}
-
-std::optional<ConstantRange> AttrBuilder::getRange() const {
-  const Attribute RangeAttr = getAttribute(Attribute::Range);
-  if (RangeAttr.isValid())
-    return RangeAttr.getRange();
-  return std::nullopt;
 }
 
 bool AttrBuilder::contains(Attribute::AttrKind A) const {
