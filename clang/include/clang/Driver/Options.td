@@ -2060,6 +2060,10 @@ def fconstexpr_backtrace_limit_EQ : Joined<["-"], "fconstexpr-backtrace-limit=">
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of entries to print in a constexpr evaluation backtrace (0 = no limit)">,
   MarshallingInfoInt<DiagnosticOpts<"ConstexprBacktraceLimit">, "DiagnosticOptions::DefaultConstexprBacktraceLimit">;
+def fconstexpr_print_value_size_limit_EQ : Joined<["-"], "fconstexpr-print-value-size-limit=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set the maximum size of a value in a constexpr diagnostic to be printed without ellipsis (0 = no limit)">,
+  MarshallingInfoInt<DiagnosticOpts<"ConstexprValueSizeLimit">, "DiagnosticOptions::DefaultConstexprValueSizeLimit">;
 def fcrash_diagnostics_EQ : Joined<["-"], "fcrash-diagnostics=">, Group<f_clang_Group>,
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Set level of crash diagnostic reporting, (option: off, compiler, all)">;
