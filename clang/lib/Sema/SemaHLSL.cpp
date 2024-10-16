@@ -110,6 +110,19 @@ DeclBindingInfo *ResourceBindings::addDeclBindingInfo(const VarDecl *VD,
                                                       ResourceClass ResClass) {
   assert(getDeclBindingInfo(VD, ResClass) == nullptr &&
          "DeclBindingInfo already added");
+#ifndef NDEBUG
+  // Verify that existing bindings for this decl are stored sequentially
+  // and at the end of the BindingsList
+  auto I = DeclToBindingListIndex.find(VD);
+  if (I != DeclToBindingListIndex.end()) {
+    for (unsigned Index = I->getSecond(); Index < BindingsList.size(); ++Index)
+      assert(BindingsList[Index].Decl == VD);
+  }
+#endif
+  // VarDecl may have multiple entries for different resource classes.
+  // DeclToBindingListIndex stores the index of the first binding we saw
+  // for this decl. If there are any additional ones then that index
+  // shouldn't be updated.
   DeclToBindingListIndex.try_emplace(VD, BindingsList.size());
   return &BindingsList.emplace_back(VD, ResClass);
 }
@@ -118,17 +131,17 @@ DeclBindingInfo *ResourceBindings::getDeclBindingInfo(const VarDecl *VD,
                                                       ResourceClass ResClass) {
   auto Entry = DeclToBindingListIndex.find(VD);
   if (Entry != DeclToBindingListIndex.end()) {
-    unsigned Index = Entry->getSecond();
-    while (Index < BindingsList.size() && BindingsList[Index].Decl == VD) {
+    for (unsigned Index = Entry->getSecond();
+         Index < BindingsList.size() && BindingsList[Index].Decl == VD;
+         ++Index) {
       if (BindingsList[Index].ResClass == ResClass)
         return &BindingsList[Index];
-      Index++;
     }
   }
   return nullptr;
 }
 
-bool ResourceBindings::hasBindingInfoForDecl(const VarDecl *VD) {
+bool ResourceBindings::hasBindingInfoForDecl(const VarDecl *VD) const {
   return DeclToBindingListIndex.contains(VD);
 }
 

@@ -70,7 +70,7 @@ public:
                                       ResourceClass ResClass);
   DeclBindingInfo *getDeclBindingInfo(const VarDecl *VD,
                                       ResourceClass ResClass);
-  bool hasBindingInfoForDecl(const VarDecl *VD);
+  bool hasBindingInfoForDecl(const VarDecl *VD) const;
 
 private:
   // List of all resource bindings required by the shader.
