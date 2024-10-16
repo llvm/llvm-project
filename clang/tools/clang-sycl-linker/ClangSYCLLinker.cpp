@@ -188,6 +188,8 @@ Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
     file_magic Magic;
     if (auto EC = identify_magic(*Filename, Magic))
       return createStringError("Failed to open file " + *Filename);
+    // TODO: Current use case involves LLVM IR bitcode files as input.
+    // This will be extended to support fat objects and SPIR-V IR files.
     if (Magic != file_magic::bitcode)
       return createStringError("Unsupported file type");
     BitcodeFiles.push_back(*Filename);
