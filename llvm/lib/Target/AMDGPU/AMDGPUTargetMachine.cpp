@@ -1335,7 +1335,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
 
 bool GCNPassConfig::addILPOpts() {
   if (EnableEarlyIfConversion)
-    addPass(&EarlyIfConverterID);
+    addPass(&EarlyIfConverterLegacyID);
 
   TargetPassConfig::addILPOpts();
   return false;
