@@ -3112,7 +3112,7 @@ defm clangir_analysis_only : BoolFOption<"clangir-analysis-only",
 // FIXME(cir): Remove this option once all pre-existing tests are compatible with
 // the calling convention lowering pass.
 defm clangir_call_conv_lowering : BoolFOption<"clangir-call-conv-lowering",
-  FrontendOpts<"ClangIRCallConvLowering">, DefaultTrue,
+  FrontendOpts<"ClangIRCallConvLowering">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Transform CIR to abide to calling convetions during lowering">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Ignore calling convetion during lowering">,
   BothFlags<[], [ClangOption, CC1Option], "">>;

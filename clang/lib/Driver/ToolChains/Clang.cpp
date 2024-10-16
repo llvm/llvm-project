@@ -5254,6 +5254,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_fclangir_call_conv_lowering,
                      options::OPT_fno_clangir_call_conv_lowering);
+  Args.addOptInFlag(CmdArgs, options::OPT_fclangir_call_conv_lowering,
+                    options::OPT_fno_clangir_call_conv_lowering);
   if (Args.hasArg(options::OPT_fclangir_mem2reg))
     CmdArgs.push_back("-fclangir-mem2reg");
 
