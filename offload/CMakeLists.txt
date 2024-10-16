@@ -349,6 +349,9 @@ add_subdirectory(tools)
 # Build target agnostic offloading library.
 add_subdirectory(src)
 
+add_subdirectory(tools/offload-tblgen)
+add_subdirectory(new-api)
+
 # Add tests.
 add_subdirectory(test)
 
