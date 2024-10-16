@@ -24,7 +24,11 @@
 #endif
 
 #ifdef __cplusplus
-#  include <ccomplex>
+#  if _LIBCPP_STD_VER >= 17
+#    include <complex>
+#  else
+#    include <ccomplex>
+#  endif
 #elif __has_include_next(<complex.h>)
 #  include_next <complex.h>
 #endif

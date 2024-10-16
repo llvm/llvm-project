@@ -7,37 +7,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CTGMATH
-#define _LIBCPP_CTGMATH
+#ifndef _LIBCPP_CSTDALIGN
+#define _LIBCPP_CSTDALIGN
 
 /*
-    ctgmath synopsis
+    cstdalign synopsis
 
-#include <ccomplex>
-#include <cmath>
+Macros:
+
+    __alignas_is_defined
+    __alignof_is_defined
 
 */
 
 #include <__config>
 
-#if _LIBCPP_STD_VER >= 17
-#  include <complex>
-#else
-#  include <ccomplex>
+// <stdalign.h> is not provided by libc++
+#if __has_include(<stdalign.h>)
+#  include <stdalign.h>
+#  ifdef _LIBCPP_STDALIGN_H
+#    error "If libc++ starts defining <stdalign.h>, the __has_include check should move to libc++'s <stdalign.h>"
+#  endif
 #endif
-
-#include <cmath>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+#undef __alignas_is_defined
+#define __alignas_is_defined 1
+
+#undef __alignof_is_defined
+#define __alignof_is_defined 1
+
 #if _LIBCPP_STD_VER >= 17 && defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 #  if _LIBCPP_STD_VER >= 20
-#    warning <ctgmath> is removed in C++20. Include <cmath> and <complex> instead.
+#    warning <cstdalign> is removed in C++20.
 #  else
-#    warning <ctgmath> is deprecated. Include <cmath> and <complex> instead.
+#    warning <cstdalign> is deprecated.
 #  endif
 #endif
 
-#endif // _LIBCPP_CTGMATH
+#endif // _LIBCPP_CSTDALIGN

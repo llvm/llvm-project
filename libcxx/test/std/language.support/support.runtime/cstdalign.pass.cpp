@@ -6,32 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test <cstdbool> // deprecated in C++17, removed in C++20, but still provided by libc++ as an extension
+// test <cstdalign> // deprecated in C++17, removed in C++20, but still provided by libc++ as an extension
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
-#include <cstdbool>
+#include <cstdalign>
 
-#include "test_macros.h"
-
-#ifndef __bool_true_false_are_defined
-#error __bool_true_false_are_defined not defined
+#ifndef __alignas_is_defined
+#  error __alignas_is_defined not defined
 #endif
 
-#ifdef bool
-#error bool should not be defined
+#ifndef __alignof_is_defined
+#  error __alignof_is_defined not defined
 #endif
 
-#ifdef true
-#error true should not be defined
+#ifdef alignas
+#  error alignas should not be defined
 #endif
 
-#ifdef false
-#error false should not be defined
+#ifdef alignof
+#  error alignof should not be defined
 #endif
 
-int main(int, char**)
-{
-
-  return 0;
-}
+int main(int, char**) { return 0; }
