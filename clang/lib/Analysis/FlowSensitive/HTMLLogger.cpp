@@ -133,8 +133,7 @@ public:
       for (const auto &Child : RLoc->children())
         JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
           if (Child.second)
-            if (Value *Val = Env.getValue(*Child.second))
-              dump(*Val);
+            dump(*Child.second);
         });
 
       for (const auto &SyntheticField : RLoc->synthetic_fields())
