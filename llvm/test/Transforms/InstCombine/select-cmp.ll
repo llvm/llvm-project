@@ -482,8 +482,9 @@ define i1 @test_select_inverse_nonconst4(i64 %x, i64 %y, i64 %z, i1 %cond) {
 
 define i1 @test_select_inverse_samesign_true_arm(i64 %x, i64 %y, i1 %cond) {
 ; CHECK-LABEL: @test_select_inverse_samesign_true_arm(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[COND:%.*]], [[CMP2]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp samesign ult i64 %x, %y
@@ -532,8 +533,9 @@ define i1 @test_select_inverse_samesign_false_arm_rhsc_same_sign(i64 %x, i64 %y,
 
 define i1 @test_select_inverse_samesign_true_arm_rhsc_same_sign(i64 %x, i64 %y, i1 %cond) {
 ; CHECK-LABEL: @test_select_inverse_samesign_true_arm_rhsc_same_sign(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[X:%.*]], 10
-; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[COND:%.*]], [[CMP2]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[X:%.*]], 11
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i64 [[X]], 10
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP1]], i1 [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmp1 = icmp samesign ult i64 %x, 11
