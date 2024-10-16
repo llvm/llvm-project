@@ -22568,7 +22568,7 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
     return SDValue();
 
   ISD::LoadExtType ExtTy =
-      ResultVT.bitsGT(VecEltVT) ? ISD::NON_EXTLOAD : ISD::EXTLOAD;
+      ResultVT.bitsGT(VecEltVT) ? ISD::EXTLOAD : ISD::NON_EXTLOAD;
   if (!TLI.isOperationLegalOrCustom(ISD::LOAD, VecEltVT) ||
       !TLI.shouldReduceLoadWidth(OriginalLoad, ExtTy, VecEltVT))
     return SDValue();
