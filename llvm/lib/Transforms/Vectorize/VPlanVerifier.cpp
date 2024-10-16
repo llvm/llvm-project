@@ -138,6 +138,10 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
   };
   for (const VPUser *U : EVL.users()) {
     if (!TypeSwitch<const VPUser *, bool>(U)
+             .Case<VPWidenIntrinsicRecipe>(
+                 [&](const VPWidenIntrinsicRecipe *S) {
+                   return VerifyEVLUse(*S, S->getNumOperands() - 1);
+                 })
              .Case<VPWidenStoreEVLRecipe>([&](const VPWidenStoreEVLRecipe *S) {
                return VerifyEVLUse(*S, 2);
              })
