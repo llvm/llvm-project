@@ -28,6 +28,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "kernel-info"
 
+namespace {
+
 /// Data structure holding function info for kernels.
 class KernelInfo {
   void updateForBB(const BasicBlock &BB, int64_t Direction,
@@ -74,6 +76,8 @@ public:
   /// Number of flat address space memory accesses (via load, store, etc.).
   int64_t FlatAddrspaceAccesses = 0;
 };
+
+} // end anonymous namespace
 
 static bool isKernelFunction(Function &F) {
   // TODO: Is this general enough?  Consider languages beyond OpenMP.
