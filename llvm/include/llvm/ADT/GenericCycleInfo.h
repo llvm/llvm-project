@@ -75,7 +75,7 @@ private:
   unsigned Depth = 0;
 
   /// Cache for the results of GetExitBlocks
-  std::unique_ptr<SmallVector<BlockT *, 4>> ExitBlocksCache;
+  mutable SmallVector<BlockT *, 4> ExitBlocksCache;
 
   void clear() {
     Entries.clear();
@@ -83,11 +83,18 @@ private:
     Blocks.clear();
     Depth = 0;
     ParentCycle = nullptr;
-    ExitBlocksCache->clear();
+    clearCache();
   }
 
-  void appendEntry(BlockT *Block) { Entries.push_back(Block); }
-  void appendBlock(BlockT *Block) { Blocks.insert(Block); }
+  void appendEntry(BlockT *Block) {
+    Entries.push_back(Block);
+    clearCache();
+  }
+
+  void appendBlock(BlockT *Block) {
+    Blocks.insert(Block);
+    clearCache();
+  }
 
   GenericCycle(const GenericCycle &) = delete;
   GenericCycle &operator=(const GenericCycle &) = delete;
@@ -95,8 +102,7 @@ private:
   GenericCycle &operator=(GenericCycle &&Rhs) = delete;
 
 public:
-  GenericCycle()
-      : ExitBlocksCache(std::make_unique<SmallVector<BlockT *, 4>>()) {};
+  GenericCycle() = default;
 
   /// \brief Whether the cycle is a natural loop.
   bool isReducible() const { return Entries.size() == 1; }
@@ -105,6 +111,13 @@ public:
 
   const SmallVectorImpl<BlockT *> & getEntries() const {
     return Entries;
+  }
+
+  /// Clear the cache of the cycle.
+  /// This should be run in all non-const function in GenericCycle
+  /// and GenericCycleInfo.
+  void clearCache() const {
+    ExitBlocksCache.clear();
   }
 
   /// \brief Return whether \p Block is an entry block of the cycle.
@@ -117,6 +130,7 @@ public:
     assert(contains(Block));
     Entries.clear();
     Entries.push_back(Block);
+    clearCache();
   }
 
   /// \brief Return whether \p Block is contained in the cycle.
@@ -129,7 +143,12 @@ public:
   bool contains(const GenericCycle *C) const;
 
   const GenericCycle *getParentCycle() const { return ParentCycle; }
-  GenericCycle *getParentCycle() { return ParentCycle; }
+
+  GenericCycle *getParentCycle() {
+    clearCache();
+    return ParentCycle;
+  }
+
   unsigned getDepth() const { return Depth; }
 
   /// Return all of the successor blocks of this cycle.

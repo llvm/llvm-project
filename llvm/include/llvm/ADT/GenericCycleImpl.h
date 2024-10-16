@@ -47,8 +47,8 @@ bool GenericCycle<ContextT>::contains(const GenericCycle *C) const {
 template <typename ContextT>
 void GenericCycle<ContextT>::getExitBlocks(
     SmallVectorImpl<BlockT *> &TmpStorage) const {
-  if (!ExitBlocksCache->empty()) {
-    TmpStorage = *ExitBlocksCache;
+  if (!ExitBlocksCache.empty()) {
+    TmpStorage = ExitBlocksCache;
     return;
   }
 
@@ -70,7 +70,7 @@ void GenericCycle<ContextT>::getExitBlocks(
 
     TmpStorage.resize(NumExitBlocks);
   }
-  ExitBlocksCache->append(TmpStorage.begin(), TmpStorage.end());
+  ExitBlocksCache.append(TmpStorage.begin(), TmpStorage.end());
 }
 
 template <typename ContextT>
@@ -304,6 +304,8 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   for (auto &It : BlockMapTopLevel)
     if (It.second == Child)
       It.second = NewParent;
+  NewParent->clearCache();
+  Child->clearCache();
 }
 
 template <typename ContextT>
@@ -322,6 +324,7 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
   }
 
   BlockMapTopLevel.try_emplace(Block, Cycle);
+  Cycle->clearCache();
 }
 
 /// \brief Main function of the cycle info computations.
