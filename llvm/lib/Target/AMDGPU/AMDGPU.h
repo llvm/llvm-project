@@ -111,9 +111,9 @@ ModulePass *createAMDGPUCtorDtorLoweringLegacyPass();
 void initializeAMDGPUCtorDtorLoweringLegacyPass(PassRegistry &);
 extern char &AMDGPUCtorDtorLoweringLegacyPassID;
 
-FunctionPass *createAMDGPULowerKernelArgumentsPass();
-void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
-extern char &AMDGPULowerKernelArgumentsID;
+ModulePass *createAMDGPULowerKernelArgumentsLegacyPass(const TargetMachine *TM);
+void initializeAMDGPULowerKernelArgumentsLegacyPass(PassRegistry &);
+extern char &AMDGPULowerKernelArgumentsLegacyPassID;
 
 FunctionPass *createAMDGPUPromoteKernelArgumentsPass();
 void initializeAMDGPUPromoteKernelArgumentsPass(PassRegistry &);
@@ -310,7 +310,7 @@ private:
 
 public:
   AMDGPULowerKernelArgumentsPass(TargetMachine &TM) : TM(TM){};
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+  PreservedAnalyses run(Module &, ModuleAnalysisManager &);
 };
 
 struct AMDGPUAttributorOptions {

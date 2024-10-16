@@ -484,7 +484,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
   initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
-  initializeAMDGPULowerKernelArgumentsPass(*PR);
+  initializeAMDGPULowerKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(*PR);
@@ -1214,7 +1214,7 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
 
   if (TM->getTargetTriple().getArch() == Triple::amdgcn &&
       EnableLowerKernelArguments)
-    addPass(createAMDGPULowerKernelArgumentsPass());
+    addPass(createAMDGPULowerKernelArgumentsLegacyPass(TM));
 
   if (TM->getTargetTriple().getArch() == Triple::amdgcn) {
     // This lowering has been placed after codegenprepare to take advantage of
