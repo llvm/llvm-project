@@ -13,8 +13,10 @@ define void @caller(i32 %0, i32 %1) #0 {
 ; CHECK-NEXT:    pushq %rdx
 ; CHECK-NEXT:    pushq %rcx
 ; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl %esi, %edx
 ; CHECK-NEXT:    movl %edi, %esi
 ; CHECK-NEXT:    movl $.L.str, %edi
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    popq %rdx
@@ -22,7 +24,7 @@ define void @caller(i32 %0, i32 %1) #0 {
 ; CHECK-NEXT:    popq %r9
 ; CHECK-NEXT:    popq %r10
 ; CHECK-NEXT:    popq %r11
-; CHECK-NEXT:    jmp printf@PLT # TAILCALL
+; CHECK-NEXT:    retq
   %3 = tail call i32 @printf(ptr @.str, i32 %0, i32 %1)
   ret void
 }
