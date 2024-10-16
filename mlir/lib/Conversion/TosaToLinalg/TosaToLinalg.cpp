@@ -561,7 +561,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
-                   static_cast<double>(APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                   static_cast<double>(
+                       APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
                            .getSExtValue()) +
                        1.0f));
 
