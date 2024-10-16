@@ -4,8 +4,9 @@
 // Check no temporary files or directores are left after compilation.
 // RUN: rm -rf %t%{fs-sep}mytmp
 // RUN: mkdir -p %t%{fs-sep}mytmp
-// RUN: env TMPDIR="%t/mytmp" %clang --target=x86_64-linux-gnu -nogpulib -nogpuinc \
-// RUN:   --rocm-path=%S/Inputs/rocm -nostdinc -nostdlib -c \
+// RUN: env TMPDIR="%t/mytmp" TMP="%t/mytmp" %clang --target=x86_64-linux-gnu \
+// RUN:   -nogpulib -nogpuinc -nostdinc -nostdlib \
+// RUN:   --rocm-path=%S/Inputs/rocm -c \
 // RUN:   --offload-arch=gfx1030 -emit-llvm -v %s 2>&1 | \
 // RUN:   FileCheck -DTMPDIR=%t%{fs-sep}mytmp%{fs-sep} %s
 // RUN: ls %t/mytmp >%t/mytmp.txt 2>&1
