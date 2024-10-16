@@ -564,7 +564,7 @@ def CountBits :  DXILOp<31, unaryBits> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def FirstbitHi :  DXILOp<33, unary> {
+def FirstbitHi :  DXILOp<33, unaryBits> {
   let Doc = "Returns the location of the first set bit starting from "
             "the highest order bit and working downward.";
   let LLVMIntrinsic = int_dx_firstbituhigh;
@@ -576,7 +576,7 @@ def FirstbitHi :  DXILOp<33, unary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def FirstbitSHi :  DXILOp<34, unary> {
+def FirstbitSHi :  DXILOp<34, unaryBits> {
   let Doc = "Returns the location of the first set bit from "
             "the highest order bit based on the sign.";
   let LLVMIntrinsic = int_dx_firstbitshigh;
