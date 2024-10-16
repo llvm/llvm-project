@@ -3203,6 +3203,21 @@ define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
   ret i1 %ret
 }
 
+define i1 @icmp_and_or_lshr_samesign(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_and_or_lshr_samesign(
+; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
+; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X:%.*]], [[OR2]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %shf = lshr i32 %x, %y
+  %or = or i32 %shf, %x
+  %and = and i32 %or, 1
+  %ret = icmp samesign ne i32 %and, 0
+  ret i1 %ret
+}
+
 define <2 x i1> @icmp_and_or_lshr_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @icmp_and_or_lshr_vec(
 ; CHECK-NEXT:    [[SHF:%.*]] = lshr <2 x i32> [[X:%.*]], [[Y:%.*]]
