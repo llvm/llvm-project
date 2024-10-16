@@ -9863,7 +9863,7 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
     if (CalleeFn != nullptr)
       printFunctionArgExts(CalleeFn, errs());
     else
-      errs() << "-";
+      errs() << "-\n";
     errs() << "Caller:  ";
     printFunctionArgExts(F, errs());
     llvm_unreachable("");
