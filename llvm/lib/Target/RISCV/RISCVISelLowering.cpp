@@ -20229,6 +20229,8 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
   } else {
     if (Constraint == "vr" || Constraint == "vd" || Constraint == "vm")
       return C_RegisterClass;
+    if (Constraint == "cr" || Constraint == "cf")
+      return C_RegisterClass;
   }
   return TargetLowering::getConstraintType(Constraint);
 }
@@ -20291,6 +20293,22 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   } else if (Constraint == "vm") {
     if (TRI->isTypeLegalForClass(RISCV::VMV0RegClass, VT.SimpleTy))
       return std::make_pair(0U, &RISCV::VMV0RegClass);
+  } else if (Constraint == "cr") {
+    if (VT == MVT::f16 && Subtarget.hasStdExtZhinxmin())
+      return std::make_pair(0U, &RISCV::GPRF16CRegClass);
+    if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
+      return std::make_pair(0U, &RISCV::GPRF32CRegClass);
+    if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
+      return std::make_pair(0U, &RISCV::GPRPairCRegClass);
+    if (!VT.isVector())
+      return std::make_pair(0U, &RISCV::GPRCRegClass);
+  } else if (Constraint == "cf") {
+    if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16)
+      return std::make_pair(0U, &RISCV::FPR16CRegClass);
+    if (Subtarget.hasStdExtF() && VT == MVT::f32)
+      return std::make_pair(0U, &RISCV::FPR32CRegClass);
+    if (Subtarget.hasStdExtD() && VT == MVT::f64)
+      return std::make_pair(0U, &RISCV::FPR64CRegClass);
   }
 
   // Clang will correctly decode the usage of register name aliases into their
