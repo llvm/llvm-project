@@ -1341,6 +1341,10 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(ArithResult.overflow);
   }
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BI__builtin_addressof:
+    return RValue::get(buildLValue(E->getArg(0)).getPointer());
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
