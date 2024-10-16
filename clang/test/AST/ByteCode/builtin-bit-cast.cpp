@@ -365,3 +365,27 @@ void test_array_fill() {
   constexpr unsigned int i = bit_cast<unsigned int>(a);
   static_assert(i == (LITTLE_END ? 0x00000201 : 0x01020000));
 }
+
+struct vol_mem {
+  volatile int x;
+};
+
+// both-error@+2 {{constexpr variable 'run_vol_mem' must be initialized by a constant expression}}
+// both-note@+1 {{non-literal type 'vol_mem' cannot be used in a constant expression}}
+constexpr int run_vol_mem = __builtin_bit_cast(int, vol_mem{43});
+
+struct mem_ptr {
+  int vol_mem::*x; // both-note{{invalid type 'int vol_mem::*' is a member of 'mem_ptr'}}
+};
+// both-error@+2 {{constexpr variable 'run_mem_ptr' must be initialized by a constant expression}}
+// both-note@+1 {{bit_cast from a member pointer type is not allowed in a constant expression}}
+constexpr int run_mem_ptr = __builtin_bit_cast(unsigned long, mem_ptr{nullptr});
+
+constexpr int global_int = 0;
+
+struct ref_mem {
+  const int &rm;
+};
+// both-error@+2 {{constexpr variable 'run_ref_mem' must be initialized by a constant expression}}
+// both-note@+1 {{bit_cast from a type with a reference member is not allowed in a constant expression}}
+constexpr unsigned long run_ref_mem = __builtin_bit_cast(unsigned long, ref_mem{global_int});
