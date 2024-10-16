@@ -2130,16 +2130,6 @@ mlir::cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(D))
     return getCXXABI().getCXXDestructorLinkage(Linkage, Dtor, GD.getDtorType());
 
-  if (isa<CXXConstructorDecl>(D) &&
-      cast<CXXConstructorDecl>(D)->isInheritingConstructor() &&
-      astCtx.getTargetInfo().getCXXABI().isMicrosoft()) {
-    // Just like in LLVM codegen:
-    // Our approach to inheriting constructors is fundamentally different from
-    // that used by the MS ABI, so keep our inheriting constructor thunks
-    // internal rather than trying to pick an unambiguous mangling for them.
-    return mlir::cir::GlobalLinkageKind::InternalLinkage;
-  }
-
   return getCIRLinkageForDeclarator(D, Linkage, /*IsConstantVariable=*/false);
 }
 
