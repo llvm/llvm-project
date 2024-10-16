@@ -463,9 +463,6 @@ public:
                              : std::optional<uint8_t>{};
   }
 
-  SmallVector<StringLiteral>
-  getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
-
   // \returns a number of registers of a given \p RC used in a function.
   // Does not go inside function calls.
   unsigned getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
