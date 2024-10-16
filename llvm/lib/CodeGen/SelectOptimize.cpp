@@ -138,8 +138,49 @@ public:
     unsigned CondIdx;
 
   public:
+<<<<<<< HEAD
     SelectLike(Instruction *I, bool Inverted = false, unsigned CondIdx = 0)
         : I(I), Inverted(Inverted), CondIdx(CondIdx) {}
+=======
+    /// Match a select or select-like instruction, returning a SelectLike.
+    static SelectLike match(Instruction *I) {
+      // Select instruction are what we are usually looking for.
+      if (isa<SelectInst>(I))
+        return SelectLike(I);
+
+      // An Or(zext(i1 X), Y) can also be treated like a select, with condition
+      // C and values Y|1 and Y.
+      switch (I->getOpcode()) {
+      case Instruction::Add:
+      case Instruction::Or:
+      case Instruction::Sub: {
+        Value *X;
+        if ((PatternMatch::match(I->getOperand(0),
+                                 m_OneUse(m_ZExt(m_Value(X)))) ||
+             PatternMatch::match(I->getOperand(1),
+                                 m_OneUse(m_ZExt(m_Value(X))))) &&
+            X->getType()->isIntegerTy(1))
+          return SelectLike(I);
+        break;
+      }
+      }
+
+      return SelectLike(nullptr);
+    }
+
+    bool isValid() { return I; }
+    operator bool() { return isValid(); }
+
+    /// Invert the select by inverting the condition and switching the operands.
+    void setInverted() {
+      assert(!Inverted && "Trying to invert an inverted SelectLike");
+      assert(isa<Instruction>(getCondition()) &&
+             cast<Instruction>(getCondition())->getOpcode() ==
+                 Instruction::Xor);
+      Inverted = true;
+    }
+    bool isInverted() const { return Inverted; }
+>>>>>>> 7e5ca4eafa3c ([SelectOpt] Support add and sub with zext operands.)
 
     Instruction *getI() { return I; }
     const Instruction *getI() const { return I; }
@@ -195,6 +236,7 @@ public:
           return It != InstCostMap.end() ? It->second.NonPredCost
                                          : Scaled64::getZero();
         }
+<<<<<<< HEAD
         return Scaled64::getZero();
       }
       // If getTrue(False)Value() return nullptr, it means we are dealing with
@@ -212,6 +254,48 @@ public:
           TotalCost += It->second.NonPredCost;
       }
       return TotalCost;
+=======
+
+      // BinaryOp case - add the cost of an extra BinOp to the cost of the False
+      // case.
+      if (isa<BinaryOperator>(I)) {
+        if (auto OpI = dyn_cast<Instruction>(getFalseValue())) {
+          auto It = InstCostMap.find(I);
+          if (It != InstCostMap.end()) {
+            InstructionCost OrCost = TTI->getArithmeticInstrCost(
+                I->getOpcode(), OpI->getType(),
+                TargetTransformInfo::TCK_Latency,
+                {TargetTransformInfo::OK_AnyValue,
+                 TargetTransformInfo::OP_None},
+                {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
+            return It->second.NonPredCost + Scaled64::get(*OrCost.getValue());
+          }
+        }
+      }
+
+      return Scaled64::getZero();
+    }
+
+    /// Return the NonPredCost cost of the false op, given the costs in
+    /// InstCostMap. This may need to be generated for select-like instructions.
+    Scaled64
+    getFalseOpCost(DenseMap<const Instruction *, CostInfo> &InstCostMap,
+                   const TargetTransformInfo *TTI) {
+      if (isa<SelectInst>(I))
+        if (auto *I = dyn_cast<Instruction>(getFalseValue())) {
+          auto It = InstCostMap.find(I);
+          return It != InstCostMap.end() ? It->second.NonPredCost
+                                         : Scaled64::getZero();
+        }
+
+      // Or case - return the cost of the false case
+      if (isa<BinaryOperator>(I))
+        if (auto I = dyn_cast<Instruction>(getFalseValue()))
+          if (auto It = InstCostMap.find(I); It != InstCostMap.end())
+            return It->second.NonPredCost;
+
+      return Scaled64::getZero();
+>>>>>>> 7e5ca4eafa3c ([SelectOpt] Support add and sub with zext operands.)
     }
   };
 
@@ -488,9 +572,23 @@ static Value *getTrueOrFalseValue(
     return V;
   }
 
+<<<<<<< HEAD
   auto *BO = cast<BinaryOperator>(SI.getI());
   assert(BO->getOpcode() == Instruction::Or &&
          "Only currently handling Or instructions.");
+=======
+  if (auto *BinOp = dyn_cast<BinaryOperator>(SI.getI())) {
+    assert((BinOp->getOpcode() == Instruction::Add ||
+            BinOp->getOpcode() == Instruction::Or ||
+            BinOp->getOpcode() == Instruction::Sub) &&
+           "Only currently handling Add, Or and Sub instructions.");
+    V = SI.getFalseValue();
+    if (isTrue) {
+      Constant *CI = ConstantInt::get(V->getType(), 1);
+      V = IB.CreateBinOp(BinOp->getOpcode(), V, CI);
+    }
+  }
+>>>>>>> 7e5ca4eafa3c ([SelectOpt] Support add and sub with zext operands.)
 
   auto *CBO = BO->clone();
   auto CondIdx = SI.getConditionOpIndex();
