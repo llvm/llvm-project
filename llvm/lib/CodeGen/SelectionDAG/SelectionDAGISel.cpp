@@ -2201,6 +2201,7 @@ bool SelectionDAGISel::CheckAndMask(SDValue LHS, ConstantSDNode *RHS,
                                     int64_t DesiredMaskS) const {
   const APInt &ActualMask = RHS->getAPIntValue();
   // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
   const APInt &DesiredMask = APInt(LHS.getValueSizeInBits(), DesiredMaskS,
                                    /*isSigned=*/false, /*implicitTrunc=*/true);
 
@@ -2232,6 +2233,7 @@ bool SelectionDAGISel::CheckOrMask(SDValue LHS, ConstantSDNode *RHS,
                                    int64_t DesiredMaskS) const {
   const APInt &ActualMask = RHS->getAPIntValue();
   // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
   const APInt &DesiredMask = APInt(LHS.getValueSizeInBits(), DesiredMaskS,
                                    /*isSigned=*/false, /*implicitTrunc=*/true);
 

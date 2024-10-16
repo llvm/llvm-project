@@ -113,6 +113,7 @@ public:
   template <unsigned Bits, bool InputSigned>
   static IntegralAP from(Integral<Bits, InputSigned> I, unsigned BitWidth) {
     // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
     APInt Copy = APInt(BitWidth, static_cast<uint64_t>(I), InputSigned,
                        /*implicitTrunc=*/true);
 

@@ -861,6 +861,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   // there.
   auto to_generic = [&](auto v) {
     // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
     bool is_signed = std::is_signed<decltype(v)>::value;
     return Scalar(llvm::APSInt(llvm::APInt(8 * opcodes.GetAddressByteSize(), v,
                                            is_signed, /*implicitTrunc=*/true),
