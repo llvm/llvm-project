@@ -44,24 +44,24 @@ module attributes {omp.is_target_device = false} {
 // -----
 
 module attributes {omp.is_target_device = false} {
-  func.func @test_derived_type_map_operand_and_block_addition(%arg0: !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
-    %0 = hlfir.designate %arg0{"rx"}   : (!fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) -> !fir.ref<f32>
+  func.func @test_derived_type_map_operand_and_block_addition(%arg0: !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
+    %0 = hlfir.designate %arg0{"rx"}   : (!fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) -> !fir.ref<f32>
     %1 = omp.map.info var_ptr(%0 : !fir.ref<f32>, f32) map_clauses(from) capture(ByRef) -> !fir.ref<f32> {name = "scalar_struct%rx"}
-    %2 = hlfir.designate %arg0{"ry"}   : (!fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) -> !fir.ref<f32>
+    %2 = hlfir.designate %arg0{"ry"}   : (!fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) -> !fir.ref<f32>
     %3 = omp.map.info var_ptr(%2 : !fir.ref<f32>, f32) map_clauses(from) capture(ByRef) -> !fir.ref<f32> {name = "scalar_struct%ry"}
-    %4 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>, !fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>) map_clauses(from) capture(ByRef) members(%1, %3 : [1], [4] : !fir.ref<f32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>> {name = "scalar_struct", partial_map = true}
-    omp.target map_entries(%4 -> %arg1 : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
+    %4 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>, !fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>) map_clauses(from) capture(ByRef) members(%1, %3 : [1], [4] : !fir.ref<f32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>> {name = "scalar_struct", partial_map = true}
+    omp.target map_entries(%4 -> %arg1 : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
       omp.terminator
     }
     return
   }
 }
 
-// CHECK: func.func @test_derived_type_map_operand_and_block_addition(%{{.*}}: !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) { 
+// CHECK: func.func @test_derived_type_map_operand_and_block_addition(%{{.*}}: !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) { 
 // CHECK:   %[[MAP_MEMBER_1:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<f32>, f32) map_clauses(from) capture(ByRef) -> !fir.ref<f32> {name = "scalar_struct%rx"}
 // CHECK:   %[[MAP_MEMBER_2:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<f32>, f32) map_clauses(from) capture(ByRef) -> !fir.ref<f32> {name = "scalar_struct%ry"}
-// CHECK:   %[[MAP_PARENT:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>, !fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>) map_clauses(from) capture(ByRef) members(%[[MAP_MEMBER_1]], %[[MAP_MEMBER_2]] : [1], [4] : !fir.ref<f32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>> {name = "scalar_struct", partial_map = true}
-// CHECK:   omp.target map_entries(%[[MAP_MEMBER_1]] -> %[[ARG1:.*]], %[[MAP_MEMBER_2]] -> %[[ARG2:.*]], %[[MAP_PARENT]] -> %[[ARG3:.*]] : !fir.ref<f32>, !fir.ref<f32>, !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
+// CHECK:   %[[MAP_PARENT:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>, !fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>) map_clauses(from) capture(ByRef) members(%[[MAP_MEMBER_1]], %[[MAP_MEMBER_2]] : [1], [4] : !fir.ref<f32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>> {name = "scalar_struct", partial_map = true}
+// CHECK:   omp.target map_entries(%[[MAP_MEMBER_1]] -> %[[ARG1:.*]], %[[MAP_MEMBER_2]] -> %[[ARG2:.*]], %[[MAP_PARENT]] -> %[[ARG3:.*]] : !fir.ref<f32>, !fir.ref<f32>, !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
 
 // -----
 

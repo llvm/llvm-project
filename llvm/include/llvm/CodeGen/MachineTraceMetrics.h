@@ -46,12 +46,13 @@
 #ifndef LLVM_CODEGEN_MACHINETRACEMETRICS_H
 #define LLVM_CODEGEN_MACHINETRACEMETRICS_H
 
-#include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
 namespace llvm {
@@ -93,7 +94,7 @@ enum class MachineTraceStrategy {
   TS_NumStrategies
 };
 
-class MachineTraceMetrics : public MachineFunctionPass {
+class MachineTraceMetrics {
   const MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -102,19 +103,25 @@ class MachineTraceMetrics : public MachineFunctionPass {
   TargetSchedModel SchedModel;
 
 public:
+  friend class MachineTraceMetricsWrapperPass;
   friend class Ensemble;
   friend class Trace;
 
   class Ensemble;
 
-  static char ID;
+  // For legacy pass.
+  MachineTraceMetrics() = default;
 
-  MachineTraceMetrics();
+  explicit MachineTraceMetrics(MachineFunction &MF, const MachineLoopInfo &LI) {
+    init(MF, LI);
+  }
 
-  void getAnalysisUsage(AnalysisUsage&) const override;
-  bool runOnMachineFunction(MachineFunction&) override;
-  void releaseMemory() override;
-  void verifyAnalysis() const override;
+  MachineTraceMetrics(MachineTraceMetrics &&) = default;
+
+  ~MachineTraceMetrics();
+
+  void init(MachineFunction &Func, const MachineLoopInfo &LI);
+  void clear();
 
   /// Per-basic block information that doesn't depend on the trace through the
   /// block.
@@ -400,6 +407,12 @@ public:
   /// Call Ensemble::getTrace() again to update any trace handles.
   void invalidate(const MachineBasicBlock *MBB);
 
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
+
+  void verifyAnalysis() const;
+
 private:
   // One entry per basic block, indexed by block number.
   SmallVector<FixedBlockInfo, 4> BlockInfo;
@@ -412,8 +425,8 @@ private:
   SmallVector<unsigned, 0> ProcReleaseAtCycles;
 
   // One ensemble per strategy.
-  Ensemble
-      *Ensembles[static_cast<size_t>(MachineTraceStrategy::TS_NumStrategies)];
+  std::unique_ptr<Ensemble>
+      Ensembles[static_cast<size_t>(MachineTraceStrategy::TS_NumStrategies)];
 
   // Convert scaled resource usage to a cycle count that can be compared with
   // latencies.
@@ -434,6 +447,38 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   En.print(OS);
   return OS;
 }
+
+class MachineTraceMetricsAnalysis
+    : public AnalysisInfoMixin<MachineTraceMetricsAnalysis> {
+  friend AnalysisInfoMixin<MachineTraceMetricsAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineTraceMetrics;
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Verifier pass for \c MachineTraceMetrics.
+struct MachineTraceMetricsVerifierPass
+    : PassInfoMixin<MachineTraceMetricsVerifierPass> {
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class MachineTraceMetricsWrapperPass : public MachineFunctionPass {
+public:
+  static char ID;
+  MachineTraceMetrics MTM;
+
+  MachineTraceMetricsWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &) const override;
+  bool runOnMachineFunction(MachineFunction &) override;
+  void releaseMemory() override { MTM.clear(); }
+  void verifyAnalysis() const override { MTM.verifyAnalysis(); }
+  MachineTraceMetrics &getMTM() { return MTM; }
+};
 
 } // end namespace llvm
 

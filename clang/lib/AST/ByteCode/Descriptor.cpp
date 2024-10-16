@@ -103,6 +103,7 @@ static void ctorArrayDesc(Block *B, std::byte *Ptr, bool IsConst,
     Desc->IsConst = IsConst || D->IsConst;
     Desc->IsFieldMutable = IsMutable || D->IsMutable;
     Desc->InUnion = InUnion;
+    Desc->IsArrayElement = true;
 
     if (auto Fn = D->ElemDesc->CtorFn)
       Fn(B, ElemLoc, Desc->IsConst, Desc->IsFieldMutable, IsActive,
@@ -408,6 +409,8 @@ QualType Descriptor::getType() const {
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
   QualType T = getType();
+  if (T->isPointerOrReferenceType())
+    return T->getPointeeType();
   if (const auto *AT = T->getAsArrayTypeUnsafe())
     return AT->getElementType();
   if (const auto *CT = T->getAs<ComplexType>())

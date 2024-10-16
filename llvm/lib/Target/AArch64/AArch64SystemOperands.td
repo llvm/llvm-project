@@ -1970,3 +1970,14 @@ def : RWSysReg<"HACDBSCONS_EL2",    0b11, 0b100, 0b0010, 0b0011, 0b101>;
 // v9.5a Fine Grained Write Trap EL3 (FEAT_FGWTE3)
 //                                  Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"FGWTE3_EL3",        0b11, 0b110, 0b0001, 0b0001, 0b101>;
+
+// v9.6a Memory partitioning and monitoring (FEAT_MPAM) registers
+//                                        Op0   Op1    CRn     CRm     Op2
+def : ROSysReg<"MPAMBWIDR_EL1",           0b11, 0b000, 0b1010, 0b0100, 0b101>;
+def : RWSysReg<"MPAMBW3_EL3",             0b11, 0b110, 0b1010, 0b0101, 0b100>;
+def : RWSysReg<"MPAMBW2_EL2",             0b11, 0b100, 0b1010, 0b0101, 0b100>;
+def : RWSysReg<"MPAMBW1_EL1",             0b11, 0b000, 0b1010, 0b0101, 0b100>;
+def : RWSysReg<"MPAMBW1_EL12",            0b11, 0b101, 0b1010, 0b0101, 0b100>;
+def : RWSysReg<"MPAMBW0_EL1",             0b11, 0b000, 0b1010, 0b0101, 0b101>;
+def : RWSysReg<"MPAMBWCAP_EL2",           0b11, 0b100, 0b1010, 0b0101, 0b110>;
+def : RWSysReg<"MPAMBWSM_EL1",            0b11, 0b000, 0b1010, 0b0101, 0b111>;

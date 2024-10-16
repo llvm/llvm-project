@@ -18,12 +18,12 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # AVX:           registers:
-# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '' }
-# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '' }
+# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '', flags: [   ] }
+# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '', flags: [   ] }
 #
 # AVX512VL:      registers:
-# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -50,12 +50,12 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 # AVX:           registers:
-# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '' }
-# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '' }
+# AVX-NEXT:        - { id: 0, class: vr256, preferred-register: '', flags: [   ] }
+# AVX-NEXT:        - { id: 1, class: vr128, preferred-register: '', flags: [   ] }
 #
 # AVX512VL:      registers:
-# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
-# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# AVX512VL-NEXT:   - { id: 0, class: vr256x, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }

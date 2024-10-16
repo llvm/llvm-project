@@ -774,6 +774,13 @@ mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
                        mlir::FunctionType libFuncType,
                        llvm::ArrayRef<mlir::Value> args) {
   llvm::StringRef libFuncName = mathOp.runtimeFunc;
+
+  // On AIX, __clog is used in libm.
+  if (fir::getTargetTriple(builder.getModule()).isOSAIX() &&
+      libFuncName == "clog") {
+    libFuncName = "__clog";
+  }
+
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << libFuncName
                           << "' call with type ";
              libFuncType.dump(); llvm::dbgs() << "\n");
@@ -838,24 +845,7 @@ mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
 
   auto getSplitComplexArgsType = [&builder, &args]() -> mlir::FunctionType {
     mlir::Type ctype = args[0].getType();
-    auto fKind = mlir::cast<fir::ComplexType>(ctype).getFKind();
-    mlir::Type ftype;
-
-    if (fKind == 2)
-      ftype = builder.getF16Type();
-    else if (fKind == 3)
-      ftype = builder.getBF16Type();
-    else if (fKind == 4)
-      ftype = builder.getF32Type();
-    else if (fKind == 8)
-      ftype = builder.getF64Type();
-    else if (fKind == 10)
-      ftype = builder.getF80Type();
-    else if (fKind == 16)
-      ftype = builder.getF128Type();
-    else
-      assert(0 && "Unsupported Complex Type");
-
+    auto ftype = mlir::cast<mlir::ComplexType>(ctype).getElementType();
     return builder.getFunctionType({ftype, ftype, ftype, ftype}, {ctype});
   };
 
@@ -946,25 +936,16 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
                           << "' operation with type ";
              mathLibFuncType.dump(); llvm::dbgs() << "\n");
-  auto type = mlir::cast<fir::ComplexType>(mathLibFuncType.getInput(0));
-  auto kind = mlir::cast<fir::RealType>(type.getElementType()).getFKind();
-  auto realTy = builder.getRealType(kind);
-  auto mComplexTy = mlir::ComplexType::get(realTy);
-
-  llvm::SmallVector<mlir::Value, 2> cargs;
-  for (const mlir::Value &arg : args) {
-    // Convert the fir.complex to a mlir::complex
-    cargs.push_back(builder.createConvert(loc, mComplexTy, arg));
-  }
-
   // Builder expects an extra return type to be provided if different to
   // the argument types for an operation
   if constexpr (T::template hasTrait<
                     mlir::OpTrait::SameOperandsAndResultType>()) {
-    result = builder.create<T>(loc, cargs);
+    result = builder.create<T>(loc, args);
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   } else {
-    result = builder.create<T>(loc, realTy, cargs);
+    auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));
+    auto realTy = complexTy.getElementType();
+    result = builder.create<T>(loc, realTy, args);
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   }
 
@@ -1458,17 +1439,12 @@ private:
     }
   }
 
-  // Floating point can be mlir::FloatType or fir::real
+  // Floating point can be mlir Float or Complex Type.
   static unsigned getFloatingPointWidth(mlir::Type t) {
     if (auto f{mlir::dyn_cast<mlir::FloatType>(t)})
       return f.getWidth();
-    // FIXME: Get width another way for fir.real/complex
-    // - use fir/KindMapping.h and llvm::Type
-    // - or use evaluate/type.h
-    if (auto r{mlir::dyn_cast<fir::RealType>(t)})
-      return r.getFKind() * 4;
-    if (auto cplx{mlir::dyn_cast<fir::ComplexType>(t)})
-      return cplx.getFKind() * 4;
+    if (auto cplx{mlir::dyn_cast<mlir::ComplexType>(t)})
+      return mlir::cast<mlir::FloatType>(cplx.getElementType()).getWidth();
     llvm_unreachable("not a floating-point type");
   }
 
@@ -1489,13 +1465,10 @@ private:
                  : Conversion::Extend;
     }
 
-    if (auto fromCplxTy{mlir::dyn_cast<fir::ComplexType>(from)}) {
-      if (auto toCplxTy{mlir::dyn_cast<fir::ComplexType>(to)}) {
-        return getFloatingPointWidth(fromCplxTy) >
-                       getFloatingPointWidth(toCplxTy)
-                   ? Conversion::Narrow
-                   : Conversion::Extend;
-      }
+    if (fir::isa_complex(from) && fir::isa_complex(to)) {
+      return getFloatingPointWidth(from) > getFloatingPointWidth(to)
+                 ? Conversion::Narrow
+                 : Conversion::Extend;
     }
     // Notes:
     // - No conversion between character types, specialization of runtime
@@ -2009,11 +1982,9 @@ static std::string typeToString(mlir::Type t) {
   if (auto i{mlir::dyn_cast<mlir::IntegerType>(t)}) {
     return "i" + std::to_string(i.getWidth());
   }
-  if (auto cplx{mlir::dyn_cast<fir::ComplexType>(t)}) {
-    return "z" + std::to_string(cplx.getFKind());
-  }
-  if (auto real{mlir::dyn_cast<fir::RealType>(t)}) {
-    return "r" + std::to_string(real.getFKind());
+  if (auto cplx{mlir::dyn_cast<mlir::ComplexType>(t)}) {
+    auto eleTy = mlir::cast<mlir::FloatType>(cplx.getElementType());
+    return "z" + std::to_string(eleTy.getWidth());
   }
   if (auto f{mlir::dyn_cast<mlir::FloatType>(t)}) {
     return "f" + std::to_string(f.getWidth());

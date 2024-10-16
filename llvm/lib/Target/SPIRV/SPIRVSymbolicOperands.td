@@ -482,6 +482,7 @@ defm GlobalVariableFPGADecorationsINTEL : CapabilityOperand<6189, 0, 0, [SPV_INT
 defm CacheControlsINTEL : CapabilityOperand<6441, 0, 0, [SPV_INTEL_cache_controls], []>;
 defm CooperativeMatrixKHR : CapabilityOperand<6022, 0, 0, [SPV_KHR_cooperative_matrix], []>;
 defm ArithmeticFenceEXT : CapabilityOperand<6144, 0, 0, [SPV_EXT_arithmetic_fence], []>;
+defm SplitBarrierINTEL : CapabilityOperand<6141, 0, 0, [SPV_INTEL_split_barrier], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1096,6 +1097,7 @@ multiclass AccessQualifierOperand<bits<32> value, list<Capability> reqCapabiliti
 defm ReadOnly : AccessQualifierOperand<0, [Kernel]>;
 defm WriteOnly : AccessQualifierOperand<1, [Kernel]>;
 defm ReadWrite : AccessQualifierOperand<2, [Kernel]>;
+defm None : AccessQualifierOperand<3, []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define FunctionParameterAttribute enum values and at the
