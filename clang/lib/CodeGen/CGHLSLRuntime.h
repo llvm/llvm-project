@@ -138,6 +138,8 @@ public:
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
   void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
   void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
+
+  bool needsResourceBindingInitFn();
   llvm::Function *createResourceBindingInitFn();
 
 private:
