@@ -104,7 +104,7 @@ protected:
 };
 
 template <typename Signed, typename Unsigned>
-struct ConvertOpToUnsigned final : public OpRewritePattern<Signed> {
+struct ConvertOpToUnsigned final : OpRewritePattern<Signed> {
   ConvertOpToUnsigned(MLIRContext *context, DataFlowSolver &s)
       : OpRewritePattern<Signed>(context), solver(s) {}
 
@@ -122,7 +122,7 @@ private:
   DataFlowSolver &solver;
 };
 
-struct ConvertCmpIToUnsigned final : public OpRewritePattern<CmpIOp> {
+struct ConvertCmpIToUnsigned final : OpRewritePattern<CmpIOp> {
   ConvertCmpIToUnsigned(MLIRContext *context, DataFlowSolver &s)
       : OpRewritePattern<CmpIOp>(context), solver(s) {}
 
