@@ -700,9 +700,9 @@ bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
   Type *CallType = CI.getType();
-  bool AreAllVectors = isStructOfMatchingFixedVectors(CallType);
+  bool AreAllMatchingVectors = isStructOfMatchingFixedVectors(CallType);
   std::optional<VectorSplit> VS;
-  if (AreAllVectors)
+  if (AreAllMatchingVectors)
     VS = getVectorSplit(CallType->getContainedType(0));
   else
     VS = getVectorSplit(CallType);
@@ -730,12 +730,17 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
     Tys.push_back(VS->SplitTy);
 
-  if (AreAllVectors) {
+  if (AreAllMatchingVectors) {
     Type *PrevType = CallType->getContainedType(0);
     for (unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
       Type *CurrType = cast<FixedVectorType>(CallType->getContainedType(I));
       if (PrevType != CurrType) {
         std::optional<VectorSplit> CurrVS = getVectorSplit(CurrType);
+        // This case does not seem to happen, but it is possible for
+        // VectorSplit.NumPacked >= NumElems. If that happens a VectorSplit
+        // is not returned and we will bailout of handling this call.
+        if (!CurrVS)
+          return false;
         Tys.push_back(CurrVS->SplitTy);
         PrevType = CurrType;
       }
