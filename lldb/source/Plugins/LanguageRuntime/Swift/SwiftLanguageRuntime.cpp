@@ -42,6 +42,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/UnwindLLDB.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/OptionParsing.h"
@@ -1068,31 +1069,21 @@ llvm::Error SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(
       frame_sp.get(),
       result_sp, eval_options);
 
-  if (log) {
-    const char *eval_result_str
-        = m_process.ExecutionResultAsCString(eval_result);
-    log->Printf("[RunObjectDescriptionExpr] %s", eval_result_str);
-  }
+  LLDB_LOG(log, "[RunObjectDescriptionExpr] {0}", toString(eval_result));
 
   // Sanity check the result of the expression before moving forward
   if (!result_sp) {
-    if (log)
-      log->Printf(
-          "[RunObjectDescriptionExpr] expression generated no result");
-
+    LLDB_LOG(log, "[RunObjectDescriptionExpr] expression generated no result");
     return llvm::createStringError("expression produced no result");
   }
   if (result_sp->GetError().Fail()) {
-    if (log)
-      log->Printf(
-          "[RunObjectDescriptionExpr] expression generated error: %s",
-          result_sp->GetError().AsCString());
+    LLDB_LOG(log, "[RunObjectDescriptionExpr] expression generated error: {0}",
+             result_sp->GetError().AsCString());
 
     return result_sp->GetError().ToError();
   }
   if (!result_sp->GetCompilerType().IsValid()) {
-    if (log)
-      log->Printf("[RunObjectDescriptionExpr] expression generated "
+    LLDB_LOG(log, "[RunObjectDescriptionExpr] expression generated "
                   "invalid type");
 
     return llvm::createStringError("expression produced invalid result type");
@@ -1108,14 +1099,13 @@ llvm::Error SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(
               .SetLanguage(lldb::eLanguageTypeSwift)
               .SetCapping(eTypeSummaryUncapped),
           dump_options)) {
-    if (log)
-      log->Printf("[RunObjectDescriptionExpr] expression completed "
-                  "successfully");
+    LLDB_LOG(log,
+             "[RunObjectDescriptionExpr] expression completed successfully");
     return llvm::Error::success();
   }
-  if (log)
-    log->Printf("[RunObjectDescriptionExpr] expression generated "
-                "invalid string data");
+  LLDB_LOG(
+      log,
+      "[RunObjectDescriptionExpr] expression generated invalid string data");
 
   return llvm::createStringError("expression produced unprintable string");
 }

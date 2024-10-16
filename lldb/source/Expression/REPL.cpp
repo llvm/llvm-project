@@ -406,7 +406,26 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
             add_to_code = false;
             [[fallthrough]];
           case lldb::eExpressionDiscarded:
-            error_sp->Printf("%s\n", error.AsCString());
+            // FIXME: BEGIN SWIFT
+            if (error.Success() && result_valobj_sp) {
+              // The color detection in RenderDiagnosticDetails doesn't work
+              // with error_sp.
+              StreamString diag_stream(useColors);
+              std::vector<DiagnosticDetail> diags;
+              llvm::Error error = result_valobj_sp->GetError().ToError();
+              error = llvm::handleErrors(
+                  std::move(error),
+                  [&](DiagnosticError &error) { diags = error.GetDetails(); });
+              // FIXME: Only correct for the first 999 lines.
+              unsigned prompt_len =
+                  llvm::StringRef(io_handler.GetPrompt()).size() + 3;
+              RenderDiagnosticDetails(diag_stream, prompt_len, true, diags);
+              *error_sp << diag_stream.GetString();
+              if (error)
+                *error_sp << toString(std::move(error));
+            } else
+              // END SWIFT
+              error_sp->Printf("%s\n", error.AsCString());
             break;
 
           case lldb::eExpressionCompleted:
