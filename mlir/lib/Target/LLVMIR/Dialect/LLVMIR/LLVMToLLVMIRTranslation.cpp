@@ -114,25 +114,15 @@ convertOperandBundle(OperandRange bundleOperands, StringRef bundleTag,
 }
 
 static SmallVector<llvm::OperandBundleDef>
-convertOperandBundles(OperandRangeRange bundleOperands, ArrayAttr bundleTags,
+convertOperandBundles(OperandRangeRange bundleOperands,
+                      ArrayRef<std::string> bundleTags,
                       LLVM::ModuleTranslation &moduleTranslation) {
   SmallVector<llvm::OperandBundleDef> bundles;
   bundles.reserve(bundleOperands.size());
 
-  for (auto [operands, tagAttr] : llvm::zip_equal(bundleOperands, bundleTags)) {
-    StringRef tag = cast<StringAttr>(tagAttr).getValue();
+  for (auto [operands, tag] : llvm::zip_equal(bundleOperands, bundleTags))
     bundles.push_back(convertOperandBundle(operands, tag, moduleTranslation));
-  }
   return bundles;
-}
-
-static SmallVector<llvm::OperandBundleDef>
-convertOperandBundles(OperandRangeRange bundleOperands,
-                      std::optional<ArrayAttr> bundleTags,
-                      LLVM::ModuleTranslation &moduleTranslation) {
-  if (!bundleTags)
-    return {};
-  return convertOperandBundles(bundleOperands, *bundleTags, moduleTranslation);
 }
 
 /// Builder for LLVM_CallIntrinsicOp

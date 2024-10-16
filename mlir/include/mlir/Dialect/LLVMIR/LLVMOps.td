@@ -559,7 +559,11 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                    VariadicOfVariadic<LLVM_Type,
                                       "op_bundle_sizes">:$op_bundle_operands,
                    DenseI32ArrayAttr:$op_bundle_sizes,
-                   OptionalAttr<ArrayAttr>:$op_bundle_tags);
+                   DefaultValuedProperty<
+                     ArrayProperty<StringProperty, "operand bundle tags">,
+                     "ArrayRef<std::string>{}",
+                     "SmallVector<std::string>{}"
+                   >:$op_bundle_tags);
   let results = (outs Optional<LLVM_Type>:$result);
   let successors = (successor AnySuccessor:$normalDest,
                               AnySuccessor:$unwindDest);
@@ -674,7 +678,11 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   VariadicOfVariadic<LLVM_Type,
                                      "op_bundle_sizes">:$op_bundle_operands,
                   DenseI32ArrayAttr:$op_bundle_sizes,
-                  OptionalAttr<ArrayAttr>:$op_bundle_tags);
+                  DefaultValuedProperty<
+                    ArrayProperty<StringProperty, "operand bundle tags">,
+                    "ArrayRef<std::string>{}",
+                    "SmallVector<std::string>{}"
+                  >:$op_bundle_tags);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -1922,7 +1930,11 @@ def LLVM_CallIntrinsicOp
                        VariadicOfVariadic<LLVM_Type,
                                           "op_bundle_sizes">:$op_bundle_operands,
                        DenseI32ArrayAttr:$op_bundle_sizes,
-                       OptionalAttr<ArrayAttr>:$op_bundle_tags);
+                       DefaultValuedProperty<
+                         ArrayProperty<StringProperty, "operand bundle tags">,
+                         "ArrayRef<std::string>{}",
+                         "SmallVector<std::string>{}"
+                       >:$op_bundle_tags);
   let results = (outs Optional<LLVM_Type>:$results);
   let llvmBuilder = [{
     return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);
