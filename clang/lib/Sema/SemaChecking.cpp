@@ -10352,7 +10352,6 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
     // inconsistency by storing this as a signed type.
     if (S.getLangOpts().CPlusPlus11 &&
         !BitfieldEnumDecl->getIntegerTypeSourceInfo() &&
-        BitfieldEnumDecl->getNumPositiveBits() > 0 &&
         BitfieldEnumDecl->getNumNegativeBits() == 0) {
       S.Diag(InitLoc, diag::warn_no_underlying_type_specified_for_enum_bitfield)
           << BitfieldEnumDecl;
