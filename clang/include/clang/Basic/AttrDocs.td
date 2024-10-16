@@ -3968,8 +3968,18 @@ def PipelineHintDocs : Documentation {
   placed immediately before a for, while, do-while, or a C++11 range-based for
   loop.
 
+  Using ``#pragma clang loop pipeline(enable)`` applies the software pipelining
+  optimization if possible:
+
+  .. code-block:: c++
+
+  #pragma clang loop pipeline(enable)
+  for (...) {
+    ...
+  }
+
   Using ``#pragma clang loop pipeline(disable)`` avoids the software pipelining
-  optimization. The disable state can only be specified:
+  optimization:
 
   .. code-block:: c++
 
