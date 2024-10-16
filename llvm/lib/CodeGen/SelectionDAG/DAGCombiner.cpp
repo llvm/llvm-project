@@ -9594,6 +9594,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold (not (or x, y)) -> (and (not x), (not y)) iff x or y are setcc
+  // fold (not (and x, y)) -> (or (not x), (not y)) iff x or y are setcc
   if (isOneConstant(N1) && VT == MVT::i1 && N0.hasOneUse() &&
       (N0Opcode == ISD::OR || N0Opcode == ISD::AND)) {
     SDValue N00 = N0.getOperand(0), N01 = N0.getOperand(1);
@@ -22567,7 +22568,7 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
     return SDValue();
 
   ISD::LoadExtType ExtTy =
-      ResultVT.bitsGT(VecEltVT) ? ISD::NON_EXTLOAD : ISD::EXTLOAD;
+      ResultVT.bitsGT(VecEltVT) ? ISD::EXTLOAD : ISD::NON_EXTLOAD;
   if (!TLI.isOperationLegalOrCustom(ISD::LOAD, VecEltVT) ||
       !TLI.shouldReduceLoadWidth(OriginalLoad, ExtTy, VecEltVT))
     return SDValue();

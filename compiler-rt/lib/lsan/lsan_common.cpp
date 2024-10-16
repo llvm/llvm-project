@@ -712,11 +712,11 @@ static bool ReportUnsuspendedThreads(
 
   Sort(threads.data(), threads.size());
 
-  InternalMmapVector<tid_t> unsuspended;
-  GetRunningThreadsLocked(&unsuspended);
+  InternalMmapVector<tid_t> known_threads;
+  GetRunningThreadsLocked(&known_threads);
 
   bool succeded = true;
-  for (auto os_id : unsuspended) {
+  for (auto os_id : known_threads) {
     uptr i = InternalLowerBound(threads, os_id);
     if (i >= threads.size() || threads[i] != os_id) {
       succeded = false;
