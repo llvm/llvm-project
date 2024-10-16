@@ -1474,6 +1474,12 @@ public:
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
   friend DoubleAPFloat;
+  friend class APFloatEBOChecker;
+};
+
+class APFloatEBOChecker {
+  static_assert(sizeof(APFloat) == sizeof(APFloat::U),
+                "Empty base class optimization is not performed.");
 };
 
 /// See friend declarations above.
