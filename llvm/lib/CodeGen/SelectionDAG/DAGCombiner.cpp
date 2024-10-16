@@ -7350,6 +7350,21 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (SDValue R = foldLogicOfShifts(N, N1, N0, DAG))
     return R;
 
+  // If the target supports ANDNOT, attempt to reconstruct an ANDNOT pattern
+  // that might have become separated by a bitwise-agnostic instruction.
+  if (TLI.hasAndNot(SDValue(N, 0))) {
+    SDValue X, Y;
+
+    // Fold (and X, (bswap (not Y))) -> (and X, (not (bswap Y)))
+    // Fold (and X, (bitreverse (not Y))) -> (and X, (not (bitreverse Y)))
+    for (unsigned Opc : {ISD::BSWAP, ISD::BITREVERSE})
+      if (sd_match(N, m_And(m_Value(X),
+                            m_OneUse(m_UnaryOp(Opc, m_Not(m_Value(Y)))))) &&
+          !sd_match(X, m_Not(m_Value())))
+        return DAG.getNode(ISD::AND, DL, VT, X,
+                           DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y), VT));
+  }
+
   // Masking the negated extension of a boolean is just the zero-extended
   // boolean:
   // and (sub 0, zext(bool X)), 1 --> zext(bool X)
