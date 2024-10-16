@@ -74,13 +74,12 @@ constexpr std::size_t MaxArrayConstructorVectorAlignInBytes = 8;
 extern "C" {
 // API to initialize an ArrayConstructorVector before any values are pushed to
 // it. Inlined code is only expected to allocate the "ArrayConstructorVector"
-// class instance storage with sufficient size (using
-// "2*sizeof(ArrayConstructorVector)" on the host should be safe regardless of
-// the target the runtime is compiled for). This avoids the need for the runtime
-// to maintain a state, or to use dynamic allocation for it. "vectorClassSize"
-// is used to validate that lowering allocated enough space for it.
+// class instance storage with sufficient size
+// (MaxArrayConstructorVectorSizeInBytes is expected to be large enough for all
+// supported targets). This avoids the need for the runtime to maintain a state,
+// or to use dynamic allocation for it.
 void RTDECL(InitArrayConstructorVector)(ArrayConstructorVector &vector,
-    Descriptor &to, bool useValueLengthParameters, int vectorClassSize,
+    Descriptor &to, bool useValueLengthParameters,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
 // Generic API to push any kind of entity into the array constructor (any
