@@ -405,7 +405,9 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
   InternalMmapVector<uptr> registers;
   InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
-    tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
+    registers.clear();
+    extra_ranges.clear();
+    const tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
     LOG_THREADS("Processing thread %llu.\n", os_id);
     uptr stack_begin, stack_end, tls_begin, tls_end, cache_begin, cache_end;
     DTLS *dtls;
@@ -429,9 +431,8 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
         continue;
       sp = stack_begin;
     }
-    if (suspended_threads.GetThreadID(i) == caller_tid) {
+    if (os_id == caller_tid)
       sp = caller_sp;
-    }
 
     if (flags()->use_registers && have_registers) {
       uptr registers_begin = reinterpret_cast<uptr>(registers.data());
@@ -464,7 +465,6 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       }
       ScanRangeForPointers(stack_begin, stack_end, frontier, "STACK",
                            kReachable);
-      extra_ranges.clear();
       GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
       ScanExtraStackRanges(extra_ranges, frontier);
     }
