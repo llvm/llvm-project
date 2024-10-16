@@ -265,6 +265,9 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
   if (0 == EntrySize)
     return;
 
+  // Emit an additional section to store the correlation info as pairs of
+  // addresses, each pair contains the address of a jump instruction (jr) and
+  // the address of the jump table.
   OutStreamer->switchSection(MMI->getContext().getELFSection(
       ".discard.tablejump_annotate", ELF::SHT_PROGBITS, 0));
 
