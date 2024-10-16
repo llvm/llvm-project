@@ -308,108 +308,117 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType) {
 
 struct NarrowElementwise final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
-  NarrowElementwise(MLIRContext *context, DataFlowSolver &s, unsigned target)
+  NarrowElementwise(MLIRContext *context, DataFlowSolver &s,
+                    ArrayRef<unsigned> target)
       : OpTraitRewritePattern<OpTrait::Elementwise>(context), solver(s),
-        targetBitwidth(target) {}
+        targetBitwidths(target) {}
 
   using OpTraitRewritePattern::OpTraitRewritePattern;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    Type srcType = checkElementwiseOpType(op, targetBitwidth);
-    if (!srcType)
-      return failure();
 
     std::optional<ConstantIntRanges> range =
         getOperandsRange(solver, op->getResults());
     if (!range)
       return failure();
 
-    // We are truncating op args to the desired bitwidth before the op and then
-    // extending op results back to the original width after.
-    // extui and exti will produce different results for negative values, so
-    // limit signed range to non-negative values.
-    auto smin = APInt::getZero(targetBitwidth);
-    auto smax = APInt::getSignedMaxValue(targetBitwidth);
-    auto umin = APInt::getMinValue(targetBitwidth);
-    auto umax = APInt::getMaxValue(targetBitwidth);
-    if (!checkRange(*range, smin, smax, umin, umax))
-      return failure();
+    for (unsigned targetBitwidth : targetBitwidths) {
+      Type srcType = checkElementwiseOpType(op, targetBitwidth);
+      if (!srcType)
+        continue;
 
-    Type targetType = getTargetType(srcType, targetBitwidth);
-    if (targetType == srcType)
-      return failure();
+      // We are truncating op args to the desired bitwidth before the op and
+      // then extending op results back to the original width after. extui and
+      // exti will produce different results for negative values, so limit
+      // signed range to non-negative values.
+      auto smin = APInt::getZero(targetBitwidth);
+      auto smax = APInt::getSignedMaxValue(targetBitwidth);
+      auto umin = APInt::getMinValue(targetBitwidth);
+      auto umax = APInt::getMaxValue(targetBitwidth);
+      if (!checkRange(*range, smin, smax, umin, umax))
+        continue;
 
-    Location loc = op->getLoc();
-    IRMapping mapping;
-    for (Value arg : op->getOperands()) {
-      Value newArg = doCast(rewriter, loc, arg, targetType);
-      mapping.map(arg, newArg);
-    }
+      Type targetType = getTargetType(srcType, targetBitwidth);
+      if (targetType == srcType)
+        continue;
 
-    Operation *newOp = rewriter.clone(*op, mapping);
-    rewriter.modifyOpInPlace(newOp, [&]() {
-      for (OpResult res : newOp->getResults()) {
-        res.setType(targetType);
+      Location loc = op->getLoc();
+      IRMapping mapping;
+      for (Value arg : op->getOperands()) {
+        Value newArg = doCast(rewriter, loc, arg, targetType);
+        mapping.map(arg, newArg);
       }
-    });
-    SmallVector<Value> newResults;
-    for (Value res : newOp->getResults())
-      newResults.emplace_back(doCast(rewriter, loc, res, srcType));
 
-    rewriter.replaceOp(op, newResults);
-    return success();
+      Operation *newOp = rewriter.clone(*op, mapping);
+      rewriter.modifyOpInPlace(newOp, [&]() {
+        for (OpResult res : newOp->getResults()) {
+          res.setType(targetType);
+        }
+      });
+      SmallVector<Value> newResults;
+      for (Value res : newOp->getResults())
+        newResults.emplace_back(doCast(rewriter, loc, res, srcType));
+
+      rewriter.replaceOp(op, newResults);
+      return success();
+    }
+    return failure();
   }
 
 private:
   DataFlowSolver &solver;
-  unsigned targetBitwidth;
+  SmallVector<unsigned, 4> targetBitwidths;
 };
 
 struct NarrowCmpi final : public OpRewritePattern<arith::CmpIOp> {
   NarrowCmpi(MLIRContext *context, PatternBenefit benefit, DataFlowSolver &s,
-             unsigned target)
-      : OpRewritePattern(context, benefit), solver(s), targetBitwidth(target) {}
+             ArrayRef<unsigned> target)
+      : OpRewritePattern(context, benefit), solver(s), targetBitwidths(target) {
+  }
 
   LogicalResult matchAndRewrite(arith::CmpIOp op,
                                 PatternRewriter &rewriter) const override {
     Value lhs = op.getLhs();
     Value rhs = op.getRhs();
 
-    Type srcType = checkArithType(lhs.getType(), targetBitwidth);
-    if (!srcType)
-      return failure();
-
     std::optional<ConstantIntRanges> range =
         getOperandsRange(solver, {lhs, rhs});
     if (!range)
       return failure();
 
-    auto smin = APInt::getSignedMinValue(targetBitwidth);
-    auto smax = APInt::getSignedMaxValue(targetBitwidth);
-    auto umin = APInt::getMinValue(targetBitwidth);
-    auto umax = APInt::getMaxValue(targetBitwidth);
-    if (!checkRange(*range, smin, smax, umin, umax))
-      return failure();
+    for (unsigned targetBitwidth : targetBitwidths) {
+      Type srcType = checkArithType(lhs.getType(), targetBitwidth);
+      if (!srcType)
+        continue;
 
-    Type targetType = getTargetType(srcType, targetBitwidth);
-    if (targetType == srcType)
-      return failure();
+      auto smin = APInt::getSignedMinValue(targetBitwidth);
+      auto smax = APInt::getSignedMaxValue(targetBitwidth);
+      auto umin = APInt::getMinValue(targetBitwidth);
+      auto umax = APInt::getMaxValue(targetBitwidth);
+      if (!checkRange(*range, smin, smax, umin, umax))
+        continue;
 
-    Location loc = op->getLoc();
-    IRMapping mapping;
-    for (Value arg : op->getOperands()) {
-      Value newArg = doCast(rewriter, loc, arg, targetType);
-      mapping.map(arg, newArg);
+      Type targetType = getTargetType(srcType, targetBitwidth);
+      if (targetType == srcType)
+        continue;
+
+      Location loc = op->getLoc();
+      IRMapping mapping;
+      for (Value arg : op->getOperands()) {
+        Value newArg = doCast(rewriter, loc, arg, targetType);
+        mapping.map(arg, newArg);
+      }
+
+      Operation *newOp = rewriter.clone(*op, mapping);
+      rewriter.replaceOp(op, newOp->getResults());
+      return success();
     }
-
-    Operation *newOp = rewriter.clone(*op, mapping);
-    rewriter.replaceOp(op, newOp->getResults());
-    return success();
+    return failure();
   }
 
 private:
   DataFlowSolver &solver;
-  unsigned targetBitwidth;
+  SmallVector<unsigned, 4> targetBitwidths;
 };
 
 struct IntRangeOptimizationsPass
@@ -453,7 +462,7 @@ struct IntRangeNarrowingPass
     DataFlowListener listener(solver);
 
     RewritePatternSet patterns(ctx);
-    populateIntRangeNarrowingPatterns(patterns, solver, this->targetBitwidth);
+    populateIntRangeNarrowingPatterns(patterns, solver, bitwidthsSupported);
 
     GreedyRewriteConfig config;
     config.listener = &listener;
@@ -470,16 +479,16 @@ void mlir::arith::populateIntRangeOptimizationsPatterns(
                DeleteTrivialRem<RemUIOp>>(patterns.getContext(), solver);
 }
 
-void mlir::arith::populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
-                                                    DataFlowSolver &solver,
-                                                    unsigned targetBitwidth) {
+void mlir::arith::populateIntRangeNarrowingPatterns(
+    RewritePatternSet &patterns, DataFlowSolver &solver,
+    ArrayRef<unsigned> bitwidthsSupported) {
   // Cmpi uses args ranges instead of results, run it with higher benefit,
   // as its argumens can be potentially replaced.
   patterns.add<NarrowCmpi>(patterns.getContext(), /*benefit*/ 10, solver,
-                           targetBitwidth);
+                           bitwidthsSupported);
 
   patterns.add<NarrowElementwise>(patterns.getContext(), solver,
-                                  targetBitwidth);
+                                  bitwidthsSupported);
 }
 
 std::unique_ptr<Pass> mlir::arith::createIntRangeOptimizationsPass() {

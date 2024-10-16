@@ -58,8 +58,8 @@ def ArithIntRangeNarrowing : Pass<"arith-int-range-narrowing"> {
   }];
 
   let options = [
-    Option<"targetBitwidth", "target-bitwidth", "unsigned",
-           /*default=*/"32", "Target bitwidth this pass will try to narrow to">,
+    ListOption<"bitwidthsSupported", "int-bitwidths-supported", "unsigned",
+               "Integer bitwidths supported">,
   ];
 
   // Explicitly depend on "arith" because this pass could create operations in

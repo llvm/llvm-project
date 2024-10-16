@@ -1,4 +1,4 @@
-// RUN: mlir-opt --arith-int-range-narrowing="target-bitwidth=32"  %s | FileCheck %s
+// RUN: mlir-opt --arith-int-range-narrowing="int-bitwidths-supported=32" %s | FileCheck %s
 
 // Do not truncate negative values
 // CHECK-LABEL: func @test_addi_neg

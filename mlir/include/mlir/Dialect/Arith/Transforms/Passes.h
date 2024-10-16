@@ -80,7 +80,7 @@ std::unique_ptr<Pass> createIntRangeOptimizationsPass();
 /// Add patterns for int range based narrowing.
 void populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
                                        DataFlowSolver &solver,
-                                       unsigned targetBitwidth);
+                                       ArrayRef<unsigned> bitwidthsSupported);
 
 // TODO: merge these two narrowing passes.
 /// Add patterns for integer bitwidth narrowing.
