@@ -2,6 +2,9 @@
 
 typedef unsigned long int size_t;
 
+int global_array[42];
+int global_int;
+
 struct fam_struct {
   int x;
   char count;
@@ -24,21 +27,25 @@ void test2(struct fam_struct *ptr, int idx) {
   __builtin_counted_by_ref();                               // expected-error {{too few arguments to function call, expected 1, have 0}}
   __builtin_counted_by_ref(ptr->array, ptr->x, ptr->count); // expected-error {{too many arguments to function call, expected 1, have 3}}
   __builtin_counted_by_ref(ptr->x);                         // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  __builtin_counted_by_ref(&ptr->x);                        // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  __builtin_counted_by_ref(global_array);                   // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  __builtin_counted_by_ref(global_int);                     // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  __builtin_counted_by_ref(&global_int);                    // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(&ptr->array[idx++]);             // expected-warning {{'__builtin_counted_by_ref' argument has side-effects that will be discarded}} expected-warning {{expression result unused}}
 }
 
 void foo(char *);
 
 void *test3(struct fam_struct *ptr, int size, int idx) {
-  char *ref = __builtin_counted_by_ref(ptr->array);         // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
+  char *ref = __builtin_counted_by_ref(ptr->array);         // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
 
-  ref = __builtin_counted_by_ref(ptr->array);               // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
-  ref = (char *)(int *)(42 + &*__builtin_counted_by_ref(ptr->array)); // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
-  foo(__builtin_counted_by_ref(ptr->array));                // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
+  ref = __builtin_counted_by_ref(ptr->array);               // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
+  ref = (char *)(int *)(42 + &*__builtin_counted_by_ref(ptr->array)); // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
+  foo(__builtin_counted_by_ref(ptr->array));                // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
   *(__builtin_counted_by_ref(ptr->array) + 4) = 37;         // expected-error {{value returned by '__builtin_counted_by_ref' cannot be used in a binary expression}}
   __builtin_counted_by_ref(ptr->array)[3] = 37;             // expected-error {{value returned by '__builtin_counted_by_ref' cannot be used in an array subscript expression}}
 
-  return __builtin_counted_by_ref(ptr->array);              // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable or used as a function argument}}
+  return __builtin_counted_by_ref(ptr->array);              // expected-error {{value returned by '__builtin_counted_by_ref' cannot be assigned to a variable, have its address taken, or passed into or returned from a function}}
 }
 
 struct non_fam_struct {

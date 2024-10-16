@@ -3780,9 +3780,9 @@ as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 ``__builtin_counted_by_ref`` returns a pointer to the count field from the
 ``counted_by`` attribute.
 
-The argument must be a pointer to a flexible array member. If the argument
-isn't a flexible array member or doesn't have the ``counted_by`` attribute, the
-builtin returns ``(void *)0``.
+The argument must be a flexible array member. If the argument isn't a flexible
+array member or doesn't have the ``counted_by`` attribute, the builtin returns
+``(void *)0``.
 
 **Syntax**:
 
@@ -3795,7 +3795,7 @@ builtin returns ``(void *)0``.
 .. code-block:: c
 
   #define alloc(P, FAM, COUNT) ({                                 \
-     sizeof_t __ignored_assignment;                               \
+     size_t __ignored_assignment;                                 \
      typeof(P) __p = NULL;                                        \
      __p = malloc(MAX(sizeof(*__p),                               \
                       sizeof(*__p) + sizeof(*__p->FAM) * COUNT)); \
@@ -3839,8 +3839,8 @@ for allocators (like in Linux) that are implemented in a way where the counter
 assignment can happen automatically.
 
 **Note: The value returned by ``__builtin_counted_by_ref`` cannot be assigned
-to a variable or passed into a function, because doing so violates bounds
-safety conventions.**
+to a variable, have its address taken, or passed into or returned from a
+function, because doing so violates bounds safety conventions.**
 
 Multiprecision Arithmetic Builtins
 ----------------------------------

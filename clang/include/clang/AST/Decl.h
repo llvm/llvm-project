@@ -3059,6 +3059,9 @@ class FieldDecl : public DeclaratorDecl, public Mergeable<FieldDecl> {
   unsigned BitField : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned Mutable : 1;
+  // FIXME: IsBoundsSafetyCounter can be made into an attribute, once some
+  // downstream work is in mainline.
+  // See https://github.com/llvm/llvm-project/issues/112586
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsBoundsSafetyCounter : 1;
   LLVM_PREFERRED_TYPE(InitStorageKind)

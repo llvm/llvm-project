@@ -5578,10 +5578,9 @@ bool Sema::BuiltinSetjmp(CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
-  // For simplicity, we support only a limited expressions for the argument.
-  // Specifically 'ptr->array' and '&ptr->array[0]'. This allows us to reject
-  // arguments with complex casting, which really shouldn't be a huge problem.
+ExprResult Sema::BuiltinCountedByRef(ExprResult TheCallResult) {
+  CallExpr *TheCall = cast<CallExpr>(TheCallResult.get());
+
   if (checkArgCount(TheCall, 1))
     return true;
 
@@ -5589,6 +5588,9 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
   if (ArgRes.isInvalid())
     return true;
 
+  // For simplicity, we support only limited expressions for the argument.
+  // Specifically 'ptr->array' and '&ptr->array[0]'. This allows us to reject
+  // arguments with complex casting, which really shouldn't be a huge problem.
   const Expr *Arg = ArgRes.get()->IgnoreParenImpCasts();
   if (!isa<PointerType>(Arg->getType()) && !Arg->getType()->isArrayType())
     return Diag(Arg->getBeginLoc(),
@@ -5608,81 +5610,73 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
       Arg = ASE->getBase()->IgnoreParenImpCasts();
   }
 
-  // Use 'size_t *' as the default return type. If the argument doesn't have
-  // the 'counted_by' attribute, it'll return a 'nullptr'.
-  TheCall->setType(Context.getPointerType(Context.getSizeType()));
-
-  if (const MemberExpr *ME = dyn_cast_if_present<MemberExpr>(Arg)) {
+  if (const MemberExpr *ME = dyn_cast<MemberExpr>(Arg)) {
     if (!ME->isFlexibleArrayMemberLike(
             Context, getLangOpts().getStrictFlexArraysLevel()))
       return Diag(Arg->getBeginLoc(),
                   diag::err_builtin_counted_by_ref_must_be_flex_array_member)
              << Arg->getSourceRange();
 
-    if (ME->getMemberDecl()->getType()->isCountAttributedType()) {
+    if (auto *CATy =
+            ME->getMemberDecl()->getType()->getAs<CountAttributedType>();
+        CATy && CATy->getKind() == CountAttributedType::CountedBy) {
       if (FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-        if (FieldDecl *CountFD = FAMDecl->findCountedByField()) {
-          // Reverse through any anonymous structs / unions surrounding the
-          // flexible array member. We'll build any necessary MemberExpr's to
-          // anonymous structs / unions when building a reference to the
-          // 'count' field.
-          RecordDecl *RD = FAMDecl->getParent();
-          DeclContext *DC = RD;
-          for (; DC->isRecord(); DC = DC->getLexicalParent()) {
-            if (!RD->isAnonymousStructOrUnion())
-              break;
-            RD = cast<RecordDecl>(DC);
-            if (auto *Base = dyn_cast<MemberExpr>(ME->getBase()))
-              ME = Base;
-          }
+        FieldDecl *CountFD = FAMDecl->findCountedByField();
+        assert(CountFD && "'count' field couldn't be found");
 
-          // See if the count's FieldDecl is within anonymous structs.
-          SmallVector<NamedDecl *, 2> PathToFD;
-          for (Decl *D : RD->decls()) {
-            if (auto *IFD = dyn_cast<IndirectFieldDecl>(D);
-                IFD && IFD->getAnonField() == CountFD) {
-              PathToFD.insert(PathToFD.begin(), IFD->chain_begin(),
-                              IFD->chain_end());
-              break;
-            }
-          }
-
-          if (PathToFD.empty())
-            PathToFD.push_back(CountFD);
-
-          // Build a MemberExpr to the 'count' field. This accounts for any
-          // anonymous structs / unions that may contain the field. Use the
-          // CallExpr's SourceLocation for future diagnostics.
-          SourceLocation Loc = TheCall->getBeginLoc();
-          bool isArrow = ME->isArrow();
-          Expr *New = ME->getBase();
-          for (NamedDecl *ND : PathToFD) {
-            ValueDecl *VD = cast<ValueDecl>(ND);
-            auto *ME = MemberExpr::CreateImplicit(Context, New, isArrow, VD,
-                                                  VD->getType(), VK_PRValue,
-                                                  OK_Ordinary);
-            ME->setMemberLoc(Loc);
-            New = ME;
-            isArrow = false;
-          }
-
-          return ExprResult(UnaryOperator::Create(
-              Context, New, UO_AddrOf,
-              Context.getPointerType(CountFD->getType()), VK_LValue,
-              OK_Ordinary, Loc, false, FPOptionsOverride()));
-        } else {
-          auto *A = FAMDecl->getAttr<CountedByAttr>();
-          auto *CountDecl = cast<DeclRefExpr>(A->getCount())->getDecl();
-
-          Diag(Arg->getBeginLoc(), diag::err_count_attr_must_be_in_structure)
-              << CountDecl << 0 << Arg->getSourceRange();
-          Diag(CountDecl->getBeginLoc(),
-               diag::note_flexible_array_counted_by_attr_field)
-              << CountDecl << CountDecl->getSourceRange();
-          return ExprError();
+        // Reverse through any anonymous structs / unions surrounding the
+        // flexible array member. We'll build any necessary MemberExpr's to
+        // anonymous structs / unions when building a reference to the
+        // 'count' field.
+        RecordDecl *RD = FAMDecl->getParent();
+        DeclContext *DC = RD;
+        for (; DC->isRecord(); DC = DC->getLexicalParent()) {
+          if (!RD->isAnonymousStructOrUnion())
+            break;
+          RD = cast<RecordDecl>(DC);
+          if (auto *Base = dyn_cast<MemberExpr>(ME->getBase()))
+            ME = Base;
         }
+
+        // See if the count's FieldDecl is within anonymous structs.
+        SmallVector<NamedDecl *, 2> PathToFD;
+        for (Decl *D : RD->decls()) {
+          if (auto *IFD = dyn_cast<IndirectFieldDecl>(D);
+              IFD && IFD->getAnonField() == CountFD) {
+            PathToFD.insert(PathToFD.begin(), IFD->chain_begin(),
+                            IFD->chain_end());
+            break;
+          }
+        }
+
+        if (PathToFD.empty())
+          PathToFD.push_back(CountFD);
+
+        // Build a MemberExpr to the 'count' field. This accounts for any
+        // anonymous structs / unions that may contain the field. Use the
+        // CallExpr's SourceLocation for future diagnostics.
+        SourceLocation Loc = TheCall->getBeginLoc();
+        bool isArrow = ME->isArrow();
+        Expr *New = ME->getBase();
+        for (NamedDecl *ND : PathToFD) {
+          ValueDecl *VD = cast<ValueDecl>(ND);
+          auto *ME = MemberExpr::CreateImplicit(Context, New, isArrow, VD,
+                                                VD->getType(), VK_PRValue,
+                                                OK_Ordinary);
+          ME->setMemberLoc(Loc);
+          New = ME;
+          isArrow = false;
+        }
+
+        return ExprResult(UnaryOperator::Create(
+            Context, New, UO_AddrOf, Context.getPointerType(CountFD->getType()),
+            VK_LValue, OK_Ordinary, Loc, false, FPOptionsOverride()));
       }
     }
+  } else {
+    return Diag(Arg->getBeginLoc(),
+                diag::err_builtin_counted_by_ref_must_be_flex_array_member)
+           << Arg->getSourceRange();
   }
 
   QualType SizeTypePtrTy = Context.VoidPtrTy;

@@ -13775,12 +13775,12 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
       bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
         InvalidUse = true;
         Option = 0; // report 'array expression' in diagnostic.
-        return VisitStmt(E->getBase()) && VisitStmt(E->getIdx());
+        return true;
       }
       bool VisitBinaryOperator(BinaryOperator *E) {
         InvalidUse = true;
         Option = 1; // report 'binary expression' in diagnostic.
-        return VisitStmt(E->getLHS()) && VisitStmt(E->getRHS());
+        return true;
       }
     } V;
     V.TraverseStmt(E);
