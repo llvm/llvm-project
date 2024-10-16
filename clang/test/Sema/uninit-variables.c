@@ -551,3 +551,14 @@ struct full_of_empty empty_test_2(void) {
   struct full_of_empty e;
   return e; // no-warning
 }
+
+struct with_explicit_field {
+  int x;
+  int y [[clang::requires_explicit_initialization]]; // #FIELD_Y
+};
+
+void aggregate() {
+  struct with_explicit_field a; // expected-warning {{field in 'with_explicit_field' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_Y {{'y' declared here}}
+  struct with_explicit_field b = {1}; // expected-warning {{field 'y' is not explicitly initialized, but was marked as requiring explicit initialization}} expected-note@#FIELD_Y {{'y' declared here}}
+  (void)(&a != &b);
+}
