@@ -154,6 +154,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
   case VPScalarCastSC:
+  case VPReverseVectorPointerSC:
     return false;
   case VPInstructionSC:
     return mayWriteToMemory();
