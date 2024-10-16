@@ -80,9 +80,6 @@ public:
   pointer __end_;
   _LIBCPP_COMPRESSED_PAIR(pointer, __end_cap_, allocator_type, __alloc_);
 
-  using __alloc_ref       = __add_lvalue_reference_t<allocator_type>;
-  using __alloc_const_ref = __add_lvalue_reference_t<allocator_type>;
-
   __split_buffer(const __split_buffer&)            = delete;
   __split_buffer& operator=(const __split_buffer&) = delete;
 
