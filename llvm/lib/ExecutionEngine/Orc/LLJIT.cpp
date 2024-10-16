@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
@@ -195,10 +197,14 @@ public:
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
     auto *AtExitCallbackTy = FunctionType::get(VoidTy, {}, false);
     auto *AtExitCallbackPtrTy = PointerType::getUnqual(AtExitCallbackTy);
-    addHelperAndWrapper(*M, "atexit",
-                        FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
-                        GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
-                        {PlatformInstanceDecl, DSOHandle});
+    auto *AtExit = addHelperAndWrapper(
+        *M, "atexit", FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
+        GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
+        {PlatformInstanceDecl, DSOHandle});
+    Attribute::AttrKind AtExitExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Return(J.getTargetTriple());
+    if (AtExitExtAttr != Attribute::None)
+      AtExit->addRetAttr(AtExitExtAttr);
 
     return J.addIRModule(JD, ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
