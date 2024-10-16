@@ -1705,8 +1705,8 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
-def err_unexpected_module_decl : Error<
-  "module declaration can only appear at the top level">;
+def err_unexpected_module_or_import_decl : Error<
+  "%select{module|import}0 declaration can only appear at the top level">;
 def err_module_expected_ident : Error<
   "expected a module name after '%select{module|import}0'">;
 def err_attribute_not_module_attr : Error<
