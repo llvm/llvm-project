@@ -6173,6 +6173,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     Check(MaskTy->getElementType()->isIntegerTy(1),
           "Mask must be a vector of i1's.", &Call);
+    Check(Call.getType() == MaskTy, "Return type must match the mask type.",
+          &Call);
     break;
   }
   case Intrinsic::vector_insert: {

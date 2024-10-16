@@ -4077,21 +4077,14 @@ bool AArch64TTIImpl::hasVectorMatch(VectorType *VT, unsigned SearchSize) const {
   // legal type for MATCH, and (iii) the search vector can be broadcast
   // efficently to a legal type.
   //
-  // Currently, we require the length of the search vector to match the minimum
-  // number of elements of `VT'. In practice this means we only support the
-  // cases (nxv16i8, 16), (v16i8, 16), (nxv8i16, 8), and (v8i16, 8), where the
-  // first element of the tuples corresponds to the type of the first argument
-  // and the second the length of the search vector.
-  //
-  // In the future we can support more cases. For example, (nxv16i8, 4) could
-  // be efficiently supported by using a DUP.S to broadcast the search
-  // elements, and more exotic cases like (nxv16i8, 5) could be supported by a
-  // sequence of SEL(DUP).
+  // Currently, we require the search vector to be 64-bit or 128-bit. In the
+  // future we can support more cases.
   if (ST->hasSVE2() && ST->isSVEAvailable() &&
       VT->getPrimitiveSizeInBits().getKnownMinValue() == 128 &&
       (VT->getElementCount().getKnownMinValue() == 8 ||
        VT->getElementCount().getKnownMinValue() == 16) &&
-      VT->getElementCount().getKnownMinValue() == SearchSize)
+      (VT->getElementCount().getKnownMinValue() == SearchSize ||
+       VT->getElementCount().getKnownMinValue() / 2 == SearchSize))
     return true;
   return false;
 }
