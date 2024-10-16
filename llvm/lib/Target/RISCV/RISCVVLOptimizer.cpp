@@ -680,7 +680,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     }
   }
 
-  // If the VL is 1, then there is no need to reduce it.
+  // If the VL is 1, then there is no need to reduce it. This is an
+  // optimization, not needed to preserve correctness.
   if (VLOp.isImm() && VLOp.getImm() == 1) {
     LLVM_DEBUG(dbgs() << "  Not a candidate because VL is already 1\n");
     return false;
@@ -762,6 +763,8 @@ bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
       CommonVL = &VLOp;
       LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
     } else if (!CommonVL->isIdenticalTo(VLOp)) {
+      // FIXME: This check requires all users to have the same VL. We can relax
+      // this and get the largest VL amongst all users.
       LLVM_DEBUG(dbgs() << "    Abort because users have different VL\n");
       CanReduceVL = false;
       break;
@@ -813,7 +816,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
     if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
-      LLVM_DEBUG(dbgs() << "    Abort due to no benefit.\n");
+      LLVM_DEBUG(dbgs() << "    Abort due to no CommonVL not <= VLOp.\n");
       continue;
     }
 
