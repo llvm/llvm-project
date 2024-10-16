@@ -600,7 +600,6 @@ exit:
   ret i64 %p
 }
 
-
 define i64 @multi_exit_4_exit_count_with_udiv_by_value_in_latch_loop_may_not_execute(ptr %dst, i64 %N, i1 %c) {
 ; CHECK-LABEL: define i64 @multi_exit_4_exit_count_with_udiv_by_value_in_latch_loop_may_not_execute(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]], i1 [[C:%.*]]) {
@@ -675,7 +674,6 @@ exit:
   ret i64 %p
 }
 
-
 define i64 @multi_exit_4_exit_count_with_udiv_by_value_in_latch_different_bounds(ptr %dst, i64 %N, i64 %M) {
 ; CHECK-LABEL: define i64 @multi_exit_4_exit_count_with_udiv_by_value_in_latch_different_bounds(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
@@ -744,7 +742,6 @@ exit:
   %p = phi i64 [ 1, %loop.header ], [ 0, %loop.latch]
   ret i64 %p
 }
-
 
 define i64 @multi_exit_4_exit_count_with_udiv_by_frozen_value_in_latch(ptr %dst, i64 %N) {
 ; CHECK-LABEL: define i64 @multi_exit_4_exit_count_with_udiv_by_frozen_value_in_latch(
