@@ -2247,9 +2247,12 @@ class RecordResolver final : public Resolver {
   DenseMap<Init *, Init *> Cache;
   SmallVector<Init *, 4> Stack;
   Init *Name = nullptr;
+  // Cache is for fields, ArgumentResolver is for arguments.
+  MapResolver *ArgumentResolver;
 
 public:
-  explicit RecordResolver(Record &R) : Resolver(&R) {}
+  explicit RecordResolver(Record &R, MapResolver *ArgumentResolver = nullptr)
+      : Resolver(&R), ArgumentResolver(ArgumentResolver) {}
 
   void setName(Init *NewName) { Name = NewName; }
 
