@@ -1738,8 +1738,8 @@ Instruction *InstCombinerImpl::foldICmpAndShift(ICmpInst &Cmp,
 
     // Compute X & (C2 << Y).
     Value *NewAnd = Builder.CreateAnd(Shift->getOperand(0), NewShift);
-    Cmp.setSameSign(false);
-    return replaceOperand(Cmp, 0, NewAnd);
+    return ICmpInst::Create(Instruction::ICmp, Cmp.getPredicate(), NewAnd,
+                            Cmp.getOperand(1));
   }
 
   return nullptr;
@@ -1845,8 +1845,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                /*HasNUW=*/true),
                              One, Or->getName());
         Value *NewAnd = Builder.CreateAnd(A, NewOr, And->getName());
-        Cmp.setSameSign(false);
-        return replaceOperand(Cmp, 0, NewAnd);
+        return ICmpInst::Create(Instruction::ICmp, Cmp.getPredicate(), NewAnd,
+                                Cmp.getOperand(1));
       }
     }
   }
