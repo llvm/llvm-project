@@ -6237,7 +6237,8 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
-let Predicates = [HasNEONandIsStreamingSafe] in {
+// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
+let Predicates = [HasNEON] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
@@ -6247,7 +6248,8 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
+// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
+let Predicates = [HasNEON, HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
@@ -6270,9 +6272,10 @@ def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 
 // fp16: integer extraction from vector must be at least 32-bits to be legal.
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
-let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
-def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract 
-                (v8i16 FPR128:$Rn), (i64 0))), i16)))), 
+// TODO: Allow these in streaming[-compatible] functions with +sme2p2.
+let Predicates = [HasNEON, HasFullFP16] in {
+def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract
+                (v8i16 FPR128:$Rn), (i64 0))), i16)))),
           (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
 
 // unsigned 32-bit extracted element is truncated to 16-bits using AND
@@ -6367,7 +6370,7 @@ def : Pat <(f64 (uint_to_fp (i32
                           (LDURSi GPR64sp:$Rn, simm9:$offset), ssub))>;
 // 64-bits -> double are handled in target specific dag combine:
 // performIntToFpCombine.
-} // let Predicates = [HasNEONandIsStreamingSafe]
+} // let Predicates = [HasNEON]
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three different-sized vector instructions.

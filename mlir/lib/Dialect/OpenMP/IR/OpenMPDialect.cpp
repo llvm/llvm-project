@@ -2012,14 +2012,16 @@ void SimdOp::build(OpBuilder &builder, OperationState &state,
                    const SimdOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: linearVars, linearStepVars, privateVars,
-  // privateSyms, reductionVars, reductionByref, reductionSyms.
+  // privateSyms.
   SimdOp::build(builder, state, clauses.alignedVars,
                 makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
                 /*linear_vars=*/{}, /*linear_step_vars=*/{},
                 clauses.nontemporalVars, clauses.order, clauses.orderMod,
                 /*private_vars=*/{}, /*private_syms=*/nullptr,
-                /*reduction_vars=*/{}, /*reduction_byref=*/nullptr,
-                /*reduction_syms=*/nullptr, clauses.safelen, clauses.simdlen);
+                clauses.reductionVars,
+                makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                makeArrayAttr(ctx, clauses.reductionSyms), clauses.safelen,
+                clauses.simdlen);
 }
 
 LogicalResult SimdOp::verify() {

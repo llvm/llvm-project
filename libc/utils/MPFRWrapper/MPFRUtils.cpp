@@ -488,14 +488,28 @@ public:
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
 
     mpfr_sinpi(result.value, value, mpfr_rounding);
+    return result;
 #else
+    if (mpfr_integer_p(value)) {
+      mpfr_set_si(result.value, 0, mpfr_rounding);
+      return result;
+    }
+
+    MPFRNumber value_mul_two(*this);
+    mpfr_mul_si(value_mul_two.value, value, 2, MPFR_RNDN);
+
+    if (mpfr_integer_p(value_mul_two.value)) {
+      auto d = mpfr_get_si(value, MPFR_RNDD);
+      mpfr_set_si(result.value, (d & 1) ? -1 : 1, mpfr_rounding);
+      return result;
+    }
+
     MPFRNumber value_pi(0.0, 1280);
     mpfr_const_pi(value_pi.value, MPFR_RNDN);
     mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
     mpfr_sin(result.value, value_pi.value, mpfr_rounding);
-#endif
-
     return result;
+#endif
   }
 
   MPFRNumber sinh() const {

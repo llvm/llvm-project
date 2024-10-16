@@ -2216,7 +2216,7 @@ ExprResult SemaOpenACC::CheckGangExpr(OpenACCGangKind GK, Expr *E) {
     case OpenACCGangKind::Static:
       return CheckGangStaticExpr(*this, E);
     }
-  }
+  } break;
   default:
     llvm_unreachable("Non compute construct in active compute construct?");
   }

@@ -1475,10 +1475,10 @@ struct Partition {
   std::unique_ptr<VersionTableSection> verSym;
 
   Partition(Ctx &ctx) : ctx(ctx) {}
-  unsigned getNumber() const { return this - &ctx.partitions[0] + 1; }
+  unsigned getNumber(Ctx &ctx) const { return this - &ctx.partitions[0] + 1; }
 };
 
-inline Partition &SectionBase::getPartition() const {
+inline Partition &SectionBase::getPartition(Ctx &ctx) const {
   assert(isLive());
   return ctx.partitions[partition - 1];
 }
