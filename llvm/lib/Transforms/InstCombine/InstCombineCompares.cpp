@@ -1738,6 +1738,7 @@ Instruction *InstCombinerImpl::foldICmpAndShift(ICmpInst &Cmp,
 
     // Compute X & (C2 << Y).
     Value *NewAnd = Builder.CreateAnd(Shift->getOperand(0), NewShift);
+    Cmp.setSameSign(false);
     return replaceOperand(Cmp, 0, NewAnd);
   }
 
