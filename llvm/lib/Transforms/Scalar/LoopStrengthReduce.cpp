@@ -622,7 +622,8 @@ static bool containsAddRecDependentOnLoop(const SCEV *S, const Loop &L) {
 /// representation.
 /// \see Formula::BaseRegs.
 bool Formula::isCanonical(const Loop &L) const {
-  assert((Scale == 0 || ScaledReg) && "ScaledReg must be non-null if Scale is non-zero");
+  assert((Scale == 0 || ScaledReg) &&
+         "ScaledReg must be non-null if Scale is non-zero");
 
   if (!ScaledReg)
     return BaseRegs.size() <= 1;
