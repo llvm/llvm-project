@@ -69,8 +69,14 @@ bool llvm::hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
 
 void llvm::fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result) {
   for (auto &Bundles : Assume.bundle_op_infos()) {
-    std::pair<Value *, Attribute::AttrKind> Key{
-        nullptr, Attribute::getAttrKindFromName(Bundles.Tag->getKey())};
+    Attribute::AttrKind AttrKind =
+        Attribute::getAttrKindFromName(Bundles.Tag->getKey());
+
+    if (!Attribute::isEnumAttrKind(AttrKind) &&
+        !Attribute::isIntAttrKind(AttrKind))
+      continue;
+
+    std::pair<Value *, Attribute::AttrKind> Key{nullptr, AttrKind};
     if (bundleHasArgument(Bundles, ABA_WasOn))
       Key.first = getValueFromBundleOpInfo(Assume, Bundles, ABA_WasOn);
 
@@ -101,8 +107,14 @@ llvm::getKnowledgeFromBundle(AssumeInst &Assume,
   RetainedKnowledge Result;
   if (!DebugCounter::shouldExecute(AssumeQueryCounter))
     return Result;
+  Attribute::AttrKind AttrKind =
+      Attribute::getAttrKindFromName(BOI.Tag->getKey());
 
-  Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
+  if (!Attribute::isEnumAttrKind(AttrKind) &&
+      !Attribute::isIntAttrKind(AttrKind))
+    return Result;
+
+  Result.AttrKind = AttrKind;
   if (bundleHasArgument(BOI, ABA_WasOn))
     Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn);
   auto GetArgOr1 = [&](unsigned Idx) -> uint64_t {

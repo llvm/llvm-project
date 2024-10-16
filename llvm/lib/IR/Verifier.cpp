@@ -5416,6 +5416,23 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                 "third argument should be an integer if present", Call);
         return;
       }
+      if (Kind == Attribute::Range) {
+        Check(ArgCount == 3, "range assumptions should have 3 arguments", Call);
+        Type *FirstType = Call.getOperand(Elem.Begin)->getType();
+        Check(FirstType->isIntOrIntVectorTy(),
+              "first argument should be an integer or vector of integers",
+              Call);
+        Type *ST = FirstType->getScalarType();
+        Check(Call.getOperand(Elem.Begin + 1)->getType() == ST,
+              "second argument should be an integer with same bit width as the "
+              "first argument",
+              Call);
+        Check(Call.getOperand(Elem.Begin + 2)->getType() == ST,
+              "third argument should be an integer with same bit width as the "
+              "first argument",
+              Call);
+        return;
+      }
       Check(ArgCount <= 2, "too many arguments", Call);
       if (Kind == Attribute::None)
         break;
