@@ -1503,7 +1503,10 @@ enum DeclCode {
   /// An ImplicitConceptSpecializationDecl record.
   DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
 
-  DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
+  /// A FunctionParmPackDecl record.
+  DECL_FUNCTION_PARM_PACK,
+
+  DECL_LAST = DECL_FUNCTION_PARM_PACK
 };
 
 /// Record codes for each kind of statement or expression.

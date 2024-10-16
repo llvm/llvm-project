@@ -14952,12 +14952,20 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     }
 
     // Transform the captured variable.
-    auto *CapturedVar = cast_or_null<ValueDecl>(
-        getDerived().TransformDecl(C->getLocation(), C->getCapturedVar()));
-    if (!CapturedVar || CapturedVar->isInvalidDecl()) {
+    Decl *NewCapturedDecl =
+        getDerived().TransformDecl(C->getLocation(), C->getCapturedVar());
+    if (!NewCapturedDecl || NewCapturedDecl->isInvalidDecl()) {
       Invalid = true;
       continue;
     }
+    if (auto *FPPD = dyn_cast<FunctionParmPackDecl>(NewCapturedDecl)) {
+      LSI->ContainsUnexpandedParameterPack = true;
+      for (VarDecl *Expanded : FPPD->getExpandedParams())
+        getSema().tryCaptureVariable(Expanded, C->getLocation(), Kind,
+                                     EllipsisLoc);
+      continue;
+    }
+    auto *CapturedVar = cast<ValueDecl>(NewCapturedDecl);
 
     // This is not an init-capture; however it contains an unexpanded pack e.g.
     //  ([Pack] {}(), ...)

@@ -90,6 +90,7 @@ namespace clang {
     void VisitUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D);
     void VisitDeclaratorDecl(DeclaratorDecl *D);
     void VisitFunctionDecl(FunctionDecl *D);
+    void VisitFunctionParmPackDecl(FunctionParmPackDecl *D);
     void VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D);
     void VisitCXXMethodDecl(CXXMethodDecl *D);
     void VisitCXXConstructorDecl(CXXConstructorDecl *D);
@@ -1704,6 +1705,15 @@ void ASTDeclWriter::VisitImplicitConceptSpecializationDecl(
   for (const TemplateArgument &Arg : D->getTemplateArguments())
     Record.AddTemplateArgument(Arg);
   Code = serialization::DECL_IMPLICIT_CONCEPT_SPECIALIZATION;
+}
+
+void ASTDeclWriter::VisitFunctionParmPackDecl(FunctionParmPackDecl *D) {
+  Record.push_back(D->getNumExpansions());
+  VisitDecl(D);
+  Record.AddDeclRef(D->getPattern());
+  for (VarDecl *VD : D->getExpandedParams())
+    Record.AddDeclRef(VD);
+  Code = serialization::DECL_FUNCTION_PARM_PACK;
 }
 
 void ASTDeclWriter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
