@@ -249,6 +249,8 @@ public:
 
       removeResourceGlobals(CI);
 
+      DRM.updateResourceMap(CI, *OpCall);
+
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
       return Error::success();
@@ -294,6 +296,8 @@ public:
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
 
       removeResourceGlobals(CI);
+
+      DRM.updateResourceMap(CI, *OpBind);
 
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();
@@ -479,6 +483,9 @@ public:
           OpCode::BufferLoad, Args, CI->getName(), NewRetTy);
       if (Error E = OpCall.takeError())
         return E;
+
+      DRM.updateResUseMap(CI, *OpCall);
+
       if (Error E = replaceResRetUses(CI, *OpCall, HasCheckBit))
         return E;
 
@@ -546,6 +553,8 @@ public:
           OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
+
+      DRM.updateResUseMap(CI, *OpCall);
 
       CI->eraseFromParent();
       return Error::success();

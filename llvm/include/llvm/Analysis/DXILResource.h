@@ -264,6 +264,8 @@ public:
 class DXILResourceMap {
   SmallVector<dxil::ResourceInfo> Resources;
   DenseMap<CallInst *, unsigned> CallMap;
+  // Mapping from Resource use to Resource Handle
+  DenseMap<CallInst *, CallInst *> ResUseToHandleMap;
   unsigned FirstUAV = 0;
   unsigned FirstCBuffer = 0;
   unsigned FirstSampler = 0;
@@ -335,6 +337,31 @@ public:
   }
 
   void print(raw_ostream &OS) const;
+
+  void updateResourceMap(CallInst *origCallInst, CallInst *newCallInst);
+
+  void updateResUseMap(CallInst *origResUse, CallInst *newResUse) {
+    assert((origResUse != nullptr) && (newResUse != nullptr) &&
+           (origResUse != newResUse) && "Wrong Inputs");
+
+    updateResUseMapCommon(origResUse, newResUse, /*keepOrigResUseInMap=*/false);
+  }
+
+  CallInst *findResHandleByUse(CallInst *resUse) {
+    auto Pos = ResUseToHandleMap.find(resUse);
+    assert((Pos != ResUseToHandleMap.end()) &&
+           "Can't find the resource handle");
+
+    return Pos->second;
+  }
+
+private:
+  void updateResUseMapCommon(CallInst *origResUse, CallInst *newResUse,
+                             bool keepOrigResUseInMap) {
+    ResUseToHandleMap.try_emplace(newResUse, findResHandleByUse(origResUse));
+    if (!keepOrigResUseInMap)
+      ResUseToHandleMap.erase(origResUse);
+  }
 };
 
 class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
