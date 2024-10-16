@@ -962,24 +962,47 @@ bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
   return true;
 }
 
-// Sends a custom DAP event with an optional body.
+// Sends a DAP event with an optional body.
 //
 // See
 // https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent
-bool CustomDAPEventRequestHandler::DoExecute(
-    lldb::SBDebugger debugger, char **command,
-    lldb::SBCommandReturnObject &result) {
-  // Command format like: `custom-event <name> <body>?`
+bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
+                                        char **command,
+                                        lldb::SBCommandReturnObject &result) {
+  // Command format like: `send-event <name> <body>?`
   if (!command || !command[0] || llvm::StringRef(command[0]).empty()) {
-    result.SetError("Invalid use of custom-event, expected format "
-                    "`custom-event <name> <body>?`.");
+    result.SetError("Not enough arguments found, expected format "
+                    "`lldb-dap send-event <name> <body>?`.");
     return false;
   }
 
   llvm::StringRef name{command[0]};
+  // Events that are stateful and should be handled by lldb-dap internally.
+  const std::array internal_events{"breakpoint", "capabilities", "continued",
+                                   "exited",     "initialize",   "loadedSource",
+                                   "module",     "process",      "stopped",
+                                   "terminated", "thread"};
+  if (std::find(internal_events.begin(), internal_events.end(), name) !=
+      std::end(internal_events)) {
+    std::string msg =
+        llvm::formatv("Invalid use of lldb-dap send-event, event \"{0}\" "
+                      "should be handled by lldb-dap internally.",
+                      name)
+            .str();
+    result.SetError(msg.c_str());
+    return false;
+  }
+
   llvm::json::Object event(CreateEventObject(name));
 
   if (command[1] && !llvm::StringRef(command[1]).empty()) {
+    // See if we have to unused arguments.
+    if (command[2] && !llvm::StringRef(command[1]).empty()) {
+      result.SetError("Additional arguments found, expected `lldb-dap send-event "
+                      "<name> <body>?`.");
+      return false;
+    }
+
     llvm::StringRef raw_body{command[1]};
 
     llvm::Expected<llvm::json::Value> body = llvm::json::parse(raw_body);

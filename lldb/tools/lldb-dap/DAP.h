@@ -144,7 +144,7 @@ struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
                  lldb::SBCommandReturnObject &result) override;
 };
 
-struct CustomDAPEventRequestHandler : public lldb::SBCommandPluginInterface {
+struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };

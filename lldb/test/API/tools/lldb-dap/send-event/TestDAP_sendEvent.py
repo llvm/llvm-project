@@ -1,16 +1,18 @@
 """
-Test lldb-dap custom-event integration.
+Test lldb-dap send-event integration.
 """
 
 import json
+import time
+import threading
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
-class TestDAP_customEvent(lldbdap_testcase.DAPTestCaseBase):
-    def test_custom_event(self):
+class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
+    def test_send_event(self):
         """
         Test sending a custom event.
         """
@@ -23,8 +25,8 @@ class TestDAP_customEvent(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(
             program,
             stopCommands=[
-                "lldb-dap custom-event my-custom-event-no-body",
-                "lldb-dap custom-event my-custom-event '{}'".format(
+                "lldb-dap send-event my-custom-event-no-body",
+                "lldb-dap send-event my-custom-event '{}'".format(
                     json.dumps(custom_event_body)
                 ),
             ],
@@ -44,3 +46,19 @@ class TestDAP_customEvent(lldbdap_testcase.DAPTestCaseBase):
         custom_event = self.dap_server.wait_for_event(filter=["my-custom-event"])
         self.assertEquals(custom_event["event"], "my-custom-event")
         self.assertEquals(custom_event["body"], custom_event_body)
+
+    def test_send_internal_event(self):
+        """
+        Test sending an internal event produces an error.
+        """
+        program = self.getBuildArtifact("a.out")
+        source = "main.c"
+        self.build_and_launch(program)
+
+        breakpoint_line = line_number(source, "// breakpoint")
+
+        self.set_source_breakpoints(source, [breakpoint_line])
+        self.continue_to_next_stop()
+
+        resp = self.dap_server.request_evaluate("`lldb-dap send-event stopped", context="repl")
+        self.assertRegex(resp['body']['result'], r"Invalid use of lldb-dap send-event, event \"stopped\" should be handled by lldb-dap internally.")
