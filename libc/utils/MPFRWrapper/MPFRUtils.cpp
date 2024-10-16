@@ -334,6 +334,29 @@ public:
     return result;
   }
 
+  MPFRNumber exp10m1() const {
+    // TODO: Only use mpfr_exp10m1 once CI and buildbots get MPFR >= 4.2.0.
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+    MPFRNumber result(*this);
+    mpfr_exp10m1(result.value, value, mpfr_rounding);
+    return result;
+#else
+    unsigned int prec = mpfr_precision * 3;
+    MPFRNumber result(*this, prec);
+
+    MPFRNumber ln10(10.0f, prec);
+    // log(10)
+    mpfr_log(ln10.value, ln10.value, mpfr_rounding);
+    // x * log(10)
+    mpfr_mul(result.value, value, ln10.value, mpfr_rounding);
+    // e^(x * log(10)) - 1
+    int ex = mpfr_expm1(result.value, result.value, mpfr_rounding);
+    mpfr_subnormalize(result.value, ex, mpfr_rounding);
+    return result;
+#endif
+  }
+
   MPFRNumber expm1() const {
     MPFRNumber result(*this);
     mpfr_expm1(result.value, value, mpfr_rounding);
@@ -744,6 +767,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.exp2m1();
   case Operation::Exp10:
     return mpfrInput.exp10();
+  case Operation::Exp10m1:
+    return mpfrInput.exp10m1();
   case Operation::Expm1:
     return mpfrInput.expm1();
   case Operation::Floor:

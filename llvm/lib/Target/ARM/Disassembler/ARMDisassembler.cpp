@@ -894,12 +894,13 @@ void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
         MCID.operands()[i].RegClass == ARM::CCRRegClassID) {
       if (i > 0 && MCID.operands()[i - 1].isPredicate())
         continue;
-      MI.insert(I, MCOperand::createReg(InITBlock ? 0 : ARM::CPSR));
+      MI.insert(I,
+                MCOperand::createReg(InITBlock ? ARM::NoRegister : ARM::CPSR));
       return;
     }
   }
 
-  MI.insert(I, MCOperand::createReg(InITBlock ? 0 : ARM::CPSR));
+  MI.insert(I, MCOperand::createReg(InITBlock ? ARM::NoRegister : ARM::CPSR));
 }
 
 bool ARMDisassembler::isVectorPredicable(const MCInst &MI) const {

@@ -105,12 +105,20 @@ class XunitReport(object):
             file.write("</testsuites>\n")
 
     def _write_testsuite(self, file, suite, tests):
-        skipped = sum(1 for t in tests if t.result.code in self.skipped_codes)
-        failures = sum(1 for t in tests if t.isFailure())
+        skipped = 0
+        failures = 0
+        time = 0.0
+
+        for t in tests:
+            if t.result.code in self.skipped_codes:
+                skipped += 1
+            if t.isFailure():
+                failures += 1
+            time += t.result.elapsed
 
         name = suite.config.name.replace(".", "-")
         file.write(
-            f'<testsuite name={quo(name)} tests="{len(tests)}" failures="{failures}" skipped="{skipped}">\n'
+            f'<testsuite name={quo(name)} tests="{len(tests)}" failures="{failures}" skipped="{skipped}" time="{time:.2f}">\n'
         )
         for test in tests:
             self._write_test(file, test, name)
