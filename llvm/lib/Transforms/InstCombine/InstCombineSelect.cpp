@@ -1448,6 +1448,7 @@ Instruction *InstCombinerImpl::foldSelectEqualityTest(SelectInst &Sel) {
              m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(X), m_Specific(Y))))
     return nullptr;
 
+  cast<ICmpInst>(XeqY)->setSameSign(false);
   return replaceInstUsesWith(Sel, XeqY);
 }
 
