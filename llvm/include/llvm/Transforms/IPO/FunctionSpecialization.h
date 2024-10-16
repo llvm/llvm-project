@@ -173,8 +173,9 @@ struct Bonus {
 };
 
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
+  std::function<BlockFrequencyInfo &(Function &)> GetBFI;
+  Function *F;
   const DataLayout &DL;
-  BlockFrequencyInfo &BFI;
   TargetTransformInfo &TTI;
   SCCPSolver &Solver;
 
@@ -192,17 +193,20 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   ConstMap::iterator LastVisited;
 
 public:
-  InstCostVisitor(const DataLayout &DL, BlockFrequencyInfo &BFI,
-                  TargetTransformInfo &TTI, SCCPSolver &Solver)
-      : DL(DL), BFI(BFI), TTI(TTI), Solver(Solver) {}
+  InstCostVisitor(std::function<BlockFrequencyInfo &(Function &)> GetBFI,
+                  Function *F, const DataLayout &DL, TargetTransformInfo &TTI,
+                  SCCPSolver &Solver)
+      : GetBFI(GetBFI), F(F), DL(DL), TTI(TTI), Solver(Solver) {}
 
   bool isBlockExecutable(BasicBlock *BB) {
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
   }
 
-  Bonus getSpecializationBonus(Argument *A, Constant *C);
+  Cost getCodeSizeBonus(Argument *A, Constant *C);
 
-  Bonus getBonusFromPendingPHIs();
+  Cost getCodeSizeBonusFromPendingPHIs();
+
+  Cost getLatencyBonus();
 
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
@@ -210,8 +214,8 @@ private:
   static bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
                                     DenseSet<BasicBlock *> &DeadBlocks);
 
-  Bonus getUserBonus(Instruction *User, Value *Use = nullptr,
-                     Constant *C = nullptr);
+  Cost getUserCodeSizeBonus(Instruction *User, Value *Use = nullptr,
+                            Constant *C = nullptr);
 
   Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList);
   Cost estimateSwitchInst(SwitchInst &I);
@@ -283,9 +287,8 @@ public:
   bool run();
 
   InstCostVisitor getInstCostVisitorFor(Function *F) {
-    auto &BFI = GetBFI(*F);
     auto &TTI = GetTTI(*F);
-    return InstCostVisitor(M.getDataLayout(), BFI, TTI, Solver);
+    return InstCostVisitor(GetBFI, F, M.getDataLayout(), TTI, Solver);
   }
 
 private:

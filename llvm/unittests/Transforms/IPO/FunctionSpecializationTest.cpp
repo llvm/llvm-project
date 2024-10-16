@@ -43,6 +43,7 @@ protected:
   FunctionAnalysisManager FAM;
   std::unique_ptr<Module> M;
   std::unique_ptr<SCCPSolver> Solver;
+  SmallVector<Instruction *, 8> Instructions;
 
   FunctionSpecializationTest() {
     FAM.registerPass([&] { return TargetLibraryAnalysis(); });
@@ -97,21 +98,29 @@ protected:
                                GetAC);
   }
 
-  Bonus getInstCost(Instruction &I, bool SizeOnly = false) {
+  Cost getInstCodeSize(Instruction &I, bool SizeOnly = false) {
     auto &TTI = FAM.getResult<TargetIRAnalysis>(*I.getFunction());
-    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*I.getFunction());
 
     Cost CodeSize =
         TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
 
-    Cost Latency =
-        SizeOnly
-            ? 0
-            : BFI.getBlockFreq(I.getParent()).getFrequency() /
-                  BFI.getEntryFreq().getFrequency() *
-                  TTI.getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
+    if (!SizeOnly)
+      Instructions.push_back(&I);
 
-    return {CodeSize, Latency};
+    return CodeSize;
+  }
+
+  Cost getLatency(Function *F) {
+    auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
+    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*F);
+
+    Cost Latency = 0;
+    for (const Instruction *I : Instructions)
+      Latency += BFI.getBlockFreq(I->getParent()).getFrequency() /
+                 BFI.getEntryFreq().getFrequency() *
+                 TTI.getInstructionCost(I, TargetTransformInfo::TCK_Latency);
+
+    return Latency;
   }
 };
 
@@ -171,25 +180,30 @@ TEST_F(FunctionSpecializationTest, SwitchInst) {
   Instruction &BrLoop = BB2.back();
 
   // mul
-  Bonus Ref = getInstCost(Mul);
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), One);
+  Cost Ref = getInstCodeSize(Mul);
+  Cost Test = Visitor.getCodeSizeBonus(F->getArg(0), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // and + or + add
-  Ref = getInstCost(And) + getInstCost(Or) + getInstCost(Add);
-  Test = Visitor.getSpecializationBonus(F->getArg(1), One);
+  Ref = getInstCodeSize(And) + getInstCodeSize(Or) + getInstCodeSize(Add);
+  Test = Visitor.getCodeSizeBonus(F->getArg(1), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // switch + sdiv + br + br
-  Ref = getInstCost(Switch) +
-        getInstCost(Sdiv, /*SizeOnly =*/ true) +
-        getInstCost(BrBB2, /*SizeOnly =*/ true) +
-        getInstCost(BrLoop, /*SizeOnly =*/ true);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), One);
+  Ref = getInstCodeSize(Switch) + getInstCodeSize(Sdiv, /*SizeOnly =*/true) +
+        getInstCodeSize(BrBB2, /*SizeOnly =*/true) +
+        getInstCodeSize(BrLoop, /*SizeOnly =*/true);
+  Test = Visitor.getCodeSizeBonus(F->getArg(2), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
+
+  // Latency.
+  Ref = getLatency(F);
+  Test = Visitor.getLatencyBonus();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test > 0);
 }
 
 TEST_F(FunctionSpecializationTest, BranchInst) {
@@ -238,27 +252,31 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
   Instruction &BrLoop = BB2.front();
 
   // mul
-  Bonus Ref = getInstCost(Mul);
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), One);
+  Cost Ref = getInstCodeSize(Mul);
+  Cost Test = Visitor.getCodeSizeBonus(F->getArg(0), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // add
-  Ref = getInstCost(Add);
-  Test = Visitor.getSpecializationBonus(F->getArg(1), One);
+  Ref = getInstCodeSize(Add);
+  Test = Visitor.getCodeSizeBonus(F->getArg(1), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // branch + sub + br + sdiv + br
-  Ref = getInstCost(Branch) +
-        getInstCost(Sub, /*SizeOnly =*/ true) +
-        getInstCost(BrBB1BB2) +
-        getInstCost(Sdiv, /*SizeOnly =*/ true) +
-        getInstCost(BrBB2, /*SizeOnly =*/ true) +
-        getInstCost(BrLoop, /*SizeOnly =*/ true);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), False);
+  Ref = getInstCodeSize(Branch) + getInstCodeSize(Sub, /*SizeOnly =*/true) +
+        getInstCodeSize(BrBB1BB2) + getInstCodeSize(Sdiv, /*SizeOnly =*/true) +
+        getInstCodeSize(BrBB2, /*SizeOnly =*/true) +
+        getInstCodeSize(BrLoop, /*SizeOnly =*/true);
+  Test = Visitor.getCodeSizeBonus(F->getArg(2), False);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
+
+  // Latency.
+  Ref = getLatency(F);
+  Test = Visitor.getLatencyBonus();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test > 0);
 }
 
 TEST_F(FunctionSpecializationTest, SelectInst) {
@@ -279,14 +297,22 @@ TEST_F(FunctionSpecializationTest, SelectInst) {
   Constant *False = ConstantInt::getFalse(M.getContext());
   Instruction &Select = *F->front().begin();
 
-  Bonus Ref = getInstCost(Select);
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), False);
-  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
-  Test = Visitor.getSpecializationBonus(F->getArg(1), One);
-  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), Zero);
-  EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  Cost RefCodeSize = getInstCodeSize(Select);
+  Cost RefLatency = getLatency(F);
+
+  Cost TestCodeSize = Visitor.getCodeSizeBonus(F->getArg(0), False);
+  EXPECT_TRUE(TestCodeSize == 0);
+  TestCodeSize = Visitor.getCodeSizeBonus(F->getArg(1), One);
+  EXPECT_TRUE(TestCodeSize == 0);
+  Cost TestLatency = Visitor.getLatencyBonus();
+  EXPECT_TRUE(TestLatency == 0);
+
+  TestCodeSize = Visitor.getCodeSizeBonus(F->getArg(2), Zero);
+  EXPECT_EQ(TestCodeSize, RefCodeSize);
+  EXPECT_TRUE(TestCodeSize > 0);
+  TestLatency = Visitor.getLatencyBonus();
+  EXPECT_EQ(TestLatency, RefLatency);
+  EXPECT_TRUE(TestLatency > 0);
 }
 
 TEST_F(FunctionSpecializationTest, Misc) {
@@ -332,26 +358,32 @@ TEST_F(FunctionSpecializationTest, Misc) {
   Instruction &Smax = *BlockIter++;
 
   // icmp + zext
-  Bonus Ref = getInstCost(Icmp) + getInstCost(Zext);
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), One);
+  Cost Ref = getInstCodeSize(Icmp) + getInstCodeSize(Zext);
+  Cost Test = Visitor.getCodeSizeBonus(F->getArg(0), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // select
-  Ref = getInstCost(Select);
-  Test = Visitor.getSpecializationBonus(F->getArg(1), True);
+  Ref = getInstCodeSize(Select);
+  Test = Visitor.getCodeSizeBonus(F->getArg(1), True);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
   // gep + load + freeze + smax
-  Ref = getInstCost(Gep) + getInstCost(Load) + getInstCost(Freeze) +
-        getInstCost(Smax);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), GV);
+  Ref = getInstCodeSize(Gep) + getInstCodeSize(Load) + getInstCodeSize(Freeze) +
+        getInstCodeSize(Smax);
+  Test = Visitor.getCodeSizeBonus(F->getArg(2), GV);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
 
-  Test = Visitor.getSpecializationBonus(F->getArg(3), Undef);
-  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
+  Test = Visitor.getCodeSizeBonus(F->getArg(3), Undef);
+  EXPECT_TRUE(Test == 0);
+
+  // Latency.
+  Ref = getLatency(F);
+  Test = Visitor.getLatencyBonus();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test > 0);
 }
 
 TEST_F(FunctionSpecializationTest, PhiNode) {
@@ -401,25 +433,34 @@ TEST_F(FunctionSpecializationTest, PhiNode) {
   Instruction &Icmp = *++BB.begin();
   Instruction &Branch = BB.back();
 
-  Bonus Test = Visitor.getSpecializationBonus(F->getArg(0), One);
-  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
+  Cost Test = Visitor.getCodeSizeBonus(F->getArg(0), One);
+  EXPECT_TRUE(Test == 0);
 
-  Test = Visitor.getSpecializationBonus(F->getArg(1), One);
-  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
+  Test = Visitor.getCodeSizeBonus(F->getArg(1), One);
+  EXPECT_TRUE(Test == 0);
+
+  Test = Visitor.getLatencyBonus();
+  EXPECT_TRUE(Test == 0);
 
   // switch + phi + br
-  Bonus Ref = getInstCost(Switch) +
-              getInstCost(PhiCase2, /*SizeOnly =*/ true) +
-              getInstCost(BrBB, /*SizeOnly =*/ true);
-  Test = Visitor.getSpecializationBonus(F->getArg(2), One);
+  Cost Ref = getInstCodeSize(Switch) +
+             getInstCodeSize(PhiCase2, /*SizeOnly =*/true) +
+             getInstCodeSize(BrBB, /*SizeOnly =*/true);
+  Test = Visitor.getCodeSizeBonus(F->getArg(2), One);
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0 && Test > 0);
 
   // phi + phi + add + icmp + branch
-  Ref = getInstCost(PhiBB) + getInstCost(PhiLoop) + getInstCost(Add) +
-        getInstCost(Icmp) + getInstCost(Branch);
-  Test = Visitor.getBonusFromPendingPHIs();
+  Ref = getInstCodeSize(PhiBB) + getInstCodeSize(PhiLoop) +
+        getInstCodeSize(Add) + getInstCodeSize(Icmp) + getInstCodeSize(Branch);
+  Test = Visitor.getCodeSizeBonusFromPendingPHIs();
   EXPECT_EQ(Test, Ref);
-  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
+  EXPECT_TRUE(Test > 0);
+
+  // Latency.
+  Ref = getLatency(F);
+  Test = Visitor.getLatencyBonus();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test > 0);
 }
 
