@@ -532,6 +532,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__ranges/from_range.h>
 #include <__tree>
 #include <__type_traits/container_traits.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_assignable.h>
@@ -571,6 +572,8 @@ class multiset;
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS set {
+  static_assert(__container_requirements<set, _Key>::value);
+
 public:
   // types:
   typedef _Key key_type;
@@ -901,6 +904,8 @@ public:
 #endif
 };
 
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(set);
+
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
           class _Compare   = less<__iter_value_type<_InputIterator>>,
@@ -1033,6 +1038,8 @@ struct __container_traits<set<_Key, _Compare, _Allocator> > {
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS multiset {
+  static_assert(__container_requirements<multiset, _Key>::value);
+
 public:
   // types:
   typedef _Key key_type;
@@ -1365,6 +1372,8 @@ public:
   }
 #endif
 };
+
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(multiset);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

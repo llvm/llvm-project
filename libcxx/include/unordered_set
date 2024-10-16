@@ -551,6 +551,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/container_traits.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
@@ -592,6 +593,8 @@ class unordered_multiset;
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
 class _LIBCPP_TEMPLATE_VIS unordered_set {
+  static_assert(__container_requirements<unordered_set, _Value>::value);
+
 public:
   // types
   typedef _Value key_type;
@@ -912,6 +915,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n) { __table_.__reserve_unique(__n); }
 };
 
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(unordered_set);
+
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
           class _Hash      = hash<__iter_value_type<_InputIterator>>,
@@ -1197,6 +1202,8 @@ struct __container_traits<unordered_set<_Value, _Hash, _Pred, _Alloc> > {
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
 class _LIBCPP_TEMPLATE_VIS unordered_multiset {
+  static_assert(__container_requirements<unordered_multiset, _Value>::value);
+
 public:
   // types
   typedef _Value key_type;
@@ -1518,6 +1525,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI void rehash(size_type __n) { __table_.__rehash_multi(__n); }
   _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n) { __table_.__reserve_multi(__n); }
 };
+
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(unordered_multiset);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

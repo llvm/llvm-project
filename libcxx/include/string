@@ -621,6 +621,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
@@ -760,6 +761,13 @@ struct __padding<0> {};
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
+  // This is_array check precedes _LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS since basic_string
+  // never permits arrays, and earlier static_asserts suppress later ones (meaning that this one is
+  // always emitted for both 'basic_string<char[]>' and 'basic_string<char[10]>', and doesn't say
+  // "before C++20").
+  static_assert(!is_array<_CharT>::value, "'std::basic_string' cannot hold C arrays");
+  static_assert(__container_requirements<basic_string, _CharT>::value);
+
   using __default_allocator_type = allocator<_CharT>;
 
 public:
@@ -824,7 +832,6 @@ public:
 #  define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) PTR
 #endif
 
-  static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
   static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");
   static_assert(is_trivial<value_type>::value, "Character type of basic_string must be trivial");
   static_assert(is_same<_CharT, typename traits_type::char_type>::value,
@@ -2257,6 +2264,8 @@ private:
   friend inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
   operator==(const basic_string<_CharT2, _Traits2, _Allocator2>&, const _CharT2*) _NOEXCEPT;
 };
+
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(basic_string);
 
 // These declarations must appear before any functions are implicitly used
 // so that they have the correct visibility specifier.

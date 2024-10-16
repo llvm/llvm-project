@@ -357,6 +357,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__split_buffer>
 #include <__type_traits/conditional.h>
 #include <__type_traits/container_traits.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
@@ -403,6 +404,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
 private:
+  static_assert(__container_requirements<vector, _Tp>::value);
+
   typedef allocator<_Tp> __default_allocator_type;
 
 public:
@@ -1030,6 +1033,8 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 };
+
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(vector);
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

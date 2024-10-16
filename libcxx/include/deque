@@ -221,6 +221,7 @@ template <class T, class Allocator, class Predicate>
 #include <__split_buffer>
 #include <__type_traits/conditional.h>
 #include <__type_traits/container_traits.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
@@ -483,6 +484,8 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS deque {
+  static_assert(__container_requirements<deque, _Tp>::value);
+
 public:
   // types:
 
@@ -2610,6 +2613,8 @@ inline constexpr bool __format::__enable_insertable<std::deque<wchar_t>> = true;
 #  endif
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS(deque);
 
 template <class _Tp, class _Allocator>
 struct __container_traits<deque<_Tp, _Allocator> > {

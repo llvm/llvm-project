@@ -605,10 +605,15 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/container_traits.h>
+#include <__type_traits/diagnostic_utilities.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_array.h>
+#include <__type_traits/is_function.h>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_void.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
@@ -1035,6 +1040,15 @@ template <class _Key,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS unordered_map {
+  // TODO(#106635): replace with _LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS
+  // Remember to remove relevant headers when this is completed.
+  static_assert(!is_reference<_Key>::value, "'std::unordered_map' cannot hold references");
+  static_assert(!is_function<_Key>::value && !is_function<_Tp>::value, "'std::unordered_map' cannot hold functions");
+  static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::unordered_map' cannot hold 'void'");
+  static_assert(!__libcpp_is_unbounded_array<_Key>::value,
+                "'std::unordered_map' cannot hold C arrays of an unknown size");
+  static_assert(!is_array<_Key>::value, "'std::unordered_map' cannot hold C arrays before C++20");
+
 public:
   // types
   typedef _Key key_type;
@@ -1848,6 +1862,16 @@ template <class _Key,
           class _Pred  = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS unordered_multimap {
+  // TODO(#106635): replace with _LIBCPP_DEFINE__CONTAINER_VALUE_TYPE_REQUIREMENTS
+  // Remember to remove relevant headers when this is completed.
+  static_assert(!is_reference<_Key>::value, "'std::unordered_multimap' cannot hold references");
+  static_assert(!is_function<_Key>::value && !is_function<_Tp>::value,
+                "'std::unordered_multimap' cannot hold functions");
+  static_assert(!is_void<_Key>::value && !is_void<_Tp>::value, "'std::unordered_multimap' cannot hold 'void'");
+  static_assert(!__libcpp_is_unbounded_array<_Key>::value,
+                "'std::unordered_multimap' cannot hold C arrays of an unknown size");
+  static_assert(!is_array<_Key>::value, "'std::unordered_multimap' cannot hold C arrays before C++20");
+
 public:
   // types
   typedef _Key key_type;
