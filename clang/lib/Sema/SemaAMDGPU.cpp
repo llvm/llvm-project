@@ -63,6 +63,34 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     OrderIndex = 0;
     ScopeIndex = 1;
     break;
+  case AMDGPU::BI__builtin_amdgcn_mov_dpp: {
+    if (SemaRef.checkArgCountRange(TheCall, 5, 5))
+      return true;
+    Expr *ValArg = TheCall->getArg(0);
+    QualType Ty = ValArg->getType();
+    if (!Ty->isArithmeticType()) {
+      SemaRef.Diag(ValArg->getBeginLoc(),
+                   diag::err_typecheck_cond_expect_int_float)
+          << Ty << ValArg->getSourceRange();
+      return true;
+    }
+    return false;
+  }
+  case AMDGPU::BI__builtin_amdgcn_update_dpp: {
+    if (SemaRef.checkArgCountRange(TheCall, 6, 6))
+      return true;
+    for (unsigned I = 0; I != 2; ++I) {
+      Expr *ValArg = TheCall->getArg(I);
+      QualType Ty = ValArg->getType();
+      if (!Ty->isArithmeticType()) {
+        SemaRef.Diag(ValArg->getBeginLoc(),
+                     diag::err_typecheck_cond_expect_int_float)
+            << Ty << ValArg->getSourceRange();
+        return true;
+      }
+    }
+    return false;
+  }
   default:
     return false;
   }
