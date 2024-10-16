@@ -1309,11 +1309,13 @@ Currently, only the following parameter attributes are defined:
     structure that is the return value of the function in the source
     program. This pointer must be guaranteed by the caller to be valid:
     loads and stores to the structure may be assumed by the callee not
-    to trap and to be properly aligned. This is not a valid attribute
-    for return values.
+    to trap and to be properly aligned.
 
     The sret type argument specifies the in memory type, which must be
     the same as the pointee type of the argument.
+
+    A function that accepts an ``sret`` argument must return ``void``.
+    A return value may not be ``sret``.
 
 .. _attr_elementtype:
 
@@ -12329,6 +12331,7 @@ Syntax:
 ::
 
       <result> = icmp <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
+      <result> = icmp samesign <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
 
 Overview:
 """""""""
@@ -12397,6 +12400,9 @@ are compared as if they were integers.
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
 as the values being compared. Otherwise, the result is an ``i1``.
+
+If the ``samesign`` keyword is present and the operands are not of the
+same sign then the result is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""

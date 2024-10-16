@@ -36,10 +36,8 @@ public:
 
   // invoke
   template <class... _ArgTypes>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-
-  typename __invoke_return<type, _ArgTypes...>::type
-  operator()(_ArgTypes&&... __args) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __invoke_of<const _Tp&, _ArgTypes...>::type
+  operator()(_ArgTypes&&... __args) const _NOEXCEPT_(__nothrow_invokable<const _Tp&, _ArgTypes...>::value) {
     return std::__invoke(__f_, std::forward<_ArgTypes>(__args)...);
   }
 };
