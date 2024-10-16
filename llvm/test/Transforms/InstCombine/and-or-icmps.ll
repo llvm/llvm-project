@@ -3416,3 +3416,16 @@ define i1 @and_ugt_to_mask_off_by_one(i8 %x) {
   %and2 = and i1 %cmp, %cmp2
   ret i1 %and2
 }
+
+define i1 @logical_or_icmp_eq_const_samesign(i8 %x, i8 %y) {
+; CHECK-LABEL: @logical_or_icmp_eq_const_samesign(
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp samesign ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = icmp sgt i8 %x, %y
+  %cmpeq = icmp samesign ne i8 %x, 0
+  %r = select i1 %cmp, i1 true, i1 %cmpeq
+  ret i1 %r
+}
