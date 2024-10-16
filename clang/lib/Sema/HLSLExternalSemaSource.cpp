@@ -462,7 +462,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
     Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD = nullptr) {
   TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
-    Builder.addTypenameTypeParameter(Name);
+    Builder.addTypeParameter(Name);
 
   return Builder.finalizeTemplateArgs(CD);
 }
