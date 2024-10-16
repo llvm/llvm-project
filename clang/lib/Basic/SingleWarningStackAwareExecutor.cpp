@@ -1,5 +1,5 @@
-//===--- SingleWarningStackAwareExecutor.cpp -  - A utility for warning once when
-// close to out of stack space -------*- C++ -*-===//
+//===--- SingleWarningStackAwareExecutor.cpp -  - A utility for warning once
+// when close to out of stack space -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
