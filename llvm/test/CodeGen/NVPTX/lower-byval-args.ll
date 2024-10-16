@@ -224,8 +224,10 @@ define dso_local void @memcpy_from_param_noalign (ptr nocapture noundef writeonl
 ; COMMON-LABEL: define dso_local void @memcpy_from_param_noalign(
 ; COMMON-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[S1:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr [[OUT]], ptr addrspace(101) [[S1]], i64 16, i1 true)
+; COMMON-NEXT:    [[S3:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
+; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
+; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr [[OUT2]], ptr addrspace(101) [[S3]], i64 16, i1 true)
 ; COMMON-NEXT:    ret void
 ;
 entry:
