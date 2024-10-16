@@ -13,7 +13,7 @@ void main() {
   while (true) {
 
 // CHECK-DXIL:  %[[#]] = call i1 @llvm.dx.wave.is.first.lane()
-// CHECK-SPIRV: %[[#]] = call i1 @llvm.spv.wave.is.first.lane()
+// CHECK-SPIRV: %[[#]] = call spir_func i1 @llvm.spv.wave.is.first.lane()
 // CHECK-SPIRV-SAME: [ "convergencectrl"(token %[[#loop_tok]]) ]
     if (WaveIsFirstLane()) {
       break;
@@ -21,7 +21,7 @@ void main() {
   }
 
 // CHECK-DXIL:  %[[#]] = call i1 @llvm.dx.wave.is.first.lane()
-// CHECK-SPIRV: %[[#]] = call i1 @llvm.spv.wave.is.first.lane()
+// CHECK-SPIRV: %[[#]] = call spir_func i1 @llvm.spv.wave.is.first.lane()
 // CHECK-SPIRV-SAME: [ "convergencectrl"(token %[[#entry_tok]]) ]
   if (WaveIsFirstLane()) {
     return;
