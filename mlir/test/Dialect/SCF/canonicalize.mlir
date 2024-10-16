@@ -1632,6 +1632,8 @@ func.func @do_not_inline_distributed_forall_loop(
 }
 // CHECK-LABEL: @do_not_inline_distributed_forall_loop
 // CHECK: scf.forall
+// CHECK:   tensor.extract_slice %{{.*}}[0, 0] [2, 3] [1, 1]
+// CHECK:   tensor.parallel_insert_slice %{{.*}}[0, 0] [2, 3] [1, 1]
 
 // -----
 

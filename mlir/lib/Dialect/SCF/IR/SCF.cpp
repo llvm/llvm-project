@@ -1767,6 +1767,32 @@ struct ForallOpSingleOrZeroIterationDimsFolder
   }
 };
 
+struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
+  using OpRewritePattern<ForallOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForallOp op,
+                                PatternRewriter &rewriter) const override {
+    // Replace all induction vars with a single trip count with their lower
+    // bound.
+    Location loc = op.getLoc();
+    bool replacedIv = false;
+    for (auto [lb, ub, step, iv] :
+         llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
+                   op.getMixedStep(), op.getInductionVars())) {
+      if (iv.getUses().begin() == iv.getUses().end())
+        continue;
+      auto numIterations = constantTripCount(lb, ub, step);
+      if (!numIterations.has_value() || numIterations.value() != 1) {
+        continue;
+      }
+      rewriter.replaceAllUsesWith(
+          iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
+      return success();
+    }
+    return failure();
+  }
+};
+
 struct FoldTensorCastOfOutputIntoForallOp
     : public OpRewritePattern<scf::ForallOp> {
   using OpRewritePattern<scf::ForallOp>::OpRewritePattern;
@@ -1851,7 +1877,8 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<DimOfForallOp, FoldTensorCastOfOutputIntoForallOp,
               ForallOpControlOperandsFolder, ForallOpIterArgsFolder,
-              ForallOpSingleOrZeroIterationDimsFolder>(context);
+              ForallOpSingleOrZeroIterationDimsFolder,
+              ForallOpReplaceConstantInductionVar>(context);
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
