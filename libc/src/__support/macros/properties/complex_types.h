@@ -10,8 +10,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CTYPES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CTYPES_H
 
-#include "include/llvm-libc-types/cfloat16.h"
 #include "include/llvm-libc-types/cfloat128.h"
+#include "include/llvm-libc-types/cfloat16.h"
 #include "types.h"
 
 // -- cfloat16 support --------------------------------------------------------

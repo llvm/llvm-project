@@ -135,7 +135,7 @@ public:
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if (cpp::is_complex_type_same<T, cfloat128>)
       return matchComplex<float128>();
-#endif   
+#endif
   }
 
   void explainError() override {

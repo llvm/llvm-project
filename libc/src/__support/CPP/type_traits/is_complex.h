@@ -37,7 +37,7 @@ public:
 #ifdef LIBC_TYPES_HAS_CFLOAT128
                               ,
                               cfloat128
-#endif                        
+#endif
                               >();
 };
 template <typename T>
