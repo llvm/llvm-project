@@ -19,7 +19,7 @@
 
 using AArch64ABIKind = ::cir::AArch64ABIKind;
 using ABIArgInfo = ::cir::ABIArgInfo;
-using MissingFeature = ::cir::MissingFeatures;
+using MissingFeatures = ::cir::MissingFeatures;
 
 namespace mlir {
 namespace cir {
@@ -60,7 +60,7 @@ class AArch64TargetLoweringInfo : public TargetLoweringInfo {
 public:
   AArch64TargetLoweringInfo(LowerTypes &LT, AArch64ABIKind Kind)
       : TargetLoweringInfo(std::make_unique<AArch64ABIInfo>(LT, Kind)) {
-    cir_cconv_assert(!MissingFeature::swift());
+    cir_cconv_assert(!MissingFeatures::swift());
   }
 
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
@@ -97,7 +97,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
   if (!isAggregateTypeForABI(RetTy)) {
     // NOTE(cir): Skip enum handling.
 
-    if (MissingFeature::fixedSizeIntType())
+    if (MissingFeatures::fixedSizeIntType())
       cir_cconv_unreachable("NYI");
 
     return (isPromotableIntegerTypeForABI(RetTy) && isDarwinPCS()
@@ -114,13 +114,13 @@ AArch64ABIInfo::classifyArgumentType(Type Ty, bool IsVariadic,
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
   // TODO(cir): check for illegal vector types.
-  if (MissingFeature::vectorType())
+  if (MissingFeatures::vectorType())
     cir_cconv_unreachable("NYI");
 
   if (!isAggregateTypeForABI(Ty)) {
     // NOTE(cir): Enum is IntType in CIR. Skip enum handling here.
 
-    if (MissingFeature::fixedSizeIntType())
+    if (MissingFeatures::fixedSizeIntType())
       cir_cconv_unreachable("NYI");
 
     return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
