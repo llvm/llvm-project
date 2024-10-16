@@ -159,7 +159,6 @@ public:
   lldb::SBError Destroy();
 
   lldb::SBError Continue();
-  lldb::SBError Continue(RunDirection direction);
 
   lldb::SBError Stop();
 

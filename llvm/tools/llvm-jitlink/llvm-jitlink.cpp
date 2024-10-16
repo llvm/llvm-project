@@ -1041,8 +1041,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         return;
       }
     } else if (TT.isOSBinFormatELF()) {
-      if (auto P = ELFNixPlatform::Create(ES, ObjLayer, *PlatformJD,
-                                          OrcRuntime.c_str()))
+      if (auto P =
+              ELFNixPlatform::Create(ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
       else {
         Err = P.takeError();

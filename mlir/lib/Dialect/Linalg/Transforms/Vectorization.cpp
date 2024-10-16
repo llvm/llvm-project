@@ -2071,11 +2071,6 @@ vectorizeScalableVectorPrecondition(Operation *op,
       return failure();
   }
 
-  // Check to not let go the matmul with extended semantic, through this
-  // transform.
-  if (linalgOp.hasUserDefinedMaps())
-    return failure();
-
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||

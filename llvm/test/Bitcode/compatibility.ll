@@ -1327,6 +1327,14 @@ continue:
   ret i32 0
 }
 
+declare void @instructions.bundles.callee(i32)
+define void @instructions.bundles.metadata(i32 %x) {
+entry:
+  call void @instructions.bundles.callee(i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+; CHECK: call void @instructions.bundles.callee(i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+  ret void
+}
+
 ; Instructions -- Unary Operations
 define void @instructions.unops(double %op1) {
   fneg double %op1

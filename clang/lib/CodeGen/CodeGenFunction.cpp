@@ -463,7 +463,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     EscapeArgs.resize(EscapedLocals.size());
     for (auto &Pair : EscapedLocals)
       EscapeArgs[Pair.second] = Pair.first;
-    llvm::Function *FrameEscapeFn = llvm::Intrinsic::getDeclaration(
+    llvm::Function *FrameEscapeFn = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::localescape);
     CGBuilderTy(*this, AllocaInsertPt).CreateCall(FrameEscapeFn, EscapeArgs);
   }
@@ -3130,7 +3130,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     llvm::Instruction *Assumption) {
   assert(isa_and_nonnull<llvm::CallInst>(Assumption) &&
          cast<llvm::CallInst>(Assumption)->getCalledOperand() ==
-             llvm::Intrinsic::getDeclaration(
+             llvm::Intrinsic::getOrInsertDeclaration(
                  Builder.GetInsertBlock()->getParent()->getParent(),
                  llvm::Intrinsic::assume) &&
          "Assumption should be a call to llvm.assume().");

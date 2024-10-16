@@ -79,6 +79,7 @@ module std_core [system] {
     }
     module conditional                                { header "__type_traits/conditional.h" }
     module conjunction                                { header "__type_traits/conjunction.h" }
+    module container_traits                           { header "__type_traits/container_traits.h" }
     module copy_cv                                    { header "__type_traits/copy_cv.h" }
     module copy_cvref                                 { header "__type_traits/copy_cvref.h" }
     module datasizeof                                 { header "__type_traits/datasizeof.h" }

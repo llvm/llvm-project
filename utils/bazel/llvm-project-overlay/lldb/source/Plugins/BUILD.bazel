@@ -2248,6 +2248,8 @@ cc_library(
     hdrs = glob(["Process/minidump/*.h"]),
     include_prefix = "Plugins",
     deps = [
+        ":PluginDynamicLoaderPosixDYLD",
+        ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",

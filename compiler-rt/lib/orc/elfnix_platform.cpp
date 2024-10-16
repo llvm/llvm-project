@@ -30,6 +30,7 @@ using namespace orc_rt;
 using namespace orc_rt::elfnix;
 
 // Declare function tags for functions in the JIT process.
+ORC_RT_JIT_DISPATCH_TAG(__orc_rt_reoptimize_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_push_initializers_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_symbol_lookup_tag)
 

@@ -245,6 +245,18 @@ def LinalgStructuredInterface
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return true if all loops are parallel.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isAllParallelLoops",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return getNumParallelLoops() ==  getNumParallelLoops();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the dims that are parallel loops.
       }],
       /*retTy=*/"void",
@@ -325,6 +337,18 @@ def LinalgStructuredInterface
         unsigned bbArgNumber = opOperand->getOperandNumber();
         // Init tensors have uses.
         return !getBlock()->getArgument(bbArgNumber).use_empty();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true only if linalgOp takes one input and produces one result.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isSingleInputOutput",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getNumDpsInputs() == 1 && $_op.getNumDpsInits() == 1;
       }]
     >,
     InterfaceMethod<
@@ -683,16 +707,6 @@ def LinalgStructuredInterface
 
         return;
       }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
-        Return true if the user has supplied an explicit indexing maps for this op.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"hasUserDefinedMaps",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{ return false; }]
     >,
     //===------------------------------------------------------------------===//
     // Linalg generalization hooks.

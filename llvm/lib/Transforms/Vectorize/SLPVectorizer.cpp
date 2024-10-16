@@ -291,6 +291,8 @@ getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
   if (NumParts == 0 || NumParts >= Sz)
     return bit_floor(Sz);
   unsigned RegVF = bit_ceil(divideCeil(Sz, NumParts));
+  if (RegVF > Sz)
+    return bit_floor(Sz);
   return (Sz / RegVF) * RegVF;
 }
 
@@ -2922,7 +2924,7 @@ private:
 
   /// This is the recursive part of buildTree.
   void buildTree_rec(ArrayRef<Value *> Roots, unsigned Depth,
-                     const EdgeInfo &EI);
+                     const EdgeInfo &EI, unsigned InterleaveFactor = 0);
 
   /// \returns true if the ExtractElement/ExtractValue instructions in \p VL can
   /// be vectorized to use the original vector (or aggregate "bitcast" to a
@@ -3226,7 +3228,15 @@ private:
     Instruction *MainOp = nullptr;
     Instruction *AltOp = nullptr;
 
+    /// Interleaving factor for interleaved loads Vectorize nodes.
+    unsigned InterleaveFactor = 0;
+
   public:
+    /// Returns interleave factor for interleave nodes.
+    unsigned getInterleaveFactor() const { return InterleaveFactor; }
+    /// Sets interleaving factor for the interleaving nodes.
+    void setInterleave(unsigned Factor) { InterleaveFactor = Factor; }
+
     /// Set this bundle's \p OpIdx'th operand to \p OpVL.
     void setOperand(unsigned OpIdx, ArrayRef<Value *> OpVL) {
       if (Operands.size() < OpIdx + 1)
@@ -3390,7 +3400,12 @@ private:
       dbgs() << "State: ";
       switch (State) {
       case Vectorize:
-        dbgs() << "Vectorize\n";
+        if (InterleaveFactor > 0) {
+          dbgs() << "Vectorize with interleave factor " << InterleaveFactor
+                 << "\n";
+        } else {
+          dbgs() << "Vectorize\n";
+        }
         break;
       case ScatterVectorize:
         dbgs() << "ScatterVectorize\n";
@@ -3460,11 +3475,15 @@ private:
                           const InstructionsState &S,
                           const EdgeInfo &UserTreeIdx,
                           ArrayRef<int> ReuseShuffleIndices = {},
-                          ArrayRef<unsigned> ReorderIndices = {}) {
+                          ArrayRef<unsigned> ReorderIndices = {},
+                          unsigned InterleaveFactor = 0) {
     TreeEntry::EntryState EntryState =
         Bundle ? TreeEntry::Vectorize : TreeEntry::NeedToGather;
-    return newTreeEntry(VL, EntryState, Bundle, S, UserTreeIdx,
-                        ReuseShuffleIndices, ReorderIndices);
+    TreeEntry *E = newTreeEntry(VL, EntryState, Bundle, S, UserTreeIdx,
+                                ReuseShuffleIndices, ReorderIndices);
+    if (E && InterleaveFactor > 0)
+      E->setInterleave(InterleaveFactor);
+    return E;
   }
 
   TreeEntry *newTreeEntry(ArrayRef<Value *> VL,
@@ -6849,7 +6868,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     return Results;
   };
   auto ProcessGatheredLoads =
-      [&](ArrayRef<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads,
+      [&, &TTI = *TTI](
+          ArrayRef<SmallVector<std::pair<LoadInst *, int>>> GatheredLoads,
           bool Final = false) {
         SmallVector<LoadInst *> NonVectorized;
         for (ArrayRef<std::pair<LoadInst *, int>> LoadsDists : GatheredLoads) {
@@ -6932,11 +6952,16 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             // distance between scalar loads in these nodes.
             unsigned MaxVF = Slice.size();
             unsigned UserMaxVF = 0;
+            unsigned InterleaveFactor = 0;
             if (MaxVF == 2) {
               UserMaxVF = MaxVF;
             } else {
+              // Found distance between segments of the interleaved loads.
+              std::optional<unsigned> InterleavedLoadsDistance = 0;
+              unsigned Order = 0;
               std::optional<unsigned> CommonVF = 0;
               DenseMap<const TreeEntry *, unsigned> EntryToPosition;
+              SmallPtrSet<const TreeEntry *, 8> DeinterleavedNodes;
               for (auto [Idx, V] : enumerate(Slice)) {
                 for (const TreeEntry *E : ValueToGatherNodes.at(V)) {
                   UserMaxVF = std::max<unsigned>(UserMaxVF, E->Scalars.size());
@@ -6951,12 +6976,59 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                     if (*CommonVF != E->Scalars.size())
                       CommonVF.reset();
                   }
+                  // Check if the load is the part of the interleaved load.
+                  if (Pos != Idx && InterleavedLoadsDistance) {
+                    if (!DeinterleavedNodes.contains(E) &&
+                        any_of(E->Scalars, [&, Slice = Slice](Value *V) {
+                          if (isa<Constant>(V))
+                            return false;
+                          if (getTreeEntry(V))
+                            return true;
+                          const auto &Nodes = ValueToGatherNodes.at(V);
+                          return (Nodes.size() != 1 || !Nodes.contains(E)) &&
+                                 !is_contained(Slice, V);
+                        })) {
+                      InterleavedLoadsDistance.reset();
+                      continue;
+                    }
+                    DeinterleavedNodes.insert(E);
+                    if (*InterleavedLoadsDistance == 0) {
+                      InterleavedLoadsDistance = Idx - Pos;
+                      continue;
+                    }
+                    if ((Idx - Pos) % *InterleavedLoadsDistance != 0 ||
+                        (Idx - Pos) / *InterleavedLoadsDistance < Order)
+                      InterleavedLoadsDistance.reset();
+                    Order = (Idx - Pos) / InterleavedLoadsDistance.value_or(1);
+                  }
+                }
+              }
+              DeinterleavedNodes.clear();
+              // Check if the large load represents interleaved load operation.
+              if (InterleavedLoadsDistance.value_or(0) > 1 &&
+                  CommonVF.value_or(0) != 0) {
+                InterleaveFactor = bit_ceil(*InterleavedLoadsDistance);
+                unsigned VF = *CommonVF;
+                OrdersType Order;
+                SmallVector<Value *> PointerOps;
+                // Segmented load detected - vectorize at maximum vector factor.
+                if (TTI.isLegalInterleavedAccessType(
+                        getWidenedType(Slice.front()->getType(), VF),
+                        InterleaveFactor,
+                        cast<LoadInst>(Slice.front())->getAlign(),
+                        cast<LoadInst>(Slice.front())
+                            ->getPointerAddressSpace()) &&
+                    canVectorizeLoads(Slice, Slice.front(), Order,
+                                      PointerOps) == LoadsState::Vectorize) {
+                  UserMaxVF = InterleaveFactor * VF;
+                } else {
+                  InterleaveFactor = 0;
                 }
               }
               // Cannot represent the loads as consecutive vectorizable nodes -
               // just exit.
               unsigned ConsecutiveNodesSize = 0;
-              if (!LoadEntriesToVectorize.empty() &&
+              if (!LoadEntriesToVectorize.empty() && InterleaveFactor == 0 &&
                   any_of(zip(LoadEntriesToVectorize, LoadSetsToVectorize),
                          [&, Slice = Slice](const auto &P) {
                            const auto *It = find_if(Slice, [&](Value *V) {
@@ -6976,7 +7048,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 continue;
               // Try to build long masked gather loads.
               UserMaxVF = bit_ceil(UserMaxVF);
-              if (any_of(seq<unsigned>(Slice.size() / UserMaxVF),
+              if (InterleaveFactor == 0 &&
+                  any_of(seq<unsigned>(Slice.size() / UserMaxVF),
                          [&, Slice = Slice](unsigned Idx) {
                            OrdersType Order;
                            SmallVector<Value *> PointerOps;
@@ -7008,9 +7081,15 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                            }))
                   continue;
                 unsigned Sz = VectorizableTree.size();
-                buildTree_rec(SubSlice, 0, EdgeInfo());
+                buildTree_rec(SubSlice, 0, EdgeInfo(), InterleaveFactor);
                 if (Sz == VectorizableTree.size()) {
                   IsVectorized = false;
+                  // Try non-interleaved vectorization with smaller vector
+                  // factor.
+                  if (InterleaveFactor > 0) {
+                    VF = 2 * (MaxVF / InterleaveFactor);
+                    InterleaveFactor = 0;
+                  }
                   continue;
                 }
               }
@@ -7374,6 +7453,11 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       }
       return TreeEntry::ScatterVectorize;
     case LoadsState::StridedVectorize:
+      if (!IsGraphTransformMode && VectorizableTree.size() > 1) {
+        // Delay slow vectorized nodes for better vectorization attempts.
+        LoadEntriesToVectorize.insert(VectorizableTree.size());
+        return TreeEntry::NeedToGather;
+      }
       return TreeEntry::StridedVectorize;
     case LoadsState::Gather:
 #ifndef NDEBUG
@@ -7707,7 +7791,8 @@ public:
 } // namespace
 
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
-                            const EdgeInfo &UserTreeIdx) {
+                            const EdgeInfo &UserTreeIdx,
+                            unsigned InterleaveFactor) {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
   SmallVector<int> ReuseShuffleIndices;
@@ -8185,7 +8270,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       switch (State) {
       case TreeEntry::Vectorize:
         TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                          ReuseShuffleIndices, CurrentOrder);
+                          ReuseShuffleIndices, CurrentOrder, InterleaveFactor);
         if (CurrentOrder.empty())
           LLVM_DEBUG(dbgs() << "SLP: added a vector of loads.\n");
         else
@@ -9895,6 +9980,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             Idx = EMask[Idx];
         }
         CommonVF = E->Scalars.size();
+      } else if (std::optional<unsigned> Factor = E->getInterleaveFactor();
+                 Factor && E->Scalars.size() != Mask.size() &&
+                 ShuffleVectorInst::isDeInterleaveMaskOfFactor(CommonMask,
+                                                               *Factor)) {
+        // Deinterleaved nodes are free.
+        std::iota(CommonMask.begin(), CommonMask.end(), 0);
       }
       ExtraCost += GetNodeMinBWAffectedCost(*E, CommonVF);
       V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
@@ -10968,23 +11059,38 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto *LI0 = cast<LoadInst>(VL0);
     auto GetVectorCost = [&](InstructionCost CommonCost) {
       InstructionCost VecLdCost;
-      if (E->State == TreeEntry::Vectorize) {
-        VecLdCost = TTI->getMemoryOpCost(
-            Instruction::Load, VecTy, LI0->getAlign(),
-            LI0->getPointerAddressSpace(), CostKind, TTI::OperandValueInfo());
-      } else if (E->State == TreeEntry::StridedVectorize) {
+      switch (E->State) {
+      case TreeEntry::Vectorize:
+        if (unsigned Factor = E->getInterleaveFactor()) {
+          VecLdCost = TTI->getInterleavedMemoryOpCost(
+              Instruction::Load, VecTy, Factor, std::nullopt, LI0->getAlign(),
+              LI0->getPointerAddressSpace(), CostKind);
+
+        } else {
+          VecLdCost = TTI->getMemoryOpCost(
+              Instruction::Load, VecTy, LI0->getAlign(),
+              LI0->getPointerAddressSpace(), CostKind, TTI::OperandValueInfo());
+        }
+        break;
+      case TreeEntry::StridedVectorize: {
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getStridedMemoryOpCost(
             Instruction::Load, VecTy, LI0->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind);
-      } else {
-        assert(E->State == TreeEntry::ScatterVectorize && "Unknown EntryState");
+        break;
+      }
+      case TreeEntry::ScatterVectorize: {
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getGatherScatterOpCost(
             Instruction::Load, VecTy, LI0->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind);
+        break;
+      }
+      case TreeEntry::CombinedVectorize:
+      case TreeEntry::NeedToGather:
+        llvm_unreachable("Unexpected vectorization state.");
       }
       return VecLdCost + CommonCost;
     };
@@ -11397,6 +11503,11 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       }))
     return false;
 
+  if (VectorizableTree.back()->isGather() &&
+      VectorizableTree.back()->isAltShuffle() &&
+      VectorizableTree.back()->getVectorFactor() > 2)
+    return false;
+
   assert(VectorizableTree.empty()
              ? ExternalUses.empty()
              : true && "We shouldn't have any external users");
@@ -11744,12 +11855,15 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   for (ExternalUser &EU : ExternalUses) {
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
-    // removed as well) as well as uses in unreachable blocks or in landing pads
-    // (rarely executed).
-    if (EphValues.count(EU.User) ||
-        (EU.User &&
-         (!DT->isReachableFromEntry(cast<Instruction>(EU.User)->getParent()) ||
-          cast<Instruction>(EU.User)->getParent()->isLandingPad())))
+    // removed as well).
+    if (EphValues.count(EU.User))
+      continue;
+
+    // Used in unreachable blocks or in landing pads (rarely executed).
+    if (BasicBlock *UserParent =
+            EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
+        UserParent &&
+        (!DT->isReachableFromEntry(UserParent) || UserParent->isLandingPad()))
       continue;
 
     // We only add extract cost once for the same scalar.
@@ -15079,7 +15193,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {
-        CF = Intrinsic::getDeclaration(F->getParent(), ID, TysForDecl);
+        CF = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, TysForDecl);
       }
 
       SmallVector<OperandBundleDef, 1> OpBundles;
@@ -18949,7 +19063,8 @@ public:
 
       unsigned ReduxWidth = NumReducedVals;
       if (!VectorizeNonPowerOf2 || !has_single_bit(ReduxWidth + 1))
-        ReduxWidth = bit_floor(ReduxWidth);
+        ReduxWidth = getFloorFullVectorNumberOfElements(
+            *TTI, Candidates.front()->getType(), ReduxWidth);
       ReduxWidth = std::min(ReduxWidth, MaxElts);
 
       unsigned Start = 0;
@@ -18957,10 +19072,7 @@ public:
       // Restarts vectorization attempt with lower vector factor.
       unsigned PrevReduxWidth = ReduxWidth;
       bool CheckForReusedReductionOpsLocal = false;
-      auto &&AdjustReducedVals = [&Pos, &Start, &ReduxWidth, NumReducedVals,
-                                  &CheckForReusedReductionOpsLocal,
-                                  &PrevReduxWidth, &V,
-                                  &IgnoreList](bool IgnoreVL = false) {
+      auto AdjustReducedVals = [&](bool IgnoreVL = false) {
         bool IsAnyRedOpGathered = !IgnoreVL && V.isAnyGathered(IgnoreList);
         if (!CheckForReusedReductionOpsLocal && PrevReduxWidth == ReduxWidth) {
           // Check if any of the reduction ops are gathered. If so, worth
@@ -18971,7 +19083,10 @@ public:
         if (Pos < NumReducedVals - ReduxWidth + 1)
           return IsAnyRedOpGathered;
         Pos = Start;
-        ReduxWidth = bit_ceil(ReduxWidth) / 2;
+        --ReduxWidth;
+        if (ReduxWidth > 1)
+          ReduxWidth = getFloorFullVectorNumberOfElements(
+              *TTI, Candidates.front()->getType(), ReduxWidth);
         return IsAnyRedOpGathered;
       };
       bool AnyVectorized = false;
@@ -19203,7 +19318,10 @@ public:
         }
         Pos += ReduxWidth;
         Start = Pos;
-        ReduxWidth = llvm::bit_floor(NumReducedVals - Pos);
+        ReduxWidth = NumReducedVals - Pos;
+        if (ReduxWidth > 1)
+          ReduxWidth = getFloorFullVectorNumberOfElements(
+              *TTI, Candidates.front()->getType(), NumReducedVals - Pos);
         AnyVectorized = true;
       }
       if (OptReusedScalars && !AnyVectorized) {

@@ -268,7 +268,7 @@ bool isLifetimeIntrinsic(Value *V) {
 
 Value *readRegister(IRBuilder<> &IRB, StringRef Name) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Function *ReadRegister = Intrinsic::getDeclaration(
+  Function *ReadRegister = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::read_register, IRB.getIntPtrTy(M->getDataLayout()));
   MDNode *MD =
       MDNode::get(M->getContext(), {MDString::get(M->getContext(), Name)});
@@ -287,7 +287,7 @@ Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
 Value *getFP(IRBuilder<> &IRB) {
   Function *F = IRB.GetInsertBlock()->getParent();
   Module *M = F->getParent();
-  auto *GetStackPointerFn = Intrinsic::getDeclaration(
+  auto *GetStackPointerFn = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::frameaddress,
       IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
   return IRB.CreatePtrToInt(
@@ -301,7 +301,7 @@ Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
   // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
   // in Bionic's libc/private/bionic_tls.h.
   Function *ThreadPointerFunc =
-      Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
                                 IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
 }

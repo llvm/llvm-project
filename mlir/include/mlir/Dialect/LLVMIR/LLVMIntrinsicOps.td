@@ -166,6 +166,9 @@ def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
+def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
+def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
+def LLVM_TanhOp : LLVM_UnaryIntrOpF<"tanh">;
 
 class LLVM_MemcpyIntrOpBase<string name> :
     LLVM_ZeroResultIntrOp<name, [0, 1, 2],
@@ -347,7 +350,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
                     [&args](unsigned index) { return args[index]->getType(); });
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *callee =
-      llvm::Intrinsic::getDeclaration(module,
+      llvm::Intrinsic::getOrInsertDeclaration(module,
         llvm::Intrinsic::experimental_constrained_}] #
     mnem # [{, overloadedTypes); }] #
     !cond(!gt(hasRoundingMode, 0) : [{
@@ -541,7 +544,7 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
     llvm::Function *fn =
-      llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::}]
+      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::}]
        # !subst(".", "_", name) # [{);
     builder.CreateCall(fn, {
         llvm::MetadataAsValue::get(ctx,
@@ -594,7 +597,7 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::LLVMContext &ctx = module->getContext();
     llvm::Function *fn =
-      llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::dbg_label);
+      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::dbg_label);
     builder.CreateCall(fn, {
         llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($label))
       });

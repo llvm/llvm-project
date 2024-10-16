@@ -1087,13 +1087,10 @@ define i32 @select_ctpop_zero(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME: This is safe to fold.
 define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @select_ctpop_zero_vec(
-; CHECK-NEXT:    [[T0:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[T1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X]])
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[T0]], <2 x i32> zeroinitializer, <2 x i32> [[T1]]
-; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+; CHECK-NEXT:    [[T1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[T1]]
 ;
   %t0 = icmp eq <2 x i32> %x, zeroinitializer
   %t1 = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x)

@@ -1158,6 +1158,7 @@ cc_library(
     hdrs = glob(["include/llvm/ProfileData/Coverage/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Object",
         ":ProfileData",
         ":Support",

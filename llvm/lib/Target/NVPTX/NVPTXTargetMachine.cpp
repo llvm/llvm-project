@@ -445,7 +445,7 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
 
   // This pass merges large allocas. StackSlotColoring is a different pass
   // which merges spill slots.
-  addPass(&StackColoringID);
+  addPass(&StackColoringLegacyID);
 
   // If the target requests it, assign local variables to stack slots relative
   // to one another and simplify frame index references where possible.

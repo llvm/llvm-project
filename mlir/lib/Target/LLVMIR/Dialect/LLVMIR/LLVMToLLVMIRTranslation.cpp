@@ -99,7 +99,8 @@ getOverloadedDeclaration(CallIntrinsicOp op, llvm::Intrinsic::ID id,
   }
 
   ArrayRef<llvm::Type *> overloadedArgTysRef = overloadedArgTys;
-  return llvm::Intrinsic::getDeclaration(module, id, overloadedArgTysRef);
+  return llvm::Intrinsic::getOrInsertDeclaration(module, id,
+                                                 overloadedArgTysRef);
 }
 
 static llvm::OperandBundleDef
@@ -143,7 +144,7 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
       return failure();
     fn = *fnOrFailure;
   } else {
-    fn = llvm::Intrinsic::getDeclaration(module, id, {});
+    fn = llvm::Intrinsic::getOrInsertDeclaration(module, id, {});
   }
 
   // Check the result type of the call.
