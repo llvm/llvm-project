@@ -2087,6 +2087,8 @@ class ClassTemplatePartialSpecializationDecl
   /// The list of template parameters
   TemplateParameterList *TemplateParams = nullptr;
 
+  /// The set of "injected" template arguments used within this
+  /// partial specialization.
   TemplateArgument *InjectedArgs = nullptr;
 
   /// The class template partial specialization from which this
@@ -2862,6 +2864,8 @@ class VarTemplatePartialSpecializationDecl
   /// The list of template parameters
   TemplateParameterList *TemplateParams = nullptr;
 
+  /// The set of "injected" template arguments used within this
+  /// partial specialization.
   TemplateArgument *InjectedArgs = nullptr;
 
   /// The variable template partial specialization from which this
