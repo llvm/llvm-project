@@ -1645,7 +1645,8 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       UnitOffset = NI.getCUOffset(*CUIndex);
     }
 
-    if (!UnitOffset)
+    // Watch for tombstoned type unit entries.
+    if (!UnitOffset || UnitOffset == UINT32_MAX)
       continue;
     // For split DWARF entries we need to make sure we find the non skeleton
     // DWARF unit that is needed and use that's DWARF unit offset as the
@@ -1657,7 +1658,7 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       ErrorCategory.Report(
           "Name Index entry contains invalid CU or TU offset", [&]() {
             error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
-                               "invalid CU or TU offset {1:x}.\n",
+                               "invalid CU or TU offset {2:x}.\n",
                                NI.getUnitOffset(), EntryID, *UnitOffset);
           });
       ++NumErrors;
