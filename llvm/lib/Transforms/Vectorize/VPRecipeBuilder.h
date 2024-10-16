@@ -54,7 +54,7 @@ class VPRecipeBuilder {
   EdgeMaskCacheTy EdgeMaskCache;
   BlockMaskCacheTy BlockMaskCache;
 
-  using RecipeOrResult = PointerUnion<VPRecipeBase*, VPValue*>;
+  using RecipeOrResult = PointerUnion<VPRecipeBase *, VPValue *>;
 
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
@@ -135,10 +135,11 @@ public:
   }
 
   // Set the recipe value for a given ingredient.
-  void setRecipe(Instruction* I, VPValue* RecipeResult) {
+  void setRecipe(Instruction *I, VPValue *RecipeResult) {
     assert(!Ingredient2Recipe.contains(I) &&
            "Cannot reset recipe for instruction.");
-    assert(RecipeResult->getDefiningRecipe() && "Value must be defined by a recipe.");
+    assert(RecipeResult->getDefiningRecipe() &&
+           "Value must be defined by a recipe.");
     Ingredient2Recipe[I] = RecipeResult;
   }
 
@@ -168,12 +169,11 @@ public:
   VPRecipeBase *getRecipe(Instruction *I) {
     assert(Ingredient2Recipe.count(I) &&
            "Recording this ingredients recipe was not requested");
-    assert(Ingredient2Recipe[I] &&
-           "Ingredient doesn't have a recipe");
+    assert(Ingredient2Recipe[I] && "Ingredient doesn't have a recipe");
     auto RecipeInfo = Ingredient2Recipe[I];
-    if (auto* R = RecipeInfo.dyn_cast<VPRecipeBase*>())
+    if (auto *R = RecipeInfo.dyn_cast<VPRecipeBase *>())
       return R;
-    return RecipeInfo.get<VPValue*>()->getDefiningRecipe();
+    return RecipeInfo.get<VPValue *>()->getDefiningRecipe();
   }
 
   /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
@@ -193,9 +193,9 @@ public:
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       if (auto RecipeInfo = Ingredient2Recipe.lookup(I)) {
-        if (auto* R = RecipeInfo.dyn_cast<VPRecipeBase*>())
+        if (auto *R = RecipeInfo.dyn_cast<VPRecipeBase *>())
           return R->getVPSingleValue();
-        return RecipeInfo.get<VPValue*>();
+        return RecipeInfo.get<VPValue *>();
       }
     }
     return Plan.getOrAddLiveIn(V);

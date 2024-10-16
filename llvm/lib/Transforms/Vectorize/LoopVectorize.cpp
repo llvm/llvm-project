@@ -9054,10 +9054,11 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
       // Special case: Handle extractvalues from struct ret calls.
       if (auto *ExtractValue = dyn_cast<ExtractValueInst>(Instr)) {
-        if (auto *CI = dyn_cast<CallInst>(ExtractValue->getAggregateOperand())) {
+        if (auto *CI =
+                dyn_cast<CallInst>(ExtractValue->getAggregateOperand())) {
           auto *R = RecipeBuilder.getRecipe(cast<Instruction>(CI));
           assert(R->getNumDefinedValues() ==
-               cast<StructType>(CI->getType())->getNumElements());
+                 cast<StructType>(CI->getType())->getNumElements());
           unsigned Idx = ExtractValue->getIndices()[0];
           RecipeBuilder.setRecipe(Instr, R->getVPValue(Idx));
           continue;
