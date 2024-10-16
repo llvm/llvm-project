@@ -1261,7 +1261,8 @@ Value *InstCombinerImpl::foldEqOfParts(ICmpInst *Cmp0, ICmpInst *Cmp1,
 static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
                                           bool IsAnd, bool IsLogical,
                                           InstCombiner::BuilderTy &Builder,
-                                          const SimplifyQuery &Q) {
+                                          const SimplifyQuery &Q,
+                                          bool SwapOpOrder) {
   // Match an equality compare with a non-poison constant as Cmp0.
   // Also, give up if the compare can be constant-folded to avoid looping.
   ICmpInst::Predicate Pred0;
@@ -1295,9 +1296,14 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
       return nullptr;
     SubstituteCmp = Builder.CreateICmp(Pred1, Y, C);
   }
-  if (IsLogical)
-    return IsAnd ? Builder.CreateLogicalAnd(Cmp0, SubstituteCmp)
-                 : Builder.CreateLogicalOr(Cmp0, SubstituteCmp);
+  if (IsLogical) {
+    Value *LHS = Cmp0;
+    Value *RHS = SubstituteCmp;
+    if (SwapOpOrder)
+      std::swap(LHS, RHS);
+    return IsAnd ? Builder.CreateLogicalAnd(LHS, RHS)
+                 : Builder.CreateLogicalOr(LHS, RHS);
+  }
   return Builder.CreateBinOp(IsAnd ? Instruction::And : Instruction::Or, Cmp0,
                              SubstituteCmp);
 }
@@ -3363,13 +3369,16 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                                   /*IsLogical*/ false, Builder))
     return V;
 
-  if (Value *V =
-          foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, IsLogical, Builder, Q))
+  if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, IsAnd, IsLogical,
+                                             Builder, Q, /*SwapOpOrder=*/false))
     return V;
   // We can convert this case to bitwise and, because both operands are used
-  // on the LHS, and as such poison from both will propagate.
+  // on the LHS, and as such poison from both will propagate (unless RHS has
+  // samesign flag).
   if (Value *V = foldAndOrOfICmpsWithConstEq(RHS, LHS, IsAnd,
-                                             /*IsLogical*/ false, Builder, Q))
+                                             /*IsLogical=*/IsLogical &&
+                                                 RHS->hasSameSign(),
+                                             Builder, Q, /*SwapOpOrder=*/true))
     return V;
 
   if (Value *V = foldIsPowerOf2OrZero(LHS, RHS, IsAnd, Builder, *this))

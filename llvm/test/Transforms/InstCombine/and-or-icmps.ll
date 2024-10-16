@@ -3421,7 +3421,7 @@ define i1 @logical_or_icmp_eq_const_samesign(i8 %x, i8 %y) {
 ; CHECK-LABEL: @logical_or_icmp_eq_const_samesign(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp samesign ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[Y:%.*]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 true, i1 [[CMPEQ]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sgt i8 %x, %y
