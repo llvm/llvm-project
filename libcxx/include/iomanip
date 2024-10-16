@@ -237,9 +237,7 @@ public:
 template <class _CharT, class _Traits, class _MoneyT>
 _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x) {
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     typename basic_istream<_CharT, _Traits>::sentry __s(__is);
     if (__s) {
       typedef istreambuf_iterator<_CharT, _Traits> _Ip;
@@ -249,11 +247,9 @@ operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x) {
       __mf.get(_Ip(__is), _Ip(), __x.__intl_, __is, __err, __x.__mon_);
       __is.setstate(__err);
     }
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     __is.__set_badbit_and_consider_rethrow();
   }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   return __is;
 }
 
@@ -286,9 +282,7 @@ public:
 template <class _CharT, class _Traits, class _MoneyT>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_MoneyT>& __x) {
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
     if (__s) {
       typedef ostreambuf_iterator<_CharT, _Traits> _Op;
@@ -297,11 +291,9 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_MoneyT>& __x) {
       if (__mf.put(_Op(__os), __x.__intl_, __os, __os.fill(), __x.__mon_).failed())
         __os.setstate(ios_base::badbit);
     }
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     __os.__set_badbit_and_consider_rethrow();
   }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   return __os;
 }
 
@@ -334,9 +326,7 @@ public:
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x) {
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     typename basic_istream<_CharT, _Traits>::sentry __s(__is);
     if (__s) {
       typedef istreambuf_iterator<_CharT, _Traits> _Ip;
@@ -346,11 +336,9 @@ operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x) {
       __tf.get(_Ip(__is), _Ip(), __is, __err, __x.__tm_, __x.__fmt_, __x.__fmt_ + _Traits::length(__x.__fmt_));
       __is.setstate(__err);
     }
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     __is.__set_badbit_and_consider_rethrow();
   }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   return __is;
 }
 
@@ -383,9 +371,7 @@ public:
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t10<_CharT>& __x) {
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
     if (__s) {
       typedef ostreambuf_iterator<_CharT, _Traits> _Op;
@@ -395,11 +381,9 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t10<_CharT>& __x) {
               .failed())
         __os.setstate(ios_base::badbit);
     }
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     __os.__set_badbit_and_consider_rethrow();
   }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   return __os;
 }
 

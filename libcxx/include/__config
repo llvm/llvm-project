@@ -1231,6 +1231,16 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 0
 #  endif
 
+#  if _LIBCPP_HAS_EXCEPTIONS
+#    define _LIBCPP_TRY try
+#    define _LIBCPP_CATCH(...) catch(__VA_ARGS__)
+#    define _LIBCPP_RETHROW throw
+#  else
+#    define _LIBCPP_TRY if (true)
+#    define _LIBCPP_CATCH(...) if (false)
+#    define _LIBCPP_RETHROW ((void)0)
+#  endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG

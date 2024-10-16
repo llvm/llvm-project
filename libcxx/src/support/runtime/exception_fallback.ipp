@@ -34,18 +34,14 @@ terminate_handler set_terminate(terminate_handler func) noexcept {
 terminate_handler get_terminate() noexcept { return __libcpp_atomic_load(&__terminate_handler); }
 
 [[noreturn]] void terminate() noexcept {
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     (*get_terminate())();
     // handler should not return
     __libcpp_verbose_abort("terminate_handler unexpectedly returned\n");
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     // handler should not throw exception
     __libcpp_verbose_abort("terminate_handler unexpectedly threw an exception\n");
   }
-#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 bool uncaught_exception() noexcept { return uncaught_exceptions() > 0; }

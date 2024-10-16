@@ -219,9 +219,7 @@ locale::__imp::__imp(size_t refs) : facet(refs), facets_(N), name_("C") {
 }
 
 locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N), name_(name) {
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     facets_ = locale::classic().__locale_->facets_;
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
@@ -268,14 +266,12 @@ locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N),
 #if _LIBCPP_HAS_WIDE_CHARACTERS
     install(new messages_byname<wchar_t>(name_));
 #endif
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__release_shared();
-    throw;
+    _LIBCPP_RETHROW;
   }
-#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 locale::__imp::__imp(const __imp& other) : facets_(max<size_t>(N, other.facets_.size())), name_(other.name_) {
@@ -291,9 +287,7 @@ locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
   for (unsigned i = 0; i < facets_.size(); ++i)
     if (facets_[i])
       facets_[i]->__add_shared();
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     if (c & locale::collate) {
       install(new collate_byname<char>(name));
 #if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -348,14 +342,12 @@ locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
       install(new messages_byname<wchar_t>(name));
 #endif
     }
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__release_shared();
-    throw;
+    _LIBCPP_RETHROW;
   }
-#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 template <class F>
@@ -370,9 +362,7 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
   for (unsigned i = 0; i < facets_.size(); ++i)
     if (facets_[i])
       facets_[i]->__add_shared();
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     if (c & locale::collate) {
       install_from<std::collate<char> >(one);
 #if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -443,14 +433,12 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
       install_from<std::messages<wchar_t> >(one);
 #endif
     }
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__release_shared();
-    throw;
+    _LIBCPP_RETHROW;
   }
-#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 locale::__imp::__imp(const __imp& other, facet* f, long id)

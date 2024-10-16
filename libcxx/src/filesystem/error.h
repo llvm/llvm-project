@@ -186,16 +186,12 @@ struct ErrorHandler {
   T report(const error_code& ec, const char* msg, ...) const {
     va_list ap;
     va_start(ap, msg);
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       report_impl(ec, msg, ap);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH(...) {
       va_end(ap);
-      throw;
+      _LIBCPP_RETHROW;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
     va_end(ap);
     return error_value<T>();
   }
@@ -206,16 +202,12 @@ struct ErrorHandler {
   T report(errc const& err, const char* msg, ...) const {
     va_list ap;
     va_start(ap, msg);
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       report_impl(make_error_code(err), msg, ap);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH(...) {
       va_end(ap);
-      throw;
+      _LIBCPP_RETHROW;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
     va_end(ap);
     return error_value<T>();
   }

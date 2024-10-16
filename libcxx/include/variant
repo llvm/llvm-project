@@ -1061,27 +1061,21 @@ public:
         std::swap(__lhs, __rhs);
       }
       __impl __tmp(std::move(*__rhs));
-#  if _LIBCPP_HAS_EXCEPTIONS
       if constexpr (__all<is_nothrow_move_constructible_v<_Types>...>::value) {
         this->__generic_construct(*__rhs, std::move(*__lhs));
       } else {
         // EXTENSION: When the move construction of `__lhs` into `__rhs` throws
         // and `__tmp` is nothrow move constructible then we move `__tmp` back
         // into `__rhs` and provide the strong exception safety guarantee.
-        try {
+        _LIBCPP_TRY {
           this->__generic_construct(*__rhs, std::move(*__lhs));
-        } catch (...) {
+        } _LIBCPP_CATCH(...) {
           if (__tmp.__move_nothrow()) {
             this->__generic_construct(*__rhs, std::move(__tmp));
           }
-          throw;
+          _LIBCPP_RETHROW;
         }
       }
-#  else
-      // this isn't consolidated with the `if constexpr` branch above due to
-      // `throw` being ill-formed with exceptions disabled even when discarded.
-      this->__generic_construct(*__rhs, std::move(*__lhs));
-#  endif
       this->__generic_construct(*__lhs, std::move(__tmp));
     }
   }

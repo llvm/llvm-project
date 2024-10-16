@@ -1144,12 +1144,9 @@ private:
       } else {
         // In this case, we know the values are just like before we attempted emplacement,
         // and we also know that the keys have been emplaced successfully. Just roll back the keys.
-#  if _LIBCPP_HAS_EXCEPTIONS
-        try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+        _LIBCPP_TRY {
           __containers_.keys.erase(__key_it);
-#  if _LIBCPP_HAS_EXCEPTIONS
-        } catch (...) {
+        } _LIBCPP_CATCH(...) {
           // Now things are funky for real. We're failing to rollback the keys.
           // Just give up and clear the whole thing.
           //
@@ -1157,7 +1154,6 @@ private:
           // original value-emplacement exception propagate normally.
           clear() /* noexcept */;
         }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
       }
     });
     auto __mapped_it = __containers_.values.emplace(__it_mapped, std::forward<_MArgs>(__mapped_args)...);

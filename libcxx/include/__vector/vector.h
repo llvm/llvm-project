@@ -1073,9 +1073,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::reserve(size_type __
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT {
   if (capacity() > size()) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       allocator_type& __a = this->__alloc();
       __split_buffer<value_type, allocator_type&> __v(size(), size(), __a);
       // The Standard mandates shrink_to_fit() does not increase the capacity.
@@ -1083,10 +1081,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
       // due to swapping the elements.
       if (__v.capacity() < capacity())
         __swap_out_circular_buffer(__v);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH(...) {
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 }
 
@@ -1271,21 +1267,17 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
   }
   __split_buffer<value_type, allocator_type&> __v(__a);
   if (__first != __last) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
       difference_type __old_size = __old_last - this->__begin_;
       difference_type __old_p    = __p - this->__begin_;
       reserve(__recommend(size() + __v.size()));
       __p        = this->__begin_ + __old_p;
       __old_last = this->__begin_ + __old_size;
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH (...) {
       erase(__make_iter(__old_last), end());
-      throw;
+      _LIBCPP_RETHROW;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
   }
   __p = std::rotate(__p, __old_last, this->__end_);
   insert(__make_iter(__p), std::make_move_iterator(__v.begin()), std::make_move_iterator(__v.end()));

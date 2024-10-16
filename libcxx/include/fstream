@@ -487,14 +487,10 @@ inline basic_filebuf<_CharT, _Traits>& basic_filebuf<_CharT, _Traits>::operator=
 
 template <class _CharT, class _Traits>
 basic_filebuf<_CharT, _Traits>::~basic_filebuf() {
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     close();
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
   }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   if (__owns_eb_)
     delete[] __extbuf_;
   if (__owns_ib_)

@@ -398,18 +398,14 @@ private:
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __init_with_sentinel(_InputIterator __first, _Sentinel __last) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       for (; __first != __last; ++__first)
         push_back(*__first);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH(...) {
       if (__begin_ != nullptr)
         __storage_traits::deallocate(__alloc(), __begin_, __cap());
-      throw;
+      _LIBCPP_RETHROW;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
   template <class _Iterator, class _Sentinel>
@@ -856,14 +852,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::reserve(size_type _
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::shrink_to_fit() _NOEXCEPT {
   if (__external_cap_to_internal(size()) > __cap()) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       vector(*this, allocator_type(__alloc())).swap(*this);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH(...) {
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 }
 
@@ -952,21 +944,17 @@ vector<bool, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inp
   }
   vector __v(get_allocator());
   if (__first != __last) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       __v.__assign_with_sentinel(std::move(__first), std::move(__last));
       difference_type __old_size = static_cast<difference_type>(__old_end - begin());
       difference_type __old_p    = __p - begin();
       reserve(__recommend(size() + __v.size()));
       __p       = begin() + __old_p;
       __old_end = begin() + __old_size;
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH(...) {
       erase(__old_end, end());
-      throw;
+      _LIBCPP_RETHROW;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
   }
   __p = std::rotate(__p, __old_end, end());
   insert(__p, __v.begin(), __v.end());

@@ -52,9 +52,7 @@ __vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args, bool _
     const char* __str = __o.data();
     size_t __len      = __o.size();
 
-#    if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#    endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       typedef ostreambuf_iterator<char> _Ip;
       if (std::__pad_and_output(
               _Ip(__os),
@@ -66,11 +64,9 @@ __vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args, bool _
               .failed())
         __os.setstate(ios_base::badbit | ios_base::failbit);
 
-#    if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH(...) {
       __os.__set_badbit_and_consider_rethrow();
     }
-#    endif // _LIBCPP_HAS_EXCEPTIONS
   }
 }
 
@@ -115,9 +111,7 @@ _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, fo
   // This is the path for the native API, start with flushing.
   __os.flush();
 
-#        if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#        endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     ostream::sentry __s(__os);
     if (__s) {
 #        ifndef _LIBCPP_WIN32API
@@ -129,11 +123,9 @@ _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, fo
 #        endif
     }
 
-#        if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     __os.__set_badbit_and_consider_rethrow();
   }
-#        endif // _LIBCPP_HAS_EXCEPTIONS
 #      endif   // _LIBCPP_AVAILABILITY_HAS_PRINT
 }
 

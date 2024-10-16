@@ -273,14 +273,10 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI ~basic_syncbuf() {
-#    if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#    endif // _LIBCPP_HAS_EXCEPTIONS
+    _LIBCPP_TRY {
       emit();
-#    if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    } _LIBCPP_CATCH(...) {
     }
-#    endif // _LIBCPP_HAS_EXCEPTIONS
     __dec_reference();
   }
 
@@ -337,9 +333,7 @@ protected:
       return traits_type::not_eof(__c);
 
     if (this->pptr() == this->epptr()) {
-#    if _LIBCPP_HAS_EXCEPTIONS
-      try {
-#    endif
+      _LIBCPP_TRY {
         size_t __size = __str_.size();
         __str_.resize(__str_.capacity() + 1);
         _LIBCPP_ASSERT_INTERNAL(__str_.size() > __size, "the buffer hasn't grown");
@@ -348,11 +342,9 @@ protected:
         this->setp(__p, __p + __str_.size());
         this->pbump(__size);
 
-#    if _LIBCPP_HAS_EXCEPTIONS
-      } catch (...) {
+      } _LIBCPP_CATCH(...) {
         return traits_type::eof();
       }
-#    endif
     }
 
     return this->sputc(traits_type::to_char_type(__c));
@@ -480,17 +472,12 @@ public:
     // TODO validate other unformatted output functions.
     typename basic_ostream<char_type, traits_type>::sentry __s(*this);
     if (__s) {
-#    if _LIBCPP_HAS_EXCEPTIONS
-      try {
-#    endif
-
+      _LIBCPP_TRY {
         if (__sb_.emit() == false)
           this->setstate(ios::badbit);
-#    if _LIBCPP_HAS_EXCEPTIONS
-      } catch (...) {
+      } _LIBCPP_CATCH(...) {
         this->__set_badbit_and_consider_rethrow();
       }
-#    endif
     }
   }
 

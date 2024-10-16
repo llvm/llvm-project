@@ -60,6 +60,10 @@ IndentWrappedFunctionNames: false
 IndentRequires: true
 InsertTrailingCommas: Wrapped
 KeepEmptyLinesAtTheStartOfBlocks: false
+Macros:
+- _LIBCPP_TRY=if (true)
+- _LIBCPP_CATCH(a)=else if (false)
+
 MaxEmptyLinesToKeep: 1
 PackConstructorInitializers: NextLine
 

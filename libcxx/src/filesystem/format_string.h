@@ -56,16 +56,12 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2) string format_string(const cha
   string ret;
   va_list ap;
   va_start(ap, msg);
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  _LIBCPP_TRY {
     ret = detail::vformat_string(msg, ap);
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  } _LIBCPP_CATCH(...) {
     va_end(ap);
-    throw;
+    _LIBCPP_RETHROW;
   }
-#endif // _LIBCPP_HAS_EXCEPTIONS
   va_end(ap);
   return ret;
 }
