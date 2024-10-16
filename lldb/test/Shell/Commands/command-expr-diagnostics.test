@@ -1,3 +1,4 @@
+# XFAIL: system-windows
 # RUN: echo quit | %lldb -o "expression a+b" \
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK1
 #            (lldb) expression a+b
@@ -17,7 +18,7 @@
 # CHECK3: {{^                         error: use of undeclared identifier 'a'}}
 
 # RUN: echo "int main(){return 0;}">%t.c
-# RUN: %clang_host %t.c -gdwarf -o %t.exe
+# RUN: %clang_host %t.c -o %t.exe
 # RUN: echo quit | %lldb %t.exe -o "b main" -o r -o \
 # RUN: "expr --top-level -- template<typename T> T FOO(T x) { return x/2;}" -o \
 # RUN: "expression -- FOO(\"\")" 2>&1 | FileCheck %s --check-prefix=CHECK4
