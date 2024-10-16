@@ -776,7 +776,7 @@ def canRunLibcxxTests():
 
     if platform == "linux":
         with tempfile.NamedTemporaryFile() as f:
-            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
+            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-l:libc++.so", "-o", f.name, "-"]
             p = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
