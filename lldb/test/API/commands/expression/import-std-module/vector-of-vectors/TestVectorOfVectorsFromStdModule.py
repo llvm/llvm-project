@@ -60,4 +60,5 @@ class TestVectorOfVectors(TestBase):
             "a.front().front()", result_type=value_type, result_value="1"
         )
         self.expect_expr("a[1][1]", result_type=value_type, result_value="2")
-        self.expect_expr("a.back().at(0)", result_type=value_type, result_value="3")
+        # Note calling at(0) may fail because of compiler optimizations.
+        self.expect_expr("a.back()[0]", result_type=value_type, result_value="3")
