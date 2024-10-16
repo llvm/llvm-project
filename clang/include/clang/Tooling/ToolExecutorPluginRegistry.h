@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_TOOLING_TOOLEXECUTORPLUGINREGISTRY_H
 #define LLVM_CLANG_TOOLING_TOOLEXECUTORPLUGINREGISTRY_H
 
-#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Execution.h"
 #include "llvm/Support/Registry.h"
 
@@ -20,10 +19,5 @@ using ToolExecutorPluginRegistry = llvm::Registry<ToolExecutorPlugin>;
 
 } // namespace tooling
 } // namespace clang
-
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::tooling::ToolExecutorPlugin>;
-} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLING_TOOLEXECUTORPLUGINREGISTRY_H
