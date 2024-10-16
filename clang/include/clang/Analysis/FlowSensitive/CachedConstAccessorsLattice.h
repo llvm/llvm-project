@@ -50,7 +50,7 @@ public:
   using Base::Base; // inherit all constructors
 
   /// Creates or returns a previously created `Value` associated with a const
-  ///  method call `obj.getFoo()` where `RecordLoc` is the
+  /// method call `obj.getFoo()` where `RecordLoc` is the
   /// `RecordStorageLocation` of `obj`.
   /// Returns nullptr if unable to find or create a value.
   ///
@@ -61,8 +61,8 @@ public:
   getOrCreateConstMethodReturnValue(const RecordStorageLocation &RecordLoc,
                                     const CallExpr *CE, Environment &Env);
 
-  /// Creates or returns a previously created `StorageLocation` associated a
-  /// const method call `obj.getFoo()` where `RecordLoc` is the
+  /// Creates or returns a previously created `StorageLocation` associated with
+  /// a const method call `obj.getFoo()` where `RecordLoc` is the
   /// `RecordStorageLocation` of `obj`.
   ///
   /// The callback `Initialize` runs on the storage location if newly created.

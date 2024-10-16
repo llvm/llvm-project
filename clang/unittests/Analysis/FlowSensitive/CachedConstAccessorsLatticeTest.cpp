@@ -32,6 +32,7 @@
 namespace clang::dataflow {
 namespace {
 
+using ast_matchers::BoundNodes;
 using ast_matchers::callee;
 using ast_matchers::cxxMemberCallExpr;
 using ast_matchers::functionDecl;
@@ -45,6 +46,8 @@ using dataflow::LatticeJoinEffect;
 using dataflow::RecordStorageLocation;
 using dataflow::Value;
 using dataflow::WatchedLiteralsSolver;
+
+using testing::SizeIs;
 
 NamedDecl *lookup(StringRef Name, const DeclContext &DC) {
   auto Result = DC.lookup(&DC.getParentASTContext().Idents.get(Name));
@@ -99,7 +102,8 @@ struct CommonTestInputs {
   const CallExpr *CallRef;
 };
 
-TEST_F(CachedConstAccessorsLatticeTest, SameValBeforeClearOrDiffAfterClear) {
+TEST_F(CachedConstAccessorsLatticeTest,
+       SamePrimitiveValBeforeClearOrDiffAfterClear) {
   CommonTestInputs Inputs;
   auto *CE = Inputs.CallVal;
   RecordStorageLocation Loc(Inputs.SType, RecordStorageLocation::FieldToLoc(),
@@ -144,6 +148,51 @@ TEST_F(CachedConstAccessorsLatticeTest, SameLocBeforeClearOrDiffAfterClear) {
   EXPECT_NE(Loc3, Loc2);
 }
 
+TEST_F(CachedConstAccessorsLatticeTest,
+       SameStructValBeforeClearOrDiffAfterClear) {
+  TestAST AST(R"cpp(
+    struct S {
+      S structValProperty() const;
+    };
+    void target() {
+      S s;
+      s.structValProperty();
+    }
+  )cpp");
+  auto *SDecl =
+      cast<CXXRecordDecl>(lookup("S", *AST.context().getTranslationUnitDecl()));
+  QualType SType = AST.context().getRecordType(SDecl);
+  const CallExpr *CE = selectFirst<CallExpr>(
+      "call", match(cxxMemberCallExpr(
+                        callee(functionDecl(hasName("structValProperty"))))
+                        .bind("call"),
+                    AST.context()));
+  ASSERT_NE(CE, nullptr);
+
+  RecordStorageLocation Loc(SType, RecordStorageLocation::FieldToLoc(), {});
+
+  LatticeT Lattice;
+  // Accessors that return a record by value are modeled by a record storage
+  // location (instead of a Value).
+  auto NopInit = [](StorageLocation &) {};
+  StorageLocation *Loc1 = Lattice.getOrCreateConstMethodReturnStorageLocation(
+      Loc, CE, Env, NopInit);
+  auto NotCalled = [](StorageLocation &) {
+    ASSERT_TRUE(false) << "Not reached";
+  };
+  StorageLocation *Loc2 = Lattice.getOrCreateConstMethodReturnStorageLocation(
+      Loc, CE, Env, NotCalled);
+
+  EXPECT_EQ(Loc1, Loc2);
+
+  Lattice.clearConstMethodReturnStorageLocations(Loc);
+  StorageLocation *Loc3 = Lattice.getOrCreateConstMethodReturnStorageLocation(
+      Loc, CE, Env, NopInit);
+
+  EXPECT_NE(Loc3, Loc1);
+  EXPECT_NE(Loc3, Loc1);
+}
+
 TEST_F(CachedConstAccessorsLatticeTest, ClearDifferentLocs) {
   CommonTestInputs Inputs;
   auto *CE = Inputs.CallRef;
@@ -166,6 +215,49 @@ TEST_F(CachedConstAccessorsLatticeTest, ClearDifferentLocs) {
                                                           NotCalled);
 
   EXPECT_EQ(RetLoc1, RetLoc2);
+}
+
+TEST_F(CachedConstAccessorsLatticeTest, DifferentValsFromDifferentLocs) {
+  TestAST AST(R"cpp(
+    struct S {
+      int *valProperty() const;
+    };
+    void target() {
+      S s1;
+      s1.valProperty();
+      S s2;
+      s2.valProperty();
+    }
+  )cpp");
+  auto *SDecl =
+      cast<CXXRecordDecl>(lookup("S", *AST.context().getTranslationUnitDecl()));
+  QualType SType = AST.context().getRecordType(SDecl);
+  SmallVector<BoundNodes, 1> valPropertyCalls =
+      match(cxxMemberCallExpr(callee(functionDecl(hasName("valProperty"))))
+                .bind("call"),
+            AST.context());
+  ASSERT_THAT(valPropertyCalls, SizeIs(2));
+
+  const CallExpr *CE1 = selectFirst<CallExpr>(
+      "call", valPropertyCalls);
+  ASSERT_NE(CE1, nullptr);
+
+  valPropertyCalls.erase(valPropertyCalls.begin());
+  const CallExpr *CE2 = selectFirst<CallExpr>(
+      "call", valPropertyCalls);
+  ASSERT_NE(CE2, nullptr);
+  ASSERT_NE(CE1, CE2);
+
+  RecordStorageLocation LocS1(SType, RecordStorageLocation::FieldToLoc(), {});
+  RecordStorageLocation LocS2(SType, RecordStorageLocation::FieldToLoc(), {});
+
+  LatticeT Lattice;
+  Value *Val1 =
+      Lattice.getOrCreateConstMethodReturnValue(LocS1, CE1, Env);
+  Value *Val2 =
+      Lattice.getOrCreateConstMethodReturnValue(LocS2, CE2, Env);
+
+  EXPECT_NE(Val1, Val2);
 }
 
 TEST_F(CachedConstAccessorsLatticeTest, JoinSameNoop) {
