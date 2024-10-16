@@ -12006,6 +12006,41 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
                      MachinePointerInfo::getUnknownStack(MF));
 }
 
+SDValue TargetLowering::expandVectorSpliceVA(SDNode *Node,
+                                             SelectionDAG &DAG) const {
+  if (Node->getOpcode() != ISD::VECTOR_SPLICE_VA)
+    report_fatal_error("Unexpected opcode!");
+  if (Node->getValueType(0).isScalableVector())
+    report_fatal_error("Fixed length vector types expected!");
+
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue V1 = Node->getOperand(0);
+  SDValue V2 = Node->getOperand(1);
+  unsigned SplicePoint =
+      cast<ConstantSDNode>(Node->getOperand(2))->getZExtValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (SplicePoint >= NumElts)
+    return V1;
+
+  EVT EltVT = VT.getVectorElementType();
+  SmallVector<SDValue, 16> Ops;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Elt;
+    if (i < SplicePoint) {
+      Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, V1,
+                        DAG.getConstant(i, dl, MVT::i32));
+    } else {
+      Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, V2,
+                        DAG.getConstant(i - SplicePoint, dl, MVT::i32));
+    }
+    Ops.push_back(Elt);
+  }
+
+  return DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
+}
+
 SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Node);

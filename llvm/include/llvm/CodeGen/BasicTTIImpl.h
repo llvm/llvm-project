@@ -2005,6 +2005,12 @@ public:
                                      cast<VectorType>(Args[0]->getType()), {},
                                      CostKind, Index, cast<VectorType>(RetTy));
     }
+    case Intrinsic::vector_splice_va: {
+      // Conservative estimate: variable splice requires at least one
+      // shift/rotate
+      // TODO: Refine this cost model based on target-specific implementation
+      return 1;
+    }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:

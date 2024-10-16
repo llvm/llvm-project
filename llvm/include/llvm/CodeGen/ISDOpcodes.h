@@ -655,6 +655,10 @@ enum NodeType {
   /// is a constant integer.
   VECTOR_SPLICE,
 
+  /// Same as VECTOR_SPLICE but takes variable argument.
+  /// VECTOR_SPLICE(VEC1, VEC2, VAL)
+  VECTOR_SPLICE_VA,
+
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top
   /// elements 1 to N-1 of the N-element vector are poison. The type of

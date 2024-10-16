@@ -1274,6 +1274,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SPLICE:
     SplitVecRes_VECTOR_SPLICE(N, Lo, Hi);
     break;
+  case ISD::VECTOR_SPLICE_VA:
+    SplitVecRes_VECTOR_SPLICE_VA(N, Lo, Hi);
+    break;
   case ISD::VECTOR_DEINTERLEAVE:
     SplitVecRes_VECTOR_DEINTERLEAVE(N);
     return;
@@ -3315,6 +3318,22 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SPLICE(SDNode *N, SDValue &Lo,
 
   SDValue Expanded = TLI.expandVectorSplice(N, DAG);
   std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
+}
+
+void DAGTypeLegalizer::SplitVecRes_VECTOR_SPLICE_VA(SDNode *N, SDValue &Lo,
+                                                    SDValue &Hi) {
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+
+  SDValue Expanded = TLI.expandVectorSpliceVA(N, DAG);
+  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, Expanded,
+                   DAG.getVectorIdxConstant(0, DL));
+  Hi =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, Expanded,
+                  DAG.getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
 }
 
 void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
