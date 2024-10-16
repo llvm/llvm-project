@@ -8,12 +8,47 @@ define float @atomic_vector() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic volatile float, ptr [[TMP1]] acquire, align 4
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
-  %1 = alloca <1 x float>
-  %2 = alloca <1 x float>
-  %3 = alloca ptr
-  call void @llvm.memcpy.p0.p0.i64(ptr %2, ptr %1, i64 4, i1 false)
-  store ptr %2, ptr %3
-  %4 = load ptr, ptr %3
-  %5 = load atomic volatile float, ptr %4 acquire, align 4
-  ret float %5
+  %src = alloca <1 x float>
+  %val = alloca <1 x float>
+  %direct = alloca ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr %val, ptr %src, i64 4, i1 false)
+  store ptr %val, ptr %direct
+  %indirect = load ptr, ptr %direct
+  %ret = load atomic volatile float, ptr %indirect acquire, align 4
+  ret float %ret
+}
+
+define i32 @atomic_vector_int() {
+; CHECK-LABEL: define i32 @atomic_vector_int() {
+; CHECK-NEXT:    [[VAL:%.*]] = alloca <1 x i32>, align 4
+; CHECK-NEXT:    store <1 x i32> undef, ptr [[VAL]], align 4
+; CHECK-NEXT:    [[RET:%.*]] = load atomic volatile i32, ptr [[VAL]] acquire, align 4
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %src = alloca <1 x i32>
+  %val = alloca <1 x i32>
+  %direct = alloca ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr %val, ptr %src, i64 4, i1 false)
+  store ptr %val, ptr %direct
+  %indirect = load ptr, ptr %direct
+  %ret = load atomic volatile i32, ptr %indirect acquire, align 4
+  ret i32 %ret
+}
+
+define ptr @atomic_vector_ptr() {
+; CHECK-LABEL: define ptr @atomic_vector_ptr() {
+; CHECK-NEXT:    [[SRC_SROA_0:%.*]] = alloca [4 x i8], align 8
+; CHECK-NEXT:    [[VAL_SROA_0:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[VAL_SROA_0]], ptr align 8 [[SRC_SROA_0]], i64 4, i1 false)
+; CHECK-NEXT:    [[VAL_SROA_0_0_VAL_SROA_0_0_RET:%.*]] = load atomic volatile ptr, ptr [[VAL_SROA_0]] acquire, align 4
+; CHECK-NEXT:    ret ptr [[VAL_SROA_0_0_VAL_SROA_0_0_RET]]
+;
+  %src = alloca <1 x ptr>
+  %val = alloca <1 x ptr>
+  %direct = alloca ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr %val, ptr %src, i64 4, i1 false)
+  store ptr %val, ptr %direct
+  %indirect = load ptr, ptr %direct
+  %ret = load atomic volatile ptr, ptr %indirect acquire, align 4
+  ret ptr %ret
 }
