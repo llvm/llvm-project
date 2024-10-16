@@ -823,6 +823,11 @@ inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
 }
 
 template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_BSwap(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BSWAP, Op);
+}
+
+template <typename Opnd>
 inline UnaryOpc_match<Opnd> m_BitReverse(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::BITREVERSE, Op);
 }
@@ -892,8 +897,16 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToSI(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::FP_TO_SINT, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctpop(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTPOP, Op);
+}
+
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_Ctlz(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::CTLZ, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::CTTZ, Op);
 }
 
 // === Constants ===
