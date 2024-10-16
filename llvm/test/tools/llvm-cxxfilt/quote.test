@@ -1,6 +1,4 @@
-// Show that llvm-cxxfilt --quote can emit quoted demangled symbols (even at the
-// end of a line) but not without double-quoting in the case they are already
-// quoted.
+// Show that llvm-cxxfilt --quote adds quotes around demangled symbols, unless the symbol is already quoted.
 RUN: echo _Z3barv '"_Z3barv"' > %t
 RUN: echo '"_Z3barv"' _Z3barv >> %t
 // This is not mangled, thus it should not be quoted
