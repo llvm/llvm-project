@@ -149,7 +149,7 @@ exit:
 ; This test has two FORs (for.x and for.y) where incoming value from the previous
 ; iteration (for.x.prev) of one FOR (for.y) depends on another FOR (for.x).
 ; Sinking would require moving a recipe with side effects (store). Instead,
-; for.x.prev can be hoisted.
+; for.x.next can be hoisted.
 define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-LABEL: 'test_chained_first_order_recurrences_4'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
@@ -167,10 +167,10 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, ir<%for.x.next>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%base>, vp<[[SCALAR_STEPS]]>
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_X:%.]]> = first-order splice ir<%for.x>, ir<%for.x.next>
 ; CHECK-NEXT:     WIDEN-CAST ir<%for.x.prev> = trunc  vp<[[SPLICE_X]]> to i32
 ; CHECK-NEXT:     EMIT vp<[[SPLICE_Y:%.+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
-; CHECK-NEXT:     CLONE ir<%gep> = getelementptr ir<%base>, vp<[[SCALAR_STEPS]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%for.y.i64> = sext  vp<[[SPLICE_Y]]> to i64
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%for.y.i64>

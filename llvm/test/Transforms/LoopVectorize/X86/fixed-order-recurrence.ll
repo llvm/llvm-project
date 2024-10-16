@@ -280,6 +280,18 @@ exit:
 }
 
 ; Test for https://github.com/llvm/llvm-project/issues/106523.
+; %for.2 requires no code motion, as its previous (%or) precedes its (first)
+; user (store). Furthermore, its user cannot sink, being a store.
+;
+; %for.1 requires code motion, as its previous (%trunc) follows its (first)
+; user (%or). Sinking %or past %trunc seems possible, as %or has no uses
+; (except for feeding %for.2; worth strengthening VPlan's dce?). However, %or
+; is both the user of %for.1 and the previous of %for.2, and we refrain from
+; sinking instructions that act as previous because they (may) serve points to
+; sink after.
+
+; Instead, %for.1 can be reconciled by hoisting its previous above its user
+; %or, as this user %trunc depends only on %iv.
 define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK-LABEL: @for_iv_trunc_optimized(
 ; CHECK-NEXT:  bb:
@@ -294,8 +306,8 @@ define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK-NEXT:    [[STEP_ADD]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[VEC_IND]], <4 x i32> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP3]] = or <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP0]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP3]] = or <4 x i32> [[TMP1]], <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[DST:%.*]], align 4
@@ -316,7 +328,7 @@ define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[ADD:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ [[TRUNC:%.*]], [[LOOP]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ [[OR:%.*]], [[LOOP]] ], [ [[SCALAR_RECUR_INIT4]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[OR]] = or i32 [[FOR_1]], 0
+; CHECK-NEXT:    [[OR]] = or i32 [[FOR_1]], 3
 ; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    store i32 [[FOR_2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
@@ -329,10 +341,10 @@ bb:
   br label %loop
 
 loop:
-  %iv = phi i64 [ %add, %loop ], [ 1, %bb ]
-  %for.1 = phi i32 [ %trunc, %loop ], [ 1, %bb ]
-  %for.2 = phi i32 [ %or, %loop ], [ 0, %bb ]
-  %or = or i32 %for.1, 0
+  %iv = phi i64 [ 1, %bb ], [ %add, %loop ]
+  %for.1 = phi i32 [ 1, %bb ], [ %trunc, %loop ]
+  %for.2 = phi i32 [ 0, %bb ], [ %or, %loop ]
+  %or = or i32 %for.1, 3
   %add = add i64 %iv, 1
   store i32 %for.2, ptr %dst, align 4
   %icmp = icmp ult i64 %iv, 337

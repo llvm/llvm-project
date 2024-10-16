@@ -382,7 +382,10 @@ exit:
   ret void
 }
 
-define void @hoist_previous_value_and_operands(ptr %dst, i64 %mask) {
+; Similar to the test cases for https://github.com/llvm/llvm-project/issues/106523.
+; The previous truncation (%trunc) gets vectorized (rather than folded into an
+; IV) and hoisted along with its AND operand above the user 'or'.
+define void @hoist_previous_value_and_operand(ptr %dst, i64 %mask) {
 ; CHECK-LABEL: @hoist_previous_value_and_operands(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -397,13 +400,13 @@ define void @hoist_previous_value_and_operands(ptr %dst, i64 %mask) {
 ; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP2]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP4]] = or <4 x i32> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR1]], <4 x i32> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
@@ -437,10 +440,10 @@ bb:
   br label %loop
 
 loop:
-  %iv = phi i64 [ %add, %loop ], [ 1, %bb ]
-  %for.1 = phi i32 [ %trunc, %loop ], [ 1, %bb ]
-  %for.2 = phi i32 [ %or, %loop ], [ 0, %bb ]
-  %or = or i32 %for.1, 0
+  %iv = phi i64 [ 1, %bb ], [ %add, %loop ]
+  %for.1 = phi i32 [ 1, %bb ], [ %trunc, %loop ]
+  %for.2 = phi i32 [ 0, %bb ], [ %or, %loop ]
+  %or = or i32 %for.1, 3
   %add = add i64 %iv, 1
   %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
   store i32 %for.2, ptr %gep, align 4

@@ -781,78 +781,83 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     return false;
 
   // Collect recipes that need hoisting.
-  SmallVector<VPRecipeBase *> WorkList;
+  SmallVector<VPRecipeBase *> HoistCandidates;
   SmallPtrSet<VPRecipeBase *, 8> Seen;
-  VPBasicBlock *HoistBlock = FOR->getParent();
-  auto HoistPoint = HoistBlock->getFirstNonPhi();
-  auto TryToPushHoistCandidate = [&](VPRecipeBase *HoistCandidate) {
-    // If we reach FOR, it means the original Previous depends on some other
-    // recurrence that in turn depends on FOR. If that is the case, we would
-    // also need to hoist recipes involving the other FOR, which may break
-    // dependencies.
-    if (HoistCandidate == FOR)
-      return false;
+  VPRecipeBase *HoistPoint = nullptr;
+  // Find the closest hoist point by looking at all users of FOR and selecting
+  // the recipe dominating all other users.
+  for (VPUser *U : FOR->users()) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    if (!R)
+      continue;
+    if (!HoistPoint || VPDT.properlyDominates(R, HoistPoint))
+      HoistPoint = R;
+  }
 
-    // Hoist candidate outside any region, no need to hoist.
-    if (!HoistCandidate->getParent()->getParent())
-      return true;
+  auto NeedsHoisting = [HoistPoint, &VPDT,
+                        &Seen](VPValue *HoistCandidateV) -> VPRecipeBase * {
+    VPRecipeBase *HoistCandidate = HoistCandidateV->getDefiningRecipe();
+    if (!HoistCandidate)
+      return nullptr;
+    assert((!HoistCandidate->getParent()->getParent() ||
+            HoistCandidate->getParent()->getParent() ==
+                HoistCandidate->getParent()->getEnclosingLoopRegion()) &&
+           "CFG in VPlan should still be flattened, without replicate regions");
+    // Hoist candidate has already beend visited, no need to hoist.
+    if (!Seen.insert(HoistCandidate).second)
+      return nullptr;
 
-    // Hoist candidate is a header phi or already visited, no need to hoist.
-    if (isa<VPHeaderPHIRecipe>(HoistCandidate) ||
-        !Seen.insert(HoistCandidate).second)
-      return true;
+    // Candidate is outside loop region or a header phi, dominates FOR users w/o
+    // hoisting.
+    if (!HoistCandidate->getParent()->getEnclosingLoopRegion() ||
+        isa<VPHeaderPHIRecipe>(HoistCandidate))
+      return nullptr;
 
-    // If we reached a recipe that dominates all users of FOR, we don't need to
+    // If we reached a recipe that dominates HoistPoint, we don't need to
     // hoist the recipe.
-    if (all_of(FOR->users(), [&VPDT, HoistCandidate](VPUser *U) {
-          return VPDT.properlyDominates(HoistCandidate, cast<VPRecipeBase>(U));
-        })) {
-      if (VPDT.properlyDominates(&*HoistPoint, HoistCandidate)) {
-        // This HoistCandidate domiantes all users of FOR and is closer to them
-        // than the previous HoistPoint.
-        HoistPoint = std::next(HoistCandidate->getIterator());
-        HoistBlock = HoistCandidate->getParent();
-      }
-      return true;
-    }
-
-    // Don't move candiates with sideeffects, as we do not yet analyze recipes
-    // between candidate and hoist destination yet.
-    if (HoistCandidate->mayHaveSideEffects())
-      return false;
-
-    WorkList.push_back(HoistCandidate);
-    return true;
+    if (VPDT.properlyDominates(HoistCandidate, HoistPoint))
+      return nullptr;
+    return HoistCandidate;
+  };
+  auto CanHoist = [&](VPRecipeBase *HoistCandidate) {
+    // Avoid hoisting candidates with side-effects, as we do not yet analyze
+    // associated dependencies.
+    return !HoistCandidate->mayHaveSideEffects();
   };
 
   // Recursively try to hoist Previous and its operands before all users of FOR.
-  // Update HoistPoint to the closest recipe that dominates all users of FOR.
-  if (!TryToPushHoistCandidate(Previous))
-    return false;
+  if (NeedsHoisting(Previous->getVPSingleValue()))
+    HoistCandidates.push_back(Previous);
 
-  for (unsigned I = 0; I != WorkList.size(); ++I) {
-    VPRecipeBase *Current = WorkList[I];
+  for (unsigned I = 0; I != HoistCandidates.size(); ++I) {
+    VPRecipeBase *Current = HoistCandidates[I];
     assert(Current->getNumDefinedValues() == 1 &&
            "only recipes with a single defined value expected");
+    if (!CanHoist(Current))
+      return false;
 
-    for (VPValue *Op : Current->operands())
-      if (auto *R = Op->getDefiningRecipe())
-        if (!TryToPushHoistCandidate(R))
-          return false;
+    for (VPValue *Op : Current->operands()) {
+      // If we reach FOR, it means the original Previous depends on some other
+      // recurrence that in turn depends on FOR. If that is the case, we would
+      // also need to hoist recipes involving the other FOR, which may break
+      // dependencies.
+      if (Op == FOR)
+        return false;
+
+      if (auto *R = NeedsHoisting(Op))
+        HoistCandidates.push_back(R);
+    }
   }
 
   // Keep recipes to hoist ordered by dominance so earlier instructions are
   // processed first.
-  sort(WorkList, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
+  sort(HoistCandidates, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
     return VPDT.properlyDominates(A, B);
   });
 
-  for (VPRecipeBase *HoistCandidate : WorkList) {
-    if (HoistPoint == HoistCandidate->getIterator()) {
-      HoistPoint = std::next(HoistCandidate->getIterator());
-      continue;
-    }
-    HoistCandidate->moveBefore(*HoistBlock, HoistPoint);
+  for (VPRecipeBase *HoistCandidate : HoistCandidates) {
+    HoistCandidate->moveBefore(*HoistPoint->getParent(),
+                               HoistPoint->getIterator());
   }
 
   return true;
@@ -881,9 +886,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT))
-      if (!hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
-        return false;
+    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
+        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
+      return false;
 
     // Introduce a recipe to combine the incoming and previous values of a
     // fixed-order recurrence.
