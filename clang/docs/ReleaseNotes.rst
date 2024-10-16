@@ -605,6 +605,8 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- clang-cl now supports ``/std:c++23preview`` which enables C++23 features.
+
 - Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
   Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.
   Clang now follows the MSVC behavior in this scenario.
