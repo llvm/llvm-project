@@ -772,6 +772,10 @@ public:
     return 1;
   }
 
+  InstructionCost getDataFlowCost(Type *DataType, bool IsCallingConv) const {
+    return 0;
+  }
+
   // Assume that we have a register of the right size for the type.
   unsigned getNumberOfParts(Type *Tp) const { return 1; }
 

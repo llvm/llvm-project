@@ -306,6 +306,14 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
+InstructionCost GCNTTIImpl::getDataFlowCost(Type *DataType,
+                                            bool IsCallingConv) {
+  if (isTypeLegal(DataType) || IsCallingConv)
+    return BaseT::getDataFlowCost(DataType, IsCallingConv);
+
+  return getNumberOfParts(DataType);
+}
+
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
   // registers. See getRegisterClassForType for the implementation.
