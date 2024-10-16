@@ -2,7 +2,6 @@
 
 import sys
 sys.path.append(sys.argv[1])
-import pathlib
 from libcxx.header_information import all_headers, libcxx_include
 
 with open(libcxx_include / "module.modulemap") as f:
