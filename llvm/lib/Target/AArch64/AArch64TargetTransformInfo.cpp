@@ -1637,7 +1637,7 @@ static std::optional<Instruction *> instCombineSVEAllActive(IntrinsicInst &II,
     return std::nullopt;
 
   auto *Mod = II.getModule();
-  auto *NewDecl = Intrinsic::getDeclaration(Mod, IID, {II.getType()});
+  auto *NewDecl = Intrinsic::getOrInsertDeclaration(Mod, IID, {II.getType()});
   II.setCalledFunction(NewDecl);
 
   return &II;
@@ -3743,7 +3743,7 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   assert(Factor >= 2 && "Invalid interleave factor");
   auto *VecVTy = cast<VectorType>(VecTy);
 
-  if (VecTy->isScalableTy() && (!ST->hasSVE() || Factor != 2))
+  if (VecTy->isScalableTy() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
   // Vectorization for masked interleaved accesses is only enabled for scalable

@@ -840,11 +840,11 @@ enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
 /// TODO: Statically shaped loops + vector masking
 static uint64_t getTrailingNonUnitLoopDimIdx(LinalgOp linalgOp) {
   SmallVector<int64_t> loopRanges = linalgOp.getStaticLoopRanges();
-  assert(linalgOp.hasDynamicShape() ||
-         llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) ==
-                 1 &&
-             "For statically shaped Linalg Ops, only one "
-             "non-unit loop dim is expected");
+  assert(
+      (linalgOp.hasDynamicShape() ||
+       llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) == 1) &&
+      "For statically shaped Linalg Ops, only one "
+      "non-unit loop dim is expected");
 
   size_t idx = loopRanges.size() - 1;
   for (; idx >= 0; idx--)
@@ -2070,11 +2070,6 @@ vectorizeScalableVectorPrecondition(Operation *op,
         (iterators.back() != utils::IteratorType::parallel))
       return failure();
   }
-
-  // Check to not let go the matmul with extended semantic, through this
-  // transform.
-  if (linalgOp.hasUserDefinedMaps())
-    return failure();
 
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors

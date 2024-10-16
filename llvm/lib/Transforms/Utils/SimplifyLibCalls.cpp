@@ -1960,7 +1960,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   if (IsIntrinsic) {
     Module *M = CI->getModule();
     Intrinsic::ID IID = CalleeFn->getIntrinsicID();
-    Function *Fn = Intrinsic::getDeclaration(M, IID, B.getFloatTy());
+    Function *Fn = Intrinsic::getOrInsertDeclaration(M, IID, B.getFloatTy());
     R = isBinary ? B.CreateCall(Fn, V) : B.CreateCall(Fn, V[0]);
   } else {
     AttributeList CalleeAttrs = CalleeFn->getAttributes();

@@ -1824,26 +1824,16 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
            Subtarget->hasUnalignedDSAccessEnabled();
   }
 
-  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
-    bool AlignedBy4 = Alignment >= Align(4);
-    if (IsFast)
-      *IsFast = AlignedBy4;
-
-    return AlignedBy4 ||
-           Subtarget->enableFlatScratch() ||
-           Subtarget->hasUnalignedScratchAccess();
-  }
-
   // FIXME: We have to be conservative here and assume that flat operations
   // will access scratch.  If we had access to the IR function, then we
   // could determine if any private memory was used in the function.
-  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS &&
-      !Subtarget->hasUnalignedScratchAccess()) {
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+      AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
     bool AlignedBy4 = Alignment >= Align(4);
     if (IsFast)
       *IsFast = AlignedBy4;
 
-    return AlignedBy4;
+    return AlignedBy4 || Subtarget->hasUnalignedScratchAccessEnabled();
   }
 
   // So long as they are correct, wide global memory operations perform better
@@ -8796,7 +8786,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     const Module *M = MF.getFunction().getParent();
     const GlobalValue *GV =
-        M->getNamedValue(Intrinsic::getName(Intrinsic::amdgcn_groupstaticsize));
+        Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_groupstaticsize);
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0,
                                             SIInstrInfo::MO_ABS32_LO);
     return {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0};

@@ -88,6 +88,8 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- The DefineOutline tweak now handles member functions of class templates.
+
 Improvements to clang-doc
 -------------------------
 
@@ -156,7 +158,7 @@ Changes in existing checks
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
-  subtracting from a pointer.
+  subtracting from a pointer directly or when used to scale a numeric value.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
@@ -202,6 +204,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
   ``NULL``/``__null`` (but not ``0``) when used with a templated type.
 
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two cases
+  that can be replaced with ``ends_with``
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too and to only expand macros starting with ``PRI``
@@ -237,6 +243,10 @@ Changes in existing checks
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
+
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check to
+  validate ``namespace`` aliases.
 
 Removed checks
 ^^^^^^^^^^^^^^

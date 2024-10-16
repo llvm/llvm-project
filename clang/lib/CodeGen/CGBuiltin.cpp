@@ -1288,9 +1288,8 @@ static llvm::Value *EmitBitTestIntrinsic(CodeGenFunction &CGF,
   // Bit = BitBaseI8[BitPos >> 3] & (1 << (BitPos & 0x7)) != 0;
   Value *ByteIndex = CGF.Builder.CreateAShr(
       BitPos, llvm::ConstantInt::get(BitPos->getType(), 3), "bittest.byteidx");
-  Value *BitBaseI8 = CGF.Builder.CreatePointerCast(BitBase, CGF.Int8PtrTy);
-  Address ByteAddr(CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, BitBaseI8,
-                                                 ByteIndex, "bittest.byteaddr"),
+  Address ByteAddr(CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, BitBase, ByteIndex,
+                                                 "bittest.byteaddr"),
                    CGF.Int8Ty, CharUnits::One());
   Value *PosLow =
       CGF.Builder.CreateAnd(CGF.Builder.CreateTrunc(BitPos, CGF.Int8Ty),
@@ -2868,6 +2867,28 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
                                    Intrinsic::minnum,
                                    Intrinsic::experimental_constrained_minnum));
+
+    case Builtin::BIfmaximum_num:
+    case Builtin::BIfmaximum_numf:
+    case Builtin::BIfmaximum_numl:
+    case Builtin::BI__builtin_fmaximum_num:
+    case Builtin::BI__builtin_fmaximum_numf:
+    case Builtin::BI__builtin_fmaximum_numf16:
+    case Builtin::BI__builtin_fmaximum_numl:
+    case Builtin::BI__builtin_fmaximum_numf128:
+      return RValue::get(
+          emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::maximumnum));
+
+    case Builtin::BIfminimum_num:
+    case Builtin::BIfminimum_numf:
+    case Builtin::BIfminimum_numl:
+    case Builtin::BI__builtin_fminimum_num:
+    case Builtin::BI__builtin_fminimum_numf:
+    case Builtin::BI__builtin_fminimum_numf16:
+    case Builtin::BI__builtin_fminimum_numl:
+    case Builtin::BI__builtin_fminimum_numf128:
+      return RValue::get(
+          emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::minimumnum));
 
     // fmod() is a special-case. It maps to the frem instruction rather than an
     // LLVM intrinsic.
@@ -5636,14 +5657,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
             *Arg3 = EmitScalarExpr(E->getArg(3));
       llvm::FunctionType *FTy = llvm::FunctionType::get(
           Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
-      Value *BCast = Builder.CreatePointerCast(Arg3, I8PTy);
+      Value *ACast = Builder.CreateAddrSpaceCast(Arg3, I8PTy);
       // We know the third argument is an integer type, but we may need to cast
       // it to i32.
       if (Arg2->getType() != Int32Ty)
         Arg2 = Builder.CreateZExtOrTrunc(Arg2, Int32Ty);
       return RValue::get(
           EmitRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name),
-                          {Arg0, Arg1, Arg2, BCast, PacketSize, PacketAlign}));
+                          {Arg0, Arg1, Arg2, ACast, PacketSize, PacketAlign}));
     }
   }
   // OpenCL v2.0 s6.13.16 ,s9.17.3.5 - Built-in pipe reserve read and write
@@ -11295,7 +11316,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *Dst = EmitScalarExpr(E->getArg(0));
     Value *Val = EmitScalarExpr(E->getArg(1));
     Value *Size = EmitScalarExpr(E->getArg(2));
-    Dst = Builder.CreatePointerCast(Dst, Int8PtrTy);
     Val = Builder.CreateTrunc(Val, Int8Ty);
     Size = Builder.CreateIntCast(Size, Int64Ty, false);
     return Builder.CreateCall(
@@ -11320,34 +11340,27 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (MTEIntrinsicID != Intrinsic::not_intrinsic) {
-    llvm::Type *T = ConvertType(E->getType());
-
     if (MTEIntrinsicID == Intrinsic::aarch64_irg) {
       Value *Pointer = EmitScalarExpr(E->getArg(0));
       Value *Mask = EmitScalarExpr(E->getArg(1));
 
-      Pointer = Builder.CreatePointerCast(Pointer, Int8PtrTy);
       Mask = Builder.CreateZExt(Mask, Int64Ty);
-      Value *RV = Builder.CreateCall(
-                       CGM.getIntrinsic(MTEIntrinsicID), {Pointer, Mask});
-       return Builder.CreatePointerCast(RV, T);
+      return Builder.CreateCall(CGM.getIntrinsic(MTEIntrinsicID),
+                                {Pointer, Mask});
     }
     if (MTEIntrinsicID == Intrinsic::aarch64_addg) {
       Value *Pointer = EmitScalarExpr(E->getArg(0));
       Value *TagOffset = EmitScalarExpr(E->getArg(1));
 
-      Pointer = Builder.CreatePointerCast(Pointer, Int8PtrTy);
       TagOffset = Builder.CreateZExt(TagOffset, Int64Ty);
-      Value *RV = Builder.CreateCall(
-                       CGM.getIntrinsic(MTEIntrinsicID), {Pointer, TagOffset});
-      return Builder.CreatePointerCast(RV, T);
+      return Builder.CreateCall(CGM.getIntrinsic(MTEIntrinsicID),
+                                {Pointer, TagOffset});
     }
     if (MTEIntrinsicID == Intrinsic::aarch64_gmi) {
       Value *Pointer = EmitScalarExpr(E->getArg(0));
       Value *ExcludedMask = EmitScalarExpr(E->getArg(1));
 
       ExcludedMask = Builder.CreateZExt(ExcludedMask, Int64Ty);
-      Pointer = Builder.CreatePointerCast(Pointer, Int8PtrTy);
       return Builder.CreateCall(
                        CGM.getIntrinsic(MTEIntrinsicID), {Pointer, ExcludedMask});
     }
@@ -11356,25 +11369,20 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     // return address same as input address.
     if (MTEIntrinsicID == Intrinsic::aarch64_ldg) {
       Value *TagAddress = EmitScalarExpr(E->getArg(0));
-      TagAddress = Builder.CreatePointerCast(TagAddress, Int8PtrTy);
-      Value *RV = Builder.CreateCall(
-                    CGM.getIntrinsic(MTEIntrinsicID), {TagAddress, TagAddress});
-      return Builder.CreatePointerCast(RV, T);
+      return Builder.CreateCall(CGM.getIntrinsic(MTEIntrinsicID),
+                                {TagAddress, TagAddress});
     }
     // Although it is possible to supply a different tag (to set)
     // to this intrinsic (as first arg), for now we supply
     // the tag that is in input address arg (common use case).
     if (MTEIntrinsicID == Intrinsic::aarch64_stg) {
-        Value *TagAddress = EmitScalarExpr(E->getArg(0));
-        TagAddress = Builder.CreatePointerCast(TagAddress, Int8PtrTy);
-        return Builder.CreateCall(
-                 CGM.getIntrinsic(MTEIntrinsicID), {TagAddress, TagAddress});
+      Value *TagAddress = EmitScalarExpr(E->getArg(0));
+      return Builder.CreateCall(CGM.getIntrinsic(MTEIntrinsicID),
+                                {TagAddress, TagAddress});
     }
     if (MTEIntrinsicID == Intrinsic::aarch64_subp) {
       Value *PointerA = EmitScalarExpr(E->getArg(0));
       Value *PointerB = EmitScalarExpr(E->getArg(1));
-      PointerA = Builder.CreatePointerCast(PointerA, Int8PtrTy);
-      PointerB = Builder.CreatePointerCast(PointerB, Int8PtrTy);
       return Builder.CreateCall(
                        CGM.getIntrinsic(MTEIntrinsicID), {PointerA, PointerB});
     }
@@ -13648,7 +13656,7 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());
 
     // Built the IR for the preserve_field_info intrinsic.
-    llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getDeclaration(
+    llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::bpf_preserve_field_info,
         {FieldAddr->getType()});
     return Builder.CreateCall(FnGetFieldInfo, {FieldAddr, InfoKind});
@@ -13670,10 +13678,10 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
 
     llvm::Function *FnDecl;
     if (BuiltinID == BPF::BI__builtin_btf_type_id)
-      FnDecl = llvm::Intrinsic::getDeclaration(
+      FnDecl = llvm::Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), llvm::Intrinsic::bpf_btf_type_id, {});
     else
-      FnDecl = llvm::Intrinsic::getDeclaration(
+      FnDecl = llvm::Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), llvm::Intrinsic::bpf_preserve_type_info, {});
     CallInst *Fn = Builder.CreateCall(FnDecl, {SeqNumVal, FlagValue});
     Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
@@ -13708,7 +13716,7 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     Value *FlagValue = ConstantInt::get(Int64Ty, Flag->getSExtValue());
     Value *SeqNumVal = ConstantInt::get(Int32Ty, BuiltinSeqNum++);
 
-    llvm::Function *IntrinsicFn = llvm::Intrinsic::getDeclaration(
+    llvm::Function *IntrinsicFn = llvm::Intrinsic::getOrInsertDeclaration(
         &CGM.getModule(), llvm::Intrinsic::bpf_preserve_enum_value, {});
     CallInst *Fn =
         Builder.CreateCall(IntrinsicFn, {SeqNumVal, EnumStrVal, FlagValue});
@@ -18755,6 +18763,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
         nullptr, "hlsl.normalize");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_degrees: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "degree operand must have a float representation");
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getDegreesIntrinsic(),
+        ArrayRef<Value *>{X}, nullptr, "hlsl.degrees");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
@@ -18872,7 +18890,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     // for the DirectX intrinsic and the demangled builtin name
     switch (CGM.getTarget().getTriple().getArch()) {
     case llvm::Triple::dxil:
-      return EmitRuntimeCall(Intrinsic::getDeclaration(
+      return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
           &CGM.getModule(), Intrinsic::dx_wave_getlaneindex));
     case llvm::Triple::spirv:
       return EmitRuntimeCall(CGM.CreateRuntimeFunction(
@@ -18885,7 +18903,26 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
   }
   case Builtin::BI__builtin_hlsl_wave_is_first_lane: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getDeclaration(&CGM.getModule(), ID));
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+  }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
+    // Due to the use of variadic arguments we must explicitly retreive them and
+    // create our function type.
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Value *OpIndex = EmitScalarExpr(E->getArg(1));
+    llvm::FunctionType *FT = llvm::FunctionType::get(
+        OpExpr->getType(), ArrayRef{OpExpr->getType(), OpIndex->getType()},
+        false);
+
+    // Get overloaded name
+    std::string Name =
+        Intrinsic::getName(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
+                           ArrayRef{OpExpr->getType()}, &CGM.getModule());
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
+                                                     /*Local=*/false,
+                                                     /*AssumeConvergent=*/true),
+                           ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);

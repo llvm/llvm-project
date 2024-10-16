@@ -64,7 +64,8 @@ public:
   const void *getNativePointer(unsigned Idx);
 
   /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S);
+  unsigned createGlobalString(const StringLiteral *S,
+                              const Expr *Base = nullptr);
 
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;

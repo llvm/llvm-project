@@ -121,10 +121,13 @@ add_math_entrypoint_object(exp2f)
 add_math_entrypoint_object(exp2f16)
 
 add_math_entrypoint_object(exp2m1f)
+add_math_entrypoint_object(exp2m1f16)
 
 add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(exp10f16)
+
+add_math_entrypoint_object(exp10m1f16)
 
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
@@ -474,6 +477,7 @@ add_math_entrypoint_object(sincosf)
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
 add_math_entrypoint_object(sinpif)
+add_math_entrypoint_object(sinpif16)
 
 add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)

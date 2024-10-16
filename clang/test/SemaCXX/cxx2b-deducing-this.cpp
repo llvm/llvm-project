@@ -142,8 +142,8 @@ struct Corresponding {
     void d(this Corresponding&&);
     void d(this const Corresponding&);
     void d(this const int&);
-    void d(this const int);
-    void d(this int);
+    void d(this const int);  // expected-note {{previous declaration is here}}
+    void d(this int);        // expected-error {{class member cannot be redeclared}}
 
     void e(this const Corresponding&&); // expected-note {{here}}
     void e() const &&; // expected-error{{cannot be redeclared}}
@@ -171,9 +171,8 @@ struct CorrespondingTpl {
     void d(this Corresponding&&);
     void d(this const Corresponding&);
     void d(this const int&);
-    void d(this const int);
-    void d(this int);
-
+    void d(this const int); // expected-note {{previous declaration is here}}
+    void d(this int);       // expected-error {{class member cannot be redeclared}}
     void e(this const CorrespondingTpl&&); // expected-note {{here}}
     void e() const &&; // expected-error{{cannot be redeclared}}
 };
@@ -1072,4 +1071,29 @@ int main() {
   Foo foo;
   return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
 }
+}
+
+namespace GH100394 {
+struct C1 {
+  void f(this const C1);
+  void f() const;        // ok
+};
+
+struct C2 {
+  void f(this const C2);    // expected-note {{previous declaration is here}}
+  void f(this volatile C2); // expected-error {{class member cannot be redeclared}} \
+                            // expected-warning {{volatile-qualified parameter type 'volatile C2' is deprecated}}
+};
+
+struct C3 {
+  void f(this volatile C3); // expected-note {{previous declaration is here}} \
+                            // expected-warning {{volatile-qualified parameter type 'volatile C3' is deprecated}}
+  void f(this const C3);    // expected-error {{class member cannot be redeclared}}
+};
+
+struct C4 {
+  void f(this const C4);          // expected-note {{previous declaration is here}}
+  void f(this const volatile C4); // expected-error {{class member cannot be redeclared}} \
+                                  // expected-warning {{volatile-qualified parameter type 'const volatile C4' is deprecated}}
+};
 }

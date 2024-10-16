@@ -2888,6 +2888,17 @@ void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
   if (C.hasIntExpr())
     Visitor.AddStmt(C.getIntExpr());
 }
+
+void OpenACCClauseEnqueue::VisitWorkerClause(const OpenACCWorkerClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+
+void OpenACCClauseEnqueue::VisitVectorClause(const OpenACCVectorClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+
 void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
   if (const Expr *DevNumExpr = C.getDevNumExpr())
     Visitor.AddStmt(DevNumExpr);
@@ -2906,6 +2917,11 @@ void OpenACCClauseEnqueue::VisitIndependentClause(
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 void OpenACCClauseEnqueue::VisitCollapseClause(const OpenACCCollapseClause &C) {
   Visitor.AddStmt(C.getLoopCount());
+}
+void OpenACCClauseEnqueue::VisitGangClause(const OpenACCGangClause &C) {
+  for (unsigned I = 0; I < C.getNumExprs(); ++I) {
+    Visitor.AddStmt(C.getExpr(I).second);
+  }
 }
 } // namespace
 

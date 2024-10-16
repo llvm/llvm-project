@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
@@ -195,10 +197,14 @@ public:
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
     auto *AtExitCallbackTy = FunctionType::get(VoidTy, {}, false);
     auto *AtExitCallbackPtrTy = PointerType::getUnqual(AtExitCallbackTy);
-    addHelperAndWrapper(*M, "atexit",
-                        FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
-                        GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
-                        {PlatformInstanceDecl, DSOHandle});
+    auto *AtExit = addHelperAndWrapper(
+        *M, "atexit", FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
+        GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
+        {PlatformInstanceDecl, DSOHandle});
+    Attribute::AttrKind AtExitExtAttr =
+        TargetLibraryInfo::getExtAttrForI32Return(J.getTargetTriple());
+    if (AtExitExtAttr != Attribute::None)
+      AtExit->addRetAttr(AtExitExtAttr);
 
     return J.addIRModule(JD, ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
@@ -1172,7 +1178,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
       StaticVCRuntime = VCRuntime->second;
     }
     if (auto P = COFFPlatform::Create(
-            ES, *ObjLinkingLayer, PlatformJD, std::move(RuntimeArchiveBuffer),
+            *ObjLinkingLayer, PlatformJD, std::move(RuntimeArchiveBuffer),
             LoadAndLinkDynLibrary(J), StaticVCRuntime, VCRuntimePath))
       J.getExecutionSession().setPlatform(std::move(*P));
     else
@@ -1185,8 +1191,8 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
     if (!G)
       return G.takeError();
 
-    if (auto P = ELFNixPlatform::Create(ES, *ObjLinkingLayer, PlatformJD,
-                                        std::move(*G)))
+    if (auto P =
+            ELFNixPlatform::Create(*ObjLinkingLayer, PlatformJD, std::move(*G)))
       J.getExecutionSession().setPlatform(std::move(*P));
     else
       return P.takeError();
@@ -1293,9 +1299,12 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
     return;
   }
 
+  // Create the IP Layer.
+  IPLayer = std::make_unique<IRPartitionLayer>(*ES, *InitHelperTransformLayer);
+
   // Create the COD layer.
-  CODLayer = std::make_unique<CompileOnDemandLayer>(
-      *ES, *InitHelperTransformLayer, *LCTMgr, std::move(ISMBuilder));
+  CODLayer = std::make_unique<CompileOnDemandLayer>(*ES, *IPLayer, *LCTMgr,
+                                                    std::move(ISMBuilder));
 
   if (*S.SupportConcurrentCompilation)
     CODLayer->setCloneToNewContextOnEmit(true);
