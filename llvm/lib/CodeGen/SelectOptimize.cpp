@@ -431,7 +431,7 @@ PreservedAnalyses SelectOptimizeImpl::run(Function &F,
   BFI = &FAM.getResult<BlockFrequencyAnalysis>(F);
 
   // When optimizing for size, selects are preferable over branches.
-  if (F.hasOptSize() || llvm::shouldOptimizeForSize(&F, PSI, BFI))
+  if (llvm::shouldOptimizeForSize(&F, PSI, BFI))
     return PreservedAnalyses::all();
 
   LI = &FAM.getResult<LoopAnalysis>(F);
@@ -467,7 +467,7 @@ bool SelectOptimizeImpl::runOnFunction(Function &F, Pass &P) {
   TSchedModel.init(TSI);
 
   // When optimizing for size, selects are preferable over branches.
-  if (F.hasOptSize() || llvm::shouldOptimizeForSize(&F, PSI, BFI))
+  if (llvm::shouldOptimizeForSize(&F, PSI, BFI))
     return false;
 
   return optimizeSelects(F);
