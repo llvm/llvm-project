@@ -32,16 +32,11 @@ LLVM_LIBC_FUNCTION(void, longjmp, (jmp_buf, int)) {
       movq %c[r15](%%rdi), %%r15
       movq %c[rsp](%%rdi), %%rsp
       jmpq *%c[rip](%%rdi)
-      )" ::
-      [rbx] "i"(offsetof(__jmp_buf, rbx)),
-      [rbp] "i"(offsetof(__jmp_buf, rbp)),
-      [r12] "i"(offsetof(__jmp_buf, r12)),
-      [r13] "i"(offsetof(__jmp_buf, r13)),
-      [r14] "i"(offsetof(__jmp_buf, r14)),
-      [r15] "i"(offsetof(__jmp_buf, r15)),
-      [rsp] "i"(offsetof(__jmp_buf, rsp)),
-      [rip] "i"(offsetof(__jmp_buf, rip))
-);
+      )" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
+      [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
+      [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
+      [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
+      [rip] "i"(offsetof(__jmp_buf, rip)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
