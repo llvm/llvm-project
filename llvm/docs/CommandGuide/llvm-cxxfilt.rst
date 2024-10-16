@@ -54,8 +54,8 @@ OPTIONS
 
 .. option:: --quote
 
-  Add `"` `"` around demangled function symbols.
-  Do not quote already quoted symbols.
+  Add `"` `"` around demangled function symbols. Do not quote already quoted
+  symbols.
 
 .. option:: --no-strip-underscore, -n
 
