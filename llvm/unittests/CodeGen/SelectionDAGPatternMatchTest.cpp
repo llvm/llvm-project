@@ -200,6 +200,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue SMin = DAG->getNode(ISD::SMIN, DL, Int32VT, Op1, Op0);
   SDValue UMax = DAG->getNode(ISD::UMAX, DL, Int32VT, Op0, Op1);
   SDValue UMin = DAG->getNode(ISD::UMIN, DL, Int32VT, Op1, Op0);
+  SDValue Rotl = DAG->getNode(ISD::ROTL, DL, Int32VT, Op0, Op1);
+  SDValue Rotr = DAG->getNode(ISD::ROTR, DL, Int32VT, Op1, Op0);
 
   SDValue ICMP_GT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGT);
   SDValue ICMP_GE = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGE);
@@ -245,6 +247,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(DisOr, m_DisjointOr(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(DisOr, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_AddLike(m_Value(), m_Value())));
+
+  EXPECT_TRUE(sd_match(Rotl, m_Rotl(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Rotr, m_Rotr(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Rotl, m_Rotr(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Rotr, m_Rotl(m_Value(), m_Value())));
 
   EXPECT_TRUE(sd_match(SMax, m_c_BinOp(ISD::SMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMax, m_SMax(m_Value(), m_Value())));
@@ -302,7 +309,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue FPToSI = DAG->getNode(ISD::FP_TO_SINT, DL, FloatVT, Op2);
   SDValue FPToUI = DAG->getNode(ISD::FP_TO_UINT, DL, FloatVT, Op2);
 
+  SDValue Brev = DAG->getNode(ISD::BITREVERSE, DL, Int32VT, Op0);
+  SDValue Bswap = DAG->getNode(ISD::BSWAP, DL, Int32VT, Op0);
+
+  SDValue Ctpop = DAG->getNode(ISD::CTPOP, DL, Int32VT, Op0);
   SDValue Ctlz = DAG->getNode(ISD::CTLZ, DL, Int32VT, Op0);
+  SDValue Cttz = DAG->getNode(ISD::CTTZ, DL, Int32VT, Op0);
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
@@ -328,7 +340,17 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_FALSE(sd_match(FPToUI, m_FPToSI(m_Value())));
   EXPECT_FALSE(sd_match(FPToSI, m_FPToUI(m_Value())));
 
+  EXPECT_TRUE(sd_match(Brev, m_BitReverse(m_Value())));
+  EXPECT_TRUE(sd_match(Bswap, m_BSwap(m_Value())));
+  EXPECT_FALSE(sd_match(Brev, m_BSwap(m_Value())));
+  EXPECT_FALSE(sd_match(Bswap, m_BitReverse(m_Value())));
+
+  EXPECT_TRUE(sd_match(Ctpop, m_Ctpop(m_Value())));
   EXPECT_TRUE(sd_match(Ctlz, m_Ctlz(m_Value())));
+  EXPECT_TRUE(sd_match(Cttz, m_Cttz(m_Value())));
+  EXPECT_FALSE(sd_match(Ctpop, m_Ctlz(m_Value())));
+  EXPECT_FALSE(sd_match(Ctlz, m_Cttz(m_Value())));
+  EXPECT_FALSE(sd_match(Cttz, m_Ctlz(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
