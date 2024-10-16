@@ -258,6 +258,6 @@ void mlir::detail::reportFatalInferReturnTypesError(OperationState &state) {
   llvm::interleaveComma(state.operands, os,
                         [&](Value val) { os << val.getType(); });
   os << ") -> ( ??? )";
-  mlir::emitRemark(state.location, "location of op");
+  emitRemark(state.location, "location of op");
   llvm::report_fatal_error(llvm::StringRef(buffer));
 }
