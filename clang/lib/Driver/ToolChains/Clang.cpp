@@ -7405,6 +7405,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
                              // TODO add c++23 and c++26 when MSVC supports it.
+                             .Case("c++23preview", "-std=c++23")
                              .Case("c++latest", "-std=c++26")
                              .Default("");
       if (LanguageStandard.empty())
