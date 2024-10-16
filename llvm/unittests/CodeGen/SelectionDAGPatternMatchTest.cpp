@@ -200,6 +200,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue SMin = DAG->getNode(ISD::SMIN, DL, Int32VT, Op1, Op0);
   SDValue UMax = DAG->getNode(ISD::UMAX, DL, Int32VT, Op0, Op1);
   SDValue UMin = DAG->getNode(ISD::UMIN, DL, Int32VT, Op1, Op0);
+  SDValue Rotl = DAG->getNode(ISD::ROTL, DL, Int32VT, Op0, Op1);
+  SDValue Rotr = DAG->getNode(ISD::ROTR, DL, Int32VT, Op1, Op0);
 
   SDValue ICMP_GT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGT);
   SDValue ICMP_GE = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGE);
@@ -245,6 +247,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(DisOr, m_DisjointOr(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(DisOr, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_AddLike(m_Value(), m_Value())));
+
+  EXPECT_TRUE(sd_match(Rotl, m_Rotl(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Rotr, m_Rotr(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Rotl, m_Rotr(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Rotr, m_Rotl(m_Value(), m_Value())));
 
   EXPECT_TRUE(sd_match(SMax, m_c_BinOp(ISD::SMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMax, m_SMax(m_Value(), m_Value())));
