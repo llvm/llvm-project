@@ -97,7 +97,7 @@ bool __rtsan::IsFunctionSuppressed(const char *function_name) {
   if (suppression_ctx == nullptr)
     return false;
 
-  const char *flag_name = ConvertTypeToFlagName(ErrorType::FunctionNameIs);
+  const char *flag_name = ConvertTypeToFlagName(ErrorType::FunctionNameMatches);
 
   if (!suppression_ctx->HasSuppressionType(flag_name))
     return false;
