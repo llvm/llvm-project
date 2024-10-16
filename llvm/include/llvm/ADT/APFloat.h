@@ -1474,6 +1474,8 @@ public:
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
   friend DoubleAPFloat;
+  // Since Storage is private, friend class APFloatEBOChecker is added to allow
+  // access to it in APFloat.cpp.
   friend class APFloatEBOChecker;
 };
 
