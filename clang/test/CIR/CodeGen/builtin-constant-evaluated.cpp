@@ -1,11 +1,12 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck %s --check-prefix=CIR --input-file=%t.cir
 
 auto func() {
   return __builtin_strcmp("", "");
-  // CHECK:      cir.func @_Z4funcv()
-  // CHECK-NEXT: %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64} loc(#loc2)
-  // CHECK-NEXT: %1 = cir.const #cir.int<0> : !s32i loc(#loc7)
-  // CHECK-NEXT: cir.store %1, %0 : !s32i, !cir.ptr<!s32i> loc(#loc8)
-  // CHECK-NEXT: %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i loc(#loc8)
-  // CHECK-NEXT: cir.return %2 : !s32i loc(#loc8)
+  // CIR:      cir.func @_Z4funcv()
+  // CIR-NEXT: %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64} loc(#loc2)
+  // CIR-NEXT: %1 = cir.const #cir.int<0> : !s32i loc(#loc7)
+  // CIR-NEXT: cir.store %1, %0 : !s32i, !cir.ptr<!s32i> loc(#loc8)
+  // CIR-NEXT: %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i loc(#loc8)
+  // CIR-NEXT: cir.return %2 : !s32i loc(#loc8)
 }

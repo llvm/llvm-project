@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck %s --check-prefix=CIR --input-file=%t.cir
 
 int test_assume(int x) {
