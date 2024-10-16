@@ -220,6 +220,20 @@ entry:
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+define dso_local void @memcpy_from_param_noalign (ptr nocapture noundef writeonly %out, ptr nocapture noundef readonly byval(%struct.S) %s) local_unnamed_addr #0 {
+; COMMON-LABEL: define dso_local void @memcpy_from_param_noalign(
+; COMMON-SAME: ptr nocapture noundef writeonly [[OUT:%.*]], ptr nocapture noundef readonly byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[S1:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr [[OUT]], ptr addrspace(101) [[S1]], i64 16, i1 true)
+; COMMON-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %s, i64 16, i1 true)
+  ret void
+}
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 define dso_local void @memcpy_to_param(ptr nocapture noundef readonly %in, ptr nocapture noundef readnone byval(%struct.S) align 4 %s) local_unnamed_addr #0 {
 ; COMMON-LABEL: define dso_local void @memcpy_to_param(
 ; COMMON-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef readnone byval([[STRUCT_S:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
