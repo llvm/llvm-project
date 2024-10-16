@@ -3121,7 +3121,12 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   case NEON::BI__builtin_neon_vqshrn_n_v:
     llvm_unreachable("NYI");
   case NEON::BI__builtin_neon_vrshrn_n_v:
-    llvm_unreachable("NYI");
+    return buildNeonCall(
+        builder,
+        {builder.getExtendedElementVectorType(
+             vTy, mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned()),
+         SInt32Ty},
+        Ops, "llvm.aarch64.neon.rshrn", ty, getLoc(E->getExprLoc()));
   case NEON::BI__builtin_neon_vqrshrn_n_v:
     llvm_unreachable("NYI");
   case NEON::BI__builtin_neon_vrndah_f16: {
