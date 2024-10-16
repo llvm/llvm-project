@@ -3590,9 +3590,10 @@ void OpEmitter::genTypeInterfaceMethods() {
     if (!infer.isArg())
       continue;
     auto arg = op.getArgToOperandOrAttribute(infer.getIndex());
-    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand)
+    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
       maxAccessedIndex =
           std::max(maxAccessedIndex, arg.operandOrAttributeIndex());
+    }
   }
   if (maxAccessedIndex != -1) {
     body << "  if (operands.size() <= " << Twine(maxAccessedIndex) << ")\n";
