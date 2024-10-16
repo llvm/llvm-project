@@ -6432,8 +6432,6 @@ static llvm::FixedVectorType *GetNeonType(CodeGenFunction *CGF,
   case NeonTypeFlags::Int8:
   case NeonTypeFlags::Poly8:
     return llvm::FixedVectorType::get(CGF->Int8Ty, V1Ty ? 1 : (8 << IsQuad));
-  case NeonTypeFlags::MFloat8:
-    return llvm::FixedVectorType::get(CGF->Int8Ty, V1Ty ? 1 : (8 << IsQuad));
   case NeonTypeFlags::Int16:
   case NeonTypeFlags::Poly16:
     return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));

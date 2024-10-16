@@ -2242,7 +2242,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 #define AARCH64_VECTOR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
                                    ElBits, NF)                                 \
   case BuiltinType::Id:                                                        \
-    Width = 0;                                                                 \
+    Width = NumEls * ElBits * NF;                                              \
     Align = NumEls * ElBits;                                                   \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"

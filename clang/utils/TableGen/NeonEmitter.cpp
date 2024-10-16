@@ -101,8 +101,7 @@ enum EltType {
   Float16,
   Float32,
   Float64,
-  BFloat16,
-  MFloat8,
+  BFloat16
 };
 
 } // end namespace NeonTypeFlags
@@ -150,8 +149,7 @@ private:
     SInt,
     UInt,
     Poly,
-    BFloat16,
-    MFloat8,
+    BFloat16
   };
   TypeKind Kind;
   bool Immediate, Constant, Pointer;
@@ -781,7 +779,7 @@ Type Type::fromTypedefName(StringRef Name) {
     T.Kind = Poly;
   } else if (Name.consume_front("bfloat")) {
     T.Kind = BFloat16;
-  }else {
+  } else {
     assert(Name.starts_with("int"));
     Name = Name.drop_front(3);
   }
