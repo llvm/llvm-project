@@ -218,3 +218,116 @@ float64x2_t test_vpaddq_f64(float64x2_t a, float64x2_t b) {
 // LLVM: {{.*}}test_vpaddq_f64(<2 x double>{{.*}}[[A:%.*]], <2 x double>{{.*}}[[B:%.*]])
 // LLVM: [[RES:%.*]] = call <2 x double> @llvm.aarch64.neon.faddp.v2f64(<2 x double> [[A]], <2 x double> [[B]])
 // LLVM: ret <2 x double> [[RES]]
+
+int16x4_t test_vqdmulh_lane_s16(int16x4_t a, int16x4_t v) {
+  return vqdmulh_lane_s16(a, v, 3);
+}
+
+// CIR-LABEL: vqdmulh_lane_s16
+// CIR: [[LANE:%.*]] = cir.const #cir.int<3> : !s32i
+// CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqdmulh.lane" {{%.*}}, {{%.*}}, [[LANE]] : 
+// CIR: (!cir.vector<!s16i x 4>, !cir.vector<!s16i x 4>, !s32i) -> !cir.vector<!s16i x 4>
+
+// LLVM: {{.*}}test_vqdmulh_lane_s16(<4 x i16>{{.*}}[[A:%.*]], <4 x i16>{{.*}}[[V:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqdmulh.lane.v4i16.v4i16
+// LLVM-SAME: (<4 x i16> [[A]], <4 x i16> [[V]], i32 3)
+// LLVM:  ret <4 x i16> [[RES]]
+
+
+int32x2_t test_vqdmulh_lane_s32(int32x2_t a, int32x2_t v) {
+  return vqdmulh_lane_s32(a, v, 1);
+}
+
+// CIR-LABEL: vqdmulh_lane_s32
+// CIR: [[LANE:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqdmulh.lane" {{%.*}}, {{%.*}}, [[LANE]] : 
+// CIR: (!cir.vector<!s32i x 2>, !cir.vector<!s32i x 2>, !s32i) -> !cir.vector<!s32i x 2>
+
+// LLVM: {{.*}}test_vqdmulh_lane_s32(<2 x i32>{{.*}}[[A:%.*]], <2 x i32>{{.*}}[[V:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqdmulh.lane.v2i32.v2i32
+// LLVM-SAME: (<2 x i32> [[A]], <2 x i32> [[V]], i32 1)
+// LLVM:  ret <2 x i32> [[RES]]
+
+int16x8_t test_vqdmulhq_lane_s16(int16x8_t a, int16x4_t v) {
+  return vqdmulhq_lane_s16(a, v, 3);
+}
+
+// CIR-LABEL: vqdmulhq_lane_s16
+// CIR: [[LANE:%.*]] = cir.const #cir.int<3> : !s32i
+// CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqdmulh.lane" {{%.*}}, {{%.*}}, [[LANE]] : 
+// CIR: (!cir.vector<!s16i x 8>, !cir.vector<!s16i x 4>, !s32i) -> !cir.vector<!s16i x 8>
+
+// LLVM: {{.*}}test_vqdmulhq_lane_s16(<8 x i16>{{.*}}[[A:%.*]], <4 x i16>{{.*}}[[V:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i16> @llvm.aarch64.neon.sqdmulh.lane.v8i16.v4i16
+// LLVM-SAME: (<8 x i16> [[A]], <4 x i16> [[V]], i32 3)
+// LLVM:  ret <8 x i16> [[RES]]
+
+int32x4_t test_vqdmulhq_lane_s32(int32x4_t a, int32x2_t v) {
+  return vqdmulhq_lane_s32(a, v, 1);
+}
+
+// CIR-LABEL: vqdmulhq_lane_s32
+// CIR: [[LANE:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqdmulh.lane" {{%.*}}, {{%.*}}, [[LANE]] : 
+// CIR: (!cir.vector<!s32i x 4>, !cir.vector<!s32i x 2>, !s32i) -> !cir.vector<!s32i x 4>
+
+// LLVM: {{.*}}test_vqdmulhq_lane_s32(<4 x i32>{{.*}}[[A:%.*]], <2 x i32>{{.*}}[[V:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmulh.lane.v4i32.v2i32
+// LLVM-SAME: (<4 x i32> [[A]], <2 x i32> [[V]], i32 1)
+// LLVM:  ret <4 x i32> [[RES]]
+
+int16x4_t test_vqrdmulh_lane_s16(int16x4_t a, int16x4_t v) {
+  return vqrdmulh_lane_s16(a, v, 3);
+}
+
+// CIR-LABEL: vqrdmulh_lane_s16
+// CIR: [[LANE:%.*]] = cir.const #cir.int<3> : !s32i
+// CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqrdmulh.lane" {{%.*}}, {{%.*}}, [[LANE]] : 
+// CIR-SAME: (!cir.vector<!s16i x 4>, !cir.vector<!s16i x 4>, !s32i) -> !cir.vector<!s16i x 4>
+
+// LLVM: {{.*}}test_vqrdmulh_lane_s16(<4 x i16>{{.*}}[[A:%.*]], <4 x i16>{{.*}}[[V:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrdmulh.lane.v4i16.v4i16
+// LLVM-SAME: (<4 x i16> [[A]], <4 x i16> [[V]], i32 3)
+// LLVM:  ret <4 x i16> [[RES]]
+
+int16x8_t test_vqrdmulhq_lane_s16(int16x8_t a, int16x4_t v) {
+  return vqrdmulhq_lane_s16(a, v, 3);
+}
+
+// CIR-LABEL: vqrdmulhq_lane_s16
+// CIR: [[LANE:%.*]] = cir.const #cir.int<3> : !s32i
+// CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqrdmulh.lane" {{%.*}}, {{%.*}}, [[LANE]] : 
+// CIR-SAME: (!cir.vector<!s16i x 8>, !cir.vector<!s16i x 4>, !s32i) -> !cir.vector<!s16i x 8>
+
+// LLVM: {{.*}}test_vqrdmulhq_lane_s16(<8 x i16>{{.*}}[[A:%.*]], <4 x i16>{{.*}}[[V:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i16> @llvm.aarch64.neon.sqrdmulh.lane.v8i16.v4i16
+// LLVM-SAME: (<8 x i16> [[A]], <4 x i16> [[V]], i32 3)
+// LLVM:  ret <8 x i16> [[RES]]
+
+int32x2_t test_vqrdmulh_lane_s32(int32x2_t a, int32x2_t v) {
+  return vqrdmulh_lane_s32(a, v, 1);
+}
+
+// CIR-LABEL: vqrdmulh_lane_s32
+// CIR: [[LANE:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqrdmulh.lane" {{%.*}}, {{%.*}}, [[LANE]] : 
+// CIR-SAME: (!cir.vector<!s32i x 2>, !cir.vector<!s32i x 2>, !s32i) -> !cir.vector<!s32i x 2>
+
+// LLVM: {{.*}}test_vqrdmulh_lane_s32(<2 x i32>{{.*}}[[A:%.*]], <2 x i32>{{.*}}[[V:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqrdmulh.lane.v2i32.v2i32
+// LLVM-SAME: (<2 x i32> [[A]], <2 x i32> [[V]], i32 1)
+// LLVM:  ret <2 x i32> [[RES]]
+
+int32x4_t test_vqrdmulhq_lane_s32(int32x4_t a, int32x2_t v) {
+  return vqrdmulhq_lane_s32(a, v, 1);
+}
+
+// CIR-LABEL: vqrdmulhq_lane_s32
+// CIR: [[LANE:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR: {{%.*}} = cir.llvm.intrinsic "llvm.aarch64.neon.sqrdmulh.lane" {{%.*}}, {{%.*}}, [[LANE]] :
+// CIR-SAME: (!cir.vector<!s32i x 4>, !cir.vector<!s32i x 2>, !s32i) -> !cir.vector<!s32i x 4>
+
+// LLVM: {{.*}}test_vqrdmulhq_lane_s32(<4 x i32>{{.*}}[[A:%.*]], <2 x i32>{{.*}}[[V:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqrdmulh.lane.v4i32.v2i32
+// LLVM-SAME: (<4 x i32> [[A]], <2 x i32> [[V]], i32 1)
+// LLVM:  ret <4 x i32> [[RES]]
