@@ -871,6 +871,10 @@ have the same root cause, and check whether a similar issue has already been
 reported. Reports should always be submitted against current LLVM ``main``,
 not a released version.
 
+If possible, provide information on when an issue was introduced (e.g. by
+checking older versions on godbolt). A regression from the last LLVM release
+has higher priority than an issue that existed for decades.
+
 The remaining guidelines depend on the type of issue the fuzzer detects.
 
 **For miscompilations:** These issues are usually detected by looking for
