@@ -235,6 +235,9 @@ public:
     assert(isAnnotation() && "Used AnnotVal on non-annotation token");
     return PtrData;
   }
+  template <class T> T getAnnotationValueAs() const {
+    return static_cast<T>(getAnnotationValue());
+  }
   void setAnnotationValue(void *val) {
     assert(isAnnotation() && "Used AnnotVal on non-annotation token");
     PtrData = val;
@@ -288,6 +291,10 @@ public:
 
   /// Return the ObjC keyword kind.
   tok::ObjCKeywordKind getObjCKeywordID() const;
+
+  /// Return true if we have an C++20 Modules contextual keyword(export, import
+  /// or module).
+  bool isModuleContextualKeyword() const;
 
   bool isSimpleTypeSpecifier(const LangOptions &LangOpts) const;
 

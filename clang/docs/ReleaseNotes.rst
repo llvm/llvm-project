@@ -205,6 +205,8 @@ C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 
+- Implemented `P3034R1 Module Declarations Shouldn’t be Macros <https://wg21.link/P3034R1>`_.
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
