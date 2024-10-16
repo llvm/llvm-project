@@ -3861,3 +3861,11 @@ SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
     RegFlags.push_back("WWM_REG");
   return RegFlags;
 }
+unsigned
+SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
+                                   const TargetRegisterClass &RC) const {
+  for (MCPhysReg Reg : reverse(RC.getRegisters()))
+    if (MRI.isPhysRegUsed(Reg))
+      return getHWRegIndex(Reg) + 1;
+  return 0;
+}
