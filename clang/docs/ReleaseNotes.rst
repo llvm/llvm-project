@@ -99,6 +99,19 @@ C++ Specific Potentially Breaking Changes
     // Was error, now evaluates to false.
     constexpr bool b = f() == g();
 
+- Clang will now correctly not consider pointers to non classes for covariance.
+
+  .. code-block:: c++
+
+    struct A {
+      virtual const int *f() const;
+    };
+    struct B : A {
+      // Return type has less cv-qualification but doesn't point to a class.
+      // Error will be generated.
+      int *f() const override;
+    };
+
 - The warning ``-Wdeprecated-literal-operator`` is now on by default, as this is
   something that WG21 has shown interest in removing from the language. The
   result is that anyone who is compiling with ``-Werror`` should see this
@@ -629,6 +642,8 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- clang-cl now supports ``/std:c++23preview`` which enables C++23 features.
 
 - Clang no longer allows references inside a union when emulating MSVC 1900+ even if `fms-extensions` is enabled.
   Starting with VS2015, MSVC 1900, this Microsoft extension is no longer allowed and always results in an error.

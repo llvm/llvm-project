@@ -3240,6 +3240,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     // Array parameter types are treated as fundamental types.
     case Type::ArrayParameter:
       break;
+
+    case Type::HLSLAttributedResource:
+      T = cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr();
     }
 
     if (Queue.empty())

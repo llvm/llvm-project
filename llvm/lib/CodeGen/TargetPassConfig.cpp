@@ -306,7 +306,7 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &DeadMachineInstructionElimID)
     return applyDisable(TargetID, DisableMachineDCE);
 
-  if (StandardID == &EarlyIfConverterID)
+  if (StandardID == &EarlyIfConverterLegacyID)
     return applyDisable(TargetID, DisableEarlyIfConversion);
 
   if (StandardID == &EarlyMachineLICMID)
@@ -522,7 +522,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
     DISABLE_PASS(DisableBlockPlacement, MachineBlockPlacementPass)
     DISABLE_PASS(DisableBranchFold, BranchFolderPass)
     DISABLE_PASS(DisableCopyProp, MachineCopyPropagationPass)
-    DISABLE_PASS(DisableEarlyIfConversion, EarlyIfConverterPass)
+    DISABLE_PASS(DisableEarlyIfConversion, EarlyIfConverterLegacyPass)
     DISABLE_PASS(DisableEarlyTailDup, EarlyTailDuplicatePass)
     DISABLE_PASS(DisableMachineCSE, MachineCSELegacyPass)
     DISABLE_PASS(DisableMachineDCE, DeadMachineInstructionElimPass)

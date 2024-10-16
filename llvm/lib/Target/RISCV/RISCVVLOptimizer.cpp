@@ -114,10 +114,10 @@ struct OperandInfo {
       return;
     }
     assert(EMUL && "Expected EMUL to have value");
-    OS << "EMUL: ";
+    OS << "EMUL: m";
     if (EMUL->second)
-      OS << "m";
-    OS << "f" << EMUL->first;
+      OS << "f";
+    OS << EMUL->first;
     OS << ", EEW: " << (1 << Log2EEW);
   }
 };
@@ -563,7 +563,12 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VREM_VV:
   case RISCV::VREM_VX:
   // Vector Widening Integer Multiply Instructions
-  // FIXME: Add support
+  case RISCV::VWMUL_VV:
+  case RISCV::VWMUL_VX:
+  case RISCV::VWMULSU_VV:
+  case RISCV::VWMULSU_VX:
+  case RISCV::VWMULU_VV:
+  case RISCV::VWMULU_VX:
   // Vector Single-Width Integer Multiply-Add Instructions
   // FIXME: Add support
   // Vector Widening Integer Multiply-Add Instructions

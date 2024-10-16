@@ -27284,9 +27284,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 
 void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Builder.CreateCall(
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::aarch64_clrex));
+  Builder.CreateIntrinsic(Intrinsic::aarch64_clrex, {}, {});
 }
 
 Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,

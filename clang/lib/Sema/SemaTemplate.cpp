@@ -6075,6 +6075,13 @@ bool UnnamedLocalNoLinkageFinder::VisitNestedNameSpecifier(
   llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitHLSLAttributedResourceType(
+    const HLSLAttributedResourceType *T) {
+  if (T->hasContainedType() && Visit(T->getContainedType()))
+    return true;
+  return Visit(T->getWrappedType());
+}
+
 bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {
   assert(ArgInfo && "invalid TypeSourceInfo");
   QualType Arg = ArgInfo->getType();

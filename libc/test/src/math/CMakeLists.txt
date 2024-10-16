@@ -91,6 +91,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinpif16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinpif16_test.cpp
+  DEPENDS
+    libc.src.math.sinpif16
+)
+
+add_fp_unittest(
   sin_test
   NEED_MPFR
   SUITE
@@ -1049,6 +1060,17 @@ add_fp_unittest(
     exp10f16_test.cpp
   DEPENDS
     libc.src.math.exp10f16
+)
+
+add_fp_unittest(
+  exp10m1f16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10m1f16_test.cpp
+  DEPENDS
+    libc.src.math.exp10m1f16
 )
 
 add_fp_unittest(

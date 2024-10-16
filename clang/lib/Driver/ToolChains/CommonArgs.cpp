@@ -1428,6 +1428,16 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
   }
+
+  // libomp needs libatomic for atomic operations if using libgcc
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false)) {
+    Driver::OpenMPRuntimeKind OMPRuntime =
+        TC.getDriver().getOpenMPRuntime(Args);
+    ToolChain::RuntimeLibType RuntimeLib = TC.GetRuntimeLibType(Args);
+    if (OMPRuntime == Driver::OMPRT_OMP && RuntimeLib == ToolChain::RLT_Libgcc)
+      CmdArgs.push_back("-latomic");
+  }
 }
 
 void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,

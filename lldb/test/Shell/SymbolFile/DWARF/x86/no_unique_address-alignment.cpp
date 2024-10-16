@@ -1,6 +1,6 @@
 // XFAIL: *
 
-// RUN: %clangxx_host -gdwarf -o %t %s
+// RUN: %clang --target=x86_64-apple-macosx -c -gdwarf -o %t %s
 // RUN: %lldb %t \
 // RUN:   -o "expr alignof(OverlappingFields)" \
 // RUN:   -o "expr sizeof(OverlappingFields)" \

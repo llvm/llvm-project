@@ -529,6 +529,25 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sinpif16
+  SRCS
+    sinpif16.cpp
+  HDRS
+    ../sinpif16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits 
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.properties.types
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   tan
   SRCS
     tan.cpp
@@ -1629,6 +1648,29 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  exp10m1f16
+  SRCS
+    exp10m1f16.cpp
+  HDRS
+    ../exp10m1f16.h
+  DEPENDS
+    .expxf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization

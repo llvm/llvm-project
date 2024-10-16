@@ -1669,6 +1669,16 @@ public:
         MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         bool MayReadFromMemory, bool MayWriteToMemory,
+                         bool MayHaveSideEffects, DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayReadFromMemory(MayReadFromMemory),
+        MayWriteToMemory(MayWriteToMemory),
+        MayHaveSideEffects(MayHaveSideEffects) {}
+
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
@@ -1706,6 +1716,8 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
 };
 
 /// A recipe for widening Call instructions using library calls.

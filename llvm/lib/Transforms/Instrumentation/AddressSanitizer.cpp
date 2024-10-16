@@ -1865,11 +1865,9 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   if (UseCalls && ClOptimizeCallbacks) {
     const ASanAccessInfo AccessInfo(IsWrite, CompileKernel, AccessSizeIndex);
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-    IRB.CreateCall(
-        Intrinsic::getOrInsertDeclaration(M, Intrinsic::asan_check_memaccess),
-        {IRB.CreatePointerCast(Addr, PtrTy),
-         ConstantInt::get(Int32Ty, AccessInfo.Packed)});
+    IRB.CreateIntrinsic(Intrinsic::asan_check_memaccess, {},
+                        {IRB.CreatePointerCast(Addr, PtrTy),
+                         ConstantInt::get(Int32Ty, AccessInfo.Packed)});
     return;
   }
 

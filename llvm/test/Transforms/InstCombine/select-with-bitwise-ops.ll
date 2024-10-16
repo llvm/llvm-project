@@ -549,7 +549,10 @@ define <2 x i32> @select_icmp_eq_and_1_0_or_vector_of_2s(i32 %x, <2 x i32> %y) {
 
 define i32 @select_icmp_and_8_ne_0_xor_8(i32 %x) {
 ; CHECK-LABEL: @select_icmp_and_8_ne_0_xor_8(
-; CHECK-NEXT:    [[X_XOR:%.*]] = and i32 [[X:%.*]], -9
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], 8
+; CHECK-NEXT:    [[X_XOR:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[XOR]]
 ; CHECK-NEXT:    ret i32 [[X_XOR]]
 ;
   %and = and i32 %x, 8
@@ -561,7 +564,10 @@ define i32 @select_icmp_and_8_ne_0_xor_8(i32 %x) {
 
 define i32 @select_icmp_and_8_eq_0_xor_8(i32 %x) {
 ; CHECK-LABEL: @select_icmp_and_8_eq_0_xor_8(
-; CHECK-NEXT:    [[XOR_X:%.*]] = or i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], 8
+; CHECK-NEXT:    [[XOR_X:%.*]] = select i1 [[CMP]], i32 [[XOR]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[XOR_X]]
 ;
   %and = and i32 %x, 8
@@ -648,7 +654,9 @@ define i64 @select_icmp_x_and_8_ne_0_y_and_not_8(i32 %x, i64 %y) {
 
 define i32 @select_icmp_and_2147483648_ne_0_xor_2147483648(i32 %x) {
 ; CHECK-LABEL: @select_icmp_and_2147483648_ne_0_xor_2147483648(
-; CHECK-NEXT:    [[X_XOR:%.*]] = and i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[X_XOR:%.*]] = select i1 [[CMP1]], i32 [[XOR]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[X_XOR]]
 ;
   %and = and i32 %x, 2147483648
@@ -660,7 +668,9 @@ define i32 @select_icmp_and_2147483648_ne_0_xor_2147483648(i32 %x) {
 
 define i32 @select_icmp_and_2147483648_eq_0_xor_2147483648(i32 %x) {
 ; CHECK-LABEL: @select_icmp_and_2147483648_eq_0_xor_2147483648(
-; CHECK-NEXT:    [[XOR_X:%.*]] = or i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[XOR_X:%.*]] = select i1 [[CMP1]], i32 [[X]], i32 [[XOR]]
 ; CHECK-NEXT:    ret i32 [[XOR_X]]
 ;
   %and = and i32 %x, 2147483648
