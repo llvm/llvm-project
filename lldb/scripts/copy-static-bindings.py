@@ -22,24 +22,25 @@ import os
 import sys
 import shutil
 
+
 def find_generated_bindings(build_dir, language):
     # First, see if we're in a standalone build of LLDB.
-    bindings_build_dir = os.path.join(build_dir, 'bindings', language)
+    bindings_build_dir = os.path.join(build_dir, "bindings", language)
     if os.path.exists(bindings_build_dir):
         return bindings_build_dir
 
     # Failing that, check if it's a unified build (i.e. build with LLVM+Clang)
-    bindings_build_dir = os.path.join(build_dir, 'tools', 'lldb', 'bindings',
-                                      language)
+    bindings_build_dir = os.path.join(build_dir, "tools", "lldb", "bindings", language)
     if os.path.exists(bindings_build_dir):
         return bindings_build_dir
 
     return None
 
 
-def copy_bindings(generated_bindings_dir, source_dir, language, extensions=['.cpp']):
-    binding_source_dir = os.path.join(source_dir, 'bindings', language,
-                                      'static-binding')
+def copy_bindings(generated_bindings_dir, source_dir, language, extensions=[".cpp"]):
+    binding_source_dir = os.path.join(
+        source_dir, "bindings", language, "static-binding"
+    )
 
     for root, _, files in os.walk(generated_bindings_dir):
         for file in files:
@@ -50,36 +51,40 @@ def copy_bindings(generated_bindings_dir, source_dir, language, extensions=['.cp
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Copy the static bindings')
-    parser.add_argument('build_dir',
-                        type=str,
-                        help='Path to the root of the LLDB build directory')
+    parser = argparse.ArgumentParser(description="Copy the static bindings")
+    parser.add_argument(
+        "build_dir", type=str, help="Path to the root of the LLDB build directory"
+    )
 
     args = parser.parse_args()
 
     build_dir = args.build_dir
     if not os.path.exists(build_dir):
-        print("error: the build directory does not exist: {}".format(
-            args.build_dir))
+        print("error: the build directory does not exist: {}".format(args.build_dir))
         sys.exit(1)
 
     source_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     if not os.path.exists(source_dir):
-        print("error: the source directory does not exist: {}".format(
-            source_dir))
+        print("error: the source directory does not exist: {}".format(source_dir))
         sys.exit(1)
 
-    generated_bindings_python_dir = find_generated_bindings(build_dir, 'python')
+    generated_bindings_python_dir = find_generated_bindings(build_dir, "python")
     if generated_bindings_python_dir is None:
-        print("error: unable to locate the python bindings in the build directory")
+        print(
+            "warning: Python bindings skipped: unable to locate the Python bindings in the build directory"
+        )
     else:
-        copy_bindings(generated_bindings_python_dir, source_dir, 'python', ['.py', '.cpp'])
+        copy_bindings(
+            generated_bindings_python_dir, source_dir, "python", [".py", ".cpp"]
+        )
 
-    generated_bindings_lua_dir = find_generated_bindings(build_dir, 'lua')
+    generated_bindings_lua_dir = find_generated_bindings(build_dir, "lua")
     if generated_bindings_lua_dir is None:
-        print("error: unable to locate the lua bindings in the build directory")
+        print(
+            "warning: Lua bindings skipped: unable to locate the Lua bindings in the build directory"
+        )
     else:
-        copy_bindings(generated_bindings_lua_dir, source_dir, 'lua', ['.cpp'])
+        copy_bindings(generated_bindings_lua_dir, source_dir, "lua", [".cpp"])
 
 
 if __name__ == "__main__":
