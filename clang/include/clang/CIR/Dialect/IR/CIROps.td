@@ -1911,6 +1911,9 @@ def BrOp : CIR_Op<"br",
     The `cir.br` branches unconditionally to a block. Used to represent C/C++
     goto's and general block branching.
 
+    Note that for source level `goto`'s crossing scope boundaries, those are
+    usually represented with the "symbolic" `cir.goto` operation.
+
     Example:
 
     ```mlir
@@ -4599,26 +4602,52 @@ def SwitchFlatOp : CIR_Op<"switch.flat", [AttrSizedOperandSegments, Terminator]>
 //===----------------------------------------------------------------------===//
 
 def GotoOp : CIR_Op<"goto", [Terminator]> {
-  let description = [{ Transfers control to the specified label.
+  let description = [{
+
+  Transfers control to the specified `label`. This requires a corresponding
+  `cir.label` to exist and is used by to represent source level `goto`s
+  that jump across region boundaries. Alternatively, `cir.br` is used to
+  construct goto's that don't violate such boundaries.
+
+  `cir.goto` is completely symbolic (i.e. it "jumps" on a label that isn't
+  yet materialized) and should be taken into account by passes and analysis
+  when deciding if it's safe to make some assumptions about a given region
+  or basic block.
 
   Example:
   ```C++
-    void foo() {
-      goto exit;
-
-    exit:
-      return;
+    int test(int x) {
+      if (x)
+        goto label;
+      {
+        x = 10;
+    label:
+        return x;
+      }
     }
-    ```
+  ```
 
-    ```mlir
-    cir.func @foo() {
-      cir.goto "exit"
-    ^bb1:
-      cir.label "exit"
-      cir.return
-    }
-    ```
+  ```mlir
+    cir.scope {  // REGION #1
+      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
+      cir.if %3 {
+        cir.goto "label"
+      }
+      }
+      cir.scope {  // REGION #2
+        %2 = cir.const #cir.int<10> : !s32i
+        cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+        cir.br ^bb1
+      ^bb1:  // pred: ^bb0
+        cir.label "label"
+        %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        cir.store %3, %1 : !s32i, !cir.ptr<!s32i>
+        %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+        cir.return %4 : !s32i
+      }
+      cir.unreachable
+  ```
   }];
   let arguments = (ins StrAttr:$label);
   let assemblyFormat = [{ $label attr-dict }];
