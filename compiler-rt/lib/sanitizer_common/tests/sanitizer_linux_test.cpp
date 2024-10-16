@@ -143,6 +143,9 @@ TEST_F(ThreadListerTest, ThreadListerSeesAllSpawnedThreads) {
   std::vector<tid_t> listed_tids = ReadTidsToVector(&thread_lister);
   ASSERT_TRUE(HasElement(listed_tids, self_tid));
   ASSERT_TRUE(Includes(listed_tids, tids_));
+
+  ASSERT_NE(nullptr, thread_lister.LoadStatus(self_tid));
+  for (auto tid : tids_) ASSERT_NE(nullptr, thread_lister.LoadStatus(tid));
 }
 
 TEST_F(ThreadListerTest, DoNotForgetThreads) {
@@ -202,7 +205,6 @@ TEST(SanitizerLinux, ThreadDescriptorSize) {
   void *result;
   ASSERT_EQ(0, pthread_create(&tid, 0, thread_descriptor_size_test_func, 0));
   ASSERT_EQ(0, pthread_join(tid, &result));
-  EXPECT_EQ(0u, ThreadDescriptorSize());
   InitTlsSize();
   EXPECT_EQ((uptr)result, ThreadDescriptorSize());
 }

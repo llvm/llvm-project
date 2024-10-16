@@ -354,10 +354,10 @@ martin@martin.st (email), [mstrorsjo](https://github.com/mstrorsjo) (GitHub)
 Michael Spencer \
 bigcheesegs@gmail.com (email), [Bigcheese](https://github.com/Bigcheese) (GitHub)
 
-#### Sony PlayStation®4 support
+#### Sony PlayStation support
 
-Paul Robinson \
-paul.robinson@sony.com (email), [pogo59](https://github.com/pogo59) (GitHub)
+Jeremy Morse \
+jeremy.morse@sony.com (email), [jmorse](https://github.com/jmorse) (GitHub)
 
 #### Inline assembly
 

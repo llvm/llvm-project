@@ -120,8 +120,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
       for (WinEHHandlerType &H : TBME.HandlerArray) {
         if (const AllocaInst *AI = H.CatchObj.Alloca)
-          CatchObjects.insert({AI, {}}).first->second.push_back(
-              &H.CatchObj.FrameIndex);
+          CatchObjects[AI].push_back(&H.CatchObj.FrameIndex);
         else
           H.CatchObj.FrameIndex = INT_MAX;
       }

@@ -53,7 +53,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     NonBindCInteroperability, CudaManaged, CudaUnified,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
-    SavedLocalInSpecExpr)
+    SavedLocalInSpecExpr, PrintNamelist)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -63,9 +63,9 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     F202XAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
     LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict,
     FoldingException, FoldingAvoidsRuntimeCrash, FoldingValueChecks,
-    FoldingFailure, FoldingLimit, Interoperability, Bounds, Preprocessing,
-    Scanning, OpenAccUsage, ProcPointerCompatibility, VoidMold,
-    KnownBadImplicitInterface, EmptyCase, CaseOverflow, CUDAUsage,
+    FoldingFailure, FoldingLimit, Interoperability, CharacterInteroperability,
+    Bounds, Preprocessing, Scanning, OpenAccUsage, ProcPointerCompatibility,
+    VoidMold, KnownBadImplicitInterface, EmptyCase, CaseOverflow, CUDAUsage,
     IgnoreTKRUsage, ExternalInterfaceMismatch, DefinedOperatorArgs, Final,
     ZeroDoStep, UnusedForallIndex, OpenMPUsage, ModuleFile, DataLength,
     IgnoredDirective, HomonymousSpecific, HomonymousResult,

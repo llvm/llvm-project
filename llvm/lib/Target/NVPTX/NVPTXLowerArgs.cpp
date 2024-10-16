@@ -282,7 +282,7 @@ static void convertToParamAS(Use *OldUse, Value *Param, bool HasCvtaParam,
           [](Value *Addr, Instruction *OriginalUser) -> Value * {
         PointerType *ReturnTy =
             PointerType::get(OriginalUser->getContext(), ADDRESS_SPACE_GENERIC);
-        Function *CvtToGen = Intrinsic::getDeclaration(
+        Function *CvtToGen = Intrinsic::getOrInsertDeclaration(
             OriginalUser->getModule(), Intrinsic::nvvm_ptr_param_to_gen,
             {ReturnTy, PointerType::get(OriginalUser->getContext(),
                                         ADDRESS_SPACE_PARAM)});
@@ -545,7 +545,8 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
 void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
                                       Argument *Arg) {
   Function *Func = Arg->getParent();
-  bool HasCvtaParam = TM.getSubtargetImpl(*Func)->hasCvtaParam();
+  bool HasCvtaParam =
+      TM.getSubtargetImpl(*Func)->hasCvtaParam() && isKernelFunction(*Func);
   bool IsGridConstant = HasCvtaParam && isParamGridConstant(*Arg);
   const DataLayout &DL = Func->getDataLayout();
   BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
@@ -626,10 +627,10 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
     // addrspacecast preserves alignment.  Since params are constant, this load
     // is definitely not volatile.
-    LoadInst *LI =
-        new LoadInst(StructType, ArgInParam, Arg->getName(),
-                     /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
-    new StoreInst(LI, AllocA, FirstInst);
+    const auto ArgSize = *AllocA->getAllocationSize(DL);
+    IRBuilder<> IRB(&*FirstInst);
+    IRB.CreateMemCpy(AllocA, AllocA->getAlign(), ArgInParam, AllocA->getAlign(),
+                     ArgSize);
   }
 }
 

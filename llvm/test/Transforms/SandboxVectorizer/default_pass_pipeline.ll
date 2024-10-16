@@ -4,6 +4,7 @@
 
 ; This checks the default pass pipeline for the sandbox vectorizer.
 define void @pipeline() {
+; CHECK: bottom-up-vec
 ; CHECK: rpm
 ; CHECK-EMPTY:
   ret void
