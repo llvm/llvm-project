@@ -703,11 +703,6 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
         return error(FlagStringValue.SourceRange.Start,
                      Twine("use of undefined register flag '") +
                          FlagStringValue.Value + "'");
-      if (Info.Flags & FlagValue)
-        return error(FlagStringValue.SourceRange.Start,
-                     Twine("flag '") + FlagStringValue.Value +
-                         "' was already set for virtual register '%" +
-                         Twine(VReg.ID.Value) + "'");
       Info.Flags |= FlagValue;
     }
     RegInfo.noteNewVirtualRegister(Info.VReg);
