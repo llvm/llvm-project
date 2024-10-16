@@ -2098,6 +2098,86 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
 __attribute__((convergent)) bool WaveIsFirstLane();
 
 //===----------------------------------------------------------------------===//
+// WaveReadLaneAt builtins
+//===----------------------------------------------------------------------===//
+
+// \brief Returns the value of the expression for the given lane index within
+// the specified wave.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) bool WaveReadLaneAt(bool, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) bool2 WaveReadLaneAt(bool2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) bool3 WaveReadLaneAt(bool3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) bool4 WaveReadLaneAt(bool4, int32_t);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int16_t WaveReadLaneAt(int16_t, int32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int16_t2 WaveReadLaneAt(int16_t2, int32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int16_t3 WaveReadLaneAt(int16_t3, int32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int16_t4 WaveReadLaneAt(int16_t4, int32_t);
+#endif
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) half WaveReadLaneAt(half, int32_t);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) half2 WaveReadLaneAt(half2, int32_t);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) half3 WaveReadLaneAt(half3, int32_t);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) half4 WaveReadLaneAt(half4, int32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int WaveReadLaneAt(int, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int2 WaveReadLaneAt(int2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int3 WaveReadLaneAt(int3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int4 WaveReadLaneAt(int4, int32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) float WaveReadLaneAt(float, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) float2 WaveReadLaneAt(float2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) float3 WaveReadLaneAt(float3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) float4 WaveReadLaneAt(float4, int32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int64_t WaveReadLaneAt(int64_t, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int64_t2 WaveReadLaneAt(int64_t2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int64_t3 WaveReadLaneAt(int64_t3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) int64_t4 WaveReadLaneAt(int64_t4, int32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double WaveReadLaneAt(double, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double2 WaveReadLaneAt(double2, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double3 WaveReadLaneAt(double3, int32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double4 WaveReadLaneAt(double4, int32_t);
+
+//===----------------------------------------------------------------------===//
 // sign builtins
 //===----------------------------------------------------------------------===//
 
