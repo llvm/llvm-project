@@ -192,6 +192,10 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_LLVM_TOOLS_DIR "${CMAKE_BINARY_DIR}/bin" CACHE BOOL "")
     set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
+    # Enable FatLTO for Linux and baremetal runtimes
+    set(RUNTIMES_${target}_LLVM_ENABLE_LTO ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO ON CACHE BOOL "")
+
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}")
   endif()
@@ -273,6 +277,10 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}+asan+noexcept_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}+asan+noexcept_LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}+asan+noexcept_LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
+
+    # Enable FatLTO for Fuchsia runtimes
+    set(RUNTIMES_${target}_LLVM_ENABLE_LTO ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_FATLTO ON CACHE BOOL "")
 
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}")

@@ -102,10 +102,6 @@ option(LIBCXX_ENABLE_WIDE_CHARACTERS
    support the C functionality for wide characters. When wide characters are
    not supported, several parts of the library will be disabled, notably the
    wide character specializations of std::basic_string." ON)
- option(LIBCXX_ENABLE_FATLTO
-   "Whether to compile libc++ with FatLTO enabled." ON)
- option(LIBCXX_ENABLE_LTO
-   "Whether to compile libc++ with LTO enabled." ON)
 
 # To use time zone support in libc++ the platform needs to have the IANA
 # database installed. Libc++ will fail to build if this is enabled on a

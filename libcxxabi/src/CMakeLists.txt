@@ -143,15 +143,6 @@ if ( APPLE )
   endif()
 endif()
 
-if(LIBCXX_ENABLE_LTO)
-  list(APPEND LIBCXXABI_COMPILE_FLAGS "-flto")
-  list(APPEND LIBCXXABI_LINK_FLAGS "-flto")
-endif()
-if(LIBCXX_ENABLE_FATLTO)
-  list(APPEND LIBCXXABI_COMPILE_FLAGS "-ffat-lto-objects")
-  list(APPEND LIBCXXABI_LINK_FLAGS "-ffat-lto-objects")
-endif()
-
 split_list(LIBCXXABI_COMPILE_FLAGS)
 split_list(LIBCXXABI_LINK_FLAGS)
 
