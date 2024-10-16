@@ -2460,7 +2460,7 @@ void SemaObjC::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       QualType modifiedTy = resultTy;
       if (auto nullability = AttributedType::stripOuterNullability(modifiedTy)) {
         if (*nullability == NullabilityKind::Unspecified)
-          resultTy = Context.getAttributedType(attr::TypeNonNull,
+          resultTy = Context.getAttributedType(NullabilityKind::NonNull,
                                                modifiedTy, modifiedTy);
       }
     }
@@ -2538,7 +2538,7 @@ void SemaObjC::ProcessPropertyDecl(ObjCPropertyDecl *property) {
         QualType modifiedTy = paramTy;
         if (auto nullability = AttributedType::stripOuterNullability(modifiedTy)){
           if (*nullability == NullabilityKind::Unspecified)
-            paramTy = Context.getAttributedType(attr::TypeNullable,
+            paramTy = Context.getAttributedType(NullabilityKind::Nullable,
                                                 modifiedTy, modifiedTy);
         }
       }
