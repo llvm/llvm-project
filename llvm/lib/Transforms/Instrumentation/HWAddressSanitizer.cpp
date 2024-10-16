@@ -1041,19 +1041,18 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
   }
 
   if (UseFixedShadowIntrinsic) {
-    IRB.CreateCall(
-        Intrinsic::getOrInsertDeclaration(
-            M, UseShortGranules
-                   ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
-                   : Intrinsic::hwasan_check_memaccess_fixedshadow),
+    IRB.CreateIntrinsic(
+        UseShortGranules
+            ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
+            : Intrinsic::hwasan_check_memaccess_fixedshadow,
+        {},
         {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
          ConstantInt::get(Int64Ty, Mapping.offset())});
   } else {
-    IRB.CreateCall(Intrinsic::getOrInsertDeclaration(
-                       M, UseShortGranules
-                              ? Intrinsic::hwasan_check_memaccess_shortgranules
-                              : Intrinsic::hwasan_check_memaccess),
-                   {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+    IRB.CreateIntrinsic(
+        UseShortGranules ? Intrinsic::hwasan_check_memaccess_shortgranules
+                         : Intrinsic::hwasan_check_memaccess,
+        {}, {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
   }
 }
 
