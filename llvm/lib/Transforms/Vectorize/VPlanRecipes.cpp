@@ -960,24 +960,39 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     Args.push_back(Arg);
   }
 
-  // Use vector version of the intrinsic.
-  Module *M = State.Builder.GetInsertBlock()->getModule();
-  Function *VectorF =
-      Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
-  assert(VectorF && "Can't retrieve vector intrinsic.");
+  if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
+    // Use vector version of the vector predicate Intrinsic
+    IRBuilderBase &BuilderIR = State.Builder;
+    VectorBuilder VBuilder(BuilderIR);
+    Value *Mask = BuilderIR.CreateVectorSplat(State.VF, BuilderIR.getTrue());
+    VBuilder.setMask(Mask).setEVL(Args.back());
+    // Remove the EVL from Args
+    Args.pop_back();
+    Value *VPInst = VBuilder.createSimpleIntrinsic(
+        VectorIntrinsicID, TysForDecl[0], Args, "vp.call");
+    if (!VPInst->getType()->isVoidTy())
+      State.set(this, VPInst);
+    State.addMetadata(VPInst,
+                      dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+  } else {
+    // Use vector version of the intrinsic.
+    Module *M = State.Builder.GetInsertBlock()->getModule();
+    Function *VectorF =
+        Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
+    assert(VectorF && "Can't retrieve vector intrinsic.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
-    CI->getOperandBundlesAsDefs(OpBundles);
+    auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    if (CI)
+      CI->getOperandBundlesAsDefs(OpBundles);
 
-  CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+    CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+    setFlags(V);
 
-  setFlags(V);
-
-  if (!V->getType()->isVoidTy())
-    State.set(this, V);
-  State.addMetadata(V, CI);
+    if (!V->getType()->isVoidTy())
+      State.set(this, V);
+    State.addMetadata(V, CI);
+  }
 }
 
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
@@ -990,6 +1005,18 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   // clear Arguments.
   // TODO: Rework TTI interface to be independent of concrete IR values.
   SmallVector<const Value *> Arguments;
+
+  Intrinsic::ID FID = VectorIntrinsicID;
+  unsigned NumOperands = getNumOperands();
+  if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
+    std::optional<Intrinsic::ID> ID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(VectorIntrinsicID);
+    if (ID) {
+      FID = ID.value();
+      NumOperands = getNumOperands() - 1;
+    }
+  }
+
   for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
@@ -1005,14 +1032,14 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
 
   Type *RetTy = ToVectorTy(Ctx.Types.inferScalarType(this), VF);
   SmallVector<Type *> ParamTys;
-  for (unsigned I = 0; I != getNumOperands(); ++I)
+  for (unsigned I = 0; I != NumOperands; ++I)
     ParamTys.push_back(
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
-      VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
+      FID, RetTy, Arguments, ParamTys, FMF,
       dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()));
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }

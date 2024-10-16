@@ -1481,6 +1481,24 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
+              .Case<VPWidenIntrinsicRecipe>(
+                  [&](VPWidenIntrinsicRecipe *CInst) -> VPRecipeBase * {
+                    auto *CI = cast<CallInst>(CInst->getUnderlyingInstr());
+                    SmallVector<VPValue *> Ops(CInst->operands());
+                    Ops.push_back(&EVL);
+                    Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(
+                        CI->getCalledFunction()->getIntrinsicID());
+                    if (VPID == Intrinsic::not_intrinsic)
+                      return nullptr;
+                    // FIXME: In fact, can we really not pass the
+                    // underlyingInstr? In this case, how to set the Flag and
+                    // add metadata in execute?
+                    return new VPWidenIntrinsicRecipe(
+                        VPID, Ops, TypeInfo.inferScalarType(CInst), false,
+                        false, false);
+                    // return new VPWidenIntrinsicRecipe(
+                    //     *CI, VPID, Ops, CI->getType(), CI->getDebugLoc());
+                  })
               .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
                 SmallVector<VPValue *> Ops(Sel->operands());
                 Ops.push_back(&EVL);
