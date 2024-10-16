@@ -1288,6 +1288,10 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
       !isSafeToSpeculativelyExecuteWithVariableReplaced(I))
     return false;
 
+  // Forbid potentially lane-crossing instructions.
+  if (Old->getType()->isVectorTy() && !isNotCrossLaneOperation(I))
+    return false;
+
   bool Changed = false;
   for (Use &U : I->operands()) {
     if (U == Old) {
@@ -1366,9 +1370,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // with different operands, which should not cause side-effects or trigger
     // undefined behavior). Only do this if CmpRHS is a constant, as
     // profitability is not clear for other cases.
-    // FIXME: Support vectors.
     if (OldOp == CmpLHS && match(NewOp, m_ImmConstant()) &&
-        !match(OldOp, m_Constant()) && !Cmp.getType()->isVectorTy() &&
+        !match(OldOp, m_Constant()) &&
         isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
       if (replaceInInstruction(TrueVal, OldOp, NewOp))
         return &Sel;
@@ -3834,11 +3837,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // minnum/maxnum intrinsics.
     if (SIFPOp->hasNoNaNs() && SIFPOp->hasNoSignedZeros()) {
       Value *X, *Y;
-      if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
+      if (match(&SI, m_OrdOrUnordFMax(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
             SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
 
-      if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
+      if (match(&SI, m_OrdOrUnordFMin(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
             SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
     }

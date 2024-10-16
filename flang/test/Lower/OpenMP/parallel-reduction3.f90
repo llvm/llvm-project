@@ -102,7 +102,6 @@
 ! CHECK:                 hlfir.destroy %[[VAL_28]] : !hlfir.expr<?xi32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

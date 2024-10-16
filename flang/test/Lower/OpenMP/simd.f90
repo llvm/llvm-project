@@ -267,7 +267,6 @@ subroutine lastprivate_with_simd
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }
-!CHECK: omp.terminator
 !CHECK: }
   !$omp simd lastprivate(sum)
   do i = 1, 100

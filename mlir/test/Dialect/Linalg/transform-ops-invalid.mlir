@@ -18,8 +18,8 @@ transform.sequence failures(propagate) {
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
-  // expected-error@below {{expects pack_paddings to contain booleans (0/1), found [1, 7]}}
-  transform.structured.pad %arg0 {pack_paddings=[1, 7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  // expected-error@below {{expects nofold_flags to contain booleans (0/1), found [1, 7]}}
+  transform.structured.pad %arg0 {nofold_flags=[1, 7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----

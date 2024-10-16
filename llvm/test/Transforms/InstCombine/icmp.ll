@@ -5365,3 +5365,25 @@ define i1 @icmp_and_inv_pow2_or_zero_ne_0(i32 %A, i32 %B) {
   %cmp = icmp ne i32 %and, 0
   ret i1 %cmp
 }
+
+define i1 @icmp_samesign_logical_and(i32 %In) {
+; CHECK-LABEL: @icmp_samesign_logical_and(
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IN:%.*]], 1
+; CHECK-NEXT:    ret i1 [[C2]]
+;
+  %c1 = icmp samesign sgt i32 %In, -1
+  %c2 = icmp samesign eq i32 %In, 1
+  %V = select i1 %c1, i1 %c2, i1 false
+  ret i1 %V
+}
+
+define i1 @icmp_samesign_logical_or(i32 %In) {
+; CHECK-LABEL: @icmp_samesign_logical_or(
+; CHECK-NEXT:    [[V:%.*]] = icmp ne i32 [[IN:%.*]], 1
+; CHECK-NEXT:    ret i1 [[V]]
+;
+  %c1 = icmp samesign slt i32 %In, 0
+  %c2 = icmp samesign ne i32 %In, 1
+  %V = select i1 %c1, i1 true, i1 %c2
+  ret i1 %V
+}

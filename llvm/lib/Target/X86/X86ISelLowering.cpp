@@ -10356,7 +10356,7 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
           }
           return false;
         };
-        if (!IsCheapConcat(V1, V2))
+        if (!IsCheapConcat(peekThroughBitcasts(V1), peekThroughBitcasts(V2)))
           continue;
       }
 
@@ -50049,12 +50049,15 @@ static SDValue combineAndNotOrIntoAndNotAnd(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue X, Y, Z;
-  if (sd_match(
-          N, m_And(m_Value(X), m_OneUse(m_Or(m_Value(Y), m_Not(m_Value(Z)))))))
-    return DAG.getNode(
-        ISD::AND, DL, VT, X,
-        DAG.getNOT(DL, DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, Y, VT), Z),
-                   VT));
+  if (sd_match(N, m_And(m_Value(X),
+                        m_OneUse(m_Or(m_Value(Y), m_Not(m_Value(Z))))))) {
+    // Don't fold if Y is a constant to prevent infinite loops.
+    if (!isa<ConstantSDNode>(Y))
+      return DAG.getNode(
+          ISD::AND, DL, VT, X,
+          DAG.getNOT(
+              DL, DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, Y, VT), Z), VT));
+  }
 
   return SDValue();
 }

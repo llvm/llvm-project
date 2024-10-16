@@ -166,7 +166,6 @@ end
 ! CHECK:                 fir.call @_QPsub4(%[[VAL_9]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -338,7 +337,6 @@ end subroutine
 ! CHECK:                 hlfir.assign %[[VAL_40]] to %[[VAL_31]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
