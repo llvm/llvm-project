@@ -51,7 +51,7 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
 private:
-  bool checkUsers(std::optional<Register> &CommonVL, MachineInstr &MI);
+  bool checkUsers(const MachineOperand *&CommonVL, MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
 };
@@ -658,10 +658,34 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   if (MI.getNumDefs() != 1)
     return false;
 
+  // If we're not using VLMAX, then we need to be careful whether we are using
+  // TA/TU when there is a non-undef Passthru. But when we are using VLMAX, it
+  // does not matter whether we are using TA/TU with a non-undef Passthru, since
+  // there are no tail elements to be perserved.
   unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
   const MachineOperand &VLOp = MI.getOperand(VLOpNum);
-  if (!VLOp.isImm() || VLOp.getImm() != RISCV::VLMaxSentinel)
+  if (VLOp.isReg() || VLOp.getImm() != RISCV::VLMaxSentinel) {
+    // If MI has a non-undef passthru, we will not try to optimize it since
+    // that requires us to preserve tail elements according to TA/TU.
+    // Otherwise, The MI has an undef Passthru, so it doesn't matter whether we
+    // are using TA/TU.
+    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
+    unsigned PassthruOpIdx = MI.getNumExplicitDefs();
+    if (HasPassthru &&
+        MI.getOperand(PassthruOpIdx).getReg() != RISCV::NoRegister) {
+      LLVM_DEBUG(
+          dbgs() << "  Not a candidate because it uses non-undef passthru"
+                    " with non-VLMAX VL\n");
+      return false;
+    }
+  }
+
+  // If the VL is 1, then there is no need to reduce it. This is an
+  // optimization, not needed to preserve correctness.
+  if (VLOp.isImm() && VLOp.getImm() == 1) {
+    LLVM_DEBUG(dbgs() << "  Not a candidate because VL is already 1\n");
     return false;
+  }
 
   // Some instructions that produce vectors have semantics that make it more
   // difficult to determine whether the VL can be reduced. For example, some
@@ -684,7 +708,7 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVLOptimizer::checkUsers(std::optional<Register> &CommonVL,
+bool RISCVVLOptimizer::checkUsers(const MachineOperand *&CommonVL,
                                   MachineInstr &MI) {
   // FIXME: Avoid visiting each user for each time we visit something on the
   // worklist, combined with an extra visit from the outer loop. Restructure
@@ -730,16 +754,17 @@ bool RISCVVLOptimizer::checkUsers(std::optional<Register> &CommonVL,
 
     unsigned VLOpNum = RISCVII::getVLOpNum(Desc);
     const MachineOperand &VLOp = UserMI.getOperand(VLOpNum);
-    // Looking for a register VL that isn't X0.
-    if (!VLOp.isReg() || VLOp.getReg() == RISCV::X0) {
-      LLVM_DEBUG(dbgs() << "    Abort due to user uses X0 as VL.\n");
-      CanReduceVL = false;
-      break;
-    }
+
+    // Looking for an immediate or a register VL that isn't X0.
+    assert(!VLOp.isReg() ||
+           VLOp.getReg() != RISCV::X0 && "Did not expect X0 VL");
 
     if (!CommonVL) {
-      CommonVL = VLOp.getReg();
-    } else if (*CommonVL != VLOp.getReg()) {
+      CommonVL = &VLOp;
+      LLVM_DEBUG(dbgs() << "    User VL is: " << VLOp << "\n");
+    } else if (!CommonVL->isIdenticalTo(VLOp)) {
+      // FIXME: This check requires all users to have the same VL. We can relax
+      // this and get the largest VL amongst all users.
       LLVM_DEBUG(dbgs() << "    Abort because users have different VL\n");
       CanReduceVL = false;
       break;
@@ -776,7 +801,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     MachineInstr &MI = *Worklist.pop_back_val();
     LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-    std::optional<Register> CommonVL;
+    const MachineOperand *CommonVL = nullptr;
     bool CanReduceVL = true;
     if (isVectorRegClass(MI.getOperand(0).getReg(), MRI))
       CanReduceVL = checkUsers(CommonVL, MI);
@@ -784,21 +809,34 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
     if (!CanReduceVL || !CommonVL)
       continue;
 
-    if (!CommonVL->isVirtual()) {
-      LLVM_DEBUG(
-          dbgs() << "    Abort due to new VL is not virtual register.\n");
+    assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
+           "Expected VL to be an Imm or virtual Reg");
+
+    unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
+    MachineOperand &VLOp = MI.getOperand(VLOpNum);
+
+    if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
+      LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
       continue;
     }
 
-    const MachineInstr *VLMI = MRI->getVRegDef(*CommonVL);
-    if (!MDT->dominates(VLMI, &MI))
-      continue;
+    if (CommonVL->isImm()) {
+      LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
+                        << CommonVL->getImm() << " for " << MI << "\n");
+      VLOp.ChangeToImmediate(CommonVL->getImm());
+    } else {
+      const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+      if (!MDT->dominates(VLMI, &MI))
+        continue;
+      LLVM_DEBUG(
+          dbgs() << "  Reduce VL from " << VLOp << " to "
+                 << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
+                 << " for " << MI << "\n");
 
-    // All our checks passed. We can reduce VL.
-    LLVM_DEBUG(dbgs() << "    Reducing VL for: " << MI << "\n");
-    unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
-    MachineOperand &VLOp = MI.getOperand(VLOpNum);
-    VLOp.ChangeToRegister(*CommonVL, false);
+      // All our checks passed. We can reduce VL.
+      VLOp.ChangeToRegister(CommonVL->getReg(), false);
+    }
+
     MadeChange = true;
 
     // Now add all inputs to this instruction to the worklist.
