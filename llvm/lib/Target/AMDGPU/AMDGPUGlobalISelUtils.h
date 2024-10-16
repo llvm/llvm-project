@@ -14,6 +14,7 @@
 
 namespace llvm {
 
+class AllocaInst;
 class MachineRegisterInfo;
 class GCNSubtarget;
 class GISelKnownBits;
@@ -30,7 +31,8 @@ getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
 
 bool IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd);
 
-bool IsPrivateInVGPR(const MachineMemOperand *MemOpnd);
+bool IsPromotablePrivate(const AllocaInst &Alloca);
+bool IsPromotablePrivate(const MachineMemOperand *MemOpnd);
 
 } // namespace AMDGPU
 } // namespace llvm

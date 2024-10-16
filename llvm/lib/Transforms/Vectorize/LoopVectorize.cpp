@@ -809,8 +809,7 @@ protected:
 };
 } // end namespace llvm
 
-/// Look for a meaningful debug location on the instruction or it's
-/// operands.
+/// Look for a meaningful debug location on the instruction or its operands.
 static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
   if (!I)
     return DebugLoc();
@@ -1798,7 +1797,7 @@ public:
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
-  /// un-linked from the IR and is added back during vector code generation. If
+  /// un-linked from the IR and are added back during vector code generation. If
   /// there is no vector code generation, the check blocks are removed
   /// completely.
   void create(Loop *L, const LoopAccessInfo &LAI,
@@ -2581,7 +2580,7 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
     }
   }
 
-  // Create phi nodes to merge from the  backedge-taken check block.
+  // Create phi nodes to merge from the backedge-taken check block.
   PHINode *BCResumeVal =
       PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
                       LoopScalarPreHeader->getFirstNonPHIIt());
@@ -3002,7 +3001,8 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
 
       // We can't sink an instruction if it is a phi node, is not in the loop,
       // may have side effects or may read from memory.
-      // TODO Could dor more granular checking to allow sinking a load past non-store instructions.
+      // TODO: Could do more granular checking to allow sinking
+      // a load past non-store instructions.
       if (!I || isa<PHINode>(I) || !VectorLoop->contains(I) ||
           I->mayHaveSideEffects() || I->mayReadFromMemory())
           continue;
@@ -3140,9 +3140,8 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
   // (2) Add to the worklist all bitcast and getelementptr instructions used by
   // memory accesses requiring a scalar use. The pointer operands of loads and
-  // stores will be scalar as long as the memory accesses is not a gather or
-  // scatter operation. The value operand of a store will remain scalar if the
-  // store is scalarized.
+  // stores will be scalar unless the operation is a gather or scatter.
+  // The value operand of a store will remain scalar if the store is scalarized.
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
       if (auto *Load = dyn_cast<LoadInst>(&I)) {
@@ -3415,7 +3414,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   assert(Group && "Must have a group.");
   unsigned InterleaveFactor = Group->getFactor();
 
-  // If the instruction's allocated size doesn't equal it's type size, it
+  // If the instruction's allocated size doesn't equal its type size, it
   // requires padding and will be scalarized.
   auto &DL = I->getDataLayout();
   auto *ScalarTy = getLoadStoreType(I);
@@ -3515,11 +3514,11 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   assert(VF.isVector() && !Uniforms.contains(VF) &&
          "This function should not be visited twice for the same VF");
 
-  // Visit the list of Uniforms. If we'll not find any uniform value, we'll
-  // not analyze again.  Uniforms.count(VF) will return 1.
+  // Visit the list of Uniforms. If we find no uniform value, we won't
+  // analyze again.  Uniforms.count(VF) will return 1.
   Uniforms[VF].clear();
 
-  // We now know that the loop is vectorizable!
+  // Now we know that the loop is vectorizable!
   // Collect instructions inside the loop that will remain uniform after
   // vectorization.
 
@@ -3566,7 +3565,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 
   auto PrevVF = VF.divideCoefficientBy(2);
   // Return true if all lanes perform the same memory operation, and we can
-  // thus chose to execute only one.
+  // thus choose to execute only one.
   auto IsUniformMemOpUse = [&](Instruction *I) {
     // If the value was already known to not be uniform for the previous
     // (smaller VF), it cannot be uniform for the larger VF.
@@ -3957,7 +3956,7 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
 FixedScalableVFPair
 LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
-    // TODO: It may by useful to do since it's still likely to be dynamically
+    // TODO: It may be useful to do since it's still likely to be dynamically
     // uniform if the target can skip.
     reportVectorizationFailure(
         "Not inserting runtime ptr check for divergent target",
@@ -4031,7 +4030,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     assert(WideningDecisions.empty() && Uniforms.empty() && Scalars.empty() &&
            "No decisions should have been taken at this point");
     // Note: There is no need to invalidate any cost modeling decisions here, as
-    // non where taken so far.
+    // none were taken so far.
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
@@ -7940,7 +7939,7 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
     BasicBlock *Bypass, BasicBlock *Insert) {
 
   assert(EPI.TripCount &&
-         "Expected trip count to have been safed in the first pass.");
+         "Expected trip count to have been saved in the first pass.");
   assert(
       (!isa<Instruction>(EPI.TripCount) ||
        DT->dominates(cast<Instruction>(EPI.TripCount)->getParent(), Insert)) &&

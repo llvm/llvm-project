@@ -8,33 +8,53 @@ define amdgpu_kernel void @private_load_store() {
   ; NOVIDX: bb.0.entry:
   ; NOVIDX-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %stack.0.p, 4, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
   ; NOVIDX-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[SCRATCH_LOAD_DWORD_SADDR]], %stack.0.p, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.p.2, addrspace 5)
+  ; NOVIDX-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %stack.1.q, 4, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
+  ; NOVIDX-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[SCRATCH_LOAD_DWORD_SADDR1]], %stack.1.q, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.q.2, addrspace 5)
   ; NOVIDX-NEXT:   S_ENDPGM 0
   ;
   ; VIDX-LABEL: name: private_load_store
   ; VIDX: bb.0.entry:
-  ; VIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 %stack.0.p, 2, implicit-def dead $scc
-  ; VIDX-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 1, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
-  ; VIDX-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 %stack.0.p, 2, implicit-def dead $scc
-  ; VIDX-NEXT:   V_STORE_IDX [[V_LOAD_IDX]], [[S_LSHR_B32_1]], 2, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
+  ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 124
+  ; VIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
+  ; VIDX-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
+  ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 128
+  ; VIDX-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
+  ; VIDX-NEXT:   V_STORE_IDX [[V_LOAD_IDX]], [[S_LSHR_B32_1]], 0, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
+  ; VIDX-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 4
+  ; VIDX-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
+  ; VIDX-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_2]], 0, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
+  ; VIDX-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 8
+  ; VIDX-NEXT:   [[S_LSHR_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_3]], 2, implicit-def dead $scc
+  ; VIDX-NEXT:   V_STORE_IDX [[V_LOAD_IDX1]], [[S_LSHR_B32_3]], 0, implicit $exec :: (store (s32) into %ir.q.2, addrspace 5)
   ; VIDX-NEXT:   S_ENDPGM 0
   ;
   ; SETIDX-LABEL: name: private_load_store
   ; SETIDX: bb.0.entry:
-  ; SETIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 %stack.0.p, 2, implicit-def dead $scc
-  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
-  ; SETIDX-NEXT:   BUNDLE implicit-def [[V_LOAD_IDX:%[0-9]+]], implicit $idx1, implicit $exec {
-  ; SETIDX-NEXT:     [[V_LOAD_IDX]]:vgpr_32 = V_LOAD_IDX $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
-  ; SETIDX-NEXT:     V_STORE_IDX internal [[V_LOAD_IDX]], $idx1, 2, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
+  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
+  ; SETIDX-NEXT:   BUNDLE implicit-def %5, implicit $idx1, implicit $exec {
+  ; SETIDX-NEXT:     [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 31, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
+  ; SETIDX-NEXT:     V_STORE_IDX internal [[V_LOAD_IDX]], $idx1, 32, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
+  ; SETIDX-NEXT:   }
+  ; SETIDX-NEXT:   BUNDLE implicit-def %8, implicit $idx1, implicit $exec {
+  ; SETIDX-NEXT:     [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
+  ; SETIDX-NEXT:     V_STORE_IDX internal [[V_LOAD_IDX1]], $idx1, 2, implicit $exec :: (store (s32) into %ir.q.2, addrspace 5)
   ; SETIDX-NEXT:   }
   ; SETIDX-NEXT:   S_ENDPGM 0
 entry:
   %p = alloca [30 x float], align 4, addrspace(5)
+  %q = alloca [30 x float], align 4, addrspace(5)
 
   %p.1 = getelementptr [30 x float], ptr addrspace(5) %p, i64 0, i64 1
   %v = load float, ptr addrspace(5) %p.1, align 4
 
   %p.2 = getelementptr [30 x float], ptr addrspace(5) %p, i64 0, i64 2
   store float %v, ptr addrspace(5) %p.2, align 4
+
+  %q.1 = getelementptr [30 x float], ptr addrspace(5) %q, i64 0, i64 1
+  %w = load float, ptr addrspace(5) %q.1, align 4
+
+  %q.2 = getelementptr [30 x float], ptr addrspace(5) %q, i64 0, i64 2
+  store float %w, ptr addrspace(5) %q.2, align 4
 
   ret void
 }

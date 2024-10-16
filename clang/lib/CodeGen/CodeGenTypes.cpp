@@ -743,6 +743,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = llvm::Type::getIntNTy(getLLVMContext(), EIT->getNumBits());
     break;
   }
+  case Type::HLSLAttributedResource:
+    ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+    break;
   }
 
   assert(ResultType && "Didn't convert a type?");

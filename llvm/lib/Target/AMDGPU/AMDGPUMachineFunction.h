@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+class AllocaInst;
 class AMDGPUSubtarget;
 
 class AMDGPUMachineFunction : public MachineFunctionInfo {
@@ -31,6 +32,11 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of lane-shared objects and their offsets
   /// mapping to the lane-shared-vgpr space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedVGPRObjects;
+  /// A map to keep track of private objects and their offsets
+  /// mapping to the VGPR space.
+  SmallDenseMap<const AllocaInst *, unsigned, 4> PrivateVGPRObjects;
+  /// Number of bytes of VGPR-space allocated to private objects.
+  uint32_t PrivateVGPRObjectsSize = 0;
 
 protected:
   uint64_t ExplicitKernArgSize = 0; // Cache for this.
@@ -141,6 +147,9 @@ public:
 
   unsigned allocateLaneSharedGlobal(const DataLayout &DL,
                                     const GlobalVariable &GV);
+
+  unsigned allocatePrivateInVGPR(const DataLayout &DL,
+                                 const AllocaInst &Alloca);
 
   static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
   static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);

@@ -8,13 +8,15 @@
 
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPU.h"
+#include "AMDGPUGlobalISelUtils.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "AMDGPUMemoryUtils.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -200,6 +202,19 @@ AMDGPUMachineFunction::allocateLaneSharedGlobal(const DataLayout &DL,
   Offset = LaneSharedScratchSize = alignTo(LaneSharedScratchSize, Alignment);
   LaneSharedScratchSize += DL.getTypeAllocSize(GV.getValueType());
   Entry.first->second = Offset;
+  return Offset;
+}
+
+unsigned
+AMDGPUMachineFunction::allocatePrivateInVGPR(const DataLayout &DL,
+                                             const AllocaInst &Alloca) {
+  assert(AMDGPU::IsPromotablePrivate(Alloca));
+  auto [Entry, Inserted] = PrivateVGPRObjects.insert({&Alloca, 0});
+  unsigned &Offset = Entry->second;
+  if (Inserted) {
+    Offset = PrivateVGPRObjectsSize;
+    PrivateVGPRObjectsSize += alignTo(*Alloca.getAllocationSize(DL), 4);
+  }
   return Offset;
 }
 

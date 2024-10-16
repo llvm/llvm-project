@@ -68,6 +68,8 @@ private:
 
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
+  SDValue lowerFrameIndex(AMDGPUMachineFunction *MFI, SDValue Op,
+                          SelectionDAG &DAG) const;
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,

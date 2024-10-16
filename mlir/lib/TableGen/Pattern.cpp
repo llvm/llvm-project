@@ -700,7 +700,7 @@ int Pattern::getBenefit() const {
   // The initial benefit value is a heuristic with number of ops in the source
   // pattern.
   int initBenefit = getSourcePattern().getNumOps();
-  const llvm::DagInit *delta = def.getValueAsDag("benefitDelta");
+  llvm::DagInit *delta = def.getValueAsDag("benefitDelta");
   if (delta->getNumArgs() != 1 || !isa<llvm::IntInit>(delta->getArg(0))) {
     PrintFatalError(&def,
                     "The 'addBenefit' takes and only takes one integer value");
