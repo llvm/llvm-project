@@ -32,8 +32,7 @@ namespace {
 
 /// Data structure holding function info for kernels.
 class KernelInfo {
-  void updateForBB(const BasicBlock &BB, int64_t Direction,
-                   OptimizationRemarkEmitter &ORE);
+  void updateForBB(const BasicBlock &BB, OptimizationRemarkEmitter &ORE);
 
 public:
   static void emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
@@ -180,38 +179,37 @@ static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
   });
 }
 
-void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
+void KernelInfo::updateForBB(const BasicBlock &BB,
                              OptimizationRemarkEmitter &ORE) {
-  assert(Direction == 1 || Direction == -1);
   const Function &F = *BB.getParent();
   const Module &M = *F.getParent();
   const DataLayout &DL = M.getDataLayout();
   for (const Instruction &I : BB.instructionsWithoutDebug()) {
     if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(&I)) {
-      Allocas += Direction;
+      ++Allocas;
       TypeSize::ScalarTy StaticSize = 0;
       if (std::optional<TypeSize> Size = Alloca->getAllocationSize(DL)) {
         StaticSize = Size->getFixedValue();
         assert(StaticSize <= std::numeric_limits<int64_t>::max());
-        AllocasStaticSizeSum += Direction * StaticSize;
+        AllocasStaticSizeSum += StaticSize;
       } else {
-        AllocasDyn += Direction;
+        ++AllocasDyn;
       }
       remarkAlloca(ORE, F, *Alloca, StaticSize);
     } else if (const CallBase *Call = dyn_cast<CallBase>(&I)) {
       SmallString<40> CallKind;
       SmallString<40> RemarkKind;
       if (Call->isIndirectCall()) {
-        IndirectCalls += Direction;
+        ++IndirectCalls;
         CallKind += "indirect";
         RemarkKind += "Indirect";
       } else {
-        DirectCalls += Direction;
+        ++DirectCalls;
         CallKind += "direct";
         RemarkKind += "Direct";
       }
       if (isa<InvokeInst>(Call)) {
-        Invokes += Direction;
+        ++Invokes;
         CallKind += " invoke";
         RemarkKind += "Invoke";
       } else {
@@ -221,12 +219,12 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
       if (!Call->isIndirectCall()) {
         if (const Function *Callee = Call->getCalledFunction()) {
           if (!Callee->isIntrinsic() && !Callee->isDeclaration()) {
-            DirectCallsToDefinedFunctions += Direction;
+            ++DirectCallsToDefinedFunctions;
             CallKind += " to defined function";
             RemarkKind += "ToDefinedFunction";
           }
         } else if (Call->isInlineAsm()) {
-          InlineAssemblyCalls += Direction;
+          ++InlineAssemblyCalls;
           CallKind += " to inline assembly";
           RemarkKind += "ToInlineAssembly";
         }
@@ -234,34 +232,34 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
       remarkCall(ORE, F, *Call, CallKind, RemarkKind);
       if (const AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(Call)) {
         if (MI->getDestAddressSpace() == FlatAddrspace) {
-          FlatAddrspaceAccesses += Direction;
+          ++FlatAddrspaceAccesses;
           remarkFlatAddrspaceAccess(ORE, F, I);
         } else if (const AnyMemTransferInst *MT =
                        dyn_cast<AnyMemTransferInst>(MI)) {
           if (MT->getSourceAddressSpace() == FlatAddrspace) {
-            FlatAddrspaceAccesses += Direction;
+            ++FlatAddrspaceAccesses;
             remarkFlatAddrspaceAccess(ORE, F, I);
           }
         }
       }
     } else if (const LoadInst *Load = dyn_cast<LoadInst>(&I)) {
       if (Load->getPointerAddressSpace() == FlatAddrspace) {
-        FlatAddrspaceAccesses += Direction;
+        ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
     } else if (const StoreInst *Store = dyn_cast<StoreInst>(&I)) {
       if (Store->getPointerAddressSpace() == FlatAddrspace) {
-        FlatAddrspaceAccesses += Direction;
+        ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
     } else if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
       if (At->getPointerAddressSpace() == FlatAddrspace) {
-        FlatAddrspaceAccesses += Direction;
+        ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
     } else if (const AtomicCmpXchgInst *At = dyn_cast<AtomicCmpXchgInst>(&I)) {
       if (At->getPointerAddressSpace() == FlatAddrspace) {
-        FlatAddrspaceAccesses += Direction;
+        ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
     }
@@ -300,11 +298,9 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   }
   TheTTI.collectKernelLaunchBounds(F, KI.LaunchBounds);
 
-  const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   for (const auto &BB : F)
-    if (DT.isReachableFromEntry(&BB))
-      KI.updateForBB(BB, +1, ORE);
+    KI.updateForBB(BB, ORE);
 
 #define REMARK_PROPERTY(PROP_NAME)                                             \
   remarkProperty(ORE, F, #PROP_NAME, KI.PROP_NAME)
