@@ -28731,7 +28731,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   unsigned BitsPerElt = VTOp1.getVectorElementType().getSizeInBits();
   unsigned IndexLen = MinSVESize / BitsPerElt;
   unsigned ElementsPerVectorReg = VTOp1.getVectorNumElements();
-  uint64_t MaxOffset = APInt(BitsPerElt, -1, true).getZExtValue();
+  uint64_t MaxOffset = maxUIntN(BitsPerElt);
   EVT MaskEltType = VTOp1.getVectorElementType().changeTypeToInteger();
   EVT MaskType = EVT::getVectorVT(*DAG.getContext(), MaskEltType, IndexLen);
   bool MinMaxEqual = (MinSVESize == MaxSVESize);
