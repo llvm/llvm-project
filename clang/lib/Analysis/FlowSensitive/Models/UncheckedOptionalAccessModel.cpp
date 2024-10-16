@@ -560,8 +560,7 @@ void handleConstMemberCall(const CallExpr *CE,
       return;
     if (CE->isGLValue()) {
       // If the call to the const method returns a reference to an optional,
-      // we can use link the call expression to the optional via
-      // setStorageLocation.
+      // link the call expression to the cached StorageLocation.
       State.Env.setStorageLocation(*CE, *Loc);
     } else {
       // If the call to the const method returns an optional by value, we
