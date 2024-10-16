@@ -52,7 +52,7 @@ commonBuildCXXMemberOrOperatorCall(CIRGenFunction &CGF, const CXXMethodDecl *MD,
 
   // If there is an implicit parameter (e.g. VTT), emit it.
   if (ImplicitParam) {
-    llvm_unreachable("NYI");
+    Args.add(RValue::get(ImplicitParam), ImplicitParamTy);
   }
 
   const auto *FPT = MD->getType()->castAs<FunctionProtoType>();

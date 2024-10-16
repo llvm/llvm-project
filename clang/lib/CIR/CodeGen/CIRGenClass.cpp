@@ -1205,7 +1205,8 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
       if (CGM.getCodeGenOpts().StrictVTablePointers &&
           CGM.getCodeGenOpts().OptimizationLevel > 0)
         llvm_unreachable("NYI");
-      llvm_unreachable("NYI");
+      initializeVTablePointers(getLoc(Dtor->getSourceRange()),
+                               Dtor->getParent());
     }
 
     if (isTryBody)
@@ -1466,7 +1467,12 @@ mlir::Value CIRGenFunction::GetVTTParameter(GlobalDecl GD, bool ForVirtualBase,
   if (Delegating) {
     llvm_unreachable("NYI");
   } else if (RD == Base) {
-    llvm_unreachable("NYI");
+    // If the record matches the base, this is the complete ctor/dtor
+    // variant calling the base variant in a class with virtual bases.
+    assert(!CGM.getCXXABI().NeedsVTTParameter(CurGD) &&
+           "doing no-op VTT offset in base dtor/ctor?");
+    assert(!ForVirtualBase && "Can't have same class as virtual base!");
+    SubVTTIndex = 0;
   } else {
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
     CharUnits BaseOffset = ForVirtualBase ? Layout.getVBaseClassOffset(Base)

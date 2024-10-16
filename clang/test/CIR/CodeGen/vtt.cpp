@@ -49,7 +49,7 @@ int f() {
 // CIR: cir.global linkonce_odr @_ZTT1D = #cir.const_array<[#cir.global_view<@_ZTV1D, [0 : i32, 0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1D0_1B, [0 : i32, 0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1D0_1B, [0 : i32, 1 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1D16_1C, [0 : i32, 0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1D16_1C, [0 : i32, 1 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTV1D, [0 : i32, 2 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTV1D, [0 : i32, 1 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 7> {alignment = 8 : i64}
 
 // Class B constructor
-// CIR: cir.func linkonce_odr @_ZN1BC2Ev(%arg0: !cir.ptr<!ty_B> loc({{.*}}), %arg1: !cir.ptr<!cir.ptr<!void>> loc({{.*}})) extra(#fn_attr) {
+// CIR: cir.func linkonce_odr @_ZN1BC2Ev(%arg0: !cir.ptr<!ty_B>
 // CIR:   %{{[0-9]+}} = cir.vtt.address_point %{{[0-9]+}} : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
 // CIR:   %{{[0-9]+}} = cir.load align(8) %{{[0-9]+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_B>), !cir.ptr<!cir.ptr<!void>>
@@ -80,7 +80,7 @@ int f() {
 // LLVM: }
 
 // Class C constructor
-// CIR: cir.func linkonce_odr @_ZN1CC2Ev(%arg0: !cir.ptr<!ty_C> loc({{.*}}), %arg1: !cir.ptr<!cir.ptr<!void>> loc({{.*}})) extra(#fn_attr) {
+// CIR: cir.func linkonce_odr @_ZN1CC2Ev(%arg0: !cir.ptr<!ty_C>
 // CIR:   %{{[0-9]+}} = cir.vtt.address_point %{{[0-9]+}} : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
 // CIR:   %{{[0-9]+}} = cir.load align(8) %{{[0-9]+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast(bitcast, %{{[0-9]+}} : !cir.ptr<!ty_C>), !cir.ptr<!cir.ptr<!void>>
@@ -100,7 +100,7 @@ int f() {
 // CIR: }
 
 // Class D constructor
-// CIR: cir.func linkonce_odr @_ZN1DC1Ev(%arg0: !cir.ptr<!ty_D> loc({{.*}})) extra(#fn_attr) {
+// CIR: cir.func linkonce_odr @_ZN1DC1Ev(%arg0: !cir.ptr<!ty_D>
 // CIR:   %{{[0-9]+}} = cir.alloca !cir.ptr<!ty_D>, !cir.ptr<!cir.ptr<!ty_D>>, ["this", init] {alignment = 8 : i64}
 // CIR:   cir.store %arg0, %{{[0-9]+}} : !cir.ptr<!ty_D>, !cir.ptr<!cir.ptr<!ty_D>>
 // CIR:   %[[D_PTR:.*]] = cir.load %0 : !cir.ptr<!cir.ptr<!ty_D>>, !cir.ptr<!ty_D>
@@ -149,3 +149,36 @@ int f() {
 // LLVM:   call void @_ZN1CC2Ev(ptr %[[BASE_C]], ptr getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i32 0, i32 3))
 // LLVM:   ret void
 // LLVM: }
+
+namespace other {
+  struct A {
+    A();
+    ~A();
+  };
+
+  struct B : virtual A {
+    B();
+    ~B();
+  };
+
+  extern int foo();
+  B::B() {
+    int x = foo();
+  }
+
+  B::~B() {
+    int y = foo();
+  }
+}
+
+// CIR-LABEL:   cir.func  @_ZN5other1BD1Ev(
+// CIR-SAME:                               %[[VAL_0:.*]]: !cir.ptr<!ty_other3A3AB>
+// CIR:           %[[VAL_1:.*]] = cir.alloca !cir.ptr<!ty_other3A3AB>, !cir.ptr<!cir.ptr<!ty_other3A3AB>>, ["this", init] {alignment = 8 : i64}
+// CIR:           cir.store %[[VAL_0]], %[[VAL_1]] : !cir.ptr<!ty_other3A3AB>, !cir.ptr<!cir.ptr<!ty_other3A3AB>>
+// CIR:           %[[VAL_2:.*]] = cir.load %[[VAL_1]] : !cir.ptr<!cir.ptr<!ty_other3A3AB>>, !cir.ptr<!ty_other3A3AB>
+// CIR:           %[[VAL_3:.*]] = cir.vtt.address_point @_ZTTN5other1BE, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:           cir.call @_ZN5other1BD2Ev(%[[VAL_2]], %[[VAL_3]]) : (!cir.ptr<!ty_other3A3AB>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR:           %[[VAL_4:.*]] = cir.base_class_addr(%[[VAL_2]] : !cir.ptr<!ty_other3A3AB> nonnull) [0] -> !cir.ptr<!ty_other3A3AA>
+// CIR:           cir.call @_ZN5other1AD2Ev(%[[VAL_4]]) : (!cir.ptr<!ty_other3A3AA>) -> ()
+// CIR:           cir.return
+// CIR:         }

@@ -131,7 +131,18 @@ public:
     // The Itanium ABI has separate complete-object vs. base-object variants of
     // both constructors and destructors.
     if (isa<CXXDestructorDecl>(GD.getDecl())) {
-      llvm_unreachable("NYI");
+      switch (GD.getDtorType()) {
+      case Dtor_Complete:
+      case Dtor_Deleting:
+        return true;
+
+      case Dtor_Base:
+        return false;
+
+      case Dtor_Comdat:
+        llvm_unreachable("emitting dtor comdat as function?");
+      }
+      llvm_unreachable("bad dtor kind");
     }
     if (isa<CXXConstructorDecl>(GD.getDecl())) {
       switch (GD.getCtorType()) {
@@ -379,7 +390,7 @@ bool CIRGenItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
 
   // Check if we have a base destructor.
   if (isa<CXXDestructorDecl>(MD) && GD.getDtorType() == Dtor_Base)
-    llvm_unreachable("NYI");
+    return true;
 
   return false;
 }
