@@ -24082,24 +24082,6 @@ static SDValue performMaskedGatherScatterCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   if (!DCI.isBeforeLegalize())
     return SDValue();
-
-  if (N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM) {
-    MaskedHistogramSDNode *HG = cast<MaskedHistogramSDNode>(N);
-
-    SDValue Index = HG->getIndex();
-    if (!ISD::isExtOpcode(Index->getOpcode())) {
-      return SDValue();
-    }
-    SDLoc DL(HG);
-    SDValue ExtOp = Index.getOperand(0);
-    SDValue Ops[] = {HG->getChain(),   HG->getInc(), HG->getMask(),
-                     HG->getBasePtr(), ExtOp,        HG->getScale(),
-                     HG->getIntID()};
-    return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), HG->getMemoryVT(),
-                                  DL, Ops, HG->getMemOperand(),
-                                  HG->getIndexType());
-  }
-
   MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
 
   SDLoc DL(MGS);
@@ -24110,8 +24092,9 @@ static SDValue performMaskedGatherScatterCombine(
   SDValue BasePtr = MGS->getBasePtr();
   ISD::MemIndexType IndexType = MGS->getIndexType();
 
-  if (!findMoreOptimalIndexType(MGS, BasePtr, Index, DAG))
+  if (!findMoreOptimalIndexType(MGS, BasePtr, Index, DAG)) {
     return SDValue();
+  }
 
   // Here we catch such cases early and change MGATHER's IndexType to allow
   // the use of an Index that's more legalisation friendly.
@@ -24122,12 +24105,18 @@ static SDValue performMaskedGatherScatterCombine(
         DAG.getVTList(N->getValueType(0), MVT::Other), MGT->getMemoryVT(), DL,
         Ops, MGT->getMemOperand(), IndexType, MGT->getExtensionType());
   }
-  auto *MSC = cast<MaskedScatterSDNode>(MGS);
-  SDValue Data = MSC->getValue();
-  SDValue Ops[] = {Chain, Data, Mask, BasePtr, Index, Scale};
-  return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL,
-                              Ops, MSC->getMemOperand(), IndexType,
-                              MSC->isTruncatingStore());
+  if (auto *MSC = dyn_cast<MaskedScatterSDNode>(MGS)) {
+    SDValue Data = MSC->getValue();
+    SDValue Ops[] = {Chain, Data, Mask, BasePtr, Index, Scale};
+    return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(),
+                                DL, Ops, MSC->getMemOperand(), IndexType,
+                                MSC->isTruncatingStore());
+  }
+  auto *HG = cast<MaskedHistogramSDNode>(MGS);
+  SDValue Ops[] = {Chain, HG->getInc(), Mask,          BasePtr,
+                   Index, Scale,        HG->getIntID()};
+  return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), HG->getMemoryVT(),
+                                DL, Ops, HG->getMemOperand(), IndexType);
 }
 
 /// Target-specific DAG combine function for NEON load/store intrinsics
