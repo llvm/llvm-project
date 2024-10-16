@@ -341,10 +341,11 @@ struct TemplateParameterListBuilder {
     ASTContext &context = S.getASTContext();
     SourceLocation loc = Builder.Record->getBeginLoc();
     DeclarationNameInfo DNI(CD->getDeclName(), loc);
-    NestedNameSpecifierLoc NNS;
+    NestedNameSpecifierLoc NNSLoc;
     DeclContext *DC = Builder.Record->getDeclContext();
     TemplateArgumentListInfo TALI(loc, loc);
 
+    // assume that the concept decl has just one template parameter
     TemplateTypeParmDecl *ConceptTTPD = dyn_cast<TemplateTypeParmDecl>(
         CD->getTemplateParameters()->getParam(0));
 
@@ -363,11 +364,11 @@ struct TemplateParameterListBuilder {
     T->setDeclContext(DC);
     T->setReferenced();
 
-    clang::QualType TType = context.getTypeDeclType(ConceptTTPD);
+    clang::QualType ConceptTType = context.getTypeDeclType(ConceptTTPD);
 
-    TemplateArgument TA = TemplateArgument(TType);
+    TemplateArgument ConceptTA = TemplateArgument(ConceptTType);
 
-    ArrayRef<TemplateArgument> ConvertedArgs = {TA};
+    ArrayRef<TemplateArgument> ConceptConvertedArgs = {ConceptTA};
 
     clang::QualType CSETType = context.getTypeDeclType(T);
 
@@ -375,24 +376,25 @@ struct TemplateParameterListBuilder {
 
     ArrayRef<TemplateArgument> CSEConvertedArgs = {CSETA};
 
-    ImplicitConceptSpecializationDecl *IDecl =
+    ImplicitConceptSpecializationDecl *ImplicitCSEDecl =
         ImplicitConceptSpecializationDecl::Create(
             context, Builder.Record->getDeclContext(), loc, CSEConvertedArgs);
 
-    const ConstraintSatisfaction CS(CD, ConvertedArgs);
-    TemplateArgumentLoc tal =
-        S.getTrivialTemplateArgumentLoc(TA, QualType(), SourceLocation());
+    const ConstraintSatisfaction CS(CD, ConceptConvertedArgs);
+    TemplateArgumentLoc TAL = S.getTrivialTemplateArgumentLoc(
+        ConceptTA, QualType(), SourceLocation());
 
-    TALI.addArgument(tal);
+    TALI.addArgument(TAL);
     const ASTTemplateArgumentListInfo *ATALI =
         ASTTemplateArgumentListInfo::Create(context, TALI);
 
-    // In CR, ATALI is what adds the extra TemplateArgument node underneath CSE
-    ConceptReference *CR = ConceptReference::Create(S.getASTContext(), NNS, loc,
-                                                    DNI, CD, CD, ATALI);
+    // In the concept reference, ATALI is what adds the extra
+    // TemplateArgument node underneath CSE
+    ConceptReference *CR = ConceptReference::Create(S.getASTContext(), NNSLoc,
+                                                    loc, DNI, CD, CD, ATALI);
 
     ConceptSpecializationExpr *CSE =
-        ConceptSpecializationExpr::Create(context, CR, IDecl, &CS);
+        ConceptSpecializationExpr::Create(context, CR, ImplicitCSEDecl, &CS);
 
     return CSE;
   }
