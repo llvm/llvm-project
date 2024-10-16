@@ -77,11 +77,7 @@ void RenderDiagnosticDetails(Stream &stream,
     spacer = "";
   }
 
-  // Print a line with caret indicator(s) below the lldb prompt + command.
-  const size_t padding = *offset_in_command;
-  stream << std::string(padding, ' ');
-
-  size_t offset = 1;
+  // Partition the diagnostics.
   std::vector<DiagnosticDetail> remaining_details, other_details,
       hidden_details;
   for (const DiagnosticDetail &detail : details) {
@@ -98,10 +94,31 @@ void RenderDiagnosticDetails(Stream &stream,
       continue;
     }
 
-    auto &loc = *detail.source_location;
     remaining_details.push_back(detail);
+  }
+
+  // Sort the diagnostics.
+  auto sort = [](auto &ds) {
+    llvm::sort(ds.begin(), ds.end(), [](auto &d1, auto &d2) {
+      auto l1 = d1.source_location.value_or(DiagnosticDetail::SourceLocation{});
+      auto l2 = d2.source_location.value_or(DiagnosticDetail::SourceLocation{});
+      return std::pair(l1.line, l2.column) < std::pair(l1.line, l2.column);
+    });
+  };
+  sort(remaining_details);
+  sort(other_details);
+  sort(hidden_details);
+
+  // Print a line with caret indicator(s) below the lldb prompt + command.
+  const size_t padding = *offset_in_command;
+  stream << std::string(padding, ' ');
+  size_t offset = 1;
+  for (const DiagnosticDetail &detail : remaining_details) {
+    auto &loc = *detail.source_location;
+
     if (offset > loc.column)
       continue;
+
     stream << std::string(loc.column - offset, ' ') << cursor;
     for (unsigned i = 0; i + 1 < loc.length; ++i)
       stream << underline;
@@ -121,7 +138,8 @@ void RenderDiagnosticDetails(Stream &stream,
     for (auto &remaining_detail :
          llvm::ArrayRef(remaining_details).drop_back(1)) {
       uint16_t column = remaining_detail.source_location->column;
-      stream << std::string(column - offset, ' ') << vbar;
+      if (offset <= column)
+        stream << std::string(column - offset, ' ') << vbar;
       offset = column + 1;
     }
 

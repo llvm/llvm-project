@@ -16,12 +16,45 @@ std::string Render(std::vector<DiagnosticDetail> details) {
 } // namespace
 
 TEST_F(ErrorDisplayTest, RenderStatus) {
-  DiagnosticDetail::SourceLocation inline_loc;
-  inline_loc.in_user_input = true;
+  using SourceLocation = DiagnosticDetail::SourceLocation;
   {
+    SourceLocation inline_loc;
+    inline_loc.in_user_input = true;
     std::string result =
         Render({DiagnosticDetail{inline_loc, eSeverityError, "foo", ""}});
     ASSERT_TRUE(StringRef(result).contains("error:"));
     ASSERT_TRUE(StringRef(result).contains("foo"));
+  }
+
+  {
+    // Test that diagnostics on the same column can be handled and all
+    // three errors are diagnosed.
+    SourceLocation loc1 = {FileSpec{"a.c"}, 13, 11, 0, false, true};
+    SourceLocation loc2 = {FileSpec{"a.c"}, 13, 13, 0, false, true};
+    std::string result =
+        Render({DiagnosticDetail{loc1, eSeverityError, "1", "1"},
+                DiagnosticDetail{loc1, eSeverityError, "2", "2"},
+                DiagnosticDetail{loc2, eSeverityError, "3", "3"}});
+    ASSERT_TRUE(StringRef(result).contains("error: 1"));
+    ASSERT_TRUE(StringRef(result).contains("error: 2"));
+    ASSERT_TRUE(StringRef(result).contains("error: 3"));
+  }
+  {
+    // Test that diagnostics in reverse order are emitted correctly.
+    SourceLocation loc1 = {FileSpec{"a.c"}, 1, 20, 0, false, true};
+    SourceLocation loc2 = {FileSpec{"a.c"}, 2, 10, 0, false, true};
+    std::string result =
+        Render({DiagnosticDetail{loc2, eSeverityError, "X", "X"},
+                DiagnosticDetail{loc1, eSeverityError, "Y", "Y"}});
+    ASSERT_LT(StringRef(result).find("Y"), StringRef(result).find("X"));
+  }
+  {
+    // Test that diagnostics in reverse order are emitted correctly.
+    SourceLocation loc1 = {FileSpec{"a.c"}, 2, 10, 0, false, true};
+    SourceLocation loc2 = {FileSpec{"a.c"}, 1, 20, 0, false, true};
+    std::string result =
+        Render({DiagnosticDetail{loc2, eSeverityError, "X", "X"},
+                DiagnosticDetail{loc1, eSeverityError, "Y", "Y"}});
+    ASSERT_LT(StringRef(result).find("Y"), StringRef(result).find("X"));
   }
 }
