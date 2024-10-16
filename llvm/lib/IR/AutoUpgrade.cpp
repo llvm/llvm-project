@@ -34,9 +34,11 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -63,7 +65,7 @@ static bool upgradePTESTIntrinsic(Function *F, Intrinsic::ID IID,
 
   // Yes, it's old, replace it with new version.
   rename(F);
-  NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
   return true;
 }
 
@@ -79,7 +81,7 @@ static bool upgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
 
   // Move this function aside and map down.
   rename(F);
-  NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
   return true;
 }
 
@@ -92,7 +94,7 @@ static bool upgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
     return false;
 
   rename(F);
-  NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
   return true;
 }
 
@@ -102,7 +104,7 @@ static bool upgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID,
     return false;
 
   rename(F);
-  NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
   return true;
 }
 
@@ -112,7 +114,7 @@ static bool upgradeX86BF16DPIntrinsic(Function *F, Intrinsic::ID IID,
     return false;
 
   rename(F);
-  NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
   return true;
 }
 
@@ -500,8 +502,8 @@ static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
       return false;
 
     rename(F);
-    NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::x86_rdtscp);
+    NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                              Intrinsic::x86_rdtscp);
     return true;
   }
 
@@ -607,14 +609,15 @@ static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
 
     if (ID != Intrinsic::not_intrinsic) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
       return true;
     }
     return false; // No other 'x86.xop.*'
   }
 
   if (Name == "seh.recoverfp") {
-    NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::eh_recoverfp);
+    NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                              Intrinsic::eh_recoverfp);
     return true;
   }
 
@@ -628,15 +631,15 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                                                  Function *&NewFn) {
   if (Name.starts_with("rbit")) {
     // '(arm|aarch64).rbit'.
-    NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
-                                      F->arg_begin()->getType());
+    NewFn = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), Intrinsic::bitreverse, F->arg_begin()->getType());
     return true;
   }
 
   if (Name == "thread.pointer") {
     // '(arm|aarch64).thread.pointer'.
-    NewFn =
-        Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
+    NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                              Intrinsic::thread_pointer);
     return true;
   }
 
@@ -661,7 +664,7 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         std::array<Type *, 2> Tys{
             {F->getReturnType(),
              FixedVectorType::get(Type::getBFloatTy(Ctx), OperandWidth / 16)}};
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
         return true;
       }
       return false; // No other '(arm|aarch64).neon.bfdot.*'.
@@ -686,7 +689,7 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                             : (Intrinsic::ID)Intrinsic::aarch64_neon_bfmlalt)
                 .Default(Intrinsic::not_intrinsic);
         if (ID != Intrinsic::not_intrinsic) {
-          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
           return true;
         }
         return false; // No other '(arm|aarch64).neon.bfm*.v16i8'.
@@ -710,8 +713,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                              .StartsWith("vqsubu.", Intrinsic::usub_sat)
                              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
-                                          F->arg_begin()->getType());
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
+                                                  F->arg_begin()->getType());
         return true;
       }
 
@@ -731,10 +734,10 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
           auto fArgs = F->getFunctionType()->params();
           Type *Tys[] = {fArgs[0], fArgs[1]};
           if (Groups[1].size() == 1)
-            NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                              StoreInts[fArgs.size() - 3], Tys);
+            NewFn = Intrinsic::getOrInsertDeclaration(
+                F->getParent(), StoreInts[fArgs.size() - 3], Tys);
           else
-            NewFn = Intrinsic::getDeclaration(
+            NewFn = Intrinsic::getOrInsertDeclaration(
                 F->getParent(), StoreLaneInts[fArgs.size() - 5], Tys);
           return true;
         }
@@ -808,8 +811,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                              .StartsWith("rbit", Intrinsic::bitreverse)
                              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
-                                          F->arg_begin()->getType());
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
+                                                  F->arg_begin()->getType());
         return true;
       }
 
@@ -819,8 +822,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
           return false; // Invalid IR.
         VectorType *Ty = dyn_cast<VectorType>(F->getReturnType());
         if (Ty && Ty->getElementType()->isFloatingPointTy()) {
-          NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                            Intrinsic::aarch64_neon_faddp, Ty);
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), Intrinsic::aarch64_neon_faddp, Ty);
           return true;
         }
       }
@@ -838,7 +841,7 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                   .Case("mlalt", Intrinsic::aarch64_sve_bfmlalt_lane_v2)
                   .Default(Intrinsic::not_intrinsic);
           if (ID != Intrinsic::not_intrinsic) {
-            NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+            NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
             return true;
           }
           return false; // No other 'aarch64.sve.bf*.lane'.
@@ -859,8 +862,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
 
         auto Args = F->getFunctionType()->params();
         Type *Tys[] = {F->getReturnType(), Args[1]};
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::aarch64_sve_faddqv, Tys);
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), Intrinsic::aarch64_sve_faddqv, Tys);
         return true;
       }
 
@@ -878,8 +881,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
               Intrinsic::aarch64_sve_ld3_sret,
               Intrinsic::aarch64_sve_ld4_sret,
           };
-          NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                            LoadIDs[Name[0] - '2'], Ty);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                    LoadIDs[Name[0] - '2'], Ty);
           return true;
         }
         return false; // No other 'aarch64.sve.ld*'.
@@ -890,8 +893,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         if (Name.starts_with("get")) {
           // 'aarch64.sve.tuple.get*'.
           Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-          NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                            Intrinsic::vector_extract, Tys);
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), Intrinsic::vector_extract, Tys);
           return true;
         }
 
@@ -899,8 +902,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
           // 'aarch64.sve.tuple.set*'.
           auto Args = F->getFunctionType()->params();
           Type *Tys[] = {Args[0], Args[2], Args[1]};
-          NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                            Intrinsic::vector_insert, Tys);
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), Intrinsic::vector_insert, Tys);
           return true;
         }
 
@@ -909,8 +912,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
           // 'aarch64.sve.tuple.create*'.
           auto Args = F->getFunctionType()->params();
           Type *Tys[] = {F->getReturnType(), Args[1]};
-          NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                            Intrinsic::vector_insert, Tys);
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), Intrinsic::vector_insert, Tys);
           return true;
         }
         return false; // No other 'aarch64.sve.tuple.*'.
@@ -1024,8 +1027,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     if (Name.consume_front("amdgcn.")) {
       if (Name == "alignbit") {
         // Target specific intrinsic became redundant
-        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
-                                          {F->getReturnType()});
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), Intrinsic::fshr, {F->getReturnType()});
         return true;
       }
 
@@ -1039,21 +1042,24 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
-      if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
-          Name.starts_with("ds.fmax") ||
-          Name.starts_with("global.atomic.fadd") ||
-          Name.starts_with("flat.atomic.fadd")) {
-        // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
-        // declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
+          Name.consume_front("flat.atomic.")) {
+        if (Name.starts_with("fadd") ||
+            // FIXME: We should also remove fmin.num and fmax.num intrinsics.
+            (Name.starts_with("fmin") && !Name.starts_with("fmin.num")) ||
+            (Name.starts_with("fmax") && !Name.starts_with("fmax.num"))) {
+          // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
+          // declaration.
+          NewFn = nullptr;
+          return true;
+        }
       }
 
       if (Name.starts_with("ldexp.")) {
         // Target specific intrinsic became redundant
-        NewFn = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::ldexp,
-          {F->getReturnType(), F->getArg(1)->getType()});
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), Intrinsic::ldexp,
+            {F->getReturnType(), F->getArg(1)->getType()});
         return true;
       }
       break; // No other 'amdgcn.*'
@@ -1069,15 +1075,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
-                                          F->arg_begin()->getType());
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
+                                                  F->arg_begin()->getType());
         return true;
       }
     }
 
     if (F->arg_size() == 2 && Name == "coro.end") {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                Intrinsic::coro_end);
       return true;
     }
 
@@ -1100,7 +1107,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       // converted to DbgVariableRecords later.
       if (Name == "addr" || (Name == "value" && F->arg_size() == 4)) {
         rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                  Intrinsic::dbg_value);
         return true;
       }
       break; // No other 'dbg.*'.
@@ -1130,7 +1138,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           // Inserting overloads the inserted type.
           Tys.push_back(FT->getParamType(1));
         rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
         return true;
       }
 
@@ -1166,8 +1174,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         if (ID != Intrinsic::not_intrinsic) {
           rename(F);
           auto Args = F->getFunctionType()->params();
-          NewFn =
-              Intrinsic::getDeclaration(F->getParent(), ID, {Args[V2 ? 1 : 0]});
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
+                                                    {Args[V2 ? 1 : 0]});
           return true;
         }
         break; // No other 'expermental.vector.reduce.*'.
@@ -1177,15 +1185,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     if (Name.consume_front("experimental.stepvector.")) {
       Intrinsic::ID ID = Intrinsic::stepvector;
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
-                                        F->getFunctionType()->getReturnType());
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), ID, F->getFunctionType()->getReturnType());
       return true;
     }
     break; // No other 'e*'.
   case 'f':
     if (Name.starts_with("flt.rounds")) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::get_rounding);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                Intrinsic::get_rounding);
       return true;
     }
     break;
@@ -1195,8 +1204,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       auto Args = F->getFunctionType()->params();
       Type* ObjectPtr[1] = {Args[0]};
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-          Intrinsic::launder_invariant_group, ObjectPtr);
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), Intrinsic::launder_invariant_group, ObjectPtr);
       return true;
     }
     break;
@@ -1213,7 +1222,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // Get the types of dest, src, and len
         ArrayRef<Type *> ParamTypes =
             F->getFunctionType()->params().slice(0, 3);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ParamTypes);
+        NewFn =
+            Intrinsic::getOrInsertDeclaration(F->getParent(), ID, ParamTypes);
         return true;
       }
     }
@@ -1225,8 +1235,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           FT->getParamType(0), // Dest
           FT->getParamType(2)  // len
       };
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memset,
-                                        ParamTypes);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                Intrinsic::memset, ParamTypes);
       return true;
     }
     break;
@@ -1242,8 +1252,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                 .Case("popc.i", Intrinsic::ctpop)
                 .Default(Intrinsic::not_intrinsic);
         if (IID != Intrinsic::not_intrinsic) {
-          NewFn = Intrinsic::getDeclaration(F->getParent(), IID,
-                                            {F->getReturnType()});
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                    {F->getReturnType()});
           return true;
         }
       }
@@ -1311,8 +1321,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           F->getName() !=
               Intrinsic::getName(Intrinsic::objectsize, Tys, F->getParent())) {
         rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::objectsize,
-                                          Tys);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
+                                                  Intrinsic::objectsize, Tys);
         return true;
       }
     }
@@ -1321,7 +1331,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   case 'p':
     if (Name.starts_with("ptr.annotation.") && F->arg_size() == 4) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(
+      NewFn = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::ptr_annotation,
           {F->arg_begin()->getType(), F->getArg(1)->getType()});
       return true;
@@ -1340,7 +1350,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (ID != Intrinsic::not_intrinsic) {
         if (!F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
           rename(F);
-          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
           return true;
         }
         break; // No other applicable upgrades.
@@ -1354,7 +1364,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         if (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
             F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
           rename(F);
-          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
           return true;
         }
         break; // No other applicable upgrades.
@@ -1371,7 +1381,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (ID != Intrinsic::not_intrinsic) {
         if (F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
           rename(F);
-          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
           return true;
         }
         break; // No other applicable upgrades.
@@ -1390,7 +1400,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   case 'v': {
     if (Name == "var.annotation" && F->arg_size() == 4) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(
+      NewFn = Intrinsic::getOrInsertDeclaration(
           F->getParent(), Intrinsic::var_annotation,
           {{F->arg_begin()->getType(), F->getArg(1)->getType()}});
       return true;
@@ -1408,8 +1418,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
               .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         rename(F);
-        NewFn =
-            Intrinsic::getDeclaration(F->getParent(), ID, F->getReturnType());
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
+                                                  F->getReturnType());
         return true;
       }
 
@@ -1421,7 +1431,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                  .Default(Intrinsic::not_intrinsic);
         if (ID != Intrinsic::not_intrinsic) {
           rename(F);
-          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
           return true;
         }
         break; // No other 'wasm.dot.i8x16.i7x16.*'.
@@ -1735,8 +1745,7 @@ static Value *upgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
   if (!IndexForm)
     std::swap(Args[0], Args[1]);
 
-  Value *V = Builder.CreateCall(Intrinsic::getDeclaration(CI.getModule(), IID),
-                                Args);
+  Value *V = Builder.CreateIntrinsic(IID, {}, Args);
   Value *PassThru = ZeroMask ? ConstantAggregateZero::get(Ty)
                              : Builder.CreateBitCast(CI.getArgOperand(1),
                                                      Ty);
@@ -1748,7 +1757,7 @@ static Value *upgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallBase &CI,
   Type *Ty = CI.getType();
   Value *Op0 = CI.getOperand(0);
   Value *Op1 = CI.getOperand(1);
-  Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID, Ty);
+  Function *Intrin = Intrinsic::getOrInsertDeclaration(CI.getModule(), IID, Ty);
   Value *Res = Builder.CreateCall(Intrin, {Op0, Op1});
 
   if (CI.arg_size() == 4) { // For masked intrinsics.
@@ -1775,7 +1784,7 @@ static Value *upgradeX86Rotate(IRBuilder<> &Builder, CallBase &CI,
   }
 
   Intrinsic::ID IID = IsRotateRight ? Intrinsic::fshr : Intrinsic::fshl;
-  Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID, Ty);
+  Function *Intrin = Intrinsic::getOrInsertDeclaration(CI.getModule(), IID, Ty);
   Value *Res = Builder.CreateCall(Intrin, {Src, Src, Amt});
 
   if (CI.arg_size() == 4) { // For masked intrinsics.
@@ -1845,7 +1854,7 @@ static Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallBase &CI,
   }
 
   Intrinsic::ID IID = IsShiftRight ? Intrinsic::fshr : Intrinsic::fshl;
-  Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID, Ty);
+  Function *Intrin = Intrinsic::getOrInsertDeclaration(CI.getModule(), IID, Ty);
   Value *Res = Builder.CreateCall(Intrin, {Op0, Op1, Amt});
 
   unsigned NumArgs = CI.arg_size();
@@ -1906,7 +1915,8 @@ static Value *upgradeMaskedLoad(IRBuilder<> &Builder, Value *Ptr,
 static Value *upgradeAbs(IRBuilder<> &Builder, CallBase &CI) {
   Type *Ty = CI.getType();
   Value *Op0 = CI.getArgOperand(0);
-  Function *F = Intrinsic::getDeclaration(CI.getModule(), Intrinsic::abs, Ty);
+  Function *F =
+      Intrinsic::getOrInsertDeclaration(CI.getModule(), Intrinsic::abs, Ty);
   Value *Res = Builder.CreateCall(F, {Op0, Builder.getInt1(false)});
   if (CI.arg_size() == 3)
     Res = emitX86Select(Builder, CI.getArgOperand(2), Res, CI.getArgOperand(1));
@@ -1999,7 +2009,7 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI,
 // Replace a masked intrinsic with an older unmasked intrinsic.
 static Value *upgradeX86MaskedShift(IRBuilder<> &Builder, CallBase &CI,
                                     Intrinsic::ID IID) {
-  Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID);
+  Function *Intrin = Intrinsic::getOrInsertDeclaration(CI.getModule(), IID);
   Value *Rep = Builder.CreateCall(Intrin,
                                  { CI.getArgOperand(0), CI.getArgOperand(1) });
   return emitX86Select(Builder, CI.getArgOperand(3), Rep, CI.getArgOperand(2));
@@ -2258,8 +2268,7 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
   SmallVector<Value *, 4> Args(CI.args());
   Args.pop_back();
   Args.pop_back();
-  Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI.getModule(), IID),
-                           Args);
+  Rep = Builder.CreateIntrinsic(IID, {}, Args);
   unsigned NumArgs = CI.arg_size();
   Rep = emitX86Select(Builder, CI.getArgOperand(NumArgs - 1), Rep,
                       CI.getArgOperand(NumArgs - 2));
@@ -2314,25 +2323,21 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else if (Name == "clz.ll") {
     // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
     Value *Arg = CI->getArgOperand(0);
-    Value *Ctlz = Builder.CreateCall(
-        Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                  {Arg->getType()}),
-        {Arg, Builder.getFalse()}, "ctlz");
+    Value *Ctlz = Builder.CreateIntrinsic(Intrinsic::ctlz, {Arg->getType()},
+                                          {Arg, Builder.getFalse()},
+                                          /*FMFSource=*/nullptr, "ctlz");
     Rep = Builder.CreateTrunc(Ctlz, Builder.getInt32Ty(), "ctlz.trunc");
   } else if (Name == "popc.ll") {
     // llvm.nvvm.popc.ll returns an i32, but llvm.ctpop.i64 returns an
     // i64.
     Value *Arg = CI->getArgOperand(0);
-    Value *Popc = Builder.CreateCall(
-        Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctpop,
-                                  {Arg->getType()}),
-        Arg, "ctpop");
+    Value *Popc = Builder.CreateIntrinsic(Intrinsic::ctpop, {Arg->getType()},
+                                          Arg, /*FMFSource=*/nullptr, "ctpop");
     Rep = Builder.CreateTrunc(Popc, Builder.getInt32Ty(), "ctpop.trunc");
   } else if (Name == "h2f") {
-    Rep = Builder.CreateCall(
-        Intrinsic::getDeclaration(F->getParent(), Intrinsic::convert_from_fp16,
-                                  {Builder.getFloatTy()}),
-        CI->getArgOperand(0), "h2f");
+    Rep = Builder.CreateIntrinsic(Intrinsic::convert_from_fp16,
+                                  {Builder.getFloatTy()}, CI->getArgOperand(0),
+                                  /*FMFSource=*/nullptr, "h2f");
   } else if (Name.consume_front("bitcast.") &&
              (Name == "f2i" || Name == "i2f" || Name == "ll2d" ||
               Name == "d2ll")) {
@@ -2368,7 +2373,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     if (IID != Intrinsic::not_intrinsic &&
         !F->getReturnType()->getScalarType()->isBFloatTy()) {
       rename(F);
-      Function *NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+      Function *NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
       SmallVector<Value *, 2> Args;
       for (size_t I = 0; I < NewFn->arg_size(); ++I) {
         Value *Arg = CI->getArgOperand(I);
@@ -2475,17 +2480,15 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name == "sse.sqrt.ss" || Name == "sse2.sqrt.sd") {
     Value *Vec = CI->getArgOperand(0);
     Value *Elt0 = Builder.CreateExtractElement(Vec, (uint64_t)0);
-    Function *Intr = Intrinsic::getDeclaration(F->getParent(), Intrinsic::sqrt,
-                                               Elt0->getType());
+    Function *Intr = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), Intrinsic::sqrt, Elt0->getType());
     Elt0 = Builder.CreateCall(Intr, Elt0);
     Rep = Builder.CreateInsertElement(Vec, Elt0, (uint64_t)0);
   } else if (Name.starts_with("avx.sqrt.p") ||
              Name.starts_with("sse2.sqrt.p") ||
              Name.starts_with("sse.sqrt.p")) {
-    Rep =
-        Builder.CreateCall(Intrinsic::getDeclaration(
-                               F->getParent(), Intrinsic::sqrt, CI->getType()),
-                           {CI->getArgOperand(0)});
+    Rep = Builder.CreateIntrinsic(Intrinsic::sqrt, CI->getType(),
+                                  {CI->getArgOperand(0)});
   } else if (Name.starts_with("avx512.mask.sqrt.p")) {
     if (CI->arg_size() == 4 &&
         (!isa<ConstantInt>(CI->getArgOperand(3)) ||
@@ -2494,13 +2497,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                                           : Intrinsic::x86_avx512_sqrt_pd_512;
 
       Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(3)};
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
-                               Args);
+      Rep = Builder.CreateIntrinsic(IID, {}, Args);
     } else {
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(),
-                                                         Intrinsic::sqrt,
-                                                         CI->getType()),
-                               {CI->getArgOperand(0)});
+      Rep = Builder.CreateIntrinsic(Intrinsic::sqrt, CI->getType(),
+                                    {CI->getArgOperand(0)});
     }
     Rep =
         emitX86Select(Builder, CI->getArgOperand(2), Rep, CI->getArgOperand(1));
@@ -2624,8 +2624,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       break;
     }
 
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                             {CI->getOperand(0), CI->getArgOperand(1)});
+    Rep = Builder.CreateIntrinsic(IID, {},
+                                  {CI->getOperand(0), CI->getArgOperand(1)});
     Rep = applyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(2));
   } else if (Name.starts_with("avx512.mask.fpclass.p")) {
     Type *OpTy = CI->getArgOperand(0)->getType();
@@ -2647,8 +2647,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else
       llvm_unreachable("Unexpected intrinsic");
 
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                             {CI->getOperand(0), CI->getArgOperand(1)});
+    Rep = Builder.CreateIntrinsic(IID, {},
+                                  {CI->getOperand(0), CI->getArgOperand(1)});
     Rep = applyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(2));
   } else if (Name.starts_with("avx512.cmp.p")) {
     SmallVector<Value *, 4> Args(CI->args());
@@ -2676,8 +2676,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       std::swap(Mask, Args.back());
     Args.push_back(Mask);
 
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                             Args);
+    Rep = Builder.CreateIntrinsic(IID, {}, Args);
   } else if (Name.starts_with("avx512.mask.cmp.")) {
     // Integer compare intrinsics.
     unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
@@ -2771,8 +2770,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
               cast<ConstantInt>(CI->getArgOperand(3))->getZExtValue() != 4)) {
       Intrinsic::ID IID = IsUnsigned ? Intrinsic::x86_avx512_uitofp_round
                                      : Intrinsic::x86_avx512_sitofp_round;
-      Function *F =
-          Intrinsic::getDeclaration(CI->getModule(), IID, {DstTy, SrcTy});
+      Function *F = Intrinsic::getOrInsertDeclaration(CI->getModule(), IID,
+                                                      {DstTy, SrcTy});
       Rep = Builder.CreateCall(F, {Rep, CI->getArgOperand(3)});
     } else {
       Rep = IsUnsigned ? Builder.CreateUIToFP(Rep, DstTy, "cvt")
@@ -2814,7 +2813,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
                                    ResultTy->getNumElements());
 
-    Function *ELd = Intrinsic::getDeclaration(
+    Function *ELd = Intrinsic::getOrInsertDeclaration(
         F->getParent(), Intrinsic::masked_expandload, ResultTy);
     Rep = Builder.CreateCall(ELd, {Ptr, MaskVec, CI->getOperand(1)});
   } else if (Name.starts_with("avx512.mask.compress.store.")) {
@@ -2829,7 +2828,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         getX86MaskVec(Builder, CI->getArgOperand(2),
                       cast<FixedVectorType>(ResultTy)->getNumElements());
 
-    Function *CSt = Intrinsic::getDeclaration(
+    Function *CSt = Intrinsic::getOrInsertDeclaration(
         F->getParent(), Intrinsic::masked_compressstore, ResultTy);
     Rep = Builder.CreateCall(CSt, {CI->getArgOperand(1), Ptr, MaskVec});
   } else if (Name.starts_with("avx512.mask.compress.") ||
@@ -2842,7 +2841,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool IsCompress = Name[12] == 'c';
     Intrinsic::ID IID = IsCompress ? Intrinsic::x86_avx512_mask_compress
                                    : Intrinsic::x86_avx512_mask_expand;
-    Function *Intr = Intrinsic::getDeclaration(F->getParent(), IID, ResultTy);
+    Function *Intr =
+        Intrinsic::getOrInsertDeclaration(F->getParent(), IID, ResultTy);
     Rep = Builder.CreateCall(Intr,
                              {CI->getOperand(0), CI->getOperand(1), MaskVec});
   } else if (Name.starts_with("xop.vpcom")) {
@@ -2905,7 +2905,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     Rep = upgradeX86ConcatShift(Builder, *CI, true, ZeroMask);
   } else if (Name == "sse42.crc32.64.8") {
-    Function *CRC32 = Intrinsic::getDeclaration(
+    Function *CRC32 = Intrinsic::getOrInsertDeclaration(
         F->getParent(), Intrinsic::x86_sse42_crc32_32_8);
     Value *Trunc0 =
         Builder.CreateTrunc(CI->getArgOperand(0), Type::getInt32Ty(C));
@@ -3399,8 +3399,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else
         IID = Intrinsic::x86_avx512_add_pd_512;
 
-      Rep = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), IID),
+      Rep = Builder.CreateIntrinsic(
+          IID, {},
           {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(4)});
     } else {
       Rep = Builder.CreateFAdd(CI->getArgOperand(0), CI->getArgOperand(1));
@@ -3415,8 +3415,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else
         IID = Intrinsic::x86_avx512_div_pd_512;
 
-      Rep = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), IID),
+      Rep = Builder.CreateIntrinsic(
+          IID, {},
           {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(4)});
     } else {
       Rep = Builder.CreateFDiv(CI->getArgOperand(0), CI->getArgOperand(1));
@@ -3431,8 +3431,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else
         IID = Intrinsic::x86_avx512_mul_pd_512;
 
-      Rep = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), IID),
+      Rep = Builder.CreateIntrinsic(
+          IID, {},
           {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(4)});
     } else {
       Rep = Builder.CreateFMul(CI->getArgOperand(0), CI->getArgOperand(1));
@@ -3447,8 +3447,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else
         IID = Intrinsic::x86_avx512_sub_pd_512;
 
-      Rep = Builder.CreateCall(
-          Intrinsic::getDeclaration(F->getParent(), IID),
+      Rep = Builder.CreateIntrinsic(
+          IID, {},
           {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(4)});
     } else {
       Rep = Builder.CreateFSub(CI->getArgOperand(0), CI->getArgOperand(1));
@@ -3465,16 +3465,15 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         {Intrinsic::x86_avx512_min_ps_512, Intrinsic::x86_avx512_min_pd_512}};
     Intrinsic::ID IID = MinMaxTbl[IsMin][IsDouble];
 
-    Rep = Builder.CreateCall(
-        Intrinsic::getDeclaration(F->getParent(), IID),
+    Rep = Builder.CreateIntrinsic(
+        IID, {},
         {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(4)});
     Rep =
         emitX86Select(Builder, CI->getArgOperand(3), Rep, CI->getArgOperand(2));
   } else if (Name.starts_with("avx512.mask.lzcnt.")) {
     Rep =
-        Builder.CreateCall(Intrinsic::getDeclaration(
-                               F->getParent(), Intrinsic::ctlz, CI->getType()),
-                           {CI->getArgOperand(0), Builder.getInt1(false)});
+        Builder.CreateIntrinsic(Intrinsic::ctlz, CI->getType(),
+                                {CI->getArgOperand(0), Builder.getInt1(false)});
     Rep =
         emitX86Select(Builder, CI->getArgOperand(2), Rep, CI->getArgOperand(1));
   } else if (Name.starts_with("avx512.mask.psll")) {
@@ -3718,10 +3717,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     if (NegAcc)
       Ops[2] = Builder.CreateFNeg(Ops[2]);
 
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(),
-                                                       Intrinsic::fma,
-                                                       Ops[0]->getType()),
-                             Ops);
+    Rep = Builder.CreateIntrinsic(Intrinsic::fma, Ops[0]->getType(), Ops);
 
     if (IsScalar)
       Rep = Builder.CreateInsertElement(CI->getArgOperand(0), Rep, (uint64_t)0);
@@ -3733,10 +3729,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Ops[1] = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
     Ops[2] = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
 
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(),
-                                                       Intrinsic::fma,
-                                                       Ops[0]->getType()),
-                             Ops);
+    Rep = Builder.CreateIntrinsic(Intrinsic::fma, Ops[0]->getType(), Ops);
 
     Rep = Builder.CreateInsertElement(Constant::getNullValue(CI->getType()),
                                       Rep, (uint64_t)0);
@@ -3776,11 +3769,11 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = Intrinsic::x86_avx512_vfmadd_f64;
       else
         IID = Intrinsic::x86_avx512_vfmadd_f32;
-      Function *FMA = Intrinsic::getDeclaration(CI->getModule(), IID);
+      Function *FMA = Intrinsic::getOrInsertDeclaration(CI->getModule(), IID);
       Rep = Builder.CreateCall(FMA, Ops);
     } else {
-      Function *FMA = Intrinsic::getDeclaration(CI->getModule(), Intrinsic::fma,
-                                                A->getType());
+      Function *FMA = Intrinsic::getOrInsertDeclaration(
+          CI->getModule(), Intrinsic::fma, A->getType());
       Rep = Builder.CreateCall(FMA, {A, B, C});
     }
 
@@ -3832,11 +3825,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else
         IID = Intrinsic::x86_avx512_vfmadd_pd_512;
 
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                               {A, B, C, CI->getArgOperand(4)});
+      Rep = Builder.CreateIntrinsic(IID, {}, {A, B, C, CI->getArgOperand(4)});
     } else {
-      Function *FMA = Intrinsic::getDeclaration(CI->getModule(), Intrinsic::fma,
-                                                A->getType());
+      Function *FMA = Intrinsic::getOrInsertDeclaration(
+          CI->getModule(), Intrinsic::fma, A->getType());
       Rep = Builder.CreateCall(FMA, {A, B, C});
     }
 
@@ -3863,8 +3855,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Value *Ops[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                     CI->getArgOperand(2)};
     Ops[2] = Builder.CreateFNeg(Ops[2]);
-    Rep =
-        Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID), Ops);
+    Rep = Builder.CreateIntrinsic(IID, {}, Ops);
   } else if (Name.starts_with("avx512.mask.vfmaddsub.p") ||
              Name.starts_with("avx512.mask3.vfmaddsub.p") ||
              Name.starts_with("avx512.maskz.vfmaddsub.p") ||
@@ -3887,16 +3878,15 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       if (IsSubAdd)
         Ops[2] = Builder.CreateFNeg(Ops[2]);
 
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                               Ops);
+      Rep = Builder.CreateIntrinsic(IID, {}, Ops);
     } else {
       int NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
 
       Value *Ops[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                       CI->getArgOperand(2)};
 
-      Function *FMA = Intrinsic::getDeclaration(CI->getModule(), Intrinsic::fma,
-                                                Ops[0]->getType());
+      Function *FMA = Intrinsic::getOrInsertDeclaration(
+          CI->getModule(), Intrinsic::fma, Ops[0]->getType());
       Value *Odd = Builder.CreateCall(FMA, Ops);
       Ops[2] = Builder.CreateFNeg(Ops[2]);
       Value *Even = Builder.CreateCall(FMA, Ops);
@@ -3939,8 +3929,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2), CI->getArgOperand(3)};
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
-                             Args);
+    Rep = Builder.CreateIntrinsic(IID, {}, Args);
     Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                : CI->getArgOperand(0);
     Rep = emitX86Select(Builder, CI->getArgOperand(4), Rep, PassThru);
@@ -3967,8 +3956,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
-                             Args);
+    Rep = Builder.CreateIntrinsic(IID, {}, Args);
     Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                : CI->getArgOperand(0);
     Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
@@ -4003,8 +3991,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
-                             Args);
+    Rep = Builder.CreateIntrinsic(IID, {}, Args);
     Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                : CI->getArgOperand(0);
     Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
@@ -4033,8 +4020,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
-    Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
-                             Args);
+    Rep = Builder.CreateIntrinsic(IID, {}, Args);
     Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                : CI->getArgOperand(0);
     Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
@@ -4056,8 +4042,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     // Make a call with 3 operands.
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
-    Value *NewCall = Builder.CreateCall(
-        Intrinsic::getDeclaration(CI->getModule(), IID), Args);
+    Value *NewCall = Builder.CreateIntrinsic(IID, {}, Args);
 
     // Extract the second result and store it.
     Value *Data = Builder.CreateExtractValue(NewCall, 1);
@@ -4103,7 +4088,7 @@ static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
   Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
                                     GoodPredTy, Args[1]);
 
-  Function *NewF = Intrinsic::getDeclaration(CI->getModule(), NewID);
+  Function *NewF = Intrinsic::getOrInsertDeclaration(CI->getModule(), NewID);
   return Builder.CreateCall(NewF, Args, CI->getName());
 }
 
@@ -4112,19 +4097,15 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   if (Name == "mve.vctp64.old") {
     // Replace the old v4i1 vctp64 with a v2i1 vctp and predicate-casts to the
     // correct type.
-    Value *VCTP = Builder.CreateCall(
-        Intrinsic::getDeclaration(F->getParent(), Intrinsic::arm_mve_vctp64),
-        CI->getArgOperand(0), CI->getName());
-    Value *C1 = Builder.CreateCall(
-        Intrinsic::getDeclaration(
-            F->getParent(), Intrinsic::arm_mve_pred_v2i,
-            {VectorType::get(Builder.getInt1Ty(), 2, false)}),
-        VCTP);
-    return Builder.CreateCall(
-        Intrinsic::getDeclaration(
-            F->getParent(), Intrinsic::arm_mve_pred_i2v,
-            {VectorType::get(Builder.getInt1Ty(), 4, false)}),
-        C1);
+    Value *VCTP = Builder.CreateIntrinsic(Intrinsic::arm_mve_vctp64, {},
+                                          CI->getArgOperand(0),
+                                          /*FMFSource=*/nullptr, CI->getName());
+    Value *C1 = Builder.CreateIntrinsic(
+        Intrinsic::arm_mve_pred_v2i,
+        {VectorType::get(Builder.getInt1Ty(), 2, false)}, VCTP);
+    return Builder.CreateIntrinsic(
+        Intrinsic::arm_mve_pred_i2v,
+        {VectorType::get(Builder.getInt1Ty(), 4, false)}, C1);
   } else if (Name == "mve.mull.int.predicated.v2i64.v4i32.v4i1" ||
              Name == "mve.vqdmull.predicated.v2i64.v4i32.v4i1" ||
              Name == "mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1" ||
@@ -4182,20 +4163,15 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     for (Value *Op : CI->args()) {
       Type *Ty = Op->getType();
       if (Ty->getScalarSizeInBits() == 1) {
-        Value *C1 = Builder.CreateCall(
-            Intrinsic::getDeclaration(
-                F->getParent(), Intrinsic::arm_mve_pred_v2i,
-                {VectorType::get(Builder.getInt1Ty(), 4, false)}),
-            Op);
-        Op = Builder.CreateCall(
-            Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::arm_mve_pred_i2v, {V2I1Ty}),
-            C1);
+        Value *C1 = Builder.CreateIntrinsic(
+            Intrinsic::arm_mve_pred_v2i,
+            {VectorType::get(Builder.getInt1Ty(), 4, false)}, Op);
+        Op = Builder.CreateIntrinsic(Intrinsic::arm_mve_pred_i2v, {V2I1Ty}, C1);
       }
       Ops.push_back(Op);
     }
 
-    Function *Fn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+    Function *Fn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
     return Builder.CreateCall(Fn, Ops, CI->getName());
   }
   llvm_unreachable("Unknown function for ARM CallBase upgrade.");
@@ -4216,7 +4192,11 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
           .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap)
           .StartsWith("global.atomic.fadd", AtomicRMWInst::FAdd)
-          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd);
+          .StartsWith("flat.atomic.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("global.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("flat.atomic.fmin", AtomicRMWInst::FMin)
+          .StartsWith("global.atomic.fmax", AtomicRMWInst::FMax)
+          .StartsWith("flat.atomic.fmax", AtomicRMWInst::FMax);
 
   unsigned NumOperands = CI->getNumOperands();
   if (NumOperands < 3) // Malformed bitcode.
@@ -4270,11 +4250,20 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   AtomicRMWInst *RMW =
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
-  if (PtrTy->getAddressSpace() != 3) {
+  unsigned AddrSpace = PtrTy->getAddressSpace();
+  if (AddrSpace != AMDGPUAS::LOCAL_ADDRESS) {
     MDNode *EmptyMD = MDNode::get(F->getContext(), {});
     RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
     if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
       RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+  }
+
+  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
+    MDBuilder MDB(F->getContext());
+    MDNode *RangeNotPrivate =
+        MDB.createRange(APInt(32, AMDGPUAS::PRIVATE_ADDRESS),
+                        APInt(32, AMDGPUAS::PRIVATE_ADDRESS + 1));
+    RMW->setMetadata(LLVMContext::MD_noalias_addrspace, RangeNotPrivate);
   }
 
   if (IsVolatile)
@@ -5070,7 +5059,8 @@ void llvm::UpgradeARCRuntime(Module &M) {
     if (!Fn)
       return;
 
-    Function *NewFn = llvm::Intrinsic::getDeclaration(&M, IntrinsicFunc);
+    Function *NewFn =
+        llvm::Intrinsic::getOrInsertDeclaration(&M, IntrinsicFunc);
 
     for (User *U : make_early_inc_range(Fn->users())) {
       CallInst *CI = dyn_cast<CallInst>(U);
@@ -5547,11 +5537,24 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
+  auto AddPtr32Ptr64AddrSpaces = [&DL, &Res]() {
+    // If the datalayout matches the expected format, add pointer size address
+    // spaces to the datalayout.
+    StringRef AddrSpaces{"-p270:32:32-p271:32:32-p272:64:64"};
+    if (!DL.contains(AddrSpaces)) {
+      SmallVector<StringRef, 4> Groups;
+      Regex R("^([Ee]-m:[a-z](-p:32:32)?)(-.*)$");
+      if (R.match(Res, &Groups))
+        Res = (Groups[1] + AddrSpaces + Groups[3]).str();
+    }
+  };
+
   // AArch64 data layout upgrades.
   if (T.isAArch64()) {
     // Add "-Fn32"
     if (!DL.empty() && !DL.contains("-Fn32"))
       Res.append("-Fn32");
+    AddPtr32Ptr64AddrSpaces();
     return Res;
   }
 
@@ -5570,15 +5573,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   if (!T.isX86())
     return Res;
 
-  // If the datalayout matches the expected format, add pointer size address
-  // spaces to the datalayout.
-  std::string AddrSpaces = "-p270:32:32-p271:32:32-p272:64:64";
-  if (StringRef Ref = Res; !Ref.contains(AddrSpaces)) {
-    SmallVector<StringRef, 4> Groups;
-    Regex R("(e-m:[a-z](-p:32:32)?)(-[if]64:.*$)");
-    if (R.match(Res, &Groups))
-      Res = (Groups[1] + AddrSpaces + Groups[3]).str();
-  }
+  AddPtr32Ptr64AddrSpaces();
 
   // i128 values need to be 16-byte-aligned. LLVM already called into libgcc
   // for i128 operations prior to this being reflected in the data layout, and

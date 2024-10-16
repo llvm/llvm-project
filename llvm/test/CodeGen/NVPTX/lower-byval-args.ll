@@ -88,8 +88,7 @@ define dso_local void @read_only_gep_asc0(ptr nocapture noundef writeonly %out, 
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S3]], ptr addrspace(101) align 4 [[S4]], i64 8, i1 false)
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S3]], i64 4
@@ -115,8 +114,7 @@ define dso_local void @escape_ptr(ptr nocapture noundef readnone %out, ptr nound
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S3]], ptr addrspace(101) align 4 [[S4]], i64 8, i1 false)
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[S3]])
@@ -134,8 +132,7 @@ define dso_local void @escape_ptr_gep(ptr nocapture noundef readnone %out, ptr n
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S3]], ptr addrspace(101) align 4 [[S4]], i64 8, i1 false)
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S3]], i64 4
@@ -155,8 +152,7 @@ define dso_local void @escape_ptr_store(ptr nocapture noundef writeonly %out, pt
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S3]], ptr addrspace(101) align 4 [[S4]], i64 8, i1 false)
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    store ptr [[S3]], ptr [[OUT2]], align 8
@@ -174,8 +170,7 @@ define dso_local void @escape_ptr_gep_store(ptr nocapture noundef writeonly %out
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S3]], ptr addrspace(101) align 4 [[S4]], i64 8, i1 false)
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S3]], i64 4
@@ -195,8 +190,7 @@ define dso_local void @escape_ptrtoint(ptr nocapture noundef writeonly %out, ptr
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S3]], ptr addrspace(101) align 4 [[S4]], i64 8, i1 false)
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    [[I:%.*]] = ptrtoint ptr [[S3]] to i64
@@ -232,8 +226,7 @@ define dso_local void @memcpy_to_param(ptr nocapture noundef readonly %in, ptr n
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S3]], ptr addrspace(101) align 4 [[S4]], i64 8, i1 false)
 ; COMMON-NEXT:    [[IN1:%.*]] = addrspacecast ptr [[IN]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[IN2:%.*]] = addrspacecast ptr addrspace(1) [[IN1]] to ptr
 ; COMMON-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[S3]], ptr [[IN2]], i64 16, i1 true)
@@ -251,8 +244,7 @@ define dso_local void @copy_on_store(ptr nocapture noundef readonly %in, ptr noc
 ; COMMON-NEXT:  [[BB:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[S3]], ptr addrspace(101) align 4 [[S4]], i64 8, i1 false)
 ; COMMON-NEXT:    [[IN1:%.*]] = addrspacecast ptr [[IN]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[IN2:%.*]] = addrspacecast ptr addrspace(1) [[IN1]] to ptr
 ; COMMON-NEXT:    [[I:%.*]] = load i32, ptr [[IN2]], align 4
@@ -273,12 +265,10 @@ define void @test_select(ptr byval(i32) align 4 %input1, ptr byval(i32) %input2,
 ; SM_60-NEXT:    [[OUT8:%.*]] = addrspacecast ptr addrspace(1) [[OUT7]] to ptr
 ; SM_60-NEXT:    [[INPUT24:%.*]] = alloca i32, align 4
 ; SM_60-NEXT:    [[INPUT25:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
-; SM_60-NEXT:    [[INPUT26:%.*]] = load i32, ptr addrspace(101) [[INPUT25]], align 4
-; SM_60-NEXT:    store i32 [[INPUT26]], ptr [[INPUT24]], align 4
+; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT24]], ptr addrspace(101) align 4 [[INPUT25]], i64 4, i1 false)
 ; SM_60-NEXT:    [[INPUT11:%.*]] = alloca i32, align 4
 ; SM_60-NEXT:    [[INPUT12:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
-; SM_60-NEXT:    [[INPUT13:%.*]] = load i32, ptr addrspace(101) [[INPUT12]], align 4
-; SM_60-NEXT:    store i32 [[INPUT13]], ptr [[INPUT11]], align 4
+; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT12]], i64 4, i1 false)
 ; SM_60-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT11]], ptr [[INPUT24]]
 ; SM_60-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
 ; SM_60-NEXT:    store i32 [[VALLOADED]], ptr [[OUT8]], align 4
@@ -313,12 +303,10 @@ define void @test_select_write(ptr byval(i32) align 4 %input1, ptr byval(i32) %i
 ; COMMON-NEXT:    [[OUT8:%.*]] = addrspacecast ptr addrspace(1) [[OUT7]] to ptr
 ; COMMON-NEXT:    [[INPUT24:%.*]] = alloca i32, align 4
 ; COMMON-NEXT:    [[INPUT25:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
-; COMMON-NEXT:    [[INPUT26:%.*]] = load i32, ptr addrspace(101) [[INPUT25]], align 4
-; COMMON-NEXT:    store i32 [[INPUT26]], ptr [[INPUT24]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT24]], ptr addrspace(101) align 4 [[INPUT25]], i64 4, i1 false)
 ; COMMON-NEXT:    [[INPUT11:%.*]] = alloca i32, align 4
 ; COMMON-NEXT:    [[INPUT12:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
-; COMMON-NEXT:    [[INPUT13:%.*]] = load i32, ptr addrspace(101) [[INPUT12]], align 4
-; COMMON-NEXT:    store i32 [[INPUT13]], ptr [[INPUT11]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT12]], i64 4, i1 false)
 ; COMMON-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT11]], ptr [[INPUT24]]
 ; COMMON-NEXT:    store i32 1, ptr [[PTRNEW]], align 4
 ; COMMON-NEXT:    ret void
@@ -337,12 +325,10 @@ define void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval(%struct.S)
 ; SM_60-NEXT:    [[INOUT8:%.*]] = addrspacecast ptr addrspace(1) [[INOUT7]] to ptr
 ; SM_60-NEXT:    [[INPUT24:%.*]] = alloca [[STRUCT_S]], align 8
 ; SM_60-NEXT:    [[INPUT25:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
-; SM_60-NEXT:    [[INPUT26:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[INPUT25]], align 8
-; SM_60-NEXT:    store [[STRUCT_S]] [[INPUT26]], ptr [[INPUT24]], align 4
+; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 8 [[INPUT24]], ptr addrspace(101) align 8 [[INPUT25]], i64 8, i1 false)
 ; SM_60-NEXT:    [[INPUT11:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[INPUT12:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
-; SM_60-NEXT:    [[INPUT13:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[INPUT12]], align 4
-; SM_60-NEXT:    store [[STRUCT_S]] [[INPUT13]], ptr [[INPUT11]], align 4
+; SM_60-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT12]], i64 8, i1 false)
 ; SM_60-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; SM_60:       [[FIRST]]:
 ; SM_60-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT11]], i32 0, i32 0
@@ -402,12 +388,10 @@ define void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr byval(%str
 ; COMMON-NEXT:  [[BB:.*:]]
 ; COMMON-NEXT:    [[INPUT24:%.*]] = alloca [[STRUCT_S]], align 8
 ; COMMON-NEXT:    [[INPUT25:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
-; COMMON-NEXT:    [[INPUT26:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[INPUT25]], align 8
-; COMMON-NEXT:    store [[STRUCT_S]] [[INPUT26]], ptr [[INPUT24]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 8 [[INPUT24]], ptr addrspace(101) align 8 [[INPUT25]], i64 8, i1 false)
 ; COMMON-NEXT:    [[INPUT11:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[INPUT12:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
-; COMMON-NEXT:    [[INPUT13:%.*]] = load [[STRUCT_S]], ptr addrspace(101) [[INPUT12]], align 4
-; COMMON-NEXT:    store [[STRUCT_S]] [[INPUT13]], ptr [[INPUT11]], align 4
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT11]], ptr addrspace(101) align 4 [[INPUT12]], i64 8, i1 false)
 ; COMMON-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; COMMON:       [[FIRST]]:
 ; COMMON-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT11]], i32 0, i32 0

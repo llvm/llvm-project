@@ -102,7 +102,7 @@ bool RISCVTargetInfo::validateAsmConstraint(
     return true;
   case 'v':
     // A vector register.
-    if (Name[1] == 'r' || Name[1] == 'm') {
+    if (Name[1] == 'r' || Name[1] == 'd' || Name[1] == 'm') {
       Info.setAllowsRegister();
       Name += 1;
       return true;

@@ -36,7 +36,10 @@ adds `FOO=1` and `bar` to the environment:
   "name": "Debug",
   "program": "/tmp/a.out",
   "args": [ "one", "two", "three" ],
-  "env": [ "FOO=1", "BAR" ],
+  "env": {
+    "FOO": "1"
+    "BAR": ""
+  }
 }
 ```
 
@@ -241,9 +244,9 @@ The escape character can be adjusted via the `commandEscapePrefix` configuration
 The `lldb-dap` tool includes additional custom commands to support the Debug
 Adapter Protocol features.
 
-#### `lldb-dap startDebugging`
+#### `lldb-dap start-debugging`
 
-Using the command `lldb-dap startDebugging` it is possible to trigger a
+Using the command `lldb-dap start-debugging` it is possible to trigger a
 reverse request to the client requesting a child debug session with the
 specified configuration. For example, this can be used to attached to forked or
 spawned processes. For more information see
@@ -252,7 +255,7 @@ spawned processes. For more information see
 The custom command has the following format:
 
 ```
-lldb-dap startDebugging <launch|attach> <configuration>
+lldb-dap start-debugging <launch|attach> <configuration>
 ```
 
 This will launch a server and then request a child debug session for a client.
@@ -261,7 +264,7 @@ This will launch a server and then request a child debug session for a client.
 {
   "program": "server",
   "postRunCommand": [
-    "lldb-dap startDebugging launch '{\"program\":\"client\"}'"
+    "lldb-dap start-debugging launch '{\"program\":\"client\"}'"
   ]
 }
 ```

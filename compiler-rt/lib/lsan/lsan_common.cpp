@@ -698,7 +698,9 @@ void LeakSuppressionContext::PrintMatchedSuppressions() {
 
 // Fuchsia provides a libc interface that guarantees all threads are
 // covered, and SuspendedThreadList is never really used.
-static void ReportUnsuspendedThreads(const SuspendedThreadsList &) {}
+static bool ReportUnsuspendedThreads(const SuspendedThreadsList &) {
+  return true;
+}
 
 #  else  // !SANITIZER_FUCHSIA
 
@@ -710,11 +712,11 @@ static bool ReportUnsuspendedThreads(
 
   Sort(threads.data(), threads.size());
 
-  InternalMmapVector<tid_t> unsuspended;
-  GetRunningThreadsLocked(&unsuspended);
+  InternalMmapVector<tid_t> known_threads;
+  GetRunningThreadsLocked(&known_threads);
 
   bool succeded = true;
-  for (auto os_id : unsuspended) {
+  for (auto os_id : known_threads) {
     uptr i = InternalLowerBound(threads, os_id);
     if (i >= threads.size() || threads[i] != os_id) {
       succeded = false;
@@ -769,19 +771,20 @@ static bool PrintResults(LeakReport &report) {
   }
   if (common_flags()->print_suppressions)
     GetSuppressionContext()->PrintMatchedSuppressions();
-  if (unsuppressed_count > 0) {
+  if (unsuppressed_count)
     report.PrintSummary();
-    return true;
-  }
-  return false;
+  if ((unsuppressed_count && common_flags()->verbosity >= 2) ||
+      flags()->log_threads)
+    PrintThreads();
+  return unsuppressed_count;
 }
 
-static bool CheckForLeaks() {
+static bool CheckForLeaksOnce() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off()) {
-    VReport(1, "LeakSanitizer is disabled");
+    VReport(1, "LeakSanitizer is disabled\n");
     return false;
   }
-  VReport(1, "LeakSanitizer: checking for leaks");
+  VReport(1, "LeakSanitizer: checking for leaks\n");
   // Inside LockStuffAndStopTheWorld we can't run symbolizer, so we can't match
   // suppressions. However if a stack id was previously suppressed, it should be
   // suppressed in future checks as well.
@@ -826,6 +829,12 @@ static bool CheckForLeaks() {
     VReport(1, "Rerun with %zu suppressed stacks.",
             GetSuppressionContext()->GetSortedSuppressedStacks().size());
   }
+}
+
+static bool CheckForLeaks() {
+  int leaking_tries = 0;
+  for (int i = 0; i < flags()->tries; ++i) leaking_tries += CheckForLeaksOnce();
+  return leaking_tries == flags()->tries;
 }
 
 static bool has_reported_leaks = false;

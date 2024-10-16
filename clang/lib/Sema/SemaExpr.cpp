@@ -18,6 +18,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
@@ -65,6 +66,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -2468,7 +2470,15 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
       LookupCtx ? LookupCtx : (SS.isEmpty() ? CurContext : nullptr);
   while (DC) {
     if (isa<CXXRecordDecl>(DC)) {
-      LookupQualifiedName(R, DC);
+      if (ExplicitTemplateArgs) {
+        if (LookupTemplateName(
+                R, S, SS, Context.getRecordType(cast<CXXRecordDecl>(DC)),
+                /*EnteringContext*/ false, TemplateNameIsRequired,
+                /*RequiredTemplateKind*/ nullptr, /*AllowTypoCorrection*/ true))
+          return true;
+      } else {
+        LookupQualifiedName(R, DC);
+      }
 
       if (!R.empty()) {
         // Don't give errors about ambiguities in this lookup.
@@ -4086,7 +4096,15 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     Res = new (Context) ImaginaryLiteral(Res,
                                         Context.getComplexType(Res->getType()));
 
-    Diag(Tok.getLocation(), diag::ext_imaginary_constant);
+    // In C++, this is a GNU extension. In C, it's a C2y extension.
+    unsigned DiagId;
+    if (getLangOpts().CPlusPlus)
+      DiagId = diag::ext_gnu_imaginary_constant;
+    else if (getLangOpts().C2y)
+      DiagId = diag::warn_c23_compat_imaginary_constant;
+    else
+      DiagId = diag::ext_c2y_imaginary_constant;
+    Diag(Tok.getLocation(), DiagId);
   }
   return Res;
 }
@@ -5639,6 +5657,8 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
       runWithSufficientStackSpace(Loc, [&] {
         MarkDeclarationsReferencedInExpr(E, /*SkipLocalVariables=*/false);
       });
+    if (isInLifetimeExtendingContext())
+      DiscardCleanupsInEvaluationContext();
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
     //   full-expression.
@@ -6963,8 +6983,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   }
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(FDecl))
-    if (!isa<RequiresExprBodyDecl>(CurContext) &&
-        Method->isImplicitObjectMemberFunction())
+    if (Method->isImplicitObjectMemberFunction())
       return ExprError(Diag(LParenLoc, diag::err_member_call_without_object)
                        << Fn->getSourceRange() << 0);
 
@@ -16076,17 +16095,7 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
 
   TypeSourceInfo *Sig = GetTypeForDeclarator(ParamInfo);
   QualType T = Sig->getType();
-
-  // FIXME: We should allow unexpanded parameter packs here, but that would,
-  // in turn, make the block expression contain unexpanded parameter packs.
-  if (DiagnoseUnexpandedParameterPack(CaretLoc, Sig, UPPC_Block)) {
-    // Drop the parameters.
-    FunctionProtoType::ExtProtoInfo EPI;
-    EPI.HasTrailingReturn = false;
-    EPI.TypeQuals.addConst();
-    T = Context.getFunctionType(Context.DependentTy, std::nullopt, EPI);
-    Sig = Context.getTrivialTypeSourceInfo(T);
-  }
+  DiagnoseUnexpandedParameterPack(CaretLoc, Sig, UPPC_Block);
 
   // GetTypeForDeclarator always produces a function type for a block
   // literal signature.  Furthermore, it is always a FunctionProtoType
@@ -16358,7 +16367,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   PoppedFunctionScopePtr ScopeRAII = PopFunctionScopeInfo(&WP, BD, BlockTy);
 
-  BlockExpr *Result = new (Context) BlockExpr(BD, BlockTy);
+  BlockExpr *Result = new (Context)
+      BlockExpr(BD, BlockTy, BSI->ContainsUnexpandedParameterPack);
 
   // If the block isn't obviously global, i.e. it captures anything at
   // all, then we need to do a few things in the surrounding context:
@@ -16381,6 +16391,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   if (getCurFunction())
     getCurFunction()->addBlock(BD);
 
+  // This can happen if the block's return type is deduced, but
+  // the return expression is invalid.
   if (BD->isInvalidDecl())
     return CreateRecoveryExpr(Result->getBeginLoc(), Result->getEndLoc(),
                               {Result}, Result->getType());
@@ -18145,6 +18157,15 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
             Func->setInstantiationIsPending(true);
             PendingInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));
+            if (llvm::isTimeTraceVerbose()) {
+              llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
+                std::string Name;
+                llvm::raw_string_ostream OS(Name);
+                Func->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                           /*Qualified=*/true);
+                return Name;
+              });
+            }
             // Notify the consumer that a function was implicitly instantiated.
             Consumer.HandleCXXImplicitFunctionInstantiation(Func);
           }
@@ -18844,7 +18865,17 @@ bool Sema::tryCaptureVariable(
   // We need to sync up the Declaration Context with the
   // FunctionScopeIndexToStopAt
   if (FunctionScopeIndexToStopAt) {
+    assert(!FunctionScopes.empty() && "No function scopes to stop at?");
     unsigned FSIndex = FunctionScopes.size() - 1;
+    // When we're parsing the lambda parameter list, the current DeclContext is
+    // NOT the lambda but its parent. So move away the current LSI before
+    // aligning DC and FunctionScopeIndexToStopAt.
+    if (auto *LSI = dyn_cast<LambdaScopeInfo>(FunctionScopes[FSIndex]);
+        FSIndex && LSI && !LSI->AfterParameterList)
+      --FSIndex;
+    assert(MaxFunctionScopesIndex <= FSIndex &&
+           "FunctionScopeIndexToStopAt should be no greater than FSIndex into "
+           "FunctionScopes.");
     while (FSIndex != MaxFunctionScopesIndex) {
       DC = getLambdaAwareParentOfDeclContext(DC);
       --FSIndex;
@@ -20224,6 +20255,8 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
     return;
 
   Expr *E = ParenE->IgnoreParens();
+  if (ParenE->isProducedByFoldExpansion() && ParenE->getSubExpr() == E)
+    return;
 
   if (BinaryOperator *opE = dyn_cast<BinaryOperator>(E))
     if (opE->getOpcode() == BO_EQ &&

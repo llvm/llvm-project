@@ -10003,7 +10003,8 @@ void ASTReader::finishPendingActions() {
 
     auto RTD = cast<RedeclarableTemplateDecl>(D)->getCanonicalDecl();
     for (auto *R = getMostRecentExistingDecl(RTD); R; R = R->getPreviousDecl())
-      cast<RedeclarableTemplateDecl>(R)->Common = RTD->Common;
+      cast<RedeclarableTemplateDecl>(R)->setCommonPtr(
+          RTD->getCommonPtrInternal());
   }
   PendingDefinitions.clear();
 
@@ -10604,6 +10605,11 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
+  case llvm::omp::OMPC_permutation: {
+    unsigned NumLoops = Record.readInt();
+    C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
+    break;
+  }
   case llvm::omp::OMPC_full:
     C = OMPFullClause::CreateEmpty(Context);
     break;
@@ -10988,6 +10994,12 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPPermutationClause(OMPPermutationClause *C) {
+  for (Expr *&E : C->getArgsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }
@@ -12315,11 +12327,33 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCTileClause::Create(getContext(), BeginLoc, LParenLoc,
                                      SizeExprs, EndLoc);
   }
+  case OpenACCClauseKind::Gang: {
+    SourceLocation LParenLoc = readSourceLocation();
+    unsigned NumExprs = readInt();
+    llvm::SmallVector<OpenACCGangKind> GangKinds;
+    llvm::SmallVector<Expr *> Exprs;
+    for (unsigned I = 0; I < NumExprs; ++I) {
+      GangKinds.push_back(readEnum<OpenACCGangKind>());
+      Exprs.push_back(readSubExpr());
+    }
+    return OpenACCGangClause::Create(getContext(), BeginLoc, LParenLoc,
+                                     GangKinds, Exprs, EndLoc);
+  }
+  case OpenACCClauseKind::Worker: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *WorkerExpr = readBool() ? readSubExpr() : nullptr;
+    return OpenACCWorkerClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       WorkerExpr, EndLoc);
+  }
+  case OpenACCClauseKind::Vector: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *VectorExpr = readBool() ? readSubExpr() : nullptr;
+    return OpenACCVectorClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       VectorExpr, EndLoc);
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Delete:
@@ -12331,7 +12365,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

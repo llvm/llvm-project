@@ -682,6 +682,7 @@ def StdC : StandardSpec<"stdc"> {
           GuardedFunctionSpec<"exp2f16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 
           FunctionSpec<"exp2m1f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          GuardedFunctionSpec<"exp2m1f16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 
           FunctionSpec<"expm1", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"expm1f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -690,6 +691,8 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"exp10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           GuardedFunctionSpec<"exp10f16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"exp10m1f16", RetValSpec<Float16Type>, [ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 
           FunctionSpec<"remainder", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"remainderf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
