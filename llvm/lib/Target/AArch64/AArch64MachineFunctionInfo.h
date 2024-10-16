@@ -303,7 +303,7 @@ public:
   void setLocalStackSize(uint64_t Size) { LocalStackSize = Size; }
   uint64_t getLocalStackSize() const { return LocalStackSize; }
 
-  void setOutliningStyle(std::string Style) { OutliningStyle = Style; }
+  void setOutliningStyle(const std::string &Style) { OutliningStyle = Style; }
   std::optional<std::string> getOutliningStyle() const {
     return OutliningStyle;
   }
