@@ -28,10 +28,7 @@ void ExpectNotRealtime(Context &context, const DiagnosticsInfo &info,
   if (context.InRealtimeContext() && !context.IsBypassed()) {
     ScopedBypass sb{context};
 
-    if ((info.type == DiagnosticsInfoType::InterceptedCall &&
-         IsInterceptorSuppressed(info.func_name)) ||
-        (info.type == DiagnosticsInfoType::BlockingCall &&
-         IsBlockingFnSuppressed(info.func_name)))
+    if (IsFunctionSuppressed(info.func_name))
       return;
 
     __sanitizer::BufferedStackTrace stack;

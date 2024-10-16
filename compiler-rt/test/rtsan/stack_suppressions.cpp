@@ -36,8 +36,8 @@ void BlockFunc() [[clang::blocking]] {
 void *process() [[clang::nonblocking]] {
   void *ptr = MallocViolation(); // Suppressed call-stack-contains
   VectorViolations();            // Suppressed call-stack-contains with regex
-  BlockFunc();                   // Suppressed blocking-fn-name
-  free(ptr);                     // Suppressed intercepted-fn-name
+  BlockFunc();                   // Suppressed function-name-is
+  free(ptr);                     // Suppressed function-name-is
 
   // This is the one that should abort the program
   // Everything else is suppressed
