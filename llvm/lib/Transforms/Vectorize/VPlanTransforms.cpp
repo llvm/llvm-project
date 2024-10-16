@@ -1377,7 +1377,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
               .Case<VPWidenRecipe>([&](VPWidenRecipe *W) -> VPRecipeBase * {
                 unsigned Opcode = W->getOpcode();
                 if (!Instruction::isBinaryOp(Opcode) &&
-                    !Instruction::isUnaryOp(Opcode))
+                    !Instruction::isUnaryOp(Opcode) &&
+                    Opcode != Instruction::ICmp && Opcode != Instruction::FCmp)
                   return nullptr;
                 return new VPWidenEVLRecipe(*W, EVL);
               })
