@@ -2076,6 +2076,48 @@ defm atomic_cmp_swap_i32 : ternary_atomic_op_failure_ord;
 defm atomic_cmp_swap_i64 : ternary_atomic_op_failure_ord;
 
 let Predicates = [IsLA64] in {
+
+def : Pat<(atomic_swap_i32_monotonic GPR:$addr, GPR:$incr),
+          (AMSWAP_W GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_swap_i64_monotonic GPR:$addr, GPR:$incr),
+          (AMSWAP_D GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_load_add_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_add_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_D GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_sub_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_W (SUB_W R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_sub_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMADD_D (SUB_D R0, GPR:$rk), GPR:$rj)>;
+def : Pat<(atomic_load_and_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMAND_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_and_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMAND_D GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_or_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMOR_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_or_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMOR_D GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_xor_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMXOR_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_xor_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMXOR_D GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umin_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMMIN_WU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umin_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMMIN_DU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umax_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMMAX_WU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umax_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMMAX_DU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_min_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMMIN_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_min_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMMIN_D GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_max_i32_monotonic GPR:$rj, GPR:$rk),
+          (AMMAX_W GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_max_i64_monotonic GPR:$rj, GPR:$rk),
+          (AMMAX_D GPR:$rk, GPR:$rj)>;
+
 def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i64,
                 PseudoMaskedAtomicSwap32>;
 def : Pat<(atomic_swap_i32 GPR:$addr, GPR:$incr),
