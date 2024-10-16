@@ -45,6 +45,7 @@ struct CoverageViewOptions {
   bool SkipExpansions;
   bool SkipFunctions;
   bool SkipBranches;
+  int32_t MCDCCountedStates;
   OutputFormat Format;
   BranchOutputType ShowBranches;
   std::string ShowOutputDirectory;
