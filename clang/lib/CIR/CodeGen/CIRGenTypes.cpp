@@ -504,9 +504,10 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       break;
 
     case BuiltinType::UInt128:
+      ResultType = CGM.UInt128Ty;
+      break;
     case BuiltinType::Int128:
-      assert(0 && "not implemented");
-      // FIXME: ResultType = Builder.getIntegerType(128);
+      ResultType = CGM.SInt128Ty;
       break;
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \

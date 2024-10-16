@@ -593,8 +593,8 @@ module {
 // // -----
 
 module {
-  // expected-error@below {{expected integer width to be from 1 up to 64}}
-  cir.func @l0(%arg0: !cir.int<s, 128>) -> () {
+  // expected-error@below {{expected integer width to be from 1 up to 128}}
+  cir.func @l0(%arg0: !cir.int<s, 256>) -> () {
     cir.return
   }
 }

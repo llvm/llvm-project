@@ -120,6 +120,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
       ::mlir::cir::IntType::get(builder.getContext(), 32, /*isSigned=*/true);
   SInt64Ty =
       ::mlir::cir::IntType::get(builder.getContext(), 64, /*isSigned=*/true);
+  SInt128Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 128, /*isSigned=*/true);
 
   // Initialize CIR unsigned integer types cache.
   UInt8Ty =
@@ -130,6 +132,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
       ::mlir::cir::IntType::get(builder.getContext(), 32, /*isSigned=*/false);
   UInt64Ty =
       ::mlir::cir::IntType::get(builder.getContext(), 64, /*isSigned=*/false);
+  UInt128Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 128, /*isSigned=*/false);
 
   VoidTy = ::mlir::cir::VoidType::get(builder.getContext());
 
