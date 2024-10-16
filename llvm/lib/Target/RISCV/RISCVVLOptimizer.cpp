@@ -114,10 +114,10 @@ struct OperandInfo {
       return;
     }
     assert(EMUL && "Expected EMUL to have value");
-    OS << "EMUL: ";
+    OS << "EMUL: m";
     if (EMUL->second)
-      OS << "m";
-    OS << "f" << EMUL->first;
+      OS << "f";
+    OS << EMUL->first;
     OS << ", EEW: " << (1 << Log2EEW);
   }
 };

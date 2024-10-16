@@ -288,4 +288,23 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
+  let summary = "Register a CUDA kernel";
+
+  let arguments = (ins
+    SymbolRefAttr:$name
+  );
+
+  let assemblyFormat = [{
+    $name attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    mlir::StringAttr getKernelName();
+    mlir::StringAttr getKernelModuleName();
+  }];
+}
+
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS
