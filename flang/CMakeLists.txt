@@ -468,7 +468,7 @@ if (FLANG_CUF_RUNTIME)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
-add_subdirectory(../FortranRuntime/lib/Runtime runtime)
+add_subdirectory(../flang-rt/lib/flang_rt runtime)
 
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)

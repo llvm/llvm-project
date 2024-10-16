@@ -76,4 +76,4 @@ add_flang_nongtest_unittest(folding
   FortranSemantics
 )
 
-add_subdirectory(../../../FortranRuntime/unittests/Evaluate runtime)
+add_subdirectory(../../../flang-rt/unittests/Evaluate runtime)
