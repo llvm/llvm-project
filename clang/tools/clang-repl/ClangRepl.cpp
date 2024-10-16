@@ -276,10 +276,12 @@ int main(int argc, const char **argv) {
   }
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+  bool UseEPCSearchGen = false;
   if (EPC) {
     CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
     JB = ExitOnErr(
         clang::Interpreter::createLLJITBuilder(std::move(EPC), OrcRuntimePath));
+    UseEPCSearchGen = true;
   }
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
@@ -352,7 +354,7 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input.rfind("%lib ", 0) == 0) {
-        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
+        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5, UseEPCSearchGen))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");

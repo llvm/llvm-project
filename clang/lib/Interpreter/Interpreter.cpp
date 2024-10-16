@@ -718,13 +718,20 @@ llvm::Error Interpreter::Undo(unsigned N) {
   return llvm::Error::success();
 }
 
-llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
+llvm::Error Interpreter::LoadDynamicLibrary(const char *name, bool UseEPC) {
   auto EE = getExecutionEngine();
   if (!EE)
     return EE.takeError();
 
-  if (auto DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
-          EE->getExecutionSession(), name))
+  auto &DL = EE->getDataLayout();
+  if (UseEPC) {
+    if (auto DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
+            EE->getExecutionSession(), name))
+      EE->getMainJITDylib().addGenerator(std::move(*DLSG));
+    else
+      return DLSG.takeError();
+  } else if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
+                 name, DL.getGlobalPrefix()))
     EE->getMainJITDylib().addGenerator(std::move(*DLSG));
   else
     return DLSG.takeError();
