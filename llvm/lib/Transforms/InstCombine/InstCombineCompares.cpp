@@ -1844,6 +1844,7 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                /*HasNUW=*/true),
                              One, Or->getName());
         Value *NewAnd = Builder.CreateAnd(A, NewOr, And->getName());
+        Cmp.setSameSign(false);
         return replaceOperand(Cmp, 0, NewAnd);
       }
     }
