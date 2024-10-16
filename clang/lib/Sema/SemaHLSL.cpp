@@ -1036,7 +1036,7 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
 
 // Returns handle type of a resource, if the type is a resource
 static const HLSLAttributedResourceType *
-FindHandleTypeOnResource(const Type *Ty) {
+findHandleTypeOnResource(const Type *Ty) {
   // If Ty is a resource class, the first field must
   // be the resource handle of type HLSLAttributedResourceType
   if (RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
@@ -1047,13 +1047,6 @@ FindHandleTypeOnResource(const Type *Ty) {
     }
   }
   return nullptr;
-}
-
-// Returns handle type of a resource, if the VarDecl is a resource
-static const HLSLAttributedResourceType *
-FindHandleTypeOnResource(const VarDecl *VD) {
-  assert(VD != nullptr && "expected VarDecl");
-  return FindHandleTypeOnResource(VD->getType().getTypePtr());
 }
 
 // Walks though the global variable declaration, collects all resource binding
@@ -1076,12 +1069,10 @@ void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
     if (!Ty->isRecordType())
       continue;
 
-    // Field is a resource or array of resources
     if (const HLSLAttributedResourceType *AttrResType =
-            FindHandleTypeOnResource(Ty)) {
-      ResourceClass RC = AttrResType->getAttrs().ResourceClass;
-
+            findHandleTypeOnResource(Ty)) {
       // Add a new DeclBindingInfo to Bindings if it does not already exist
+      ResourceClass RC = AttrResType->getAttrs().ResourceClass;
       DeclBindingInfo *DBI = Bindings.getDeclBindingInfo(VD, RC);
       if (!DBI)
         Bindings.addDeclBindingInfo(VD, RC);
@@ -1130,7 +1121,7 @@ static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
 
   // Resource
   if (const HLSLAttributedResourceType *AttrResType =
-          FindHandleTypeOnResource(VD)) {
+          findHandleTypeOnResource(VD->getType().getTypePtr())) {
     if (RegType == getRegisterType(AttrResType->getAttrs().ResourceClass))
       return true;
 
@@ -2373,7 +2364,7 @@ void SemaHLSL::collectResourcesOnVarDecl(VarDecl *VD) {
 
   // Resource (or array of resources)
   if (const HLSLAttributedResourceType *AttrResType =
-          FindHandleTypeOnResource(Ty)) {
+          findHandleTypeOnResource(Ty)) {
     Bindings.addDeclBindingInfo(VD, AttrResType->getAttrs().ResourceClass);
     return;
   }

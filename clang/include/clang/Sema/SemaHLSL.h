@@ -48,7 +48,7 @@ struct DeclBindingInfo {
   const HLSLResourceBindingAttr *Attr;
   BindingType BindType;
 
-  DeclBindingInfo(const VarDecl *Decl, ResourceClass ResClass, int Size = 0,
+  DeclBindingInfo(const VarDecl *Decl, ResourceClass ResClass,
                   BindingType BindType = BindingType::NotAssigned,
                   const HLSLResourceBindingAttr *Attr = nullptr)
       : Decl(Decl), ResClass(ResClass), Attr(Attr), BindType(BindType) {}
