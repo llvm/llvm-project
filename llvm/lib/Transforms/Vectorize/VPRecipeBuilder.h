@@ -171,9 +171,9 @@ public:
            "Recording this ingredients recipe was not requested");
     assert(Ingredient2Recipe[I] && "Ingredient doesn't have a recipe");
     auto RecipeInfo = Ingredient2Recipe[I];
-    if (auto *R = RecipeInfo.dyn_cast<VPRecipeBase *>())
+    if (auto *R = dyn_cast<VPRecipeBase *>(RecipeInfo))
       return R;
-    return RecipeInfo.get<VPValue *>()->getDefiningRecipe();
+    return cast<VPValue *>(RecipeInfo)->getDefiningRecipe();
   }
 
   /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
@@ -193,9 +193,9 @@ public:
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       if (auto RecipeInfo = Ingredient2Recipe.lookup(I)) {
-        if (auto *R = RecipeInfo.dyn_cast<VPRecipeBase *>())
+        if (auto *R = dyn_cast<VPRecipeBase *>(RecipeInfo))
           return R->getVPSingleValue();
-        return RecipeInfo.get<VPValue *>();
+        return cast<VPValue *>(RecipeInfo);
       }
     }
     return Plan.getOrAddLiveIn(V);
