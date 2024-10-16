@@ -1929,3 +1929,30 @@ func.func @test_dynamic_fft2d(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>
   %output_real, %output_imag = "tosa.fft2d"(%arg0, %arg1) {inverse = true} : (tensor<?x?x?xf32>, tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
   return %output_real, %output_imag : tensor<?x?x?xf32>, tensor<?x?x?xf32>
 }
+
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (0)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0)>
+
+// CHECK-LABEL:   func.func @test_cast_fp32_i64(
+// CHECK-SAME:                                  %[[ARG0:.*]]: tensor<1xf32>) -> tensor<1xi64> {
+// CHECK:           %[[VAL_0:.*]] = tensor.empty() : tensor<1xi64>
+// CHECK:           %[[RESULT:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel"]} ins(%[[ARG0]] : tensor<1xf32>) outs(%[[VAL_0]] : tensor<1xi64>) {
+// CHECK:           ^bb0(%[[VAL_2:.*]]: f32, %[[VAL_3:.*]]: i64):
+// CHECK:             %[[VAL_4:.*]] = math.roundeven %[[VAL_2]] : f32
+// CHECK:             %[[VAL_5:.*]] = arith.constant -9.22337203E+18 : f32
+// CHECK:             %[[VAL_6:.*]] = arith.constant 9.22337203E+18 : f32
+// CHECK:             %[[VAL_7:.*]] = arith.constant 9223372036854775807 : i64
+// CHECK:             %[[VAL_8:.*]] = arith.maximumf %[[VAL_4]], %[[VAL_5]] : f32
+// CHECK:             %[[VAL_9:.*]] = arith.fptosi %[[VAL_8]] : f32 to i64
+// CHECK:             %[[VAL_10:.*]] = arith.cmpf uge, %[[VAL_4]], %[[VAL_6]] : f32
+// CHECK:             %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_7]], %[[VAL_9]] : i64
+// CHECK:             linalg.yield %[[VAL_11]] : i64
+// CHECK:           } -> tensor<1xi64>
+// CHECK:           return %[[RESULT]] : tensor<1xi64>
+func.func @test_cast_fp32_i64(%arg0: tensor<1xf32>) -> (tensor<1xi64>) {
+  %0 = tosa.cast %arg0 : (tensor<1xf32>) -> tensor<1xi64>
+  return %0: tensor<1xi64>
+}
