@@ -1213,7 +1213,7 @@ public:
       __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT _LIBCPP_LIFETIMEBOUND {
     return __self_view(typename __self_view::__assume_valid(), data(), size());
   }
 
