@@ -82,11 +82,6 @@ void populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
                                        DataFlowSolver &solver,
                                        ArrayRef<unsigned> bitwidthsSupported);
 
-// TODO: merge these two narrowing passes.
-/// Add patterns for integer bitwidth narrowing.
-void populateArithIntNarrowingPatterns(RewritePatternSet &patterns,
-                                       const ArithIntNarrowingOptions &options);
-
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
