@@ -760,6 +760,12 @@ public:
     return actionFor(LegalizeAction::Libcall, Types);
   }
   LegalizeRuleSet &
+  libcallFor(bool Pred, std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Libcall, Types);
+  }
+  LegalizeRuleSet &
   libcallForCartesianProduct(std::initializer_list<LLT> Types) {
     return actionForCartesianProduct(LegalizeAction::Libcall, Types);
   }
