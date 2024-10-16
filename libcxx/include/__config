@@ -757,6 +757,21 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T
 #  endif
 
+// P1831R1 deprecated many uses of volatile, but the way attributes work with template specializations require this
+// work-around to always raise warnings in cases where templates are specialized for volatile variants of STL types.
+#  if _LIBCPP_STD_VER >= 20
+     template <class _Tp, bool __cxx20 = _LIBCPP_STD_VER >= 20>
+     _LIBCPP_HIDE_FROM_ABI constexpr bool __volatile_deprecated_since_cxx20_warning = true;
+     template <class _Tp>
+     _LIBCPP_DEPRECATED_IN_CXX20
+     _LIBCPP_HIDE_FROM_ABI constexpr bool __volatile_deprecated_since_cxx20_warning<_Tp, true> = true;
+#    define _LIBCPP_VOLATILE_DEPRECATED_WARNING static_assert(__volatile_deprecated_since_cxx20_warning<volatile _Tp>)
+#    define _LIBCPP_VOLATILE_DEPRECATED_WARNING                                                                    \
+     static_assert(__volatile_deprecated_since_cxx20_warning<volatile _Tp>)
+#  else
+#    define _LIBCPP_VOLATILE_DEPRECATED_WARNING static_assert(true)
+#  endif
+
 // Macros to enter and leave a state where deprecation warnings are suppressed.
 #  if defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_COMPILER_GCC)
 #    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                           \
