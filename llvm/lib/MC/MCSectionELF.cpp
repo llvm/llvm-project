@@ -191,8 +191,10 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   if (Flags & ELF::SHF_GROUP) {
-    OS << ",";
-    printName(OS, Group.getPointer()->getName());
+    if (const MCSymbolELF *Signature = Group.getPointer()) {
+      OS << ",";
+      printName(OS, Signature->getName());
+    }
     if (isComdat())
       OS << ",comdat";
   }
