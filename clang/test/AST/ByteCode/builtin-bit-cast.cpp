@@ -112,6 +112,14 @@ namespace simple {
                                                              // ref-note {{indeterminate value can only initialize an object}}
 }
 
+namespace Fail {
+  constexpr int a = 1/0; // both-error {{must be initialized by a constant expression}} \
+                         // both-note {{division by zero}} \
+                         // both-note {{declared here}}
+  constexpr int b = __builtin_bit_cast(int, a); // both-error {{must be initialized by a constant expression}} \
+                                                // both-note {{initializer of 'a' is not a constant expression}}
+}
+
 namespace bitint {
   constexpr _BitInt(sizeof(int) * 8) BI = ~0;
   constexpr unsigned int I = __builtin_bit_cast(unsigned int, BI);

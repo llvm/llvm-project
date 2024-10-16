@@ -3004,6 +3004,9 @@ inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
                     uint32_t ResultBitWidth, const llvm::fltSemantics *Sem) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
 
+  if (!CheckLoad(S, OpPC, FromPtr))
+    return false;
+
   size_t BuffSize = ResultBitWidth / 8;
   llvm::SmallVector<std::byte> Buff(BuffSize);
   bool HasIndeterminateBits = false;
