@@ -49,7 +49,8 @@ public:
                                       llvm::StringRef VarName) const;
   // Generate Replacement for declaring the selected Expr as a new variable
   tooling::Replacement insertDeclaration(llvm::StringRef VarName,
-                                         SourceRange InitChars) const;
+                                         SourceRange InitChars,
+                                         bool AddSemicolon) const;
 
 private:
   bool Extractable = false;
@@ -252,7 +253,8 @@ ExtractionContext::replaceWithVar(SourceRange Chars,
 // returns the Replacement for declaring a new variable storing the extraction
 tooling::Replacement
 ExtractionContext::insertDeclaration(llvm::StringRef VarName,
-                                     SourceRange InitializerChars) const {
+                                     SourceRange InitializerChars,
+                                     bool AddSemicolon) const {
   llvm::StringRef ExtractionCode = toSourceCode(SM, InitializerChars);
   const SourceLocation InsertionLoc =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(),
@@ -260,7 +262,9 @@ ExtractionContext::insertDeclaration(llvm::StringRef VarName,
           ->getBegin();
   std::string ExtractedVarDecl =
       printType(VarType, ExprNode->getDeclContext(), VarName) + " = " +
-      ExtractionCode.str() + "; ";
+      ExtractionCode.str();
+  if (AddSemicolon)
+    ExtractedVarDecl += "; ";
   return tooling::Replacement(SM, InsertionLoc, 0, ExtractedVarDecl);
 }
 
@@ -423,8 +427,6 @@ bool childExprIsStmt(const Stmt *Outer, const Expr *Inner) {
   if (!Outer || !Inner)
     return false;
   // Exclude the most common places where an expr can appear but be unused.
-  if (llvm::isa<CompoundStmt>(Outer))
-    return true;
   if (llvm::isa<SwitchCase>(Outer))
     return true;
   // Control flow statements use condition etc, but not the body.
@@ -516,6 +518,12 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
       return false;
   }
 
+  // If e.g. a capture clause was selected, the target node is the lambda
+  // expression. We only want to offer the extraction if the entire lambda
+  // expression was selected.
+  if (llvm::isa<LambdaExpr>(E))
+    return N->Selected == SelectionTree::Complete;
+
   // The same logic as for assignments applies to initializations.
   // However, we do allow extracting the RHS of an init capture, as it is
   // a valid use case to move non-trivial expressions out of the capture clause.
@@ -599,10 +607,22 @@ Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
   // FIXME: get variable name from user or suggest based on type
   std::string VarName = "placeholder";
   SourceRange Range = Target->getExtractionChars();
+
+  const SelectionTree::Node &OuterImplicit =
+      Target->getExprNode()->outerImplicit();
+  assert(OuterImplicit.Parent);
+  bool IsStmtExpr = llvm::isa_and_nonnull<CompoundStmt>(
+      OuterImplicit.Parent->ASTNode.get<Stmt>());
+
   // insert new variable declaration
-  if (auto Err = Result.add(Target->insertDeclaration(VarName, Range)))
+  if (auto Err =
+          Result.add(Target->insertDeclaration(VarName, Range, !IsStmtExpr)))
     return std::move(Err);
-  // replace expression with variable name
+
+  // replace expression with variable name, unless it's a statement expression,
+  // in which case we remove it.
+  if (IsStmtExpr)
+    VarName.clear();
   if (auto Err = Result.add(Target->replaceWithVar(Range, VarName)))
     return std::move(Err);
   return Effect::mainFileEdit(Inputs.AST->getSourceManager(),
