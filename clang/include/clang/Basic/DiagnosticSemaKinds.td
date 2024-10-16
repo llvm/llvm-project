@@ -9267,6 +9267,12 @@ def warn_unused_container_subscript_expr : Warning<
 def warn_unused_call : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedValue>;
+def warn_unused_return_type : Warning<
+  "ignoring %select{return value|temporary}0 of type %2 declared with %1 attribute">,
+  InGroup<UnusedValue>;
+def warn_unused_return_type_msg : Warning<
+  "ignoring %select{return value|temporary}0 of type %2 declared with %1 attribute: %3">,
+  InGroup<UnusedValue>;
 def warn_unused_constructor : Warning<
   "ignoring temporary created by a constructor declared with %0 attribute">,
   InGroup<UnusedValue>;
