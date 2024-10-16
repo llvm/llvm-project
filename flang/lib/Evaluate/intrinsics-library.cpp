@@ -417,7 +417,7 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
-#if HAS_FLOAT80 || HAS_LDBL128
+#if defined(__GLIBC__) && (HAS_FLOAT80 || HAS_LDBL128)
 template <>
 struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<long double, long double>;
