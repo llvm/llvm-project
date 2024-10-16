@@ -265,6 +265,15 @@ namespace fpclassify {
   char classify_subnorm [__builtin_fpclassify(-1, -1, -1, +1, -1, 1.0e-38f)];
 }
 
+namespace abs {
+static_assert(__builtin_abs(14) == 14, "");
+static_assert(__builtin_labs(14L) == 14L, "");
+static_assert(__builtin_llabs(14LL) == 14LL, "");
+static_assert(__builtin_abs(-14) == 14, "");
+static_assert(__builtin_labs(-14L) == 14L, "");
+static_assert(__builtin_llabs(-14LL) == 14LL, "");
+} // namespace abs
+
 namespace fabs {
   static_assert(__builtin_fabs(-14.0) == 14.0, "");
 }
