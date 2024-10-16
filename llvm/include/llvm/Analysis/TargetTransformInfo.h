@@ -1534,6 +1534,14 @@ public:
       Function *F, Type *RetTy, ArrayRef<Type *> Tys,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
 
+  /// \returns The cost of propagating Type \p DataType through Basic Block /
+  /// function boundaries. If \p IsCallingConv is specified, then \p DataType is
+  /// associated with either a function argument or return. Otherwise, \p
+  /// DataType is used in either a GEP instruction, or spans across BasicBlocks
+  /// (this is relevant because SelectionDAG builder may, for example, scalarize
+  /// illegal vectors across blocks, which introduces extract/insert code).
+  InstructionCost getDataFlowCost(Type *DataType, bool IsCallingConv) const;
+
   /// \returns The number of pieces into which the provided type must be
   /// split during legalization. Zero is returned when the answer is unknown.
   unsigned getNumberOfParts(Type *Tp) const;
@@ -2096,6 +2104,8 @@ public:
   virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                            ArrayRef<Type *> Tys,
                                            TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost getDataFlowCost(Type *DataType,
+                                          bool IsCallingConv) = 0;
   virtual unsigned getNumberOfParts(Type *Tp) = 0;
   virtual InstructionCost
   getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr) = 0;
@@ -2780,6 +2790,9 @@ public:
                                    ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind) override {
     return Impl.getCallInstrCost(F, RetTy, Tys, CostKind);
+  }
+  InstructionCost getDataFlowCost(Type *DataType, bool IsCallingConv) override {
+    return Impl.getDataFlowCost(DataType, IsCallingConv);
   }
   unsigned getNumberOfParts(Type *Tp) override {
     return Impl.getNumberOfParts(Tp);

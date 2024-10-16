@@ -2410,6 +2410,10 @@ public:
     return 10;
   }
 
+  InstructionCost getDataFlowCost(Type *DataType, bool IsCallingConv) {
+    return 0;
+  }
+
   unsigned getNumberOfParts(Type *Tp) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
     return LT.first.isValid() ? *LT.first.getValue() : 0;

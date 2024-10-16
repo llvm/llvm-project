@@ -161,6 +161,8 @@ public:
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr);
 
+  InstructionCost getDataFlowCost(Type *DataType, bool IsCallingConv);
+
   bool isInlineAsmSourceOfDivergence(const CallInst *CI,
                                      ArrayRef<unsigned> Indices = {}) const;
 

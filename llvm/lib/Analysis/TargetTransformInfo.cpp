@@ -1116,6 +1116,13 @@ TargetTransformInfo::getCallInstrCost(Function *F, Type *RetTy,
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getDataFlowCost(Type *DataType,
+                                                     bool IsCallingConv) const {
+  InstructionCost Cost = TTIImpl->getDataFlowCost(DataType, IsCallingConv);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 unsigned TargetTransformInfo::getNumberOfParts(Type *Tp) const {
   return TTIImpl->getNumberOfParts(Tp);
 }
