@@ -9230,6 +9230,8 @@ def err_typecheck_cond_incompatible_operands : Error<
 def err_typecheck_expect_scalar_or_vector : Error<
   "invalid operand of type %0 where %1 or "
   "a vector of such type is required">;
+def err_typecheck_expect_any_scalar_or_vector : Error<
+  "invalid operand of type %0 where a scalar or vector is required">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
@@ -10124,6 +10126,8 @@ def note_lambda_capture_initializer : Note<
   " via initialization of lambda capture %0}1">;
 def note_init_with_default_member_initializer : Note<
   "initializing field %0 with default member initializer">;
+def note_init_with_default_argument : Note<
+  "initializing parameter %0 with default argument">;
 
 // Check for initializing a member variable with the address or a reference to
 // a constructor parameter.
@@ -12702,7 +12706,7 @@ def err_acc_gang_dim_value
 def err_acc_num_arg_conflict
     : Error<"'num' argument to '%0' clause not allowed on a 'loop' construct "
             "associated with a 'kernels' construct that has a "
-            "'%select{num_gangs|num_workers}1' "
+            "'%select{num_gangs|num_workers|vector_length}1' "
             "clause">;
 def err_acc_clause_in_clause_region
     : Error<"loop with a '%0' clause may not exist in the region of a '%1' "

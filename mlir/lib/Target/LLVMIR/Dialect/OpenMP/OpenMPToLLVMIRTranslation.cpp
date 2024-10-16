@@ -480,12 +480,11 @@ makeReductionGen(omp::DeclareReductionOp decl, llvm::IRBuilderBase &builder,
       [&, decl](llvm::OpenMPIRBuilder::InsertPointTy insertPoint,
                 llvm::Value *lhs, llvm::Value *rhs,
                 llvm::Value *&result) mutable {
-        Region &reductionRegion = decl.getReductionRegion();
-        moduleTranslation.mapValue(reductionRegion.front().getArgument(0), lhs);
-        moduleTranslation.mapValue(reductionRegion.front().getArgument(1), rhs);
+        moduleTranslation.mapValue(decl.getReductionLhsArg(), lhs);
+        moduleTranslation.mapValue(decl.getReductionRhsArg(), rhs);
         builder.restoreIP(insertPoint);
         SmallVector<llvm::Value *> phis;
-        if (failed(inlineConvertOmpRegions(reductionRegion,
+        if (failed(inlineConvertOmpRegions(decl.getReductionRegion(),
                                            "omp.reduction.nonatomic.body",
                                            builder, moduleTranslation, &phis)))
           return llvm::OpenMPIRBuilder::InsertPointTy();
@@ -513,12 +512,11 @@ makeAtomicReductionGen(omp::DeclareReductionOp decl,
   OwningAtomicReductionGen atomicGen =
       [&, decl](llvm::OpenMPIRBuilder::InsertPointTy insertPoint, llvm::Type *,
                 llvm::Value *lhs, llvm::Value *rhs) mutable {
-        Region &atomicRegion = decl.getAtomicReductionRegion();
-        moduleTranslation.mapValue(atomicRegion.front().getArgument(0), lhs);
-        moduleTranslation.mapValue(atomicRegion.front().getArgument(1), rhs);
+        moduleTranslation.mapValue(decl.getAtomicReductionLhsArg(), lhs);
+        moduleTranslation.mapValue(decl.getAtomicReductionRhsArg(), rhs);
         builder.restoreIP(insertPoint);
         SmallVector<llvm::Value *> phis;
-        if (failed(inlineConvertOmpRegions(atomicRegion,
+        if (failed(inlineConvertOmpRegions(decl.getAtomicReductionRegion(),
                                            "omp.reduction.atomic.body", builder,
                                            moduleTranslation, &phis)))
           return llvm::OpenMPIRBuilder::InsertPointTy();
@@ -1674,9 +1672,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         // argument of the `alloc` region and the second argument of the `copy`
         // region to be the yielded value of the `alloc` region (this is the
         // private clone of the privatized value).
-        copyCloneBuilder.mergeBlocks(
-            &*newCopyRegionFrontBlock, &*oldAllocBackBlock,
-            {allocRegion.getArgument(0), oldAllocYieldOp.getOperand(0)});
+        copyCloneBuilder.mergeBlocks(&*newCopyRegionFrontBlock,
+                                     &*oldAllocBackBlock,
+                                     {mlirPrivatizerClone.getAllocMoldArg(),
+                                      oldAllocYieldOp.getOperand(0)});
 
         // 4. The old terminator of the `alloc` region is not needed anymore, so
         // delete it.
@@ -1686,8 +1685,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       // Replace the privatizer block argument with mlir value being privatized.
       // This way, the body of the privatizer will be changed from using the
       // region/block argument to the value being privatized.
-      auto allocRegionArg = allocRegion.getArgument(0);
-      replaceAllUsesInRegionWith(allocRegionArg, mlirPrivVar, allocRegion);
+      replaceAllUsesInRegionWith(mlirPrivatizerClone.getAllocMoldArg(),
+                                 mlirPrivVar, allocRegion);
 
       auto oldIP = builder.saveIP();
       builder.restoreIP(allocaIP);
@@ -1786,6 +1785,20 @@ convertOrderKind(std::optional<omp::ClauseOrderKind> o) {
   llvm_unreachable("Unknown ClauseOrderKind kind");
 }
 
+static LogicalResult simdOpSupported(omp::SimdOp op) {
+  if (!op.getLinearVars().empty() || !op.getLinearStepVars().empty())
+    return op.emitError("linear clause not yet supported");
+
+  if (!op.getPrivateVars().empty() || op.getPrivateSyms())
+    return op.emitError("privatization clauses not yet supported");
+
+  if (!op.getReductionVars().empty() || op.getReductionByref() ||
+      op.getReductionSyms())
+    return op.emitError("reduction clause not yet supported");
+
+  return success();
+}
+
 /// Converts an OpenMP simd loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -1793,11 +1806,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   auto simdOp = cast<omp::SimdOp>(opInst);
   auto loopOp = cast<omp::LoopNestOp>(simdOp.getWrappedLoop());
 
-  if (!simdOp.getLinearVars().empty() || !simdOp.getLinearStepVars().empty() ||
-      !simdOp.getPrivateVars().empty() || simdOp.getPrivateSyms() ||
-      !simdOp.getReductionVars().empty() || simdOp.getReductionByref() ||
-      simdOp.getReductionSyms())
-    return opInst.emitError("unhandled clauses for translation to LLVM IR");
+  if (failed(simdOpSupported(simdOp)))
+    return failure();
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
@@ -3242,11 +3252,6 @@ static bool targetOpSupported(Operation &opInst) {
     return false;
   }
 
-  if (targetOp.getNowait()) {
-    opInst.emitError("Nowait clause not yet supported");
-    return false;
-  }
-
   if (!targetOp.getAllocateVars().empty() ||
       !targetOp.getAllocatorVars().empty()) {
     opInst.emitError("Allocate clause not yet supported");
@@ -3480,10 +3485,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                            " private allocatables is not supported yet");
           bodyGenStatus = failure();
         } else {
-          Region &allocRegion = privatizer.getAllocRegion();
-          BlockArgument allocRegionArg = allocRegion.getArgument(0);
-          moduleTranslation.mapValue(allocRegionArg,
+          moduleTranslation.mapValue(privatizer.getAllocMoldArg(),
                                      moduleTranslation.lookupValue(privVar));
+          Region &allocRegion = privatizer.getAllocRegion();
           SmallVector<llvm::Value *, 1> yieldedValues;
           if (failed(inlineConvertOmpRegions(
                   allocRegion, "omp.targetop.privatizer", builder,
@@ -3569,7 +3573,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
       ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), entryInfo,
       defaultValTeams, defaultValThreads, kernelInput, genMapInfoCB, bodyCB,
-      argAccessorCB, dds));
+      argAccessorCB, dds, targetOp.getNowait()));
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary

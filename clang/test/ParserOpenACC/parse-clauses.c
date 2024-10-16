@@ -898,7 +898,6 @@ void IntExprParsing() {
 #pragma acc set default_async(returns_int())
 
 
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector
   for(;;);
   // expected-error@+1{{expected expression}}
@@ -908,8 +907,7 @@ void IntExprParsing() {
   // expected-error@+1{{expected expression}}
 #pragma acc loop vector(invalid:)
   for(;;);
-  // expected-error@+2{{invalid tag 'invalid' on 'vector' clause}}
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
+  // expected-error@+1{{invalid tag 'invalid' on 'vector' clause}}
 #pragma acc loop vector(invalid:5)
   for(;;);
   // expected-error@+1{{expected expression}}
@@ -932,20 +930,15 @@ void IntExprParsing() {
   // expected-note@+1{{to match this '('}}
 #pragma acc loop vector(num:6,4)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(5)
   for(;;);
-  // expected-error@+2{{invalid tag 'num' on 'vector' clause}}
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
+  // expected-error@+1{{invalid tag 'num' on 'vector' clause}}
 #pragma acc loop vector(num:5)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(length:5)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(returns_int())
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'vector' not yet implemented, clause ignored}}
 #pragma acc loop vector(length:returns_int())
   for(;;);
 

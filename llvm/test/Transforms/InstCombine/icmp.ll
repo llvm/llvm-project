@@ -3203,6 +3203,21 @@ define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
   ret i1 %ret
 }
 
+define i1 @icmp_and_or_lshr_samesign(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_and_or_lshr_samesign(
+; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
+; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X:%.*]], [[OR2]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %shf = lshr i32 %x, %y
+  %or = or i32 %shf, %x
+  %and = and i32 %or, 1
+  %ret = icmp samesign ne i32 %and, 0
+  ret i1 %ret
+}
+
 define <2 x i1> @icmp_and_or_lshr_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @icmp_and_or_lshr_vec(
 ; CHECK-NEXT:    [[SHF:%.*]] = lshr <2 x i32> [[X:%.*]], [[Y:%.*]]
@@ -5364,4 +5379,26 @@ define i1 @icmp_and_inv_pow2_or_zero_ne_0(i32 %A, i32 %B) {
   %and = and i32 %A, %inv
   %cmp = icmp ne i32 %and, 0
   ret i1 %cmp
+}
+
+define i1 @icmp_samesign_logical_and(i32 %In) {
+; CHECK-LABEL: @icmp_samesign_logical_and(
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IN:%.*]], 1
+; CHECK-NEXT:    ret i1 [[C2]]
+;
+  %c1 = icmp samesign sgt i32 %In, -1
+  %c2 = icmp samesign eq i32 %In, 1
+  %V = select i1 %c1, i1 %c2, i1 false
+  ret i1 %V
+}
+
+define i1 @icmp_samesign_logical_or(i32 %In) {
+; CHECK-LABEL: @icmp_samesign_logical_or(
+; CHECK-NEXT:    [[V:%.*]] = icmp ne i32 [[IN:%.*]], 1
+; CHECK-NEXT:    ret i1 [[V]]
+;
+  %c1 = icmp samesign slt i32 %In, 0
+  %c2 = icmp samesign ne i32 %In, 1
+  %V = select i1 %c1, i1 true, i1 %c2
+  ret i1 %V
 }

@@ -1870,6 +1870,14 @@ void Clang::AddLoongArchTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-tune-cpu");
     CmdArgs.push_back(Args.MakeArgString(TuneCPU));
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mannotate_tablejump,
+                               options::OPT_mno_annotate_tablejump)) {
+    if (A->getOption().matches(options::OPT_mannotate_tablejump)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-loongarch-annotate-tablejump");
+    }
+  }
 }
 
 void Clang::AddMIPSTargetArgs(const ArgList &Args,
@@ -7217,6 +7225,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
                              // TODO add c++23 and c++26 when MSVC supports it.
+                             .Case("c++23preview", "-std=c++23")
                              .Case("c++latest", "-std=c++26")
                              .Default("");
       if (LanguageStandard.empty())

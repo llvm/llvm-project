@@ -236,7 +236,6 @@ public:
     }
     // Iterators iterate over the bundles
     iterator &operator++() {
-      assert(VecIdx >= 0 && "Already at end!");
       ++VecIdx;
       if (VecIdx >= Vec->size()) {
         assert(MapIt != Map->end() && "Already at end!");
