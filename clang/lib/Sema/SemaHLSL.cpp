@@ -1000,16 +1000,8 @@ static CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
 }
 
 static const HLSLAttributedResourceType *
-findAttributedResourceTypeOnField(VarDecl *VD) {
-  assert(VD != nullptr && "expected VarDecl");
-  if (RecordDecl *RD = getRecordDeclFromVarDecl(VD)) {
-    for (auto *FD : RD->fields()) {
-      if (const HLSLAttributedResourceType *AttrResType =
-              dyn_cast<HLSLAttributedResourceType>(FD->getType().getTypePtr()))
-        return AttrResType;
-    }
-  }
-  return nullptr;
+findHandleTypeOnResource(const Type *Ty) {
+  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
 }
 
 // Iterate over RecordType fields and return true if any of them matched the

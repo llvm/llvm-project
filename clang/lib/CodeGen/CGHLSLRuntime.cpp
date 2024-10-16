@@ -495,20 +495,10 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   }
 }
 
-// Returns handle type of a resource, if the type is a resource
-// or an array of resources
-static const HLSLAttributedResourceType *findHandleTypeOnResource(QualType QT) {
-  // If the type is a resource class, the first field must
-  // be the resource handle of type HLSLAttributedResourceType
-  const clang::Type *Ty = QT->getUnqualifiedDesugaredType();
-  if (RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
-    if (!RD->fields().empty()) {
-      const auto &FirstFD = RD->fields().begin();
-      return dyn_cast<HLSLAttributedResourceType>(
-          FirstFD->getType().getTypePtr());
-    }
-  }
-  return nullptr;
+// Returns handle type from a resource, if the type is a resource
+static const HLSLAttributedResourceType *
+findHandleTypeOnResource(const clang::Type *Ty) {
+  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
 }
 
 void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
@@ -519,7 +509,7 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
   if (!RBA)
     return;
 
-  if (!findHandleTypeOnResource(VD->getType()))
+  if (!findHandleTypeOnResource(VD->getType().getTypePtr()))
     // FIXME: Only simple declarations of resources are supported for now.
     // Arrays of resources or resources in user defined classes are
     // not implemented yet.
@@ -557,7 +547,7 @@ llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
         continue;
 
       const HLSLAttributedResourceType *AttrResType =
-          findHandleTypeOnResource(VD->getType());
+          findHandleTypeOnResource(VD->getType().getTypePtr());
 
       // FIXME: Only simple declarations of resources are supported for now.
       // Arrays of resources or resources in user defined classes are
