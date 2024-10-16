@@ -53,7 +53,7 @@ AutoExporter::AutoExporter(
       "libflang_rt",
       "libflang_rt.static",
       "libflang_rt.dynamic",
-      "libflang_rtstatic_dbg",
+      "libflang_rt.static_dbg",
       "libflang_rt.dynamic_dbg",
       "libunwind",
       "libmsvcrt",
