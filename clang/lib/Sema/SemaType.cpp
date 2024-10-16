@@ -9158,11 +9158,20 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
 
   if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
     if (!MPTy->getClass()->isDependentType()) {
-      if (getLangOpts().CompleteMemberPointers &&
-          !MPTy->getClass()->getAsCXXRecordDecl()->isBeingDefined() &&
-          RequireCompleteType(Loc, QualType(MPTy->getClass(), 0), Kind,
-                              diag::err_memptr_incomplete))
-        return true;
+      if (getLangOpts().CompleteMemberPointers) {
+        const CXXRecordDecl *RD = MPTy->getClass()->getAsCXXRecordDecl();
+        if (RD->isBeingDefined()) {
+          if (RD->isParsingBaseSpecifiers()) {
+            Diag(Loc, diag::err_memptr_incomplete)
+                << QualType(MPTy->getClass(), 0);
+            return true;
+          }
+          // Otherwise, we know the bases and can assign a proper inheritance
+          // model even though the class is incomplete.
+        } else if (RequireCompleteType(Loc, QualType(MPTy->getClass(), 0), Kind,
+                                       diag::err_memptr_incomplete))
+          return true;
+      }
 
       // We lock in the inheritance model once somebody has asked us to ensure
       // that a pointer-to-member type is complete.
