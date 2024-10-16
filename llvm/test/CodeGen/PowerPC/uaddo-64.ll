@@ -36,3 +36,27 @@ entry:
   store i64 %2, ptr %ovf, align 8
   ret i1 %1
 }
+
+define noundef i64 @addWithCarryIn (i64 noundef %a, i64 noundef %b, i64 noundef %c, ptr nocapture noundef writeonly %ovf) {
+; CHECK-LABEL: addWithCarryIn:
+; CHECK:       # %bb.0:                                # %entry
+; CHECK-NEXT:    li 7, 0
+; CHECK-NEXT:    addc 3, 3, 4
+; CHECK-NEXT:    addze 4, 7
+; CHECK-NEXT:    addc 3, 3, 5
+; CHECK-NEXT:    addze 5, 7
+; CHECK-NEXT:    or 4, 4, 5
+; CHECK-NEXT:    std 4, 0(6)
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %1 = extractvalue { i64, i1 } %0, 1
+  %2 = extractvalue { i64, i1 } %0, 0
+  %3 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %2, i64 %c)
+  %4 = extractvalue { i64, i1 } %3, 1
+  %5 = extractvalue { i64, i1 } %3, 0
+  %6 = or i1 %1, %4
+  %7 = zext i1 %6 to i64
+  store i64 %7, ptr %ovf, align 8
+  ret i64 %5
+}
