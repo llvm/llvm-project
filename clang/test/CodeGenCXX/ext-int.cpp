@@ -614,3 +614,18 @@ void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
 // NewStructPathTBAA-DAG: ![[EXTINT_TBAA_ROOT]] = !{![[CHAR_TBAA_ROOT]], i64 4, !"_BitInt(32)"}
 // NewStructPathTBAA-DAG: ![[EXTINT6_TBAA]] = !{![[EXTINT6_TBAA_ROOT:.+]], ![[EXTINT6_TBAA_ROOT]], i64 0, i64 1}
 // NewStructPathTBAA-DAG: ![[EXTINT6_TBAA_ROOT]] = !{![[CHAR_TBAA_ROOT]], i64 1, !"_BitInt(6)"}
+
+namespace A {
+template <int N> struct S {
+  using T = _BitInt(N);
+  T Data;
+};
+template <int N> void foo(S<N> B) {
+  const auto Var = B.Data;
+}
+
+void bar() {
+  S<2080> a;
+  foo(a);
+}
+}

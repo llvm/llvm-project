@@ -775,6 +775,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
              ISD::FMAXNUM,
              ISD::FMINIMUM,
              ISD::FMAXIMUM,
+             ISD::FCANONICALIZE,
              ISD::STRICT_FADD,
              ISD::STRICT_FSUB,
              ISD::STRICT_FMUL,
@@ -818,6 +819,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationPromotedToType(ISD::FROUNDEVEN, V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FRINT,      V4Narrow, MVT::v4f32);
     setOperationPromotedToType(ISD::FNEARBYINT, V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FCANONICALIZE, V4Narrow, MVT::v4f32);
 
     setOperationAction(ISD::FABS,        V4Narrow, Legal);
     setOperationAction(ISD::FNEG, 	 V4Narrow, Legal);
@@ -851,6 +853,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V8Narrow, Expand);
     setOperationAction(ISD::FP_EXTEND,   V8Narrow, Expand);
+    setOperationPromotedToType(ISD::FCANONICALIZE, V8Narrow, MVT::v8f32);
   };
 
   if (!Subtarget->hasFullFP16()) {
@@ -1143,7 +1146,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       Subtarget->requiresStrictAlign() ? MaxStoresPerMemcpyOptSize : 16;
 
   MaxStoresPerMemmoveOptSize = 4;
-  MaxStoresPerMemmove = 4;
+  MaxStoresPerMemmove =
+      Subtarget->requiresStrictAlign() ? MaxStoresPerMemmoveOptSize : 16;
 
   MaxLoadsPerMemcmpOptSize = 4;
   MaxLoadsPerMemcmp =
@@ -16451,8 +16455,8 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
         Builder.CreateShuffleVector(TI->getOperand(0), ShuffleLanes), VecTy));
 
     if (Parts.size() == 4) {
-      auto *F = Intrinsic::getDeclaration(TI->getModule(),
-                                          Intrinsic::aarch64_neon_tbl4, VecTy);
+      auto *F = Intrinsic::getOrInsertDeclaration(
+          TI->getModule(), Intrinsic::aarch64_neon_tbl4, VecTy);
       Parts.push_back(ConstantVector::get(MaskConst));
       Results.push_back(Builder.CreateCall(F, Parts));
       Parts.clear();
@@ -16481,7 +16485,7 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
       break;
     }
 
-    auto *F = Intrinsic::getDeclaration(TI->getModule(), TblID, VecTy);
+    auto *F = Intrinsic::getOrInsertDeclaration(TI->getModule(), TblID, VecTy);
     Parts.push_back(ConstantVector::get(MaskConst));
     Results.push_back(Builder.CreateCall(F, Parts));
   }
@@ -16762,9 +16766,10 @@ static Function *getStructuredLoadFunction(Module *M, unsigned Factor,
                                              Intrinsic::aarch64_neon_ld3,
                                              Intrinsic::aarch64_neon_ld4};
   if (Scalable)
-    return Intrinsic::getDeclaration(M, SVELoads[Factor - 2], {LDVTy});
+    return Intrinsic::getOrInsertDeclaration(M, SVELoads[Factor - 2], {LDVTy});
 
-  return Intrinsic::getDeclaration(M, NEONLoads[Factor - 2], {LDVTy, PtrTy});
+  return Intrinsic::getOrInsertDeclaration(M, NEONLoads[Factor - 2],
+                                           {LDVTy, PtrTy});
 }
 
 static Function *getStructuredStoreFunction(Module *M, unsigned Factor,
@@ -16778,9 +16783,10 @@ static Function *getStructuredStoreFunction(Module *M, unsigned Factor,
                                               Intrinsic::aarch64_neon_st3,
                                               Intrinsic::aarch64_neon_st4};
   if (Scalable)
-    return Intrinsic::getDeclaration(M, SVEStores[Factor - 2], {STVTy});
+    return Intrinsic::getOrInsertDeclaration(M, SVEStores[Factor - 2], {STVTy});
 
-  return Intrinsic::getDeclaration(M, NEONStores[Factor - 2], {STVTy, PtrTy});
+  return Intrinsic::getOrInsertDeclaration(M, NEONStores[Factor - 2],
+                                           {STVTy, PtrTy});
 }
 
 /// Lower an interleaved load into a ldN intrinsic.
@@ -27244,7 +27250,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
   if (ValueTy->getPrimitiveSizeInBits() == 128) {
     Intrinsic::ID Int =
         IsAcquire ? Intrinsic::aarch64_ldaxp : Intrinsic::aarch64_ldxp;
-    Function *Ldxr = Intrinsic::getDeclaration(M, Int);
+    Function *Ldxr = Intrinsic::getOrInsertDeclaration(M, Int);
 
     Value *LoHi = Builder.CreateCall(Ldxr, Addr, "lohi");
 
@@ -27263,7 +27269,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
   Type *Tys[] = { Addr->getType() };
   Intrinsic::ID Int =
       IsAcquire ? Intrinsic::aarch64_ldaxr : Intrinsic::aarch64_ldxr;
-  Function *Ldxr = Intrinsic::getDeclaration(M, Int, Tys);
+  Function *Ldxr = Intrinsic::getOrInsertDeclaration(M, Int, Tys);
 
   const DataLayout &DL = M->getDataLayout();
   IntegerType *IntEltTy = Builder.getIntNTy(DL.getTypeSizeInBits(ValueTy));
@@ -27278,7 +27284,8 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Builder.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::aarch64_clrex));
+  Builder.CreateCall(
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::aarch64_clrex));
 }
 
 Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
@@ -27293,7 +27300,7 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   if (Val->getType()->getPrimitiveSizeInBits() == 128) {
     Intrinsic::ID Int =
         IsRelease ? Intrinsic::aarch64_stlxp : Intrinsic::aarch64_stxp;
-    Function *Stxr = Intrinsic::getDeclaration(M, Int);
+    Function *Stxr = Intrinsic::getOrInsertDeclaration(M, Int);
     Type *Int64Ty = Type::getInt64Ty(M->getContext());
     Type *Int128Ty = Type::getInt128Ty(M->getContext());
 
@@ -27308,7 +27315,7 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   Intrinsic::ID Int =
       IsRelease ? Intrinsic::aarch64_stlxr : Intrinsic::aarch64_stxr;
   Type *Tys[] = { Addr->getType() };
-  Function *Stxr = Intrinsic::getDeclaration(M, Int, Tys);
+  Function *Stxr = Intrinsic::getOrInsertDeclaration(M, Int, Tys);
 
   const DataLayout &DL = M->getDataLayout();
   IntegerType *IntValTy = Builder.getIntNTy(DL.getTypeSizeInBits(Val->getType()));
@@ -27345,7 +27352,7 @@ bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &,
 static Value *UseTlsOffset(IRBuilderBase &IRB, unsigned Offset) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   Function *ThreadPointerFunc =
-      Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
   return IRB.CreatePointerCast(
       IRB.CreateConstGEP1_32(IRB.getInt8Ty(), IRB.CreateCall(ThreadPointerFunc),
                              Offset),
@@ -27511,6 +27518,21 @@ bool AArch64TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // sequence can be performed in vector form.
   bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
   return OptSize && !VT.isVector();
+}
+
+bool AArch64TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
+                                             const MachineFunction &MF) const {
+  // Avoid merging stores into fixed-length vectors when Neon is unavailable.
+  // In future, we could allow this when SVE is available, but currently,
+  // the SVE lowerings for BUILD_VECTOR are limited to a few specific cases (and
+  // the general lowering may introduce stack spills/reloads).
+  if (MemVT.isFixedLengthVector() && !Subtarget->isNeonAvailable())
+    return false;
+
+  // Do not merge to float value size (128 bytes) if no implicit float attribute
+  // is set.
+  bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat);
+  return !NoFloat || MemVT.getSizeInBits() <= 64;
 }
 
 bool AArch64TargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
