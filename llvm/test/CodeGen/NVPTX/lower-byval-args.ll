@@ -440,7 +440,7 @@ attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.module.flags = !{!0, !1, !2, !3}
-!nvvm.annotations = !{!4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19}
+!nvvm.annotations = !{!4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !23}
 !llvm.ident = !{!20, !21}
 
 !0 = !{i32 2, !"SDK Version", [2 x i32] [i32 11, i32 8]}
@@ -465,3 +465,4 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !19 = !{ptr @test_select_write, !"kernel", i32 1}
 !20 = !{!"clang version 20.0.0git"}
 !21 = !{!"clang version 3.8.0 (tags/RELEASE_380/final)"}
+!23 = !{ptr @memcpy_from_param_noalign, !"kernel", i32 1}
