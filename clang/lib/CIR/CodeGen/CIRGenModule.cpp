@@ -3031,9 +3031,110 @@ void CIRGenModule::Release() {
   // TODO: FINISH THE REST OF THIS
 }
 
-bool CIRGenModule::shouldEmitFunction(GlobalDecl GD) {
-  // TODO: implement this -- requires defining linkage for CIR
-  return true;
+namespace {
+// TODO(cir): This should be a common helper shared with CodeGen.
+struct FunctionIsDirectlyRecursive
+    : public ConstStmtVisitor<FunctionIsDirectlyRecursive, bool> {
+  const StringRef name;
+  const Builtin::Context &builtinCtx;
+  FunctionIsDirectlyRecursive(StringRef name,
+                              const Builtin::Context &builtinCtx)
+      : name(name), builtinCtx(builtinCtx) {}
+
+  bool VisitCallExpr(const CallExpr *expr) {
+    const FunctionDecl *func = expr->getDirectCallee();
+    if (!func)
+      return false;
+    AsmLabelAttr *attr = func->getAttr<AsmLabelAttr>();
+    if (attr && name == attr->getLabel())
+      return true;
+    unsigned builtinId = func->getBuiltinID();
+    if (!builtinId || !builtinCtx.isLibFunction(builtinId))
+      return false;
+    StringRef builtinName = builtinCtx.getName(builtinId);
+    if (builtinName.starts_with("__builtin_") &&
+        name == builtinName.slice(strlen("__builtin_"), StringRef::npos)) {
+      return true;
+    }
+    return false;
+  }
+
+  bool VisitStmt(const Stmt *stmt) {
+    for (const Stmt *child : stmt->children())
+      if (child && this->Visit(child))
+        return true;
+    return false;
+  }
+};
+} // namespace
+
+// isTriviallyRecursive - Check if this function calls another
+// decl that, because of the asm attribute or the other decl being a builtin,
+// ends up pointing to itself.
+// TODO(cir): This should be a common helper shared with CodeGen.
+bool CIRGenModule::isTriviallyRecursive(const FunctionDecl *func) {
+  StringRef name;
+  if (getCXXABI().getMangleContext().shouldMangleDeclName(func)) {
+    // asm labels are a special kind of mangling we have to support.
+    AsmLabelAttr *attr = func->getAttr<AsmLabelAttr>();
+    if (!attr)
+      return false;
+    name = attr->getLabel();
+  } else {
+    name = func->getName();
+  }
+
+  FunctionIsDirectlyRecursive walker(name, astCtx.BuiltinInfo);
+  const Stmt *body = func->getBody();
+  return body ? walker.Visit(body) : false;
+}
+
+// TODO(cir): This should be a common helper shared with CodeGen.
+bool CIRGenModule::shouldEmitFunction(GlobalDecl globalDecl) {
+  if (getFunctionLinkage(globalDecl) !=
+      GlobalLinkageKind::AvailableExternallyLinkage)
+    return true;
+
+  const auto *func = cast<FunctionDecl>(globalDecl.getDecl());
+  // Inline builtins declaration must be emitted. They often are fortified
+  // functions.
+  if (func->isInlineBuiltinDeclaration())
+    return true;
+
+  if (codeGenOpts.OptimizationLevel == 0 && !func->hasAttr<AlwaysInlineAttr>())
+    return false;
+
+  // We don't import function bodies from other named module units since that
+  // behavior may break ABI compatibility of the current unit.
+  if (const Module *mod = func->getOwningModule();
+      mod && mod->getTopLevelModule()->isNamedModule() &&
+      astCtx.getCurrentNamedModule() != mod->getTopLevelModule()) {
+    // There are practices to mark template member function as always-inline
+    // and mark the template as extern explicit instantiation but not give
+    // the definition for member function. So we have to emit the function
+    // from explicitly instantiation with always-inline.
+    //
+    // See https://github.com/llvm/llvm-project/issues/86893 for details.
+    //
+    // TODO: Maybe it is better to give it a warning if we call a non-inline
+    // function from other module units which is marked as always-inline.
+    if (!func->isTemplateInstantiation() || !func->hasAttr<AlwaysInlineAttr>())
+      return false;
+  }
+
+  if (func->hasAttr<NoInlineAttr>())
+    return false;
+
+  if (func->hasAttr<DLLImportAttr>() && !func->hasAttr<AlwaysInlineAttr>())
+    assert(!MissingFeatures::setDLLImportDLLExport() &&
+           "shouldEmitFunction for dllimport is NYI");
+
+  // PR9614. Avoid cases where the source code is lying to us. An available
+  // externally function should have an equivalent function somewhere else,
+  // but a function that calls itself through asm label/`__builtin_` trickery is
+  // clearly not equivalent to the real implementation.
+  // This happens in glibc's btowc and in some configure checks.
+  return !isTriviallyRecursive(func);
 }
 
 bool CIRGenModule::supportsCOMDAT() const {

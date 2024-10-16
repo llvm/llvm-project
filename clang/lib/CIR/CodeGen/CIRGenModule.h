@@ -665,7 +665,9 @@ public:
   // Finalize CIR code generation.
   void Release();
 
-  bool shouldEmitFunction(clang::GlobalDecl GD);
+  bool isTriviallyRecursive(const clang::FunctionDecl *func);
+
+  bool shouldEmitFunction(clang::GlobalDecl globalDecl);
 
   /// Returns a pointer to a global variable representing a temporary with
   /// static or thread storage duration.
