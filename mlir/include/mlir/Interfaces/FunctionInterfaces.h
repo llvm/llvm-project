@@ -20,6 +20,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/CallInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallString.h"
 

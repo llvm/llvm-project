@@ -108,6 +108,29 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
         }
       }
 
+      // FunctionOpInterface is tied to a ReturnLike.
+      Operation *terminator = entryBlock.getTerminator();
+      if (terminator->hasTrait<OpTrait::ReturnLike>()) {
+        return $_op.emitOpError("The body of a FunctionOpInterface must")
+              << "have a ReturnLike terminator.";
+      }
+
+      // Match ReturnLike's operand types and FunctionOpInterface's 
+      // result types.
+      auto returnOperandTypes = terminator->getOperandTypes();
+      auto funcResultTypes =  $_op->getResultTypes();
+      if (funcResultTypes.size() != returnOperandTypes.size()) {
+        return $_op.emitOpError("The number of a FunctionOpInterface's")
+              << "result must match that of the ReturnLike operands.";
+      }
+
+      for (unsigned i = 0; i < funcResultTypes.size(); ++i) {
+        if (funcResultTypes[i] != returnOperandTypes[i]) {
+          return $_op.emitOpError("The result types of a FunctionOpInterface")
+              << "must match the operand types of the ReturnLike.";
+        }
+      }
+
       return success();
     }]>,
     InterfaceMethod<[{
