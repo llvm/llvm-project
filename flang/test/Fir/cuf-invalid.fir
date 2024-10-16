@@ -144,21 +144,6 @@ module attributes {gpu.container_module} {
 // -----
 
 module attributes {gpu.container_module} {
-  gpu.module @cuda_device_mod {
-    gpu.func @_QPsub_device1() {
-      gpu.return
-    }
-  }
-  llvm.func internal @__cudaFortranConstructor() {
-    // expected-error@+1{{'cuf.register_kernel' op device function not found}}
-    cuf.register_kernel @cuda_device_mod::@_QPsub_device2
-    llvm.return
-  }
-}
-
-// -----
-
-module attributes {gpu.container_module} {
   llvm.func internal @__cudaFortranConstructor() {
     // expected-error@+1{{'cuf.register_kernel' op gpu module not found}}
     cuf.register_kernel @cuda_device_mod::@_QPsub_device1

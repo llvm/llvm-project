@@ -281,12 +281,12 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
 
   mlir::SymbolTable gpuSymTab(gpuMod);
   auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName());
-  if (!func)
-    return emitOpError("device function not found");
-
-  if (!func.isKernel())
-    return emitOpError("only kernel gpu.func can be registered");
-
+  if (func) {
+    // Only check if the gpu.func is found. It might be converted to LLVMFuncOp
+    // already.
+    if (!func.isKernel())
+      return emitOpError("only kernel gpu.func can be registered");
+  }
   return mlir::success();
 }
 
