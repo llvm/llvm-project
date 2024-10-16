@@ -2471,13 +2471,14 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
 
     Value *Step = CreateStep();
+#ifndef NDEBUG
     ScalarEvolution &SE = *PSE.getSE();
-    // Check if we can prove that the trip count is >= the step.
     const SCEV *TripCountSCEV = SE.applyLoopGuards(SE.getSCEV(LHS), OrigLoop);
     assert(
         !SE.isKnownPredicate(CmpInst::getInversePredicate(ICmpInst::ICMP_ULT),
                              TripCountSCEV, SE.getSCEV(Step)) &&
         "SCEV unexpectedly proved overflow check to be known");
+#endif
     // Don't execute the vector loop if (UMax - n) < (VF * UF).
     CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, Step);
   }
