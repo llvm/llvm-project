@@ -2182,6 +2182,24 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
+.. _BinPackLongBracedList:
+
+**BinPackLongBracedList** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BinPackLongBracedList>`
+  If ``BinPackLongBracedList`` is ``true`` it overrides
+  ``BinPackArguments`` if there are 20 or more items in a braced
+  initializer list.
+
+  .. code-block:: c++
+
+     BinPackLongBracedList: false  vs.    BinPackLongBracedList: true
+     vector<int> x{                       vector<int> x{1, 2, ...,
+                                                        20, 21};
+                 1,
+                 2,
+                 ...,
+                 20,
+                 21};
+
 .. _BinPackParameters:
 
 **BinPackParameters** (``BinPackParametersStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
@@ -3803,6 +3821,7 @@ the configuration (without a prefix: ``Auto``).
   (e.g. a type or variable name), clang-format formats as if the ``{}`` were
   the parentheses of a function call with that name. If there is no name,
   a zero-length name is assumed.
+
 
   .. code-block:: c++
 
