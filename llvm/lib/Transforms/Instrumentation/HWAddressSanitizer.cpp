@@ -1025,7 +1025,6 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
         insertShadowTagCheck(Ptr, InsertBefore, DTU, LI).TagMismatchTerm;
 
   IRBuilder<> IRB(InsertBefore);
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   bool UseFixedShadowIntrinsic = false;
   // The memaccess fixed shadow intrinsic is only supported on AArch64,
   // which allows a 16-bit immediate to be left-shifted by 32.
