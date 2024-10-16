@@ -57,4 +57,22 @@ TEST_F(ErrorDisplayTest, RenderStatus) {
                 DiagnosticDetail{loc1, eSeverityError, "Y", "Y"}});
     ASSERT_LT(StringRef(result).find("Y"), StringRef(result).find("X"));
   }
+  {
+    // Test that range diagnostics are emitted correctly.
+    SourceLocation loc1 = {FileSpec{"a.c"}, 1, 1, 3, false, true};
+    SourceLocation loc2 = {FileSpec{"a.c"}, 1, 5, 3, false, true};
+    std::string result =
+        Render({DiagnosticDetail{loc1, eSeverityError, "X", "X"},
+                DiagnosticDetail{loc2, eSeverityError, "Y", "Y"}});
+    auto lines = StringRef(result).split('\n');
+    auto line1 = lines.first;
+    lines = lines.second.split('\n');
+    auto line2 = lines.first;
+    lines = lines.second.split('\n');
+    auto line3 = lines.first;
+    //               1234567
+    ASSERT_EQ(line1, "^~~ ^~~");
+    ASSERT_EQ(line2, "|   error: Y");
+    ASSERT_EQ(line3, "error: X");
+  }
 }
