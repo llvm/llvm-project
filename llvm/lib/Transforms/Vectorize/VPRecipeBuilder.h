@@ -54,9 +54,11 @@ class VPRecipeBuilder {
   EdgeMaskCacheTy EdgeMaskCache;
   BlockMaskCacheTy BlockMaskCache;
 
+  using RecipeOrResult = PointerUnion<VPRecipeBase*, VPValue*>;
+
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
-  DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
+  DenseMap<Instruction *, RecipeOrResult> Ingredient2Recipe;
 
   /// Cross-iteration reduction & first-order recurrence phis for which we need
   /// to add the incoming value from the backedge after all recipes have been
@@ -132,6 +134,14 @@ public:
     Ingredient2Recipe[I] = R;
   }
 
+  // Set the recipe value for a given ingredient.
+  void setRecipe(Instruction* I, VPValue* RecipeResult) {
+    assert(!Ingredient2Recipe.contains(I) &&
+           "Cannot reset recipe for instruction.");
+    assert(RecipeResult->getDefiningRecipe() && "Value must be defined by a recipe.");
+    Ingredient2Recipe[I] = RecipeResult;
+  }
+
   /// Create the mask for the vector loop header block.
   void createHeaderMask();
 
@@ -158,9 +168,12 @@ public:
   VPRecipeBase *getRecipe(Instruction *I) {
     assert(Ingredient2Recipe.count(I) &&
            "Recording this ingredients recipe was not requested");
-    assert(Ingredient2Recipe[I] != nullptr &&
+    assert(Ingredient2Recipe[I] &&
            "Ingredient doesn't have a recipe");
-    return Ingredient2Recipe[I];
+    auto RecipeInfo = Ingredient2Recipe[I];
+    if (auto* R = RecipeInfo.dyn_cast<VPRecipeBase*>())
+      return R;
+    return RecipeInfo.get<VPValue*>()->getDefiningRecipe();
   }
 
   /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
@@ -179,17 +192,10 @@ public:
 
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {
-      if (auto *R = Ingredient2Recipe.lookup(I))
-        return R->getVPSingleValue();
-    }
-    // Ugh: Not sure where to handle this :(
-    if (auto *EVI = dyn_cast<ExtractValueInst>(V)) {
-      Value *AggOp = EVI->getAggregateOperand();
-      if (auto *R = getRecipe(cast<Instruction>(AggOp))) {
-        assert(R->getNumDefinedValues() ==
-               cast<StructType>(AggOp->getType())->getNumElements());
-        unsigned Idx = EVI->getIndices()[0];
-        return R->getVPValue(Idx);
+      if (auto RecipeInfo = Ingredient2Recipe.lookup(I)) {
+        if (auto* R = RecipeInfo.dyn_cast<VPRecipeBase*>())
+          return R->getVPSingleValue();
+        return RecipeInfo.get<VPValue*>();
       }
     }
     return Plan.getOrAddLiveIn(V);

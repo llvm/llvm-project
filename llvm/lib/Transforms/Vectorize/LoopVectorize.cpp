@@ -9052,16 +9052,16 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     for (Instruction &I : drop_end(BB->instructionsWithoutDebug(false))) {
       Instruction *Instr = &I;
 
-      // A special case. Mapping handled in
-      // VPRecipeBuilder::getVPValueOrAddLiveIn().
+      // Special case: Handle extractvalues from struct ret calls.
       if (auto *ExtractValue = dyn_cast<ExtractValueInst>(Instr)) {
-        bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
-            [&](ElementCount VF) {
-              return CM.isUniformAfterVectorization(ExtractValue, VF);
-            },
-            Range);
-        if (!IsUniform)
+        if (auto *CI = dyn_cast<CallInst>(ExtractValue->getAggregateOperand())) {
+          auto *R = RecipeBuilder.getRecipe(cast<Instruction>(CI));
+          assert(R->getNumDefinedValues() ==
+               cast<StructType>(CI->getType())->getNumElements());
+          unsigned Idx = ExtractValue->getIndices()[0];
+          RecipeBuilder.setRecipe(Instr, R->getVPValue(Idx));
           continue;
+        }
       }
 
       SmallVector<VPValue *, 4> Operands;
