@@ -2878,7 +2878,8 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
 
     // -(Cond ? X : C) --> Cond ? -X : -C
     // -(Cond ? C : Y) --> Cond ? -C : -Y
-    if (match(X, m_ImmConstant()) || match(Y, m_ImmConstant())) {
+    if ((match(X, m_ImmConstant()) && !isa<ScalableVectorType>(X->getType())) ||
+        (match(Y, m_ImmConstant()) && !isa<ScalableVectorType>(Y->getType()))) {
       Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
       Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
       SelectInst *NewSel = SelectInst::Create(Cond, NegX, NegY);
