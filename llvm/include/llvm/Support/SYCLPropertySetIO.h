@@ -75,14 +75,14 @@ public:
 
   SYCLPropertyValue(Type Ty) {
     switch (Ty) {
-      case UInt32:
-        Val = (uint32_t)0;
-        break;
-      case ByteArray:
-        Val = std::unique_ptr<std::byte, Deleter>(new std::byte[1], Deleter{});
-        break;
-      default:
-        llvm_unreachable_internal("unsupported SYCL property type");
+    case UInt32:
+      Val = (uint32_t)0;
+      break;
+    case ByteArray:
+      Val = std::unique_ptr<std::byte, Deleter>(new std::byte[1], Deleter{});
+      break;
+    default:
+      llvm_unreachable_internal("unsupported SYCL property type");
     }
   }
   SYCLPropertyValue(uint32_t Val) : Val({Val}) {}
