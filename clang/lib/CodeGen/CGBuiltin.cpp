@@ -5857,9 +5857,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           /*IndexTypeQuals=*/0);
       auto Tmp = CreateMemTemp(SizeArrayTy, "block_sizes");
       llvm::Value *TmpPtr = Tmp.getPointer();
+      // The EmitLifetime* pair expect a naked Alloca as their last argument,
+      // however for cases where the default AS is not the Alloca AS, Tmp is
+      // actually the Alloca ascasted to the default AS, hence the
+      // stripPointerCasts()
+      llvm::Value *Alloca = TmpPtr->stripPointerCasts();
       llvm::Value *TmpSize = EmitLifetimeStart(
-          CGM.getDataLayout().getTypeAllocSize(Tmp.getElementType()),
-          TmpPtr->stripPointerCasts());
+          CGM.getDataLayout().getTypeAllocSize(Tmp.getElementType()), Alloca);
       llvm::Value *ElemPtr;
       // Each of the following arguments specifies the size of the corresponding
       // argument passed to the enqueued block.
@@ -5875,7 +5879,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Builder.CreateAlignedStore(
             V, GEP, CGM.getDataLayout().getPrefTypeAlign(SizeTy));
       }
-      return std::tie(ElemPtr, TmpSize, TmpPtr);
+      // Return the Alloca itself rather than a potential ascast as this is only
+      // used by the paired EmitLifetimeEnd.
+      return std::tie(ElemPtr, TmpSize, Alloca);
     };
 
     // Could have events and/or varargs.
@@ -5904,7 +5910,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       auto Call = RValue::get(
           EmitRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Args));
       if (TmpSize)
-        EmitLifetimeEnd(TmpSize, TmpPtr->stripPointerCasts());
+        EmitLifetimeEnd(TmpSize, TmpPtr);
       return Call;
     }
     // Any calls now have event arguments passed.
