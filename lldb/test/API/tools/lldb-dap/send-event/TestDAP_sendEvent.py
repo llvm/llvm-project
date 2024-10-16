@@ -3,8 +3,6 @@ Test lldb-dap send-event integration.
 """
 
 import json
-import time
-import threading
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -60,5 +58,10 @@ class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
         self.set_source_breakpoints(source, [breakpoint_line])
         self.continue_to_next_stop()
 
-        resp = self.dap_server.request_evaluate("`lldb-dap send-event stopped", context="repl")
-        self.assertRegex(resp['body']['result'], r"Invalid use of lldb-dap send-event, event \"stopped\" should be handled by lldb-dap internally.")
+        resp = self.dap_server.request_evaluate(
+            "`lldb-dap send-event stopped", context="repl"
+        )
+        self.assertRegex(
+            resp['body']['result'],
+            r"Invalid use of lldb-dap send-event, event \"stopped\" should be handled by lldb-dap internally."
+        )
