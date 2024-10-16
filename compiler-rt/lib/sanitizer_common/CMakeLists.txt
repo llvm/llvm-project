@@ -193,7 +193,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_suppressions.h
   sanitizer_symbolizer.h
   sanitizer_symbolizer_amdgpu.h
-  sanitizer_symbolizer_fuchsia.h
   sanitizer_symbolizer_markup_constants.h
   sanitizer_symbolizer_internal.h
   sanitizer_symbolizer_libbacktrace.h
