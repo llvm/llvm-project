@@ -277,8 +277,12 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
 
   mlir::SymbolTable symTab(mod);
   auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(getKernelModuleName());
-  if (!gpuMod)
+  if (!gpuMod) {
+    // If already a gpu.binary then stop the check here.
+    if (symTab.lookup<mlir::gpu::BinaryOp>(getKernelModuleName()))
+      return mlir::success();
     return emitOpError("gpu module not found");
+  }
 
   mlir::SymbolTable gpuSymTab(gpuMod);
   if (auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName())) {
