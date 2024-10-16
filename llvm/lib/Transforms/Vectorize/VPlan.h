@@ -1686,7 +1686,7 @@ public:
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          bool MayReadFromMemory, bool MayWriteToMemory,
                          bool MayHaveSideEffects, DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+      : VPSingleDefRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
         MayReadFromMemory(MayReadFromMemory),
         MayWriteToMemory(MayWriteToMemory),
