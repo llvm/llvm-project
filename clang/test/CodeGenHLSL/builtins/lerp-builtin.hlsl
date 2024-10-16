@@ -1,3 +1,4 @@
+// REQUIRES: directx-registered-target
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // CHECK-LABEL: builtin_lerp_half_vector

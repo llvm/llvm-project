@@ -1,3 +1,4 @@
+// REQUIRES: directx-registered-target
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,CHECK-SPIRV

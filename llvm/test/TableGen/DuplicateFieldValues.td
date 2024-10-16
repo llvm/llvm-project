@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-instr-info -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-instr-info --enabled-targets=all -I %p/../../include %s | FileCheck %s
 
 // CHECK: ABCForm_A
 // CHECK-NOT: ABCForm_A

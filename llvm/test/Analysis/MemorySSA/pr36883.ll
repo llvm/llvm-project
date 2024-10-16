@@ -1,3 +1,4 @@
+; REQUIRES: arm-registered-target
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -S < %s 2>&1 | FileCheck %s
 ;
 ; We weren't properly considering the args in callsites in equality or hashing.

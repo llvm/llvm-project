@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen --gen-fast-isel -I %p/../../include %s 2>&1 | FileCheck %s
+// RUN: llvm-tblgen --gen-fast-isel --enabled-targets=all -I %p/../../include %s 2>&1 | FileCheck %s
 
 include "llvm/Target/Target.td"
 

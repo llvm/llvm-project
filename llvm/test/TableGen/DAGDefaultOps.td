@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include %s -o %t
+// RUN: llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include %s -o %t
 // RUN: FileCheck --check-prefix=ADD %s < %t
 // RUN: FileCheck --check-prefix=ADDINT %s < %t
 // RUN: FileCheck --check-prefix=SUB %s < %t

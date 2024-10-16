@@ -1158,23 +1158,15 @@ public:
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
-        return Intrinsics[i];
-    llvm_unreachable("Unknown intrinsic!");
+    return Intrinsics.getIntrinsic(R);
   }
 
   const CodeGenIntrinsic &getIntrinsicInfo(unsigned IID) const {
-    if (IID - 1 < Intrinsics.size())
-      return Intrinsics[IID - 1];
-    llvm_unreachable("Bad intrinsic ID!");
+    return Intrinsics.getIntrinsic(IID);
   }
 
   unsigned getIntrinsicID(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
-        return i;
-    llvm_unreachable("Unknown intrinsic!");
+    return Intrinsics.getIntrinsicID(R);
   }
 
   const DAGDefaultOperand &getDefaultOperand(const Record *R) const {

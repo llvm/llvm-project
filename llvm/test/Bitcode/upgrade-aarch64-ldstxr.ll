@@ -1,3 +1,4 @@
+; REQUIRES: aarch64-registered-target
 ; RUN: llvm-dis < %S/upgrade-aarch64-ldstxr.bc | FileCheck %s
 
 define void @f(i32* %p) {

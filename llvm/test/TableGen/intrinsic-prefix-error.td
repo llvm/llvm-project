@@ -1,4 +1,4 @@
-// RUN: not llvm-tblgen -gen-intrinsic-enums --intrinsic-prefix=gen3 -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS 2>&1 | FileCheck %s
+// RUN: not llvm-tblgen -gen-intrinsic-enums --enabled-targets=all --intrinsic-prefix=gen3 -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS 2>&1 | FileCheck %s
 
 include "llvm/IR/Intrinsics.td"
 

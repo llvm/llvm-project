@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common -optimize-match-table=false %s -o %T/hwmode-non-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -I %p/../../include -I %p/Common -optimize-match-table=false %s -o %T/hwmode-non-optimized.cpp
 // RUN: FileCheck %s --check-prefixes=CHECK -input-file=%T/hwmode-non-optimized.cpp
 
 include "llvm/Target/Target.td"

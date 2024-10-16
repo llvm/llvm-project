@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-global-isel -optimize-match-table=false -I %p/../../include -I %p/Common %s -o /dev/null --warn-on-skipped-patterns 2>&1 < %s 2>&1 | FileCheck %s
+// RUN: llvm-tblgen -gen-global-isel --enabled-targets=all -optimize-match-table=false -I %p/../../include -I %p/Common %s -o /dev/null --warn-on-skipped-patterns 2>&1 < %s 2>&1 | FileCheck %s
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"

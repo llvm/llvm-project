@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-dag-isel --enabled-targets=all -I %p/../../include %s | FileCheck %s
 
 include "llvm/Target/Target.td"
 

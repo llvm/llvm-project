@@ -1,4 +1,4 @@
-// RUN: not llvm-tblgen -gen-instr-info -I %p/../../include %s 2>&1 | FileCheck %s
+// RUN: not llvm-tblgen -gen-instr-info --enabled-targets=all -I %p/../../include %s 2>&1 | FileCheck %s
 
 // This test verifies that TableGen is displaying an error when mapped instruction
 // does not contain a field listed under RowFields.

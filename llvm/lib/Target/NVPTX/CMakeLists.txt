@@ -3,8 +3,8 @@ add_llvm_component_group(NVPTX)
 set(LLVM_TARGET_DEFINITIONS NVPTX.td)
 
 tablegen(LLVM NVPTXGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM NVPTXGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM NVPTXGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM NVPTXGenDAGISel.inc -gen-dag-isel ${ENABLED_INTRINSIC_TARGETS})
+tablegen(LLVM NVPTXGenInstrInfo.inc -gen-instr-info ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM NVPTXGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM NVPTXGenSubtargetInfo.inc -gen-subtarget)
 

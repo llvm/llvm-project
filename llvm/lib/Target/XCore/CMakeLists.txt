@@ -4,9 +4,9 @@ set(LLVM_TARGET_DEFINITIONS XCore.td)
 
 tablegen(LLVM XCoreGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM XCoreGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM XCoreGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM XCoreGenDAGISel.inc -gen-dag-isel ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM XCoreGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM XCoreGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM XCoreGenInstrInfo.inc -gen-instr-info ${ENABLED_INTRINSIC_TARGETS})
 tablegen(LLVM XCoreGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM XCoreGenSubtargetInfo.inc -gen-subtarget)
 

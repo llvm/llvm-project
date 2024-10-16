@@ -1,3 +1,4 @@
+; REQUIRES: aarch64-registered-target
 ; RUN: llvm-dis %p/aarch64-addp-upgrade.bc -o - | FileCheck %s
 
 ; Bitcode was generated from file below, which may or may not even assemble any
