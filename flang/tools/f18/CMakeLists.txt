@@ -54,8 +54,6 @@ if (NOT CMAKE_CROSSCOMPILING)
   foreach(filename ${MODULES})
     set(depends "")
     set(opts "")
-    set(sourcepath "${FLANG_SOURCE_DIR}/module/${filename}.f90")
-    set(modpath "${FLANG_INTRINSIC_MODULES_DIR}/${filename}.mod")
     if(${filename} STREQUAL "__fortran_builtins" OR
        ${filename} STREQUAL "__ppc_types")
     elseif(${filename} STREQUAL "__ppc_intrinsics" OR
@@ -66,9 +64,6 @@ if (NOT CMAKE_CROSSCOMPILING)
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_builtins.mod)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
-      if(${filename} STREQUAL "iso_fortran_env_impl")
-        set(sourcepath "${FORTRANRUNTIME_SOURCE_DIR}/lib/Runtime/${filename}.f90")
-      endif()
       if(${filename} STREQUAL "iso_fortran_env")
         set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/iso_fortran_env_impl.mod)
       endif()
@@ -97,27 +92,20 @@ if (NOT CMAKE_CROSSCOMPILING)
       set(decls "-DFLANG_SUPPORT_R16")
     endif()
 
-    # Some modules have an implementation part that needs to be added to the
-    # FortranRuntime library.
     set(compile_with "-fsyntax-only")
     set(object_output "")
     set(include_in_link FALSE)
 
+    set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
-    add_custom_command(OUTPUT ${modpath} ${object_output}
+    add_custom_command(OUTPUT ${base}.mod ${object_output}
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
       COMMAND flang-new ${opts} ${decls} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
-        ${sourcepath}
-      DEPENDS flang-new ${sourcepath} ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
+        ${FLANG_SOURCE_DIR}/module/${filename}.f90
+      DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
-    list(APPEND MODULE_FILES "${modpath}")
-    install(FILES "${modpath}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
-
-    # If a module has been compiled into an object file, add the file to
-    # the link line for the FortranRuntime library.
-    if(include_in_link)
-      list(APPEND module_objects ${object_output})
-    endif()
+    list(APPEND MODULE_FILES ${base}.mod)
+    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
   endforeach()
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.

@@ -32,8 +32,8 @@ tool.
 
 ### Building flang in tree (bootstrap build)
 Building flang in tree means building flang along with all of the projects on
-which it depends.  These projects include mlir, clang, flang, openmp,
-compiler-rt, and FortranRuntime.  Note that compiler-rt is only needed to access libraries that
+which it depends.  These projects include mlir, clang, flang, openmp, and
+compiler-rt.  Note that compiler-rt is only needed to access libraries that
 support 16 bit floating point numbers.  It's not needed to run the automated
 tests.  You can use several different C++ compilers for most of the build,
 includig GNU and clang.  But building compiler-rt requres using the clang
@@ -82,7 +82,7 @@ cmake \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_LIT_ARGS=-v \
   -DLLVM_ENABLE_PROJECTS="clang;mlir;flang;openmp" \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;FortranRuntime" \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang_rt" \
   ../llvm-project/llvm
 
 ninja
@@ -209,15 +209,15 @@ mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DLLVM_ENABLE_RUNTIMES=FortranRuntime \
-  -DFORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
+  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_CUDA_COMPILER=clang \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtimes/
-make -j`nprocs` FortranRuntime
+make -j`nprocs` flang_rt
 ```
 
 Note that the used version of `clang` must [support](https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#cuda-support)
@@ -232,8 +232,8 @@ mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DLLVM_ENABLE_RUNTIMES=FortranRuntime \
-  -DFORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
+  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
@@ -241,7 +241,7 @@ cmake \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtimes/
 
-make -j`nprocs` FortranRuntime
+make -j`nprocs` flang_rt
 ```
 
 Note that `nvcc` might limit support to certain
@@ -260,8 +260,8 @@ build config:
 
 For example:
 ```bash
-  -DLLVM_ENABLE_RUNTIMES=FortranRuntime \
-  -DFORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
+  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
@@ -272,8 +272,8 @@ For example:
 
 Or:
 ```bash
-  -DLLVM_ENABLE_RUNTIMES=FortranRuntime \
-  -DFORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
+  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=gcc \
   -DCMAKE_CXX_COMPILER=g++ \
@@ -295,14 +295,14 @@ mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DLLVM_ENABLE_RUNTIMES=FortranRuntime \
-  -DFORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT="OpenMP" \
+  -DLLVM_ENABLE_RUNTIMES=flang_rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT="OpenMP" \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
-  -DFORTRANRUNTIME_DEVICE_ARCHITECTURES="all" \
+  -DFLANG_RT_DEVICE_ARCHITECTURES="all" \
   ../runtimes/
 
-make -j`nprocs` FortranRuntime
+make -j`nprocs` flang_rt
 ```
 
 The result of the build is a "device-only" library, i.e. the host

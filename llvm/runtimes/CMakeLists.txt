@@ -280,8 +280,8 @@ function(runtime_default_target)
                                       ${ARG_CMAKE_ARGS}
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
-                                                CUDA # For runtimes that may look for the CUDA SDK (libc, offload)
-                                                FLANG_RUNTIME # Shared between Flang and FortranRuntime
+                                                CUDA # For runtimes that may look for the CUDA SDK (libc, offload, flang-rt)
+                                                FLANG_RUNTIME # Shared between Flang and Flang-RT
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
@@ -573,7 +573,7 @@ if(build_runtimes)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
-  if("FortranRuntime" IN_LIST LLVM_ENABLE_RUNTIMES)
+  if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
     set(enable_fortran ENABLE_FORTRAN)
   endif ()
 

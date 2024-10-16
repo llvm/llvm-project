@@ -1,3 +1,11 @@
+//===-- include/flang/ISO_Fortran_binding.h ---------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 /*===-- include/flang/ISO_Fortran_binding.h -----------------------*- C++ -*-===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,14 +15,14 @@
  * ===-----------------------------------------------------------------------===
  */
 
-#ifndef CFI_ISO_FORTRAN_BINDING_H_
-#define CFI_ISO_FORTRAN_BINDING_H_
+#ifndef FORTRAN_ISO_FORTRAN_BINDING_H_
+#define FORTRAN_ISO_FORTRAN_BINDING_H_
 
 /* When this header is included into the compiler and runtime implementations,
  * it does so by means of a wrapper header that establishes namespaces and
  * a macro for extra function attributes (RT_API_ATTRS).
  */
-#ifndef FORTRAN_ISO_FORTRAN_BINDING_WRAPPER_H_
+#ifndef FORTRAN_COMMON_ISO_FORTRAN_BINDING_WRAPPER_H_
 #include <stddef.h>
 #define FORTRAN_ISO_NAMESPACE_
 #endif
@@ -207,4 +215,4 @@ RT_API_ATTRS int CFI_setpointer(
 } // extern "C"
 #endif
 
-#endif /* CFI_ISO_FORTRAN_BINDING_H_ */
+#endif /* FORTRAN_ISO_FORTRAN_BINDING_H_ */

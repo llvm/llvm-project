@@ -6,15 +6,15 @@
 #
 #===------------------------------------------------------------------------===#
 
-add_fortranruntime_nongtest_unittest(quick-sanity-test
+add_flangrt_nongtest_unittest(quick-sanity-test
 quick-sanity-test.cpp
 LINK_LIBS
-  FortranRuntime.unittest
+  flang_rt.unittest
 )
 
 # This test is not run by default as it takes a long time to execute.
-add_fortranruntime_nongtest_unittest(thorough-test SLOW_TEST
+add_flangrt_nongtest_unittest(thorough-test SLOW_TEST
 thorough-test.cpp
 LINK_LIBS
-  FortranRuntime.unittest
+  flang_rt.unittest
 )

@@ -6,8 +6,8 @@
 #
 #===------------------------------------------------------------------------===#
 
-add_fortranruntime_unittest(FlangCommonTests
+add_flangrt_unittest(FlangCommonTests
   FastIntSetTest.cpp
   LINK_LIBS
-    FortranRuntime.unittest
+    flang_rt.unittest
 )
