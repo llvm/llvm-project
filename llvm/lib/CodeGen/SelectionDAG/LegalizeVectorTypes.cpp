@@ -164,6 +164,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::USHLSAT:
 
   case ISD::FPOW:
+  case ISD::FATAN2:
   case ISD::FREM:
   case ISD::FSUB:
   case ISD::MUL:
@@ -1293,6 +1294,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UDIV: case ISD::VP_UDIV:
   case ISD::FDIV: case ISD::VP_FDIV:
   case ISD::FPOW:
+  case ISD::FATAN2:
   case ISD::AND: case ISD::VP_AND:
   case ISD::OR: case ISD::VP_OR:
   case ISD::XOR: case ISD::VP_XOR:
@@ -4581,6 +4583,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::FPOW:
+  case ISD::FATAN2:
   case ISD::FREM:
     if (unrollExpandedOp())
       break;
