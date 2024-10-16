@@ -2113,10 +2113,6 @@ static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
                                         const unsigned NumBytesToCopy,
                                         ConstantInt *BytesToCopyOp,
                                         ConstantDataArray *SourceDataArray) {
-  if (!SourceVar->hasInitializer() || !SourceVar->isConstant() ||
-      !SourceVar->hasLocalLinkage() || !SourceVar->hasGlobalUnnamedAddr())
-    return false;
-
   auto *NewSourceGV =
       widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
   if (!NewSourceGV)
@@ -2147,7 +2143,8 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     GlobalVariable *GV,
     function_ref<TargetTransformInfo &(Function &)> GetTTI) {
 
-  if (!GV->hasInitializer())
+  if (!GV->hasInitializer() || !GV->isConstant() || !GV->hasLocalLinkage() ||
+      !GV->hasGlobalUnnamedAddr())
     return false;
 
   for (auto *User : GV->users()) {
