@@ -20,33 +20,41 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static void updateFlags(ComputedShaderFlags &Flags, const Instruction &I) {
+static void updateFlags(DXILModuleShaderFlagsInfo &MSFI, const Instruction &I) {
+  ComputedShaderFlags &FSF = MSFI.FuncShaderFlagsMap[I.getFunction()];
   Type *Ty = I.getType();
   if (Ty->isDoubleTy()) {
-    Flags.Doubles = true;
+    FSF.Doubles = true;
     switch (I.getOpcode()) {
     case Instruction::FDiv:
     case Instruction::UIToFP:
     case Instruction::SIToFP:
     case Instruction::FPToUI:
     case Instruction::FPToSI:
-      Flags.DX11_1_DoubleExtensions = true;
+      FSF.DX11_1_DoubleExtensions = true;
       break;
     }
   }
 }
 
-ComputedShaderFlags ComputedShaderFlags::computeFlags(Module &M) {
-  ComputedShaderFlags Flags;
-  for (const auto &F : M)
+static DXILModuleShaderFlagsInfo computeFlags(Module &M) {
+  DXILModuleShaderFlagsInfo MSFI;
+  for (const auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    if (!MSFI.FuncShaderFlagsMap.contains(&F)) {
+      ComputedShaderFlags CSF{};
+      MSFI.FuncShaderFlagsMap[&F] = CSF;
+    }
     for (const auto &BB : F)
       for (const auto &I : BB)
-        updateFlags(Flags, I);
-  return Flags;
+        updateFlags(MSFI, I);
+  }
+  return MSFI;
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
-  uint64_t FlagVal = (uint64_t) * this;
+  uint64_t FlagVal = (uint64_t)*this;
   OS << formatv("; Shader Flags Value: {0:x8}\n;\n", FlagVal);
   if (FlagVal == 0)
     return;
@@ -65,15 +73,25 @@ void ComputedShaderFlags::print(raw_ostream &OS) const {
 
 AnalysisKey ShaderFlagsAnalysis::Key;
 
-ComputedShaderFlags ShaderFlagsAnalysis::run(Module &M,
-                                             ModuleAnalysisManager &AM) {
-  return ComputedShaderFlags::computeFlags(M);
+DXILModuleShaderFlagsInfo ShaderFlagsAnalysis::run(Module &M,
+                                                   ModuleAnalysisManager &AM) {
+  return computeFlags(M);
+}
+
+bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
+  MSFI = computeFlags(M);
+  return false;
 }
 
 PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
-  ComputedShaderFlags Flags = AM.getResult<ShaderFlagsAnalysis>(M);
-  Flags.print(OS);
+  DXILModuleShaderFlagsInfo Flags = AM.getResult<ShaderFlagsAnalysis>(M);
+  OS << "; Shader Flags mask for Module:\n";
+  Flags.ModuleFlags.print(OS);
+  for (auto SF : Flags.FuncShaderFlagsMap) {
+    OS << "; Shader Flags mash for Function: " << SF.first->getName() << "\n";
+    SF.second.print(OS);
+  }
   return PreservedAnalyses::all();
 }
 
