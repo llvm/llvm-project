@@ -338,8 +338,6 @@ public:
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;
 
-  bool useWidenGlobalStrings() const;
-
   unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const;
 
   /// @}
