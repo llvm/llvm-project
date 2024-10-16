@@ -73,11 +73,19 @@
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC
 # elif defined(__aarch64__)
 #  define _LIBUNWIND_TARGET_AARCH64 1
-#  define _LIBUNWIND_CONTEXT_SIZE 66
+#  if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+#    define _LIBUNWIND_CONTEXT_SIZE 67
+#  else
+#    define _LIBUNWIND_CONTEXT_SIZE 66
+#  endif
 #  if defined(__SEH__)
 #    define _LIBUNWIND_CURSOR_SIZE 164
 #  else
-#    define _LIBUNWIND_CURSOR_SIZE 78
+#    if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+#      define _LIBUNWIND_CURSOR_SIZE 79
+#    else
+#      define _LIBUNWIND_CURSOR_SIZE 78
+#    endif
 #  endif
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64
 # elif defined(__arm__)
