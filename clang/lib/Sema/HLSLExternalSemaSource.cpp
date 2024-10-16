@@ -300,8 +300,8 @@ struct BuiltinTypeDeclBuilder {
   }
 
   TemplateParameterListBuilder addTemplateArgumentList(Sema &S);
-  BuiltinTypeDeclBuilder &addSimpleTemplateParams(Sema &S,
-                                                  ArrayRef<StringRef> Names, ConceptDecl *CD);
+  BuiltinTypeDeclBuilder &
+  addSimpleTemplateParams(Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD);
   BuiltinTypeDeclBuilder &addConceptSpecializationExpr(Sema &S);
 };
 
@@ -309,7 +309,6 @@ struct TemplateParameterListBuilder {
   BuiltinTypeDeclBuilder &Builder;
   Sema &S;
   llvm::SmallVector<NamedDecl *> Params;
-  
 
   TemplateParameterListBuilder(Sema &S, BuiltinTypeDeclBuilder &RB)
       : Builder(RB), S(S) {}
@@ -335,9 +334,10 @@ struct TemplateParameterListBuilder {
     Decl->setReferenced();
     Params.emplace_back(Decl);
     return *this;
-  }  
+  }
 
-  ConceptSpecializationExpr *getConceptSpecializationExpr(Sema &S, ConceptDecl *CD) {
+  ConceptSpecializationExpr *getConceptSpecializationExpr(Sema &S,
+                                                          ConceptDecl *CD) {
     ASTContext &context = S.getASTContext();
     SourceLocation loc = Builder.Record->getBeginLoc();
     DeclarationNameInfo DNI(CD->getDeclName(), loc);
@@ -400,7 +400,8 @@ struct TemplateParameterListBuilder {
   BuiltinTypeDeclBuilder &finalizeTemplateArgs(ConceptDecl *CD) {
     if (Params.empty())
       return Builder;
-    ConceptSpecializationExpr *CSE = CD ? getConceptSpecializationExpr(S, CD) : nullptr;
+    ConceptSpecializationExpr *CSE =
+        CD ? getConceptSpecializationExpr(S, CD) : nullptr;
 
     auto *ParamList = TemplateParameterList::Create(S.Context, SourceLocation(),
                                                     SourceLocation(), Params,
@@ -436,9 +437,8 @@ BuiltinTypeDeclBuilder::addTemplateArgumentList(Sema &S) {
   return TemplateParameterListBuilder(S, *this);
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSimpleTemplateParams(Sema &S,
-                                                ArrayRef<StringRef> Names, ConceptDecl *CD = nullptr) {
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
+    Sema &S, ArrayRef<StringRef> Names, ConceptDecl *CD = nullptr) {
   TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
     Builder.addTypeParameter(Name);
@@ -611,8 +611,7 @@ ConceptDecl *getTypedBufferConceptDecl(Sema &S) {
 
   IdentifierInfo &IsValidLineVectorII =
       context.Idents.get("is_valid_line_vector");
-  IdentifierInfo &ElementTypeII =
-      context.Idents.get("element_type");
+  IdentifierInfo &ElementTypeII = context.Idents.get("element_type");
   clang::TemplateTypeParmDecl *T = clang::TemplateTypeParmDecl::Create(
       context, context.getTranslationUnitDecl(), DeclLoc, DeclLoc,
       /*depth=*/0,
