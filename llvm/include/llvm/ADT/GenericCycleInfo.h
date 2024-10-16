@@ -116,9 +116,7 @@ public:
   /// Clear the cache of the cycle.
   /// This should be run in all non-const function in GenericCycle
   /// and GenericCycleInfo.
-  void clearCache() const {
-    ExitBlocksCache.clear();
-  }
+  void clearCache() const { ExitBlocksCache.clear(); }
 
   /// \brief Return whether \p Block is an entry block of the cycle.
   bool isEntry(const BlockT *Block) const {
