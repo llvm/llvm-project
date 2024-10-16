@@ -4594,41 +4594,28 @@ def HLSLResourceBinding: InheritableAttr {
   let Args = [StringArgument<"Slot">, StringArgument<"Space", 1>];
   let Documentation = [HLSLResourceBindingDocs];
   let AdditionalMembers = [{
-      enum class RegisterType : unsigned { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
-
+  public:
+      enum class RegisterType : unsigned { SRV, UAV, CBuffer, Sampler, C, I };
+  
+  private:
       RegisterType RegType;
       unsigned SlotNumber;
       unsigned SpaceNumber;
-      
-      // Size of the binding
-      // 0 == not set
-      //-1 == unbounded
-      int Size;
 
-      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum, int Size = 0) {
+  public:
+      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum) {
         RegType = RT;
         SlotNumber = SlotNum;
         SpaceNumber = SpaceNum;
       }
-      RegisterType getRegisterType() {
+      RegisterType getRegisterType() const {
         return RegType;
       }
-      unsigned getSlotNumber() {
+      unsigned getSlotNumber() const {
         return SlotNumber;
       }
-      unsigned getSpaceNumber() {
+      unsigned getSpaceNumber() const {
         return SpaceNumber;
-      }
-      unsigned getSize() {
-        assert(Size == -1 || Size > 0 && "size not set");
-        return Size;
-      }
-      void setSize(int N) {
-        assert(N == -1 || N > 0 && "unexpected size value");
-        Size = N;
-      }
-      bool isSizeUnbounded() {
-        return Size == -1;
       }
   }];
 }

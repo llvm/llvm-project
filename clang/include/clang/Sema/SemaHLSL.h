@@ -45,15 +45,13 @@ enum class BindingType : uint8_t { NotAssigned, Explicit, Implicit };
 struct DeclBindingInfo {
   const VarDecl *Decl;
   ResourceClass ResClass;
-  int Size; // -1 == unbounded array
   const HLSLResourceBindingAttr *Attr;
   BindingType BindType;
 
   DeclBindingInfo(const VarDecl *Decl, ResourceClass ResClass, int Size = 0,
                   BindingType BindType = BindingType::NotAssigned,
                   const HLSLResourceBindingAttr *Attr = nullptr)
-      : Decl(Decl), ResClass(ResClass), Size(Size), Attr(Attr),
-        BindType(BindType) {}
+      : Decl(Decl), ResClass(ResClass), Attr(Attr), BindType(BindType) {}
 
   void setBindingAttribute(HLSLResourceBindingAttr *A, BindingType BT) {
     assert(Attr == nullptr && BindType == BindingType::NotAssigned &&
@@ -68,8 +66,8 @@ struct DeclBindingInfo {
 // assigments.
 class ResourceBindings {
 public:
-  DeclBindingInfo *addDeclBindingInfo(const VarDecl *VD, ResourceClass ResClass,
-                                      int Size);
+  DeclBindingInfo *addDeclBindingInfo(const VarDecl *VD,
+                                      ResourceClass ResClass);
   DeclBindingInfo *getDeclBindingInfo(const VarDecl *VD,
                                       ResourceClass ResClass);
   bool hasBindingInfoForDecl(const VarDecl *VD);
@@ -157,10 +155,10 @@ private:
   ResourceBindings Bindings;
 
 private:
-  void FindResourcesOnVarDecl(VarDecl *D);
-  void FindResourcesOnUserRecordDecl(const VarDecl *VD, const RecordType *RT,
-                                     int Size);
-  void ProcessExplicitBindingsOnDecl(VarDecl *D);
+  void collectResourcesOnVarDecl(VarDecl *D);
+  void collectResourcesOnUserRecordDecl(const VarDecl *VD,
+                                        const RecordType *RT);
+  void processExplicitBindingsOnDecl(VarDecl *D);
 };
 
 } // namespace clang

@@ -56,28 +56,37 @@ static RegisterType getRegisterType(ResourceClass RC) {
   llvm_unreachable("unexpected ResourceClass value");
 }
 
-static RegisterType getRegisterType(StringRef Slot) {
+// Converts the first letter of string Slot to RegisterType.
+// Returns false if the letter does not correspond to a valid register type.
+static bool convertToRegisterType(StringRef Slot, RegisterType *RT) {
+  assert(RT != nullptr);
   switch (Slot[0]) {
   case 't':
   case 'T':
-    return RegisterType::SRV;
+    *RT = RegisterType::SRV;
+    return true;
   case 'u':
   case 'U':
-    return RegisterType::UAV;
+    *RT = RegisterType::UAV;
+    return true;
   case 'b':
   case 'B':
-    return RegisterType::CBuffer;
+    *RT = RegisterType::CBuffer;
+    return true;
   case 's':
   case 'S':
-    return RegisterType::Sampler;
+    *RT = RegisterType::Sampler;
+    return true;
   case 'c':
   case 'C':
-    return RegisterType::C;
+    *RT = RegisterType::C;
+    return true;
   case 'i':
   case 'I':
-    return RegisterType::I;
+    *RT = RegisterType::I;
+    return true;
   default:
-    return RegisterType::Invalid;
+    return false;
   }
 }
 
@@ -91,19 +100,18 @@ static ResourceClass getResourceClass(RegisterType RT) {
     return ResourceClass::CBuffer;
   case RegisterType::Sampler:
     return ResourceClass::Sampler;
-  default:
+  case RegisterType::C:
+  case RegisterType::I:
     llvm_unreachable("unexpected RegisterType value");
   }
 }
 
 DeclBindingInfo *ResourceBindings::addDeclBindingInfo(const VarDecl *VD,
-                                                      ResourceClass ResClass,
-                                                      int Size) {
+                                                      ResourceClass ResClass) {
   assert(getDeclBindingInfo(VD, ResClass) == nullptr &&
          "DeclBindingInfo already added");
-  if (DeclToBindingListIndex.find(VD) == DeclToBindingListIndex.end())
-    DeclToBindingListIndex[VD] = BindingsList.size();
-  return &BindingsList.emplace_back(DeclBindingInfo(VD, ResClass, Size));
+  DeclToBindingListIndex.try_emplace(VD, BindingsList.size());
+  return &BindingsList.emplace_back(VD, ResClass);
 }
 
 DeclBindingInfo *ResourceBindings::getDeclBindingInfo(const VarDecl *VD,
@@ -1050,19 +1058,18 @@ FindHandleTypeOnResource(const VarDecl *VD) {
 
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
-void SemaHLSL::FindResourcesOnUserRecordDecl(const VarDecl *VD,
-                                             const RecordType *RT, int Size) {
+void SemaHLSL::collectResourcesOnUserRecordDecl(const VarDecl *VD,
+                                                const RecordType *RT) {
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *FD : RD->fields()) {
     const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
 
-    // Calculate array size and unwrap
-    int ArraySize = 1;
+    // Unwrap arrays
+    // FIXME: Calculate array size while unwrapping
     assert(!Ty->isIncompleteArrayType() &&
            "incomplete arrays inside user defined types are not supported");
     while (Ty->isConstantArrayType()) {
       const ConstantArrayType *CAT = cast<ConstantArrayType>(Ty);
-      ArraySize *= CAT->getSize().getSExtValue();
       Ty = CAT->getElementType()->getUnqualifiedDesugaredType();
     }
 
@@ -1074,23 +1081,26 @@ void SemaHLSL::FindResourcesOnUserRecordDecl(const VarDecl *VD,
             FindHandleTypeOnResource(Ty)) {
       ResourceClass RC = AttrResType->getAttrs().ResourceClass;
 
-      // Add a new DeclBindingInfo to Bindings. Update the binding size if
-      // a binding info already exists (there are multiple resources of same
-      // resource class in this user decl)
-      if (auto *DBI = Bindings.getDeclBindingInfo(VD, RC))
-        DBI->Size += Size * ArraySize;
-      else
-        Bindings.addDeclBindingInfo(VD, RC, Size);
+      // Add a new DeclBindingInfo to Bindings if it does not already exist
+      DeclBindingInfo *DBI = Bindings.getDeclBindingInfo(VD, RC);
+      if (!DBI)
+        Bindings.addDeclBindingInfo(VD, RC);
     } else if (const RecordType *RT = dyn_cast<RecordType>(Ty)) {
       // Recursively scan embedded struct or class; it would be nice to do this
-      // without recursion, but tricky to corrently calculate the size.
-      // Hopefully nesting of structs in structs too many levels is unlikely.
-      FindResourcesOnUserRecordDecl(VD, RT, Size);
+      // without recursion, but tricky to correctly calculate the size of the
+      // binding, which is something we are probably going to need to do later
+      // on. Hopefully nesting of structs in structs too many levels is
+      // unlikely.
+      collectResourcesOnUserRecordDecl(VD, RT);
     }
   }
 }
 
-// return false if the register binding is not valid
+// Diagnore localized register binding errors for a single binding; does not
+// diagnose resource binding on user record types, that will be done later
+// in processResourceBindingOnDecl based on the information collected in
+// collectResourcesOnVarDecl.
+// Returns false if the register binding is not valid.
 static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
                                          Decl *D, RegisterType RegType,
                                          bool SpecifiedSpace) {
@@ -1155,7 +1165,7 @@ static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
     return false;
   }
   if (Ty->isRecordType())
-    // RecordTypes will be diagnosed in ProcessResourceBindingOnDecl
+    // RecordTypes will be diagnosed in processResourceBindingOnDecl
     // that is called from ActOnVariableDeclarator
     return true;
 
@@ -1175,7 +1185,7 @@ static bool ValidateMultipleRegisterAnnotations(Sema &S, Decl *TheDecl,
     if (HLSLResourceBindingAttr *attr =
             dyn_cast<HLSLResourceBindingAttr>(*it)) {
 
-      RegisterType otherRegType = getRegisterType(attr->getSlot());
+      RegisterType otherRegType = attr->getRegisterType();
       if (RegisterTypesDetected[static_cast<int>(otherRegType)]) {
         int otherRegTypeNum = static_cast<int>(otherRegType);
         S.Diag(TheDecl->getLocation(),
@@ -1250,13 +1260,12 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
 
   // Validate.
   if (!Slot.empty()) {
-    RegType = getRegisterType(Slot);
-    if (RegType == RegisterType::I) {
-      Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
+    if (!convertToRegisterType(Slot, &RegType)) {
+      Diag(ArgLoc, diag::err_hlsl_binding_type_invalid) << Slot.substr(0, 1);
       return;
     }
-    if (RegType == RegisterType::Invalid) {
-      Diag(ArgLoc, diag::err_hlsl_binding_type_invalid) << Slot.substr(0, 1);
+    if (RegType == RegisterType::I) {
+      Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
       return;
     }
 
@@ -2294,60 +2303,51 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
 
     // find all resources on decl
     if (IsIntangibleType(VD->getType()))
-      FindResourcesOnVarDecl(VD);
+      collectResourcesOnVarDecl(VD);
 
     // process explicit bindings
-    ProcessExplicitBindingsOnDecl(VD);
+    processExplicitBindingsOnDecl(VD);
   }
 }
 
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
-void SemaHLSL::FindResourcesOnVarDecl(VarDecl *VD) {
+void SemaHLSL::collectResourcesOnVarDecl(VarDecl *VD) {
   assert(VD->hasGlobalStorage() && IsIntangibleType(VD->getType()) &&
          "expected global variable that contains HLSL resource");
 
   // Cbuffers and Tbuffers are HLSLBufferDecl types
   if (const HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(VD)) {
-    Bindings.addDeclBindingInfo(VD,
-                                CBufferOrTBuffer->isCBuffer()
-                                    ? ResourceClass::CBuffer
-                                    : ResourceClass::SRV,
-                                1);
+    Bindings.addDeclBindingInfo(VD, CBufferOrTBuffer->isCBuffer()
+                                        ? ResourceClass::CBuffer
+                                        : ResourceClass::SRV);
     return;
   }
 
-  // Calculate size of array and unwrap
-  int Size = 1;
+  // Unwrap arrays
+  // FIXME: Calculate array size while unwrapping
   const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-  if (Ty->isIncompleteArrayType())
-    Size = -1;
   while (Ty->isConstantArrayType()) {
     const ConstantArrayType *CAT = cast<ConstantArrayType>(Ty);
-    Size *= CAT->getSize().getSExtValue();
     Ty = CAT->getElementType()->getUnqualifiedDesugaredType();
   }
 
   // Resource (or array of resources)
   if (const HLSLAttributedResourceType *AttrResType =
           FindHandleTypeOnResource(Ty)) {
-    Bindings.addDeclBindingInfo(VD, AttrResType->getAttrs().ResourceClass,
-                                Size);
+    Bindings.addDeclBindingInfo(VD, AttrResType->getAttrs().ResourceClass);
     return;
   }
 
-  assert(Size != -1 &&
-         "unbounded arrays of user defined types are not supported");
-
   // User defined record type
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
-    FindResourcesOnUserRecordDecl(VD, RT, Size);
+    collectResourcesOnUserRecordDecl(VD, RT);
 }
 
 // Walks though the explicit resource binding attributes on the declaration,
 // and makes sure there is a resource that matched the binding and updates
 // DeclBindingInfoLists
-void SemaHLSL::ProcessExplicitBindingsOnDecl(VarDecl *VD) {
+void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
   assert(VD->hasGlobalStorage() && "expected global variable");
 
   for (Attr *A : VD->attrs()) {
@@ -2356,11 +2356,9 @@ void SemaHLSL::ProcessExplicitBindingsOnDecl(VarDecl *VD) {
       continue;
 
     RegisterType RT = RBA->getRegisterType();
-    assert(RT != RegisterType::I && RT != RegisterType::Invalid &&
-           "invalid or obsolete register type should never have an attribute "
-           "created");
+    assert(RT != RegisterType::I && "invalid or obsolete register type should "
+                                    "never have an attribute created");
 
-    // These were already diagnosed earlier
     if (RT == RegisterType::C) {
       if (Bindings.hasBindingInfoForDecl(VD))
         SemaRef.Diag(VD->getLocation(),
@@ -2375,7 +2373,6 @@ void SemaHLSL::ProcessExplicitBindingsOnDecl(VarDecl *VD) {
     ResourceClass RC = getResourceClass(RT);
     if (DeclBindingInfo *BI = Bindings.getDeclBindingInfo(VD, RC)) {
       // update binding info
-      RBA->setSize(BI->Size);
       BI->setBindingAttribute(RBA, BindingType::Explicit);
     } else {
       SemaRef.Diag(VD->getLocation(),
