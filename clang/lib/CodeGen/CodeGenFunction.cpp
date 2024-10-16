@@ -2909,17 +2909,15 @@ static int getPriorityFromAttrString(StringRef AttrStr) {
   AttrStr.split(Attrs, ';');
 
   // Default Priority is zero.
-  int Priority = 0;
+  unsigned Priority = 0;
   for (auto Attr : Attrs) {
     if (Attr.consume_front("priority=")) {
-      int Result;
+      unsigned Result;
       if (!Attr.getAsInteger(0, Result)) {
         Priority = Result;
       }
     }
   }
-
-  assert(Priority >= 0);
 
   return Priority;
 }
