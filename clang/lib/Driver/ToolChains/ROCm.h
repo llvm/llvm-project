@@ -170,9 +170,10 @@ private:
 
 public:
   RocmInstallationDetector(const Driver &D, const llvm::Triple &TargetTriple,
-                           const llvm::opt::ArgList &Args,
+                           const llvm::opt::ArgList &Args/* SALINAS ,
                            bool DetectHIPRuntime = true,
-                           bool DetectDeviceLib = false);
+                           bool DetectDeviceLib = false,
+                           bool isMSVC = false*/);
 
   /// Get file paths of default bitcode libraries common to AMDGPU based
   /// toolchains.
@@ -198,7 +199,7 @@ public:
 
   /// Check whether the target triple is for Windows.
   bool isHostWindows() const { return IsHostMSVC; }
-  void setHostWindows(bool val) { IsHostMSVC=val; }
+  void setHostWindows(bool val) { IsHostMSVC=val; /* salinas */ fprintf(stderr,"DAVE: RocmInstallationDetector::setHostWindows()\n"); }
 
   /// Print information about the detected ROCm installation.
   void print(raw_ostream &OS) const;
@@ -279,6 +280,12 @@ public:
     return Loc->second;
   }
 
+  /* SALINAS */
+  void init() { 
+      fprintf(stderr, "DAVE: RocmInstallationDetector::init()\n");
+    detectHIPRuntime();
+    detectDeviceLibrary();
+  }
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const;
 

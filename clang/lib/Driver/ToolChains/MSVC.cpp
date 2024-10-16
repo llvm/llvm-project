@@ -427,9 +427,12 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
-      RocmInstallation(D, Triple, Args) {
-  
+      RocmInstallation(D, Triple, Args) { /* salinas */ fprintf(stderr,"DAVE: MSVCToolChain::MSVCToolChain() ... \n");
+  /* salnas */ fprintf(stderr,
+                       "DAVE in MSVCToolChain ctor calling setHostWindows()\n");
   RocmInstallation->setHostWindows(true);
+  /* SALINAS */
+  RocmInstallation->init();
 
   getProgramPaths().push_back(getDriver().Dir);
 
@@ -457,6 +460,7 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                                           VCToolChainPath, VSLayout) ||
       llvm::findVCToolChainViaRegistry(VCToolChainPath, VSLayout);
 
+  /* salinas */ fprintf(stderr, "DAVE: end of MSVC ToolChain ctor\n");
 }
 
 Tool *MSVCToolChain::buildLinker() const {

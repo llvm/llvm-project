@@ -931,7 +931,10 @@ MachO::MachO(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 /// Darwin - Darwin tool chain for i386 and x86_64.
 Darwin::Darwin(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : MachO(D, Triple, Args), TargetInitialized(false),
-      CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args) {}
+      CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args) {
+  /* SALINAS*/
+  RocmInstallation->init();
+}
 
 types::ID MachO::LookupTypeForExtension(StringRef Ext) const {
   types::ID Ty = ToolChain::LookupTypeForExtension(Ext);

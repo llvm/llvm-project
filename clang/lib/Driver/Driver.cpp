@@ -769,7 +769,8 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
 
 void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                               InputList &Inputs) {
-
+  /* salinas */ fprintf(
+      stderr, "DAVE: Criver::CreateOffloadingDeviceToolChains ....\n");
   //
   // CUDA/HIP
   //
@@ -812,7 +813,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         CudaInstallation.WarnIfUnsupportedVersion();
     }
     C.addOffloadDeviceToolChain(CudaTC.get(), OFK);
-  } else if (IsHIP) {
+  } else if (IsHIP) { /* salinas */ fprintf(stderr,"\t creating HIP Offloading toolchain ...\n");
     if (auto *OMPTargetArg =
             C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
       Diag(clang::diag::err_drv_unsupported_opt_for_language_mode)
@@ -820,6 +821,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       return;
     }
     const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
+    /* salinas */ fprintf(
+        stderr,
+        "Driver::CreateOffloadingDeviceToolChain .... OK got a HOST TC ...\n");
     auto OFK = Action::OFK_HIP;
     auto HIPTriple = getHIPOffloadTargetTriple(*this, C.getInputArgs());
     if (!HIPTriple)
@@ -6329,7 +6333,7 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
 
 const ToolChain &Driver::getToolChain(const ArgList &Args,
                                       const llvm::Triple &Target) const {
-
+  /* salinas */ fprintf(stderr, "Driver::getToolChain() ... ->%s<-\n",Target.str().c_str() );
   auto &TC = ToolChains[Target.str()];
   if (!TC) {
     switch (Target.getOS()) {
@@ -6517,10 +6521,17 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
 const ToolChain &Driver::getOffloadingDeviceToolChain(
     const ArgList &Args, const llvm::Triple &Target, const ToolChain &HostTC,
     const Action::OffloadKind &TargetDeviceOffloadKind) const {
+    /* salinas */ fprintf(stderr,"===== Driver::getOffloadingDeviceToolChain() ....\n");
+  if (HostTC.getTriple().isWindowsMSVCEnvironment())
+    fprintf(stderr, "\t\t HOST TC IS WINDOWS !!!!!\n");
+  else
+    fprintf(stderr, "\t\t HOST TC is NOT Windows \n");
+
   // Use device / host triples as the key into the ToolChains map because the
   // device ToolChain we create depends on both.
   auto &TC = ToolChains[Target.str() + "/" + HostTC.getTriple().str()];
   if (!TC) {
+    /* salinas */ fprintf(stderr, "\t\t DIDN't GET a TC .....\n");
     // Categorized by offload kind > arch rather than OS > arch like
     // the normal getToolChain call, as it seems a reasonable way to categorize
     // things.
@@ -6530,21 +6541,25 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
             Target.getArch() == llvm::Triple::spirv64) &&
            Target.getVendor() == llvm::Triple::AMD &&
            Target.getOS() == llvm::Triple::AMDHSA) ||
-          !Args.hasArgNoClaim(options::OPT_offload_EQ))
-        TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
-                                                           HostTC, Args);
-      else if (Target.getArch() == llvm::Triple::spirv64 &&
-               Target.getVendor() == llvm::Triple::UnknownVendor &&
-               Target.getOS() == llvm::Triple::UnknownOS)
-        TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target,
-                                                           HostTC, Args);
+          !Args.hasArgNoClaim(options::OPT_offload_EQ)) /* salinas */ {
+        fprintf(stderr, "\t creating HIPAMDToolChain ...\n");
+        TC = std::make_unique<toolchains::HIPAMDToolChain>(
+            *this, Target, HostTC, Args);
+      } else if (Target.getArch() == llvm::Triple::spirv64 &&
+                 Target.getVendor() == llvm::Triple::UnknownVendor &&
+                 Target.getOS() == llvm::Triple::UnknownOS) /* salinas */ {
+        fprintf(stderr, "\t creating HIPSPVToolChain\n");
+        TC = std::make_unique<toolchains::HIPSPVToolChain>(
+            *this, Target, HostTC, Args); /* salinas */
+      }
       break;
     }
     default:
       break;
     }
   }
-
+  /* salinas */ fprintf(stderr,
+                        "\t end of Driver::getOffloadDeviceToolChain\n");
   return *TC;
 }
 

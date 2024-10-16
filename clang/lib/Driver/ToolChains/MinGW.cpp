@@ -487,6 +487,9 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
       RocmInstallation(D, Triple, Args) {
+    /* SALINAS */
+  RocmInstallation->init();
+
   getProgramPaths().push_back(getDriver().Dir);
 
   std::string InstallBase =
