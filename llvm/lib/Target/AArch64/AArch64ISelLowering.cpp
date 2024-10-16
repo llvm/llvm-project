@@ -1146,7 +1146,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       Subtarget->requiresStrictAlign() ? MaxStoresPerMemcpyOptSize : 16;
 
   MaxStoresPerMemmoveOptSize = 4;
-  MaxStoresPerMemmove = 4;
+  MaxStoresPerMemmove =
+      Subtarget->requiresStrictAlign() ? MaxStoresPerMemmoveOptSize : 16;
 
   MaxLoadsPerMemcmpOptSize = 4;
   MaxLoadsPerMemcmp =
@@ -27282,9 +27283,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 
 void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Builder.CreateCall(
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::aarch64_clrex));
+  Builder.CreateIntrinsic(Intrinsic::aarch64_clrex, {}, {});
 }
 
 Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,

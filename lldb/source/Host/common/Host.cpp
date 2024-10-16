@@ -90,39 +90,11 @@ using namespace lldb;
 using namespace lldb_private;
 
 #if !defined(__APPLE__)
-#if !defined(_WIN32)
-#include <syslog.h>
-void Host::SystemLog(Severity severity, llvm::StringRef message) {
-  static llvm::once_flag g_openlog_once;
-  llvm::call_once(g_openlog_once,
-                  [] { openlog("lldb", LOG_PID | LOG_NDELAY, LOG_USER); });
-  int level = LOG_DEBUG;
-  switch (severity) {
-  case lldb::eSeverityInfo:
-    level = LOG_INFO;
-    break;
-  case lldb::eSeverityWarning:
-    level = LOG_WARNING;
-    break;
-  case lldb::eSeverityError:
-    level = LOG_ERR;
-    break;
-  }
-  syslog(level, "%s", message.data());
-}
-#else
-void Host::SystemLog(Severity severity, llvm::StringRef message) {
-  switch (severity) {
-  case lldb::eSeverityInfo:
-  case lldb::eSeverityWarning:
-    llvm::outs() << message;
-    break;
-  case lldb::eSeverityError:
-    llvm::errs() << message;
-    break;
-  }
-}
-#endif
+// The system log is currently only meaningful on Darwin, where this means
+// os_log. The meaning of a "system log" isn't as clear on other platforms, and
+// therefore we don't providate a default implementation. Vendors are free to
+// to implement this function if they have a use for it.
+void Host::SystemLog(Severity severity, llvm::StringRef message) {}
 #endif
 
 static constexpr Log::Category g_categories[] = {

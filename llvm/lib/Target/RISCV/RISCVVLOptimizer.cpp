@@ -114,10 +114,10 @@ struct OperandInfo {
       return;
     }
     assert(EMUL && "Expected EMUL to have value");
-    OS << "EMUL: ";
+    OS << "EMUL: m";
     if (EMUL->second)
-      OS << "m";
-    OS << "f" << EMUL->first;
+      OS << "f";
+    OS << EMUL->first;
     OS << ", EEW: " << (1 << Log2EEW);
   }
 };
@@ -248,8 +248,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     llvm_unreachable("Configuration setting instructions do not read or write "
                      "vector registers");
 
-  // 11. Vector Integer Arithmetic Instructions
-  // 11.1. Vector Single-Width Integer Add and Subtract
+  // Vector Integer Arithmetic Instructions
+  // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
   case RISCV::VADD_VX:
@@ -257,8 +257,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VSUB_VX:
   case RISCV::VRSUB_VI:
   case RISCV::VRSUB_VX:
-  // 11.5. Vector Bitwise Logical Instructions
-  // 11.6. Vector Single-Width Shift Instructions
+  // Vector Bitwise Logical Instructions
+  // Vector Single-Width Shift Instructions
   // EEW=SEW. EMUL=LMUL.
   case RISCV::VAND_VI:
   case RISCV::VAND_VV:
@@ -278,7 +278,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VSRA_VI:
   case RISCV::VSRA_VV:
   case RISCV::VSRA_VX:
-  // 11.9. Vector Integer Min/Max Instructions
+  // Vector Integer Min/Max Instructions
   // EEW=SEW. EMUL=LMUL.
   case RISCV::VMINU_VV:
   case RISCV::VMINU_VX:
@@ -288,7 +288,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMAXU_VX:
   case RISCV::VMAX_VV:
   case RISCV::VMAX_VX:
-  // 11.10. Vector Single-Width Integer Multiply Instructions
+  // Vector Single-Width Integer Multiply Instructions
   // Source and Dest EEW=SEW and EMUL=LMUL.
   case RISCV::VMUL_VV:
   case RISCV::VMUL_VX:
@@ -298,7 +298,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMULHU_VX:
   case RISCV::VMULHSU_VV:
   case RISCV::VMULHSU_VX:
-  // 11.11. Vector Integer Divide Instructions
+  // Vector Integer Divide Instructions
   // EEW=SEW. EMUL=LMUL.
   case RISCV::VDIVU_VV:
   case RISCV::VDIVU_VX:
@@ -308,7 +308,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VREMU_VX:
   case RISCV::VREM_VV:
   case RISCV::VREM_VX:
-  // 11.13. Vector Single-Width Integer Multiply-Add Instructions
+  // Vector Single-Width Integer Multiply-Add Instructions
   // EEW=SEW. EMUL=LMUL.
   case RISCV::VMACC_VV:
   case RISCV::VMACC_VX:
@@ -318,16 +318,16 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMADD_VX:
   case RISCV::VNMSUB_VV:
   case RISCV::VNMSUB_VX:
-  // 11.15. Vector Integer Merge Instructions
+  // Vector Integer Merge Instructions
   // EEW=SEW and EMUL=LMUL, except the mask operand has EEW=1 and EMUL=
   // (EEW/SEW)*LMUL. Mask operand is handled before this switch.
   case RISCV::VMERGE_VIM:
   case RISCV::VMERGE_VVM:
   case RISCV::VMERGE_VXM:
-  // 11.16. Vector Integer Move Instructions
-  // 12. Vector Fixed-Point Arithmetic Instructions
-  // 12.1. Vector Single-Width Saturating Add and Subtract
-  // 12.2. Vector Single-Width Averaging Add and Subtract
+  // Vector Integer Move Instructions
+  // Vector Fixed-Point Arithmetic Instructions
+  // Vector Single-Width Saturating Add and Subtract
+  // Vector Single-Width Averaging Add and Subtract
   // EEW=SEW. EMUL=LMUL.
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_V:
@@ -350,7 +350,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VASUBU_VX:
   case RISCV::VASUB_VV:
   case RISCV::VASUB_VX:
-  // 12.4. Vector Single-Width Scaling Shift Instructions
+  // Vector Single-Width Scaling Shift Instructions
   // EEW=SEW. EMUL=LMUL.
   case RISCV::VSSRL_VI:
   case RISCV::VSSRL_VV:
@@ -358,15 +358,15 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VSSRA_VI:
   case RISCV::VSSRA_VV:
   case RISCV::VSSRA_VX:
-  // 16. Vector Permutation Instructions
-  // 16.1. Integer Scalar Move Instructions
-  // 16.2. Floating-Point Scalar Move Instructions
+  // Vector Permutation Instructions
+  // Integer Scalar Move Instructions
+  // Floating-Point Scalar Move Instructions
   // EMUL=LMUL. EEW=SEW.
   case RISCV::VMV_X_S:
   case RISCV::VMV_S_X:
   case RISCV::VFMV_F_S:
   case RISCV::VFMV_S_F:
-  // 16.3. Vector Slide Instructions
+  // Vector Slide Instructions
   // EMUL=LMUL. EEW=SEW.
   case RISCV::VSLIDEUP_VI:
   case RISCV::VSLIDEUP_VX:
@@ -376,17 +376,17 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VFSLIDE1UP_VF:
   case RISCV::VSLIDE1DOWN_VX:
   case RISCV::VFSLIDE1DOWN_VF:
-  // 16.4. Vector Register Gather Instructions
+  // Vector Register Gather Instructions
   // EMUL=LMUL. EEW=SEW. For mask operand, EMUL=1 and EEW=1.
   case RISCV::VRGATHER_VI:
   case RISCV::VRGATHER_VV:
   case RISCV::VRGATHER_VX:
-  // 16.5. Vector Compress Instruction
+  // Vector Compress Instruction
   // EMUL=LMUL. EEW=SEW.
   case RISCV::VCOMPRESS_VM:
     return OperandInfo(MIVLMul, MILog2SEW);
 
-  // 11.2. Vector Widening Integer Add/Subtract
+  // Vector Widening Integer Add/Subtract
   // Def uses EEW=2*SEW and EMUL=2*LMUL. Operands use EEW=SEW and EMUL=LMUL.
   case RISCV::VWADDU_VV:
   case RISCV::VWADDU_VX:
@@ -397,7 +397,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWSUB_VV:
   case RISCV::VWSUB_VX:
   case RISCV::VWSLL_VI:
-  // 11.12. Vector Widening Integer Multiply Instructions
+  // Vector Widening Integer Multiply Instructions
   // Source and Destination EMUL=LMUL. Destination EEW=2*SEW. Source EEW=SEW.
   case RISCV::VWMUL_VV:
   case RISCV::VWMUL_VX:
@@ -420,7 +420,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWADD_WX:
   case RISCV::VWSUB_WV:
   case RISCV::VWSUB_WX:
-  // 11.14. Vector Widening Integer Multiply-Add Instructions
+  // Vector Widening Integer Multiply-Add Instructions
   // Destination EEW=2*SEW and EMUL=2*LMUL. Source EEW=SEW and EMUL=LMUL.
   // Even though the add is a 2*SEW addition, the operands of the add are the
   // Dest which is 2*SEW and the result of the multiply which is 2*SEW.
@@ -431,7 +431,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWMACCSU_VV:
   case RISCV::VWMACCSU_VX:
   case RISCV::VWMACCUS_VX: {
-    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 1 : MO.getOperandNo() == 2;
+    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
@@ -439,7 +439,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     return OperandInfo(EMUL, Log2EEW);
   }
 
-  // 11.3. Vector Integer Extension
+  // Vector Integer Extension
   case RISCV::VZEXT_VF2:
   case RISCV::VSEXT_VF2:
     return getIntegerExtensionOperandInfo(2, MI, MO);
@@ -450,7 +450,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VSEXT_VF8:
     return getIntegerExtensionOperandInfo(8, MI, MO);
 
-  // 11.7. Vector Narrowing Integer Right Shift Instructions
+  // Vector Narrowing Integer Right Shift Instructions
   // Destination EEW=SEW and EMUL=LMUL, Op 1 has EEW=2*SEW EMUL=2*LMUL. Op2 has
   // EEW=SEW EMUL=LMUL.
   case RISCV::VNSRL_WX:
@@ -459,7 +459,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNSRA_WI:
   case RISCV::VNSRA_WV:
   case RISCV::VNSRA_WX:
-  // 12.5. Vector Narrowing Fixed-Point Clip Instructions
+  // Vector Narrowing Fixed-Point Clip Instructions
   // Destination and Op1 EEW=SEW and EMUL=LMUL. Op2 EEW=2*SEW and EMUL=2*LMUL
   case RISCV::VNCLIPU_WI:
   case RISCV::VNCLIPU_WV:
@@ -467,7 +467,7 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNCLIP_WI:
   case RISCV::VNCLIP_WV:
   case RISCV::VNCLIP_WX: {
-    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 1 : MO.getOperandNo() == 2;
+    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
@@ -491,7 +491,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
     return false;
 
   switch (RVV->BaseInstr) {
-  // 11.1. Vector Single-Width Integer Add and Subtract
+  // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
   case RISCV::VADD_VX:
@@ -499,7 +499,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSUB_VX:
   case RISCV::VRSUB_VI:
   case RISCV::VRSUB_VX:
-  // 11.2. Vector Widening Integer Add/Subtract
+  // Vector Widening Integer Add/Subtract
   case RISCV::VWADDU_VV:
   case RISCV::VWADDU_VX:
   case RISCV::VWSUBU_VV:
@@ -516,28 +516,35 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VWADD_WX:
   case RISCV::VWSUB_WV:
   case RISCV::VWSUB_WX:
-  // 11.3. Vector Integer Extension
+  // Vector Integer Extension
   case RISCV::VZEXT_VF2:
   case RISCV::VSEXT_VF2:
   case RISCV::VZEXT_VF4:
   case RISCV::VSEXT_VF4:
   case RISCV::VZEXT_VF8:
   case RISCV::VSEXT_VF8:
-  // 11.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-  // FIXME: Add support for 11.4 instructions
-  // 11.5. Vector Bitwise Logical Instructions
-  // FIXME: Add support for 11.5 instructions
-  // 11.6. Vector Single-Width Shift Instructions
-  // FIXME: Add support for 11.6 instructions
+  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+  // FIXME: Add support
+  // Vector Bitwise Logical Instructions
+  // FIXME: Add support
+  // Vector Single-Width Shift Instructions
+  // FIXME: Add support
   case RISCV::VSLL_VI:
-  // 11.7. Vector Narrowing Integer Right Shift Instructions
-  // FIXME: Add support for 11.7 instructions
+  // Vector Narrowing Integer Right Shift Instructions
+  // FIXME: Add support
   case RISCV::VNSRL_WI:
-  // 11.8 Vector Integer Compare Instructions
-  // FIXME: Add support for 11.8 instructions
-  // 11.9. Vector Integer Min/Max Instructions
-  // FIXME: Add support for 11.9 instructions
-  // 11.10. Vector Single-Width Integer Multiply Instructions
+  // Vector Integer Compare Instructions
+  // FIXME: Add support
+  // Vector Integer Min/Max Instructions
+  case RISCV::VMINU_VV:
+  case RISCV::VMINU_VX:
+  case RISCV::VMIN_VV:
+  case RISCV::VMIN_VX:
+  case RISCV::VMAXU_VV:
+  case RISCV::VMAXU_VX:
+  case RISCV::VMAX_VV:
+  case RISCV::VMAX_VX:
+  // Vector Single-Width Integer Multiply Instructions
   case RISCV::VMUL_VV:
   case RISCV::VMUL_VX:
   case RISCV::VMULH_VV:
@@ -546,20 +553,32 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMULHU_VX:
   case RISCV::VMULHSU_VV:
   case RISCV::VMULHSU_VX:
-  // 11.11. Vector Integer Divide Instructions
-  // FIXME: Add support for 11.11 instructions
-  // 11.12. Vector Widening Integer Multiply Instructions
-  // FIXME: Add support for 11.12 instructions
-  // 11.13. Vector Single-Width Integer Multiply-Add Instructions
-  // FIXME: Add support for 11.13 instructions
-  // 11.14. Vector Widening Integer Multiply-Add Instructions
-  // FIXME: Add support for 11.14 instructions
+  // Vector Integer Divide Instructions
+  case RISCV::VDIVU_VV:
+  case RISCV::VDIVU_VX:
+  case RISCV::VDIV_VV:
+  case RISCV::VDIV_VX:
+  case RISCV::VREMU_VV:
+  case RISCV::VREMU_VX:
+  case RISCV::VREM_VV:
+  case RISCV::VREM_VX:
+  // Vector Widening Integer Multiply Instructions
+  case RISCV::VWMUL_VV:
+  case RISCV::VWMUL_VX:
+  case RISCV::VWMULSU_VV:
+  case RISCV::VWMULSU_VX:
+  case RISCV::VWMULU_VV:
+  case RISCV::VWMULU_VX:
+  // Vector Single-Width Integer Multiply-Add Instructions
+  // FIXME: Add support
+  // Vector Widening Integer Multiply-Add Instructions
+  // FIXME: Add support
   case RISCV::VWMACC_VX:
   case RISCV::VWMACCU_VX:
-  // 11.15. Vector Integer Merge Instructions
-  // FIXME: Add support for 11.15 instructions
-  // 11.16. Vector Integer Move Instructions
-  // FIXME: Add support for 11.16 instructions
+  // Vector Integer Merge Instructions
+  // FIXME: Add support
+  // Vector Integer Move Instructions
+  // FIXME: Add support
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
 
@@ -597,10 +616,8 @@ static bool isVectorOpUsedAsScalarOp(MachineOperand &MO) {
   case RISCV::VFREDOSUM_VS:
   case RISCV::VFREDUSUM_VS:
   case RISCV::VFWREDOSUM_VS:
-  case RISCV::VFWREDUSUM_VS: {
-    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI->getDesc());
-    return HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 3;
-  }
+  case RISCV::VFWREDUSUM_VS:
+    return MO.getOperandNo() == 3;
   default:
     return false;
   }

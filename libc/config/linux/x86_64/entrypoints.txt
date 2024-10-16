@@ -249,6 +249,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munlock
     libc.src.sys.mman.munlockall
     libc.src.sys.mman.munmap
+    libc.src.sys.mman.remap_file_pages
     libc.src.sys.mman.posix_madvise
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
@@ -610,6 +611,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.exp10f16
+    libc.src.math.exp10m1f16
     libc.src.math.exp2f16
     libc.src.math.exp2m1f16
     libc.src.math.expf16
@@ -676,6 +678,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
+    libc.src.math.sinpif16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
     libc.src.math.truncf16

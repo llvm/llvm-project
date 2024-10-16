@@ -1288,6 +1288,10 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
       !isSafeToSpeculativelyExecuteWithVariableReplaced(I))
     return false;
 
+  // Forbid potentially lane-crossing instructions.
+  if (Old->getType()->isVectorTy() && !isNotCrossLaneOperation(I))
+    return false;
+
   bool Changed = false;
   for (Use &U : I->operands()) {
     if (U == Old) {
@@ -1366,9 +1370,8 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // with different operands, which should not cause side-effects or trigger
     // undefined behavior). Only do this if CmpRHS is a constant, as
     // profitability is not clear for other cases.
-    // FIXME: Support vectors.
     if (OldOp == CmpLHS && match(NewOp, m_ImmConstant()) &&
-        !match(OldOp, m_Constant()) && !Cmp.getType()->isVectorTy() &&
+        !match(OldOp, m_Constant()) &&
         isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
       if (replaceInInstruction(TrueVal, OldOp, NewOp))
         return &Sel;
@@ -1445,6 +1448,7 @@ Instruction *InstCombinerImpl::foldSelectEqualityTest(SelectInst &Sel) {
              m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(X), m_Specific(Y))))
     return nullptr;
 
+  cast<ICmpInst>(XeqY)->setSameSign(false);
   return replaceInstUsesWith(Sel, XeqY);
 }
 
@@ -1948,56 +1952,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     SI.swapValues();
     SI.swapProfMetadata();
     return &SI;
-  }
-
-  // FIXME: This code is nearly duplicated in InstSimplify. Using/refactoring
-  // decomposeBitTestICmp() might help.
-  if (TrueVal->getType()->isIntOrIntVectorTy()) {
-    unsigned BitWidth =
-        DL.getTypeSizeInBits(TrueVal->getType()->getScalarType());
-    APInt MinSignedValue = APInt::getSignedMinValue(BitWidth);
-    Value *X;
-    const APInt *Y, *C;
-    bool TrueWhenUnset;
-    bool IsBitTest = false;
-    if (ICmpInst::isEquality(Pred) &&
-        match(CmpLHS, m_And(m_Value(X), m_Power2(Y))) &&
-        match(CmpRHS, m_Zero())) {
-      IsBitTest = true;
-      TrueWhenUnset = Pred == ICmpInst::ICMP_EQ;
-    } else if (Pred == ICmpInst::ICMP_SLT && match(CmpRHS, m_Zero())) {
-      X = CmpLHS;
-      Y = &MinSignedValue;
-      IsBitTest = true;
-      TrueWhenUnset = false;
-    } else if (Pred == ICmpInst::ICMP_SGT && match(CmpRHS, m_AllOnes())) {
-      X = CmpLHS;
-      Y = &MinSignedValue;
-      IsBitTest = true;
-      TrueWhenUnset = true;
-    }
-    if (IsBitTest) {
-      Value *V = nullptr;
-      // (X & Y) == 0 ? X : X ^ Y  --> X & ~Y
-      if (TrueWhenUnset && TrueVal == X &&
-          match(FalseVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder.CreateAnd(X, ~(*Y));
-      // (X & Y) != 0 ? X ^ Y : X  --> X & ~Y
-      else if (!TrueWhenUnset && FalseVal == X &&
-               match(TrueVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder.CreateAnd(X, ~(*Y));
-      // (X & Y) == 0 ? X ^ Y : X  --> X | Y
-      else if (TrueWhenUnset && FalseVal == X &&
-               match(TrueVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder.CreateOr(X, *Y);
-      // (X & Y) != 0 ? X : X ^ Y  --> X | Y
-      else if (!TrueWhenUnset && TrueVal == X &&
-               match(FalseVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder.CreateOr(X, *Y);
-
-      if (V)
-        return replaceInstUsesWith(SI, V);
-    }
   }
 
   if (Instruction *V =
@@ -3834,11 +3788,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // minnum/maxnum intrinsics.
     if (SIFPOp->hasNoNaNs() && SIFPOp->hasNoSignedZeros()) {
       Value *X, *Y;
-      if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
+      if (match(&SI, m_OrdOrUnordFMax(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
             SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
 
-      if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
+      if (match(&SI, m_OrdOrUnordFMin(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
             SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
     }

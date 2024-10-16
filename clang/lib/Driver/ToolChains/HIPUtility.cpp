@@ -340,6 +340,7 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 void HIP::constructGenerateObjFileFromHIPFatBinary(
     Compilation &C, const InputInfo &Output, const InputInfoList &Inputs,
     const ArgList &Args, const JobAction &JA, const Tool &T) {
+  const Driver &D = C.getDriver();
   std::string Name = std::string(llvm::sys::path::stem(Output.getFilename()));
 
   // Create Temp Object File Generator,
@@ -347,13 +348,13 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   // Keep them if save-temps is enabled.
   const char *ObjinFile;
   const char *BundleFile;
-  if (C.getDriver().isSaveTempsEnabled()) {
+  if (D.isSaveTempsEnabled()) {
     ObjinFile = C.getArgs().MakeArgString(Name + ".mcin");
     BundleFile = C.getArgs().MakeArgString(Name + ".hipfb");
   } else {
-    auto TmpNameMcin = C.getDriver().GetTemporaryPath(Name, "mcin");
+    auto TmpNameMcin = D.GetTemporaryPath(Name, "mcin");
     ObjinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
-    auto TmpNameFb = C.getDriver().GetTemporaryPath(Name, "hipfb");
+    auto TmpNameFb = D.GetTemporaryPath(Name, "hipfb");
     BundleFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameFb));
   }
   HIP::constructHIPFatbinCommand(C, JA, BundleFile, Inputs, Args, T);
@@ -456,7 +457,7 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
   llvm::raw_fd_ostream Objf(ObjinFile, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
-    C.getDriver().Diag(clang::diag::err_unable_to_make_temp) << EC.message();
+    D.Diag(clang::diag::err_unable_to_make_temp) << EC.message();
     return;
   }
 
@@ -466,7 +467,7 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
                        "-o",      Output.getFilename(),
                        "-x",      "assembler",
                        ObjinFile, "-c"};
-  const char *Clang = Args.MakeArgString(C.getDriver().ClangExecutable);
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
-                                         Clang, McArgs, Inputs, Output));
+                                         D.getClangProgramPath(), McArgs,
+                                         Inputs, Output, D.getPrependArg()));
 }

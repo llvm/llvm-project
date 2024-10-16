@@ -115,7 +115,8 @@ strtointeger(const char *__restrict src, int base,
                    : cpp::numeric_limits<T>::max();
   ResultType const abs_max =
       (is_positive ? cpp::numeric_limits<T>::max() : NEGATIVE_MAX);
-  ResultType const abs_max_div_by_base = abs_max / base;
+  ResultType const abs_max_div_by_base =
+      static_cast<ResultType>(abs_max / base);
 
   while (src_cur < src_len && isalnum(src[src_cur])) {
     int cur_digit = b36_char_to_int(src[src_cur]);
