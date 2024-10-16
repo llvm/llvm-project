@@ -17322,7 +17322,7 @@ SDValue PPCTargetLowering::LowerFRAMEADDR(SDValue Op,
 #define GET_REGISTER_MATCHER
 #include "PPCGenAsmMatcher.inc"
 
-Register PPCTargetLowering::getRegisterByName(const char* RegName, LLT VT,
+Register PPCTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                               const MachineFunction &MF) const {
 
   bool Is64Bit = Subtarget.isPPC64() && VT == LLT::scalar(64);
@@ -17331,8 +17331,8 @@ Register PPCTargetLowering::getRegisterByName(const char* RegName, LLT VT,
 
   Register Reg = MatchRegisterName(RegName);
   if (!Reg)
-    report_fatal_error(Twine("Invalid global name register \""
-                              + StringRef(RegName)  + "\"."));
+    report_fatal_error(
+        Twine("Invalid global name register \"" + StringRef(RegName) + "\"."));
 
   // Convert GPR to GP8R register for 64bit.
   if (Is64Bit && StringRef(RegName).starts_with_insensitive("r"))
