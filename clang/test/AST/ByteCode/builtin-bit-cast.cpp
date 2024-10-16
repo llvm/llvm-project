@@ -377,9 +377,10 @@ constexpr int run_vol_mem = __builtin_bit_cast(int, vol_mem{43});
 struct mem_ptr {
   int vol_mem::*x; // both-note{{invalid type 'int vol_mem::*' is a member of 'mem_ptr'}}
 };
+
 // both-error@+2 {{constexpr variable 'run_mem_ptr' must be initialized by a constant expression}}
 // both-note@+1 {{bit_cast from a member pointer type is not allowed in a constant expression}}
-constexpr int run_mem_ptr = __builtin_bit_cast(unsigned long, mem_ptr{nullptr});
+constexpr _BitInt(sizeof(mem_ptr) * 8) run_mem_ptr = __builtin_bit_cast(_BitInt(sizeof(mem_ptr) * 8), mem_ptr{nullptr});
 
 constexpr int global_int = 0;
 
@@ -388,4 +389,4 @@ struct ref_mem {
 };
 // both-error@+2 {{constexpr variable 'run_ref_mem' must be initialized by a constant expression}}
 // both-note@+1 {{bit_cast from a type with a reference member is not allowed in a constant expression}}
-constexpr unsigned long run_ref_mem = __builtin_bit_cast(unsigned long, ref_mem{global_int});
+constexpr intptr_t run_ref_mem = __builtin_bit_cast(intptr_t, ref_mem{global_int});
