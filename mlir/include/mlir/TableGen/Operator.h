@@ -119,15 +119,14 @@ public:
 
   /// A utility iterator over a list of variable decorators.
   struct VariableDecoratorIterator
-      : public llvm::mapped_iterator<const llvm::Init *const *,
-                                     VariableDecorator (*)(
-                                         const llvm::Init *)> {
+      : public llvm::mapped_iterator<llvm::Init *const *,
+                                     VariableDecorator (*)(llvm::Init *)> {
     /// Initializes the iterator to the specified iterator.
-    VariableDecoratorIterator(const llvm::Init *const *it)
-        : llvm::mapped_iterator<const llvm::Init *const *,
-                                VariableDecorator (*)(const llvm::Init *)>(
-              it, &unwrap) {}
-    static VariableDecorator unwrap(const llvm::Init *init);
+    VariableDecoratorIterator(llvm::Init *const *it)
+        : llvm::mapped_iterator<llvm::Init *const *,
+                                VariableDecorator (*)(llvm::Init *)>(it,
+                                                                     &unwrap) {}
+    static VariableDecorator unwrap(llvm::Init *init);
   };
   using var_decorator_iterator = VariableDecoratorIterator;
   using var_decorator_range = llvm::iterator_range<VariableDecoratorIterator>;

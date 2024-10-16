@@ -784,7 +784,7 @@ bool AArch64PassConfig::addILPOpts() {
   if (EnableCondBrTuning)
     addPass(createAArch64CondBrTuning());
   if (EnableEarlyIfConversion)
-    addPass(&EarlyIfConverterID);
+    addPass(&EarlyIfConverterLegacyID);
   if (EnableStPairSuppress)
     addPass(createAArch64StorePairSuppressPass());
   addPass(createAArch64SIMDInstrOptPass());
