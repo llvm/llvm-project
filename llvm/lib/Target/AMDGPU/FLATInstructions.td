@@ -454,6 +454,19 @@ class FLAT_RTS<string opName, bit HasVdst, bit HasData, RegisterClass vdstClass 
   let has_vdst = HasVdst;
 }
 
+class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
+  opName,
+  !if(HasVdst, (outs VGPR_32:$vdst), (outs)),
+  !con(!if(HasAddr, !if(HasVdst, (ins VReg_64:$vaddr), (ins VGPR_32:$vaddr)), (ins)), (ins CPol:$cpol)),
+  !if(HasVdst, " $vdst", "")#!if(HasAddr, ", $vaddr", "")#"$cpol">{
+
+  let is_flat_global = 1;
+  let has_offset = 0;
+  let has_vaddr = HasAddr;
+  let has_data = 0;
+  let has_vdst = HasVdst;
+}
+
 class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
   FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
   let has_vdst = 0;
@@ -1326,6 +1339,16 @@ let SubtargetPredicate = isGFX13Plus in {
   def RTS_RAY_SAVE             : FLAT_RTS<"rts_ray_save", 1, 0>;
   def RTS_UPDATE_RAY           : FLAT_RTS<"rts_update_ray", 1, 1>;
   def RTS_FLUSH                : FLAT_RTS<"rts_flush", 0, 0>;
+
+  let OtherPredicates = [HasSWC] in {
+  def SWC_REORDER             : FLAT_SWC<"swc_reorder", 1, 1>;
+  def SWC_FLUSH               : FLAT_SWC<"swc_flush", 0, 0>;
+  def SWC_REORDER_SWAP        : FLAT_SWC<"swc_reorder_swap", 1, 1>;
+  def SWC_REORDER_SWAP_RESUME : FLAT_SWC<"swc_reorder_swap_resume", 1, 0>;
+  def SWC_GET_EXCHANGE_STATE  : FLAT_SWC<"swc_get_exchange_state", 1, 0>;
+  def SWC_SET_EXCHANGE_STATE  : FLAT_SWC<"swc_set_exchange_state", 0, 1>;
+  def SWC_ABORT_EXCHANGE      : FLAT_SWC<"swc_abort_exchange", 0, 0>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3729,9 +3752,15 @@ defm RTS_UPDATE_RAY                   : VFLAT_Real_Base_gfx13<0x92>;
 defm RTS_FLUSH                        : VFLAT_Real_Base_gfx13<0x94>;
 defm RTS_RAY_SAVE                     : VFLAT_Real_Base_gfx13<0x95>;
 defm RTS_RAY_RESTORE                  : VFLAT_Real_Base_gfx13<0x96>;
+defm SWC_REORDER                      : VFLAT_Real_Base_gfx13<0xa0>;
+defm SWC_FLUSH                        : VFLAT_Real_Base_gfx13<0xa1>;
+defm SWC_REORDER_SWAP                 : VFLAT_Real_Base_gfx13<0xa3>;
+defm SWC_REORDER_SWAP_RESUME          : VFLAT_Real_Base_gfx13<0xa4>;
+defm SWC_GET_EXCHANGE_STATE           : VFLAT_Real_Base_gfx13<0xa5>;
+defm SWC_SET_EXCHANGE_STATE           : VFLAT_Real_Base_gfx13<0xa6>;
+defm SWC_ABORT_EXCHANGE               : VFLAT_Real_Base_gfx13<0xa7>;
 // TODO-GFX13:
 // GLOBAL_WAVE_KILL
-// SWC_*
 
 // ENC_VSCRATCH.
 defm SCRATCH_LOAD_UBYTE               : VSCRATCH_Real_AllAddr_gfx13<0x08, "scratch_load_u8">;
